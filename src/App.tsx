@@ -10,7 +10,6 @@ import ServiceDetailsPage from './pages/ServiceDetailsPage';
 import EmployeesPage from './pages/EmployeesPage';
 import NewsPage from './pages/NewsPage';
 import NewsDetailsPage from './pages/NewsDetailsPage';
-import TariffsPage from './pages/TariffsPage';
 import LoginPage from './pages/LoginPage';
 import CabinetPage from './pages/CabinetPage';
 import AdminPage from './pages/AdminPage';
@@ -29,7 +28,6 @@ function App() {
         <Route path="/employees" element={<PublicLayout><EmployeesPage /></PublicLayout>} />
         <Route path="/news" element={<PublicLayout><NewsPage /></PublicLayout>} />
         <Route path="/news/:id" element={<PublicLayout><NewsDetailsPage /></PublicLayout>} />
-        <Route path="/tariffs" element={<PublicLayout><TariffsPage /></PublicLayout>} />
         <Route path="/login" element={<LoginPage onSuccess={() => setToast('Успешный вход. Добро пожаловать!')} />} />
         <Route path="/cabinet" element={<CabinetLayout><CabinetPage onNotify={(text) => setToast(text)} /></CabinetLayout>} />
         <Route path="/admin" element={<AdminLayout><AdminPage onNotify={(text) => setToast(text)} /></AdminLayout>} />

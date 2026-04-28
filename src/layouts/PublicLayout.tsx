@@ -7,7 +7,6 @@ const navItems = [
   { label: 'Главная', path: '/' },
   { label: 'О компании', path: '/about' },
   { label: 'Услуги', path: '/services' },
-  { label: 'Тарифы', path: '/tariffs' },
   { label: 'Сотрудники', path: '/employees' },
   { label: 'Новости', path: '/news' },
 ];
@@ -20,7 +19,8 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
       <header className="sticky top-0 z-40 bg-eco-700 text-white shadow-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 sm:px-8">
           <Link to="/" className="text-xl font-bold text-white">
-            ECOPROGRESS GROUP
+            ECOPROGRESS 
+            GROUP
           </Link>
           <nav className="hidden items-center gap-8 lg:flex">
             {navItems.map((item) => (
@@ -80,23 +80,17 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
       </header>
       <main>{children}</main>
       <footer className="bg-eco-700 text-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-16 sm:px-8 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-md">
-            <h2 className="text-2xl font-semibold text-white">Eco.Progress</h2>
-            <p className="mt-4 text-sm leading-7 text-slate-300">
-              Сопровождаем бизнес на каждом этапе экологического аудита, оформления отчетности и прохождения проверок.
-            </p>
-          </div>
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mx-auto max-w-7xl px-6 py-16 sm:px-8">
+          <div className="grid gap-8 lg:grid-cols-4">
             <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-eco-400">Контакты</p>
-              <p className="mt-4 text-sm text-slate-300">Нур-Султан, ул. Экологическая, 23</p>
-              <p className="mt-2 text-sm text-slate-300">+7 (7172) 34-56-78</p>
-              <p className="mt-2 text-sm text-slate-300">info@ecoprogress.kz</p>
+              <h3 className="text-xl font-bold text-white">ECOPROGRESS GROUP</h3>
+              <p className="mt-4 text-sm text-eco-200">
+                Экологическое сопровождение бизнеса. Помогаем соблюдать требования и проходить проверки.
+              </p>
             </div>
             <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-eco-400">Навигация</p>
-              <ul className="mt-4 space-y-3 text-sm text-slate-300">
+              <h4 className="text-sm font-semibold uppercase tracking-[0.24em] text-eco-300">Навигация</h4>
+              <ul className="mt-4 space-y-3 text-sm text-eco-200">
                 {navItems.map((item) => (
                   <li key={item.path}>
                     <Link to={item.path} className="hover:text-white">
@@ -107,17 +101,23 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               </ul>
             </div>
             <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-eco-400">Инструменты</p>
-              <ul className="mt-4 space-y-3 text-sm text-slate-300">
-                <li>Личный кабинет</li>
-                <li>Админка</li>
-                <li>Моковые данные</li>
+              <h4 className="text-sm font-semibold uppercase tracking-[0.24em] text-eco-300">Контакты</h4>
+              <ul className="mt-4 space-y-3 text-sm text-eco-200">
+                <li>Республика Казахстан, г. Астана</li>
+                <li>+7 (___) ___-__-__</li>
+                <li>info@ecoprogress.kz</li>
               </ul>
             </div>
+            <div>
+              <h4 className="text-sm font-semibold uppercase tracking-[0.24em] text-eco-300">Время работы</h4>
+              <p className="mt-4 text-sm text-eco-200">
+                Пн–Пт: 09:00–18:00
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="border-t border-slate-800 px-6 py-6 text-center text-sm text-slate-500 sm:px-8">
-          © 2026 Eco.Progress. Все права защищены.
+          <div className="mt-12 border-t border-white/20 pt-8 text-center text-sm text-eco-300">
+            © 2026 ECOPROGRESS GROUP. Все права защищены.
+          </div>
         </div>
       </footer>
     </div>

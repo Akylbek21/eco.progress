@@ -177,8 +177,8 @@ export const services: ServiceItem[] = [
 
 export const employees: Employee[] = [
   {
-    id: 'emp-ivan',
-    name: 'Иван Смирнов',
+    id: 'emp-chief',
+    name: 'Главный эколог',
     position: 'Главный эколог',
     experience: '12 лет',
     specialty: 'Стратегия экологической безопасности',
@@ -188,8 +188,8 @@ export const employees: Employee[] = [
     certificates: ['Сертификат ISO 14001', 'Лицензия эксперта'],
   },
   {
-    id: 'emp-olga',
-    name: 'Ольга Петрова',
+    id: 'emp-consultant',
+    name: 'Эколог-консультант',
     position: 'Эколог-консультант',
     experience: '8 лет',
     specialty: 'Аудит и экологический контроль',
@@ -199,8 +199,8 @@ export const employees: Employee[] = [
     certificates: ['Сертификат эколога', 'Диплом аудита'],
   },
   {
-    id: 'emp-maxim',
-    name: 'Максим Орлов',
+    id: 'emp-reporting',
+    name: 'Специалист по отчетности',
     position: 'Специалист по отчетности',
     experience: '6 лет',
     specialty: 'Отчеты по выбросам и отходам',
@@ -210,8 +210,8 @@ export const employees: Employee[] = [
     certificates: ['Сертификат отчетности', 'Лицензия специалиста'],
   },
   {
-    id: 'emp-anna',
-    name: 'Анна Кузнецова',
+    id: 'emp-docs',
+    name: 'Специалист по документации',
     position: 'Специалист по документации',
     experience: '7 лет',
     specialty: 'Разработка регламентов и паспортов',
@@ -221,8 +221,8 @@ export const employees: Employee[] = [
     certificates: ['Сертификат документации', 'Диплом эксперта'],
   },
   {
-    id: 'emp-sergey',
-    name: 'Сергей Иванов',
+    id: 'emp-manager',
+    name: 'Менеджер по работе с клиентами',
     position: 'Менеджер по работе с клиентами',
     experience: '5 лет',
     specialty: 'Клиентское сопровождение и согласование',
@@ -236,30 +236,48 @@ export const employees: Employee[] = [
 export const news: NewsItem[] = [
   {
     id: 'news-1',
-    title: 'Новые требования по обращению с отходами в 2026 году',
+    title: 'Изменения в экологическом законодательстве 2026 года',
     excerpt:
-      'Какие изменения ожидают предприятия и как подготовиться заранее к новым нормам и проверкам.',
+      'Новые требования к обращению с отходами и подготовке отчетности. Как подготовиться к изменениям заранее.',
     category: 'Законодательство',
     date: '15 апреля 2026',
     image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=60',
   },
   {
     id: 'news-2',
-    title: 'Как Eco.Progress помогает пройти экологическую проверку без срывов',
+    title: ': успешное сопровождение экологических проверок',
     excerpt:
-      'Примеры работы с клиентами и шаги, которые сокращают риски нарушения эконорм.',
+      'Как наша компания помогает клиентам пройти проверки без нарушений и с минимальными рисками.',
     category: 'Новости компании',
     date: '2 апреля 2026',
     image: 'https://images.unsplash.com/photo-1521702818651-0b6a5c3152ec?auto=format&fit=crop&w=800&q=60',
   },
   {
     id: 'news-3',
-    title: 'Пять важных документов для экологической лицензии',
+    title: 'Обязательные документы для получения экологической лицензии',
     excerpt:
-      'Список обязательных документов и советы, как подготовить пакет без ошибок.',
-    category: 'Полезные статьи',
+      'Полный список документов и рекомендации по подготовке пакета для получения разрешений.',
+    category: 'Полезные материалы',
     date: '28 марта 2026',
     image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=60',
+  },
+  {
+    id: 'news-4',
+    title: 'Экологическая отчетность: новые формы и сроки сдачи',
+    excerpt:
+      'Обзор изменений в формах отчетности и сроках их предоставления в контролирующие органы.',
+    category: 'Экологическая отчетность',
+    date: '20 марта 2026',
+    image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=800&q=60',
+  },
+  {
+    id: 'news-5',
+    title: 'Подготовка к плановым экологическим проверкам',
+    excerpt:
+      'Рекомендации по подготовке предприятия к проверкам и необходимые документы.',
+    category: 'Проверки',
+    date: '10 марта 2026',
+    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=60',
   },
 ];
 
@@ -269,24 +287,40 @@ export const orders: Order[] = [
     service: 'Экологическая отчетность',
     createdAt: '12 апреля 2026',
     status: 'В работе',
-    manager: 'Ольга Петрова',
-    company: 'ТехноСнаб Плюс',
+    manager: 'Эколог-консультант',
+    company: 'ТОО «ТехноСнаб»',
   },
   {
     id: 'ORD-1009',
     service: 'Разработка экологической документации',
     createdAt: '4 апреля 2026',
     status: 'Ожидает документы',
-    manager: 'Анна Кузнецова',
-    company: 'ЛесПром ООО',
+    manager: 'Специалист по документации',
+    company: 'ТОО «ЛесПром»',
   },
   {
     id: 'ORD-1004',
     service: 'Подготовка разрешительной документации',
     createdAt: '21 марта 2026',
     status: 'Готово',
-    manager: 'Иван Смирнов',
-    company: 'ЭкоСервис Групп',
+    manager: 'Главный эколог',
+    company: 'ТОО «ЭкоСервис»',
+  },
+  {
+    id: 'ORD-1001',
+    service: 'Производственный экологический контроль',
+    createdAt: '15 марта 2026',
+    status: 'В работе',
+    manager: 'Эколог-консультант',
+    company: 'АО «ПромТех»',
+  },
+  {
+    id: 'ORD-0998',
+    service: 'Экологический аудит',
+    createdAt: '8 марта 2026',
+    status: 'Готово',
+    manager: 'Главный эколог',
+    company: 'ТОО «СтройИнвест»',
   },
 ];
 
@@ -352,7 +386,7 @@ export const notifications: NotificationItem[] = [
   {
     id: 'NOT-01',
     title: 'Новый комментарий по заявке ORD-1012',
-    description: 'Ольга добавила уточнение по данным для отчета.',
+    description: 'Специалист добавил уточнение по данным для отчета.',
     date: 'Сегодня, 09:22',
   },
   {
@@ -361,30 +395,49 @@ export const notifications: NotificationItem[] = [
     description: 'Заявка перешла в статус «Ожидает документы».',
     date: '12 апреля 2026',
   },
+  {
+    id: 'NOT-03',
+    title: 'Новая заявка ORD-1015',
+    description: 'Поступила новая заявка на экологический аудит.',
+    date: '11 апреля 2026',
+  },
+  {
+    id: 'NOT-04',
+    title: 'Отчет готов',
+    description: 'Отчет по заявке ORD-1004 готов к скачиванию.',
+    date: '10 апреля 2026',
+  },
 ];
 
 export const clientProfile: ClientProfile = {
-  companyName: 'АО «ЭкоТехПром»',
-  tin: '190240128441',
-  address: 'г. Нур-Султан, ул. Экологическая, 23',
-  phone: '+7 (7172) 34-56-78',
-  email: 'contact@ecotechprom.kz',
-  contactPerson: 'Алексей Морозов',
+  companyName: 'ТОО «ТехноСнаб»',
+  tin: '123456789012',
+  address: 'Республика Казахстан, г. Астана',
+  phone: '+7 (___) ___-__-__',
+  email: 'info@technosnab.kz',
+  contactPerson: 'Менеджер по закупкам',
 };
 
 export const clients = [
   {
     id: 'client-01',
-    name: 'АО «ЭкоТехПром»',
-    contact: 'Алексей Морозов',
+    name: 'ТОО «ТехноСнаб»',
+    contact: 'Менеджер по закупкам',
     orders: 6,
     status: 'Активный',
   },
   {
     id: 'client-02',
-    name: 'ТОО «Зелёный Поток»',
-    contact: 'Мария Громова',
+    name: 'ТОО «ЛесПром»',
+    contact: 'Директор',
     orders: 3,
     status: 'На сопровождении',
+  },
+  {
+    id: 'client-03',
+    name: 'АО «ПромТех»',
+    contact: 'Главный инженер',
+    orders: 8,
+    status: 'Активный',
   },
 ];
