@@ -1,71 +1,92 @@
 import { ReactNode, useState } from 'react';
-import { Link } from 'react-router-dom';
-import Button from '../components/ui/Button';
-
-const links = [
-  { label: 'Dashboard', anchor: 'dashboard' },
-  { label: 'Мои заявки', anchor: 'orders' },
-  { label: 'Создать заявку', anchor: 'create' },
-  { label: 'Документы', anchor: 'documents' },
-  { label: 'Оплаты', anchor: 'payments' },
-  { label: 'Профиль', anchor: 'profile' },
-  { label: 'Уведомления', anchor: 'notifications' },
-];
+import { Link, NavLink } from 'react-router-dom';
+import { Bell, Building2, CreditCard, FileText, Home, LogOut, Menu, PlusCircle, User, X } from 'lucide-react';
+import { getCurrentUser, logout } from '../services/authService';
+import BrandLogo from '../components/ui/BrandLogo';
 
 const CabinetLayout = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
+  const user = getCurrentUser();
+  const isIndividual = user?.type === 'individual';
+  const links = [
+    { label: 'Обзор', path: '/cabinet', icon: Home },
+    { label: isIndividual ? 'Мои заявки' : 'Заявки компании', path: '/cabinet/orders', icon: FileText },
+    { label: 'Новая заявка', path: '/cabinet/orders/new', icon: PlusCircle },
+    { label: isIndividual ? 'Мои документы' : 'Документы компании', path: '/cabinet/documents', icon: FileText },
+    { label: 'Оплаты', path: '/cabinet/payments', icon: CreditCard },
+    { label: isIndividual ? 'Профиль' : 'Данные компании', path: '/cabinet/company', icon: isIndividual ? User : Building2 },
+    { label: 'Уведомления', path: '/cabinet/notifications', icon: Bell },
+  ];
+
+  const nav = (
+    <nav className="space-y-1">
+      {links.map((item) => {
+        const Icon = item.icon;
+        return (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            end={item.path === '/cabinet'}
+            onClick={() => setOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${isActive ? 'bg-eco-400 text-white shadow-lg shadow-eco-400/20' : 'text-slate-650 hover:bg-eco-50'}`
+            }
+          >
+            <Icon size={18} />
+            {item.label}
+          </NavLink>
+        );
+      })}
+    </nav>
+  );
 
   return (
-    <div className="min-h-screen bg-eco-50 text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 sm:px-8">
-          <Link to="/cabinet" className="text-lg font-semibold text-eco-900">
-            Клиентский кабинет
-          </Link>
-          <div className="hidden items-center gap-3 lg:flex">
-            <Link to="/">
-              <Button variant="ghost">На сайт</Button>
-            </Link>
-            <Link to="/login">
-              <Button>Выйти</Button>
-            </Link>
-          </div>
-          <button
-            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-3 text-slate-600 shadow-sm lg:hidden"
-            onClick={() => setOpen((state) => !state)}
-            aria-label="Меню кабинета"
-          >
-            <span className="text-2xl">☰</span>
-          </button>
+    <div className="min-h-screen bg-eco-50 text-slate-900 lg:grid lg:grid-cols-[286px_1fr]">
+      <aside className="hidden border-r border-slate-200 bg-white/95 p-6 shadow-sm lg:block">
+        <Link to="/cabinet" className="flex items-center gap-3 text-xl font-bold leading-tight text-eco-800">
+          <BrandLogo className="h-11 w-11" />
+          <span>
+            <span className="block">ECOPROGRESS</span>
+            <span className="block text-xs tracking-[0.22em] text-eco-500">GROUP</span>
+          </span>
+        </Link>
+        <p className="mt-2 text-sm text-slate-500">Кабинет клиента</p>
+        <div className="my-6 rounded-3xl bg-eco-50 p-4">
+          <p className="text-sm font-semibold text-slate-900">{user?.companyName ?? user?.name ?? 'Клиент'}</p>
+          <p className="mt-1 text-xs text-slate-500">{isIndividual ? 'Физическое лицо' : 'Юридическое лицо / ИП'}</p>
         </div>
-        {open && (
-          <div className="border-t border-slate-200 bg-white lg:hidden">
-            <div className="space-y-2 px-6 py-5">
-              {links.map((item) => (
-                <a key={item.anchor} href={`#${item.anchor}`} className="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                  {item.label}
-                </a>
-              ))}
+        {nav}
+      </aside>
+      <div>
+        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
+          <div className="flex items-center justify-between gap-4 px-5 py-4 sm:px-8">
+            <button className="rounded-2xl border border-slate-200 bg-white p-3 lg:hidden" onClick={() => setOpen(true)} aria-label="Меню">
+              <Menu size={20} />
+            </button>
+            <div>
+              <p className="text-sm text-slate-500">Добро пожаловать</p>
+              <h1 className="text-lg font-semibold text-eco-900">{user?.name ?? 'Клиент ECOPROGRESS GROUP'}</h1>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link to="/" className="hidden text-sm font-semibold text-eco-700 hover:text-eco-900 sm:block">На сайт</Link>
+              <Link to="/login" onClick={logout} className="inline-flex items-center gap-2 rounded-full bg-eco-800 px-4 py-2 text-sm font-semibold text-white">
+                <LogOut size={16} /> Выйти
+              </Link>
             </div>
           </div>
-        )}
-      </header>
-      <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 sm:px-8 lg:grid-cols-[260px_1fr]">
-        <aside className="hidden rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm lg:block">
-          <p className="mb-4 text-sm uppercase tracking-[0.24em] text-eco-700">Разделы</p>
-          <div className="space-y-2">
-            {links.map((item) => (
-              <a
-                key={item.anchor}
-                href={`#${item.anchor}`}
-                className="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-eco-50"
-              >
-                {item.label}
-              </a>
-            ))}
+        </header>
+        {open && (
+          <div className="fixed inset-0 z-50 bg-eco-900/40 lg:hidden" onClick={() => setOpen(false)}>
+            <aside className="h-full w-80 max-w-[86vw] bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+              <div className="mb-6 flex items-center justify-between">
+                <span className="font-bold text-eco-800">Кабинет</span>
+                <button onClick={() => setOpen(false)}><X size={20} /></button>
+              </div>
+              {nav}
+            </aside>
           </div>
-        </aside>
-        <section>{children}</section>
+        )}
+        <main className="px-5 py-8 sm:px-8">{children}</main>
       </div>
     </div>
   );
