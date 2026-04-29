@@ -2,7 +2,6 @@ import { ReactNode, useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import Button from '../components/ui/Button';
-import BrandLogo from '../components/ui/BrandLogo';
 
 const navItems = [
   { label: 'Главная', path: '/' },
@@ -28,14 +27,13 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
     <div className="min-h-screen bg-[#F7FBFD] text-slate-900">
       <header className={`sticky top-0 z-40 border-b border-eco-200/45 bg-white/92 text-eco-900 backdrop-blur-xl transition-all duration-300 ${scrolled ? 'shadow-xl shadow-eco-900/8' : 'shadow-sm shadow-eco-900/5'}`}>
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
-          <Link to="/" className="group inline-flex items-center gap-3 text-xl font-bold text-eco-900">
-            <BrandLogo className="h-11 w-11" />
+          <Link to="/" className="inline-flex items-center text-xl font-bold text-eco-900">
             <span className="leading-none">
               <span className="block text-base">ECOPROGRESS</span>
               <span className="block text-xs tracking-[0.22em] text-eco-500">GROUP</span>
             </span>
           </Link>
-          <nav className="hidden items-center gap-7 lg:flex">
+          <nav className="hidden items-center gap-6 lg:flex">
             {navItems.map((item) => (
               <NavLink
                 key={item.path}
@@ -97,21 +95,18 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
         <div className="relative mx-auto max-w-7xl px-5 py-14 sm:px-8">
           <div className="grid gap-10 lg:grid-cols-[1.3fr_0.8fr_1fr_1fr]">
             <div>
-              <div className="flex items-center gap-3">
-                <BrandLogo className="h-12 w-12" dark={false} />
-                <h3 className="text-2xl font-bold leading-tight">
-                  <span className="block">ECOPROGRESS</span>
-                  <span className="block text-sm tracking-[0.24em] text-eco-200">GROUP</span>
-                </h3>
-              </div>
+              <h3 className="text-2xl font-bold leading-tight">
+                <span className="block">ECOPROGRESS</span>
+                <span className="block text-sm tracking-[0.24em] text-eco-200">GROUP</span>
+              </h3>
               <p className="mt-4 max-w-md text-sm leading-6 text-white/75">
-                Экологическое сопровождение бизнеса: документы, отчетность, проверки и понятные статусы в онлайн-кабинете.
+                Экологическое сопровождение бизнеса: документы, отчетность, проверки, договоры, ЭЦП и оплата в онлайн-кабинете.
               </p>
             </div>
             <div>
               <h4 className="text-sm font-semibold uppercase text-eco-200">Навигация</h4>
               <ul className="mt-4 space-y-3 text-sm text-white/75">
-                {navItems.slice(0, 5).map((item) => (
+                {navItems.slice(0, 6).map((item) => (
                   <li key={item.path}>
                     <Link to={item.path} className="hover:text-white">{item.label}</Link>
                   </li>
@@ -135,7 +130,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               </div>
             </div>
           </div>
-          <div className="mt-12 border-t border-white/15 pt-6 text-sm text-white/60">2026 ECOPROGRESS GROUP. Frontend mock service.</div>
+          <div className="mt-12 border-t border-white/15 pt-6 text-sm text-white/60">2026 ECOPROGRESS GROUP. Frontend demo service.</div>
         </div>
       </footer>
     </div>

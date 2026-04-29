@@ -91,6 +91,14 @@ export type Order = {
   createdAt: string;
   status: OrderStatus;
   manager: string;
+  contractStatus?: 'not_sent' | 'sent' | 'signed';
+  paymentStatus?: 'not_sent' | 'pending' | 'paid';
+  signatureProvider?: string;
+  paymentMethod?: string;
+  paymentAmount?: string;
+  paymentUrl?: string;
+  signedAt?: string;
+  paidAt?: string;
   documents: DocumentItem[];
   resultDocuments: DocumentItem[];
   comments: CommentItem[];

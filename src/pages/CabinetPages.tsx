@@ -1,9 +1,10 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { CheckCircle2, CreditCard, FileSignature, LockKeyhole } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import { payments, services, statusDescriptions, type Order } from '../data/mockData';
-import { addComment, createOrder, getClientOrders, getOrderById, uploadDocument } from '../services/orderService';
+import { addComment, createOrder, getClientOrders, getOrderById, payOrderOnline, signOrderContract, uploadDocument } from '../services/orderService';
 import { getCurrentUser } from '../services/authService';
 
 const badge = (status: string) => <span className="rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">{status}</span>;
@@ -77,7 +78,7 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
       comment: String(form.get('comment')),
       fileName: file?.name,
     });
-    onNotify?.('Заявка создана. Специалист ECOPROGRESS GROUP скоро свяжется с вами.');
+    onNotify?.('Заявка создана. Сотрудник проверит данные и отправит договор со счетом.');
     navigate(`/cabinet/orders/${order.id}`);
   };
   return (
@@ -94,8 +95,17 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
           <label className="text-sm font-semibold text-slate-700">Срочность<select name="urgency" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3"><option>Стандартная</option><option>Срочно</option><option>Не срочно</option></select></label>
           <label className="text-sm font-semibold text-slate-700">Прикрепить файл<input name="file" type="file" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
         </div>
+        <div className="mt-5 grid gap-3 rounded-2xl border border-eco-100 bg-eco-50 p-4 text-sm text-slate-700 md:grid-cols-3">
+          <div className="flex items-center gap-3"><FileSignature size={18} className="text-eco-700" />Сотрудник проверит заявку</div>
+          <div className="flex items-center gap-3"><CreditCard size={18} className="text-eco-700" />Счет появится после проверки</div>
+          <div className="flex items-center gap-3"><LockKeyhole size={18} className="text-eco-700" />Статусы сохраняются в кабинете</div>
+        </div>
+        <label className="mt-4 flex items-start gap-3 text-sm text-slate-600">
+          <input required type="checkbox" className="mt-1 h-4 w-4 rounded border-slate-300" />
+          <span>Согласен отправить заявку на проверку. Договор и счет будут доступны после обработки сотрудником.</span>
+        </label>
         <label className="mt-4 block text-sm font-semibold text-slate-700">Комментарий<textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} /></label>
-        <Button className="mt-6">Отправить заявку</Button>
+        <Button className="mt-6">Отправить заявку на проверку</Button>
       </form>
     </Reveal>
   );
@@ -126,6 +136,16 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
     event.currentTarget.reset();
     load();
   };
+  const handleSign = async () => {
+    await signOrderContract(order.id, order.signatureProvider || 'NCALayer / ЭЦП');
+    onNotify?.('Договор подписан электронной подписью');
+    load();
+  };
+  const handlePay = async () => {
+    await payOrderOnline(order.id, order.paymentMethod || 'Банковская карта');
+    onNotify?.('Оплата прошла онлайн');
+    load();
+  };
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <Reveal>
@@ -146,6 +166,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       </Reveal>
       <Reveal direction="left">
         <div className="space-y-5">
+          <OnlineOrderPanel order={order} onSign={handleSign} onPay={handlePay} />
           <form onSubmit={submitFile} className="rounded-[22px] bg-white p-5 shadow-sm"><h3 className="font-bold text-eco-900">Загрузить документ</h3><input name="file" type="file" required className="mt-4 w-full rounded-2xl border border-slate-200 px-4 py-3" /><Button className="mt-4 w-full">Загрузить</Button></form>
           <form onSubmit={submitComment} className="rounded-[22px] bg-white p-5 shadow-sm"><h3 className="font-bold text-eco-900">Написать комментарий</h3><textarea name="comment" required className="input-focus mt-4 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} /><Button className="mt-4 w-full">Отправить</Button></form>
         </div>
@@ -156,6 +177,55 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
 
 const Info = ({ label, value }: { label: string; value: string }) => <div className="rounded-2xl bg-eco-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">{label}</p><p className="mt-2 text-sm text-slate-800">{value || 'Не указано'}</p></div>;
 
+const OnlineOrderPanel = ({ order, onSign, onPay }: { order: Order; onSign: () => void; onPay: () => void }) => {
+  const available = order.contractStatus === 'sent' || order.contractStatus === 'signed' || order.paymentStatus === 'pending' || order.paymentStatus === 'paid';
+  const signed = order.contractStatus === 'signed';
+  const paid = order.paymentStatus === 'paid';
+  if (!available) {
+    return (
+      <div className="rounded-[22px] bg-white p-5 shadow-sm">
+        <h3 className="font-bold text-eco-900">Онлайн-оформление</h3>
+        <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+          <div className="flex items-start gap-3">
+            <LockKeyhole className="text-slate-500" size={20} />
+            <div>
+              <p className="font-semibold text-slate-900">Ожидает проверки сотрудником</p>
+              <p className="mt-1 text-sm text-slate-600">После проверки здесь появятся договор для подписи и счет на онлайн-оплату.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-[22px] bg-white p-5 shadow-sm">
+      <h3 className="font-bold text-eco-900">Онлайн-оформление</h3>
+      <div className="mt-4 space-y-3">
+        <div className="rounded-2xl border border-slate-200 p-4">
+          <div className="flex items-start gap-3">
+            {signed ? <CheckCircle2 className="text-eco-600" size={20} /> : <FileSignature className="text-eco-700" size={20} />}
+            <div>
+              <p className="font-semibold text-slate-900">{signed ? 'Договор подписан' : 'Подписать договор'}</p>
+              <p className="mt-1 text-sm text-slate-600">{signed ? order.signedAt : order.signatureProvider || 'NCALayer / ЭЦП'}</p>
+            </div>
+          </div>
+          <Button disabled={signed} onClick={onSign} className="mt-4 w-full">{signed ? 'Подписано' : 'Подписать ЭЦП'}</Button>
+        </div>
+        <div className="rounded-2xl border border-slate-200 p-4">
+          <div className="flex items-start gap-3">
+            {paid ? <CheckCircle2 className="text-eco-600" size={20} /> : <CreditCard className="text-eco-700" size={20} />}
+            <div>
+              <p className="font-semibold text-slate-900">{paid ? 'Оплата получена' : 'Оплатить онлайн'}</p>
+              <p className="mt-1 text-sm text-slate-600">{paid ? order.paidAt : `${order.paymentAmount || '150 000 ₸'} · ${order.paymentMethod || 'Банковская карта'}`}</p>
+            </div>
+          </div>
+          <Button disabled={paid} onClick={onPay} className="mt-4 w-full">{paid ? 'Оплачено' : 'Перейти к оплате'}</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Section = ({ title, items }: { title: string; items: string[] }) => <div className="mt-6"><h3 className="font-bold text-eco-900">{title}</h3><div className="mt-3 space-y-2">{items.length ? items.map((item) => <div key={item} className="rounded-2xl bg-eco-50 p-3 text-sm text-slate-700">{item}</div>) : <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-500">Пока нет данных</div>}</div></div>;
 
 export const CabinetDocumentsPage = () => {
@@ -164,7 +234,23 @@ export const CabinetDocumentsPage = () => {
   return <PageList title="Документы">{docs.map((doc) => <div key={doc.id} className="rounded-2xl bg-eco-50 p-4 text-sm">{doc.name} · {doc.status}</div>)}</PageList>;
 };
 
-export const CabinetPaymentsPage = () => <PageList title="Оплаты">{payments.map((p) => <div key={p.id} className="rounded-2xl bg-eco-50 p-4 text-sm">{p.invoice} · {p.service} · {p.amount} · {p.status}</div>)}</PageList>;
+export const CabinetPaymentsPage = () => {
+  const { orders } = useClientOrders();
+  const onlinePayments = orders.map((order) => ({
+    id: order.id,
+    invoice: `Онлайн-счет ${order.id}`,
+    service: order.service,
+    amount: order.paymentStatus === 'not_sent' || !order.paymentStatus ? 'Не выставлен' : order.paymentAmount || 'Не выставлен',
+    status: order.paymentStatus === 'paid' ? 'Оплачено онлайн' : order.paymentStatus === 'pending' ? 'Ожидает онлайн-оплаты' : 'Счет еще не выставлен',
+  }));
+  return (
+    <PageList title="Оплаты">
+      {[...onlinePayments, ...payments].map((p) => (
+        <div key={p.id} className="rounded-2xl bg-eco-50 p-4 text-sm">{p.invoice} · {p.service} · {p.amount} · {p.status}</div>
+      ))}
+    </PageList>
+  );
+};
 
 export const CabinetCompanyPage = () => {
   const user = getCurrentUser();

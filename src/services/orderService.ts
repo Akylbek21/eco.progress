@@ -50,6 +50,8 @@ export type CreateOrderPayload = {
   service: string;
   urgency: string;
   comment: string;
+  signatureProvider?: string;
+  paymentMethod?: string;
   fileName?: string;
 };
 
@@ -78,13 +80,126 @@ export const createOrder = async (payload: CreateOrderPayload): Promise<Order> =
     createdAt: stamp(),
     status: 'Новая',
     manager: 'Не назначен',
+    contractStatus: 'not_sent',
+    paymentStatus: 'not_sent',
+    signatureProvider: payload.signatureProvider || 'NCALayer / ЭЦП',
+    paymentMethod: payload.paymentMethod || 'Банковская карта',
+    paymentAmount: '150 000 ₸',
+    paymentUrl: `https://pay.ecoprogress.kz/invoice/${id}`,
     documents: doc,
     resultDocuments: [],
     comments: [],
-    history: [{ id: `H-${Date.now()}`, orderId: id, text: 'Заявка создана', createdAt: stamp() }],
+    history: [
+      { id: `H-${Date.now()}-online`, orderId: id, text: 'Заявка ожидает проверки сотрудником перед выставлением договора и счета', createdAt: stamp() },
+      { id: `H-${Date.now()}`, orderId: id, text: 'Заявка создана', createdAt: stamp() },
+    ],
   };
   writeOrders([order, ...readOrders()]);
   return order;
+};
+
+export const sendContractAndInvoice = async (
+  orderId: string,
+  payload: { amount: string; paymentMethod: string; signatureProvider: string; contractFileName?: string }
+) => {
+  await delay();
+  const sentAt = stamp();
+  const items = readOrders().map((order) =>
+    order.id === orderId
+      ? {
+          ...order,
+          contractStatus: 'sent' as const,
+          paymentStatus: 'pending' as const,
+          paymentAmount: payload.amount,
+          paymentMethod: payload.paymentMethod,
+          signatureProvider: payload.signatureProvider,
+          paymentUrl: `https://pay.ecoprogress.kz/invoice/${orderId}`,
+          resultDocuments: [
+            {
+              id: `DOC-${Date.now()}`,
+              orderId,
+              name: payload.contractFileName || `Договор ${orderId} для подписания.pdf`,
+              type: 'result' as const,
+              uploadedAt: sentAt,
+              status: 'Ожидает подписи клиента',
+            },
+            {
+              id: `DOC-${Date.now()}-invoice`,
+              orderId,
+              name: `Счет на оплату ${orderId}.pdf`,
+              type: 'invoice' as const,
+              uploadedAt: sentAt,
+              status: 'Ожидает оплаты',
+            },
+            ...order.resultDocuments,
+          ],
+          history: [
+            { id: `H-${Date.now()}`, orderId, text: `Сотрудник отправил договор и счет на ${payload.amount}`, createdAt: sentAt },
+            ...order.history,
+          ],
+        }
+      : order
+  );
+  writeOrders(items);
+  return items.find((order) => order.id === orderId);
+};
+
+export const signOrderContract = async (orderId: string, provider: string) => {
+  await delay();
+  const signedAt = stamp();
+  const items = readOrders().map((order) =>
+    order.id === orderId
+      ? {
+          ...order,
+          contractStatus: 'signed' as const,
+          signatureProvider: provider,
+          signedAt,
+          documents: [
+            {
+              id: `DOC-${Date.now()}`,
+              orderId,
+              name: `Договор ${orderId}, подписан ЭЦП.pdf`,
+              type: 'client' as const,
+              uploadedAt: signedAt,
+              status: 'Подписан онлайн',
+            },
+            ...order.documents,
+          ],
+          history: [{ id: `H-${Date.now()}`, orderId, text: `Договор подписан онлайн через ${provider}`, createdAt: signedAt }, ...order.history],
+        }
+      : order
+  );
+  writeOrders(items);
+  return items.find((order) => order.id === orderId);
+};
+
+export const payOrderOnline = async (orderId: string, method: string) => {
+  await delay();
+  const paidAt = stamp();
+  const items = readOrders().map((order) =>
+    order.id === orderId
+      ? {
+          ...order,
+          paymentStatus: 'paid' as const,
+          paymentMethod: method,
+          paidAt,
+          documents: [
+            {
+              id: `DOC-${Date.now()}`,
+              orderId,
+              name: `Квитанция об оплате ${orderId}.pdf`,
+              type: 'invoice' as const,
+              uploadedAt: paidAt,
+              status: 'Оплачено онлайн',
+            },
+            ...order.documents,
+          ],
+          history: [{ id: `H-${Date.now()}`, orderId, text: `Счет оплачен онлайн: ${method}`, createdAt: paidAt }, ...order.history],
+        }
+      : order
+  );
+  writeOrders(items);
+  return items.find((order) => order.id === orderId);
 };
 
 export const updateOrderStatus = async (orderId: string, status: OrderStatus) => {

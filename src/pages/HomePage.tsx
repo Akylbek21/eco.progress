@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BarChart3, ClipboardCheck, FileText, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react';
+import { ArrowRight, BarChart3, ClipboardCheck, CreditCard, FileSignature, FileText, LockKeyhole, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import EcoDashboardPreview from '../components/content/EcoDashboardPreview';
@@ -21,12 +21,10 @@ const quizMap: Record<string, string[]> = {
   'Не знаю, что нужно': ['Консультации по экологии', 'Экологический аудит'],
 };
 
-const process = [
-  'Вы оставляете заявку',
-  'Мы уточняем задачу',
-  'Собираем документы',
-  'Выполняем услугу',
-  'Передаем результат',
+const onlineSteps: Array<[string, string, LucideIcon]> = [
+  ['ЭЦП', 'Подписание договора через NCALayer, Kaspi ID или SMS-подтверждение.', FileSignature],
+  ['Оплата', 'Онлайн-счет, статус оплаты и квитанция сохраняются в заявке.', CreditCard],
+  ['Кабинет', 'История, документы и уведомления доступны в личном кабинете.', LockKeyhole],
 ];
 
 const HomePage = () => {
@@ -92,26 +90,66 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="px-5 py-20 sm:px-8">
-        <div className="mx-auto grid max-w-7xl gap-8 rounded-[32px] bg-gradient-to-br from-eco-900 via-eco-800 to-eco-700 p-6 shadow-2xl shadow-eco-900/12 sm:p-8 lg:grid-cols-[0.82fr_1fr] lg:p-10">
+      <section className="bg-white px-5 py-20 sm:px-8">
+        <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
           <Reveal direction="right">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-eco-200">Mini-quiz</p>
-              <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">Подберите услугу за 1 минуту</h2>
-              <p className="mt-4 leading-7 text-white/72">Выберите задачу, а мы покажем направления, с которых стоит начать.</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Все оформление онлайн</p>
+              <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Заявка, ЭЦП и оплата в одном кабинете</h2>
+              <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
+                Клиент создает заявку, подписывает договор электронной подписью, оплачивает счет онлайн и получает документы без визита в офис.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link to="/cabinet/orders/new"><Button>Оформить онлайн</Button></Link>
+                <Link to="/cabinet/payments"><Button variant="secondary">Посмотреть оплаты</Button></Link>
+              </div>
             </div>
           </Reveal>
           <Reveal direction="left">
-            <div className="rounded-[24px] bg-white p-6 shadow-xl shadow-eco-900/16">
+            <div className="grid gap-4 sm:grid-cols-3">
+              {onlineSteps.map(([title, text, Icon]) => (
+                <div key={String(title)} className="rounded-[20px] border border-slate-200 bg-[#F7FBFD] p-5">
+                  <Icon className="text-eco-600" size={26} />
+                  <h3 className="mt-4 text-lg font-bold text-eco-900">{title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">{text}</p>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="px-5 py-20 sm:px-8">
+        <div className="relative mx-auto grid max-w-7xl gap-8 overflow-hidden rounded-[32px] bg-gradient-to-br from-eco-900 via-eco-800 to-eco-600 p-6 shadow-2xl shadow-eco-900/12 sm:p-8 lg:grid-cols-[0.82fr_1fr] lg:p-10">
+          <div className="absolute inset-0 bg-sea bg-cover bg-center opacity-10" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(56,199,186,0.2),transparent_34rem)]" />
+          <Reveal direction="right">
+            <div className="relative flex h-full flex-col justify-between">
+              <div>
+              
+              <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">Подберите услугу за 1 минуту</h2>
+                <p className="mt-4 max-w-md leading-7 text-white/80">Выберите задачу, а мы покажем направления, с которых стоит начать.</p>
+              </div>
+              <div className="mt-8 grid gap-3 text-sm text-white/78 sm:grid-cols-3 lg:grid-cols-1">
+                {['Без лишних звонков', 'Понятный следующий шаг', 'Подбор под вашу задачу'].map((item) => (
+                  <span key={item} className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+          <Reveal direction="left">
+            <div className="relative rounded-[24px] bg-white p-6 shadow-xl shadow-eco-900/16">
               <h3 className="font-semibold text-slate-900">Какая у вас задача?</h3>
               <div className="mt-5 flex flex-wrap gap-3">
                 {Object.keys(quizMap).map((item) => (
-                  <button key={item} onClick={() => setQuiz(item)} className={`rounded-full px-4 py-2 text-sm font-semibold transition ${quiz === item ? 'bg-eco-800 text-white' : 'bg-eco-50 text-eco-800 hover:bg-eco-200/40'}`}>
+                  <button key={item} onClick={() => setQuiz(item)} className={`rounded-full px-4 py-2 text-sm font-semibold transition ${quiz === item ? 'bg-eco-800 text-white shadow-lg shadow-eco-900/12' : 'bg-eco-50 text-eco-800 hover:bg-eco-100'}`}>
                     {item}
                   </button>
                 ))}
               </div>
-              <div className="mt-6 rounded-2xl bg-[#F7FBFD] p-5">
+              <div className="mt-6 rounded-2xl border border-eco-100 bg-[#F7FBFD] p-5">
                 <p className="text-sm font-semibold text-eco-900">Рекомендуем:</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {quizMap[quiz].map((item) => <span key={item} className="rounded-full bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">{item}</span>)}
@@ -120,23 +158,6 @@ const HomePage = () => {
               </div>
             </div>
           </Reveal>
-        </div>
-      </section>
-
-      <section className="bg-white px-5 py-20 sm:px-8">
-        <div className="mx-auto max-w-7xl">
-          <Reveal><h2 className="text-3xl font-bold text-eco-900 sm:text-4xl">Как мы работаем</h2></Reveal>
-          <div className="mt-10 grid gap-4 md:grid-cols-5">
-            {process.map((item, index) => (
-              <Reveal key={item} delay={index * 0.05}>
-                <div className="relative h-full rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-eco-900 font-bold text-white">{index + 1}</span>
-                  <p className="mt-5 font-semibold text-slate-900">{item}</p>
-                  {index < process.length - 1 && <div className="absolute -right-4 top-10 hidden h-px w-8 bg-eco-200 md:block" />}
-                </div>
-              </Reveal>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -226,13 +247,28 @@ const HomePage = () => {
       </section>
 
       <section className="bg-white px-5 py-20 sm:px-8">
-        <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.92fr_1.08fr]">
           <Reveal direction="right">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Онлайн-кабинет</p>
-              <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Клиент видит весь процесс</h2>
-              <p className="mt-4 text-lg leading-8 text-slate-600">Создание заявок, загрузка документов, статусы, комментарии специалиста и готовые файлы собраны в одном спокойном интерфейсе.</p>
-              <Link to="/register" className="mt-7 inline-block"><Button>Создать кабинет</Button></Link>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Личный кабинет</p>
+              <h2 className="mt-3 text-3xl font-bold leading-tight text-eco-900 sm:text-4xl">
+                Контролируйте экологические задачи без бесконечных переписок
+              </h2>
+              <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
+                Заявки, документы, комментарии специалиста и готовые файлы собраны в одном месте. Вы всегда видите, что уже сделано, что нужно от вас и когда ждать результат.
+              </p>
+              <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                {['Статус каждой заявки онлайн', 'Документы не теряются в чатах', 'Специалист пишет прямо в кабинете', 'Готовые файлы доступны сразу'].map((item) => (
+                  <div key={item} className="flex items-center gap-3 rounded-2xl border border-eco-100 bg-eco-50 px-4 py-3 text-sm font-semibold text-eco-900">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link to="/register"><Button>Создать кабинет</Button></Link>
+                <a href="#lead"><Button variant="secondary" className="border-eco-200 bg-white text-eco-800 hover:bg-eco-50">Получить консультацию</Button></a>
+              </div>
             </div>
           </Reveal>
           <Reveal direction="left">

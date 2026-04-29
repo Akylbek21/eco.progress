@@ -2,7 +2,6 @@ import { ReactNode } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { Bell, BriefcaseBusiness, FileText, Home, LogOut, UserRound, Users } from 'lucide-react';
 import { logout } from '../services/authService';
-import BrandLogo from '../components/ui/BrandLogo';
 
 const links = [
   { label: 'Dashboard', path: '/staff', icon: Home },
@@ -16,8 +15,7 @@ const links = [
 const StaffLayout = ({ children }: { children: ReactNode }) => (
   <div className="min-h-screen bg-slate-100 text-slate-900 lg:grid lg:grid-cols-[290px_1fr]">
     <aside className="hidden bg-eco-900 p-6 text-white lg:block">
-      <Link to="/staff" className="flex items-center gap-3 text-xl font-bold leading-tight">
-        <BrandLogo className="h-11 w-11" dark={false} />
+      <Link to="/staff" className="flex items-center text-xl font-bold leading-tight">
         <span>
           <span className="block">ECOPROGRESS</span>
           <span className="block text-xs tracking-[0.22em] text-white/55">GROUP CRM</span>

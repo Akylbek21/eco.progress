@@ -2,7 +2,6 @@ import { ReactNode, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Bell, Building2, CreditCard, FileText, Home, LogOut, Menu, PlusCircle, User, X } from 'lucide-react';
 import { getCurrentUser, logout } from '../services/authService';
-import BrandLogo from '../components/ui/BrandLogo';
 
 const CabinetLayout = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
@@ -43,8 +42,7 @@ const CabinetLayout = ({ children }: { children: ReactNode }) => {
   return (
     <div className="min-h-screen bg-eco-50 text-slate-900 lg:grid lg:grid-cols-[286px_1fr]">
       <aside className="hidden border-r border-slate-200 bg-white/95 p-6 shadow-sm lg:block">
-        <Link to="/cabinet" className="flex items-center gap-3 text-xl font-bold leading-tight text-eco-800">
-          <BrandLogo className="h-11 w-11" />
+        <Link to="/cabinet" className="flex items-center text-xl font-bold leading-tight text-eco-800">
           <span>
             <span className="block">ECOPROGRESS</span>
             <span className="block text-xs tracking-[0.22em] text-eco-500">GROUP</span>
