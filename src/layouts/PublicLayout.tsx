@@ -7,6 +7,7 @@ const navItems = [
   { label: 'Главная', path: '/' },
   { label: 'О компании', path: '/about' },
   { label: 'Услуги', path: '/services' },
+  { label: 'Тарифы', path: '/tariffs' },
   { label: 'Сотрудники', path: '/employees' },
   { label: 'Новости', path: '/news' },
   { label: 'Кабинет клиента', path: '/cabinet' },

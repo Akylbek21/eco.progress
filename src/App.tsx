@@ -9,6 +9,7 @@ import AboutPage from './pages/AboutPage';
 import ServicesPage from './pages/ServicesPage';
 import ServiceDetailsPage from './pages/ServiceDetailsPage';
 import EmployeesPage from './pages/EmployeesPage';
+import TariffsPage from './pages/TariffsPage';
 import NewsPage from './pages/NewsPage';
 import NewsDetailsPage from './pages/NewsDetailsPage';
 import LoginPage from './pages/LoginPage';
@@ -52,6 +53,7 @@ function App() {
         <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
         <Route path="/services" element={<PublicLayout><ServicesPage /></PublicLayout>} />
         <Route path="/services/:id" element={<PublicLayout><ServiceDetailsPage /></PublicLayout>} />
+        <Route path="/tariffs" element={<PublicLayout><TariffsPage /></PublicLayout>} />
         <Route path="/employees" element={<PublicLayout><EmployeesPage /></PublicLayout>} />
         <Route path="/news" element={<PublicLayout><NewsPage /></PublicLayout>} />
         <Route path="/news/:id" element={<PublicLayout><NewsDetailsPage /></PublicLayout>} />

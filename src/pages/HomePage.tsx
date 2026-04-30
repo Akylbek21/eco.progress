@@ -1,10 +1,10 @@
 import { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BarChart3, ClipboardCheck, CreditCard, FileSignature, FileText, LockKeyhole, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react';
+import { BarChart3, Beaker, Building2, ChevronDown, ClipboardCheck, FileCheck2, FileText, MapPinned, Recycle, ShieldCheck, Sparkles, Truck, type LucideIcon } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import EcoDashboardPreview from '../components/content/EcoDashboardPreview';
-import { services } from '../data/mockData';
+import { tariffs } from '../data/mockData';
 
 const helpCards: Array<[string, string, LucideIcon]> = [
   ['Экологическая отчетность', 'Сроки, формы и исходные данные под контролем специалиста.', BarChart3],
@@ -13,23 +13,132 @@ const helpCards: Array<[string, string, LucideIcon]> = [
   ['Сопровождение проверок', 'Подготовка к инспекции, снижение рисков и помощь с пояснениями.', ShieldCheck],
 ];
 
-const quizMap: Record<string, string[]> = {
-  'Нужно сдать отчетность': ['Экологическая отчетность', 'Консультации по экологии'],
-  'Нужны экологические документы': ['Разработка экологической документации', 'Подготовка разрешительной документации'],
-  'Предстоит проверка': ['Сопровождение экологических проверок', 'Экологический аудит'],
-  'Нужна консультация': ['Консультации по экологии', 'Экологический аудит'],
-  'Не знаю, что нужно': ['Консультации по экологии', 'Экологический аудит'],
-};
-
-const onlineSteps: Array<[string, string, LucideIcon]> = [
-  ['ЭЦП', 'Подписание договора через NCALayer, Kaspi ID или SMS-подтверждение.', FileSignature],
-  ['Оплата', 'Онлайн-счет, статус оплаты и квитанция сохраняются в заявке.', CreditCard],
-  ['Кабинет', 'История, документы и уведомления доступны в личном кабинете.', LockKeyhole],
+const fullCycleServices: Array<{
+  title: string;
+  description: string;
+  itemsLabel?: string;
+  items: string[];
+  cta: string;
+  Icon: LucideIcon;
+}> = [
+  {
+    title: 'Экологическое проектирование',
+    description: 'Разрабатываем экологическую документацию для предприятий, строительных объектов, производственных площадок и организаций. Помогаем пройти необходимые согласования и подготовить документы в соответствии с требованиями Экологического кодекса Республики Казахстан.',
+    items: [
+      'Разработка раздела охраны окружающей среды — РООС',
+      'Разработка проекта оценки воздействия на окружающую среду — ОВОС',
+      'Подготовка отчета о возможных воздействиях — ОВВ',
+      'Подготовка заявления о намечаемой деятельности — ЗОНД',
+      'Разработка проектов нормативов допустимых выбросов — НДВ',
+      'Разработка нормативов предельно допустимых сбросов — ПДС',
+      'Разработка проекта санитарно-защитной зоны — СЗЗ',
+      'Разработка проекта утилизации отходов',
+      'Разработка программы управления отходами — ПУО',
+      'Разработка программы производственного экологического контроля — ПЭК',
+      'Разработка плана природоохранных мероприятий — ППМ',
+      'Инвентаризация источников выбросов парниковых газов',
+    ],
+    cta: 'Заказать экологический проект',
+    Icon: FileText,
+  },
+  {
+    title: 'Разрешительная документация',
+    description: 'Помогаем компаниям подготовить и получить необходимую разрешительную экологическую документацию для законной деятельности предприятия.',
+    items: [
+      'Получение комплексного экологического разрешения — КЭР',
+      'Подготовка документов для экологических согласований',
+      'Сопровождение при прохождении экологических процедур',
+      'Подготовка документов для объектов I, II, III и IV категорий',
+      'Консультация по требованиям Экологического кодекса РК',
+      'Документальное сопровождение предприятия',
+    ],
+    cta: 'Получить консультацию',
+    Icon: FileCheck2,
+  },
+  {
+    title: 'Лабораторные исследования',
+    description: 'Проводим лабораторные исследования и замеры с выдачей протоколов. Исследования помогают предприятиям подтвердить экологическую безопасность, пройти проверки и подготовить нужную документацию.',
+    items: [
+      'Химический анализ воды',
+      'Химический анализ почвы и грунта',
+      'Анализ атмосферного воздуха',
+      'Анализ сточных и природных вод',
+      'Замеры промышленных выбросов в атмосферу',
+      'Замеры на границе санитарно-защитной зоны — СЗЗ',
+      'Замеры факторов производственной среды',
+      'Замеры выбросов загрязняющих веществ от автотранспорта',
+      'Проведение лабораторных анализов с выдачей протокола',
+    ],
+    cta: 'Заказать лабораторный анализ',
+    Icon: Beaker,
+  },
+  {
+    title: 'Обращение с отходами',
+    description: 'Организуем полный цикл работы с отходами: прием, сбор, вывоз, транспортировку, переработку, утилизацию и безопасное размещение. Работаем с соблюдением экологических и санитарных требований.',
+    items: [
+      'Прием отходов',
+      'Сбор отходов',
+      'Вывоз отходов',
+      'Транспортировка отходов с оформлением документов',
+      'Переработка отходов',
+      'Утилизация отходов',
+      'Захоронение отходов на полигоне',
+      'Работа с опасными и неопасными отходами',
+      'Документальное сопровождение операций с отходами',
+    ],
+    cta: 'Оставить заявку на вывоз отходов',
+    Icon: Recycle,
+  },
+  {
+    title: 'Транспортировка отходов',
+    description: 'Обеспечиваем экологически безопасную транспортировку отходов специализированным транспортом. Сопровождаем процесс необходимыми документами и соблюдаем требования безопасности.',
+    items: [
+      'Вывоз производственных отходов',
+      'Вывоз строительных отходов',
+      'Вывоз бытовых отходов',
+      'Транспортировка опасных отходов',
+      'Транспортировка неопасных отходов',
+      'Оформление сопроводительной документации',
+      'Организация безопасного маршрута перевозки',
+    ],
+    cta: 'Заказать транспортировку',
+    Icon: Truck,
+  },
+  {
+    title: 'Полигон и размещение отходов',
+    description: 'Предоставляем услуги по законному и безопасному размещению отходов на лицензированном полигоне. Это подходит для предприятий, строительных организаций, коммунальных служб и населения региона.',
+    items: [
+      'Прием отходов на законных основаниях',
+      'Размещение отходов на полигоне',
+      'Захоронение твердых бытовых отходов — ТБО',
+      'Захоронение производственных отходов',
+      'Полное документальное сопровождение',
+      'Контроль соблюдения экологических требований',
+    ],
+    cta: 'Узнать условия приема отходов',
+    Icon: MapPinned,
+  },
+  {
+    title: 'Услуги для предприятий',
+    description: 'Комплексное экологическое сопровождение для бизнеса, производственных объектов, строительных компаний, промышленных предприятий и организаций.',
+    itemsLabel: 'Что входит',
+    items: [
+      'Анализ экологических требований для объекта',
+      'Подготовка проектной документации',
+      'Лабораторные замеры и протоколы',
+      'Получение разрешений',
+      'Организация вывоза и утилизации отходов',
+      'Экологическая отчетность',
+      'Консультации по проверкам и требованиям законодательства',
+    ],
+    cta: 'Получить сопровождение',
+    Icon: Building2,
+  },
 ];
 
 const HomePage = () => {
-  const [quiz, setQuiz] = useState('Нужно сдать отчетность');
   const [sent, setSent] = useState(false);
+  const [expandedHomeService, setExpandedHomeService] = useState<string | null>(null);
 
   const submitLead = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -90,95 +199,73 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="bg-white px-5 py-20 sm:px-8">
-        <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-          <Reveal direction="right">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Все оформление онлайн</p>
-              <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Заявка, ЭЦП и оплата в одном кабинете</h2>
-              <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
-                Клиент создает заявку, подписывает договор электронной подписью, оплачивает счет онлайн и получает документы без визита в офис.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link to="/cabinet/orders/new"><Button>Оформить онлайн</Button></Link>
-                <Link to="/cabinet/payments"><Button variant="secondary">Посмотреть оплаты</Button></Link>
-              </div>
-            </div>
-          </Reveal>
-          <Reveal direction="left">
-            <div className="grid gap-4 sm:grid-cols-3">
-              {onlineSteps.map(([title, text, Icon]) => (
-                <div key={String(title)} className="rounded-[20px] border border-slate-200 bg-[#F7FBFD] p-5">
-                  <Icon className="text-eco-600" size={26} />
-                  <h3 className="mt-4 text-lg font-bold text-eco-900">{title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">{text}</p>
-                </div>
-              ))}
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      <section className="px-5 py-20 sm:px-8">
-        <div className="relative mx-auto grid max-w-7xl gap-8 overflow-hidden rounded-[32px] bg-gradient-to-br from-eco-900 via-eco-800 to-eco-600 p-6 shadow-2xl shadow-eco-900/12 sm:p-8 lg:grid-cols-[0.82fr_1fr] lg:p-10">
-          <div className="absolute inset-0 bg-sea bg-cover bg-center opacity-10" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(56,199,186,0.2),transparent_34rem)]" />
-          <Reveal direction="right">
-            <div className="relative flex h-full flex-col justify-between">
-              <div>
-              
-              <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">Подберите услугу за 1 минуту</h2>
-                <p className="mt-4 max-w-md leading-7 text-white/80">Выберите задачу, а мы покажем направления, с которых стоит начать.</p>
-              </div>
-              <div className="mt-8 grid gap-3 text-sm text-white/78 sm:grid-cols-3 lg:grid-cols-1">
-                {['Без лишних звонков', 'Понятный следующий шаг', 'Подбор под вашу задачу'].map((item) => (
-                  <span key={item} className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur">
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </Reveal>
-          <Reveal direction="left">
-            <div className="relative rounded-[24px] bg-white p-6 shadow-xl shadow-eco-900/16">
-              <h3 className="font-semibold text-slate-900">Какая у вас задача?</h3>
-              <div className="mt-5 flex flex-wrap gap-3">
-                {Object.keys(quizMap).map((item) => (
-                  <button key={item} onClick={() => setQuiz(item)} className={`rounded-full px-4 py-2 text-sm font-semibold transition ${quiz === item ? 'bg-eco-800 text-white shadow-lg shadow-eco-900/12' : 'bg-eco-50 text-eco-800 hover:bg-eco-100'}`}>
-                    {item}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-6 rounded-2xl border border-eco-100 bg-[#F7FBFD] p-5">
-                <p className="text-sm font-semibold text-eco-900">Рекомендуем:</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {quizMap[quiz].map((item) => <span key={item} className="rounded-full bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">{item}</span>)}
-                </div>
-                <a href="#lead" className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-eco-700">Оставить заявку <ArrowRight size={16} /></a>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      <section className="px-5 py-20 sm:px-8">
+      <section id="services" className="bg-white px-5 py-20 sm:px-8">
         <div className="mx-auto max-w-7xl">
-          <Reveal><h2 className="text-3xl font-bold text-eco-900 sm:text-4xl">Популярные услуги</h2></Reveal>
-          <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {services.slice(0, 6).map((service, index) => (
-              <Reveal key={service.id} delay={index * 0.05}>
-                <div className="card-hover flex h-full flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white">
-                  <div className="h-1.5 bg-gradient-to-r from-accent via-eco-200 to-eco-500" />
-                  <div className="flex flex-1 flex-col p-6">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-eco-500">{service.category}</p>
-                    <h3 className="mt-4 text-xl font-bold text-eco-900">{service.title}</h3>
-                    <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{service.description}</p>
-                    <div className="mt-6 flex gap-3">
-                      <Link to={`/services/${service.id}`} className="flex-1"><Button variant="secondary" className="w-full">Подробнее</Button></Link>
-                      <Link to="/cabinet/orders/new" className="flex-1"><Button className="w-full">Заказать</Button></Link>
-                    </div>
-                  </div>
+          <Reveal>
+            <div className="grid gap-8 lg:grid-cols-[0.8fr_1fr] lg:items-start">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Услуги</p>
+                <h2 className="mt-3 text-3xl font-bold leading-tight text-eco-900 sm:text-4xl">
+                  Экологические услуги полного цикла
+                </h2>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-eco-900 sm:text-2xl">
+                  Комплексные экологические услуги для бизнеса и организаций
+                </h3>
+                <p className="mt-4 text-base leading-7 text-slate-600">
+                  Мы сопровождаем клиентов на всех этапах экологической работы: от разработки проектной документации и лабораторных исследований до получения разрешений, транспортировки, переработки, утилизации и безопасного размещения отходов.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <a href="#lead"><Button>Получить консультацию</Button></a>
+                  <a href="#services-list"><Button variant="secondary" className="border-eco-200 bg-white text-eco-800 hover:bg-eco-50">Посмотреть все услуги</Button></a>
                 </div>
+              </div>
+            </div>
+          </Reveal>
+
+          <div id="services-list" className="mt-12 grid gap-6 lg:grid-cols-2">
+            {fullCycleServices.map(({ title, description, itemsLabel = 'Услуги внутри карточки', items, cta, Icon }, index) => (
+              <Reveal key={title} delay={index * 0.04}>
+                <article className="card-hover flex h-full flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-[#F7FBFD] shadow-lg shadow-eco-900/5">
+                  <div className="h-1.5 bg-gradient-to-r from-accent via-eco-200 to-eco-500" />
+                  <div className="flex flex-1 flex-col p-6 sm:p-7">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-eco-600 shadow-sm">
+                        <Icon size={25} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-eco-500">Направление {index + 1}</p>
+                        <h3 className="mt-2 text-xl font-bold text-eco-900">{title}</h3>
+                      </div>
+                    </div>
+                    <p className="mt-5 text-sm leading-6 text-slate-600">{description}</p>
+                    <div className="mt-6 overflow-hidden rounded-[18px] border border-eco-100 bg-white">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedHomeService(expandedHomeService === title ? null : title)}
+                        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left text-sm font-bold text-eco-900 transition hover:bg-eco-50"
+                        aria-expanded={expandedHomeService === title}
+                      >
+                        <span>{itemsLabel}</span>
+                        <ChevronDown className={`shrink-0 transition-transform ${expandedHomeService === title ? 'rotate-180' : ''}`} size={20} />
+                      </button>
+                      {expandedHomeService === title && (
+                        <ul className="border-t border-eco-100 px-5 py-4 space-y-3 text-sm leading-6 text-slate-700">
+                          {items.map((item) => (
+                            <li key={item} className="flex gap-3">
+                              <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-accent" />
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <a href="#lead" className="mt-6">
+                      <Button className="w-full">{cta}</Button>
+                    </a>
+                  </div>
+                </article>
               </Reveal>
             ))}
           </div>
@@ -192,32 +279,15 @@ const HomePage = () => {
           <Reveal>
             <div className="max-w-3xl">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Тарифы сопровождения</p>
-              <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Выберите формат для вашего бизнеса</h2>
+              <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Тарифы на экологическое сопровождение</h2>
+              <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
+                Выберите формат сопровождения: от разовой консультации и проверки документов до полного экологического аутсорсинга для предприятия.
+              </p>
             </div>
           </Reveal>
-          <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            {[
-              {
-                name: 'Малый бизнес',
-                price: 'от 150 000 ₸',
-                text: 'Для ИП, небольших компаний и разовых экологических задач.',
-                features: ['Первичная консультация', 'Одна заявка в работе', 'Базовая проверка документов', 'Рекомендации по следующим шагам'],
-              },
-              {
-                name: 'Средний бизнес',
-                price: 'от 350 000 ₸',
-                text: 'Для компаний с регулярной отчетностью, документами и несколькими объектами.',
-                features: ['До 3 активных заявок', 'Экологическая отчетность', 'Документы и разрешения', 'Комментарии специалиста в кабинете'],
-                popular: true,
-              },
-              {
-                name: 'Большой бизнес',
-                price: 'от 650 000 ₸',
-                text: 'Для предприятий, которым нужно комплексное сопровождение и контроль рисков.',
-                features: ['Комплексное сопровождение', 'Проверки и аудит', 'Приоритетная обработка заявок', 'Готовые документы под ключ'],
-              },
-            ].map((tariff, index) => (
-              <Reveal key={tariff.name} delay={index * 0.06}>
+          <div className="mt-10 grid gap-6 lg:grid-cols-4">
+            {tariffs.map((tariff, index) => (
+              <Reveal key={tariff.id} delay={index * 0.06}>
                 <div className={`card-hover relative flex h-full flex-col rounded-[24px] border bg-white p-7 shadow-lg shadow-eco-900/8 ${tariff.popular ? 'border-accent ring-4 ring-accent/12' : 'border-slate-200'}`}>
                   {tariff.popular && (
                     <span className="absolute right-5 top-5 rounded-full bg-accent px-3 py-1 text-xs font-bold text-eco-900">
@@ -226,10 +296,10 @@ const HomePage = () => {
                   )}
                   <ShieldCheck className="text-accent" size={26} />
                   <h3 className="mt-5 text-2xl font-bold text-eco-900">{tariff.name}</h3>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">{tariff.text}</p>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">{tariff.description}</p>
                   <p className="mt-6 text-3xl font-bold text-eco-900">{tariff.price}</p>
                   <ul className="mt-6 flex-1 space-y-3 text-sm text-slate-700">
-                    {tariff.features.map((feature) => (
+                    {tariff.features.slice(0, 5).map((feature) => (
                       <li key={feature} className="flex gap-3">
                         <span className="mt-1 h-2 w-2 rounded-full bg-accent" />
                         <span>{feature}</span>
@@ -237,12 +307,20 @@ const HomePage = () => {
                     ))}
                   </ul>
                   <a href="#lead" className="mt-7">
-                    <Button className="w-full">Выбрать тариф</Button>
+                    <Button className="w-full">{tariff.cta}</Button>
                   </a>
                 </div>
               </Reveal>
             ))}
           </div>
+          <Reveal>
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-[20px] border border-eco-100 bg-white p-5">
+              <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                Стоимость зависит от категории объекта, количества документов, объема отходов, необходимости лабораторных исследований, региона и сроков выполнения.
+              </p>
+              <Link to="/tariffs"><Button variant="secondary" className="border-eco-200 bg-white text-eco-800 hover:bg-eco-50">Все тарифы</Button></Link>
+            </div>
+          </Reveal>
         </div>
       </section>
 
