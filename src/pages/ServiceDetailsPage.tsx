@@ -1,6 +1,7 @@
 import { Link, Navigate, useParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
+import SEO from '../components/SEO';
 import { services } from '../data/mockData';
 
 const ServiceDetailsPage = () => {
@@ -10,6 +11,7 @@ const ServiceDetailsPage = () => {
 
   return (
     <div>
+      <SEO title={`${service.title} | ECOPROGRESS GROUP`} description={service.description} />
       <section className="relative overflow-hidden px-5 py-24 text-white sm:px-8">
         <div className="absolute inset-0 bg-windmill bg-cover bg-center" />
         <div className="absolute inset-0 bg-eco-900/80" />

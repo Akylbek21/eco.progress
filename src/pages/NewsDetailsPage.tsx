@@ -1,5 +1,6 @@
 import { Navigate, useParams } from 'react-router-dom';
 import Reveal from '../components/animations/Reveal';
+import SEO from '../components/SEO';
 import { news } from '../data/mockData';
 
 const NewsDetailsPage = () => {
@@ -8,6 +9,7 @@ const NewsDetailsPage = () => {
   if (!item) return <Navigate to="/news" replace />;
   return (
     <article className="bg-white">
+      <SEO title={`${item.title} | ECOPROGRESS GROUP`} description={item.excerpt} />
       <section className="relative overflow-hidden px-5 py-24 text-white sm:px-8">
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${item.image})` }} />
         <div className="absolute inset-0 bg-eco-900/78" />

@@ -4,7 +4,7 @@ import { Bell, BriefcaseBusiness, FileText, Home, LogOut, Menu, UserRound, Users
 import { logout } from '../services/authService';
 
 const links = [
-  { label: 'Dashboard', path: '/staff', icon: Home },
+  { label: 'Обзор', path: '/staff', icon: Home },
   { label: 'Заявки', path: '/staff/orders', icon: BriefcaseBusiness },
   { label: 'Клиенты', path: '/staff/clients', icon: Users },
   { label: 'Документы', path: '/staff/documents', icon: FileText },

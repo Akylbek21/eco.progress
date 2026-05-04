@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ClipboardCheck, FileText, FlaskConical, Recycle, ShieldCheck } from 'lucide-react';
 import Reveal from '../components/animations/Reveal';
 import Button from '../components/ui/Button';
+import SEO from '../components/SEO';
 import { tariffs } from '../data/mockData';
 
 const modes = ['Все', 'Разовая задача', 'Ежемесячное сопровождение'] as const;
@@ -26,6 +27,7 @@ const TariffsPage = () => {
 
   return (
     <div className="bg-[#F7FBFD]">
+      <SEO title="Тарифы на экологическое сопровождение | ECOPROGRESS GROUP" description="Тарифы ECOPROGRESS GROUP на консультации, экологические документы, лабораторные исследования, отходы и сопровождение бизнеса." />
       <section className="relative isolate overflow-hidden px-5 py-24 text-white sm:px-8">
         <div className="absolute inset-0 -z-30 bg-windmill bg-cover bg-center" />
         <div className="absolute inset-0 -z-20 bg-eco-900/80" />

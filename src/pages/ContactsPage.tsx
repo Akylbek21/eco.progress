@@ -1,35 +1,34 @@
-import { FormEvent, useState } from 'react';
 import { AtSign, Clock, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
-import { companyContacts } from '../data/mockData';
+import LeadForm from '../components/LeadForm';
+import SEO from '../components/SEO';
+import { company, getWhatsAppUrl } from '../config/company';
+import { trackPhoneClick, trackWhatsAppClick } from '../services/analytics';
 
 const ContactsPage = () => {
-  const [sent, setSent] = useState(false);
-
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSent(true);
-    event.currentTarget.reset();
-  };
-
   const items = [
-    ['Телефон', companyContacts.phone, Phone],
-    ['WhatsApp', companyContacts.whatsappDisplay, MessageCircle],
-    ['Email', companyContacts.email, Mail],
-    ['Адрес', companyContacts.address, MapPin],
-    ['График работы', companyContacts.schedule, Clock],
-    ['Instagram', companyContacts.instagram, AtSign],
+    ['Телефон', company.phone, Phone],
+    ['WhatsApp', company.whatsappDisplay, MessageCircle],
+    ['Email', company.email, Mail],
+    ['Адрес', company.address, MapPin],
+    ['График работы', company.schedule, Clock],
+    ['Instagram', company.instagram, AtSign],
   ] as const;
 
   return (
     <section className="bg-[#F7FBFD] px-4 py-16 sm:px-8 sm:py-20">
+      <SEO title="Контакты | ECOPROGRESS GROUP" description="Контакты ECOPROGRESS GROUP: телефон, WhatsApp, email, адрес и форма консультации по экологическим услугам." />
       <div className="mx-auto max-w-7xl">
         <Reveal>
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Контакты</p>
-            <h1 className="mt-3 text-4xl font-bold text-eco-900">Свяжитесь с ECOPROGRESS GROUP</h1>
-            <p className="mt-4 leading-7 text-slate-600">Напишите нам, если нужна консультация, расчет стоимости или помощь с выбором услуги.</p>
+            <h1 className="mt-3 text-4xl font-bold text-eco-900">Напишите нам — специалист подскажет, какая услуга нужна именно вам</h1>
+            <p className="mt-4 leading-7 text-slate-600">Свяжитесь с нами для консультации, расчета стоимости или быстрой проверки ситуации.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a href={company.phoneHref} onClick={() => trackPhoneClick({ placement: 'contacts_page' })}><Button>Позвонить</Button></a>
+              <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'contacts_page' })}><Button variant="secondary">Написать в WhatsApp</Button></a>
+            </div>
           </div>
         </Reveal>
         <div className="mt-10 grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
@@ -42,33 +41,15 @@ const ContactsPage = () => {
                   <p className="mt-2 break-words font-bold text-eco-900">{value}</p>
                 </div>
               ))}
-              <a href={companyContacts.mapsUrl} target="_blank" rel="noreferrer" className="rounded-[20px] border border-eco-100 bg-eco-900 p-5 text-white shadow-sm sm:col-span-2">
+              <a href={company.mapsUrl} target="_blank" rel="noreferrer" className="rounded-[20px] border border-eco-100 bg-eco-900 p-5 text-white shadow-sm sm:col-span-2">
                 <MapPin className="text-accent" size={24} />
                 <p className="mt-4 font-bold">Открыть карту</p>
-                <p className="mt-2 text-sm text-white/70">Точная ссылка 2GIS / Google Maps будет добавлена после подтверждения адреса.</p>
+                <p className="mt-2 text-sm text-white/70">Откроется карта с расположением офиса ECOPROGRESS GROUP.</p>
               </a>
             </div>
           </Reveal>
           <Reveal direction="left">
-            <form onSubmit={submit} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-xl shadow-eco-900/8 sm:p-7">
-              <h2 className="text-2xl font-bold text-eco-900">Получить консультацию</h2>
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                <label className="text-sm font-semibold text-slate-700">Имя<input required className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
-                <label className="text-sm font-semibold text-slate-700">Телефон / WhatsApp<input required className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
-                <label className="text-sm font-semibold text-slate-700 md:col-span-2">Что нужно?
-                  <select className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3">
-                    <option>Консультация</option>
-                    <option>Экологические документы</option>
-                    <option>Вывоз отходов</option>
-                    <option>Лабораторные анализы</option>
-                    <option>Не знаю, нужна помощь</option>
-                  </select>
-                </label>
-              </div>
-              <label className="mt-4 block text-sm font-semibold text-slate-700">Комментарий<textarea className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} /></label>
-              <Button className="mt-5 w-full">Отправить</Button>
-              {sent && <p className="mt-4 rounded-2xl bg-eco-50 p-4 text-sm font-semibold text-eco-900">Спасибо! Мы свяжемся с вами.</p>}
-            </form>
+            <LeadForm source="contacts_page" title="Получить консультацию" />
           </Reveal>
         </div>
       </div>

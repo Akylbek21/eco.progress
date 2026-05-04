@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import PublicLayout from './layouts/PublicLayout';
 import CabinetLayout from './layouts/CabinetLayout';
 import StaffLayout from './layouts/StaffLayout';
@@ -8,6 +8,7 @@ import ScrollToTop from './components/ScrollToTop';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ServicesPage from './pages/ServicesPage';
+import ServiceLandingPage from './pages/ServiceLandingPage';
 import ServiceDetailsPage from './pages/ServiceDetailsPage';
 import EmployeesPage from './pages/EmployeesPage';
 import TariffsPage from './pages/TariffsPage';
@@ -18,6 +19,7 @@ import RegisterPage from './pages/RegisterPage';
 import FaqPage from './pages/FaqPage';
 import ContactsPage from './pages/ContactsPage';
 import AdminPage from './pages/AdminPage';
+import NotFoundPage from './pages/NotFoundPage';
 import {
   CabinetCompanyPage,
   CabinetDashboardPage,
@@ -54,6 +56,12 @@ function App() {
         <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
         <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
         <Route path="/services" element={<PublicLayout><ServicesPage /></PublicLayout>} />
+        <Route path="/services/ecological-documents" element={<PublicLayout><ServiceLandingPage slug="ecological-documents" /></PublicLayout>} />
+        <Route path="/services/waste-transportation" element={<PublicLayout><ServiceLandingPage slug="waste-transportation" /></PublicLayout>} />
+        <Route path="/services/waste-recycling" element={<PublicLayout><ServiceLandingPage slug="waste-recycling" /></PublicLayout>} />
+        <Route path="/services/laboratory-tests" element={<PublicLayout><ServiceLandingPage slug="laboratory-tests" /></PublicLayout>} />
+        <Route path="/services/poligon-tbo" element={<PublicLayout><ServiceLandingPage slug="poligon-tbo" /></PublicLayout>} />
+        <Route path="/services/environmental-audit" element={<PublicLayout><ServiceLandingPage slug="environmental-audit" /></PublicLayout>} />
         <Route path="/services/:id" element={<PublicLayout><ServiceDetailsPage /></PublicLayout>} />
         <Route path="/tariffs" element={<PublicLayout><TariffsPage /></PublicLayout>} />
         <Route path="/employees" element={<PublicLayout><EmployeesPage /></PublicLayout>} />
@@ -83,7 +91,7 @@ function App() {
         <Route path="/staff/profile" element={<StaffLayout><StaffProfilePage /></StaffLayout>} />
 
         <Route path="/admin" element={<AdminLayout><AdminPage /></AdminLayout>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
       </Routes>
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-[20px] border border-slate-200 bg-white px-5 py-4 shadow-2xl shadow-eco-900/15">

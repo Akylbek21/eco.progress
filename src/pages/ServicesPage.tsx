@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, MessageCircle } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
+import LeadForm from '../components/LeadForm';
+import SEO from '../components/SEO';
 import { services, type ServiceCategory } from '../data/mockData';
+import { getWhatsAppUrl } from '../config/company';
+import { trackWhatsAppClick } from '../services/analytics';
 
 const categories: Array<'Все' | ServiceCategory> = ['Все', 'Проектирование', 'Разрешения', 'Лаборатория', 'Отходы', 'Предприятия'];
 
@@ -69,12 +73,21 @@ const ServicesPage = () => {
 
   return (
     <div>
+      <SEO title="Услуги ECOPROGRESS GROUP | Экологические документы, отходы, лаборатория" description="Полный список экологических услуг: документы, лабораторные исследования, вывоз и утилизация отходов, полигон ТБО и сопровождение проверок." />
       <section className="relative overflow-hidden px-4 py-16 text-white sm:px-8 sm:py-24">
         <div className="absolute inset-0 bg-windmill bg-cover bg-center" />
         <div className="absolute inset-0 bg-eco-900/78" />
         <div className="relative mx-auto max-w-7xl">
           <Reveal><h1 className="max-w-3xl text-3xl font-bold leading-tight sm:text-6xl">Экологические услуги полного цикла</h1></Reveal>
           <Reveal delay={0.1}><p className="mt-4 max-w-2xl text-base leading-7 text-white/78 sm:mt-5 sm:text-lg">От проектной документации и лабораторных исследований до утилизации, транспортировки и размещения отходов на полигоне.</p></Reveal>
+          <Reveal delay={0.16}>
+            <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
+              <Link to="/cabinet/orders/new"><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Оставить заявку</Button></Link>
+              <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'services_page_hero' })} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white hover:bg-white/15 sm:w-auto">
+                <MessageCircle size={18} /> WhatsApp
+              </a>
+            </div>
+          </Reveal>
         </div>
       </section>
       <section className="bg-eco-50 px-4 py-10 sm:px-8 sm:py-14">
@@ -228,6 +241,20 @@ const ServicesPage = () => {
                 <Link to={`/services/${selectedService.id}`} className="w-full sm:w-auto"><Button variant="secondary" className="w-full sm:w-auto">Подробнее об услуге</Button></Link>
               </div>
             </div>
+          </Reveal>
+        </div>
+      </section>
+      <section className="bg-[#F7FBFD] px-4 py-16 sm:px-8 sm:py-20">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.8fr_1.2fr]">
+          <Reveal direction="right">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Не нашли нужную услугу?</p>
+              <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Оставьте заявку — специалист подскажет решение</h2>
+              <p className="mt-4 leading-7 text-slate-600">Можно коротко описать ситуацию без специальных терминов. Мы сами подскажем, какие документы, вывоз или анализы нужны.</p>
+            </div>
+          </Reveal>
+          <Reveal direction="left">
+            <LeadForm source="services_page_bottom" />
           </Reveal>
         </div>
       </section>

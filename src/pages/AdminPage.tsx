@@ -8,7 +8,7 @@ const AdminPage = () => {
     ['сотрудники', employees.map((item) => item.name)],
     ['клиенты', clients.map((item) => item.name)],
     ['пользователи', [...users, ...staffUsers].map((item) => `${item.email} · ${item.role}`)],
-    ['настройки', ['Контакты', 'Главная страница', 'Публичное меню', 'Mock localStorage']],
+    ['настройки', ['Контакты', 'Главная страница', 'Публичное меню', 'Хранилище заявок']],
   ];
 
   return (

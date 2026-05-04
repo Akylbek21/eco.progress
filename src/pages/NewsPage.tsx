@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
 import Reveal from '../components/animations/Reveal';
+import SEO from '../components/SEO';
 import { news } from '../data/mockData';
 
 const NewsPage = () => (
   <div className="bg-eco-50">
+    <SEO title="Новости | ECOPROGRESS GROUP" description="Новости и материалы ECOPROGRESS GROUP об экологических документах, отчетности, проверках и сопровождении бизнеса." />
     <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
       <Reveal><h1 className="text-4xl font-bold text-eco-900 sm:text-5xl">Новости</h1></Reveal>
       <div className="mt-10 grid gap-6 md:grid-cols-3">

@@ -1,15 +1,17 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { MessageCircle, Menu, X } from 'lucide-react';
 import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
-import { companyContacts } from '../data/mockData';
+import { company, getWhatsAppUrl } from '../config/company';
+import { trackPhoneClick, trackWhatsAppClick } from '../services/analytics';
 
 const navItems = [
   { label: 'Главная', path: '/' },
+  { label: 'О компании', path: '/about' },
   { label: 'Услуги', path: '/services' },
   { label: 'Сотрудники', path: '/employees' },
-  { label: 'Тарифы', path: '/tariffs' },
+  { label: 'Как это работает', path: '/#how-it-works' },
   { label: 'Контакты', path: '/contacts' },
 ];
 
@@ -34,7 +36,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               <span className="block text-xs tracking-[0.22em] text-eco-500">GROUP</span>
             </span>
           </Link>
-          <nav className="hidden items-center gap-6 lg:flex">
+          <nav className="hidden items-center gap-5 xl:gap-6 lg:flex">
             {navItems.map((item) => (
               <NavLink
                 key={item.path}
@@ -103,32 +105,46 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 <span className="block text-sm tracking-[0.24em] text-eco-200">GROUP</span>
               </h3>
               <p className="mt-4 max-w-md text-sm leading-6 text-white/75">
-                Экологические документы, вывоз отходов, лабораторные исследования и сопровождение бизнеса с понятным личным кабинетом.
+                Экологические документы, лаборатория, вывоз и утилизация отходов для бизнеса.
               </p>
-              <p className="mt-5 text-xs leading-5 text-white/45">Юридическая информация: реквизиты и лицензии будут добавлены после подключения backend.</p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'footer' })} className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-bold text-eco-900">
+                  <MessageCircle size={17} /> WhatsApp
+                </a>
+                <Link to="/cabinet/orders/new" className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">Оставить заявку</Link>
+              </div>
             </div>
             <div>
               <h4 className="text-sm font-semibold uppercase text-eco-200">Услуги</h4>
               <ul className="mt-4 space-y-3 text-sm text-white/75">
-                {['Экологические документы', 'Вывоз и утилизация отходов', 'Лабораторные анализы', 'Сопровождение проверок'].map((item) => <li key={item}><Link to="/services" className="hover:text-white">{item}</Link></li>)}
+                <li><Link to="/services/ecological-documents" className="hover:text-white">Экологические документы</Link></li>
+                <li><Link to="/services/waste-transportation" className="hover:text-white">Вывоз отходов</Link></li>
+                <li><Link to="/services/waste-recycling" className="hover:text-white">Утилизация отходов</Link></li>
+                <li><Link to="/services/laboratory-tests" className="hover:text-white">Лабораторные анализы</Link></li>
+                <li><Link to="/services/poligon-tbo" className="hover:text-white">Полигон ТБО</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="text-sm font-semibold uppercase text-eco-200">Контакты</h4>
               <ul className="mt-4 space-y-3 text-sm text-white/75">
-                <li>{companyContacts.phone}</li>
-                <li>WhatsApp: {companyContacts.whatsappDisplay}</li>
-                <li>{companyContacts.email}</li>
-                <li>{companyContacts.address}</li>
-                <li>{companyContacts.schedule}</li>
+                <li><a href={company.phoneHref} onClick={() => trackPhoneClick({ placement: 'footer' })} className="hover:text-white">{company.phone}</a></li>
+                <li>WhatsApp: {company.whatsappDisplay}</li>
+                <li>{company.email}</li>
+                <li>{company.address}</li>
+                <li>{company.schedule}</li>
               </ul>
             </div>
             <div>
-              <h4 className="text-sm font-semibold uppercase text-eco-200">Сервис</h4>
+              <h4 className="text-sm font-semibold uppercase text-eco-200">Компания</h4>
               <div className="mt-4 space-y-3 text-sm text-white/75">
-                <Link to="/login" className="block hover:text-white">Кабинет клиента</Link>
+                <Link to="/tariffs" className="block hover:text-white">Тарифы</Link>
+                <Link to="/employees" className="block hover:text-white">Сотрудники</Link>
                 <Link to="/faq" className="block hover:text-white">FAQ</Link>
                 <Link to="/contacts" className="block hover:text-white">Контакты</Link>
+              </div>
+              <h4 className="mt-7 text-sm font-semibold uppercase text-eco-200">Личный кабинет</h4>
+              <div className="mt-4 space-y-3 text-sm text-white/75">
+                <Link to="/login" className="block hover:text-white">Кабинет клиента</Link>
                 <Link to="/staff/login" className="block text-xs text-white/45 hover:text-white">Вход для сотрудников</Link>
               </div>
             </div>
