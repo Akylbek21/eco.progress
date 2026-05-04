@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart3, Beaker, Building2, ChevronDown, ClipboardCheck, FileCheck2, FileText, MapPinned, Recycle, ShieldCheck, Sparkles, Truck, type LucideIcon } from 'lucide-react';
+import { BarChart3, Beaker, Building2, ClipboardCheck, FileCheck2, FileText, MapPinned, Recycle, ShieldCheck, Sparkles, Truck, type LucideIcon } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import EcoDashboardPreview from '../components/content/EcoDashboardPreview';
@@ -14,6 +14,7 @@ const helpCards: Array<[string, string, LucideIcon]> = [
 ];
 
 const fullCycleServices: Array<{
+  id: string;
   title: string;
   description: string;
   itemsLabel?: string;
@@ -22,6 +23,7 @@ const fullCycleServices: Array<{
   Icon: LucideIcon;
 }> = [
   {
+    id: 'eco-design',
     title: 'Экологическое проектирование',
     description: 'Разрабатываем экологическую документацию для предприятий, строительных объектов, производственных площадок и организаций. Помогаем пройти необходимые согласования и подготовить документы в соответствии с требованиями Экологического кодекса Республики Казахстан.',
     items: [
@@ -42,6 +44,7 @@ const fullCycleServices: Array<{
     Icon: FileText,
   },
   {
+    id: 'permits',
     title: 'Разрешительная документация',
     description: 'Помогаем компаниям подготовить и получить необходимую разрешительную экологическую документацию для законной деятельности предприятия.',
     items: [
@@ -56,6 +59,7 @@ const fullCycleServices: Array<{
     Icon: FileCheck2,
   },
   {
+    id: 'laboratory',
     title: 'Лабораторные исследования',
     description: 'Проводим лабораторные исследования и замеры с выдачей протоколов. Исследования помогают предприятиям подтвердить экологическую безопасность, пройти проверки и подготовить нужную документацию.',
     items: [
@@ -73,6 +77,7 @@ const fullCycleServices: Array<{
     Icon: Beaker,
   },
   {
+    id: 'waste-management',
     title: 'Обращение с отходами',
     description: 'Организуем полный цикл работы с отходами: прием, сбор, вывоз, транспортировку, переработку, утилизацию и безопасное размещение. Работаем с соблюдением экологических и санитарных требований.',
     items: [
@@ -90,6 +95,7 @@ const fullCycleServices: Array<{
     Icon: Recycle,
   },
   {
+    id: 'waste-transportation',
     title: 'Транспортировка отходов',
     description: 'Обеспечиваем экологически безопасную транспортировку отходов специализированным транспортом. Сопровождаем процесс необходимыми документами и соблюдаем требования безопасности.',
     items: [
@@ -105,6 +111,7 @@ const fullCycleServices: Array<{
     Icon: Truck,
   },
   {
+    id: 'landfill',
     title: 'Полигон и размещение отходов',
     description: 'Предоставляем услуги по законному и безопасному размещению отходов на лицензированном полигоне. Это подходит для предприятий, строительных организаций, коммунальных служб и населения региона.',
     items: [
@@ -119,6 +126,7 @@ const fullCycleServices: Array<{
     Icon: MapPinned,
   },
   {
+    id: 'enterprise-support',
     title: 'Услуги для предприятий',
     description: 'Комплексное экологическое сопровождение для бизнеса, производственных объектов, строительных компаний, промышленных предприятий и организаций.',
     itemsLabel: 'Что входит',
@@ -136,9 +144,11 @@ const fullCycleServices: Array<{
   },
 ];
 
+const popularServiceIds = ['eco-design', 'laboratory', 'waste-management', 'enterprise-support'];
+
 const HomePage = () => {
   const [sent, setSent] = useState(false);
-  const [expandedHomeService, setExpandedHomeService] = useState<string | null>(null);
+  const popularServices = fullCycleServices.filter((service) => popularServiceIds.includes(service.id));
 
   const submitLead = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -204,68 +214,53 @@ const HomePage = () => {
           <Reveal>
             <div className="grid gap-8 lg:grid-cols-[0.8fr_1fr] lg:items-start">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Услуги</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Популярные услуги</p>
                 <h2 className="mt-3 text-3xl font-bold leading-tight text-eco-900 sm:text-4xl">
-                  Экологические услуги полного цикла
+                  Часто выбираемые направления
                 </h2>
               </div>
               <div>
-                <h3 className="text-xl font-bold text-eco-900 sm:text-2xl">
-                  Комплексные экологические услуги для бизнеса и организаций
-                </h3>
+                <h3 className="text-xl font-bold text-eco-900 sm:text-2xl">Быстрый вход в полный каталог услуг</h3>
                 <p className="mt-4 text-base leading-7 text-slate-600">
-                  Мы сопровождаем клиентов на всех этапах экологической работы: от разработки проектной документации и лабораторных исследований до получения разрешений, транспортировки, переработки, утилизации и безопасного размещения отходов.
+                  На главной показываем основные направления. Полный набор и выбор конкретных работ находится на странице услуг.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <a href="#lead"><Button>Получить консультацию</Button></a>
-                  <a href="#services-list"><Button variant="secondary" className="border-eco-200 bg-white text-eco-800 hover:bg-eco-50">Посмотреть все услуги</Button></a>
+                  <Link to="/services"><Button variant="secondary" className="border-eco-200 bg-white text-eco-800 hover:bg-eco-50">Все услуги</Button></Link>
                 </div>
               </div>
             </div>
           </Reveal>
 
           <div id="services-list" className="mt-12 grid gap-6 lg:grid-cols-2">
-            {fullCycleServices.map(({ title, description, itemsLabel = 'Услуги внутри карточки', items, cta, Icon }, index) => (
-              <Reveal key={title} delay={index * 0.04}>
-                <article className="card-hover flex h-full flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-[#F7FBFD] shadow-lg shadow-eco-900/5">
+            {popularServices.map(({ id, title, description, items, Icon }, index) => (
+              <Reveal key={id} delay={index * 0.04}>
+                <Link to={`/services#service-${id}`} className="group card-hover flex h-full flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-[#F7FBFD] shadow-lg shadow-eco-900/5">
                   <div className="h-1.5 bg-gradient-to-r from-accent via-eco-200 to-eco-500" />
                   <div className="flex flex-1 flex-col p-6 sm:p-7">
                     <div className="flex items-start gap-4">
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-eco-600 shadow-sm">
                         <Icon size={25} />
                       </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-eco-500">Направление {index + 1}</p>
-                        <h3 className="mt-2 text-xl font-bold text-eco-900">{title}</h3>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-eco-500">Популярное направление {index + 1}</p>
+                        <h3 className="mt-2 text-xl font-bold text-eco-900 transition group-hover:text-eco-600">{title}</h3>
                       </div>
                     </div>
                     <p className="mt-5 text-sm leading-6 text-slate-600">{description}</p>
-                    <div className="mt-6 overflow-hidden rounded-[18px] border border-eco-100 bg-white">
-                      <button
-                        type="button"
-                        onClick={() => setExpandedHomeService(expandedHomeService === title ? null : title)}
-                        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left text-sm font-bold text-eco-900 transition hover:bg-eco-50"
-                        aria-expanded={expandedHomeService === title}
-                      >
-                        <span>{itemsLabel}</span>
-                        <ChevronDown className={`shrink-0 transition-transform ${expandedHomeService === title ? 'rotate-180' : ''}`} size={20} />
-                      </button>
-                      {expandedHomeService === title && (
-                        <ul className="border-t border-eco-100 px-5 py-4 space-y-3 text-sm leading-6 text-slate-700">
-                          {items.map((item) => (
-                            <li key={item} className="flex gap-3">
-                              <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-accent" />
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                    <ul className="mt-6 space-y-3 text-sm leading-6 text-slate-700">
+                      {items.slice(0, 3).map((item) => (
+                        <li key={item} className="flex gap-3">
+                          <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-accent" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-eco-600 px-5 py-3 text-sm font-semibold text-white transition group-hover:bg-eco-700">
+                      Перейти к выбору
                     </div>
-                    <a href="#lead" className="mt-6">
-                      <Button className="w-full">{cta}</Button>
-                    </a>
                   </div>
-                </article>
+                </Link>
               </Reveal>
             ))}
           </div>

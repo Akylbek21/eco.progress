@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, CreditCard, FileSignature, LockKeyhole } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
@@ -58,13 +58,33 @@ const PageList = ({ title, children }: { title: string; children: React.ReactNod
 
 export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string) => void }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = getCurrentUser();
+  const serviceFromUrl = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const serviceId = params.get('service') ?? '';
+    return services.some((service) => service.id === serviceId) ? serviceId : services[0]?.id ?? '';
+  }, [location.search]);
+  const itemsFromUrl = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get('items') ?? '').split(',').map(Number).filter((index) => Number.isInteger(index) && index >= 0);
+  }, [location.search]);
+  const [selectedOrderServiceId, setSelectedOrderServiceId] = useState<string>(serviceFromUrl);
+  const [selectedOrderItems, setSelectedOrderItems] = useState<string[]>([]);
+  const selectedOrderService = services.find((service) => service.id === selectedOrderServiceId) ?? services[0];
+  useEffect(() => {
+    setSelectedOrderServiceId(serviceFromUrl);
+    const service = services.find((item) => item.id === serviceFromUrl) ?? services[0];
+    setSelectedOrderItems(itemsFromUrl.map((index) => service.includes[index]).filter(Boolean));
+  }, [serviceFromUrl, itemsFromUrl]);
+  const toggleOrderItem = (item: string) => {
+    setSelectedOrderItems((current) => (current.includes(item) ? current.filter((value) => value !== item) : [...current, item]));
+  };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const serviceId = String(form.get('serviceId'));
-    const service = services.find((item) => item.id === serviceId) ?? services[0];
     const file = form.get('file') as File | null;
+    const selectedItemsText = selectedOrderItems.length > 0 ? `\n\nВыбранные работы:\n${selectedOrderItems.map((item) => `- ${item}`).join('\n')}` : '';
     const order = await createOrder({
       user,
       contactPerson: String(form.get('contactPerson')),
@@ -72,10 +92,10 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
       email: String(form.get('email')),
       companyName: String(form.get('companyName')),
       bin: String(form.get('bin')),
-      serviceId,
-      service: service.title,
+      serviceId: selectedOrderService.id,
+      service: selectedOrderItems.length > 0 ? `${selectedOrderService.title}: ${selectedOrderItems.join('; ')}` : selectedOrderService.title,
       urgency: String(form.get('urgency')),
-      comment: String(form.get('comment')),
+      comment: `${String(form.get('comment'))}${selectedItemsText}`,
       fileName: file?.name,
     });
     onNotify?.('Заявка создана. Сотрудник проверит данные и отправит договор со счетом.');
@@ -91,9 +111,42 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
           <Input name="email" label="Email" type="email" defaultValue={user?.email} />
           <Input name="companyName" label="Название компании" defaultValue={user?.companyName ?? user?.name} />
           <Input name="bin" label="БИН" defaultValue={user?.bin} />
-          <label className="text-sm font-semibold text-slate-700">Услуга<select name="serviceId" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3">{services.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}</select></label>
           <label className="text-sm font-semibold text-slate-700">Срочность<select name="urgency" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3"><option>Стандартная</option><option>Срочно</option><option>Не срочно</option></select></label>
           <label className="text-sm font-semibold text-slate-700">Прикрепить файл<input name="file" type="file" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
+        </div>
+        <div className="mt-5 rounded-2xl border border-eco-100 bg-eco-50 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-bold text-eco-900">Направление и конкретные работы</p>
+            <p className="text-sm font-semibold text-eco-600">Выбрано работ: {selectedOrderItems.length}</p>
+          </div>
+          <label className="mt-4 block text-sm font-semibold text-slate-700">
+            Направление
+            <select
+              value={selectedOrderServiceId}
+              onChange={(event) => {
+                setSelectedOrderServiceId(event.target.value);
+                setSelectedOrderItems([]);
+              }}
+              className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+            >
+              {services.map((service) => (
+                <option key={service.id} value={service.id}>{service.title}</option>
+              ))}
+            </select>
+          </label>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {selectedOrderService.includes.map((item) => (
+              <label key={item} className={`flex cursor-pointer items-start gap-3 rounded-2xl border bg-white p-4 text-sm transition ${selectedOrderItems.includes(item) ? 'border-accent ring-2 ring-accent/20' : 'border-slate-200 hover:border-eco-200'}`}>
+                <input
+                  type="checkbox"
+                  checked={selectedOrderItems.includes(item)}
+                  onChange={() => toggleOrderItem(item)}
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-[#38C7BA]"
+                />
+                <span className="leading-6 text-slate-700">{item}</span>
+              </label>
+            ))}
+          </div>
         </div>
         <div className="mt-5 grid gap-3 rounded-2xl border border-eco-100 bg-eco-50 p-4 text-sm text-slate-700 md:grid-cols-3">
           <div className="flex items-center gap-3"><FileSignature size={18} className="text-eco-700" />Сотрудник проверит заявку</div>
