@@ -2,15 +2,15 @@ import { ReactNode, useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import Button from '../components/ui/Button';
+import WhatsAppButton from '../components/WhatsAppButton';
+import { companyContacts } from '../data/mockData';
 
 const navItems = [
   { label: 'Главная', path: '/' },
-  { label: 'О компании', path: '/about' },
   { label: 'Услуги', path: '/services' },
-  { label: 'Тарифы', path: '/tariffs' },
   { label: 'Сотрудники', path: '/employees' },
-  { label: 'Новости', path: '/news' },
-  { label: 'Кабинет клиента', path: '/cabinet' },
+  { label: 'Тарифы', path: '/tariffs' },
+  { label: 'Контакты', path: '/contacts' },
 ];
 
 const PublicLayout = ({ children }: { children: ReactNode }) => {
@@ -54,8 +54,8 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
             <Link to="/login">
               <Button variant="secondary" className="border-eco-200 bg-white text-eco-800 hover:bg-eco-50">Войти</Button>
             </Link>
-            <Link to="/register">
-              <Button className="bg-accent text-eco-900 hover:bg-accent/90">Регистрация</Button>
+            <Link to="/cabinet/orders/new">
+              <Button className="bg-accent text-eco-900 hover:bg-accent/90">Оставить заявку</Button>
             </Link>
           </div>
           <button
@@ -82,17 +82,19 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                   {item.label}
                 </NavLink>
               ))}
-              <Link to="/register" onClick={() => setMenuOpen(false)} className="block rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-eco-900">
-                Регистрация
+              <Link to="/login" onClick={() => setMenuOpen(false)} className="block rounded-2xl border border-eco-100 px-4 py-3 text-sm font-semibold text-eco-800">
+                Войти
+              </Link>
+              <Link to="/cabinet/orders/new" onClick={() => setMenuOpen(false)} className="block rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-eco-900">
+                Оставить заявку
               </Link>
             </div>
           </div>
         )}
       </header>
       <main>{children}</main>
+      <WhatsAppButton />
       <footer className="relative overflow-hidden bg-eco-900 text-white">
-        <div className="absolute inset-0 bg-sea bg-cover bg-center opacity-35" />
-        <div className="absolute inset-0 bg-eco-900/80" />
         <div className="relative mx-auto max-w-7xl px-5 py-14 sm:px-8">
           <div className="grid gap-10 lg:grid-cols-[1.3fr_0.8fr_1fr_1fr]">
             <div>
@@ -101,37 +103,37 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 <span className="block text-sm tracking-[0.24em] text-eco-200">GROUP</span>
               </h3>
               <p className="mt-4 max-w-md text-sm leading-6 text-white/75">
-                Экологическое сопровождение бизнеса: документы, отчетность, проверки, договоры, ЭЦП и оплата в онлайн-кабинете.
+                Экологические документы, вывоз отходов, лабораторные исследования и сопровождение бизнеса с понятным личным кабинетом.
               </p>
+              <p className="mt-5 text-xs leading-5 text-white/45">Юридическая информация: реквизиты и лицензии будут добавлены после подключения backend.</p>
             </div>
             <div>
-              <h4 className="text-sm font-semibold uppercase text-eco-200">Навигация</h4>
+              <h4 className="text-sm font-semibold uppercase text-eco-200">Услуги</h4>
               <ul className="mt-4 space-y-3 text-sm text-white/75">
-                {navItems.slice(0, 6).map((item) => (
-                  <li key={item.path}>
-                    <Link to={item.path} className="hover:text-white">{item.label}</Link>
-                  </li>
-                ))}
+                {['Экологические документы', 'Вывоз и утилизация отходов', 'Лабораторные анализы', 'Сопровождение проверок'].map((item) => <li key={item}><Link to="/services" className="hover:text-white">{item}</Link></li>)}
               </ul>
             </div>
             <div>
               <h4 className="text-sm font-semibold uppercase text-eco-200">Контакты</h4>
               <ul className="mt-4 space-y-3 text-sm text-white/75">
-                <li>+7 (___) ___-__-__</li>
-                <li>info@ecoprogress.kz</li>
-                <li>Республика Казахстан, г. Астана</li>
-                <li>Пн-Пт, 09:00-18:00</li>
+                <li>{companyContacts.phone}</li>
+                <li>WhatsApp: {companyContacts.whatsappDisplay}</li>
+                <li>{companyContacts.email}</li>
+                <li>{companyContacts.address}</li>
+                <li>{companyContacts.schedule}</li>
               </ul>
             </div>
             <div>
               <h4 className="text-sm font-semibold uppercase text-eco-200">Сервис</h4>
               <div className="mt-4 space-y-3 text-sm text-white/75">
                 <Link to="/login" className="block hover:text-white">Кабинет клиента</Link>
-                <Link to="/staff/login" className="block hover:text-white">Вход для сотрудников</Link>
+                <Link to="/faq" className="block hover:text-white">FAQ</Link>
+                <Link to="/contacts" className="block hover:text-white">Контакты</Link>
+                <Link to="/staff/login" className="block text-xs text-white/45 hover:text-white">Вход для сотрудников</Link>
               </div>
             </div>
           </div>
-          <div className="mt-12 border-t border-white/15 pt-6 text-sm text-white/60">2026 ECOPROGRESS GROUP. Frontend demo service.</div>
+          <div className="mt-12 border-t border-white/15 pt-6 text-sm text-white/60">2026 ECOPROGRESS GROUP. Все права защищены.</div>
         </div>
       </footer>
     </div>

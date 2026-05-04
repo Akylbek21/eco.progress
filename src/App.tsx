@@ -4,6 +4,7 @@ import PublicLayout from './layouts/PublicLayout';
 import CabinetLayout from './layouts/CabinetLayout';
 import StaffLayout from './layouts/StaffLayout';
 import AdminLayout from './layouts/AdminLayout';
+import ScrollToTop from './components/ScrollToTop';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ServicesPage from './pages/ServicesPage';
@@ -48,6 +49,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-eco-50 text-slate-900">
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
         <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />

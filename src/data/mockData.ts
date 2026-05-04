@@ -133,6 +133,17 @@ export type NotificationItem = {
   role: UserRole | 'ALL';
 };
 
+export const companyContacts = {
+  phone: '+7 (___) ___-__-__',
+  whatsapp: '77000000000',
+  whatsappDisplay: '+7 (___) ___-__-__',
+  email: 'info@ecoprogress.kz',
+  address: 'Республика Казахстан, г. Астана',
+  schedule: 'Пн-Пт, 09:00-18:00',
+  instagram: '@ecoprogress.group',
+  mapsUrl: 'https://go.2gis.com/',
+};
+
 export type MockUser = {
   id: string;
   role: UserRole;

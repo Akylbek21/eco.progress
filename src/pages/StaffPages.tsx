@@ -86,7 +86,7 @@ export const StaffDashboardPage = () => {
         </div>
       </Reveal>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-5">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {stats.map(([label, count, hint], index) => (
           <Reveal key={label} delay={index * 0.04}>
             <div className="rounded-[20px] bg-white p-5 shadow-sm">
@@ -122,7 +122,7 @@ export const StaffDashboardPage = () => {
 
 const StaffPanel = ({ title, children }: { title: string; children: ReactNode }) => (
   <Reveal>
-    <div className="rounded-[22px] bg-white p-6 shadow-sm">
+    <div className="rounded-[20px] bg-white p-5 shadow-sm sm:rounded-[22px] sm:p-6">
       <h3 className="mb-4 text-xl font-bold text-eco-900">{title}</h3>
       <div className="space-y-3">{children}</div>
     </div>
@@ -134,9 +134,9 @@ const OrderLine = ({ order }: { order: Order }) => {
   return (
     <Link to={`/staff/orders/${order.id}`} className="block rounded-2xl bg-slate-50 p-4 transition hover:bg-eco-50">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="font-semibold text-slate-900">{order.id} · {order.clientName}</p>
-          <p className="mt-1 text-sm text-slate-600">{order.companyName || 'Физическое лицо'} · {order.service}</p>
+          <p className="mt-1 break-words text-sm text-slate-600">{order.companyName || 'Физическое лицо'} · {order.service}</p>
           <p className="mt-2 text-xs font-semibold text-eco-700">{nextStep(order)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -161,7 +161,7 @@ export const StaffOrdersPage = () => {
 
   return (
     <Reveal>
-      <div className="rounded-[22px] bg-white p-6 shadow-sm">
+      <div className="rounded-[20px] bg-white p-4 shadow-sm sm:rounded-[22px] sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-eco-900">Заявки клиентов</h2>
@@ -169,12 +169,15 @@ export const StaffOrdersPage = () => {
           </div>
           <p className="rounded-full bg-eco-50 px-4 py-2 text-sm font-semibold text-eco-800">Найдено: {filtered.length}</p>
         </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск по номеру, клиенту или услуге" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{statuses.map((s) => <option key={s}>{s}</option>)}</select>
-          <select value={service} onChange={(e) => setService(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{services.map((s) => <option key={s.id}>{s.title}</option>)}</select>
+        <div className="mt-5 grid gap-3 lg:grid-cols-3">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск по номеру, клиенту или услуге" className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3" />
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{statuses.map((s) => <option key={s}>{s}</option>)}</select>
+          <select value={service} onChange={(e) => setService(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{services.map((s) => <option key={s.id}>{s.title}</option>)}</select>
         </div>
-        <div className="mt-5 overflow-x-auto">
+        <div className="mt-5 space-y-3 lg:hidden">
+          {filtered.map((order) => <OrderLine key={order.id} order={order} />)}
+        </div>
+        <div className="mt-5 hidden overflow-x-auto lg:block">
           <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="text-slate-500">
               <tr><th className="p-3">Заявка</th><th>Клиент</th><th>Услуга</th><th>Дата</th><th>Статус</th><th>Онлайн</th><th>Следующий шаг</th><th></th></tr>
@@ -263,12 +266,12 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
   return (
     <div className="space-y-6">
       <Reveal>
-        <div className="rounded-[24px] bg-white p-6 shadow-sm">
+        <div className="rounded-[20px] bg-white p-4 shadow-sm sm:rounded-[24px] sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <Link to="/staff/orders" className="text-sm font-semibold text-eco-700">← Все заявки</Link>
               <h2 className="mt-3 text-2xl font-bold text-eco-900">{order.id}</h2>
-              <p className="mt-1 text-slate-600">{order.service}</p>
+              <p className="mt-1 break-words text-slate-600">{order.service}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {badge(order.status)}
@@ -436,7 +439,7 @@ const ReviewChecklist = ({ order }: { order: Order }) => {
 };
 
 const Action = ({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) => (
-  <div className="rounded-[22px] bg-white p-5 shadow-sm">
+  <div className="rounded-[20px] bg-white p-4 shadow-sm sm:rounded-[22px] sm:p-5">
     <div className="mb-4 flex items-center gap-3 text-eco-900">
       {icon}
       <h3 className="font-bold">{title}</h3>
@@ -446,10 +449,10 @@ const Action = ({ title, icon, children }: { title: string; icon: ReactNode; chi
 );
 
 const Section = ({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) => (
-  <div className="rounded-[22px] bg-white p-6 shadow-sm">
+  <div className="rounded-[20px] bg-white p-4 shadow-sm sm:rounded-[22px] sm:p-6">
     <div className="mb-4 flex items-center gap-3 text-eco-900">
       {icon}
-      <h3 className="text-xl font-bold">{title}</h3>
+      <h3 className="text-lg font-bold sm:text-xl">{title}</h3>
     </div>
     {children}
   </div>
@@ -465,9 +468,9 @@ const Field = ({ label, children }: { label: string; children: ReactNode }) => (
 const Grid = ({ items }: { items: Record<string, string> }) => (
   <div className="grid gap-3 md:grid-cols-2">
     {Object.entries(items).map(([key, value]) => (
-      <div key={key} className="rounded-2xl bg-slate-50 p-4">
+      <div key={key} className="min-w-0 rounded-2xl bg-slate-50 p-4">
         <p className="text-xs font-semibold uppercase text-slate-500">{key}</p>
-        <p className="mt-2 text-sm text-slate-800">{value || 'Не указано'}</p>
+        <p className="mt-2 break-words text-sm text-slate-800">{value || 'Не указано'}</p>
       </div>
     ))}
   </div>
@@ -477,7 +480,7 @@ const List = ({ title, items }: { title: string; items: string[] }) => (
   <div className="mt-4 first:mt-0">
     <h4 className="font-semibold text-slate-900">{title}</h4>
     <div className="mt-3 space-y-2">
-      {items.length ? items.map((item) => <p key={item} className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">{item}</p>) : <p className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-500">Пока нет данных</p>}
+      {items.length ? items.map((item) => <p key={item} className="break-words rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">{item}</p>) : <p className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-500">Пока нет данных</p>}
     </div>
   </div>
 );

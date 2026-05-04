@@ -45,15 +45,15 @@ const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: 
           </div>
           <h1 className="mt-5 text-3xl font-bold text-eco-900">{staff ? 'Вход сотрудника' : 'Вход клиента'}</h1>
           <p className="mt-3 text-sm leading-6 text-slate-500">
-            {staff ? 'Демо-доступ для менеджера: проверьте заявку, отправьте договор и выставьте счет.' : 'Демо-доступ для клиента: создайте заявку и дождитесь договора со счетом.'}
+            {staff ? 'Рабочий кабинет для обработки заявок, договоров, счетов и документов.' : 'Войдите, чтобы создать заявку, загрузить документы и отслеживать статус работы.'}
           </p>
           <label className="mt-7 block text-sm font-semibold text-slate-700">
             Email
-            <input name="email" type="email" required defaultValue={staff ? 'manager@ecoprogress.kz' : 'client@ecoprogress.kz'} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+            <input name="email" type="email" required placeholder={staff ? 'manager@ecoprogress.kz' : 'name@example.com'} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
           </label>
           <label className="mt-4 block text-sm font-semibold text-slate-700">
             Пароль
-            <input name="password" type="password" required defaultValue="demo123" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+            <input name="password" type="password" required className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
           </label>
           <Button disabled={loading} className="mt-6 w-full">{loading ? 'Входим...' : 'Войти'}</Button>
           <div className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">

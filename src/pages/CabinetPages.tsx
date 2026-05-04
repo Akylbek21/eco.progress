@@ -9,6 +9,42 @@ import { getCurrentUser } from '../services/authService';
 
 const badge = (status: string) => <span className="rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">{status}</span>;
 
+const clientSteps = ['Заявка создана', 'Проверка', 'Договор', 'Оплата', 'В работе', 'Готово'];
+
+const clientStage = (order: Order) => {
+  if (order.status === 'Отменено') return 0;
+  if (order.status === 'Готово' || order.status === 'Завершено') return 5;
+  if (['В работе', 'На проверке'].includes(order.status)) return 4;
+  if (order.paymentStatus === 'pending' || order.paymentStatus === 'paid') return 3;
+  if (order.contractStatus === 'sent' || order.contractStatus === 'signed') return 2;
+  if (['В обработке', 'Ожидает документы'].includes(order.status)) return 1;
+  return 0;
+};
+
+const clientStatusText = (order: Order) => {
+  if (order.status === 'Новая') return 'Заявка создана. Специалист скоро проверит информацию и свяжется с вами.';
+  if (order.status === 'В обработке') return 'Сейчас специалист проверяет вашу заявку. Скоро вы получите расчет или уточняющий вопрос.';
+  if (order.status === 'Ожидает документы') return 'Нужно добавить документы или уточнить данные. Посмотрите комментарии специалиста.';
+  if (order.contractStatus === 'sent' && order.paymentStatus !== 'paid') return 'Договор и счет отправлены. Их можно посмотреть и оплатить в кабинете.';
+  if (['В работе', 'На проверке'].includes(order.status)) return 'Работа выполняется. Готовые документы появятся в кабинете.';
+  if (order.status === 'Готово' || order.status === 'Завершено') return 'Работа завершена. Результат доступен в документах заявки.';
+  if (order.status === 'Отменено') return 'Заявка отменена. При необходимости создайте новую заявку.';
+  return statusDescriptions[order.status];
+};
+
+const ClientStatusPath = ({ order }: { order: Order }) => {
+  const current = clientStage(order);
+  return (
+    <div className="mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      {clientSteps.map((step, index) => (
+        <div key={step} className={`rounded-2xl border p-3 text-xs font-semibold ${index <= current ? 'border-accent bg-eco-50 text-eco-900' : 'border-slate-200 bg-white text-slate-500'}`}>
+          {step}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const useClientOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const refresh = () => getClientOrders(getCurrentUser()).then(setOrders);
@@ -18,15 +54,27 @@ const useClientOrders = () => {
 
 export const CabinetDashboardPage = () => {
   const { orders } = useClientOrders();
+  const user = getCurrentUser();
   const stats = [
-    ['Всего заявок', orders.length],
-    ['В работе', orders.filter((o) => ['В обработке', 'В работе', 'На проверке'].includes(o.status)).length],
-    ['Ожидают документы', orders.filter((o) => o.status === 'Ожидает документы').length],
-    ['Завершены', orders.filter((o) => ['Готово', 'Завершено'].includes(o.status)).length],
+    ['Активные заявки', orders.filter((o) => !['Готово', 'Завершено', 'Отменено'].includes(o.status)).length],
+    ['Документы', orders.reduce((sum, order) => sum + order.documents.length + order.resultDocuments.length, 0)],
+    ['Ожидает оплаты', orders.filter((o) => o.paymentStatus === 'pending').length],
+    ['Уведомления', orders.reduce((sum, order) => sum + order.comments.filter((comment) => comment.visibility === 'client').length, 0)],
   ];
   return (
     <div>
-      <Reveal><h2 className="text-3xl font-bold text-eco-900">Обзор кабинета</h2></Reveal>
+      <Reveal>
+        <div className="rounded-[24px] bg-eco-900 p-5 text-white shadow-xl shadow-eco-900/10 sm:p-7">
+          <p className="text-sm text-white/65">Добро пожаловать</p>
+          <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold sm:text-3xl">{user?.name ?? 'Клиент ECOPROGRESS GROUP'}</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">Здесь вы видите заявки, документы, договоры, оплату и комментарии специалиста.</p>
+            </div>
+            <Link to="/cabinet/orders/new"><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Создать новую заявку</Button></Link>
+          </div>
+        </div>
+      </Reveal>
       <div className="mt-6 grid gap-4 md:grid-cols-4">
         {stats.map(([label, value], index) => (
           <Reveal key={String(label)} delay={index * 0.04}><div className="rounded-[20px] bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-3xl font-bold text-eco-900">{value}</p></div></Reveal>
@@ -43,9 +91,13 @@ export const CabinetDashboardPage = () => {
 const Panel = ({ title, children }: { title: string; children: React.ReactNode }) => <div className="rounded-[22px] bg-white p-6 shadow-sm"><h3 className="mb-4 text-xl font-bold text-eco-900">{title}</h3><div className="space-y-3">{children}</div></div>;
 
 const OrderRow = ({ order }: { order: Order }) => (
-  <Link to={`/cabinet/orders/${order.id}`} className="flex items-center justify-between gap-4 rounded-2xl bg-eco-50 p-4 hover:bg-eco-100">
-    <div><p className="font-semibold text-slate-900">{order.id}</p><p className="text-sm text-slate-600">{order.service}</p></div>
-    {badge(order.status)}
+  <Link to={`/cabinet/orders/${order.id}`} className="block rounded-2xl bg-eco-50 p-4 hover:bg-eco-100">
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0"><p className="font-semibold text-slate-900">{order.id}</p><p className="mt-1 break-words text-sm text-slate-600">{order.service}</p></div>
+      {badge(order.status)}
+    </div>
+    <p className="mt-3 text-sm leading-6 text-slate-600">{clientStatusText(order)}</p>
+    <ClientStatusPath order={order} />
   </Link>
 );
 
@@ -84,6 +136,11 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const file = form.get('file') as File | null;
+    const extraText = [
+      `Тип клиента: ${String(form.get('clientKind'))}`,
+      `Город: ${String(form.get('city') || 'не указан')}`,
+      `WhatsApp: ${String(form.get('whatsapp') || 'не указан')}`,
+    ].join('\n');
     const selectedItemsText = selectedOrderItems.length > 0 ? `\n\nВыбранные работы:\n${selectedOrderItems.map((item) => `- ${item}`).join('\n')}` : '';
     const order = await createOrder({
       user,
@@ -95,7 +152,7 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
       serviceId: selectedOrderService.id,
       service: selectedOrderItems.length > 0 ? `${selectedOrderService.title}: ${selectedOrderItems.join('; ')}` : selectedOrderService.title,
       urgency: String(form.get('urgency')),
-      comment: `${String(form.get('comment'))}${selectedItemsText}`,
+      comment: `${String(form.get('comment'))}\n\n${extraText}${selectedItemsText}`,
       fileName: file?.name,
     });
     onNotify?.('Заявка создана. Сотрудник проверит данные и отправит договор со счетом.');
@@ -103,20 +160,17 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
   };
   return (
     <Reveal>
-      <form onSubmit={submit} className="rounded-[24px] bg-white p-6 shadow-sm">
+      <form onSubmit={submit} className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">
         <h2 className="text-2xl font-bold text-eco-900">Новая заявка</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <Input name="contactPerson" label="Контактное лицо" defaultValue={user?.name} />
-          <Input name="phone" label="Телефон" defaultValue={user?.phone} />
-          <Input name="email" label="Email" type="email" defaultValue={user?.email} />
-          <Input name="companyName" label="Название компании" defaultValue={user?.companyName ?? user?.name} />
-          <Input name="bin" label="БИН" defaultValue={user?.bin} />
-          <label className="text-sm font-semibold text-slate-700">Срочность<select name="urgency" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3"><option>Стандартная</option><option>Срочно</option><option>Не срочно</option></select></label>
-          <label className="text-sm font-semibold text-slate-700">Прикрепить файл<input name="file" type="file" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
+        <p className="mt-2 text-sm leading-6 text-slate-600">Заполните то, что знаете. Если не уверены, выберите “Не знаю” и специалист поможет.</p>
+        <StepTitle number="1" title="Кто вы?" />
+        <div className="grid gap-3 sm:grid-cols-3">
+          {['Физическое лицо', 'ИП', 'ТОО / компания'].map((item) => <label key={item} className="rounded-2xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700"><input name="clientKind" type="radio" defaultChecked={item === 'ТОО / компания'} className="mr-2 accent-[#38C7BA]" />{item}</label>)}
         </div>
-        <div className="mt-5 rounded-2xl border border-eco-100 bg-eco-50 p-4">
+        <StepTitle number="2" title="Что нужно?" />
+        <div className="rounded-2xl border border-eco-100 bg-eco-50 p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-bold text-eco-900">Направление и конкретные работы</p>
+            <p className="text-sm font-bold text-eco-900">Направление услуги</p>
             <p className="text-sm font-semibold text-eco-600">Выбрано работ: {selectedOrderItems.length}</p>
           </div>
           <label className="mt-4 block text-sm font-semibold text-slate-700">
@@ -147,7 +201,24 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
               </label>
             ))}
           </div>
+          <label className="mt-4 flex items-center gap-2 rounded-2xl bg-white p-4 text-sm font-semibold text-slate-700"><input type="checkbox" className="accent-[#38C7BA]" />Не знаю, нужна помощь специалиста</label>
         </div>
+        <StepTitle number="3" title="Данные" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <Input name="contactPerson" label="Контактное лицо *" defaultValue={user?.name} required />
+          <Input name="phone" label="Телефон *" defaultValue={user?.phone} required />
+          <Input name="whatsapp" label="WhatsApp" />
+          <Input name="email" label="Email *" type="email" defaultValue={user?.email} required />
+          <Input name="companyName" label="Название компании" defaultValue={user?.companyName ?? user?.name} />
+          <Input name="bin" label="БИН / ИИН" defaultValue={user?.bin} />
+          <Input name="city" label="Город" defaultValue={user?.city} />
+          <label className="text-sm font-semibold text-slate-700">Срочность<select name="urgency" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3"><option>Стандартная</option><option>Срочно</option><option>Не срочно</option></select></label>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-slate-500">БИН/ИИН можно не заполнять, если вы пока хотите только консультацию.</p>
+        <StepTitle number="4" title="Комментарий и документы" />
+        <label className="block text-sm font-semibold text-slate-700">Короткое описание задачи<textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} placeholder="Например: нужно вывезти строительные отходы или подготовить документы для объекта" /></label>
+        <label className="mt-4 block text-sm font-semibold text-slate-700">Прикрепить файл, если есть<input name="file" type="file" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
+        <StepTitle number="5" title="Подтверждение" />
         <div className="mt-5 grid gap-3 rounded-2xl border border-eco-100 bg-eco-50 p-4 text-sm text-slate-700 md:grid-cols-3">
           <div className="flex items-center gap-3"><FileSignature size={18} className="text-eco-700" />Сотрудник проверит заявку</div>
           <div className="flex items-center gap-3"><CreditCard size={18} className="text-eco-700" />Счет появится после проверки</div>
@@ -157,14 +228,20 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
           <input required type="checkbox" className="mt-1 h-4 w-4 rounded border-slate-300" />
           <span>Согласен отправить заявку на проверку. Договор и счет будут доступны после обработки сотрудником.</span>
         </label>
-        <label className="mt-4 block text-sm font-semibold text-slate-700">Комментарий<textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} /></label>
         <Button className="mt-6">Отправить заявку на проверку</Button>
       </form>
     </Reveal>
   );
 };
 
-const Input = ({ name, label, type = 'text', defaultValue = '' }: { name: string; label: string; type?: string; defaultValue?: string }) => <label className="text-sm font-semibold text-slate-700">{label}<input name={name} type={type} required defaultValue={defaultValue} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>;
+const Input = ({ name, label, type = 'text', defaultValue = '', required = false }: { name: string; label: string; type?: string; defaultValue?: string; required?: boolean }) => <label className="text-sm font-semibold text-slate-700">{label}<input name={name} type={type} required={required} defaultValue={defaultValue} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>;
+
+const StepTitle = ({ number, title }: { number: string; title: string }) => (
+  <div className="mt-7 mb-4 flex items-center gap-3">
+    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-eco-900 text-sm font-bold text-white">{number}</span>
+    <h3 className="text-lg font-bold text-eco-900">{title}</h3>
+  </div>
+);
 
 export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: string) => void }) => {
   const { id } = useParams();
@@ -203,8 +280,9 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <Reveal>
         <div className="rounded-[24px] bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-2xl font-bold text-eco-900">{order.id}</h2><p className="mt-1 text-slate-600">{order.service}</p></div>{badge(order.status)}</div>
-          <p className="mt-4 rounded-2xl bg-eco-50 p-4 text-sm text-slate-700">{statusDescriptions[order.status]}</p>
+          <div className="flex flex-wrap items-start justify-between gap-4"><div className="min-w-0"><h2 className="text-2xl font-bold text-eco-900">{order.id}</h2><p className="mt-1 break-words text-slate-600">{order.service}</p></div>{badge(order.status)}</div>
+          <p className="mt-4 rounded-2xl bg-eco-50 p-4 text-sm leading-6 text-slate-700">{clientStatusText(order)}</p>
+          <ClientStatusPath order={order} />
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <Info label="Дата создания" value={order.createdAt} />
             <Info label="Срочность" value={order.urgency} />
