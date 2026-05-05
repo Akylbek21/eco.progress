@@ -1,5 +1,5 @@
 export type ClientType = 'individual' | 'company';
-export type UserRole = 'CLIENT' | 'MANAGER' | 'ADMIN';
+export type UserRole = 'CLIENT' | 'MANAGER' | 'ADMIN' | 'ACCOUNTANT' | 'ECOLOGIST' | 'LABORATORY';
 
 export type ServiceCategory = 'Проектирование' | 'Разрешения' | 'Лаборатория' | 'Отходы' | 'Предприятия';
 
@@ -47,6 +47,22 @@ export type OrderStatus =
   | 'Завершено'
   | 'Отменено';
 
+export type PaymentStatus = 'not_sent' | 'pending' | 'partial' | 'paid';
+export type EcologyStatus = 'not_started' | 'in_progress' | 'waiting_client_data' | 'done';
+export type LaboratoryStatus = 'not_assigned' | 'waiting_samples' | 'samples_received' | 'analysis_in_progress' | 'result_ready';
+export type StaffContractStatus = 'not_created' | 'prepared' | 'sent_to_client' | 'waiting_signature' | 'signed' | 'rejected';
+
+export type CRMActionType =
+  | 'status_changed'
+  | 'payment_changed'
+  | 'internal_note_added'
+  | 'client_message_added'
+  | 'contract_updated'
+  | 'document_ready'
+  | 'manager_assigned'
+  | 'order_created'
+  | 'document_uploaded';
+
 export type DocumentItem = {
   id: string;
   orderId?: string;
@@ -70,6 +86,13 @@ export type OrderHistoryItem = {
   orderId: string;
   text: string;
   createdAt: string;
+  actionType?: CRMActionType;
+  actor?: string;
+  actorName?: string;
+  actorRole?: UserRole;
+  oldValue?: string;
+  newValue?: string;
+  comment?: string;
 };
 
 export type Order = {
@@ -92,11 +115,31 @@ export type Order = {
   status: OrderStatus;
   manager: string;
   contractStatus?: 'not_sent' | 'sent' | 'signed';
-  paymentStatus?: 'not_sent' | 'pending' | 'paid';
+  crmContractStatus?: StaffContractStatus;
+  paymentStatus?: PaymentStatus;
   signatureProvider?: string;
   paymentMethod?: string;
   paymentAmount?: string;
   paymentUrl?: string;
+  paymentComment?: string;
+  invoiceNumber?: string;
+  actNumber?: string;
+  assignedManagerId?: string;
+  assignedAccountantId?: string;
+  assignedEcologistId?: string;
+  assignedLaboratoryId?: string;
+  assignedAccountant?: string;
+  assignedEcologist?: string;
+  assignedLaboratory?: string;
+  ecologyStatus?: EcologyStatus;
+  ecologyComment?: string;
+  ecologyReadyAt?: string;
+  laboratoryStatus?: LaboratoryStatus;
+  laboratoryComment?: string;
+  samplesReceivedAt?: string;
+  laboratoryReadyAt?: string;
+  deadline?: string;
+  updatedAt?: string;
   signedAt?: string;
   paidAt?: string;
   documents: DocumentItem[];
@@ -390,7 +433,11 @@ export const news: NewsItem[] = [
 ];
 
 export const staffUsers: MockUser[] = [
-  { id: 'staff-1', role: 'MANAGER', type: 'staff', email: 'manager@ecoprogress.kz', name: 'Менеджер ECOPROGRESS GROUP', position: 'Менеджер по работе с клиентами' },
+  { id: 'staff-1', role: 'MANAGER', type: 'staff', email: 'manager@ecoprogress.kz', name: 'Менеджер ECOPROGRESS GROUP', phone: '+7 (___) ___-__-__', position: 'Менеджер по работе с клиентами' },
+  { id: 'staff-2', role: 'ACCOUNTANT', type: 'staff', email: 'accountant@ecoprogress.kz', name: 'Бухгалтер ECOPROGRESS GROUP', phone: '+7 (___) ___-__-__', position: 'Бухгалтер' },
+  { id: 'staff-3', role: 'ECOLOGIST', type: 'staff', email: 'ecologist@ecoprogress.kz', name: 'Эколог ECOPROGRESS GROUP', phone: '+7 (___) ___-__-__', position: 'Эколог' },
+  { id: 'staff-4', role: 'LABORATORY', type: 'staff', email: 'laboratory@ecoprogress.kz', name: 'Лаборатория ECOPROGRESS GROUP', phone: '+7 (___) ___-__-__', position: 'Лаборатория' },
+  { id: 'staff-5', role: 'ADMIN', type: 'admin', email: 'admin@ecoprogress.kz', name: 'Администратор ECOPROGRESS GROUP', phone: '+7 (___) ___-__-__', position: 'Администратор' },
 ];
 
 export const users: MockUser[] = [

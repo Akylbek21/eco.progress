@@ -86,6 +86,7 @@ function App() {
         <Route path="/staff/orders" element={<StaffLayout><StaffOrdersPage /></StaffLayout>} />
         <Route path="/staff/orders/:id" element={<StaffLayout><StaffOrderDetailsPage onNotify={setToast} /></StaffLayout>} />
         <Route path="/staff/clients" element={<StaffLayout><StaffClientsPage /></StaffLayout>} />
+        <Route path="/staff/clients/:companyKey" element={<StaffLayout><StaffClientsPage /></StaffLayout>} />
         <Route path="/staff/documents" element={<StaffLayout><StaffDocumentsPage /></StaffLayout>} />
         <Route path="/staff/notifications" element={<StaffLayout><StaffNotificationsPage /></StaffLayout>} />
         <Route path="/staff/profile" element={<StaffLayout><StaffProfilePage /></StaffLayout>} />

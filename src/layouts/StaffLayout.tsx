@@ -1,19 +1,31 @@
 import { ReactNode, useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Bell, BriefcaseBusiness, FileText, Home, LogOut, Menu, UserRound, Users, X } from 'lucide-react';
-import { logout } from '../services/authService';
+import { Bell, Building2, FileText, Home, LogOut, Menu, UserRound, ClipboardList, X } from 'lucide-react';
+import { getCurrentUser, logout } from '../services/authService';
 
 const links = [
-  { label: 'Обзор', path: '/staff', icon: Home },
-  { label: 'Заявки', path: '/staff/orders', icon: BriefcaseBusiness },
-  { label: 'Клиенты', path: '/staff/clients', icon: Users },
+  { label: 'Главная', path: '/staff', icon: Home },
+  { label: 'Заявки', path: '/staff/orders', icon: ClipboardList },
+  { label: 'Компании', path: '/staff/clients', icon: Building2 },
   { label: 'Документы', path: '/staff/documents', icon: FileText },
   { label: 'Уведомления', path: '/staff/notifications', icon: Bell },
   { label: 'Профиль', path: '/staff/profile', icon: UserRound },
 ];
 
+const roleLabel = (role?: string) => {
+  const labels: Record<string, string> = {
+    ADMIN: 'Admin',
+    MANAGER: 'Manager',
+    ACCOUNTANT: 'Accountant',
+    ECOLOGIST: 'Ecologist',
+    LABORATORY: 'Laboratory',
+  };
+  return labels[role || ''] || 'Manager';
+};
+
 const StaffLayout = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
+  const user = getCurrentUser();
 
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
@@ -63,8 +75,8 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
               <Menu size={20} />
             </button>
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-slate-500">Роль: MANAGER</p>
-              <h1 className="truncate text-base font-semibold text-eco-900 sm:text-lg">Менеджер ECOPROGRESS GROUP</h1>
+              <p className="text-sm text-slate-500">Роль: {roleLabel(user?.role)}</p>
+              <h1 className="truncate text-base font-semibold text-eco-900 sm:text-lg">{user?.name || 'Сотрудник ECOPROGRESS GROUP'}</h1>
             </div>
             <div className="flex shrink-0 items-center gap-3">
               <Link to="/" className="hidden text-sm font-semibold text-eco-700 hover:text-eco-900 sm:block">На сайт</Link>
