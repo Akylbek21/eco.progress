@@ -55,7 +55,7 @@ import {
   statusClass,
 } from '../utils/crm';
 import { canCompleteAnnualRequest, getAnnualRequestDebtSummary, getAnnualRequestProgress, getAnnualRequestWarnings, getCurrentQuarterForRequest, isAnnualRequest } from '../utils/annualRequests';
-import { formatCurrency, getOverdueDays, getPaymentStatusColor, getPaymentStatusLabel, paymentMethodLabel } from '../utils/payments';
+import { canAccessPayments, formatCurrency, getOverdueDays, getPaymentStatusColor, getPaymentStatusLabel, paymentMethodLabel } from '../utils/payments';
 
 const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -66,14 +66,14 @@ const useOrders = () => {
 
 const badge = (status: string) => {
   const definition = orderStatuses.includes(status as OrderStatus) ? getOrderStatusDefinition(status as OrderStatus) : undefined;
-  return <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${statusClass(status)}`}>{definition?.label || status}</span>;
+  return <span className={`inline-flex max-w-full rounded-full px-3 py-1 text-left text-xs font-bold leading-snug ring-1 ${statusClass(status)}`}>{definition?.label || status}</span>;
 };
 const paymentBadge = (status?: PaymentStatus) => {
   const paymentStatus = fallbackPaymentStatus(status);
-  return <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${paymentStatusClass(paymentStatus)}`}>{paymentStatusLabels[paymentStatus]}</span>;
+  return <span className={`inline-flex max-w-full rounded-full px-3 py-1 text-left text-xs font-bold leading-snug ring-1 ${paymentStatusClass(paymentStatus)}`}>{paymentStatusLabels[paymentStatus]}</span>;
 };
-const ecologyBadge = (status?: EcologyStatus) => <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${ecologyStatusClass(status)}`}>{ecologyLabel(status)}</span>;
-const laboratoryBadge = (status?: LaboratoryStatus) => <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${laboratoryStatusClass(status)}`}>{laboratoryLabel(status)}</span>;
+const ecologyBadge = (status?: EcologyStatus) => <span className={`inline-flex max-w-full rounded-full px-3 py-1 text-left text-xs font-bold leading-snug ring-1 ${ecologyStatusClass(status)}`}>{ecologyLabel(status)}</span>;
+const laboratoryBadge = (status?: LaboratoryStatus) => <span className={`inline-flex max-w-full rounded-full px-3 py-1 text-left text-xs font-bold leading-snug ring-1 ${laboratoryStatusClass(status)}`}>{laboratoryLabel(status)}</span>;
 const quarterWorkStatusLabels: Record<QuarterWorkStatus, string> = {
   planned: 'Запланировано',
   waiting_client_data: 'Ожидает данные клиента',
@@ -90,7 +90,7 @@ const quarterWorkBadge = (status: QuarterWorkStatus) => {
     status === 'waiting_payment' || status === 'waiting_client_data' ? 'bg-amber-50 text-amber-800 ring-amber-100' :
     status === 'in_progress' || status === 'ready_to_start' ? 'bg-eco-50 text-eco-800 ring-eco-100' :
     'bg-slate-100 text-slate-700 ring-slate-200';
-  return <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${tone}`}>{quarterWorkStatusLabels[status]}</span>;
+  return <span className={`inline-flex max-w-full rounded-full px-3 py-1 text-left text-xs font-bold leading-snug ring-1 ${tone}`}>{quarterWorkStatusLabels[status]}</span>;
 };
 
 const onlineState = (order: Order) => {
@@ -160,7 +160,7 @@ const roleAccess = (role: UserRole) => ({
   all: role === 'ADMIN',
   manager: canAccess(role, 'edit_order') || canAccess(role, 'send_messages'),
   finance: canAccess(role, 'edit_payment'),
-  viewFinance: canAccess(role, 'view_payment'),
+  viewFinance: canAccessPayments(role),
   ecology: canAccess(role, 'edit_ecology'),
   laboratory: canAccess(role, 'edit_laboratory'),
   messages: canAccess(role, 'send_messages'),
@@ -795,7 +795,7 @@ export const StaffOrdersPage = () => {
           {filtered.map((order) => <OrderLine key={order.id} order={order} />)}
         </div>
         <div className="mt-5 hidden overflow-x-auto lg:block">
-          <table className="w-full min-w-[1120px] text-left text-sm">
+          <table className="w-full min-w-[1650px] text-left text-sm">
             <thead className="text-slate-500">
               <tr><th className="p-3">№</th><th>Тип</th><th>Компания-исполнитель</th><th>Клиент</th><th>Договор</th><th>Услуга</th><th>Статус</th><th>Квартал</th><th>Прогресс</th><th>Долг</th><th>Оплата</th><th>Этап</th><th>Следующий шаг</th><th>Ответственный</th><th></th></tr>
             </thead>
@@ -821,10 +821,10 @@ const StaffOrderTableRow = ({ order }: { order: Order }) => {
     <tr className="border-t border-slate-100 align-top">
       <td className="p-3 font-semibold text-slate-900">{order.id}</td>
       <td className="py-3">
-        {isAnnualRequest(order) ? <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-800 ring-1 ring-cyan-100">Годовая</span> : <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200">Разовая</span>}
+        {isAnnualRequest(order) ? <span className="inline-flex max-w-full rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold leading-snug text-cyan-800 ring-1 ring-cyan-100">Годовая</span> : <span className="inline-flex max-w-full rounded-full bg-slate-100 px-3 py-1 text-xs font-bold leading-snug text-slate-700 ring-1 ring-slate-200">Разовая</span>}
       </td>
-      <td className="py-3"><p className="font-semibold text-slate-900">{getOrderBusinessCompanyName(order)}</p></td>
-      <td className="py-3"><p className="text-sm text-slate-600">{getOrderCompanyName(order)}</p></td>
+      <td className="py-3"><p className="font-semibold leading-snug text-slate-900">{getOrderBusinessCompanyName(order)}</p></td>
+      <td className="py-3"><p className="text-sm leading-snug text-slate-600">{getOrderCompanyName(order)}</p></td>
       <td className="py-3">
         {contract ? (
           <div>
@@ -833,16 +833,16 @@ const StaffOrderTableRow = ({ order }: { order: Order }) => {
           </div>
         ) : <span className="text-xs text-slate-400">Нет</span>}
       </td>
-      <td className="py-3">{order.service}</td>
+      <td className="py-3 leading-snug">{order.service}</td>
       <td className="py-3">{badge(order.status)}</td>
       <td className="py-3 text-sm text-slate-600">{currentQuarter ? currentQuarter.quarterLabel : '-'}</td>
       <td className="py-3 text-sm font-semibold text-eco-800">{isAnnualRequest(order) ? `${progress.completed}/${progress.total}` : '-'}</td>
       <td className="py-3 text-sm font-semibold text-rose-700">{isAnnualRequest(order) && debt.totalDebt > 0 ? formatCurrency(debt.totalDebt) : '-'}</td>
       <td className="py-3">{paymentBadge(order.paymentStatus)}</td>
-      <td className="py-3 text-sm text-slate-600">{getOrderStage(order)}</td>
-      <td className="py-3 font-semibold text-slate-700">{getNextCrmStep(order)}</td>
-      <td className="py-3 text-sm text-slate-600">{order.manager || 'Не назначен'}</td>
-      <td className="py-3"><Link to={`/staff/orders/${order.id}`} className="rounded-full bg-eco-900 px-3 py-2 text-xs font-bold text-white">Открыть</Link></td>
+      <td className="py-3 text-sm leading-snug text-slate-600">{getOrderStage(order)}</td>
+      <td className="py-3 font-semibold leading-snug text-slate-700">{getNextCrmStep(order)}</td>
+      <td className="py-3 text-sm leading-snug text-slate-600">{order.manager || 'Не назначен'}</td>
+      <td className="py-3"><Link to={`/staff/orders/${order.id}`} className="inline-flex max-w-full justify-center rounded-full bg-eco-900 px-3 py-2 text-xs font-bold leading-snug text-white">Открыть</Link></td>
     </tr>
   );
 };
@@ -1141,6 +1141,15 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
 
             {activeTab === 'Оплата' && (
               <Section title="Оплата" icon={<CreditCard size={20} />}>
+                {!access.viewFinance && (
+                  <div className="mb-5 grid gap-3 md:grid-cols-3">
+                    <InfoTile label="Оплата" value={order.quarters?.some((quarter) => quarter.remainingAmount > 0) ? 'Есть задолженность' : fallbackPaymentStatus(order.paymentStatus) === 'paid' ? 'Оплачено' : 'Оплата ожидается'} />
+                    <InfoTile label="Статус" value={paymentStatusLabels[fallbackPaymentStatus(order.paymentStatus)]} />
+                    <InfoTile label="Доступ" value="Финансовые детали доступны администратору и бухгалтеру" />
+                  </div>
+                )}
+                {access.viewFinance && (
+                  <>
                 <div className="mb-5 grid gap-3 md:grid-cols-4">
                   <InfoTile label="Статус" value={paymentStatusLabels[fallbackPaymentStatus(order.paymentStatus)]} />
                   <InfoTile label="Сумма" value={order.paymentAmount || 'Не указана'} />
@@ -1178,6 +1187,8 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                     </div>
                   )}
                 </form>
+                  </>
+                )}
               </Section>
             )}
 
@@ -1487,12 +1498,18 @@ const AnnualQuarterCard = ({
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <InfoTile label="Этап" value={quarter.workStage} />
         <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">Оплата</p><div className="mt-2"><span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${getPaymentStatusColor(quarter.paymentStatus)}`}>{getPaymentStatusLabel(quarter.paymentStatus)}</span></div></div>
-        <InfoTile label="Сумма" value={formatCurrency(quarter.plannedAmount)} />
-        <InfoTile label="Оплачено" value={formatCurrency(quarter.paidAmount)} />
-        <InfoTile label="Долг" value={formatCurrency(quarter.remainingAmount)} />
-        <InfoTile label="Срок оплаты" value={quarter.dueDate || 'Нет'} />
+        {canManageFinance ? (
+          <>
+            <InfoTile label="Сумма" value={formatCurrency(quarter.plannedAmount)} />
+            <InfoTile label="Оплачено" value={formatCurrency(quarter.paidAmount)} />
+            <InfoTile label="Долг" value={formatCurrency(quarter.remainingAmount)} />
+            <InfoTile label="Срок оплаты" value={quarter.dueDate || 'Нет'} />
+          </>
+        ) : (
+          <InfoTile label="Состояние" value={quarter.remainingAmount > 0 ? 'Есть задолженность' : quarter.paymentStatus === 'paid' ? 'Оплачено' : 'Оплата ожидается'} />
+        )}
       </div>
-      {overdueDays > 0 && quarter.remainingAmount > 0 && <p className="mt-3 rounded-2xl bg-rose-50 p-3 text-sm font-semibold text-rose-800">Срок оплаты истек: {overdueDays} дн.</p>}
+      {canManageFinance && overdueDays > 0 && quarter.remainingAmount > 0 && <p className="mt-3 rounded-2xl bg-rose-50 p-3 text-sm font-semibold text-rose-800">Срок оплаты истек: {overdueDays} дн.</p>}
       <QuarterList title="Документы" items={quarter.documents.map((doc) => `${doc.name} · ${doc.uploadedByName}`)} empty="Документы пока не загружены" />
       <QuarterList title="Результаты" items={quarter.results.map((result) => result.title)} empty="Результат пока не загружен" />
       <QuarterList title="Комментарии" items={quarter.comments.map((comment) => `${comment.author}: ${comment.text}`)} empty="Комментариев нет" />
@@ -1555,7 +1572,7 @@ const QuarterList = ({ title, items, empty }: { title: string; items: string[]; 
   <div className="mt-4">
     <p className="text-sm font-bold text-slate-900">{title}</p>
     <div className="mt-2 space-y-2">
-      {items.map((item) => <p key={item} className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">{item}</p>)}
+      {items.map((item) => <p key={item} className="overflow-hidden rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-snug text-slate-700">{item}</p>)}
       {!items.length && <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">{empty}</p>}
     </div>
   </div>
@@ -1636,18 +1653,18 @@ const Field = ({ label, children }: { label: string; children: ReactNode }) => (
 );
 
 const InfoTile = ({ label, value }: { label: string; value: string }) => (
-  <div className="min-w-0 rounded-2xl bg-slate-50 p-4">
-    <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
-    <p className="mt-2 break-words text-sm font-semibold text-slate-800">{value || 'Не указано'}</p>
+  <div className="min-w-0 overflow-hidden rounded-2xl bg-slate-50 p-4">
+    <p className="text-xs font-semibold uppercase leading-snug text-slate-500">{label}</p>
+    <p className="mt-2 break-words text-sm font-semibold leading-snug text-slate-800">{value || 'Не указано'}</p>
   </div>
 );
 
 const Grid = ({ items }: { items: Record<string, string> }) => (
   <div className="grid gap-3 md:grid-cols-2">
     {Object.entries(items).map(([key, value]) => (
-      <div key={key} className="min-w-0 rounded-2xl bg-slate-50 p-4">
-        <p className="text-xs font-semibold uppercase text-slate-500">{key}</p>
-        <p className="mt-2 break-words text-sm text-slate-800">{value || 'Не указано'}</p>
+      <div key={key} className="min-w-0 overflow-hidden rounded-2xl bg-slate-50 p-4">
+        <p className="text-xs font-semibold uppercase leading-snug text-slate-500">{key}</p>
+        <p className="mt-2 break-words text-sm leading-snug text-slate-800">{value || 'Не указано'}</p>
       </div>
     ))}
   </div>
@@ -1657,7 +1674,7 @@ const List = ({ title, items }: { title: string; items: string[] }) => (
   <div className="mt-4 first:mt-0">
     <h4 className="font-semibold text-slate-900">{title}</h4>
     <div className="mt-3 space-y-2">
-      {items.length ? items.map((item) => <p key={item} className="break-words rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">{item}</p>) : <p className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-500">Нет данных</p>}
+      {items.length ? items.map((item) => <p key={item} className="overflow-hidden rounded-2xl bg-slate-50 p-3 text-sm leading-snug text-slate-700">{item}</p>) : <p className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-500">Нет данных</p>}
     </div>
   </div>
 );

@@ -105,7 +105,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
             </aside>
           </div>
         )}
-        <main className="px-4 py-6 sm:px-8 sm:py-8">{children}</main>
+        <main className="staff-crm px-4 py-6 sm:px-8 sm:py-8">{children}</main>
       </div>
     </div>
   );

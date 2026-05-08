@@ -9,7 +9,7 @@ import type {
   QuarterWorkStatus,
   RequestQuarter,
 } from '../data/mockData';
-import { calculateRemainingAmount, getOverdueDays } from './payments';
+import { calculateQuarterPeriod, calculateRemainingAmount, getOverdueDays } from './payments';
 import { getWorkStageByService } from './crm';
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -73,6 +73,7 @@ export const requestQuarterFromContractItem = (
   invoiceNumber: item.invoiceNumber,
   invoiceDate: item.invoiceDate,
   dueDate: item.dueDate,
+  lastPaymentDate: item.lastPaymentDate,
   documents: existing?.documents || [],
   results: existing?.results || [],
   comments: existing?.comments || [],
@@ -94,9 +95,7 @@ export const createFallbackRequestQuarters = (order: Order): RequestQuarter[] =>
   const amount = Number((order.paymentAmount || '').replace(/[^\d]/g, '')) || 0;
   const plannedAmount = amount > 0 ? Math.round(amount / 4) : 0;
   return ([1, 2, 3, 4] as QuarterNumber[]).map((quarter) => {
-    const startMonth = (quarter - 1) * 3;
-    const periodStart = new Date(year, startMonth, 1).toISOString().slice(0, 10);
-    const periodEnd = new Date(year, startMonth + 3, 0).toISOString().slice(0, 10);
+    const { periodStart, periodEnd } = calculateQuarterPeriod(order.annualPeriodStart || `${year}-01-01`, quarter);
     const workStage = getWorkStageByService(order);
     return normalizeRequestQuarter({
       id: `${order.id}-Q${quarter}`,
@@ -126,8 +125,15 @@ export const createFallbackRequestQuarters = (order: Order): RequestQuarter[] =>
 export const isAnnualRequest = (request: Order) => request.contractType === 'annual_quarterly';
 
 export const getCurrentQuarterForRequest = (request: Order, date: Date | string = new Date()) => {
-  const quarterNumber = getCurrentQuarterByDate(date);
-  return request.quarters?.find((quarter) => quarter.quarter === quarterNumber);
+  const quarters = [...(request.quarters || [])].sort((a, b) => a.quarter - b.quarter);
+  const inPeriod = quarters.find((quarter) => isDateBetween(date, quarter.periodStart, quarter.periodEnd));
+  if (inPeriod) return inPeriod;
+
+  const value = typeof date === 'string' ? new Date(`${date}T12:00:00`) : date;
+  const nextQuarter = quarters.find((quarter) => new Date(`${quarter.periodStart}T00:00:00`) > value);
+  if (nextQuarter) return nextQuarter;
+
+  return quarters.find((quarter) => quarter.workStatus !== 'completed') || quarters[quarters.length - 1];
 };
 
 export const getAnnualRequestProgress = (request: Order) => {

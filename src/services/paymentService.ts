@@ -1,8 +1,5 @@
 import {
-  financeContracts,
-  financeDebts,
   paymentRecords,
-  paymentTransactions,
   type Contract,
   type Debt,
   type Payment,
@@ -13,15 +10,23 @@ import {
   type QuarterWorkStatus,
 } from '../data/mockData';
 import { syncAnnualQuarterFromFinance, updatePaymentStatus } from './orderService';
-import { calculateDebtForQuarter, calculateRemainingAmount, createQuarterlySchedule, formatCurrency, getOverdueDays, getPaymentStatusByAmounts } from '../utils/payments';
+import {
+  applyQuarterPaymentSync,
+  normalizeFinanceContract as normalizeContract,
+  normalizeFinanceQuarter as normalizeQuarter,
+  refreshFinanceDebtsFromContractsSync,
+  readFinanceContractsSync as readContractsSync,
+  readFinanceDebtsSync as readDebtsSync,
+  readFinanceTransactionsSync as readTransactionsSync,
+  stampFinanceDate as stampDate,
+  writeFinanceContractsSync as writeContractsSync,
+  writeFinanceDebtsSync as writeDebtsSync,
+  writeFinanceTransactionsSync as writeTransactionsSync,
+} from './financeStore';
+import { calculateRemainingAmount, formatCurrency, getPaymentStatusByAmounts } from '../utils/payments';
 
 const PAYMENTS_KEY = 'eco-progress-finance-payments';
-const TRANSACTIONS_KEY = 'eco-progress-finance-transactions';
-const CONTRACTS_KEY = 'eco-progress-finance-contracts';
-const DEBTS_KEY = 'eco-progress-finance-debts';
 const delay = (ms = 160) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const stampDate = () => new Date().toISOString().slice(0, 10);
 
 const normalizePayment = (payment: Payment): Payment => {
   const paidAmount = Math.min(payment.paidAmount || 0, payment.totalAmount);
@@ -32,26 +37,6 @@ const normalizePayment = (payment: Payment): Payment => {
     remainingAmount,
     paymentStatus: getPaymentStatusByAmounts(payment.totalAmount, paidAmount, payment.dueDate),
   };
-};
-
-const normalizeQuarter = (quarter: QuarterlyContractItem): QuarterlyContractItem => {
-  const paidAmount = Math.min(quarter.paidAmount || 0, quarter.plannedAmount);
-  const remainingAmount = calculateRemainingAmount(quarter.plannedAmount, paidAmount);
-  return {
-    ...quarter,
-    paidAmount,
-    remainingAmount,
-    paymentStatus: getPaymentStatusByAmounts(quarter.plannedAmount, paidAmount, quarter.dueDate),
-    workStatus: remainingAmount > 0 && getOverdueDays(quarter.dueDate) > 0 && quarter.workStatus !== 'completed' ? 'blocked_by_debt' : quarter.workStatus,
-  };
-};
-
-const normalizeContract = (contract: Contract): Contract => {
-  if (contract.contractType === 'annual_quarterly') {
-    const schedule = contract.quarterlySchedule?.length ? contract.quarterlySchedule : createQuarterlySchedule(contract);
-    return { ...contract, quarterlySchedule: schedule.map(normalizeQuarter) };
-  }
-  return { ...contract, contractType: contract.contractType || 'one_time' };
 };
 
 const readPaymentsSync = () => {
@@ -75,89 +60,6 @@ const readPaymentsSync = () => {
 
 const writePaymentsSync = (items: Payment[]) => {
   localStorage.setItem(PAYMENTS_KEY, JSON.stringify(items.map(normalizePayment)));
-};
-
-const readTransactionsSync = () => {
-  const raw = localStorage.getItem(TRANSACTIONS_KEY);
-  if (!raw) {
-    localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(paymentTransactions));
-    return paymentTransactions;
-  }
-
-  try {
-    return JSON.parse(raw) as PaymentTransaction[];
-  } catch {
-    localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(paymentTransactions));
-    return paymentTransactions;
-  }
-};
-
-const writeTransactionsSync = (items: PaymentTransaction[]) => {
-  localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(items));
-};
-
-const readContractsSync = () => {
-  const raw = localStorage.getItem(CONTRACTS_KEY);
-  if (!raw) {
-    const initial = financeContracts.map(normalizeContract);
-    localStorage.setItem(CONTRACTS_KEY, JSON.stringify(initial));
-    return initial;
-  }
-
-  try {
-    const parsed = (JSON.parse(raw) as Contract[]).map((contract) => normalizeContract({ ...contract, contractType: contract.contractType || 'one_time' }));
-    localStorage.setItem(CONTRACTS_KEY, JSON.stringify(parsed));
-    return parsed;
-  } catch {
-    const initial = financeContracts.map(normalizeContract);
-    localStorage.setItem(CONTRACTS_KEY, JSON.stringify(initial));
-    return initial;
-  }
-};
-
-const writeContractsSync = (items: Contract[]) => {
-  localStorage.setItem(CONTRACTS_KEY, JSON.stringify(items.map(normalizeContract)));
-};
-
-const buildDebtsFromContracts = (contracts: Contract[]): Debt[] =>
-  contracts.flatMap((contract) =>
-    (contract.quarterlySchedule || []).flatMap((quarter) => {
-      const debt = calculateDebtForQuarter(quarter);
-      if (!debt) return [];
-      return [{
-        ...debt,
-        id: `DEBT-${contract.id}-${quarter.id}`,
-        clientCompanyId: contract.clientCompanyId,
-        clientCompanyName: contract.clientCompanyName,
-        contractNumber: contract.contractNumber,
-        comment: quarter.comment || debt.comment,
-      }];
-    })
-  );
-
-const readDebtsSync = () => {
-  const contracts = readContractsSync();
-  const generated = buildDebtsFromContracts(contracts);
-  const raw = localStorage.getItem(DEBTS_KEY);
-  if (!raw) {
-    const initial = [...generated, ...financeDebts.filter((debt) => !generated.some((item) => item.id === debt.id))];
-    localStorage.setItem(DEBTS_KEY, JSON.stringify(initial));
-    return initial;
-  }
-
-  try {
-    const manual = JSON.parse(raw) as Debt[];
-    const merged = generated.map((debt) => ({ ...debt, comment: manual.find((item) => item.id === debt.id)?.comment || debt.comment }));
-    localStorage.setItem(DEBTS_KEY, JSON.stringify(merged));
-    return merged;
-  } catch {
-    localStorage.setItem(DEBTS_KEY, JSON.stringify(generated));
-    return generated;
-  }
-};
-
-const writeDebtsSync = (items: Debt[]) => {
-  localStorage.setItem(DEBTS_KEY, JSON.stringify(items));
 };
 
 const syncOrderPayment = async (payment: Payment) => {
@@ -306,46 +208,13 @@ export const addQuarterPayment = async (
   contractId: string,
   quarterItemId: string,
   payload: AddPartialPaymentPayload,
-  createdBy = 'Бухгалтер ECOPROGRESS GROUP'
+  createdBy = 'ECOPROGRESS GROUP accountant'
 ) => {
   await delay();
-  let updatedContract: Contract | undefined;
-  let updatedQuarter: QuarterlyContractItem | undefined;
-  const contracts = readContractsSync().map((contract) => {
-    if (contract.id !== contractId) return contract;
-    const quarterlySchedule = (contract.quarterlySchedule || []).map((quarter) => {
-      if (quarter.id !== quarterItemId) return quarter;
-      const paidAmount = Math.min(quarter.plannedAmount, quarter.paidAmount + payload.amount);
-      updatedQuarter = normalizeQuarter({
-        ...quarter,
-        paidAmount,
-        remainingAmount: calculateRemainingAmount(quarter.plannedAmount, paidAmount),
-        lastPaymentDate: payload.date,
-        comment: payload.comment || quarter.comment,
-      });
-      return updatedQuarter;
-    });
-    updatedContract = normalizeContract({ ...contract, quarterlySchedule, updatedAt: stampDate() });
-    return updatedContract;
-  });
-
-  writeContractsSync(contracts);
+  const { updatedContract, updatedQuarter } = applyQuarterPaymentSync(contractId, quarterItemId, payload, createdBy);
   if (updatedQuarter) {
-    const transaction: PaymentTransaction = {
-      id: `TRX-Q-${Date.now()}`,
-      contractId,
-      quarterItemId,
-      amount: payload.amount,
-      date: payload.date,
-      method: payload.method,
-      comment: payload.comment,
-      createdBy,
-      createdAt: stampDate(),
-    };
-    writeTransactionsSync([transaction, ...readTransactionsSync()]);
     await syncAnnualQuarterFromFinance(contractId, updatedQuarter);
   }
-  writeDebtsSync(buildDebtsFromContracts(readContractsSync()));
   return updatedContract;
 };
 
@@ -390,7 +259,7 @@ export const updateQuarterDetails = async (
     const quarter = updatedContract.quarterlySchedule?.find((item) => item.id === quarterItemId);
     if (quarter) await syncAnnualQuarterFromFinance(contractId, quarter);
   }
-  writeDebtsSync(buildDebtsFromContracts(readContractsSync()));
+  refreshFinanceDebtsFromContractsSync();
   return updatedContract;
 };
 
@@ -407,7 +276,7 @@ export const closeDebt = async (debtId: string, comment?: string) => {
       comment: comment || currentDebt.comment,
       updatedAt: stampDate(),
     };
-    writeDebtsSync(readDebtsSync().map((debt) => (debt.id === debtId ? closedDebt : debt)));
+    writeDebtsSync([closedDebt, ...readDebtsSync().filter((debt) => debt.id !== debtId)]);
     return closedDebt;
   }
 

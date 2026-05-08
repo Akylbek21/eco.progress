@@ -81,6 +81,7 @@ export type StaffContractStatus = 'not_created' | 'prepared' | 'sent_to_client' 
 export type PaymentRecordStatus = 'paid' | 'partial' | 'unpaid' | 'overdue';
 export type PaymentMethod = 'bank_transfer' | 'cash' | 'card' | 'other';
 export type ContractType = 'one_time' | 'annual_quarterly';
+export type QuarterScheduleType = 'calendar_quarters' | 'contract_quarters';
 export type ContractStatus = 'draft' | 'active' | 'completed' | 'terminated';
 export type QuarterNumber = 1 | 2 | 3 | 4;
 export type QuarterLabel = '1 квартал' | '2 квартал' | '3 квартал' | '4 квартал';
@@ -165,6 +166,7 @@ export type RequestQuarter = {
   invoiceNumber?: string;
   invoiceDate?: string;
   dueDate?: string;
+  lastPaymentDate?: string;
   documents: QuarterDocument[];
   results: QuarterResult[];
   comments: QuarterComment[];
@@ -328,6 +330,7 @@ export type Contract = {
   startDate: string;
   endDate: string;
   totalAmount: number;
+  quarterScheduleType?: QuarterScheduleType;
   quarterlySchedule?: QuarterlyContractItem[];
   status: ContractStatus;
   serviceName: string;

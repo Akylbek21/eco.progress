@@ -3,8 +3,9 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-route
 import { CheckCircle2, CreditCard, FileSignature, LockKeyhole } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
-import { getBusinessCompanyById, payments, services, type Order, type QuarterDocument, type RequestQuarter } from '../data/mockData';
+import { getBusinessCompanyById, services, type Contract, type Debt, type Order, type Payment, type QuarterDocument, type RequestQuarter } from '../data/mockData';
 import { addComment, createOrder, getClientOrders, getOrderById, payOrderOnline, signOrderContract, uploadAnnualQuarterDocument, uploadDocument } from '../services/orderService';
+import { getFinanceContracts, getFinanceDebts, getFinancePayments } from '../services/paymentService';
 import { getCurrentUser } from '../services/authService';
 import {
   contractStatusClass,
@@ -521,8 +522,9 @@ export const CabinetDocumentsPage = () => {
   return <PageList title="Документы">{docs.map((doc) => <div key={doc.id} className="rounded-2xl bg-eco-50 p-4 text-sm">{doc.name} · {doc.status}</div>)}</PageList>;
 };
 
-export const CabinetPaymentsPage = () => {
+const CabinetPaymentsPageLegacy = () => {
   const { orders } = useClientOrders();
+  const payments: Array<{ id: string; invoice: string; service: string; amount: string; status: string }> = [];
   const onlinePayments = orders.map((order) => ({
     id: order.id,
     invoice: `Онлайн-счет ${order.id}`,
@@ -535,6 +537,78 @@ export const CabinetPaymentsPage = () => {
       {[...onlinePayments, ...payments].map((p) => (
         <div key={p.id} className="rounded-2xl bg-eco-50 p-4 text-sm">{p.invoice} · {p.service} · {p.amount} · {p.status}</div>
       ))}
+    </PageList>
+  );
+};
+
+export const CabinetPaymentsPage = () => {
+  const { orders } = useClientOrders();
+  const [financePayments, setFinancePayments] = useState<Payment[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
+
+  useEffect(() => {
+    getFinancePayments().then(setFinancePayments);
+    getFinanceContracts().then(setContracts);
+    getFinanceDebts().then(setDebts);
+  }, []);
+
+  const requestIds = new Set(orders.map((order) => order.id));
+  const annualContracts = contracts.filter((contract) =>
+    requestIds.has(contract.requestId) || orders.some((order) => order.contractId === contract.id)
+  );
+  const oneTimePayments = financePayments.filter((payment) =>
+    requestIds.has(payment.requestId) &&
+    !annualContracts.some((contract) => contract.requestId === payment.requestId)
+  );
+  const clientDebts = debts.filter((debt) => requestIds.has(debt.requestId) && debt.status !== 'closed');
+
+  return (
+    <PageList title="Оплаты">
+      {oneTimePayments.map((payment) => (
+        <div key={payment.id} className="rounded-2xl bg-eco-50 p-4 text-sm">
+          <p className="font-bold text-eco-900">{payment.invoiceNumber} · {payment.serviceName}</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-4">
+            <Info label="Сумма" value={formatCurrency(payment.totalAmount)} />
+            <Info label="Оплачено" value={formatCurrency(payment.paidAmount)} />
+            <Info label="Остаток" value={formatCurrency(payment.remainingAmount)} />
+            <Info label="Статус" value={getPaymentStatusLabel(payment.paymentStatus)} />
+          </div>
+        </div>
+      ))}
+
+      {annualContracts.flatMap((contract) =>
+        (contract.quarterlySchedule || []).map((quarter) => (
+          <div key={quarter.id} className="rounded-2xl bg-eco-50 p-4 text-sm">
+            <p className="font-bold text-eco-900">{contract.contractNumber} · {quarter.quarterLabel}</p>
+            <p className="mt-1 text-slate-600">{quarter.periodStart} - {quarter.periodEnd}</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-5">
+              <Info label="Сумма" value={formatCurrency(quarter.plannedAmount)} />
+              <Info label="Оплачено" value={formatCurrency(quarter.paidAmount)} />
+              <Info label="Остаток" value={formatCurrency(quarter.remainingAmount)} />
+              <Info label="Срок" value={quarter.dueDate || 'Нет'} />
+              <Info label="Статус" value={getPaymentStatusLabel(quarter.paymentStatus)} />
+            </div>
+          </div>
+        ))
+      )}
+
+      {clientDebts.length > 0 && (
+        <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm">
+          <p className="font-bold text-rose-900">Задолженность</p>
+          <div className="mt-3 space-y-2">
+            {clientDebts.map((debt) => (
+              <div key={debt.id} className="rounded-xl bg-white p-3">
+                {debt.contractNumber} {debt.quarterLabel || ''} · {formatCurrency(debt.remainingAmount)} · {debt.dueDate || 'срок не указан'}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!oneTimePayments.length && !annualContracts.length && !clientDebts.length && (
+        <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Платежей пока нет</div>
+      )}
     </PageList>
   );
 };

@@ -1,7 +1,8 @@
-import { financeContracts, getBusinessCompanyById, getBusinessCompanyByServiceId, notifications, orders, statusDescriptions, type CommentItem, type CRMActionType, type DocumentItem, type EcologyStatus, type LaboratoryStatus, type MockUser, type NotificationItem, type Order, type OrderHistoryItem, type OrderStatus, type PaymentMethod, type PaymentStatus, type QuarterDocument, type QuarterResult, type QuarterWorkStatus, type QuarterlyContractItem, type RequestQuarter, type StaffContractStatus, type UserRole } from '../data/mockData';
+import { getBusinessCompanyById, getBusinessCompanyByServiceId, notifications, orders, statusDescriptions, type CommentItem, type CRMActionType, type DocumentItem, type EcologyStatus, type LaboratoryStatus, type MockUser, type NotificationItem, type Order, type OrderHistoryItem, type OrderStatus, type PaymentMethod, type PaymentStatus, type QuarterDocument, type QuarterResult, type QuarterWorkStatus, type QuarterlyContractItem, type RequestQuarter, type StaffContractStatus, type UserRole } from '../data/mockData';
 import { canCompleteAnnualRequest, createFallbackRequestQuarters, createRequestQuartersFromContract, getQuarterResultTypeByStage, getUploadedByRole, normalizeRequestQuarter } from '../utils/annualRequests';
 import { calculateRemainingAmount } from '../utils/payments';
 import { fallbackPaymentStatus, getWorkStageByService, normalizeOrderStatus } from '../utils/crm';
+import { applyQuarterPaymentSync, readFinanceContractsSync } from './financeStore';
 
 const ORDERS_KEY = 'eco-progress-orders';
 const USER_KEY = 'eco-progress-user';
@@ -12,9 +13,10 @@ const normalizeOrder = (order: Order): Order => {
     ? getBusinessCompanyById(order.businessCompanyId)
     : getBusinessCompanyByServiceId(order.serviceId);
 
+  const contracts = readFinanceContractsSync();
   const contract = order.contractId
-    ? financeContracts.find((item) => item.id === order.contractId)
-    : financeContracts.find((item) => item.requestId === order.id);
+    ? contracts.find((item) => item.id === order.contractId)
+    : contracts.find((item) => item.requestId === order.id);
   const contractType = order.contractType || contract?.contractType || 'one_time';
   const annualQuarters = contractType === 'annual_quarterly'
     ? contract?.quarterlySchedule?.length
@@ -553,7 +555,7 @@ export const addAnnualQuarterComment = async (orderId: string, quarterId: string
   );
 };
 
-export const addAnnualQuarterPayment = async (
+const addAnnualQuarterPaymentLegacy = async (
   orderId: string,
   quarterId: string,
   payload: { amount: number; paidAt?: string; method?: PaymentMethod; comment?: string }
@@ -577,6 +579,48 @@ export const addAnnualQuarterPayment = async (
   );
 };
 
+export const addAnnualQuarterPayment = async (
+  orderId: string,
+  quarterId: string,
+  payload: { amount: number; paidAt?: string; method?: PaymentMethod; comment?: string }
+) => {
+  await delay();
+  const order = readOrders().find((item) => item.id === orderId);
+  const requestQuarter = order?.quarters?.find((quarter) => quarter.id === quarterId);
+  const contract = order
+    ? readFinanceContractsSync().find((item) => item.id === order.contractId || item.requestId === order.id)
+    : undefined;
+  const financeQuarter = contract?.quarterlySchedule?.find((quarter) =>
+    quarter.id === quarterId ||
+    `RQ-${quarter.id}` === quarterId ||
+    quarter.quarter === requestQuarter?.quarter
+  );
+
+  if (!order || !contract || !financeQuarter) return order;
+
+  const { updatedQuarter } = applyQuarterPaymentSync(contract.id, financeQuarter.id, {
+    amount: payload.amount,
+    date: payload.paidAt || new Date().toISOString().slice(0, 10),
+    method: payload.method || 'bank_transfer',
+    comment: payload.comment,
+  }, currentActor().name);
+
+  const synced = updatedQuarter ? await syncAnnualQuarterFromFinance(contract.id, updatedQuarter) : order;
+  if (!payload.comment) return synced;
+
+  return updateOrderQuarter(
+    orderId,
+    quarterId,
+    (quarter) => ({
+      ...quarter,
+      comments: [{ id: `QCOM-${Date.now()}`, quarterId, requestId: orderId, author: currentActor().name, text: payload.comment || '', visibility: 'internal', createdAt: stamp() }, ...quarter.comments],
+      updatedAt: new Date().toISOString().slice(0, 10),
+    }),
+    `Quarter payment note added: ${payload.amount}`,
+    'payment_changed'
+  );
+};
+
 export const syncAnnualQuarterFromFinance = async (contractId: string, financeQuarter: QuarterlyContractItem) => {
   await delay(20);
   const orders = readOrders();
@@ -596,7 +640,12 @@ export const syncAnnualQuarterFromFinance = async (contractId: string, financeQu
       invoiceNumber: financeQuarter.invoiceNumber,
       invoiceDate: financeQuarter.invoiceDate,
       dueDate: financeQuarter.dueDate,
-      workStatus: financeQuarter.workStatus,
+      workStatus: quarter.workStatus === 'completed'
+        ? quarter.workStatus
+        : financeQuarter.workStatus === 'completed' || financeQuarter.workStatus === 'blocked_by_debt'
+          ? financeQuarter.workStatus
+          : quarter.workStatus,
+      lastPaymentDate: financeQuarter.lastPaymentDate,
       completedAt: financeQuarter.completedAt || quarter.completedAt,
       updatedAt: new Date().toISOString().slice(0, 10),
     }),

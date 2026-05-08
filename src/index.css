@@ -70,6 +70,39 @@ select {
   box-shadow: 0 0 0 4px rgba(135, 201, 249, 0.32);
 }
 
+.staff-crm,
+.staff-crm * {
+  min-width: 0;
+}
+
+.staff-crm :where(h1, h2, h3, h4, h5, p, span, a, button, label, td, th) {
+  overflow-wrap: anywhere;
+}
+
+.staff-crm :where(button, a, span) {
+  max-width: 100%;
+}
+
+.staff-crm :where(.rounded-full) {
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.staff-crm :where(input, select, textarea) {
+  max-width: 100%;
+}
+
+.staff-crm table {
+  table-layout: fixed;
+}
+
+.staff-crm td,
+.staff-crm th {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  vertical-align: top;
+}
+
 @keyframes heroZoom {
   from { transform: scale(1); }
   to { transform: scale(1.05); }

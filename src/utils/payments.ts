@@ -1,4 +1,4 @@
-import type { Contract, Debt, PaymentMethod, PaymentRecordStatus, QuarterlyContractItem, QuarterNumber, UserRole } from '../data/mockData';
+import type { Contract, Debt, PaymentMethod, PaymentRecordStatus, QuarterlyContractItem, QuarterNumber, QuarterScheduleType, UserRole } from '../data/mockData';
 
 const dayMs = 24 * 60 * 60 * 1000;
 
@@ -54,12 +54,21 @@ export const paymentMethodLabel = (method?: PaymentMethod) => {
 
 export const canAccessPayments = (role?: UserRole) => role === 'ADMIN' || role === 'ACCOUNTANT';
 
-export const calculateQuarterPeriod = (startDate: string, quarter: QuarterNumber) => {
+export const calculateQuarterPeriod = (
+  startDate: string,
+  quarter: QuarterNumber,
+  scheduleType: QuarterScheduleType = 'calendar_quarters',
+  endDate?: string
+) => {
   const start = new Date(`${startDate}T00:00:00`);
-  const year = start.getFullYear();
-  const startMonth = (quarter - 1) * 3;
-  const periodStart = new Date(year, startMonth, 1);
-  const periodEnd = new Date(year, startMonth + 3, 0);
+  const periodStart = scheduleType === 'contract_quarters'
+    ? new Date(start.getFullYear(), start.getMonth() + (quarter - 1) * 3, start.getDate())
+    : new Date(start.getFullYear(), (quarter - 1) * 3, 1);
+  const naturalPeriodEnd = scheduleType === 'contract_quarters'
+    ? new Date(periodStart.getFullYear(), periodStart.getMonth() + 3, periodStart.getDate() - 1)
+    : new Date(periodStart.getFullYear(), periodStart.getMonth() + 3, 0);
+  const contractEnd = endDate ? new Date(`${endDate}T23:59:59`) : undefined;
+  const periodEnd = contractEnd && quarter === 4 && contractEnd < naturalPeriodEnd ? contractEnd : naturalPeriodEnd;
   return {
     periodStart: periodStart.toISOString().slice(0, 10),
     periodEnd: periodEnd.toISOString().slice(0, 10),
@@ -109,7 +118,7 @@ export const calculateDebtForQuarter = (quarterItem: QuarterlyContractItem): Deb
 export const createQuarterlySchedule = (contract: Contract): QuarterlyContractItem[] => {
   const amount = Math.round(contract.totalAmount / 4);
   return ([1, 2, 3, 4] as QuarterNumber[]).map((quarter) => {
-    const { periodStart, periodEnd } = calculateQuarterPeriod(contract.startDate, quarter);
+    const { periodStart, periodEnd } = calculateQuarterPeriod(contract.startDate, quarter, contract.quarterScheduleType || 'calendar_quarters', contract.endDate);
     const quarterLabel = `${quarter} квартал` as QuarterlyContractItem['quarterLabel'];
     return {
       id: `${contract.id}-Q${quarter}`,

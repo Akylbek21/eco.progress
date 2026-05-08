@@ -277,7 +277,7 @@ const PaymentsPage = () => {
   const filteredRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return rows
-      .filter((row) => paymentType === 'all' || (paymentType === 'debts' ? row.rowType === 'debt' : row.rowType === paymentType))
+      .filter((row) => paymentType === 'all' ? row.rowType !== 'debt' : paymentType === 'debts' ? row.rowType === 'debt' : row.rowType === paymentType)
       .filter((row) => contractType === 'all' || row.contractType === contractType)
       .filter((row) => quarter === 'all' || row.quarter === quarter)
       .filter((row) => status === 'all' || row.paymentStatus === status)
@@ -309,9 +309,12 @@ const PaymentsPage = () => {
     const quarterlyAmount = filteredRows.filter((row) => row.rowType === 'quarterly').reduce((sum, row) => sum + row.totalAmount, 0);
     const paid = filteredRows.reduce((sum, row) => sum + row.paidAmount, 0);
     const partial = filteredRows.filter((row) => row.paymentStatus === 'partial').reduce((sum, row) => sum + row.paidAmount, 0);
-    const totalDebt = filteredRows.filter((row) => row.remainingAmount > 0).reduce((sum, row) => sum + row.remainingAmount, 0);
-    const overdueDebt = filteredRows.filter((row) => row.paymentStatus === 'overdue').reduce((sum, row) => sum + row.remainingAmount, 0);
-    const clientsWithDebt = new Set(filteredRows.filter((row) => row.remainingAmount > 0).map((row) => row.clientCompanyId)).size;
+    const debtBasis = paymentType === 'debts'
+      ? filteredRows
+      : filteredRows.filter((row) => row.rowType === 'one_time' || row.rowType === 'quarterly');
+    const totalDebt = debtBasis.filter((row) => row.remainingAmount > 0).reduce((sum, row) => sum + row.remainingAmount, 0);
+    const overdueDebt = debtBasis.filter((row) => row.paymentStatus === 'overdue').reduce((sum, row) => sum + row.remainingAmount, 0);
+    const clientsWithDebt = new Set(debtBasis.filter((row) => row.remainingAmount > 0).map((row) => row.clientCompanyId)).size;
     const upcoming = filteredRows.filter((row) => {
       const overdueDays = getOverdueDays(row.dueDate);
       if (!row.dueDate || row.remainingAmount <= 0 || overdueDays > 0) return false;
@@ -329,7 +332,7 @@ const PaymentsPage = () => {
       ['Клиентов с долгом', clientsWithDebt, ReceiptText],
       ['Ближайшие оплаты', upcoming, CreditCard],
     ] as Array<[string, number, LucideIcon]>;
-  }, [filteredRows]);
+  }, [filteredRows, paymentType]);
 
   const selectedRow = rows.find((row) => row.id === selectedRowId);
   const selectedContract = selectedRow?.contract;
@@ -337,9 +340,11 @@ const PaymentsPage = () => {
   const selectedQuarter = selectedRow?.quarterItem;
   const selectedTransactions = selectedRow
     ? transactions.filter((transaction) =>
-        (selectedPayment?.id && transaction.paymentId === selectedPayment.id) ||
-        (selectedContract?.id && transaction.contractId === selectedContract.id) ||
-        (selectedQuarter?.id && transaction.quarterItemId === selectedQuarter.id)
+        selectedPayment?.id
+          ? transaction.paymentId === selectedPayment.id
+          : selectedQuarter?.id
+            ? transaction.quarterItemId === selectedQuarter.id
+            : Boolean(selectedContract?.id && transaction.contractId === selectedContract.id)
       )
     : [];
 
