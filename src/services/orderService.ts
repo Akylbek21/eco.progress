@@ -1,30 +1,57 @@
-import { notifications, orders, statusDescriptions, type CommentItem, type CRMActionType, type DocumentItem, type EcologyStatus, type LaboratoryStatus, type MockUser, type NotificationItem, type Order, type OrderHistoryItem, type OrderStatus, type PaymentStatus, type StaffContractStatus, type UserRole } from '../data/mockData';
+import { financeContracts, getBusinessCompanyById, getBusinessCompanyByServiceId, notifications, orders, statusDescriptions, type CommentItem, type CRMActionType, type DocumentItem, type EcologyStatus, type LaboratoryStatus, type MockUser, type NotificationItem, type Order, type OrderHistoryItem, type OrderStatus, type PaymentMethod, type PaymentStatus, type QuarterDocument, type QuarterResult, type QuarterWorkStatus, type QuarterlyContractItem, type RequestQuarter, type StaffContractStatus, type UserRole } from '../data/mockData';
+import { canCompleteAnnualRequest, createFallbackRequestQuarters, createRequestQuartersFromContract, getQuarterResultTypeByStage, getUploadedByRole, normalizeRequestQuarter } from '../utils/annualRequests';
+import { calculateRemainingAmount } from '../utils/payments';
+import { fallbackPaymentStatus, getWorkStageByService, normalizeOrderStatus } from '../utils/crm';
 
 const ORDERS_KEY = 'eco-progress-orders';
 const USER_KEY = 'eco-progress-user';
 const delay = (ms = 180) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const normalizeOrder = (order: Order): Order => ({
-  ...order,
-  contractStatus: order.contractStatus || 'not_sent',
-  crmContractStatus: order.crmContractStatus || (order.contractStatus === 'signed' ? 'signed' : order.contractStatus === 'sent' ? 'sent_to_client' : 'not_created'),
-  paymentStatus: order.paymentStatus || 'not_sent',
-  assignedManagerId: order.assignedManagerId || 'staff-1',
-  assignedAccountantId: order.assignedAccountantId || 'staff-2',
-  assignedEcologistId: order.assignedEcologistId || 'staff-3',
-  assignedLaboratoryId: order.assignedLaboratoryId || 'staff-4',
-  assignedAccountant: order.assignedAccountant || 'Бухгалтер ECOPROGRESS GROUP',
-  assignedEcologist: order.assignedEcologist || 'Эколог ECOPROGRESS GROUP',
-  assignedLaboratory: order.assignedLaboratory || 'Лаборатория ECOPROGRESS GROUP',
-  ecologyStatus: order.ecologyStatus || (/(эколог|отчет|документ|разреш)/i.test(order.service) ? 'in_progress' : 'not_started'),
-  laboratoryStatus: order.laboratoryStatus || (/(лаборатор|анализ|исслед)/i.test(order.service) ? 'waiting_samples' : 'not_assigned'),
-  deadline: order.deadline || '',
-  updatedAt: order.updatedAt || order.createdAt,
-  comments: order.comments || [],
-  documents: order.documents || [],
-  resultDocuments: order.resultDocuments || [],
-  history: order.history || [],
-});
+const normalizeOrder = (order: Order): Order => {
+  const fallbackCompany = order.businessCompanyId
+    ? getBusinessCompanyById(order.businessCompanyId)
+    : getBusinessCompanyByServiceId(order.serviceId);
+
+  const contract = order.contractId
+    ? financeContracts.find((item) => item.id === order.contractId)
+    : financeContracts.find((item) => item.requestId === order.id);
+  const contractType = order.contractType || contract?.contractType || 'one_time';
+  const annualQuarters = contractType === 'annual_quarterly'
+    ? contract?.quarterlySchedule?.length
+      ? createRequestQuartersFromContract(contract, order.quarters || [])
+      : (order.quarters?.length ? order.quarters.map(normalizeRequestQuarter) : createFallbackRequestQuarters({ ...order, contractType, contractId: order.contractId || contract?.id }))
+    : order.quarters?.map(normalizeRequestQuarter);
+
+  return {
+    ...order,
+    status: contractType === 'annual_quarterly' && !['Завершено', 'Отменено'].includes(order.status) ? 'annual_active' : normalizeOrderStatus(order.status, order),
+    contractType,
+    contractId: order.contractId || contract?.id,
+    annualPeriodStart: order.annualPeriodStart || contract?.startDate,
+    annualPeriodEnd: order.annualPeriodEnd || contract?.endDate,
+    quarters: annualQuarters,
+    businessCompanyId: order.businessCompanyId || fallbackCompany.id,
+    businessCompanyName: order.businessCompanyName || fallbackCompany.name,
+    contractStatus: order.contractStatus || 'not_sent',
+    crmContractStatus: order.crmContractStatus || (order.contractStatus === 'signed' ? 'signed' : order.contractStatus === 'sent' ? 'sent_to_client' : 'not_created'),
+    paymentStatus: order.paymentStatus || 'not_sent',
+    assignedManagerId: order.assignedManagerId || 'staff-1',
+    assignedAccountantId: order.assignedAccountantId || 'staff-2',
+    assignedEcologistId: order.assignedEcologistId || 'staff-3',
+    assignedLaboratoryId: order.assignedLaboratoryId || 'staff-4',
+    assignedAccountant: order.assignedAccountant || 'Бухгалтер ECOPROGRESS GROUP',
+    assignedEcologist: order.assignedEcologist || 'Эколог ECOPROGRESS GROUP',
+    assignedLaboratory: order.assignedLaboratory || 'Лаборатория ECOPROGRESS GROUP',
+    ecologyStatus: order.ecologyStatus || (/(эколог|отчет|документ|разреш)/i.test(order.service) ? 'in_progress' : 'not_started'),
+    laboratoryStatus: order.laboratoryStatus || (/(лаборатор|анализ|исслед)/i.test(order.service) ? 'waiting_samples' : 'not_assigned'),
+    deadline: order.deadline || '',
+    updatedAt: order.updatedAt || order.createdAt,
+    comments: order.comments || [],
+    documents: order.documents || [],
+    resultDocuments: order.resultDocuments || [],
+    history: order.history || [],
+  };
+};
 
 const readOrders = (): Order[] => {
   const raw = localStorage.getItem(ORDERS_KEY);
@@ -34,7 +61,14 @@ const readOrders = (): Order[] => {
     return initialOrders;
   }
   try {
-    return (JSON.parse(raw) as Order[]).map(normalizeOrder);
+    const parsed = JSON.parse(raw) as Order[];
+    const merged = [
+      ...parsed,
+      ...orders.filter((mockOrder) => !parsed.some((item) => item.id === mockOrder.id)),
+    ];
+    const normalizedOrders = merged.map(normalizeOrder);
+    localStorage.setItem(ORDERS_KEY, JSON.stringify(normalizedOrders));
+    return normalizedOrders;
   } catch {
     const initialOrders = orders.map(normalizeOrder);
     localStorage.setItem(ORDERS_KEY, JSON.stringify(initialOrders));
@@ -140,11 +174,14 @@ export type CreateOrderPayload = {
 export const createOrder = async (payload: CreateOrderPayload): Promise<Order> => {
   await delay();
   const id = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+  const businessCompany = getBusinessCompanyByServiceId(payload.serviceId);
   const doc: DocumentItem[] = payload.fileName
     ? [{ id: `DOC-${Date.now()}`, orderId: id, name: payload.fileName, type: 'client', uploadedAt: stamp(), status: 'Загружен' }]
     : [];
   const order: Order = {
     id,
+    businessCompanyId: businessCompany.id,
+    businessCompanyName: businessCompany.name,
     clientId: payload.user?.id ?? 'client-1',
     clientType: payload.user?.type === 'individual' ? 'individual' : 'company',
     clientName: payload.contactPerson,
@@ -160,7 +197,7 @@ export const createOrder = async (payload: CreateOrderPayload): Promise<Order> =
     urgency: payload.urgency,
     comment: payload.comment,
     createdAt: stamp(),
-    status: 'Новая',
+    status: 'Консультация',
     manager: 'Не назначен',
     contractStatus: 'not_sent',
     crmContractStatus: 'not_created',
@@ -184,7 +221,7 @@ export const createOrder = async (payload: CreateOrderPayload): Promise<Order> =
     resultDocuments: [],
     comments: [],
     history: [
-      historyEntry(id, 'order_created', 'Заявка ожидает проверки сотрудником перед выставлением договора и счета'),
+      historyEntry(id, 'order_created', `Заявка направлена в ${businessCompany.name} на этап "Консультация"`),
       historyEntry(id, 'order_created', 'Заявка создана'),
     ],
   };
@@ -209,6 +246,7 @@ export const sendContractAndInvoice = async (
           paymentMethod: payload.paymentMethod,
           signatureProvider: payload.signatureProvider,
           paymentUrl: `https://pay.ecoprogress.kz/invoice/${orderId}`,
+          status: 'Счет на оплату' as OrderStatus,
           updatedAt: sentAt,
           resultDocuments: [
             {
@@ -279,6 +317,7 @@ export const payOrderOnline = async (orderId: string, method: string) => {
       ? {
           ...order,
           paymentStatus: 'paid' as const,
+          status: order.contractType === 'annual_quarterly' ? 'annual_active' as OrderStatus : getWorkStageByService(order),
           paymentMethod: method,
           paidAt,
           updatedAt: paidAt,
@@ -311,8 +350,14 @@ export const updatePaymentStatus = async (
     if (order.id !== orderId) return order;
     const paidAt = status === 'paid' ? payload.paidAt || order.paidAt || stamp() : order.paidAt;
     const previousStatus = order.paymentStatus || 'not_sent';
+    const nextOrderStatus = order.contractType === 'annual_quarterly'
+      ? 'annual_active'
+      : status === 'paid' && order.status === 'Счет на оплату'
+      ? getWorkStageByService(order)
+      : order.status;
     return {
       ...order,
+      status: nextOrderStatus,
       paymentStatus: status,
       paymentAmount: payload.amount ?? order.paymentAmount,
       paymentMethod: payload.method ?? order.paymentMethod,
@@ -354,16 +399,230 @@ export const updateContractStatus = async (orderId: string, status: StaffContrac
 
 export const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
   await delay();
-  const items = readOrders().map((order) =>
-    order.id === orderId
+  const items = readOrders().map((order) => {
+    if (order.id !== orderId) return order;
+    const updatedAt = stamp();
+    if (order.contractType === 'annual_quarterly' && status === 'Завершено' && !canCompleteAnnualRequest(order)) {
+      return {
+        ...order,
+        updatedAt,
+        history: [historyEntry(orderId, 'status_changed', 'Годовая заявка не завершена: есть незакрытые кварталы, долги или отсутствуют результаты'), ...order.history],
+      };
+    }
+    const invoiceDoc: DocumentItem | undefined = status === 'Счет на оплату' && !order.resultDocuments.some((doc) => doc.type === 'invoice')
       ? {
-          ...order,
-          status,
-          updatedAt: stamp(),
-          history: [historyEntry(orderId, 'status_changed', `Статус изменен: ${order.status} → ${status}`, undefined, order.status, status), ...order.history],
+          id: `DOC-${Date.now()}-invoice`,
+          orderId,
+          name: `Счет на оплату ${orderId}.pdf`,
+          type: 'invoice',
+          uploadedAt: updatedAt,
+          status: 'Ожидает оплаты',
         }
-      : order
+      : undefined;
+
+    return {
+      ...order,
+      status,
+      paymentStatus: status === 'Счет на оплату' && fallbackPaymentStatus(order.paymentStatus) === 'not_sent' ? 'pending' as const : order.paymentStatus,
+      paymentUrl: status === 'Счет на оплату' ? order.paymentUrl || `https://pay.ecoprogress.kz/invoice/${orderId}` : order.paymentUrl,
+      resultDocuments: invoiceDoc ? [invoiceDoc, ...order.resultDocuments] : order.resultDocuments,
+      updatedAt,
+      history: [historyEntry(orderId, 'status_changed', `Этап изменен: ${order.status} → ${status}`, undefined, order.status, status), ...order.history],
+    };
+  });
+  writeOrders(items);
+  return items.find((order) => order.id === orderId);
+};
+
+const updateOrderQuarter = (
+  orderId: string,
+  quarterId: string,
+  updater: (quarter: RequestQuarter) => RequestQuarter,
+  historyText: string,
+  actionType: CRMActionType = 'status_changed'
+) => {
+  const updatedAt = stamp();
+  const items = readOrders().map((order) => {
+    if (order.id !== orderId) return order;
+    return {
+      ...order,
+      status: order.contractType === 'annual_quarterly' && order.status !== 'Завершено' ? 'annual_active' as OrderStatus : order.status,
+      quarters: (order.quarters || []).map((quarter) => quarter.id === quarterId ? normalizeRequestQuarter(updater(quarter)) : quarter),
+      updatedAt,
+      history: [historyEntry(orderId, actionType, historyText), ...order.history],
+    };
+  });
+  writeOrders(items);
+  return items.find((order) => order.id === orderId);
+};
+
+export const updateAnnualQuarterWorkStatus = async (orderId: string, quarterId: string, workStatus: QuarterWorkStatus, comment?: string) => {
+  await delay();
+  return updateOrderQuarter(
+    orderId,
+    quarterId,
+    (quarter) => ({
+      ...quarter,
+      workStatus,
+      startedAt: ['ready_to_start', 'in_progress'].includes(workStatus) ? quarter.startedAt || new Date().toISOString().slice(0, 10) : quarter.startedAt,
+      completedAt: workStatus === 'completed' ? quarter.completedAt || new Date().toISOString().slice(0, 10) : quarter.completedAt,
+      comments: comment ? [{ id: `QCOM-${Date.now()}`, quarterId, requestId: orderId, author: currentActor().name, text: comment, visibility: 'internal', createdAt: stamp() }, ...quarter.comments] : quarter.comments,
+      updatedAt: new Date().toISOString().slice(0, 10),
+    }),
+    `Статус квартала изменен: ${workStatus}`,
+    'status_changed'
   );
+};
+
+export const uploadAnnualQuarterDocument = async (
+  orderId: string,
+  quarterId: string,
+  payload: { fileName: string; fileType: string; fileSize?: number; documentType: QuarterDocument['documentType']; uploadedByName?: string; uploadedByRole?: QuarterDocument['uploadedByRole'] }
+) => {
+  await delay();
+  const actor = currentActor();
+  let document: QuarterDocument | undefined;
+  const updatedOrder = updateOrderQuarter(
+    orderId,
+    quarterId,
+    (quarter) => {
+      document = {
+        id: `QDOC-${Date.now()}`,
+        quarterId,
+        requestId: orderId,
+        contractId: quarter.contractId,
+        name: payload.fileName,
+        fileName: payload.fileName,
+        fileType: payload.fileType,
+        fileSize: payload.fileSize,
+        documentType: payload.documentType,
+        uploadedByRole: payload.uploadedByRole || getUploadedByRole(actor.role),
+        uploadedByName: payload.uploadedByName || actor.name,
+        uploadedAt: new Date().toISOString().slice(0, 10),
+      };
+      return { ...quarter, documents: [document, ...quarter.documents], updatedAt: new Date().toISOString().slice(0, 10) };
+    },
+    `Документ квартала загружен: ${payload.fileName}`,
+    'document_uploaded'
+  );
+  return { order: updatedOrder, document };
+};
+
+export const addAnnualQuarterResult = async (
+  orderId: string,
+  quarterId: string,
+  payload: { title: string; description?: string; resultType?: QuarterResult['resultType']; attachedDocumentIds?: string[]; createdByName?: string }
+) => {
+  await delay();
+  let result: QuarterResult | undefined;
+  const updatedOrder = updateOrderQuarter(
+    orderId,
+    quarterId,
+    (quarter) => {
+      result = {
+        id: `QRES-${Date.now()}`,
+        quarterId,
+        requestId: orderId,
+        title: payload.title,
+        description: payload.description,
+        resultType: payload.resultType || getQuarterResultTypeByStage(quarter),
+        attachedDocumentIds: payload.attachedDocumentIds || quarter.documents.map((doc) => doc.id),
+        createdByName: payload.createdByName || currentActor().name,
+        createdAt: new Date().toISOString().slice(0, 10),
+      };
+      return { ...quarter, results: [result, ...quarter.results], updatedAt: new Date().toISOString().slice(0, 10) };
+    },
+    `Результат квартала добавлен: ${payload.title}`,
+    'document_ready'
+  );
+  return { order: updatedOrder, result };
+};
+
+export const addAnnualQuarterComment = async (orderId: string, quarterId: string, text: string, visibility: 'client' | 'internal' = 'internal') => {
+  await delay();
+  return updateOrderQuarter(
+    orderId,
+    quarterId,
+    (quarter) => ({
+      ...quarter,
+      comments: [{ id: `QCOM-${Date.now()}`, quarterId, requestId: orderId, author: currentActor().name, text, visibility, createdAt: stamp() }, ...quarter.comments],
+      updatedAt: new Date().toISOString().slice(0, 10),
+    }),
+    visibility === 'client' ? 'Добавлен комментарий клиенту по кварталу' : 'Добавлен внутренний комментарий по кварталу',
+    visibility === 'client' ? 'client_message_added' : 'internal_note_added'
+  );
+};
+
+export const addAnnualQuarterPayment = async (
+  orderId: string,
+  quarterId: string,
+  payload: { amount: number; paidAt?: string; method?: PaymentMethod; comment?: string }
+) => {
+  await delay();
+  return updateOrderQuarter(
+    orderId,
+    quarterId,
+    (quarter) => {
+      const paidAmount = Math.min(quarter.plannedAmount, quarter.paidAmount + payload.amount);
+      return {
+        ...quarter,
+        paidAmount,
+        remainingAmount: calculateRemainingAmount(quarter.plannedAmount, paidAmount),
+        comments: payload.comment ? [{ id: `QCOM-${Date.now()}`, quarterId, requestId: orderId, author: currentActor().name, text: payload.comment, visibility: 'internal', createdAt: stamp() }, ...quarter.comments] : quarter.comments,
+        updatedAt: payload.paidAt || new Date().toISOString().slice(0, 10),
+      };
+    },
+    `Добавлена оплата по кварталу: ${payload.amount} ₸`,
+    'payment_changed'
+  );
+};
+
+export const syncAnnualQuarterFromFinance = async (contractId: string, financeQuarter: QuarterlyContractItem) => {
+  await delay(20);
+  const orders = readOrders();
+  const target = orders.find((order) => order.contractId === contractId || order.id === financeQuarter.requestId);
+  if (!target?.quarters?.length) return undefined;
+  const requestQuarter = target.quarters.find((quarter) => quarter.quarter === financeQuarter.quarter || quarter.id.endsWith(financeQuarter.id));
+  if (!requestQuarter) return undefined;
+  return updateOrderQuarter(
+    target.id,
+    requestQuarter.id,
+    (quarter) => ({
+      ...quarter,
+      plannedAmount: financeQuarter.plannedAmount,
+      paidAmount: financeQuarter.paidAmount,
+      remainingAmount: financeQuarter.remainingAmount,
+      paymentStatus: financeQuarter.paymentStatus,
+      invoiceNumber: financeQuarter.invoiceNumber,
+      invoiceDate: financeQuarter.invoiceDate,
+      dueDate: financeQuarter.dueDate,
+      workStatus: financeQuarter.workStatus,
+      completedAt: financeQuarter.completedAt || quarter.completedAt,
+      updatedAt: new Date().toISOString().slice(0, 10),
+    }),
+    `Квартал синхронизирован с оплатой: ${financeQuarter.quarterLabel}`,
+    'payment_changed'
+  );
+};
+
+export const completeAnnualRequest = async (orderId: string) => {
+  await delay();
+  const items = readOrders().map((order) => {
+    if (order.id !== orderId) return order;
+    if (!canCompleteAnnualRequest(order)) {
+      return {
+        ...order,
+        updatedAt: stamp(),
+        history: [historyEntry(orderId, 'status_changed', 'Годовая заявка не может быть завершена: проверьте кварталы, результаты и оплату'), ...order.history],
+      };
+    }
+    return {
+      ...order,
+      status: 'Завершено' as OrderStatus,
+      updatedAt: stamp(),
+      history: [historyEntry(orderId, 'status_changed', 'Годовая заявка завершена после выполнения всех 4 кварталов', undefined, order.status, 'Завершено'), ...order.history],
+    };
+  });
   writeOrders(items);
   return items.find((order) => order.id === orderId);
 };
@@ -429,6 +688,7 @@ export const updateEcologyStatus = async (orderId: string, status: EcologyStatus
     return {
       ...order,
       ecologyStatus: status,
+      status: status === 'done' && order.status === 'Проектирование' ? 'Проверка результата' : order.status,
       ecologyComment: comment ?? order.ecologyComment,
       ecologyReadyAt: status === 'done' ? order.ecologyReadyAt || stamp() : order.ecologyReadyAt,
       updatedAt: stamp(),
@@ -447,6 +707,7 @@ export const updateLaboratoryStatus = async (orderId: string, status: Laboratory
     return {
       ...order,
       laboratoryStatus: status,
+      status: status === 'result_ready' && order.status === 'Лаборатория' ? 'Проверка результата' : order.status,
       laboratoryComment: comment ?? order.laboratoryComment,
       samplesReceivedAt: status === 'samples_received' ? order.samplesReceivedAt || stamp() : order.samplesReceivedAt,
       laboratoryReadyAt: status === 'result_ready' ? order.laboratoryReadyAt || stamp() : order.laboratoryReadyAt,

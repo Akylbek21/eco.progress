@@ -5,7 +5,7 @@ import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import LeadForm from '../components/LeadForm';
 import SEO from '../components/SEO';
-import { services, type ServiceCategory } from '../data/mockData';
+import { getBusinessCompanyById, services, type ServiceCategory } from '../data/mockData';
 import { getWhatsAppUrl } from '../config/company';
 import { trackWhatsAppClick } from '../services/analytics';
 
@@ -104,7 +104,10 @@ const ServicesPage = () => {
               <Reveal key={service.id} delay={index * 0.04}>
                 <div id={`service-${service.id}`} className={`card-hover flex h-full scroll-mt-28 flex-col rounded-[18px] border bg-white p-5 sm:rounded-[22px] sm:p-6 ${(selectedIncludes[service.id] ?? []).length > 0 ? 'border-accent ring-4 ring-accent/15' : 'border-slate-200'}`}>
                   <div className="flex items-start justify-between gap-4">
-                    <p className="text-sm font-semibold text-eco-500">{service.category}</p>
+                    <div>
+                      <p className="text-sm font-semibold text-eco-500">{service.category}</p>
+                      <p className="mt-1 text-xs font-bold text-slate-500">Исполнитель: {getBusinessCompanyById(service.businessCompanyId).name}</p>
+                    </div>
                     {(selectedIncludes[service.id] ?? []).length > 0 && (
                       <span className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-eco-900">
                         Выбрано: {(selectedIncludes[service.id] ?? []).length}

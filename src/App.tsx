@@ -20,6 +20,7 @@ import FaqPage from './pages/FaqPage';
 import ContactsPage from './pages/ContactsPage';
 import AdminPage from './pages/AdminPage';
 import NotFoundPage from './pages/NotFoundPage';
+import PaymentsPage from './pages/PaymentsPage';
 import {
   CabinetCompanyPage,
   CabinetDashboardPage,
@@ -84,12 +85,15 @@ function App() {
 
         <Route path="/staff" element={<StaffLayout><StaffDashboardPage /></StaffLayout>} />
         <Route path="/staff/orders" element={<StaffLayout><StaffOrdersPage /></StaffLayout>} />
+        <Route path="/staff/orders/company/:businessCompanyId" element={<StaffLayout><StaffOrdersPage /></StaffLayout>} />
         <Route path="/staff/orders/:id" element={<StaffLayout><StaffOrderDetailsPage onNotify={setToast} /></StaffLayout>} />
         <Route path="/staff/clients" element={<StaffLayout><StaffClientsPage /></StaffLayout>} />
         <Route path="/staff/clients/:companyKey" element={<StaffLayout><StaffClientsPage /></StaffLayout>} />
         <Route path="/staff/documents" element={<StaffLayout><StaffDocumentsPage /></StaffLayout>} />
+        <Route path="/staff/documents/:orderId" element={<StaffLayout><StaffDocumentsPage /></StaffLayout>} />
         <Route path="/staff/notifications" element={<StaffLayout><StaffNotificationsPage /></StaffLayout>} />
         <Route path="/staff/profile" element={<StaffLayout><StaffProfilePage /></StaffLayout>} />
+        <Route path="/dashboard/payments" element={<StaffLayout><PaymentsPage /></StaffLayout>} />
 
         <Route path="/admin" element={<AdminLayout><AdminPage /></AdminLayout>} />
         <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />

@@ -6,12 +6,14 @@ type StatusBadgeProps = {
 
 const StatusBadge = ({ status }: StatusBadgeProps) => {
   const color =
-    status === 'Готово'
+    status === 'Готово' || status === 'Завершено'
       ? 'bg-emerald-100 text-emerald-800'
       : status === 'Отменено'
       ? 'bg-rose-100 text-rose-800'
-      : status === 'Ожидает документы'
+      : status === 'Счет на оплату'
       ? 'bg-amber-100 text-amber-800'
+      : ['Проектирование', 'Лаборатория', 'Вывоз', 'Утилизация'].includes(status)
+      ? 'bg-eco-100 text-eco-800'
       : 'bg-slate-100 text-slate-800';
 
   return (

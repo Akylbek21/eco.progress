@@ -1,5 +1,5 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   Bell,
   Building2,
@@ -20,18 +20,32 @@ import {
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
-import { notifications, services, statusDescriptions, type DocumentItem, type EcologyStatus, type LaboratoryStatus, type MockUser, type Order, type OrderStatus, type PaymentStatus, type StaffContractStatus, type UserRole } from '../data/mockData';
-import { addComment, assignManager, getOrderById, getOrders, sendContractAndInvoice, updateContractStatus, updateEcologyStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, uploadDocument } from '../services/staffOrderService';
+import { clientContracts, getBusinessCompanyById, notifications, services, statusDescriptions, type ClientContract, type DocumentItem, type EcologyStatus, type LaboratoryStatus, type MockUser, type Order, type OrderStatus, type PaymentMethod, type PaymentStatus, type QuarterDocument, type QuarterResult, type QuarterWorkStatus, type RequestQuarter, type StaffContractStatus, type UserRole } from '../data/mockData';
+import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, assignManager, completeAnnualRequest, getOrderById, getOrders, sendContractAndInvoice, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, uploadAnnualQuarterDocument, uploadDocument } from '../services/staffOrderService';
 import { getCurrentUser, logout } from '../services/authService';
 import { canAccess, permissionsForRole, type Permission } from '../config/permissions';
 import {
+  buildBusinessCompanySummaries,
   buildCompanySummaries,
   companyKey,
+  contractStatusClass,
   ecologyLabel,
   ecologyStatusClass,
   fallbackPaymentStatus,
+  formatContractDaysLeft,
+  formatIsoDate,
+  getContractDisplayStatus,
+  getContractProgress,
+  getContractsForOrder,
   getNextCrmStep,
+  getNextOrderStatus,
+  getOrderBusinessCompanyName,
   getOrderCompanyName,
+  getOrderStatusDefinition,
+  getOrderWorkStageLabel,
+  getWorkflowForOrder,
+  getPrimaryContractForOrder,
+  isWorkOrderStatus,
   laboratoryLabel,
   laboratoryStatusClass,
   orderStatuses,
@@ -40,6 +54,8 @@ import {
   paymentStatuses,
   statusClass,
 } from '../utils/crm';
+import { canCompleteAnnualRequest, getAnnualRequestDebtSummary, getAnnualRequestProgress, getAnnualRequestWarnings, getCurrentQuarterForRequest, isAnnualRequest } from '../utils/annualRequests';
+import { formatCurrency, getOverdueDays, getPaymentStatusColor, getPaymentStatusLabel, paymentMethodLabel } from '../utils/payments';
 
 const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -48,13 +64,34 @@ const useOrders = () => {
   return { orders, refresh };
 };
 
-const badge = (status: string) => <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${statusClass(status)}`}>{status}</span>;
+const badge = (status: string) => {
+  const definition = orderStatuses.includes(status as OrderStatus) ? getOrderStatusDefinition(status as OrderStatus) : undefined;
+  return <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${statusClass(status)}`}>{definition?.label || status}</span>;
+};
 const paymentBadge = (status?: PaymentStatus) => {
   const paymentStatus = fallbackPaymentStatus(status);
   return <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${paymentStatusClass(paymentStatus)}`}>{paymentStatusLabels[paymentStatus]}</span>;
 };
 const ecologyBadge = (status?: EcologyStatus) => <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${ecologyStatusClass(status)}`}>{ecologyLabel(status)}</span>;
 const laboratoryBadge = (status?: LaboratoryStatus) => <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${laboratoryStatusClass(status)}`}>{laboratoryLabel(status)}</span>;
+const quarterWorkStatusLabels: Record<QuarterWorkStatus, string> = {
+  planned: 'Запланировано',
+  waiting_client_data: 'Ожидает данные клиента',
+  ready_to_start: 'Готово к старту',
+  in_progress: 'В работе',
+  waiting_payment: 'Ожидает оплату',
+  blocked_by_debt: 'Заблокировано долгом',
+  completed: 'Выполнено',
+};
+const quarterWorkBadge = (status: QuarterWorkStatus) => {
+  const tone =
+    status === 'completed' ? 'bg-emerald-50 text-emerald-800 ring-emerald-100' :
+    status === 'blocked_by_debt' ? 'bg-rose-50 text-rose-800 ring-rose-100' :
+    status === 'waiting_payment' || status === 'waiting_client_data' ? 'bg-amber-50 text-amber-800 ring-amber-100' :
+    status === 'in_progress' || status === 'ready_to_start' ? 'bg-eco-50 text-eco-800 ring-eco-100' :
+    'bg-slate-100 text-slate-700 ring-slate-200';
+  return <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${tone}`}>{quarterWorkStatusLabels[status]}</span>;
+};
 
 const onlineState = (order: Order) => {
   if (order.paymentStatus === 'paid' && order.contractStatus === 'signed') return { label: 'Подписано и оплачено', tone: 'bg-emerald-50 text-emerald-800' };
@@ -139,10 +176,60 @@ const roleQuickActions = (role: UserRole) => {
 };
 
 const roleOrderFilter = (orders: Order[], role: UserRole) => {
-  if (role === 'ACCOUNTANT') return orders.filter((order) => order.paymentStatus === 'pending' || order.contractStatus === 'sent' || Boolean(order.paymentAmount));
-  if (role === 'ECOLOGIST') return orders.filter((order) => /эколог|отчет|документ|разреш/i.test(order.service));
-  if (role === 'LABORATORY') return orders.filter((order) => /лаборатор|анализ|исслед/i.test(order.service));
+  if (role === 'ACCOUNTANT') return orders.filter((order) => order.status === 'Счет на оплату' || order.paymentStatus === 'pending' || order.paymentStatus === 'partial' || order.quarters?.some((quarter) => quarter.remainingAmount > 0));
+  if (role === 'ECOLOGIST') return orders.filter((order) => order.status === 'Проектирование' || order.quarters?.some((quarter) => quarter.workStage === 'Проектирование') || /эколог|отчет|документ|разреш|овос|ндв|пдв|пноолр/i.test(order.service));
+  if (role === 'LABORATORY') return orders.filter((order) => order.status === 'Лаборатория' || order.quarters?.some((quarter) => quarter.workStage === 'Лаборатория') || /лаборатор|анализ|исслед|проб|замер/i.test(order.service));
   return orders;
+};
+
+type WorkTask = {
+  id: string;
+  title: string;
+  reason: string;
+  company: string;
+  order: Order;
+  priority: 'Срочно' | 'Важно' | 'План';
+  deadline: string;
+};
+
+const isClosedOrder = (order: Order) => ['Готово', 'Завершено', 'Отменено'].includes(order.status);
+
+const orderNeedsRole = (order: Order, role: UserRole) => {
+  if (role === 'ADMIN') return !isClosedOrder(order);
+  if (role === 'ACCOUNTANT') return order.status === 'Счет на оплату' || ['pending', 'partial'].includes(fallbackPaymentStatus(order.paymentStatus)) || Boolean(order.quarters?.some((quarter) => quarter.remainingAmount > 0));
+  if (role === 'ECOLOGIST') return order.status === 'Проектирование' || (order.status === 'Проверка результата' && order.ecologyStatus !== 'done') || Boolean(order.quarters?.some((quarter) => quarter.workStage === 'Проектирование' && quarter.workStatus !== 'completed'));
+  if (role === 'LABORATORY') return (order.status === 'Лаборатория' && order.laboratoryStatus !== 'result_ready') || Boolean(order.quarters?.some((quarter) => quarter.workStage === 'Лаборатория' && quarter.workStatus !== 'completed'));
+  return !isClosedOrder(order);
+};
+
+const taskTitleForRole = (order: Order, role: UserRole) => {
+  const paymentStatus = fallbackPaymentStatus(order.paymentStatus);
+  if (role === 'ACCOUNTANT') {
+    if (order.status === 'Счет на оплату' && paymentStatus === 'not_sent') return 'Выставить счет';
+    if (paymentStatus === 'pending') return 'Проверить оплату';
+    if (paymentStatus === 'partial') return 'Проверить остаток';
+    return 'Подготовить акт';
+  }
+  if (role === 'ECOLOGIST') {
+    if (order.ecologyStatus === 'waiting_client_data') return 'Нужны данные';
+    if (order.ecologyStatus === 'in_progress') return 'Заключение';
+    return 'Взять экологию';
+  }
+  if (role === 'LABORATORY') {
+    if (order.laboratoryStatus === 'waiting_samples') return 'Ждем образцы';
+    if (order.laboratoryStatus === 'samples_received') return 'Начать анализ';
+    if (order.laboratoryStatus === 'analysis_in_progress') return 'Загрузить результат';
+    return 'Назначить анализ';
+  }
+  return getNextCrmStep(order);
+};
+
+const taskReason = (order: Order) => `${getOrderStage(order)} · ${order.status}`;
+
+const taskPriority = (order: Order, index: number): WorkTask['priority'] => {
+  if (order.status === 'Консультация' || order.status === 'Счет на оплату' || order.paymentStatus === 'pending' || order.ecologyStatus === 'waiting_client_data') return 'Срочно';
+  if (index < 3 || order.paymentStatus === 'partial' || order.laboratoryStatus === 'analysis_in_progress') return 'Важно';
+  return 'План';
 };
 
 const companyUrlKey = (key: string) => encodeURIComponent(key);
@@ -153,6 +240,7 @@ type StaffDocument = DocumentItem & {
   company: string;
   orderId: string;
   orderService: string;
+  orderStatus: OrderStatus;
   docType: StaffDocumentType;
   uploadedBy: string;
 };
@@ -175,6 +263,7 @@ const collectDocuments = (orders: Order[]): StaffDocument[] =>
       company: getOrderCompanyName(order),
       orderId: order.id,
       orderService: order.service,
+      orderStatus: order.status,
       docType: documentType(doc),
       uploadedBy: doc.type === 'client' ? order.contactPerson || order.clientName : 'Сотрудник',
     }))
@@ -197,24 +286,26 @@ const PermissionDenied = ({ permission }: { permission: Permission }) => (
 
 export const StaffDashboardPage = () => {
   const { orders } = useOrders();
+  const navigate = useNavigate();
   const role = staffRole();
   if (!canAccess(role, 'view_orders')) return <PermissionDenied permission="view_orders" />;
   const user = getCurrentUser();
   const roleOrders = roleOrderFilter(orders, role);
   const [selectedCompany, setSelectedCompany] = useState('all');
-  const companies = useMemo(() => buildCompanySummaries(orders), [orders]);
+  const companies = useMemo(() => buildBusinessCompanySummaries(orders), [orders]);
   const visibleOrders = useMemo(() => roleOrders
-    .filter((order) => selectedCompany === 'all' || companyKey(getOrderCompanyName(order)) === selectedCompany)
+    .filter((order) => selectedCompany === 'all' || order.businessCompanyId === selectedCompany)
     .sort((a, b) => b.id.localeCompare(a.id)), [roleOrders, selectedCompany]);
   const latestActions = orders.flatMap((order) => order.history.slice(0, 2).map((item) => ({ ...item, order }))).slice(0, 6);
   const roleNotifications = buildRoleNotifications(orders, role).slice(0, 5);
   const myTasks = buildMyTasks(orders, role);
+  const expiringContracts = [...clientContracts].sort((a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime()).slice(0, 5);
   const stats = [
-    ['Новые', orders.filter((o) => o.status === 'Новая').length],
-    ['В работе', orders.filter((o) => ['В обработке', 'В работе', 'На проверке'].includes(o.status)).length],
+    ['Консультации', orders.filter((o) => o.status === 'Консультация').length],
+    ['До оплаты', orders.filter((o) => ['Анализ', 'КП', 'Договор'].includes(o.status)).length],
     ['Ждут оплаты', orders.filter((o) => o.paymentStatus === 'pending' || o.paymentStatus === 'partial').length],
-    ['Ждут эколога', orders.filter((o) => o.ecologyStatus === 'in_progress' || o.ecologyStatus === 'waiting_client_data').length],
-    ['Ждут лабораторию', orders.filter((o) => ['waiting_samples', 'samples_received', 'analysis_in_progress'].includes(o.laboratoryStatus || '')).length],
+    ['В работе', orders.filter((o) => isWorkOrderStatus(o.status)).length],
+    ['Проверка', orders.filter((o) => o.status === 'Проверка результата').length],
     ['Готово', orders.filter((o) => ['Готово', 'Завершено'].includes(o.status)).length],
   ];
 
@@ -243,29 +334,23 @@ export const StaffDashboardPage = () => {
       <Reveal>
         <div>
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-xl font-bold text-eco-900">Компании</h3>
+            <h3 className="text-xl font-bold text-eco-900">Компании-исполнители</h3>
             <button type="button" onClick={() => setSelectedCompany('all')} className="text-sm font-bold text-eco-700">Все</button>
           </div>
-          <CompanyCards companies={companies} selectedCompany={selectedCompany} onSelect={setSelectedCompany} totalOrders={orders.length} />
+          <CompanyCards
+            companies={companies}
+            selectedCompany={selectedCompany}
+            onSelect={setSelectedCompany}
+            onOpenOrders={(key) => navigate(key === 'all' ? '/staff/orders' : `/staff/orders/company/${key}`)}
+            totalOrders={orders.length}
+          />
         </div>
       </Reveal>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_390px]">
-        <StaffPanel title="Мои задачи">
-          {myTasks.map((task) => (
-            <Link key={task.id} to={`/staff/orders/${task.order.id}`} className="block rounded-2xl bg-slate-50 p-4 transition hover:bg-eco-50">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-bold text-slate-900">{task.title}</p>
-                  <p className="mt-1 text-sm text-slate-500">{task.company} · {task.order.id}</p>
-                  <p className="mt-2 text-xs font-semibold text-slate-500">{task.deadline}</p>
-                </div>
-                <span className={`rounded-full px-3 py-1 text-xs font-bold ${task.priority === 'Высокий' ? 'bg-rose-50 text-rose-800' : 'bg-white text-eco-800'}`}>{task.priority}</span>
-              </div>
-              <span className="mt-3 inline-flex rounded-full bg-eco-900 px-3 py-2 text-xs font-bold text-white">Открыть</span>
-            </Link>
-          ))}
-          {!myTasks.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Задач нет</p>}
+      <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+        <StaffPanel title="Рабочая очередь">
+          {myTasks.map((task) => <WorkTaskCard key={task.id} task={task} />)}
+          {!myTasks.length && <EmptyState text="Задач нет" />}
         </StaffPanel>
         <div className="space-y-6">
           <StaffPanel title="Действия">
@@ -278,16 +363,19 @@ export const StaffDashboardPage = () => {
           </StaffPanel>
           <StaffPanel title="Уведомления">
             {roleNotifications.map((item) => <NotificationLine key={item.id} notification={item} />)}
+            {!roleNotifications.length && <EmptyState text="Уведомлений нет" />}
+          </StaffPanel>
+          <StaffPanel title="Сроки договоров">
+            {expiringContracts.map((contract) => <StaffContractLine key={contract.id} contract={contract} />)}
+            {!expiringContracts.length && <EmptyState text="Договоров нет" />}
           </StaffPanel>
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_390px]">
-        <StaffPanel title="Заявки">
-          {visibleOrders.slice(0, 7).map((order) => <OrderLine key={order.id} order={order} />)}
-          {!visibleOrders.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Заявок нет</p>}
-        </StaffPanel>
-      </div>
+      <StaffPanel title="Заявки">
+        {visibleOrders.slice(0, 7).map((order) => <OrderLine key={order.id} order={order} />)}
+        {!visibleOrders.length && <EmptyState text="Заявок нет" />}
+      </StaffPanel>
 
       <StaffPanel title="Последние действия">
         {latestActions.map((item) => (
@@ -299,7 +387,7 @@ export const StaffDashboardPage = () => {
             <p className="mt-2 text-sm text-slate-600">{item.text}</p>
           </Link>
         ))}
-        {!latestActions.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Действий нет</p>}
+        {!latestActions.length && <EmptyState text="Действий нет" />}
       </StaffPanel>
     </div>
   );
@@ -308,38 +396,44 @@ export const StaffDashboardPage = () => {
 const buildRoleNotifications = (orders: Order[], role: UserRole) => {
   const generated = orders.flatMap((order) => {
     const items = [
-      order.status === 'Новая' && { id: `${order.id}-new`, category: 'Новая заявка', title: `Новая заявка ${order.id}`, text: `${getOrderCompanyName(order)} · ${order.service}`, order },
+      order.status === 'Консультация' && { id: `${order.id}-new`, category: 'Консультация', title: `Консультация ${order.id}`, text: `${getOrderCompanyName(order)} · ${order.service}`, order },
       order.paymentStatus === 'pending' && { id: `${order.id}-pay`, category: 'Оплата', title: `Ожидает оплаты ${order.id}`, text: order.paymentAmount || 'Сумма не указана', order },
       order.resultDocuments.length > 0 && { id: `${order.id}-doc`, category: 'Документы', title: `Документы по ${order.id}`, text: getOrderCompanyName(order), order },
-      /эколог|отчет|документ|разреш/i.test(order.service) && { id: `${order.id}-eco`, category: 'Эколог', title: `Экологическая обработка ${order.id}`, text: getNextCrmStep(order), order },
-      /лаборатор|анализ|исслед/i.test(order.service) && { id: `${order.id}-lab`, category: 'Лаборатория', title: `Лабораторная задача ${order.id}`, text: getNextCrmStep(order), order },
+      order.status === 'Проектирование' && { id: `${order.id}-eco`, category: 'Проектирование', title: `Проектирование ${order.id}`, text: getNextCrmStep(order), order },
+      order.status === 'Лаборатория' && { id: `${order.id}-lab`, category: 'Лаборатория', title: `Лабораторная задача ${order.id}`, text: getNextCrmStep(order), order },
     ].filter(Boolean);
     return items as Array<{ id: string; category: string; title: string; text: string; order: Order }>;
   });
 
   if (role === 'ACCOUNTANT') return generated.filter((item) => ['Оплата', 'Документы'].includes(item.category));
-  if (role === 'ECOLOGIST') return generated.filter((item) => item.category === 'Эколог');
+  if (role === 'ECOLOGIST') return generated.filter((item) => item.category === 'Проектирование');
   if (role === 'LABORATORY') return generated.filter((item) => item.category === 'Лаборатория');
-  if (role === 'MANAGER') return generated.filter((item) => ['Новая заявка', 'Документы', 'Эколог'].includes(item.category));
+  if (role === 'MANAGER') return generated.filter((item) => ['Консультация', 'Документы', 'Проектирование'].includes(item.category));
   return generated;
 };
 
 const buildMyTasks = (orders: Order[], role: UserRole) => roleOrderFilter(orders, role)
-  .filter((order) => !['Готово', 'Завершено', 'Отменено'].includes(order.status))
+  .filter((order) => orderNeedsRole(order, role))
+  .sort((a, b) => Number(b.status === 'Консультация') - Number(a.status === 'Консультация') || b.id.localeCompare(a.id))
   .slice(0, 6)
   .map((order, index) => ({
     id: `TASK-${order.id}`,
-    title: getNextCrmStep(order),
-    company: getOrderCompanyName(order),
+    title: taskTitleForRole(order, role),
+    reason: taskReason(order),
+    company: getOrderBusinessCompanyName(order),
     order,
-    priority: index < 2 ? 'Высокий' : order.paymentStatus === 'pending' ? 'Средний' : 'Обычный',
+    priority: taskPriority(order, index),
     deadline: order.deadline || 'Сегодня',
   }));
 
 const getOrderStage = (order: Order) => {
-  if (order.paymentStatus === 'pending' || order.paymentStatus === 'partial') return 'Бухгалтерия';
-  if (order.ecologyStatus === 'in_progress' || order.ecologyStatus === 'waiting_client_data') return 'Экология';
-  if (['waiting_samples', 'samples_received', 'analysis_in_progress'].includes(order.laboratoryStatus || '')) return 'Лаборатория';
+  if (order.status === 'annual_active') return getCurrentQuarterForRequest(order)?.workStage || 'Готово';
+  if (order.status === 'Счет на оплату') return 'Бухгалтерия';
+  if (order.status === 'Проектирование') return 'Проектирование';
+  if (order.status === 'Лаборатория') return 'Лаборатория';
+  if (order.status === 'Вывоз') return 'Вывоз';
+  if (order.status === 'Утилизация') return 'Утилизация';
+  if (order.status === 'Проверка результата') return 'Проверка';
   if (order.status === 'Готово' || order.status === 'Завершено') return 'Готово';
   return 'Менеджер';
 };
@@ -355,6 +449,28 @@ const NotificationLine = ({ notification }: { notification: { id: string; catego
   </Link>
 );
 
+const StaffContractLine = ({ contract }: { contract: ClientContract }) => {
+  const progress = getContractProgress(contract);
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="break-words font-bold text-slate-900">{contract.companyName}</p>
+          <p className="mt-1 text-sm text-slate-600">{contract.number} · {getBusinessCompanyById(contract.businessCompanyId).name}</p>
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${contractStatusClass(contract)}`}>{getContractDisplayStatus(contract)}</span>
+      </div>
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-white">
+        <div className="h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm">
+        <span className="font-bold text-eco-900">{formatContractDaysLeft(contract)}</span>
+        <span className="text-slate-500">до {formatIsoDate(contract.endsAt)}</span>
+      </div>
+    </div>
+  );
+};
+
 const StaffPanel = ({ title, children }: { title: string; children: ReactNode }) => (
   <Reveal>
     <div className="rounded-[20px] bg-white p-5 shadow-sm sm:rounded-[22px] sm:p-6">
@@ -364,16 +480,51 @@ const StaffPanel = ({ title, children }: { title: string; children: ReactNode })
   </Reveal>
 );
 
+const EmptyState = ({ text }: { text: string }) => (
+  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm font-semibold text-slate-500">
+    {text}
+  </div>
+);
+
+const WorkTaskCard = ({ task }: { task: WorkTask }) => {
+  const priorityClass = task.priority === 'Срочно'
+    ? 'bg-rose-50 text-rose-800'
+    : task.priority === 'Важно'
+      ? 'bg-amber-50 text-amber-800'
+      : 'bg-white text-eco-800';
+
+  return (
+    <Link to={`/staff/orders/${task.order.id}`} className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:border-eco-200 hover:bg-eco-50">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-lg font-bold text-slate-900">{task.title}</p>
+          <p className="mt-1 break-words text-sm text-slate-600">{task.company} · {task.order.id}</p>
+          <p className="mt-2 text-xs font-semibold text-slate-500">{task.reason}</p>
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${priorityClass}`}>{task.priority}</span>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <span className="text-xs font-semibold text-slate-500">{task.deadline}</span>
+        <span className="inline-flex rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Открыть</span>
+      </div>
+    </Link>
+  );
+};
+
 const OrderLine = ({ order }: { order: Order }) => {
   const online = onlineState(order);
+  const manager = order.manager?.trim();
+  const contract = getPrimaryContractForOrder(order);
   return (
     <Link to={`/staff/orders/${order.id}`} className="block rounded-2xl bg-slate-50 p-4 transition hover:bg-eco-50">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-semibold text-slate-900">{order.id} · {getOrderCompanyName(order)}</p>
-          <p className="mt-1 break-words text-sm text-slate-600">{order.service}</p>
+          <p className="font-semibold text-slate-900">{order.id} · {getOrderBusinessCompanyName(order)}</p>
+          {order.service && <p className="mt-1 break-words text-sm text-slate-600">{order.service}</p>}
+          <p className="mt-1 text-xs text-slate-500">Клиент: {getOrderCompanyName(order)}</p>
+          {contract && <p className="mt-1 text-xs font-semibold text-amber-700">Договор: {formatContractDaysLeft(contract)}</p>}
           <p className="mt-2 text-xs font-semibold text-eco-700">Следующий шаг: {getNextCrmStep(order)}</p>
-          <p className="mt-1 text-xs text-slate-500">Ответственный: {order.manager || 'Не назначен'}</p>
+          {manager && <p className="mt-1 text-xs text-slate-500">Ответственный: {manager}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           {badge(order.status)}
@@ -389,11 +540,13 @@ const CompanyCards = ({
   companies,
   selectedCompany,
   onSelect,
+  onOpenOrders,
   totalOrders,
 }: {
-  companies: ReturnType<typeof buildCompanySummaries>;
+  companies: ReturnType<typeof buildBusinessCompanySummaries> | ReturnType<typeof buildCompanySummaries>;
   selectedCompany: string;
   onSelect: (key: string) => void;
+  onOpenOrders?: (key: string) => void;
   totalOrders: number;
 }) => {
   const totals = companies.reduce(
@@ -412,7 +565,7 @@ const CompanyCards = ({
       <button
         type="button"
         onClick={() => onSelect('all')}
-        className={`min-w-[250px] rounded-[20px] border p-4 text-left transition ${
+        className={`min-w-[260px] rounded-[20px] border p-4 text-left transition ${
           selectedCompany === 'all' ? 'border-eco-400 bg-eco-900 text-white shadow-lg shadow-eco-900/15' : 'border-slate-200 bg-white text-slate-900 hover:border-eco-200'
         }`}
       >
@@ -423,7 +576,27 @@ const CompanyCards = ({
           <Building2 size={20} />
         </div>
         <CompanyMetrics total={totalOrders} active={totals.active} waiting={totals.waiting} completed={totals.completed} dark={selectedCompany === 'all'} />
-        <p className="mt-3 text-xs font-semibold opacity-75">{totals.pendingPayment} ждёт оплаты</p>
+        {totals.pendingPayment > 0 && <p className="mt-3 text-xs font-semibold opacity-75">{totals.pendingPayment} ждёт оплаты</p>}
+        {onOpenOrders && (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenOrders('all');
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                event.stopPropagation();
+                onOpenOrders('all');
+              }
+            }}
+            className={`mt-4 inline-flex rounded-full px-4 py-2 text-xs font-bold ${selectedCompany === 'all' ? 'bg-white text-eco-900' : 'bg-eco-900 text-white'}`}
+          >
+            Открыть заявки
+          </span>
+        )}
       </button>
 
       {companies.map((company) => {
@@ -433,7 +606,7 @@ const CompanyCards = ({
             type="button"
             key={company.key}
             onClick={() => onSelect(company.key)}
-            className={`min-w-[270px] rounded-[20px] border p-4 text-left transition ${
+            className={`min-w-[280px] rounded-[20px] border p-4 text-left transition ${
               selected ? 'border-eco-400 bg-white shadow-lg shadow-eco-900/10 ring-2 ring-eco-200' : 'border-slate-200 bg-white shadow-sm hover:border-eco-200'
             }`}
           >
@@ -444,9 +617,32 @@ const CompanyCards = ({
               <Building2 className={selected ? 'text-eco-700' : 'text-slate-400'} size={20} />
             </div>
             <CompanyMetrics total={company.total} active={company.active} waiting={company.waiting} completed={company.completed} />
-            <p className="mt-3 text-xs font-semibold text-slate-500">
-              {company.pendingPayment} ждёт оплаты{company.partialPayment ? ` · ${company.partialPayment} частично` : ''}
-            </p>
+            {'description' in company && <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-500">{company.description}</p>}
+            {(company.pendingPayment > 0 || company.partialPayment > 0) && (
+              <p className="mt-3 text-xs font-semibold text-slate-500">
+                {company.pendingPayment > 0 && `${company.pendingPayment} ждёт оплаты`}{company.pendingPayment > 0 && company.partialPayment > 0 ? ' · ' : ''}{company.partialPayment > 0 && `${company.partialPayment} частично`}
+              </p>
+            )}
+            {onOpenOrders && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpenOrders(company.key);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onOpenOrders(company.key);
+                  }
+                }}
+                className="mt-4 inline-flex rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white"
+              >
+                Открыть заявки
+              </span>
+            )}
           </button>
         );
       })}
@@ -454,27 +650,66 @@ const CompanyCards = ({
   );
 };
 
-const CompanyMetrics = ({ total, active, waiting, completed, dark = false }: { total: number; active: number; waiting: number; completed: number; dark?: boolean }) => (
-  <div className="mt-4 grid grid-cols-4 gap-2 text-center">
-    {[
-      ['заявки', total],
-      ['в работе', active],
-      ['ждёт', waiting],
-      ['готово', completed],
-    ].map(([label, value]) => (
+const CompanyMetrics = ({ total, active, waiting, completed, dark = false }: { total: number; active: number; waiting: number; completed: number; dark?: boolean }) => {
+  const items = [
+    ['заявки', total],
+    active > 0 && ['в работе', active],
+    waiting > 0 && ['ждёт', waiting],
+    completed > 0 && ['готово', completed],
+  ].filter(Boolean) as Array<[string, number]>;
+
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      {items.map(([label, value]) => (
       <div key={String(label)} className={`rounded-2xl px-2 py-2 ${dark ? 'bg-white/10' : 'bg-slate-50'}`}>
         <p className={`text-lg font-bold ${dark ? 'text-white' : 'text-eco-900'}`}>{value}</p>
         <p className={`text-[11px] font-semibold ${dark ? 'text-white/65' : 'text-slate-500'}`}>{label}</p>
       </div>
-    ))}
-  </div>
-);
+      ))}
+    </div>
+  );
+};
 
 const crmTabs = ['Обзор', 'Оплата', 'Договор', 'Документы', 'Экология', 'Лаборатория', 'Сообщения', 'Заметки', 'История'] as const;
 type CrmTab = typeof crmTabs[number];
 
+const workflowTabTarget = (order: Order): CrmTab => {
+  const workStage = getOrderWorkStageLabel(order);
+  if (workStage === 'Лаборатория') return 'Лаборатория';
+  if (workStage === 'Проектирование') return 'Экология';
+  return 'Документы';
+};
+
+const staffWorkflowTabs = (order: Order): Array<{ label: string; target: CrmTab }> => [
+  { label: 'Консультация', target: 'Обзор' },
+  { label: 'Анализ', target: 'Документы' },
+  { label: 'КП', target: 'Договор' },
+  { label: 'Договор', target: 'Договор' },
+  { label: 'Счет на оплату', target: 'Оплата' },
+  { label: getOrderWorkStageLabel(order), target: workflowTabTarget(order) },
+  { label: 'Проверка результата', target: 'Документы' },
+  { label: 'Готово', target: 'Документы' },
+  { label: 'Завершено', target: 'Документы' },
+];
+
+const staffUtilityTabs: Array<{ label: string; target: CrmTab }> = [
+  { label: 'Сообщения', target: 'Сообщения' },
+  { label: 'Заметки', target: 'Заметки' },
+  { label: 'История', target: 'История' },
+];
+
+const isStaffWorkflowTabActive = (order: Order, activeTab: CrmTab, label: string) => {
+  const workStageLabel = getOrderWorkStageLabel(order);
+
+  if (label === order.status) return true;
+  if (label === workStageLabel && order.status === workStageLabel) return activeTab === workflowTabTarget(order);
+  return false;
+};
+
 export const StaffOrdersPage = () => {
   const { orders } = useOrders();
+  const { businessCompanyId } = useParams();
+  const navigate = useNavigate();
   const role = staffRole();
   if (!canAccess(role, 'view_orders')) return <PermissionDenied permission="view_orders" />;
   const [q, setQ] = useState('');
@@ -483,20 +718,42 @@ export const StaffOrdersPage = () => {
   const [manager, setManager] = useState('Все');
   const [stage, setStage] = useState('Все');
   const [date, setDate] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState('all');
-  const companies = useMemo(() => buildCompanySummaries(orders), [orders]);
+  const [requestType, setRequestType] = useState('Все');
+  const [quarterFilter, setQuarterFilter] = useState('Все');
+  const [onlyMyTasks, setOnlyMyTasks] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState(businessCompanyId ?? 'all');
+  useEffect(() => {
+    setSelectedCompany(businessCompanyId ?? 'all');
+  }, [businessCompanyId]);
+  const selectBusinessCompany = (key: string) => {
+    setSelectedCompany(key);
+    navigate(key === 'all' ? '/staff/orders' : `/staff/orders/company/${key}`);
+  };
+  const companies = useMemo(() => buildBusinessCompanySummaries(orders), [orders]);
   const managers = useMemo(() => Array.from(new Set(orders.map((order) => order.manager || 'Не назначен'))).sort(), [orders]);
   const filtered = useMemo(() => orders
-    .filter((o) => selectedCompany === 'all' || companyKey(getOrderCompanyName(o)) === selectedCompany)
+    .filter((o) => !onlyMyTasks || orderNeedsRole(o, role))
+    .filter((o) => selectedCompany === 'all' || o.businessCompanyId === selectedCompany)
     .filter((o) => status === 'Все' || o.status === status)
     .filter((o) => payment === 'Все' || fallbackPaymentStatus(o.paymentStatus) === payment)
+    .filter((o) => {
+      if (requestType === 'Все') return true;
+      if (requestType === 'Разовые') return o.contractType !== 'annual_quarterly';
+      if (requestType === 'Годовые активные') return o.contractType === 'annual_quarterly' && o.status === 'annual_active';
+      return o.contractType === 'annual_quarterly' && o.status === 'Завершено';
+    })
+    .filter((o) => {
+      if (quarterFilter === 'Все') return true;
+      if (o.contractType !== 'annual_quarterly') return false;
+      if (quarterFilter === 'Текущий квартал') return Boolean(getCurrentQuarterForRequest(o));
+      return o.quarters?.some((quarter) => quarter.quarterLabel === quarterFilter);
+    })
     .filter((o) => manager === 'Все' || (o.manager || 'Не назначен') === manager)
     .filter((o) => stage === 'Все' || getOrderStage(o) === stage)
     .filter((o) => !date || o.createdAt.toLowerCase().includes(date.toLowerCase()))
     .filter((o) => `${o.id} ${o.clientName} ${getOrderCompanyName(o)} ${o.service}`.toLowerCase().includes(q.toLowerCase()))
-    .sort((a, b) => b.id.localeCompare(a.id)), [orders, q, selectedCompany, status, payment, manager, stage, date]);
-  const activeCompany = selectedCompany === 'all' ? 'Все компании' : companies.find((company) => company.key === selectedCompany)?.name || 'Компания';
-
+    .sort((a, b) => Number(orderNeedsRole(b, role)) - Number(orderNeedsRole(a, role)) || b.id.localeCompare(a.id)), [orders, q, selectedCompany, status, payment, requestType, quarterFilter, manager, stage, date, onlyMyTasks, role]);
+  const activeCompany = selectedCompany === 'all' ? 'Все компании-исполнители' : companies.find((company) => company.key === selectedCompany)?.name || 'Компания';
   return (
     <div className="space-y-6">
       <Reveal>
@@ -507,7 +764,7 @@ export const StaffOrdersPage = () => {
             </div>
             <p className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-eco-800 shadow-sm">Роль: {roleTitle(role)}</p>
           </div>
-          <CompanyCards companies={companies} selectedCompany={selectedCompany} onSelect={setSelectedCompany} totalOrders={orders.length} />
+          <CompanyCards companies={companies} selectedCompany={selectedCompany} onSelect={selectBusinessCompany} totalOrders={orders.length} />
         </div>
       </Reveal>
 
@@ -522,37 +779,29 @@ export const StaffOrdersPage = () => {
         <div className="mt-5 grid gap-3 lg:grid-cols-4 xl:grid-cols-8">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск по номеру, компании, клиенту или услуге" className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3" />
           <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3">
-            <option value="all">Все компании</option>
+            <option value="all">Все компании-исполнители</option>
             {companies.map((company) => <option key={company.key} value={company.key}>{company.name}</option>)}
           </select>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{orderStatuses.map((s) => <option key={s}>{s}</option>)}</select>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{orderStatuses.map((s) => <option key={s} value={s}>{getOrderStatusDefinition(s).label}</option>)}</select>
           <select value={payment} onChange={(e) => setPayment(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{paymentStatuses.map((item) => <option key={item} value={item}>{paymentStatusLabels[item]}</option>)}</select>
+          <select value={requestType} onChange={(e) => setRequestType(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3">{['Все', 'Разовые', 'Годовые активные', 'Завершенные годовые'].map((item) => <option key={item}>{item}</option>)}</select>
+          <select value={quarterFilter} onChange={(e) => setQuarterFilter(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3">{['Все', '1 квартал', '2 квартал', '3 квартал', '4 квартал', 'Текущий квартал'].map((item) => <option key={item}>{item}</option>)}</select>
           <select value={manager} onChange={(e) => setManager(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{managers.map((item) => <option key={item}>{item}</option>)}</select>
-          <select value={stage} onChange={(e) => setStage(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{['Менеджер', 'Бухгалтерия', 'Экология', 'Лаборатория', 'Готово'].map((item) => <option key={item}>{item}</option>)}</select>
+          <select value={stage} onChange={(e) => setStage(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{['Менеджер', 'Бухгалтерия', 'Проектирование', 'Лаборатория', 'Вывоз', 'Утилизация', 'Проверка', 'Готово'].map((item) => <option key={item}>{item}</option>)}</select>
           <input value={date} onChange={(e) => setDate(e.target.value)} placeholder="Дата" className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3" />
-          <button type="button" onClick={() => { setQ(''); setStatus('Все'); setPayment('Все'); setManager('Все'); setStage('Все'); setDate(''); setSelectedCompany('all'); }} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-eco-800 transition hover:bg-eco-50">Сбросить</button>
+          <button type="button" onClick={() => { setQ(''); setStatus('Все'); setPayment('Все'); setRequestType('Все'); setQuarterFilter('Все'); setManager('Все'); setStage('Все'); setDate(''); setOnlyMyTasks(false); selectBusinessCompany('all'); }} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-eco-800 transition hover:bg-eco-50">Сбросить</button>
         </div>
         <div className="mt-5 space-y-3 lg:hidden">
           {filtered.map((order) => <OrderLine key={order.id} order={order} />)}
         </div>
         <div className="mt-5 hidden overflow-x-auto lg:block">
-          <table className="w-full min-w-[980px] text-left text-sm">
+          <table className="w-full min-w-[1120px] text-left text-sm">
             <thead className="text-slate-500">
-              <tr><th className="p-3">№</th><th>Компания</th><th>Услуга</th><th>Статус</th><th>Оплата</th><th>Этап</th><th>Следующий шаг</th><th>Ответственный</th><th></th></tr>
+              <tr><th className="p-3">№</th><th>Тип</th><th>Компания-исполнитель</th><th>Клиент</th><th>Договор</th><th>Услуга</th><th>Статус</th><th>Квартал</th><th>Прогресс</th><th>Долг</th><th>Оплата</th><th>Этап</th><th>Следующий шаг</th><th>Ответственный</th><th></th></tr>
             </thead>
             <tbody>
               {filtered.map((order) => (
-                <tr key={order.id} className="border-t border-slate-100 align-top">
-                  <td className="p-3 font-semibold text-slate-900">{order.id}</td>
-                  <td className="py-3"><p className="font-semibold text-slate-900">{getOrderCompanyName(order)}</p></td>
-                  <td className="py-3">{order.service}</td>
-                  <td className="py-3">{badge(order.status)}</td>
-                  <td className="py-3">{paymentBadge(order.paymentStatus)}</td>
-                  <td className="py-3 text-sm text-slate-600">{getOrderStage(order)}</td>
-                  <td className="py-3 font-semibold text-slate-700">{getNextCrmStep(order)}</td>
-                  <td className="py-3 text-sm text-slate-600">{order.manager || 'Не назначен'}</td>
-                  <td className="py-3"><Link to={`/staff/orders/${order.id}`} className="rounded-full bg-eco-900 px-3 py-2 text-xs font-bold text-white">Открыть</Link></td>
-                </tr>
+                <StaffOrderTableRow key={order.id} order={order} />
               ))}
             </tbody>
           </table>
@@ -560,6 +809,41 @@ export const StaffOrdersPage = () => {
       </div>
       </Reveal>
     </div>
+  );
+};
+
+const StaffOrderTableRow = ({ order }: { order: Order }) => {
+  const contract = getPrimaryContractForOrder(order);
+  const progress = getAnnualRequestProgress(order);
+  const debt = getAnnualRequestDebtSummary(order);
+  const currentQuarter = getCurrentQuarterForRequest(order);
+  return (
+    <tr className="border-t border-slate-100 align-top">
+      <td className="p-3 font-semibold text-slate-900">{order.id}</td>
+      <td className="py-3">
+        {isAnnualRequest(order) ? <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-800 ring-1 ring-cyan-100">Годовая</span> : <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200">Разовая</span>}
+      </td>
+      <td className="py-3"><p className="font-semibold text-slate-900">{getOrderBusinessCompanyName(order)}</p></td>
+      <td className="py-3"><p className="text-sm text-slate-600">{getOrderCompanyName(order)}</p></td>
+      <td className="py-3">
+        {contract ? (
+          <div>
+            <p className="text-xs font-bold text-eco-900">{formatContractDaysLeft(contract)}</p>
+            <p className="mt-1 text-xs text-slate-500">{contract.number}</p>
+          </div>
+        ) : <span className="text-xs text-slate-400">Нет</span>}
+      </td>
+      <td className="py-3">{order.service}</td>
+      <td className="py-3">{badge(order.status)}</td>
+      <td className="py-3 text-sm text-slate-600">{currentQuarter ? currentQuarter.quarterLabel : '-'}</td>
+      <td className="py-3 text-sm font-semibold text-eco-800">{isAnnualRequest(order) ? `${progress.completed}/${progress.total}` : '-'}</td>
+      <td className="py-3 text-sm font-semibold text-rose-700">{isAnnualRequest(order) && debt.totalDebt > 0 ? formatCurrency(debt.totalDebt) : '-'}</td>
+      <td className="py-3">{paymentBadge(order.paymentStatus)}</td>
+      <td className="py-3 text-sm text-slate-600">{getOrderStage(order)}</td>
+      <td className="py-3 font-semibold text-slate-700">{getNextCrmStep(order)}</td>
+      <td className="py-3 text-sm text-slate-600">{order.manager || 'Не назначен'}</td>
+      <td className="py-3"><Link to={`/staff/orders/${order.id}`} className="rounded-full bg-eco-900 px-3 py-2 text-xs font-bold text-white">Открыть</Link></td>
+    </tr>
   );
 };
 
@@ -597,6 +881,16 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     load();
   };
 
+  const submitQuickComment = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const visibility = access.messages ? String(form.get('visibility')) as 'client' | 'internal' : 'internal';
+    await addComment(order.id, String(form.get('comment')), visibility);
+    onNotify?.('Комментарий добавлен');
+    event.currentTarget.reset();
+    load();
+  };
+
   const submitDoc = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const file = new FormData(event.currentTarget).get('file') as File | null;
@@ -628,6 +922,72 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     load();
   };
 
+  const submitQuarterDocument = async (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const file = form.get('file') as File | null;
+    if (file?.name) {
+      await uploadAnnualQuarterDocument(order.id, quarter.id, {
+        fileName: file.name,
+        fileType: file.type || 'application/octet-stream',
+        fileSize: file.size,
+        documentType: String(form.get('documentType') || 'other') as QuarterDocument['documentType'],
+      });
+      onNotify?.('Документ квартала загружен');
+    }
+    event.currentTarget.reset();
+    load();
+  };
+
+  const submitQuarterResult = async (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const resultType = String(form.get('resultType') || '');
+    await addAnnualQuarterResult(order.id, quarter.id, {
+      title: String(form.get('title') || `Результат ${quarter.quarterLabel}`),
+      description: String(form.get('description') || ''),
+      resultType: resultType ? resultType as QuarterResult['resultType'] : undefined,
+    });
+    onNotify?.('Результат квартала добавлен');
+    event.currentTarget.reset();
+    load();
+  };
+
+  const submitQuarterPayment = async (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await addAnnualQuarterPayment(order.id, quarter.id, {
+      amount: Number(form.get('amount') || 0),
+      paidAt: String(form.get('paidAt') || new Date().toISOString().slice(0, 10)),
+      method: String(form.get('method') || 'bank_transfer') as PaymentMethod,
+      comment: String(form.get('comment') || ''),
+    });
+    onNotify?.('Оплата квартала добавлена');
+    event.currentTarget.reset();
+    load();
+  };
+
+  const submitQuarterComment = async (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await addAnnualQuarterComment(order.id, quarter.id, String(form.get('comment') || ''), access.messages ? String(form.get('visibility') || 'internal') as 'client' | 'internal' : 'internal');
+    onNotify?.('Комментарий квартала добавлен');
+    event.currentTarget.reset();
+    load();
+  };
+
+  const changeQuarterWork = async (quarter: RequestQuarter, status: QuarterWorkStatus) => {
+    await updateAnnualQuarterWorkStatus(order.id, quarter.id, status);
+    onNotify?.('Статус квартала обновлен');
+    load();
+  };
+
+  const finishAnnual = async () => {
+    await completeAnnualRequest(order.id);
+    onNotify?.(canCompleteAnnualRequest(order) ? 'Годовая заявка завершена' : 'Пока нельзя завершить годовую заявку');
+    load();
+  };
+
   const submitEcology = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -654,7 +1014,6 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
       signatureProvider: String(form.get('signatureProvider')),
       contractFileName: contract?.name,
     });
-    await updateOrderStatus(order.id, 'В обработке');
     onNotify?.('Договор и счет отправлены клиенту');
     event.currentTarget.reset();
     load();
@@ -667,6 +1026,27 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
   };
 
   const online = onlineState(order);
+  const serviceContracts = getContractsForOrder(order);
+  const canAddComment = access.notes || access.messages;
+  const nextStatus = getNextOrderStatus(order);
+  const canAdvanceWorkflow = Boolean(nextStatus) && (
+    access.manager ||
+    (access.finance && order.status === 'Счет на оплату') ||
+    (access.ecology && order.status === 'Проектирование') ||
+    (access.laboratory && order.status === 'Лаборатория')
+  );
+  const advanceWorkflow = async () => {
+    if (!nextStatus) return;
+    await changeStatus(nextStatus);
+  };
+  const suggestedActions = [
+    canAdvanceWorkflow && nextStatus && { label: `Следующий этап: ${nextStatus}`, onClick: advanceWorkflow, variant: nextStatus === 'Завершено' ? 'success' as const : 'primary' as const },
+    order.status === 'Счет на оплату' && fallbackPaymentStatus(order.paymentStatus) !== 'paid' && access.finance && { label: 'Проверить оплату', onClick: () => setActiveTab('Оплата'), variant: 'primary' as const },
+    ['КП', 'Договор'].includes(order.status) && access.manager && { label: 'Открыть договор/КП', onClick: () => setActiveTab('Договор'), variant: 'secondary' as const },
+    order.status === 'Проектирование' && access.ecology && { label: 'Открыть проектирование', onClick: () => setActiveTab('Экология'), variant: 'secondary' as const },
+    order.status === 'Лаборатория' && access.laboratory && { label: 'Открыть лабораторию', onClick: () => setActiveTab('Лаборатория'), variant: 'secondary' as const },
+    (order.status === 'Вывоз' || order.status === 'Утилизация' || order.status === 'Проверка результата') && canAccess(role, 'edit_documents') && { label: 'Документы результата', onClick: () => setActiveTab('Документы'), variant: 'secondary' as const },
+  ].filter(Boolean) as Array<{ label: string; onClick: () => void | Promise<void>; variant: 'primary' | 'secondary' | 'success' }>;
 
   return (
     <div className="space-y-6">
@@ -675,7 +1055,8 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <Link to="/staff/orders" className="text-sm font-semibold text-eco-700">← Заявки</Link>
-              <h2 className="mt-3 text-2xl font-bold text-eco-900">{order.id} · {getOrderCompanyName(order)}</h2>
+              <h2 className="mt-3 text-2xl font-bold text-eco-900">{order.id} · {getOrderBusinessCompanyName(order)}</h2>
+              <p className="mt-1 text-sm text-slate-500">Клиент: {getOrderCompanyName(order)}</p>
               <p className="mt-1 break-words text-slate-600">Статус: {order.status}</p>
               <p className="mt-1 text-sm font-semibold text-eco-700">Следующий шаг: {getNextCrmStep(order)}</p>
             </div>
@@ -686,16 +1067,30 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
             </div>
           </div>
           <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-            {crmTabs.map((tab) => (
+            {staffWorkflowTabs(order).map(({ label, target }) => (
               <button
                 type="button"
-                key={tab}
-                onClick={() => setActiveTab(tab)}
+                key={label}
+                onClick={() => setActiveTab(target)}
                 className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${
-                  activeTab === tab ? 'bg-eco-900 text-white shadow-lg shadow-eco-900/10' : 'bg-slate-100 text-slate-600 hover:bg-eco-50 hover:text-eco-900'
+                  isStaffWorkflowTabActive(order, activeTab, label) ? 'bg-eco-900 text-white shadow-lg shadow-eco-900/10' : 'bg-slate-100 text-slate-600 hover:bg-eco-50 hover:text-eco-900'
                 }`}
               >
-                {tab}
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+            {staffUtilityTabs.map(({ label, target }) => (
+              <button
+                type="button"
+                key={label}
+                onClick={() => setActiveTab(target)}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${
+                  activeTab === target ? 'bg-eco-900 text-white shadow-lg shadow-eco-900/10' : 'bg-slate-100 text-slate-600 hover:bg-eco-50 hover:text-eco-900'
+                }`}
+              >
+                {label}
               </button>
             ))}
           </div>
@@ -708,12 +1103,37 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
             {activeTab === 'Обзор' && (
               <>
                 <Section title="Обзор" icon={<ClipboardCheck size={20} />}>
-                  <Grid items={{ Компания: getOrderCompanyName(order), Контакт: order.contactPerson || order.clientName, Телефон: order.phone, Услуга: order.service, Статус: order.status, 'Следующий шаг': getNextCrmStep(order), Ответственный: order.manager, Дедлайн: order.deadline || 'Нет' }} />
+                  <div className="mb-5">
+                    <h4 className="font-semibold text-slate-900">Очередность выполнения заявки</h4>
+                    <Workflow order={order} />
+                  </div>
+                  {isAnnualRequest(order) && (
+                    <AnnualRequestPanel
+                      order={order}
+                      canManageWork={access.manager || access.ecology || access.laboratory || canAccess(role, 'edit_documents')}
+                      canManageFinance={access.finance}
+                      canMessageClient={access.messages}
+                      onWorkStatus={changeQuarterWork}
+                      onDocument={submitQuarterDocument}
+                      onResult={submitQuarterResult}
+                      onPayment={submitQuarterPayment}
+                      onComment={submitQuarterComment}
+                      onComplete={finishAnnual}
+                    />
+                  )}
+                  <Grid items={{ 'Компания-исполнитель': getOrderBusinessCompanyName(order), Клиент: getOrderCompanyName(order), Контакт: order.contactPerson || order.clientName, Телефон: order.phone, Услуга: order.service, Статус: order.status, 'Следующий шаг': getNextCrmStep(order), Ответственный: order.manager, Дедлайн: order.deadline || 'Нет' }} />
                   <div className="mt-5 grid gap-3 md:grid-cols-4">
                     <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">Оплата</p><div className="mt-2">{paymentBadge(order.paymentStatus)}</div></div>
                     <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">Экология</p><div className="mt-2">{ecologyBadge(order.ecologyStatus)}</div></div>
                     <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">Лаборатория</p><div className="mt-2">{laboratoryBadge(order.laboratoryStatus)}</div></div>
                     <InfoTile label="Документы" value={`${order.documents.length + order.resultDocuments.length} файлов`} />
+                  </div>
+                  <div className="mt-5">
+                    <h4 className="font-semibold text-slate-900">Договоры клиента по этому направлению</h4>
+                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                      {serviceContracts.map((contract) => <StaffContractLine key={contract.id} contract={contract} />)}
+                      {!serviceContracts.length && <EmptyState text="Договор по этому направлению не найден" />}
+                    </div>
                   </div>
                 </Section>
               </>
@@ -896,82 +1316,35 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
         </Reveal>
 
         <Reveal direction="left">
-          <div className="space-y-5">
-            <Action title="Следующий шаг" icon={<CheckCircle2 size={20} />}>
+          <div className="sticky top-24 space-y-5 self-start">
+            <Action title="Что сделать" icon={<CheckCircle2 size={20} />}>
               <p className="rounded-2xl bg-eco-50 p-4 text-sm font-semibold text-eco-900">{getNextCrmStep(order)}</p>
-              {access.manager && (
-                <div className="mt-4 grid gap-3">
-                  <Button onClick={() => changeStatus('В обработке')} variant="secondary" className="w-full">В работу</Button>
-                  <Button onClick={() => changeStatus('Ожидает документы')} variant="secondary" className="w-full">Документы</Button>
-                  <Button onClick={() => changeStatus('В работе')} className="w-full">Передать</Button>
-                </div>
+              <div className="mt-4 grid gap-3">
+                {suggestedActions.map((action) => (
+                  <Button key={action.label} onClick={action.onClick} variant={action.variant} className="w-full">{action.label}</Button>
+                ))}
+              </div>
+              {canAddComment && (
+                <form onSubmit={submitQuickComment} className="mt-5 border-t border-slate-100 pt-5">
+                  <label className="text-sm font-semibold text-slate-700">Комментарий</label>
+                  <textarea name="comment" required placeholder="Написать комментарий" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
+                  {access.messages && (
+                    <select name="visibility" defaultValue="internal" className="input-focus mt-3 w-full rounded-2xl border border-slate-200 px-4 py-3">
+                      <option value="internal">Внутренний</option>
+                      <option value="client">Клиенту</option>
+                    </select>
+                  )}
+                  <Button type="submit" variant="secondary" className="mt-3 w-full">Добавить</Button>
+                </form>
+              )}
+              {canAccess(role, 'edit_documents') && (
+                <form onSubmit={submitDoc} className="mt-5 border-t border-slate-100 pt-5">
+                  <label className="text-sm font-semibold text-slate-700">Документ</label>
+                  <input name="file" type="file" required className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                  <Button type="submit" className="mt-3 w-full">Загрузить</Button>
+                </form>
               )}
             </Action>
-
-            {access.manager && (
-              <Action title="Статус" icon={<UserCheck size={20} />}>
-                <label className="text-sm font-semibold text-slate-700">Статус
-                  <select value={order.status} onChange={(e) => changeStatus(e.target.value as OrderStatus)} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3">{orderStatuses.map((s) => <option key={s}>{s}</option>)}</select>
-                </label>
-                <form onSubmit={submitManager} className="mt-4">
-                  <label className="text-sm font-semibold text-slate-700">Ответственный
-                    <input name="manager" defaultValue={order.manager} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
-                  </label>
-                  <Button className="mt-4 w-full">Сохранить</Button>
-                </form>
-              </Action>
-            )}
-
-            {access.finance && (
-              <Action title="Оплата" icon={<CreditCard size={20} />}>
-                <div className="mb-4">{paymentBadge(order.paymentStatus)}</div>
-                <div className="grid gap-3">
-                  <Button onClick={() => changePayment('paid', 'Оплачено')} className="w-full">Оплачено</Button>
-                  <Button onClick={() => changePayment('pending', 'Ожидает оплаты')} variant="secondary" className="w-full">Ожидает оплаты</Button>
-                </div>
-              </Action>
-            )}
-
-            {(access.manager || access.finance) && (
-              <Action title="Договор" icon={<FileSignature size={20} />}>
-              <form onSubmit={submitContractAndInvoice} className="mt-4 space-y-4">
-                <Field label="Сумма"><input name="amount" required defaultValue={order.paymentAmount || '150 000 ₸'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-                <Field label="Метод"><select name="paymentMethod" defaultValue={order.paymentMethod || 'Банковская карта'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3"><option>Банковская карта</option><option>Kaspi Pay</option><option>Счет на оплату</option></select></Field>
-                <Field label="Подписание"><select name="signatureProvider" defaultValue={order.signatureProvider || 'NCALayer / ЭЦП'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3"><option>NCALayer / ЭЦП</option><option>Kaspi ID</option><option>SMS-подтверждение</option></select></Field>
-                <Field label="Файл"><input name="contract" type="file" className="w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-                <Button className="w-full">Отправить</Button>
-              </form>
-              </Action>
-            )}
-
-            {access.messages && (
-              <Action title="Сообщение" icon={<MessageSquare size={20} />}>
-                <form onSubmit={(event) => submitComment(event, 'client')}>
-                  <textarea name="comment" required placeholder="Сообщение" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
-                  <Button className="mt-4 w-full">Отправить</Button>
-                </form>
-              </Action>
-            )}
-
-            {access.notes && (
-              <Action title="Заметка" icon={<Bell size={20} />}>
-                <form onSubmit={(event) => submitComment(event, 'internal')}>
-                  <textarea name="comment" required placeholder="Заметка" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
-                  <Button variant="secondary" className="mt-4 w-full">Добавить</Button>
-                </form>
-              </Action>
-            )}
-
-            {canAccess(role, 'edit_documents') && (
-              <Action title="Документ" icon={<CreditCard size={20} />}>
-                <form onSubmit={submitDoc}>
-                  <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
-                  <Button className="mt-4 w-full">Загрузить</Button>
-                </form>
-              </Action>
-            )}
-
-            {access.manager && <Button onClick={() => changeStatus('Завершено')} className="w-full">Готово</Button>}
           </div>
         </Reveal>
       </div>
@@ -980,23 +1353,213 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
 };
 
 const Workflow = ({ order }: { order: Order }) => {
-  const steps = [
-    ['Заявка', true],
-    ['Проверка', order.status !== 'Новая'],
-    ['Договор и счет', order.contractStatus === 'sent' || order.contractStatus === 'signed'],
-    ['Подпись и оплата', order.contractStatus === 'signed' || order.paymentStatus === 'paid'],
-  ] as const;
+  const steps = getWorkflowForOrder(order);
+  const currentOrder = getOrderStatusDefinition(order.status).order;
   return (
-    <div className="mt-5 grid gap-3 md:grid-cols-4">
-      {steps.map(([label, done], index) => (
+    <div className="mt-5 grid gap-3 md:grid-cols-3 xl:grid-cols-9">
+      {steps.map((label, index) => {
+        const done = getOrderStatusDefinition(label).order <= currentOrder && order.status !== 'Отменено';
+        return (
         <div key={label} className={`rounded-2xl border p-4 ${done ? 'border-eco-200 bg-eco-50' : 'border-slate-200 bg-slate-50'}`}>
           <p className="text-xs font-semibold uppercase text-slate-500">Шаг {index + 1}</p>
           <p className="mt-2 font-bold text-slate-900">{label}</p>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
+
+const AnnualRequestPanel = ({
+  order,
+  canManageWork,
+  canManageFinance,
+  canMessageClient,
+  onWorkStatus,
+  onDocument,
+  onResult,
+  onPayment,
+  onComment,
+  onComplete,
+}: {
+  order: Order;
+  canManageWork: boolean;
+  canManageFinance: boolean;
+  canMessageClient: boolean;
+  onWorkStatus: (quarter: RequestQuarter, status: QuarterWorkStatus) => void | Promise<void>;
+  onDocument: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void | Promise<void>;
+  onResult: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void | Promise<void>;
+  onPayment: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void | Promise<void>;
+  onComment: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void | Promise<void>;
+  onComplete: () => void | Promise<void>;
+}) => {
+  const progress = getAnnualRequestProgress(order);
+  const debt = getAnnualRequestDebtSummary(order);
+  const currentQuarter = getCurrentQuarterForRequest(order);
+  const warnings = getAnnualRequestWarnings(order);
+  const canFinish = canCompleteAnnualRequest(order);
+
+  return (
+    <div className="mb-6 rounded-[22px] border border-cyan-100 bg-cyan-50/40 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h4 className="text-lg font-bold text-eco-900">Годовая заявка</h4>
+          <p className="mt-1 text-sm text-slate-600">Период: {order.annualPeriodStart} - {order.annualPeriodEnd}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-cyan-800 ring-1 ring-cyan-100">Прогресс {progress.completed}/{progress.total}</span>
+          {currentQuarter && <span className="rounded-full bg-eco-900 px-3 py-1 text-xs font-bold text-white">Текущий квартал: {currentQuarter.quarterLabel}</span>}
+          {debt.totalDebt > 0 && <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-800 ring-1 ring-rose-100">Долг {formatCurrency(debt.totalDebt)}</span>}
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-4">
+        <InfoTile label="Выполнено" value={`${progress.completed} из ${progress.total}`} />
+        <InfoTile label="Общий долг" value={formatCurrency(debt.totalDebt)} />
+        <InfoTile label="Просрочено" value={formatCurrency(debt.overdueDebt)} />
+        <InfoTile label="Ближайший срок" value={debt.nextDue || 'Нет'} />
+      </div>
+      {warnings.length > 0 && (
+        <div className="mt-4 grid gap-2 md:grid-cols-2">
+          {warnings.map((warning) => <p key={warning} className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-amber-800 ring-1 ring-amber-100">{warning}</p>)}
+        </div>
+      )}
+      <div className="mt-5 grid gap-4 xl:grid-cols-2">
+        {(order.quarters || []).map((quarter) => (
+          <AnnualQuarterCard
+            key={quarter.id}
+            quarter={quarter}
+            isCurrent={currentQuarter?.id === quarter.id}
+            canManageWork={canManageWork}
+            canManageFinance={canManageFinance}
+            canMessageClient={canMessageClient}
+            onWorkStatus={onWorkStatus}
+            onDocument={onDocument}
+            onResult={onResult}
+            onPayment={onPayment}
+            onComment={onComment}
+          />
+        ))}
+      </div>
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <Button type="button" variant={canFinish ? 'success' : 'secondary'} disabled={!canFinish} onClick={onComplete}>Завершить годовую заявку</Button>
+        {!canFinish && <p className="text-sm text-slate-600">Завершение доступно после выполнения всех кварталов, загрузки результатов и закрытия долгов.</p>}
+      </div>
+    </div>
+  );
+};
+
+const AnnualQuarterCard = ({
+  quarter,
+  isCurrent,
+  canManageWork,
+  canManageFinance,
+  canMessageClient,
+  onWorkStatus,
+  onDocument,
+  onResult,
+  onPayment,
+  onComment,
+}: {
+  quarter: RequestQuarter;
+  isCurrent: boolean;
+  canManageWork: boolean;
+  canManageFinance: boolean;
+  canMessageClient: boolean;
+  onWorkStatus: (quarter: RequestQuarter, status: QuarterWorkStatus) => void | Promise<void>;
+  onDocument: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void | Promise<void>;
+  onResult: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void | Promise<void>;
+  onPayment: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void | Promise<void>;
+  onComment: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void | Promise<void>;
+}) => {
+  const overdueDays = getOverdueDays(quarter.dueDate);
+  return (
+    <div className={`rounded-[20px] border p-4 ${isCurrent ? 'border-eco-300 bg-white shadow-sm' : overdueDays > 0 && quarter.remainingAmount > 0 ? 'border-rose-200 bg-rose-50/50' : 'border-slate-200 bg-white'}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h5 className="text-lg font-bold text-eco-900">{quarter.quarterLabel}</h5>
+            {isCurrent && <span className="rounded-full bg-eco-900 px-2 py-1 text-[11px] font-bold text-white">Текущий квартал</span>}
+          </div>
+          <p className="mt-1 text-sm text-slate-500">{quarter.periodStart} - {quarter.periodEnd}</p>
+        </div>
+        {quarterWorkBadge(quarter.workStatus)}
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <InfoTile label="Этап" value={quarter.workStage} />
+        <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">Оплата</p><div className="mt-2"><span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${getPaymentStatusColor(quarter.paymentStatus)}`}>{getPaymentStatusLabel(quarter.paymentStatus)}</span></div></div>
+        <InfoTile label="Сумма" value={formatCurrency(quarter.plannedAmount)} />
+        <InfoTile label="Оплачено" value={formatCurrency(quarter.paidAmount)} />
+        <InfoTile label="Долг" value={formatCurrency(quarter.remainingAmount)} />
+        <InfoTile label="Срок оплаты" value={quarter.dueDate || 'Нет'} />
+      </div>
+      {overdueDays > 0 && quarter.remainingAmount > 0 && <p className="mt-3 rounded-2xl bg-rose-50 p-3 text-sm font-semibold text-rose-800">Срок оплаты истек: {overdueDays} дн.</p>}
+      <QuarterList title="Документы" items={quarter.documents.map((doc) => `${doc.name} · ${doc.uploadedByName}`)} empty="Документы пока не загружены" />
+      <QuarterList title="Результаты" items={quarter.results.map((result) => result.title)} empty="Результат пока не загружен" />
+      <QuarterList title="Комментарии" items={quarter.comments.map((comment) => `${comment.author}: ${comment.text}`)} empty="Комментариев нет" />
+
+      {canManageWork && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" onClick={() => onWorkStatus(quarter, 'waiting_client_data')}>Запросить данные</Button>
+          <Button type="button" variant="secondary" onClick={() => onWorkStatus(quarter, 'in_progress')}>Начать работу</Button>
+          <Button type="button" variant="success" onClick={() => onWorkStatus(quarter, 'completed')}>Квартал выполнен</Button>
+        </div>
+      )}
+      {canManageWork && (
+        <form onSubmit={(event) => onDocument(event, quarter)} className="mt-4 grid gap-3 sm:grid-cols-[1fr_180px]">
+          <input name="file" type="file" required className="rounded-2xl border border-slate-200 px-4 py-3" />
+          <select name="documentType" defaultValue="result" className="input-focus rounded-2xl border border-slate-200 px-4 py-3">
+            <option value="client_data">Данные клиента</option>
+            <option value="invoice">Счет</option>
+            <option value="act">Акт</option>
+            <option value="protocol">Протокол</option>
+            <option value="report">Отчет</option>
+            <option value="result">Результат</option>
+            <option value="other">Другое</option>
+          </select>
+          <Button type="submit" className="sm:col-span-2">Загрузить документ квартала</Button>
+        </form>
+      )}
+      {canManageWork && (
+        <form onSubmit={(event) => onResult(event, quarter)} className="mt-4 grid gap-3">
+          <input name="title" required placeholder="Название результата" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+          <textarea name="description" placeholder="Описание результата" rows={2} className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+          <Button type="submit" variant="secondary">Добавить результат</Button>
+        </form>
+      )}
+      {canManageFinance && (
+        <form onSubmit={(event) => onPayment(event, quarter)} className="mt-4 grid gap-3 sm:grid-cols-2">
+          <input name="amount" type="number" min="1" max={quarter.remainingAmount || undefined} required placeholder="Сумма оплаты" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+          <input name="paidAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+          <select name="method" defaultValue="bank_transfer" className="input-focus rounded-2xl border border-slate-200 px-4 py-3">
+            {(['bank_transfer', 'cash', 'card', 'other'] as PaymentMethod[]).map((method) => <option key={method} value={method}>{paymentMethodLabel(method)}</option>)}
+          </select>
+          <input name="comment" placeholder="Комментарий бухгалтера" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+          <Button type="submit" className="sm:col-span-2">Добавить оплату</Button>
+        </form>
+      )}
+      <form onSubmit={(event) => onComment(event, quarter)} className="mt-4 grid gap-3">
+        <textarea name="comment" required placeholder="Комментарий по кварталу" rows={2} className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+        {canMessageClient && (
+          <select name="visibility" defaultValue="internal" className="input-focus rounded-2xl border border-slate-200 px-4 py-3">
+            <option value="internal">Внутренний</option>
+            <option value="client">Клиенту</option>
+          </select>
+        )}
+        <Button type="submit" variant="secondary">Добавить комментарий</Button>
+      </form>
+    </div>
+  );
+};
+
+const QuarterList = ({ title, items, empty }: { title: string; items: string[]; empty: string }) => (
+  <div className="mt-4">
+    <p className="text-sm font-bold text-slate-900">{title}</p>
+    <div className="mt-2 space-y-2">
+      {items.map((item) => <p key={item} className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">{item}</p>)}
+      {!items.length && <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">{empty}</p>}
+    </div>
+  </div>
+);
 
 const OrderReadiness = ({ order }: { order: Order }) => {
   const contract = contractState(order);
@@ -1113,6 +1676,7 @@ export const StaffClientsPage = () => {
   const selectedCompany = companies.find((company) => company.key === selectedKey);
   const selectedOrders = selectedCompany ? orders.filter((order) => companyKey(getOrderCompanyName(order)) === selectedCompany.key) : [];
   const selectedDocs = collectDocuments(selectedOrders);
+  const selectedContracts = selectedCompany ? clientContracts.filter((contract) => contract.companyName === selectedCompany.name) : [];
   const latestOrder = [...selectedOrders].sort((a, b) => b.id.localeCompare(a.id))[0];
 
   if (selectedCompany) {
@@ -1144,6 +1708,12 @@ export const StaffClientsPage = () => {
             <Section title="Документы" icon={<FileText size={20} />}>
               {selectedDocs.map((doc) => <DocumentLine key={doc.id} doc={doc} />)}
             </Section>
+            <Section title="Договоры сопровождения" icon={<FileSignature size={20} />}>
+              <div className="grid gap-3 lg:grid-cols-2">
+                {selectedContracts.map((contract) => <StaffContractLine key={contract.id} contract={contract} />)}
+                {!selectedContracts.length && <EmptyState text="Договоров нет" />}
+              </div>
+            </Section>
             <Section title="История" icon={<History size={20} />}>
               <List title="Действия" items={selectedOrders.flatMap((order) => order.history.map((item) => `${order.id} · ${item.createdAt}: ${item.text}`)).slice(0, 12)} />
             </Section>
@@ -1172,6 +1742,9 @@ export const StaffClientsPage = () => {
           {filteredCompanies.map((company) => {
             const companyOrders = orders.filter((order) => companyKey(getOrderCompanyName(order)) === company.key);
             const last = [...companyOrders].sort((a, b) => b.id.localeCompare(a.id))[0];
+            const nearestContract = clientContracts
+              .filter((contract) => contract.companyName === company.name)
+              .sort((a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime())[0];
             return (
               <Link key={company.key} to={`/staff/clients/${companyUrlKey(company.key)}`} className="block rounded-[20px] border border-slate-100 bg-slate-50 p-5 transition hover:border-eco-200 hover:bg-eco-50">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1188,6 +1761,11 @@ export const StaffClientsPage = () => {
                   <InfoTile label="Активные" value={String(company.active)} />
                   <InfoTile label="Завершенные" value={String(company.completed)} />
                 </div>
+                {nearestContract && (
+                  <p className="mt-3 rounded-2xl bg-white p-3 text-xs font-bold text-eco-900">
+                    Ближайший договор: {formatContractDaysLeft(nearestContract)} · {nearestContract.number}
+                  </p>
+                )}
                 <p className="mt-3 text-xs font-semibold text-slate-500">Последняя: {lastOrderDate(companyOrders)}</p>
               </Link>
             );
@@ -1199,27 +1777,59 @@ export const StaffClientsPage = () => {
   );
 };
 
+const documentHref = (doc: StaffDocument, order?: Order) =>
+  `data:text/plain;charset=utf-8,${encodeURIComponent([
+    doc.name,
+    `Компания: ${doc.company}`,
+    `Заявка: ${doc.orderId}`,
+    order?.service && `Услуга: ${order.service}`,
+    `Статус: ${doc.status}`,
+    `Дата: ${doc.uploadedAt}`,
+  ].filter(Boolean).join('\n'))}`;
+
 const DocumentLine = ({ doc }: { doc: StaffDocument }) => (
-  <div className="rounded-2xl bg-slate-50 p-4">
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <p className="font-bold text-slate-900">{doc.name}</p>
-        <p className="mt-1 text-sm text-slate-500">{doc.company} · заявка {doc.orderId}</p>
-      </div>
-      <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{doc.docType}</span>
+  <div className="grid items-center gap-3 rounded-2xl bg-slate-50 p-4 lg:grid-cols-[1.6fr_1.1fr_0.8fr_0.9fr_auto]">
+    <div className="min-w-0">
+      <p className="break-words font-bold text-slate-900">{doc.name}</p>
+      <p className="mt-1 text-sm text-slate-500">{doc.company}</p>
     </div>
-    <p className="mt-2 text-sm text-slate-600">{doc.status} · {doc.uploadedAt} · {doc.uploadedBy}</p>
-    <Link to={`/staff/orders/${doc.orderId}`} className="mt-3 inline-flex rounded-full bg-eco-900 px-3 py-2 text-xs font-bold text-white">Открыть</Link>
+    <div className="text-sm text-slate-600">
+      <p className="font-semibold text-slate-800">{doc.orderId}</p>
+      <p>{doc.orderService}</p>
+    </div>
+    <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{doc.docType}</span>
+    <div className="text-sm text-slate-600">
+      <p>{doc.status}</p>
+      <p>{doc.uploadedAt}</p>
+    </div>
+    <Link to={`/staff/documents/${doc.orderId}`} className="inline-flex justify-center rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Открыть</Link>
+  </div>
+);
+
+const DocumentFileRow = ({ doc, order }: { doc: StaffDocument; order: Order }) => (
+  <div className="grid items-center gap-3 rounded-2xl bg-slate-50 p-4 lg:grid-cols-[1.7fr_0.8fr_0.8fr_auto]">
+    <div className="min-w-0">
+      <p className="break-words font-bold text-slate-900">{doc.name}</p>
+      <p className="mt-1 text-sm text-slate-500">{doc.uploadedBy} · {doc.uploadedAt}</p>
+    </div>
+    <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{doc.docType}</span>
+    <p className="text-sm font-semibold text-slate-700">{doc.status}</p>
+    <div className="flex flex-wrap gap-2">
+      <a href={documentHref(doc, order)} target="_blank" rel="noreferrer" className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-eco-800 transition hover:bg-white">Посмотреть</a>
+      <a href={documentHref(doc, order)} download={doc.name} className="rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Скачать</a>
+    </div>
   </div>
 );
 
 export const StaffDocumentsPage = () => {
   const { orders } = useOrders();
+  const { orderId } = useParams();
   const [q, setQ] = useState('');
   const [company, setCompany] = useState('Все');
   const [type, setType] = useState('Все');
   const [status, setStatus] = useState('Все');
-  const docs = useMemo(() => collectDocuments(orders), [orders]);
+  const completedOrders = useMemo(() => orders.filter((order) => ['Готово', 'Завершено'].includes(order.status)), [orders]);
+  const docs = useMemo(() => collectDocuments(completedOrders), [completedOrders]);
   const companies = useMemo(() => Array.from(new Set(docs.map((doc) => doc.company))).sort(), [docs]);
   const types = useMemo(() => Array.from(new Set(docs.map((doc) => doc.docType))).sort(), [docs]);
   const statuses = useMemo(() => Array.from(new Set(docs.map((doc) => doc.status))).sort(), [docs]);
@@ -1232,6 +1842,48 @@ export const StaffDocumentsPage = () => {
     acc[doc.company] = [...(acc[doc.company] || []), doc];
     return acc;
   }, {}), [filtered]);
+  const selectedOrder = orderId ? completedOrders.find((order) => order.id === orderId) : undefined;
+  const selectedDocs = selectedOrder ? collectDocuments([selectedOrder]) : [];
+
+  if (orderId) {
+    if (!selectedOrder) {
+      return (
+        <Reveal>
+          <div className="rounded-[22px] bg-white p-6 shadow-sm">
+            <Link to="/staff/documents" className="text-sm font-bold text-eco-700">← Документы</Link>
+            <EmptyState text="Завершённая заявка не найдена" />
+          </div>
+        </Reveal>
+      );
+    }
+
+    return (
+      <Reveal>
+        <div className="rounded-[22px] bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <Link to="/staff/documents" className="text-sm font-bold text-eco-700">← Документы</Link>
+              <h2 className="mt-3 text-3xl font-bold text-eco-900">{selectedOrder.id} · {getOrderCompanyName(selectedOrder)}</h2>
+              <p className="mt-2 text-sm text-slate-500">{selectedOrder.service}</p>
+            </div>
+            {badge(selectedOrder.status)}
+          </div>
+
+          <div className="mt-6 grid gap-3 md:grid-cols-4">
+            <InfoTile label="Компания" value={getOrderCompanyName(selectedOrder)} />
+            <InfoTile label="Контакт" value={selectedOrder.contactPerson || selectedOrder.clientName} />
+            <InfoTile label="Дата" value={selectedOrder.createdAt} />
+            <InfoTile label="Документы" value={String(selectedDocs.length)} />
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {selectedDocs.map((doc) => <DocumentFileRow key={doc.id} doc={doc} order={selectedOrder} />)}
+            {!selectedDocs.length && <EmptyState text="Документов нет" />}
+          </div>
+        </div>
+      </Reveal>
+    );
+  }
 
   return (
     <Reveal>
@@ -1253,7 +1905,7 @@ export const StaffDocumentsPage = () => {
           {Object.entries(grouped).map(([companyName, items]) => (
             <div key={companyName} className="rounded-[20px] border border-slate-100 p-4">
               <h3 className="font-bold text-eco-900">{companyName}</h3>
-              <div className="mt-3 grid gap-3 xl:grid-cols-2">
+              <div className="mt-3 space-y-2">
                 {items.map((doc) => <DocumentLine key={doc.id} doc={doc} />)}
               </div>
             </div>

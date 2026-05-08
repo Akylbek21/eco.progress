@@ -1,6 +1,10 @@
 export {
   addComment,
+  addAnnualQuarterComment,
+  addAnnualQuarterPayment,
+  addAnnualQuarterResult,
   assignManager,
+  completeAnnualRequest,
   getOrderById,
   getOrders,
   sendContractAndInvoice,
@@ -9,5 +13,7 @@ export {
   updateLaboratoryStatus,
   updateOrderStatus,
   updatePaymentStatus,
+  updateAnnualQuarterWorkStatus,
+  uploadAnnualQuarterDocument,
   uploadDocument,
 } from './orderService';

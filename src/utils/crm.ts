@@ -1,7 +1,9 @@
-import type { EcologyStatus, LaboratoryStatus, Order, OrderStatus, PaymentStatus } from '../data/mockData';
+import { businessCompanies, clientContracts, getBusinessCompanyById, getBusinessCompanyByServiceId, orderStatusDefinitions, type ClientContract, type EcologyStatus, type LaboratoryStatus, type MockUser, type Order, type OrderStatus, type OrderStatusDefinition, type PaymentStatus } from '../data/mockData';
 import { ecologyStatusLabels, laboratoryStatusLabels } from '../types/crm';
 
-export const orderStatuses: OrderStatus[] = ['Новая', 'В обработке', 'Ожидает документы', 'В работе', 'На проверке', 'Готово', 'Завершено', 'Отменено'];
+export const orderStatuses: OrderStatus[] = orderStatusDefinitions.map((status) => status.id);
+
+export const workOrderStatuses: OrderStatus[] = ['Проектирование', 'Лаборатория', 'Вывоз', 'Утилизация'];
 
 export const paymentStatuses: PaymentStatus[] = ['not_sent', 'pending', 'partial', 'paid'];
 
@@ -34,29 +36,153 @@ export const getOrderCompanyName = (order: Order) => {
 
 export const companyKey = (name: string) => name.trim().toLowerCase();
 
+export const getOrderBusinessCompany = (order: Order) =>
+  order.businessCompanyId ? getBusinessCompanyById(order.businessCompanyId) : getBusinessCompanyByServiceId(order.serviceId);
+
+export const getOrderBusinessCompanyName = (order: Order) =>
+  order.businessCompanyName || getOrderBusinessCompany(order).name;
+
+export const getOrderStatusDefinition = (status: OrderStatus): OrderStatusDefinition =>
+  orderStatusDefinitions.find((item) => item.id === status) || orderStatusDefinitions[0];
+
+export const getOrderStatusOrder = (status: OrderStatus) => getOrderStatusDefinition(status).order;
+
+export const getWorkStageByService = (service: { service?: string; serviceId?: string; businessCompanyId?: string }): OrderStatus => {
+  const source = `${service.serviceId || ''} ${service.service || ''} ${service.businessCompanyId || ''}`.toLowerCase();
+
+  if (/лаборатор|анализ|исслед|lab/.test(source)) return 'Лаборатория';
+  if (/транспорт|вывоз|transport/.test(source)) return 'Вывоз';
+  if (/эколог|проект|документ|разреш|отчет|отч[её]т|овос|пдв|ндв|пноолр|роос|пдс|сзз|пэк|ппм|permit|design/.test(source)) return 'Проектирование';
+  if (/утилиз|переработ|полигон|размещ|захорон|waste|recycl|landfill|poligon/.test(source)) return 'Утилизация';
+
+  return 'Проектирование';
+};
+
+export const getWorkStageLabel = getWorkStageByService;
+
+export const getOrderWorkStageLabel = (order: Order) => getWorkStageLabel(order);
+
+export const isWorkOrderStatus = (status: OrderStatus) => workOrderStatuses.includes(status);
+
+export const getWorkflowForOrder = (order: Order): OrderStatus[] => [
+  'Консультация',
+  'Анализ',
+  'КП',
+  'Договор',
+  'Счет на оплату',
+  ...(order.contractType === 'annual_quarterly' ? ['annual_active' as OrderStatus] : [getOrderWorkStageLabel(order)]),
+  'Проверка результата',
+  'Готово',
+  'Завершено',
+];
+
+export const normalizeOrderStatus = (status: string | undefined, order: Pick<Order, 'service' | 'serviceId' | 'businessCompanyId'>): OrderStatus => {
+  if (orderStatuses.includes(status as OrderStatus)) return status as OrderStatus;
+  if (status === 'Активна по годовому договору') return 'annual_active';
+
+  if (status === 'Новая') return 'Консультация';
+  if (status === 'В обработке' || status === 'Ожидает документы') return 'Анализ';
+  if (status === 'В работе') return getWorkStageByService(order);
+  if (status === 'На проверке') return 'Проверка результата';
+  if (status === 'Готово') return 'Готово';
+  if (status === 'Завершено') return 'Завершено';
+  if (status === 'Отменено') return 'Отменено';
+
+  return 'Консультация';
+};
+
+export const getNextOrderStatus = (order: Order): OrderStatus | undefined => {
+  if (order.status === 'Отменено' || order.status === 'Завершено') return undefined;
+  if (order.contractType === 'annual_quarterly' && order.status === 'annual_active') return undefined;
+  if (order.status === 'Счет на оплату' && fallbackPaymentStatus(order.paymentStatus) !== 'paid') return undefined;
+
+  const workflow = getWorkflowForOrder(order);
+  const currentIndex = workflow.indexOf(order.status);
+  if (currentIndex < 0) return 'Консультация';
+  return workflow[currentIndex + 1];
+};
+
+const dayMs = 24 * 60 * 60 * 1000;
+
+export const getContractDaysLeft = (contract: Pick<ClientContract, 'endsAt'>) => {
+  const today = new Date();
+  const end = new Date(`${contract.endsAt}T23:59:59`);
+  return Math.ceil((end.getTime() - today.getTime()) / dayMs);
+};
+
+export const getContractProgress = (contract: Pick<ClientContract, 'startedAt' | 'endsAt'>) => {
+  const start = new Date(`${contract.startedAt}T00:00:00`).getTime();
+  const end = new Date(`${contract.endsAt}T23:59:59`).getTime();
+  const today = new Date().getTime();
+  if (end <= start) return 100;
+  return Math.min(100, Math.max(0, Math.round(((today - start) / (end - start)) * 100)));
+};
+
+export const getContractDisplayStatus = (contract: Pick<ClientContract, 'status' | 'endsAt'>) => {
+  const daysLeft = getContractDaysLeft(contract);
+  if (daysLeft < 0 || contract.status === 'expired') return 'Истек';
+  if (daysLeft <= 90 || contract.status === 'expiring') return 'Скоро истекает';
+  if (contract.status === 'draft') return 'Черновик';
+  return 'Активен';
+};
+
+export const contractStatusClass = (contract: Pick<ClientContract, 'status' | 'endsAt'>) => {
+  const daysLeft = getContractDaysLeft(contract);
+  if (daysLeft < 0 || contract.status === 'expired') return 'bg-rose-50 text-rose-800 ring-rose-100';
+  if (daysLeft <= 90 || contract.status === 'expiring') return 'bg-amber-50 text-amber-800 ring-amber-100';
+  return 'bg-emerald-50 text-emerald-800 ring-emerald-100';
+};
+
+export const formatIsoDate = (value: string) =>
+  new Date(`${value}T00:00:00`).toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
+
+export const formatContractDaysLeft = (contract: Pick<ClientContract, 'endsAt'>) => {
+  const daysLeft = getContractDaysLeft(contract);
+  if (daysLeft < 0) return `Истек ${Math.abs(daysLeft)} дн. назад`;
+  if (daysLeft === 0) return 'Истекает сегодня';
+  return `Осталось ${daysLeft} дн.`;
+};
+
+export const getContractsForClient = (user?: MockUser | null) => {
+  if (!user) return [];
+  return clientContracts.filter((contract) =>
+    contract.clientId === user.id ||
+    (user.companyName && contract.companyName === user.companyName)
+  );
+};
+
+export const getContractsForOrder = (order: Order) =>
+  clientContracts.filter((contract) =>
+    (contract.clientId === order.clientId || contract.companyName === getOrderCompanyName(order)) &&
+    contract.businessCompanyId === getOrderBusinessCompany(order).id
+  );
+
+export const getPrimaryContractForOrder = (order: Order) =>
+  getContractsForOrder(order).sort((a, b) => getContractDaysLeft(a) - getContractDaysLeft(b))[0];
+
 export const isCompletedOrder = (order: Order) => ['Готово', 'Завершено'].includes(order.status);
 
 export const isWaitingOrder = (order: Order) =>
-  order.status === 'Ожидает документы' || order.contractStatus === 'sent' || fallbackPaymentStatus(order.paymentStatus) === 'pending';
+  order.status === 'Счет на оплату' || order.contractStatus === 'sent' || fallbackPaymentStatus(order.paymentStatus) === 'pending';
 
 export const isActiveOrder = (order: Order) => !['Готово', 'Завершено', 'Отменено'].includes(order.status);
 
 export const getNextCrmStep = (order: Order) => {
   const paymentStatus = fallbackPaymentStatus(order.paymentStatus);
-  if (order.status === 'Новая') return 'Проверить заявку';
-  if (!order.contractStatus || order.contractStatus === 'not_sent') return 'Выставить счет';
-  if (paymentStatus === 'not_sent') return 'Проверить оплату';
-  if (paymentStatus === 'pending') return 'Ждем оплату';
-  if (paymentStatus === 'partial') return 'Проверить остаток';
-  if (order.ecologyStatus === 'waiting_client_data') return 'Запросить данные';
-  if (order.ecologyStatus === 'in_progress') return 'Завершить заключение';
-  if (order.laboratoryStatus === 'waiting_samples') return 'Ждем образцы';
-  if (order.laboratoryStatus === 'analysis_in_progress') return 'Загрузить результат';
-  if (order.laboratoryStatus === 'samples_received') return 'Начать анализ';
-  if (order.contractStatus === 'signed' && paymentStatus === 'paid' && order.status !== 'В работе') return 'Передать в работу';
-  if (order.status === 'Готово') return 'Закрыть заявку';
-  if (paymentStatus === 'paid' && (order.ecologyStatus === 'done' || order.ecologyStatus === 'not_started') && (order.laboratoryStatus === 'result_ready' || order.laboratoryStatus === 'not_assigned')) return 'Закрыть заявку';
-  return 'Вести заявку';
+  if (order.status === 'Отменено') return 'Заявка отменена';
+  if (order.status === 'Завершено') return 'Заявка завершена';
+  if (order.status === 'annual_active') return 'Вести квартальное обслуживание по годовому договору';
+  if (order.status === 'Счет на оплату') {
+    if (paymentStatus === 'paid') return `Передать на этап: ${getOrderWorkStageLabel(order)}`;
+    if (paymentStatus === 'partial') return 'Проверить остаток оплаты';
+    return 'Ожидать оплату счета';
+  }
+  if (order.status === 'Готово') return 'Завершить заявку';
+
+  const nextStatus = getNextOrderStatus(order);
+  if (nextStatus) return `Перейти к этапу: ${nextStatus}`;
+
+  return getOrderStatusDefinition(order.status).employeeActionLabel;
 };
 
 export const ecologyStatusClass = (status?: EcologyStatus) => {
@@ -79,8 +205,12 @@ export const ecologyLabel = (status?: EcologyStatus) => ecologyStatusLabels[stat
 export const laboratoryLabel = (status?: LaboratoryStatus) => laboratoryStatusLabels[status || 'not_assigned'];
 
 export const statusClass = (status: string) => {
-  if (status === 'Новая') return 'bg-sky-50 text-sky-800 ring-sky-100';
-  if (status === 'Ожидает документы') return 'bg-amber-50 text-amber-800 ring-amber-100';
+  if (status === 'Консультация' || status === 'Анализ') return 'bg-sky-50 text-sky-800 ring-sky-100';
+  if (status === 'КП' || status === 'Договор') return 'bg-indigo-50 text-indigo-800 ring-indigo-100';
+  if (status === 'Счет на оплату') return 'bg-amber-50 text-amber-800 ring-amber-100';
+  if (status === 'annual_active') return 'bg-cyan-50 text-cyan-800 ring-cyan-100';
+  if (status === 'Проектирование' || status === 'Лаборатория' || status === 'Вывоз' || status === 'Утилизация') return 'bg-eco-50 text-eco-800 ring-eco-100';
+  if (status === 'Проверка результата') return 'bg-violet-50 text-violet-800 ring-violet-100';
   if (status === 'Готово' || status === 'Завершено') return 'bg-emerald-50 text-emerald-800 ring-emerald-100';
   if (status === 'Отменено') return 'bg-rose-50 text-rose-800 ring-rose-100';
   return 'bg-eco-50 text-eco-800 ring-eco-100';
@@ -105,6 +235,11 @@ export type CompanySummary = {
   pendingPayment: number;
   partialPayment: number;
   amount?: string;
+};
+
+export type BusinessCompanySummary = CompanySummary & {
+  id: string;
+  description: string;
 };
 
 export const buildCompanySummaries = (orders: Order[]): CompanySummary[] => {
@@ -135,6 +270,56 @@ export const buildCompanySummaries = (orders: Order[]): CompanySummary[] => {
     current.partialPayment += paymentStatus === 'partial' ? 1 : 0;
     current.amount = current.amount || order.paymentAmount;
     map.set(key, current);
+  });
+
+  return Array.from(map.values()).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+};
+
+export const buildBusinessCompanySummaries = (orders: Order[]): BusinessCompanySummary[] => {
+  const map = new Map<string, BusinessCompanySummary>();
+
+  businessCompanies.forEach((company) => {
+    map.set(company.id, {
+      id: company.id,
+      key: company.id,
+      name: company.name,
+      description: company.description,
+      total: 0,
+      active: 0,
+      waiting: 0,
+      completed: 0,
+      paid: 0,
+      pendingPayment: 0,
+      partialPayment: 0,
+    });
+  });
+
+  orders.forEach((order) => {
+    const company = getOrderBusinessCompany(order);
+    const current = map.get(company.id) ?? {
+      id: company.id,
+      key: company.id,
+      name: company.name,
+      description: company.description,
+      total: 0,
+      active: 0,
+      waiting: 0,
+      completed: 0,
+      paid: 0,
+      pendingPayment: 0,
+      partialPayment: 0,
+    };
+    const paymentStatus = fallbackPaymentStatus(order.paymentStatus);
+
+    current.total += 1;
+    current.active += isActiveOrder(order) ? 1 : 0;
+    current.waiting += isWaitingOrder(order) ? 1 : 0;
+    current.completed += isCompletedOrder(order) ? 1 : 0;
+    current.paid += paymentStatus === 'paid' ? 1 : 0;
+    current.pendingPayment += paymentStatus === 'pending' ? 1 : 0;
+    current.partialPayment += paymentStatus === 'partial' ? 1 : 0;
+    current.amount = current.amount || order.paymentAmount;
+    map.set(company.id, current);
   });
 
   return Array.from(map.values()).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));

@@ -2,10 +2,11 @@ import { CheckCircle2, Clock3, FileCheck2, MessageSquareText, UploadCloud } from
 import Reveal from '../animations/Reveal';
 
 const timeline = [
-  { label: 'Заявка создана', done: true },
-  { label: 'Документы получены', done: true },
-  { label: 'В работе', done: true },
-  { label: 'На проверке', done: false },
+  { label: 'Консультация', done: true },
+  { label: 'Анализ', done: true },
+  { label: 'Счет на оплату', done: true },
+  { label: 'Проектирование', done: true },
+  { label: 'Проверка результата', done: false },
 ];
 
 const EcoDashboardPreview = ({ compact = false }: { compact?: boolean }) => {
@@ -18,7 +19,7 @@ const EcoDashboardPreview = ({ compact = false }: { compact?: boolean }) => {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-eco-500">Кабинет клиента</p>
             <h3 className="mt-1 text-lg font-bold text-eco-900">ORD-1012</h3>
           </div>
-          <span className="rounded-full bg-accent/18 px-3 py-1 text-xs font-bold text-eco-800">В работе</span>
+          <span className="rounded-full bg-accent/18 px-3 py-1 text-xs font-bold text-eco-800">Проектирование</span>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">

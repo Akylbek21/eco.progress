@@ -1,24 +1,26 @@
 import { ReactNode, useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Bell, Building2, FileText, Home, LogOut, Menu, UserRound, ClipboardList, X } from 'lucide-react';
+import { Bell, Building2, CreditCard, FileText, Home, LogOut, Menu, UserRound, ClipboardList, X } from 'lucide-react';
 import { getCurrentUser, logout } from '../services/authService';
+import { canAccessPayments } from '../utils/payments';
 
 const links = [
   { label: 'Главная', path: '/staff', icon: Home },
   { label: 'Заявки', path: '/staff/orders', icon: ClipboardList },
   { label: 'Компании', path: '/staff/clients', icon: Building2 },
   { label: 'Документы', path: '/staff/documents', icon: FileText },
+  { label: 'Оплата', path: '/dashboard/payments', icon: CreditCard, paymentsOnly: true },
   { label: 'Уведомления', path: '/staff/notifications', icon: Bell },
   { label: 'Профиль', path: '/staff/profile', icon: UserRound },
 ];
 
 const roleLabel = (role?: string) => {
   const labels: Record<string, string> = {
-    ADMIN: 'Admin',
-    MANAGER: 'Manager',
-    ACCOUNTANT: 'Accountant',
-    ECOLOGIST: 'Ecologist',
-    LABORATORY: 'Laboratory',
+    ADMIN: 'Администратор',
+    MANAGER: 'Менеджер',
+    ACCOUNTANT: 'Бухгалтер',
+    ECOLOGIST: 'Эколог',
+    LABORATORY: 'Лаборатория',
   };
   return labels[role || ''] || 'Manager';
 };
@@ -29,7 +31,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
 
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
-      {links.map((item) => {
+      {links.filter((item) => !item.paymentsOnly || canAccessPayments(user?.role)).map((item) => {
         const Icon = item.icon;
         return (
           <NavLink
