@@ -107,7 +107,7 @@ const HomePage = () => (
       description="Экологические документы, лабораторные исследования, вывоз и утилизация отходов, полигон ТБО и сопровождение проверок по Казахстану."
       schema={organizationSchema}
     />
-    <section className="relative isolate overflow-hidden px-4 py-20 text-white sm:px-8 sm:py-28 lg:min-h-[760px]">
+    <section id="lead" className="relative isolate overflow-hidden px-4 py-20 text-white sm:px-8 sm:py-28 lg:min-h-[760px]">
       <div className="hero-zoom absolute inset-0 -z-30 bg-windmill bg-cover bg-center" />
       <div className="absolute inset-0 -z-20 bg-eco-900/88" />
       <div className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-white to-transparent" />
@@ -224,39 +224,6 @@ const HomePage = () => (
     <DocumentsSection />
     <CaseStudies />
 
-    <section id="lead-magnet" className="bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-20">
-      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
-        <Reveal direction="right">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Бесплатная проверка</p>
-            <h2 className="mt-3 text-3xl font-bold sm:text-4xl">Бесплатно проверим, какие экологические документы нужны вашей компании</h2>
-            <p className="mt-4 max-w-xl leading-7 text-white/72">Оставьте телефон — специалист подскажет, какие документы нужны, какие сроки и какие риски могут быть при проверке.</p>
-            <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap">
-              <a href="#lead"><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Получить бесплатную консультацию</Button></a>
-              <a href="#lead"><Button variant="secondary" className="w-full border-white/30 bg-white/10 text-white hover:bg-white/15 sm:w-auto">Отправить документы на проверку</Button></a>
-            </div>
-          </div>
-        </Reveal>
-        <Reveal direction="left">
-          <LeadForm source="free_document_check" title="Проверить документы бесплатно" compact defaultService="Экологические документы" />
-        </Reveal>
-      </div>
-    </section>
-
-    <section id="lead" className="bg-[#F7FBFD] px-4 py-16 sm:px-8 sm:py-20">
-      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-        <Reveal direction="right">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Заявка</p>
-            <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Оставить заявку без регистрации</h2>
-            <p className="mt-4 leading-7 text-slate-600">Первая заявка не требует регистрации. Мы сохраним обращение и свяжемся с вами в ближайшее время.</p>
-          </div>
-        </Reveal>
-        <Reveal direction="left">
-          <LeadForm source="homepage_lead_form" />
-        </Reveal>
-      </div>
-    </section>
   </div>
 );
 

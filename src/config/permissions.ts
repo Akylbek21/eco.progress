@@ -26,7 +26,6 @@ export type Permission =
 const staffBase: Permission[] = [
   'view_companies',
   'view_orders',
-  'view_payment',
   'view_ecology',
   'view_laboratory',
   'view_documents',
@@ -43,6 +42,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'create_order',
     'edit_order',
     'delete_orders',
+    'view_payment',
     'edit_payment',
     'edit_ecology',
     'edit_laboratory',
@@ -61,6 +61,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
   ],
   ACCOUNTANT: [
     ...staffBase,
+    'view_payment',
     'edit_payment',
     'edit_documents',
   ],

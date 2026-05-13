@@ -61,6 +61,12 @@ export const staffLogin = async (email: string, password: string) => {
   return saveSession(staff);
 };
 
+export const switchStaffRole = (role: MockUser['role']) => {
+  const staff = staffUsers.find((item) => item.role === role);
+  if (!staff) return null;
+  return saveSession(staff);
+};
+
 export const register = async (payload: RegisterPayload) => {
   await delay();
   const base = {

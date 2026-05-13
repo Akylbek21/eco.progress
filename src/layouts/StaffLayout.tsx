@@ -1,17 +1,21 @@
 import { ReactNode, useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Bell, Building2, CreditCard, FileText, Home, LogOut, Menu, UserRound, ClipboardList, X } from 'lucide-react';
-import { getCurrentUser, logout } from '../services/authService';
+import { BarChart3, Building2, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, Handshake, LockKeyhole, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
+import { getCurrentUser, logout, switchStaffRole } from '../services/authService';
 import { canAccessPayments } from '../utils/payments';
+import { canAccess } from '../config/permissions';
+import type { UserRole } from '../data/mockData';
 
 const links = [
-  { label: 'Главная', path: '/staff', icon: Home },
   { label: 'Заявки', path: '/staff/orders', icon: ClipboardList },
-  { label: 'Компании', path: '/staff/clients', icon: Building2 },
+  { label: 'Клиенты', path: '/staff/clients', icon: Building2 },
+  { label: 'КП', path: '/staff/commercial-offers', icon: Handshake },
+  { label: 'Договоры', path: '/staff/contracts', icon: FileSignature },
+  { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true },
+  { label: 'Задачи', path: '/staff/tasks', icon: ClipboardCheck },
   { label: 'Документы', path: '/staff/documents', icon: FileText },
-  { label: 'Оплата', path: '/dashboard/payments', icon: CreditCard, paymentsOnly: true },
-  { label: 'Уведомления', path: '/staff/notifications', icon: Bell },
-  { label: 'Профиль', path: '/staff/profile', icon: UserRound },
+  { label: 'Отчеты', path: '/staff/reports', icon: BarChart3 },
+  { label: 'Роли пользователей', path: '/staff/user-roles', icon: ShieldCheck, rolesOnly: true },
 ];
 
 const roleLabel = (role?: string) => {
@@ -25,14 +29,38 @@ const roleLabel = (role?: string) => {
   return labels[role || ''] || 'Manager';
 };
 
+const switchableRoles: UserRole[] = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'ECOLOGIST', 'LABORATORY'];
+
 const StaffLayout = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
-  const user = getCurrentUser();
+  const [user, setUser] = useState(() => getCurrentUser());
+
+  const changeRole = (role: UserRole) => {
+    const session = switchStaffRole(role);
+    if (session?.user) setUser(session.user);
+  };
 
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
-      {links.filter((item) => !item.paymentsOnly || canAccessPayments(user?.role)).map((item) => {
+      {links.map((item) => {
         const Icon = item.icon;
+        const locked = (item.paymentsOnly && !canAccessPayments(user?.role)) || (item.rolesOnly && !canAccess(user?.role, 'manage_roles'));
+        if (locked) {
+          const title = item.rolesOnly ? 'Доступно только администратору' : 'Доступно только администратору и бухгалтеру';
+          return (
+            <div
+              key={item.path}
+              title={title}
+              className={`flex cursor-not-allowed items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium ${
+                mobile ? 'text-slate-400' : 'text-white/45'
+              }`}
+            >
+              <Icon size={18} />
+              <span className="min-w-0 flex-1">{item.label}</span>
+              <LockKeyhole size={14} />
+            </div>
+          );
+        }
         return (
           <NavLink
             key={item.path}
@@ -81,6 +109,18 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
               <h1 className="truncate text-base font-semibold text-eco-900 sm:text-lg">{user?.name || 'Сотрудник ECOPROGRESS GROUP'}</h1>
             </div>
             <div className="flex shrink-0 items-center gap-3">
+              <label className="flex max-w-[180px] items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
+                <span className="hidden sm:inline">Роль</span>
+                <select
+                  value={user?.role && switchableRoles.includes(user.role) ? user.role : 'MANAGER'}
+                  onChange={(event) => changeRole(event.target.value as UserRole)}
+                  className="min-w-0 bg-transparent text-sm font-semibold text-eco-900 outline-none"
+                >
+                  {switchableRoles.map((role) => (
+                    <option key={role} value={role}>{roleLabel(role)}</option>
+                  ))}
+                </select>
+              </label>
               <Link to="/" className="hidden text-sm font-semibold text-eco-700 hover:text-eco-900 sm:block">На сайт</Link>
               <Link to="/staff/login" onClick={logout} className="inline-flex items-center gap-2 rounded-full bg-eco-900 px-3 py-2 text-sm font-semibold text-white sm:px-4">
                 <LogOut size={16} />

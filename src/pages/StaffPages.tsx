@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
-import { clientContracts, getBusinessCompanyById, notifications, services, statusDescriptions, type ClientContract, type DocumentItem, type EcologyStatus, type LaboratoryStatus, type MockUser, type Order, type OrderStatus, type PaymentMethod, type PaymentStatus, type QuarterDocument, type QuarterResult, type QuarterWorkStatus, type RequestQuarter, type StaffContractStatus, type UserRole } from '../data/mockData';
+import { clientContracts, getBusinessCompanyById, notifications, services, staffUsers, statusDescriptions, type ClientContract, type DocumentItem, type EcologyStatus, type LaboratoryStatus, type MockUser, type Order, type OrderStatus, type PaymentMethod, type PaymentStatus, type QuarterDocument, type QuarterResult, type QuarterWorkStatus, type RequestQuarter, type StaffContractStatus, type UserRole } from '../data/mockData';
 import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, assignManager, completeAnnualRequest, getOrderById, getOrders, sendContractAndInvoice, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, uploadAnnualQuarterDocument, uploadDocument } from '../services/staffOrderService';
 import { getCurrentUser, logout } from '../services/authService';
 import { canAccess, permissionsForRole, type Permission } from '../config/permissions';
@@ -108,7 +108,13 @@ const contractState = (order: Order) => {
   return { title: 'Договор не отправлен', text: 'Проверьте заявку и отправьте договор клиенту', tone: 'border-slate-200 bg-slate-50 text-slate-700' };
 };
 
-const paymentState = (order: Order) => {
+const paymentState = (order: Order, canViewFinance = false) => {
+  if (!canViewFinance) {
+    if (order.paymentStatus === 'paid') return { title: 'Оплата получена', text: 'Финансовые детали скрыты', tone: 'border-emerald-200 bg-emerald-50 text-emerald-900' };
+    if (order.paymentStatus === 'partial') return { title: 'Частичная оплата', text: 'Финансовые детали скрыты', tone: 'border-indigo-200 bg-indigo-50 text-indigo-900' };
+    if (order.paymentStatus === 'pending') return { title: 'Оплата ожидается', text: 'Финансовые детали скрыты', tone: 'border-amber-200 bg-amber-50 text-amber-900' };
+    return { title: 'Оплата не выставлена', text: 'Финансовые детали скрыты', tone: 'border-slate-200 bg-slate-50 text-slate-700' };
+  }
   if (order.paymentStatus === 'paid') return { title: 'Оплата получена', text: order.paidAt || order.paymentAmount || 'Счет оплачен', tone: 'border-emerald-200 bg-emerald-50 text-emerald-900' };
   if (order.paymentStatus === 'partial') return { title: 'Частичная оплата', text: order.paymentAmount || order.paymentComment || 'Оплата получена частично', tone: 'border-indigo-200 bg-indigo-50 text-indigo-900' };
   if (order.paymentStatus === 'pending') return { title: 'Счет выставлен', text: `${order.paymentAmount || 'Сумма указана'} · ${order.paymentMethod || 'Онлайн-оплата'}`, tone: 'border-amber-200 bg-amber-50 text-amber-900' };
@@ -173,6 +179,69 @@ const roleQuickActions = (role: UserRole) => {
   if (role === 'LABORATORY') return ['Образцы', 'Анализ', 'Результат'];
   if (role === 'ADMIN') return ['Все задачи', 'Заявки', 'Уведомления'];
   return ['Новые заявки', 'Ответить клиенту', 'Договор'];
+};
+
+const roleWorkplace = (role: UserRole) => {
+  if (role === 'ACCOUNTANT') return {
+    title: 'Рабочее место бухгалтера',
+    text: 'В фокусе только счета, оплаты, акты и долги. Рабочие документы и этапы показаны как справка.',
+    queueTitle: 'Оплаты и долги',
+  };
+  if (role === 'ECOLOGIST') return {
+    title: 'Рабочее место эколога',
+    text: 'В фокусе проектирование, данные от клиента, экологические документы и результат квартала.',
+    queueTitle: 'Экологические задачи',
+  };
+  if (role === 'LABORATORY') return {
+    title: 'Рабочее место лаборатории',
+    text: 'В фокусе образцы, анализы, протоколы и загрузка лабораторного результата.',
+    queueTitle: 'Лабораторные задачи',
+  };
+  if (role === 'ADMIN') return {
+    title: 'Рабочее место администратора',
+    text: 'Виден полный процесс: заявки, финансы, документы, роли и контроль исполнения.',
+    queueTitle: 'Все активные задачи',
+  };
+  return {
+    title: 'Рабочее место менеджера',
+    text: 'В фокусе клиент, заявка, договор, документы и коммуникация. Финансовые суммы скрыты.',
+    queueTitle: 'Клиентские задачи',
+  };
+};
+
+const roleStats = (orders: Order[], role: UserRole): Array<[string, number]> => {
+  if (role === 'ACCOUNTANT') return [
+    ['Ждут оплаты', orders.filter((o) => o.paymentStatus === 'pending' || o.paymentStatus === 'partial').length],
+    ['Счет на оплату', orders.filter((o) => o.status === 'Счет на оплату').length],
+    ['Есть долг', orders.filter((o) => o.quarters?.some((quarter) => quarter.remainingAmount > 0)).length],
+    ['Оплачено', orders.filter((o) => o.paymentStatus === 'paid').length],
+  ];
+  if (role === 'ECOLOGIST') return [
+    ['В проектировании', orders.filter((o) => o.status === 'Проектирование' || o.quarters?.some((quarter) => quarter.workStage === 'Проектирование')).length],
+    ['Нужны данные', orders.filter((o) => o.ecologyStatus === 'waiting_client_data').length],
+    ['В работе', orders.filter((o) => o.ecologyStatus === 'in_progress').length],
+    ['Готово', orders.filter((o) => o.ecologyStatus === 'done').length],
+  ];
+  if (role === 'LABORATORY') return [
+    ['Ждем образцы', orders.filter((o) => o.laboratoryStatus === 'waiting_samples').length],
+    ['Образцы получены', orders.filter((o) => o.laboratoryStatus === 'samples_received').length],
+    ['Анализ идет', orders.filter((o) => o.laboratoryStatus === 'analysis_in_progress').length],
+    ['Результат готов', orders.filter((o) => o.laboratoryStatus === 'result_ready').length],
+  ];
+  if (role === 'MANAGER') return [
+    ['Консультации', orders.filter((o) => o.status === 'Консультация').length],
+    ['КП/договор', orders.filter((o) => ['КП', 'Договор'].includes(o.status)).length],
+    ['Ждут клиента', orders.filter((o) => o.contractStatus === 'sent' || o.paymentStatus === 'pending').length],
+    ['Готово', orders.filter((o) => ['Готово', 'Завершено'].includes(o.status)).length],
+  ];
+  return [
+    ['Консультации', orders.filter((o) => o.status === 'Консультация').length],
+    ['До оплаты', orders.filter((o) => ['Анализ', 'КП', 'Договор'].includes(o.status)).length],
+    ['Ждут оплаты', orders.filter((o) => o.paymentStatus === 'pending' || o.paymentStatus === 'partial').length],
+    ['В работе', orders.filter((o) => isWorkOrderStatus(o.status)).length],
+    ['Проверка', orders.filter((o) => o.status === 'Проверка результата').length],
+    ['Готово', orders.filter((o) => ['Готово', 'Завершено'].includes(o.status)).length],
+  ];
 };
 
 const roleOrderFilter = (orders: Order[], role: UserRole) => {
@@ -290,6 +359,7 @@ export const StaffDashboardPage = () => {
   const role = staffRole();
   if (!canAccess(role, 'view_orders')) return <PermissionDenied permission="view_orders" />;
   const user = getCurrentUser();
+  const workplace = roleWorkplace(role);
   const roleOrders = roleOrderFilter(orders, role);
   const [selectedCompany, setSelectedCompany] = useState('all');
   const companies = useMemo(() => buildBusinessCompanySummaries(orders), [orders]);
@@ -299,28 +369,24 @@ export const StaffDashboardPage = () => {
   const latestActions = orders.flatMap((order) => order.history.slice(0, 2).map((item) => ({ ...item, order }))).slice(0, 6);
   const roleNotifications = buildRoleNotifications(orders, role).slice(0, 5);
   const myTasks = buildMyTasks(orders, role);
-  const expiringContracts = [...clientContracts].sort((a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime()).slice(0, 5);
-  const stats = [
-    ['Консультации', orders.filter((o) => o.status === 'Консультация').length],
-    ['До оплаты', orders.filter((o) => ['Анализ', 'КП', 'Договор'].includes(o.status)).length],
-    ['Ждут оплаты', orders.filter((o) => o.paymentStatus === 'pending' || o.paymentStatus === 'partial').length],
-    ['В работе', orders.filter((o) => isWorkOrderStatus(o.status)).length],
-    ['Проверка', orders.filter((o) => o.status === 'Проверка результата').length],
-    ['Готово', orders.filter((o) => ['Готово', 'Завершено'].includes(o.status)).length],
-  ];
+  const expiringContracts = ['ADMIN', 'MANAGER'].includes(role) ? [...clientContracts].sort((a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime()).slice(0, 5) : [];
+  const stats = roleStats(roleOrders, role);
 
   return (
     <div className="space-y-6">
       <Reveal>
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-eco-900">{user?.name || 'Сотрудник'} · {roleTitle(role)}</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{workplace.text}</p>
           </div>
           <p className="rounded-full bg-white px-4 py-2 text-sm font-bold text-eco-800 shadow-sm">Сегодня: {myTasks.length} задач</p>
+          </div>
         </div>
       </Reveal>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map(([label, count], index) => (
           <Reveal key={label} delay={index * 0.04}>
             <div className="rounded-2xl bg-white p-4 shadow-sm">
@@ -348,7 +414,7 @@ export const StaffDashboardPage = () => {
       </Reveal>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
-        <StaffPanel title="Рабочая очередь">
+        <StaffPanel title={workplace.queueTitle}>
           {myTasks.map((task) => <WorkTaskCard key={task.id} task={task} />)}
           {!myTasks.length && <EmptyState text="Задач нет" />}
         </StaffPanel>
@@ -365,19 +431,21 @@ export const StaffDashboardPage = () => {
             {roleNotifications.map((item) => <NotificationLine key={item.id} notification={item} />)}
             {!roleNotifications.length && <EmptyState text="Уведомлений нет" />}
           </StaffPanel>
-          <StaffPanel title="Сроки договоров">
-            {expiringContracts.map((contract) => <StaffContractLine key={contract.id} contract={contract} />)}
-            {!expiringContracts.length && <EmptyState text="Договоров нет" />}
-          </StaffPanel>
+          {['ADMIN', 'MANAGER'].includes(role) && (
+            <StaffPanel title="Сроки договоров">
+              {expiringContracts.map((contract) => <StaffContractLine key={contract.id} contract={contract} />)}
+              {!expiringContracts.length && <EmptyState text="Договоров нет" />}
+            </StaffPanel>
+          )}
         </div>
       </div>
 
-      <StaffPanel title="Заявки">
+      <StaffPanel title={role === 'ADMIN' ? 'Все заявки' : 'Мои заявки по роли'}>
         {visibleOrders.slice(0, 7).map((order) => <OrderLine key={order.id} order={order} />)}
         {!visibleOrders.length && <EmptyState text="Заявок нет" />}
       </StaffPanel>
 
-      <StaffPanel title="Последние действия">
+      {role === 'ADMIN' && <StaffPanel title="Последние действия">
         {latestActions.map((item) => (
           <Link key={`${item.order.id}-${item.id}`} to={`/staff/orders/${item.order.id}`} className="block rounded-2xl bg-slate-50 p-4 transition hover:bg-eco-50">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -388,7 +456,7 @@ export const StaffDashboardPage = () => {
           </Link>
         ))}
         {!latestActions.length && <EmptyState text="Действий нет" />}
-      </StaffPanel>
+      </StaffPanel>}
     </div>
   );
 };
@@ -698,6 +766,22 @@ const staffUtilityTabs: Array<{ label: string; target: CrmTab }> = [
   { label: 'История', target: 'История' },
 ];
 
+const roleVisibleTabs = (role: UserRole, order: Order): CrmTab[] => {
+  if (role === 'ADMIN') return [...crmTabs];
+  if (role === 'ACCOUNTANT') return ['Обзор', 'Оплата', 'Договор', 'Документы', 'История'];
+  if (role === 'ECOLOGIST') return ['Обзор', 'Экология', 'Документы', 'Сообщения', 'Заметки'];
+  if (role === 'LABORATORY') return ['Обзор', 'Лаборатория', 'Документы', 'Сообщения', 'Заметки'];
+  return ['Обзор', 'Договор', 'Документы', 'Сообщения', 'Заметки', 'История'];
+};
+
+const roleDefaultTab = (role: UserRole, order: Order): CrmTab => {
+  if (role === 'ACCOUNTANT') return 'Оплата';
+  if (role === 'ECOLOGIST') return 'Экология';
+  if (role === 'LABORATORY') return 'Лаборатория';
+  if (['КП', 'Договор'].includes(order.status)) return 'Договор';
+  return 'Обзор';
+};
+
 const isStaffWorkflowTabActive = (order: Order, activeTab: CrmTab, label: string) => {
   const workStageLabel = getOrderWorkStageLabel(order);
 
@@ -712,6 +796,7 @@ export const StaffOrdersPage = () => {
   const navigate = useNavigate();
   const role = staffRole();
   if (!canAccess(role, 'view_orders')) return <PermissionDenied permission="view_orders" />;
+  const access = roleAccess(role);
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('Все');
   const [payment, setPayment] = useState('Все');
@@ -731,7 +816,8 @@ export const StaffOrdersPage = () => {
   };
   const companies = useMemo(() => buildBusinessCompanySummaries(orders), [orders]);
   const managers = useMemo(() => Array.from(new Set(orders.map((order) => order.manager || 'Не назначен'))).sort(), [orders]);
-  const filtered = useMemo(() => orders
+  const scopedOrders = useMemo(() => roleOrderFilter(orders, role), [orders, role]);
+  const filtered = useMemo(() => scopedOrders
     .filter((o) => !onlyMyTasks || orderNeedsRole(o, role))
     .filter((o) => selectedCompany === 'all' || o.businessCompanyId === selectedCompany)
     .filter((o) => status === 'Все' || o.status === status)
@@ -752,7 +838,7 @@ export const StaffOrdersPage = () => {
     .filter((o) => stage === 'Все' || getOrderStage(o) === stage)
     .filter((o) => !date || o.createdAt.toLowerCase().includes(date.toLowerCase()))
     .filter((o) => `${o.id} ${o.clientName} ${getOrderCompanyName(o)} ${o.service}`.toLowerCase().includes(q.toLowerCase()))
-    .sort((a, b) => Number(orderNeedsRole(b, role)) - Number(orderNeedsRole(a, role)) || b.id.localeCompare(a.id)), [orders, q, selectedCompany, status, payment, requestType, quarterFilter, manager, stage, date, onlyMyTasks, role]);
+    .sort((a, b) => Number(orderNeedsRole(b, role)) - Number(orderNeedsRole(a, role)) || b.id.localeCompare(a.id)), [scopedOrders, q, selectedCompany, status, payment, requestType, quarterFilter, manager, stage, date, onlyMyTasks, role]);
   const activeCompany = selectedCompany === 'all' ? 'Все компании-исполнители' : companies.find((company) => company.key === selectedCompany)?.name || 'Компания';
   return (
     <div className="space-y-6">
@@ -760,7 +846,8 @@ export const StaffOrdersPage = () => {
         <div>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h2 className="text-3xl font-bold text-eco-900">Заявки</h2>
+              <h2 className="text-3xl font-bold text-eco-900">{role === 'ADMIN' ? 'Все заявки' : 'Заявки по моей роли'}</h2>
+              <p className="mt-2 text-sm text-slate-600">{roleWorkplace(role).text}</p>
             </div>
             <p className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-eco-800 shadow-sm">Роль: {roleTitle(role)}</p>
           </div>
@@ -773,8 +860,18 @@ export const StaffOrdersPage = () => {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h3 className="text-2xl font-bold text-eco-900">{activeCompany}</h3>
+            <p className="mt-1 text-sm text-slate-600">Список уже отфильтрован под роль: {roleTitle(role)}.</p>
           </div>
-          <p className="rounded-full bg-eco-50 px-4 py-2 text-sm font-semibold text-eco-800">Найдено: {filtered.length}</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setOnlyMyTasks((value) => !value)}
+              className={`rounded-full px-4 py-2 text-sm font-bold transition ${onlyMyTasks ? 'bg-eco-900 text-white' : 'bg-eco-50 text-eco-800 hover:bg-eco-100'}`}
+            >
+              {onlyMyTasks ? 'Моя очередь' : 'Все доступные'}
+            </button>
+            <p className="rounded-full bg-eco-50 px-4 py-2 text-sm font-semibold text-eco-800">Найдено: {filtered.length}</p>
+          </div>
         </div>
         <div className="mt-5 grid gap-3 lg:grid-cols-4 xl:grid-cols-8">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск по номеру, компании, клиенту или услуге" className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3" />
@@ -783,11 +880,11 @@ export const StaffOrdersPage = () => {
             {companies.map((company) => <option key={company.key} value={company.key}>{company.name}</option>)}
           </select>
           <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{orderStatuses.map((s) => <option key={s} value={s}>{getOrderStatusDefinition(s).label}</option>)}</select>
-          <select value={payment} onChange={(e) => setPayment(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{paymentStatuses.map((item) => <option key={item} value={item}>{paymentStatusLabels[item]}</option>)}</select>
+          {access.viewFinance && <select value={payment} onChange={(e) => setPayment(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{paymentStatuses.map((item) => <option key={item} value={item}>{paymentStatusLabels[item]}</option>)}</select>}
           <select value={requestType} onChange={(e) => setRequestType(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3">{['Все', 'Разовые', 'Годовые активные', 'Завершенные годовые'].map((item) => <option key={item}>{item}</option>)}</select>
           <select value={quarterFilter} onChange={(e) => setQuarterFilter(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3">{['Все', '1 квартал', '2 квартал', '3 квартал', '4 квартал', 'Текущий квартал'].map((item) => <option key={item}>{item}</option>)}</select>
-          <select value={manager} onChange={(e) => setManager(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{managers.map((item) => <option key={item}>{item}</option>)}</select>
-          <select value={stage} onChange={(e) => setStage(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{['Менеджер', 'Бухгалтерия', 'Проектирование', 'Лаборатория', 'Вывоз', 'Утилизация', 'Проверка', 'Готово'].map((item) => <option key={item}>{item}</option>)}</select>
+          {['ADMIN', 'MANAGER'].includes(role) && <select value={manager} onChange={(e) => setManager(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{managers.map((item) => <option key={item}>{item}</option>)}</select>}
+          {role === 'ADMIN' && <select value={stage} onChange={(e) => setStage(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{['Менеджер', 'Бухгалтерия', 'Проектирование', 'Лаборатория', 'Вывоз', 'Утилизация', 'Проверка', 'Готово'].map((item) => <option key={item}>{item}</option>)}</select>}
           <input value={date} onChange={(e) => setDate(e.target.value)} placeholder="Дата" className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3" />
           <button type="button" onClick={() => { setQ(''); setStatus('Все'); setPayment('Все'); setRequestType('Все'); setQuarterFilter('Все'); setManager('Все'); setStage('Все'); setDate(''); setOnlyMyTasks(false); selectBusinessCompany('all'); }} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-eco-800 transition hover:bg-eco-50">Сбросить</button>
         </div>
@@ -797,11 +894,11 @@ export const StaffOrdersPage = () => {
         <div className="mt-5 hidden overflow-x-auto lg:block">
           <table className="w-full min-w-[1650px] text-left text-sm">
             <thead className="text-slate-500">
-              <tr><th className="p-3">№</th><th>Тип</th><th>Компания-исполнитель</th><th>Клиент</th><th>Договор</th><th>Услуга</th><th>Статус</th><th>Квартал</th><th>Прогресс</th><th>Долг</th><th>Оплата</th><th>Этап</th><th>Следующий шаг</th><th>Ответственный</th><th></th></tr>
+              <tr><th className="p-3">№</th><th>Тип</th><th>Компания-исполнитель</th><th>Клиент</th><th>Договор</th><th>Услуга</th><th>Статус</th><th>Квартал</th><th>Прогресс</th>{access.viewFinance && <th>Долг</th>}<th>Оплата</th><th>Этап</th><th>Следующий шаг</th><th>Ответственный</th><th></th></tr>
             </thead>
             <tbody>
               {filtered.map((order) => (
-                <StaffOrderTableRow key={order.id} order={order} />
+                <StaffOrderTableRow key={order.id} order={order} canViewFinance={access.viewFinance} />
               ))}
             </tbody>
           </table>
@@ -812,7 +909,7 @@ export const StaffOrdersPage = () => {
   );
 };
 
-const StaffOrderTableRow = ({ order }: { order: Order }) => {
+const StaffOrderTableRow = ({ order, canViewFinance }: { order: Order; canViewFinance: boolean }) => {
   const contract = getPrimaryContractForOrder(order);
   const progress = getAnnualRequestProgress(order);
   const debt = getAnnualRequestDebtSummary(order);
@@ -837,7 +934,7 @@ const StaffOrderTableRow = ({ order }: { order: Order }) => {
       <td className="py-3">{badge(order.status)}</td>
       <td className="py-3 text-sm text-slate-600">{currentQuarter ? currentQuarter.quarterLabel : '-'}</td>
       <td className="py-3 text-sm font-semibold text-eco-800">{isAnnualRequest(order) ? `${progress.completed}/${progress.total}` : '-'}</td>
-      <td className="py-3 text-sm font-semibold text-rose-700">{isAnnualRequest(order) && debt.totalDebt > 0 ? formatCurrency(debt.totalDebt) : '-'}</td>
+      {canViewFinance && <td className="py-3 text-sm font-semibold text-rose-700">{isAnnualRequest(order) && debt.totalDebt > 0 ? formatCurrency(debt.totalDebt) : '-'}</td>}
       <td className="py-3">{paymentBadge(order.paymentStatus)}</td>
       <td className="py-3 text-sm leading-snug text-slate-600">{getOrderStage(order)}</td>
       <td className="py-3 font-semibold leading-snug text-slate-700">{getNextCrmStep(order)}</td>
@@ -857,8 +954,13 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     if (id) getOrderById(id).then(setOrder);
   };
   useEffect(() => { load(); }, [id]);
+  const visibleTabs = useMemo(() => order ? roleVisibleTabs(role, order) : ['Обзор'] as CrmTab[], [role, order]);
+  useEffect(() => {
+    if (order && !visibleTabs.includes(activeTab)) setActiveTab(roleDefaultTab(role, order));
+  }, [activeTab, order, role, visibleTabs]);
   if (!id) return <Navigate to="/staff/orders" replace />;
   if (!order) return <div className="rounded-2xl bg-white p-6">Загрузка заявки...</div>;
+  const currentTab = visibleTabs.includes(activeTab) ? activeTab : roleDefaultTab(role, order);
 
   const changeStatus = async (status: OrderStatus) => {
     await updateOrderStatus(order.id, status);
@@ -909,6 +1011,10 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
 
   const submitPayment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!access.finance) {
+      onNotify?.('Финансовые действия доступны только бухгалтеру и администратору');
+      return;
+    }
     const form = new FormData(event.currentTarget);
     await updatePaymentStatus(order.id, String(form.get('paymentStatus')) as PaymentStatus, {
       amount: String(form.get('amount') || ''),
@@ -955,6 +1061,10 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
 
   const submitQuarterPayment = async (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => {
     event.preventDefault();
+    if (!access.finance) {
+      onNotify?.('Финансовые действия доступны только бухгалтеру и администратору');
+      return;
+    }
     const form = new FormData(event.currentTarget);
     await addAnnualQuarterPayment(order.id, quarter.id, {
       amount: Number(form.get('amount') || 0),
@@ -1006,6 +1116,10 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
 
   const submitContractAndInvoice = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!access.finance) {
+      onNotify?.('Счет и финансовые данные доступны только бухгалтеру и администратору');
+      return;
+    }
     const form = new FormData(event.currentTarget);
     const contract = form.get('contract') as File | null;
     await sendContractAndInvoice(order.id, {
@@ -1028,6 +1142,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
   const online = onlineState(order);
   const serviceContracts = getContractsForOrder(order);
   const canAddComment = access.notes || access.messages;
+  const workplace = roleWorkplace(role);
   const nextStatus = getNextOrderStatus(order);
   const canAdvanceWorkflow = Boolean(nextStatus) && (
     access.manager ||
@@ -1066,31 +1181,21 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               <span className={`rounded-full px-3 py-1 text-xs font-bold ${online.tone}`}>{online.label}</span>
             </div>
           </div>
-          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-            {staffWorkflowTabs(order).map(({ label, target }) => (
-              <button
-                type="button"
-                key={label}
-                onClick={() => setActiveTab(target)}
-                className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${
-                  isStaffWorkflowTabActive(order, activeTab, label) ? 'bg-eco-900 text-white shadow-lg shadow-eco-900/10' : 'bg-slate-100 text-slate-600 hover:bg-eco-50 hover:text-eco-900'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="mt-5 rounded-2xl bg-eco-50 p-4 text-sm leading-6 text-slate-700">
+            <p className="font-bold text-eco-900">{workplace.title}</p>
+            <p className="mt-1">{workplace.text}</p>
           </div>
-          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-            {staffUtilityTabs.map(({ label, target }) => (
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+            {visibleTabs.map((tab) => (
               <button
                 type="button"
-                key={label}
-                onClick={() => setActiveTab(target)}
+                key={tab}
+                onClick={() => setActiveTab(tab)}
                 className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${
-                  activeTab === target ? 'bg-eco-900 text-white shadow-lg shadow-eco-900/10' : 'bg-slate-100 text-slate-600 hover:bg-eco-50 hover:text-eco-900'
+                  currentTab === tab ? 'bg-eco-900 text-white shadow-lg shadow-eco-900/10' : 'bg-slate-100 text-slate-600 hover:bg-eco-50 hover:text-eco-900'
                 }`}
               >
-                {label}
+                {tab}
               </button>
             ))}
           </div>
@@ -1100,7 +1205,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
       <div className="grid gap-6 xl:grid-cols-[1fr_390px]">
         <Reveal>
           <div className="space-y-6">
-            {activeTab === 'Обзор' && (
+            {currentTab === 'Обзор' && (
               <>
                 <Section title="Обзор" icon={<ClipboardCheck size={20} />}>
                   <div className="mb-5">
@@ -1110,7 +1215,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                   {isAnnualRequest(order) && (
                     <AnnualRequestPanel
                       order={order}
-                      canManageWork={access.manager || access.ecology || access.laboratory || canAccess(role, 'edit_documents')}
+                      canManageWork={access.manager || access.ecology || access.laboratory}
                       canManageFinance={access.finance}
                       canMessageClient={access.messages}
                       onWorkStatus={changeQuarterWork}
@@ -1139,7 +1244,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               </>
             )}
 
-            {activeTab === 'Оплата' && (
+            {currentTab === 'Оплата' && (
               <Section title="Оплата" icon={<CreditCard size={20} />}>
                 {!access.viewFinance && (
                   <div className="mb-5 grid gap-3 md:grid-cols-3">
@@ -1192,28 +1297,35 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               </Section>
             )}
 
-            {activeTab === 'Договор' && (
+            {currentTab === 'Договор' && (
               <Section title="Договор" icon={<FileSignature size={20} />}>
                 <div className="mb-5 grid gap-3 md:grid-cols-3">
                   <InfoTile label="Статус" value={contractLabel(order.crmContractStatus || order.contractStatus)} />
                   <InfoTile label="Подписание" value={order.signatureProvider || 'Не указано'} />
                   <InfoTile label="Дата" value={order.signedAt || 'Нет'} />
                 </div>
-                <form onSubmit={submitContractAndInvoice} className="grid gap-4 md:grid-cols-2">
-                  <Field label="Сумма"><input name="amount" required defaultValue={order.paymentAmount || '150 000 ₸'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-                  <Field label="Метод"><select name="paymentMethod" defaultValue={order.paymentMethod || 'Банковская карта'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3"><option>Банковская карта</option><option>Kaspi Pay</option><option>Счет на оплату</option></select></Field>
-                  <Field label="Подписание"><select name="signatureProvider" defaultValue={order.signatureProvider || 'NCALayer / ЭЦП'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3"><option>NCALayer / ЭЦП</option><option>Kaspi ID</option><option>SMS-подтверждение</option></select></Field>
-                  <Field label="Файл"><input name="contract" type="file" className="w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-                  <div className="flex flex-wrap gap-3 md:col-span-2">
-                    <Button>Отправить</Button>
-                    <Button type="button" variant="secondary" onClick={() => markContract('sent_to_client', 'Договор отправлен')}>Отправлен</Button>
-                    <Button type="button" variant="secondary" onClick={() => markContract('signed', 'Договор подписан')}>Подписан</Button>
+                {!access.viewFinance && (
+                  <div className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-600">
+                    Сумма договора, способ оплаты и счет доступны только бухгалтеру и администратору.
                   </div>
-                </form>
+                )}
+                {access.viewFinance && (
+                  <form onSubmit={submitContractAndInvoice} className="grid gap-4 md:grid-cols-2">
+                    <Field label="Сумма"><input name="amount" required defaultValue={order.paymentAmount || '150 000 ₸'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+                    <Field label="Метод"><select name="paymentMethod" defaultValue={order.paymentMethod || 'Банковская карта'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3"><option>Банковская карта</option><option>Kaspi Pay</option><option>Счет на оплату</option></select></Field>
+                    <Field label="Подписание"><select name="signatureProvider" defaultValue={order.signatureProvider || 'NCALayer / ЭЦП'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3"><option>NCALayer / ЭЦП</option><option>Kaspi ID</option><option>SMS-подтверждение</option></select></Field>
+                    <Field label="Файл"><input name="contract" type="file" className="w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+                    <div className="flex flex-wrap gap-3 md:col-span-2">
+                      <Button>Отправить</Button>
+                      <Button type="button" variant="secondary" onClick={() => markContract('sent_to_client', 'Договор отправлен')}>Отправлен</Button>
+                      <Button type="button" variant="secondary" onClick={() => markContract('signed', 'Договор подписан')}>Подписан</Button>
+                    </div>
+                  </form>
+                )}
               </Section>
             )}
 
-            {activeTab === 'Документы' && (
+            {currentTab === 'Документы' && (
               <Section title="Документы" icon={<Upload size={20} />}>
                 <List title="От клиента" items={order.documents.map((d) => `${d.name} · ${d.status} · ${d.uploadedAt}`)} />
                 <List title="От ECOPROGRESS" items={order.resultDocuments.map((d) => `${d.name} · ${d.status} · ${d.uploadedAt}`)} />
@@ -1226,7 +1338,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               </Section>
             )}
 
-            {activeTab === 'Экология' && (
+            {currentTab === 'Экология' && (
               <Section title="Экология" icon={<Leaf size={20} />}>
                 <div className="grid gap-3 md:grid-cols-3">
                   <InfoTile label="Статус" value={ecologyLabel(order.ecologyStatus)} />
@@ -1255,7 +1367,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               </Section>
             )}
 
-            {activeTab === 'Лаборатория' && (
+            {currentTab === 'Лаборатория' && (
               <Section title="Лаборатория" icon={<Microscope size={20} />}>
                 <div className="grid gap-3 md:grid-cols-3">
                   <InfoTile label="Статус" value={laboratoryLabel(order.laboratoryStatus)} />
@@ -1282,7 +1394,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               </Section>
             )}
 
-            {activeTab === 'Сообщения' && (
+            {currentTab === 'Сообщения' && (
               <Section title="Сообщения" icon={<Send size={20} />}>
                 <List title="Сообщения" items={order.comments.filter((c) => c.visibility === 'client').map((c) => `${c.createdAt} · ${c.author}: ${c.text}`)} />
                 {access.messages && (
@@ -1294,7 +1406,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               </Section>
             )}
 
-            {activeTab === 'Заметки' && (
+            {currentTab === 'Заметки' && (
               <Section title="Заметки" icon={<StickyNote size={20} />}>
                 <List title="Заметки" items={order.comments.filter((c) => c.visibility === 'internal').map((c) => `${c.createdAt} · ${c.author}: ${c.text}`)} />
                 <form onSubmit={(event) => submitComment(event, 'internal')} className="mt-5">
@@ -1304,7 +1416,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               </Section>
             )}
 
-            {activeTab === 'История' && (
+            {currentTab === 'История' && (
               <Section title="История" icon={<History size={20} />}>
                 <div className="space-y-3">
                   {order.history.length ? order.history.map((item) => (
@@ -1409,6 +1521,19 @@ const AnnualRequestPanel = ({
   const currentQuarter = getCurrentQuarterForRequest(order);
   const warnings = getAnnualRequestWarnings(order);
   const canFinish = canCompleteAnnualRequest(order);
+  const quarters = useMemo(() => [...(order.quarters || [])].sort((a, b) => a.quarter - b.quarter), [order.quarters]);
+  const [selectedQuarterId, setSelectedQuarterId] = useState<string>();
+  const selectedQuarter = quarters.find((quarter) => quarter.id === selectedQuarterId) || quarters[0];
+
+  useEffect(() => {
+    if (!quarters.length) {
+      setSelectedQuarterId(undefined);
+      return;
+    }
+    if (!selectedQuarterId || !quarters.some((quarter) => quarter.id === selectedQuarterId)) {
+      setSelectedQuarterId(quarters[0].id);
+    }
+  }, [quarters, selectedQuarterId]);
 
   return (
     <div className="mb-6 rounded-[22px] border border-cyan-100 bg-cyan-50/40 p-4">
@@ -1420,26 +1545,55 @@ const AnnualRequestPanel = ({
         <div className="flex flex-wrap gap-2">
           <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-cyan-800 ring-1 ring-cyan-100">Прогресс {progress.completed}/{progress.total}</span>
           {currentQuarter && <span className="rounded-full bg-eco-900 px-3 py-1 text-xs font-bold text-white">Текущий квартал: {currentQuarter.quarterLabel}</span>}
-          {debt.totalDebt > 0 && <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-800 ring-1 ring-rose-100">Долг {formatCurrency(debt.totalDebt)}</span>}
+          {debt.totalDebt > 0 && (
+            <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-800 ring-1 ring-rose-100">
+              {canManageFinance ? `Долг ${formatCurrency(debt.totalDebt)}` : 'Есть задолженность'}
+            </span>
+          )}
         </div>
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-4">
         <InfoTile label="Выполнено" value={`${progress.completed} из ${progress.total}`} />
-        <InfoTile label="Общий долг" value={formatCurrency(debt.totalDebt)} />
-        <InfoTile label="Просрочено" value={formatCurrency(debt.overdueDebt)} />
-        <InfoTile label="Ближайший срок" value={debt.nextDue || 'Нет'} />
+        {canManageFinance ? (
+          <>
+            <InfoTile label="Общий долг" value={formatCurrency(debt.totalDebt)} />
+            <InfoTile label="Просрочено" value={formatCurrency(debt.overdueDebt)} />
+            <InfoTile label="Ближайший срок" value={debt.nextDue || 'Нет'} />
+          </>
+        ) : (
+          <>
+            <InfoTile label="Оплата" value={debt.totalDebt > 0 ? 'Есть задолженность' : 'Без задолженности'} />
+            <InfoTile label="Доступ" value="Финансовые суммы скрыты" />
+            <InfoTile label="Работа" value={canFinish ? 'Готова к завершению' : 'Кварталы в работе'} />
+          </>
+        )}
       </div>
       {warnings.length > 0 && (
         <div className="mt-4 grid gap-2 md:grid-cols-2">
           {warnings.map((warning) => <p key={warning} className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-amber-800 ring-1 ring-amber-100">{warning}</p>)}
         </div>
       )}
-      <div className="mt-5 grid gap-4 xl:grid-cols-2">
-        {(order.quarters || []).map((quarter) => (
-          <AnnualQuarterCard
+      <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+        {quarters.map((quarter) => (
+          <button
+            type="button"
             key={quarter.id}
-            quarter={quarter}
-            isCurrent={currentQuarter?.id === quarter.id}
+            onClick={() => setSelectedQuarterId(quarter.id)}
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${
+              selectedQuarter?.id === quarter.id
+                ? 'bg-eco-900 text-white shadow-lg shadow-eco-900/10'
+                : 'bg-white text-slate-600 ring-1 ring-cyan-100 hover:bg-cyan-100 hover:text-eco-900'
+            }`}
+          >
+            {quarter.quarterLabel}
+          </button>
+        ))}
+      </div>
+      {selectedQuarter ? (
+        <div className="mt-4">
+          <AnnualQuarterCard
+            quarter={selectedQuarter}
+            isCurrent={currentQuarter?.id === selectedQuarter.id}
             canManageWork={canManageWork}
             canManageFinance={canManageFinance}
             canMessageClient={canMessageClient}
@@ -1449,8 +1603,10 @@ const AnnualRequestPanel = ({
             onPayment={onPayment}
             onComment={onComment}
           />
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className="mt-4 rounded-2xl bg-white p-4 text-sm text-slate-500">Кварталы пока не сформированы</div>
+      )}
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <Button type="button" variant={canFinish ? 'success' : 'secondary'} disabled={!canFinish} onClick={onComplete}>Завершить годовую заявку</Button>
         {!canFinish && <p className="text-sm text-slate-600">Завершение доступно после выполнения всех кварталов, загрузки результатов и закрытия долгов.</p>}
@@ -1578,9 +1734,9 @@ const QuarterList = ({ title, items, empty }: { title: string; items: string[]; 
   </div>
 );
 
-const OrderReadiness = ({ order }: { order: Order }) => {
+const OrderReadiness = ({ order, canViewFinance = false }: { order: Order; canViewFinance?: boolean }) => {
   const contract = contractState(order);
-  const payment = paymentState(order);
+  const payment = paymentState(order, canViewFinance);
   return (
     <div className="mt-5 grid gap-3 md:grid-cols-2">
       <div className={`rounded-2xl border p-4 ${contract.tone}`}>
@@ -1931,6 +2087,188 @@ export const StaffDocumentsPage = () => {
         </div>
       </div>
     </Reveal>
+  );
+};
+
+export const StaffCommercialOffersPage = () => {
+  const { orders } = useOrders();
+  const offers = useMemo(() => orders.filter((order) => ['КП', 'Договор', 'Счет на оплату'].includes(order.status)), [orders]);
+  const activeOffers = offers.filter((order) => order.status === 'КП').length;
+
+  return (
+    <SimpleStaffPage title="КП">
+      <div className="grid gap-3 md:grid-cols-3">
+        <InfoTile label="В работе" value={String(activeOffers)} />
+        <InfoTile label="На согласовании" value={String(offers.filter((order) => order.status === 'Договор').length)} />
+        <InfoTile label="Переданы в оплату" value={String(offers.filter((order) => order.status === 'Счет на оплату').length)} />
+      </div>
+      <div className="mt-5 space-y-3">
+        {offers.map((order) => (
+          <Link key={order.id} to={`/staff/orders/${order.id}`} className="block rounded-2xl bg-slate-50 p-4 transition hover:bg-eco-50">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-bold text-slate-900">{order.id} · {getOrderCompanyName(order)}</p>
+                <p className="mt-1 break-words text-sm text-slate-600">{order.service}</p>
+                <p className="mt-2 text-xs font-semibold text-eco-700">{getNextCrmStep(order)}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {badge(order.status)}
+                {paymentBadge(order.paymentStatus)}
+              </div>
+            </div>
+          </Link>
+        ))}
+        {!offers.length && <EmptyState text="КП нет" />}
+      </div>
+    </SimpleStaffPage>
+  );
+};
+
+export const StaffContractsPage = () => {
+  const { orders } = useOrders();
+  const orderContracts = useMemo(() => orders.filter((order) => order.contractId || ['Договор', 'Счет на оплату', 'annual_active'].includes(order.status)), [orders]);
+
+  return (
+    <SimpleStaffPage title="Договоры">
+      <div className="grid gap-3 md:grid-cols-4">
+        <InfoTile label="Сопровождение" value={String(clientContracts.length)} />
+        <InfoTile label="Активные" value={String(clientContracts.filter((contract) => contract.status === 'active').length)} />
+        <InfoTile label="Истекают" value={String(clientContracts.filter((contract) => contract.status === 'expiring').length)} />
+        <InfoTile label="По заявкам" value={String(orderContracts.length)} />
+      </div>
+      <Section title="Договоры сопровождения" icon={<FileSignature size={20} />}>
+        <div className="grid gap-3 lg:grid-cols-2">
+          {clientContracts.map((contract) => <StaffContractLine key={contract.id} contract={contract} />)}
+          {!clientContracts.length && <EmptyState text="Договоров нет" />}
+        </div>
+      </Section>
+      <Section title="Договоры по заявкам" icon={<ClipboardList size={20} />}>
+        <div className="space-y-3">
+          {orderContracts.map((order) => (
+            <Link key={order.id} to={`/staff/orders/${order.id}`} className="block rounded-2xl bg-slate-50 p-4 transition hover:bg-eco-50">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-900">{getPrimaryContractForOrder(order)?.number || order.contractId || order.id}</p>
+                  <p className="mt-1 break-words text-sm text-slate-600">{getOrderCompanyName(order)} · {order.service}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {badge(order.status)}
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{contractLabel(order.crmContractStatus || order.contractStatus)}</span>
+                </div>
+              </div>
+            </Link>
+          ))}
+          {!orderContracts.length && <EmptyState text="Договоров по заявкам нет" />}
+        </div>
+      </Section>
+    </SimpleStaffPage>
+  );
+};
+
+export const StaffTasksPage = () => {
+  const { orders } = useOrders();
+  const role = staffRole();
+  const tasks = useMemo(() => buildMyTasks(orders, role), [orders, role]);
+
+  return (
+    <SimpleStaffPage title="Задачи">
+      <div className="grid gap-3 md:grid-cols-3">
+        <InfoTile label="Всего" value={String(tasks.length)} />
+        <InfoTile label="Срочно" value={String(tasks.filter((task) => task.priority === 'Срочно').length)} />
+        <InfoTile label="Роль" value={roleTitle(role)} />
+      </div>
+      <div className="mt-5 grid gap-3 xl:grid-cols-2">
+        {tasks.map((task) => <WorkTaskCard key={task.id} task={task} />)}
+        {!tasks.length && <EmptyState text="Задач нет" />}
+      </div>
+    </SimpleStaffPage>
+  );
+};
+
+export const StaffReportsPage = () => {
+  const { orders } = useOrders();
+  const docs = useMemo(() => collectDocuments(orders), [orders]);
+  const companies = useMemo(() => buildCompanySummaries(orders), [orders]);
+  const active = orders.filter((order) => !isClosedOrder(order)).length;
+  const completed = orders.filter((order) => ['Готово', 'Завершено'].includes(order.status)).length;
+  const paid = orders.filter((order) => fallbackPaymentStatus(order.paymentStatus) === 'paid').length;
+  const debt = orders.filter((order) => order.quarters?.some((quarter) => quarter.remainingAmount > 0)).length;
+
+  return (
+    <SimpleStaffPage title="Отчеты">
+      <div className="grid gap-3 md:grid-cols-4">
+        <InfoTile label="Заявки" value={String(orders.length)} />
+        <InfoTile label="В работе" value={String(active)} />
+        <InfoTile label="Готово" value={String(completed)} />
+        <InfoTile label="Есть долг" value={String(debt)} />
+      </div>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Section title="Воронка CRM" icon={<ClipboardList size={20} />}>
+          <div className="space-y-2">
+            {roleStats(orders, 'ADMIN').map(([label, value]) => <ReportRow key={label} label={label} value={value} total={orders.length} />)}
+          </div>
+        </Section>
+        <Section title="Клиенты и документы" icon={<FileText size={20} />}>
+          <div className="space-y-2">
+            <ReportRow label="Клиенты" value={companies.length} total={Math.max(companies.length, 1)} />
+            <ReportRow label="Документы" value={docs.length} total={Math.max(docs.length, 1)} />
+            <ReportRow label="Оплачено" value={paid} total={orders.length} />
+            <ReportRow label="Договоры сопровождения" value={clientContracts.length} total={Math.max(clientContracts.length, 1)} />
+          </div>
+        </Section>
+      </div>
+    </SimpleStaffPage>
+  );
+};
+
+export const StaffUserRolesPage = () => {
+  const role = staffRole();
+  if (!canAccess(role, 'manage_roles')) return <PermissionDenied permission="manage_roles" />;
+
+  return (
+    <SimpleStaffPage title="Роли пользователей">
+      <div className="grid gap-3 md:grid-cols-3">
+        <InfoTile label="Пользователи" value={String(staffUsers.length)} />
+        <InfoTile label="Роли" value={String(new Set(staffUsers.map((user) => user.role)).size)} />
+        <InfoTile label="Текущая роль" value={roleTitle(role)} />
+      </div>
+      <div className="mt-5 space-y-3">
+        {staffUsers.map((user) => <StaffUserRoleRow key={user.id} user={user} />)}
+      </div>
+    </SimpleStaffPage>
+  );
+};
+
+const ReportRow = ({ label, value, total }: { label: string; value: number; total: number }) => {
+  const percent = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-semibold text-slate-800">{label}</p>
+        <p className="text-sm font-bold text-eco-900">{value}</p>
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+        <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(percent, 100)}%` }} />
+      </div>
+    </div>
+  );
+};
+
+const StaffUserRoleRow = ({ user }: { user: MockUser }) => {
+  const permissions = permissionsForRole(user.role);
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-bold text-slate-900">{user.name}</p>
+          <p className="mt-1 text-sm text-slate-600">{user.email} · {user.position || 'Должность не указана'}</p>
+        </div>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{roleTitle(user.role)}</span>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {permissions.map((permission) => <span key={permission} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600">{permission}</span>)}
+      </div>
+    </div>
   );
 };
 

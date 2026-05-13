@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { CheckCircle2, CreditCard, FileSignature, LockKeyhole } from 'lucide-react';
+import { CalendarDays, CheckCircle2, CreditCard, FileSignature, LockKeyhole } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import { getBusinessCompanyById, services, type Contract, type Debt, type Order, type Payment, type QuarterDocument, type RequestQuarter } from '../data/mockData';
@@ -407,63 +407,147 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
 
 const Info = ({ label, value }: { label: string; value: string }) => <div className="rounded-2xl bg-eco-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">{label}</p><p className="mt-2 text-sm text-slate-800">{value || 'Не указано'}</p></div>;
 
+const clientQuarterWorkLabel = (quarter: RequestQuarter) => {
+  if (quarter.workStatus === 'completed') return 'Работы выполнены';
+  if (quarter.workStatus === 'in_progress') return 'Работы идут';
+  if (quarter.workStatus === 'waiting_client_data') return 'Нужны данные от клиента';
+  if (quarter.workStatus === 'blocked_by_debt') return 'Ожидаем оплату';
+  if (quarter.workStatus === 'ready_to_start') return 'Готово к старту';
+  return 'Запланировано';
+};
+
+const clientPaymentLabel = (remainingAmount: number, paymentStatus: RequestQuarter['paymentStatus']) => {
+  if (remainingAmount <= 0 || paymentStatus === 'paid') return 'Оплачено';
+  if (paymentStatus === 'partial') return 'Оплачено частично';
+  if (paymentStatus === 'overdue') return 'Есть просрочка';
+  return 'Ожидает оплаты';
+};
+
+const clientQuarterHelpText = (quarter: RequestQuarter) => {
+  if (quarter.workStatus === 'waiting_client_data') return 'Загрузите документы или данные по этому кварталу.';
+  if (quarter.remainingAmount > 0) return 'После оплаты квартальный этап продолжится по графику.';
+  if (quarter.workStatus === 'completed') return 'Результат квартала можно посмотреть ниже.';
+  return 'Следите за статусом работ и документами квартала.';
+};
+
 const ClientAnnualRequestPanel = ({ order, onUpload }: { order: Order; onUpload: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void }) => {
   const progress = getAnnualRequestProgress(order);
   const debt = getAnnualRequestDebtSummary(order);
   const currentQuarter = getCurrentQuarterForRequest(order);
   const warnings = getAnnualRequestWarnings(order).filter((warning) => !warning.includes('бухгалтер'));
+  const quarters = useMemo(() => [...(order.quarters || [])].sort((a, b) => a.quarter - b.quarter), [order.quarters]);
+  const [selectedQuarterId, setSelectedQuarterId] = useState<string>();
+  const selectedQuarter = quarters.find((quarter) => quarter.id === selectedQuarterId) || quarters[0];
+
+  useEffect(() => {
+    if (!quarters.length) {
+      setSelectedQuarterId(undefined);
+      return;
+    }
+    if (!selectedQuarterId || !quarters.some((quarter) => quarter.id === selectedQuarterId)) {
+      setSelectedQuarterId(quarters[0].id);
+    }
+  }, [quarters, selectedQuarterId]);
 
   return (
-    <div className="mt-6 rounded-[22px] border border-eco-100 bg-eco-50/60 p-4">
+    <div className="mt-6 rounded-[22px] border border-eco-100 bg-eco-50/60 p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-bold text-eco-900">Годовое обслуживание</h3>
-          <p className="mt-1 text-sm text-slate-600">{order.annualPeriodStart} - {order.annualPeriodEnd}</p>
+          <h3 className="text-lg font-bold text-eco-900">Годовой договор: 4 квартала</h3>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
+            Заявка активна весь год. Каждый квартал идет как отдельный этап: работы, счет, оплата, документы и результат.
+          </p>
         </div>
-        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800 ring-1 ring-eco-100">Выполнено {progress.completed}/{progress.total}</span>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800 ring-1 ring-eco-100">Готово {progress.completed} из {progress.total}</span>
       </div>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <Info label="Текущий квартал" value={currentQuarter?.quarterLabel || 'Нет'} />
-        <Info label="Остаток к оплате" value={formatCurrency(debt.totalDebt)} />
-        <Info label="Ближайший срок" value={debt.nextDue || 'Нет'} />
+      <div className="mt-4 grid gap-3 md:grid-cols-4">
+        <Info label="Период договора" value={`${order.annualPeriodStart || 'Не указан'} - ${order.annualPeriodEnd || 'Не указан'}`} />
+        <Info label="Сейчас идет" value={currentQuarter?.quarterLabel || 'Нет активного квартала'} />
+        <Info label="Кварталы" value={`${progress.completed} выполнено, ${Math.max(progress.total - progress.completed, 0)} в работе/плане`} />
+        <Info label="Осталось оплатить" value={formatCurrency(debt.totalDebt)} />
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-4">
+        {['1. Подписываем годовой договор', '2. Работаем по кварталам', '3. Счет и оплата отдельно за квартал', '4. Результат загружается в нужный квартал'].map((item) => (
+          <div key={item} className="rounded-2xl bg-white p-4 text-sm font-semibold leading-6 text-slate-700 ring-1 ring-eco-100">{item}</div>
+        ))}
       </div>
       {warnings.length > 0 && (
         <div className="mt-4 grid gap-2 md:grid-cols-2">
           {warnings.map((warning) => <p key={warning} className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-amber-800">{warning}</p>)}
         </div>
       )}
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        {(order.quarters || []).map((quarter) => (
-          <ClientQuarterCard key={quarter.id} quarter={quarter} isCurrent={currentQuarter?.id === quarter.id} onUpload={onUpload} />
+      <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+        {quarters.map((quarter) => (
+          <button
+            type="button"
+            key={quarter.id}
+            onClick={() => setSelectedQuarterId(quarter.id)}
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${
+              selectedQuarter?.id === quarter.id
+                ? 'bg-eco-900 text-white shadow-lg shadow-eco-900/10'
+                : 'bg-white text-slate-600 ring-1 ring-eco-100 hover:bg-eco-100 hover:text-eco-900'
+            }`}
+          >
+            {quarter.quarterLabel}
+          </button>
         ))}
       </div>
+      {selectedQuarter ? (
+        <div className="mt-4">
+          <ClientQuarterCard quarter={selectedQuarter} isCurrent={currentQuarter?.id === selectedQuarter.id} onUpload={onUpload} />
+        </div>
+      ) : (
+        <div className="mt-4 rounded-2xl bg-white p-4 text-sm text-slate-500">Кварталы пока не сформированы</div>
+      )}
     </div>
   );
 };
 
-const ClientQuarterCard = ({ quarter, isCurrent, onUpload }: { quarter: RequestQuarter; isCurrent: boolean; onUpload: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void }) => (
-  <div className={`rounded-[20px] border bg-white p-4 ${isCurrent ? 'border-eco-300' : 'border-slate-200'}`}>
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h4 className="font-bold text-eco-900">{quarter.quarterLabel}</h4>
-        <p className="mt-1 text-sm text-slate-500">{quarter.periodStart} - {quarter.periodEnd}</p>
+const ClientQuarterCard = ({ quarter, isCurrent, onUpload }: { quarter: RequestQuarter; isCurrent: boolean; onUpload: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void }) => {
+  const paidPercent = quarter.plannedAmount > 0 ? Math.min(100, Math.round((quarter.paidAmount / quarter.plannedAmount) * 100)) : 0;
+  return (
+    <div className={`rounded-[20px] border bg-white p-4 ${isCurrent ? 'border-eco-300 shadow-sm' : 'border-slate-200'}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <CalendarDays size={18} className="shrink-0 text-eco-700" />
+            <h4 className="font-bold text-eco-900">{quarter.quarterLabel} договора</h4>
+          </div>
+          <p className="mt-1 text-sm text-slate-500">{quarter.periodStart} - {quarter.periodEnd}</p>
+        </div>
+        {isCurrent && <span className="rounded-full bg-eco-900 px-2 py-1 text-[11px] font-bold text-white">Текущий квартал</span>}
       </div>
-      {isCurrent && <span className="rounded-full bg-eco-900 px-2 py-1 text-[11px] font-bold text-white">Текущий квартал</span>}
+      <p className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">{clientQuarterHelpText(quarter)}</p>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <Info label="Работы по кварталу" value={clientQuarterWorkLabel(quarter)} />
+        <div className="rounded-2xl bg-eco-50 p-4">
+          <p className="text-xs font-semibold uppercase text-slate-500">Оплата за квартал</p>
+          <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ${getPaymentStatusColor(quarter.paymentStatus)}`}>
+            {clientPaymentLabel(quarter.remainingAmount, quarter.paymentStatus)}
+          </span>
+        </div>
+        <Info label="Сумма квартала" value={formatCurrency(quarter.plannedAmount)} />
+        <Info label="Осталось оплатить" value={formatCurrency(quarter.remainingAmount)} />
+      </div>
+      <div className="mt-4">
+        <div className="flex justify-between text-xs font-semibold text-slate-500">
+          <span>Оплачено</span>
+          <span>{paidPercent}%</span>
+        </div>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full rounded-full bg-accent" style={{ width: `${paidPercent}%` }} />
+        </div>
+      </div>
+      <Section title="Что загружено по кварталу" items={quarter.documents.map((doc) => doc.name)} />
+      <Section title="Результат квартала" items={quarter.results.map((result) => result.title)} />
+      <form onSubmit={(event) => onUpload(event, quarter)} className="mt-4 rounded-2xl border border-dashed border-slate-200 p-3">
+        <p className="mb-3 text-sm font-semibold text-slate-700">Загрузить данные именно для {quarter.quarterLabel.toLowerCase()}</p>
+        <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+        <Button type="submit" className="mt-3 w-full">Загрузить документ квартала</Button>
+      </form>
     </div>
-    <div className="mt-4 grid gap-2 sm:grid-cols-2">
-      <Info label="Работы" value={quarter.workStatus === 'completed' ? 'Выполнено' : quarter.workStatus === 'in_progress' ? 'В работе' : quarter.workStatus === 'waiting_client_data' ? 'Ожидаем данные' : 'Запланировано'} />
-      <div className="rounded-2xl bg-eco-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">Оплата</p><span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ${getPaymentStatusColor(quarter.paymentStatus)}`}>{getPaymentStatusLabel(quarter.paymentStatus)}</span></div>
-      <Info label="Сумма" value={formatCurrency(quarter.plannedAmount)} />
-      <Info label="Остаток" value={formatCurrency(quarter.remainingAmount)} />
-    </div>
-    <Section title="Документы квартала" items={quarter.documents.map((doc) => doc.name)} />
-    <Section title="Результаты квартала" items={quarter.results.map((result) => result.title)} />
-    <form onSubmit={(event) => onUpload(event, quarter)} className="mt-4">
-      <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
-      <Button type="submit" className="mt-3 w-full">Загрузить данные по кварталу</Button>
-    </form>
-  </div>
-);
+  );
+};
 
 const OnlineOrderPanel = ({ order, onSign, onPay }: { order: Order; onSign: () => void; onPay: () => void }) => {
   const available = order.contractStatus === 'sent' || order.contractStatus === 'signed' || order.paymentStatus === 'pending' || order.paymentStatus === 'paid';
@@ -565,9 +649,15 @@ export const CabinetPaymentsPage = () => {
 
   return (
     <PageList title="Оплаты">
+      <div className="rounded-2xl border border-eco-100 bg-eco-50 p-4 text-sm leading-6 text-slate-700">
+        <p className="font-bold text-eco-900">Как читать оплаты</p>
+        <p className="mt-1">Разовая заявка оплачивается одним счетом. Годовой договор делится на 4 квартальных счета: каждый квартал имеет свою сумму, срок, оплату и остаток.</p>
+      </div>
+
       {oneTimePayments.map((payment) => (
         <div key={payment.id} className="rounded-2xl bg-eco-50 p-4 text-sm">
-          <p className="font-bold text-eco-900">{payment.invoiceNumber} · {payment.serviceName}</p>
+          <p className="font-bold text-eco-900">Разовая оплата: {payment.invoiceNumber}</p>
+          <p className="mt-1 text-slate-600">{payment.serviceName}</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-4">
             <Info label="Сумма" value={formatCurrency(payment.totalAmount)} />
             <Info label="Оплачено" value={formatCurrency(payment.paidAmount)} />
@@ -577,25 +667,57 @@ export const CabinetPaymentsPage = () => {
         </div>
       ))}
 
-      {annualContracts.flatMap((contract) =>
-        (contract.quarterlySchedule || []).map((quarter) => (
-          <div key={quarter.id} className="rounded-2xl bg-eco-50 p-4 text-sm">
-            <p className="font-bold text-eco-900">{contract.contractNumber} · {quarter.quarterLabel}</p>
-            <p className="mt-1 text-slate-600">{quarter.periodStart} - {quarter.periodEnd}</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-5">
-              <Info label="Сумма" value={formatCurrency(quarter.plannedAmount)} />
-              <Info label="Оплачено" value={formatCurrency(quarter.paidAmount)} />
-              <Info label="Остаток" value={formatCurrency(quarter.remainingAmount)} />
-              <Info label="Срок" value={quarter.dueDate || 'Нет'} />
-              <Info label="Статус" value={getPaymentStatusLabel(quarter.paymentStatus)} />
+      {annualContracts.map((contract) => {
+        const quarters = contract.quarterlySchedule || [];
+        const total = quarters.reduce((sum, quarter) => sum + quarter.plannedAmount, 0);
+        const paid = quarters.reduce((sum, quarter) => sum + quarter.paidAmount, 0);
+        const remaining = quarters.reduce((sum, quarter) => sum + quarter.remainingAmount, 0);
+        return (
+          <div key={contract.id} className="rounded-2xl border border-eco-100 bg-white p-4 text-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-bold text-eco-900">Годовой договор: {contract.contractNumber}</p>
+                <p className="mt-1 text-slate-600">4 квартальных счета по договору. Оплата каждого квартала считается отдельно.</p>
+              </div>
+              <span className="rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800 ring-1 ring-eco-100">
+                Осталось {formatCurrency(remaining)}
+              </span>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <Info label="Сумма договора" value={formatCurrency(total)} />
+              <Info label="Оплачено" value={formatCurrency(paid)} />
+              <Info label="Остаток" value={formatCurrency(remaining)} />
+            </div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              {quarters.map((quarter) => (
+                <div key={quarter.id} className="rounded-2xl bg-eco-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-bold text-eco-900">{quarter.quarterLabel}</p>
+                      <p className="mt-1 text-slate-600">{quarter.periodStart} - {quarter.periodEnd}</p>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${getPaymentStatusColor(quarter.paymentStatus)}`}>
+                      {clientPaymentLabel(quarter.remainingAmount, quarter.paymentStatus)}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <Info label="Сумма квартала" value={formatCurrency(quarter.plannedAmount)} />
+                    <Info label="Осталось" value={formatCurrency(quarter.remainingAmount)} />
+                    <Info label="Оплачено" value={formatCurrency(quarter.paidAmount)} />
+                    <Info label="Срок оплаты" value={quarter.dueDate || 'Нет'} />
+                  </div>
+                </div>
+              ))}
+              {!quarters.length && <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Квартальные счета пока не сформированы</div>}
             </div>
           </div>
-        ))
-      )}
+        );
+      })}
 
       {clientDebts.length > 0 && (
         <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm">
-          <p className="font-bold text-rose-900">Задолженность</p>
+          <p className="font-bold text-rose-900">Что осталось оплатить</p>
+          <p className="mt-1 text-rose-800">Здесь показаны только ваши открытые долги по счетам.</p>
           <div className="mt-3 space-y-2">
             {clientDebts.map((debt) => (
               <div key={debt.id} className="rounded-xl bg-white p-3">
