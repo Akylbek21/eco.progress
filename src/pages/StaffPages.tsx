@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   Bell,
   Building2,
+  CalendarDays,
   CheckCircle2,
   ClipboardCheck,
   ClipboardList,
@@ -20,8 +21,8 @@ import {
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
-import { clientContracts, getBusinessCompanyById, notifications, services, staffUsers, statusDescriptions, type ClientContract, type DocumentItem, type EcologyStatus, type LaboratoryStatus, type MockUser, type Order, type OrderStatus, type PaymentMethod, type PaymentStatus, type QuarterDocument, type QuarterResult, type QuarterWorkStatus, type RequestQuarter, type StaffContractStatus, type UserRole } from '../data/mockData';
-import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, assignManager, completeAnnualRequest, getOrderById, getOrders, sendContractAndInvoice, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, uploadAnnualQuarterDocument, uploadDocument } from '../services/staffOrderService';
+import { clientContracts, getBusinessCompanyById, notifications, services, staffUsers, statusDescriptions, type ClientContract, type DocumentItem, type EcologyStatus, type LaboratoryMeasurementAgreementStatus, type LaboratoryPrimaryDocumentStatus, type LaboratoryResultDocument, type LaboratoryResultDocumentStatus, type LaboratoryStatus, type MockUser, type Order, type OrderStatus, type PaymentMethod, type PaymentStatus, type QuarterDocument, type QuarterResult, type QuarterWorkStatus, type RequestQuarter, type StaffContractStatus, type UserRole } from '../data/mockData';
+import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, assignManager, completeAnnualRequest, getOrderById, getOrders, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, uploadAnnualQuarterDocument, uploadDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
 import { getCurrentUser, logout } from '../services/authService';
 import { canAccess, permissionsForRole, type Permission } from '../config/permissions';
 import {
@@ -56,6 +57,17 @@ import {
 } from '../utils/crm';
 import { canCompleteAnnualRequest, getAnnualRequestDebtSummary, getAnnualRequestProgress, getAnnualRequestWarnings, getCurrentQuarterForRequest, isAnnualRequest } from '../utils/annualRequests';
 import { canAccessPayments, formatCurrency, getOverdueDays, getPaymentStatusColor, getPaymentStatusLabel, paymentMethodLabel } from '../utils/payments';
+import {
+  formatLaboratoryHistory,
+  isLaboratoryOrder,
+  laboratoryMeasurementStatusClass,
+  laboratoryMeasurementStatusLabels,
+  laboratoryPrimaryStatusClass,
+  laboratoryPrimaryStatusLabels,
+  laboratoryResultSectionLabels,
+  laboratoryResultStatusClass,
+  laboratoryResultStatusLabels,
+} from '../utils/laboratory';
 
 const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -738,7 +750,7 @@ const CompanyMetrics = ({ total, active, waiting, completed, dark = false }: { t
   );
 };
 
-const crmTabs = ['Обзор', 'Оплата', 'Договор', 'Документы', 'Экология', 'Лаборатория', 'Сообщения', 'Заметки', 'История'] as const;
+const crmTabs = ['Обзор', 'Обзор заявки', 'Оплата', 'Договор', 'Документы', 'Экология', 'Лаборатория', 'Первичные документы', 'Согласование замера', 'Протокол', '870 форма', 'База отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт', 'Сообщения', 'Заметки', 'История'] as const;
 type CrmTab = typeof crmTabs[number];
 
 const workflowTabTarget = (order: Order): CrmTab => {
@@ -767,7 +779,13 @@ const staffUtilityTabs: Array<{ label: string; target: CrmTab }> = [
 ];
 
 const roleVisibleTabs = (role: UserRole, order: Order): CrmTab[] => {
-  if (role === 'ADMIN') return [...crmTabs];
+  if (isLaboratoryOrder(order)) {
+    const laboratoryTabs: CrmTab[] = ['Обзор заявки', 'Первичные документы', 'Согласование замера', 'Протокол', '870 форма', 'База отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт', 'История'];
+    if (role === 'ACCOUNTANT') return ['Обзор заявки', 'История'];
+    if (role === 'ECOLOGIST') return ['Обзор заявки', 'Первичные документы', 'История'];
+    return laboratoryTabs;
+  }
+  if (role === 'ADMIN') return ['Обзор', 'Оплата', 'Договор', 'Документы', 'Экология', 'Лаборатория', 'Сообщения', 'Заметки', 'История'];
   if (role === 'ACCOUNTANT') return ['Обзор', 'Оплата', 'Договор', 'Документы', 'История'];
   if (role === 'ECOLOGIST') return ['Обзор', 'Экология', 'Документы', 'Сообщения', 'Заметки'];
   if (role === 'LABORATORY') return ['Обзор', 'Лаборатория', 'Документы', 'Сообщения', 'Заметки'];
@@ -775,6 +793,7 @@ const roleVisibleTabs = (role: UserRole, order: Order): CrmTab[] => {
 };
 
 const roleDefaultTab = (role: UserRole, order: Order): CrmTab => {
+  if (isLaboratoryOrder(order)) return 'Обзор заявки';
   if (role === 'ACCOUNTANT') return 'Оплата';
   if (role === 'ECOLOGIST') return 'Экология';
   if (role === 'LABORATORY') return 'Лаборатория';
@@ -1114,6 +1133,72 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     load();
   };
 
+  const submitLaboratoryPrimaryStatus = async (event: FormEvent<HTMLFormElement>, documentId: string) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await updateLaboratoryPrimaryDocumentStatus(
+      order.id,
+      documentId,
+      String(form.get('status')) as LaboratoryPrimaryDocumentStatus,
+      String(form.get('comment') || '')
+    );
+    onNotify?.('Статус первичного документа обновлен');
+    load();
+  };
+
+  const submitMeasurementAgreement = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await saveLaboratoryMeasurementAgreement(order.id, {
+      measurementDate: String(form.get('measurementDate') || ''),
+      measurementTime: String(form.get('measurementTime') || ''),
+      address: String(form.get('address') || ''),
+      companyName: String(form.get('companyName') || ''),
+      contactPerson: String(form.get('contactPerson') || ''),
+      phone: String(form.get('phone') || ''),
+      measurementScope: String(form.get('measurementScope') || ''),
+      comment: String(form.get('comment') || ''),
+    });
+    onNotify?.('Согласование замера сохранено');
+    load();
+  };
+
+  const sendMeasurement = async () => {
+    await sendLaboratoryMeasurementAgreement(order.id);
+    onNotify?.('Клиенту отправлены email и уведомление в личном кабинете');
+    load();
+  };
+
+  const changeMeasurementStatus = async (status: LaboratoryMeasurementAgreementStatus, comment?: string) => {
+    await updateLaboratoryMeasurementAgreementStatus(order.id, status, comment);
+    onNotify?.('Статус замера обновлен');
+    load();
+  };
+
+  const submitLaboratoryResult = async (event: FormEvent<HTMLFormElement>, section: LaboratoryResultDocument['section']) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const file = form.get('file') as File | null;
+    if (file?.name) {
+      await uploadLaboratoryResultDocument(order.id, {
+        name: String(form.get('name') || laboratoryResultSectionLabels[section]),
+        section,
+        fileName: file.name,
+        status: String(form.get('status') || 'ready') as LaboratoryResultDocumentStatus,
+        comment: String(form.get('comment') || ''),
+      });
+      onNotify?.('Лабораторный документ загружен');
+    }
+    event.currentTarget.reset();
+    load();
+  };
+
+  const changeLaboratoryResultStatus = async (documentId: string, status: LaboratoryResultDocumentStatus) => {
+    await updateLaboratoryResultDocumentStatus(order.id, documentId, status);
+    onNotify?.(status === 'published_to_client' ? 'Документ опубликован клиенту' : 'Статус документа обновлен');
+    load();
+  };
+
   const submitContractAndInvoice = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!access.finance) {
@@ -1159,7 +1244,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     order.status === 'Счет на оплату' && fallbackPaymentStatus(order.paymentStatus) !== 'paid' && access.finance && { label: 'Проверить оплату', onClick: () => setActiveTab('Оплата'), variant: 'primary' as const },
     ['КП', 'Договор'].includes(order.status) && access.manager && { label: 'Открыть договор/КП', onClick: () => setActiveTab('Договор'), variant: 'secondary' as const },
     order.status === 'Проектирование' && access.ecology && { label: 'Открыть проектирование', onClick: () => setActiveTab('Экология'), variant: 'secondary' as const },
-    order.status === 'Лаборатория' && access.laboratory && { label: 'Открыть лабораторию', onClick: () => setActiveTab('Лаборатория'), variant: 'secondary' as const },
+    order.status === 'Лаборатория' && access.laboratory && { label: 'Открыть лабораторию', onClick: () => setActiveTab(isLaboratoryOrder(order) ? 'Согласование замера' : 'Лаборатория'), variant: 'secondary' as const },
     (order.status === 'Вывоз' || order.status === 'Утилизация' || order.status === 'Проверка результата') && canAccess(role, 'edit_documents') && { label: 'Документы результата', onClick: () => setActiveTab('Документы'), variant: 'secondary' as const },
   ].filter(Boolean) as Array<{ label: string; onClick: () => void | Promise<void>; variant: 'primary' | 'secondary' | 'success' }>;
 
@@ -1205,7 +1290,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
       <div className="grid gap-6 xl:grid-cols-[1fr_390px]">
         <Reveal>
           <div className="space-y-6">
-            {currentTab === 'Обзор' && (
+            {(currentTab === 'Обзор' || currentTab === 'Обзор заявки') && (
               <>
                 <Section title="Обзор" icon={<ClipboardCheck size={20} />}>
                   <div className="mb-5">
@@ -1365,6 +1450,91 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                   </div>
                 )}
               </Section>
+            )}
+
+            {currentTab === 'Первичные документы' && (
+              <Section title="Первичные документы" icon={<Upload size={20} />}>
+                <div className="space-y-4">
+                  {(order.laboratoryPrimaryDocuments || []).map((doc) => (
+                    <div key={doc.id} className="rounded-2xl border border-slate-200 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900">{doc.name}</p>
+                          <p className="mt-1 text-sm text-slate-500">{doc.fileName || 'Файл не загружен'}</p>
+                        </div>
+                        <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${laboratoryPrimaryStatusClass(doc.status)}`}>{laboratoryPrimaryStatusLabels[doc.status]}</span>
+                      </div>
+                      <div className="mt-3 grid gap-3 md:grid-cols-4">
+                        <InfoTile label="Дата загрузки" value={doc.uploadedAt || 'Нет'} />
+                        <InfoTile label="Кто загрузил" value={doc.uploadedBy || 'Нет'} />
+                        <InfoTile label="Комментарий" value={doc.employeeComment || 'Нет'} />
+                        <InfoTile label="Статус изменил" value={doc.statusChangedBy || 'Нет'} />
+                      </div>
+                      <form onSubmit={(event) => submitLaboratoryPrimaryStatus(event, doc.id)} className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_auto]">
+                        <select name="status" defaultValue={doc.status} disabled={!access.manager && !access.laboratory} className="input-focus rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100">
+                          {(['not_uploaded', 'uploaded', 'in_review', 'approved', 'revision_required', 'not_required'] as LaboratoryPrimaryDocumentStatus[]).map((status) => <option key={status} value={status}>{laboratoryPrimaryStatusLabels[status]}</option>)}
+                        </select>
+                        <input name="comment" defaultValue={doc.employeeComment || ''} disabled={!access.manager && !access.laboratory} placeholder="Комментарий сотрудника" className="input-focus rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" />
+                        {(access.manager || access.laboratory) && <Button>Сохранить</Button>}
+                      </form>
+                      {doc.history?.length > 0 && <List title="История действий" items={formatLaboratoryHistory(doc.history)} />}
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {currentTab === 'Согласование замера' && (
+              <Section title="Согласование замера" icon={<CalendarDays size={20} />}>
+                {order.laboratoryMeasurementAgreement && (
+                  <>
+                    <div className="mb-5 grid gap-3 md:grid-cols-3">
+                      <div className="rounded-2xl bg-slate-50 p-4">
+                        <p className="text-xs font-semibold uppercase text-slate-500">Статус согласования</p>
+                        <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ${laboratoryMeasurementStatusClass(order.laboratoryMeasurementAgreement.status)}`}>{laboratoryMeasurementStatusLabels[order.laboratoryMeasurementAgreement.status]}</span>
+                      </div>
+                      <InfoTile label="Отправлено" value={order.laboratoryMeasurementAgreement.sentAt || 'Нет'} />
+                      <InfoTile label="Ответ клиента" value={order.laboratoryMeasurementAgreement.acceptedAt || order.laboratoryMeasurementAgreement.rescheduleDate || 'Нет'} />
+                    </div>
+                    <form onSubmit={submitMeasurementAgreement} className="grid gap-4 md:grid-cols-2">
+                      <Field label="Дата замера"><input name="measurementDate" type="date" defaultValue={order.laboratoryMeasurementAgreement.measurementDate} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+                      <Field label="Время замера"><input name="measurementTime" type="time" defaultValue={order.laboratoryMeasurementAgreement.measurementTime} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+                      <Field label="Адрес объекта"><input name="address" defaultValue={order.laboratoryMeasurementAgreement.address} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+                      <Field label="Ответственная фирма или лаборатория"><input name="companyName" defaultValue={order.laboratoryMeasurementAgreement.companyName} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+                      <Field label="Контактное лицо"><input name="contactPerson" defaultValue={order.laboratoryMeasurementAgreement.contactPerson} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+                      <Field label="Телефон"><input name="phone" defaultValue={order.laboratoryMeasurementAgreement.phone} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+                      <label className="text-sm font-semibold text-slate-700 md:col-span-2">Что нужно замерить
+                        <textarea name="measurementScope" defaultValue={order.laboratoryMeasurementAgreement.measurementScope} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
+                      </label>
+                      <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий
+                        <textarea name="comment" defaultValue={order.laboratoryMeasurementAgreement.comment} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
+                      </label>
+                      <div className="flex flex-wrap gap-3 md:col-span-2">
+                        <Button>Сохранить</Button>
+                        <Button type="button" variant="secondary" onClick={sendMeasurement}>Отправить клиенту на согласование</Button>
+                        <Button type="button" variant="secondary" onClick={() => changeMeasurementStatus('confirmed', 'Замер согласован')}>Замер согласован</Button>
+                        <Button type="button" variant="secondary" onClick={() => changeMeasurementStatus('completed', 'Замер проведён')}>Замер проведён</Button>
+                        <Button type="button" variant="secondary" onClick={() => changeMeasurementStatus('cancelled', 'Замер отменён')}>Отменено</Button>
+                      </div>
+                    </form>
+                    {order.laboratoryMeasurementAgreement.status === 'reschedule_requested' && (
+                      <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
+                        Клиент предложил: {order.laboratoryMeasurementAgreement.rescheduleDate || 'дата не указана'} {order.laboratoryMeasurementAgreement.rescheduleTime || ''}. {order.laboratoryMeasurementAgreement.rescheduleComment || ''}
+                      </div>
+                    )}
+                  </>
+                )}
+              </Section>
+            )}
+
+            {(['Протокол', '870 форма', 'База отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт'] as CrmTab[]).includes(currentTab) && (
+              <LaboratoryResultSection
+                order={order}
+                tab={currentTab}
+                canEdit={access.laboratory || access.manager}
+                onUpload={submitLaboratoryResult}
+                onStatus={changeLaboratoryResultStatus}
+              />
             )}
 
             {currentTab === 'Лаборатория' && (
@@ -1834,6 +2004,91 @@ const List = ({ title, items }: { title: string; items: string[] }) => (
     </div>
   </div>
 );
+
+const laboratoryTabToSection = (tab: CrmTab): LaboratoryResultDocument['section'] => {
+  if (tab === '870 форма') return 'form_870';
+  if (tab === 'База отчёт') return 'base_report';
+  if (tab === 'Годовой отчёт') return 'annual_report';
+  if (tab === 'Полугодовой отчёт') return 'half_year_report';
+  if (tab === 'Архив отчёт') return 'archive_report';
+  return 'protocol';
+};
+
+const LaboratoryResultSection = ({
+  order,
+  tab,
+  canEdit,
+  onUpload,
+  onStatus,
+}: {
+  order: Order;
+  tab: CrmTab;
+  canEdit: boolean;
+  onUpload: (event: FormEvent<HTMLFormElement>, section: LaboratoryResultDocument['section']) => void;
+  onStatus: (documentId: string, status: LaboratoryResultDocumentStatus) => void;
+}) => {
+  const section = laboratoryTabToSection(tab);
+  const documents = (order.laboratoryResultDocuments || []).filter((doc) => doc.section === section);
+  return (
+    <Section title={laboratoryResultSectionLabels[section]} icon={<FileText size={20} />}>
+      <div className="grid gap-3 md:grid-cols-3">
+        <InfoTile label="Документов" value={String(documents.length)} />
+        <InfoTile label="Опубликовано клиенту" value={String(documents.filter((doc) => doc.status === 'published_to_client').length)} />
+        <InfoTile label="Внутренние черновики" value={String(documents.filter((doc) => doc.status !== 'published_to_client').length)} />
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {documents.map((doc) => (
+          <div key={doc.id} className="rounded-2xl border border-slate-200 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-bold text-slate-900">{doc.name}</p>
+                <p className="mt-1 text-sm text-slate-500">{doc.fileName || 'Файл не указан'} · {doc.uploadedAt || doc.readyAt || 'дата не указана'}</p>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${laboratoryResultStatusClass(doc.status)}`}>{laboratoryResultStatusLabels[doc.status]}</span>
+            </div>
+            <div className="mt-3 grid gap-2 md:grid-cols-3">
+              <InfoTile label="Загрузил" value={doc.uploadedBy || 'Нет'} />
+              <InfoTile label="Готовность" value={doc.readyAt || 'Нет'} />
+              <InfoTile label="Публикация" value={doc.publishedAt || 'Нет'} />
+            </div>
+            {canEdit && (
+              <div className="mt-4 flex flex-wrap gap-3">
+                {(['draft', 'in_progress', 'ready', 'published_to_client', 'archived'] as LaboratoryResultDocumentStatus[]).map((status) => (
+                  <Button key={status} type="button" variant={status === 'published_to_client' ? 'primary' : 'secondary'} onClick={() => onStatus(doc.id, status)}>
+                    {laboratoryResultStatusLabels[status]}
+                  </Button>
+                ))}
+              </div>
+            )}
+            {doc.history?.length > 0 && <List title="История" items={formatLaboratoryHistory(doc.history)} />}
+          </div>
+        ))}
+        {!documents.length && <EmptyState text="Документы этого раздела пока не загружены" />}
+      </div>
+
+      {canEdit && (
+        <form onSubmit={(event) => onUpload(event, section)} className="mt-5 grid gap-4 rounded-2xl border border-dashed border-slate-200 p-4 md:grid-cols-2">
+          <Field label="Название документа">
+            <input name="name" defaultValue={laboratoryResultSectionLabels[section]} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
+          </Field>
+          <Field label="Статус">
+            <select name="status" defaultValue="ready" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3">
+              {(['draft', 'in_progress', 'ready', 'published_to_client', 'archived'] as LaboratoryResultDocumentStatus[]).map((status) => <option key={status} value={status}>{laboratoryResultStatusLabels[status]}</option>)}
+            </select>
+          </Field>
+          <Field label="Файл">
+            <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+          </Field>
+          <Field label="Комментарий">
+            <input name="comment" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
+          </Field>
+          <Button className="md:col-span-2">Загрузить документ</Button>
+        </form>
+      )}
+    </Section>
+  );
+};
 
 export const StaffClientsPage = () => {
   const { orders } = useOrders();

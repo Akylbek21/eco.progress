@@ -77,6 +77,9 @@ export type OrderStatusDefinition = {
 export type PaymentStatus = 'not_sent' | 'pending' | 'partial' | 'paid';
 export type EcologyStatus = 'not_started' | 'in_progress' | 'waiting_client_data' | 'done';
 export type LaboratoryStatus = 'not_assigned' | 'waiting_samples' | 'samples_received' | 'analysis_in_progress' | 'result_ready';
+export type LaboratoryPrimaryDocumentStatus = 'not_uploaded' | 'uploaded' | 'in_review' | 'approved' | 'revision_required' | 'not_required';
+export type LaboratoryMeasurementAgreementStatus = 'draft' | 'sent_to_client' | 'accepted_by_client' | 'reschedule_requested' | 'confirmed' | 'completed' | 'cancelled';
+export type LaboratoryResultDocumentStatus = 'draft' | 'in_progress' | 'ready' | 'published_to_client' | 'archived';
 export type StaffContractStatus = 'not_created' | 'prepared' | 'sent_to_client' | 'waiting_signature' | 'signed' | 'rejected';
 export type PaymentRecordStatus = 'paid' | 'partial' | 'unpaid' | 'overdue';
 export type PaymentMethod = 'bank_transfer' | 'cash' | 'card' | 'other';
@@ -201,6 +204,59 @@ export type OrderHistoryItem = {
   comment?: string;
 };
 
+export type LaboratoryPrimaryDocument = {
+  id: string;
+  orderId: string;
+  name: string;
+  status: LaboratoryPrimaryDocumentStatus;
+  fileName?: string;
+  fileUrl?: string;
+  employeeComment?: string;
+  uploadedAt?: string;
+  uploadedBy?: string;
+  statusChangedAt?: string;
+  statusChangedBy?: string;
+  history: OrderHistoryItem[];
+};
+
+export type LaboratoryMeasurementAgreement = {
+  id: string;
+  orderId: string;
+  measurementDate: string;
+  measurementTime: string;
+  address: string;
+  companyName: string;
+  contactPerson: string;
+  phone: string;
+  measurementScope: string;
+  comment: string;
+  status: LaboratoryMeasurementAgreementStatus;
+  sentAt?: string;
+  acceptedAt?: string;
+  rescheduleDate?: string;
+  rescheduleTime?: string;
+  rescheduleComment?: string;
+  completedAt?: string;
+  updatedAt?: string;
+};
+
+export type LaboratoryResultDocument = {
+  id: string;
+  orderId: string;
+  name: string;
+  section: 'protocol' | 'form_870' | 'base_report' | 'annual_report' | 'half_year_report' | 'archive_report';
+  status: LaboratoryResultDocumentStatus;
+  fileName?: string;
+  fileUrl?: string;
+  readyAt?: string;
+  uploadedAt?: string;
+  uploadedBy?: string;
+  publishedAt?: string;
+  publishedBy?: string;
+  comment?: string;
+  history: OrderHistoryItem[];
+};
+
 export type Order = {
   id: string;
   businessCompanyId?: string;
@@ -251,6 +307,11 @@ export type Order = {
   laboratoryComment?: string;
   samplesReceivedAt?: string;
   laboratoryReadyAt?: string;
+  laboratoryPrimaryDocuments?: LaboratoryPrimaryDocument[];
+  laboratoryMeasurementAgreement?: LaboratoryMeasurementAgreement;
+  laboratorySections?: string[];
+  laboratoryResultDocuments?: LaboratoryResultDocument[];
+  notifications?: NotificationItem[];
   deadline?: string;
   updatedAt?: string;
   signedAt?: string;

@@ -8,6 +8,11 @@ export {
   getOrderById,
   getOrders,
   sendContractAndInvoice,
+  saveLaboratoryMeasurementAgreement,
+  sendLaboratoryMeasurementAgreement,
+  updateLaboratoryMeasurementAgreementStatus,
+  updateLaboratoryPrimaryDocumentStatus,
+  updateLaboratoryResultDocumentStatus,
   updateContractStatus,
   updateEcologyStatus,
   updateLaboratoryStatus,
@@ -16,4 +21,6 @@ export {
   updateAnnualQuarterWorkStatus,
   uploadAnnualQuarterDocument,
   uploadDocument,
+  uploadLaboratoryPrimaryDocument,
+  uploadLaboratoryResultDocument,
 } from './orderService';

@@ -1,10 +1,10 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { CalendarDays, CheckCircle2, CreditCard, FileSignature, LockKeyhole } from 'lucide-react';
+import { CalendarDays, CheckCircle2, CreditCard, Download, FileSignature, LockKeyhole, RefreshCw } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
-import { getBusinessCompanyById, services, type Contract, type Debt, type Order, type Payment, type QuarterDocument, type RequestQuarter } from '../data/mockData';
-import { addComment, createOrder, getClientOrders, getOrderById, payOrderOnline, signOrderContract, uploadAnnualQuarterDocument, uploadDocument } from '../services/orderService';
+import { getBusinessCompanyById, services, type Contract, type Debt, type LaboratoryPrimaryDocument, type Order, type Payment, type QuarterDocument, type RequestQuarter } from '../data/mockData';
+import { addComment, createOrder, getClientOrders, getOrderById, payOrderOnline, respondLaboratoryMeasurementAgreement, signOrderContract, uploadAnnualQuarterDocument, uploadDocument, uploadLaboratoryPrimaryDocument } from '../services/orderService';
 import { getFinanceContracts, getFinanceDebts, getFinancePayments } from '../services/paymentService';
 import { getCurrentUser } from '../services/authService';
 import {
@@ -23,6 +23,17 @@ import {
 } from '../utils/crm';
 import { getAnnualRequestDebtSummary, getAnnualRequestProgress, getAnnualRequestWarnings, getCurrentQuarterForRequest, isAnnualRequest } from '../utils/annualRequests';
 import { formatCurrency, getPaymentStatusColor, getPaymentStatusLabel } from '../utils/payments';
+import {
+  clientLaboratoryStepState,
+  formatLaboratoryHistory,
+  isLaboratoryOrder,
+  laboratoryMeasurementStatusClass,
+  laboratoryMeasurementStatusLabels,
+  laboratoryPrimaryStatusClass,
+  laboratoryPrimaryStatusLabels,
+  laboratoryResultStatusClass,
+  laboratoryResultStatusLabels,
+} from '../utils/laboratory';
 
 const badge = (status: string) => {
   const label = status === 'annual_active' ? 'Активна по годовому договору' : status;
@@ -321,6 +332,128 @@ const StepTitle = ({ number, title }: { number: string; title: string }) => (
   </div>
 );
 
+const ClientLaboratoryPanel = ({
+  order,
+  onUploadPrimary,
+  onAcceptMeasurement,
+  onRescheduleMeasurement,
+}: {
+  order: Order;
+  onUploadPrimary: (event: FormEvent<HTMLFormElement>, document: LaboratoryPrimaryDocument) => void;
+  onAcceptMeasurement: () => void;
+  onRescheduleMeasurement: (event: FormEvent<HTMLFormElement>) => void;
+}) => {
+  const steps = clientLaboratoryStepState(order);
+  const agreement = order.laboratoryMeasurementAgreement;
+  const publishedDocuments = (order.laboratoryResultDocuments || []).filter((doc) => doc.status === 'published_to_client');
+  return (
+    <div className="mt-6 space-y-5">
+      <div className="grid gap-3 md:grid-cols-4">
+        {steps.map((step, index) => (
+          <div key={step.label} className={`rounded-2xl border p-4 ${step.done ? 'border-emerald-200 bg-emerald-50' : step.active ? 'border-eco-200 bg-eco-50' : 'border-slate-200 bg-white'}`}>
+            <p className="text-xs font-bold uppercase text-slate-500">{index + 1} этап</p>
+            <p className="mt-2 font-bold text-eco-900">{step.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-[22px] border border-eco-100 bg-eco-50/60 p-4 sm:p-5">
+        <h3 className="text-lg font-bold text-eco-900">1. Документы от вас</h3>
+        <div className="mt-4 grid gap-3">
+          {(order.laboratoryPrimaryDocuments || []).map((doc) => (
+            <div key={doc.id} className="rounded-2xl bg-white p-4 ring-1 ring-eco-100">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-900">{doc.name}</p>
+                  <p className="mt-1 text-sm text-slate-500">{doc.fileName || 'Файл не загружен'}</p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${laboratoryPrimaryStatusClass(doc.status)}`}>{laboratoryPrimaryStatusLabels[doc.status]}</span>
+              </div>
+              <div className="mt-3 grid gap-2 md:grid-cols-3">
+                <Info label="Дата загрузки" value={doc.uploadedAt || 'Нет'} />
+                <Info label="Кто загрузил" value={doc.uploadedBy || 'Нет'} />
+                <Info label="Комментарий" value={doc.employeeComment || 'Нет'} />
+              </div>
+              {doc.status === 'revision_required' && doc.employeeComment && (
+                <p className="mt-3 rounded-2xl bg-rose-50 p-3 text-sm font-semibold text-rose-800">{doc.employeeComment}</p>
+              )}
+              {doc.status !== 'approved' && doc.status !== 'not_required' && (
+                <form onSubmit={(event) => onUploadPrimary(event, doc)} className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                  <Button className="shrink-0">{doc.fileName || doc.status === 'revision_required' ? <><RefreshCw size={16} /> Заменить файл</> : 'Загрузить'}</Button>
+                </form>
+              )}
+              {doc.history.length > 0 && <Section title="История действий" items={formatLaboratoryHistory(doc.history)} />}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-[22px] border border-slate-200 bg-white p-4 sm:p-5">
+        <h3 className="text-lg font-bold text-eco-900">2. Согласование замера</h3>
+        {agreement ? (
+          <>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${laboratoryMeasurementStatusClass(agreement.status)}`}>{laboratoryMeasurementStatusLabels[agreement.status]}</span>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <Info label="Дата" value={agreement.measurementDate || 'Не указана'} />
+              <Info label="Время" value={agreement.measurementTime || 'Не указано'} />
+              <Info label="Адрес объекта" value={agreement.address || 'Не указан'} />
+              <Info label="Ответственная организация" value={agreement.companyName || 'Не указана'} />
+              <Info label="Контактное лицо" value={agreement.contactPerson || 'Не указано'} />
+              <Info label="Телефон" value={agreement.phone || 'Не указан'} />
+              <Info label="Что нужно замерить" value={agreement.measurementScope || 'Не указано'} />
+              <Info label="Комментарий" value={agreement.comment || 'Нет'} />
+            </div>
+            {agreement.status === 'sent_to_client' && (
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <Button type="button" onClick={onAcceptMeasurement} className="w-full">Подтвердить дату</Button>
+                <form onSubmit={onRescheduleMeasurement} className="rounded-2xl border border-slate-200 p-4">
+                  <p className="font-bold text-eco-900">Предложить другую дату</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <input name="rescheduleDate" type="date" required className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+                    <input name="rescheduleTime" type="time" required className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+                  </div>
+                  <textarea name="comment" placeholder="Комментарий" className="input-focus mt-3 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
+                  <Button variant="secondary" className="mt-3 w-full">Отправить вариант</Button>
+                </form>
+              </div>
+            )}
+          </>
+        ) : <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Согласование замера пока не отправлено.</div>}
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="rounded-[22px] bg-white p-5 shadow-sm">
+          <h3 className="font-bold text-eco-900">3. Статус выполнения</h3>
+          <p className="mt-3 rounded-2xl bg-eco-50 p-4 text-sm font-semibold text-eco-900">
+            {agreement?.status === 'completed' ? 'Замер проведён. Лаборатория готовит протоколы и отчёты.' : agreement?.status === 'confirmed' ? 'Замер согласован.' : 'Ожидаем согласования и проведения замера.'}
+          </p>
+        </div>
+        <div className="rounded-[22px] bg-white p-5 shadow-sm">
+          <h3 className="font-bold text-eco-900">4. Готовые документы</h3>
+          <div className="mt-4 space-y-3">
+            {publishedDocuments.map((doc) => (
+              <div key={doc.id} className="rounded-2xl bg-eco-50 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-bold text-slate-900">{doc.name}</p>
+                    <p className="mt-1 text-sm text-slate-500">Дата готовности: {doc.readyAt || doc.publishedAt || 'Не указана'}</p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${laboratoryResultStatusClass(doc.status)}`}>{laboratoryResultStatusLabels[doc.status]}</span>
+                </div>
+                <a href={`#${doc.id}`} download={doc.fileName} className="mt-3 inline-flex items-center gap-2 rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white"><Download size={14} /> Скачать</a>
+              </div>
+            ))}
+            {!publishedDocuments.length && <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Пока нет опубликованных документов</div>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: string) => void }) => {
   const { id } = useParams();
   const [order, setOrder] = useState<Order | undefined>();
@@ -342,6 +475,34 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
     const file = new FormData(event.currentTarget).get('file') as File | null;
     if (file?.name) await uploadDocument(order.id, file.name, 'client');
     onNotify?.('Документ загружен');
+    event.currentTarget.reset();
+    load();
+  };
+  const submitLaboratoryPrimaryFile = async (event: FormEvent<HTMLFormElement>, document: LaboratoryPrimaryDocument) => {
+    event.preventDefault();
+    const file = new FormData(event.currentTarget).get('file') as File | null;
+    if (file?.name) {
+      await uploadLaboratoryPrimaryDocument(order.id, document.id, file.name);
+      onNotify?.(document.fileName ? 'Файл заменен' : 'Документ загружен');
+    }
+    event.currentTarget.reset();
+    load();
+  };
+  const acceptMeasurement = async () => {
+    await respondLaboratoryMeasurementAgreement(order.id, { action: 'accept' });
+    onNotify?.('Дата замера подтверждена');
+    load();
+  };
+  const requestMeasurementReschedule = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await respondLaboratoryMeasurementAgreement(order.id, {
+      action: 'reschedule',
+      rescheduleDate: String(form.get('rescheduleDate') || ''),
+      rescheduleTime: String(form.get('rescheduleTime') || ''),
+      comment: String(form.get('comment') || ''),
+    });
+    onNotify?.('Вариант другой даты отправлен');
     event.currentTarget.reset();
     load();
   };
@@ -372,13 +533,20 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
     onNotify?.('Оплата прошла онлайн');
     load();
   };
+  const visibleHistory = order.history.filter((h) => {
+    if (h.actorRole === 'CLIENT') return true;
+    const visibleActions = isLaboratoryOrder(order)
+      ? ['client_message_added', 'document_uploaded', 'order_created']
+      : ['client_message_added', 'document_uploaded', 'document_ready', 'order_created'];
+    return visibleActions.includes(h.actionType || '');
+  });
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <Reveal>
         <div className="rounded-[24px] bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4"><div className="min-w-0"><h2 className="text-2xl font-bold text-eco-900">{order.id}</h2><p className="mt-1 break-words text-slate-600">{order.service}</p></div>{badge(order.status)}</div>
           <p className="mt-4 rounded-2xl bg-eco-50 p-4 text-sm leading-6 text-slate-700">{clientStatusText(order)}</p>
-          <ClientStatusPath order={order} />
+          {isLaboratoryOrder(order) ? <ClientLaboratoryPanel order={order} onUploadPrimary={submitLaboratoryPrimaryFile} onAcceptMeasurement={acceptMeasurement} onRescheduleMeasurement={requestMeasurementReschedule} /> : <ClientStatusPath order={order} />}
           {isAnnualRequest(order) && <ClientAnnualRequestPanel order={order} onUpload={submitQuarterFile} />}
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <Info label="Компания-исполнитель" value={order.businessCompanyName || getBusinessCompanyById(order.businessCompanyId).name} />
@@ -388,10 +556,10 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
             <Info label="Комментарий клиента" value={order.comment} />
             <Info label="Ответственный" value={order.manager} />
           </div>
-          <Section title="Документы клиента" items={order.documents.map((d) => d.name)} />
-          <Section title="Документы ECOPROGRESS GROUP" items={order.resultDocuments.map((d) => d.name)} />
+          {!isLaboratoryOrder(order) && <Section title="Документы клиента" items={order.documents.map((d) => d.name)} />}
+          {!isLaboratoryOrder(order) && <Section title="Документы ECOPROGRESS GROUP" items={order.resultDocuments.map((d) => d.name)} />}
           <Section title="Комментарии сотрудника" items={order.comments.filter((c) => c.visibility === 'client').map((c) => `${c.author}: ${c.text}`)} />
-          <Section title="История заявки" items={order.history.map((h) => `${h.createdAt} - ${h.text}`)} />
+          <Section title="История заявки" items={visibleHistory.map((h) => `${h.createdAt} - ${h.text}`)} />
         </div>
       </Reveal>
       <Reveal direction="left">
@@ -757,4 +925,20 @@ export const CabinetCompanyPage = () => {
   );
 };
 
-export const CabinetNotificationsPage = () => <PageList title="Уведомления">{['Заявка создана', 'Статус обновлен', 'Документ готов'].map((n) => <div key={n} className="rounded-2xl bg-eco-50 p-4 text-sm">{n}</div>)}</PageList>;
+export const CabinetNotificationsPage = () => {
+  const { orders } = useClientOrders();
+  const orderNotifications = orders.flatMap((order) => (order.notifications || []).map((item) => ({ ...item, orderId: order.id })));
+  const fallback = ['Заявка создана', 'Статус обновлен', 'Документ готов'].map((title, index) => ({ id: `fallback-${index}`, title, description: '', date: '', orderId: '' }));
+  const items = orderNotifications.length ? orderNotifications : fallback;
+  return (
+    <PageList title="Уведомления">
+      {items.map((item) => (
+        <div key={item.id} className="rounded-2xl bg-eco-50 p-4 text-sm">
+          <p className="font-bold text-eco-900">{item.title}</p>
+          {item.description && <p className="mt-1 text-slate-600">{item.description}</p>}
+          <p className="mt-2 text-xs font-semibold text-slate-500">{item.date} {item.orderId ? `· ${item.orderId}` : ''}</p>
+        </div>
+      ))}
+    </PageList>
+  );
+};

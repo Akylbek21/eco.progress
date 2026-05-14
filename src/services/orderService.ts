@@ -1,7 +1,8 @@
-import { getBusinessCompanyById, getBusinessCompanyByServiceId, notifications, orders, statusDescriptions, type CommentItem, type CRMActionType, type DocumentItem, type EcologyStatus, type LaboratoryStatus, type MockUser, type NotificationItem, type Order, type OrderHistoryItem, type OrderStatus, type PaymentMethod, type PaymentStatus, type QuarterDocument, type QuarterResult, type QuarterWorkStatus, type QuarterlyContractItem, type RequestQuarter, type StaffContractStatus, type UserRole } from '../data/mockData';
+import { getBusinessCompanyById, getBusinessCompanyByServiceId, notifications, orders, statusDescriptions, type CommentItem, type CRMActionType, type DocumentItem, type EcologyStatus, type LaboratoryMeasurementAgreement, type LaboratoryMeasurementAgreementStatus, type LaboratoryPrimaryDocumentStatus, type LaboratoryResultDocument, type LaboratoryResultDocumentStatus, type LaboratoryStatus, type MockUser, type NotificationItem, type Order, type OrderHistoryItem, type OrderStatus, type PaymentMethod, type PaymentStatus, type QuarterDocument, type QuarterResult, type QuarterWorkStatus, type QuarterlyContractItem, type RequestQuarter, type StaffContractStatus, type UserRole } from '../data/mockData';
 import { canCompleteAnnualRequest, createFallbackRequestQuarters, createRequestQuartersFromContract, getQuarterResultTypeByStage, getUploadedByRole, normalizeRequestQuarter } from '../utils/annualRequests';
 import { calculateRemainingAmount } from '../utils/payments';
 import { fallbackPaymentStatus, getWorkStageByService, normalizeOrderStatus } from '../utils/crm';
+import { createLaboratoryMeasurementAgreement, createLaboratoryPrimaryDocuments, isLaboratoryOrder, laboratoryMeasurementStatusLabels, laboratoryPrimaryStatusLabels, laboratoryResultSectionLabels, laboratoryResultStatusLabels, normalizeLaboratoryResultDocuments } from '../utils/laboratory';
 import { applyQuarterPaymentSync, readFinanceContractsSync } from './financeStore';
 
 const ORDERS_KEY = 'eco-progress-orders';
@@ -23,6 +24,11 @@ const normalizeOrder = (order: Order): Order => {
       ? createRequestQuartersFromContract(contract, order.quarters || [])
       : (order.quarters?.length ? order.quarters.map(normalizeRequestQuarter) : createFallbackRequestQuarters({ ...order, contractType, contractId: order.contractId || contract?.id }))
     : order.quarters?.map(normalizeRequestQuarter);
+
+  const isLabOrder = isLaboratoryOrder(order);
+  const laboratoryPrimaryDocuments = isLabOrder ? createLaboratoryPrimaryDocuments(order.id, order.laboratoryPrimaryDocuments) : order.laboratoryPrimaryDocuments;
+  const laboratoryMeasurementAgreement = isLabOrder ? createLaboratoryMeasurementAgreement(order, order.laboratoryMeasurementAgreement) : order.laboratoryMeasurementAgreement;
+  const laboratoryResultDocuments = isLabOrder ? normalizeLaboratoryResultDocuments(order.id, order.laboratoryResultDocuments) : order.laboratoryResultDocuments;
 
   return {
     ...order,
@@ -52,6 +58,11 @@ const normalizeOrder = (order: Order): Order => {
     documents: order.documents || [],
     resultDocuments: order.resultDocuments || [],
     history: order.history || [],
+    laboratoryPrimaryDocuments,
+    laboratoryMeasurementAgreement,
+    laboratorySections: order.laboratorySections || (isLabOrder ? ['overview', 'primary_documents', 'measurement', 'protocol', 'form_870', 'base_report', 'annual_report', 'half_year_report', 'archive_report', 'history'] : undefined),
+    laboratoryResultDocuments,
+    notifications: order.notifications || [],
   };
 };
 
@@ -177,6 +188,7 @@ export const createOrder = async (payload: CreateOrderPayload): Promise<Order> =
   await delay();
   const id = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
   const businessCompany = getBusinessCompanyByServiceId(payload.serviceId);
+  const isLabOrder = payload.serviceId === 'laboratory' || /лаборатор|замер|анализ|исслед/i.test(payload.service);
   const doc: DocumentItem[] = payload.fileName
     ? [{ id: `DOC-${Date.now()}`, orderId: id, name: payload.fileName, type: 'client', uploadedAt: stamp(), status: 'Загружен' }]
     : [];
@@ -227,6 +239,13 @@ export const createOrder = async (payload: CreateOrderPayload): Promise<Order> =
       historyEntry(id, 'order_created', 'Заявка создана'),
     ],
   };
+  if (isLabOrder) {
+    order.laboratoryPrimaryDocuments = createLaboratoryPrimaryDocuments(id);
+    order.laboratoryMeasurementAgreement = createLaboratoryMeasurementAgreement(order);
+    order.laboratorySections = ['overview', 'primary_documents', 'measurement', 'protocol', 'form_870', 'base_report', 'annual_report', 'half_year_report', 'archive_report', 'history'];
+    order.laboratoryResultDocuments = [];
+    order.notifications = [];
+  }
   writeOrders([order, ...readOrders()]);
   return order;
 };
@@ -762,6 +781,322 @@ export const updateLaboratoryStatus = async (orderId: string, status: Laboratory
       laboratoryReadyAt: status === 'result_ready' ? order.laboratoryReadyAt || stamp() : order.laboratoryReadyAt,
       updatedAt: stamp(),
       history: [historyEntry(orderId, 'status_changed', `Лабораторный статус изменен: ${oldValue} → ${status}`, comment, oldValue, status), ...order.history],
+    };
+  });
+  writeOrders(items);
+  return items.find((order) => order.id === orderId);
+};
+
+export const uploadLaboratoryPrimaryDocument = async (orderId: string, documentId: string, fileName: string) => {
+  await delay();
+  const uploadedAt = stamp();
+  const actor = currentActor();
+  let updatedDocument;
+  const items = readOrders().map((order) => {
+    if (order.id !== orderId) return order;
+    const entry = historyEntry(orderId, 'document_uploaded', `Первичный документ загружен: ${fileName}`);
+    const laboratoryPrimaryDocuments = createLaboratoryPrimaryDocuments(orderId, order.laboratoryPrimaryDocuments).map((doc) => {
+      if (doc.id !== documentId) return doc;
+      updatedDocument = {
+        ...doc,
+        status: 'uploaded' as LaboratoryPrimaryDocumentStatus,
+        fileName,
+        uploadedAt,
+        uploadedBy: actor.name,
+        statusChangedAt: uploadedAt,
+        statusChangedBy: actor.name,
+        history: [{ ...entry, createdAt: uploadedAt }, ...doc.history],
+      };
+      return updatedDocument;
+    });
+    return {
+      ...order,
+      laboratoryPrimaryDocuments,
+      updatedAt: uploadedAt,
+      history: [{ ...entry, createdAt: uploadedAt }, ...order.history],
+    };
+  });
+  writeOrders(items);
+  return { order: items.find((order) => order.id === orderId), document: updatedDocument };
+};
+
+export const updateLaboratoryPrimaryDocumentStatus = async (
+  orderId: string,
+  documentId: string,
+  status: LaboratoryPrimaryDocumentStatus,
+  comment?: string
+) => {
+  await delay();
+  const changedAt = stamp();
+  const actor = currentActor();
+  const items = readOrders().map((order) => {
+    if (order.id !== orderId) return order;
+    const previous = createLaboratoryPrimaryDocuments(orderId, order.laboratoryPrimaryDocuments).find((doc) => doc.id === documentId);
+    const entry = historyEntry(
+      orderId,
+      'status_changed',
+      `Статус первичного документа "${previous?.name || documentId}" изменен: ${previous ? laboratoryPrimaryStatusLabels[previous.status] : 'Нет'} → ${laboratoryPrimaryStatusLabels[status]}`,
+      comment,
+      previous ? laboratoryPrimaryStatusLabels[previous.status] : undefined,
+      laboratoryPrimaryStatusLabels[status]
+    );
+    return {
+      ...order,
+      laboratoryPrimaryDocuments: createLaboratoryPrimaryDocuments(orderId, order.laboratoryPrimaryDocuments).map((doc) =>
+        doc.id === documentId
+          ? {
+              ...doc,
+              status,
+              employeeComment: comment ?? doc.employeeComment,
+              statusChangedAt: changedAt,
+              statusChangedBy: actor.name,
+              history: [{ ...entry, createdAt: changedAt }, ...doc.history],
+            }
+          : doc
+      ),
+      updatedAt: changedAt,
+      history: [{ ...entry, createdAt: changedAt }, ...order.history],
+    };
+  });
+  writeOrders(items);
+  return items.find((order) => order.id === orderId);
+};
+
+export const saveLaboratoryMeasurementAgreement = async (
+  orderId: string,
+  payload: Partial<Omit<LaboratoryMeasurementAgreement, 'id' | 'orderId' | 'status'>>
+) => {
+  await delay();
+  const updatedAt = stamp();
+  const items = readOrders().map((order) => {
+    if (order.id !== orderId) return order;
+    const agreement = createLaboratoryMeasurementAgreement(order, order.laboratoryMeasurementAgreement);
+    return {
+      ...order,
+      laboratoryMeasurementAgreement: {
+        ...agreement,
+        ...payload,
+        updatedAt,
+      },
+      updatedAt,
+      history: [historyEntry(orderId, 'status_changed', 'Согласование замера сохранено'), ...order.history],
+    };
+  });
+  writeOrders(items);
+  return items.find((order) => order.id === orderId);
+};
+
+const measurementEmailText = (order: Order, agreement: LaboratoryMeasurementAgreement) => [
+  'Здравствуйте!',
+  '',
+  `По вашей заявке №${order.id} подготовлено согласование замера.`,
+  '',
+  `Дата замера: ${agreement.measurementDate || 'не указана'}`,
+  `Время: ${agreement.measurementTime || 'не указано'}`,
+  `Адрес объекта: ${agreement.address || 'не указан'}`,
+  `Ответственная организация: ${agreement.companyName || 'не указана'}`,
+  `Контактное лицо: ${agreement.contactPerson || 'не указано'}`,
+  `Телефон: ${agreement.phone || 'не указан'}`,
+  agreement.comment ? `Комментарий: ${agreement.comment}` : '',
+  '',
+  'Пожалуйста, подтвердите дату замера в личном кабинете.',
+  'Если дата неудобна, вы можете предложить другую дату.',
+  '',
+  `/cabinet/orders/${order.id}`,
+].filter(Boolean).join('\n');
+
+export const sendLaboratoryMeasurementAgreement = async (orderId: string) => {
+  await delay();
+  const sentAt = stamp();
+  const items = readOrders().map((order) => {
+    if (order.id !== orderId) return order;
+    const agreement = createLaboratoryMeasurementAgreement(order, order.laboratoryMeasurementAgreement);
+    const updatedAgreement = { ...agreement, status: 'sent_to_client' as LaboratoryMeasurementAgreementStatus, sentAt, updatedAt: sentAt };
+    const emailText = measurementEmailText(order, updatedAgreement);
+    return {
+      ...order,
+      laboratoryMeasurementAgreement: updatedAgreement,
+      notifications: [
+        {
+          id: `LAB-NOT-${Date.now()}`,
+          title: `Согласование замера по заявке ${order.id}`,
+          description: `Подтвердите дату замера: ${updatedAgreement.measurementDate || 'дата не указана'} ${updatedAgreement.measurementTime || ''}`,
+          date: sentAt,
+          role: 'CLIENT' as const,
+        },
+        ...(order.notifications || []),
+      ],
+      comments: [
+        {
+          id: `COM-${Date.now()}-measurement`,
+          orderId,
+          author: 'ECOPROGRESS GROUP',
+          text: 'В личный кабинет отправлено согласование замера. Проверьте дату и подтвердите ее или предложите другую.',
+          visibility: 'client' as const,
+          createdAt: sentAt,
+        },
+        ...order.comments,
+      ],
+      updatedAt: sentAt,
+      history: [
+        { ...historyEntry(orderId, 'client_message_added', `Согласование замера отправлено клиенту. Email:\n${emailText}`, undefined, laboratoryMeasurementStatusLabels[agreement.status], laboratoryMeasurementStatusLabels.sent_to_client), createdAt: sentAt },
+        ...order.history,
+      ],
+    };
+  });
+  writeOrders(items);
+  return items.find((order) => order.id === orderId);
+};
+
+export const respondLaboratoryMeasurementAgreement = async (
+  orderId: string,
+  payload: { action: 'accept' | 'reschedule'; rescheduleDate?: string; rescheduleTime?: string; comment?: string }
+) => {
+  await delay();
+  const respondedAt = stamp();
+  const items = readOrders().map((order) => {
+    if (order.id !== orderId) return order;
+    const agreement = createLaboratoryMeasurementAgreement(order, order.laboratoryMeasurementAgreement);
+    const nextStatus: LaboratoryMeasurementAgreementStatus = payload.action === 'accept' ? 'confirmed' : 'reschedule_requested';
+    return {
+      ...order,
+      laboratoryMeasurementAgreement: {
+        ...agreement,
+        status: nextStatus,
+        acceptedAt: payload.action === 'accept' ? respondedAt : agreement.acceptedAt,
+        rescheduleDate: payload.action === 'reschedule' ? payload.rescheduleDate : agreement.rescheduleDate,
+        rescheduleTime: payload.action === 'reschedule' ? payload.rescheduleTime : agreement.rescheduleTime,
+        rescheduleComment: payload.action === 'reschedule' ? payload.comment : agreement.rescheduleComment,
+        updatedAt: respondedAt,
+      },
+      status: payload.action === 'accept' ? 'Лаборатория' as OrderStatus : order.status,
+      laboratoryStatus: payload.action === 'accept' ? 'waiting_samples' as LaboratoryStatus : order.laboratoryStatus,
+      updatedAt: respondedAt,
+      history: [
+        { ...clientHistoryEntry(orderId, 'status_changed', payload.action === 'accept' ? 'Клиент подтвердил дату замера' : 'Клиент предложил другую дату замера', payload.comment, laboratoryMeasurementStatusLabels[agreement.status], laboratoryMeasurementStatusLabels[nextStatus]), createdAt: respondedAt },
+        ...order.history,
+      ],
+    };
+  });
+  writeOrders(items);
+  return items.find((order) => order.id === orderId);
+};
+
+export const updateLaboratoryMeasurementAgreementStatus = async (
+  orderId: string,
+  status: LaboratoryMeasurementAgreementStatus,
+  comment?: string
+) => {
+  await delay();
+  const changedAt = stamp();
+  const items = readOrders().map((order) => {
+    if (order.id !== orderId) return order;
+    const agreement = createLaboratoryMeasurementAgreement(order, order.laboratoryMeasurementAgreement);
+    return {
+      ...order,
+      laboratoryMeasurementAgreement: {
+        ...agreement,
+        status,
+        completedAt: status === 'completed' ? changedAt : agreement.completedAt,
+        updatedAt: changedAt,
+      },
+      status: status === 'confirmed' || status === 'completed' ? 'Лаборатория' as OrderStatus : order.status,
+      laboratoryStatus: status === 'completed' ? 'analysis_in_progress' as LaboratoryStatus : order.laboratoryStatus,
+      samplesReceivedAt: status === 'completed' ? order.samplesReceivedAt || changedAt : order.samplesReceivedAt,
+      updatedAt: changedAt,
+      history: [
+        historyEntry(orderId, 'status_changed', `Статус согласования замера изменен: ${laboratoryMeasurementStatusLabels[agreement.status]} → ${laboratoryMeasurementStatusLabels[status]}`, comment, laboratoryMeasurementStatusLabels[agreement.status], laboratoryMeasurementStatusLabels[status]),
+        ...order.history,
+      ],
+    };
+  });
+  writeOrders(items);
+  return items.find((order) => order.id === orderId);
+};
+
+export const uploadLaboratoryResultDocument = async (
+  orderId: string,
+  payload: { name: string; section: LaboratoryResultDocument['section']; fileName: string; status?: LaboratoryResultDocumentStatus; comment?: string }
+) => {
+  await delay();
+  const uploadedAt = stamp();
+  const actor = currentActor();
+  let resultDocument: LaboratoryResultDocument | undefined;
+  const items = readOrders().map((order) => {
+    if (order.id !== orderId) return order;
+    const entry = historyEntry(orderId, 'document_ready', `Лабораторный документ загружен: ${payload.name}`);
+    resultDocument = {
+      id: `LAB-RES-${Date.now()}`,
+      orderId,
+      name: payload.name,
+      section: payload.section,
+      status: payload.status || 'ready',
+      fileName: payload.fileName,
+      uploadedAt,
+      readyAt: uploadedAt,
+      uploadedBy: actor.name,
+      comment: payload.comment,
+      history: [{ ...entry, createdAt: uploadedAt }],
+    };
+    return {
+      ...order,
+      laboratoryResultDocuments: [resultDocument, ...(order.laboratoryResultDocuments || [])],
+      laboratoryStatus: 'result_ready' as LaboratoryStatus,
+      laboratoryReadyAt: order.laboratoryReadyAt || uploadedAt,
+      updatedAt: uploadedAt,
+      history: [{ ...entry, createdAt: uploadedAt }, ...order.history],
+    };
+  });
+  writeOrders(items);
+  return { order: items.find((order) => order.id === orderId), document: resultDocument };
+};
+
+export const updateLaboratoryResultDocumentStatus = async (
+  orderId: string,
+  documentId: string,
+  status: LaboratoryResultDocumentStatus,
+  comment?: string
+) => {
+  await delay();
+  const changedAt = stamp();
+  const actor = currentActor();
+  const items = readOrders().map((order) => {
+    if (order.id !== orderId) return order;
+    const previous = (order.laboratoryResultDocuments || []).find((doc) => doc.id === documentId);
+    const entry = historyEntry(
+      orderId,
+      status === 'published_to_client' ? 'client_message_added' : 'status_changed',
+      `Статус лабораторного документа "${previous?.name || documentId}" изменен: ${previous ? laboratoryResultStatusLabels[previous.status] : 'Нет'} → ${laboratoryResultStatusLabels[status]}`,
+      comment,
+      previous ? laboratoryResultStatusLabels[previous.status] : undefined,
+      laboratoryResultStatusLabels[status]
+    );
+    return {
+      ...order,
+      status: status === 'published_to_client' ? 'Готово' as OrderStatus : order.status,
+      laboratoryResultDocuments: (order.laboratoryResultDocuments || []).map((doc) =>
+        doc.id === documentId
+          ? {
+              ...doc,
+              status,
+              comment: comment ?? doc.comment,
+              publishedAt: status === 'published_to_client' ? changedAt : doc.publishedAt,
+              publishedBy: status === 'published_to_client' ? actor.name : doc.publishedBy,
+              history: [{ ...entry, createdAt: changedAt }, ...doc.history],
+            }
+          : doc
+      ),
+      notifications: status === 'published_to_client'
+        ? [{
+            id: `LAB-NOT-${Date.now()}`,
+            title: `Готов документ по заявке ${order.id}`,
+            description: `${previous?.name || laboratoryResultSectionLabels[previous?.section || 'protocol']} опубликован в личном кабинете`,
+            date: changedAt,
+            role: 'CLIENT' as const,
+          }, ...(order.notifications || [])]
+        : order.notifications,
+      updatedAt: changedAt,
+      history: [{ ...entry, createdAt: changedAt }, ...order.history],
     };
   });
   writeOrders(items);
