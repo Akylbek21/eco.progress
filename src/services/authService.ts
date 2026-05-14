@@ -1,9 +1,8 @@
-import { staffUsers, type ClientType, type MockUser } from '../data/mockData';
+import api from './api';
+import type { MockUser } from '../types';
 
 const TOKEN_KEY = 'eco-progress-token';
 const USER_KEY = 'eco-progress-user';
-
-const delay = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export type RegisterPayload =
   | {
@@ -28,73 +27,29 @@ export type RegisterPayload =
       password: string;
     };
 
-const saveSession = (user: MockUser) => {
-  const token = btoa(`${user.email}:${Date.now()}`);
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-  return { token, user };
-};
-
 export const login = async (email: string, password: string) => {
-  await delay();
-  void password;
-  return saveSession({
-    id: 'client-1',
-    role: 'CLIENT',
-    type: 'company',
-    email,
-    name: 'Контактное лицо',
-    phone: '+7 (___) ___-__-__',
-    city: 'Астана',
-    companyName: 'ТОО "Клиент Eco"',
-    bin: '000000000000',
-    organizationType: 'ТОО',
-    legalAddress: 'Республика Казахстан, г. Астана',
-    position: 'Менеджер',
-  });
+  const { data } = await api.post<{ data: { token: string; user: MockUser }; message: string | null }>('/auth/login', { email, password });
+  localStorage.setItem(TOKEN_KEY, data.data.token);
+  localStorage.setItem(USER_KEY, JSON.stringify(data.data.user));
+  return data.data;
 };
 
 export const staffLogin = async (email: string, password: string) => {
-  await delay();
-  void password;
-  const staff = staffUsers.find((item) => item.email === email) ?? staffUsers[0];
-  return saveSession(staff);
-};
-
-export const switchStaffRole = (role: MockUser['role']) => {
-  const staff = staffUsers.find((item) => item.role === role);
-  if (!staff) return null;
-  return saveSession(staff);
+  const { data } = await api.post<{ data: { token: string; user: MockUser }; message: string | null }>('/auth/staff/login', { email, password });
+  localStorage.setItem(TOKEN_KEY, data.data.token);
+  localStorage.setItem(USER_KEY, JSON.stringify(data.data.user));
+  return data.data;
 };
 
 export const register = async (payload: RegisterPayload) => {
-  await delay();
-  const base = {
-    id: `client-${Date.now()}`,
-    role: 'CLIENT' as const,
-    type: payload.type as ClientType,
-    email: payload.email,
-    phone: payload.phone,
-    city: payload.city,
-  };
-
-  const user: MockUser =
-    payload.type === 'individual'
-      ? { ...base, name: payload.name }
-      : {
-          ...base,
-          name: payload.contactPerson,
-          companyName: payload.companyName,
-          bin: payload.bin,
-          organizationType: payload.organizationType,
-          legalAddress: payload.legalAddress,
-          position: payload.position,
-        };
-
-  return saveSession(user);
+  const { data } = await api.post<{ data: { token: string; user: MockUser }; message: string | null }>('/auth/register', payload);
+  localStorage.setItem(TOKEN_KEY, data.data.token);
+  localStorage.setItem(USER_KEY, JSON.stringify(data.data.user));
+  return data.data;
 };
 
 export const logout = () => {
+  api.post('/auth/logout').catch(() => {});
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 };

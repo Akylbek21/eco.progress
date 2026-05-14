@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, MessageCircle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import LeadForm from '../components/LeadForm';
 import SEO from '../components/SEO';
-import { getBusinessCompanyById, services, type ServiceCategory } from '../data/mockData';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { getServices } from '../services/serviceService';
+import { getBusinessCompanyById } from '../utils/crm';
 import { getWhatsAppUrl } from '../config/company';
 import { trackWhatsAppClick } from '../services/analytics';
+import type { ServiceCategory } from '../types';
 
 const categories: Array<'Все' | ServiceCategory> = ['Все', 'Проектирование', 'Разрешения', 'Лаборатория', 'Отходы', 'Предприятия'];
 
@@ -24,17 +28,19 @@ const servicePriceBase: Record<string, number> = {
 const formatPrice = (price: number) => `${Math.round(price).toLocaleString('ru-RU')} ₸`;
 
 const ServicesPage = () => {
+  const { data: services = [], isLoading } = useQuery({ queryKey: ['services'], queryFn: getServices });
   const [category, setCategory] = useState<'Все' | ServiceCategory>('Все');
   const [expandedService, setExpandedService] = useState<string | null>(null);
   const [selectedIncludes, setSelectedIncludes] = useState<Record<string, string[]>>({});
   const [calculator, setCalculator] = useState({
-    serviceId: services[0]?.id ?? '',
+    serviceId: '',
     objectScale: 'medium',
     urgency: 'standard',
     wasteVolume: '0',
     labPoints: '0',
   });
-  const items = useMemo(() => (category === 'Все' ? services : services.filter((item) => item.category === category)), [category]);
+  useEffect(() => { if (services.length && !calculator.serviceId) setCalculator((c) => ({ ...c, serviceId: services[0].id })); }, [services, calculator.serviceId]);
+  const items = useMemo(() => (category === 'Все' ? services : services.filter((item) => item.category === category)), [category, services]);
   const selectedService = services.find((service) => service.id === calculator.serviceId) ?? services[0];
   const basePrice = servicePriceBase[selectedService.id] ?? 150000;
   const scaleMultiplier = calculator.objectScale === 'small' ? 0.85 : calculator.objectScale === 'large' ? 1.45 : 1;
@@ -70,6 +76,9 @@ const ServicesPage = () => {
     window.addEventListener('hashchange', openServiceFromHash);
     return () => window.removeEventListener('hashchange', openServiceFromHash);
   }, []);
+
+  if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
+  if (!selectedService) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
 
   return (
     <div>

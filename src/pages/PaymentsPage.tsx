@@ -2,21 +2,34 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CreditCard, ReceiptText, WalletCards, X, type LucideIcon } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
-import {
-  clientPaymentCompanies,
-  ourPaymentCompanies,
-  type Contract,
-  type ContractType,
-  type Debt,
-  type Payment,
-  type PaymentMethod,
-  type PaymentRecordStatus,
-  type PaymentTransaction,
-  type QuarterlyContractItem,
-  type QuarterNumber,
-  type QuarterWorkStatus,
-} from '../data/mockData';
-import { getCurrentUser } from '../services/authService';
+import type {
+  ClientPaymentCompany,
+  Contract,
+  ContractType,
+  Debt,
+  OurPaymentCompany,
+  Payment,
+  PaymentMethod,
+  PaymentRecordStatus,
+  PaymentTransaction,
+  QuarterlyContractItem,
+  QuarterNumber,
+  QuarterWorkStatus,
+} from '../types';
+import { useAuth } from '../contexts/AuthContext';
+
+const ourPaymentCompanies: OurPaymentCompany[] = [
+  { id: 'ecoprogress-group', name: 'ТОО "ECOPROGRESS GROUP"' },
+  { id: 'ecoprogress-lab', name: 'ТОО "ECOPROGRESS LAB"' },
+  { id: 'ecoprogress-utilization', name: 'ТОО "ECOPROGRESS UTILIZATION"' },
+];
+
+const clientPaymentCompanies: ClientPaymentCompany[] = [
+  { id: 'shymkent-plast', name: 'ТОО "Shymkent Plast"', bin: '120540018765' },
+  { id: 'green-market', name: 'ТОО "Green Market"', bin: '160740011223' },
+  { id: 'asylbek-ip', name: 'ИП "Асылбек"', bin: '880512350987' },
+  { id: 'eco-build-kz', name: 'ТОО "Eco Build KZ"', bin: '190340025114' },
+];
 import {
   addPartialFinancePayment,
   addQuarterPayment,
@@ -147,7 +160,7 @@ const AccessDenied = () => (
 );
 
 const PaymentsPage = () => {
-  const user = getCurrentUser();
+  const { user } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -378,7 +391,7 @@ const PaymentsPage = () => {
       date: String(form.get('date') || new Date().toISOString().slice(0, 10)),
       method: String(form.get('method') || 'bank_transfer') as PaymentMethod,
       comment: String(form.get('comment') || ''),
-    }, user?.name);
+    });
     event.currentTarget.reset();
     refresh();
   };

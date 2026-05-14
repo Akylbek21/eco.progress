@@ -2,24 +2,34 @@ import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BriefcaseBusiness, UserRound } from 'lucide-react';
 import Button from '../components/ui/Button';
-import { login, staffLogin } from '../services/authService';
+import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: (message: string) => void }) => {
   const navigate = useNavigate();
+  const { login, staffLogin } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setLoading(true);
-    if (staff) {
-      await staffLogin(String(form.get('email') || 'manager@ecoprogress.kz'), String(form.get('password') || ''));
-      onSuccess?.('Вход сотрудника выполнен');
-      navigate('/staff');
-    } else {
-      await login(String(form.get('email') || 'client@ecoprogress.kz'), String(form.get('password') || ''));
-      onSuccess?.('Вы вошли в кабинет клиента');
-      navigate('/cabinet');
+    setError('');
+    try {
+      if (staff) {
+        await staffLogin(String(form.get('email') || ''), String(form.get('password') || ''));
+        onSuccess?.('Вход сотрудника выполнен');
+        navigate('/staff');
+      } else {
+        await login(String(form.get('email') || ''), String(form.get('password') || ''));
+        onSuccess?.('Вы вошли в кабинет клиента');
+        navigate('/cabinet');
+      }
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Ошибка входа. Проверьте email и пароль.';
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -47,6 +57,7 @@ const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: 
           <p className="mt-3 text-sm leading-6 text-slate-500">
             {staff ? 'Рабочий кабинет для обработки заявок, договоров, счетов и документов.' : 'Войдите, чтобы создать заявку, загрузить документы и отслеживать статус работы.'}
           </p>
+          {error && <p className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
           <label className="mt-7 block text-sm font-semibold text-slate-700">
             Email
             <input name="email" type="email" required placeholder={staff ? 'manager@ecoprogress.kz' : 'name@example.com'} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />

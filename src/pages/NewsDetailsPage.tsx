@@ -1,12 +1,21 @@
 import { Navigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
-import { news } from '../data/mockData';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { getNewsById } from '../services/newsService';
 
 const NewsDetailsPage = () => {
   const { id } = useParams();
-  const item = news.find((newsItem) => newsItem.id === id);
+  const { data: item, isLoading } = useQuery({
+    queryKey: ['news', id],
+    queryFn: () => getNewsById(id!),
+    enabled: !!id,
+  });
+
+  if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
   if (!item) return <Navigate to="/news" replace />;
+
   return (
     <article className="bg-white">
       <SEO title={`${item.title} | ECOPROGRESS GROUP`} description={item.excerpt} />

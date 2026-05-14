@@ -1,16 +1,19 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CalendarDays, CheckCircle2, CreditCard, FileSignature, LockKeyhole } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
-import { getBusinessCompanyById, services, type Contract, type Debt, type Order, type Payment, type QuarterDocument, type RequestQuarter } from '../data/mockData';
-import { addComment, createOrder, getClientOrders, getOrderById, payOrderOnline, signOrderContract, uploadAnnualQuarterDocument, uploadDocument } from '../services/orderService';
-import { getFinanceContracts, getFinanceDebts, getFinancePayments } from '../services/paymentService';
-import { getCurrentUser } from '../services/authService';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { useAuth } from '../contexts/AuthContext';
+import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, signOrderContract, payOrderOnline, uploadQuarterDocument } from '../services/orderService';
+import { getClientPayments, getClientDebts, getFinanceContracts } from '../services/paymentService';
+import { getServices } from '../services/serviceService';
 import {
   contractStatusClass,
   formatContractDaysLeft,
   formatIsoDate,
+  getBusinessCompanyById,
   getContractDisplayStatus,
   getContractProgress,
   getContractsForClient,
@@ -23,6 +26,7 @@ import {
 } from '../utils/crm';
 import { getAnnualRequestDebtSummary, getAnnualRequestProgress, getAnnualRequestWarnings, getCurrentQuarterForRequest, isAnnualRequest } from '../utils/annualRequests';
 import { formatCurrency, getPaymentStatusColor, getPaymentStatusLabel } from '../utils/payments';
+import type { Contract, Debt, Order, Payment, RequestQuarter } from '../types';
 
 const badge = (status: string) => {
   const label = status === 'annual_active' ? 'Активна по годовому договору' : status;
@@ -74,16 +78,17 @@ const ClientStatusPath = ({ order }: { order: Order }) => {
 };
 
 const useClientOrders = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const refresh = () => getClientOrders(getCurrentUser()).then(setOrders);
-  useEffect(() => { refresh(); }, []);
-  return { orders, refresh };
+  const queryClient = useQueryClient();
+  const { data: orders = [], isLoading } = useQuery({ queryKey: ['client-orders'], queryFn: getClientOrders });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+  return { orders, refresh, isLoading };
 };
 
 export const CabinetDashboardPage = () => {
-  const { orders } = useClientOrders();
-  const user = getCurrentUser();
+  const { orders, isLoading } = useClientOrders();
+  const { user } = useAuth();
   const contracts = getContractsForClient(user);
+  if (isLoading) return <div className="flex min-h-[40vh] items-center justify-center"><LoadingSpinner /></div>;
   const nearestContract = [...contracts].sort((a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime())[0];
   const stats = [
     ['Активные заявки', orders.filter((o) => !['Готово', 'Завершено', 'Отменено'].includes(o.status)).length],
@@ -169,12 +174,13 @@ const PageList = ({ title, children }: { title: string; children: React.ReactNod
 export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string) => void }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = getCurrentUser();
+  const { user } = useAuth();
+  const { data: services = [] } = useQuery({ queryKey: ['services'], queryFn: getServices });
   const serviceFromUrl = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const serviceId = params.get('service') ?? '';
     return services.some((service) => service.id === serviceId) ? serviceId : services[0]?.id ?? '';
-  }, [location.search]);
+  }, [location.search, services]);
   const itemsFromUrl = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return (params.get('items') ?? '').split(',').map(Number).filter((index) => Number.isInteger(index) && index >= 0);
@@ -207,7 +213,6 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
     ].join('\n');
     const selectedItemsText = selectedOrderItems.length > 0 ? `\n\nВыбранные работы:\n${selectedOrderItems.map((item) => `- ${item}`).join('\n')}` : '';
     const order = await createOrder({
-      user,
       contactPerson: String(form.get('contactPerson')),
       phone: String(form.get('phone')),
       email: String(form.get('email')),
@@ -323,54 +328,53 @@ const StepTitle = ({ number, title }: { number: string; title: string }) => (
 
 export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: string) => void }) => {
   const { id } = useParams();
+  const queryClient = useQueryClient();
   const [order, setOrder] = useState<Order | undefined>();
-  const load = () => id && getOrderById(id).then(setOrder);
+  const load = () => id && fetchOrderById(id).then(setOrder);
   useEffect(() => { load(); }, [id]);
   if (!id) return <Navigate to="/cabinet/orders" replace />;
-  if (!order) return <div className="rounded-2xl bg-white p-6">Загрузка заявки...</div>;
+  if (!order) return <div className="flex min-h-[40vh] items-center justify-center"><LoadingSpinner /></div>;
   const serviceContract = getPrimaryContractForOrder(order);
   const submitComment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await addComment(order.id, String(form.get('comment')), 'client', getCurrentUser()?.name ?? 'Клиент');
+    await addComment(order.id, String(form.get('comment')), 'client');
     onNotify?.('Комментарий добавлен');
     event.currentTarget.reset();
     load();
+    queryClient.invalidateQueries({ queryKey: ['client-orders'] });
   };
   const submitFile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const file = new FormData(event.currentTarget).get('file') as File | null;
-    if (file?.name) await uploadDocument(order.id, file.name, 'client');
+    if (file) await uploadDocument(order.id, file);
     onNotify?.('Документ загружен');
     event.currentTarget.reset();
     load();
+    queryClient.invalidateQueries({ queryKey: ['client-orders'] });
   };
   const submitQuarterFile = async (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => {
     event.preventDefault();
     const file = new FormData(event.currentTarget).get('file') as File | null;
-    if (file?.name) {
-      await uploadAnnualQuarterDocument(order.id, quarter.id, {
-        fileName: file.name,
-        fileType: file.type || 'application/octet-stream',
-        fileSize: file.size,
-        documentType: 'client_data',
-        uploadedByRole: 'client',
-        uploadedByName: getCurrentUser()?.name || 'Клиент',
-      });
+    if (file) {
+      await uploadQuarterDocument(order.id, quarter.id, file, 'client_data');
       onNotify?.('Документ квартала загружен');
     }
     event.currentTarget.reset();
     load();
+    queryClient.invalidateQueries({ queryKey: ['client-orders'] });
   };
   const handleSign = async () => {
     await signOrderContract(order.id, order.signatureProvider || 'NCALayer / ЭЦП');
     onNotify?.('Договор подписан электронной подписью');
     load();
+    queryClient.invalidateQueries({ queryKey: ['client-orders'] });
   };
   const handlePay = async () => {
     await payOrderOnline(order.id, order.paymentMethod || 'Банковская карта');
     onNotify?.('Оплата прошла онлайн');
     load();
+    queryClient.invalidateQueries({ queryKey: ['client-orders'] });
   };
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -627,15 +631,9 @@ const CabinetPaymentsPageLegacy = () => {
 
 export const CabinetPaymentsPage = () => {
   const { orders } = useClientOrders();
-  const [financePayments, setFinancePayments] = useState<Payment[]>([]);
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [debts, setDebts] = useState<Debt[]>([]);
-
-  useEffect(() => {
-    getFinancePayments().then(setFinancePayments);
-    getFinanceContracts().then(setContracts);
-    getFinanceDebts().then(setDebts);
-  }, []);
+  const { data: financePayments = [] } = useQuery({ queryKey: ['client-payments'], queryFn: getClientPayments });
+  const { data: contracts = [] } = useQuery({ queryKey: ['client-contracts'], queryFn: getFinanceContracts });
+  const { data: debts = [] } = useQuery({ queryKey: ['client-debts'], queryFn: getClientDebts });
 
   const requestIds = new Set(orders.map((order) => order.id));
   const annualContracts = contracts.filter((contract) =>
@@ -736,7 +734,7 @@ export const CabinetPaymentsPage = () => {
 };
 
 export const CabinetCompanyPage = () => {
-  const user = getCurrentUser();
+  const { user } = useAuth();
   const contracts = getContractsForClient(user);
   return (
     <Reveal>

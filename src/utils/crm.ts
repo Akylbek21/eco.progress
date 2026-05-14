@@ -1,5 +1,42 @@
-import { businessCompanies, clientContracts, getBusinessCompanyById, getBusinessCompanyByServiceId, orderStatusDefinitions, type ClientContract, type EcologyStatus, type LaboratoryStatus, type MockUser, type Order, type OrderStatus, type OrderStatusDefinition, type PaymentStatus } from '../data/mockData';
+import type { BusinessCompany, ClientContract, EcologyStatus, LaboratoryStatus, MockUser, Order, OrderStatus, OrderStatusCategory, OrderStatusDefinition, PaymentStatus } from '../types';
 import { ecologyStatusLabels, laboratoryStatusLabels } from '../types/crm';
+
+export const orderStatusDefinitions: OrderStatusDefinition[] = [
+  { id: 'Консультация', label: 'Консультация', description: 'Менеджер связывается с клиентом, уточняет задачу и первичные данные.', order: 1, category: 'client', clientVisibleLabel: 'Консультация', employeeActionLabel: 'Провести консультацию' },
+  { id: 'Анализ', label: 'Анализ', description: 'Специалист анализирует услугу, объект, исходные документы, сроки и риски.', order: 2, category: 'client', clientVisibleLabel: 'Анализ заявки', employeeActionLabel: 'Выполнить анализ' },
+  { id: 'КП', label: 'КП', description: 'Команда готовит коммерческое предложение с составом работ, сроками и стоимостью.', order: 3, category: 'commercial', clientVisibleLabel: 'Коммерческое предложение', employeeActionLabel: 'Подготовить КП' },
+  { id: 'Договор', label: 'Договор', description: 'Договор согласован или отправлен клиенту на подписание.', order: 4, category: 'legal', clientVisibleLabel: 'Договор', employeeActionLabel: 'Подготовить договор' },
+  { id: 'Счет на оплату', label: 'Счет на оплату', description: 'Счет выставлен, заявка ожидает оплату или проверку оплаты.', order: 5, category: 'finance', clientVisibleLabel: 'Счет на оплату', employeeActionLabel: 'Выставить счет' },
+  { id: 'annual_active', label: 'Активна по годовому договору', description: 'Заявка обслуживается по годовому договору с квартальными работами.', order: 6, category: 'work', clientVisibleLabel: 'Активна по годовому договору', employeeActionLabel: 'Вести квартальное обслуживание' },
+  { id: 'Проектирование', label: 'Проектирование', description: 'Экологи выполняют проектирование, разрешительную документацию, отчеты.', order: 6, category: 'work', clientVisibleLabel: 'Выполнение работ', employeeActionLabel: 'Передать в проектирование' },
+  { id: 'Лаборатория', label: 'Лаборатория', description: 'Лаборатория выполняет анализы, замеры, работу с пробами.', order: 6, category: 'work', clientVisibleLabel: 'Выполнение работ', employeeActionLabel: 'Передать в лабораторию' },
+  { id: 'Вывоз', label: 'Вывоз', description: 'Команда организует вывоз или транспортировку отходов.', order: 6, category: 'work', clientVisibleLabel: 'Выполнение работ', employeeActionLabel: 'Организовать вывоз' },
+  { id: 'Утилизация', label: 'Утилизация', description: 'Команда выполняет утилизацию, размещение, переработку.', order: 6, category: 'work', clientVisibleLabel: 'Выполнение работ', employeeActionLabel: 'Передать на утилизацию' },
+  { id: 'Проверка результата', label: 'Проверка результата', description: 'Готовые материалы проходят внутреннюю проверку.', order: 7, category: 'quality', clientVisibleLabel: 'Проверка результата', employeeActionLabel: 'Проверить результат' },
+  { id: 'Готово', label: 'Готово', description: 'Результат готов и доступен клиенту.', order: 8, category: 'done', clientVisibleLabel: 'Готово', employeeActionLabel: 'Передать клиенту' },
+  { id: 'Завершено', label: 'Завершено', description: 'Заявка полностью закрыта.', order: 9, category: 'done', clientVisibleLabel: 'Завершено', employeeActionLabel: 'Завершить заявку' },
+  { id: 'Отменено', label: 'Отменено', description: 'Заявка отменена.', order: 99, category: 'cancelled', clientVisibleLabel: 'Отменено', employeeActionLabel: 'Вернуть в работу' },
+];
+
+export const statusDescriptions: Record<OrderStatus, string> = Object.fromEntries(
+  orderStatusDefinitions.map((s) => [s.id, s.description])
+) as Record<OrderStatus, string>;
+
+export const businessCompanies: BusinessCompany[] = [
+  { id: 'eco-docs', name: 'ECOPROGRESS Documents', shortName: 'Documents', description: 'Экологическое проектирование, разрешительная документация, отчетность и сопровождение предприятий.', serviceCategories: ['Проектирование', 'Разрешения', 'Предприятия'] },
+  { id: 'eco-lab', name: 'ECOPROGRESS Laboratory', shortName: 'Laboratory', description: 'Лабораторные исследования, замеры, протоколы и работа с образцами.', serviceCategories: ['Лаборатория'] },
+  { id: 'eco-waste', name: 'ECOPROGRESS Waste', shortName: 'Waste', description: 'Вывоз, транспортировка, утилизация и размещение отходов.', serviceCategories: ['Отходы'] },
+];
+
+export const getBusinessCompanyById = (id?: string): BusinessCompany =>
+  businessCompanies.find((c) => c.id === id) || businessCompanies[0];
+
+export const getBusinessCompanyByServiceId = (serviceId?: string): BusinessCompany => {
+  if (!serviceId) return businessCompanies[0];
+  if (/lab|лаборатор/i.test(serviceId)) return businessCompanies.find((c) => c.id === 'eco-lab') || businessCompanies[0];
+  if (/waste|транспорт|вывоз|утилиз|полигон/i.test(serviceId)) return businessCompanies.find((c) => c.id === 'eco-waste') || businessCompanies[0];
+  return businessCompanies[0];
+};
 
 export const orderStatuses: OrderStatus[] = orderStatusDefinitions.map((status) => status.id);
 
@@ -143,22 +180,22 @@ export const formatContractDaysLeft = (contract: Pick<ClientContract, 'endsAt'>)
   return `Осталось ${daysLeft} дн.`;
 };
 
-export const getContractsForClient = (user?: MockUser | null) => {
+export const getContractsForClient = (user?: MockUser | null, contracts: ClientContract[] = []) => {
   if (!user) return [];
-  return clientContracts.filter((contract) =>
+  return contracts.filter((contract) =>
     contract.clientId === user.id ||
     (user.companyName && contract.companyName === user.companyName)
   );
 };
 
-export const getContractsForOrder = (order: Order) =>
-  clientContracts.filter((contract) =>
+export const getContractsForOrder = (order: Order, contracts: ClientContract[] = []) =>
+  contracts.filter((contract) =>
     (contract.clientId === order.clientId || contract.companyName === getOrderCompanyName(order)) &&
     contract.businessCompanyId === getOrderBusinessCompany(order).id
   );
 
-export const getPrimaryContractForOrder = (order: Order) =>
-  getContractsForOrder(order).sort((a, b) => getContractDaysLeft(a) - getContractDaysLeft(b))[0];
+export const getPrimaryContractForOrder = (order: Order, contracts: ClientContract[] = []) =>
+  getContractsForOrder(order, contracts).sort((a, b) => getContractDaysLeft(a) - getContractDaysLeft(b))[0];
 
 export const isCompletedOrder = (order: Order) => ['Готово', 'Завершено'].includes(order.status);
 

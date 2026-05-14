@@ -1,4 +1,4 @@
-import type { Contract, Debt, PaymentMethod, PaymentRecordStatus, QuarterlyContractItem, QuarterNumber, QuarterScheduleType, UserRole } from '../data/mockData';
+import type { Contract, Debt, PaymentMethod, PaymentRecordStatus, QuarterlyContractItem, QuarterNumber, QuarterScheduleType, UserRole } from '../types';
 
 const dayMs = 24 * 60 * 60 * 1000;
 

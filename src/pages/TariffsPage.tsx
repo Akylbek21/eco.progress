@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClipboardCheck, FileText, FlaskConical, Recycle, ShieldCheck } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import Button from '../components/ui/Button';
 import SEO from '../components/SEO';
-import { tariffs } from '../data/mockData';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { fetcher } from '../services/api';
+import type { TariffItem } from '../types';
 
 const modes = ['Все', 'Разовая задача', 'Ежемесячное сопровождение'] as const;
 
@@ -22,10 +25,16 @@ const workflow = [
 
 const TariffsPage = () => {
   const [mode, setMode] = useState<(typeof modes)[number]>('Все');
+  const { data: tariffs = [], isLoading } = useQuery({
+    queryKey: ['tariffs'],
+    queryFn: () => fetcher<TariffItem[]>('/tariffs'),
+  });
   const filteredTariffs = useMemo(
     () => (mode === 'Все' ? tariffs : tariffs.filter((tariff) => tariff.mode === mode)),
-    [mode],
+    [mode, tariffs],
   );
+
+  if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
 
   return (
     <div className="bg-[#F7FBFD]">

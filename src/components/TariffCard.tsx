@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import { TariffItem } from '../data/mockData';
+import type { TariffItem } from '../types';
 
 interface TariffCardProps {
   tariff: TariffItem;

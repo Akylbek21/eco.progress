@@ -1,12 +1,20 @@
 import { Link, Navigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
-import { services } from '../data/mockData';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { getServiceById } from '../services/serviceService';
 
 const ServiceDetailsPage = () => {
   const { id } = useParams();
-  const service = services.find((item) => item.id === id);
+  const { data: service, isLoading } = useQuery({
+    queryKey: ['services', id],
+    queryFn: () => getServiceById(id!),
+    enabled: !!id,
+  });
+
+  if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
   if (!service) return <Navigate to="/services" replace />;
 
   return (

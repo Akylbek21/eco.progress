@@ -1,13 +1,20 @@
+import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
-import { clients, employees, news, services, staffUsers, users } from '../data/mockData';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { fetcher } from '../services/api';
+import type { Employee, NewsItem, ServiceItem } from '../types';
 
 const AdminPage = () => {
+  const { data: services = [] } = useQuery({ queryKey: ['services'], queryFn: () => fetcher<ServiceItem[]>('/services') });
+  const { data: news = [] } = useQuery({ queryKey: ['news'], queryFn: () => fetcher<NewsItem[]>('/news') });
+  const { data: employees = [], isLoading } = useQuery({ queryKey: ['employees'], queryFn: () => fetcher<Employee[]>('/employees') });
+
+  if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
+
   const blocks = [
     ['услуги', services.map((item) => item.title)],
     ['новости', news.map((item) => item.title)],
     ['сотрудники', employees.map((item) => item.name)],
-    ['клиенты', clients.map((item) => item.name)],
-    ['пользователи', [...users, ...staffUsers].map((item) => `${item.email} · ${item.role}`)],
     ['настройки', ['Контакты', 'Главная страница', 'Публичное меню', 'Хранилище заявок']],
   ];
 

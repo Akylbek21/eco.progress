@@ -1,4 +1,4 @@
-import { type Employee } from '../../data/mockData';
+import type { Employee } from '../../types';
 import StatusBadge from '../ui/StatusBadge';
 
 const EmployeeCard = ({ employee }: { employee: Employee }) => {

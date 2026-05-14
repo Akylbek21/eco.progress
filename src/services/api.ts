@@ -1,18 +1,40 @@
 import axios from 'axios';
 
-const apiClient = axios.create({
+const api = axios.create({
   baseURL: '/api',
-  timeout: 10000,
+  headers: { 'Content-Type': 'application/json' },
 });
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('eco-progress-token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('eco-progress-token');
+      localStorage.removeItem('eco-progress-user');
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  },
+);
+
+export default api;
 
 export type ApiResponse<T> = {
   data: T;
-  message?: string;
+  message: string | null;
 };
 
-export const fetcher = async <T>(url: string): Promise<T> => {
-  const response = await apiClient.get<ApiResponse<T>>(url);
-  return response.data.data;
-};
-
-export default apiClient;
+export async function fetcher<T>(url: string): Promise<T> {
+  const { data } = await api.get<ApiResponse<T>>(url);
+  return data.data;
+}

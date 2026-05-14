@@ -1,10 +1,11 @@
 import { ReactNode, useState } from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, Navigate } from 'react-router-dom';
 import { BarChart3, Building2, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, Handshake, LockKeyhole, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
-import { getCurrentUser, logout, switchStaffRole } from '../services/authService';
+import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
 import { canAccess } from '../config/permissions';
-import type { UserRole } from '../data/mockData';
+import type { UserRole } from '../types';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const links = [
   { label: 'Заявки', path: '/staff/orders', icon: ClipboardList },
@@ -29,16 +30,12 @@ const roleLabel = (role?: string) => {
   return labels[role || ''] || 'Manager';
 };
 
-const switchableRoles: UserRole[] = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'ECOLOGIST', 'LABORATORY'];
-
 const StaffLayout = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState(() => getCurrentUser());
+  const { user, loading, isAuthenticated, isStaff, logout } = useAuth();
 
-  const changeRole = (role: UserRole) => {
-    const session = switchStaffRole(role);
-    if (session?.user) setUser(session.user);
-  };
+  if (loading) return <div className="flex min-h-screen items-center justify-center"><LoadingSpinner /></div>;
+  if (!isAuthenticated || !isStaff) return <Navigate to="/staff/login" replace />;
 
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
@@ -109,18 +106,6 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
               <h1 className="truncate text-base font-semibold text-eco-900 sm:text-lg">{user?.name || 'Сотрудник ECOPROGRESS GROUP'}</h1>
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <label className="flex max-w-[180px] items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
-                <span className="hidden sm:inline">Роль</span>
-                <select
-                  value={user?.role && switchableRoles.includes(user.role) ? user.role : 'MANAGER'}
-                  onChange={(event) => changeRole(event.target.value as UserRole)}
-                  className="min-w-0 bg-transparent text-sm font-semibold text-eco-900 outline-none"
-                >
-                  {switchableRoles.map((role) => (
-                    <option key={role} value={role}>{roleLabel(role)}</option>
-                  ))}
-                </select>
-              </label>
               <Link to="/" className="hidden text-sm font-semibold text-eco-700 hover:text-eco-900 sm:block">На сайт</Link>
               <Link to="/staff/login" onClick={logout} className="inline-flex items-center gap-2 rounded-full bg-eco-900 px-3 py-2 text-sm font-semibold text-white sm:px-4">
                 <LogOut size={16} />

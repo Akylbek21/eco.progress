@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { type ServiceItem } from '../../data/mockData';
+import type { ServiceItem } from '../../types';
 import Button from '../ui/Button';
 
 const ServiceCard = ({ service }: { service: ServiceItem }) => {

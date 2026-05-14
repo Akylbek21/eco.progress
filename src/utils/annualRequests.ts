@@ -8,7 +8,7 @@ import type {
   QuarterResult,
   QuarterWorkStatus,
   RequestQuarter,
-} from '../data/mockData';
+} from '../types';
 import { calculateQuarterPeriod, calculateRemainingAmount, getOverdueDays } from './payments';
 import { getWorkStageByService } from './crm';
 

@@ -1,11 +1,13 @@
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
-import { register } from '../services/authService';
+import { useAuth } from '../contexts/AuthContext';
 
 const RegisterPage = ({ onSuccess }: { onSuccess?: (message: string) => void }) => {
   const [type, setType] = useState<'company' | 'individual' | null>(null);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { register } = useAuth();
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -17,25 +19,31 @@ const RegisterPage = ({ onSuccess }: { onSuccess?: (message: string) => void }) 
       onSuccess?.('Пароли не совпадают');
       return;
     }
-    if (type === 'individual') {
-      await register({ type, name: String(form.get('name')), phone: String(form.get('phone')), email: String(form.get('email')), city: String(form.get('city')), password });
-    } else {
-      await register({
-        type,
-        companyName: String(form.get('companyName')),
-        bin: String(form.get('bin')),
-        organizationType: String(form.get('organizationType')),
-        legalAddress: String(form.get('legalAddress')),
-        city: String(form.get('city')),
-        contactPerson: String(form.get('contactPerson')),
-        position: String(form.get('position')),
-        phone: String(form.get('phone')),
-        email: String(form.get('email')),
-        password,
-      });
+    setError('');
+    try {
+      if (type === 'individual') {
+        await register({ type, name: String(form.get('name')), phone: String(form.get('phone')), email: String(form.get('email')), city: String(form.get('city')), password });
+      } else {
+        await register({
+          type,
+          companyName: String(form.get('companyName')),
+          bin: String(form.get('bin')),
+          organizationType: String(form.get('organizationType')),
+          legalAddress: String(form.get('legalAddress')),
+          city: String(form.get('city')),
+          contactPerson: String(form.get('contactPerson')),
+          position: String(form.get('position')),
+          phone: String(form.get('phone')),
+          email: String(form.get('email')),
+          password,
+        });
+      }
+      onSuccess?.('Кабинет клиента создан. Теперь вы можете оставить заявку и отслеживать ее статус.');
+      navigate('/cabinet');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Ошибка регистрации';
+      setError(msg);
     }
-    onSuccess?.('Кабинет клиента создан. Теперь вы можете оставить заявку и отслеживать ее статус.');
-    navigate('/cabinet');
   };
 
   const field = (name: string, label: string, type = 'text') => (
@@ -57,6 +65,7 @@ const RegisterPage = ({ onSuccess }: { onSuccess?: (message: string) => void }) 
             </button>
           ))}
         </div>
+        {error && <p className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
         {type && (
           <form onSubmit={submit} className="mt-8 rounded-[26px] bg-white p-6 shadow-sm">
             <div className="grid gap-4 md:grid-cols-2">

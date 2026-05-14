@@ -1,11 +1,16 @@
 import { ReactNode, useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, Navigate } from 'react-router-dom';
 import { Bell, Building2, CreditCard, FileText, Home, LogOut, Menu, PlusCircle, User, X } from 'lucide-react';
-import { getCurrentUser, logout } from '../services/authService';
+import { useAuth } from '../contexts/AuthContext';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const CabinetLayout = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
-  const user = getCurrentUser();
+  const { user, loading, isAuthenticated, logout } = useAuth();
+
+  if (loading) return <div className="flex min-h-screen items-center justify-center"><LoadingSpinner /></div>;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
   const isIndividual = user?.type === 'individual';
   const links = [
     { label: 'Обзор', path: '/cabinet', icon: Home },

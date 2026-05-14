@@ -1,4 +1,4 @@
-import type { UserRole } from '../data/mockData';
+import type { UserRole } from '../types';
 
 export type Permission =
   | 'view_companies'

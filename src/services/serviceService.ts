@@ -1,5 +1,6 @@
-import { services } from '../data/mockData';
+import { fetcher } from './api';
+import type { ServiceItem } from '../types';
 
-export const getServices = async () => services;
+export const getServices = async (): Promise<ServiceItem[]> => fetcher<ServiceItem[]>('/services');
 
-export const getServiceById = async (id: string) => services.find((service) => service.id === id);
+export const getServiceById = async (id: string): Promise<ServiceItem | undefined> => fetcher<ServiceItem>(`/services/${id}`);

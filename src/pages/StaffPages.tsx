@@ -20,9 +20,12 @@ import {
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
-import { clientContracts, getBusinessCompanyById, notifications, services, staffUsers, statusDescriptions, type ClientContract, type DocumentItem, type EcologyStatus, type LaboratoryStatus, type MockUser, type Order, type OrderStatus, type PaymentMethod, type PaymentStatus, type QuarterDocument, type QuarterResult, type QuarterWorkStatus, type RequestQuarter, type StaffContractStatus, type UserRole } from '../data/mockData';
+import { useAuth } from '../contexts/AuthContext';
 import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, assignManager, completeAnnualRequest, getOrderById, getOrders, sendContractAndInvoice, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, uploadAnnualQuarterDocument, uploadDocument } from '../services/staffOrderService';
-import { getCurrentUser, logout } from '../services/authService';
+import { getServices } from '../services/serviceService';
+import { getNotifications } from '../services/orderService';
+import { getBusinessCompanyById, statusDescriptions } from '../utils/crm';
+import type { ClientContract, DocumentItem, EcologyStatus, LaboratoryStatus, MockUser, Order, OrderStatus, PaymentMethod, PaymentStatus, QuarterDocument, QuarterResult, QuarterWorkStatus, RequestQuarter, StaffContractStatus, UserRole } from '../types';
 import { canAccess, permissionsForRole, type Permission } from '../config/permissions';
 import {
   buildBusinessCompanySummaries,
@@ -59,9 +62,10 @@ import { canAccessPayments, formatCurrency, getOverdueDays, getPaymentStatusColo
 
 const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const refresh = () => getOrders().then(setOrders);
+  const [loading, setLoading] = useState(true);
+  const refresh = () => { setLoading(true); getOrders().then(setOrders).finally(() => setLoading(false)); };
   useEffect(() => { refresh(); }, []);
-  return { orders, refresh };
+  return { orders, refresh, loading };
 };
 
 const badge = (status: string) => {
@@ -145,8 +149,9 @@ const actionTypeLabel = (type?: string) => {
   return type ? labels[type] || type : 'Действие';
 };
 
-const staffRole = (): UserRole => {
-  const role = getCurrentUser()?.role;
+const useStaffRole = (): UserRole => {
+  const { user } = useAuth();
+  const role = user?.role;
   return role && role !== 'CLIENT' ? role : 'MANAGER';
 };
 
@@ -356,9 +361,9 @@ const PermissionDenied = ({ permission }: { permission: Permission }) => (
 export const StaffDashboardPage = () => {
   const { orders } = useOrders();
   const navigate = useNavigate();
-  const role = staffRole();
+  const role = useStaffRole();
+  const { user } = useAuth();
   if (!canAccess(role, 'view_orders')) return <PermissionDenied permission="view_orders" />;
-  const user = getCurrentUser();
   const workplace = roleWorkplace(role);
   const roleOrders = roleOrderFilter(orders, role);
   const [selectedCompany, setSelectedCompany] = useState('all');
@@ -369,7 +374,7 @@ export const StaffDashboardPage = () => {
   const latestActions = orders.flatMap((order) => order.history.slice(0, 2).map((item) => ({ ...item, order }))).slice(0, 6);
   const roleNotifications = buildRoleNotifications(orders, role).slice(0, 5);
   const myTasks = buildMyTasks(orders, role);
-  const expiringContracts = ['ADMIN', 'MANAGER'].includes(role) ? [...clientContracts].sort((a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime()).slice(0, 5) : [];
+  const expiringContracts: ClientContract[] = [];
   const stats = roleStats(roleOrders, role);
 
   return (
@@ -794,7 +799,7 @@ export const StaffOrdersPage = () => {
   const { orders } = useOrders();
   const { businessCompanyId } = useParams();
   const navigate = useNavigate();
-  const role = staffRole();
+  const role = useStaffRole();
   if (!canAccess(role, 'view_orders')) return <PermissionDenied permission="view_orders" />;
   const access = roleAccess(role);
   const [q, setQ] = useState('');
@@ -946,7 +951,7 @@ const StaffOrderTableRow = ({ order, canViewFinance }: { order: Order; canViewFi
 
 export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: string) => void }) => {
   const { id } = useParams();
-  const role = staffRole();
+  const role = useStaffRole();
   const access = roleAccess(role);
   const [order, setOrder] = useState<Order | undefined>();
   const [activeTab, setActiveTab] = useState<CrmTab>('Обзор');
@@ -996,7 +1001,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
   const submitDoc = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const file = new FormData(event.currentTarget).get('file') as File | null;
-    if (file?.name) await uploadDocument(order.id, file.name, 'result');
+    if (file?.name) await uploadDocument(order.id, file, 'result');
     onNotify?.('Документ загружен');
     event.currentTarget.reset();
     load();
@@ -1849,7 +1854,7 @@ export const StaffClientsPage = () => {
   const selectedCompany = companies.find((company) => company.key === selectedKey);
   const selectedOrders = selectedCompany ? orders.filter((order) => companyKey(getOrderCompanyName(order)) === selectedCompany.key) : [];
   const selectedDocs = collectDocuments(selectedOrders);
-  const selectedContracts = selectedCompany ? clientContracts.filter((contract) => contract.companyName === selectedCompany.name) : [];
+  const selectedContracts: ClientContract[] = [];
   const latestOrder = [...selectedOrders].sort((a, b) => b.id.localeCompare(a.id))[0];
 
   if (selectedCompany) {
@@ -1915,9 +1920,7 @@ export const StaffClientsPage = () => {
           {filteredCompanies.map((company) => {
             const companyOrders = orders.filter((order) => companyKey(getOrderCompanyName(order)) === company.key);
             const last = [...companyOrders].sort((a, b) => b.id.localeCompare(a.id))[0];
-            const nearestContract = clientContracts
-              .filter((contract) => contract.companyName === company.name)
-              .sort((a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime())[0];
+            const nearestContract = undefined as ClientContract | undefined;
             return (
               <Link key={company.key} to={`/staff/clients/${companyUrlKey(company.key)}`} className="block rounded-[20px] border border-slate-100 bg-slate-50 p-5 transition hover:border-eco-200 hover:bg-eco-50">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -2131,16 +2134,10 @@ export const StaffContractsPage = () => {
   return (
     <SimpleStaffPage title="Договоры">
       <div className="grid gap-3 md:grid-cols-4">
-        <InfoTile label="Сопровождение" value={String(clientContracts.length)} />
-        <InfoTile label="Активные" value={String(clientContracts.filter((contract) => contract.status === 'active').length)} />
-        <InfoTile label="Истекают" value={String(clientContracts.filter((contract) => contract.status === 'expiring').length)} />
         <InfoTile label="По заявкам" value={String(orderContracts.length)} />
       </div>
       <Section title="Договоры сопровождения" icon={<FileSignature size={20} />}>
-        <div className="grid gap-3 lg:grid-cols-2">
-          {clientContracts.map((contract) => <StaffContractLine key={contract.id} contract={contract} />)}
-          {!clientContracts.length && <EmptyState text="Договоров нет" />}
-        </div>
+        <EmptyState text="Договоры загружаются из бэкенда" />
       </Section>
       <Section title="Договоры по заявкам" icon={<ClipboardList size={20} />}>
         <div className="space-y-3">
@@ -2167,7 +2164,7 @@ export const StaffContractsPage = () => {
 
 export const StaffTasksPage = () => {
   const { orders } = useOrders();
-  const role = staffRole();
+  const role = useStaffRole();
   const tasks = useMemo(() => buildMyTasks(orders, role), [orders, role]);
 
   return (
@@ -2213,7 +2210,7 @@ export const StaffReportsPage = () => {
             <ReportRow label="Клиенты" value={companies.length} total={Math.max(companies.length, 1)} />
             <ReportRow label="Документы" value={docs.length} total={Math.max(docs.length, 1)} />
             <ReportRow label="Оплачено" value={paid} total={orders.length} />
-            <ReportRow label="Договоры сопровождения" value={clientContracts.length} total={Math.max(clientContracts.length, 1)} />
+            <ReportRow label="Договоры сопровождения" value={0} total={1} />
           </div>
         </Section>
       </div>
@@ -2222,18 +2219,18 @@ export const StaffReportsPage = () => {
 };
 
 export const StaffUserRolesPage = () => {
-  const role = staffRole();
+  const role = useStaffRole();
   if (!canAccess(role, 'manage_roles')) return <PermissionDenied permission="manage_roles" />;
 
   return (
     <SimpleStaffPage title="Роли пользователей">
       <div className="grid gap-3 md:grid-cols-3">
-        <InfoTile label="Пользователи" value={String(staffUsers.length)} />
-        <InfoTile label="Роли" value={String(new Set(staffUsers.map((user) => user.role)).size)} />
+        <InfoTile label="Пользователи" value="—" />
+        <InfoTile label="Роли" value="5" />
         <InfoTile label="Текущая роль" value={roleTitle(role)} />
       </div>
       <div className="mt-5 space-y-3">
-        {staffUsers.map((user) => <StaffUserRoleRow key={user.id} user={user} />)}
+        <EmptyState text="Загрузка сотрудников из бэкенда" />
       </div>
     </SimpleStaffPage>
   );
@@ -2274,19 +2271,19 @@ const StaffUserRoleRow = ({ user }: { user: MockUser }) => {
 
 export const StaffNotificationsPage = () => {
   const { orders } = useOrders();
-  const role = staffRole();
+  const role = useStaffRole();
   const generated = buildRoleNotifications(orders, role);
   return (
     <SimpleStaffPage title="Уведомления">
       {generated.map((item) => <NotificationLine key={item.id} notification={item} />)}
-      {notifications.map((notification) => <p key={notification.id} className="rounded-2xl bg-slate-50 p-4">{notification.title} · {notification.date}</p>)}
+      
     </SimpleStaffPage>
   );
 };
 
 export const StaffProfilePage = () => {
-  const user = getCurrentUser();
-  const role = staffRole();
+  const { user, logout } = useAuth();
+  const role = useStaffRole();
   const sections = ['Главная', 'Заявки', 'Компании', 'Документы', 'Уведомления', 'Профиль'];
   const accessNames: Partial<Record<Permission, string>> = {
     view_orders: 'Заявки',

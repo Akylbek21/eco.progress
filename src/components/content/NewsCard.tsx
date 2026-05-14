@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { type NewsItem } from '../../data/mockData';
+import type { NewsItem } from '../../types';
 import Button from '../ui/Button';
 
 const NewsCard = ({ item }: { item: NewsItem }) => {
