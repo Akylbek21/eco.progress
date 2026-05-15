@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────
 # Установка и настройка host-level Nginx + Let's Encrypt
-# для ecoprogress.kz
+# для ecoprogress.kz и db.ecoprogress.kz
 #
 # Запуск:  sudo bash setup-nginx.sh
 # ──────────────────────────────────────────────────────────────
@@ -48,13 +48,23 @@ log "Копирование snippets..."
 cp "$NGINX_HOST_DIR/snippets/ssl-params.conf"   /etc/nginx/snippets/ssl-params.conf
 cp "$NGINX_HOST_DIR/snippets/proxy-params.conf" /etc/nginx/snippets/proxy-params.conf
 
-# ─── 4. Временный HTTP-only конфиг для получения сертификата ──
-log "Создание временного HTTP конфига для ecoprogress.kz..."
-cat > /etc/nginx/sites-available/ecoprogress.conf <<'HTTPCONF'
+# ─── 4. Email для Let's Encrypt ───────────────────────────────
+read -rp "$(echo -e "${YELLOW}Email для Let's Encrypt: ${NC}")" LE_EMAIL
+
+# ─── 5. Настройка ecoprogress.kz ─────────────────────────────
+setup_domain() {
+    local DOMAIN="$1"
+    local CONF_FILE="$2"
+    local EXTRA_DOMAINS="${3:-}"
+
+    log "Настройка $DOMAIN..."
+
+    # Временный HTTP конфиг
+    cat > "/etc/nginx/sites-available/${CONF_FILE}" <<HTTPCONF
 server {
     listen 80;
     listen [::]:80;
-    server_name ecoprogress.kz www.ecoprogress.kz;
+    server_name ${DOMAIN} ${EXTRA_DOMAINS};
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -67,47 +77,51 @@ server {
 }
 HTTPCONF
 
-ln -sf /etc/nginx/sites-available/ecoprogress.conf /etc/nginx/sites-enabled/ecoprogress.conf
+    ln -sf "/etc/nginx/sites-available/${CONF_FILE}" "/etc/nginx/sites-enabled/${CONF_FILE}"
 
-if [ -L /etc/nginx/sites-enabled/default ]; then
-    rm /etc/nginx/sites-enabled/default
-    log "Удалён default virtual host"
-fi
+    if [ -L /etc/nginx/sites-enabled/default ]; then
+        rm /etc/nginx/sites-enabled/default
+    fi
 
-nginx -t && systemctl reload nginx
-log "Nginx перезагружен с временным конфигом"
+    nginx -t && systemctl reload nginx
 
-# ─── 5. Получение SSL-сертификата ────────────────────────────
-read -rp "$(echo -e "${YELLOW}Email для Let's Encrypt (для уведомлений о продлении): ${NC}")" LE_EMAIL
+    # SSL-сертификат
+    if [ ! -d "/etc/letsencrypt/live/${DOMAIN}" ]; then
+        log "Запрос сертификата для ${DOMAIN}..."
+        local CERTBOT_ARGS="-d ${DOMAIN}"
+        if [ -n "$EXTRA_DOMAINS" ]; then
+            for d in $EXTRA_DOMAINS; do
+                CERTBOT_ARGS="$CERTBOT_ARGS -d $d"
+            done
+        fi
+        certbot certonly \
+            --webroot \
+            --webroot-path /var/www/certbot \
+            $CERTBOT_ARGS \
+            --email "$LE_EMAIL" \
+            --agree-tos \
+            --non-interactive
+    else
+        warn "Сертификат для ${DOMAIN} уже существует, пропускаем"
+    fi
 
-if [ ! -d /etc/letsencrypt/live/ecoprogress.kz ]; then
-    log "Запрос сертификата для ecoprogress.kz..."
-    certbot certonly \
-        --webroot \
-        --webroot-path /var/www/certbot \
-        -d ecoprogress.kz \
-        -d www.ecoprogress.kz \
-        --email "$LE_EMAIL" \
-        --agree-tos \
-        --non-interactive
-else
-    warn "Сертификат для ecoprogress.kz уже существует, пропускаем"
-fi
+    # Production конфиг
+    log "Установка production конфига ${DOMAIN}..."
+    cp "$NGINX_HOST_DIR/${CONF_FILE}" "/etc/nginx/sites-available/${CONF_FILE}"
+    nginx -t && systemctl reload nginx
+    log "${DOMAIN} готов"
+}
 
-# ─── 6. Установка полного конфига с HTTPS ─────────────────────
-log "Установка production конфига ecoprogress.kz..."
-cp "$NGINX_HOST_DIR/ecoprogress.conf" /etc/nginx/sites-available/ecoprogress.conf
+setup_domain "ecoprogress.kz" "ecoprogress.conf" "www.ecoprogress.kz"
+setup_domain "db.ecoprogress.kz" "db.ecoprogress.conf" ""
 
-nginx -t && systemctl reload nginx
-log "Nginx перезагружен с HTTPS конфигом"
-
-# ─── 7. Автоматическое продление сертификатов ─────────────────
+# ─── 6. Автоматическое продление сертификатов ─────────────────
 if ! crontab -l 2>/dev/null | grep -q certbot; then
     log "Добавление cron для автопродления сертификатов..."
     (crontab -l 2>/dev/null; echo "0 3 * * * certbot renew --quiet --post-hook 'systemctl reload nginx'") | crontab -
 fi
 
-# ─── 8. Открытие портов в файрволе ───────────────────────────
+# ─── 7. Открытие портов в файрволе ───────────────────────────
 if command -v ufw &>/dev/null; then
     log "Настройка UFW..."
     ufw allow 'Nginx Full' >/dev/null 2>&1 || true
@@ -119,10 +133,10 @@ log "========================================="
 log "  Настройка завершена!"
 log "========================================="
 echo ""
-echo "  https://ecoprogress.kz"
+echo "  https://ecoprogress.kz       — сайт"
+echo "  https://db.ecoprogress.kz    — phpMyAdmin"
 echo ""
 echo "  Проверить конфиг:    sudo nginx -t"
 echo "  Перезагрузить:       sudo systemctl reload nginx"
 echo "  Статус сертификатов: sudo certbot certificates"
-echo "  Логи nginx:          tail -f /var/log/nginx/ecoprogress.*.log"
 echo ""
