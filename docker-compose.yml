@@ -1,8 +1,16 @@
 services:
   frontend:
     build: .
+    container_name: eco-frontend
     ports:
-      - "${FRONTEND_PORT:-80}:80"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:80"
     environment:
-      - BACKEND_URL=${BACKEND_URL:-http://host.docker.internal:8080}
+      - BACKEND_URL=${BACKEND_URL:-http://eco-app:8080}
     restart: unless-stopped
+    networks:
+      - eco
+
+networks:
+  eco:
+    external: true
+    name: eco-net
