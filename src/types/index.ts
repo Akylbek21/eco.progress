@@ -47,7 +47,25 @@ export type Employee = {
 };
 
 export type OrderStatus =
+  | 'Новая заявка'
+  | 'Связаться с клиентом'
   | 'Консультация'
+  | 'Ожидаем первичные документы'
+  | 'Анализ заявки'
+  | 'Подготовка КП'
+  | 'КП отправлено'
+  | 'КП согласовано'
+  | 'Подготовка договора'
+  | 'Договор отправлен'
+  | 'Ожидаем подпись договора'
+  | 'Договор подписан'
+  | 'Передано бухгалтеру'
+  | 'Ожидает счет'
+  | 'Счет отправлен'
+  | 'Ожидаем оплату'
+  | 'Частично оплачено'
+  | 'Полностью оплачено'
+  | 'Передано специалисту'
   | 'Анализ'
   | 'КП'
   | 'Договор'
@@ -74,9 +92,23 @@ export type OrderStatusDefinition = {
   employeeActionLabel: string;
 };
 
-export type PaymentStatus = 'not_sent' | 'pending' | 'partial' | 'paid';
+export type PaymentStatus =
+  | 'not_sent'
+  | 'awaiting_invoice'
+  | 'invoice_issued'
+  | 'invoice_sent'
+  | 'pending'
+  | 'awaiting_payment'
+  | 'partial'
+  | 'paid'
+  | 'debt'
+  | 'transferred_to_specialist';
 export type EcologyStatus = 'not_started' | 'in_progress' | 'waiting_client_data' | 'done';
 export type LaboratoryStatus = 'not_assigned' | 'waiting_samples' | 'samples_received' | 'analysis_in_progress' | 'result_ready';
+export type LaboratoryPrimaryDocumentStatus = 'not_uploaded' | 'uploaded' | 'in_review' | 'approved' | 'revision_required' | 'not_required';
+export type ClientPrimaryDocumentStatus = 'need_upload' | 'sent' | 'in_review' | 'accepted' | 'needs_fix';
+export type LaboratoryMeasurementAgreementStatus = 'draft' | 'sent_to_client' | 'accepted_by_client' | 'reschedule_requested' | 'confirmed' | 'completed' | 'cancelled';
+export type LaboratoryResultDocumentStatus = 'draft' | 'in_progress' | 'ready' | 'published_to_client' | 'archived';
 export type StaffContractStatus = 'not_created' | 'prepared' | 'sent_to_client' | 'waiting_signature' | 'signed' | 'rejected';
 export type PaymentRecordStatus = 'paid' | 'partial' | 'unpaid' | 'overdue';
 export type PaymentMethod = 'bank_transfer' | 'cash' | 'card' | 'other';
@@ -201,6 +233,88 @@ export type OrderHistoryItem = {
   comment?: string;
 };
 
+export type OrderPaymentHistoryItem = {
+  id: string;
+  orderId: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  paymentPercent: number;
+  paymentDate: string;
+  status: PaymentStatus;
+  comment?: string;
+  createdAt: string;
+  createdBy?: string;
+};
+
+export type LaboratoryPrimaryDocument = {
+  id: string;
+  orderId: string;
+  name: string;
+  status: LaboratoryPrimaryDocumentStatus;
+  fileName?: string;
+  fileUrl?: string;
+  employeeComment?: string;
+  uploadedAt?: string;
+  uploadedBy?: string;
+  statusChangedAt?: string;
+  statusChangedBy?: string;
+  history: OrderHistoryItem[];
+};
+
+export type OrderPrimaryDocument = {
+  id: string;
+  orderId: string;
+  name: string;
+  required: boolean;
+  status: ClientPrimaryDocumentStatus;
+  fileName?: string;
+  uploadedAt?: string;
+  managerComment?: string;
+  clientComment?: string;
+  requestedAt?: string;
+  updatedAt?: string;
+};
+
+export type LaboratoryMeasurementAgreement = {
+  id: string;
+  orderId: string;
+  measurementDate: string;
+  measurementTime: string;
+  address: string;
+  companyName: string;
+  contactPerson: string;
+  phone: string;
+  measurementScope: string;
+  comment: string;
+  status: LaboratoryMeasurementAgreementStatus;
+  sentAt?: string;
+  acceptedAt?: string;
+  rescheduleDate?: string;
+  rescheduleTime?: string;
+  rescheduleComment?: string;
+  completedAt?: string;
+  updatedAt?: string;
+};
+
+export type LaboratoryResultDocument = {
+  id: string;
+  orderId: string;
+  name: string;
+  section: 'protocol' | 'form_870' | 'base_report' | 'quarter_report' | 'annual_report' | 'half_year_report' | 'archive_report';
+  quarter?: QuarterNumber;
+  status: LaboratoryResultDocumentStatus;
+  fileName?: string;
+  fileUrl?: string;
+  readyAt?: string;
+  uploadedAt?: string;
+  uploadedBy?: string;
+  publishedAt?: string;
+  publishedBy?: string;
+  comment?: string;
+  history: OrderHistoryItem[];
+};
+
 export type Order = {
   id: string;
   businessCompanyId?: string;
@@ -212,7 +326,9 @@ export type Order = {
   bin: string;
   organizationType: string;
   legalAddress: string;
+  objectAddress?: string;
   contactPerson: string;
+  whatsapp?: string;
   phone: string;
   email: string;
   serviceId: string;
@@ -233,8 +349,19 @@ export type Order = {
   signatureProvider?: string;
   paymentMethod?: string;
   paymentAmount?: string;
+  offerAmount?: number;
+  contractAmount?: number;
+  totalAmount?: number;
+  paidAmount?: number;
+  remainingAmount?: number;
+  paymentTerms?: 'full_prepayment' | 'partial_allowed';
+  minPrepaymentPercent?: number;
   paymentUrl?: string;
   paymentComment?: string;
+  accountantComment?: string;
+  invoiceFileName?: string;
+  invoiceSentAt?: string;
+  paymentHistory?: OrderPaymentHistoryItem[];
   invoiceNumber?: string;
   actNumber?: string;
   assignedManagerId?: string;
@@ -251,11 +378,17 @@ export type Order = {
   laboratoryComment?: string;
   samplesReceivedAt?: string;
   laboratoryReadyAt?: string;
+  laboratoryPrimaryDocuments?: LaboratoryPrimaryDocument[];
+  laboratoryMeasurementAgreement?: LaboratoryMeasurementAgreement;
+  laboratorySections?: string[];
+  laboratoryResultDocuments?: LaboratoryResultDocument[];
+  notifications?: NotificationItem[];
   deadline?: string;
   updatedAt?: string;
   signedAt?: string;
   paidAt?: string;
   documents: DocumentItem[];
+  primaryDocuments?: OrderPrimaryDocument[];
   resultDocuments: DocumentItem[];
   comments: CommentItem[];
   history: OrderHistoryItem[];

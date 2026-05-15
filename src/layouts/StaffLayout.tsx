@@ -1,21 +1,24 @@
 import { ReactNode, useState } from 'react';
 import { NavLink, Link, Navigate } from 'react-router-dom';
-import { BarChart3, Building2, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, Handshake, LockKeyhole, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
+import { BarChart3, Bell, Building2, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, Handshake, LayoutDashboard, LockKeyhole, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
 import { canAccess } from '../config/permissions';
 import type { UserRole } from '../types';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { staffUsers } from '../data/mockData';
 
-const links = [
+const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[] }> = [
+  { label: 'Дашборд', path: '/staff', icon: LayoutDashboard },
   { label: 'Заявки', path: '/staff/orders', icon: ClipboardList },
-  { label: 'Клиенты', path: '/staff/clients', icon: Building2 },
-  { label: 'КП', path: '/staff/commercial-offers', icon: Handshake },
-  { label: 'Договоры', path: '/staff/contracts', icon: FileSignature },
-  { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true },
+  { label: 'Клиенты', path: '/staff/clients', icon: Building2, allowedRoles: ['ADMIN', 'MANAGER'] },
+  { label: 'КП', path: '/staff/commercial-offers', icon: Handshake, allowedRoles: ['ADMIN', 'MANAGER'] },
+  { label: 'Договоры', path: '/staff/contracts', icon: FileSignature, allowedRoles: ['ADMIN', 'MANAGER', 'ACCOUNTANT'] },
+  { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Задачи', path: '/staff/tasks', icon: ClipboardCheck },
   { label: 'Документы', path: '/staff/documents', icon: FileText },
-  { label: 'Отчеты', path: '/staff/reports', icon: BarChart3 },
+  { label: 'Уведомления', path: '/staff/notifications', icon: Bell },
+  { label: 'Отчеты', path: '/staff/reports', icon: BarChart3, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Роли пользователей', path: '/staff/user-roles', icon: ShieldCheck, rolesOnly: true },
 ];
 
@@ -32,15 +35,17 @@ const roleLabel = (role?: string) => {
 
 const StaffLayout = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
-  const { user, loading, isAuthenticated, isStaff, logout } = useAuth();
+  const { user, loading, isAuthenticated, isStaff, logout, setUser } = useAuth();
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><LoadingSpinner /></div>;
   if (!isAuthenticated || !isStaff) return <Navigate to="/staff/login" replace />;
+  const localDemo = localStorage.getItem('eco-progress-token')?.startsWith('local-demo-token');
 
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
       {links.map((item) => {
         const Icon = item.icon;
+        if (item.allowedRoles && (!user?.role || !item.allowedRoles.includes(user.role))) return null;
         const locked = (item.paymentsOnly && !canAccessPayments(user?.role)) || (item.rolesOnly && !canAccess(user?.role, 'manage_roles'));
         if (locked) {
           const title = item.rolesOnly ? 'Доступно только администратору' : 'Доступно только администратору и бухгалтеру';
@@ -106,6 +111,21 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
               <h1 className="truncate text-base font-semibold text-eco-900 sm:text-lg">{user?.name || 'Сотрудник ECOPROGRESS GROUP'}</h1>
             </div>
             <div className="flex shrink-0 items-center gap-3">
+              {localDemo && (
+                <select
+                  value={user?.id || ''}
+                  onChange={(event) => {
+                    const nextUser = staffUsers.find((item) => item.id === event.target.value);
+                    if (nextUser) setUser(nextUser);
+                  }}
+                  className="hidden rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-eco-900 outline-none sm:block"
+                  aria-label="Change role"
+                >
+                  {staffUsers.map((item) => (
+                    <option key={item.id} value={item.id}>{roleLabel(item.role)}</option>
+                  ))}
+                </select>
+              )}
               <Link to="/" className="hidden text-sm font-semibold text-eco-700 hover:text-eco-900 sm:block">На сайт</Link>
               <Link to="/staff/login" onClick={logout} className="inline-flex items-center gap-2 rounded-full bg-eco-900 px-3 py-2 text-sm font-semibold text-white sm:px-4">
                 <LogOut size={16} />

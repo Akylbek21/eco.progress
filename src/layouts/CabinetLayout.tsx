@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Link, NavLink, Navigate } from 'react-router-dom';
-import { Bell, Building2, CreditCard, FileText, Home, LogOut, Menu, PlusCircle, User, X } from 'lucide-react';
+import { Building2, CreditCard, FileText, Home, LogOut, Menu, User, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
@@ -13,13 +13,11 @@ const CabinetLayout = ({ children }: { children: ReactNode }) => {
 
   const isIndividual = user?.type === 'individual';
   const links = [
-    { label: 'Обзор', path: '/cabinet', icon: Home },
-    { label: isIndividual ? 'Мои заявки' : 'Заявки компании', path: '/cabinet/orders', icon: FileText },
-    { label: 'Новая заявка', path: '/cabinet/orders/new', icon: PlusCircle },
-    { label: isIndividual ? 'Мои документы' : 'Документы компании', path: '/cabinet/documents', icon: FileText },
-    { label: 'Оплаты', path: '/cabinet/payments', icon: CreditCard },
-    { label: isIndividual ? 'Профиль' : 'Данные компании', path: '/cabinet/company', icon: isIndividual ? User : Building2 },
-    { label: 'Уведомления', path: '/cabinet/notifications', icon: Bell },
+    { label: 'Главная', path: '/cabinet', icon: Home },
+    { label: 'Мои заявки', path: '/cabinet/orders', icon: FileText },
+    { label: 'Документы', path: '/cabinet/documents', icon: FileText },
+    { label: 'Оплата', path: '/cabinet/payments', icon: CreditCard },
+    { label: 'Профиль компании', path: '/cabinet/company', icon: isIndividual ? User : Building2 },
   ];
 
   const nav = (

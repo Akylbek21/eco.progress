@@ -40,15 +40,63 @@ export const getBusinessCompanyByServiceId = (serviceId?: string): BusinessCompa
 
 export const orderStatuses: OrderStatus[] = orderStatusDefinitions.map((status) => status.id);
 
+export const managerOrderStatuses: OrderStatus[] = [
+  'Новая заявка',
+  'Связаться с клиентом',
+  'Консультация',
+  'Ожидаем первичные документы',
+  'Анализ заявки',
+  'Подготовка КП',
+  'КП отправлено',
+  'КП согласовано',
+  'Подготовка договора',
+  'Договор отправлен',
+  'Ожидаем подпись договора',
+  'Договор подписан',
+  'Передано бухгалтеру',
+  'Ожидает счет',
+  'Счет отправлен',
+  'Ожидаем оплату',
+  'Частично оплачено',
+  'Полностью оплачено',
+  'Передано специалисту',
+];
+
+export const accountantOrderStatuses: OrderStatus[] = [
+  'Передано бухгалтеру',
+  'Ожидает счет',
+  'Счет отправлен',
+  'Ожидаем оплату',
+  'Частично оплачено',
+  'Полностью оплачено',
+  'Передано специалисту',
+];
+
 export const workOrderStatuses: OrderStatus[] = ['Проектирование', 'Лаборатория', 'Вывоз', 'Утилизация'];
 
-export const paymentStatuses: PaymentStatus[] = ['not_sent', 'pending', 'partial', 'paid'];
+export const paymentStatuses: PaymentStatus[] = ['not_sent', 'awaiting_invoice', 'invoice_issued', 'invoice_sent', 'pending', 'awaiting_payment', 'partial', 'paid', 'debt', 'transferred_to_specialist'];
 
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
-  not_sent: 'Не оплачено',
+  not_sent: 'Ожидает счет',
+  awaiting_invoice: 'Ожидает счет',
+  invoice_issued: 'Счет выставлен',
+  invoice_sent: 'Счет отправлен клиенту',
   pending: 'Ожидает оплаты',
+  awaiting_payment: 'Ожидаем оплату',
   partial: 'Частично оплачено',
-  paid: 'Оплачено',
+  paid: 'Полностью оплачено',
+  debt: 'Есть задолженность',
+  transferred_to_specialist: 'Передано специалисту',
+};
+
+export const managerPaymentStatusLabel = (order: Pick<Order, 'paymentStatus' | 'quarters'>) => {
+  if (order.paymentStatus === 'transferred_to_specialist') return 'Передано специалисту';
+  if (order.paymentStatus === 'paid') return 'Полностью оплачено';
+  if (order.quarters?.some((quarter) => quarter.remainingAmount > 0) || order.paymentStatus === 'partial' || order.paymentStatus === 'debt') return 'Частично оплачено';
+  if (order.paymentStatus === 'invoice_issued') return 'Счет выставлен';
+  if (order.paymentStatus === 'invoice_sent') return 'Счет отправлен';
+  if (order.paymentStatus === 'pending' || order.paymentStatus === 'awaiting_payment') return 'Ожидаем оплату';
+  return 'Счет не выставлен';
 };
 
 export const fallbackPaymentStatus = (status?: PaymentStatus): PaymentStatus => status || 'not_sent';
@@ -101,12 +149,52 @@ export const getOrderWorkStageLabel = (order: Order) => getWorkStageLabel(order)
 
 export const isWorkOrderStatus = (status: OrderStatus) => workOrderStatuses.includes(status);
 
-export const getWorkflowForOrder = (order: Order): OrderStatus[] => [
+export const overallWorkflowSteps = [
   'Консультация',
-  'Анализ',
+  'Запросить первичные документы',
+  'Анализ специалиста',
   'КП',
   'Договор',
-  'Счет на оплату',
+  'Оплата',
+  'Работа специалиста',
+  'Завершение',
+] as const;
+
+export type OverallWorkflowStep = typeof overallWorkflowSteps[number];
+
+export const getOverallWorkflowStepIndex = (order: Order) => {
+  if (order.status === 'Отменено') return 0;
+  if (order.status === 'Завершено' || order.status === 'Готово') return 7;
+  if (order.status === 'Проверка результата' || order.status === 'Передано специалисту' || order.status === 'annual_active' || isWorkOrderStatus(order.status)) return 6;
+  if (['Передано бухгалтеру', 'Ожидает счет', 'Счет отправлен', 'Ожидаем оплату', 'Частично оплачено', 'Полностью оплачено', 'Счет на оплату'].includes(order.status)) return 5;
+  if (['Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан', 'Договор'].includes(order.status)) return 4;
+  if (['Подготовка КП', 'КП отправлено', 'КП согласовано', 'КП'].includes(order.status)) return 3;
+  if (order.status === 'Анализ заявки' || order.status === 'Анализ') return 2;
+  if (order.status === 'Ожидаем первичные документы') return 1;
+  if (order.status === 'Консультация') return 0;
+  return 0;
+};
+
+export const getWorkflowForOrder = (order: Order): OrderStatus[] => [
+  'Новая заявка',
+  'Связаться с клиентом',
+  'Консультация',
+  'Ожидаем первичные документы',
+  'Анализ заявки',
+  'Подготовка КП',
+  'КП отправлено',
+  'КП согласовано',
+  'Подготовка договора',
+  'Договор отправлен',
+  'Ожидаем подпись договора',
+  'Договор подписан',
+  'Передано бухгалтеру',
+  'Ожидает счет',
+  'Счет отправлен',
+  'Ожидаем оплату',
+  'Частично оплачено',
+  'Полностью оплачено',
+  'Передано специалисту',
   ...(order.contractType === 'annual_quarterly' ? ['annual_active' as OrderStatus] : [getOrderWorkStageLabel(order)]),
   'Проверка результата',
   'Готово',
@@ -114,11 +202,16 @@ export const getWorkflowForOrder = (order: Order): OrderStatus[] => [
 ];
 
 export const normalizeOrderStatus = (status: string | undefined, order: Pick<Order, 'service' | 'serviceId' | 'businessCompanyId'>): OrderStatus => {
+  if (status === 'Новая') return 'Новая заявка';
+  if (status === 'В обработке') return 'Связаться с клиентом';
+  if (status === 'Ожидает документы') return 'Ожидаем первичные документы';
+  if (status === 'Анализ') return 'Анализ заявки';
+  if (status === 'КП') return 'Подготовка КП';
+  if (status === 'Договор') return 'Подготовка договора';
+  if (status === 'Счет на оплату') return 'Ожидаем оплату';
   if (orderStatuses.includes(status as OrderStatus)) return status as OrderStatus;
   if (status === 'Активна по годовому договору') return 'annual_active';
 
-  if (status === 'Новая') return 'Консультация';
-  if (status === 'В обработке' || status === 'Ожидает документы') return 'Анализ';
   if (status === 'В работе') return getWorkStageByService(order);
   if (status === 'На проверке') return 'Проверка результата';
   if (status === 'Готово') return 'Готово';
@@ -131,7 +224,7 @@ export const normalizeOrderStatus = (status: string | undefined, order: Pick<Ord
 export const getNextOrderStatus = (order: Order): OrderStatus | undefined => {
   if (order.status === 'Отменено' || order.status === 'Завершено') return undefined;
   if (order.contractType === 'annual_quarterly' && order.status === 'annual_active') return undefined;
-  if (order.status === 'Счет на оплату' && fallbackPaymentStatus(order.paymentStatus) !== 'paid') return undefined;
+  if (['Ожидаем оплату', 'Частично оплачено', 'Счет на оплату'].includes(order.status) && !['paid', 'transferred_to_specialist'].includes(fallbackPaymentStatus(order.paymentStatus))) return undefined;
 
   const workflow = getWorkflowForOrder(order);
   const currentIndex = workflow.indexOf(order.status);
@@ -200,7 +293,7 @@ export const getPrimaryContractForOrder = (order: Order, contracts: ClientContra
 export const isCompletedOrder = (order: Order) => ['Готово', 'Завершено'].includes(order.status);
 
 export const isWaitingOrder = (order: Order) =>
-  order.status === 'Счет на оплату' || order.contractStatus === 'sent' || fallbackPaymentStatus(order.paymentStatus) === 'pending';
+  ['Ожидает счет', 'Счет отправлен', 'Ожидаем оплату', 'Частично оплачено', 'Полностью оплачено', 'Счет на оплату'].includes(order.status) || order.contractStatus === 'sent' || ['pending', 'awaiting_payment', 'invoice_sent', 'partial'].includes(fallbackPaymentStatus(order.paymentStatus));
 
 export const isActiveOrder = (order: Order) => !['Готово', 'Завершено', 'Отменено'].includes(order.status);
 
@@ -209,6 +302,13 @@ export const getNextCrmStep = (order: Order) => {
   if (order.status === 'Отменено') return 'Заявка отменена';
   if (order.status === 'Завершено') return 'Заявка завершена';
   if (order.status === 'annual_active') return 'Вести квартальное обслуживание по годовому договору';
+  if (order.status === 'Передано бухгалтеру') return 'Бухгалтер выставляет счет и ведет оплату';
+  if (order.status === 'Ожидает счет') return 'Выставить и прикрепить счет клиенту';
+  if (order.status === 'Счет отправлен') return 'Ожидать оплату клиента';
+  if (order.status === 'Ожидаем оплату') return 'Проверить поступление оплаты';
+  if (order.status === 'Частично оплачено') return 'Проверить условия старта работ или контролировать долг';
+  if (order.status === 'Полностью оплачено') return 'Передать заявку специалисту';
+  if (order.status === 'Передано специалисту') return 'Специалист получил задачу';
   if (order.status === 'Счет на оплату') {
     if (paymentStatus === 'paid') return `Передать на этап: ${getOrderWorkStageLabel(order)}`;
     if (paymentStatus === 'partial') return 'Проверить остаток оплаты';
@@ -242,9 +342,12 @@ export const ecologyLabel = (status?: EcologyStatus) => ecologyStatusLabels[stat
 export const laboratoryLabel = (status?: LaboratoryStatus) => laboratoryStatusLabels[status || 'not_assigned'];
 
 export const statusClass = (status: string) => {
-  if (status === 'Консультация' || status === 'Анализ') return 'bg-sky-50 text-sky-800 ring-sky-100';
-  if (status === 'КП' || status === 'Договор') return 'bg-indigo-50 text-indigo-800 ring-indigo-100';
-  if (status === 'Счет на оплату') return 'bg-amber-50 text-amber-800 ring-amber-100';
+  if (['Новая заявка', 'Связаться с клиентом', 'Консультация', 'Ожидаем первичные документы', 'Анализ', 'Анализ заявки'].includes(status)) return 'bg-sky-50 text-sky-800 ring-sky-100';
+  if (['КП', 'Подготовка КП', 'КП отправлено', 'КП согласовано'].includes(status)) return 'bg-indigo-50 text-indigo-800 ring-indigo-100';
+  if (['Договор', 'Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан'].includes(status)) return 'bg-violet-50 text-violet-800 ring-violet-100';
+  if (['Передано бухгалтеру', 'Ожидает счет', 'Счет на оплату', 'Счет отправлен', 'Ожидаем оплату'].includes(status)) return 'bg-amber-50 text-amber-800 ring-amber-100';
+  if (status === 'Частично оплачено') return 'bg-indigo-50 text-indigo-800 ring-indigo-100';
+  if (status === 'Полностью оплачено' || status === 'Передано специалисту') return 'bg-emerald-50 text-emerald-800 ring-emerald-100';
   if (status === 'annual_active') return 'bg-cyan-50 text-cyan-800 ring-cyan-100';
   if (status === 'Проектирование' || status === 'Лаборатория' || status === 'Вывоз' || status === 'Утилизация') return 'bg-eco-50 text-eco-800 ring-eco-100';
   if (status === 'Проверка результата') return 'bg-violet-50 text-violet-800 ring-violet-100';
@@ -255,9 +358,10 @@ export const statusClass = (status: string) => {
 
 export const paymentStatusClass = (status?: PaymentStatus) => {
   const paymentStatus = fallbackPaymentStatus(status);
-  if (paymentStatus === 'paid') return 'bg-emerald-50 text-emerald-800 ring-emerald-100';
+  if (paymentStatus === 'paid' || paymentStatus === 'transferred_to_specialist') return 'bg-emerald-50 text-emerald-800 ring-emerald-100';
   if (paymentStatus === 'partial') return 'bg-indigo-50 text-indigo-800 ring-indigo-100';
-  if (paymentStatus === 'pending') return 'bg-amber-50 text-amber-800 ring-amber-100';
+  if (paymentStatus === 'debt') return 'bg-rose-50 text-rose-800 ring-rose-100';
+  if (['pending', 'awaiting_payment', 'invoice_issued', 'invoice_sent', 'awaiting_invoice'].includes(paymentStatus)) return 'bg-amber-50 text-amber-800 ring-amber-100';
   return 'bg-slate-100 text-slate-700 ring-slate-200';
 };
 

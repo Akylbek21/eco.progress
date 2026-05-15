@@ -60,11 +60,11 @@ const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: 
           {error && <p className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
           <label className="mt-7 block text-sm font-semibold text-slate-700">
             Email
-            <input name="email" type="email" required placeholder={staff ? 'manager@ecoprogress.kz' : 'name@example.com'} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+            <input name="email" type="email" required defaultValue={staff ? 'manager@ecoprogress.kz' : 'client@ecoprogress.kz'} placeholder={staff ? 'manager@ecoprogress.kz' : 'client@ecoprogress.kz'} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
           </label>
           <label className="mt-4 block text-sm font-semibold text-slate-700">
             Пароль
-            <input name="password" type="password" required className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+            <input name="password" type="password" required defaultValue="demo" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
           </label>
           <Button disabled={loading} className="mt-6 w-full">{loading ? 'Входим...' : 'Войти'}</Button>
           <div className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">

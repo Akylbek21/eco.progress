@@ -7,7 +7,7 @@ import type {
   LaboratoryResultDocumentStatus,
   Order,
   OrderHistoryItem,
-} from '../data/mockData';
+} from '../types';
 
 export const laboratoryPrimaryDocumentNames = [
   'Разрешение',
@@ -31,18 +31,20 @@ export const laboratorySectionLabels = {
   protocol: 'Протокол',
   form_870: '870 форма',
   base_report: 'База отчёт',
+  quarter_report: 'Квартальный отчёт',
   annual_report: 'Годовой отчёт',
   half_year_report: 'Полугодовой отчёт',
   archive_report: 'Архив отчёт',
   history: 'История',
 } as const;
 
-export const laboratoryResultSections = ['protocol', 'form_870', 'base_report', 'annual_report', 'half_year_report', 'archive_report'] as const;
+export const laboratoryResultSections = ['protocol', 'form_870', 'base_report', 'quarter_report', 'annual_report', 'half_year_report', 'archive_report'] as const;
 
 export const laboratoryResultSectionLabels: Record<LaboratoryResultDocument['section'], string> = {
   protocol: 'Протокол',
   form_870: '870 форма',
   base_report: 'База отчёт',
+  quarter_report: 'Квартальный отчёт',
   annual_report: 'Годовой отчёт',
   half_year_report: 'Полугодовой отчёт',
   archive_report: 'Архив отчёт',

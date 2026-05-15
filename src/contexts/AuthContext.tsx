@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import api from '../services/api';
 import type { MockUser, UserRole } from '../types';
+import { staffUsers, users } from '../data/mockData';
 
 type AuthState = {
   user: MockUser | null;
@@ -40,6 +41,7 @@ export type RegisterPayload =
 
 const TOKEN_KEY = 'eco-progress-token';
 const USER_KEY = 'eco-progress-user';
+const LOCAL_TOKEN_PREFIX = 'local-demo-token';
 
 const staffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY'];
 
@@ -71,6 +73,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const storedToken = localStorage.getItem(TOKEN_KEY);
     if (!storedToken) { setLoading(false); return; }
+    if (storedToken.startsWith(LOCAL_TOKEN_PREFIX)) {
+      setLoading(false);
+      return;
+    }
     api.get<{ data: MockUser; message: string | null }>('/auth/me')
       .then(({ data }) => {
         const u = data.data;
@@ -84,13 +90,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [clearSession]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const { data } = await api.post<{ data: { token: string; user: MockUser }; message: string | null }>('/auth/login', { email, password });
-    saveSession(data.data.token, data.data.user);
+    const localUser = users.find((item) => item.email.toLowerCase() === email.toLowerCase());
+    if (import.meta.env.DEV && localUser && password) {
+      saveSession(`${LOCAL_TOKEN_PREFIX}-client`, localUser as MockUser);
+      return;
+    }
+    try {
+      const { data } = await api.post<{ data: { token: string; user: MockUser }; message: string | null }>('/auth/login', { email, password });
+      saveSession(data.data.token, data.data.user);
+    } catch (error) {
+      if (!localUser || !password) throw error;
+      saveSession(`${LOCAL_TOKEN_PREFIX}-client`, localUser as MockUser);
+    }
   }, [saveSession]);
 
   const staffLogin = useCallback(async (email: string, password: string) => {
-    const { data } = await api.post<{ data: { token: string; user: MockUser }; message: string | null }>('/auth/staff/login', { email, password });
-    saveSession(data.data.token, data.data.user);
+    const localUser = staffUsers.find((item) => item.email.toLowerCase() === email.toLowerCase());
+    if (import.meta.env.DEV && localUser && password) {
+      saveSession(`${LOCAL_TOKEN_PREFIX}-staff`, localUser as MockUser);
+      return;
+    }
+    try {
+      const { data } = await api.post<{ data: { token: string; user: MockUser }; message: string | null }>('/auth/staff/login', { email, password });
+      saveSession(data.data.token, data.data.user);
+    } catch (error) {
+      if (!localUser || !password) throw error;
+      saveSession(`${LOCAL_TOKEN_PREFIX}-staff`, localUser as MockUser);
+    }
   }, [saveSession]);
 
   const register = useCallback(async (payload: RegisterPayload) => {

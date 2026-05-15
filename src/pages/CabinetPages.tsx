@@ -1,12 +1,12 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { CalendarDays, CheckCircle2, CreditCard, FileSignature, LockKeyhole } from 'lucide-react';
+import { CalendarDays, CheckCircle2, CreditCard, Download, FileSignature, FileText, LockKeyhole, RefreshCw, Upload, X } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
-import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, signOrderContract, payOrderOnline, uploadQuarterDocument } from '../services/orderService';
+import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, signOrderContract, payOrderOnline, uploadQuarterDocument, deletePrimaryDocumentFile, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentsForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument } from '../services/orderService';
 import { getClientPayments, getClientDebts, getFinanceContracts } from '../services/paymentService';
 import { getServices } from '../services/serviceService';
 import {
@@ -26,48 +26,58 @@ import {
 } from '../utils/crm';
 import { getAnnualRequestDebtSummary, getAnnualRequestProgress, getAnnualRequestWarnings, getCurrentQuarterForRequest, isAnnualRequest } from '../utils/annualRequests';
 import { formatCurrency, getPaymentStatusColor, getPaymentStatusLabel } from '../utils/payments';
-import type { Contract, Debt, Order, Payment, RequestQuarter } from '../types';
+import type { ClientPrimaryDocumentStatus, Contract, Debt, LaboratoryPrimaryDocument, Order, OrderPrimaryDocument, Payment, RequestQuarter } from '../types';
 
-const badge = (status: string) => {
-  const label = status === 'annual_active' ? 'Активна по годовому договору' : status;
-  return <span className="rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">{label}</span>;
+type ClientSimpleStatus = 'Заявка принята' | 'Ожидаем документы' | 'Договор и оплата' | 'В работе' | 'Готово' | 'Отменено';
+
+const clientSimpleSteps: ClientSimpleStatus[] = ['Заявка принята', 'Ожидаем документы', 'Договор и оплата', 'В работе', 'Готово'];
+
+const clientSimpleStatus = (order: Order): ClientSimpleStatus => {
+  if (order.status === 'Отменено') return 'Отменено';
+  if (['Готово', 'Завершено'].includes(order.status)) return 'Готово';
+  if (order.primaryDocuments?.some((doc) => ['need_upload', 'needs_fix'].includes(doc.status)) || order.status === 'Ожидаем первичные документы') return 'Ожидаем документы';
+  if (['Передано бухгалтеру', 'Ожидает счет', 'Счет отправлен', 'Ожидаем оплату', 'Частично оплачено', 'Полностью оплачено', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан', 'Передано специалисту'].includes(order.status)) return 'Договор и оплата';
+  if (isWorkOrderStatus(order.status) || ['annual_active', 'Проверка результата'].includes(order.status)) return 'В работе';
+  return 'Заявка принята';
 };
 
-const clientStepLabel = (order: Order, status: string) => {
-  if (status === 'annual_active') return 'Годовое обслуживание';
-  if (status === getOrderWorkStageLabel(order)) return 'Выполнение работ';
-  if (status === 'КП') return 'КП';
-  return status;
-};
-
-const clientSteps = (order: Order) => getWorkflowForOrder(order)
-  .filter((status) => status !== 'Завершено')
-  .map((status) => clientStepLabel(order, status));
-
-const clientStage = (order: Order) => {
-  if (order.status === 'Отменено') return 0;
-  if (order.status === 'Завершено') return clientSteps(order).length - 1;
-  return Math.max(0, getWorkflowForOrder(order).filter((status) => status !== 'Завершено').indexOf(order.status));
+const badge = (status: ClientSimpleStatus) => {
+  const tone =
+    status === 'Готово' ? 'bg-emerald-50 text-emerald-800' :
+    status === 'Отменено' ? 'bg-rose-50 text-rose-800' :
+    status === 'Ожидаем документы' ? 'bg-amber-50 text-amber-800' :
+    status === 'Договор и оплата' ? 'bg-indigo-50 text-indigo-800' :
+    status === 'В работе' ? 'bg-eco-50 text-eco-800' :
+    'bg-sky-50 text-sky-800';
+  return <span className={`rounded-full px-3 py-1 text-xs font-bold ${tone}`}>{status}</span>;
 };
 
 const clientStatusText = (order: Order) => {
-  if (order.status === 'Консультация') return 'Заявка получена. Специалист уточняет задачу и первичные данные.';
-  if (order.status === 'Анализ') return 'Специалист анализирует исходные данные, сроки и состав работ.';
-  if (order.status === 'КП') return 'Готовим коммерческое предложение с составом работ и стоимостью.';
-  if (order.status === 'Договор') return 'Договор готовится или ожидает подписания.';
-  if (order.status === 'Счет на оплату') return 'Счет выставлен. После оплаты заявка перейдет к выполнению работ.';
-  if (isWorkOrderStatus(order.status)) return `Работы выполняются. Внутренний этап: ${getOrderWorkStageLabel(order)}.`;
-  if (order.status === 'Проверка результата') return 'Готовые материалы проходят внутреннюю проверку качества.';
-  if (order.status === 'Готово' || order.status === 'Завершено') return 'Работа завершена. Результат доступен в документах заявки.';
-  if (order.status === 'Отменено') return 'Заявка отменена. При необходимости создайте новую заявку.';
-  return getOrderStatusDefinition(order.status).description;
+  const status = clientSimpleStatus(order);
+  if (status === 'Заявка принята') return 'Мы получили заявку. Менеджер проверит данные и сообщит следующий шаг.';
+  if (status === 'Ожидаем документы') return 'Загрузите первичные документы внутри заявки, чтобы мы могли начать подготовку.';
+  if (status === 'Договор и оплата') return 'Проверьте договор и счет. Если требуется, загрузите чек оплаты.';
+  if (status === 'В работе') return 'Работа выполняется. Готовые документы появятся в разделе результата.';
+  if (status === 'Готово') return 'Работа завершена. Готовые документы доступны в заявке.';
+  return 'Заявка отменена. При необходимости создайте новую заявку.';
+};
+
+const clientNextStep = (order: Order) => {
+  const status = clientSimpleStatus(order);
+  if (status === 'Ожидаем документы') return 'Загрузите первичные документы для начала работы.';
+  if (status === 'Договор и оплата') return 'Проверьте договор, счет и при необходимости загрузите чек оплаты.';
+  if (status === 'В работе') return 'Ожидайте готовые документы, мы добавим их в результат.';
+  if (status === 'Готово') return 'Скачайте готовые документы в разделе “Результат”.';
+  if (status === 'Отменено') return 'Создайте новую заявку, если услуга снова нужна.';
+  return 'Ожидайте сообщение менеджера.';
 };
 
 const ClientStatusPath = ({ order }: { order: Order }) => {
-  const current = clientStage(order);
-  const steps = clientSteps(order);
+  const simpleStatus = clientSimpleStatus(order);
+  const current = simpleStatus === 'Отменено' ? -1 : clientSimpleSteps.indexOf(simpleStatus);
+  const steps = simpleStatus === 'Отменено' ? ['Отменено'] : clientSimpleSteps;
   return (
-    <div className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
+    <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
       {steps.map((step, index) => (
         <div key={step} className={`rounded-2xl border p-3 text-xs font-semibold ${index <= current ? 'border-accent bg-eco-50 text-eco-900' : 'border-slate-200 bg-white text-slate-500'}`}>
           {step}
@@ -92,8 +102,8 @@ export const CabinetDashboardPage = () => {
   const nearestContract = [...contracts].sort((a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime())[0];
   const stats = [
     ['Активные заявки', orders.filter((o) => !['Готово', 'Завершено', 'Отменено'].includes(o.status)).length],
-    ['Документы', orders.reduce((sum, order) => sum + order.documents.length + order.resultDocuments.length, 0)],
-    ['Ожидает оплаты', orders.filter((o) => o.paymentStatus === 'pending').length],
+    ['Нужны документы', orders.filter((o) => clientSimpleStatus(o) === 'Ожидаем документы').length],
+    ['Договор и оплата', orders.filter((o) => clientSimpleStatus(o) === 'Договор и оплата').length],
     ['Договоров', contracts.length],
   ];
   return (
@@ -104,7 +114,7 @@ export const CabinetDashboardPage = () => {
           <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-2xl font-bold sm:text-3xl">{user?.name ?? 'Клиент ECOPROGRESS GROUP'}</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">Здесь вы видите заявки, документы, договоры, оплату и комментарии специалиста.</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">Здесь видно главное: статус заявки, какие документы нужны, договор, счет и готовый результат.</p>
             </div>
             <Link to="/cabinet/orders/new"><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Создать новую заявку</Button></Link>
           </div>
@@ -157,7 +167,7 @@ const OrderRow = ({ order }: { order: Order }) => (
   <Link to={`/cabinet/orders/${order.id}`} className="block rounded-2xl bg-eco-50 p-4 hover:bg-eco-100">
     <div className="flex items-start justify-between gap-4">
       <div className="min-w-0"><p className="font-semibold text-slate-900">{order.id}</p><p className="mt-1 break-words text-sm text-slate-600">{order.service}</p></div>
-      {badge(order.status)}
+      {badge(clientSimpleStatus(order))}
     </div>
     <p className="mt-3 text-sm leading-6 text-slate-600">{clientStatusText(order)}</p>
     <ClientStatusPath order={order} />
@@ -330,6 +340,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
   const { id } = useParams();
   const queryClient = useQueryClient();
   const [order, setOrder] = useState<Order | undefined>();
+  const [activeTab, setActiveTab] = useState<'Обзор' | 'Документы' | 'Договор и счет' | 'Результат'>('Обзор');
   const load = () => id && fetchOrderById(id).then(setOrder);
   useEffect(() => { load(); }, [id]);
   if (!id) return <Navigate to="/cabinet/orders" replace />;
@@ -364,6 +375,58 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
     load();
     queryClient.invalidateQueries({ queryKey: ['client-orders'] });
   };
+  const submitPrimaryFile = async (event: FormEvent<HTMLFormElement>, document: OrderPrimaryDocument) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const file = form.get('file') as File | null;
+    if (file?.name) {
+      await uploadPrimaryDocument(order.id, document.id, file.name, String(form.get('comment') || ''));
+      onNotify?.(document.fileName ? 'Файл заменен' : 'Документ загружен');
+    }
+    event.currentTarget.reset();
+    load();
+  };
+  const sendPrimaryDocs = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await sendPrimaryDocumentsForReview(order.id, String(form.get('comment') || ''));
+    onNotify?.('Документы отправлены менеджеру на проверку');
+    event.currentTarget.reset();
+    load();
+  };
+  const deletePrimaryFile = async (document: OrderPrimaryDocument) => {
+    await deletePrimaryDocumentFile(order.id, document.id);
+    onNotify?.('Файл удален');
+    load();
+  };
+  const submitLaboratoryPrimaryFile = async (event: FormEvent<HTMLFormElement>, document: LaboratoryPrimaryDocument) => {
+    event.preventDefault();
+    const file = new FormData(event.currentTarget).get('file') as File | null;
+    if (file?.name) {
+      await uploadLaboratoryPrimaryDocument(order.id, document.id, file.name);
+      onNotify?.(document.fileName ? 'Файл заменен' : 'Документ загружен');
+    }
+    event.currentTarget.reset();
+    load();
+  };
+  const acceptMeasurement = async () => {
+    await respondLaboratoryMeasurementAgreement(order.id, { action: 'accept' });
+    onNotify?.('Дата замера подтверждена');
+    load();
+  };
+  const requestMeasurementReschedule = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await respondLaboratoryMeasurementAgreement(order.id, {
+      action: 'reschedule',
+      rescheduleDate: String(form.get('rescheduleDate') || ''),
+      rescheduleTime: String(form.get('rescheduleTime') || ''),
+      comment: String(form.get('comment') || ''),
+    });
+    onNotify?.('Вариант другой даты отправлен');
+    event.currentTarget.reset();
+    load();
+  };
   const handleSign = async () => {
     await signOrderContract(order.id, order.signatureProvider || 'NCALayer / ЭЦП');
     onNotify?.('Договор подписан электронной подписью');
@@ -377,39 +440,257 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
     queryClient.invalidateQueries({ queryKey: ['client-orders'] });
   };
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="space-y-6">
       <Reveal>
-        <div className="rounded-[24px] bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4"><div className="min-w-0"><h2 className="text-2xl font-bold text-eco-900">{order.id}</h2><p className="mt-1 break-words text-slate-600">{order.service}</p></div>{badge(order.status)}</div>
-          <p className="mt-4 rounded-2xl bg-eco-50 p-4 text-sm leading-6 text-slate-700">{clientStatusText(order)}</p>
-          <ClientStatusPath order={order} />
-          {isAnnualRequest(order) && <ClientAnnualRequestPanel order={order} onUpload={submitQuarterFile} />}
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <Info label="Компания-исполнитель" value={order.businessCompanyName || getBusinessCompanyById(order.businessCompanyId).name} />
-            {serviceContract && <Info label="Договор клиента" value={`${serviceContract.number} · ${formatContractDaysLeft(serviceContract)}`} />}
-            <Info label="Дата создания" value={order.createdAt} />
-            <Info label="Срочность" value={order.urgency} />
-            <Info label="Комментарий клиента" value={order.comment} />
-            <Info label="Ответственный" value={order.manager} />
+        <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-500">Заявка №{order.id.replace('ORD-', '')}</p>
+              <h2 className="mt-1 break-words text-2xl font-bold text-eco-900">{order.service}</h2>
+            </div>
+            {badge(clientSimpleStatus(order))}
           </div>
-          <Section title="Документы клиента" items={order.documents.map((d) => d.name)} />
-          <Section title="Документы ECOPROGRESS GROUP" items={order.resultDocuments.map((d) => d.name)} />
-          <Section title="Комментарии сотрудника" items={order.comments.filter((c) => c.visibility === 'client').map((c) => `${c.author}: ${c.text}`)} />
-          <Section title="История заявки" items={order.history.map((h) => `${h.createdAt} - ${h.text}`)} />
+          <ClientStatusPath order={order} />
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+            {(['Обзор', 'Документы', 'Договор и счет', 'Результат'] as const).map((tab) => (
+              <button
+                type="button"
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${activeTab === tab ? 'bg-eco-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-eco-50 hover:text-eco-900'}`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
       </Reveal>
-      <Reveal direction="left">
-        <div className="space-y-5">
-          <OnlineOrderPanel order={order} onSign={handleSign} onPay={handlePay} />
-          <form onSubmit={submitFile} className="rounded-[22px] bg-white p-5 shadow-sm"><h3 className="font-bold text-eco-900">Загрузить документ</h3><input name="file" type="file" required className="mt-4 w-full rounded-2xl border border-slate-200 px-4 py-3" /><Button className="mt-4 w-full">Загрузить</Button></form>
-          <form onSubmit={submitComment} className="rounded-[22px] bg-white p-5 shadow-sm"><h3 className="font-bold text-eco-900">Написать комментарий</h3><textarea name="comment" required className="input-focus mt-4 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} /><Button className="mt-4 w-full">Отправить</Button></form>
-        </div>
-      </Reveal>
+
+      {activeTab === 'Обзор' && (
+        <Reveal>
+          <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Info label="Номер заявки" value={order.id} />
+              <Info label="Услуга" value={order.service} />
+              <Info label="Статус" value={clientSimpleStatus(order)} />
+              <Info label="Менеджер" value={order.manager || 'Назначается'} />
+            </div>
+            <div className="mt-5 rounded-2xl bg-eco-50 p-4">
+              <p className="text-xs font-semibold uppercase text-slate-500">Следующий шаг</p>
+              <p className="mt-2 text-lg font-bold text-eco-900">{clientNextStep(order)}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{clientStatusText(order)}</p>
+            </div>
+          </div>
+        </Reveal>
+      )}
+
+      {activeTab === 'Документы' && (
+        <ClientPrimaryDocumentsPanel
+          order={order}
+          onUpload={submitPrimaryFile}
+          onSend={sendPrimaryDocs}
+          onDelete={deletePrimaryFile}
+        />
+      )}
+
+      {activeTab === 'Договор и счет' && (
+        <ClientContractInvoicePanel order={order} onSign={handleSign} onPay={handlePay} onUploadReceipt={submitFile} serviceContract={serviceContract} />
+      )}
+
+      {activeTab === 'Результат' && <ClientResultPanel order={order} />}
     </div>
   );
 };
 
 const Info = ({ label, value }: { label: string; value: string }) => <div className="rounded-2xl bg-eco-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">{label}</p><p className="mt-2 text-sm text-slate-800">{value || 'Не указано'}</p></div>;
+
+const primaryDocumentStatusLabels: Record<ClientPrimaryDocumentStatus, string> = {
+  need_upload: 'Нужно загрузить',
+  sent: 'Отправлено',
+  in_review: 'На проверке',
+  accepted: 'Принято',
+  needs_fix: 'Нужно исправить',
+};
+
+const primaryDocumentStatusClass = (status: ClientPrimaryDocumentStatus) => {
+  if (status === 'accepted') return 'bg-emerald-50 text-emerald-800 ring-emerald-100';
+  if (status === 'needs_fix') return 'bg-rose-50 text-rose-800 ring-rose-100';
+  if (status === 'in_review') return 'bg-indigo-50 text-indigo-800 ring-indigo-100';
+  if (status === 'sent') return 'bg-sky-50 text-sky-800 ring-sky-100';
+  return 'bg-amber-50 text-amber-800 ring-amber-100';
+};
+
+const ClientPrimaryDocumentsPanel = ({
+  order,
+  onUpload,
+  onSend,
+  onDelete,
+}: {
+  order: Order;
+  onUpload: (event: FormEvent<HTMLFormElement>, document: OrderPrimaryDocument) => void;
+  onSend: (event: FormEvent<HTMLFormElement>) => void;
+  onDelete: (document: OrderPrimaryDocument) => void;
+}) => {
+  const documents = order.primaryDocuments || [];
+  const requiredLeft = documents.filter((doc) => doc.required && doc.status !== 'accepted').length;
+  const canSend = documents.some((doc) => doc.fileName && ['sent', 'needs_fix'].includes(doc.status));
+
+  return (
+    <Reveal>
+      <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h3 className="text-xl font-bold text-eco-900">Первичные документы для работы</h3>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+              Загружайте документы прямо в эту заявку. Принятые документы удалить нельзя.
+            </p>
+          </div>
+          <span className="rounded-full bg-eco-50 px-4 py-2 text-sm font-bold text-eco-800">Осталось: {requiredLeft}</span>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          {documents.map((doc) => (
+            <div key={doc.id} className="rounded-[20px] border border-slate-100 bg-slate-50 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-900">{doc.name}</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">{doc.required ? 'Обязательный документ' : 'Необязательный документ'}</p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${primaryDocumentStatusClass(doc.status)}`}>{primaryDocumentStatusLabels[doc.status]}</span>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <Info label="Файл" value={doc.fileName || 'Не загружен'} />
+                <Info label="Дата загрузки" value={doc.uploadedAt || 'Нет'} />
+                <Info label="Комментарий менеджера" value={doc.managerComment || 'Нет'} />
+              </div>
+              {doc.clientComment && <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm text-slate-600">Ваш комментарий: {doc.clientComment}</p>}
+              {doc.status !== 'accepted' && (
+                <form onSubmit={(event) => onUpload(event, doc)} className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+                  <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" />
+                  <input name="comment" placeholder="Комментарий к документу" defaultValue={doc.clientComment || ''} className="input-focus w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" />
+                  <Button type="submit" className="whitespace-nowrap">{doc.fileName ? 'Заменить файл' : 'Загрузить'}</Button>
+                </form>
+              )}
+              {doc.fileName && doc.status !== 'accepted' && (
+                <button type="button" onClick={() => onDelete(doc)} className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-rose-700">
+                  <X size={16} /> Удалить файл
+                </button>
+              )}
+            </div>
+          ))}
+          {!documents.length && (
+            <div className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-500">
+              Менеджер пока не запросил документы. Когда список появится, вы сможете загрузить файлы здесь.
+            </div>
+          )}
+        </div>
+
+        {documents.length > 0 && (
+          <form onSubmit={onSend} className="mt-5 rounded-[20px] border border-eco-100 bg-eco-50 p-4">
+            <label className="text-sm font-semibold text-slate-700">Комментарий менеджеру</label>
+            <textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} placeholder="Например: загрузили все документы, просим проверить" />
+            <Button type="submit" disabled={!canSend} className="mt-3 w-full sm:w-auto">
+              <Upload size={16} className="mr-2" /> Отправить документы
+            </Button>
+          </form>
+        )}
+      </div>
+    </Reveal>
+  );
+};
+
+const ClientContractInvoicePanel = ({
+  order,
+  onSign,
+  onPay,
+  onUploadReceipt,
+  serviceContract,
+}: {
+  order: Order;
+  onSign: () => void;
+  onPay: () => void;
+  onUploadReceipt: (event: FormEvent<HTMLFormElement>) => void;
+  serviceContract?: ReturnType<typeof getPrimaryContractForOrder>;
+}) => {
+  const contractDoc = order.documents.find((doc) => doc.name.toLowerCase().includes('договор')) || order.resultDocuments.find((doc) => doc.name.toLowerCase().includes('договор'));
+  const invoiceDoc = order.resultDocuments.find((doc) => doc.type === 'invoice' || doc.name.toLowerCase().includes('счет') || doc.name.toLowerCase().includes('счёт'));
+  const paymentText = order.paymentStatus === 'paid' || order.paymentStatus === 'transferred_to_specialist'
+    ? 'Оплата получена'
+    : order.paymentStatus === 'partial'
+    ? 'Оплачено частично'
+    : ['invoice_sent', 'awaiting_payment', 'pending'].includes(order.paymentStatus || '')
+    ? 'Ожидаем оплату'
+    : 'Счет пока не выставлен';
+
+  return (
+    <Reveal>
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">
+          <h3 className="text-xl font-bold text-eco-900">Договор и счет</h3>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <DocumentDownloadCard title="Договор" docName={contractDoc?.name || serviceContract?.number || 'Договор пока не загружен'} ready={Boolean(contractDoc || serviceContract)} />
+            <DocumentDownloadCard title="Счет" docName={invoiceDoc?.name || order.invoiceNumber || 'Счет пока не выставлен'} ready={Boolean(invoiceDoc || order.invoiceNumber)} />
+          </div>
+          <div className="mt-5 rounded-2xl bg-eco-50 p-4">
+            <p className="text-xs font-semibold uppercase text-slate-500">Статус оплаты</p>
+            <p className="mt-2 text-lg font-bold text-eco-900">{paymentText}</p>
+          </div>
+        </div>
+        <div className="space-y-5">
+          <OnlineOrderPanel order={order} onSign={onSign} onPay={onPay} />
+          <form onSubmit={onUploadReceipt} className="rounded-[22px] bg-white p-5 shadow-sm">
+            <h3 className="font-bold text-eco-900">Загрузить чек оплаты</h3>
+            <input name="file" type="file" required className="mt-4 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+            <Button className="mt-4 w-full">Загрузить чек</Button>
+          </form>
+        </div>
+      </div>
+    </Reveal>
+  );
+};
+
+const DocumentDownloadCard = ({ title, docName, ready }: { title: string; docName: string; ready: boolean }) => (
+  <div className="rounded-[20px] border border-slate-100 bg-slate-50 p-4">
+    <div className="flex items-start gap-3">
+      <FileText className={ready ? 'text-eco-700' : 'text-slate-400'} size={20} />
+      <div className="min-w-0">
+        <p className="font-bold text-slate-900">{title}</p>
+        <p className="mt-1 break-words text-sm text-slate-600">{docName}</p>
+      </div>
+    </div>
+    <a href="#download" className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold ${ready ? 'bg-eco-900 text-white' : 'pointer-events-none bg-slate-200 text-slate-500'}`}>
+      <Download size={14} /> Скачать
+    </a>
+  </div>
+);
+
+const ClientResultPanel = ({ order }: { order: Order }) => {
+  const ready = ['Готово', 'Завершено'].includes(order.status);
+  const results = ready ? order.resultDocuments.filter((doc) => doc.type === 'result') : [];
+  return (
+    <Reveal>
+      <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">
+        <h3 className="text-xl font-bold text-eco-900">Результат</h3>
+        {results.length ? (
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            {results.map((doc) => (
+              <div key={doc.id} className="rounded-[20px] bg-eco-50 p-4">
+                <p className="font-bold text-slate-900">{doc.name}</p>
+                <p className="mt-1 text-sm text-slate-500">Дата готовности: {doc.uploadedAt}</p>
+                <p className="mt-2 text-sm text-slate-600">{doc.status}</p>
+                <a href={`#${doc.id}`} download={doc.name} className="mt-3 inline-flex items-center gap-2 rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white"><Download size={14} /> Скачать</a>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-5 rounded-2xl bg-slate-50 p-5 text-sm leading-6 text-slate-600">
+            Работа еще выполняется. Когда документы будут готовы, они появятся здесь.
+          </div>
+        )}
+      </div>
+    </Reveal>
+  );
+};
 
 const clientQuarterWorkLabel = (quarter: RequestQuarter) => {
   if (quarter.workStatus === 'completed') return 'Работы выполнены';
@@ -554,9 +835,9 @@ const ClientQuarterCard = ({ quarter, isCurrent, onUpload }: { quarter: RequestQ
 };
 
 const OnlineOrderPanel = ({ order, onSign, onPay }: { order: Order; onSign: () => void; onPay: () => void }) => {
-  const available = order.contractStatus === 'sent' || order.contractStatus === 'signed' || order.paymentStatus === 'pending' || order.paymentStatus === 'paid';
+  const available = order.contractStatus === 'sent' || order.contractStatus === 'signed' || ['invoice_sent', 'awaiting_payment', 'pending', 'partial', 'paid', 'transferred_to_specialist'].includes(order.paymentStatus || '');
   const signed = order.contractStatus === 'signed';
-  const paid = order.paymentStatus === 'paid';
+  const paid = order.paymentStatus === 'paid' || order.paymentStatus === 'transferred_to_specialist';
   if (!available) {
     return (
       <div className="rounded-[22px] bg-white p-5 shadow-sm">
@@ -606,8 +887,22 @@ const Section = ({ title, items }: { title: string; items: string[] }) => <div c
 
 export const CabinetDocumentsPage = () => {
   const { orders } = useClientOrders();
-  const docs = orders.flatMap((o) => [...o.documents, ...o.resultDocuments]);
-  return <PageList title="Документы">{docs.map((doc) => <div key={doc.id} className="rounded-2xl bg-eco-50 p-4 text-sm">{doc.name} · {doc.status}</div>)}</PageList>;
+  const docs = orders.flatMap((order) => [
+    ...(order.primaryDocuments || []).map((doc) => ({ id: doc.id, orderId: order.id, name: doc.name, status: primaryDocumentStatusLabels[doc.status], file: doc.fileName || 'Файл не загружен' })),
+    ...order.documents.map((doc) => ({ id: doc.id, orderId: order.id, name: doc.name, status: doc.status, file: doc.name })),
+    ...order.resultDocuments.map((doc) => ({ id: doc.id, orderId: order.id, name: doc.name, status: doc.status, file: doc.name })),
+  ]);
+  return (
+    <PageList title="Документы">
+      {docs.map((doc) => (
+        <Link key={doc.id} to={`/cabinet/orders/${doc.orderId}`} className="block rounded-2xl bg-eco-50 p-4 text-sm hover:bg-eco-100">
+          <p className="font-bold text-slate-900">{doc.name}</p>
+          <p className="mt-1 text-slate-600">{doc.orderId} · {doc.status} · {doc.file}</p>
+        </Link>
+      ))}
+      {!docs.length && <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Документов пока нет</div>}
+    </PageList>
+  );
 };
 
 const CabinetPaymentsPageLegacy = () => {
@@ -618,7 +913,7 @@ const CabinetPaymentsPageLegacy = () => {
     invoice: `Онлайн-счет ${order.id}`,
     service: order.service,
     amount: order.paymentStatus === 'not_sent' || !order.paymentStatus ? 'Не выставлен' : order.paymentAmount || 'Не выставлен',
-    status: order.paymentStatus === 'paid' ? 'Оплачено онлайн' : order.paymentStatus === 'pending' ? 'Ожидает онлайн-оплаты' : 'Счет еще не выставлен',
+    status: order.paymentStatus === 'paid' || order.paymentStatus === 'transferred_to_specialist' ? 'Оплачено' : ['invoice_sent', 'awaiting_payment', 'pending', 'partial'].includes(order.paymentStatus || '') ? 'Ожидает оплаты' : 'Счет еще не выставлен',
   }));
   return (
     <PageList title="Оплаты">
