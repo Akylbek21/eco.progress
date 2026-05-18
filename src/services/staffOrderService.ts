@@ -102,7 +102,7 @@ export const uploadDocument = async (orderId: string, file: File, type?: string)
 
 export const sendContractAndInvoice = async (
   orderId: string,
-  payload: { amount: string; paymentMethod: string; signatureProvider: string; contractFileName?: string },
+  payload: { amount: string; paymentMethod?: string; signatureProvider?: string; contractFileName?: string; contractPeriodStart?: string; contractPeriodEnd?: string; contractServiceNote?: string; contractNote?: string },
 ) => {
   if (isLocalDemo()) return sendMockContractAndInvoice(orderId, payload);
   const { data } = await api.post<{ data: Order; message: string | null }>(`/staff/orders/${orderId}/contract-and-invoice`, payload);

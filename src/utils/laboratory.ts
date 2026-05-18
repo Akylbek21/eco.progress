@@ -38,9 +38,10 @@ export const laboratorySectionLabels = {
   history: 'История',
 } as const;
 
-export const laboratoryResultSections = ['protocol', 'form_870', 'base_report', 'quarter_report', 'annual_report', 'half_year_report', 'archive_report'] as const;
+export const laboratoryResultSections = ['measurement', 'protocol', 'form_870', 'base_report', 'quarter_report', 'annual_report', 'half_year_report', 'archive_report'] as const;
 
 export const laboratoryResultSectionLabels: Record<LaboratoryResultDocument['section'], string> = {
+  measurement: 'Согласование',
   protocol: 'Протокол',
   form_870: '870 форма',
   base_report: 'База отчёт',

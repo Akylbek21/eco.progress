@@ -301,7 +301,7 @@ export type LaboratoryResultDocument = {
   id: string;
   orderId: string;
   name: string;
-  section: 'protocol' | 'form_870' | 'base_report' | 'quarter_report' | 'annual_report' | 'half_year_report' | 'archive_report';
+  section: 'measurement' | 'protocol' | 'form_870' | 'base_report' | 'quarter_report' | 'annual_report' | 'half_year_report' | 'archive_report';
   quarter?: QuarterNumber;
   status: LaboratoryResultDocumentStatus;
   fileName?: string;
@@ -351,6 +351,11 @@ export type Order = {
   paymentAmount?: string;
   offerAmount?: number;
   contractAmount?: number;
+  contractFileName?: string;
+  contractPeriodStart?: string;
+  contractPeriodEnd?: string;
+  contractServiceNote?: string;
+  contractNote?: string;
   totalAmount?: number;
   paidAmount?: number;
   remainingAmount?: number;

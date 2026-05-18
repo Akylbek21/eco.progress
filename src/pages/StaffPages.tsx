@@ -1174,15 +1174,16 @@ const staffUtilityTabs: Array<{ label: string; target: CrmTab }> = [
 ];
 
 const roleVisibleTabs = (role: UserRole, order: Order): CrmTab[] => {
-  if (role === 'MANAGER' && managerOrderStatuses.includes(order.status)) return ['Обзор', 'Договор', 'Документы', 'Сообщения', 'Заметки', 'История'];
-  if (role === 'ACCOUNTANT') return ['Обзор', 'Оплата', 'Договор', 'Документы', 'История'];
+  const tabsForOrder = (tabs: CrmTab[]) => isLaboratoryOrder(order) ? tabs.filter((tab) => tab !== 'Документы') : tabs;
+  if (role === 'MANAGER' && managerOrderStatuses.includes(order.status)) return tabsForOrder(['Обзор', 'Договор', 'Документы', 'Сообщения', 'Заметки', 'История']);
+  if (role === 'ACCOUNTANT') return tabsForOrder(['Обзор', 'Оплата', 'Договор', 'Документы', 'История']);
   if (role !== 'ADMIN' && isLaboratoryOrder(order)) {
     return ['Обзор заявки', 'Лаборатория', 'История'];
   }
-  if (role === 'ADMIN') return ['Обзор', 'Оплата', 'Договор', 'Документы', 'Экология', 'Лаборатория', 'Сообщения', 'Заметки', 'История'];
-  if (role === 'ECOLOGIST') return ['Обзор', 'Экология', 'Документы', 'Сообщения', 'Заметки'];
-  if (role === 'LABORATORY') return ['Обзор', 'Лаборатория', 'Документы', 'Сообщения', 'Заметки'];
-  return ['Обзор', 'Договор', 'Документы', 'Сообщения', 'Заметки', 'История'];
+  if (role === 'ADMIN') return tabsForOrder(['Обзор', 'Оплата', 'Договор', 'Документы', 'Экология', 'Лаборатория', 'Сообщения', 'Заметки', 'История']);
+  if (role === 'ECOLOGIST') return tabsForOrder(['Обзор', 'Экология', 'Документы', 'Сообщения', 'Заметки']);
+  if (role === 'LABORATORY') return tabsForOrder(['Обзор', 'Лаборатория', 'Документы', 'Сообщения', 'Заметки']);
+  return tabsForOrder(['Обзор', 'Договор', 'Документы', 'Сообщения', 'Заметки', 'История']);
 };
 
 const roleDefaultTab = (role: UserRole, order: Order): CrmTab => {
@@ -1430,18 +1431,21 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
       return;
     }
     const form = new FormData(event.currentTarget);
+    const status = String(form.get('paymentStatus') || 'partial') as PaymentStatus;
+    const total = orderFinance(order).total || order.contractAmount || order.offerAmount || order.totalAmount || 0;
+    const percentValue = Number(form.get('paymentPercent') || (status === 'paid' ? 100 : order.minPrepaymentPercent ?? 50));
+    const paymentPercent = Math.min(Math.max(Number.isFinite(percentValue) ? percentValue : 0, 0), 100);
+    const paidAmount = status === 'paid' ? total : Math.round((total * paymentPercent) / 100);
+    const document = form.get('paymentDocument') as File | null;
     await updatePaymentStatus(order.id, String(form.get('paymentStatus')) as PaymentStatus, {
-      amount: String(form.get('totalAmount') || form.get('amount') || ''),
-      totalAmount: String(form.get('totalAmount') || form.get('amount') || ''),
-      paidAmount: String(form.get('paidAmount') || ''),
+      amount: String(total || ''),
+      totalAmount: total,
+      paidAmount,
       paidAt: String(form.get('paidAt') || ''),
       comment: String(form.get('comment') || ''),
-      method: String(form.get('paymentMethod') || ''),
-      invoiceNumber: String(form.get('invoiceNumber') || ''),
-      actNumber: String(form.get('actNumber') || ''),
-      invoiceFileName: String(form.get('invoiceFileName') || ''),
-      paymentTerms: String(form.get('paymentTerms') || order.paymentTerms || 'full_prepayment') as Order['paymentTerms'],
-      minPrepaymentPercent: String(form.get('minPrepaymentPercent') || order.minPrepaymentPercent || 100),
+      invoiceFileName: document?.name || order.invoiceFileName || '',
+      paymentTerms: status === 'partial' ? 'partial_allowed' : 'full_prepayment',
+      minPrepaymentPercent: status === 'paid' ? 100 : paymentPercent,
     });
     onNotify?.('Раздел оплаты сохранен');
     load();
@@ -1536,19 +1540,21 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
 
   const submitContractAndInvoice = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!access.finance) {
-      onNotify?.('Счет и финансовые данные доступны только бухгалтеру и администратору');
+    if (!access.manager && !access.finance) {
+      onNotify?.('Договор может редактировать менеджер, бухгалтер или администратор');
       return;
     }
     const form = new FormData(event.currentTarget);
     const contract = form.get('contract') as File | null;
     await sendContractAndInvoice(order.id, {
       amount: String(form.get('amount')),
-      paymentMethod: String(form.get('paymentMethod')),
-      signatureProvider: String(form.get('signatureProvider')),
       contractFileName: contract?.name,
+      contractPeriodStart: String(form.get('contractPeriodStart') || ''),
+      contractPeriodEnd: String(form.get('contractPeriodEnd') || ''),
+      contractServiceNote: String(form.get('contractServiceNote') || ''),
+      contractNote: String(form.get('contractNote') || ''),
     });
-    onNotify?.('Договор и счет отправлены клиенту');
+    onNotify?.('Договор сохранен');
     event.currentTarget.reset();
     load();
   };
@@ -1733,9 +1739,12 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               </>
             )}
 
+            {currentTab === 'Обзор заявки' && (
+              <LaboratoryRequestOverview order={order} />
+            )}
+
             {currentTab === 'Оплата' && (
               <Section title="Оплата" icon={<CreditCard size={20} />}>
-                {role === 'ACCOUNTANT' && <AccountantRequestCard order={order} />}
                 {!access.viewFinance && (
                   <div className="mb-5 grid gap-3 md:grid-cols-3">
                     <InfoTile label="Оплата" value={order.quarters?.some((quarter) => quarter.remainingAmount > 0) ? 'Есть задолженность' : fallbackPaymentStatus(order.paymentStatus) === 'paid' ? 'Оплачено' : 'Оплата ожидается'} />
@@ -1745,56 +1754,33 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                 )}
                 {access.viewFinance && (
                   <>
-                <div className="mb-5 grid gap-3 md:grid-cols-4">
-                  <InfoTile label="Статус" value={paymentStatusLabels[fallbackPaymentStatus(order.paymentStatus)]} />
-                  <InfoTile label="Сумма договора" value={formatCurrency(orderFinance(order).total)} />
-                  <InfoTile label="Оплачено" value={formatCurrency(orderFinance(order).paid)} />
-                  <InfoTile label="Остаток" value={formatCurrency(orderFinance(order).remaining)} />
-                </div>
-                <form onSubmit={submitPayment} className="grid gap-4 md:grid-cols-2">
-                  <Field label="Статус">
-                    <select name="paymentStatus" disabled={!access.finance} defaultValue={fallbackPaymentStatus(order.paymentStatus)} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100">{paymentStatuses.map((status) => <option key={status} value={status}>{paymentStatusLabels[status]}</option>)}</select>
-                  </Field>
-                  <Field label="Общая сумма">
-                    <input name="totalAmount" type="number" min="0" disabled={!access.finance} defaultValue={orderFinance(order).total || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" />
-                  </Field>
-                  <Field label="Оплаченная сумма">
-                    <input name="paidAmount" type="number" min="0" disabled={!access.finance} defaultValue={orderFinance(order).paid || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" />
-                  </Field>
-                  <Field label="Дата оплаты">
-                    <input name="paidAt" disabled={!access.finance} defaultValue={order.paidAt || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" />
-                  </Field>
-                  <Field label="Номер счета">
-                    <input name="invoiceNumber" disabled={!access.finance} defaultValue={order.invoiceNumber || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" />
-                  </Field>
-                  <Field label="Файл счета">
-                    <input name="invoiceFileName" disabled={!access.finance} defaultValue={order.invoiceFileName || ''} placeholder="invoice.pdf" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" />
-                  </Field>
-                  <Field label="Метод">
-                    <input name="paymentMethod" disabled={!access.finance} defaultValue={order.paymentMethod || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" />
-                  </Field>
-                  <Field label="Условия оплаты">
-                    <select name="paymentTerms" disabled={!access.finance} defaultValue={order.paymentTerms || 'full_prepayment'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100">
-                      <option value="full_prepayment">100% предоплата</option>
-                      <option value="partial_allowed">Можно начать после частичной оплаты</option>
-                    </select>
-                  </Field>
-                  <Field label="Минимум для старта, %">
-                    <input name="minPrepaymentPercent" type="number" min="0" max="100" disabled={!access.finance} defaultValue={order.minPrepaymentPercent ?? 100} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" />
-                  </Field>
-                  <label className="md:col-span-2 text-sm font-semibold text-slate-700">Комментарий
-                    <textarea name="comment" disabled={!access.finance} defaultValue={order.paymentComment || ''} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" rows={3} />
-                  </label>
-                  {access.finance && (
-                    <div className="flex flex-wrap gap-3 md:col-span-2">
-                      <Button>Сохранить</Button>
-                      <Button type="button" variant="secondary" onClick={() => changePayment('awaiting_invoice', 'Ожидает счет')}>Выставить счет</Button>
-                      <Button type="button" variant="secondary" onClick={() => changePayment('invoice_sent', 'Счет отправлен клиенту')}>Счет отправлен</Button>
-                      <Button type="button" variant="secondary" onClick={() => changePayment('partial', 'Частично оплачено')}>Частично оплачено</Button>
-                      <Button type="button" variant="secondary" onClick={() => changePayment('paid', 'Полностью оплачено')}>Полностью оплачено</Button>
+                    <div className="mb-5 grid gap-3 md:grid-cols-4">
+                      <InfoTile label="Статус" value={paymentStatusLabels[fallbackPaymentStatus(order.paymentStatus)]} />
+                      <InfoTile label="Сумма договора" value={formatCurrency(orderFinance(order).total)} />
+                      <InfoTile label="Оплачено" value={formatCurrency(orderFinance(order).paid)} />
+                      <InfoTile label="Остаток" value={formatCurrency(orderFinance(order).remaining)} />
                     </div>
-                  )}
-                </form>
+                    <form onSubmit={submitPayment} className="grid gap-4 rounded-2xl border border-dashed border-slate-200 p-4 md:grid-cols-2">
+                      <Field label="Документ оплаты">
+                        <input name="paymentDocument" type="file" className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                      </Field>
+                      <Field label="Дата оплаты">
+                        <input name="paidAt" type="date" defaultValue={order.paidAt || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                      </Field>
+                      <Field label="Процент оплаты">
+                        <input name="paymentPercent" type="number" min="0" max="100" defaultValue={fallbackPaymentStatus(order.paymentStatus) === 'paid' ? 100 : order.minPrepaymentPercent ?? 50} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                      </Field>
+                      <Field label="Тип оплаты">
+                        <select name="paymentStatus" defaultValue={fallbackPaymentStatus(order.paymentStatus) === 'paid' ? 'paid' : 'partial'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3">
+                          <option value="partial">Частичная оплата</option>
+                          <option value="paid">Полная оплата</option>
+                        </select>
+                      </Field>
+                      <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий
+                        <textarea name="comment" defaultValue={order.paymentComment || order.accountantComment || ''} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
+                      </label>
+                      <Button className="md:col-span-2">Сохранить оплату</Button>
+                    </form>
                   </>
                 )}
               </Section>
@@ -1802,27 +1788,32 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
 
             {currentTab === 'Договор' && (
               <Section title="Договор" icon={<FileSignature size={20} />}>
-                <div className="mb-5 grid gap-3 md:grid-cols-3">
-                  <InfoTile label="Статус" value={contractLabel(order.crmContractStatus || order.contractStatus)} />
-                  <InfoTile label="Подписание" value={order.signatureProvider || 'Не указано'} />
-                  <InfoTile label="Дата" value={order.signedAt || 'Нет'} />
-                </div>
-                {!access.viewFinance && (
+                {!access.manager && !access.finance && (
                   <div className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-600">
-                    Сумма договора, способ оплаты и счет доступны только бухгалтеру и администратору.
+                    Договор может редактировать менеджер, бухгалтер или администратор.
                   </div>
                 )}
-                {access.viewFinance && (
-                  <form onSubmit={submitContractAndInvoice} className="grid gap-4 md:grid-cols-2">
-                    <Field label="Сумма"><input name="amount" required defaultValue={order.paymentAmount || '150 000 ₸'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-                    <Field label="Метод"><select name="paymentMethod" defaultValue={order.paymentMethod || 'Банковская карта'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3"><option>Банковская карта</option><option>Kaspi Pay</option><option>Счет на оплату</option></select></Field>
-                    <Field label="Подписание"><select name="signatureProvider" defaultValue={order.signatureProvider || 'NCALayer / ЭЦП'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3"><option>NCALayer / ЭЦП</option><option>Kaspi ID</option><option>SMS-подтверждение</option></select></Field>
-                    <Field label="Файл"><input name="contract" type="file" className="w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-                    <div className="flex flex-wrap gap-3 md:col-span-2">
-                      <Button>Отправить</Button>
-                      <Button type="button" variant="secondary" onClick={() => markContract('sent_to_client', 'Договор отправлен')}>Отправлен</Button>
-                      <Button type="button" variant="secondary" onClick={() => markContract('signed', 'Договор подписан')}>Подписан</Button>
-                    </div>
+                {(access.manager || access.finance) && (
+                  <form onSubmit={submitContractAndInvoice} className="grid gap-4 rounded-2xl border border-dashed border-slate-200 p-4 md:grid-cols-2">
+                    <Field label="Документ договора">
+                      <input name="contract" type="file" className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                    </Field>
+                    <Field label="Сумма договора">
+                      <input name="amount" type="number" min="0" required defaultValue={order.contractAmount || order.totalAmount || order.offerAmount || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                    </Field>
+                    <Field label="Срок договора от">
+                      <input name="contractPeriodStart" type="date" defaultValue={order.contractPeriodStart || order.annualPeriodStart || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                    </Field>
+                    <Field label="Срок договора до">
+                      <input name="contractPeriodEnd" type="date" defaultValue={order.contractPeriodEnd || order.annualPeriodEnd || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                    </Field>
+                    <label className="text-sm font-semibold text-slate-700 md:col-span-2">На какую услугу договор
+                      <textarea name="contractServiceNote" defaultValue={order.contractServiceNote || order.service || ''} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
+                    </label>
+                    <label className="text-sm font-semibold text-slate-700 md:col-span-2">Примечание
+                      <textarea name="contractNote" defaultValue={order.contractNote || ''} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
+                    </label>
+                    <Button className="md:col-span-2">Сохранить договор</Button>
                   </form>
                 )}
               </Section>
@@ -2458,6 +2449,101 @@ const ClientSentPrimaryDocuments = ({ order }: { order: Order }) => {
   );
 };
 
+const LaboratoryRequestOverview = ({ order }: { order: Order }) => {
+  const laboratoryPrimaryDocuments = order.laboratoryPrimaryDocuments || [];
+  const uploadedPrimaryDocuments = (order.primaryDocuments || []).filter((doc) => Boolean(doc.fileName));
+  const clientDocuments = order.documents.filter((doc) => doc.type === 'client');
+  const allClientDocuments = [
+    ...uploadedPrimaryDocuments.map((doc) => ({
+      id: `primary-${doc.id}`,
+      name: doc.name,
+      fileName: doc.fileName || doc.name,
+      uploadedAt: doc.uploadedAt || 'Дата не указана',
+      status: doc.status,
+      comment: doc.clientComment,
+      source: 'Первичный документ',
+    })),
+    ...laboratoryPrimaryDocuments.filter((doc) => Boolean(doc.fileName)).map((doc) => ({
+      id: `laboratory-primary-${doc.id}`,
+      name: doc.name,
+      fileName: doc.fileName || doc.name,
+      uploadedAt: doc.uploadedAt || 'Дата не указана',
+      status: laboratoryPrimaryStatusLabels[doc.status],
+      comment: doc.employeeComment,
+      source: 'Первичный документ лаборатории',
+    })),
+    ...clientDocuments.map((doc) => ({
+      id: `client-${doc.id}`,
+      name: doc.name,
+      fileName: doc.name,
+      uploadedAt: doc.uploadedAt || 'Дата не указана',
+      status: doc.status,
+      comment: '',
+      source: 'Документ заявки',
+    })),
+  ];
+
+  return (
+    <div className="space-y-6">
+      <Section title="Обзор заявки" icon={<ClipboardCheck size={20} />}>
+        <Grid items={{
+          Клиент: getOrderCompanyName(order),
+          Услуга: order.service,
+          Статус: order.status,
+          Лаборатория: laboratoryLabel(order.laboratoryStatus),
+        }} />
+      </Section>
+
+      <Section title="Первичные документы" icon={<Upload size={20} />}>
+        <div className="space-y-3">
+          {laboratoryPrimaryDocuments.length ? laboratoryPrimaryDocuments.map((doc) => (
+            <div key={doc.id} className="rounded-2xl border border-slate-200 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="break-words font-bold text-slate-900">{doc.name}</p>
+                  <p className="mt-1 break-words text-sm text-slate-600">{doc.fileName || 'Файл не загружен'}</p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${laboratoryPrimaryStatusClass(doc.status)}`}>{laboratoryPrimaryStatusLabels[doc.status]}</span>
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <InfoTile label="Дата загрузки" value={doc.uploadedAt || 'Нет'} />
+                <InfoTile label="Кто загрузил" value={doc.uploadedBy || 'Нет'} />
+                <InfoTile label="Комментарий" value={doc.employeeComment || 'Нет'} />
+              </div>
+            </div>
+          )) : <EmptyState text="Первичные документы пока не загружены" />}
+        </div>
+      </Section>
+
+      <Section title="Все документы от клиента" icon={<FileText size={20} />}>
+        <div className="space-y-3">
+          {allClientDocuments.length ? allClientDocuments.map((doc) => {
+            const downloadHref = `data:text/plain;charset=utf-8,${encodeURIComponent(`Файл из mock CRM: ${doc.fileName}\nЗаявка: ${order.id}\nДокумент: ${doc.name}`)}`;
+            return (
+              <div key={doc.id} className="grid gap-3 rounded-2xl border border-slate-200 p-4 md:grid-cols-[1fr_auto] md:items-center">
+                <div className="min-w-0">
+                  <p className="break-words font-bold text-slate-900">{doc.name}</p>
+                  <p className="mt-1 break-words text-sm text-slate-600">{doc.fileName} · {doc.source}</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-400">{doc.uploadedAt} · {doc.status}</p>
+                  {doc.comment && <p className="mt-2 break-words rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-700">{doc.comment}</p>}
+                </div>
+                <a
+                  href={downloadHref}
+                  download={doc.fileName}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-eco-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-eco-800"
+                >
+                  <Download size={16} />
+                  Скачать
+                </a>
+              </div>
+            );
+          }) : <EmptyState text="Клиент пока не отправил документы" />}
+        </div>
+      </Section>
+    </div>
+  );
+};
+
 const LaboratoryWorkspace = ({
   order,
   canEdit,
@@ -2483,137 +2569,13 @@ const LaboratoryWorkspace = ({
   onSetLaboratoryStatus: (status: LaboratoryStatus, comment: string) => void;
   onAddComment: (event: FormEvent<HTMLFormElement>, visibility: 'client' | 'internal') => void;
 }) => {
-  const agreement = order.laboratoryMeasurementAgreement;
-  const resultTabs: CrmTab[] = ['Протокол', '870 форма', 'База отчёт', 'Квартальный отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт'];
-  const laboratoryViews = [
-    { id: 'primary', label: 'Первичные документы' },
-    { id: 'measurement', label: 'Согласование' },
-    { id: 'protocol', label: 'Протокол' },
-    { id: 'form_870', label: '870 форма' },
-    { id: 'base_report', label: 'База отчёт' },
-    { id: 'quarter_report', label: 'Квартальный отчёт' },
-    { id: 'annual_report', label: 'Годовой отчёт' },
-    { id: 'half_year_report', label: 'Полугодовой отчёт' },
-    { id: 'archive_report', label: 'Архив отчёт' },
-  ] as const;
-  const [activeView, setActiveView] = useState<(typeof laboratoryViews)[number]['id']>('primary');
-  const resultViewIds = new Set(['protocol', 'form_870', 'base_report', 'quarter_report', 'annual_report', 'half_year_report', 'archive_report']);
   return (
     <div className="space-y-6">
-      <div className="sticky top-20 z-10 rounded-[20px] border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur">
-        {resultViewIds.has(activeView) && (
-          <p className="mb-2 px-2 text-xs font-bold uppercase tracking-wide text-slate-500">Документы, которые отправляем клиенту</p>
-        )}
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {laboratoryViews.map((view) => (
-            <button
-              key={view.id}
-              type="button"
-              onClick={() => setActiveView(view.id)}
-              className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${
-                activeView === view.id
-                  ? 'bg-eco-900 text-white shadow-lg shadow-eco-900/10'
-                  : 'bg-slate-100 text-slate-600 hover:bg-eco-50 hover:text-eco-900'
-              }`}
-            >
-              {view.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {activeView === 'primary' && <Section title="Первичные документы" icon={<Upload size={20} />}>
-        <ClientSentPrimaryDocuments order={order} />
-      </Section>}
-
-      {activeView === 'measurement' && <Section title="Согласование замера" icon={<CalendarDays size={20} />}>
-        {agreement && (
-          <>
-            <div className="mb-5 grid gap-3 md:grid-cols-3">
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase text-slate-500">Статус согласования</p>
-                <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ${laboratoryMeasurementStatusClass(agreement.status)}`}>{laboratoryMeasurementStatusLabels[agreement.status]}</span>
-              </div>
-              <InfoTile label="Отправлено" value={agreement.sentAt || 'Нет'} />
-              <InfoTile label="Ответ клиента" value={agreement.acceptedAt || agreement.rescheduleDate || 'Нет'} />
-            </div>
-            <form onSubmit={onMeasurementSubmit} className="grid gap-4 md:grid-cols-2">
-              <Field label="Дата замера"><input name="measurementDate" type="date" disabled={!canEdit} defaultValue={agreement.measurementDate} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" /></Field>
-              <Field label="Время замера"><input name="measurementTime" type="time" disabled={!canEdit} defaultValue={agreement.measurementTime} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" /></Field>
-              <Field label="Адрес объекта"><input name="address" disabled={!canEdit} defaultValue={agreement.address} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" /></Field>
-              <Field label="Ответственная фирма или лаборатория"><input name="companyName" disabled={!canEdit} defaultValue={agreement.companyName} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" /></Field>
-              <Field label="Контактное лицо"><input name="contactPerson" disabled={!canEdit} defaultValue={agreement.contactPerson} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" /></Field>
-              <Field label="Телефон"><input name="phone" disabled={!canEdit} defaultValue={agreement.phone} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" /></Field>
-              <label className="text-sm font-semibold text-slate-700 md:col-span-2">Что нужно замерить
-                <textarea name="measurementScope" disabled={!canEdit} defaultValue={agreement.measurementScope} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" rows={3} />
-              </label>
-              <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий
-                <textarea name="comment" disabled={!canEdit} defaultValue={agreement.comment} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" rows={3} />
-              </label>
-              {canEdit && (
-                <div className="flex flex-wrap gap-3 md:col-span-2">
-                  <Button>Сохранить</Button>
-                  <Button type="button" variant="secondary" onClick={onSendMeasurement}>Отправить клиенту на согласование</Button>
-                  <Button type="button" variant="secondary" onClick={() => onChangeMeasurementStatus('confirmed', 'Замер согласован')}>Замер согласован</Button>
-                  <Button type="button" variant="secondary" onClick={() => onChangeMeasurementStatus('completed', 'Замер проведён')}>Замер проведён</Button>
-                  <Button type="button" variant="secondary" onClick={() => onChangeMeasurementStatus('cancelled', 'Замер отменён')}>Отменено</Button>
-                </div>
-              )}
-            </form>
-            {agreement.status === 'reschedule_requested' && (
-              <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
-                Клиент предложил: {agreement.rescheduleDate || 'дата не указана'} {agreement.rescheduleTime || ''}. {agreement.rescheduleComment || ''}
-              </div>
-            )}
-          </>
-        )}
-      </Section>}
-
-      {activeView === 'quarter_report' && (
-        <LaboratoryQuarterlyReportSection
-          order={order}
-          canEdit={canEdit}
-          onUpload={onUploadResult}
-          onStatus={onResultStatus}
-        />
-      )}
-
-      {resultTabs.filter((tab) => laboratoryTabToSection(tab) === activeView && activeView !== 'quarter_report').map((tab) => (
-        <LaboratoryResultSection
-          key={tab}
-          order={order}
-          tab={tab}
-          canEdit={canEdit}
-          onUpload={onUploadResult}
-          onStatus={onResultStatus}
-        />
-      ))}
-
-      <Section title="Комментарии" icon={<MessageSquare size={20} />}>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div>
-            <List title="Клиенту" items={order.comments.filter((comment) => comment.visibility === 'client').map((comment) => `${comment.createdAt} · ${comment.author}: ${comment.text}`)} />
-            {canEdit && (
-              <form onSubmit={(event) => onAddComment(event, 'client')} className="mt-4">
-                <textarea name="comment" required placeholder="Комментарий клиенту" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
-                <Button className="mt-3">
-                  <Send size={16} />
-                  Отправить клиенту
-                </Button>
-              </form>
-            )}
-          </div>
-          <div>
-            <List title="Внутренние" items={order.comments.filter((comment) => comment.visibility === 'internal').map((comment) => `${comment.createdAt} · ${comment.author}: ${comment.text}`)} />
-            {canEdit && (
-              <form onSubmit={(event) => onAddComment(event, 'internal')} className="mt-4">
-                <textarea name="comment" required placeholder="Внутренний комментарий" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
-                <Button variant="secondary" className="mt-3">Добавить заметку</Button>
-              </form>
-            )}
-          </div>
-        </div>
-      </Section>
+      <LaboratoryClientDocumentsSection
+        order={order}
+        canEdit={canEdit}
+        onUpload={onUploadResult}
+      />
     </div>
   );
 };
@@ -2626,6 +2588,88 @@ const laboratoryTabToSection = (tab: CrmTab): LaboratoryResultDocument['section'
   if (tab === 'Полугодовой отчёт') return 'half_year_report';
   if (tab === 'Архив отчёт') return 'archive_report';
   return 'protocol';
+};
+
+const laboratoryClientDocumentTypes: Array<{ section: LaboratoryResultDocument['section']; label: string }> = [
+  { section: 'measurement', label: laboratoryResultSectionLabels.measurement },
+  { section: 'protocol', label: laboratoryResultSectionLabels.protocol },
+  { section: 'form_870', label: laboratoryResultSectionLabels.form_870 },
+  { section: 'base_report', label: laboratoryResultSectionLabels.base_report },
+  { section: 'quarter_report', label: laboratoryResultSectionLabels.quarter_report },
+  { section: 'annual_report', label: laboratoryResultSectionLabels.annual_report },
+  { section: 'half_year_report', label: laboratoryResultSectionLabels.half_year_report },
+  { section: 'archive_report', label: laboratoryResultSectionLabels.archive_report },
+];
+
+const LaboratoryClientDocumentsSection = ({
+  order,
+  canEdit,
+  onUpload,
+}: {
+  order: Order;
+  canEdit: boolean;
+  onUpload: (event: FormEvent<HTMLFormElement>, section: LaboratoryResultDocument['section']) => void;
+}) => {
+  const currentQuarter = getCurrentQuarterForRequest(order);
+  const [selectedSection, setSelectedSection] = useState<LaboratoryResultDocument['section']>('measurement');
+  const [selectedQuarter, setSelectedQuarter] = useState<QuarterNumber>(currentQuarter?.quarter || 1);
+  const selectedLabel = laboratoryResultSectionLabels[selectedSection];
+
+  return (
+    <Section title="Документы клиенту" icon={<FileText size={20} />}>
+      {canEdit && (
+        <form onSubmit={(event) => onUpload(event, selectedSection)} className="grid gap-4 rounded-2xl border border-dashed border-slate-200 p-4 lg:grid-cols-[1fr_280px]">
+          <input type="hidden" name="status" value="published_to_client" />
+          {selectedSection !== 'quarter_report' && <input type="hidden" name="quarter" value="" />}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Название документа">
+              <input
+                key={`document-name-${selectedSection}-${selectedQuarter}`}
+                name="name"
+                defaultValue={selectedSection === 'quarter_report' ? `${selectedLabel} ${selectedQuarter} квартал` : selectedLabel}
+                className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3"
+              />
+            </Field>
+            <Field label="Файлы">
+              <input name="file" type="file" multiple required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+            </Field>
+            {selectedSection === 'quarter_report' && (
+              <Field label="Квартал">
+                <select
+                  name="quarter"
+                  value={selectedQuarter}
+                  onChange={(event) => setSelectedQuarter(toQuarterNumber(event.target.value) || 1)}
+                  className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3"
+                >
+                  {quarterNumbers.map((quarter) => <option key={quarter} value={quarter}>{quarter} квартал</option>)}
+                </select>
+              </Field>
+            )}
+            <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий
+              <textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
+            </label>
+          </div>
+
+          <div className="flex flex-col justify-between gap-4 rounded-2xl bg-slate-50 p-4">
+            <Field label="Тип документа">
+              <select
+                value={selectedSection}
+                onChange={(event) => setSelectedSection(event.target.value as LaboratoryResultDocument['section'])}
+                className="input-focus w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+              >
+                {laboratoryClientDocumentTypes.map(({ section, label }) => <option key={section} value={section}>{label}</option>)}
+              </select>
+            </Field>
+            <Button>
+              <Send size={16} />
+              Отправить
+            </Button>
+          </div>
+        </form>
+      )}
+    </Section>
+  );
 };
 
 const LaboratoryQuarterlyReportSection = ({

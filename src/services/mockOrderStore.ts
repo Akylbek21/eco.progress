@@ -128,7 +128,7 @@ export const updateMockContract = (orderId: string, status: StaffContractStatus 
 
 export const sendMockContractAndInvoice = (
   orderId: string,
-  payload: { amount: string; paymentMethod: string; signatureProvider: string; contractFileName?: string },
+  payload: { amount: string; paymentMethod?: string; signatureProvider?: string; contractFileName?: string; contractPeriodStart?: string; contractPeriodEnd?: string; contractServiceNote?: string; contractNote?: string },
 ) =>
   replaceMockOrder(orderId, (order) => {
     const amount = Number(payload.amount.replace(/\D/g, '')) || order.totalAmount || 0;
@@ -152,9 +152,13 @@ export const sendMockContractAndInvoice = (
       ...order,
       crmContractStatus: 'sent_to_client',
       contractStatus: 'sent',
-      paymentStatus: 'invoice_sent',
-      paymentMethod: payload.paymentMethod,
-      signatureProvider: payload.signatureProvider,
+      paymentMethod: payload.paymentMethod ?? order.paymentMethod,
+      signatureProvider: payload.signatureProvider ?? order.signatureProvider,
+      contractFileName: payload.contractFileName ?? order.contractFileName,
+      contractPeriodStart: payload.contractPeriodStart ?? order.contractPeriodStart,
+      contractPeriodEnd: payload.contractPeriodEnd ?? order.contractPeriodEnd,
+      contractServiceNote: payload.contractServiceNote ?? order.contractServiceNote,
+      contractNote: payload.contractNote ?? order.contractNote,
       totalAmount: amount,
       contractAmount: amount,
       remainingAmount: amount - (order.paidAmount ?? 0),
@@ -162,7 +166,7 @@ export const sendMockContractAndInvoice = (
     }, 'Contract and invoice sent', 'contract_updated');
   });
 
-export const updateMockPayment = (orderId: string, status: PaymentStatus, payload: { paidAmount?: string | number; totalAmount?: string | number; amount?: string; paidAt?: string; comment?: string; method?: string } = {}) =>
+export const updateMockPayment = (orderId: string, status: PaymentStatus, payload: { paidAmount?: string | number; totalAmount?: string | number; amount?: string; paidAt?: string; comment?: string; method?: string; invoiceFileName?: string; paymentTerms?: Order['paymentTerms']; minPrepaymentPercent?: string | number } = {}) =>
   replaceMockOrder(orderId, (order) => {
     const parseMoney = (value: string | number | undefined, fallback: number) => {
       if (typeof value === 'number') return value;
@@ -180,6 +184,9 @@ export const updateMockPayment = (orderId: string, status: PaymentStatus, payloa
       remainingAmount: remaining,
       paymentMethod: payload.method ?? order.paymentMethod,
       paidAt: payload.paidAt ?? order.paidAt,
+      invoiceFileName: payload.invoiceFileName ?? order.invoiceFileName,
+      paymentTerms: payload.paymentTerms ?? order.paymentTerms,
+      minPrepaymentPercent: payload.minPrepaymentPercent !== undefined ? Number(payload.minPrepaymentPercent) : order.minPrepaymentPercent,
       accountantComment: payload.comment ?? order.accountantComment,
       paymentHistory: [
         {
