@@ -140,6 +140,7 @@ export type DocumentItem = {
   type: 'client' | 'result' | 'invoice' | 'internal';
   uploadedAt: string;
   status: string;
+  fileUrl?: string;
 };
 
 export type QuarterDocument = {
@@ -269,6 +270,7 @@ export type OrderPrimaryDocument = {
   required: boolean;
   status: ClientPrimaryDocumentStatus;
   fileName?: string;
+  fileUrl?: string;
   uploadedAt?: string;
   managerComment?: string;
   clientComment?: string;
@@ -557,7 +559,7 @@ export type ClientContract = {
   responsibleManagerId: string;
 };
 
-export type MockUser = {
+export type User = {
   id: string;
   role: UserRole;
   type: ClientType | 'staff' | 'admin';

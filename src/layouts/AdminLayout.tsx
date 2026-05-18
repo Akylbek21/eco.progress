@@ -23,7 +23,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => (
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur-xl sm:px-8">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-slate-500">Mock frontend</p>
+            <p className="text-sm text-slate-500">Панель администратора</p>
             <h1 className="text-xl font-semibold text-eco-900">Управление контентом ECOPROGRESS GROUP</h1>
           </div>
           <Link to="/" className="rounded-full bg-eco-800 px-4 py-2 text-sm font-semibold text-white">На сайт</Link>

@@ -25,10 +25,9 @@ import Reveal from '../components/animations/Reveal';
 import { useAuth } from '../contexts/AuthContext';
 import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, assignManager, completeAnnualRequest, getOrderById, getOrders, requestPrimaryDocument, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
 import { getServices } from '../services/serviceService';
-import { getNotifications } from '../services/orderService';
 import { primaryDocumentTemplates } from '../services/orderService';
 import { getBusinessCompanyById, statusDescriptions } from '../utils/crm';
-import type { ClientPrimaryDocumentStatus, ClientContract, DocumentItem, EcologyStatus, LaboratoryMeasurementAgreementStatus, LaboratoryPrimaryDocumentStatus, LaboratoryResultDocument, LaboratoryResultDocumentStatus, LaboratoryStatus, MockUser, Order, OrderPrimaryDocument, OrderStatus, PaymentMethod, PaymentStatus, QuarterDocument, QuarterNumber, QuarterResult, QuarterWorkStatus, RequestQuarter, StaffContractStatus, UserRole } from '../types';
+import type { ClientPrimaryDocumentStatus, ClientContract, DocumentItem, EcologyStatus, LaboratoryMeasurementAgreementStatus, LaboratoryPrimaryDocumentStatus, LaboratoryResultDocument, LaboratoryResultDocumentStatus, LaboratoryStatus, User, Order, OrderPrimaryDocument, OrderStatus, PaymentMethod, PaymentStatus, QuarterDocument, QuarterNumber, QuarterResult, QuarterWorkStatus, RequestQuarter, StaffContractStatus, UserRole } from '../types';
 import { canAccess, permissionsForRole, type Permission } from '../config/permissions';
 import {
   buildBusinessCompanySummaries,
@@ -2417,7 +2416,7 @@ const ClientSentPrimaryDocuments = ({ order }: { order: Order }) => {
     <div className="space-y-3">
       {documents.map((doc) => {
         const fileName = doc.fileName || doc.name;
-        const downloadHref = `data:text/plain;charset=utf-8,${encodeURIComponent(`Файл из mock CRM: ${fileName}\nЗаявка: ${order.id}\nДокумент: ${doc.name}`)}`;
+        const downloadHref = doc.fileUrl || `/api/files/documents/${doc.id}`;
 
         return (
           <div key={doc.id} className="grid gap-3 rounded-2xl border border-slate-200 p-4 md:grid-cols-[1fr_auto] md:items-center">
@@ -2458,6 +2457,7 @@ const LaboratoryRequestOverview = ({ order }: { order: Order }) => {
       id: `primary-${doc.id}`,
       name: doc.name,
       fileName: doc.fileName || doc.name,
+      fileUrl: doc.fileUrl,
       uploadedAt: doc.uploadedAt || 'Дата не указана',
       status: doc.status,
       comment: doc.clientComment,
@@ -2467,6 +2467,7 @@ const LaboratoryRequestOverview = ({ order }: { order: Order }) => {
       id: `laboratory-primary-${doc.id}`,
       name: doc.name,
       fileName: doc.fileName || doc.name,
+      fileUrl: doc.fileUrl,
       uploadedAt: doc.uploadedAt || 'Дата не указана',
       status: laboratoryPrimaryStatusLabels[doc.status],
       comment: doc.employeeComment,
@@ -2476,6 +2477,7 @@ const LaboratoryRequestOverview = ({ order }: { order: Order }) => {
       id: `client-${doc.id}`,
       name: doc.name,
       fileName: doc.name,
+      fileUrl: doc.fileUrl,
       uploadedAt: doc.uploadedAt || 'Дата не указана',
       status: doc.status,
       comment: '',
@@ -2518,7 +2520,7 @@ const LaboratoryRequestOverview = ({ order }: { order: Order }) => {
       <Section title="Все документы от клиента" icon={<FileText size={20} />}>
         <div className="space-y-3">
           {allClientDocuments.length ? allClientDocuments.map((doc) => {
-            const downloadHref = `data:text/plain;charset=utf-8,${encodeURIComponent(`Файл из mock CRM: ${doc.fileName}\nЗаявка: ${order.id}\nДокумент: ${doc.name}`)}`;
+            const downloadHref = doc.fileUrl || `/api/files/documents/${doc.id}`;
             return (
               <div key={doc.id} className="grid gap-3 rounded-2xl border border-slate-200 p-4 md:grid-cols-[1fr_auto] md:items-center">
                 <div className="min-w-0">
@@ -2963,15 +2965,8 @@ export const StaffClientsPage = () => {
   );
 };
 
-const documentHref = (doc: StaffDocument, order?: Order) =>
-  `data:text/plain;charset=utf-8,${encodeURIComponent([
-    doc.name,
-    `Компания: ${doc.company}`,
-    `Заявка: ${doc.orderId}`,
-    order?.service && `Услуга: ${order.service}`,
-    `Статус: ${doc.status}`,
-    `Дата: ${doc.uploadedAt}`,
-  ].filter(Boolean).join('\n'))}`;
+const documentHref = (doc: StaffDocument) =>
+  doc.fileUrl || `/api/files/documents/${doc.id}`;
 
 const DocumentLine = ({ doc }: { doc: StaffDocument }) => (
   <div className="grid items-center gap-3 rounded-2xl bg-slate-50 p-4 lg:grid-cols-[1.6fr_1.1fr_0.8fr_0.9fr_auto]">
@@ -2992,7 +2987,7 @@ const DocumentLine = ({ doc }: { doc: StaffDocument }) => (
   </div>
 );
 
-const DocumentFileRow = ({ doc, order }: { doc: StaffDocument; order: Order }) => (
+const DocumentFileRow = ({ doc }: { doc: StaffDocument }) => (
   <div className="grid items-center gap-3 rounded-2xl bg-slate-50 p-4 lg:grid-cols-[1.7fr_0.8fr_0.8fr_auto]">
     <div className="min-w-0">
       <p className="break-words font-bold text-slate-900">{doc.name}</p>
@@ -3001,8 +2996,8 @@ const DocumentFileRow = ({ doc, order }: { doc: StaffDocument; order: Order }) =
     <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{doc.docType}</span>
     <p className="text-sm font-semibold text-slate-700">{doc.status}</p>
     <div className="flex flex-wrap gap-2">
-      <a href={documentHref(doc, order)} target="_blank" rel="noreferrer" className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-eco-800 transition hover:bg-white">Посмотреть</a>
-      <a href={documentHref(doc, order)} download={doc.name} className="rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Скачать</a>
+      <a href={documentHref(doc)} target="_blank" rel="noreferrer" className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-eco-800 transition hover:bg-white">Посмотреть</a>
+      <a href={documentHref(doc)} download={doc.name} className="rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Скачать</a>
     </div>
   </div>
 );
@@ -3063,7 +3058,7 @@ export const StaffDocumentsPage = () => {
           </div>
 
           <div className="mt-6 space-y-3">
-            {selectedDocs.map((doc) => <DocumentFileRow key={doc.id} doc={doc} order={selectedOrder} />)}
+            {selectedDocs.map((doc) => <DocumentFileRow key={doc.id} doc={doc} />)}
             {!selectedDocs.length && <EmptyState text="Документов нет" />}
           </div>
         </div>
@@ -3147,7 +3142,7 @@ export const StaffContractsPage = () => {
         <InfoTile label="По заявкам" value={String(orderContracts.length)} />
       </div>
       <Section title="Договоры сопровождения" icon={<FileSignature size={20} />}>
-        <EmptyState text="Договоры загружаются из бэкенда" />
+        <EmptyState text="Договоры сопровождения пока не созданы" />
       </Section>
       <Section title="Договоры по заявкам" icon={<ClipboardList size={20} />}>
         <div className="space-y-3">
@@ -3240,7 +3235,7 @@ export const StaffUserRolesPage = () => {
         <InfoTile label="Текущая роль" value={roleTitle(role)} />
       </div>
       <div className="mt-5 space-y-3">
-        <EmptyState text="Загрузка сотрудников из бэкенда" />
+        <EmptyState text="Список сотрудников пока пуст" />
       </div>
     </SimpleStaffPage>
   );
@@ -3261,7 +3256,7 @@ const ReportRow = ({ label, value, total }: { label: string; value: number; tota
   );
 };
 
-const StaffUserRoleRow = ({ user }: { user: MockUser }) => {
+const StaffUserRoleRow = ({ user }: { user: User }) => {
   const permissions = permissionsForRole(user.role);
   return (
     <div className="rounded-2xl bg-slate-50 p-4">

@@ -1,4 +1,4 @@
-import type { BusinessCompany, ClientContract, EcologyStatus, LaboratoryStatus, MockUser, Order, OrderStatus, OrderStatusCategory, OrderStatusDefinition, PaymentStatus } from '../types';
+import type { BusinessCompany, ClientContract, EcologyStatus, LaboratoryStatus, User, Order, OrderStatus, OrderStatusCategory, OrderStatusDefinition, PaymentStatus } from '../types';
 import { ecologyStatusLabels, laboratoryStatusLabels } from '../types/crm';
 
 export const orderStatusDefinitions: OrderStatusDefinition[] = [
@@ -273,7 +273,7 @@ export const formatContractDaysLeft = (contract: Pick<ClientContract, 'endsAt'>)
   return `Осталось ${daysLeft} дн.`;
 };
 
-export const getContractsForClient = (user?: MockUser | null, contracts: ClientContract[] = []) => {
+export const getContractsForClient = (user?: User | null, contracts: ClientContract[] = []) => {
   if (!user) return [];
   return contracts.filter((contract) =>
     contract.clientId === user.id ||

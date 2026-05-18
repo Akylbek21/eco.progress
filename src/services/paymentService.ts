@@ -1,41 +1,37 @@
 import api from './api';
-import { financeContracts, financeDebts, paymentRecords, paymentTransactions } from '../data/mockData';
 import type { Contract, Debt, Payment, PaymentMethod, PaymentTransaction } from '../types';
 
-const isLocalDemo = () => localStorage.getItem('eco-progress-token')?.startsWith('local-demo-token');
-
 export const getFinancePayments = async (): Promise<Payment[]> => {
-  if (isLocalDemo()) return paymentRecords as Payment[];
   const { data } = await api.get<{ data: Payment[]; message: string | null }>('/staff/payments');
   return data.data;
 };
 
 export const getClientPayments = async (): Promise<Payment[]> => {
-  if (isLocalDemo()) return paymentRecords as Payment[];
   const { data } = await api.get<{ data: Payment[]; message: string | null }>('/client/payments');
   return data.data;
 };
 
 export const getFinanceTransactions = async (): Promise<PaymentTransaction[]> => {
-  if (isLocalDemo()) return paymentTransactions as PaymentTransaction[];
   const { data } = await api.get<{ data: PaymentTransaction[]; message: string | null }>('/staff/payments');
   return data.data;
 };
 
 export const getFinanceContracts = async (): Promise<Contract[]> => {
-  if (isLocalDemo()) return financeContracts as Contract[];
-  const { data } = await api.get<{ data: Contract[]; message: string | null }>('/staff/payments');
+  const { data } = await api.get<{ data: Contract[]; message: string | null }>('/staff/contracts');
+  return data.data;
+};
+
+export const getClientContracts = async (): Promise<Contract[]> => {
+  const { data } = await api.get<{ data: Contract[]; message: string | null }>('/client/contracts');
   return data.data;
 };
 
 export const getFinanceDebts = async (): Promise<Debt[]> => {
-  if (isLocalDemo()) return financeDebts as Debt[];
   const { data } = await api.get<{ data: Debt[]; message: string | null }>('/staff/debts');
   return data.data;
 };
 
 export const getClientDebts = async (): Promise<Debt[]> => {
-  if (isLocalDemo()) return financeDebts as Debt[];
   const { data } = await api.get<{ data: Debt[]; message: string | null }>('/client/debts');
   return data.data;
 };

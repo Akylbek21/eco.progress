@@ -6,8 +6,8 @@ import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
-import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, signOrderContract, payOrderOnline, uploadQuarterDocument, deletePrimaryDocumentFile, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentsForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument } from '../services/orderService';
-import { getClientPayments, getClientDebts, getFinanceContracts } from '../services/paymentService';
+import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, signOrderContract, payOrderOnline, uploadQuarterDocument, deletePrimaryDocumentFile, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentsForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications } from '../services/orderService';
+import { getClientPayments, getClientDebts, getClientContracts } from '../services/paymentService';
 import { getServices } from '../services/serviceService';
 import {
   contractStatusClass,
@@ -26,7 +26,7 @@ import {
 } from '../utils/crm';
 import { getAnnualRequestDebtSummary, getAnnualRequestProgress, getAnnualRequestWarnings, getCurrentQuarterForRequest, isAnnualRequest } from '../utils/annualRequests';
 import { formatCurrency, getPaymentStatusColor, getPaymentStatusLabel } from '../utils/payments';
-import type { ClientPrimaryDocumentStatus, Contract, Debt, LaboratoryPrimaryDocument, Order, OrderPrimaryDocument, Payment, RequestQuarter } from '../types';
+import type { ClientPrimaryDocumentStatus, Contract, Debt, DocumentItem, LaboratoryPrimaryDocument, Order, OrderPrimaryDocument, Payment, RequestQuarter } from '../types';
 
 type ClientSimpleStatus = 'Заявка принята' | 'Ожидаем документы' | 'Договор и оплата' | 'В работе' | 'Готово' | 'Отменено';
 
@@ -628,8 +628,8 @@ const ClientContractInvoicePanel = ({
         <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">
           <h3 className="text-xl font-bold text-eco-900">Договор и счет</h3>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <DocumentDownloadCard title="Договор" docName={contractDoc?.name || serviceContract?.number || 'Договор пока не загружен'} ready={Boolean(contractDoc || serviceContract)} />
-            <DocumentDownloadCard title="Счет" docName={invoiceDoc?.name || order.invoiceNumber || 'Счет пока не выставлен'} ready={Boolean(invoiceDoc || order.invoiceNumber)} />
+            <DocumentDownloadCard title="Договор" doc={contractDoc} fallbackLabel={serviceContract?.number || 'Договор пока не загружен'} ready={Boolean(contractDoc || serviceContract)} />
+            <DocumentDownloadCard title="Счет" doc={invoiceDoc} fallbackLabel={order.invoiceNumber || 'Счет пока не выставлен'} ready={Boolean(invoiceDoc || order.invoiceNumber)} />
           </div>
           <div className="mt-5 rounded-2xl bg-eco-50 p-4">
             <p className="text-xs font-semibold uppercase text-slate-500">Статус оплаты</p>
@@ -649,20 +649,30 @@ const ClientContractInvoicePanel = ({
   );
 };
 
-const DocumentDownloadCard = ({ title, docName, ready }: { title: string; docName: string; ready: boolean }) => (
-  <div className="rounded-[20px] border border-slate-100 bg-slate-50 p-4">
-    <div className="flex items-start gap-3">
-      <FileText className={ready ? 'text-eco-700' : 'text-slate-400'} size={20} />
-      <div className="min-w-0">
-        <p className="font-bold text-slate-900">{title}</p>
-        <p className="mt-1 break-words text-sm text-slate-600">{docName}</p>
+const DocumentDownloadCard = ({ title, doc, fallbackLabel, ready }: { title: string; doc?: DocumentItem; fallbackLabel: string; ready: boolean }) => {
+  const displayName = doc?.name || fallbackLabel;
+  const downloadUrl = doc?.fileUrl || (doc?.id ? `/api/files/documents/${doc.id}` : undefined);
+  return (
+    <div className="rounded-[20px] border border-slate-100 bg-slate-50 p-4">
+      <div className="flex items-start gap-3">
+        <FileText className={ready ? 'text-eco-700' : 'text-slate-400'} size={20} />
+        <div className="min-w-0">
+          <p className="font-bold text-slate-900">{title}</p>
+          <p className="mt-1 break-words text-sm text-slate-600">{displayName}</p>
+        </div>
       </div>
+      {downloadUrl ? (
+        <a href={downloadUrl} download={displayName} className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold ${ready ? 'bg-eco-900 text-white' : 'pointer-events-none bg-slate-200 text-slate-500'}`}>
+          <Download size={14} /> Скачать
+        </a>
+      ) : (
+        <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-200 px-4 py-2 text-xs font-bold text-slate-500">
+          <Download size={14} /> Скачать
+        </span>
+      )}
     </div>
-    <a href="#download" className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold ${ready ? 'bg-eco-900 text-white' : 'pointer-events-none bg-slate-200 text-slate-500'}`}>
-      <Download size={14} /> Скачать
-    </a>
-  </div>
-);
+  );
+};
 
 const ClientResultPanel = ({ order }: { order: Order }) => {
   const ready = ['Готово', 'Завершено'].includes(order.status);
@@ -678,7 +688,7 @@ const ClientResultPanel = ({ order }: { order: Order }) => {
                 <p className="font-bold text-slate-900">{doc.name}</p>
                 <p className="mt-1 text-sm text-slate-500">Дата готовности: {doc.uploadedAt}</p>
                 <p className="mt-2 text-sm text-slate-600">{doc.status}</p>
-                <a href={`#${doc.id}`} download={doc.name} className="mt-3 inline-flex items-center gap-2 rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white"><Download size={14} /> Скачать</a>
+                <a href={doc.fileUrl || `/api/files/documents/${doc.id}`} download={doc.name} className="mt-3 inline-flex items-center gap-2 rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white"><Download size={14} /> Скачать</a>
               </div>
             ))}
           </div>
@@ -927,7 +937,7 @@ const CabinetPaymentsPageLegacy = () => {
 export const CabinetPaymentsPage = () => {
   const { orders } = useClientOrders();
   const { data: financePayments = [] } = useQuery({ queryKey: ['client-payments'], queryFn: getClientPayments });
-  const { data: contracts = [] } = useQuery({ queryKey: ['client-contracts'], queryFn: getFinanceContracts });
+  const { data: contracts = [] } = useQuery({ queryKey: ['client-contracts'], queryFn: getClientContracts });
   const { data: debts = [] } = useQuery({ queryKey: ['client-debts'], queryFn: getClientDebts });
 
   const requestIds = new Set(orders.map((order) => order.id));
@@ -1050,4 +1060,19 @@ export const CabinetCompanyPage = () => {
   );
 };
 
-export const CabinetNotificationsPage = () => <PageList title="Уведомления">{['Заявка создана', 'Статус обновлен', 'Документ готов'].map((n) => <div key={n} className="rounded-2xl bg-eco-50 p-4 text-sm">{n}</div>)}</PageList>;
+export const CabinetNotificationsPage = () => {
+  const { data: notifications = [], isLoading } = useQuery({ queryKey: ['notifications'], queryFn: getNotifications });
+  return (
+    <PageList title="Уведомления">
+      {isLoading && <LoadingSpinner />}
+      {!isLoading && !notifications.length && <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Уведомлений пока нет</div>}
+      {notifications.map((n) => (
+        <div key={n.id} className="rounded-2xl bg-eco-50 p-4">
+          <p className="font-semibold text-eco-900">{n.title}</p>
+          <p className="mt-1 text-sm text-slate-600">{n.description}</p>
+          <p className="mt-2 text-xs text-slate-400">{n.date}</p>
+        </div>
+      ))}
+    </PageList>
+  );
+};

@@ -6,7 +6,6 @@ import { canAccessPayments } from '../utils/payments';
 import { canAccess } from '../config/permissions';
 import type { UserRole } from '../types';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { staffUsers } from '../data/mockData';
 
 const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[] }> = [
   { label: 'Дашборд', path: '/staff', icon: LayoutDashboard },
@@ -35,11 +34,10 @@ const roleLabel = (role?: string) => {
 
 const StaffLayout = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
-  const { user, loading, isAuthenticated, isStaff, logout, setUser } = useAuth();
+  const { user, loading, isAuthenticated, isStaff, logout } = useAuth();
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><LoadingSpinner /></div>;
   if (!isAuthenticated || !isStaff) return <Navigate to="/staff/login" replace />;
-  const localDemo = localStorage.getItem('eco-progress-token')?.startsWith('local-demo-token');
 
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
@@ -111,21 +109,6 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
               <h1 className="truncate text-base font-semibold text-eco-900 sm:text-lg">{user?.name || 'Сотрудник ECOPROGRESS GROUP'}</h1>
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              {localDemo && (
-                <select
-                  value={user?.id || ''}
-                  onChange={(event) => {
-                    const nextUser = staffUsers.find((item) => item.id === event.target.value);
-                    if (nextUser) setUser(nextUser);
-                  }}
-                  className="hidden rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-eco-900 outline-none sm:block"
-                  aria-label="Change role"
-                >
-                  {staffUsers.map((item) => (
-                    <option key={item.id} value={item.id}>{roleLabel(item.role)}</option>
-                  ))}
-                </select>
-              )}
               <Link to="/" className="hidden text-sm font-semibold text-eco-700 hover:text-eco-900 sm:block">На сайт</Link>
               <Link to="/staff/login" onClick={logout} className="inline-flex items-center gap-2 rounded-full bg-eco-900 px-3 py-2 text-sm font-semibold text-white sm:px-4">
                 <LogOut size={16} />
