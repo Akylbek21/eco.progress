@@ -198,16 +198,18 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
   const [selectedOrderServiceId, setSelectedOrderServiceId] = useState<string>(serviceFromUrl);
   const [selectedOrderItems, setSelectedOrderItems] = useState<string[]>([]);
   const selectedOrderService = services.find((service) => service.id === selectedOrderServiceId) ?? services[0];
-  const selectedBusinessCompany = getBusinessCompanyById(selectedOrderService.businessCompanyId);
+  const selectedBusinessCompany = getBusinessCompanyById(selectedOrderService?.businessCompanyId);
   const selectedWorkStage = getWorkStageLabel({
-    service: `${selectedOrderService.title} ${selectedOrderItems.join(' ')}`,
-    serviceId: selectedOrderService.id,
-    businessCompanyId: selectedOrderService.businessCompanyId,
+    service: `${selectedOrderService?.title ?? ''} ${selectedOrderItems.join(' ')}`,
+    serviceId: selectedOrderService?.id,
+    businessCompanyId: selectedOrderService?.businessCompanyId,
   });
   useEffect(() => {
     setSelectedOrderServiceId(serviceFromUrl);
     const service = services.find((item) => item.id === serviceFromUrl) ?? services[0];
-    setSelectedOrderItems(itemsFromUrl.map((index) => service.includes[index]).filter(Boolean));
+    if (service) {
+      setSelectedOrderItems(itemsFromUrl.map((index) => service.includes[index]).filter(Boolean));
+    }
   }, [serviceFromUrl, itemsFromUrl]);
   const toggleOrderItem = (item: string) => {
     setSelectedOrderItems((current) => (current.includes(item) ? current.filter((value) => value !== item) : [...current, item]));
@@ -237,6 +239,9 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
     onNotify?.('Заявка создана. Сотрудник проверит данные и отправит договор со счетом.');
     navigate(`/cabinet/orders/${order.id}`);
   };
+  if (!selectedOrderService) {
+    return <div className="flex min-h-[400px] items-center justify-center"><LoadingSpinner /></div>;
+  }
   return (
     <Reveal>
       <form onSubmit={submit} className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">

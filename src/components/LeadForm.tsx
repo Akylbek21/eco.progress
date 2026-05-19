@@ -23,6 +23,7 @@ const serviceOptions = [
 const LeadForm = ({ source = 'site_form', title = 'Получить консультацию', compact = false, defaultService = 'Не знаю, нужна консультация' }: LeadFormProps) => {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState(false);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -35,11 +36,17 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
     if (!name || !phone || !serviceType) return;
 
     setLoading(true);
-    const lead = await createLead({ name, phone, city, serviceType, comment, source });
-    trackLeadSubmit({ source, serviceType, leadId: lead.id });
-    setLoading(false);
-    setSent(true);
-    event.currentTarget.reset();
+    setError(false);
+    try {
+      const lead = await createLead({ name, phone, city, serviceType, comment, source });
+      trackLeadSubmit({ source, serviceType, leadId: lead.id });
+      setSent(true);
+      event.currentTarget.reset();
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -72,6 +79,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
       </label>
       <Button disabled={loading} className="mt-5 w-full">{loading ? 'Отправляем...' : 'Отправить заявку'}</Button>
       {sent && <p className="mt-4 rounded-2xl bg-eco-50 p-4 text-sm font-semibold text-eco-900">Спасибо! Специалист ECOPROGRESS GROUP свяжется с вами в ближайшее время.</p>}
+      {error && <p className="mt-4 rounded-2xl bg-rose-50 p-4 text-sm font-semibold text-rose-800">Не удалось отправить заявку. Попробуйте позже или свяжитесь по WhatsApp.</p>}
     </form>
   );
 };
