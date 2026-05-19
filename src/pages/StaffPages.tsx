@@ -455,6 +455,98 @@ const collectDocuments = (orders: Order[]): StaffDocument[] =>
     }))
   );
 
+type EcoDocumentSection = 'overview' | 'projecting' | 'permit';
+type EcoDocument = {
+  id: string;
+  requestId: string;
+  section: EcoDocumentSection;
+  documentType?: string;
+  title?: string;
+  fileName: string;
+  comment?: string;
+  status: string;
+  uploadedBy: string;
+  uploadedAt: string;
+};
+type EcoAction = {
+  id: string;
+  requestId: string;
+  action: string;
+  comment?: string;
+  createdBy: string;
+  createdAt: string;
+};
+type EcoRequestState = {
+  requestId: string;
+  workStatus: string;
+};
+type EcoTab = 'Обзор' | 'Проектирование' | 'Разрешение';
+
+const ecoStorageKeys = {
+  documents: 'eco-progress-ecologist-documents',
+  actions: 'eco-progress-ecologist-actions',
+  states: 'eco-progress-ecologist-states',
+};
+const ecoWorkStatuses = [
+  'В работе у эколога',
+  'Ожидаем документы от клиента',
+  'Документы на проверке',
+  'Требуется исправление',
+  'Документы приняты',
+  'Проектирование начато',
+  'Проектирование завершено',
+  'Передано на разрешение',
+  'Работа завершена',
+];
+const ecoProjectDocumentTypes = [
+  'Бланк инвентаризация',
+  'Согласование предварительных материалов',
+  'Скрининг',
+  'Согласование о проведении организации общественных слушаний',
+  'ОВОС отчет',
+  'ОВОС',
+  'Согласование ОС',
+];
+const ecoProjectDocumentStatuses = ['Черновик', 'На проверке', 'Требует исправления', 'Согласовано', 'Готово'];
+const ecoPermitDocumentStatuses = ['Подготовка', 'На проверке', 'Отправлено', 'Принято', 'Требует исправления', 'Завершено'];
+
+const readEcoStorage = <T,>(key: string, fallback: T): T => {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) as T : fallback;
+  } catch {
+    return fallback;
+  }
+};
+const writeEcoStorage = <T,>(key: string, value: T) => {
+  if (typeof window !== 'undefined') window.localStorage.setItem(key, JSON.stringify(value));
+};
+const todayLabel = () => new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const ecoDefaultStatus = (order: Order) => {
+  if (order.ecologyStatus === 'waiting_client_data') return 'Ожидаем документы от клиента';
+  if (order.ecologyStatus === 'done') return 'Работа завершена';
+  if (order.ecologyStatus === 'in_progress' || order.status === 'Проектирование') return 'В работе у эколога';
+  return 'Документы на проверке';
+};
+const isEcologyWorkspaceOrder = (order: Order) =>
+  order.status === 'Проектирование' ||
+  getOrderWorkStageLabel(order) === 'Проектирование' ||
+  Boolean(order.quarters?.some((quarter) => quarter.workStage === 'Проектирование'));
+const isLaboratoryWorkspaceOrder = (order: Order) =>
+  order.status === 'Лаборатория' ||
+  isLaboratoryOrder(order) ||
+  Boolean(order.quarters?.some((quarter) => quarter.workStage === 'Лаборатория'));
+const ecoStatusTone = (status: string) => {
+  if (['Документы приняты', 'Проектирование завершено', 'Принято', 'Согласовано', 'Готово', 'Завершено', 'Работа завершена'].includes(status)) return 'bg-emerald-50 text-emerald-800 ring-emerald-100';
+  if (['Требуется исправление', 'Требует исправления'].includes(status)) return 'bg-rose-50 text-rose-800 ring-rose-100';
+  if (['Ожидаем документы от клиента', 'Подготовка', 'Черновик'].includes(status)) return 'bg-amber-50 text-amber-800 ring-amber-100';
+  if (['На проверке', 'Документы на проверке', 'Отправлено', 'Передано на разрешение'].includes(status)) return 'bg-sky-50 text-sky-800 ring-sky-100';
+  return 'bg-eco-50 text-eco-800 ring-eco-100';
+};
+const ecoBadge = (status: string) => <span className={`inline-flex max-w-full rounded-full px-3 py-1 text-xs font-bold leading-snug ring-1 ${ecoStatusTone(status)}`}>{status}</span>;
+const ecoRequestStatus = (order: Order, states: EcoRequestState[]) => states.find((item) => item.requestId === order.id)?.workStatus || ecoDefaultStatus(order);
+
 const lastOrderDate = (orders: Order[]) => orders[0]?.createdAt || 'Нет заявок';
 
 const PermissionDenied = ({ permission }: { permission: Permission }) => (
@@ -469,6 +561,72 @@ const PermissionDenied = ({ permission }: { permission: Permission }) => (
     </div>
   </Reveal>
 );
+
+const EcologistRequestList = ({ orders, title = 'Заявки эколога', compact = false }: { orders: Order[]; title?: string; compact?: boolean }) => {
+  const [states] = useState(() => readEcoStorage<EcoRequestState[]>(ecoStorageKeys.states, []));
+  return (
+    <Reveal>
+      <div className="rounded-[22px] bg-white p-4 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className={`${compact ? 'text-2xl' : 'text-3xl'} font-bold text-eco-900`}>{title}</h2>
+            <p className="mt-2 text-sm text-slate-600">Работа эколога ведется только внутри конкретной заявки.</p>
+          </div>
+          <p className="rounded-full bg-eco-50 px-4 py-2 text-sm font-bold text-eco-800">Всего: {orders.length}</p>
+        </div>
+
+        <div className="mt-5 hidden overflow-x-auto lg:block">
+          <table className="w-full min-w-[980px] text-left text-sm">
+            <thead className="text-slate-500">
+              <tr>
+                <th className="p-3">Заявка</th>
+                <th>Клиент</th>
+                <th>Услуга</th>
+                <th>Статус</th>
+                <th>Дата</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map((order) => (
+                <tr key={order.id} className="border-t border-slate-100 align-top">
+                  <td className="p-3 font-bold text-slate-900">{order.id}</td>
+                  <td className="py-3">
+                    <p className="font-semibold text-slate-900">{getOrderCompanyName(order)}</p>
+                    <p className="mt-1 text-xs text-slate-500">{order.contactPerson || order.clientName || 'Контакт не указан'}</p>
+                  </td>
+                  <td className="py-3 leading-snug text-slate-700">{order.service}</td>
+                  <td className="py-3">{ecoBadge(ecoRequestStatus(order, states))}</td>
+                  <td className="py-3 text-slate-600">{order.createdAt}</td>
+                  <td className="py-3 text-right">
+                    <Link to={`/staff/orders/${order.id}`} className="inline-flex rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Открыть заявку</Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-5 grid gap-3 lg:hidden">
+          {orders.map((order) => (
+            <Link key={order.id} to={`/staff/orders/${order.id}`} className="block rounded-2xl bg-slate-50 p-4 transition hover:bg-eco-50">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-900">{order.id} · {getOrderCompanyName(order)}</p>
+                  <p className="mt-1 break-words text-sm text-slate-600">{order.service}</p>
+                  <p className="mt-2 text-xs text-slate-500">Дата: {order.createdAt}</p>
+                </div>
+                {ecoBadge(ecoRequestStatus(order, states))}
+              </div>
+              <span className="mt-3 inline-flex rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Открыть заявку</span>
+            </Link>
+          ))}
+        </div>
+        {!orders.length && <EmptyState text="Заявок для эколога пока нет" />}
+      </div>
+    </Reveal>
+  );
+};
 
 export const StaffDashboardPage = () => {
   const { orders } = useOrders();
@@ -1144,7 +1302,7 @@ const CompanyMetrics = ({ total, active, waiting, completed, dark = false }: { t
   );
 };
 
-const crmTabs = ['Обзор', 'Обзор заявки', 'Оплата', 'Договор', 'Документы', 'Экология', 'Лаборатория', 'Первичные документы', 'Согласование замера', 'Протокол', '870 форма', 'База отчёт', 'Квартальный отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт', 'Сообщения', 'Заметки', 'История'] as const;
+const crmTabs = ['Обзор', 'Обзор заявки', 'Оплата', 'Договор', 'Документы', 'Проектирование', 'Разрешение', 'Экология', 'Лаборатория', 'Первичные документы', 'Согласование замера', 'Протокол', '870 форма', 'База отчёт', 'Квартальный отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт', 'Сообщения', 'Заметки', 'История'] as const;
 type CrmTab = typeof crmTabs[number];
 
 const workflowTabTarget = (order: Order): CrmTab => {
@@ -1174,23 +1332,28 @@ const staffUtilityTabs: Array<{ label: string; target: CrmTab }> = [
 
 const roleVisibleTabs = (role: UserRole, order: Order): CrmTab[] => {
   const tabsForOrder = (tabs: CrmTab[]) => isLaboratoryOrder(order) ? tabs.filter((tab) => tab !== 'Документы') : tabs;
+  const workTabsForOrder = (): CrmTab[] => {
+    if (isLaboratoryWorkspaceOrder(order)) return ['Первичные документы', 'Согласование замера', 'Протокол', '870 форма', 'База отчёт', 'Квартальный отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт'];
+    if (isEcologyWorkspaceOrder(order)) return ['Проектирование', 'Разрешение'];
+    return [];
+  };
   if (role === 'MANAGER' && managerOrderStatuses.includes(order.status)) return tabsForOrder(['Обзор', 'Договор', 'Документы', 'Сообщения', 'Заметки', 'История']);
   if (role === 'ACCOUNTANT') return tabsForOrder(['Обзор', 'Оплата', 'Договор', 'Документы', 'История']);
-  if (role !== 'ADMIN' && isLaboratoryOrder(order)) {
-    return ['Обзор заявки', 'Лаборатория', 'История'];
+  if (role === 'LABORATORY' && isLaboratoryWorkspaceOrder(order)) return ['Обзор', 'Оплата', 'Договор', 'Лаборатория', 'Сообщения', 'Заметки', 'История'];
+  if (role === 'ECOLOGIST' || role === 'LABORATORY') return ['Обзор', 'Договор', 'Документы', ...workTabsForOrder(), 'Сообщения', 'Заметки', 'История'];
+  if (role === 'ADMIN') {
+    const workTabs: CrmTab[] = isLaboratoryWorkspaceOrder(order) ? ['Лаборатория'] : isEcologyWorkspaceOrder(order) ? ['Проектирование', 'Разрешение'] : [];
+    return tabsForOrder(['Обзор', 'Оплата', 'Договор', 'Документы', ...workTabs, 'Сообщения', 'Заметки', 'История']);
   }
-  if (role === 'ADMIN') return tabsForOrder(['Обзор', 'Оплата', 'Договор', 'Документы', 'Экология', 'Лаборатория', 'Сообщения', 'Заметки', 'История']);
-  if (role === 'ECOLOGIST') return tabsForOrder(['Обзор', 'Экология', 'Документы', 'Сообщения', 'Заметки']);
-  if (role === 'LABORATORY') return tabsForOrder(['Обзор', 'Лаборатория', 'Документы', 'Сообщения', 'Заметки']);
   return tabsForOrder(['Обзор', 'Договор', 'Документы', 'Сообщения', 'Заметки', 'История']);
 };
 
 const roleDefaultTab = (role: UserRole, order: Order): CrmTab => {
   if (role === 'MANAGER' && managerOrderStatuses.includes(order.status)) return ['Подготовка КП', 'КП отправлено', 'КП согласовано', 'Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан'].includes(order.status) ? 'Договор' : 'Обзор';
   if (role === 'ACCOUNTANT') return 'Оплата';
+  if (role === 'ECOLOGIST' && isEcologyWorkspaceOrder(order)) return 'Обзор';
+  if (role === 'LABORATORY' && isLaboratoryWorkspaceOrder(order)) return 'Лаборатория';
   if (isLaboratoryOrder(order)) return 'Лаборатория';
-  if (role === 'ECOLOGIST') return 'Экология';
-  if (role === 'LABORATORY') return 'Лаборатория';
   if (['КП', 'Договор', 'Подготовка КП', 'КП отправлено', 'КП согласовано', 'Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан'].includes(order.status)) return 'Договор';
   return 'Обзор';
 };
@@ -1230,6 +1393,7 @@ export const StaffOrdersPage = () => {
   const companies = useMemo(() => buildBusinessCompanySummaries(orders), [orders]);
   const managers = useMemo(() => Array.from(new Set(orders.map((order) => order.manager || 'Не назначен'))).sort(), [orders]);
   const scopedOrders = useMemo(() => roleOrderFilter(orders, role), [orders, role]);
+  if (role === 'ECOLOGIST') return <EcologistRequestList orders={scopedOrders} />;
   const statusOptions = role === 'MANAGER' ? managerOrderStatuses : role === 'ACCOUNTANT' ? accountantOrderStatuses : orderStatuses;
   const filtered = useMemo(() => scopedOrders
     .filter((o) => !onlyMyTasks || orderNeedsRole(o, role))
@@ -1361,6 +1525,7 @@ const StaffOrderTableRow = ({ order, canViewFinance, managerView = false }: { or
 export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: string) => void }) => {
   const { id } = useParams();
   const role = useStaffRole();
+  const { user } = useAuth();
   const access = roleAccess(role);
   const [order, setOrder] = useState<Order | undefined>();
   const [activeTab, setActiveTab] = useState<CrmTab>('Обзор');
@@ -1658,7 +1823,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     canAdvanceWorkflow && nextStatus && { label: `Следующий этап: ${nextStatus}`, onClick: advanceWorkflow, variant: nextStatus === 'Завершено' ? 'success' as const : 'primary' as const },
     order.status === 'Счет на оплату' && fallbackPaymentStatus(order.paymentStatus) !== 'paid' && access.finance && { label: 'Проверить оплату', onClick: () => setActiveTab('Оплата'), variant: 'primary' as const },
     ['КП', 'Договор', 'Подготовка КП', 'КП отправлено', 'КП согласовано', 'Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан'].includes(order.status) && access.manager && { label: 'Открыть договор/КП', onClick: () => setActiveTab('Договор'), variant: 'secondary' as const },
-    order.status === 'Проектирование' && access.ecology && { label: 'Открыть проектирование', onClick: () => setActiveTab('Экология'), variant: 'secondary' as const },
+    order.status === 'Проектирование' && access.ecology && { label: 'Открыть проектирование', onClick: () => setActiveTab('Проектирование'), variant: 'secondary' as const },
     order.status === 'Лаборатория' && access.laboratory && { label: 'Открыть лабораторию', onClick: () => setActiveTab('Лаборатория'), variant: 'secondary' as const },
     (order.status === 'Вывоз' || order.status === 'Утилизация' || order.status === 'Проверка результата') && canAccess(role, 'edit_documents') && { label: 'Документы результата', onClick: () => setActiveTab('Документы'), variant: 'secondary' as const },
   ].filter(Boolean) as Array<{ label: string; onClick: () => void | Promise<void>; variant: 'primary' | 'secondary' | 'success'; disabled?: boolean }>;
@@ -1723,8 +1888,8 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                   <Grid items={{ 'Компания-исполнитель': getOrderBusinessCompanyName(order), Клиент: getOrderCompanyName(order), Контакт: order.contactPerson || order.clientName, Телефон: order.phone, Услуга: order.service, Статус: order.status, 'Следующий шаг': getNextCrmStep(order), Ответственный: order.manager, Дедлайн: order.deadline || 'Нет' }} />
                   <div className="mt-5 grid gap-3 md:grid-cols-4">
                     <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">Оплата</p><div className="mt-2">{role === 'MANAGER' ? managerPaymentBadge(order) : paymentBadge(order.paymentStatus)}</div></div>
-                    <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">Экология</p><div className="mt-2">{ecologyBadge(order.ecologyStatus)}</div></div>
-                    <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">Лаборатория</p><div className="mt-2">{laboratoryBadge(order.laboratoryStatus)}</div></div>
+                    {isEcologyWorkspaceOrder(order) && <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">Экология</p><div className="mt-2">{ecologyBadge(order.ecologyStatus)}</div></div>}
+                    {isLaboratoryWorkspaceOrder(order) && <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">Лаборатория</p><div className="mt-2">{laboratoryBadge(order.laboratoryStatus)}</div></div>}
                     <InfoTile label="Документы" value={`${order.documents.length + order.resultDocuments.length} файлов`} />
                   </div>
                   <div className="mt-5">
@@ -1858,6 +2023,14 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                   </div>
                 )}
               </Section>
+            )}
+
+            {currentTab === 'Проектирование' && isEcologyWorkspaceOrder(order) && (
+              <EcoWorkDocumentTab order={order} userName={user?.name || 'Администратор'} mode="projecting" onNotify={onNotify} />
+            )}
+
+            {currentTab === 'Разрешение' && isEcologyWorkspaceOrder(order) && (
+              <EcoWorkDocumentTab order={order} userName={user?.name || 'Администратор'} mode="permit" onNotify={onNotify} />
             )}
 
             {currentTab === 'Первичные документы' && (
@@ -2073,6 +2246,423 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     </div>
   );
 };
+
+const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order; userName: string; onNotify?: (message: string) => void }) => {
+  const [activeTab, setActiveTab] = useState<EcoTab>('Обзор');
+  const [documents, setDocuments] = useState<EcoDocument[]>(() => readEcoStorage<EcoDocument[]>(ecoStorageKeys.documents, []).filter((doc) => doc.requestId === order.id));
+  const [actions, setActions] = useState<EcoAction[]>(() => readEcoStorage<EcoAction[]>(ecoStorageKeys.actions, []).filter((action) => action.requestId === order.id));
+  const [workStatus, setWorkStatus] = useState(() => ecoRequestStatus(order, readEcoStorage<EcoRequestState[]>(ecoStorageKeys.states, [])));
+
+  const addAction = (action: string, comment?: string) => {
+    const nextAction: EcoAction = {
+      id: `eco-action-${Date.now()}`,
+      requestId: order.id,
+      action,
+      comment,
+      createdBy: userName,
+      createdAt: todayLabel(),
+    };
+    const allActions = readEcoStorage<EcoAction[]>(ecoStorageKeys.actions, []);
+    writeEcoStorage(ecoStorageKeys.actions, [nextAction, ...allActions]);
+    setActions((current) => [nextAction, ...current]);
+  };
+
+  const saveRequestDocuments = (nextDocuments: EcoDocument[]) => {
+    const otherDocuments = readEcoStorage<EcoDocument[]>(ecoStorageKeys.documents, []).filter((doc) => doc.requestId !== order.id);
+    writeEcoStorage(ecoStorageKeys.documents, [...nextDocuments, ...otherDocuments]);
+    setDocuments(nextDocuments);
+  };
+
+  const changeWorkStatus = (status: string, comment?: string) => {
+    const otherStates = readEcoStorage<EcoRequestState[]>(ecoStorageKeys.states, []).filter((item) => item.requestId !== order.id);
+    writeEcoStorage(ecoStorageKeys.states, [{ requestId: order.id, workStatus: status }, ...otherStates]);
+    setWorkStatus(status);
+    addAction(`Статус работы изменен: ${status}`, comment);
+    onNotify?.('Статус работы обновлен');
+  };
+
+  const submitStatus = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    changeWorkStatus(String(form.get('status')), String(form.get('comment') || ''));
+    event.currentTarget.reset();
+  };
+
+  const submitClientComment = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const comment = String(form.get('comment') || '');
+    if (!comment.trim()) return;
+    addAction('Комментарий клиенту', comment);
+    onNotify?.('Комментарий добавлен');
+    event.currentTarget.reset();
+  };
+
+  const submitProjectDocument = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const file = form.get('file') as File | null;
+    if (!file?.name) return;
+    const documentType = String(form.get('documentType') || ecoProjectDocumentTypes[0]);
+    const nextDocument: EcoDocument = {
+      id: `eco-doc-${Date.now()}`,
+      requestId: order.id,
+      section: 'projecting',
+      documentType,
+      fileName: file.name,
+      comment: String(form.get('comment') || ''),
+      status: 'Черновик',
+      uploadedBy: userName,
+      uploadedAt: todayLabel(),
+    };
+    saveRequestDocuments([nextDocument, ...documents]);
+    addAction('Загружен проектный документ', `${documentType}: ${file.name}`);
+    onNotify?.('Проектный документ загружен');
+    event.currentTarget.reset();
+  };
+
+  const submitPermitDocument = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const file = form.get('file') as File | null;
+    if (!file?.name) return;
+    const title = String(form.get('title') || '').trim() || file.name;
+    const nextDocument: EcoDocument = {
+      id: `eco-doc-${Date.now()}`,
+      requestId: order.id,
+      section: 'permit',
+      title,
+      fileName: file.name,
+      comment: String(form.get('comment') || ''),
+      status: 'Подготовка',
+      uploadedBy: userName,
+      uploadedAt: todayLabel(),
+    };
+    saveRequestDocuments([nextDocument, ...documents]);
+    addAction('Загружен документ по разрешению', `${title}: ${file.name}`);
+    onNotify?.('Документ по разрешению загружен');
+    event.currentTarget.reset();
+  };
+
+  const changeDocumentStatus = (documentId: string, status: string) => {
+    const nextDocuments = documents.map((doc) => doc.id === documentId ? { ...doc, status } : doc);
+    saveRequestDocuments(nextDocuments);
+    addAction(`Статус документа изменен: ${status}`, documents.find((doc) => doc.id === documentId)?.fileName);
+    onNotify?.('Статус документа обновлен');
+  };
+
+  const projectDocuments = documents.filter((doc) => doc.section === 'projecting');
+  const permitDocuments = documents.filter((doc) => doc.section === 'permit');
+  const clientDocuments = [
+    ...order.documents.map((doc) => ({
+      id: doc.id,
+      title: doc.name,
+      fileName: doc.fileUrl || doc.name,
+      status: doc.status,
+      uploadedAt: doc.uploadedAt,
+      uploadedBy: order.contactPerson || order.clientName || 'Клиент',
+      comment: '',
+    })),
+    ...(order.primaryDocuments || []).map((doc) => ({
+      id: doc.id,
+      title: doc.name,
+      fileName: doc.fileName || 'Файл не загружен',
+      status: primaryDocumentStatusLabels[doc.status],
+      uploadedAt: doc.uploadedAt || 'Нет',
+      uploadedBy: order.contactPerson || order.clientName || 'Клиент',
+      comment: doc.managerComment || doc.clientComment || '',
+    })),
+  ];
+
+  return (
+    <div className="space-y-6">
+      <Reveal>
+        <div className="rounded-[22px] bg-white p-4 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <Link to="/staff/orders" className="text-sm font-semibold text-eco-700">← Заявки эколога</Link>
+              <h2 className="mt-3 text-2xl font-bold text-eco-900">{order.id} · {getOrderCompanyName(order)}</h2>
+              <p className="mt-1 break-words text-sm text-slate-600">{order.service}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {ecoBadge(workStatus)}
+              {badge(order.status)}
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-4">
+            <InfoTile label="Клиент" value={order.contactPerson || order.clientName || 'Не указано'} />
+            <InfoTile label="Компания" value={getOrderCompanyName(order)} />
+            <InfoTile label="Услуга" value={order.service} />
+            <InfoTile label="Дата" value={order.createdAt} />
+          </div>
+
+          <div className="mt-5 flex gap-2 overflow-x-auto rounded-2xl bg-slate-100 p-1">
+            {(['Обзор', 'Проектирование', 'Разрешение'] as EcoTab[]).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`shrink-0 rounded-xl px-4 py-2 text-sm font-bold transition ${activeTab === tab ? 'bg-eco-900 text-white shadow-sm' : 'text-slate-600 hover:bg-white hover:text-eco-900'}`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Reveal>
+
+      {activeTab === 'Обзор' && (
+        <Reveal>
+          <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+            <div className="space-y-6">
+              <Section title="Данные заявки" icon={<ClipboardList size={20} />}>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <InfoTile label="Название компании" value={getOrderCompanyName(order)} />
+                  <InfoTile label="БИН / ИИН" value={order.bin || 'Не указано'} />
+                  <InfoTile label="Контактное лицо" value={order.contactPerson || order.clientName || 'Не указано'} />
+                  <InfoTile label="Телефон" value={order.phone || 'Не указано'} />
+                  <InfoTile label="Email" value={order.email || 'Не указано'} />
+                  <InfoTile label="Текущий статус работы" value={workStatus} />
+                </div>
+              </Section>
+
+              <Section title="Документы клиента" icon={<FileText size={20} />}>
+                <div className="space-y-3">
+                  {clientDocuments.map((doc) => (
+                    <div key={doc.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900">{doc.title}</p>
+                          <p className="mt-1 break-words text-sm text-slate-600">{doc.fileName}</p>
+                          {doc.comment && <p className="mt-2 text-sm text-slate-500">{doc.comment}</p>}
+                        </div>
+                        {ecoBadge(doc.status)}
+                      </div>
+                      <p className="mt-3 text-xs font-semibold text-slate-500">{doc.uploadedBy} · {doc.uploadedAt}</p>
+                    </div>
+                  ))}
+                  {!clientDocuments.length && <EmptyState text="Клиентские документы пока не загружены" />}
+                </div>
+              </Section>
+
+              <Section title="Комментарии и история" icon={<History size={20} />}>
+                <div className="space-y-3">
+                  {order.comments.map((comment) => (
+                    <div key={comment.id} className="rounded-2xl bg-slate-50 p-4">
+                      <p className="text-sm font-bold text-slate-900">{comment.author} · {comment.createdAt}</p>
+                      <p className="mt-2 text-sm text-slate-700">{comment.text}</p>
+                    </div>
+                  ))}
+                  {actions.map((item) => (
+                    <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
+                      <p className="text-sm font-bold text-slate-900">{item.createdAt} · {item.createdBy}</p>
+                      <p className="mt-2 text-sm text-slate-700">{item.action}</p>
+                      {item.comment && <p className="mt-1 text-sm text-slate-500">{item.comment}</p>}
+                    </div>
+                  ))}
+                  {order.history.slice(0, 6).map((item) => (
+                    <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
+                      <p className="text-sm font-bold text-slate-900">{item.createdAt} · {actionTypeLabel(item.actionType)}</p>
+                      <p className="mt-2 text-sm text-slate-700">{item.text}</p>
+                    </div>
+                  ))}
+                  {!order.comments.length && !actions.length && !order.history.length && <EmptyState text="История по заявке пока пустая" />}
+                </div>
+              </Section>
+            </div>
+
+            <div className="space-y-6">
+              <Action title="Действия эколога" icon={<CheckCircle2 size={20} />}>
+                <div className="grid gap-3">
+                  <Button type="button" onClick={() => changeWorkStatus('Документы приняты', 'Эколог принял документы')}>Принять документы</Button>
+                  <Button type="button" variant="secondary" onClick={() => changeWorkStatus('Ожидаем документы от клиента', 'Запрошены недостающие документы')}>Запросить недостающие</Button>
+                  <Button type="button" variant="secondary" onClick={() => changeWorkStatus('Требуется исправление', 'Запрошено исправление документов')}>Запросить исправление</Button>
+                </div>
+                <form onSubmit={submitStatus} className="mt-5 border-t border-slate-100 pt-5">
+                  <label className="text-sm font-semibold text-slate-700">Статус работы</label>
+                  <select name="status" defaultValue={workStatus} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3">
+                    {ecoWorkStatuses.map((status) => <option key={status}>{status}</option>)}
+                  </select>
+                  <textarea name="comment" placeholder="Комментарий к статусу" className="input-focus mt-3 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
+                  <Button type="submit" className="mt-3 w-full">Изменить статус</Button>
+                </form>
+                <form onSubmit={submitClientComment} className="mt-5 border-t border-slate-100 pt-5">
+                  <label className="text-sm font-semibold text-slate-700">Комментарий клиенту</label>
+                  <textarea name="comment" required placeholder="Написать комментарий" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} />
+                  <Button type="submit" variant="secondary" className="mt-3 w-full">Отправить комментарий</Button>
+                </form>
+              </Action>
+            </div>
+          </div>
+        </Reveal>
+      )}
+
+      {activeTab === 'Проектирование' && (
+        <Reveal>
+          <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
+            <Section title="Загрузка проектного документа" icon={<Upload size={20} />}>
+              <form onSubmit={submitProjectDocument} className="space-y-4">
+                <Field label="Тип документа">
+                  <select name="documentType" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3">
+                    {ecoProjectDocumentTypes.map((type) => <option key={type}>{type}</option>)}
+                  </select>
+                </Field>
+                <Field label="Файл">
+                  <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                </Field>
+                <label className="text-sm font-semibold text-slate-700">Замечание / комментарий к документу
+                  <textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} />
+                </label>
+                <Button type="submit" className="w-full">Загрузить документ</Button>
+              </form>
+            </Section>
+            <EcoDocumentList documents={projectDocuments} statusOptions={ecoProjectDocumentStatuses} onStatusChange={changeDocumentStatus} emptyText="Проектные документы пока не загружены" />
+          </div>
+        </Reveal>
+      )}
+
+      {activeTab === 'Разрешение' && (
+        <Reveal>
+          <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
+            <Section title="Загрузка документа по разрешению" icon={<Upload size={20} />}>
+              <form onSubmit={submitPermitDocument} className="space-y-4">
+                <Field label="Название документа">
+                  <input name="title" required className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                </Field>
+                <Field label="Файл">
+                  <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                </Field>
+                <label className="text-sm font-semibold text-slate-700">Комментарий
+                  <textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} />
+                </label>
+                <Button type="submit" className="w-full">Загрузить документ</Button>
+              </form>
+            </Section>
+            <EcoDocumentList documents={permitDocuments} statusOptions={ecoPermitDocumentStatuses} onStatusChange={changeDocumentStatus} emptyText="Документы по разрешению пока не загружены" />
+          </div>
+        </Reveal>
+      )}
+    </div>
+  );
+};
+
+const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order; userName: string; mode: 'projecting' | 'permit'; onNotify?: (message: string) => void }) => {
+  const [documents, setDocuments] = useState<EcoDocument[]>(() => readEcoStorage<EcoDocument[]>(ecoStorageKeys.documents, []).filter((doc) => doc.requestId === order.id));
+  const sectionDocuments = documents.filter((doc) => doc.section === mode);
+
+  const addAction = (action: string, comment?: string) => {
+    const nextAction: EcoAction = {
+      id: `eco-action-${Date.now()}`,
+      requestId: order.id,
+      action,
+      comment,
+      createdBy: userName,
+      createdAt: todayLabel(),
+    };
+    writeEcoStorage(ecoStorageKeys.actions, [nextAction, ...readEcoStorage<EcoAction[]>(ecoStorageKeys.actions, [])]);
+  };
+
+  const saveRequestDocuments = (nextRequestDocuments: EcoDocument[]) => {
+    const otherDocuments = readEcoStorage<EcoDocument[]>(ecoStorageKeys.documents, []).filter((doc) => doc.requestId !== order.id);
+    writeEcoStorage(ecoStorageKeys.documents, [...nextRequestDocuments, ...otherDocuments]);
+    setDocuments(nextRequestDocuments);
+  };
+
+  const submitDocument = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const file = form.get('file') as File | null;
+    if (!file?.name) return;
+    const title = String(form.get('title') || '').trim() || file.name;
+    const documentType = String(form.get('documentType') || ecoProjectDocumentTypes[0]);
+    const nextDocument: EcoDocument = {
+      id: `eco-doc-${Date.now()}`,
+      requestId: order.id,
+      section: mode,
+      documentType: mode === 'projecting' ? documentType : undefined,
+      title: mode === 'permit' ? title : undefined,
+      fileName: file.name,
+      comment: String(form.get('comment') || ''),
+      status: mode === 'projecting' ? 'Черновик' : 'Подготовка',
+      uploadedBy: userName,
+      uploadedAt: todayLabel(),
+    };
+    saveRequestDocuments([nextDocument, ...documents]);
+    addAction(mode === 'projecting' ? 'Загружен проектный документ' : 'Загружен документ по разрешению', `${mode === 'projecting' ? documentType : title}: ${file.name}`);
+    onNotify?.(mode === 'projecting' ? 'Проектный документ загружен' : 'Документ по разрешению загружен');
+    event.currentTarget.reset();
+  };
+
+  const changeDocumentStatus = (documentId: string, status: string) => {
+    const nextDocuments = documents.map((doc) => doc.id === documentId ? { ...doc, status } : doc);
+    saveRequestDocuments(nextDocuments);
+    addAction(`Статус документа изменен: ${status}`, documents.find((doc) => doc.id === documentId)?.fileName);
+    onNotify?.('Статус документа обновлен');
+  };
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
+      <Section title={mode === 'projecting' ? 'Загрузка проектного документа' : 'Загрузка документа по разрешению'} icon={<Upload size={20} />}>
+        <form onSubmit={submitDocument} className="space-y-4">
+          {mode === 'projecting' ? (
+            <Field label="Тип документа">
+              <select name="documentType" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3">
+                {ecoProjectDocumentTypes.map((type) => <option key={type}>{type}</option>)}
+              </select>
+            </Field>
+          ) : (
+            <Field label="Название документа">
+              <input name="title" required className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
+            </Field>
+          )}
+          <Field label="Файл">
+            <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+          </Field>
+          <label className="text-sm font-semibold text-slate-700">{mode === 'projecting' ? 'Замечание / комментарий к документу' : 'Комментарий'}
+            <textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} />
+          </label>
+          <Button type="submit" className="w-full">Загрузить документ</Button>
+        </form>
+      </Section>
+      <EcoDocumentList
+        documents={sectionDocuments}
+        statusOptions={mode === 'projecting' ? ecoProjectDocumentStatuses : ecoPermitDocumentStatuses}
+        onStatusChange={changeDocumentStatus}
+        emptyText={mode === 'projecting' ? 'Проектные документы пока не загружены' : 'Документы по разрешению пока не загружены'}
+      />
+    </div>
+  );
+};
+
+const EcoDocumentList = ({ documents, statusOptions, onStatusChange, emptyText }: { documents: EcoDocument[]; statusOptions: string[]; onStatusChange: (documentId: string, status: string) => void; emptyText: string }) => (
+  <Section title="Загруженные документы" icon={<FileText size={20} />}>
+    <div className="space-y-3">
+      {documents.map((doc) => (
+        <div key={doc.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-bold text-slate-900">{doc.documentType || doc.title}</p>
+              <p className="mt-1 break-words text-sm text-slate-600">{doc.fileName}</p>
+              {doc.comment && <p className="mt-2 text-sm text-slate-500">{doc.comment}</p>}
+            </div>
+            {ecoBadge(doc.status)}
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <InfoTile label="Кто загрузил" value={doc.uploadedBy} />
+            <InfoTile label="Дата загрузки" value={doc.uploadedAt} />
+            <Field label="Статус документа">
+              <select value={doc.status} onChange={(event) => onStatusChange(doc.id, event.target.value)} className="input-focus w-full rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                {statusOptions.map((status) => <option key={status}>{status}</option>)}
+              </select>
+            </Field>
+          </div>
+        </div>
+      ))}
+      {!documents.length && <EmptyState text={emptyText} />}
+    </div>
+  </Section>
+);
 
 const Workflow = ({ order }: { order: Order }) => {
   const currentStep = getOverallWorkflowStepIndex(order);

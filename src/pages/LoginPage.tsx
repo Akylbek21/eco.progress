@@ -4,24 +4,31 @@ import { BriefcaseBusiness, UserRound } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
 
+const demoClient = { label: 'Клиент', email: 'client@demo.kz', password: 'demo' };
+const demoStaff = [
+  { label: 'Эколог', email: 'ecologist@demo.kz', password: 'demo' },
+  { label: 'Лаборатория', email: 'laboratory@demo.kz', password: 'demo' },
+  { label: 'Менеджер', email: 'manager@demo.kz', password: 'demo' },
+  { label: 'Бухгалтер', email: 'accountant@demo.kz', password: 'demo' },
+  { label: 'Админ', email: 'admin@demo.kz', password: 'demo' },
+];
+
 const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: (message: string) => void }) => {
   const navigate = useNavigate();
   const { login, staffLogin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
+  const signIn = async (email: string, password: string) => {
     setLoading(true);
     setError('');
     try {
       if (staff) {
-        await staffLogin(String(form.get('email') || ''), String(form.get('password') || ''));
+        await staffLogin(email, password);
         onSuccess?.('Вход сотрудника выполнен');
         navigate('/staff');
       } else {
-        await login(String(form.get('email') || ''), String(form.get('password') || ''));
+        await login(email, password);
         onSuccess?.('Вы вошли в кабинет клиента');
         navigate('/cabinet');
       }
@@ -31,6 +38,12 @@ const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: 
     } finally {
       setLoading(false);
     }
+  };
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await signIn(String(form.get('email') || ''), String(form.get('password') || ''));
   };
 
   return (
@@ -67,6 +80,23 @@ const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: 
             <input name="password" type="password" required placeholder="Введите пароль" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
           </label>
           <Button disabled={loading} className="mt-6 w-full">{loading ? 'Входим...' : 'Войти'}</Button>
+          <div className="mt-5 rounded-2xl border border-dashed border-eco-200 bg-eco-50/60 p-4">
+            <p className="text-sm font-bold text-eco-900">Быстрый демо-вход</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {(staff ? demoStaff : [demoClient]).map((account) => (
+                <button
+                  key={account.email}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => signIn(account.email, account.password)}
+                  className="rounded-2xl bg-white px-3 py-2 text-left text-sm font-semibold text-eco-800 ring-1 ring-eco-100 transition hover:bg-eco-900 hover:text-white disabled:opacity-60"
+                >
+                  {account.label}
+                  <span className="mt-1 block text-xs font-medium opacity-70">{account.email} / demo</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
             <Link to={staff ? '/login' : '/staff/login'} className="font-semibold text-eco-700">
               {staff ? 'Перейти во вход клиента' : 'Перейти во вход сотрудника'}

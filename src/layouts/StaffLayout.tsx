@@ -38,12 +38,14 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><LoadingSpinner /></div>;
   if (!isAuthenticated || !isStaff) return <Navigate to="/staff/login" replace />;
+  const homePath = '/staff';
 
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
       {links.map((item) => {
         const Icon = item.icon;
-        if (item.allowedRoles && (!user?.role || !item.allowedRoles.includes(user.role))) return null;
+        const ecologistCanSeeSection = user?.role === 'ECOLOGIST';
+        if (!ecologistCanSeeSection && item.allowedRoles && (!user?.role || !item.allowedRoles.includes(user.role))) return null;
         const locked = (item.paymentsOnly && !canAccessPayments(user?.role)) || (item.rolesOnly && !canAccess(user?.role, 'manage_roles'));
         if (locked) {
           const title = item.rolesOnly ? 'Доступно только администратору' : 'Доступно только администратору и бухгалтеру';
@@ -89,7 +91,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 lg:grid lg:grid-cols-[290px_1fr]">
       <aside className="hidden bg-eco-900 p-6 text-white lg:block">
-        <Link to="/staff" className="flex items-center text-xl font-bold leading-tight">
+        <Link to={homePath} className="flex items-center text-xl font-bold leading-tight">
           <span>
             <span className="block">ECOPROGRESS</span>
             <span className="block text-xs tracking-[0.22em] text-white/55">GROUP CRM</span>

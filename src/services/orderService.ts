@@ -1,4 +1,5 @@
 import api from './api';
+import { readDemoOrders } from './staffOrderService';
 import type {
   CommentItem,
   DocumentItem,
@@ -20,13 +21,21 @@ export const primaryDocumentTemplates = [
 ] as const;
 
 export const getOrders = async (): Promise<Order[]> => {
-  const { data } = await api.get<{ data: Order[]; message: string | null }>('/client/orders');
-  return data.data;
+  try {
+    const { data } = await api.get<{ data: Order[]; message: string | null }>('/client/orders');
+    const demoOrders = readDemoOrders();
+    const existingIds = new Set(data.data.map((order) => order.id));
+    return [...data.data, ...demoOrders.filter((order) => !existingIds.has(order.id))];
+  } catch {
+    return readDemoOrders();
+  }
 };
 
 export const getClientOrders = async (): Promise<Order[]> => getOrders();
 
 export const getOrderById = async (id: string): Promise<Order | undefined> => {
+  const demoOrder = readDemoOrders().find((order) => order.id === id);
+  if (demoOrder) return demoOrder;
   const { data } = await api.get<{ data: Order; message: string | null }>(`/client/orders/${id}`);
   return data.data;
 };
