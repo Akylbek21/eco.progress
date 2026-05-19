@@ -37,11 +37,12 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
 
     setLoading(true);
     setError(false);
+    setSent(false);
     try {
       const lead = await createLead({ name, phone, city, serviceType, comment, source });
-      trackLeadSubmit({ source, serviceType, leadId: lead.id });
       setSent(true);
       event.currentTarget.reset();
+      try { trackLeadSubmit({ source, serviceType, leadId: lead.id }); } catch {}
     } catch {
       setError(true);
     } finally {
