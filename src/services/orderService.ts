@@ -1,5 +1,4 @@
 import api from './api';
-import { readDemoOrders } from './staffOrderService';
 import type {
   CommentItem,
   DocumentItem,
@@ -21,21 +20,13 @@ export const primaryDocumentTemplates = [
 ] as const;
 
 export const getOrders = async (): Promise<Order[]> => {
-  try {
-    const { data } = await api.get<{ data: Order[]; message: string | null }>('/client/orders');
-    const demoOrders = readDemoOrders();
-    const existingIds = new Set(data.data.map((order) => order.id));
-    return [...data.data, ...demoOrders.filter((order) => !existingIds.has(order.id))];
-  } catch {
-    return readDemoOrders();
-  }
+  const { data } = await api.get<{ data: Order[]; message: string | null }>('/client/orders');
+  return data.data;
 };
 
 export const getClientOrders = async (): Promise<Order[]> => getOrders();
 
 export const getOrderById = async (id: string): Promise<Order | undefined> => {
-  const demoOrder = readDemoOrders().find((order) => order.id === id);
-  if (demoOrder) return demoOrder;
   const { data } = await api.get<{ data: Order; message: string | null }>(`/client/orders/${id}`);
   return data.data;
 };
@@ -173,5 +164,5 @@ export const getNotifications = async (): Promise<NotificationItem[]> => {
 
 export const getDocuments = async (): Promise<DocumentItem[]> => {
   const orders = await getOrders();
-  return orders.flatMap((order) => [...order.documents, ...order.resultDocuments]);
+  return orders.flatMap((order) => [...(order.documents || []), ...(order.resultDocuments || [])]);
 };

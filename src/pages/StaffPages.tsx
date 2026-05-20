@@ -482,11 +482,6 @@ type EcoRequestState = {
 };
 type EcoTab = 'Обзор' | 'Проектирование' | 'Разрешение';
 
-const ecoStorageKeys = {
-  documents: 'eco-progress-ecologist-documents',
-  actions: 'eco-progress-ecologist-actions',
-  states: 'eco-progress-ecologist-states',
-};
 const ecoWorkStatuses = [
   'В работе у эколога',
   'Ожидаем документы от клиента',
@@ -510,18 +505,6 @@ const ecoProjectDocumentTypes = [
 const ecoProjectDocumentStatuses = ['Черновик', 'На проверке', 'Требует исправления', 'Согласовано', 'Готово'];
 const ecoPermitDocumentStatuses = ['Подготовка', 'На проверке', 'Отправлено', 'Принято', 'Требует исправления', 'Завершено'];
 
-const readEcoStorage = <T,>(key: string, fallback: T): T => {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) as T : fallback;
-  } catch {
-    return fallback;
-  }
-};
-const writeEcoStorage = <T,>(key: string, value: T) => {
-  if (typeof window !== 'undefined') window.localStorage.setItem(key, JSON.stringify(value));
-};
 const todayLabel = () => new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 const ecoDefaultStatus = (order: Order) => {
   if (order.ecologyStatus === 'waiting_client_data') return 'Ожидаем документы от клиента';
@@ -545,7 +528,7 @@ const ecoStatusTone = (status: string) => {
   return 'bg-eco-50 text-eco-800 ring-eco-100';
 };
 const ecoBadge = (status: string) => <span className={`inline-flex max-w-full rounded-full px-3 py-1 text-xs font-bold leading-snug ring-1 ${ecoStatusTone(status)}`}>{status}</span>;
-const ecoRequestStatus = (order: Order, states: EcoRequestState[]) => states.find((item) => item.requestId === order.id)?.workStatus || ecoDefaultStatus(order);
+const ecoRequestStatus = (order: Order) => ecoDefaultStatus(order);
 
 const lastOrderDate = (orders: Order[]) => orders[0]?.createdAt || 'Нет заявок';
 
@@ -563,7 +546,6 @@ const PermissionDenied = ({ permission }: { permission: Permission }) => (
 );
 
 const EcologistRequestList = ({ orders, title = 'Заявки эколога', compact = false }: { orders: Order[]; title?: string; compact?: boolean }) => {
-  const [states] = useState(() => readEcoStorage<EcoRequestState[]>(ecoStorageKeys.states, []));
   return (
     <Reveal>
       <div className="rounded-[22px] bg-white p-4 shadow-sm sm:p-6">
@@ -596,7 +578,7 @@ const EcologistRequestList = ({ orders, title = 'Заявки эколога', c
                     <p className="mt-1 text-xs text-slate-500">{order.contactPerson || order.clientName || 'Контакт не указан'}</p>
                   </td>
                   <td className="py-3 leading-snug text-slate-700">{order.service}</td>
-                  <td className="py-3">{ecoBadge(ecoRequestStatus(order, states))}</td>
+                  <td className="py-3">{ecoBadge(ecoRequestStatus(order))}</td>
                   <td className="py-3 text-slate-600">{order.createdAt}</td>
                   <td className="py-3 text-right">
                     <Link to={`/staff/orders/${order.id}`} className="inline-flex rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Открыть заявку</Link>
@@ -616,7 +598,7 @@ const EcologistRequestList = ({ orders, title = 'Заявки эколога', c
                   <p className="mt-1 break-words text-sm text-slate-600">{order.service}</p>
                   <p className="mt-2 text-xs text-slate-500">Дата: {order.createdAt}</p>
                 </div>
-                {ecoBadge(ecoRequestStatus(order, states))}
+                {ecoBadge(ecoRequestStatus(order))}
               </div>
               <span className="mt-3 inline-flex rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Открыть заявку</span>
             </Link>
@@ -2249,11 +2231,30 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
 
 const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order; userName: string; onNotify?: (message: string) => void }) => {
   const [activeTab, setActiveTab] = useState<EcoTab>('Обзор');
-  const [documents, setDocuments] = useState<EcoDocument[]>(() => readEcoStorage<EcoDocument[]>(ecoStorageKeys.documents, []).filter((doc) => doc.requestId === order.id));
-  const [actions, setActions] = useState<EcoAction[]>(() => readEcoStorage<EcoAction[]>(ecoStorageKeys.actions, []).filter((action) => action.requestId === order.id));
-  const [workStatus, setWorkStatus] = useState(() => ecoRequestStatus(order, readEcoStorage<EcoRequestState[]>(ecoStorageKeys.states, [])));
+  const [documents, setDocuments] = useState<EcoDocument[]>(() =>
+    (order.resultDocuments || []).map((doc) => ({
+      id: doc.id,
+      requestId: order.id,
+      section: 'overview' as EcoDocumentSection,
+      fileName: doc.fileUrl || doc.name,
+      status: doc.status,
+      uploadedBy: 'Сотрудник',
+      uploadedAt: doc.uploadedAt,
+    }))
+  );
+  const [actions, setActions] = useState<EcoAction[]>(() =>
+    (order.history || []).filter((h) => h.actorRole !== 'CLIENT').map((h) => ({
+      id: h.id,
+      requestId: order.id,
+      action: h.text,
+      comment: h.comment,
+      createdBy: h.actorName || 'Система',
+      createdAt: h.createdAt,
+    }))
+  );
+  const [workStatus, setWorkStatus] = useState(() => ecoRequestStatus(order));
 
-  const addAction = (action: string, comment?: string) => {
+  const addAction = async (action: string, comment?: string) => {
     const nextAction: EcoAction = {
       id: `eco-action-${Date.now()}`,
       requestId: order.id,
@@ -2262,22 +2263,25 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
       createdBy: userName,
       createdAt: todayLabel(),
     };
-    const allActions = readEcoStorage<EcoAction[]>(ecoStorageKeys.actions, []);
-    writeEcoStorage(ecoStorageKeys.actions, [nextAction, ...allActions]);
     setActions((current) => [nextAction, ...current]);
+    try {
+      await addComment(order.id, `${action}${comment ? `: ${comment}` : ''}`, 'internal');
+    } catch { /* action logged locally */ }
   };
 
   const saveRequestDocuments = (nextDocuments: EcoDocument[]) => {
-    const otherDocuments = readEcoStorage<EcoDocument[]>(ecoStorageKeys.documents, []).filter((doc) => doc.requestId !== order.id);
-    writeEcoStorage(ecoStorageKeys.documents, [...nextDocuments, ...otherDocuments]);
     setDocuments(nextDocuments);
   };
 
-  const changeWorkStatus = (status: string, comment?: string) => {
-    const otherStates = readEcoStorage<EcoRequestState[]>(ecoStorageKeys.states, []).filter((item) => item.requestId !== order.id);
-    writeEcoStorage(ecoStorageKeys.states, [{ requestId: order.id, workStatus: status }, ...otherStates]);
+  const changeWorkStatus = async (status: string, comment?: string) => {
     setWorkStatus(status);
     addAction(`Статус работы изменен: ${status}`, comment);
+    try {
+      const ecologyStatus = status === 'Работа завершена' ? 'done' as const
+        : status === 'Ожидаем документы от клиента' ? 'waiting_client_data' as const
+        : 'in_progress' as const;
+      await updateEcologyStatus(order.id, ecologyStatus, comment);
+    } catch { /* status changed locally */ }
     onNotify?.('Статус работы обновлен');
   };
 
@@ -2288,22 +2292,26 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
     event.currentTarget.reset();
   };
 
-  const submitClientComment = (event: FormEvent<HTMLFormElement>) => {
+  const submitClientComment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const comment = String(form.get('comment') || '');
     if (!comment.trim()) return;
+    await addComment(order.id, comment, 'client');
     addAction('Комментарий клиенту', comment);
     onNotify?.('Комментарий добавлен');
     event.currentTarget.reset();
   };
 
-  const submitProjectDocument = (event: FormEvent<HTMLFormElement>) => {
+  const submitProjectDocument = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const file = form.get('file') as File | null;
     if (!file?.name) return;
     const documentType = String(form.get('documentType') || ecoProjectDocumentTypes[0]);
+    try {
+      await uploadDocument(order.id, file, 'result');
+    } catch { /* upload failed */ }
     const nextDocument: EcoDocument = {
       id: `eco-doc-${Date.now()}`,
       requestId: order.id,
@@ -2321,12 +2329,15 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
     event.currentTarget.reset();
   };
 
-  const submitPermitDocument = (event: FormEvent<HTMLFormElement>) => {
+  const submitPermitDocument = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const file = form.get('file') as File | null;
     if (!file?.name) return;
     const title = String(form.get('title') || '').trim() || file.name;
+    try {
+      await uploadDocument(order.id, file, 'result');
+    } catch { /* upload failed */ }
     const nextDocument: EcoDocument = {
       id: `eco-doc-${Date.now()}`,
       requestId: order.id,
@@ -2548,34 +2559,23 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
 };
 
 const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order; userName: string; mode: 'projecting' | 'permit'; onNotify?: (message: string) => void }) => {
-  const [documents, setDocuments] = useState<EcoDocument[]>(() => readEcoStorage<EcoDocument[]>(ecoStorageKeys.documents, []).filter((doc) => doc.requestId === order.id));
+  const [documents, setDocuments] = useState<EcoDocument[]>([]);
   const sectionDocuments = documents.filter((doc) => doc.section === mode);
 
-  const addAction = (action: string, comment?: string) => {
-    const nextAction: EcoAction = {
-      id: `eco-action-${Date.now()}`,
-      requestId: order.id,
-      action,
-      comment,
-      createdBy: userName,
-      createdAt: todayLabel(),
-    };
-    writeEcoStorage(ecoStorageKeys.actions, [nextAction, ...readEcoStorage<EcoAction[]>(ecoStorageKeys.actions, [])]);
-  };
-
   const saveRequestDocuments = (nextRequestDocuments: EcoDocument[]) => {
-    const otherDocuments = readEcoStorage<EcoDocument[]>(ecoStorageKeys.documents, []).filter((doc) => doc.requestId !== order.id);
-    writeEcoStorage(ecoStorageKeys.documents, [...nextRequestDocuments, ...otherDocuments]);
     setDocuments(nextRequestDocuments);
   };
 
-  const submitDocument = (event: FormEvent<HTMLFormElement>) => {
+  const submitDocument = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const file = form.get('file') as File | null;
     if (!file?.name) return;
     const title = String(form.get('title') || '').trim() || file.name;
     const documentType = String(form.get('documentType') || ecoProjectDocumentTypes[0]);
+    try {
+      await uploadDocument(order.id, file, 'result');
+    } catch { /* upload failed */ }
     const nextDocument: EcoDocument = {
       id: `eco-doc-${Date.now()}`,
       requestId: order.id,
@@ -2589,7 +2589,9 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
       uploadedAt: todayLabel(),
     };
     saveRequestDocuments([nextDocument, ...documents]);
-    addAction(mode === 'projecting' ? 'Загружен проектный документ' : 'Загружен документ по разрешению', `${mode === 'projecting' ? documentType : title}: ${file.name}`);
+    try {
+      await addComment(order.id, `${mode === 'projecting' ? 'Загружен проектный документ' : 'Загружен документ по разрешению'}: ${mode === 'projecting' ? documentType : title}: ${file.name}`, 'internal');
+    } catch { /* comment failed */ }
     onNotify?.(mode === 'projecting' ? 'Проектный документ загружен' : 'Документ по разрешению загружен');
     event.currentTarget.reset();
   };
@@ -2597,7 +2599,6 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
   const changeDocumentStatus = (documentId: string, status: string) => {
     const nextDocuments = documents.map((doc) => doc.id === documentId ? { ...doc, status } : doc);
     saveRequestDocuments(nextDocuments);
-    addAction(`Статус документа изменен: ${status}`, documents.find((doc) => doc.id === documentId)?.fileName);
     onNotify?.('Статус документа обновлен');
   };
 

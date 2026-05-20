@@ -43,32 +43,6 @@ type ClientAgreementResponse = {
   sentAt: string;
 };
 
-const clientAgreementStorageKey = 'eco-progress-client-agreements';
-const readClientAgreements = (): ClientAgreementResponse[] => {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = window.localStorage.getItem(clientAgreementStorageKey);
-    return raw ? JSON.parse(raw) as ClientAgreementResponse[] : [];
-  } catch {
-    return [];
-  }
-};
-const writeClientAgreements = (items: ClientAgreementResponse[]) => {
-  if (typeof window !== 'undefined') window.localStorage.setItem(clientAgreementStorageKey, JSON.stringify(items));
-};
-const agreementDateLabel = () => new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-const readEcoDocumentsForClient = (requestId: string) => {
-  if (typeof window === 'undefined') return [] as Array<{ id: string; documentType?: string; title?: string; fileName: string; comment?: string; status: string; uploadedBy: string; uploadedAt: string }>;
-  try {
-    const raw = window.localStorage.getItem('eco-progress-ecologist-documents');
-    const docs = raw ? JSON.parse(raw) as Array<{ id: string; requestId: string; section: string; documentType?: string; title?: string; fileName: string; comment?: string; status: string; uploadedBy: string; uploadedAt: string }> : [];
-    return docs.filter((doc) => doc.requestId === requestId);
-  } catch {
-    return [];
-  }
-};
-
 const clientSimpleSteps: ClientSimpleStatus[] = ['Заявка принята', 'Ожидаем документы', 'Договор и оплата', 'В работе', 'Готово'];
 
 const clientSimpleStatus = (order: Order): ClientSimpleStatus => {
@@ -385,7 +359,6 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
   const queryClient = useQueryClient();
   const [order, setOrder] = useState<Order | undefined>();
   const [activeTab, setActiveTab] = useState<ClientOrderTab>('Обзор');
-  const [agreementRefresh, setAgreementRefresh] = useState(0);
   const load = () => id && fetchOrderById(id).then(setOrder);
   useEffect(() => { load(); }, [id]);
   if (!id) return <Navigate to="/cabinet/orders" replace />;
@@ -445,19 +418,14 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
     const file = form.get('file') as File | null;
     const action = String(form.get('action')) as ClientAgreementResponse['action'];
     const signed = action === 'signed';
-    const response: ClientAgreementResponse = {
-      id: `${order.id}-agreement-${Date.now()}`,
-      requestId: order.id,
-      sourceDocumentId: sourceDocument.id,
-      sourceDocumentTitle: sourceDocument.title,
-      fileName: file?.name || undefined,
-      comment: String(form.get('comment') || ''),
-      action,
-      signed,
-      signedAt: signed ? agreementDateLabel() : undefined,
-      sentAt: agreementDateLabel(),
-    };
-    writeClientAgreements([response, ...readClientAgreements()]);
+    const commentText = String(form.get('comment') || '');
+    const label = action === 'revision_requested'
+      ? `Документ "${sourceDocument.title}" отправлен на исправление`
+      : signed
+      ? `Документ "${sourceDocument.title}" подписан`
+      : `Документ "${sourceDocument.title}" отправлен без подписи`;
+    await addComment(order.id, `${label}${commentText ? `: ${commentText}` : ''}`, 'client');
+    if (file?.name) await uploadDocument(order.id, file, 'client');
     onNotify?.(
       action === 'revision_requested'
         ? 'Документ отправлен сотруднику на исправление'
@@ -466,7 +434,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
         : 'Документ отправлен сотруднику без подписи'
     );
     event.currentTarget.reset();
-    setAgreementRefresh((value) => value + 1);
+    load();
   };
   const deletePrimaryFile = async (document: OrderPrimaryDocument) => {
     await deletePrimaryDocumentFile(order.id, document.id);
@@ -569,7 +537,6 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
 
       {activeTab === 'Согласование' && (
         <ClientAgreementPanel
-          key={agreementRefresh}
           order={order}
           onSend={sendAgreementResponse}
         />
@@ -618,18 +585,7 @@ const getAgreementSourceDocuments = (order: Order): AgreementSourceDocument[] =>
     uploadedAt: doc.uploadedAt || doc.readyAt || 'Дата не указана',
     section: 'Лабораторный документ',
   }));
-  const ecologyDocs = readEcoDocumentsForClient(order.id).map((doc) => ({
-    id: `ecology-${doc.id}`,
-    title: doc.documentType || doc.title || doc.fileName,
-    fileName: doc.fileName,
-    comment: doc.comment || '',
-    status: doc.status,
-    uploadedBy: doc.uploadedBy || 'Эколог ECOPROGRESS',
-    uploadedAt: doc.uploadedAt,
-    section: 'Экологический документ',
-  }));
-
-  return [...ecologyDocs, ...laboratoryDocs, ...resultDocs];
+  return [...laboratoryDocs, ...resultDocs];
 };
 
 const ClientAgreementPanel = ({
@@ -640,7 +596,6 @@ const ClientAgreementPanel = ({
   onSend: (event: FormEvent<HTMLFormElement>, sourceDocument: AgreementSourceDocument) => void;
 }) => {
   const sourceDocuments = getAgreementSourceDocuments(order);
-  const responses = readClientAgreements().filter((item) => item.requestId === order.id);
 
   return (
     <Reveal>
@@ -656,9 +611,7 @@ const ClientAgreementPanel = ({
         </div>
 
         <div className="mt-5 space-y-4">
-          {sourceDocuments.map((doc) => {
-            const latestResponse = responses.find((item) => item.sourceDocumentId === doc.id);
-            return (
+          {sourceDocuments.map((doc) => (
               <div key={doc.id} className="rounded-[20px] border border-slate-100 bg-slate-50 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -669,16 +622,6 @@ const ClientAgreementPanel = ({
                   </div>
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800 ring-1 ring-eco-100">{doc.status}</span>
                 </div>
-
-                {latestResponse && (
-                  <div className="mt-4 rounded-2xl bg-white p-4">
-                    <p className="text-sm font-bold text-eco-900">
-                      {latestResponse.action === 'revision_requested' ? 'Отправлено на исправление' : latestResponse.signed ? 'Подписано и отправлено' : 'Отправлено без подписи'}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">{latestResponse.sentAt}{latestResponse.fileName ? ` · ${latestResponse.fileName}` : ''}</p>
-                    {latestResponse.comment && <p className="mt-2 text-sm text-slate-500">{latestResponse.comment}</p>}
-                  </div>
-                )}
 
                 <form onSubmit={(event) => onSend(event, doc)} className="mt-4 grid gap-4 rounded-2xl border border-dashed border-slate-200 bg-white p-4 lg:grid-cols-[1fr_280px]">
                   <div className="grid gap-4 md:grid-cols-2">
@@ -705,8 +648,7 @@ const ClientAgreementPanel = ({
                   </div>
                 </form>
               </div>
-            );
-          })}
+          ))}
           {!sourceDocuments.length && (
             <div className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-500">
               Документов на согласование пока нет. Когда сотрудник отправит документ, он появится здесь.
