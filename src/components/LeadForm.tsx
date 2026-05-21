@@ -27,7 +27,8 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formEl = event.currentTarget;
+    const form = new FormData(formEl);
     const name = String(form.get('name') || '').trim();
     const phone = String(form.get('phone') || '').trim();
     const city = String(form.get('city') || '').trim();
@@ -41,7 +42,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
     try {
       const lead = await createLead({ name, phone, city, serviceType, comment, source });
       setSent(true);
-      event.currentTarget.reset();
+      formEl.reset();
       try { trackLeadSubmit({ source, serviceType, leadId: lead.id }); } catch {}
     } catch {
       setError(true);

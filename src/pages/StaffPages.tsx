@@ -81,9 +81,20 @@ import {
 const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const refresh = () => { setLoading(true); getOrders().then(setOrders).finally(() => setLoading(false)); };
+  const [error, setError] = useState<string | null>(null);
+  const refresh = () => {
+    setLoading(true);
+    setError(null);
+    getOrders()
+      .then(setOrders)
+      .catch((err) => {
+        console.error('Failed to load orders:', err);
+        setError(err?.response?.status === 403 ? 'Нет доступа к заявкам' : 'Не удалось загрузить заявки');
+      })
+      .finally(() => setLoading(false));
+  };
   useEffect(() => { refresh(); }, []);
-  return { orders, refresh, loading };
+  return { orders, refresh, loading, error };
 };
 
 const badge = (status: string) => {
@@ -611,7 +622,7 @@ const EcologistRequestList = ({ orders, title = 'Заявки эколога', c
 };
 
 export const StaffDashboardPage = () => {
-  const { orders } = useOrders();
+  const { orders, error } = useOrders();
   const navigate = useNavigate();
   const role = useStaffRole();
   const { user } = useAuth();
@@ -676,6 +687,12 @@ export const StaffDashboardPage = () => {
           </div>
         </div>
       </Reveal>
+
+      {error && (
+        <Reveal>
+          <div className="rounded-[24px] bg-rose-50 p-5 text-sm font-semibold text-rose-800 shadow-sm">{error}</div>
+        </Reveal>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map(([label, count], index) => (
@@ -1349,7 +1366,7 @@ const isStaffWorkflowTabActive = (order: Order, activeTab: CrmTab, label: string
 };
 
 export const StaffOrdersPage = () => {
-  const { orders } = useOrders();
+  const { orders, error } = useOrders();
   const { businessCompanyId } = useParams();
   const navigate = useNavigate();
   const role = useStaffRole();
@@ -1414,6 +1431,12 @@ export const StaffOrdersPage = () => {
           <CompanyCards companies={companies} selectedCompany={selectedCompany} onSelect={selectBusinessCompany} totalOrders={orders.length} />
         </div>
       </Reveal>
+
+      {error && (
+        <Reveal>
+          <div className="rounded-[24px] bg-rose-50 p-5 text-sm font-semibold text-rose-800 shadow-sm">{error}</div>
+        </Reveal>
+      )}
 
       <Reveal>
         <div className="rounded-[20px] bg-white p-4 shadow-sm sm:rounded-[22px] sm:p-6">
