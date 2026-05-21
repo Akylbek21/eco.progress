@@ -4,13 +4,13 @@ import { BriefcaseBusiness, UserRound } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
 
-const demoClient = { label: 'Клиент', email: 'client@demo.kz', password: 'demo' };
+const demoClient = { label: 'Клиент', email: 'client@ecoprogress.kz', password: 'ecopass' };
 const demoStaff = [
-  { label: 'Эколог', email: 'ecologist@demo.kz', password: 'demo' },
-  { label: 'Лаборатория', email: 'laboratory@demo.kz', password: 'demo' },
-  { label: 'Менеджер', email: 'manager@demo.kz', password: 'demo' },
-  { label: 'Бухгалтер', email: 'accountant@demo.kz', password: 'demo' },
-  { label: 'Админ', email: 'admin@demo.kz', password: 'demo' },
+  { label: 'Эколог', email: 'ecologist@ecoprogress.kz', password: 'ecopass' },
+  { label: 'Лаборатория', email: 'lab@ecoprogress.kz', password: 'ecopass' },
+  { label: 'Менеджер', email: 'manager@ecoprogress.kz', password: 'ecopass' },
+  { label: 'Бухгалтер', email: 'accountant@ecoprogress.kz', password: 'ecopass' },
+  { label: 'Админ', email: 'admin@ecoprogress.kz', password: 'ecopass' },
 ];
 
 const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: (message: string) => void }) => {
@@ -92,7 +92,7 @@ const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: 
                   className="rounded-2xl bg-white px-3 py-2 text-left text-sm font-semibold text-eco-800 ring-1 ring-eco-100 transition hover:bg-eco-900 hover:text-white disabled:opacity-60"
                 >
                   {account.label}
-                  <span className="mt-1 block text-xs font-medium opacity-70">{account.email} / demo</span>
+                  <span className="mt-1 block text-xs font-medium opacity-70">{account.email} / {account.password}</span>
                 </button>
               ))}
             </div>
