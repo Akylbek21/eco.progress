@@ -19,11 +19,13 @@ import {
   StickyNote,
   Upload,
   UserCheck,
+  X,
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import { useAuth } from '../contexts/AuthContext';
-import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, assignManager, completeAnnualRequest, getOrderById, getOrders, requestPrimaryDocument, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
+import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getOrderById, getOrders, requestPrimaryDocument, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
+import type { CreateClientPayload, StaffCreateOrderPayload } from '../services/staffOrderService';
 import { getServices } from '../services/serviceService';
 import { primaryDocumentTemplates } from '../services/orderService';
 import { getBusinessCompanyById, statusDescriptions } from '../utils/crm';
@@ -137,11 +139,15 @@ const requiredPrimaryDocumentsAccepted = (order: Order) => {
   return required.length > 0 && required.every((doc) => doc.status === 'accepted');
 };
 const primaryDocumentStatusLabels: Record<ClientPrimaryDocumentStatus, string> = {
-  need_upload: 'Нужно загрузить',
+  need_upload: 'Не загружен',
+  uploaded: 'Загружен',
   sent: 'Отправлено',
   in_review: 'На проверке',
-  accepted: 'Принято',
-  needs_fix: 'Нужно исправить',
+  under_review: 'На проверке',
+  accepted: 'Принят',
+  approved: 'Принят',
+  needs_fix: 'На исправлении',
+  rejected: 'Отклонён',
 };
 const primaryDocumentStatusClass = (status: ClientPrimaryDocumentStatus) => {
   if (status === 'accepted') return 'bg-emerald-50 text-emerald-800 ring-emerald-100';
@@ -3535,13 +3541,76 @@ export const StaffClientsPage = () => {
     );
   }
 
+  const [showCreateClient, setShowCreateClient] = useState(false);
+  const [createResult, setCreateResult] = useState<{ email: string; password: string } | null>(null);
+  const [createError, setCreateError] = useState('');
+  const { refresh } = useOrders();
+
+  const handleCreateClient = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCreateError('');
+    const form = new FormData(event.currentTarget);
+    const payload: CreateClientPayload = {
+      email: String(form.get('email') || ''),
+      phone: String(form.get('phone') || ''),
+      companyName: String(form.get('companyName') || ''),
+      binIin: String(form.get('binIin') || ''),
+      contactPerson: String(form.get('contactPerson') || ''),
+      legalAddress: String(form.get('legalAddress') || ''),
+      clientType: (form.get('clientType') as 'company' | 'individual') || 'company',
+    };
+    try {
+      const result = await createClient(payload);
+      setCreateResult({ email: result.email, password: result.tempPassword });
+    } catch (err: unknown) {
+      setCreateError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Не удалось создать клиента');
+    }
+  };
+
   return (
     <Reveal>
       <div className="rounded-[22px] bg-white p-6 shadow-sm">
         <div className="mb-5">
-          <h2 className="text-3xl font-bold text-eco-900">Компании</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-3xl font-bold text-eco-900">Компании</h2>
+            <button type="button" onClick={() => { setShowCreateClient(true); setCreateResult(null); setCreateError(''); }} className="rounded-full bg-eco-900 px-5 py-3 text-sm font-bold text-white hover:bg-eco-800">+ Создать клиента</button>
+          </div>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск компании" className="input-focus mt-4 w-full max-w-xl rounded-2xl border border-slate-200 px-4 py-3" />
         </div>
+
+        {showCreateClient && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm" onClick={() => setShowCreateClient(false)}>
+            <div className="relative w-full max-w-lg rounded-[28px] bg-white p-6 shadow-2xl sm:p-8" onClick={(e) => e.stopPropagation()}>
+              <button type="button" onClick={() => setShowCreateClient(false)} className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100"><X size={20} /></button>
+              {createResult ? (
+                <div className="text-center">
+                  <h3 className="text-xl font-bold text-eco-900">Клиент создан</h3>
+                  <p className="mt-4 text-sm text-slate-600">Передайте клиенту данные для входа:</p>
+                  <div className="mt-4 rounded-2xl bg-eco-50 p-4 text-left">
+                    <p className="text-sm"><span className="font-semibold">Email:</span> {createResult.email}</p>
+                    <p className="mt-1 text-sm"><span className="font-semibold">Пароль:</span> {createResult.password}</p>
+                  </div>
+                  <button type="button" onClick={() => { setShowCreateClient(false); refresh(); }} className="mt-5 rounded-full bg-eco-900 px-6 py-3 text-sm font-bold text-white">Закрыть</button>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-xl font-bold text-eco-900">Создать клиента</h3>
+                  <form onSubmit={handleCreateClient} className="mt-5 grid gap-3">
+                    <label className="block text-sm font-semibold text-slate-700">Email *<input name="email" type="email" required className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
+                    <label className="block text-sm font-semibold text-slate-700">Контактное лицо<input name="contactPerson" className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
+                    <label className="block text-sm font-semibold text-slate-700">Телефон<input name="phone" type="tel" className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
+                    <label className="block text-sm font-semibold text-slate-700">Тип<select name="clientType" className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"><option value="company">Юридическое лицо</option><option value="individual">Физическое лицо</option></select></label>
+                    <label className="block text-sm font-semibold text-slate-700">Компания<input name="companyName" className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
+                    <label className="block text-sm font-semibold text-slate-700">БИН/ИИН<input name="binIin" className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
+                    <label className="block text-sm font-semibold text-slate-700">Юр. адрес<input name="legalAddress" className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
+                    {createError && <p className="text-sm font-semibold text-rose-600">{createError}</p>}
+                    <button type="submit" className="mt-2 rounded-full bg-eco-900 px-6 py-3 text-sm font-bold text-white hover:bg-eco-800">Создать</button>
+                  </form>
+                </>
+              )}
+            </div>
+          </div>
+        )}
         <div className="grid gap-4 xl:grid-cols-2">
           {filteredCompanies.map((company) => {
             const companyOrders = orders.filter((order) => companyKey(getOrderCompanyName(order)) === company.key);

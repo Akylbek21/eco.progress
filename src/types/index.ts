@@ -76,6 +76,12 @@ export type OrderStatus =
   | 'Вывоз'
   | 'Утилизация'
   | 'Проверка результата'
+  | 'Документы на проверке'
+  | 'На консультации'
+  | 'На согласовании'
+  | 'На исправлении'
+  | 'Оплачено'
+  | 'В работе'
   | 'Готово'
   | 'Завершено'
   | 'Отменено';
@@ -106,7 +112,7 @@ export type PaymentStatus =
 export type EcologyStatus = 'not_started' | 'in_progress' | 'waiting_client_data' | 'done';
 export type LaboratoryStatus = 'not_assigned' | 'waiting_samples' | 'samples_received' | 'analysis_in_progress' | 'result_ready';
 export type LaboratoryPrimaryDocumentStatus = 'not_uploaded' | 'uploaded' | 'in_review' | 'approved' | 'revision_required' | 'not_required';
-export type ClientPrimaryDocumentStatus = 'need_upload' | 'sent' | 'in_review' | 'accepted' | 'needs_fix';
+export type ClientPrimaryDocumentStatus = 'need_upload' | 'uploaded' | 'sent' | 'in_review' | 'under_review' | 'accepted' | 'approved' | 'needs_fix' | 'rejected';
 export type LaboratoryMeasurementAgreementStatus = 'draft' | 'sent_to_client' | 'accepted_by_client' | 'reschedule_requested' | 'confirmed' | 'completed' | 'cancelled';
 export type LaboratoryResultDocumentStatus = 'draft' | 'in_progress' | 'ready' | 'published_to_client' | 'archived';
 export type StaffContractStatus = 'not_created' | 'prepared' | 'sent_to_client' | 'waiting_signature' | 'signed' | 'rejected';

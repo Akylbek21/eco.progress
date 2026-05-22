@@ -1,13 +1,16 @@
+import { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import OrderChoiceModal from '../components/OrderChoiceModal';
 import { getServiceById } from '../services/serviceService';
 
 const ServiceDetailsPage = () => {
   const { id } = useParams();
+  const [orderModal, setOrderModal] = useState(false);
   const { data: service, isLoading } = useQuery({
     queryKey: ['services', id],
     queryFn: () => getServiceById(id!),
@@ -27,7 +30,7 @@ const ServiceDetailsPage = () => {
           <Reveal><p className="text-sm font-semibold uppercase tracking-[0.22em] text-eco-200">{service.category}</p></Reveal>
           <Reveal delay={0.1}><h1 className="mt-4 max-w-4xl text-4xl font-bold sm:text-6xl">{service.title}</h1></Reveal>
           <Reveal delay={0.16}><p className="mt-5 max-w-2xl text-lg text-white/78">{service.description}</p></Reveal>
-          <Link to="/cabinet/orders/new" className="mt-8 inline-block"><Button className="bg-accent text-eco-900 hover:bg-accent/90">Оставить заявку</Button></Link>
+          <button type="button" onClick={() => setOrderModal(true)} className="mt-8 inline-block"><Button className="bg-accent text-eco-900 hover:bg-accent/90">Заказать услугу</Button></button>
         </div>
       </section>
       <section className="bg-white px-5 py-16 sm:px-8">
@@ -51,6 +54,7 @@ const ServiceDetailsPage = () => {
           ))}
         </div>
       </section>
+      <OrderChoiceModal open={orderModal} onClose={() => setOrderModal(false)} preSelectedService={id} />
     </div>
   );
 };

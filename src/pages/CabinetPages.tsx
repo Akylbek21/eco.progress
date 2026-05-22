@@ -28,7 +28,7 @@ import { getAnnualRequestDebtSummary, getAnnualRequestProgress, getAnnualRequest
 import { formatCurrency, getPaymentStatusColor, getPaymentStatusLabel } from '../utils/payments';
 import type { ClientPrimaryDocumentStatus, Contract, Debt, DocumentItem, LaboratoryPrimaryDocument, Order, OrderPrimaryDocument, Payment, RequestQuarter } from '../types';
 
-type ClientSimpleStatus = 'Заявка принята' | 'Ожидаем документы' | 'Договор и оплата' | 'В работе' | 'Готово' | 'Отменено';
+type ClientSimpleStatus = 'Новая заявка' | 'На консультации' | 'Ожидаем документы' | 'Документы на проверке' | 'Договор и счет' | 'Ожидаем оплату' | 'Оплачено' | 'В работе' | 'На согласовании' | 'Завершено' | 'Отменено';
 type ClientOrderTab = 'Обзор' | 'Документы' | 'Согласование' | 'Договор и счет' | 'Результат';
 type ClientAgreementResponse = {
   id: string;
@@ -43,44 +43,66 @@ type ClientAgreementResponse = {
   sentAt: string;
 };
 
-const clientSimpleSteps: ClientSimpleStatus[] = ['Заявка принята', 'Ожидаем документы', 'Договор и оплата', 'В работе', 'Готово'];
+const clientSimpleSteps: ClientSimpleStatus[] = ['Новая заявка', 'На консультации', 'Ожидаем документы', 'Договор и счет', 'Ожидаем оплату', 'В работе', 'На согласовании', 'Завершено'];
 
 const clientSimpleStatus = (order: Order): ClientSimpleStatus => {
   if (order.status === 'Отменено') return 'Отменено';
-  if (['Готово', 'Завершено'].includes(order.status)) return 'Готово';
+  if (['Готово', 'Завершено'].includes(order.status)) return 'Завершено';
+  if (['Проверка результата'].includes(order.status)) return 'На согласовании';
+  if (isWorkOrderStatus(order.status) || ['annual_active'].includes(order.status)) return 'В работе';
+  if (['Полностью оплачено', 'Передано специалисту'].includes(order.status)) return 'Оплачено';
+  if (['Передано бухгалтеру', 'Ожидает счет', 'Счет отправлен', 'Ожидаем оплату', 'Частично оплачено', 'Счет на оплату'].includes(order.status)) return 'Ожидаем оплату';
+  if (['КП', 'Договор', 'Подготовка КП', 'КП отправлено', 'КП согласовано', 'Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан'].includes(order.status)) return 'Договор и счет';
+  if (order.primaryDocuments?.some((doc) => doc.status === 'uploaded' || doc.status === 'under_review') || order.status === 'Документы на проверке') return 'Документы на проверке';
   if (order.primaryDocuments?.some((doc) => ['need_upload', 'needs_fix'].includes(doc.status)) || order.status === 'Ожидаем первичные документы') return 'Ожидаем документы';
-  if (['Передано бухгалтеру', 'Ожидает счет', 'Счет отправлен', 'Ожидаем оплату', 'Частично оплачено', 'Полностью оплачено', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан', 'Передано специалисту'].includes(order.status)) return 'Договор и оплата';
-  if (isWorkOrderStatus(order.status) || ['annual_active', 'Проверка результата'].includes(order.status)) return 'В работе';
-  return 'Заявка принята';
+  if (['Консультация', 'Анализ', 'Анализ заявки'].includes(order.status)) return 'На консультации';
+  if (['Новая заявка', 'Связаться с клиентом'].includes(order.status)) return 'Новая заявка';
+  return 'Новая заявка';
 };
 
 const badge = (status: ClientSimpleStatus) => {
   const tone =
-    status === 'Готово' ? 'bg-emerald-50 text-emerald-800' :
+    status === 'Завершено' ? 'bg-emerald-50 text-emerald-800' :
+    status === 'Оплачено' ? 'bg-emerald-50 text-emerald-800' :
     status === 'Отменено' ? 'bg-rose-50 text-rose-800' :
     status === 'Ожидаем документы' ? 'bg-amber-50 text-amber-800' :
-    status === 'Договор и оплата' ? 'bg-indigo-50 text-indigo-800' :
+    status === 'Документы на проверке' ? 'bg-blue-50 text-blue-800' :
+    status === 'Договор и счет' ? 'bg-indigo-50 text-indigo-800' :
+    status === 'Ожидаем оплату' ? 'bg-orange-50 text-orange-800' :
     status === 'В работе' ? 'bg-eco-50 text-eco-800' :
+    status === 'На согласовании' ? 'bg-purple-50 text-purple-800' :
+    status === 'На консультации' ? 'bg-sky-50 text-sky-800' :
     'bg-sky-50 text-sky-800';
   return <span className={`rounded-full px-3 py-1 text-xs font-bold ${tone}`}>{status}</span>;
 };
 
 const clientStatusText = (order: Order) => {
   const status = clientSimpleStatus(order);
-  if (status === 'Заявка принята') return 'Мы получили заявку. Менеджер проверит данные и сообщит следующий шаг.';
+  if (status === 'Новая заявка') return 'Мы получили заявку. Менеджер свяжется с вами для уточнения деталей.';
+  if (status === 'На консультации') return 'Менеджер уточняет детали и подготавливает предложение.';
   if (status === 'Ожидаем документы') return 'Загрузите первичные документы внутри заявки, чтобы мы могли начать подготовку.';
-  if (status === 'Договор и оплата') return 'Проверьте договор и счет. Если требуется, загрузите чек оплаты.';
-  if (status === 'В работе') return 'Работа выполняется. Готовые документы появятся в разделе результата.';
-  if (status === 'Готово') return 'Работа завершена. Готовые документы доступны в заявке.';
+  if (status === 'Документы на проверке') return 'Менеджер проверяет загруженные документы.';
+  if (status === 'Договор и счет') return 'Готовятся договор и коммерческие документы.';
+  if (status === 'Ожидаем оплату') return 'Счет отправлен. Оплатите услугу для начала работы.';
+  if (status === 'Оплачено') return 'Оплата подтверждена. Заявка передается специалисту.';
+  if (status === 'В работе') return 'Специалист выполняет работу по вашей заявке.';
+  if (status === 'На согласовании') return 'Проверьте и подпишите документ от специалиста.';
+  if (status === 'Завершено') return 'Работа завершена. Готовые документы доступны в заявке.';
   return 'Заявка отменена. При необходимости создайте новую заявку.';
 };
 
 const clientNextStep = (order: Order) => {
   const status = clientSimpleStatus(order);
   if (status === 'Ожидаем документы') return 'Загрузите первичные документы для начала работы.';
-  if (status === 'Договор и оплата') return 'Проверьте договор, счет и при необходимости загрузите чек оплаты.';
-  if (status === 'В работе') return 'Ожидайте готовые документы, мы добавим их в результат.';
-  if (status === 'Готово') return 'Скачайте готовые документы в разделе “Результат”.';
+  if (status === 'Новая заявка') return 'Менеджер скоро свяжется с вами.';
+  if (status === 'На консультации') return 'Ожидайте — менеджер подготовит предложение.';
+  if (status === 'Документы на проверке') return 'Ожидайте проверки документов менеджером.';
+  if (status === 'Договор и счет') return 'Проверьте договор и коммерческие условия.';
+  if (status === 'Ожидаем оплату') return 'Оплатите счет для начала работы.';
+  if (status === 'Оплачено') return 'Заявка передается специалисту.';
+  if (status === 'В работе') return 'Ожидайте готовые документы от специалиста.';
+  if (status === 'На согласовании') return 'Проверьте и подпишите документ.';
+  if (status === 'Завершено') return 'Скачайте готовые документы в разделе “Результат”.';
   if (status === 'Отменено') return 'Создайте новую заявку, если услуга снова нужна.';
   return 'Ожидайте сообщение менеджера.';
 };
@@ -116,7 +138,7 @@ export const CabinetDashboardPage = () => {
   const stats = [
     ['Активные заявки', orders.filter((o) => !['Готово', 'Завершено', 'Отменено'].includes(o.status)).length],
     ['Нужны документы', orders.filter((o) => clientSimpleStatus(o) === 'Ожидаем документы').length],
-    ['Договор и оплата', orders.filter((o) => clientSimpleStatus(o) === 'Договор и оплата').length],
+    ['Договор и счет', orders.filter((o) => clientSimpleStatus(o) === 'Договор и счет').length],
     ['Договоров', contracts.length],
   ];
   return (
@@ -661,11 +683,15 @@ const ClientAgreementPanel = ({
 };
 
 const primaryDocumentStatusLabels: Record<ClientPrimaryDocumentStatus, string> = {
-  need_upload: 'Нужно загрузить',
+  need_upload: 'Не загружен',
+  uploaded: 'Загружен',
   sent: 'Отправлено',
   in_review: 'На проверке',
-  accepted: 'Принято',
-  needs_fix: 'Нужно исправить',
+  under_review: 'На проверке',
+  accepted: 'Принят',
+  approved: 'Принят',
+  needs_fix: 'На исправлении',
+  rejected: 'Отклонён',
 };
 
 const primaryDocumentStatusClass = (status: ClientPrimaryDocumentStatus) => {

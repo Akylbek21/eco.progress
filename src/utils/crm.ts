@@ -2,21 +2,39 @@ import type { BusinessCompany, ClientContract, EcologyStatus, LaboratoryStatus, 
 import { ecologyStatusLabels, laboratoryStatusLabels } from '../types/crm';
 
 export const orderStatusDefinitions: OrderStatusDefinition[] = [
-  { id: 'Консультация', label: 'Консультация', description: 'Менеджер связывается с клиентом, уточняет задачу и первичные данные.', order: 1, category: 'client', clientVisibleLabel: 'Консультация', employeeActionLabel: 'Провести консультацию' },
-  { id: 'Анализ', label: 'Анализ', description: 'Специалист анализирует услугу, объект, исходные документы, сроки и риски.', order: 2, category: 'client', clientVisibleLabel: 'Анализ заявки', employeeActionLabel: 'Выполнить анализ' },
-  { id: 'КП', label: 'КП', description: 'Команда готовит коммерческое предложение с составом работ, сроками и стоимостью.', order: 3, category: 'commercial', clientVisibleLabel: 'Коммерческое предложение', employeeActionLabel: 'Подготовить КП' },
-  { id: 'Договор', label: 'Договор', description: 'Договор согласован или отправлен клиенту на подписание.', order: 4, category: 'legal', clientVisibleLabel: 'Договор', employeeActionLabel: 'Подготовить договор' },
-  { id: 'Счет на оплату', label: 'Счет на оплату', description: 'Счет выставлен, заявка ожидает оплату или проверку оплаты.', order: 5, category: 'finance', clientVisibleLabel: 'Счет на оплату', employeeActionLabel: 'Выставить счет' },
-  { id: 'annual_active', label: 'Активна по годовому договору', description: 'Заявка обслуживается по годовому договору с квартальными работами.', order: 6, category: 'work', clientVisibleLabel: 'Активна по годовому договору', employeeActionLabel: 'Вести квартальное обслуживание' },
-  { id: 'Проектирование', label: 'Проектирование', description: 'Экологи выполняют проектирование, разрешительную документацию, отчеты.', order: 6, category: 'work', clientVisibleLabel: 'Выполнение работ', employeeActionLabel: 'Передать в проектирование' },
-  { id: 'Лаборатория', label: 'Лаборатория', description: 'Лаборатория выполняет анализы, замеры, работу с пробами.', order: 6, category: 'work', clientVisibleLabel: 'Выполнение работ', employeeActionLabel: 'Передать в лабораторию' },
-  { id: 'Вывоз', label: 'Вывоз', description: 'Команда организует вывоз или транспортировку отходов.', order: 6, category: 'work', clientVisibleLabel: 'Выполнение работ', employeeActionLabel: 'Организовать вывоз' },
-  { id: 'Утилизация', label: 'Утилизация', description: 'Команда выполняет утилизацию, размещение, переработку.', order: 6, category: 'work', clientVisibleLabel: 'Выполнение работ', employeeActionLabel: 'Передать на утилизацию' },
-  { id: 'Проверка результата', label: 'Проверка результата', description: 'Готовые материалы проходят внутреннюю проверку.', order: 7, category: 'quality', clientVisibleLabel: 'Проверка результата', employeeActionLabel: 'Проверить результат' },
-  { id: 'Готово', label: 'Готово', description: 'Результат готов и доступен клиенту.', order: 8, category: 'done', clientVisibleLabel: 'Готово', employeeActionLabel: 'Передать клиенту' },
+  { id: 'Консультация', label: 'Консультация', description: 'Менеджер связывается с клиентом, уточняет задачу и первичные данные.', order: 1, category: 'client', clientVisibleLabel: 'На консультации', employeeActionLabel: 'Провести консультацию' },
+  { id: 'Анализ', label: 'Анализ', description: 'Специалист анализирует услугу, объект, исходные документы, сроки и риски.', order: 2, category: 'client', clientVisibleLabel: 'На консультации', employeeActionLabel: 'Выполнить анализ' },
+  { id: 'КП', label: 'КП', description: 'Команда готовит коммерческое предложение с составом работ, сроками и стоимостью.', order: 3, category: 'commercial', clientVisibleLabel: 'Договор и счет', employeeActionLabel: 'Подготовить КП' },
+  { id: 'Договор', label: 'Договор', description: 'Договор согласован или отправлен клиенту на подписание.', order: 4, category: 'legal', clientVisibleLabel: 'Договор и счет', employeeActionLabel: 'Подготовить договор' },
+  { id: 'Счет на оплату', label: 'Счет на оплату', description: 'Счет выставлен, заявка ожидает оплату или проверку оплаты.', order: 5, category: 'finance', clientVisibleLabel: 'Ожидаем оплату', employeeActionLabel: 'Выставить счет' },
+  { id: 'annual_active', label: 'Активна по годовому договору', description: 'Заявка обслуживается по годовому договору с квартальными работами.', order: 6, category: 'work', clientVisibleLabel: 'В работе', employeeActionLabel: 'Вести квартальное обслуживание' },
+  { id: 'Проектирование', label: 'Проектирование', description: 'Экологи выполняют проектирование, разрешительную документацию, отчеты.', order: 6, category: 'work', clientVisibleLabel: 'В работе', employeeActionLabel: 'Передать в проектирование' },
+  { id: 'Лаборатория', label: 'Лаборатория', description: 'Лаборатория выполняет анализы, замеры, работу с пробами.', order: 6, category: 'work', clientVisibleLabel: 'В работе', employeeActionLabel: 'Передать в лабораторию' },
+  { id: 'Вывоз', label: 'Вывоз', description: 'Команда организует вывоз или транспортировку отходов.', order: 6, category: 'work', clientVisibleLabel: 'В работе', employeeActionLabel: 'Организовать вывоз' },
+  { id: 'Утилизация', label: 'Утилизация', description: 'Команда выполняет утилизацию, размещение, переработку.', order: 6, category: 'work', clientVisibleLabel: 'В работе', employeeActionLabel: 'Передать на утилизацию' },
+  { id: 'Проверка результата', label: 'Проверка результата', description: 'Готовые материалы проходят внутреннюю проверку.', order: 7, category: 'quality', clientVisibleLabel: 'На согласовании', employeeActionLabel: 'Проверить результат' },
+  { id: 'Готово', label: 'Готово', description: 'Результат готов и доступен клиенту.', order: 8, category: 'done', clientVisibleLabel: 'Завершено', employeeActionLabel: 'Передать клиенту' },
   { id: 'Завершено', label: 'Завершено', description: 'Заявка полностью закрыта.', order: 9, category: 'done', clientVisibleLabel: 'Завершено', employeeActionLabel: 'Завершить заявку' },
   { id: 'Отменено', label: 'Отменено', description: 'Заявка отменена.', order: 99, category: 'cancelled', clientVisibleLabel: 'Отменено', employeeActionLabel: 'Вернуть в работу' },
 ];
+
+export type SimplifiedStatus = 'Новая заявка' | 'На консультации' | 'Ожидаем документы' | 'Документы на проверке' | 'Договор и счет' | 'Ожидаем оплату' | 'Оплачено' | 'В работе' | 'На согласовании' | 'На исправлении' | 'Завершено' | 'Отменено';
+
+export const getSimplifiedClientStatus = (order: Order): SimplifiedStatus => {
+  const s = order.status;
+  if (s === 'Отменено') return 'Отменено';
+  if (['Готово', 'Завершено'].includes(s)) return 'Завершено';
+  if (['Проверка результата'].includes(s)) return 'На согласовании';
+  if (['Проектирование', 'Лаборатория', 'Вывоз', 'Утилизация', 'annual_active'].includes(s)) return 'В работе';
+  if (['Полностью оплачено', 'Передано специалисту'].includes(s)) return 'Оплачено';
+  if (['Ожидаем оплату', 'Частично оплачено', 'Счет на оплату', 'Счет отправлен', 'Ожидает счет', 'Передано бухгалтеру'].includes(s)) return 'Ожидаем оплату';
+  if (['КП', 'Договор', 'Подготовка КП', 'КП отправлено', 'КП согласовано', 'Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан'].includes(s)) return 'Договор и счет';
+  if (['Документы на проверке', 'Проверка документов'].includes(s)) return 'Документы на проверке';
+  if (['Ожидаем первичные документы', 'Ожидает документы'].includes(s)) return 'Ожидаем документы';
+  if (['Новая заявка', 'Связаться с клиентом'].includes(s)) return 'Новая заявка';
+  if (['Консультация', 'Анализ', 'Анализ заявки'].includes(s)) return 'На консультации';
+  return 'Новая заявка';
+};
 
 export const statusDescriptions: Record<OrderStatus, string> = Object.fromEntries(
   orderStatusDefinitions.map((s) => [s.id, s.description])
@@ -203,12 +221,21 @@ export const getWorkflowForOrder = (order: Order): OrderStatus[] => [
 
 export const normalizeOrderStatus = (status: string | undefined, order: Pick<Order, 'service' | 'serviceId' | 'businessCompanyId'>): OrderStatus => {
   if (status === 'Новая') return 'Новая заявка';
+  if (status === 'Новая заявка') return 'Новая заявка';
   if (status === 'В обработке') return 'Связаться с клиентом';
+  if (status === 'На консультации') return 'Консультация';
   if (status === 'Ожидает документы') return 'Ожидаем первичные документы';
+  if (status === 'Ожидаем документы') return 'Ожидаем первичные документы';
+  if (status === 'Документы на проверке') return 'Ожидаем первичные документы';
   if (status === 'Анализ') return 'Анализ заявки';
   if (status === 'КП') return 'Подготовка КП';
+  if (status === 'Договор и счет') return 'Подготовка КП';
   if (status === 'Договор') return 'Подготовка договора';
   if (status === 'Счет на оплату') return 'Ожидаем оплату';
+  if (status === 'Ожидаем оплату') return 'Ожидаем оплату';
+  if (status === 'Оплачено') return 'Полностью оплачено';
+  if (status === 'На согласовании') return 'Проверка результата';
+  if (status === 'На исправлении') return 'Проверка результата';
   if (orderStatuses.includes(status as OrderStatus)) return status as OrderStatus;
   if (status === 'Активна по годовому договору') return 'annual_active';
 

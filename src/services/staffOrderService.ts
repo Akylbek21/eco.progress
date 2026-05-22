@@ -254,3 +254,45 @@ export const getClients = async () => {
   const { data } = await api.get<{ data: unknown[]; message: string | null }>('/clients');
   return data.data;
 };
+
+export type CreateClientPayload = {
+  companyName?: string;
+  binIin?: string;
+  email: string;
+  phone?: string;
+  contactPerson?: string;
+  legalAddress?: string;
+  clientType?: 'company' | 'individual';
+};
+
+export type CreateClientResult = {
+  id: number;
+  companyName: string;
+  email: string;
+  phone: string;
+  contactPerson: string;
+  tempPassword: string;
+};
+
+export const createClient = async (payload: CreateClientPayload): Promise<CreateClientResult> => {
+  const { data } = await api.post<{ data: CreateClientResult; message: string | null }>('/staff/clients', payload);
+  return data.data;
+};
+
+export type StaffCreateOrderPayload = {
+  clientId: number;
+  serviceId?: string;
+  serviceName?: string;
+  businessCompanyId?: string;
+  contractType?: string;
+  urgency?: string;
+  comment?: string;
+  contactPerson?: string;
+  phone?: string;
+  city?: string;
+};
+
+export const createStaffOrder = async (payload: StaffCreateOrderPayload): Promise<Order> => {
+  const { data } = await api.post<{ data: Order; message: string | null }>('/staff/orders', payload);
+  return data.data;
+};

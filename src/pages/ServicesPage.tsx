@@ -7,6 +7,7 @@ import Reveal from '../components/animations/Reveal';
 import LeadForm from '../components/LeadForm';
 import SEO from '../components/SEO';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import OrderChoiceModal from '../components/OrderChoiceModal';
 import { getServices } from '../services/serviceService';
 import { getBusinessCompanyById } from '../utils/crm';
 import { getWhatsAppUrl } from '../config/company';
@@ -32,6 +33,7 @@ const ServicesPage = () => {
   const [category, setCategory] = useState<'Все' | ServiceCategory>('Все');
   const [expandedService, setExpandedService] = useState<string | null>(null);
   const [selectedIncludes, setSelectedIncludes] = useState<Record<string, string[]>>({});
+  const [orderModal, setOrderModal] = useState<string | null>(null);
   const [calculator, setCalculator] = useState({
     serviceId: '',
     objectScale: 'medium',
@@ -91,7 +93,7 @@ const ServicesPage = () => {
           <Reveal delay={0.1}><p className="mt-4 max-w-2xl text-base leading-7 text-white/78 sm:mt-5 sm:text-lg">От проектной документации и лабораторных исследований до утилизации, транспортировки и размещения отходов на полигоне.</p></Reveal>
           <Reveal delay={0.16}>
             <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
-              <Link to="/cabinet/orders/new"><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Оставить заявку</Button></Link>
+              <button type="button" onClick={() => setOrderModal('')}><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Заказать услугу</Button></button>
               <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'services_page_hero' })} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white hover:bg-white/15 sm:w-auto">
                 <MessageCircle size={18} /> WhatsApp
               </a>
@@ -155,9 +157,9 @@ const ServicesPage = () => {
                   </div>
                   <div className="mt-5 grid gap-3 sm:mt-6 sm:flex sm:flex-wrap">
                     <Link to={`/services/${service.id}`} className="w-full sm:w-auto"><Button variant="secondary" className="w-full sm:w-auto">Подробнее</Button></Link>
-                    <Link to={getOrderPath(service.id)} className="w-full sm:w-auto">
+                    <button type="button" onClick={() => setOrderModal(service.id)} className="w-full sm:w-auto">
                       <Button className="w-full sm:w-auto">{(selectedIncludes[service.id] ?? []).length > 0 ? 'Заказать выбранные' : 'Заказать услугу'}</Button>
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </Reveal>
@@ -270,6 +272,7 @@ const ServicesPage = () => {
           </Reveal>
         </div>
       </section>
+      <OrderChoiceModal open={orderModal !== null} onClose={() => setOrderModal(null)} preSelectedService={orderModal ?? undefined} />
     </div>
   );
 };

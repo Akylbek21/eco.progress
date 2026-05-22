@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { MessageCircle, Menu, X } from 'lucide-react';
 import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
+import OrderChoiceModal from '../components/OrderChoiceModal';
 import { company, getWhatsAppUrl } from '../config/company';
 import { trackPhoneClick, trackWhatsAppClick } from '../services/analytics';
 
@@ -18,6 +19,7 @@ const navItems = [
 const PublicLayout = ({ children }: { children: ReactNode }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [orderModal, setOrderModal] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
@@ -56,9 +58,9 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
             <Link to="/login">
               <Button variant="secondary" className="border-eco-200 bg-white text-eco-800 hover:bg-eco-50">Войти</Button>
             </Link>
-            <Link to="/cabinet/orders/new">
+            <button type="button" onClick={() => setOrderModal(true)}>
               <Button className="bg-accent text-eco-900 hover:bg-accent/90">Оставить заявку</Button>
-            </Link>
+            </button>
           </div>
           <button
             className="inline-flex items-center justify-center rounded-2xl border border-eco-200 bg-white p-3 text-eco-900 lg:hidden"
@@ -87,15 +89,16 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               <Link to="/login" onClick={() => setMenuOpen(false)} className="block rounded-2xl border border-eco-100 px-4 py-3 text-sm font-semibold text-eco-800">
                 Войти
               </Link>
-              <Link to="/cabinet/orders/new" onClick={() => setMenuOpen(false)} className="block rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-eco-900">
+              <button type="button" onClick={() => { setMenuOpen(false); setOrderModal(true); }} className="block w-full rounded-2xl bg-accent px-4 py-3 text-left text-sm font-semibold text-eco-900">
                 Оставить заявку
-              </Link>
+              </button>
             </div>
           </div>
         )}
       </header>
       <main>{children}</main>
       <WhatsAppButton />
+      <OrderChoiceModal open={orderModal} onClose={() => setOrderModal(false)} />
       <footer className="relative overflow-hidden bg-eco-900 text-white">
         <div className="relative mx-auto max-w-7xl px-5 py-14 sm:px-8">
           <div className="grid gap-10 lg:grid-cols-[1.3fr_0.8fr_1fr_1fr]">
@@ -111,7 +114,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'footer' })} className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-bold text-eco-900">
                   <MessageCircle size={17} /> WhatsApp
                 </a>
-                <Link to="/cabinet/orders/new" className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">Оставить заявку</Link>
+                <button type="button" onClick={() => setOrderModal(true)} className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">Оставить заявку</button>
               </div>
             </div>
             <div>
