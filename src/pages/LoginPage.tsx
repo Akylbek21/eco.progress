@@ -48,8 +48,7 @@ const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: 
         <div className="relative flex h-full items-end p-12 text-white">
           <div>
             <h1 className="text-5xl font-bold leading-tight">
-              <span className="block">ECOPROGRESS</span>
-              <span className="block text-2xl tracking-[0.24em] text-eco-200">GROUP</span>
+              <span className="block">ecoprogress.kz</span>
             </h1>
             <p className="mt-4 max-w-md text-white/75">Онлайн-сервис экологического сопровождения: заявка, проверка, договор, ЭЦП и оплата в одном процессе.</p>
           </div>

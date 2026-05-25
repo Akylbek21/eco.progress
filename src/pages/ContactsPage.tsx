@@ -1,4 +1,5 @@
-import { AtSign, Clock, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
+﻿import { AtSign, Clock, Mail, MapPin, Phone } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import WhatsAppButton from '../components/WhatsAppButton';
@@ -10,7 +11,7 @@ import { trackPhoneClick } from '../services/analytics';
 const ContactsPage = () => {
   const items = [
     ['Телефон', company.phone, Phone],
-    ['WhatsApp', company.whatsappDisplay, MessageCircle],
+    ['WhatsApp', company.whatsappDisplay, FaWhatsapp],
     ['Email', company.email, Mail],
     ['Адрес', company.address, MapPin],
     ['График работы', company.schedule, Clock],
@@ -19,7 +20,7 @@ const ContactsPage = () => {
 
   return (
     <section className="bg-[#F7FBFD] px-4 py-16 sm:px-8 sm:py-20">
-      <SEO title="Контакты | ECOPROGRESS GROUP" description="Контакты ECOPROGRESS GROUP: телефон, WhatsApp, email, адрес и форма консультации по экологическим услугам." />
+      <SEO title="Контакты | ecoprogress.kz" description="Контакты ecoprogress.kz: телефон, WhatsApp, email, адрес и форма консультации по экологическим услугам." />
       <div className="mx-auto max-w-7xl">
         <Reveal>
           <div className="max-w-3xl">
@@ -45,7 +46,7 @@ const ContactsPage = () => {
               <a href={company.mapsUrl} target="_blank" rel="noreferrer" className="rounded-[20px] border border-eco-100 bg-eco-900 p-5 text-white shadow-sm sm:col-span-2">
                 <MapPin className="text-accent" size={24} />
                 <p className="mt-4 font-bold">Открыть карту</p>
-                <p className="mt-2 text-sm text-white/70">Откроется карта с расположением офиса ECOPROGRESS GROUP.</p>
+                <p className="mt-2 text-sm text-white/70">Откроется карта с расположением офиса ecoprogress.kz.</p>
               </a>
             </div>
           </Reveal>

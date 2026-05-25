@@ -1,4 +1,4 @@
-import { COMPANY_CONTACTS } from '../config/contacts';
+﻿import { COMPANY_CONTACTS } from '../config/contacts';
 
 export const defaultWhatsAppRequestMessage = `Здравствуйте! Хочу оставить заявку на экологические услуги.
 
@@ -43,7 +43,7 @@ export const createWhatsAppLeadMessage = ({
   bin,
   city,
   comment,
-}: WhatsAppLeadValues) => `Здравствуйте! Хочу оставить заявку на услугу ECO PROGRESS.
+}: WhatsAppLeadValues) => `Здравствуйте! Хочу оставить заявку на услугу ecoprogress.kz.
 
 Услуга: ${service}
 Имя: ${name}
@@ -55,4 +55,4 @@ export const createWhatsAppLeadMessage = ({
 Комментарий:
 ${comment || 'не указано'}
 
-Источник: сайт ECO PROGRESS`;
+Источник: сайт ecoprogress.kz`;

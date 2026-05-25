@@ -1,6 +1,7 @@
-import { ReactNode, useEffect, useState } from 'react';
+﻿import { ReactNode, useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { ChevronDown, HelpCircle, LogIn, Menu, UserPlus, X } from 'lucide-react';
+import { FaInstagram, FaTelegramPlane, FaTiktok, FaWhatsapp } from 'react-icons/fa';
 import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
 import OrderChoiceModal from '../components/OrderChoiceModal';
@@ -16,8 +17,21 @@ const navItems = [
   { label: 'Контакты', path: '/contacts' },
 ];
 
+const accountMenuItems = [
+  { label: 'Регистрация', path: '/register', Icon: UserPlus },
+  { label: 'Войти', path: '/login', Icon: LogIn },
+  { label: 'Частые вопросы', path: '/faq', Icon: HelpCircle },
+];
+
+const socialLinks = [
+  { label: 'TikTok', href: 'https://www.tiktok.com/@ecoprogress.group', Icon: FaTiktok },
+  { label: 'Instagram', href: 'https://www.instagram.com/ecoprogress.group', Icon: FaInstagram },
+  { label: 'Telegram', href: 'https://t.me/ecoprogress_group', Icon: FaTelegramPlane },
+];
+
 const PublicLayout = ({ children }: { children: ReactNode }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [orderModal, setOrderModal] = useState(false);
 
@@ -33,10 +47,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
       <header className={`sticky top-0 z-40 border-b border-eco-200/45 bg-white/92 text-eco-900 backdrop-blur-xl transition-all duration-300 ${scrolled ? 'shadow-xl shadow-eco-900/8' : 'shadow-sm shadow-eco-900/5'}`}>
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
           <Link to="/" className="inline-flex items-center text-xl font-bold text-eco-900">
-            <span className="leading-none">
-              <span className="block text-base">ECOPROGRESS</span>
-              <span className="block text-xs tracking-[0.22em] text-eco-500">GROUP</span>
-            </span>
+            <span className="leading-none">ecoprogress.kz</span>
           </Link>
           <nav className="hidden items-center gap-5 xl:gap-6 lg:flex">
             {navItems.map((item) => (
@@ -55,12 +66,52 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
             ))}
           </nav>
           <div className="hidden items-center gap-3 lg:flex">
-            <Link to="/login">
-              <Button variant="secondary" className="border-eco-200 bg-white text-eco-800 hover:bg-eco-50">Войти</Button>
-            </Link>
-            <button type="button" onClick={() => setOrderModal(true)}>
-              <Button className="bg-accent text-eco-900 hover:bg-accent/90">Оставить заявку</Button>
-            </button>
+            <div className="relative">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setAccountMenuOpen((state) => !state)}
+                className="gap-2 border-eco-200 bg-white text-eco-800 hover:bg-eco-50"
+                aria-expanded={accountMenuOpen}
+              >
+                Меню <ChevronDown size={16} className={`transition ${accountMenuOpen ? 'rotate-180' : ''}`} />
+              </Button>
+              {accountMenuOpen && (
+                <div className="absolute right-0 top-[calc(100%+0.75rem)] w-72 overflow-hidden rounded-[20px] border border-eco-100 bg-white p-2 shadow-2xl shadow-eco-900/12">
+                  {accountMenuItems.map(({ label, path, Icon }) => (
+                    <Link
+                      key={path}
+                      to={path}
+                      onClick={() => setAccountMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-eco-900 hover:bg-eco-50"
+                    >
+                      <Icon size={18} className="text-eco-600" />
+                      {label}
+                    </Link>
+                  ))}
+                  <div className="mt-2 border-t border-slate-100 px-3 py-3">
+                    <p className="text-xs font-semibold uppercase text-slate-500">Социальные сети</p>
+                    <div className="mt-3 flex gap-2">
+                      {socialLinks.map(({ label, href, Icon }) => (
+                        <a
+                          key={label}
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={label}
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-eco-50 text-eco-800 hover:bg-eco-900 hover:text-white"
+                        >
+                          <Icon size={18} />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <Button type="button" onClick={() => setOrderModal(true)} className="bg-accent text-eco-900 hover:bg-accent/90">
+              Оставить заявку
+            </Button>
           </div>
           <button
             className="inline-flex items-center justify-center rounded-2xl border border-eco-200 bg-white p-3 text-eco-900 lg:hidden"
@@ -86,9 +137,28 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                   {item.label}
                 </NavLink>
               ))}
-              <Link to="/login" onClick={() => setMenuOpen(false)} className="block rounded-2xl border border-eco-100 px-4 py-3 text-sm font-semibold text-eco-800">
-                Войти
-              </Link>
+              <div className="grid gap-2 border-t border-eco-100 pt-3">
+                {accountMenuItems.map(({ label, path, Icon }) => (
+                  <Link key={path} to={path} onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-2xl border border-eco-100 px-4 py-3 text-sm font-semibold text-eco-800">
+                    <Icon size={18} className="text-eco-600" />
+                    {label}
+                  </Link>
+                ))}
+                <div className="flex items-center gap-2 rounded-2xl bg-eco-50 px-4 py-3">
+                  {socialLinks.map(({ label, href, Icon }) => (
+                    <a
+                      key={label}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-eco-800 shadow-sm hover:bg-eco-900 hover:text-white"
+                    >
+                      <Icon size={18} />
+                    </a>
+                  ))}
+                </div>
+              </div>
               <button type="button" onClick={() => { setMenuOpen(false); setOrderModal(true); }} className="block w-full rounded-2xl bg-accent px-4 py-3 text-left text-sm font-semibold text-eco-900">
                 Оставить заявку
               </button>
@@ -99,13 +169,14 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
       <main>{children}</main>
       <WhatsAppButton floating />
       <OrderChoiceModal open={orderModal} onClose={() => setOrderModal(false)} />
-      <footer className="relative overflow-hidden bg-eco-900 text-white">
+      <footer className="relative isolate overflow-hidden bg-eco-900 text-white">
+        <img src="/para.jpg" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+        <div className="absolute inset-0 -z-10 bg-eco-900/86" />
         <div className="relative mx-auto max-w-7xl px-5 py-14 sm:px-8">
           <div className="grid gap-10 lg:grid-cols-[1.3fr_0.8fr_1fr_1fr]">
             <div>
               <h3 className="text-2xl font-bold leading-tight">
-                <span className="block">ECOPROGRESS</span>
-                <span className="block text-sm tracking-[0.24em] text-eco-200">GROUP</span>
+                ecoprogress.kz
               </h3>
               <p className="mt-4 max-w-md text-sm leading-6 text-white/75">
                 Экологические документы, лаборатория, вывоз и утилизация отходов для бизнеса.
@@ -129,7 +200,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               <h4 className="text-sm font-semibold uppercase text-eco-200">Контакты</h4>
               <ul className="mt-4 space-y-3 text-sm text-white/75">
                 <li><a href={company.phoneHref} onClick={() => trackPhoneClick({ placement: 'footer' })} className="hover:text-white">{company.phone}</a></li>
-                <li>WhatsApp: {company.whatsappDisplay}</li>
+                <li className="flex items-center gap-2"><FaWhatsapp className="shrink-0 text-[#25D366]" size={16} aria-hidden="true" /> WhatsApp: {company.whatsappDisplay}</li>
                 <li>{company.email}</li>
                 <li>{company.address}</li>
                 <li>{company.schedule}</li>
@@ -150,7 +221,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               </div>
             </div>
           </div>
-          <div className="mt-12 border-t border-white/15 pt-6 text-sm text-white/60">2026 ECOPROGRESS GROUP. Все права защищены.</div>
+          <div className="mt-12 border-t border-white/15 pt-6 text-sm text-white/60">2026 ecoprogress.kz. Все права защищены.</div>
         </div>
       </footer>
     </div>

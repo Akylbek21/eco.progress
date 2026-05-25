@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Monitor, X } from 'lucide-react';
+import { Monitor, X } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 import Button from './ui/Button';
 import { useAuth } from '../contexts/AuthContext';
 import { trackWhatsAppClick } from '../services/analytics';
@@ -50,8 +51,9 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService }: Props) => {
         </button>
 
         <h2 className="pr-10 text-2xl font-bold text-eco-900">Оставить заявку</h2>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">
-          Выберите удобный способ. Можно работать через личный кабинет или отправить заявку менеджеру в WhatsApp без регистрации.
+        <p className="mt-3 flex max-w-xl items-start gap-2 text-sm leading-6 text-slate-600">
+          <FaWhatsapp className="mt-1 shrink-0 text-[#25D366]" size={16} aria-hidden="true" />
+          <span>Выберите удобный способ. Можно работать через личный кабинет или отправить заявку менеджеру в WhatsApp без регистрации.</span>
         </p>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -70,9 +72,9 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService }: Props) => {
 
           <div className="flex min-w-0 flex-col rounded-[20px] border border-green-100 bg-green-50 p-5">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#25D366] shadow-sm">
-              <MessageCircle size={23} />
+              <FaWhatsapp size={24} aria-hidden="true" />
             </div>
-            <h3 className="mt-4 text-lg font-bold text-eco-900">Оставить заявку через WhatsApp</h3>
+            <h3 className="mt-4 inline-flex items-center gap-2 text-lg font-bold text-eco-900"><FaWhatsapp className="text-[#25D366]" size={18} aria-hidden="true" /> Оставить заявку через WhatsApp</h3>
             <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">
               Без регистрации. Менеджер получит сообщение и свяжется с вами.
             </p>
@@ -86,7 +88,7 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService }: Props) => {
               }}
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-center text-sm font-bold text-white shadow-sm transition hover:bg-[#20bd5a]"
             >
-              <MessageCircle size={17} /> Написать в WhatsApp
+              <FaWhatsapp size={18} aria-hidden="true" /> Написать в WhatsApp
             </a>
           </div>
         </div>

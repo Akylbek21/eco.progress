@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -83,7 +83,7 @@ const ServicesPage = () => {
 
   return (
     <div>
-      <SEO title="Услуги ECOPROGRESS GROUP | Экологические документы, отходы, лаборатория" description="Полный список экологических услуг: документы, лабораторные исследования, вывоз и утилизация отходов, полигон ТБО и сопровождение проверок." />
+      <SEO title="Услуги ecoprogress.kz | Экологические документы, отходы, лаборатория" description="Полный список экологических услуг: документы, лабораторные исследования, вывоз и утилизация отходов, полигон ТБО и сопровождение проверок." />
       <section className="relative overflow-hidden px-4 py-16 text-white sm:px-8 sm:py-24">
         <div className="absolute inset-0 bg-windmill bg-cover bg-center" />
         <div className="absolute inset-0 bg-eco-900/78" />

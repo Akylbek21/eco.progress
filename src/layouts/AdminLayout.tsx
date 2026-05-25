@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+﻿import { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Settings } from 'lucide-react';
 
@@ -24,7 +24,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => (
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-500">Панель администратора</p>
-            <h1 className="text-xl font-semibold text-eco-900">Управление контентом ECOPROGRESS GROUP</h1>
+            <h1 className="text-xl font-semibold text-eco-900">Управление контентом ecoprogress.kz</h1>
           </div>
           <Link to="/" className="rounded-full bg-eco-800 px-4 py-2 text-sm font-semibold text-white">На сайт</Link>
         </div>

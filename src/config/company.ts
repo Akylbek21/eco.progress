@@ -1,8 +1,8 @@
-import { COMPANY_CONTACTS } from './contacts';
+﻿import { COMPANY_CONTACTS } from './contacts';
 import { createWhatsAppUrl } from '../utils/whatsapp';
 
 export const company = {
-  name: 'ECOPROGRESS GROUP',
+  name: 'ecoprogress.kz',
   phone: COMPANY_CONTACTS.whatsappDisplay,
   phoneHref: `tel:+${COMPANY_CONTACTS.whatsappPhone}`,
   whatsapp: COMPANY_CONTACTS.whatsappPhone,

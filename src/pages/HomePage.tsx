@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 import { ArrowRight, Beaker, Building2, FileText, MapPinned, Recycle, ShieldCheck, Truck } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
@@ -58,37 +58,50 @@ const services = [
     text: 'Проекты, разрешения, программы и отчеты для объектов и предприятий.',
     Icon: FileText,
     href: '/services/ecological-documents',
+    image: '/cottonbro.jpg',
   },
   {
     title: 'Лабораторные исследования',
     text: 'Анализы воды, воздуха, почвы, замеры выбросов и протоколы исследований.',
     Icon: Beaker,
     href: '/services/laboratory-tests',
+    image: '/edward.jpg',
   },
   {
     title: 'Вывоз и утилизация отходов',
     text: 'Сбор, транспортировка, переработка, утилизация и документы по отходам.',
     Icon: Recycle,
     href: '/services/waste-transportation',
+    image: '/jose.jpg',
   },
   {
     title: 'Полигон ТБО',
     text: 'Приём, законное размещение отходов и документы для организаций.',
     Icon: MapPinned,
     href: '/services/poligon-tbo',
+    image: '/poligon-tbo-2.jpg',
   },
   {
     title: 'Сопровождение проверок',
     text: 'Проверка документов, подготовка к инспекции и план действий.',
     Icon: ShieldCheck,
     href: '/services/environmental-audit',
+    image: '/images (1).jpg',
   },
   {
     title: 'Утилизация отходов',
     text: 'Подбор решения для переработки, утилизации и закрывающих документов.',
     Icon: Truck,
     href: '/services/waste-recycling',
+    image: '/utilizacija-othodov-3.jpg',
   },
+];
+
+const visualHighlights = [
+  { title: 'Лабораторный контроль', image: '/edward.jpg', className: 'sm:col-span-2' },
+  { title: 'Документы и сопровождение', image: '/images (1).jpg', className: '' },
+  { title: 'Вывоз отходов', image: '/jose.jpg', className: '' },
+  { title: 'Экологический мониторинг', image: '/para.jpg', className: 'sm:col-span-2' },
 ];
 
 const organizationSchema = {
@@ -104,7 +117,7 @@ const organizationSchema = {
 const HomePage = () => (
   <div className="min-h-screen bg-white">
     <SEO
-      title="Экологические услуги для бизнеса | ECOPROGRESS GROUP"
+      title="Экологические услуги для бизнеса | ecoprogress.kz"
       description="Экологические документы, лабораторные исследования, вывоз и утилизация отходов, полигон ТБО и сопровождение проверок по Казахстану."
       schema={organizationSchema}
     />
@@ -151,19 +164,25 @@ const HomePage = () => (
         <Reveal direction="right">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">О компании</p>
-            <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">ECOPROGRESS GROUP — комплексные экологические решения</h2>
+            <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">ecoprogress.kz — комплексные экологические решения</h2>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
-              ECOPROGRESS GROUP — группа компаний, которая помогает бизнесу решать экологические задачи: проектирование, лабораторные исследования, вывоз и утилизация отходов, полигон ТБО и сопровождение проверок.
+              ecoprogress.kz — группа компаний, которая помогает бизнесу решать экологические задачи: проектирование, лабораторные исследования, вывоз и утилизация отходов, полигон ТБО и сопровождение проверок.
             </p>
             <Link to="/about" className="mt-7 inline-block"><Button>Подробнее о компании</Button></Link>
           </div>
         </Reveal>
         <Reveal direction="left">
           <div className="grid gap-3 sm:grid-cols-2">
-            {['Экологические документы', 'Лаборатория', 'Транспортировка отходов', 'Утилизация и полигон'].map((item) => (
-              <div key={item} className="flex items-start gap-3 rounded-2xl bg-white p-4 shadow-sm">
-                <Building2 className="shrink-0 text-eco-600" size={20} />
-                <span className="text-sm font-bold text-eco-900">{item}</span>
+            {visualHighlights.map((item) => (
+              <div key={item.title} className={`group relative min-h-[150px] overflow-hidden rounded-[20px] bg-eco-900 shadow-sm ${item.className}`}>
+                <img src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-eco-900/88 via-eco-900/30 to-transparent" />
+                <div className="relative flex h-full min-h-[150px] items-end p-5">
+                  <span className="inline-flex items-center gap-2 text-sm font-bold text-white">
+                    <Building2 className="shrink-0 text-accent" size={18} />
+                    {item.title}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
@@ -183,13 +202,21 @@ const HomePage = () => (
           </div>
         </Reveal>
         <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {services.map(({ title, text, Icon, href }, index) => (
+          {services.map(({ title, text, Icon, href, image }, index) => (
             <Reveal key={title} delay={index * 0.04}>
-              <Link to={href} className="group card-hover flex h-full flex-col rounded-[20px] border border-slate-200 bg-white p-6 shadow-lg shadow-eco-900/5">
-                <Icon className="text-eco-600" size={28} />
-                <h3 className="mt-5 text-xl font-bold text-eco-900 group-hover:text-eco-600">{title}</h3>
-                <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{text}</p>
-                <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-eco-700">Подробнее <ArrowRight size={16} /></span>
+              <Link to={href} className="group card-hover flex h-full flex-col rounded-[20px] border border-slate-200 bg-white shadow-lg shadow-eco-900/5">
+                <div className="relative h-44 overflow-hidden">
+                  <img src={image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-eco-900/70 to-transparent" />
+                  <div className="absolute bottom-4 left-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/92 text-eco-700 shadow-sm">
+                    <Icon size={24} />
+                  </div>
+                </div>
+                <div className="flex flex-1 flex-col p-6">
+                  <h3 className="text-xl font-bold text-eco-900 group-hover:text-eco-600">{title}</h3>
+                  <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{text}</p>
+                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-eco-700">Подробнее <ArrowRight size={16} /></span>
+                </div>
               </Link>
             </Reveal>
           ))}

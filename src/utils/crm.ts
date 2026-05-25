@@ -41,9 +41,9 @@ export const statusDescriptions: Record<OrderStatus, string> = Object.fromEntrie
 ) as Record<OrderStatus, string>;
 
 export const businessCompanies: BusinessCompany[] = [
-  { id: 'eco-docs', name: 'ECOPROGRESS Documents', shortName: 'Documents', description: 'Экологическое проектирование, разрешительная документация, отчетность и сопровождение предприятий.', serviceCategories: ['Проектирование', 'Разрешения', 'Предприятия'] },
-  { id: 'eco-lab', name: 'ECOPROGRESS Laboratory', shortName: 'Laboratory', description: 'Лабораторные исследования, замеры, протоколы и работа с образцами.', serviceCategories: ['Лаборатория'] },
-  { id: 'eco-waste', name: 'ECOPROGRESS Waste', shortName: 'Waste', description: 'Вывоз, транспортировка, утилизация и размещение отходов.', serviceCategories: ['Отходы'] },
+  { id: 'eco-docs', name: 'ecoprogress.kz Documents', shortName: 'Documents', description: 'Экологическое проектирование, разрешительная документация, отчетность и сопровождение предприятий.', serviceCategories: ['Проектирование', 'Разрешения', 'Предприятия'] },
+  { id: 'eco-lab', name: 'ecoprogress.kz Laboratory', shortName: 'Laboratory', description: 'Лабораторные исследования, замеры, протоколы и работа с образцами.', serviceCategories: ['Лаборатория'] },
+  { id: 'eco-waste', name: 'ecoprogress.kz Waste', shortName: 'Waste', description: 'Вывоз, транспортировка, утилизация и размещение отходов.', serviceCategories: ['Отходы'] },
 ];
 
 export const getBusinessCompanyById = (id?: string): BusinessCompany =>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClipboardCheck, FileText, FlaskConical, Recycle, ShieldCheck } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -38,7 +38,7 @@ const TariffsPage = () => {
 
   return (
     <div className="bg-[#F7FBFD]">
-      <SEO title="Тарифы на экологическое сопровождение | ECOPROGRESS GROUP" description="Тарифы ECOPROGRESS GROUP на консультации, экологические документы, лабораторные исследования, отходы и сопровождение бизнеса." />
+      <SEO title="Тарифы на экологическое сопровождение | ecoprogress.kz" description="Тарифы ecoprogress.kz на консультации, экологические документы, лабораторные исследования, отходы и сопровождение бизнеса." />
       <section className="relative isolate overflow-hidden px-5 py-24 text-white sm:px-8">
         <div className="absolute inset-0 -z-30 bg-windmill bg-cover bg-center" />
         <div className="absolute inset-0 -z-20 bg-eco-900/80" />

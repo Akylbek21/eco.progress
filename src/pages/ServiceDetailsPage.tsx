@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
@@ -24,7 +24,7 @@ const ServiceDetailsPage = () => {
 
   return (
     <div>
-      <SEO title={`${service.title} | ECOPROGRESS GROUP`} description={service.description} />
+      <SEO title={`${service.title} | ecoprogress.kz`} description={service.description} />
       <section className="relative overflow-hidden px-5 py-24 text-white sm:px-8">
         <div className="absolute inset-0 bg-windmill bg-cover bg-center" />
         <div className="absolute inset-0 bg-eco-900/80" />

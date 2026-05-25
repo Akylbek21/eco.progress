@@ -1,4 +1,5 @@
 import Reveal from '../components/animations/Reveal';
+import { FaWhatsapp } from 'react-icons/fa';
 
 const faqs = [
   ['Сколько стоит услуга?', 'Стоимость зависит от объекта, объема работ и сроков. После заявки специалист подготовит расчет.'],
@@ -21,8 +22,14 @@ const FaqPage = () => (
         {faqs.map(([q, a], index) => (
           <Reveal key={q} delay={index * 0.04}>
             <div className="rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="font-bold text-eco-900">{q}</h2>
-              <p className="mt-3 leading-7 text-slate-600">{a}</p>
+              <h2 className="inline-flex items-center gap-2 font-bold text-eco-900">
+                {q.includes('WhatsApp') && <FaWhatsapp className="shrink-0 text-[#25D366]" size={18} aria-hidden="true" />}
+                {q}
+              </h2>
+              <p className="mt-3 inline-flex items-start gap-2 leading-7 text-slate-600">
+                {a.includes('WhatsApp') && <FaWhatsapp className="mt-1.5 shrink-0 text-[#25D366]" size={16} aria-hidden="true" />}
+                <span>{a}</span>
+              </p>
             </div>
           </Reveal>
         ))}

@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+﻿import { ReactNode, useState } from 'react';
 import { Link, NavLink, Navigate } from 'react-router-dom';
 import { Building2, CreditCard, FileText, Home, LogOut, Menu, User, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -46,10 +46,7 @@ const CabinetLayout = ({ children }: { children: ReactNode }) => {
     <div className="min-h-screen bg-eco-50 text-slate-900 lg:grid lg:grid-cols-[286px_1fr]">
       <aside className="hidden border-r border-slate-200 bg-white/95 p-6 shadow-sm lg:block">
         <Link to="/cabinet" className="flex items-center text-xl font-bold leading-tight text-eco-800">
-          <span>
-            <span className="block">ECOPROGRESS</span>
-            <span className="block text-xs tracking-[0.22em] text-eco-500">GROUP</span>
-          </span>
+          <span>ecoprogress.kz</span>
         </Link>
         <p className="mt-2 text-sm text-slate-500">Кабинет клиента</p>
         <div className="my-6 rounded-3xl bg-eco-50 p-4">
@@ -66,7 +63,7 @@ const CabinetLayout = ({ children }: { children: ReactNode }) => {
             </button>
             <div>
               <p className="text-sm text-slate-500">Добро пожаловать</p>
-              <h1 className="text-lg font-semibold text-eco-900">{user?.name ?? 'Клиент ECOPROGRESS GROUP'}</h1>
+              <h1 className="text-lg font-semibold text-eco-900">{user?.name ?? 'Клиент ecoprogress.kz'}</h1>
             </div>
             <div className="flex items-center gap-3">
               <Link to="/" className="hidden text-sm font-semibold text-eco-700 hover:text-eco-900 sm:block">На сайт</Link>

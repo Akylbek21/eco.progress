@@ -104,7 +104,7 @@ export const createLaboratoryMeasurementAgreement = (
   measurementDate: '',
   measurementTime: '',
   address: order.legalAddress || '',
-  companyName: 'ECOPROGRESS LABORATORY',
+  companyName: 'ecoprogress.kz Laboratory',
   contactPerson: order.contactPerson || '',
   phone: order.phone || '',
   measurementScope: '',

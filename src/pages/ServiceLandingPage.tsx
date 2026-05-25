@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
@@ -22,13 +22,14 @@ type ServiceLanding = {
   duration: string;
   faq: Array<[string, string]>;
   leadDefault: string;
+  image: string;
 };
 
 const landingPages: Record<string, ServiceLanding> = {
   'ecological-documents': {
     slug: 'ecological-documents',
     title: 'Экологические документы',
-    metaTitle: 'Экологические документы для бизнеса | ECOPROGRESS GROUP',
+    metaTitle: 'Экологические документы для бизнеса | ecoprogress.kz',
     description: 'Подготовка экологических документов: ОВОС, РООС, ПУО, ПЭК, НДВ, отчеты, разрешения и сопровождение по требованиям РК.',
     h1: 'Экологические документы для бизнеса',
     intro: 'Поможем понять, какие документы нужны вашему объекту, подготовим пакет материалов и сопроводим процесс.',
@@ -38,11 +39,12 @@ const landingPages: Record<string, ServiceLanding> = {
     duration: 'Срок зависит от объекта, категории и состава документов.',
     faq: [['Что делать, если я не знаю, какие документы нужны?', 'Оставьте заявку — специалист определит перечень документов после уточнения объекта.'], ['Можно ли начать без полного пакета данных?', 'Да, мы подскажем, какие сведения собрать в первую очередь.']],
     leadDefault: 'Экологические документы',
+    image: '/cottonbro.jpg',
   },
   'waste-transportation': {
     slug: 'waste-transportation',
     title: 'Вывоз отходов',
-    metaTitle: 'Вывоз и утилизация отходов | ECOPROGRESS GROUP',
+    metaTitle: 'Вывоз и утилизация отходов | ecoprogress.kz',
     description: 'Сбор, транспортировка, утилизация, переработка и документы по отходам для организаций.',
     h1: 'Вывоз и утилизация отходов',
     intro: 'Организуем сбор отходов, транспортировку, утилизацию и документы для бизнеса.',
@@ -52,11 +54,12 @@ const landingPages: Record<string, ServiceLanding> = {
     duration: 'Срок зависит от объема, вида отходов и маршрута.',
     faq: [['Вывозите опасные отходы?', 'Возможность зависит от вида отходов. Специалист уточнит детали и предложит решение.'], ['Какие документы выдаются?', 'Перечень документов зависит от операции с отходами и условий договора.']],
     leadDefault: 'Вывоз отходов',
+    image: '/jose.jpg',
   },
   'waste-recycling': {
     slug: 'waste-recycling',
     title: 'Утилизация отходов',
-    metaTitle: 'Утилизация и переработка отходов | ECOPROGRESS GROUP',
+    metaTitle: 'Утилизация и переработка отходов | ecoprogress.kz',
     description: 'Подбор решения для утилизации и переработки отходов с документальным сопровождением.',
     h1: 'Утилизация и переработка отходов',
     intro: 'Поможем подобрать законный способ утилизации или переработки отходов и подготовить документы.',
@@ -66,11 +69,12 @@ const landingPages: Record<string, ServiceLanding> = {
     duration: 'Срок зависит от вида отходов и доступного способа утилизации.',
     faq: [['Можно ли переработать отходы?', 'Это зависит от состава отходов. Мы уточним данные и предложим вариант.'], ['Можно ли заказать разовую услугу?', 'Да, можно оставить заявку на разовую партию отходов.']],
     leadDefault: 'Утилизация отходов',
+    image: '/utilizacija-othodov-3.jpg',
   },
   'laboratory-tests': {
     slug: 'laboratory-tests',
     title: 'Лабораторные исследования',
-    metaTitle: 'Лабораторные исследования воды, воздуха и почвы | ECOPROGRESS GROUP',
+    metaTitle: 'Лабораторные исследования воды, воздуха и почвы | ecoprogress.kz',
     description: 'Анализ воды, воздуха, почвы, замеры выбросов и протоколы лабораторных исследований.',
     h1: 'Лабораторные исследования воды, воздуха и почвы',
     intro: 'Организуем лабораторные анализы и замеры с протоколами для документов, проверок и внутреннего контроля.',
@@ -80,11 +84,12 @@ const landingPages: Record<string, ServiceLanding> = {
     duration: 'Срок зависит от вида анализа, количества точек и лабораторной нагрузки.',
     faq: [['Можно ли получить протокол?', 'Да, по результатам исследований предоставляются протоколы.'], ['Вы делаете замеры выбросов?', 'Да, замеры выбросов входят в перечень лабораторных услуг.']],
     leadDefault: 'Лабораторные анализы',
+    image: '/edward.jpg',
   },
   'poligon-tbo': {
     slug: 'poligon-tbo',
     title: 'Полигон ТБО',
-    metaTitle: 'Полигон ТБО | ECOPROGRESS GROUP',
+    metaTitle: 'Полигон ТБО | ecoprogress.kz',
     description: 'Приём ТБО, законное размещение отходов, документы и работа с организациями.',
     h1: 'Полигон ТБО для организаций',
     intro: 'Предоставляем услуги по приёму и законному размещению ТБО с документальным сопровождением.',
@@ -94,11 +99,12 @@ const landingPages: Record<string, ServiceLanding> = {
     duration: 'Условия и сроки зависят от объема и графика приёма.',
     faq: [['Можно ли привезти отходы на полигон?', 'Да, условия приёма уточняются по виду и объему отходов.'], ['Работаете с организациями?', 'Да, оказываем услуги для юридических лиц и ИП.']],
     leadDefault: 'Полигон ТБО',
+    image: '/poligon-tbo-2.jpg',
   },
   'environmental-audit': {
     slug: 'environmental-audit',
     title: 'Сопровождение проверок',
-    metaTitle: 'Сопровождение экологических проверок | ECOPROGRESS GROUP',
+    metaTitle: 'Сопровождение экологических проверок | ecoprogress.kz',
     description: 'Подготовка к экологической проверке, проверка документов, консультации и сопровождение бизнеса.',
     h1: 'Сопровождение экологических проверок',
     intro: 'Поможем подготовиться к проверке, собрать документы и понять риски до визита инспекции.',
@@ -108,6 +114,7 @@ const landingPages: Record<string, ServiceLanding> = {
     duration: 'Срок зависит от количества документов и срочности проверки.',
     faq: [['Что делать, если проверка уже пришла?', 'Оставьте заявку срочно — специалист поможет определить первые шаги.'], ['Можно ли проверить документы заранее?', 'Да, это снижает риск замечаний при проверке.']],
     leadDefault: 'Сопровождение проверки',
+    image: '/images (1).jpg',
   },
 };
 
@@ -144,7 +151,9 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
   return (
     <div className="bg-white">
       <SEO title={page.metaTitle} description={page.description} canonical={`${company.siteUrl}/services/${page.slug}`} schema={schema} />
-      <section className="bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-24">
+      <section className="relative isolate overflow-hidden bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-24">
+        <img src={page.image} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+        <div className="absolute inset-0 -z-10 bg-eco-900/82" />
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-accent">{page.title}</p>

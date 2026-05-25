@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+﻿import { ReactNode, useState } from 'react';
 import { NavLink, Link, Navigate } from 'react-router-dom';
 import { BarChart3, Bell, Building2, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, Handshake, LayoutDashboard, LockKeyhole, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -93,8 +93,8 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
       <aside className="hidden bg-eco-900 p-6 text-white lg:block">
         <Link to={homePath} className="flex items-center text-xl font-bold leading-tight">
           <span>
-            <span className="block">ECOPROGRESS</span>
-            <span className="block text-xs tracking-[0.22em] text-white/55">GROUP CRM</span>
+            <span className="block">ecoprogress.kz</span>
+            <span className="block text-xs tracking-[0.22em] text-white/55">CRM</span>
           </span>
         </Link>
         <p className="mt-2 text-sm text-white/60">Кабинет сотрудника</p>
@@ -108,7 +108,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
             </button>
             <div className="min-w-0 flex-1">
               <p className="text-sm text-slate-500">Роль: {roleLabel(user?.role)}</p>
-              <h1 className="truncate text-base font-semibold text-eco-900 sm:text-lg">{user?.name || 'Сотрудник ECOPROGRESS GROUP'}</h1>
+              <h1 className="truncate text-base font-semibold text-eco-900 sm:text-lg">{user?.name || 'Сотрудник ecoprogress.kz'}</h1>
             </div>
             <div className="flex shrink-0 items-center gap-3">
               <Link to="/" className="hidden text-sm font-semibold text-eco-700 hover:text-eco-900 sm:block">На сайт</Link>
@@ -125,7 +125,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
               <div className="mb-6 flex items-center justify-between">
                 <div>
                   <span className="font-bold text-eco-900">CRM сотрудника</span>
-                  <p className="mt-1 text-xs text-slate-500">ECOPROGRESS GROUP</p>
+                  <p className="mt-1 text-xs text-slate-500">ecoprogress.kz</p>
                 </div>
                 <button className="rounded-2xl border border-slate-200 p-2" onClick={() => setOpen(false)} aria-label="Закрыть меню">
                   <X size={18} />

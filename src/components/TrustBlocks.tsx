@@ -1,4 +1,4 @@
-import { Award, Beaker, Building2, ClipboardCheck, FileCheck2, FolderCheck, Recycle, ShieldCheck, Truck } from 'lucide-react';
+﻿import { Award, Beaker, Building2, ClipboardCheck, FileCheck2, FolderCheck, Recycle, ShieldCheck, Truck } from 'lucide-react';
 
 const reasons = [
   ['Работаем с юридическими лицами и ИП', Building2],
@@ -17,7 +17,7 @@ export const TrustSection = () => (
     <div className="mx-auto max-w-7xl">
       <div className="max-w-3xl">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Доверие</p>
-        <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Почему выбирают ECOPROGRESS GROUP</h2>
+        <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Почему выбирают ecoprogress.kz</h2>
       </div>
       <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {reasons.map(([title, Icon]) => (

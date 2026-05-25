@@ -1,6 +1,7 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+﻿import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CalendarDays, CheckCircle2, CreditCard, Download, FileSignature, FileText, LockKeyhole, RefreshCw, Send, Upload, X } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
@@ -158,7 +159,7 @@ export const CabinetDashboardPage = () => {
           <p className="text-sm text-white/65">Добро пожаловать</p>
           <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-2xl font-bold sm:text-3xl">{user?.name ?? 'Клиент ECOPROGRESS GROUP'}</h2>
+              <h2 className="text-2xl font-bold sm:text-3xl">{user?.name ?? 'Клиент ecoprogress.kz'}</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">Здесь видно главное: статус заявки, какие документы нужны, договор, счет и готовый результат.</p>
             </div>
             <Link to="/cabinet/orders/new"><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Создать новую заявку</Button></Link>
@@ -351,7 +352,7 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
         <div className="grid gap-4 md:grid-cols-2">
           <Input name="contactPerson" label="Контактное лицо *" defaultValue={user?.name} required />
           <Input name="phone" label="Телефон *" defaultValue={user?.phone} required />
-          <Input name="whatsapp" label="WhatsApp" />
+          <Input name="whatsapp" label="WhatsApp" icon={<FaWhatsapp size={18} aria-hidden="true" />} />
           <Input name="email" label="Email *" type="email" defaultValue={user?.email} required />
           <Input name="companyName" label="Название компании" defaultValue={user?.companyName ?? user?.name} />
           <Input name="bin" label="БИН / ИИН" defaultValue={user?.bin} />
@@ -388,7 +389,12 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
   );
 };
 
-const Input = ({ name, label, type = 'text', defaultValue = '', required = false }: { name: string; label: string; type?: string; defaultValue?: string; required?: boolean }) => <label className="text-sm font-semibold text-slate-700">{label}<input name={name} type={type} required={required} defaultValue={defaultValue} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>;
+const Input = ({ name, label, type = 'text', defaultValue = '', required = false, icon }: { name: string; label: string; type?: string; defaultValue?: string; required?: boolean; icon?: ReactNode }) => (
+  <label className="text-sm font-semibold text-slate-700">
+    <span className="inline-flex items-center gap-1.5">{icon}{label}</span>
+    <input name={name} type={type} required={required} defaultValue={defaultValue} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+  </label>
+);
 
 const StepTitle = ({ number, title }: { number: string; title: string }) => (
   <div className="mt-7 mb-4 flex items-center gap-3">
@@ -400,6 +406,7 @@ const StepTitle = ({ number, title }: { number: string; title: string }) => (
 export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: string) => void }) => {
   const { id } = useParams();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [order, setOrder] = useState<Order | undefined>();
   const [activeTab, setActiveTab] = useState<ClientOrderTab>('Обзор');
   const load = () => id && fetchOrderById(id).then(setOrder);
@@ -407,43 +414,78 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
   if (!id) return <Navigate to="/cabinet/orders" replace />;
   if (!order) return <div className="flex min-h-[40vh] items-center justify-center"><LoadingSpinner /></div>;
   const serviceContract = getPrimaryContractForOrder(order);
+  const errorMessage = (err: unknown, fallback: string) =>
+    (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (err as Error)?.message || fallback;
   const submitComment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await addComment(order.id, String(form.get('comment')), 'client');
-    onNotify?.('Комментарий добавлен');
-    event.currentTarget.reset();
-    load();
-    queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    const text = String(form.get('comment') || '').trim();
+    if (!text) {
+      toast.error('Введите текст сообщения');
+      return;
+    }
+    try {
+      await addComment(order.id, text, 'client');
+      toast.success('Сообщение отправлено', 'Сотрудник увидит ваше сообщение в заявке.');
+      event.currentTarget.reset();
+      load();
+      queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось отправить сообщение.'));
+    }
   };
   const submitFile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const file = new FormData(event.currentTarget).get('file') as File | null;
-    if (file) await uploadDocument(order.id, file);
-    onNotify?.('Документ загружен');
-    event.currentTarget.reset();
-    load();
-    queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    if (!file?.name) {
+      toast.error('Документ не загружен', 'Выберите файл и попробуйте снова.');
+      return;
+    }
+    try {
+      await uploadDocument(order.id, file);
+      toast.success('Документ загружен', 'Документ добавлен к заявке.');
+      event.currentTarget.reset();
+      load();
+      queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    } catch (err) {
+      toast.error('Документ не загружен', errorMessage(err, 'Выберите файл и попробуйте снова.'));
+    }
   };
   const submitQuarterFile = async (quarter: RequestQuarter, values: UploadDocumentValues) => {
-    if (values.file) {
-      await uploadQuarterDocument(order.id, quarter.id, values.file, values.category || 'client_data');
-      onNotify?.('Документ квартала загружен');
+    if (!values.file) {
+      toast.error('Документ не загружен', 'Выберите файл и попробуйте снова.');
+      return;
     }
-    load();
-    queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    try {
+      await uploadQuarterDocument(order.id, quarter.id, values.file, values.category || 'client_data');
+      toast.success('Документ загружен', 'Документ добавлен к кварталу.');
+      load();
+      queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    } catch (err) {
+      toast.error('Документ не загружен', errorMessage(err, 'Не удалось загрузить документ квартала.'));
+    }
   };
   const submitPrimaryFile = async (document: OrderPrimaryDocument, values: UploadDocumentValues) => {
-    if (values.file?.name) {
-      await uploadPrimaryDocument(order.id, document.id, values.file.name, values.comment);
-      onNotify?.(document.fileName ? 'Файл заменен' : 'Документ загружен');
+    if (!values.file?.name) {
+      toast.error('Документ не загружен', 'Выберите файл и попробуйте снова.');
+      return;
     }
-    load();
+    try {
+      await uploadPrimaryDocument(order.id, document.id, values.file.name, values.comment);
+      toast.success('Документ загружен', 'Документ добавлен к заявке.');
+      load();
+    } catch (err) {
+      toast.error('Документ не загружен', errorMessage(err, 'Не удалось загрузить документ.'));
+    }
   };
   const sendPrimaryDocs = async (comment = '') => {
-    await sendPrimaryDocumentsForReview(order.id, comment);
-    onNotify?.('Документы отправлены менеджеру на проверку');
-    load();
+    try {
+      await sendPrimaryDocumentsForReview(order.id, comment);
+      toast.success('Документы отправлены на проверку', 'Менеджер проверит документы и оставит комментарий.');
+      load();
+    } catch (err) {
+      toast.error('Нельзя отправить документы', errorMessage(err, 'Сначала загрузите обязательные документы.'));
+    }
   };
   const sendAgreementResponse = async (sourceDocument: AgreementSourceDocument, values: AgreementResponseValues) => {
     const { file, action } = values;
@@ -454,68 +496,102 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       : signed
       ? `Документ "${sourceDocument.title}" подписан`
       : `Документ "${sourceDocument.title}" отправлен без подписи`;
-    await addComment(order.id, `${label}${commentText ? `: ${commentText}` : ''}`, 'client');
-    if (file?.name) await uploadDocument(order.id, file, 'client');
-    onNotify?.(
-      action === 'revision_requested'
-        ? 'Документ отправлен сотруднику на исправление'
-        : signed
-        ? 'Документ подписан и отправлен сотруднику'
-        : 'Документ отправлен сотруднику без подписи'
-    );
-    load();
+    try {
+      await addComment(order.id, `${label}${commentText ? `: ${commentText}` : ''}`, 'client');
+      if (file?.name) await uploadDocument(order.id, file, 'client');
+      if (action === 'revision_requested') toast.success('Запрос отправлен', 'Специалист увидит ваш комментарий по результату.');
+      else if (signed) toast.success('КП согласовано', 'Менеджер начнет подготовку договора.');
+      else toast.success('Документ отправлен', 'Менеджер увидит ваш ответ.');
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось отправить ответ по документу.'));
+    }
   };
   const deletePrimaryFile = async (document: OrderPrimaryDocument) => {
-    await deletePrimaryDocumentFile(order.id, document.id);
-    onNotify?.('Файл удален');
-    load();
+    try {
+      await deletePrimaryDocumentFile(order.id, document.id);
+      toast.success('Документ удален', 'Файл удален из заявки.');
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось удалить файл.'));
+    }
   };
   const submitLaboratoryPrimaryFile = async (event: FormEvent<HTMLFormElement>, document: LaboratoryPrimaryDocument) => {
     event.preventDefault();
     const file = new FormData(event.currentTarget).get('file') as File | null;
-    if (file?.name) {
-      await uploadLaboratoryPrimaryDocument(order.id, document.id, file.name);
-      onNotify?.(document.fileName ? 'Файл заменен' : 'Документ загружен');
+    if (!file?.name) {
+      toast.error('Документ не загружен', 'Выберите файл и попробуйте снова.');
+      return;
     }
-    event.currentTarget.reset();
-    load();
+    try {
+      await uploadLaboratoryPrimaryDocument(order.id, document.id, file.name);
+      toast.success('Документ загружен', 'Документ добавлен к заявке.');
+      event.currentTarget.reset();
+      load();
+    } catch (err) {
+      toast.error('Документ не загружен', errorMessage(err, 'Не удалось загрузить документ.'));
+    }
   };
   const acceptMeasurement = async () => {
-    await respondLaboratoryMeasurementAgreement(order.id, { action: 'accept' });
-    onNotify?.('Дата замера подтверждена');
-    load();
+    try {
+      await respondLaboratoryMeasurementAgreement(order.id, { action: 'accept' });
+      toast.success('Дата замера подтверждена', 'Лаборатория увидит ваше подтверждение.');
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось подтвердить дату замера.'));
+    }
   };
   const requestMeasurementReschedule = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await respondLaboratoryMeasurementAgreement(order.id, {
-      action: 'reschedule',
-      rescheduleDate: String(form.get('rescheduleDate') || ''),
-      rescheduleTime: String(form.get('rescheduleTime') || ''),
-      comment: String(form.get('comment') || ''),
-    });
-    onNotify?.('Вариант другой даты отправлен');
-    event.currentTarget.reset();
-    load();
+    try {
+      await respondLaboratoryMeasurementAgreement(order.id, {
+        action: 'reschedule',
+        rescheduleDate: String(form.get('rescheduleDate') || ''),
+        rescheduleTime: String(form.get('rescheduleTime') || ''),
+        comment: String(form.get('comment') || ''),
+      });
+      toast.success('Дата замера изменена', 'Лаборатория увидит предложенное время.');
+      event.currentTarget.reset();
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось отправить перенос замера.'));
+    }
   };
   const handleSign = async () => {
-    await signOrderContract(order.id, order.signatureProvider || 'NCALayer / ЭЦП');
-    onNotify?.('Договор подписан электронной подписью');
-    load();
-    queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    try {
+      await signOrderContract(order.id, order.signatureProvider || 'NCALayer / ЭЦП');
+      toast.success('Договор подписан', 'Менеджер получил подписанный договор.');
+      load();
+      queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    } catch (err) {
+      toast.error('Не удалось подписать договор', errorMessage(err, 'Попробуйте снова или загрузите подписанный файл.'));
+    }
   };
   const handlePay = async () => {
-    await payOrderOnline(order.id, order.paymentMethod || 'Банковская карта');
-    onNotify?.('Оплата прошла онлайн');
-    load();
-    queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    try {
+      await payOrderOnline(order.id, order.paymentMethod || 'Банковская карта');
+      toast.success('Оплата подтверждена', 'Статус оплаты обновлен.');
+      load();
+      queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось выполнить оплату.'));
+    }
   };
   const submitReceipt = async (values: PaymentModalValues) => {
-    if (values.file) await uploadDocument(order.id, values.file, 'client');
-    if (values.comment) await addComment(order.id, `Чек оплаты: ${values.comment}`, 'client');
-    onNotify?.('Чек оплаты загружен');
-    load();
-    queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    if (!values.file) {
+      toast.error('Чек не загружен', 'Выберите файл чека.');
+      return;
+    }
+    try {
+      await uploadDocument(order.id, values.file, 'client');
+      if (values.comment) await addComment(order.id, `Чек оплаты: ${values.comment}`, 'client');
+      toast.success('Чек оплаты загружен', 'Бухгалтер проверит оплату.');
+      load();
+      queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    } catch (err) {
+      toast.error('Чек не загружен', errorMessage(err, 'Выберите файл чека.'));
+    }
   };
   return (
     <div className="space-y-6">
@@ -607,7 +683,7 @@ const getAgreementSourceDocuments = (order: Order): AgreementSourceDocument[] =>
     fileName: doc.fileUrl || doc.name,
     comment: '',
     status: doc.status,
-    uploadedBy: 'Сотрудник ECOPROGRESS',
+    uploadedBy: 'Сотрудник ecoprogress.kz',
     uploadedAt: doc.uploadedAt,
     section: 'Документ от сотрудника',
   }));
@@ -617,7 +693,7 @@ const getAgreementSourceDocuments = (order: Order): AgreementSourceDocument[] =>
     fileName: doc.fileName || doc.name,
     comment: doc.comment || '',
     status: doc.status,
-    uploadedBy: doc.uploadedBy || 'Лаборатория ECOPROGRESS',
+    uploadedBy: doc.uploadedBy || 'Лаборатория ecoprogress.kz',
     uploadedAt: doc.uploadedAt || doc.readyAt || 'Дата не указана',
     section: 'Лабораторный документ',
   }));
@@ -1311,7 +1387,7 @@ export const CabinetCompanyPage = () => {
           <div className="mt-5 grid gap-4 md:grid-cols-2">{Object.entries(user ?? {}).filter(([k]) => !['role', 'type', 'id'].includes(k)).map(([k, v]) => <Info key={k} label={k} value={String(v)} />)}</div>
         </div>
         <div className="rounded-[22px] bg-white p-6 shadow-sm">
-          <h2 className="text-2xl font-bold text-eco-900">Договоры с ECOPROGRESS GROUP</h2>
+          <h2 className="text-2xl font-bold text-eco-900">Договоры с ecoprogress.kz</h2>
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             {contracts.map((contract) => <ClientContractCard key={contract.id} contract={contract} />)}
             {!contracts.length && <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Договоров пока нет</div>}

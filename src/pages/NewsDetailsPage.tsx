@@ -1,4 +1,4 @@
-import { Navigate, useParams } from 'react-router-dom';
+﻿import { Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
@@ -18,7 +18,7 @@ const NewsDetailsPage = () => {
 
   return (
     <article className="bg-white">
-      <SEO title={`${item.title} | ECOPROGRESS GROUP`} description={item.excerpt} />
+      <SEO title={`${item.title} | ecoprogress.kz`} description={item.excerpt} />
       <section className="relative overflow-hidden px-5 py-24 text-white sm:px-8">
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${item.image})` }} />
         <div className="absolute inset-0 bg-eco-900/78" />

@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
+﻿import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   Bell,
@@ -21,6 +21,7 @@ import {
   UserCheck,
   X,
 } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import {
@@ -37,6 +38,7 @@ import {
   type UploadDocumentValues,
 } from '../components/modals';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
 import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getOrderById, getOrders, requestPrimaryDocument, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
 import type { CreateClientPayload, StaffCreateOrderPayload } from '../services/staffOrderService';
 import { getServices } from '../services/serviceService';
@@ -1550,6 +1552,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
   const { id } = useParams();
   const role = useStaffRole();
   const { user } = useAuth();
+  const toast = useToast();
   const access = roleAccess(role);
   const [order, setOrder] = useState<Order | undefined>();
   const [activeTab, setActiveTab] = useState<CrmTab>('Обзор');
@@ -1564,58 +1567,100 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
   if (!id) return <Navigate to="/staff/orders" replace />;
   if (!order) return <div className="rounded-2xl bg-white p-6">Загрузка заявки...</div>;
   const currentTab = visibleTabs.includes(activeTab) ? activeTab : roleDefaultTab(role, order);
+  const errorMessage = (err: unknown, fallback: string) =>
+    (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (err as Error)?.message || fallback;
 
   const changeStatus = async (status: OrderStatus) => {
-    await updateOrderStatus(order.id, status);
-    onNotify?.('Статус заявки обновлен');
-    load();
+    try {
+      await updateOrderStatus(order.id, status);
+      toast.success('Статус обновлен', `Новый статус: ${status}`);
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось обновить статус.'));
+      throw err;
+    }
   };
 
   const changePayment = async (paymentStatus: PaymentStatus, comment?: string) => {
-    await updatePaymentStatus(order.id, paymentStatus, { comment });
-    onNotify?.('Статус оплаты обновлен');
-    load();
+    try {
+      await updatePaymentStatus(order.id, paymentStatus, { comment });
+      toast.success('Статус оплаты обновлен', paymentStatusLabels[paymentStatus]);
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось обновить оплату.'));
+      throw err;
+    }
   };
 
   const submitComment = async (event: FormEvent<HTMLFormElement>, visibility: 'client' | 'internal') => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await addComment(order.id, String(form.get('comment')), visibility);
-    onNotify?.('Комментарий добавлен');
-    event.currentTarget.reset();
-    load();
+    const text = String(form.get('comment') || '').trim();
+    if (!text) {
+      toast.error('Введите текст сообщения');
+      return;
+    }
+    try {
+      await addComment(order.id, text, visibility);
+      toast.success(visibility === 'client' ? 'Сообщение отправлено' : 'Заметка сохранена', visibility === 'client' ? 'Клиент увидит его в кабинете.' : 'Она видна только сотрудникам.');
+      event.currentTarget.reset();
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось добавить комментарий.'));
+    }
   };
 
   const submitQuickComment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const visibility = access.messages ? String(form.get('visibility')) as 'client' | 'internal' : 'internal';
-    await addComment(order.id, String(form.get('comment')), visibility);
-    onNotify?.('Комментарий добавлен');
-    event.currentTarget.reset();
-    load();
+    const text = String(form.get('comment') || '').trim();
+    if (!text) {
+      toast.error('Введите текст сообщения');
+      return;
+    }
+    try {
+      await addComment(order.id, text, visibility);
+      toast.success(visibility === 'client' ? 'Сообщение отправлено' : 'Заметка сохранена', visibility === 'client' ? 'Клиент увидит его в кабинете.' : 'Она видна только сотрудникам.');
+      event.currentTarget.reset();
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось добавить комментарий.'));
+    }
   };
 
   const submitDoc = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const file = new FormData(event.currentTarget).get('file') as File | null;
-    if (file?.name) await uploadDocument(order.id, file, 'result');
-    onNotify?.('Документ загружен');
-    event.currentTarget.reset();
-    load();
+    if (!file?.name) {
+      toast.error('Документ не загружен', 'Выберите файл и попробуйте снова.');
+      return;
+    }
+    try {
+      await uploadDocument(order.id, file, 'result');
+      toast.success('Документ загружен', 'Документ добавлен к заявке.');
+      event.currentTarget.reset();
+      load();
+    } catch (err) {
+      toast.error('Документ не загружен', errorMessage(err, 'Не удалось загрузить документ.'));
+    }
   };
 
   const submitManager = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await assignManager(order.id, String(new FormData(event.currentTarget).get('manager')));
-    onNotify?.('Ответственный назначен');
-    load();
+    try {
+      await assignManager(order.id, String(new FormData(event.currentTarget).get('manager')));
+      toast.success('Ответственный назначен', 'Изменение сохранено в заявке.');
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось назначить ответственного.'));
+    }
   };
 
   const submitPayment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!access.finance) {
-      onNotify?.('Финансовые действия доступны только бухгалтеру и администратору');
+      toast.warning('Действие недоступно', 'Финансовые действия доступны только бухгалтеру и администратору.');
       return;
     }
     const form = new FormData(event.currentTarget);
@@ -1625,97 +1670,135 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     const paymentPercent = Math.min(Math.max(Number.isFinite(percentValue) ? percentValue : 0, 0), 100);
     const paidAmount = status === 'paid' ? total : Math.round((total * paymentPercent) / 100);
     const document = form.get('paymentDocument') as File | null;
-    await updatePaymentStatus(order.id, String(form.get('paymentStatus')) as PaymentStatus, {
-      amount: String(total || ''),
-      totalAmount: total,
-      paidAmount,
-      paidAt: String(form.get('paidAt') || ''),
-      comment: String(form.get('comment') || ''),
-      invoiceFileName: document?.name || order.invoiceFileName || '',
-      paymentTerms: status === 'partial' ? 'partial_allowed' : 'full_prepayment',
-      minPrepaymentPercent: status === 'paid' ? 100 : paymentPercent,
-    });
-    onNotify?.('Раздел оплаты сохранен');
-    load();
+    try {
+      await updatePaymentStatus(order.id, String(form.get('paymentStatus')) as PaymentStatus, {
+        amount: String(total || ''),
+        totalAmount: total,
+        paidAmount,
+        paidAt: String(form.get('paidAt') || ''),
+        comment: String(form.get('comment') || ''),
+        invoiceFileName: document?.name || order.invoiceFileName || '',
+        paymentTerms: status === 'partial' ? 'partial_allowed' : 'full_prepayment',
+        minPrepaymentPercent: status === 'paid' ? 100 : paymentPercent,
+      });
+      toast.success(status === 'paid' ? 'Оплата закрыта полностью' : 'Частичная оплата сохранена', status === 'paid' ? 'Остаток по заявке равен 0.' : 'Остаток оплаты пересчитан.');
+      load();
+    } catch (err) {
+      toast.error('Не удалось сохранить оплату', errorMessage(err, 'Проверьте данные и попробуйте снова.'));
+    }
   };
 
   const submitPaymentValues = async (values: PaymentModalValues) => {
     if (!access.finance) {
-      onNotify?.('Финансовые действия доступны только бухгалтеру и администратору');
+      toast.warning('Действие недоступно', 'Финансовые действия доступны только бухгалтеру и администратору.');
       return;
     }
     const total = orderFinance(order).total || order.contractAmount || order.offerAmount || order.totalAmount || 0;
     const status: PaymentStatus = values.mode === 'full' ? 'paid' : 'partial';
-    await updatePaymentStatus(order.id, status, {
-      amount: String(total || ''),
-      totalAmount: total,
-      paidAmount: values.mode === 'full' ? total : values.amount,
-      paidAt: values.date,
-      comment: values.comment,
-      invoiceFileName: values.file?.name || order.invoiceFileName || '',
-      paymentTerms: status === 'partial' ? 'partial_allowed' : 'full_prepayment',
-      minPrepaymentPercent: status === 'paid' ? 100 : Math.round((values.amount / Math.max(total, 1)) * 100),
-    });
-    onNotify?.('Раздел оплаты сохранен');
-    load();
+    try {
+      await updatePaymentStatus(order.id, status, {
+        amount: String(total || ''),
+        totalAmount: total,
+        paidAmount: values.mode === 'full' ? total : values.amount,
+        paidAt: values.date,
+        comment: values.comment,
+        invoiceFileName: values.file?.name || order.invoiceFileName || '',
+        paymentTerms: status === 'partial' ? 'partial_allowed' : 'full_prepayment',
+        minPrepaymentPercent: status === 'paid' ? 100 : Math.round((values.amount / Math.max(total, 1)) * 100),
+      });
+      toast.success(values.mode === 'full' ? 'Оплата закрыта полностью' : 'Частичная оплата сохранена', values.mode === 'full' ? 'Остаток по заявке равен 0.' : 'Остаток оплаты пересчитан.');
+      load();
+    } catch (err) {
+      toast.error('Не удалось сохранить оплату', errorMessage(err, 'Проверьте данные и попробуйте снова.'));
+      throw err;
+    }
   };
 
   const submitEcology = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await updateEcologyStatus(order.id, String(form.get('ecologyStatus')) as EcologyStatus, String(form.get('comment') || ''));
-    onNotify?.('Экологический блок обновлен');
-    load();
+    try {
+      const status = String(form.get('ecologyStatus')) as EcologyStatus;
+      await updateEcologyStatus(order.id, status, String(form.get('comment') || ''));
+      toast.success('Статус обновлен', `Новый статус: ${ecologyLabel(status)}`);
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось обновить экологический блок.'));
+    }
   };
 
   const submitLaboratory = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await updateLaboratoryStatus(order.id, String(form.get('laboratoryStatus')) as LaboratoryStatus, String(form.get('comment') || ''));
-    onNotify?.('Лабораторный блок обновлен');
-    load();
+    try {
+      const status = String(form.get('laboratoryStatus')) as LaboratoryStatus;
+      await updateLaboratoryStatus(order.id, status, String(form.get('comment') || ''));
+      toast.success('Статус обновлен', `Новый статус: ${laboratoryLabel(status)}`);
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось обновить лабораторный блок.'));
+    }
   };
 
   const submitLaboratoryPrimaryStatus = async (event: FormEvent<HTMLFormElement>, documentId: string) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await updateLaboratoryPrimaryDocumentStatus(
-      order.id,
-      documentId,
-      String(form.get('status')) as LaboratoryPrimaryDocumentStatus,
-      String(form.get('comment') || '')
-    );
-    onNotify?.('Статус первичного документа обновлен');
-    load();
+    try {
+      const status = String(form.get('status')) as LaboratoryPrimaryDocumentStatus;
+      await updateLaboratoryPrimaryDocumentStatus(
+        order.id,
+        documentId,
+        status,
+        String(form.get('comment') || '')
+      );
+      toast.success('Статус обновлен', `Новый статус: ${laboratoryPrimaryStatusLabels[status]}`);
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось обновить статус документа.'));
+    }
   };
 
   const submitMeasurementAgreement = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await saveLaboratoryMeasurementAgreement(order.id, {
-      measurementDate: String(form.get('measurementDate') || ''),
-      measurementTime: String(form.get('measurementTime') || ''),
-      address: String(form.get('address') || ''),
-      companyName: String(form.get('companyName') || ''),
-      contactPerson: String(form.get('contactPerson') || ''),
-      phone: String(form.get('phone') || ''),
-      measurementScope: String(form.get('measurementScope') || ''),
-      comment: String(form.get('comment') || ''),
-    });
-    onNotify?.('Согласование замера сохранено');
-    load();
+    try {
+      await saveLaboratoryMeasurementAgreement(order.id, {
+        measurementDate: String(form.get('measurementDate') || ''),
+        measurementTime: String(form.get('measurementTime') || ''),
+        address: String(form.get('address') || ''),
+        companyName: String(form.get('companyName') || ''),
+        contactPerson: String(form.get('contactPerson') || ''),
+        phone: String(form.get('phone') || ''),
+        measurementScope: String(form.get('measurementScope') || ''),
+        comment: String(form.get('comment') || ''),
+      });
+      toast.success('Замер назначен', 'Клиент увидит дату и время замера.');
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось сохранить замер.'));
+    }
   };
 
   const sendMeasurement = async () => {
-    await sendLaboratoryMeasurementAgreement(order.id);
-    onNotify?.('Клиенту отправлены email и уведомление в личном кабинете');
-    load();
+    try {
+      await sendLaboratoryMeasurementAgreement(order.id);
+      toast.success('Дата отправлена клиенту', 'Клиент сможет подтвердить или попросить перенести.');
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось отправить дату замера.'));
+      throw err;
+    }
   };
 
   const changeMeasurementStatus = async (status: LaboratoryMeasurementAgreementStatus, comment?: string) => {
-    await updateLaboratoryMeasurementAgreementStatus(order.id, status, comment);
-    onNotify?.('Статус замера обновлен');
-    load();
+    try {
+      await updateLaboratoryMeasurementAgreementStatus(order.id, status, comment);
+      toast.success(status === 'completed' ? 'Замер отмечен как проведенный' : 'Статус замера обновлен', status === 'completed' ? 'Теперь можно загрузить протокол.' : laboratoryMeasurementStatusLabels[status]);
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось обновить статус замера.'));
+      throw err;
+    }
   };
 
   const submitLaboratoryResult = async (event: FormEvent<HTMLFormElement>, section: LaboratoryResultDocument['section']) => {
@@ -1723,28 +1806,40 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     const form = new FormData(event.currentTarget);
     const files = form.getAll('file').filter((file): file is File => file instanceof File && Boolean(file.name));
     const quarter = toQuarterNumber(form.get('quarter'));
-    if (files.length) {
+    if (!files.length) {
+      toast.error('Документ не загружен', 'Выберите файл протокола или отчета.');
+      return;
+    }
+    try {
       const baseName = String(form.get('name') || laboratoryResultSectionLabels[section]);
+      const status = String(form.get('status') || 'ready') as LaboratoryResultDocumentStatus;
       for (const file of files) {
         await uploadLaboratoryResultDocument(order.id, {
           name: files.length > 1 ? `${baseName} - ${file.name}` : baseName,
           section,
           quarter,
           fileName: file.name,
-          status: String(form.get('status') || 'ready') as LaboratoryResultDocumentStatus,
+          status,
           comment: String(form.get('comment') || ''),
         });
       }
-      onNotify?.(files.length > 1 ? 'Лабораторные документы загружены' : 'Лабораторный документ загружен');
+      toast.success(section === 'protocol' ? 'Протокол загружен' : 'Результат загружен', status === 'published_to_client' ? 'Клиент сможет скачать результат.' : 'Теперь его можно опубликовать клиенту.');
+      event.currentTarget.reset();
+      load();
+    } catch (err) {
+      toast.error('Документ не загружен', errorMessage(err, 'Не удалось загрузить лабораторный результат.'));
     }
-    event.currentTarget.reset();
-    load();
   };
 
   const changeLaboratoryResultStatus = async (documentId: string, status: LaboratoryResultDocumentStatus) => {
-    await updateLaboratoryResultDocumentStatus(order.id, documentId, status);
-    onNotify?.(status === 'published_to_client' ? 'Документ опубликован клиенту' : 'Статус документа обновлен');
-    load();
+    try {
+      await updateLaboratoryResultDocumentStatus(order.id, documentId, status);
+      toast.success(status === 'published_to_client' ? 'Протокол опубликован' : 'Статус документа обновлен', status === 'published_to_client' ? 'Клиент сможет скачать результат.' : laboratoryResultStatusLabels[status]);
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось обновить документ.'));
+      throw err;
+    }
   };
 
   const submitContractAndInvoice = async (event: FormEvent<HTMLFormElement>) => {
@@ -1755,55 +1850,87 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     }
     const form = new FormData(event.currentTarget);
     const contract = form.get('contract') as File | null;
-    await sendContractAndInvoice(order.id, {
-      amount: String(form.get('amount')),
-      contractFileName: contract?.name,
-      contractPeriodStart: String(form.get('contractPeriodStart') || ''),
-      contractPeriodEnd: String(form.get('contractPeriodEnd') || ''),
-      contractServiceNote: String(form.get('contractServiceNote') || ''),
-      contractNote: String(form.get('contractNote') || ''),
-    });
-    onNotify?.('Договор сохранен');
-    event.currentTarget.reset();
-    load();
+    try {
+      await sendContractAndInvoice(order.id, {
+        amount: String(form.get('amount')),
+        contractFileName: contract?.name,
+        contractPeriodStart: String(form.get('contractPeriodStart') || ''),
+        contractPeriodEnd: String(form.get('contractPeriodEnd') || ''),
+        contractServiceNote: String(form.get('contractServiceNote') || ''),
+        contractNote: String(form.get('contractNote') || ''),
+      });
+      toast.success('Договор отправлен клиенту', 'Клиент сможет скачать и подписать договор.');
+      event.currentTarget.reset();
+      load();
+    } catch (err) {
+      toast.error('Не удалось отправить договор', errorMessage(err, 'Проверьте номер, сумму и файл договора.'));
+    }
   };
 
   const submitContractValues = async (values: ContractModalValues) => {
     if (!access.manager && !access.finance) {
-      onNotify?.('Договор может редактировать менеджер, бухгалтер или администратор');
+      toast.warning('Действие недоступно', 'Договор может редактировать менеджер, бухгалтер или администратор.');
       return;
     }
-    await sendContractAndInvoice(order.id, {
-      amount: values.amount,
-      contractFileName: values.file?.name,
-      contractPeriodStart: values.periodStart,
-      contractPeriodEnd: values.periodEnd,
-      contractServiceNote: order.service,
-      contractNote: values.comment,
-    });
-    onNotify?.('Договор сохранен');
-    load();
+    try {
+      await sendContractAndInvoice(order.id, {
+        amount: values.amount,
+        contractFileName: values.file?.name,
+        contractPeriodStart: values.periodStart,
+        contractPeriodEnd: values.periodEnd,
+        contractServiceNote: order.service,
+        contractNote: values.comment,
+      });
+      toast.success('Договор отправлен клиенту', 'Клиент сможет скачать и подписать договор.');
+      load();
+    } catch (err) {
+      toast.error('Не удалось отправить договор', errorMessage(err, 'Проверьте номер, сумму и файл договора.'));
+      throw err;
+    }
   };
 
   const markContract = async (status: StaffContractStatus, comment?: string) => {
-    await updateContractStatus(order.id, status, comment);
-    onNotify?.('Статус договора обновлен');
-    load();
+    try {
+      await updateContractStatus(order.id, status, comment);
+      toast.success('Статус договора обновлен', contractLabel(status));
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось обновить статус договора.'));
+      throw err;
+    }
   };
 
   const performManagerAction = async (action: typeof managerActionFlow[number]) => {
-    if (action.contractStatus) {
-      await updateContractStatus(order.id, action.contractStatus, action.label);
+    try {
+      if (action.contractStatus) {
+        await updateContractStatus(order.id, action.contractStatus, action.label);
+      }
+      await updateOrderStatus(order.id, action.target);
+      if (action.target === 'Передано бухгалтеру') toast.success('Заявка передана бухгалтеру', 'Бухгалтер сможет выставить счет.');
+      else if (action.target === 'КП отправлено') toast.success('КП отправлено клиенту', 'Клиент сможет скачать и согласовать КП.');
+      else if (action.target === 'КП согласовано') toast.success('КП отмечено как согласованное', 'Теперь можно подготовить договор.');
+      else toast.success('Статус обновлен', `Новый статус: ${action.target}`);
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, action.target === 'Передано бухгалтеру' ? 'Нельзя передать бухгалтеру.' : 'Не удалось выполнить действие.'));
+      throw err;
     }
-    await updateOrderStatus(order.id, action.target);
-    onNotify?.(action.target === 'Передано бухгалтеру' ? 'Заявка передана бухгалтеру' : 'Статус заявки обновлен');
-    load();
   };
 
   const markPrimaryDocument = async (documentId: string, status: ClientPrimaryDocumentStatus, comment = '') => {
-    await updatePrimaryDocumentStatus(order.id, documentId, status, comment);
-    onNotify?.(status === 'accepted' ? 'Документ принят' : 'Клиенту отправлен комментарий по документу');
-    load();
+    if ((status === 'needs_fix' || status === 'rejected') && !comment.trim()) {
+      toast.error('Укажите причину', 'Комментарий обязателен при отклонении или исправлении документа.');
+      return;
+    }
+    try {
+      await updatePrimaryDocumentStatus(order.id, documentId, status, comment);
+      if (status === 'accepted') toast.success('Документ принят', 'Клиент увидит, что документ принят.');
+      else if (status === 'rejected') toast.success('Документ отклонен', 'Клиент увидит причину отклонения.');
+      else toast.success('Запрос исправления отправлен', 'Клиент увидит ваш комментарий.');
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, 'Не удалось проверить документ.'));
+    }
   };
 
   const submitRequestPrimaryDocument = async (event: FormEvent<HTMLFormElement>) => {
@@ -1811,36 +1938,49 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     const form = new FormData(event.currentTarget);
     const documentNames = form.getAll('documentNames').map(String).filter(Boolean);
     if (!documentNames.length) {
-      onNotify?.('Выберите хотя бы один документ');
+      toast.error('Не удалось отправить запрос', 'Выберите хотя бы один документ.');
       return;
     }
-    await Promise.all(documentNames.map((documentName) =>
-      requestPrimaryDocument(
-        order.id,
-        documentName,
-        Boolean(form.get('required')),
-        String(form.get('comment') || '')
-      )
-    ));
-    onNotify?.(`Запрошено документов: ${documentNames.length}`);
-    event.currentTarget.reset();
-    load();
+    try {
+      await Promise.all(documentNames.map((documentName) =>
+        requestPrimaryDocument(
+          order.id,
+          documentName,
+          Boolean(form.get('required')),
+          String(form.get('comment') || '')
+        )
+      ));
+      toast.success('Запрос документов отправлен', 'Клиент увидит список документов в кабинете.');
+      event.currentTarget.reset();
+      load();
+    } catch (err) {
+      toast.error('Не удалось отправить запрос', errorMessage(err, 'Выберите хотя бы один документ.'));
+    }
   };
 
   const setAccountantPayment = async (status: PaymentStatus, comment: string, paidAmount?: number) => {
     const finance = orderFinance(order);
-    await updatePaymentStatus(order.id, status, {
-      totalAmount: finance.total || order.contractAmount || order.offerAmount || 0,
-      paidAmount: paidAmount ?? finance.paid,
-      paidAt: new Date().toISOString().slice(0, 10),
-      comment,
-      invoiceNumber: order.invoiceNumber,
-      invoiceFileName: order.invoiceFileName,
-      paymentTerms: order.paymentTerms || 'full_prepayment',
-      minPrepaymentPercent: order.minPrepaymentPercent ?? 100,
-    });
-    onNotify?.(comment);
-    load();
+    try {
+      await updatePaymentStatus(order.id, status, {
+        totalAmount: finance.total || order.contractAmount || order.offerAmount || 0,
+        paidAmount: paidAmount ?? finance.paid,
+        paidAt: new Date().toISOString().slice(0, 10),
+        comment,
+        invoiceNumber: order.invoiceNumber,
+        invoiceFileName: order.invoiceFileName,
+        paymentTerms: order.paymentTerms || 'full_prepayment',
+        minPrepaymentPercent: order.minPrepaymentPercent ?? 100,
+      });
+      if (status === 'invoice_sent') toast.success('Счет выставлен', 'Клиент увидит счет в личном кабинете.');
+      else if (status === 'paid') toast.success('Оплата подтверждена', 'Статус оплаты обновлен.');
+      else if (status === 'partial') toast.success('Частичная оплата сохранена', 'Остаток оплаты пересчитан.');
+      else if (status === 'transferred_to_specialist') toast.success('Заявка передана специалисту', 'Специалист может начать работу.');
+      else toast.success('Статус оплаты обновлен', comment);
+      load();
+    } catch (err) {
+      toast.error('Ошибка', errorMessage(err, status === 'transferred_to_specialist' ? 'Нельзя передать специалисту.' : 'Не удалось обновить оплату.'));
+      throw err;
+    }
   };
 
   const online = onlineState(order);
@@ -2006,7 +2146,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
             {currentTab === 'Документы' && (
               <Section title="Документы" icon={<Upload size={20} />}>
                 <List title="От клиента" items={order.documents.map((d) => `${d.name} · ${d.status} · ${d.uploadedAt}`)} />
-                <List title="От ECOPROGRESS" items={order.resultDocuments.map((d) => `${d.name} · ${d.status} · ${d.uploadedAt}`)} />
+                <List title="От ecoprogress.kz" items={order.resultDocuments.map((d) => `${d.name} · ${d.status} · ${d.uploadedAt}`)} />
                 {canAccess(role, 'edit_documents') && <StaffUploadDocumentAction onSubmit={async (values) => {
                   if (values.file) await uploadDocument(order.id, values.file, values.category || 'result');
                   onNotify?.('Документ загружен');
@@ -2019,7 +2159,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               <Section title="Экология" icon={<Leaf size={20} />}>
                 <div className="grid gap-3 md:grid-cols-3">
                   <InfoTile label="Статус" value={ecologyLabel(order.ecologyStatus)} />
-                  <InfoTile label="Ответственный" value={order.assignedEcologist || 'Эколог ECOPROGRESS GROUP'} />
+                  <InfoTile label="Ответственный" value={order.assignedEcologist || 'Эколог ecoprogress.kz'} />
                   <InfoTile label="Готово" value={order.ecologyReadyAt || 'Нет'} />
                 </div>
                 <List title="Документы" items={order.resultDocuments.filter((doc) => documentType(doc) === 'экологический документ' || documentType(doc) === 'заключение').map((doc) => `${doc.name} · ${doc.status} · ${doc.uploadedAt}`)} />
@@ -2752,7 +2892,7 @@ const ManagerRequestCard = ({ order }: { order: Order }) => {
         <InfoTile label="БИН / ИИН" value={order.bin || 'Не указано'} />
         <InfoTile label="Контактное лицо" value={order.contactPerson || order.clientName || 'Не указано'} />
         <InfoTile label="Телефон" value={order.phone || 'Не указано'} />
-        <InfoTile label="WhatsApp" value={extra.whatsapp || order.phone || 'Не указано'} />
+        <InfoTile label={<span className="inline-flex items-center gap-1.5"><FaWhatsapp className="text-[#25D366]" size={14} aria-hidden="true" /> WhatsApp</span>} value={extra.whatsapp || order.phone || 'Не указано'} />
         <InfoTile label="Email" value={order.email || 'Не указано'} />
         <InfoTile label="Адрес объекта" value={extra.objectAddress || order.legalAddress || 'Не указано'} />
         <InfoTile label="Выбранная услуга" value={order.service || 'Не указано'} />
@@ -3113,7 +3253,7 @@ const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   </label>
 );
 
-const InfoTile = ({ label, value }: { label: string; value: string }) => (
+const InfoTile = ({ label, value }: { label: ReactNode; value: string }) => (
   <div className="min-w-0 overflow-hidden rounded-2xl bg-slate-50 p-4">
     <p className="text-xs font-semibold uppercase leading-snug text-slate-500">{label}</p>
     <p className="mt-2 break-words text-sm font-semibold leading-snug text-slate-800">{value || 'Не указано'}</p>
@@ -3593,6 +3733,7 @@ const LaboratoryResultSection = ({
 
 export const StaffClientsPage = () => {
   const { orders } = useOrders();
+  const toast = useToast();
   const { companyKey: selectedKeyParam } = useParams();
   const [q, setQ] = useState('');
   const selectedKey = selectedKeyParam ? decodeURIComponent(selectedKeyParam) : '';
@@ -3679,8 +3820,12 @@ export const StaffClientsPage = () => {
     try {
       const result = await createClient(payload);
       setCreateResult({ email: result.email, password: result.tempPassword });
+      toast.success('Клиент создан', 'Теперь менеджер может оформить заявку от клиента.');
     } catch (err: unknown) {
-      setCreateError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Не удалось создать клиента');
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Не удалось создать клиента';
+      setCreateError(message);
+      toast.error('Ошибка', message);
+      throw err;
     }
   };
 

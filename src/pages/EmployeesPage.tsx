@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+﻿import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -15,7 +15,7 @@ const EmployeesPage = () => {
 
   return (
     <div className="bg-eco-50">
-      <SEO title="Сотрудники | ECOPROGRESS GROUP" description="Команда ECOPROGRESS GROUP сопровождает экологические документы, проверки, отходы, лабораторные исследования и заявки клиентов." />
+      <SEO title="Сотрудники | ecoprogress.kz" description="Команда ecoprogress.kz сопровождает экологические документы, проверки, отходы, лабораторные исследования и заявки клиентов." />
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
         <Reveal><h1 className="text-4xl font-bold text-eco-900 sm:text-5xl">Сотрудники</h1></Reveal>
         <p className="mt-4 max-w-2xl text-slate-600">Команда, которая сопровождает заявки, документы, проверки и консультации.</p>

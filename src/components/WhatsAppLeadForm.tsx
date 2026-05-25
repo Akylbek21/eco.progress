@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { Send } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 import Button from './ui/Button';
 import { createWhatsAppLeadMessage, createWhatsAppUrl } from '../utils/whatsapp';
 import { trackWhatsAppClick } from '../services/analytics';
@@ -71,10 +71,11 @@ const WhatsAppLeadForm = ({
 
   return (
     <form onSubmit={submit} className="min-w-0 overflow-hidden rounded-[24px] border border-green-100 bg-white p-5 shadow-xl shadow-eco-900/8 sm:p-7">
-      <h2 className="text-2xl font-bold text-eco-900">{title}</h2>
+      <h2 className="inline-flex items-center gap-2 text-2xl font-bold text-eco-900"><FaWhatsapp className="text-[#25D366]" size={24} aria-hidden="true" /> {title}</h2>
       {!compact && (
-        <p className="mt-3 text-sm leading-6 text-slate-600">
-          Заполните короткую заявку. Мы откроем WhatsApp с готовым сообщением, вам останется отправить его менеджеру.
+        <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-slate-600">
+          <FaWhatsapp className="mt-1 shrink-0 text-[#25D366]" size={16} aria-hidden="true" />
+          <span>Заполните короткую заявку. Мы откроем WhatsApp с готовым сообщением, вам останется отправить его менеджеру.</span>
         </p>
       )}
       <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -111,12 +112,13 @@ const WhatsAppLeadForm = ({
         <textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={compact ? 3 : 4} />
       </label>
       <Button type="submit" className="mt-5 w-full gap-2 bg-[#25D366] text-white hover:bg-[#20bd5a]">
-        <Send size={16} /> Отправить через WhatsApp
+        <FaWhatsapp size={18} aria-hidden="true" /> Отправить через WhatsApp
       </Button>
       {error && <p className="mt-4 rounded-2xl bg-rose-50 p-4 text-sm font-semibold text-rose-800">{error}</p>}
-      {notice && <p className="mt-4 rounded-2xl bg-green-50 p-4 text-sm font-semibold text-green-800">{notice}</p>}
+      {notice && <p className="mt-4 flex items-start gap-2 rounded-2xl bg-green-50 p-4 text-sm font-semibold text-green-800"><FaWhatsapp className="mt-0.5 shrink-0 text-[#25D366]" size={16} aria-hidden="true" /> <span>{notice}</span></p>}
       {manualUrl && (
-        <a href={manualUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex text-sm font-bold text-[#168a42] hover:text-[#0f6b32]">
+        <a href={manualUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#168a42] hover:text-[#0f6b32]">
+          <FaWhatsapp size={16} aria-hidden="true" />
           Открыть WhatsApp вручную
         </a>
       )}
