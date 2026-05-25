@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { MessageCircle } from 'lucide-react';
 import Button from '../components/ui/Button';
-import LeadForm from '../components/LeadForm';
+import WhatsAppButton from '../components/WhatsAppButton';
+import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
 import { TrustCompact } from '../components/TrustBlocks';
-import { company, getWhatsAppUrl } from '../config/company';
-import { trackServiceView, trackWhatsAppClick } from '../services/analytics';
+import { company } from '../config/company';
+import { trackServiceView } from '../services/analytics';
+import { createBlankWhatsAppRequestMessage } from '../utils/whatsapp';
 
 type ServiceLanding = {
   slug: string;
@@ -151,12 +152,10 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
             <p className="mt-5 max-w-2xl text-lg leading-8 text-white/76">{page.intro}</p>
             <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
               <a href="#lead"><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Оставить заявку</Button></a>
-              <a href={getWhatsAppUrl(`Здравствуйте! Хочу получить консультацию по услуге: ${page.title}. Город: `)} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'service_page', service: page.slug })} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white hover:bg-white/15 sm:w-auto">
-                <MessageCircle size={18} /> WhatsApp
-              </a>
+              <WhatsAppButton label="Оставить заявку через WhatsApp" message={createBlankWhatsAppRequestMessage(page.title)} className="w-full sm:w-auto" />
             </div>
           </div>
-          <LeadForm source={`service_${page.slug}`} title="Получить расчет" compact defaultService={page.leadDefault} />
+          <WhatsAppLeadForm source={`service_${page.slug}_whatsapp`} title="Заявка через WhatsApp" compact defaultService={page.title} />
         </div>
       </section>
 
@@ -198,7 +197,7 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
             <h2 className="text-3xl font-bold text-eco-900">Получить консультацию по услуге</h2>
             <p className="mt-4 leading-7 text-slate-600">Опишите задачу, и специалист подскажет сроки, документы и примерный порядок работы.</p>
           </div>
-          <LeadForm source={`service_bottom_${page.slug}`} defaultService={page.leadDefault} />
+          <WhatsAppLeadForm source={`service_bottom_${page.slug}_whatsapp`} defaultService={page.title} />
         </div>
       </section>
     </div>

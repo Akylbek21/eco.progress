@@ -23,6 +23,19 @@ import {
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
+import {
+  CommentModal,
+  ConfirmModal,
+  ContractModal,
+  CreateClientModal,
+  PaymentModal,
+  UploadDocumentModal,
+  type CommentValues,
+  type ContractModalValues,
+  type CreateClientModalValues,
+  type PaymentModalValues,
+  type UploadDocumentValues,
+} from '../components/modals';
 import { useAuth } from '../contexts/AuthContext';
 import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getOrderById, getOrders, requestPrimaryDocument, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
 import type { CreateClientPayload, StaffCreateOrderPayload } from '../services/staffOrderService';
@@ -1626,6 +1639,27 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     load();
   };
 
+  const submitPaymentValues = async (values: PaymentModalValues) => {
+    if (!access.finance) {
+      onNotify?.('Финансовые действия доступны только бухгалтеру и администратору');
+      return;
+    }
+    const total = orderFinance(order).total || order.contractAmount || order.offerAmount || order.totalAmount || 0;
+    const status: PaymentStatus = values.mode === 'full' ? 'paid' : 'partial';
+    await updatePaymentStatus(order.id, status, {
+      amount: String(total || ''),
+      totalAmount: total,
+      paidAmount: values.mode === 'full' ? total : values.amount,
+      paidAt: values.date,
+      comment: values.comment,
+      invoiceFileName: values.file?.name || order.invoiceFileName || '',
+      paymentTerms: status === 'partial' ? 'partial_allowed' : 'full_prepayment',
+      minPrepaymentPercent: status === 'paid' ? 100 : Math.round((values.amount / Math.max(total, 1)) * 100),
+    });
+    onNotify?.('Раздел оплаты сохранен');
+    load();
+  };
+
   const submitEcology = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -1731,6 +1765,23 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     });
     onNotify?.('Договор сохранен');
     event.currentTarget.reset();
+    load();
+  };
+
+  const submitContractValues = async (values: ContractModalValues) => {
+    if (!access.manager && !access.finance) {
+      onNotify?.('Договор может редактировать менеджер, бухгалтер или администратор');
+      return;
+    }
+    await sendContractAndInvoice(order.id, {
+      amount: values.amount,
+      contractFileName: values.file?.name,
+      contractPeriodStart: values.periodStart,
+      contractPeriodEnd: values.periodEnd,
+      contractServiceNote: order.service,
+      contractNote: values.comment,
+    });
+    onNotify?.('Договор сохранен');
     load();
   };
 
@@ -1935,27 +1986,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                       <InfoTile label="Оплачено" value={formatCurrency(orderFinance(order).paid)} />
                       <InfoTile label="Остаток" value={formatCurrency(orderFinance(order).remaining)} />
                     </div>
-                    <form onSubmit={submitPayment} className="grid gap-4 rounded-2xl border border-dashed border-slate-200 p-4 md:grid-cols-2">
-                      <Field label="Документ оплаты">
-                        <input name="paymentDocument" type="file" className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
-                      </Field>
-                      <Field label="Дата оплаты">
-                        <input name="paidAt" type="date" defaultValue={order.paidAt || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
-                      </Field>
-                      <Field label="Процент оплаты">
-                        <input name="paymentPercent" type="number" min="0" max="100" defaultValue={fallbackPaymentStatus(order.paymentStatus) === 'paid' ? 100 : order.minPrepaymentPercent ?? 50} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
-                      </Field>
-                      <Field label="Тип оплаты">
-                        <select name="paymentStatus" defaultValue={fallbackPaymentStatus(order.paymentStatus) === 'paid' ? 'paid' : 'partial'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3">
-                          <option value="partial">Частичная оплата</option>
-                          <option value="paid">Полная оплата</option>
-                        </select>
-                      </Field>
-                      <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий
-                        <textarea name="comment" defaultValue={order.paymentComment || order.accountantComment || ''} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
-                      </label>
-                      <Button className="md:col-span-2">Сохранить оплату</Button>
-                    </form>
+                    <StaffPaymentActions order={order} onSubmit={submitPaymentValues} />
                   </>
                 )}
               </Section>
@@ -1968,29 +1999,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                     Договор может редактировать менеджер, бухгалтер или администратор.
                   </div>
                 )}
-                {(access.manager || access.finance) && (
-                  <form onSubmit={submitContractAndInvoice} className="grid gap-4 rounded-2xl border border-dashed border-slate-200 p-4 md:grid-cols-2">
-                    <Field label="Документ договора">
-                      <input name="contract" type="file" className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
-                    </Field>
-                    <Field label="Сумма договора">
-                      <input name="amount" type="number" min="0" required defaultValue={order.contractAmount || order.totalAmount || order.offerAmount || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
-                    </Field>
-                    <Field label="Срок договора от">
-                      <input name="contractPeriodStart" type="date" defaultValue={order.contractPeriodStart || order.annualPeriodStart || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
-                    </Field>
-                    <Field label="Срок договора до">
-                      <input name="contractPeriodEnd" type="date" defaultValue={order.contractPeriodEnd || order.annualPeriodEnd || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
-                    </Field>
-                    <label className="text-sm font-semibold text-slate-700 md:col-span-2">На какую услугу договор
-                      <textarea name="contractServiceNote" defaultValue={order.contractServiceNote || order.service || ''} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
-                    </label>
-                    <label className="text-sm font-semibold text-slate-700 md:col-span-2">Примечание
-                      <textarea name="contractNote" defaultValue={order.contractNote || ''} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
-                    </label>
-                    <Button className="md:col-span-2">Сохранить договор</Button>
-                  </form>
-                )}
+                {(access.manager || access.finance) && <StaffContractAction onSubmit={submitContractValues} />}
               </Section>
             )}
 
@@ -1998,12 +2007,11 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               <Section title="Документы" icon={<Upload size={20} />}>
                 <List title="От клиента" items={order.documents.map((d) => `${d.name} · ${d.status} · ${d.uploadedAt}`)} />
                 <List title="От ECOPROGRESS" items={order.resultDocuments.map((d) => `${d.name} · ${d.status} · ${d.uploadedAt}`)} />
-                <form onSubmit={submitDoc} className="mt-5 rounded-2xl border border-slate-200 p-4">
-                  <Field label="Файл">
-                    <input name="file" type="file" required disabled={!canAccess(role, 'edit_documents')} className="w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" />
-                  </Field>
-                  {canAccess(role, 'edit_documents') && <Button className="mt-4">Загрузить</Button>}
-                </form>
+                {canAccess(role, 'edit_documents') && <StaffUploadDocumentAction onSubmit={async (values) => {
+                  if (values.file) await uploadDocument(order.id, values.file, values.category || 'result');
+                  onNotify?.('Документ загружен');
+                  load();
+                }} />}
               </Section>
             )}
 
@@ -2222,7 +2230,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               <p className="rounded-2xl bg-eco-50 p-4 text-sm font-semibold text-eco-900">{getNextCrmStep(order)}</p>
               <div className="mt-4 grid gap-3">
                 {suggestedActions.map((action) => (
-                  <Button key={action.label} onClick={action.onClick} variant={action.variant} disabled={action.disabled} className="w-full">{action.label}</Button>
+                  <StaffConfirmAction key={action.label} action={action} />
                 ))}
               </div>
               {role === 'ACCOUNTANT' && !canTransferToSpecialist(order) && ['Частично оплачено', 'Полностью оплачено'].includes(order.status) && (
@@ -2231,24 +2239,23 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                 </p>
               )}
               {canAddComment && (
-                <form onSubmit={submitQuickComment} className="mt-5 border-t border-slate-100 pt-5">
-                  <label className="text-sm font-semibold text-slate-700">Комментарий</label>
-                  <textarea name="comment" required placeholder="Написать комментарий" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
-                  {access.messages && (
-                    <select name="visibility" defaultValue="internal" className="input-focus mt-3 w-full rounded-2xl border border-slate-200 px-4 py-3">
-                      <option value="internal">Внутренний</option>
-                      <option value="client">Клиенту</option>
-                    </select>
-                  )}
-                  <Button type="submit" variant="secondary" className="mt-3 w-full">Добавить</Button>
-                </form>
+                <StaffCommentAction
+                  canSendClient={access.messages}
+                  onSubmit={async (values) => {
+                    await addComment(order.id, values.text, values.visibility);
+                    onNotify?.('Комментарий добавлен');
+                    load();
+                  }}
+                />
               )}
               {canAccess(role, 'edit_documents') && (
-                <form onSubmit={submitDoc} className="mt-5 border-t border-slate-100 pt-5">
-                  <label className="text-sm font-semibold text-slate-700">Документ</label>
-                  <input name="file" type="file" required className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
-                  <Button type="submit" className="mt-3 w-full">Загрузить</Button>
-                </form>
+                <div className="mt-5 border-t border-slate-100 pt-5">
+                  <StaffUploadDocumentAction onSubmit={async (values) => {
+                    if (values.file) await uploadDocument(order.id, values.file, values.category || 'result');
+                    onNotify?.('Документ загружен');
+                    load();
+                  }} />
+                </div>
               )}
             </Action>
           </div>
@@ -2295,7 +2302,9 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
     setActions((current) => [nextAction, ...current]);
     try {
       await addComment(order.id, `${action}${comment ? `: ${comment}` : ''}`, 'internal');
-    } catch { /* action logged locally */ }
+    } catch {
+      onNotify?.('Не удалось сохранить заметку');
+    }
   };
 
   const saveRequestDocuments = (nextDocuments: EcoDocument[]) => {
@@ -2310,7 +2319,9 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
         : status === 'Ожидаем документы от клиента' ? 'waiting_client_data' as const
         : 'in_progress' as const;
       await updateEcologyStatus(order.id, ecologyStatus, comment);
-    } catch { /* status changed locally */ }
+    } catch {
+      onNotify?.('Не удалось обновить статус работы');
+    }
     onNotify?.('Статус работы обновлен');
   };
 
@@ -2340,7 +2351,10 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
     const documentType = String(form.get('documentType') || ecoProjectDocumentTypes[0]);
     try {
       await uploadDocument(order.id, file, 'result');
-    } catch { /* upload failed */ }
+    } catch {
+      onNotify?.('Не удалось загрузить документ');
+      return;
+    }
     const nextDocument: EcoDocument = {
       id: `eco-doc-${Date.now()}`,
       requestId: order.id,
@@ -2366,7 +2380,10 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
     const title = String(form.get('title') || '').trim() || file.name;
     try {
       await uploadDocument(order.id, file, 'result');
-    } catch { /* upload failed */ }
+    } catch {
+      onNotify?.('Не удалось загрузить документ');
+      return;
+    }
     const nextDocument: EcoDocument = {
       id: `eco-doc-${Date.now()}`,
       requestId: order.id,
@@ -2604,7 +2621,10 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
     const documentType = String(form.get('documentType') || ecoProjectDocumentTypes[0]);
     try {
       await uploadDocument(order.id, file, 'result');
-    } catch { /* upload failed */ }
+    } catch {
+      onNotify?.('Не удалось загрузить документ');
+      return;
+    }
     const nextDocument: EcoDocument = {
       id: `eco-doc-${Date.now()}`,
       requestId: order.id,
@@ -2620,7 +2640,9 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
     saveRequestDocuments([nextDocument, ...documents]);
     try {
       await addComment(order.id, `${mode === 'projecting' ? 'Загружен проектный документ' : 'Загружен документ по разрешению'}: ${mode === 'projecting' ? documentType : title}: ${file.name}`, 'internal');
-    } catch { /* comment failed */ }
+    } catch {
+      onNotify?.('Не удалось сохранить заметку');
+    }
     onNotify?.(mode === 'projecting' ? 'Проектный документ загружен' : 'Документ по разрешению загружен');
     event.currentTarget.reset();
   };
@@ -2697,7 +2719,7 @@ const EcoDocumentList = ({ documents, statusOptions, onStatusChange, emptyText }
 const Workflow = ({ order }: { order: Order }) => {
   const currentStep = getOverallWorkflowStepIndex(order);
   return (
-    <div className="mt-5 grid gap-3 md:grid-cols-3 xl:grid-cols-9">
+    <div className="mt-5 grid gap-3 md:grid-cols-3 xl:grid-cols-5">
       {overallWorkflowSteps.map((label, index) => {
         const done = index <= currentStep && order.status !== 'Отменено';
         const active = index === currentStep && order.status !== 'Отменено';
@@ -2976,6 +2998,103 @@ const Action = ({ title, icon, children }: { title: string; icon: ReactNode; chi
     {children}
   </div>
 );
+
+type StaffSuggestedAction = {
+  label: string;
+  onClick: () => void | Promise<void>;
+  variant: 'primary' | 'secondary' | 'success';
+  disabled?: boolean;
+};
+
+const StaffConfirmAction = ({ action }: { action: StaffSuggestedAction }) => {
+  const [open, setOpen] = useState(false);
+  const isDanger = /отмен|отклон|долг/i.test(action.label);
+  const isSuccess = action.variant === 'success' || /оплат|передать|готов|заверш/i.test(action.label);
+  return (
+    <>
+      <Button type="button" onClick={() => setOpen(true)} variant={action.variant} disabled={action.disabled} className="w-full">{action.label}</Button>
+      <ConfirmModal
+        isOpen={open}
+        title={`${action.label}?`}
+        description="Действие изменит состояние заявки или связанного процесса."
+        confirmText={action.label}
+        variant={isDanger ? 'danger' : isSuccess ? 'success' : 'default'}
+        onClose={() => setOpen(false)}
+        onConfirm={async () => {
+          await action.onClick();
+          setOpen(false);
+        }}
+      />
+    </>
+  );
+};
+
+const StaffPaymentActions = ({ order, onSubmit }: { order: Order; onSubmit: (values: PaymentModalValues) => void | Promise<void> }) => {
+  const [mode, setMode] = useState<'partial' | 'full' | null>(null);
+  const finance = orderFinance(order);
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-200 p-4">
+      <p className="text-sm font-semibold text-slate-700">Действия с оплатой</p>
+      <div className="mt-3 flex flex-wrap gap-3">
+        <Button type="button" variant="secondary" onClick={() => setMode('partial')}>Отметить частичную оплату</Button>
+        <Button type="button" onClick={() => setMode('full')}>Отметить полную оплату</Button>
+      </div>
+      <PaymentModal
+        isOpen={Boolean(mode)}
+        mode={mode || 'partial'}
+        totalAmount={finance.total}
+        paidAmount={finance.paid}
+        remainingAmount={finance.remaining}
+        onClose={() => setMode(null)}
+        onSubmit={onSubmit}
+      />
+    </div>
+  );
+};
+
+const StaffContractAction = ({ onSubmit }: { onSubmit: (values: ContractModalValues) => void | Promise<void> }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-200 p-4">
+      <p className="text-sm font-semibold text-slate-700">Договор отправляется через модальное окно.</p>
+      <Button type="button" className="mt-3" onClick={() => setOpen(true)}>Подготовить договор</Button>
+      <ContractModal isOpen={open} onClose={() => setOpen(false)} onSubmit={onSubmit} />
+    </div>
+  );
+};
+
+const StaffUploadDocumentAction = ({ onSubmit }: { onSubmit: (values: UploadDocumentValues) => void | Promise<void> }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button type="button" className="w-full" onClick={() => setOpen(true)}>Загрузить документ</Button>
+      <UploadDocumentModal
+        isOpen={open}
+        defaultCategory="result"
+        categories={['result', 'invoice', 'internal', 'client']}
+        allowSendToClient
+        onClose={() => setOpen(false)}
+        onSubmit={onSubmit}
+      />
+    </>
+  );
+};
+
+const StaffCommentAction = ({ canSendClient, onSubmit }: { canSendClient: boolean; onSubmit: (values: CommentValues) => void | Promise<void> }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-5 border-t border-slate-100 pt-5">
+      <Button type="button" variant="secondary" className="w-full" onClick={() => setOpen(true)}>Добавить комментарий</Button>
+      <CommentModal
+        isOpen={open}
+        title="Комментарий по заявке"
+        defaultVisibility={canSendClient ? 'internal' : 'internal'}
+        onClose={() => setOpen(false)}
+        onSubmit={(values) => onSubmit(canSendClient ? values : { ...values, visibility: 'internal' })}
+      />
+    </div>
+  );
+};
 
 const Section = ({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) => (
   <div className="rounded-[20px] bg-white p-4 shadow-sm sm:rounded-[22px] sm:p-6">
@@ -3546,18 +3665,16 @@ export const StaffClientsPage = () => {
   const [createError, setCreateError] = useState('');
   const { refresh } = useOrders();
 
-  const handleCreateClient = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleCreateClient = async (values: CreateClientModalValues) => {
     setCreateError('');
-    const form = new FormData(event.currentTarget);
     const payload: CreateClientPayload = {
-      email: String(form.get('email') || ''),
-      phone: String(form.get('phone') || ''),
-      companyName: String(form.get('companyName') || ''),
-      binIin: String(form.get('binIin') || ''),
-      contactPerson: String(form.get('contactPerson') || ''),
-      legalAddress: String(form.get('legalAddress') || ''),
-      clientType: (form.get('clientType') as 'company' | 'individual') || 'company',
+      email: values.email,
+      phone: values.phone,
+      companyName: values.companyName,
+      binIin: values.bin,
+      contactPerson: values.contactPerson,
+      legalAddress: values.address,
+      clientType: values.companyName ? 'company' : 'individual',
     };
     try {
       const result = await createClient(payload);
@@ -3578,39 +3695,15 @@ export const StaffClientsPage = () => {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск компании" className="input-focus mt-4 w-full max-w-xl rounded-2xl border border-slate-200 px-4 py-3" />
         </div>
 
-        {showCreateClient && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm" onClick={() => setShowCreateClient(false)}>
-            <div className="relative w-full max-w-lg rounded-[28px] bg-white p-6 shadow-2xl sm:p-8" onClick={(e) => e.stopPropagation()}>
-              <button type="button" onClick={() => setShowCreateClient(false)} className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100"><X size={20} /></button>
-              {createResult ? (
-                <div className="text-center">
-                  <h3 className="text-xl font-bold text-eco-900">Клиент создан</h3>
-                  <p className="mt-4 text-sm text-slate-600">Передайте клиенту данные для входа:</p>
-                  <div className="mt-4 rounded-2xl bg-eco-50 p-4 text-left">
-                    <p className="text-sm"><span className="font-semibold">Email:</span> {createResult.email}</p>
-                    <p className="mt-1 text-sm"><span className="font-semibold">Пароль:</span> {createResult.password}</p>
-                  </div>
-                  <button type="button" onClick={() => { setShowCreateClient(false); refresh(); }} className="mt-5 rounded-full bg-eco-900 px-6 py-3 text-sm font-bold text-white">Закрыть</button>
-                </div>
-              ) : (
-                <>
-                  <h3 className="text-xl font-bold text-eco-900">Создать клиента</h3>
-                  <form onSubmit={handleCreateClient} className="mt-5 grid gap-3">
-                    <label className="block text-sm font-semibold text-slate-700">Email *<input name="email" type="email" required className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
-                    <label className="block text-sm font-semibold text-slate-700">Контактное лицо<input name="contactPerson" className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
-                    <label className="block text-sm font-semibold text-slate-700">Телефон<input name="phone" type="tel" className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
-                    <label className="block text-sm font-semibold text-slate-700">Тип<select name="clientType" className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"><option value="company">Юридическое лицо</option><option value="individual">Физическое лицо</option></select></label>
-                    <label className="block text-sm font-semibold text-slate-700">Компания<input name="companyName" className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
-                    <label className="block text-sm font-semibold text-slate-700">БИН/ИИН<input name="binIin" className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
-                    <label className="block text-sm font-semibold text-slate-700">Юр. адрес<input name="legalAddress" className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
-                    {createError && <p className="text-sm font-semibold text-rose-600">{createError}</p>}
-                    <button type="submit" className="mt-2 rounded-full bg-eco-900 px-6 py-3 text-sm font-bold text-white hover:bg-eco-800">Создать</button>
-                  </form>
-                </>
-              )}
-            </div>
+        <CreateClientModal isOpen={showCreateClient} onClose={() => { setShowCreateClient(false); refresh(); }} onSubmit={handleCreateClient} />
+        {createResult && (
+          <div className="mb-5 rounded-2xl bg-eco-50 p-4 text-sm text-eco-900">
+            <p className="font-bold">Клиент создан. Данные для входа:</p>
+            <p className="mt-1">Email: {createResult.email}</p>
+            <p>Пароль: {createResult.password}</p>
           </div>
         )}
+        {createError && <p className="mb-5 rounded-2xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{createError}</p>}
         <div className="grid gap-4 xl:grid-cols-2">
           {filteredCompanies.map((company) => {
             const companyOrders = orders.filter((order) => companyKey(getOrderCompanyName(order)) === company.key);

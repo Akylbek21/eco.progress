@@ -6,7 +6,9 @@ import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import OrderChoiceModal from '../components/OrderChoiceModal';
+import WhatsAppButton from '../components/WhatsAppButton';
 import { getServiceById } from '../services/serviceService';
+import { createBlankWhatsAppRequestMessage } from '../utils/whatsapp';
 
 const ServiceDetailsPage = () => {
   const { id } = useParams();
@@ -30,7 +32,10 @@ const ServiceDetailsPage = () => {
           <Reveal><p className="text-sm font-semibold uppercase tracking-[0.22em] text-eco-200">{service.category}</p></Reveal>
           <Reveal delay={0.1}><h1 className="mt-4 max-w-4xl text-4xl font-bold sm:text-6xl">{service.title}</h1></Reveal>
           <Reveal delay={0.16}><p className="mt-5 max-w-2xl text-lg text-white/78">{service.description}</p></Reveal>
-          <button type="button" onClick={() => setOrderModal(true)} className="mt-8 inline-block"><Button className="bg-accent text-eco-900 hover:bg-accent/90">Заказать услугу</Button></button>
+          <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
+            <button type="button" onClick={() => setOrderModal(true)} className="w-full sm:w-auto"><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Заказать услугу</Button></button>
+            <WhatsAppButton label="Оставить заявку через WhatsApp" message={createBlankWhatsAppRequestMessage(service.title)} className="w-full sm:w-auto" />
+          </div>
         </div>
       </section>
       <section className="bg-white px-5 py-16 sm:px-8">

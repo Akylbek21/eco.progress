@@ -1,9 +1,12 @@
+import { COMPANY_CONTACTS } from './contacts';
+import { createWhatsAppUrl } from '../utils/whatsapp';
+
 export const company = {
   name: 'ECOPROGRESS GROUP',
-  phone: '+7 (___) ___-__-__',
-  phoneHref: 'tel:+77000000000',
-  whatsapp: '77000000000',
-  whatsappDisplay: '+7 (___) ___-__-__',
+  phone: COMPANY_CONTACTS.whatsappDisplay,
+  phoneHref: `tel:+${COMPANY_CONTACTS.whatsappPhone}`,
+  whatsapp: COMPANY_CONTACTS.whatsappPhone,
+  whatsappDisplay: COMPANY_CONTACTS.whatsappDisplay,
   email: 'info@ecoprogress.kz',
   address: 'Республика Казахстан, г. Астана',
   schedule: 'Пн-Пт, 09:00-18:00',
@@ -14,4 +17,4 @@ export const company = {
 
 export const whatsappConsultationText = 'Здравствуйте! Хочу получить консультацию по экологическим услугам. Город: ';
 
-export const getWhatsAppUrl = (text = whatsappConsultationText) => `https://wa.me/${company.whatsapp}?text=${encodeURIComponent(text)}`;
+export const getWhatsAppUrl = (text = whatsappConsultationText) => createWhatsAppUrl(text);

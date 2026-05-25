@@ -3,19 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { BriefcaseBusiness, UserRound } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
-
-const demoClient = { label: 'Клиент', email: 'client@ecoprogress.kz', password: 'ecopass' };
-const demoStaff = [
-  { label: 'Эколог', email: 'ecologist@ecoprogress.kz', password: 'ecopass' },
-  { label: 'Лаборатория', email: 'lab@ecoprogress.kz', password: 'ecopass' },
-  { label: 'Менеджер', email: 'manager@ecoprogress.kz', password: 'ecopass' },
-  { label: 'Бухгалтер', email: 'accountant@ecoprogress.kz', password: 'ecopass' },
-  { label: 'Админ', email: 'admin@ecoprogress.kz', password: 'ecopass' },
-];
+import { useToast } from '../hooks/useToast';
 
 const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: (message: string) => void }) => {
   const navigate = useNavigate();
   const { login, staffLogin } = useAuth();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -35,6 +28,7 @@ const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: 
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Ошибка входа. Проверьте email и пароль.';
       setError(msg);
+      toast.error('Ошибка входа', msg);
     } finally {
       setLoading(false);
     }
@@ -80,23 +74,6 @@ const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: 
             <input name="password" type="password" required placeholder="Введите пароль" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
           </label>
           <Button disabled={loading} className="mt-6 w-full">{loading ? 'Входим...' : 'Войти'}</Button>
-          <div className="mt-5 rounded-2xl border border-dashed border-eco-200 bg-eco-50/60 p-4">
-            <p className="text-sm font-bold text-eco-900">Быстрый демо-вход</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {(staff ? demoStaff : [demoClient]).map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  disabled={loading}
-                  onClick={() => signIn(account.email, account.password)}
-                  className="rounded-2xl bg-white px-3 py-2 text-left text-sm font-semibold text-eco-800 ring-1 ring-eco-100 transition hover:bg-eco-900 hover:text-white disabled:opacity-60"
-                >
-                  {account.label}
-                  <span className="mt-1 block text-xs font-medium opacity-70">{account.email} / {account.password}</span>
-                </button>
-              ))}
-            </div>
-          </div>
           <div className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
             <Link to={staff ? '/login' : '/staff/login'} className="font-semibold text-eco-700">
               {staff ? 'Перейти во вход клиента' : 'Перейти во вход сотрудника'}

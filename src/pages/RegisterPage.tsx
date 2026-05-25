@@ -2,12 +2,14 @@ import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
 
 const RegisterPage = ({ onSuccess }: { onSuccess?: (message: string) => void }) => {
   const [type, setType] = useState<'company' | 'individual' | null>(null);
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { register } = useAuth();
+  const toast = useToast();
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -16,7 +18,7 @@ const RegisterPage = ({ onSuccess }: { onSuccess?: (message: string) => void }) 
     const password = String(form.get('password') || '');
     const confirm = String(form.get('confirm') || '');
     if (password !== confirm) {
-      onSuccess?.('Пароли не совпадают');
+      toast.error('Ошибка', 'Пароли не совпадают.');
       return;
     }
     setError('');
@@ -43,6 +45,7 @@ const RegisterPage = ({ onSuccess }: { onSuccess?: (message: string) => void }) 
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Ошибка регистрации';
       setError(msg);
+      toast.error('Ошибка регистрации', msg);
     }
   };
 

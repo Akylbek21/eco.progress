@@ -1,11 +1,11 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { MessageCircle, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
 import OrderChoiceModal from '../components/OrderChoiceModal';
-import { company, getWhatsAppUrl } from '../config/company';
-import { trackPhoneClick, trackWhatsAppClick } from '../services/analytics';
+import { company } from '../config/company';
+import { trackPhoneClick } from '../services/analytics';
 
 const navItems = [
   { label: 'Главная', path: '/' },
@@ -97,7 +97,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
         )}
       </header>
       <main>{children}</main>
-      <WhatsAppButton />
+      <WhatsAppButton floating />
       <OrderChoiceModal open={orderModal} onClose={() => setOrderModal(false)} />
       <footer className="relative overflow-hidden bg-eco-900 text-white">
         <div className="relative mx-auto max-w-7xl px-5 py-14 sm:px-8">
@@ -111,9 +111,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 Экологические документы, лаборатория, вывоз и утилизация отходов для бизнеса.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'footer' })} className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-bold text-eco-900">
-                  <MessageCircle size={17} /> WhatsApp
-                </a>
+                <WhatsAppButton label="WhatsApp" className="bg-accent px-4 py-2 text-eco-900 hover:bg-accent/90" />
                 <button type="button" onClick={() => setOrderModal(true)} className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">Оставить заявку</button>
               </div>
             </div>

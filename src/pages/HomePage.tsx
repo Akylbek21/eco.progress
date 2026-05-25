@@ -1,14 +1,15 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Beaker, Building2, FileText, MapPinned, MessageCircle, Recycle, ShieldCheck, Truck } from 'lucide-react';
+import { ArrowRight, Beaker, Building2, FileText, MapPinned, Recycle, ShieldCheck, Truck } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
-import LeadForm from '../components/LeadForm';
+import WhatsAppButton from '../components/WhatsAppButton';
+import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import ServiceSelector from '../components/ServiceSelector';
 import CaseStudies from '../components/CaseStudies';
 import SEO from '../components/SEO';
 import { DocumentsSection, TrustSection } from '../components/TrustBlocks';
-import { company, getWhatsAppUrl } from '../config/company';
-import { trackEvent, trackWhatsAppClick } from '../services/analytics';
+import { company } from '../config/company';
+import { trackEvent } from '../services/analytics';
 
 const benefits = ['Экологическое проектирование', 'Лабораторные исследования', 'Вывоз и утилизация отходов', 'Полигон ТБО', 'Работаем по Казахстану', 'Документы и сопровождение'];
 
@@ -128,9 +129,7 @@ const HomePage = () => (
             <div className="mt-9 grid gap-3 sm:flex sm:flex-wrap">
               <a href="#lead" onClick={() => trackEvent('consultation_click', { placement: 'hero' })} className="w-full sm:w-auto"><Button className="w-full bg-accent px-7 py-4 text-eco-900 hover:bg-accent/90 sm:w-auto">Получить консультацию</Button></a>
               <a href="#lead" className="w-full sm:w-auto"><Button variant="secondary" className="w-full border-white/35 bg-white/10 px-7 py-4 text-white hover:bg-white/18 sm:w-auto">Оставить заявку</Button></a>
-              <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'hero' })} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-4 text-sm font-semibold text-white transition hover:bg-white/18 sm:w-auto">
-                <MessageCircle size={18} /> Написать в WhatsApp
-              </a>
+              <WhatsAppButton label="Оставить заявку через WhatsApp" className="w-full px-7 py-4 sm:w-auto" />
             </div>
           </Reveal>
           <Reveal delay={0.22}>
@@ -140,7 +139,7 @@ const HomePage = () => (
           </Reveal>
         </div>
         <Reveal direction="left">
-          <LeadForm source="hero_quick_form" title="Быстрая заявка без регистрации" compact />
+          <WhatsAppLeadForm source="home_hero_whatsapp_form" title="Заявка через WhatsApp без регистрации" compact />
         </Reveal>
       </div>
     </section>
@@ -206,7 +205,7 @@ const HomePage = () => (
             <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">От заявки до результата в кабинете</h2>
           </div>
         </Reveal>
-        <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-9">
+        <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {processSteps.map((step, index) => (
             <Reveal key={step.title} delay={index * 0.04}>
               <div className="h-full rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm">

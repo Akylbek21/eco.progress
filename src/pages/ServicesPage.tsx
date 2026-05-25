@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, MessageCircle } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
-import LeadForm from '../components/LeadForm';
+import WhatsAppButton from '../components/WhatsAppButton';
+import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import OrderChoiceModal from '../components/OrderChoiceModal';
 import { getServices } from '../services/serviceService';
 import { getBusinessCompanyById } from '../utils/crm';
-import { getWhatsAppUrl } from '../config/company';
-import { trackWhatsAppClick } from '../services/analytics';
 import type { ServiceCategory } from '../types';
 
 const categories: Array<'Все' | ServiceCategory> = ['Все', 'Проектирование', 'Разрешения', 'Лаборатория', 'Отходы', 'Предприятия'];
@@ -94,9 +93,7 @@ const ServicesPage = () => {
           <Reveal delay={0.16}>
             <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
               <button type="button" onClick={() => setOrderModal('')}><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Заказать услугу</Button></button>
-              <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'services_page_hero' })} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white hover:bg-white/15 sm:w-auto">
-                <MessageCircle size={18} /> WhatsApp
-              </a>
+              <WhatsAppButton label="Оставить заявку через WhatsApp" className="w-full sm:w-auto" />
             </div>
           </Reveal>
         </div>
@@ -268,7 +265,7 @@ const ServicesPage = () => {
             </div>
           </Reveal>
           <Reveal direction="left">
-            <LeadForm source="services_page_bottom" />
+            <WhatsAppLeadForm source="services_page_bottom_whatsapp" />
           </Reveal>
         </div>
       </section>

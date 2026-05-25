@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import Button from './ui/Button';
 import { createLead } from '../services/leadService';
 import { trackLeadSubmit } from '../services/analytics';
+import { useToast } from '../hooks/useToast';
 
 type LeadFormProps = {
   source?: string;
@@ -21,6 +22,7 @@ const serviceOptions = [
 ];
 
 const LeadForm = ({ source = 'site_form', title = 'Получить консультацию', compact = false, defaultService = 'Не знаю, нужна консультация' }: LeadFormProps) => {
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState(false);
@@ -42,10 +44,12 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
     try {
       const lead = await createLead({ name, phone, city, serviceType, comment, source });
       setSent(true);
+      toast.success('Заявка создана', 'Менеджер получил вашу заявку и свяжется с вами.');
       formEl.reset();
       try { trackLeadSubmit({ source, serviceType, leadId: lead.id }); } catch {}
     } catch {
       setError(true);
+      toast.error('Не удалось создать заявку', 'Проверьте данные и попробуйте снова.');
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CreditCard, ReceiptText, WalletCards, X, type LucideIcon } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
+import { CommentModal, ConfirmModal, PaymentModal, type CommentValues, type PaymentModalValues } from '../components/modals';
 import type {
   ClientPaymentCompany,
   Contract,
@@ -17,6 +18,7 @@ import type {
   QuarterWorkStatus,
 } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
 
 const ourPaymentCompanies: OurPaymentCompany[] = [
   { id: 'ecoprogress-group', name: 'ТОО "ECOPROGRESS GROUP"' },
@@ -161,6 +163,7 @@ const AccessDenied = () => (
 
 const PaymentsPage = () => {
   const { user } = useAuth();
+  const toast = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -368,60 +371,138 @@ const PaymentsPage = () => {
     getFinanceTransactions().then(setTransactions);
   };
 
-  const submitOneTimePayment = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitOneTimePayment = async (values: PaymentModalValues) => {
     if (!selectedPayment) return;
-    const form = new FormData(event.currentTarget);
-    await addPartialFinancePayment(selectedPayment.id, {
-      amount: Number(form.get('amount') || 0),
-      date: String(form.get('date') || new Date().toISOString().slice(0, 10)),
-      method: String(form.get('method') || 'bank_transfer') as PaymentMethod,
-      comment: String(form.get('comment') || ''),
-    });
-    event.currentTarget.reset();
-    refresh();
+    try {
+      await addPartialFinancePayment(selectedPayment.id, {
+        amount: values.amount,
+        date: values.date,
+        method: values.method,
+        comment: values.comment,
+      });
+      refresh();
+      toast.success(values.mode === 'full' ? 'Оплата закрыта полностью' : 'Частичная оплата сохранена', values.mode === 'full' ? 'Остаток по заявке равен 0.' : 'Остаток оплаты пересчитан.');
+    } catch (err: unknown) {
+      toast.error('Не удалось сохранить оплату', (err as Error)?.message || 'Проверьте данные и попробуйте снова.');
+      throw err;
+    }
   };
 
-  const submitQuarterPayment = async (event: FormEvent<HTMLFormElement>, quarterItem: QuarterlyContractItem) => {
-    event.preventDefault();
+  const submitQuarterPayment = async (values: PaymentModalValues, quarterItem: QuarterlyContractItem) => {
     if (!selectedContract) return;
-    const form = new FormData(event.currentTarget);
-    await addQuarterPayment(selectedContract.id, quarterItem.id, {
-      amount: Number(form.get('amount') || 0),
-      date: String(form.get('date') || new Date().toISOString().slice(0, 10)),
-      method: String(form.get('method') || 'bank_transfer') as PaymentMethod,
-      comment: String(form.get('comment') || ''),
-    });
-    event.currentTarget.reset();
-    refresh();
+    try {
+      await addQuarterPayment(selectedContract.id, quarterItem.id, {
+        amount: values.amount,
+        date: values.date,
+        method: values.method,
+        comment: values.comment,
+      });
+      refresh();
+      toast.success(values.mode === 'full' ? 'Оплата закрыта полностью' : 'Частичная оплата сохранена', values.mode === 'full' ? 'Остаток по заявке равен 0.' : 'Остаток оплаты пересчитан.');
+    } catch (err: unknown) {
+      toast.error('Не удалось сохранить оплату', (err as Error)?.message || 'Проверьте данные и попробуйте снова.');
+      throw err;
+    }
   };
 
   const submitQuarterDetails = async (event: FormEvent<HTMLFormElement>, quarterItem: QuarterlyContractItem) => {
     event.preventDefault();
     if (!selectedContract) return;
     const form = new FormData(event.currentTarget);
-    await updateQuarterDetails(selectedContract.id, quarterItem.id, {
-      dueDate: String(form.get('dueDate') || ''),
-      comment: String(form.get('comment') || ''),
-      workStatus: String(form.get('workStatus') || quarterItem.workStatus) as QuarterWorkStatus,
-    });
-    refresh();
+    try {
+      await updateQuarterDetails(selectedContract.id, quarterItem.id, {
+        dueDate: String(form.get('dueDate') || ''),
+        comment: String(form.get('comment') || ''),
+        workStatus: String(form.get('workStatus') || quarterItem.workStatus) as QuarterWorkStatus,
+      });
+      refresh();
+      toast.success('Квартал обновлен', 'Изменения по оплате и работам сохранены.');
+    } catch (err: unknown) {
+      toast.error('Не удалось обновить квартал', (err as Error)?.message || 'Попробуйте снова.');
+    }
   };
 
   const markQuarterCompleted = async (quarterItem: QuarterlyContractItem) => {
     if (!selectedContract) return;
-    await updateQuarterDetails(selectedContract.id, quarterItem.id, {
-      workStatus: 'completed',
-      completedAt: new Date().toISOString().slice(0, 10),
-    });
-    refresh();
+    try {
+      await updateQuarterDetails(selectedContract.id, quarterItem.id, {
+        workStatus: 'completed',
+        completedAt: new Date().toISOString().slice(0, 10),
+      });
+      refresh();
+      toast.success('Работа завершена', 'Квартальный этап отмечен как выполненный.');
+    } catch (err: unknown) {
+      toast.error('Нельзя завершить работу', (err as Error)?.message || 'Сначала проверьте данные квартала.');
+    }
   };
 
-  const submitDebtComment = async (event: FormEvent<HTMLFormElement>, debt: Debt) => {
+  const submitDebtComment = async (values: CommentValues, debt: Debt) => {
+    try {
+      if (!values.text.trim()) {
+        toast.error('Введите текст сообщения');
+        return;
+      }
+      await updateDebtComment(debt.id, values.text);
+      refresh();
+      toast.success('Заметка сохранена', 'Комментарий по долгу обновлен.');
+    } catch (err: unknown) {
+      toast.error('Не удалось сохранить комментарий', (err as Error)?.message || 'Попробуйте снова.');
+      throw err;
+    }
+  };
+
+  const markSelectedQuarterPaid = async (quarterItem: QuarterlyContractItem) => {
+    if (!selectedContract) return;
+    try {
+      await markQuarterPaid(selectedContract.id, quarterItem.id);
+      refresh();
+      toast.success('Оплата закрыта полностью', 'Остаток по заявке равен 0.');
+    } catch (err: unknown) {
+      toast.error('Ошибка', (err as Error)?.message || 'Не удалось подтвердить оплату.');
+      throw err;
+    }
+  };
+
+  const markSelectedPaymentPaid = async () => {
+    if (!selectedRow?.payment) return;
+    try {
+      await markFinancePaymentPaid(selectedRow.payment.id);
+      refresh();
+      toast.success('Оплата подтверждена', 'Статус оплаты обновлен.');
+    } catch (err: unknown) {
+      toast.error('Ошибка', (err as Error)?.message || 'Не удалось подтвердить оплату.');
+      throw err;
+    }
+  };
+
+  const submitOneTimeDetails = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!selectedRow?.payment) return;
     const form = new FormData(event.currentTarget);
-    await updateDebtComment(debt.id, String(form.get('comment') || ''));
-    refresh();
+    try {
+      await updateFinancePaymentDetails(selectedRow.payment.id, {
+        comment: String(form.get('comment') || ''),
+        lastPaymentDate: String(form.get('lastPaymentDate') || ''),
+        paymentMethod: String(form.get('paymentMethod') || selectedRow.payment.paymentMethod || 'bank_transfer') as PaymentMethod,
+      });
+      refresh();
+      toast.success('Данные оплаты обновлены', 'Изменения сохранены.');
+    } catch (err: unknown) {
+      toast.error('Ошибка', (err as Error)?.message || 'Не удалось обновить данные оплаты.');
+      throw err;
+    }
+  };
+
+  const closeSelectedDebt = async () => {
+    if (!selectedRow?.debt) return;
+    try {
+      await closeDebt(selectedRow.debt.id, 'Долг отмечен как решенный');
+      refresh();
+      toast.success('Долг закрыт', 'Задолженность отмечена как решенная.');
+    } catch (err: unknown) {
+      toast.error('Ошибка', (err as Error)?.message || 'Не удалось закрыть долг.');
+      throw err;
+    }
   };
 
   if (!canAccessPayments(user?.role)) return <AccessDenied />;
@@ -565,7 +646,7 @@ const PaymentsPage = () => {
                 debts={debts}
                 onSubmitPayment={submitQuarterPayment}
                 onSubmitDetails={submitQuarterDetails}
-                onMarkPaid={async (quarterItem) => { await markQuarterPaid(selectedContract.id, quarterItem.id); refresh(); }}
+                onMarkPaid={markSelectedQuarterPaid}
                 onMarkCompleted={markQuarterCompleted}
               />
             ) : (
@@ -574,17 +655,8 @@ const PaymentsPage = () => {
                   row={selectedRow}
                   transactions={selectedTransactions}
                   onSubmitPayment={submitOneTimePayment}
-                  onMarkPaid={async () => { await markFinancePaymentPaid(selectedRow.payment!.id); refresh(); }}
-                  onSubmitDetails={async (event) => {
-                    event.preventDefault();
-                    const form = new FormData(event.currentTarget);
-                    await updateFinancePaymentDetails(selectedRow.payment!.id, {
-                      comment: String(form.get('comment') || ''),
-                      lastPaymentDate: String(form.get('lastPaymentDate') || ''),
-                      paymentMethod: String(form.get('paymentMethod') || selectedRow.payment!.paymentMethod || 'bank_transfer') as PaymentMethod,
-                    });
-                    refresh();
-                  }}
+                  onMarkPaid={markSelectedPaymentPaid}
+                  onSubmitDetails={submitOneTimeDetails}
                 />
               )
             )}
@@ -593,7 +665,7 @@ const PaymentsPage = () => {
               <DebtActions
                 debt={selectedRow.debt}
                 onSubmitComment={submitDebtComment}
-                onClose={async () => { await closeDebt(selectedRow.debt!.id, 'Долг отмечен как решенный'); refresh(); }}
+                onClose={closeSelectedDebt}
               />
             )}
           </aside>
@@ -637,7 +709,7 @@ const OneTimeDetails = ({
 }: {
   row: PaymentRow;
   transactions: PaymentTransaction[];
-  onSubmitPayment: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmitPayment: (values: PaymentModalValues) => void | Promise<void>;
   onMarkPaid: () => void;
   onSubmitDetails: (event: FormEvent<HTMLFormElement>) => void;
 }) => (
@@ -650,7 +722,15 @@ const OneTimeDetails = ({
       <Info label="Сумма" value={formatCurrency(row.totalAmount)} />
       <Info label="Остаток" value={formatCurrency(row.remainingAmount)} />
     </div>
-    <PaymentForm title="Добавить оплату" max={row.remainingAmount || row.totalAmount} onSubmit={onSubmitPayment} onMarkPaid={onMarkPaid} />
+    <PaymentForm
+      title="Добавить оплату"
+      max={row.remainingAmount || row.totalAmount}
+      totalAmount={row.totalAmount}
+      paidAmount={row.paidAmount}
+      remainingAmount={row.remainingAmount}
+      onSubmit={onSubmitPayment}
+      onMarkPaid={onMarkPaid}
+    />
     <DetailsForm paymentMethod={row.payment?.paymentMethod} lastPaymentDate={row.lastPaymentDate} comment={row.payment?.comment} onSubmit={onSubmitDetails} />
     <TransactionList transactions={transactions} />
   </>
@@ -670,7 +750,7 @@ const AnnualContractDetails = ({
   selectedQuarterId?: string;
   transactions: PaymentTransaction[];
   debts: Debt[];
-  onSubmitPayment: (event: FormEvent<HTMLFormElement>, quarterItem: QuarterlyContractItem) => void;
+  onSubmitPayment: (values: PaymentModalValues, quarterItem: QuarterlyContractItem) => void | Promise<void>;
   onSubmitDetails: (event: FormEvent<HTMLFormElement>, quarterItem: QuarterlyContractItem) => void;
   onMarkPaid: (quarterItem: QuarterlyContractItem) => void;
   onMarkCompleted: (quarterItem: QuarterlyContractItem) => void;
@@ -707,7 +787,15 @@ const AnnualContractDetails = ({
               <Info label="Счет" value={quarterItem.invoiceNumber || 'Нет'} />
               <Info label="Просрочка" value={isQuarterOverdue(quarterItem) ? `${getOverdueDays(quarterItem.dueDate)} дн.` : 'Нет'} />
             </div>
-            <PaymentForm title="Оплата квартала" max={quarterItem.remainingAmount || quarterItem.plannedAmount} onSubmit={(event) => onSubmitPayment(event, quarterItem)} onMarkPaid={() => onMarkPaid(quarterItem)} />
+            <PaymentForm
+              title="Оплата квартала"
+              max={quarterItem.remainingAmount || quarterItem.plannedAmount}
+              totalAmount={quarterItem.plannedAmount}
+              paidAmount={quarterItem.paidAmount}
+              remainingAmount={quarterItem.remainingAmount}
+              onSubmit={(values) => onSubmitPayment(values, quarterItem)}
+              onMarkPaid={() => onMarkPaid(quarterItem)}
+            />
             <form onSubmit={(event) => onSubmitDetails(event, quarterItem)} className="mt-4 grid gap-3 sm:grid-cols-2">
               <input name="dueDate" type="date" defaultValue={quarterItem.dueDate || ''} className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
               <select name="workStatus" defaultValue={quarterItem.workStatus} className="input-focus rounded-2xl border border-slate-200 px-4 py-3">
@@ -715,7 +803,7 @@ const AnnualContractDetails = ({
               </select>
               <input name="comment" defaultValue={quarterItem.comment || ''} placeholder="Комментарий по долгу/кварталу" className="input-focus rounded-2xl border border-slate-200 px-4 py-3 sm:col-span-2" />
               <Button type="submit" variant="secondary">Сохранить квартал</Button>
-              <Button type="button" variant="success" onClick={() => onMarkCompleted(quarterItem)}>Услуга выполнена</Button>
+              <ConfirmAction title="Отметить услугу выполненной?" confirmText="Услуга выполнена" onConfirm={() => onMarkCompleted(quarterItem)} />
             </form>
           </div>
         );
@@ -725,23 +813,57 @@ const AnnualContractDetails = ({
   </>
 );
 
-const PaymentForm = ({ title, max, onSubmit, onMarkPaid }: { title: string; max: number; onSubmit: (event: FormEvent<HTMLFormElement>) => void; onMarkPaid: () => void }) => (
-  <form onSubmit={onSubmit} className="mt-6 rounded-[20px] border border-slate-200 p-4">
-    <h4 className="font-bold text-eco-900">{title}</h4>
-    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-      <input name="amount" type="number" min="1" max={max || undefined} required placeholder="Сумма оплаты" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
-      <input name="date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
-      <select name="method" defaultValue="bank_transfer" className="input-focus rounded-2xl border border-slate-200 px-4 py-3">
-        {paymentMethods.map((method) => <option key={method} value={method}>{paymentMethodLabel(method)}</option>)}
-      </select>
-      <input name="comment" placeholder="Комментарий" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+const PaymentForm = ({
+  title,
+  max,
+  totalAmount = max,
+  paidAmount = 0,
+  remainingAmount = max,
+  onSubmit,
+  onMarkPaid,
+}: {
+  title: string;
+  max: number;
+  totalAmount?: number;
+  paidAmount?: number;
+  remainingAmount?: number;
+  onSubmit: (values: PaymentModalValues) => void | Promise<void>;
+  onMarkPaid: () => void | Promise<void>;
+}) => {
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [confirmPaid, setConfirmPaid] = useState(false);
+  return (
+    <div className="mt-6 rounded-[20px] border border-slate-200 p-4">
+      <h4 className="font-bold text-eco-900">{title}</h4>
+      <p className="mt-2 text-sm text-slate-600">Добавление частичной оплаты и полное закрытие счета выполняются через модальные окна.</p>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Button type="button" onClick={() => setPaymentOpen(true)}>Добавить оплату</Button>
+        <Button type="button" variant="success" disabled={max <= 0} onClick={() => setConfirmPaid(true)}>Отметить полностью оплаченной</Button>
+      </div>
+      <PaymentModal
+        isOpen={paymentOpen}
+        mode="partial"
+        totalAmount={totalAmount}
+        paidAmount={paidAmount}
+        remainingAmount={remainingAmount}
+        onClose={() => setPaymentOpen(false)}
+        onSubmit={onSubmit}
+      />
+      <ConfirmModal
+        isOpen={confirmPaid}
+        title="Подтвердить полную оплату?"
+        description="После подтверждения счет будет отмечен как полностью оплаченный."
+        confirmText="Подтвердить оплату"
+        variant="success"
+        onClose={() => setConfirmPaid(false)}
+        onConfirm={async () => {
+          await onMarkPaid();
+          setConfirmPaid(false);
+        }}
+      />
     </div>
-    <div className="mt-4 flex flex-wrap gap-3">
-      <Button type="submit">Добавить оплату</Button>
-      <Button type="button" variant="success" disabled={max <= 0} onClick={onMarkPaid}>Отметить полностью оплаченной</Button>
-    </div>
-  </form>
-);
+  );
+};
 
 const DetailsForm = ({ paymentMethod, lastPaymentDate, comment, onSubmit }: { paymentMethod?: PaymentMethod; lastPaymentDate?: string; comment?: string; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) => (
   <form onSubmit={onSubmit} className="mt-6 rounded-[20px] border border-slate-200 p-4">
@@ -757,21 +879,62 @@ const DetailsForm = ({ paymentMethod, lastPaymentDate, comment, onSubmit }: { pa
   </form>
 );
 
-const DebtActions = ({ debt, onSubmitComment, onClose }: { debt: Debt; onSubmitComment: (event: FormEvent<HTMLFormElement>, debt: Debt) => void; onClose: () => void }) => (
-  <section className="mt-6 rounded-[20px] border border-rose-100 bg-rose-50/60 p-4">
-    <h4 className="font-bold text-rose-900">Долг</h4>
-    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-      <Info label="Сумма долга" value={formatCurrency(debt.remainingAmount)} />
-      <Info label="Просрочка" value={debt.overdueDays ? `${debt.overdueDays} дн.` : 'Нет'} />
-    </div>
-    <form onSubmit={(event) => onSubmitComment(event, debt)} className="mt-4">
-      <textarea name="comment" defaultValue={debt.comment || ''} rows={3} className="input-focus w-full rounded-2xl border border-rose-200 px-4 py-3" />
-      <div className="mt-3 flex flex-wrap gap-3">
-        <Button type="submit" variant="secondary">Сохранить комментарий</Button>
-        <Button type="button" variant="success" onClick={onClose}>Отметить как решено</Button>
+const DebtActions = ({ debt, onSubmitComment, onClose }: { debt: Debt; onSubmitComment: (values: CommentValues, debt: Debt) => void | Promise<void>; onClose: () => void | Promise<void> }) => {
+  const [commentOpen, setCommentOpen] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
+  return (
+    <section className="mt-6 rounded-[20px] border border-rose-100 bg-rose-50/60 p-4">
+      <h4 className="font-bold text-rose-900">Долг</h4>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Info label="Сумма долга" value={formatCurrency(debt.remainingAmount)} />
+        <Info label="Просрочка" value={debt.overdueDays ? `${debt.overdueDays} дн.` : 'Нет'} />
       </div>
-    </form>
-  </section>
-);
+      <p className="mt-3 rounded-2xl bg-white/70 px-4 py-3 text-sm text-rose-900">{debt.comment || 'Комментария по долгу нет'}</p>
+      <div className="mt-3 flex flex-wrap gap-3">
+        <Button type="button" variant="secondary" onClick={() => setCommentOpen(true)}>Изменить комментарий</Button>
+        <Button type="button" variant="success" onClick={() => setCloseOpen(true)}>Отметить как решено</Button>
+      </div>
+      <CommentModal
+        isOpen={commentOpen}
+        title="Комментарий по долгу"
+        defaultVisibility="internal"
+        onClose={() => setCommentOpen(false)}
+        onSubmit={(values) => onSubmitComment(values, debt)}
+      />
+      <ConfirmModal
+        isOpen={closeOpen}
+        title="Закрыть задолженность?"
+        description="Долг будет отмечен как решенный."
+        confirmText="Закрыть долг"
+        variant="success"
+        onClose={() => setCloseOpen(false)}
+        onConfirm={async () => {
+          await onClose();
+          setCloseOpen(false);
+        }}
+      />
+    </section>
+  );
+};
+
+const ConfirmAction = ({ title, confirmText, onConfirm }: { title: string; confirmText: string; onConfirm: () => void | Promise<void> }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button type="button" variant="success" onClick={() => setOpen(true)}>{confirmText}</Button>
+      <ConfirmModal
+        isOpen={open}
+        title={title}
+        confirmText={confirmText}
+        variant="success"
+        onClose={() => setOpen(false)}
+        onConfirm={async () => {
+          await onConfirm();
+          setOpen(false);
+        }}
+      />
+    </>
+  );
+};
 
 export default PaymentsPage;

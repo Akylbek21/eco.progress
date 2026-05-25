@@ -11,7 +11,6 @@ export const trackEvent = (eventName: string, payload: AnalyticsPayload = {}) =>
   if (typeof window !== 'undefined' && Array.isArray(window.dataLayer)) {
     window.dataLayer.push(event);
   }
-  console.log('[analytics]', eventName, payload);
 };
 
 export const trackLeadSubmit = (payload: AnalyticsPayload = {}) => trackEvent('lead_submit', payload);

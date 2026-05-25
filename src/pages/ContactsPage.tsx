@@ -1,10 +1,11 @@
 import { AtSign, Clock, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
-import LeadForm from '../components/LeadForm';
+import WhatsAppButton from '../components/WhatsAppButton';
+import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
-import { company, getWhatsAppUrl } from '../config/company';
-import { trackPhoneClick, trackWhatsAppClick } from '../services/analytics';
+import { company } from '../config/company';
+import { trackPhoneClick } from '../services/analytics';
 
 const ContactsPage = () => {
   const items = [
@@ -27,7 +28,7 @@ const ContactsPage = () => {
             <p className="mt-4 leading-7 text-slate-600">Свяжитесь с нами для консультации, расчета стоимости или быстрой проверки ситуации.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <a href={company.phoneHref} onClick={() => trackPhoneClick({ placement: 'contacts_page' })}><Button>Позвонить</Button></a>
-              <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'contacts_page' })}><Button variant="secondary">Написать в WhatsApp</Button></a>
+              <WhatsAppButton label="Оставить заявку через WhatsApp" />
             </div>
           </div>
         </Reveal>
@@ -49,7 +50,7 @@ const ContactsPage = () => {
             </div>
           </Reveal>
           <Reveal direction="left">
-            <LeadForm source="contacts_page" title="Получить консультацию" />
+            <WhatsAppLeadForm source="contacts_page_whatsapp" title="Заявка через WhatsApp" />
           </Reveal>
         </div>
       </div>

@@ -10,7 +10,7 @@ const Button = ({ variant = 'primary', children, className, ...props }: ButtonPr
   return (
     <button
       className={clsx(
-        'inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-all duration-200',
+        'inline-flex min-w-0 max-w-full items-center justify-center rounded-full px-5 py-3 text-center text-sm font-semibold leading-snug transition-all duration-200',
         'shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-eco-700',
         {
           'bg-eco-600 text-white hover:bg-eco-700': variant === 'primary',

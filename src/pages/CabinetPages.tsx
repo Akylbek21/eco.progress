@@ -5,6 +5,15 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import {
+  AgreementResponseModal,
+  ConfirmModal,
+  PaymentModal,
+  UploadDocumentModal,
+  type AgreementResponseValues,
+  type PaymentModalValues,
+  type UploadDocumentValues,
+} from '../components/modals';
 import { useAuth } from '../contexts/AuthContext';
 import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, signOrderContract, payOrderOnline, uploadQuarterDocument, deletePrimaryDocumentFile, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentsForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications } from '../services/orderService';
 import { getClientPayments, getClientDebts, getClientContracts } from '../services/paymentService';
@@ -26,6 +35,7 @@ import {
 } from '../utils/crm';
 import { getAnnualRequestDebtSummary, getAnnualRequestProgress, getAnnualRequestWarnings, getCurrentQuarterForRequest, isAnnualRequest } from '../utils/annualRequests';
 import { formatCurrency, getPaymentStatusColor, getPaymentStatusLabel } from '../utils/payments';
+import { useToast } from '../hooks/useToast';
 import type { ClientPrimaryDocumentStatus, Contract, Debt, DocumentItem, LaboratoryPrimaryDocument, Order, OrderPrimaryDocument, Payment, RequestQuarter } from '../types';
 
 type ClientSimpleStatus = 'Новая заявка' | 'На консультации' | 'Ожидаем документы' | 'Документы на проверке' | 'Договор и счет' | 'Ожидаем оплату' | 'Оплачено' | 'В работе' | 'На согласовании' | 'Завершено' | 'Отменено';
@@ -220,6 +230,7 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const toast = useToast();
   const { data: services = [] } = useQuery({ queryKey: ['services'], queryFn: getServices });
   const serviceFromUrl = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -232,6 +243,7 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
   }, [location.search]);
   const [selectedOrderServiceId, setSelectedOrderServiceId] = useState<string>(serviceFromUrl);
   const [selectedOrderItems, setSelectedOrderItems] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const selectedOrderService = services.find((service) => service.id === selectedOrderServiceId) ?? services[0];
   const selectedBusinessCompany = getBusinessCompanyById(selectedOrderService?.businessCompanyId);
   const selectedWorkStage = getWorkStageLabel({
@@ -251,28 +263,37 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
   };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submitting) return;
     const form = new FormData(event.currentTarget);
-    const file = form.get('file') as File | null;
-    const extraText = [
-      `Тип клиента: ${String(form.get('clientKind'))}`,
-      `Город: ${String(form.get('city') || 'не указан')}`,
-      `WhatsApp: ${String(form.get('whatsapp') || 'не указан')}`,
-    ].join('\n');
-    const selectedItemsText = selectedOrderItems.length > 0 ? `\n\nВыбранные работы:\n${selectedOrderItems.map((item) => `- ${item}`).join('\n')}` : '';
-    const order = await createOrder({
-      contactPerson: String(form.get('contactPerson')),
-      phone: String(form.get('phone')),
-      email: String(form.get('email')),
-      companyName: String(form.get('companyName')),
-      bin: String(form.get('bin')),
-      serviceId: selectedOrderService.id,
-      service: selectedOrderItems.length > 0 ? `${selectedOrderService.title}: ${selectedOrderItems.join('; ')}` : selectedOrderService.title,
-      urgency: String(form.get('urgency')),
-      comment: `${String(form.get('comment'))}\n\n${extraText}${selectedItemsText}`,
-      fileName: file?.name,
-    });
-    onNotify?.('Заявка создана. Сотрудник проверит данные и отправит договор со счетом.');
-    navigate(`/cabinet/orders/${order.id}`);
+    try {
+      setSubmitting(true);
+      const file = form.get('file') as File | null;
+      const extraText = [
+        `Тип клиента: ${String(form.get('clientKind'))}`,
+        `Город: ${String(form.get('city') || 'не указан')}`,
+        `WhatsApp: ${String(form.get('whatsapp') || 'не указан')}`,
+      ].join('\n');
+      const selectedItemsText = selectedOrderItems.length > 0 ? `\n\nВыбранные работы:\n${selectedOrderItems.map((item) => `- ${item}`).join('\n')}` : '';
+      const order = await createOrder({
+        contactPerson: String(form.get('contactPerson')),
+        phone: String(form.get('phone')),
+        email: String(form.get('email')),
+        companyName: String(form.get('companyName')),
+        bin: String(form.get('bin')),
+        serviceId: selectedOrderService.id,
+        service: selectedOrderItems.length > 0 ? `${selectedOrderService.title}: ${selectedOrderItems.join('; ')}` : selectedOrderService.title,
+        urgency: String(form.get('urgency')),
+        comment: `${String(form.get('comment'))}\n\n${extraText}${selectedItemsText}`,
+        fileName: file?.name,
+      });
+      toast.success('Заявка создана', 'Менеджер получил вашу заявку и свяжется с вами.');
+      navigate(`/cabinet/orders/${order.id}`);
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (err as Error)?.message || 'Проверьте данные и попробуйте снова.';
+      toast.error('Не удалось создать заявку', message);
+    } finally {
+      setSubmitting(false);
+    }
   };
   if (!selectedOrderService) {
     return <div className="flex min-h-[400px] items-center justify-center"><LoadingSpinner /></div>;
@@ -344,7 +365,7 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
         <StepTitle number="5" title="Подтверждение" />
         <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-sm font-bold text-eco-900">Порядок работы по заявке</p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-9">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
             {['Консультация', 'Анализ', 'КП', 'Договор', 'Счет на оплату', selectedWorkStage, 'Проверка результата', 'Готово', 'Завершено'].map((step, index) => (
               <div key={step} className="rounded-2xl bg-eco-50 p-3 text-xs font-semibold text-eco-900">
                 <span className="mr-2 text-slate-500">{index + 1}.</span>{step}
@@ -361,7 +382,7 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
           <input required type="checkbox" className="mt-1 h-4 w-4 rounded border-slate-300" />
           <span>Согласен отправить заявку на проверку. Договор и счет будут доступны после обработки сотрудником.</span>
         </label>
-        <Button className="mt-6">Отправить заявку на проверку</Button>
+        <Button className="mt-6" disabled={submitting}>{submitting ? 'Отправляем...' : 'Отправить заявку на проверку'}</Button>
       </form>
     </Reveal>
   );
@@ -404,43 +425,30 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
     load();
     queryClient.invalidateQueries({ queryKey: ['client-orders'] });
   };
-  const submitQuarterFile = async (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => {
-    event.preventDefault();
-    const file = new FormData(event.currentTarget).get('file') as File | null;
-    if (file) {
-      await uploadQuarterDocument(order.id, quarter.id, file, 'client_data');
+  const submitQuarterFile = async (quarter: RequestQuarter, values: UploadDocumentValues) => {
+    if (values.file) {
+      await uploadQuarterDocument(order.id, quarter.id, values.file, values.category || 'client_data');
       onNotify?.('Документ квартала загружен');
     }
-    event.currentTarget.reset();
     load();
     queryClient.invalidateQueries({ queryKey: ['client-orders'] });
   };
-  const submitPrimaryFile = async (event: FormEvent<HTMLFormElement>, document: OrderPrimaryDocument) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const file = form.get('file') as File | null;
-    if (file?.name) {
-      await uploadPrimaryDocument(order.id, document.id, file.name, String(form.get('comment') || ''));
+  const submitPrimaryFile = async (document: OrderPrimaryDocument, values: UploadDocumentValues) => {
+    if (values.file?.name) {
+      await uploadPrimaryDocument(order.id, document.id, values.file.name, values.comment);
       onNotify?.(document.fileName ? 'Файл заменен' : 'Документ загружен');
     }
-    event.currentTarget.reset();
     load();
   };
-  const sendPrimaryDocs = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    await sendPrimaryDocumentsForReview(order.id, String(form.get('comment') || ''));
+  const sendPrimaryDocs = async (comment = '') => {
+    await sendPrimaryDocumentsForReview(order.id, comment);
     onNotify?.('Документы отправлены менеджеру на проверку');
-    event.currentTarget.reset();
     load();
   };
-  const sendAgreementResponse = async (event: FormEvent<HTMLFormElement>, sourceDocument: AgreementSourceDocument) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const file = form.get('file') as File | null;
-    const action = String(form.get('action')) as ClientAgreementResponse['action'];
+  const sendAgreementResponse = async (sourceDocument: AgreementSourceDocument, values: AgreementResponseValues) => {
+    const { file, action } = values;
     const signed = action === 'signed';
-    const commentText = String(form.get('comment') || '');
+    const commentText = values.comment;
     const label = action === 'revision_requested'
       ? `Документ "${sourceDocument.title}" отправлен на исправление`
       : signed
@@ -455,7 +463,6 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
         ? 'Документ подписан и отправлен сотруднику'
         : 'Документ отправлен сотруднику без подписи'
     );
-    event.currentTarget.reset();
     load();
   };
   const deletePrimaryFile = async (document: OrderPrimaryDocument) => {
@@ -500,6 +507,13 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
   const handlePay = async () => {
     await payOrderOnline(order.id, order.paymentMethod || 'Банковская карта');
     onNotify?.('Оплата прошла онлайн');
+    load();
+    queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+  };
+  const submitReceipt = async (values: PaymentModalValues) => {
+    if (values.file) await uploadDocument(order.id, values.file, 'client');
+    if (values.comment) await addComment(order.id, `Чек оплаты: ${values.comment}`, 'client');
+    onNotify?.('Чек оплаты загружен');
     load();
     queryClient.invalidateQueries({ queryKey: ['client-orders'] });
   };
@@ -549,23 +563,23 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       )}
 
       {activeTab === 'Документы' && (
-        <ClientPrimaryDocumentsPanel
-          order={order}
-          onUpload={submitPrimaryFile}
-          onSend={sendPrimaryDocs}
+          <ClientPrimaryDocumentsPanel
+            order={order}
+            onUpload={submitPrimaryFile}
+            onSend={sendPrimaryDocs}
           onDelete={deletePrimaryFile}
         />
       )}
 
       {activeTab === 'Согласование' && (
-        <ClientAgreementPanel
+          <ClientAgreementPanel
           order={order}
           onSend={sendAgreementResponse}
         />
       )}
 
       {activeTab === 'Договор и счет' && (
-        <ClientContractInvoicePanel order={order} onSign={handleSign} onPay={handlePay} onUploadReceipt={submitFile} serviceContract={serviceContract} />
+        <ClientContractInvoicePanel order={order} onSign={handleSign} onPay={handlePay} onUploadReceipt={submitReceipt} serviceContract={serviceContract} />
       )}
 
       {activeTab === 'Результат' && <ClientResultPanel order={order} />}
@@ -615,9 +629,10 @@ const ClientAgreementPanel = ({
   onSend,
 }: {
   order: Order;
-  onSend: (event: FormEvent<HTMLFormElement>, sourceDocument: AgreementSourceDocument) => void;
+  onSend: (sourceDocument: AgreementSourceDocument, values: AgreementResponseValues) => void | Promise<void>;
 }) => {
   const sourceDocuments = getAgreementSourceDocuments(order);
+  const [selectedDocument, setSelectedDocument] = useState<AgreementSourceDocument | null>(null);
 
   return (
     <Reveal>
@@ -645,30 +660,12 @@ const ClientAgreementPanel = ({
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800 ring-1 ring-eco-100">{doc.status}</span>
                 </div>
 
-                <form onSubmit={(event) => onSend(event, doc)} className="mt-4 grid gap-4 rounded-2xl border border-dashed border-slate-200 bg-white p-4 lg:grid-cols-[1fr_280px]">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <label className="text-sm font-semibold text-slate-700">Ответный документ
-                      <input name="file" type="file" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
-                    </label>
-                    <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий
-                      <textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} placeholder="Комментарий по согласованию" />
-                    </label>
-                  </div>
-                  <div className="flex flex-col justify-end gap-3 rounded-2xl bg-slate-50 p-4">
-                    <Button type="submit" name="action" value="signed" className="w-full">
-                      <FileSignature size={16} />
-                      Подписать и отправить
-                    </Button>
-                    <Button type="submit" name="action" value="sent_without_signature" variant="secondary" className="w-full">
-                      <Send size={16} />
-                      Отправить без подписи
-                    </Button>
-                    <Button type="submit" name="action" value="revision_requested" variant="secondary" className="w-full border-amber-300 text-amber-800 hover:bg-amber-50">
-                      <RefreshCw size={16} />
-                      Отправить на исправление
-                    </Button>
-                  </div>
-                </form>
+                <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white p-4">
+                  <Button type="button" onClick={() => setSelectedDocument(doc)}>
+                    <FileSignature size={16} />
+                    Открыть согласование
+                  </Button>
+                </div>
               </div>
           ))}
           {!sourceDocuments.length && (
@@ -677,6 +674,12 @@ const ClientAgreementPanel = ({
             </div>
           )}
         </div>
+        <AgreementResponseModal
+          isOpen={Boolean(selectedDocument)}
+          documentName={selectedDocument?.title || ''}
+          onClose={() => setSelectedDocument(null)}
+          onSubmit={(values) => selectedDocument ? onSend(selectedDocument, values) : undefined}
+        />
       </div>
     </Reveal>
   );
@@ -709,13 +712,16 @@ const ClientPrimaryDocumentsPanel = ({
   onDelete,
 }: {
   order: Order;
-  onUpload: (event: FormEvent<HTMLFormElement>, document: OrderPrimaryDocument) => void;
-  onSend: (event: FormEvent<HTMLFormElement>) => void;
+  onUpload: (document: OrderPrimaryDocument, values: UploadDocumentValues) => void | Promise<void>;
+  onSend: (comment?: string) => void | Promise<void>;
   onDelete: (document: OrderPrimaryDocument) => void;
 }) => {
   const documents = order.primaryDocuments || [];
   const requiredLeft = documents.filter((doc) => doc.required && doc.status !== 'accepted').length;
   const canSend = documents.some((doc) => doc.fileName && ['sent', 'needs_fix'].includes(doc.status));
+  const [uploadDoc, setUploadDoc] = useState<OrderPrimaryDocument | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [deleteDoc, setDeleteDoc] = useState<OrderPrimaryDocument | null>(null);
 
   return (
     <Reveal>
@@ -746,15 +752,9 @@ const ClientPrimaryDocumentsPanel = ({
                 <Info label="Комментарий менеджера" value={doc.managerComment || 'Нет'} />
               </div>
               {doc.clientComment && <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm text-slate-600">Ваш комментарий: {doc.clientComment}</p>}
-              {doc.status !== 'accepted' && (
-                <form onSubmit={(event) => onUpload(event, doc)} className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-                  <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" />
-                  <input name="comment" placeholder="Комментарий к документу" defaultValue={doc.clientComment || ''} className="input-focus w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" />
-                  <Button type="submit" className="whitespace-nowrap">{doc.fileName ? 'Заменить файл' : 'Загрузить'}</Button>
-                </form>
-              )}
+              {doc.status !== 'accepted' && <Button type="button" className="mt-4" onClick={() => setUploadDoc(doc)}>{doc.fileName ? 'Заменить файл' : 'Загрузить документ'}</Button>}
               {doc.fileName && doc.status !== 'accepted' && (
-                <button type="button" onClick={() => onDelete(doc)} className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-rose-700">
+                <button type="button" onClick={() => setDeleteDoc(doc)} className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-rose-700">
                   <X size={16} /> Удалить файл
                 </button>
               )}
@@ -768,14 +768,45 @@ const ClientPrimaryDocumentsPanel = ({
         </div>
 
         {documents.length > 0 && (
-          <form onSubmit={onSend} className="mt-5 rounded-[20px] border border-eco-100 bg-eco-50 p-4">
-            <label className="text-sm font-semibold text-slate-700">Комментарий менеджеру</label>
-            <textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} placeholder="Например: загрузили все документы, просим проверить" />
-            <Button type="submit" disabled={!canSend} className="mt-3 w-full sm:w-auto">
+          <div className="mt-5 rounded-[20px] border border-eco-100 bg-eco-50 p-4">
+            <Button type="button" disabled={!canSend} className="w-full sm:w-auto" onClick={() => setSendOpen(true)}>
               <Upload size={16} className="mr-2" /> Отправить документы
             </Button>
-          </form>
+          </div>
         )}
+        <UploadDocumentModal
+          isOpen={Boolean(uploadDoc)}
+          title={uploadDoc?.fileName ? 'Заменить первичный документ' : 'Загрузить первичный документ'}
+          defaultName={uploadDoc?.name || ''}
+          defaultCategory="client"
+          categories={['client']}
+          onClose={() => setUploadDoc(null)}
+          onSubmit={(values) => uploadDoc ? onUpload(uploadDoc, values) : undefined}
+        />
+        <ConfirmModal
+          isOpen={sendOpen}
+          title="Отправить документы на проверку?"
+          description="Менеджер получит загруженные файлы и начнет проверку."
+          confirmText="Отправить"
+          variant="success"
+          onClose={() => setSendOpen(false)}
+          onConfirm={async () => {
+            await onSend('');
+            setSendOpen(false);
+          }}
+        />
+        <ConfirmModal
+          isOpen={Boolean(deleteDoc)}
+          title="Удалить файл?"
+          description={deleteDoc?.name}
+          confirmText="Удалить"
+          variant="danger"
+          onClose={() => setDeleteDoc(null)}
+          onConfirm={async () => {
+            if (deleteDoc) await onDelete(deleteDoc);
+            setDeleteDoc(null);
+          }}
+        />
       </div>
     </Reveal>
   );
@@ -791,7 +822,7 @@ const ClientContractInvoicePanel = ({
   order: Order;
   onSign: () => void;
   onPay: () => void;
-  onUploadReceipt: (event: FormEvent<HTMLFormElement>) => void;
+  onUploadReceipt: (values: PaymentModalValues) => void | Promise<void>;
   serviceContract?: ReturnType<typeof getPrimaryContractForOrder>;
 }) => {
   const contractDoc = order.documents.find((doc) => doc.name.toLowerCase().includes('договор')) || order.resultDocuments.find((doc) => doc.name.toLowerCase().includes('договор'));
@@ -820,14 +851,30 @@ const ClientContractInvoicePanel = ({
         </div>
         <div className="space-y-5">
           <OnlineOrderPanel order={order} onSign={onSign} onPay={onPay} />
-          <form onSubmit={onUploadReceipt} className="rounded-[22px] bg-white p-5 shadow-sm">
-            <h3 className="font-bold text-eco-900">Загрузить чек оплаты</h3>
-            <input name="file" type="file" required className="mt-4 w-full rounded-2xl border border-slate-200 px-4 py-3" />
-            <Button className="mt-4 w-full">Загрузить чек</Button>
-          </form>
+          <ReceiptUploadCard order={order} onUploadReceipt={onUploadReceipt} />
         </div>
       </div>
     </Reveal>
+  );
+};
+
+const ReceiptUploadCard = ({ order, onUploadReceipt }: { order: Order; onUploadReceipt: (values: PaymentModalValues) => void | Promise<void> }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-[22px] bg-white p-5 shadow-sm">
+      <h3 className="font-bold text-eco-900">Чек оплаты</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-600">Загрузите чек или платежное поручение через отдельное окно.</p>
+      <Button type="button" className="mt-4 w-full" onClick={() => setOpen(true)}>Загрузить чек</Button>
+      <PaymentModal
+        isOpen={open}
+        mode="client_receipt"
+        totalAmount={order.totalAmount || order.contractAmount || 0}
+        paidAmount={order.paidAmount || 0}
+        remainingAmount={order.remainingAmount || 0}
+        onClose={() => setOpen(false)}
+        onSubmit={onUploadReceipt}
+      />
+    </div>
   );
 };
 
@@ -907,7 +954,7 @@ const clientQuarterHelpText = (quarter: RequestQuarter) => {
   return 'Следите за статусом работ и документами квартала.';
 };
 
-const ClientAnnualRequestPanel = ({ order, onUpload }: { order: Order; onUpload: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void }) => {
+const ClientAnnualRequestPanel = ({ order, onUpload }: { order: Order; onUpload: (quarter: RequestQuarter, values: UploadDocumentValues) => void | Promise<void> }) => {
   const progress = getAnnualRequestProgress(order);
   const debt = getAnnualRequestDebtSummary(order);
   const currentQuarter = getCurrentQuarterForRequest(order);
@@ -980,8 +1027,9 @@ const ClientAnnualRequestPanel = ({ order, onUpload }: { order: Order; onUpload:
   );
 };
 
-const ClientQuarterCard = ({ quarter, isCurrent, onUpload }: { quarter: RequestQuarter; isCurrent: boolean; onUpload: (event: FormEvent<HTMLFormElement>, quarter: RequestQuarter) => void }) => {
+const ClientQuarterCard = ({ quarter, isCurrent, onUpload }: { quarter: RequestQuarter; isCurrent: boolean; onUpload: (quarter: RequestQuarter, values: UploadDocumentValues) => void | Promise<void> }) => {
   const paidPercent = quarter.plannedAmount > 0 ? Math.min(100, Math.round((quarter.paidAmount / quarter.plannedAmount) * 100)) : 0;
+  const [uploadOpen, setUploadOpen] = useState(false);
   return (
     <div className={`rounded-[20px] border bg-white p-4 ${isCurrent ? 'border-eco-300 shadow-sm' : 'border-slate-200'}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1017,11 +1065,18 @@ const ClientQuarterCard = ({ quarter, isCurrent, onUpload }: { quarter: RequestQ
       </div>
       <Section title="Что загружено по кварталу" items={quarter.documents.map((doc) => doc.name)} />
       <Section title="Результат квартала" items={quarter.results.map((result) => result.title)} />
-      <form onSubmit={(event) => onUpload(event, quarter)} className="mt-4 rounded-2xl border border-dashed border-slate-200 p-3">
+      <div className="mt-4 rounded-2xl border border-dashed border-slate-200 p-3">
         <p className="mb-3 text-sm font-semibold text-slate-700">Загрузить данные именно для {quarter.quarterLabel.toLowerCase()}</p>
-        <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
-        <Button type="submit" className="mt-3 w-full">Загрузить документ квартала</Button>
-      </form>
+        <Button type="button" className="w-full" onClick={() => setUploadOpen(true)}>Загрузить документ квартала</Button>
+      </div>
+      <UploadDocumentModal
+        isOpen={uploadOpen}
+        title={`Документ: ${quarter.quarterLabel}`}
+        defaultCategory="client_data"
+        categories={['client_data', 'invoice', 'act', 'protocol', 'report', 'result', 'other']}
+        onClose={() => setUploadOpen(false)}
+        onSubmit={(values) => onUpload(quarter, values)}
+      />
     </div>
   );
 };
@@ -1030,6 +1085,7 @@ const OnlineOrderPanel = ({ order, onSign, onPay }: { order: Order; onSign: () =
   const available = order.contractStatus === 'sent' || order.contractStatus === 'signed' || ['invoice_sent', 'awaiting_payment', 'pending', 'partial', 'paid', 'transferred_to_specialist'].includes(order.paymentStatus || '');
   const signed = order.contractStatus === 'signed';
   const paid = order.paymentStatus === 'paid' || order.paymentStatus === 'transferred_to_specialist';
+  const [confirm, setConfirm] = useState<'sign' | 'pay' | null>(null);
   if (!available) {
     return (
       <div className="rounded-[22px] bg-white p-5 shadow-sm">
@@ -1058,7 +1114,7 @@ const OnlineOrderPanel = ({ order, onSign, onPay }: { order: Order; onSign: () =
               <p className="mt-1 text-sm text-slate-600">{signed ? order.signedAt : order.signatureProvider || 'NCALayer / ЭЦП'}</p>
             </div>
           </div>
-          <Button disabled={signed} onClick={onSign} className="mt-4 w-full">{signed ? 'Подписано' : 'Подписать ЭЦП'}</Button>
+          <Button disabled={signed} onClick={() => setConfirm('sign')} className="mt-4 w-full">{signed ? 'Подписано' : 'Подписать ЭЦП'}</Button>
         </div>
         <div className="rounded-2xl border border-slate-200 p-4">
           <div className="flex items-start gap-3">
@@ -1068,9 +1124,33 @@ const OnlineOrderPanel = ({ order, onSign, onPay }: { order: Order; onSign: () =
               <p className="mt-1 text-sm text-slate-600">{paid ? order.paidAt : `${order.paymentAmount || '150 000 ₸'} · ${order.paymentMethod || 'Банковская карта'}`}</p>
             </div>
           </div>
-          <Button disabled={paid} onClick={onPay} className="mt-4 w-full">{paid ? 'Оплачено' : 'Перейти к оплате'}</Button>
+          <Button disabled={paid} onClick={() => setConfirm('pay')} className="mt-4 w-full">{paid ? 'Оплачено' : 'Перейти к оплате'}</Button>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirm === 'sign'}
+        title="Подписать договор?"
+        description="После подтверждения договор будет отмечен как подписанный электронной подписью."
+        confirmText="Подписать"
+        variant="success"
+        onClose={() => setConfirm(null)}
+        onConfirm={async () => {
+          await onSign();
+          setConfirm(null);
+        }}
+      />
+      <ConfirmModal
+        isOpen={confirm === 'pay'}
+        title="Перейти к оплате?"
+        description="Система отправит запрос на онлайн-оплату по текущему счету."
+        confirmText="Оплатить"
+        variant="success"
+        onClose={() => setConfirm(null)}
+        onConfirm={async () => {
+          await onPay();
+          setConfirm(null);
+        }}
+      />
     </div>
   );
 };
