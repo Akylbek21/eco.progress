@@ -37,14 +37,26 @@ import {
   type PaymentModalValues,
   type UploadDocumentValues,
 } from '../components/modals';
+import StaffNewOrderForm from '../components/crm/StaffNewOrderForm';
+import {
+  ClientInfoPanel,
+  CommercialOfferPanel,
+  ContractDetailsPanel,
+  FinalChecklistPanel,
+  InvoicePaymentPanel,
+  ResultPanel,
+  StaffAgreementPanel,
+  WasteRemovalPanel,
+} from '../components/crm/StaffOrderCrmPanels';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getOrderById, getOrders, requestPrimaryDocument, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
 import type { CreateClientPayload, StaffCreateOrderPayload } from '../services/staffOrderService';
+import { createCommercialOffer, createStaffManualOrder, getStaffCalendar, getTasks, saveContractDetails, saveInvoicePayment, saveTask, saveWasteRemoval, sendDocumentToClient, updateTaskStatus } from '../services/crmWorkflowService';
 import { getServices } from '../services/serviceService';
 import { primaryDocumentTemplates } from '../services/orderService';
 import { getBusinessCompanyById, statusDescriptions } from '../utils/crm';
-import type { ClientPrimaryDocumentStatus, ClientContract, DocumentItem, EcologyStatus, LaboratoryMeasurementAgreementStatus, LaboratoryPrimaryDocumentStatus, LaboratoryResultDocument, LaboratoryResultDocumentStatus, LaboratoryStatus, User, Order, OrderPrimaryDocument, OrderStatus, PaymentMethod, PaymentStatus, QuarterDocument, QuarterNumber, QuarterResult, QuarterWorkStatus, RequestQuarter, StaffContractStatus, UserRole } from '../types';
+import type { ClientPrimaryDocumentStatus, ClientContract, DocumentItem, EcologyStatus, LaboratoryMeasurementAgreementStatus, LaboratoryPrimaryDocumentStatus, LaboratoryResultDocument, LaboratoryResultDocumentStatus, LaboratoryStatus, User, Order, OrderPrimaryDocument, OrderStatus, PaymentMethod, PaymentStatus, QuarterDocument, QuarterNumber, QuarterResult, QuarterWorkStatus, RequestQuarter, StaffCalendarEvent, StaffContractStatus, UserRole } from '../types';
 import { canAccess, permissionsForRole, type Permission } from '../config/permissions';
 import {
   buildBusinessCompanySummaries,
@@ -259,10 +271,13 @@ const roleTitle = (role: UserRole) => {
   const labels: Record<UserRole, string> = {
     CLIENT: 'Клиент',
     ADMIN: 'Админ',
+    DIRECTOR: 'Руководитель',
+    HEAD: 'Руководитель',
     MANAGER: 'Менеджер',
     ACCOUNTANT: 'Бухгалтер',
     ECOLOGIST: 'Эколог',
     LABORATORY: 'Лаборатория',
+    WASTE_SPECIALIST: 'Специалист по отходам',
   };
   return labels[role];
 };
@@ -274,6 +289,7 @@ const roleAccess = (role: UserRole) => ({
   viewFinance: canAccessPayments(role),
   ecology: canAccess(role, 'edit_ecology'),
   laboratory: canAccess(role, 'edit_laboratory'),
+  waste: canAccess(role, 'edit_waste'),
   messages: canAccess(role, 'send_messages'),
   notes: canAccess(role, 'add_internal_notes'),
 });
@@ -282,6 +298,8 @@ const roleQuickActions = (role: UserRole) => {
   if (role === 'ACCOUNTANT') return ['Оплаты', 'Счета', 'Акты'];
   if (role === 'ECOLOGIST') return ['Новые задачи', 'Нужны данные', 'Заключение'];
   if (role === 'LABORATORY') return ['Образцы', 'Анализ', 'Результат'];
+  if (role === 'WASTE_SPECIALIST') return ['Выезды', 'Акты', 'Фото'];
+  if (role === 'DIRECTOR' || role === 'HEAD') return ['Все заявки', 'Оплаты', 'Контроль'];
   if (role === 'ADMIN') return ['Все задачи', 'Заявки', 'Уведомления'];
   return ['Новые заявки', 'Консультации', 'КП и договоры'];
 };
@@ -301,6 +319,16 @@ const roleWorkplace = (role: UserRole) => {
     title: 'Рабочее место лаборатории',
     text: 'В фокусе образцы, анализы, протоколы и загрузка лабораторного результата.',
     queueTitle: 'Лабораторные задачи',
+  };
+  if (role === 'WASTE_SPECIALIST') return {
+    title: 'Рабочее место специалиста по отходам',
+    text: 'В фокусе вывоз и утилизация: дата вывоза, транспорт, акт, фото и результат для клиента.',
+    queueTitle: 'Выезды и утилизация',
+  };
+  if (role === 'DIRECTOR' || role === 'HEAD') return {
+    title: 'Рабочее место руководителя',
+    text: 'Виден полный поток заявок, клиентов, оплат, отчетов и сотрудников без технических настроек.',
+    queueTitle: 'Контроль CRM',
   };
   if (role === 'ADMIN') return {
     title: 'Рабочее место администратора',
@@ -372,6 +400,18 @@ const roleStats = (orders: Order[], role: UserRole): Array<[string, number]> => 
     ['Анализ идет', orders.filter((o) => o.laboratoryStatus === 'analysis_in_progress').length],
     ['Результат готов', orders.filter((o) => o.laboratoryStatus === 'result_ready').length],
   ];
+  if (role === 'WASTE_SPECIALIST') return [
+    ['Вывоз / утилизация', orders.filter((o) => ['Вывоз', 'Утилизация'].includes(o.status) || /вывоз|утилизац|отход/i.test(o.service)).length],
+    ['Назначить дату', orders.filter((o) => ['Вывоз', 'Утилизация'].includes(o.status)).length],
+    ['Акты', orders.filter((o) => o.resultDocuments.some((doc) => /акт/i.test(doc.name))).length],
+    ['Готово', orders.filter((o) => ['Готово', 'Завершено'].includes(o.status)).length],
+  ];
+  if (role === 'DIRECTOR' || role === 'HEAD') return [
+    ['Все заявки', orders.length],
+    ['В работе', orders.filter((o) => !isClosedOrder(o)).length],
+    ['Оплачено', orders.filter((o) => fallbackPaymentStatus(o.paymentStatus) === 'paid').length],
+    ['Долги', orders.filter((o) => orderFinance(o).remaining > 0).length],
+  ];
   if (role === 'MANAGER') return [
     ['Новые', orders.filter((o) => o.status === 'Новая заявка').length],
     ['Связаться', orders.filter((o) => o.status === 'Связаться с клиентом').length],
@@ -389,9 +429,11 @@ const roleStats = (orders: Order[], role: UserRole): Array<[string, number]> => 
 };
 
 const roleOrderFilter = (orders: Order[], role: UserRole) => {
+  if (role === 'DIRECTOR' || role === 'HEAD') return orders;
   if (role === 'ACCOUNTANT') return orders.filter((order) => accountantOrderStatuses.includes(order.status) || ['awaiting_invoice', 'invoice_issued', 'invoice_sent', 'pending', 'awaiting_payment', 'partial', 'paid', 'debt'].includes(fallbackPaymentStatus(order.paymentStatus)) || order.quarters?.some((quarter) => quarter.remainingAmount > 0));
   if (role === 'ECOLOGIST') return orders.filter((order) => order.status === 'Проектирование' || order.quarters?.some((quarter) => quarter.workStage === 'Проектирование') || /эколог|отчет|документ|разреш|овос|ндв|пдв|пноолр/i.test(order.service));
   if (role === 'LABORATORY') return orders.filter((order) => order.status === 'Лаборатория' || order.quarters?.some((quarter) => quarter.workStage === 'Лаборатория') || /лаборатор|анализ|исслед|проб|замер/i.test(order.service));
+  if (role === 'WASTE_SPECIALIST') return orders.filter((order) => ['Вывоз', 'Утилизация'].includes(order.status) || order.quarters?.some((quarter) => quarter.workStage === 'Вывоз' || quarter.workStage === 'Утилизация') || /вывоз|утилизац|отход|полигон|паспорт/i.test(order.service));
   if (role === 'MANAGER') return orders.filter((order) => managerOrderStatuses.includes(order.status));
   return orders;
 };
@@ -410,9 +452,11 @@ const isClosedOrder = (order: Order) => ['Готово', 'Завершено', '
 
 const orderNeedsRole = (order: Order, role: UserRole) => {
   if (role === 'ADMIN') return !isClosedOrder(order);
+  if (role === 'DIRECTOR' || role === 'HEAD') return !isClosedOrder(order) || orderFinance(order).remaining > 0;
   if (role === 'ACCOUNTANT') return accountantOrderStatuses.includes(order.status) && order.status !== 'Передано специалисту';
   if (role === 'ECOLOGIST') return order.status === 'Проектирование' || (order.status === 'Проверка результата' && order.ecologyStatus !== 'done') || Boolean(order.quarters?.some((quarter) => quarter.workStage === 'Проектирование' && quarter.workStatus !== 'completed'));
   if (role === 'LABORATORY') return (order.status === 'Лаборатория' && order.laboratoryStatus !== 'result_ready') || Boolean(order.quarters?.some((quarter) => quarter.workStage === 'Лаборатория' && quarter.workStatus !== 'completed'));
+  if (role === 'WASTE_SPECIALIST') return ['Вывоз', 'Утилизация', 'Проверка результата'].includes(order.status) || Boolean(order.quarters?.some((quarter) => (quarter.workStage === 'Вывоз' || quarter.workStage === 'Утилизация') && quarter.workStatus !== 'completed'));
   if (role === 'MANAGER') return managerActionFlow.some((action) => action.from.includes(order.status));
   return !isClosedOrder(order);
 };
@@ -438,6 +482,11 @@ const taskTitleForRole = (order: Order, role: UserRole) => {
     if (order.laboratoryStatus === 'samples_received') return 'Начать анализ';
     if (order.laboratoryStatus === 'analysis_in_progress') return 'Загрузить результат';
     return 'Назначить анализ';
+  }
+  if (role === 'WASTE_SPECIALIST') {
+    if (order.status === 'Проверка результата') return 'Отправить акт и результат';
+    if (order.resultDocuments.some((doc) => /акт/i.test(doc.name))) return 'Завершить этап вывоза';
+    return 'Назначить дату и транспорт';
   }
   return getNextCrmStep(order);
 };
@@ -1089,16 +1138,27 @@ const getOrderStage = (order: Order) => {
   return 'Менеджер';
 };
 
-const NotificationLine = ({ notification }: { notification: { id: string; category: string; title: string; text: string; order?: Order } }) => (
-  <Link to={notification.order ? `/staff/orders/${notification.order.id}` : '/staff/notifications'} className="block rounded-2xl bg-slate-50 p-4 transition hover:bg-eco-50">
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <p className="font-bold text-slate-900">{notification.title}</p>
-      <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{notification.category}</span>
+const NotificationLine = ({ notification }: { notification: { id: string; category: string; title: string; text: string; order?: Order } }) => {
+  const [read, setRead] = useState(false);
+  return (
+    <div className={`rounded-2xl p-4 transition ${read ? 'bg-slate-50' : 'bg-eco-50 ring-1 ring-eco-100'}`}>
+      <Link to={notification.order ? `/staff/orders/${notification.order.id}` : '/staff/notifications'} className="block">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-bold text-slate-900">{notification.title}</p>
+          <div className="flex flex-wrap gap-2">
+            {!read && <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-amber-800">Непрочитано</span>}
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{notification.category}</span>
+          </div>
+        </div>
+        <p className="mt-2 text-sm text-slate-600">{notification.text}</p>
+      </Link>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Link to={notification.order ? `/staff/orders/${notification.order.id}` : '/staff/notifications'} className="inline-flex rounded-full bg-eco-900 px-3 py-2 text-xs font-bold text-white">Открыть</Link>
+        {!read && <button type="button" onClick={() => setRead(true)} className="rounded-full bg-white px-3 py-2 text-xs font-bold text-eco-800">Отметить прочитанным</button>}
+      </div>
     </div>
-    <p className="mt-2 text-sm text-slate-600">{notification.text}</p>
-    <span className="mt-3 inline-flex rounded-full bg-eco-900 px-3 py-2 text-xs font-bold text-white">Открыть</span>
-  </Link>
-);
+  );
+};
 
 const StaffContractLine = ({ contract }: { contract: ClientContract }) => {
   const progress = getContractProgress(contract);
@@ -1322,7 +1382,7 @@ const CompanyMetrics = ({ total, active, waiting, completed, dark = false }: { t
   );
 };
 
-const crmTabs = ['Обзор', 'Обзор заявки', 'Оплата', 'Договор', 'Документы', 'Проектирование', 'Разрешение', 'Экология', 'Лаборатория', 'Первичные документы', 'Согласование замера', 'Протокол', '870 форма', 'База отчёт', 'Квартальный отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт', 'Сообщения', 'Заметки', 'История'] as const;
+const crmTabs = ['Обзор', 'Клиент', 'Обзор заявки', 'Документы', 'КП', 'Договор', 'Счет и оплата', 'Оплата', 'Работа специалиста', 'Проектирование', 'Разрешение', 'Экология', 'Лаборатория', 'Вывоз / Утилизация', 'Первичные документы', 'Согласование', 'Согласование замера', 'Протокол', '870 форма', 'База отчёт', 'Квартальный отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт', 'Результат', 'Комментарии', 'Сообщения', 'Заметки', 'История'] as const;
 type CrmTab = typeof crmTabs[number];
 
 const workflowTabTarget = (order: Order): CrmTab => {
@@ -1357,20 +1417,23 @@ const roleVisibleTabs = (role: UserRole, order: Order): CrmTab[] => {
     if (isEcologyWorkspaceOrder(order)) return ['Проектирование', 'Разрешение'];
     return [];
   };
-  if (role === 'MANAGER' && managerOrderStatuses.includes(order.status)) return tabsForOrder(['Обзор', 'Договор', 'Документы', 'Сообщения', 'Заметки', 'История']);
-  if (role === 'ACCOUNTANT') return tabsForOrder(['Обзор', 'Оплата', 'Договор', 'Документы', 'История']);
-  if (role === 'LABORATORY' && isLaboratoryWorkspaceOrder(order)) return ['Обзор', 'Оплата', 'Договор', 'Лаборатория', 'Сообщения', 'Заметки', 'История'];
-  if (role === 'ECOLOGIST' || role === 'LABORATORY') return ['Обзор', 'Договор', 'Документы', ...workTabsForOrder(), 'Сообщения', 'Заметки', 'История'];
+  if (role === 'MANAGER' && managerOrderStatuses.includes(order.status)) return tabsForOrder(['Обзор', 'Клиент', 'Документы', 'КП', 'Договор', 'Согласование', 'Результат', 'Комментарии', 'История']);
+  if (role === 'ACCOUNTANT') return tabsForOrder(['Обзор', 'Клиент', 'Договор', 'Счет и оплата', 'Документы', 'История']);
+  if (role === 'LABORATORY' && isLaboratoryWorkspaceOrder(order)) return ['Обзор', 'Клиент', 'Документы', 'Лаборатория', 'Согласование', 'Результат', 'Комментарии', 'История'];
+  if (role === 'WASTE_SPECIALIST') return ['Обзор', 'Клиент', 'Документы', 'Вывоз / Утилизация', 'Согласование', 'Результат', 'Комментарии', 'История'];
+  if (role === 'ECOLOGIST' || role === 'LABORATORY') return ['Обзор', 'Клиент', 'Документы', ...workTabsForOrder(), 'Работа специалиста', 'Согласование', 'Результат', 'Комментарии', 'История'];
   if (role === 'ADMIN') {
     const workTabs: CrmTab[] = isLaboratoryWorkspaceOrder(order) ? ['Лаборатория'] : isEcologyWorkspaceOrder(order) ? ['Проектирование', 'Разрешение'] : [];
-    return tabsForOrder(['Обзор', 'Оплата', 'Договор', 'Документы', ...workTabs, 'Сообщения', 'Заметки', 'История']);
+    return tabsForOrder(['Обзор', 'Клиент', 'Документы', 'КП', 'Договор', 'Счет и оплата', 'Работа специалиста', ...workTabs, 'Лаборатория', 'Вывоз / Утилизация', 'Согласование', 'Результат', 'Комментарии', 'История']);
   }
-  return tabsForOrder(['Обзор', 'Договор', 'Документы', 'Сообщения', 'Заметки', 'История']);
+  if (role === 'DIRECTOR' || role === 'HEAD') return tabsForOrder(['Обзор', 'Клиент', 'Документы', 'КП', 'Договор', 'Счет и оплата', 'Работа специалиста', 'Лаборатория', 'Вывоз / Утилизация', 'Согласование', 'Результат', 'Комментарии', 'История']);
+  return tabsForOrder(['Обзор', 'Клиент', 'Договор', 'Документы', 'Комментарии', 'История']);
 };
 
 const roleDefaultTab = (role: UserRole, order: Order): CrmTab => {
   if (role === 'MANAGER' && managerOrderStatuses.includes(order.status)) return ['Подготовка КП', 'КП отправлено', 'КП согласовано', 'Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан'].includes(order.status) ? 'Договор' : 'Обзор';
-  if (role === 'ACCOUNTANT') return 'Оплата';
+  if (role === 'ACCOUNTANT') return 'Счет и оплата';
+  if (role === 'WASTE_SPECIALIST') return 'Вывоз / Утилизация';
   if (role === 'ECOLOGIST' && isEcologyWorkspaceOrder(order)) return 'Обзор';
   if (role === 'LABORATORY' && isLaboratoryWorkspaceOrder(order)) return 'Лаборатория';
   if (isLaboratoryOrder(order)) return 'Лаборатория';
@@ -1467,6 +1530,9 @@ export const StaffOrdersPage = () => {
             <p className="mt-1 text-sm text-slate-600">Список уже отфильтрован под роль: {roleTitle(role)}.</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {canAccess(role, 'create_order') && (
+              <Link to="/staff/orders/new" className="rounded-full bg-eco-900 px-4 py-2 text-sm font-bold text-white shadow-sm">Создать заявку</Link>
+            )}
             <button
               type="button"
               onClick={() => setOnlyMyTasks((value) => !value)}
@@ -1580,7 +1646,6 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
       throw err;
     }
   };
-
   const changePayment = async (paymentStatus: PaymentStatus, comment?: string) => {
     try {
       await updatePaymentStatus(order.id, paymentStatus, { comment });
@@ -1983,6 +2048,131 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     }
   };
 
+  const submitCommercialOffer = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!access.manager) {
+      toast.warning('Действие недоступно', 'КП может создавать менеджер или администратор.');
+      return;
+    }
+    const form = new FormData(event.currentTarget);
+    try {
+      await createCommercialOffer(order.id, {
+        amount: Number(form.get('amount') || order.offerAmount || 0),
+        deadline: String(form.get('deadline') || ''),
+        comment: String(form.get('comment') || ''),
+        status: 'preparing',
+        file: form.get('file') as File | null,
+      });
+      await updateOrderStatus(order.id, 'Подготовка КП');
+      toast.success('КП сохранено', 'Коммерческое предложение готово к отправке клиенту.');
+      load();
+    } catch (err) {
+      toast.error('КП не сохранено', errorMessage(err, 'Backend для КП пока может быть не подключен.'));
+    }
+  };
+
+  const changeCommercialOfferStatus = async (status: string) => {
+    const targetStatus: OrderStatus | undefined =
+      status === 'sent_to_client' ? 'КП отправлено' :
+      status === 'approved' ? 'КП согласовано' :
+      status === 'rejected' ? 'Отменено' :
+      'Подготовка КП';
+    await updateOrderStatus(order.id, targetStatus);
+    toast.success('Статус КП обновлен');
+    load();
+  };
+
+  const submitFullContract = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!access.manager && !access.finance) {
+      toast.warning('Действие недоступно', 'Договор может редактировать менеджер, бухгалтер или администратор.');
+      return;
+    }
+    const form = new FormData(event.currentTarget);
+    try {
+      await saveContractDetails(order.id, {
+        number: String(form.get('number') || ''),
+        contractDate: String(form.get('contractDate') || ''),
+        amount: Number(form.get('amount') || 0),
+        type: String(form.get('type') || 'one_time') as never,
+        startDate: String(form.get('startDate') || ''),
+        endDate: String(form.get('endDate') || ''),
+        comment: String(form.get('comment') || ''),
+        file: form.get('file') as File | null,
+        signedFile: form.get('signedFile') as File | null,
+      });
+      toast.success('Договор сохранен', 'Данные договора готовы для backend.');
+      load();
+    } catch (err) {
+      toast.error('Договор не сохранен', errorMessage(err, 'Backend договора пока может быть не подключен.'));
+    }
+  };
+
+  const submitInvoicePayment = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!access.finance) {
+      toast.warning('Действие недоступно', 'Счет и оплату редактирует бухгалтер или администратор.');
+      return;
+    }
+    const form = new FormData(event.currentTarget);
+    try {
+      await saveInvoicePayment(order.id, {
+        invoiceNumber: String(form.get('invoiceNumber') || ''),
+        invoiceAmount: Number(form.get('invoiceAmount') || 0),
+        invoiceDate: String(form.get('invoiceDate') || ''),
+        dueDate: String(form.get('dueDate') || ''),
+        accountantComment: String(form.get('accountantComment') || ''),
+        invoiceFile: form.get('invoiceFile') as File | null,
+        paymentOrder: form.get('paymentOrder') as File | null,
+      });
+      toast.success('Счет сохранен', 'Данные оплаты готовы для backend.');
+      load();
+    } catch (err) {
+      toast.error('Счет не сохранен', errorMessage(err, 'Backend счета пока может быть не подключен.'));
+    }
+  };
+
+  const submitWasteRemoval = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!access.waste && !access.all) {
+      toast.warning('Действие недоступно', 'Вывоз ведет специалист по отходам или администратор.');
+      return;
+    }
+    const form = new FormData(event.currentTarget);
+    try {
+      await saveWasteRemoval(order.id, {
+        wasteType: String(form.get('wasteType') || ''),
+        volume: String(form.get('volume') || ''),
+        hazardClass: String(form.get('hazardClass') || ''),
+        pickupAddress: String(form.get('pickupAddress') || ''),
+        pickupDate: String(form.get('pickupDate') || ''),
+        transport: String(form.get('transport') || ''),
+        driverOrExecutor: String(form.get('driverOrExecutor') || ''),
+        status: String(form.get('status') || 'data_check') as never,
+        comment: String(form.get('comment') || ''),
+        act: form.get('act') as File | null,
+        photos: form.getAll('photos').filter((file): file is File => file instanceof File && Boolean(file.name)),
+      });
+      toast.success('Этап вывоза сохранен', 'Данные готовы для подключения backend.');
+      load();
+    } catch (err) {
+      toast.error('Этап не сохранен', errorMessage(err, 'Backend вывоза пока может быть не подключен.'));
+    }
+  };
+
+  const sendDocumentAgreement = async (
+    documentId: string,
+    payload: { comment?: string; needsSignature: boolean; needsClientResponse: boolean; dueDate?: string },
+  ) => {
+    try {
+      await sendDocumentToClient(order.id, documentId, payload);
+      toast.success(payload.needsSignature ? 'Документ отправлен на подпись' : 'Документ отправлен клиенту');
+      load();
+    } catch (err) {
+      toast.error('Документ не отправлен', errorMessage(err, 'Backend согласования пока может быть не подключен.'));
+    }
+  };
+
   const online = onlineState(order);
   const serviceContracts = getContractsForOrder(order);
   const canAddComment = access.notes || access.messages;
@@ -1994,7 +2184,8 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     (access.finance && order.status === 'Счет на оплату') ||
     (access.finance && order.status === 'Передано бухгалтеру') ||
     (access.ecology && order.status === 'Проектирование') ||
-    (access.laboratory && order.status === 'Лаборатория')
+    (access.laboratory && order.status === 'Лаборатория') ||
+    (access.waste && ['Вывоз', 'Утилизация'].includes(order.status))
   );
   const advanceWorkflow = async () => {
     if (!nextStatus) return;
@@ -2005,10 +2196,10 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     : [];
   const accountantActions = role === 'ACCOUNTANT' ? [
     order.status === 'Передано бухгалтеру' && { label: 'Выставить счет', onClick: () => setAccountantPayment('awaiting_invoice', 'Бухгалтер принял заявку и готовит счет'), variant: 'primary' as const },
-    ['Передано бухгалтеру', 'Ожидает счет'].includes(order.status) && { label: 'Прикрепить счет', onClick: () => setActiveTab('Оплата'), variant: 'secondary' as const },
+    ['Передано бухгалтеру', 'Ожидает счет'].includes(order.status) && { label: 'Прикрепить счет', onClick: () => setActiveTab('Счет и оплата'), variant: 'secondary' as const },
     ['Ожидает счет'].includes(order.status) && { label: 'Отправить счет клиенту', onClick: () => setAccountantPayment('invoice_sent', 'Счет отправлен клиенту'), variant: 'primary' as const },
     ['Счет отправлен'].includes(order.status) && { label: 'Ожидаем оплату', onClick: () => setAccountantPayment('awaiting_payment', 'Ожидаем оплату по счету'), variant: 'secondary' as const },
-    ['Счет отправлен', 'Ожидаем оплату', 'Частично оплачено'].includes(order.status) && { label: 'Отметить частичную оплату', onClick: () => setActiveTab('Оплата'), variant: 'secondary' as const },
+    ['Счет отправлен', 'Ожидаем оплату', 'Частично оплачено'].includes(order.status) && { label: 'Отметить частичную оплату', onClick: () => setActiveTab('Счет и оплата'), variant: 'secondary' as const },
     ['Счет отправлен', 'Ожидаем оплату', 'Частично оплачено'].includes(order.status) && { label: 'Отметить полную оплату', onClick: () => setAccountantPayment('paid', 'Полная оплата подтверждена'), variant: 'success' as const },
     orderFinance(order).remaining > 0 && ['Ожидаем оплату', 'Частично оплачено'].includes(order.status) && { label: 'Отметить задолженность', onClick: () => setAccountantPayment('debt', 'Есть задолженность по оплате'), variant: 'secondary' as const },
     ['Частично оплачено', 'Полностью оплачено'].includes(order.status) && { label: 'Передать специалисту', onClick: () => setAccountantPayment('transferred_to_specialist', 'Заявка передана специалисту'), variant: 'success' as const, disabled: !canTransferToSpecialist(order) },
@@ -2023,11 +2214,12 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     managerActions.length === 0 && order.status === 'Передано бухгалтеру' && { label: 'Открыть историю', onClick: () => setActiveTab('История'), variant: 'secondary' as const },
   ].filter(Boolean) as Array<{ label: string; onClick: () => void | Promise<void>; variant: 'primary' | 'secondary' | 'success'; disabled?: boolean }> : [
     canAdvanceWorkflow && nextStatus && { label: `Следующий этап: ${nextStatus}`, onClick: advanceWorkflow, variant: nextStatus === 'Завершено' ? 'success' as const : 'primary' as const },
-    order.status === 'Счет на оплату' && fallbackPaymentStatus(order.paymentStatus) !== 'paid' && access.finance && { label: 'Проверить оплату', onClick: () => setActiveTab('Оплата'), variant: 'primary' as const },
-    ['КП', 'Договор', 'Подготовка КП', 'КП отправлено', 'КП согласовано', 'Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан'].includes(order.status) && access.manager && { label: 'Открыть договор/КП', onClick: () => setActiveTab('Договор'), variant: 'secondary' as const },
-    order.status === 'Проектирование' && access.ecology && { label: 'Открыть проектирование', onClick: () => setActiveTab('Проектирование'), variant: 'secondary' as const },
+    order.status === 'Счет на оплату' && fallbackPaymentStatus(order.paymentStatus) !== 'paid' && access.finance && { label: 'Проверить оплату', onClick: () => setActiveTab('Счет и оплата'), variant: 'primary' as const },
+    ['КП', 'Подготовка КП', 'КП отправлено', 'КП согласовано'].includes(order.status) && access.manager && { label: 'Открыть КП', onClick: () => setActiveTab('КП'), variant: 'secondary' as const },
+    ['Договор', 'Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан'].includes(order.status) && access.manager && { label: 'Открыть договор', onClick: () => setActiveTab('Договор'), variant: 'secondary' as const },
+    order.status === 'Проектирование' && access.ecology && { label: 'Открыть работу специалиста', onClick: () => setActiveTab('Работа специалиста'), variant: 'secondary' as const },
     order.status === 'Лаборатория' && access.laboratory && { label: 'Открыть лабораторию', onClick: () => setActiveTab('Лаборатория'), variant: 'secondary' as const },
-    (order.status === 'Вывоз' || order.status === 'Утилизация' || order.status === 'Проверка результата') && canAccess(role, 'edit_documents') && { label: 'Документы результата', onClick: () => setActiveTab('Документы'), variant: 'secondary' as const },
+    (order.status === 'Вывоз' || order.status === 'Утилизация' || order.status === 'Проверка результата') && (canAccess(role, 'edit_documents') || access.waste) && { label: 'Вывоз / утилизация', onClick: () => setActiveTab('Вывоз / Утилизация'), variant: 'secondary' as const },
   ].filter(Boolean) as Array<{ label: string; onClick: () => void | Promise<void>; variant: 'primary' | 'secondary' | 'success'; disabled?: boolean }>;
 
   return (
@@ -2109,6 +2301,85 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               <LaboratoryRequestOverview order={order} />
             )}
 
+            {currentTab === 'Клиент' && (
+              <ClientInfoPanel order={order} />
+            )}
+
+            {currentTab === 'КП' && (
+              <CommercialOfferPanel
+                order={order}
+                canEdit={access.manager || access.all}
+                onCreate={submitCommercialOffer}
+                onStatus={changeCommercialOfferStatus}
+              />
+            )}
+
+            {currentTab === 'Счет и оплата' && (
+              <InvoicePaymentPanel
+                order={order}
+                canEdit={access.finance || access.all}
+                canConfirm={access.finance || access.all}
+                onSubmit={submitInvoicePayment}
+                onQuickStatus={async (status) => {
+                  if (status === 'paid') await setAccountantPayment('paid', 'Полная оплата подтверждена');
+                  else if (status === 'partial_paid') await setAccountantPayment('partial', 'Частичная оплата подтверждена');
+                  else if (status === 'debt') await setAccountantPayment('debt', 'Есть задолженность по оплате');
+                  else if (status === 'invoice_sent') await setAccountantPayment('invoice_sent', 'Счет отправлен клиенту');
+                }}
+              />
+            )}
+
+            {currentTab === 'Работа специалиста' && (
+              <Section title="Работа специалиста" icon={<Leaf size={20} />}>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <InfoTile label="Эколог" value={ecologyLabel(order.ecologyStatus)} />
+                  <InfoTile label="Лаборатория" value={laboratoryLabel(order.laboratoryStatus)} />
+                  <InfoTile label="Результат" value={order.resultDocuments.length ? 'Загружен' : 'Не загружен'} />
+                </div>
+                <div className="mt-5 grid gap-3 md:grid-cols-2">
+                  {isEcologyWorkspaceOrder(order) && <Button type="button" variant="secondary" onClick={() => setActiveTab('Проектирование')}>Проектирование</Button>}
+                  {isLaboratoryWorkspaceOrder(order) && <Button type="button" variant="secondary" onClick={() => setActiveTab('Лаборатория')}>Лаборатория</Button>}
+                  <Button type="button" variant="secondary" onClick={() => setActiveTab('Результат')}>Результат</Button>
+                </div>
+              </Section>
+            )}
+
+            {currentTab === 'Вывоз / Утилизация' && (
+              <WasteRemovalPanel
+                order={order}
+                canEdit={access.waste || access.all}
+                onSubmit={submitWasteRemoval}
+              />
+            )}
+
+            {currentTab === 'Согласование' && (
+              <StaffAgreementPanel
+                order={order}
+                canEdit={access.manager || access.ecology || access.laboratory || access.waste || access.all}
+                onSendDocument={sendDocumentAgreement}
+              />
+            )}
+
+            {currentTab === 'Результат' && (
+              <>
+                <ResultPanel order={order} />
+                <FinalChecklistPanel order={order} />
+              </>
+            )}
+
+            {currentTab === 'Комментарии' && (
+              <Section title="Комментарии" icon={<MessageSquare size={20} />}>
+                <List title="Клиенту" items={order.comments.filter((c) => c.visibility === 'client').map((c) => `${c.createdAt} · ${c.author}: ${c.text}`)} />
+                <List title="Внутренние" items={order.comments.filter((c) => c.visibility === 'internal').map((c) => `${c.createdAt} · ${c.author}: ${c.text}`)} />
+                {canAddComment && (
+                  <form onSubmit={(event) => submitComment(event, access.messages ? 'client' : 'internal')} className="mt-5">
+                    <textarea name="comment" required placeholder="Комментарий" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} />
+                    <Button className="mt-4">Добавить</Button>
+                  </form>
+                )}
+              </Section>
+            )}
+
             {currentTab === 'Оплата' && (
               <Section title="Оплата" icon={<CreditCard size={20} />}>
                 {!access.viewFinance && (
@@ -2133,14 +2404,12 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
             )}
 
             {currentTab === 'Договор' && (
-              <Section title="Договор" icon={<FileSignature size={20} />}>
-                {!access.manager && !access.finance && (
-                  <div className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-600">
-                    Договор может редактировать менеджер, бухгалтер или администратор.
-                  </div>
-                )}
-                {(access.manager || access.finance) && <StaffContractAction onSubmit={submitContractValues} />}
-              </Section>
+              <ContractDetailsPanel
+                order={order}
+                canEdit={access.manager || access.finance || access.all}
+                onSubmit={submitFullContract}
+                onTransferToAccounting={async () => performManagerAction(managerActionFlow.find((action) => action.target === 'Передано бухгалтеру') || managerActionFlow[managerActionFlow.length - 1])}
+              />
             )}
 
             {currentTab === 'Документы' && (
@@ -2148,7 +2417,16 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                 <List title="От клиента" items={order.documents.map((d) => `${d.name} · ${d.status} · ${d.uploadedAt}`)} />
                 <List title="От ecoprogress.kz" items={order.resultDocuments.map((d) => `${d.name} · ${d.status} · ${d.uploadedAt}`)} />
                 {canAccess(role, 'edit_documents') && <StaffUploadDocumentAction onSubmit={async (values) => {
-                  if (values.file) await uploadDocument(order.id, values.file, values.category || 'result');
+                  if (values.file) await uploadDocument(order.id, {
+                    file: values.file,
+                    type: values.category || 'work_result',
+                    title: values.name || values.file.name,
+                    comment: values.comment,
+                    sendToClient: values.sendToClient,
+                    needsSignature: values.needsSignature,
+                    needsClientResponse: values.needsClientResponse,
+                    dueDate: values.dueDate,
+                  });
                   onNotify?.('Документ загружен');
                   load();
                 }} />}
@@ -2391,7 +2669,16 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               {canAccess(role, 'edit_documents') && (
                 <div className="mt-5 border-t border-slate-100 pt-5">
                   <StaffUploadDocumentAction onSubmit={async (values) => {
-                    if (values.file) await uploadDocument(order.id, values.file, values.category || 'result');
+                    if (values.file) await uploadDocument(order.id, {
+                      file: values.file,
+                      type: values.category || 'work_result',
+                      title: values.name || values.file.name,
+                      comment: values.comment,
+                      sendToClient: values.sendToClient,
+                      needsSignature: values.needsSignature,
+                      needsClientResponse: values.needsClientResponse,
+                      dueDate: values.dueDate,
+                    });
                     onNotify?.('Документ загружен');
                     load();
                   }} />
@@ -3169,6 +3456,35 @@ const StaffConfirmAction = ({ action }: { action: StaffSuggestedAction }) => {
   );
 };
 
+export const StaffNewOrderPage = ({ onNotify }: { onNotify?: (message: string) => void }) => {
+  const role = useStaffRole();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const [loading, setLoading] = useState(false);
+  if (!canAccess(role, 'create_order')) return <PermissionDenied permission="create_order" />;
+  const submit = async (payload: Parameters<typeof createStaffManualOrder>[0]) => {
+    setLoading(true);
+    try {
+      const order = await createStaffManualOrder(payload);
+      toast.success('Заявка создана', 'Статус: Новая заявка.');
+      onNotify?.('Заявка создана');
+      navigate(order?.id ? `/staff/orders/${order.id}` : '/staff/orders');
+    } catch (err) {
+      toast.error('Заявка не создана', (err as Error)?.message || 'Backend создания заявки пока может быть не подключен.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <SimpleStaffPage title="Новая заявка">
+      <div className="rounded-2xl bg-eco-50 p-4 text-sm font-semibold text-eco-900">
+        Создание заявки сотрудником для обращений из WhatsApp, Instagram, звонка или офлайн-канала.
+      </div>
+      <StaffNewOrderForm loading={loading} onSubmit={submit} />
+    </SimpleStaffPage>
+  );
+};
+
 const StaffPaymentActions = ({ order, onSubmit }: { order: Order; onSubmit: (values: PaymentModalValues) => void | Promise<void> }) => {
   const [mode, setMode] = useState<'partial' | 'full' | null>(null);
   const finance = orderFinance(order);
@@ -3210,8 +3526,7 @@ const StaffUploadDocumentAction = ({ onSubmit }: { onSubmit: (values: UploadDocu
       <Button type="button" className="w-full" onClick={() => setOpen(true)}>Загрузить документ</Button>
       <UploadDocumentModal
         isOpen={open}
-        defaultCategory="result"
-        categories={['result', 'invoice', 'internal', 'client']}
+        defaultCategory="work_result"
         allowSendToClient
         onClose={() => setOpen(false)}
         onSubmit={onSubmit}
@@ -3732,10 +4047,14 @@ const LaboratoryResultSection = ({
 };
 
 export const StaffClientsPage = () => {
-  const { orders } = useOrders();
+  const { orders, refresh } = useOrders();
   const toast = useToast();
+  const navigate = useNavigate();
   const { companyKey: selectedKeyParam } = useParams();
   const [q, setQ] = useState('');
+  const [showCreateClient, setShowCreateClient] = useState(false);
+  const [createResult, setCreateResult] = useState<{ email: string; password: string } | null>(null);
+  const [createError, setCreateError] = useState('');
   const selectedKey = selectedKeyParam ? decodeURIComponent(selectedKeyParam) : '';
   const companies = useMemo(() => buildCompanySummaries(orders), [orders]);
   const filteredCompanies = useMemo(() => companies.filter((company) => {
@@ -3749,6 +4068,18 @@ export const StaffClientsPage = () => {
   const selectedContracts: ClientContract[] = [];
   const latestOrder = [...selectedOrders].sort((a, b) => b.id.localeCompare(a.id))[0];
 
+  const newOrderUrl = (order?: Order, companyName = selectedCompany?.name || '') => {
+    const params = new URLSearchParams();
+    if (order?.clientId) params.set('clientId', order.clientId);
+    if (order?.clientName || order?.contactPerson) params.set('clientName', order.contactPerson || order.clientName);
+    if (order?.companyName || companyName) params.set('companyName', order?.companyName || companyName);
+    if (order?.bin) params.set('bin', order.bin);
+    if (order?.phone) params.set('phone', order.phone);
+    if (order?.whatsapp) params.set('whatsapp', order.whatsapp);
+    if (order?.email) params.set('email', order.email);
+    return `/staff/orders/new${params.toString() ? `?${params.toString()}` : ''}`;
+  };
+
   if (selectedCompany) {
     return (
       <div className="space-y-6">
@@ -3760,7 +4091,10 @@ export const StaffClientsPage = () => {
                 <h2 className="mt-2 text-3xl font-bold text-eco-900">{selectedCompany.name}</h2>
                 <p className="mt-2 text-sm text-slate-500">БИН: {latestOrder?.bin || 'Нет'} · {selectedCompany.active ? 'Активное' : 'На паузе'}</p>
               </div>
-              <Link to="/staff/orders" className="rounded-full bg-eco-900 px-4 py-3 text-sm font-bold text-white">Заявки</Link>
+              <div className="flex flex-wrap gap-2">
+                <Link to={newOrderUrl(latestOrder, selectedCompany.name)} className="rounded-full bg-eco-900 px-4 py-3 text-sm font-bold text-white">Создать заявку</Link>
+                <Link to="/staff/orders" className="rounded-full bg-eco-50 px-4 py-3 text-sm font-bold text-eco-800">Все заявки</Link>
+              </div>
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-4">
               <InfoTile label="Заявки" value={String(selectedCompany.total)} />
@@ -3800,11 +4134,6 @@ export const StaffClientsPage = () => {
       </div>
     );
   }
-
-  const [showCreateClient, setShowCreateClient] = useState(false);
-  const [createResult, setCreateResult] = useState<{ email: string; password: string } | null>(null);
-  const [createError, setCreateError] = useState('');
-  const { refresh } = useOrders();
 
   const handleCreateClient = async (values: CreateClientModalValues) => {
     setCreateError('');
@@ -3876,6 +4205,19 @@ export const StaffClientsPage = () => {
                   </p>
                 )}
                 <p className="mt-3 text-xs font-semibold text-slate-500">Последняя: {lastOrderDate(companyOrders)}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      navigate(newOrderUrl(last, company.name));
+                    }}
+                    className="rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white"
+                  >
+                    Создать заявку
+                  </button>
+                  <span className="rounded-full bg-white px-4 py-2 text-xs font-bold text-eco-800">Открыть карточку</span>
+                </div>
               </Link>
             );
           })}
@@ -4091,7 +4433,28 @@ export const StaffContractsPage = () => {
 export const StaffTasksPage = () => {
   const { orders } = useOrders();
   const role = useStaffRole();
+  const toast = useToast();
+  const [remoteTasks, setRemoteTasks] = useState<Awaited<ReturnType<typeof getTasks>>>([]);
+  useEffect(() => {
+    getTasks().then(setRemoteTasks);
+  }, []);
   const tasks = useMemo(() => buildMyTasks(orders, role), [orders, role]);
+  const createTask = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await saveTask({
+      orderId: String(form.get('orderId') || ''),
+      title: String(form.get('title') || ''),
+      responsibleId: String(form.get('responsibleId') || ''),
+      status: 'new',
+      priority: String(form.get('priority') || 'normal') as never,
+      dueDate: String(form.get('dueDate') || ''),
+      comment: String(form.get('comment') || ''),
+    });
+    toast.success('Задача сохранена', 'Если backend пока не подключен, форма уже готова к интеграции.');
+    event.currentTarget.reset();
+    getTasks().then(setRemoteTasks);
+  };
 
   return (
     <SimpleStaffPage title="Задачи">
@@ -4101,8 +4464,121 @@ export const StaffTasksPage = () => {
         <InfoTile label="Роль" value={roleTitle(role)} />
       </div>
       <div className="mt-5 grid gap-3 xl:grid-cols-2">
+        {remoteTasks.map((task) => (
+          <div key={task.id} className="rounded-2xl bg-slate-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-bold text-slate-900">{task.title}</p>
+                <p className="mt-1 text-sm text-slate-500">Заявка: {task.orderId} · срок: {task.dueDate || 'не указан'}</p>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{task.status}</span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" onClick={() => updateTaskStatus(task.id, 'in_progress').then(() => toast.success('Задача в работе'))}>В работу</Button>
+              <Button type="button" onClick={() => updateTaskStatus(task.id, 'done').then(() => toast.success('Задача завершена'))}>Завершить</Button>
+              <Button type="button" variant="secondary" onClick={() => updateTaskStatus(task.id, 'cancelled').then(() => toast.success('Задача отменена'))}>Отменить</Button>
+            </div>
+          </div>
+        ))}
         {tasks.map((task) => <WorkTaskCard key={task.id} task={task} />)}
-        {!tasks.length && <EmptyState text="Задач нет" />}
+        {!tasks.length && !remoteTasks.length && <EmptyState text="Задач нет" />}
+      </div>
+      {(role === 'ADMIN' || role === 'DIRECTOR' || role === 'HEAD' || canAccess(role, 'edit_tasks')) && (
+        <form onSubmit={createTask} className="mt-5 grid gap-4 rounded-2xl bg-slate-50 p-4 md:grid-cols-2">
+          <Field label="Заявка"><input name="orderId" required className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+          <Field label="Название"><input name="title" required className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+          <Field label="Ответственный"><input name="responsibleId" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+          <Field label="Приоритет"><select name="priority" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="normal">Обычный</option><option value="high">Высокий</option><option value="urgent">Срочный</option><option value="low">Низкий</option></select></Field>
+          <Field label="Срок"><input name="dueDate" type="date" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+          <Field label="Комментарий"><input name="comment" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+          <Button>Создать задачу</Button>
+        </form>
+      )}
+    </SimpleStaffPage>
+  );
+};
+
+export const StaffCalendarPage = () => {
+  const role = useStaffRole();
+  const { orders } = useOrders();
+  const [remoteEvents, setRemoteEvents] = useState<Awaited<ReturnType<typeof getStaffCalendar>>>([]);
+  const [view, setView] = useState<'today' | 'week' | 'month' | 'all' | 'overdue' | 'rescheduled'>('today');
+  useEffect(() => {
+    getStaffCalendar().then(setRemoteEvents);
+  }, []);
+  if (!canAccess(role, 'view_calendar') && role !== 'ADMIN' && role !== 'DIRECTOR' && role !== 'HEAD') return <PermissionDenied permission="view_calendar" />;
+  const generatedEvents: StaffCalendarEvent[] = orders.flatMap((order) => {
+    const items: StaffCalendarEvent[] = [];
+    if (order.laboratoryMeasurementAgreement?.measurementDate) {
+      items.push({
+        id: `${order.id}-lab`,
+        orderId: order.id,
+        type: 'laboratory' as const,
+        title: `Замер: ${order.service}`,
+        date: order.laboratoryMeasurementAgreement.measurementDate,
+        time: order.laboratoryMeasurementAgreement.measurementTime,
+        address: order.laboratoryMeasurementAgreement.address,
+        contactPerson: order.laboratoryMeasurementAgreement.contactPerson,
+        measurementType: order.laboratoryMeasurementAgreement.measurementScope,
+        status: order.laboratoryMeasurementAgreement.status === 'reschedule_requested' ? 'rescheduled' as const : 'planned' as const,
+      });
+    }
+    if (['Вывоз', 'Утилизация'].includes(order.status)) {
+      items.push({
+        id: `${order.id}-waste`,
+        orderId: order.id,
+        type: 'waste' as const,
+        title: `Вывоз / утилизация: ${order.service}`,
+        date: order.deadline || order.updatedAt || order.createdAt,
+        address: order.objectAddress || order.legalAddress,
+        executor: order.assignedEcologist || order.manager,
+        status: 'planned' as const,
+      });
+    }
+    return items;
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  const events = [...remoteEvents, ...generatedEvents].filter((event) => {
+    if (view === 'today') return event.date === today;
+    if (view === 'overdue') return event.date < today && event.status !== 'completed';
+    if (view === 'rescheduled') return event.status === 'rescheduled';
+    return true;
+  });
+  const views = [
+    ['today', 'Сегодня'],
+    ['week', 'Неделя'],
+    ['month', 'Месяц'],
+    ['all', 'Все выезды'],
+    ['overdue', 'Просроченные'],
+    ['rescheduled', 'Переносы от клиента'],
+  ] as const;
+  return (
+    <SimpleStaffPage title="Календарь">
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {views.map(([key, label]) => (
+          <button key={key} type="button" onClick={() => setView(key)} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold ${view === key ? 'bg-eco-900 text-white' : 'bg-slate-100 text-slate-700'}`}>{label}</button>
+        ))}
+      </div>
+      <div className="grid gap-3 xl:grid-cols-2">
+        {events.map((event) => (
+          <Link key={event.id} to={event.orderId ? `/staff/orders/${event.orderId}` : '/staff/calendar'} className="block rounded-2xl bg-slate-50 p-4 transition hover:bg-eco-50">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-bold text-slate-900">{event.title}</p>
+                <p className="mt-1 text-sm text-slate-600">{event.date} {event.time || ''}</p>
+                <p className="mt-1 text-sm text-slate-500">{event.address || 'Адрес не указан'}</p>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{event.type === 'laboratory' ? 'Лаборатория' : event.type === 'waste' ? 'Вывоз' : 'Задача'}</span>
+            </div>
+            <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-2">
+              {event.contactPerson && <span>Контакт: {event.contactPerson}</span>}
+              {event.measurementType && <span>Тип замера: {event.measurementType}</span>}
+              {event.transport && <span>Транспорт: {event.transport}</span>}
+              {event.executor && <span>Исполнитель: {event.executor}</span>}
+            </div>
+          </Link>
+        ))}
+        {!events.length && <EmptyState text="Событий нет" />}
       </div>
     </SimpleStaffPage>
   );
@@ -4146,15 +4622,20 @@ export const StaffReportsPage = () => {
 
 export const StaffUserRolesPage = () => {
   const role = useStaffRole();
-  if (!canAccess(role, 'manage_roles')) return <PermissionDenied permission="manage_roles" />;
+  if (!canAccess(role, 'manage_roles') && !canAccess(role, 'manage_employees')) return <PermissionDenied permission="manage_roles" />;
 
   return (
     <SimpleStaffPage title="Роли пользователей">
       <div className="grid gap-3 md:grid-cols-3">
         <InfoTile label="Пользователи" value="—" />
-        <InfoTile label="Роли" value="5" />
+        <InfoTile label="Роли" value="8" />
         <InfoTile label="Текущая роль" value={roleTitle(role)} />
       </div>
+      {!canAccess(role, 'manage_roles') && (
+        <div className="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+          Доступ руководителя открыт для просмотра сотрудников. Техническое управление ролями остается у администратора.
+        </div>
+      )}
       <div className="mt-5 space-y-3">
         <EmptyState text="Список сотрудников пока пуст" />
       </div>

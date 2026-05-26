@@ -17,6 +17,7 @@ import {
 } from '../components/modals';
 import { useAuth } from '../contexts/AuthContext';
 import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, signOrderContract, payOrderOnline, uploadQuarterDocument, deletePrimaryDocumentFile, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentsForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications } from '../services/orderService';
+import { requestCompanyProfileChange } from '../services/crmWorkflowService';
 import { getClientPayments, getClientDebts, getClientContracts } from '../services/paymentService';
 import { getServices } from '../services/serviceService';
 import {
@@ -48,7 +49,7 @@ type ClientAgreementResponse = {
   sourceDocumentTitle: string;
   fileName?: string;
   comment?: string;
-  action: 'signed' | 'sent_without_signature' | 'revision_requested';
+  action: 'accepted' | 'signed' | 'sent_without_signature' | 'revision_requested';
   signed: boolean;
   signedAt?: string;
   sentAt: string;
@@ -471,7 +472,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       return;
     }
     try {
-      await uploadPrimaryDocument(order.id, document.id, values.file.name, values.comment);
+      await uploadPrimaryDocument(order.id, document.id, values.file, values.comment);
       toast.success('Документ загружен', 'Документ добавлен к заявке.');
       load();
     } catch (err) {
@@ -490,9 +491,12 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
   const sendAgreementResponse = async (sourceDocument: AgreementSourceDocument, values: AgreementResponseValues) => {
     const { file, action } = values;
     const signed = action === 'signed';
+    const accepted = action === 'accepted';
     const commentText = values.comment;
     const label = action === 'revision_requested'
       ? `Документ "${sourceDocument.title}" отправлен на исправление`
+      : accepted
+      ? `Документ "${sourceDocument.title}" принят`
       : signed
       ? `Документ "${sourceDocument.title}" подписан`
       : `Документ "${sourceDocument.title}" отправлен без подписи`;
@@ -500,6 +504,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       await addComment(order.id, `${label}${commentText ? `: ${commentText}` : ''}`, 'client');
       if (file?.name) await uploadDocument(order.id, file, 'client');
       if (action === 'revision_requested') toast.success('Запрос отправлен', 'Специалист увидит ваш комментарий по результату.');
+      else if (accepted) toast.success('Документ принят', 'Менеджер увидит ваш ответ.');
       else if (signed) toast.success('КП согласовано', 'Менеджер начнет подготовку договора.');
       else toast.success('Документ отправлен', 'Менеджер увидит ваш ответ.');
       load();
@@ -1378,13 +1383,48 @@ export const CabinetPaymentsPage = () => {
 
 export const CabinetCompanyPage = () => {
   const { user } = useAuth();
+  const toast = useToast();
   const contracts = getContractsForClient(user);
+  const submitChangeRequest = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      await requestCompanyProfileChange({
+        companyName: String(form.get('companyName') || user?.companyName || ''),
+        bin: String(form.get('bin') || user?.bin || ''),
+        legalAddress: String(form.get('legalAddress') || user?.legalAddress || ''),
+        contactPerson: String(form.get('contactPerson') || user?.name || ''),
+        phone: String(form.get('phone') || user?.phone || ''),
+        email: String(form.get('email') || user?.email || ''),
+        whatsapp: String(form.get('whatsapp') || ''),
+        comment: String(form.get('comment') || ''),
+      });
+      toast.success('Запрос отправлен', 'Менеджер проверит и подтвердит изменение данных.');
+      event.currentTarget.reset();
+    } catch (err) {
+      toast.error('Запрос не отправлен', (err as Error)?.message || 'Попробуйте позже.');
+    }
+  };
   return (
     <Reveal>
       <div className="space-y-6">
         <div className="rounded-[22px] bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-bold text-eco-900">{user?.type === 'individual' ? 'Профиль' : 'Данные компании'}</h2>
           <div className="mt-5 grid gap-4 md:grid-cols-2">{Object.entries(user ?? {}).filter(([k]) => !['role', 'type', 'id'].includes(k)).map(([k, v]) => <Info key={k} label={k} value={String(v)} />)}</div>
+        </div>
+        <div className="rounded-[22px] bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-bold text-eco-900">Запросить изменение данных</h2>
+          <form onSubmit={submitChangeRequest} className="mt-5 grid gap-4 md:grid-cols-2">
+            <InfoInput name="companyName" label="Название компании" defaultValue={user?.companyName || ''} />
+            <InfoInput name="bin" label="БИН / ИИН" defaultValue={user?.bin || ''} />
+            <InfoInput name="legalAddress" label="Юридический адрес" defaultValue={user?.legalAddress || ''} />
+            <InfoInput name="contactPerson" label="Контактное лицо" defaultValue={user?.name || ''} />
+            <InfoInput name="phone" label="Телефон" defaultValue={user?.phone || ''} />
+            <InfoInput name="email" label="Email" defaultValue={user?.email || ''} />
+            <InfoInput name="whatsapp" label="WhatsApp" />
+            <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий<textarea name="comment" rows={3} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
+            <Button>Отправить менеджеру</Button>
+          </form>
         </div>
         <div className="rounded-[22px] bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-bold text-eco-900">Договоры с ecoprogress.kz</h2>
@@ -1414,3 +1454,10 @@ export const CabinetNotificationsPage = () => {
     </PageList>
   );
 };
+
+const InfoInput = ({ name, label, defaultValue = '' }: { name: string; label: string; defaultValue?: string }) => (
+  <label className="text-sm font-semibold text-slate-700">
+    {label}
+    <input name={name} defaultValue={defaultValue} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+  </label>
+);

@@ -21,6 +21,9 @@ import AdminPage from './pages/AdminPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PaymentsPage from './pages/PaymentsPage';
 import { useToast } from './hooks/useToast';
+import { useAuth } from './contexts/AuthContext';
+import type { ReactNode } from 'react';
+import type { UserRole } from './types';
 import {
   CabinetCompanyPage,
   CabinetDashboardPage,
@@ -33,10 +36,12 @@ import {
 } from './pages/CabinetPages';
 import {
   StaffClientsPage,
+  StaffCalendarPage,
   StaffCommercialOffersPage,
   StaffContractsPage,
   StaffDashboardPage,
   StaffDocumentsPage,
+  StaffNewOrderPage,
   StaffNotificationsPage,
   StaffOrderDetailsPage,
   StaffOrdersPage,
@@ -45,6 +50,12 @@ import {
   StaffTasksPage,
   StaffUserRolesPage,
 } from './pages/StaffPages';
+
+const StaffAccess = ({ roles, children }: { roles?: UserRole[]; children: ReactNode }) => {
+  const { user } = useAuth();
+  if (!roles || !user?.role || user.role === 'ADMIN' || roles.includes(user.role)) return <>{children}</>;
+  return <StaffDashboardPage />;
+};
 
 function App() {
   const toast = useToast();
@@ -96,18 +107,20 @@ function App() {
 
         <Route path="/staff" element={<StaffLayout><StaffDashboardPage /></StaffLayout>} />
         <Route path="/staff/orders" element={<StaffLayout><StaffOrdersPage /></StaffLayout>} />
+        <Route path="/staff/orders/new" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER']}><StaffNewOrderPage onNotify={notify} /></StaffAccess></StaffLayout>} />
         <Route path="/staff/orders/company/:businessCompanyId" element={<StaffLayout><StaffOrdersPage /></StaffLayout>} />
         <Route path="/staff/orders/:id" element={<StaffLayout><StaffOrderDetailsPage onNotify={notify} /></StaffLayout>} />
-        <Route path="/staff/clients" element={<StaffLayout><StaffClientsPage /></StaffLayout>} />
-        <Route path="/staff/clients/:companyKey" element={<StaffLayout><StaffClientsPage /></StaffLayout>} />
-        <Route path="/staff/commercial-offers" element={<StaffLayout><StaffCommercialOffersPage /></StaffLayout>} />
-        <Route path="/staff/contracts" element={<StaffLayout><StaffContractsPage /></StaffLayout>} />
+        <Route path="/staff/clients" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout>} />
+        <Route path="/staff/clients/:companyKey" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout>} />
+        <Route path="/staff/commercial-offers" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER']}><StaffCommercialOffersPage /></StaffAccess></StaffLayout>} />
+        <Route path="/staff/contracts" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER', 'ACCOUNTANT']}><StaffContractsPage /></StaffAccess></StaffLayout>} />
         <Route path="/staff/tasks" element={<StaffLayout><StaffTasksPage /></StaffLayout>} />
         <Route path="/staff/documents" element={<StaffLayout><StaffDocumentsPage /></StaffLayout>} />
         <Route path="/staff/documents/:orderId" element={<StaffLayout><StaffDocumentsPage /></StaffLayout>} />
-        <Route path="/staff/payments" element={<StaffLayout><PaymentsPage /></StaffLayout>} />
-        <Route path="/staff/reports" element={<StaffLayout><StaffReportsPage /></StaffLayout>} />
-        <Route path="/staff/user-roles" element={<StaffLayout><StaffUserRolesPage /></StaffLayout>} />
+        <Route path="/staff/payments" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout>} />
+        <Route path="/staff/calendar" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'WASTE_SPECIALIST']}><StaffCalendarPage /></StaffAccess></StaffLayout>} />
+        <Route path="/staff/reports" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT']}><StaffReportsPage /></StaffAccess></StaffLayout>} />
+        <Route path="/staff/user-roles" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD']}><StaffUserRolesPage /></StaffAccess></StaffLayout>} />
         <Route path="/staff/notifications" element={<StaffLayout><StaffNotificationsPage /></StaffLayout>} />
         <Route path="/staff/profile" element={<StaffLayout><StaffProfilePage /></StaffLayout>} />
         <Route path="/dashboard/payments" element={<StaffLayout><PaymentsPage /></StaffLayout>} />

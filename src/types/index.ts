@@ -1,5 +1,5 @@
 export type ClientType = 'individual' | 'company';
-export type UserRole = 'CLIENT' | 'MANAGER' | 'ADMIN' | 'ACCOUNTANT' | 'ECOLOGIST' | 'LABORATORY';
+export type UserRole = 'CLIENT' | 'MANAGER' | 'ADMIN' | 'DIRECTOR' | 'HEAD' | 'ACCOUNTANT' | 'ECOLOGIST' | 'LABORATORY' | 'WASTE_SPECIALIST';
 
 export type ServiceCategory = 'Проектирование' | 'Разрешения' | 'Лаборатория' | 'Отходы' | 'Предприятия';
 
@@ -579,6 +579,8 @@ export type User = {
   legalAddress?: string;
   position?: string;
 };
+
+export * from './crmFull';
 
 export type LeadStatus = 'new' | 'contacted' | 'in_progress' | 'closed';
 

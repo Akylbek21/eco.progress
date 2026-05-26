@@ -1,6 +1,6 @@
 ﻿import { ReactNode, useState } from 'react';
 import { NavLink, Link, Navigate } from 'react-router-dom';
-import { BarChart3, Bell, Building2, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, Handshake, LayoutDashboard, LockKeyhole, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
+import { BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, Handshake, LayoutDashboard, LockKeyhole, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
 import { canAccess } from '../config/permissions';
@@ -10,24 +10,28 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[] }> = [
   { label: 'Дашборд', path: '/staff', icon: LayoutDashboard },
   { label: 'Заявки', path: '/staff/orders', icon: ClipboardList },
-  { label: 'Клиенты', path: '/staff/clients', icon: Building2, allowedRoles: ['ADMIN', 'MANAGER'] },
-  { label: 'КП', path: '/staff/commercial-offers', icon: Handshake, allowedRoles: ['ADMIN', 'MANAGER'] },
-  { label: 'Договоры', path: '/staff/contracts', icon: FileSignature, allowedRoles: ['ADMIN', 'MANAGER', 'ACCOUNTANT'] },
-  { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
+  { label: 'Клиенты', path: '/staff/clients', icon: Building2, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER'] },
+  { label: 'КП', path: '/staff/commercial-offers', icon: Handshake, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER'] },
+  { label: 'Договоры', path: '/staff/contracts', icon: FileSignature, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER', 'ACCOUNTANT'] },
+  { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT'] },
+  { label: 'Календарь', path: '/staff/calendar', icon: CalendarDays, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'WASTE_SPECIALIST'] },
   { label: 'Задачи', path: '/staff/tasks', icon: ClipboardCheck },
   { label: 'Документы', path: '/staff/documents', icon: FileText },
   { label: 'Уведомления', path: '/staff/notifications', icon: Bell },
-  { label: 'Отчеты', path: '/staff/reports', icon: BarChart3, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
+  { label: 'Отчеты', path: '/staff/reports', icon: BarChart3, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT'] },
   { label: 'Роли пользователей', path: '/staff/user-roles', icon: ShieldCheck, rolesOnly: true },
 ];
 
 const roleLabel = (role?: string) => {
   const labels: Record<string, string> = {
     ADMIN: 'Администратор',
+    DIRECTOR: 'Руководитель',
+    HEAD: 'Руководитель',
     MANAGER: 'Менеджер',
     ACCOUNTANT: 'Бухгалтер',
     ECOLOGIST: 'Эколог',
     LABORATORY: 'Лаборатория',
+    WASTE_SPECIALIST: 'Специалист по отходам',
   };
   return labels[role || ''] || 'Manager';
 };
@@ -44,11 +48,10 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
       {links.map((item) => {
         const Icon = item.icon;
-        const ecologistCanSeeSection = user?.role === 'ECOLOGIST';
-        if (!ecologistCanSeeSection && item.allowedRoles && (!user?.role || !item.allowedRoles.includes(user.role))) return null;
-        const locked = (item.paymentsOnly && !canAccessPayments(user?.role)) || (item.rolesOnly && !canAccess(user?.role, 'manage_roles'));
+        if (item.allowedRoles && (!user?.role || !item.allowedRoles.includes(user.role))) return null;
+        const locked = (item.paymentsOnly && !canAccessPayments(user?.role)) || (item.rolesOnly && !canAccess(user?.role, 'manage_roles') && !canAccess(user?.role, 'manage_employees'));
         if (locked) {
-          const title = item.rolesOnly ? 'Доступно только администратору' : 'Доступно только администратору и бухгалтеру';
+          const title = item.rolesOnly ? 'Доступно администратору и руководителю' : 'Доступно администратору, руководителю и бухгалтеру';
           return (
             <div
               key={item.path}

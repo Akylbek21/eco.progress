@@ -8,6 +8,7 @@ import type {
   Order,
   OrderPrimaryDocument,
   RequestQuarter,
+  UploadDocumentPayload,
 } from '../types';
 
 export const primaryDocumentTemplates = [
@@ -56,10 +57,23 @@ export const addComment = async (orderId: string, text: string, visibility: 'cli
   return data.data;
 };
 
-export const uploadDocument = async (orderId: string, file: File, type?: string): Promise<DocumentItem> => {
+export const uploadDocument = async (orderId: string, fileOrPayload: File | UploadDocumentPayload, type?: string): Promise<DocumentItem> => {
+  const isFile = fileOrPayload instanceof File;
+  const file = isFile ? fileOrPayload : fileOrPayload.file;
   const formData = new FormData();
   formData.append('file', file);
-  if (type) formData.append('type', type);
+  if (isFile) {
+    if (type) formData.append('type', type);
+  } else {
+    formData.append('type', fileOrPayload.type);
+    formData.append('title', fileOrPayload.title);
+    formData.append('comment', fileOrPayload.comment || '');
+    formData.append('sendToClient', String(Boolean(fileOrPayload.sendToClient)));
+    formData.append('needsSignature', String(Boolean(fileOrPayload.needsSignature)));
+    formData.append('needsClientResponse', String(Boolean(fileOrPayload.needsClientResponse)));
+    if (fileOrPayload.dueDate) formData.append('dueDate', fileOrPayload.dueDate);
+    // TODO backend: accept extended document metadata when client uploads a response/result file.
+  }
   const { data } = await api.post<{ data: DocumentItem; message: string | null }>(`/client/orders/${orderId}/documents`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
@@ -106,12 +120,32 @@ export const uploadQuarterDocument = async (
 export const uploadPrimaryDocument = async (
   orderId: string,
   documentId: string,
-  fileName: string,
+  fileOrName: File | string,
   clientComment = '',
 ): Promise<OrderPrimaryDocument | undefined> => {
+  if (fileOrName instanceof File) {
+    const formData = new FormData();
+    formData.append('file', fileOrName);
+    formData.append('comment', clientComment);
+    formData.append('documentId', documentId);
+    const { data } = await api.post<{ data: OrderPrimaryDocument; message: string | null }>(
+      `/client/orders/${orderId}/primary-documents/${documentId}/upload`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return data.data;
+  }
   const { data } = await api.post<{ data: OrderPrimaryDocument; message: string | null }>(
-    `/client/orders/${orderId}/primary-documents/${documentId}`,
-    { fileName, clientComment },
+    `/client/orders/${orderId}/primary-documents/${documentId}/upload`,
+    (() => {
+      const formData = new FormData();
+      const placeholder = new File([fileOrName], fileOrName || 'document.txt', { type: 'text/plain' });
+      formData.append('file', placeholder);
+      formData.append('comment', clientComment);
+      formData.append('documentId', documentId);
+      return formData;
+    })(),
+    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
   return data.data;
 };

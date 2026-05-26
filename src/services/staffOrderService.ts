@@ -16,6 +16,7 @@ import type {
   QuarterResult,
   QuarterWorkStatus,
   StaffContractStatus,
+  UploadDocumentPayload,
 } from '../types';
 
 export type StaffOrderFilters = {
@@ -65,10 +66,23 @@ export const addComment = async (orderId: string, text: string, visibility: 'cli
   return data.data;
 };
 
-export const uploadDocument = async (orderId: string, file: File, type?: string): Promise<DocumentItem> => {
+export const uploadDocument = async (orderId: string, fileOrPayload: File | UploadDocumentPayload, type?: string): Promise<DocumentItem> => {
+  const isFile = fileOrPayload instanceof File;
+  const file = isFile ? fileOrPayload : fileOrPayload.file;
   const formData = new FormData();
   formData.append('file', file);
-  if (type) formData.append('type', type);
+  if (isFile) {
+    if (type) formData.append('type', type);
+  } else {
+    formData.append('type', fileOrPayload.type);
+    formData.append('title', fileOrPayload.title);
+    formData.append('comment', fileOrPayload.comment || '');
+    formData.append('sendToClient', String(Boolean(fileOrPayload.sendToClient)));
+    formData.append('needsSignature', String(Boolean(fileOrPayload.needsSignature)));
+    formData.append('needsClientResponse', String(Boolean(fileOrPayload.needsClientResponse)));
+    if (fileOrPayload.dueDate) formData.append('dueDate', fileOrPayload.dueDate);
+    // TODO backend: accept extended document metadata above in addition to file/type.
+  }
   const { data } = await api.post<{ data: DocumentItem; message: string | null }>(`/staff/orders/${orderId}/documents`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });

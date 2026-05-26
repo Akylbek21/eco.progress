@@ -1,4 +1,4 @@
-export type EmployeeRole = 'admin' | 'manager' | 'accountant' | 'ecologist' | 'laboratory';
+export type EmployeeRole = 'admin' | 'director' | 'head' | 'manager' | 'accountant' | 'ecologist' | 'laboratory' | 'waste_specialist';
 
 export type CrmPaymentStatus = 'unpaid' | 'awaiting_payment' | 'partially_paid' | 'paid';
 
