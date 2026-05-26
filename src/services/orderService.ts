@@ -160,6 +160,11 @@ export const sendPrimaryDocumentsForReview = async (orderId: string, clientComme
   return data.data;
 };
 
+export const sendPrimaryDocumentForReview = async (orderId: string, documentId: string, clientComment = ''): Promise<Order | undefined> => {
+  const { data } = await api.post<{ data: Order; message: string | null }>(`/client/orders/${orderId}/primary-documents/${documentId}/review`, { clientComment });
+  return data.data;
+};
+
 export const uploadLaboratoryPrimaryDocument = async (
   orderId: string,
   documentId: string,

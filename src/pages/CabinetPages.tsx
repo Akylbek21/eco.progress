@@ -1,6 +1,6 @@
 ﻿import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { CalendarDays, CheckCircle2, CreditCard, Download, FileSignature, FileText, LockKeyhole, RefreshCw, Send, Upload, X } from 'lucide-react';
+import { CalendarDays, CheckCircle2, CreditCard, Download, FileSignature, FileText, LockKeyhole, RefreshCw, Send, Upload } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
@@ -16,7 +16,7 @@ import {
   type UploadDocumentValues,
 } from '../components/modals';
 import { useAuth } from '../contexts/AuthContext';
-import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, signOrderContract, payOrderOnline, uploadQuarterDocument, deletePrimaryDocumentFile, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentsForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications } from '../services/orderService';
+import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, signOrderContract, payOrderOnline, uploadQuarterDocument, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications } from '../services/orderService';
 import { requestCompanyProfileChange } from '../services/crmWorkflowService';
 import { getClientPayments, getClientDebts, getClientContracts } from '../services/paymentService';
 import { getServices } from '../services/serviceService';
@@ -41,7 +41,7 @@ import { useToast } from '../hooks/useToast';
 import type { ClientPrimaryDocumentStatus, Contract, Debt, DocumentItem, LaboratoryPrimaryDocument, Order, OrderPrimaryDocument, Payment, RequestQuarter } from '../types';
 
 type ClientSimpleStatus = 'Новая заявка' | 'На консультации' | 'Ожидаем документы' | 'Документы на проверке' | 'Договор и счет' | 'Ожидаем оплату' | 'Оплачено' | 'В работе' | 'На согласовании' | 'Завершено' | 'Отменено';
-type ClientOrderTab = 'Обзор' | 'Документы' | 'Согласование' | 'Договор и счет' | 'Результат';
+type ClientOrderTab = 'Обзор' | 'Договор и счет' | 'Первичные документы' | 'Документы' | 'Согласование' | 'Результат';
 type ClientAgreementResponse = {
   id: string;
   requestId: string;
@@ -435,17 +435,15 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       toast.error('Ошибка', errorMessage(err, 'Не удалось отправить сообщение.'));
     }
   };
-  const submitFile = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const file = new FormData(event.currentTarget).get('file') as File | null;
-    if (!file?.name) {
+  const submitClientDocument = async (values: UploadDocumentValues) => {
+    if (!values.file?.name) {
       toast.error('Документ не загружен', 'Выберите файл и попробуйте снова.');
       return;
     }
     try {
-      await uploadDocument(order.id, file);
+      await uploadDocument(order.id, values.file, values.category || 'client');
+      if (values.comment) await addComment(order.id, values.comment, 'client');
       toast.success('Документ загружен', 'Документ добавлен к заявке.');
-      event.currentTarget.reset();
       load();
       queryClient.invalidateQueries({ queryKey: ['client-orders'] });
     } catch (err) {
@@ -479,13 +477,17 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       toast.error('Документ не загружен', errorMessage(err, 'Не удалось загрузить документ.'));
     }
   };
-  const sendPrimaryDocs = async (comment = '') => {
+  const sendPrimaryDoc = async (document: OrderPrimaryDocument, comment = '') => {
+    if (!document.fileName) {
+      toast.error('Документ не загружен', 'Сначала загрузите файл.');
+      return;
+    }
     try {
-      await sendPrimaryDocumentsForReview(order.id, comment);
-      toast.success('Документы отправлены на проверку', 'Менеджер проверит документы и оставит комментарий.');
+      await sendPrimaryDocumentForReview(order.id, document.id, comment);
+      toast.success('Документ отправлен на проверку', 'Менеджер проверит файл и оставит комментарий.');
       load();
     } catch (err) {
-      toast.error('Нельзя отправить документы', errorMessage(err, 'Сначала загрузите обязательные документы.'));
+      toast.error('Нельзя отправить документ', errorMessage(err, 'Сначала загрузите файл.'));
     }
   };
   const sendAgreementResponse = async (sourceDocument: AgreementSourceDocument, values: AgreementResponseValues) => {
@@ -510,15 +512,6 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       load();
     } catch (err) {
       toast.error('Ошибка', errorMessage(err, 'Не удалось отправить ответ по документу.'));
-    }
-  };
-  const deletePrimaryFile = async (document: OrderPrimaryDocument) => {
-    try {
-      await deletePrimaryDocumentFile(order.id, document.id);
-      toast.success('Документ удален', 'Файл удален из заявки.');
-      load();
-    } catch (err) {
-      toast.error('Ошибка', errorMessage(err, 'Не удалось удалить файл.'));
     }
   };
   const submitLaboratoryPrimaryFile = async (event: FormEvent<HTMLFormElement>, document: LaboratoryPrimaryDocument) => {
@@ -611,7 +604,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
           </div>
           <ClientStatusPath order={order} />
           <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-            {(['Обзор', 'Документы', 'Согласование', 'Договор и счет', 'Результат'] as const).map((tab) => (
+            {(['Обзор', 'Договор и счет', 'Первичные документы', 'Документы', 'Согласование', 'Результат'] as const).map((tab) => (
               <button
                 type="button"
                 key={tab}
@@ -643,13 +636,20 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
         </Reveal>
       )}
 
-      {activeTab === 'Документы' && (
+      {activeTab === 'Договор и счет' && (
+        <ClientContractInvoicePanel order={order} onSign={handleSign} onPay={handlePay} onUploadReceipt={submitReceipt} serviceContract={serviceContract} />
+      )}
+
+      {activeTab === 'Первичные документы' && (
           <ClientPrimaryDocumentsPanel
             order={order}
             onUpload={submitPrimaryFile}
-            onSend={sendPrimaryDocs}
-          onDelete={deletePrimaryFile}
+            onSend={sendPrimaryDoc}
         />
+      )}
+
+      {activeTab === 'Документы' && (
+        <ClientDocumentsPanel order={order} onUpload={submitClientDocument} />
       )}
 
       {activeTab === 'Согласование' && (
@@ -659,16 +659,74 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
         />
       )}
 
-      {activeTab === 'Договор и счет' && (
-        <ClientContractInvoicePanel order={order} onSign={handleSign} onPay={handlePay} onUploadReceipt={submitReceipt} serviceContract={serviceContract} />
-      )}
-
       {activeTab === 'Результат' && <ClientResultPanel order={order} />}
     </div>
   );
 };
 
 const Info = ({ label, value }: { label: string; value: string }) => <div className="rounded-2xl bg-eco-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">{label}</p><p className="mt-2 text-sm text-slate-800">{value || 'Не указано'}</p></div>;
+
+const ClientDocumentsPanel = ({
+  order,
+  onUpload,
+}: {
+  order: Order;
+  onUpload: (values: UploadDocumentValues) => void | Promise<void>;
+}) => {
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const documents = order.documents || [];
+  return (
+    <Reveal>
+      <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h3 className="text-xl font-bold text-eco-900">Документы заявки</h3>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Здесь хранятся обычные файлы по заявке.</p>
+          </div>
+          <Button type="button" onClick={() => setUploadOpen(true)}>
+            <Upload size={16} className="mr-2" /> Загрузить документ
+          </Button>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {documents.map((doc) => (
+            <ClientDocumentCard key={doc.id} doc={doc} />
+          ))}
+          {!documents.length && (
+            <div className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-500 md:col-span-2">
+              Документы пока не загружены.
+            </div>
+          )}
+        </div>
+        <UploadDocumentModal
+          isOpen={uploadOpen}
+          title="Загрузить документ"
+          defaultCategory="client"
+          categories={['client', 'other']}
+          onClose={() => setUploadOpen(false)}
+          onSubmit={onUpload}
+        />
+      </div>
+    </Reveal>
+  );
+};
+
+const ClientDocumentCard = ({ doc }: { doc: DocumentItem }) => {
+  const href = doc.fileUrl || `/api/files/documents/${doc.id}`;
+  return (
+    <div className="rounded-[20px] border border-slate-100 bg-slate-50 p-4">
+      <div className="flex items-start gap-3">
+        <FileText size={20} className="shrink-0 text-eco-700" />
+        <div className="min-w-0">
+          <p className="break-words font-bold text-slate-900">{doc.name}</p>
+          <p className="mt-1 text-xs font-semibold text-slate-500">{doc.status} · {doc.uploadedAt}</p>
+        </div>
+      </div>
+      <a href={href} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">
+        <FileText size={14} /> Открыть
+      </a>
+    </div>
+  );
+};
 
 type AgreementSourceDocument = {
   id: string;
@@ -679,18 +737,24 @@ type AgreementSourceDocument = {
   uploadedBy: string;
   uploadedAt: string;
   section: string;
+  needsSignature?: boolean;
+  needsClientResponse?: boolean;
 };
 
 const getAgreementSourceDocuments = (order: Order): AgreementSourceDocument[] => {
-  const resultDocs = order.resultDocuments.map((doc) => ({
+  const resultDocs = order.resultDocuments
+    .filter((doc) => doc.sentToClient || doc.needsSignature || doc.needsClientResponse || ['sent_to_client', 'published_to_client'].includes(doc.status))
+    .map((doc) => ({
     id: `result-${doc.id}`,
     title: doc.name,
     fileName: doc.fileUrl || doc.name,
-    comment: '',
+    comment: doc.staffComment || '',
     status: doc.status,
     uploadedBy: 'Сотрудник ecoprogress.kz',
     uploadedAt: doc.uploadedAt,
     section: 'Документ от сотрудника',
+    needsSignature: doc.needsSignature,
+    needsClientResponse: doc.needsClientResponse,
   }));
   const laboratoryDocs = (order.laboratoryResultDocuments || []).map((doc) => ({
     id: `laboratory-${doc.id}`,
@@ -701,6 +765,8 @@ const getAgreementSourceDocuments = (order: Order): AgreementSourceDocument[] =>
     uploadedBy: doc.uploadedBy || 'Лаборатория ecoprogress.kz',
     uploadedAt: doc.uploadedAt || doc.readyAt || 'Дата не указана',
     section: 'Лабораторный документ',
+    needsSignature: false,
+    needsClientResponse: true,
   }));
   return [...laboratoryDocs, ...resultDocs];
 };
@@ -736,6 +802,12 @@ const ClientAgreementPanel = ({
                     <p className="font-bold text-slate-900">{doc.title}</p>
                     <p className="mt-1 break-words text-sm text-slate-600">{doc.fileName}</p>
                     <p className="mt-2 text-xs font-semibold text-slate-500">{doc.section} · {doc.uploadedBy} · {doc.uploadedAt}</p>
+                    {(doc.needsSignature || doc.needsClientResponse) && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {doc.needsSignature && <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-indigo-800 ring-1 ring-indigo-100">Нужна подпись</span>}
+                        {doc.needsClientResponse && <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800 ring-1 ring-eco-100">Нужен ответ</span>}
+                      </div>
+                    )}
                     {doc.comment && <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm text-slate-600">{doc.comment}</p>}
                   </div>
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800 ring-1 ring-eco-100">{doc.status}</span>
@@ -790,19 +862,15 @@ const ClientPrimaryDocumentsPanel = ({
   order,
   onUpload,
   onSend,
-  onDelete,
 }: {
   order: Order;
   onUpload: (document: OrderPrimaryDocument, values: UploadDocumentValues) => void | Promise<void>;
-  onSend: (comment?: string) => void | Promise<void>;
-  onDelete: (document: OrderPrimaryDocument) => void;
+  onSend: (document: OrderPrimaryDocument, comment?: string) => void | Promise<void>;
 }) => {
   const documents = order.primaryDocuments || [];
   const requiredLeft = documents.filter((doc) => doc.required && doc.status !== 'accepted').length;
-  const canSend = documents.some((doc) => doc.fileName && ['sent', 'needs_fix'].includes(doc.status));
   const [uploadDoc, setUploadDoc] = useState<OrderPrimaryDocument | null>(null);
-  const [sendOpen, setSendOpen] = useState(false);
-  const [deleteDoc, setDeleteDoc] = useState<OrderPrimaryDocument | null>(null);
+  const [sendDoc, setSendDoc] = useState<OrderPrimaryDocument | null>(null);
 
   return (
     <Reveal>
@@ -817,28 +885,49 @@ const ClientPrimaryDocumentsPanel = ({
           <span className="rounded-full bg-eco-50 px-4 py-2 text-sm font-bold text-eco-800">Осталось: {requiredLeft}</span>
         </div>
 
-        <div className="mt-5 space-y-4">
+        <div className="mt-4 space-y-3">
           {documents.map((doc) => (
-            <div key={doc.id} className="rounded-[20px] border border-slate-100 bg-slate-50 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+            <div key={doc.id} className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 sm:px-4">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
                 <div className="min-w-0">
-                  <p className="font-bold text-slate-900">{doc.name}</p>
+                  <p className="break-words font-bold text-slate-900">{doc.name}</p>
                   <p className="mt-1 text-xs font-semibold text-slate-500">{doc.required ? 'Обязательный документ' : 'Необязательный документ'}</p>
+                  <div className="mt-3 grid gap-2 md:grid-cols-3">
+                    <div className="min-w-0 rounded-xl bg-white px-3 py-2">
+                      <p className="text-[11px] font-bold uppercase text-slate-400">Файл</p>
+                      <p className="mt-1 truncate text-sm font-semibold text-slate-700">{doc.fileName || 'Не загружен'}</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-2">
+                      <p className="text-[11px] font-bold uppercase text-slate-400">Дата загрузки</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">{doc.uploadedAt || 'Нет'}</p>
+                    </div>
+                    <div className="min-w-0 rounded-xl bg-white px-3 py-2">
+                      <p className="text-[11px] font-bold uppercase text-slate-400">Комментарий менеджера</p>
+                      <p className="mt-1 truncate text-sm font-semibold text-slate-700">{doc.managerComment || 'Нет'}</p>
+                    </div>
+                  </div>
+                  {doc.clientComment && <p className="mt-2 break-words rounded-xl bg-white px-3 py-2 text-sm text-slate-600">Ваш комментарий: {doc.clientComment}</p>}
                 </div>
-                <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${primaryDocumentStatusClass(doc.status)}`}>{primaryDocumentStatusLabels[doc.status]}</span>
+                <div className="flex flex-wrap items-center justify-end gap-2 lg:min-w-[250px] lg:flex-col lg:items-end">
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${primaryDocumentStatusClass(doc.status)}`}>{primaryDocumentStatusLabels[doc.status]}</span>
+                  {doc.status !== 'accepted' && (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button type="button" className="px-4 py-2 text-xs" onClick={() => setUploadDoc(doc)}>
+                        {doc.fileName ? 'Заменить' : 'Загрузить'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={!doc.fileName || ['accepted', 'approved', 'in_review', 'under_review'].includes(doc.status)}
+                        onClick={() => setSendDoc(doc)}
+                      >
+                        Отправить
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <Info label="Файл" value={doc.fileName || 'Не загружен'} />
-                <Info label="Дата загрузки" value={doc.uploadedAt || 'Нет'} />
-                <Info label="Комментарий менеджера" value={doc.managerComment || 'Нет'} />
-              </div>
-              {doc.clientComment && <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm text-slate-600">Ваш комментарий: {doc.clientComment}</p>}
-              {doc.status !== 'accepted' && <Button type="button" className="mt-4" onClick={() => setUploadDoc(doc)}>{doc.fileName ? 'Заменить файл' : 'Загрузить документ'}</Button>}
-              {doc.fileName && doc.status !== 'accepted' && (
-                <button type="button" onClick={() => setDeleteDoc(doc)} className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-rose-700">
-                  <X size={16} /> Удалить файл
-                </button>
-              )}
             </div>
           ))}
           {!documents.length && (
@@ -848,13 +937,6 @@ const ClientPrimaryDocumentsPanel = ({
           )}
         </div>
 
-        {documents.length > 0 && (
-          <div className="mt-5 rounded-[20px] border border-eco-100 bg-eco-50 p-4">
-            <Button type="button" disabled={!canSend} className="w-full sm:w-auto" onClick={() => setSendOpen(true)}>
-              <Upload size={16} className="mr-2" /> Отправить документы
-            </Button>
-          </div>
-        )}
         <UploadDocumentModal
           isOpen={Boolean(uploadDoc)}
           title={uploadDoc?.fileName ? 'Заменить первичный документ' : 'Загрузить первичный документ'}
@@ -865,27 +947,15 @@ const ClientPrimaryDocumentsPanel = ({
           onSubmit={(values) => uploadDoc ? onUpload(uploadDoc, values) : undefined}
         />
         <ConfirmModal
-          isOpen={sendOpen}
-          title="Отправить документы на проверку?"
-          description="Менеджер получит загруженные файлы и начнет проверку."
+          isOpen={Boolean(sendDoc)}
+          title="Отправить документ на проверку?"
+          description={sendDoc?.name}
           confirmText="Отправить"
           variant="success"
-          onClose={() => setSendOpen(false)}
+          onClose={() => setSendDoc(null)}
           onConfirm={async () => {
-            await onSend('');
-            setSendOpen(false);
-          }}
-        />
-        <ConfirmModal
-          isOpen={Boolean(deleteDoc)}
-          title="Удалить файл?"
-          description={deleteDoc?.name}
-          confirmText="Удалить"
-          variant="danger"
-          onClose={() => setDeleteDoc(null)}
-          onConfirm={async () => {
-            if (deleteDoc) await onDelete(deleteDoc);
-            setDeleteDoc(null);
+            if (sendDoc) await onSend(sendDoc, '');
+            setSendDoc(null);
           }}
         />
       </div>

@@ -147,6 +147,11 @@ export type DocumentItem = {
   uploadedAt: string;
   status: string;
   fileUrl?: string;
+  sentToClient?: boolean;
+  needsSignature?: boolean;
+  needsClientResponse?: boolean;
+  staffComment?: string;
+  dueDate?: string;
 };
 
 export type QuarterDocument = {

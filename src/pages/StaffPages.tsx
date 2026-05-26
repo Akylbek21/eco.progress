@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
 import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
 import Reveal from '../components/animations/Reveal';
 import {
   CommentModal,
@@ -536,7 +537,7 @@ const collectDocuments = (orders: Order[]): StaffDocument[] =>
     }))
   );
 
-type EcoDocumentSection = 'overview' | 'projecting' | 'permit';
+type EcoDocumentSection = 'overview' | 'projecting' | 'permit' | 'laboratory';
 type EcoDocument = {
   id: string;
   requestId: string;
@@ -583,8 +584,29 @@ const ecoProjectDocumentTypes = [
   'ОВОС',
   'Согласование ОС',
 ];
+const ecoPermitDocumentTypes = [
+  'Заявление на разрешение',
+  'Пакет документов для разрешения',
+  'Ответ уполномоченного органа',
+  'Разрешение',
+  'Заключение',
+  'Иной документ по разрешению',
+];
+const laboratoryDocumentTypes = [
+  'Первичные документы',
+  'Согласование замера',
+  'Протокол',
+  '870 форма',
+  'База отчёт',
+  'Квартальный отчёт',
+  'Годовой отчёт',
+  'Полугодовой отчёт',
+  'Архив отчёт',
+  'Иной лабораторный документ',
+];
 const ecoProjectDocumentStatuses = ['Черновик', 'На проверке', 'Требует исправления', 'Согласовано', 'Готово'];
 const ecoPermitDocumentStatuses = ['Подготовка', 'На проверке', 'Отправлено', 'Принято', 'Требует исправления', 'Завершено'];
+const laboratoryDocumentStatuses = ['Загружен', 'На проверке', 'Готов', 'Отправлен клиенту', 'Требует исправления', 'Архив'];
 
 const todayLabel = () => new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 const ecoDefaultStatus = (order: Order) => {
@@ -1382,7 +1404,7 @@ const CompanyMetrics = ({ total, active, waiting, completed, dark = false }: { t
   );
 };
 
-const crmTabs = ['Обзор', 'Клиент', 'Обзор заявки', 'Документы', 'КП', 'Договор', 'Счет и оплата', 'Оплата', 'Работа специалиста', 'Проектирование', 'Разрешение', 'Экология', 'Лаборатория', 'Вывоз / Утилизация', 'Первичные документы', 'Согласование', 'Согласование замера', 'Протокол', '870 форма', 'База отчёт', 'Квартальный отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт', 'Результат', 'Комментарии', 'Сообщения', 'Заметки', 'История'] as const;
+const crmTabs = ['Обзор', 'Клиент', 'Обзор заявки', 'Документы', 'КП', 'Договор', 'Счет и оплата', 'Оплата', 'Работа специалиста', 'Проектирование', 'Разрешение', 'Экология', 'Лаборатория', 'Вывоз / Утилизация', 'Первичные документы', 'Согласование', 'Согласование замера', 'Протокол', '870 форма', 'База отчёт', 'Квартальный отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт', 'Результат', 'Завершение заявки', 'Комментарии', 'Сообщения', 'Заметки', 'История'] as const;
 type CrmTab = typeof crmTabs[number];
 
 const workflowTabTarget = (order: Order): CrmTab => {
@@ -1400,8 +1422,8 @@ const staffWorkflowTabs = (order: Order): Array<{ label: string; target: CrmTab 
   { label: 'Счет на оплату', target: 'Оплата' },
   { label: getOrderWorkStageLabel(order), target: workflowTabTarget(order) },
   { label: 'Проверка результата', target: 'Документы' },
-  { label: 'Готово', target: 'Документы' },
-  { label: 'Завершено', target: 'Документы' },
+  { label: 'Готово', target: 'Завершение заявки' },
+  { label: 'Завершено', target: 'Завершение заявки' },
 ];
 
 const staffUtilityTabs: Array<{ label: string; target: CrmTab }> = [
@@ -1412,29 +1434,22 @@ const staffUtilityTabs: Array<{ label: string; target: CrmTab }> = [
 
 const roleVisibleTabs = (role: UserRole, order: Order): CrmTab[] => {
   const tabsForOrder = (tabs: CrmTab[]) => isLaboratoryOrder(order) ? tabs.filter((tab) => tab !== 'Документы') : tabs;
-  const workTabsForOrder = (): CrmTab[] => {
-    if (isLaboratoryWorkspaceOrder(order)) return ['Первичные документы', 'Согласование замера', 'Протокол', '870 форма', 'База отчёт', 'Квартальный отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт'];
-    if (isEcologyWorkspaceOrder(order)) return ['Проектирование', 'Разрешение'];
-    return [];
-  };
-  if (role === 'MANAGER' && managerOrderStatuses.includes(order.status)) return tabsForOrder(['Обзор', 'Клиент', 'Документы', 'КП', 'Договор', 'Согласование', 'Результат', 'Комментарии', 'История']);
-  if (role === 'ACCOUNTANT') return tabsForOrder(['Обзор', 'Клиент', 'Договор', 'Счет и оплата', 'Документы', 'История']);
-  if (role === 'LABORATORY' && isLaboratoryWorkspaceOrder(order)) return ['Обзор', 'Клиент', 'Документы', 'Лаборатория', 'Согласование', 'Результат', 'Комментарии', 'История'];
-  if (role === 'WASTE_SPECIALIST') return ['Обзор', 'Клиент', 'Документы', 'Вывоз / Утилизация', 'Согласование', 'Результат', 'Комментарии', 'История'];
-  if (role === 'ECOLOGIST' || role === 'LABORATORY') return ['Обзор', 'Клиент', 'Документы', ...workTabsForOrder(), 'Работа специалиста', 'Согласование', 'Результат', 'Комментарии', 'История'];
-  if (role === 'ADMIN') {
-    const workTabs: CrmTab[] = isLaboratoryWorkspaceOrder(order) ? ['Лаборатория'] : isEcologyWorkspaceOrder(order) ? ['Проектирование', 'Разрешение'] : [];
-    return tabsForOrder(['Обзор', 'Клиент', 'Документы', 'КП', 'Договор', 'Счет и оплата', 'Работа специалиста', ...workTabs, 'Лаборатория', 'Вывоз / Утилизация', 'Согласование', 'Результат', 'Комментарии', 'История']);
-  }
-  if (role === 'DIRECTOR' || role === 'HEAD') return tabsForOrder(['Обзор', 'Клиент', 'Документы', 'КП', 'Договор', 'Счет и оплата', 'Работа специалиста', 'Лаборатория', 'Вывоз / Утилизация', 'Согласование', 'Результат', 'Комментарии', 'История']);
-  return tabsForOrder(['Обзор', 'Клиент', 'Договор', 'Документы', 'Комментарии', 'История']);
+  if (role === 'MANAGER' && managerOrderStatuses.includes(order.status)) return tabsForOrder(['Обзор', 'Первичные документы', 'Договор', 'Документы', 'Завершение заявки', 'Сообщения', 'Заметки', 'История']);
+  if (role === 'ACCOUNTANT') return tabsForOrder(['Обзор', 'Счет и оплата', 'Договор', 'Документы', 'История']);
+  if (role !== 'ADMIN' && isLaboratoryOrder(order)) return ['Обзор заявки', 'Лаборатория', 'Завершение заявки', 'История'];
+  if (role === 'ADMIN') return tabsForOrder(['Обзор', 'Первичные документы', 'Счет и оплата', 'Договор', 'Документы', 'Экология', 'Лаборатория', 'Завершение заявки', 'Сообщения', 'Заметки', 'История']);
+  if (role === 'DIRECTOR' || role === 'HEAD') return tabsForOrder(['Обзор', 'Счет и оплата', 'Договор', 'Документы', 'Экология', 'Лаборатория', 'Завершение заявки', 'Сообщения', 'Заметки', 'История']);
+  if (role === 'ECOLOGIST') return tabsForOrder(['Обзор', 'Экология', 'Документы', 'Завершение заявки', 'Сообщения', 'Заметки']);
+  if (role === 'LABORATORY') return tabsForOrder(['Обзор', 'Лаборатория', 'Документы', 'Завершение заявки', 'Сообщения', 'Заметки']);
+  if (role === 'WASTE_SPECIALIST') return tabsForOrder(['Обзор', 'Вывоз / Утилизация', 'Документы', 'Завершение заявки', 'Сообщения', 'Заметки']);
+  return tabsForOrder(['Обзор', 'Договор', 'Документы', 'Завершение заявки', 'Сообщения', 'Заметки', 'История']);
 };
 
 const roleDefaultTab = (role: UserRole, order: Order): CrmTab => {
   if (role === 'MANAGER' && managerOrderStatuses.includes(order.status)) return ['Подготовка КП', 'КП отправлено', 'КП согласовано', 'Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан'].includes(order.status) ? 'Договор' : 'Обзор';
   if (role === 'ACCOUNTANT') return 'Счет и оплата';
   if (role === 'WASTE_SPECIALIST') return 'Вывоз / Утилизация';
-  if (role === 'ECOLOGIST' && isEcologyWorkspaceOrder(order)) return 'Обзор';
+  if (role === 'ECOLOGIST') return 'Экология';
   if (role === 'LABORATORY' && isLaboratoryWorkspaceOrder(order)) return 'Лаборатория';
   if (isLaboratoryOrder(order)) return 'Лаборатория';
   if (['КП', 'Договор', 'Подготовка КП', 'КП отправлено', 'КП согласовано', 'Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан'].includes(order.status)) return 'Договор';
@@ -1622,6 +1637,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
   const access = roleAccess(role);
   const [order, setOrder] = useState<Order | undefined>();
   const [activeTab, setActiveTab] = useState<CrmTab>('Обзор');
+  const [primaryRequestOpen, setPrimaryRequestOpen] = useState(false);
   const load = () => {
     if (id) getOrderById(id).then(setOrder);
   };
@@ -2001,10 +2017,15 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
   const submitRequestPrimaryDocument = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const documentNames = form.getAll('documentNames').map(String).filter(Boolean);
+    const selectedNames = form.getAll('documentNames').map(String).filter(Boolean);
+    const customNames = String(form.get('customDocumentName') || '')
+      .split(/[,;\n]/)
+      .map((name) => name.trim())
+      .filter(Boolean);
+    const documentNames = Array.from(new Set([...selectedNames, ...customNames]));
     if (!documentNames.length) {
-      toast.error('Не удалось отправить запрос', 'Выберите хотя бы один документ.');
-      return;
+      toast.error('Не удалось отправить запрос', 'Выберите документ или напишите название нового.');
+      return false;
     }
     try {
       await Promise.all(documentNames.map((documentName) =>
@@ -2018,8 +2039,10 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
       toast.success('Запрос документов отправлен', 'Клиент увидит список документов в кабинете.');
       event.currentTarget.reset();
       load();
+      return true;
     } catch (err) {
       toast.error('Не удалось отправить запрос', errorMessage(err, 'Выберите хотя бы один документ.'));
+      return false;
     }
   };
 
@@ -2268,13 +2291,6 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               <>
                 <Section title="Обзор" icon={<ClipboardCheck size={20} />}>
                   {role === 'MANAGER' && <ManagerRequestCard order={order} />}
-                  {(role === 'MANAGER' || role === 'ADMIN') && (
-                    <ManagerPrimaryDocumentsPanel
-                      order={order}
-                      onStatus={markPrimaryDocument}
-                      onRequest={submitRequestPrimaryDocument}
-                    />
-                  )}
                   <div className="mb-5">
                     <h4 className="font-semibold text-slate-900">Очередность выполнения заявки</h4>
                     <Workflow order={order} />
@@ -2337,7 +2353,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                   <InfoTile label="Результат" value={order.resultDocuments.length ? 'Загружен' : 'Не загружен'} />
                 </div>
                 <div className="mt-5 grid gap-3 md:grid-cols-2">
-                  {isEcologyWorkspaceOrder(order) && <Button type="button" variant="secondary" onClick={() => setActiveTab('Проектирование')}>Проектирование</Button>}
+                  {isEcologyWorkspaceOrder(order) && <Button type="button" variant="secondary" onClick={() => setActiveTab('Экология')}>Экология</Button>}
                   {isLaboratoryWorkspaceOrder(order) && <Button type="button" variant="secondary" onClick={() => setActiveTab('Лаборатория')}>Лаборатория</Button>}
                   <Button type="button" variant="secondary" onClick={() => setActiveTab('Результат')}>Результат</Button>
                 </div>
@@ -2365,6 +2381,14 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                 <ResultPanel order={order} />
                 <FinalChecklistPanel order={order} />
               </>
+            )}
+
+            {currentTab === 'Завершение заявки' && (
+              <StaffCompletionPanel
+                order={order}
+                canEdit={access.manager || access.ecology || access.laboratory || access.waste || access.all}
+                onStatus={changeStatus}
+              />
             )}
 
             {currentTab === 'Комментарии' && (
@@ -2414,52 +2438,41 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
 
             {currentTab === 'Документы' && (
               <Section title="Документы" icon={<Upload size={20} />}>
-                <List title="От клиента" items={order.documents.map((d) => `${d.name} · ${d.status} · ${d.uploadedAt}`)} />
-                <List title="От ecoprogress.kz" items={order.resultDocuments.map((d) => `${d.name} · ${d.status} · ${d.uploadedAt}`)} />
-                {canAccess(role, 'edit_documents') && <StaffUploadDocumentAction onSubmit={async (values) => {
-                  if (values.file) await uploadDocument(order.id, {
-                    file: values.file,
-                    type: values.category || 'work_result',
-                    title: values.name || values.file.name,
-                    comment: values.comment,
-                    sendToClient: values.sendToClient,
-                    needsSignature: values.needsSignature,
-                    needsClientResponse: values.needsClientResponse,
-                    dueDate: values.dueDate,
-                  });
-                  onNotify?.('Документ загружен');
-                  load();
-                }} />}
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <DocumentColumn title="От клиента" documents={order.documents} />
+                  <DocumentColumn title="От ecoprogress.kz" documents={order.resultDocuments} />
+                </div>
               </Section>
             )}
 
             {currentTab === 'Экология' && (
-              <Section title="Экология" icon={<Leaf size={20} />}>
-                <div className="grid gap-3 md:grid-cols-3">
-                  <InfoTile label="Статус" value={ecologyLabel(order.ecologyStatus)} />
-                  <InfoTile label="Ответственный" value={order.assignedEcologist || 'Эколог ecoprogress.kz'} />
-                  <InfoTile label="Готово" value={order.ecologyReadyAt || 'Нет'} />
-                </div>
-                <List title="Документы" items={order.resultDocuments.filter((doc) => documentType(doc) === 'экологический документ' || documentType(doc) === 'заключение').map((doc) => `${doc.name} · ${doc.status} · ${doc.uploadedAt}`)} />
-                <form onSubmit={submitEcology} className="mt-5 grid gap-4 md:grid-cols-2">
-                  <Field label="Статус">
-                    <select name="ecologyStatus" disabled={!access.ecology} defaultValue={order.ecologyStatus || 'not_started'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100">
-                      {(['not_started', 'in_progress', 'waiting_client_data', 'done'] as EcologyStatus[]).map((status) => <option key={status} value={status}>{ecologyLabel(status)}</option>)}
-                    </select>
-                  </Field>
-                  <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий
-                    <textarea name="comment" disabled={!access.ecology} defaultValue={order.ecologyComment || ''} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" rows={3} />
-                  </label>
-                  {access.ecology && <Button>Сохранить</Button>}
-                </form>
-                {access.ecology && (
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <Button type="button" variant="secondary" onClick={() => updateEcologyStatus(order.id, 'in_progress', 'Экология в работе').then(load)}>В работу</Button>
-                    <Button type="button" variant="secondary" onClick={() => updateEcologyStatus(order.id, 'waiting_client_data', 'Нужны данные').then(load)}>Нужны данные</Button>
-                    <Button type="button" onClick={() => updateEcologyStatus(order.id, 'done', 'Экология готова').then(load)}>Готово</Button>
+              <div className="space-y-6">
+                <Section title="Экология" icon={<Leaf size={20} />}>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <InfoTile label="Статус" value={ecologyLabel(order.ecologyStatus)} />
+                    <InfoTile label="Ответственный" value={order.assignedEcologist || 'Эколог ecoprogress.kz'} />
+                    <InfoTile label="Готово" value={order.ecologyReadyAt || 'Нет'} />
                   </div>
-                )}
-              </Section>
+                  {access.ecology && (
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <Button type="button" variant="secondary" onClick={() => updateEcologyStatus(order.id, 'in_progress', 'Экология в работе').then(load)}>В работу</Button>
+                      <Button type="button" variant="secondary" onClick={() => updateEcologyStatus(order.id, 'waiting_client_data', 'Нужны данные').then(load)}>Нужны данные</Button>
+                      <Button type="button" onClick={() => updateEcologyStatus(order.id, 'done', 'Экология готова').then(load)}>Готово</Button>
+                    </div>
+                  )}
+                </Section>
+                <EcoWorkDocumentTab order={order} userName={user?.name || 'Администратор'} mode="projecting" onNotify={onNotify} />
+                <EcoWorkDocumentTab order={order} userName={user?.name || 'Администратор'} mode="permit" onNotify={onNotify} />
+                <Section title="Комментарии" icon={<MessageSquare size={20} />}>
+                  <List title="Комментарии эколога" items={order.comments.filter((c) => c.visibility === 'internal' || c.author.toLowerCase().includes('эколог')).map((c) => `${c.createdAt} · ${c.author}: ${c.text}`)} />
+                  {access.ecology && (
+                    <form onSubmit={(event) => submitComment(event, 'internal')} className="mt-5">
+                      <textarea name="comment" required placeholder="Комментарий по проектированию или разрешению" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} />
+                      <Button className="mt-4">Добавить комментарий</Button>
+                    </form>
+                  )}
+                </Section>
+              </div>
             )}
 
             {currentTab === 'Проектирование' && isEcologyWorkspaceOrder(order) && (
@@ -2471,35 +2484,10 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
             )}
 
             {currentTab === 'Первичные документы' && (
-              <Section title="Первичные документы" icon={<Upload size={20} />}>
-                <div className="space-y-4">
-                  {(order.laboratoryPrimaryDocuments || []).map((doc) => (
-                    <div key={doc.id} className="rounded-2xl border border-slate-200 p-4">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-bold text-slate-900">{doc.name}</p>
-                          <p className="mt-1 text-sm text-slate-500">{doc.fileName || 'Файл не загружен'}</p>
-                        </div>
-                        <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${laboratoryPrimaryStatusClass(doc.status)}`}>{laboratoryPrimaryStatusLabels[doc.status]}</span>
-                      </div>
-                      <div className="mt-3 grid gap-3 md:grid-cols-4">
-                        <InfoTile label="Дата загрузки" value={doc.uploadedAt || 'Нет'} />
-                        <InfoTile label="Кто загрузил" value={doc.uploadedBy || 'Нет'} />
-                        <InfoTile label="Комментарий" value={doc.employeeComment || 'Нет'} />
-                        <InfoTile label="Статус изменил" value={doc.statusChangedBy || 'Нет'} />
-                      </div>
-                      <form onSubmit={(event) => submitLaboratoryPrimaryStatus(event, doc.id)} className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_auto]">
-                        <select name="status" defaultValue={doc.status} disabled={!access.manager && !access.laboratory} className="input-focus rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100">
-                          {(['not_uploaded', 'uploaded', 'in_review', 'approved', 'revision_required', 'not_required'] as LaboratoryPrimaryDocumentStatus[]).map((status) => <option key={status} value={status}>{laboratoryPrimaryStatusLabels[status]}</option>)}
-                        </select>
-                        <input name="comment" defaultValue={doc.employeeComment || ''} disabled={!access.manager && !access.laboratory} placeholder="Комментарий сотрудника" className="input-focus rounded-2xl border border-slate-200 px-4 py-3 disabled:bg-slate-100" />
-                        {(access.manager || access.laboratory) && <Button>Сохранить</Button>}
-                      </form>
-                      {doc.history?.length > 0 && <List title="История действий" items={formatLaboratoryHistory(doc.history)} />}
-                    </div>
-                  ))}
-                </div>
-              </Section>
+              <ManagerPrimaryDocumentsPanel
+                order={order}
+                onStatus={markPrimaryDocument}
+              />
             )}
 
             {currentTab === 'Согласование замера' && (
@@ -2556,46 +2544,32 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
             )}
 
             {currentTab === 'Лаборатория' && (
-              isLaboratoryOrder(order) ? (
-                <LaboratoryWorkspace
-                  order={order}
-                  canEdit={access.laboratory}
-                  canEditLaboratoryStatus={access.laboratory}
-                  onMeasurementSubmit={submitMeasurementAgreement}
-                  onSendMeasurement={sendMeasurement}
-                  onChangeMeasurementStatus={changeMeasurementStatus}
-                  onUploadResult={submitLaboratoryResult}
-                  onResultStatus={changeLaboratoryResultStatus}
-                  onLaboratoryStatus={submitLaboratory}
-                  onSetLaboratoryStatus={(status, comment) => updateLaboratoryStatus(order.id, status, comment).then(load)}
-                  onAddComment={submitComment}
-                />
-              ) : (
+              <div className="space-y-6">
                 <Section title="Лаборатория" icon={<Microscope size={20} />}>
                   <div className="grid gap-3 md:grid-cols-3">
                     <InfoTile label="Статус" value={laboratoryLabel(order.laboratoryStatus)} />
                     <InfoTile label="Образцы" value={order.samplesReceivedAt || 'Нет'} />
                     <InfoTile label="Результат" value={order.laboratoryReadyAt || 'Нет'} />
                   </div>
-                  <List title="Документы" items={order.resultDocuments.filter((doc) => documentType(doc) === 'лабораторный результат').map((doc) => `${doc.name} · ${doc.status} · ${doc.uploadedAt}`)} />
-                  {access.laboratory ? (
-                    <form onSubmit={submitLaboratory} className="mt-5 grid gap-4 md:grid-cols-2">
-                      <Field label="Статус">
-                        <select name="laboratoryStatus" defaultValue={order.laboratoryStatus || 'not_assigned'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3">
-                          {(['not_assigned', 'waiting_samples', 'samples_received', 'analysis_in_progress', 'result_ready'] as LaboratoryStatus[]).map((status) => <option key={status} value={status}>{laboratoryLabel(status)}</option>)}
-                        </select>
-                      </Field>
-                      <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий
-                        <textarea name="comment" defaultValue={order.laboratoryComment || ''} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={3} />
-                      </label>
-                      <Button>Сохранить</Button>
+                  {access.laboratory && (
+                    <div className="mt-4 flex flex-wrap gap-3">
                       <Button type="button" variant="secondary" onClick={() => updateLaboratoryStatus(order.id, 'samples_received', 'Образцы получены').then(load)}>Образцы получены</Button>
                       <Button type="button" variant="secondary" onClick={() => updateLaboratoryStatus(order.id, 'analysis_in_progress', 'Анализ в работе').then(load)}>Анализ в работе</Button>
-                      <Button type="button" variant="secondary" onClick={() => updateLaboratoryStatus(order.id, 'result_ready', 'Результат готов').then(load)}>Результат готов</Button>
-                    </form>
-                  ) : null}
+                      <Button type="button" onClick={() => updateLaboratoryStatus(order.id, 'result_ready', 'Результат готов').then(load)}>Результат готов</Button>
+                    </div>
+                  )}
                 </Section>
-              )
+                <EcoWorkDocumentTab order={order} userName={user?.name || 'Лаборатория'} mode="laboratory" onNotify={onNotify} />
+                <Section title="Комментарии" icon={<MessageSquare size={20} />}>
+                  <List title="Комментарии лаборатории" items={order.comments.filter((c) => c.visibility === 'internal' || c.author.toLowerCase().includes('лаборатор')).map((c) => `${c.createdAt} · ${c.author}: ${c.text}`)} />
+                  {access.laboratory && (
+                    <form onSubmit={(event) => submitComment(event, 'internal')} className="mt-5">
+                      <textarea name="comment" required placeholder="Комментарий по лабораторному документу" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} />
+                      <Button className="mt-4">Добавить комментарий</Button>
+                    </form>
+                  )}
+                </Section>
+              </div>
             )}
 
             {currentTab === 'Сообщения' && (
@@ -2650,6 +2624,11 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                 {suggestedActions.map((action) => (
                   <StaffConfirmAction key={action.label} action={action} />
                 ))}
+                {(role === 'MANAGER' || role === 'ADMIN') && (
+                  <Button type="button" variant="secondary" className="w-full" onClick={() => setPrimaryRequestOpen(true)}>
+                    Запросить документы
+                  </Button>
+                )}
               </div>
               {role === 'ACCOUNTANT' && !canTransferToSpecialist(order) && ['Частично оплачено', 'Полностью оплачено'].includes(order.status) && (
                 <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">
@@ -2688,6 +2667,12 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
           </div>
         </Reveal>
       </div>
+      <RequestPrimaryDocumentsModal
+        open={primaryRequestOpen}
+        order={order}
+        onClose={() => setPrimaryRequestOpen(false)}
+        onRequest={submitRequestPrimaryDocument}
+      />
     </div>
   );
 };
@@ -3031,9 +3016,45 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
   );
 };
 
-const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order; userName: string; mode: 'projecting' | 'permit'; onNotify?: (message: string) => void }) => {
+const workDocumentConfig = {
+  projecting: {
+    title: 'Проектирование',
+    uploadTitle: 'Загрузка проектного документа',
+    commentLabel: 'Комментарий к проектному документу',
+    uploadedMessage: 'Проектный документ загружен',
+    emptyText: 'Проектные документы пока не загружены',
+    types: ecoProjectDocumentTypes,
+    statuses: ecoProjectDocumentStatuses,
+    defaultStatus: 'Черновик',
+  },
+  permit: {
+    title: 'Разрешение',
+    uploadTitle: 'Загрузка документа по разрешению',
+    commentLabel: 'Комментарий к документу по разрешению',
+    uploadedMessage: 'Документ по разрешению загружен',
+    emptyText: 'Документы по разрешению пока не загружены',
+    types: ecoPermitDocumentTypes,
+    statuses: ecoPermitDocumentStatuses,
+    defaultStatus: 'Подготовка',
+  },
+  laboratory: {
+    title: 'Лаборатория',
+    uploadTitle: 'Загрузка лабораторного документа',
+    commentLabel: 'Комментарий к лабораторному документу',
+    uploadedMessage: 'Лабораторный документ загружен',
+    emptyText: 'Лабораторные документы пока не загружены',
+    types: laboratoryDocumentTypes,
+    statuses: laboratoryDocumentStatuses,
+    defaultStatus: 'Загружен',
+  },
+} as const;
+
+type WorkDocumentMode = keyof typeof workDocumentConfig;
+
+const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order; userName: string; mode: WorkDocumentMode; onNotify?: (message: string) => void }) => {
   const [documents, setDocuments] = useState<EcoDocument[]>([]);
   const sectionDocuments = documents.filter((doc) => doc.section === mode);
+  const config = workDocumentConfig[mode];
 
   const saveRequestDocuments = (nextRequestDocuments: EcoDocument[]) => {
     setDocuments(nextRequestDocuments);
@@ -3044,10 +3065,21 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
     const form = new FormData(event.currentTarget);
     const file = form.get('file') as File | null;
     if (!file?.name) return;
-    const title = String(form.get('title') || '').trim() || file.name;
-    const documentType = String(form.get('documentType') || ecoProjectDocumentTypes[0]);
+    const documentType = String(form.get('documentType') || config.types[0]);
+    const comment = String(form.get('comment') || '');
+    const needsSignature = form.get('needsSignature') === 'on';
+    const needsClientResponse = form.get('needsClientResponse') === 'on';
+    const sendToClient = form.get('sendToClient') === 'on' || needsSignature || needsClientResponse;
     try {
-      await uploadDocument(order.id, file, 'result');
+      await uploadDocument(order.id, {
+        file,
+        type: sendToClient ? 'result' : 'client',
+        title: `${documentType}: ${file.name}`,
+        comment,
+        sendToClient,
+        needsSignature,
+        needsClientResponse,
+      });
     } catch {
       onNotify?.('Не удалось загрузить документ');
       return;
@@ -3056,21 +3088,20 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
       id: `eco-doc-${Date.now()}`,
       requestId: order.id,
       section: mode,
-      documentType: mode === 'projecting' ? documentType : undefined,
-      title: mode === 'permit' ? title : undefined,
+      documentType,
       fileName: file.name,
-      comment: String(form.get('comment') || ''),
-      status: mode === 'projecting' ? 'Черновик' : 'Подготовка',
+      comment,
+      status: sendToClient ? 'Отправлен клиенту' : config.defaultStatus,
       uploadedBy: userName,
       uploadedAt: todayLabel(),
     };
     saveRequestDocuments([nextDocument, ...documents]);
     try {
-      await addComment(order.id, `${mode === 'projecting' ? 'Загружен проектный документ' : 'Загружен документ по разрешению'}: ${mode === 'projecting' ? documentType : title}: ${file.name}`, 'internal');
+      await addComment(order.id, `${config.uploadedMessage}: ${documentType}: ${file.name}`, 'internal');
     } catch {
       onNotify?.('Не удалось сохранить заметку');
     }
-    onNotify?.(mode === 'projecting' ? 'Проектный документ загружен' : 'Документ по разрешению загружен');
+    onNotify?.(config.uploadedMessage);
     event.currentTarget.reset();
   };
 
@@ -3082,33 +3113,38 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
-      <Section title={mode === 'projecting' ? 'Загрузка проектного документа' : 'Загрузка документа по разрешению'} icon={<Upload size={20} />}>
+      <Section title={config.uploadTitle} icon={<Upload size={20} />}>
         <form onSubmit={submitDocument} className="space-y-4">
-          {mode === 'projecting' ? (
-            <Field label="Тип документа">
-              <select name="documentType" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3">
-                {ecoProjectDocumentTypes.map((type) => <option key={type}>{type}</option>)}
-              </select>
-            </Field>
-          ) : (
-            <Field label="Название документа">
-              <input name="title" required className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
-            </Field>
-          )}
+          <Field label="Тип документа">
+            <select name="documentType" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3">
+              {config.types.map((type) => <option key={type}>{type}</option>)}
+            </select>
+          </Field>
           <Field label="Файл">
             <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
           </Field>
-          <label className="text-sm font-semibold text-slate-700">{mode === 'projecting' ? 'Замечание / комментарий к документу' : 'Комментарий'}
+          <label className="text-sm font-semibold text-slate-700">{config.commentLabel}
             <textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} />
           </label>
+          <div className="grid gap-3 rounded-2xl bg-slate-50 p-4">
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <input name="sendToClient" type="checkbox" className="accent-[#38C7BA]" /> Отправить клиенту на согласование
+            </label>
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <input name="needsSignature" type="checkbox" className="accent-[#38C7BA]" /> Нужна подпись
+            </label>
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <input name="needsClientResponse" type="checkbox" className="accent-[#38C7BA]" /> Нужен ответ клиента
+            </label>
+          </div>
           <Button type="submit" className="w-full">Загрузить документ</Button>
         </form>
       </Section>
       <EcoDocumentList
         documents={sectionDocuments}
-        statusOptions={mode === 'projecting' ? ecoProjectDocumentStatuses : ecoPermitDocumentStatuses}
+        statusOptions={[...config.statuses]}
         onStatusChange={changeDocumentStatus}
-        emptyText={mode === 'projecting' ? 'Проектные документы пока не загружены' : 'Документы по разрешению пока не загружены'}
+        emptyText={config.emptyText}
       />
     </div>
   );
@@ -3216,14 +3252,11 @@ const ManagerRequestCard = ({ order }: { order: Order }) => {
 const ManagerPrimaryDocumentsPanel = ({
   order,
   onStatus,
-  onRequest,
 }: {
   order: Order;
   onStatus: (documentId: string, status: ClientPrimaryDocumentStatus, comment?: string) => void | Promise<void>;
-  onRequest: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
 }) => {
   const docs = order.primaryDocuments || [];
-  const requestedNames = new Set(docs.map((doc) => doc.name));
   return (
     <div className="mb-6 rounded-[22px] border border-slate-100 bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -3239,17 +3272,45 @@ const ManagerPrimaryDocumentsPanel = ({
         ))}
         {!docs.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Документы пока не запрошены</p>}
       </div>
-      <form onSubmit={onRequest} className="mt-5 rounded-2xl bg-slate-50 p-4">
+    </div>
+  );
+};
+
+const RequestPrimaryDocumentsModal = ({
+  open,
+  order,
+  onClose,
+  onRequest,
+}: {
+  open: boolean;
+  order: Order;
+  onClose: () => void;
+  onRequest: (event: FormEvent<HTMLFormElement>) => boolean | void | Promise<boolean | void>;
+}) => {
+  const docs = order.primaryDocuments || [];
+  const requestedNames = new Set(docs.map((doc) => doc.name));
+  return (
+    <Modal
+      isOpen={open}
+      onClose={onClose}
+      title="Запросить документы"
+      description="Выберите один или несколько первичных документов для клиента."
+      size="lg"
+    >
+      <form
+        onSubmit={async (event) => {
+          const ok = await onRequest(event);
+          if (ok !== false) onClose();
+        }}
+        className="space-y-4"
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="font-bold text-slate-900">Запросить документы</p>
-            <p className="mt-1 text-sm text-slate-500">Можно выбрать сразу несколько пунктов.</p>
-          </div>
-          <label className="flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700">
+          <p className="text-sm font-semibold text-slate-600">Можно отметить сразу несколько пунктов.</p>
+          <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
             <input name="required" type="checkbox" defaultChecked /> Обязательные
           </label>
         </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {primaryDocumentTemplates.map((name) => {
             const alreadyRequested = requestedNames.has(name);
             return (
@@ -3257,7 +3318,7 @@ const ManagerPrimaryDocumentsPanel = ({
                 key={name}
                 className={`flex min-h-[48px] items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                   alreadyRequested
-                    ? 'cursor-not-allowed border-slate-200 bg-white/60 text-slate-400'
+                    ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400'
                     : 'cursor-pointer border-slate-200 bg-white text-slate-700 hover:border-eco-200 hover:bg-eco-50'
                 }`}
               >
@@ -3267,7 +3328,16 @@ const ManagerPrimaryDocumentsPanel = ({
             );
           })}
         </div>
-        <label className="flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700">
+        <label className="block text-sm font-semibold text-slate-700">
+          Создать свой первичный документ
+          <input
+            name="customDocumentName"
+            placeholder="Например: Паспорт отходов или схема точек отбора"
+            className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+          />
+          <span className="mt-1 block text-xs font-medium text-slate-500">Можно указать несколько через запятую.</span>
+        </label>
+        <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
           <input
             type="checkbox"
             onChange={(event) => {
@@ -3279,9 +3349,54 @@ const ManagerPrimaryDocumentsPanel = ({
           />
           Выбрать все незапрошенные
         </label>
-        <input name="comment" placeholder="Комментарий для клиента" className="input-focus mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" />
-        <Button type="submit" className="mt-3 w-full">Запросить выбранные документы</Button>
+        <input name="comment" placeholder="Комментарий для клиента" className="input-focus w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" />
+        <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+          <Button type="button" variant="secondary" onClick={onClose}>Отмена</Button>
+          <Button type="submit">Запросить выбранные документы</Button>
+        </div>
       </form>
+    </Modal>
+  );
+};
+
+const StaffCompletionPanel = ({
+  order,
+  canEdit,
+  onStatus,
+}: {
+  order: Order;
+  canEdit: boolean;
+  onStatus: (status: OrderStatus) => void | Promise<void>;
+}) => {
+  const completed = ['Готово', 'Завершено'].includes(order.status);
+  const resultDocuments = order.resultDocuments.filter((doc) => doc.type === 'result' || doc.status === 'published_to_client' || doc.sentToClient);
+  return (
+    <div className="space-y-6">
+      <Section title="Завершение заявки" icon={<CheckCircle2 size={20} />}>
+        <div className="grid gap-3 md:grid-cols-4">
+          <InfoTile label="Текущий статус" value={order.status} />
+          <InfoTile label="Результатов" value={String(resultDocuments.length)} />
+          <InfoTile label="Оплата" value={paymentStatusLabels[fallbackPaymentStatus(order.paymentStatus)]} />
+          <InfoTile label="Ответственный" value={order.manager || 'Не назначен'} />
+        </div>
+        <div className={`mt-5 rounded-2xl p-4 ${completed ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-900'}`}>
+          <p className="text-sm font-bold">
+            {completed ? 'Заявка находится в финальном статусе.' : 'Проверьте результат, документы и оплату перед закрытием заявки.'}
+          </p>
+        </div>
+        {canEdit && (
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Button type="button" variant="secondary" disabled={order.status === 'Готово'} onClick={() => onStatus('Готово')}>
+              Отметить готово
+            </Button>
+            <Button type="button" variant="success" disabled={order.status === 'Завершено'} onClick={() => onStatus('Завершено')}>
+              Завершить заявку
+            </Button>
+          </div>
+        )}
+      </Section>
+      <ResultPanel order={order} />
+      <FinalChecklistPanel order={order} />
     </div>
   );
 };
@@ -3294,6 +3409,15 @@ const ManagerPrimaryDocumentRow = ({
   onStatus: (documentId: string, status: ClientPrimaryDocumentStatus, comment?: string) => void | Promise<void>;
 }) => {
   const [comment, setComment] = useState(doc.managerComment || '');
+  const [action, setAction] = useState('');
+  const hasFile = Boolean(doc.fileName || doc.fileUrl);
+  const documentHref = doc.fileUrl || `/api/files/primary-documents/${encodeURIComponent(doc.id)}`;
+  const submitAction = async (nextAction: string) => {
+    setAction(nextAction);
+    if (!nextAction) return;
+    await onStatus(doc.id, nextAction as ClientPrimaryDocumentStatus, comment);
+    setAction('');
+  };
   return (
     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -3307,8 +3431,30 @@ const ManagerPrimaryDocumentRow = ({
       </div>
       <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto_auto]">
         <input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Комментарий клиенту" className="input-focus rounded-2xl border border-slate-200 bg-white px-4 py-3" />
-        <Button type="button" variant="secondary" disabled={!doc.fileName} onClick={() => onStatus(doc.id, 'accepted', comment)}>Принять документ</Button>
-        <Button type="button" variant="secondary" disabled={!doc.fileName} onClick={() => onStatus(doc.id, 'needs_fix', comment)}>Запросить исправление</Button>
+        <a
+          href={documentHref}
+          target="_blank"
+          rel="noreferrer"
+          aria-disabled={!hasFile}
+          className={`inline-flex min-h-[44px] items-center justify-center rounded-2xl px-4 py-3 text-sm font-bold transition ${
+            hasFile
+              ? 'bg-white text-eco-900 ring-1 ring-slate-200 hover:bg-eco-50'
+              : 'pointer-events-none bg-white text-slate-400 ring-1 ring-slate-100'
+          }`}
+        >
+          Открыть
+        </a>
+        <select
+          value={action}
+          disabled={!hasFile}
+          onChange={(event) => submitAction(event.target.value)}
+          className="input-focus min-h-[44px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-eco-900 disabled:bg-slate-100 disabled:text-slate-400"
+        >
+          <option value="">Действие</option>
+          <option value="accepted">Принять</option>
+          <option value="needs_fix">Запросить исправление</option>
+          <option value="rejected">Отклонить</option>
+        </select>
       </div>
     </div>
   );
@@ -3591,6 +3737,34 @@ const List = ({ title, items }: { title: string; items: string[] }) => (
     <h4 className="font-semibold text-slate-900">{title}</h4>
     <div className="mt-3 space-y-2">
       {items.length ? items.map((item) => <p key={item} className="overflow-hidden rounded-2xl bg-slate-50 p-3 text-sm leading-snug text-slate-700">{item}</p>) : <p className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-500">Нет данных</p>}
+    </div>
+  </div>
+);
+
+const DocumentColumn = ({ title, documents }: { title: string; documents: DocumentItem[] }) => (
+  <div className="min-w-0">
+    <h4 className="font-semibold text-slate-900">{title}</h4>
+    <div className="mt-3 space-y-3">
+      {documents.map((document) => {
+        const href = document.fileUrl || `/api/files/documents/${encodeURIComponent(document.id)}`;
+        return (
+          <div key={document.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <div className="min-w-0">
+              <p className="break-words text-sm font-bold text-slate-900">{document.name}</p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">{document.status} · {document.uploadedAt}</p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a href={href} target="_blank" rel="noreferrer" className="rounded-full bg-white px-3 py-2 text-xs font-bold text-eco-800 ring-1 ring-eco-100">
+                Открыть
+              </a>
+              <a href={href} download={document.name} className="rounded-full bg-eco-900 px-3 py-2 text-xs font-bold text-white">
+                Скачать
+              </a>
+            </div>
+          </div>
+        );
+      })}
+      {!documents.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Документов нет</p>}
     </div>
   </div>
 );
