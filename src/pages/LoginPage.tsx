@@ -26,7 +26,9 @@ const LoginPage = ({ staff = false, onSuccess }: { staff?: boolean; onSuccess?: 
         navigate('/cabinet');
       }
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Ошибка входа. Проверьте email и пароль.';
+      const msg = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err as Error)?.message
+        || 'Ошибка входа. Проверьте email и пароль.';
       setError(msg);
       toast.error('Ошибка входа', msg);
     } finally {

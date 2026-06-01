@@ -45,7 +45,7 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  if (token?.startsWith('mock-session')) {
+  if (import.meta.env.DEV && token?.startsWith('mock-session')) {
     config.adapter = async (mockConfig) => mockResponse(mockConfig);
   }
   return config;
@@ -54,6 +54,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const message = error.response?.data?.message;
+    if (typeof message === 'string' && message.trim()) {
+      error.message = message;
+    }
     if (error.response?.status === 401) {
       localStorage.removeItem('eco-progress-token');
       localStorage.removeItem('eco-progress-user');
@@ -113,7 +117,31 @@ const mockResponse = async (config: InternalAxiosRequestConfig): Promise<AxiosRe
   if (method === 'get' && ['/staff/debts', '/client/debts'].includes(path)) return ok(config, financeDebts);
   if (method === 'get' && path === '/staff/payment-transactions') return ok(config, paymentTransactions);
 
-  if (parts[1] === 'payments' && method !== 'get') return ok(config, paymentRecords[0]);
+  if (parts[1] === 'payments' && method !== 'get') {
+    const paymentId = parts[2];
+    const record = paymentRecords.find((item) => item.id === paymentId);
+    const requestId = String(record?.requestId || paymentId || '');
+    const order = getMockOrderById(requestId);
+    if (parts[3] === 'partial' && method === 'post') {
+      const amount = Number(payload.amount || 0);
+      return ok(config, updateMockPayment(requestId, 'partial' as never, {
+        totalAmount: order?.totalAmount || order?.contractAmount || record?.totalAmount || 0,
+        paidAmount: (order?.paidAmount || 0) + amount,
+        method: payload.method ? String(payload.method) : undefined,
+        comment: payload.comment ? String(payload.comment) : undefined,
+      }));
+    }
+    if (parts[3] === 'mark-paid' && method === 'post') {
+      const total = order?.totalAmount || order?.contractAmount || record?.totalAmount || 0;
+      return ok(config, updateMockPayment(requestId, 'paid' as never, {
+        totalAmount: total,
+        paidAmount: total,
+        method: order?.paymentMethod || record?.paymentMethod,
+        comment: 'Оплата закрыта полностью',
+      }));
+    }
+    return ok(config, paymentRecords[0]);
+  }
   if (parts[1] === 'debts' && method !== 'get') return ok(config, financeDebts[0]);
 
   if ((parts[0] === 'staff' || parts[0] === 'client') && parts[1] === 'orders') {
@@ -167,6 +195,14 @@ const mockResponse = async (config: InternalAxiosRequestConfig): Promise<AxiosRe
     if (scope === 'staff' && orderId && parts[3] === 'payment' && method === 'patch') {
       return ok(config, updateMockPayment(orderId, String(payload.paymentStatus || 'pending') as never, {
         method: payload.paymentMethod ? String(payload.paymentMethod) : undefined,
+        totalAmount: payload.totalAmount ? String(payload.totalAmount) : undefined,
+        paidAmount: payload.paidAmount ? String(payload.paidAmount) : undefined,
+        paidAt: payload.paidAt ? String(payload.paidAt) : undefined,
+        comment: payload.comment ? String(payload.comment) : undefined,
+        invoiceNumber: payload.invoiceNumber ? String(payload.invoiceNumber) : undefined,
+        invoiceFileName: payload.invoiceFileName ? String(payload.invoiceFileName) : undefined,
+        invoiceDate: payload.invoiceDate ? String(payload.invoiceDate) : undefined,
+        dueDate: payload.dueDate ? String(payload.dueDate) : undefined,
       }));
     }
 
@@ -270,15 +306,6 @@ const mockResponse = async (config: InternalAxiosRequestConfig): Promise<AxiosRe
       comment: payload.comment ? String(payload.comment) : undefined,
       createdBy: 'Local demo',
       createdAt: new Date().toISOString(),
-    });
-
-    if (scope === 'staff' && orderId && parts[3] === 'contract' && method === 'post') return ok(config, {
-      id: `CON-${Date.now()}`,
-      orderId,
-      status: String(payload.status || 'preparing'),
-      type: String(payload.type || 'complex'),
-      amount: Number(payload.amount || 0),
-      comment: payload.comment ? String(payload.comment) : undefined,
     });
 
     if (scope === 'staff' && orderId && parts[3] === 'invoice-payment' && method === 'post') return ok(config, {

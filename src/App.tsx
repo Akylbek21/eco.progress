@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import PublicLayout from './layouts/PublicLayout';
 import CabinetLayout from './layouts/CabinetLayout';
 import StaffLayout from './layouts/StaffLayout';
@@ -58,6 +58,23 @@ const StaffAccess = ({ roles, children }: { roles?: UserRole[]; children: ReactN
   return <StaffDashboardPage />;
 };
 
+const ForbiddenPage = () => (
+  <div className="flex min-h-[60vh] items-center justify-center px-5">
+    <div className="max-w-md rounded-[24px] bg-white p-8 text-center shadow-sm">
+      <h1 className="text-2xl font-bold text-eco-900">Нет доступа</h1>
+      <p className="mt-2 text-sm leading-6 text-slate-600">У вашей роли нет прав для открытия этого раздела.</p>
+    </div>
+  </div>
+);
+
+const RoleAccess = ({ roles, loginPath, children }: { roles: UserRole[]; loginPath: string; children: ReactNode }) => {
+  const { user, loading, isAuthenticated } = useAuth();
+  if (loading) return null;
+  if (!isAuthenticated) return <Navigate to={loginPath} replace />;
+  if (!user?.role || !roles.includes(user.role)) return <ForbiddenPage />;
+  return <>{children}</>;
+};
+
 function App() {
   const toast = useToast();
   const notify = (message: string) => {
@@ -111,36 +128,36 @@ function App() {
         <Route path="/register" element={<RegisterPage onSuccess={notify} />} />
         <Route path="/staff/login" element={<LoginPage staff onSuccess={notify} />} />
 
-        <Route path="/cabinet" element={<CabinetLayout><CabinetDashboardPage /></CabinetLayout>} />
-        <Route path="/cabinet/orders" element={<CabinetLayout><CabinetOrdersPage /></CabinetLayout>} />
-        <Route path="/cabinet/orders/new" element={<CabinetLayout><CabinetNewOrderPage onNotify={notify} /></CabinetLayout>} />
-        <Route path="/cabinet/orders/:id" element={<CabinetLayout><CabinetOrderDetailsPage onNotify={notify} /></CabinetLayout>} />
-        <Route path="/cabinet/documents" element={<CabinetLayout><CabinetDocumentsPage /></CabinetLayout>} />
-        <Route path="/cabinet/payments" element={<CabinetLayout><CabinetPaymentsPage /></CabinetLayout>} />
-        <Route path="/cabinet/company" element={<CabinetLayout><CabinetCompanyPage /></CabinetLayout>} />
-        <Route path="/cabinet/notifications" element={<CabinetLayout><CabinetNotificationsPage /></CabinetLayout>} />
+        <Route path="/cabinet" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetDashboardPage /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/orders" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetOrdersPage /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/orders/new" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetNewOrderPage onNotify={notify} /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/orders/:id" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetOrderDetailsPage onNotify={notify} /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/documents" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetDocumentsPage /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/payments" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetPaymentsPage /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/company" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetCompanyPage /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/notifications" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetNotificationsPage /></CabinetLayout></RoleAccess>} />
 
-        <Route path="/staff" element={<StaffLayout><StaffDashboardPage /></StaffLayout>} />
-        <Route path="/staff/orders" element={<StaffLayout><StaffOrdersPage /></StaffLayout>} />
-        <Route path="/staff/orders/new" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER']}><StaffNewOrderPage onNotify={notify} /></StaffAccess></StaffLayout>} />
-        <Route path="/staff/orders/company/:businessCompanyId" element={<StaffLayout><StaffOrdersPage /></StaffLayout>} />
-        <Route path="/staff/orders/:id" element={<StaffLayout><StaffOrderDetailsPage onNotify={notify} /></StaffLayout>} />
-        <Route path="/staff/clients" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout>} />
-        <Route path="/staff/clients/:companyKey" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout>} />
-        <Route path="/staff/commercial-offers" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER']}><StaffCommercialOffersPage /></StaffAccess></StaffLayout>} />
-        <Route path="/staff/contracts" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER', 'ACCOUNTANT']}><StaffContractsPage /></StaffAccess></StaffLayout>} />
-        <Route path="/staff/tasks" element={<StaffLayout><StaffTasksPage /></StaffLayout>} />
-        <Route path="/staff/documents" element={<StaffLayout><StaffDocumentsPage /></StaffLayout>} />
-        <Route path="/staff/documents/:orderId" element={<StaffLayout><StaffDocumentsPage /></StaffLayout>} />
-        <Route path="/staff/payments" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout>} />
-        <Route path="/staff/calendar" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'WASTE_SPECIALIST']}><StaffCalendarPage /></StaffAccess></StaffLayout>} />
-        <Route path="/staff/reports" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT']}><StaffReportsPage /></StaffAccess></StaffLayout>} />
-        <Route path="/staff/user-roles" element={<StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD']}><StaffUserRolesPage /></StaffAccess></StaffLayout>} />
-        <Route path="/staff/notifications" element={<StaffLayout><StaffNotificationsPage /></StaffLayout>} />
-        <Route path="/staff/profile" element={<StaffLayout><StaffProfilePage /></StaffLayout>} />
-        <Route path="/dashboard/payments" element={<StaffLayout><PaymentsPage /></StaffLayout>} />
+        <Route path="/staff" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffDashboardPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/orders" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffOrdersPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/orders/new" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffNewOrderPage onNotify={notify} /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/orders/company/:businessCompanyId" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffOrdersPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/orders/:id" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffOrderDetailsPage onNotify={notify} /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/clients" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/clients/:companyKey" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/commercial-offers" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffCommercialOffersPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/contracts" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER', 'ACCOUNTANT']}><StaffContractsPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/tasks" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffTasksPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/documents" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffDocumentsPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/documents/:orderId" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffDocumentsPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/calendar" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']}><StaffCalendarPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/reports" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><StaffReportsPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/user-roles" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN']}><StaffUserRolesPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/notifications" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffNotificationsPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/profile" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffProfilePage /></StaffLayout></RoleAccess>} />
+        <Route path="/dashboard/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><PaymentsPage /></StaffLayout></RoleAccess>} />
 
-        <Route path="/admin" element={<AdminLayout><AdminPage /></AdminLayout>} />
+        <Route path="/admin" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminPage /></AdminLayout></RoleAccess>} />
         <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
       </Routes>
     </div>

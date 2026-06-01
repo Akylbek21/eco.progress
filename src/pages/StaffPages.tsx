@@ -51,9 +51,9 @@ import {
 } from '../components/crm/StaffOrderCrmPanels';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getOrderById, getOrders, requestPrimaryDocument, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
+import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, applyPartialPayment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getOrderById, getOrders, markPaymentPaid, requestPrimaryDocument, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadContractDocument, uploadDocument, uploadInvoiceDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
 import type { CreateClientPayload, StaffCreateOrderPayload } from '../services/staffOrderService';
-import { createCommercialOffer, createStaffManualOrder, getStaffCalendar, getTasks, saveContractDetails, saveInvoicePayment, saveTask, saveWasteRemoval, sendDocumentToClient, updateTaskStatus } from '../services/crmWorkflowService';
+import { createCommercialOffer, createStaffManualOrder, getStaffCalendar, getTasks, saveTask, saveWasteRemoval, sendDocumentToClient, updateTaskStatus } from '../services/crmWorkflowService';
 import { getServices } from '../services/serviceService';
 import { primaryDocumentTemplates } from '../services/orderService';
 import { getBusinessCompanyById, statusDescriptions } from '../utils/crm';
@@ -368,7 +368,6 @@ const managerActionFlow: Array<{ label: string; target: OrderStatus; from: Order
   { label: 'Договор отправлен', target: 'Договор отправлен', from: ['Подготовка договора'], contractStatus: 'sent_to_client' },
   { label: 'Ожидаем подпись договора', target: 'Ожидаем подпись договора', from: ['Договор отправлен'], contractStatus: 'waiting_signature' },
   { label: 'Договор подписан', target: 'Договор подписан', from: ['Договор отправлен', 'Ожидаем подпись договора'], contractStatus: 'signed' },
-  { label: 'Передать бухгалтеру', target: 'Передано бухгалтеру', from: ['Договор подписан'] },
 ];
 
 const accountantStatusGroups: Array<{ title: string; statuses: OrderStatus[]; description: string }> = [
@@ -1651,6 +1650,12 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
   const currentTab = visibleTabs.includes(activeTab) ? activeTab : roleDefaultTab(role, order);
   const errorMessage = (err: unknown, fallback: string) =>
     (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (err as Error)?.message || fallback;
+  const refreshOrder = async () => {
+    const next = await getOrderById(order.id);
+    if (next) setOrder(next);
+    return next;
+  };
+  const successMessage = (message: string | null | undefined, fallback: string) => message || fallback;
 
   const changeStatus = async (status: OrderStatus) => {
     try {
@@ -1932,17 +1937,25 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     const form = new FormData(event.currentTarget);
     const contract = form.get('contract') as File | null;
     try {
-      await sendContractAndInvoice(order.id, {
-        amount: String(form.get('amount')),
-        contractFileName: contract?.name,
-        contractPeriodStart: String(form.get('contractPeriodStart') || ''),
-        contractPeriodEnd: String(form.get('contractPeriodEnd') || ''),
-        contractServiceNote: String(form.get('contractServiceNote') || ''),
-        contractNote: String(form.get('contractNote') || ''),
-      });
-      toast.success('Договор отправлен клиенту', 'Клиент сможет скачать и подписать договор.');
+      const result = contract?.name
+        ? await uploadContractDocument(order.id, {
+          file: contract,
+          comment: String(form.get('contractNote') || '') || 'Подпишите договор через ЭЦП',
+          dueDate: String(form.get('contractPeriodEnd') || ''),
+        })
+        : await sendContractAndInvoice(order.id, {
+          amount: String(form.get('amount')),
+          paymentMethod: order.paymentMethod || 'bank_transfer',
+          signatureProvider: order.signatureProvider || 'NCALayer',
+          contractFileName: order.contractFileName || undefined,
+          contractPeriodStart: String(form.get('contractPeriodStart') || ''),
+          contractPeriodEnd: String(form.get('contractPeriodEnd') || ''),
+          contractServiceNote: String(form.get('contractServiceNote') || ''),
+          contractNote: String(form.get('contractNote') || ''),
+        });
+      await refreshOrder();
+      toast.success(successMessage(result.message, 'Договор отправлен клиенту'), 'Клиент сможет скачать и подписать договор.');
       event.currentTarget.reset();
-      load();
     } catch (err) {
       toast.error('Не удалось отправить договор', errorMessage(err, 'Проверьте номер, сумму и файл договора.'));
     }
@@ -1954,16 +1967,24 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
       return;
     }
     try {
-      await sendContractAndInvoice(order.id, {
-        amount: values.amount,
-        contractFileName: values.file?.name,
-        contractPeriodStart: values.periodStart,
-        contractPeriodEnd: values.periodEnd,
-        contractServiceNote: order.service,
-        contractNote: values.comment,
-      });
-      toast.success('Договор отправлен клиенту', 'Клиент сможет скачать и подписать договор.');
-      load();
+      const result = values.file
+        ? await uploadContractDocument(order.id, {
+          file: values.file,
+          comment: values.comment || 'Подпишите договор через ЭЦП',
+          dueDate: values.periodEnd,
+        })
+        : await sendContractAndInvoice(order.id, {
+          amount: values.amount,
+          paymentMethod: order.paymentMethod || 'bank_transfer',
+          signatureProvider: order.signatureProvider || 'NCALayer',
+          contractFileName: values.contractNumber || order.contractFileName || undefined,
+          contractPeriodStart: values.periodStart,
+          contractPeriodEnd: values.periodEnd,
+          contractServiceNote: order.service,
+          contractNote: values.comment,
+        });
+      await refreshOrder();
+      toast.success(successMessage(result.message, 'Договор отправлен клиенту'), 'Клиент сможет скачать и подписать договор.');
     } catch (err) {
       toast.error('Не удалось отправить договор', errorMessage(err, 'Проверьте номер, сумму и файл договора.'));
       throw err;
@@ -2105,32 +2126,6 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     load();
   };
 
-  const submitFullContract = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!access.manager && !access.finance) {
-      toast.warning('Действие недоступно', 'Договор может редактировать менеджер, бухгалтер или администратор.');
-      return;
-    }
-    const form = new FormData(event.currentTarget);
-    try {
-      await saveContractDetails(order.id, {
-        number: String(form.get('number') || ''),
-        contractDate: String(form.get('contractDate') || ''),
-        amount: Number(form.get('amount') || 0),
-        type: String(form.get('type') || 'one_time') as never,
-        startDate: String(form.get('startDate') || ''),
-        endDate: String(form.get('endDate') || ''),
-        comment: String(form.get('comment') || ''),
-        file: form.get('file') as File | null,
-        signedFile: form.get('signedFile') as File | null,
-      });
-      toast.success('Договор сохранен', 'Данные договора готовы для backend.');
-      load();
-    } catch (err) {
-      toast.error('Договор не сохранен', errorMessage(err, 'Backend договора пока может быть не подключен.'));
-    }
-  };
-
   const sendFullContract = async (formElement: HTMLFormElement) => {
     if (!access.manager && !access.finance) {
       toast.warning('Действие недоступно', 'Договор может отправить менеджер, бухгалтер или администратор.');
@@ -2138,17 +2133,40 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     }
     const form = new FormData(formElement);
     const contractFile = form.get('file') as File | null;
+    const number = String(form.get('number') || '').trim();
+    const contractDate = String(form.get('contractDate') || '').trim();
+    const amount = String(form.get('amount') || '').trim();
+    const type = String(form.get('type') || '').trim();
+    const startDate = String(form.get('startDate') || '').trim();
+    const endDate = String(form.get('endDate') || '').trim();
+    const comment = String(form.get('comment') || '').trim() || 'Подпишите договор через ЭЦП';
+    const missing = [
+      !number && 'номер договора',
+      !contractDate && 'дата договора',
+      !amount && 'сумма',
+      !type && 'тип договора',
+      !startDate && 'дата начала',
+      !endDate && 'дата окончания',
+      !contractFile?.name && 'файл договора',
+    ].filter(Boolean);
+    if (missing.length) {
+      toast.error('Заполните договор', `Не указано: ${missing.join(', ')}.`);
+      return;
+    }
+    const isPdf = contractFile?.type === 'application/pdf' || contractFile?.name.toLowerCase().endsWith('.pdf');
+    if (!contractFile || !isPdf) {
+      toast.error('Неверный формат', 'Загрузите договор в формате PDF.');
+      return;
+    }
     try {
-      await sendContractAndInvoice(order.id, {
-        amount: String(form.get('amount') || order.contractAmount || order.totalAmount || 0),
-        contractFileName: contractFile?.name || order.contractFileName,
-        contractPeriodStart: String(form.get('startDate') || order.contractPeriodStart || ''),
-        contractPeriodEnd: String(form.get('endDate') || order.contractPeriodEnd || ''),
-        contractServiceNote: order.service,
-        contractNote: String(form.get('comment') || order.contractNote || ''),
+      const documentResult = await uploadContractDocument(order.id, {
+        file: contractFile,
+        comment,
+        dueDate: endDate,
       });
-      toast.success('Договор отправлен клиенту', 'Клиент сможет скачать и подписать договор.');
-      load();
+      const statusResult = await updateContractStatus(order.id, 'waiting_signature', 'Договор отправлен клиенту на подписание');
+      await refreshOrder();
+      toast.success(successMessage(statusResult.message || documentResult.message, 'Договор отправлен клиенту'), 'Клиент сможет скачать и подписать договор через ЭЦП.');
     } catch (err) {
       toast.error('Не удалось отправить договор', errorMessage(err, 'Проверьте номер, сумму и файл договора.'));
     }
@@ -2161,20 +2179,72 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
       return;
     }
     const form = new FormData(event.currentTarget);
+    const invoiceFile = form.get('invoiceFile') as File | null;
+    const comment = String(form.get('accountantComment') || '');
+    const dueDate = String(form.get('dueDate') || '');
+    const invoiceNumber = String(form.get('invoiceNumber') || '');
+    const invoiceAmount = String(form.get('invoiceAmount') || orderFinance(order).total || order.contractAmount || order.totalAmount || '');
+    const paymentMethod = String(form.get('paymentMethod') || order.paymentMethod || 'bank_transfer');
     try {
-      await saveInvoicePayment(order.id, {
-        invoiceNumber: String(form.get('invoiceNumber') || ''),
-        invoiceAmount: Number(form.get('invoiceAmount') || 0),
+      const documentResult = invoiceFile?.name
+        ? await uploadInvoiceDocument(order.id, {
+          file: invoiceFile,
+          comment,
+          dueDate,
+        })
+        : null;
+      const paymentResult = await updatePaymentStatus(order.id, 'pending', {
+        paymentMethod,
+        invoiceNumber,
+        totalAmount: invoiceAmount,
         invoiceDate: String(form.get('invoiceDate') || ''),
-        dueDate: String(form.get('dueDate') || ''),
-        accountantComment: String(form.get('accountantComment') || ''),
-        invoiceFile: form.get('invoiceFile') as File | null,
-        paymentOrder: form.get('paymentOrder') as File | null,
+        dueDate,
+        comment,
+        invoiceFileName: invoiceFile?.name || order.invoiceFileName,
       });
-      toast.success('Счет сохранен', 'Данные оплаты готовы для backend.');
-      load();
+      await refreshOrder();
+      toast.success(successMessage(paymentResult.message || documentResult?.message, 'Счет отправлен клиенту'), 'Заявка обновлена после отправки счета.');
     } catch (err) {
-      toast.error('Счет не сохранен', errorMessage(err, 'Backend счета пока может быть не подключен.'));
+      toast.error('Счет не отправлен', errorMessage(err, 'Проверьте номер, сумму и файл счета.'));
+      throw err;
+    }
+  };
+
+  const submitInvoicePaymentStatus = async (values: { status: 'not_paid' | 'partial' | 'paid' | 'debt'; amount: string; paidAt: string; method: string; comment: string }) => {
+    if (!access.finance) {
+      toast.warning('Действие недоступно', 'Оплату может менять бухгалтер или администратор.');
+      return;
+    }
+    const paymentId = order.paymentId || order.id;
+    try {
+      let message: string | null | undefined;
+      if (values.status === 'partial') {
+        if (!values.amount || Number(values.amount) <= 0) {
+          toast.error('Укажите сумму', 'Для частичной оплаты нужна сумма платежа.');
+          return;
+        }
+        const comment = [values.paidAt ? `Дата оплаты: ${values.paidAt}` : '', values.comment].filter(Boolean).join('. ');
+        const result = await applyPartialPayment(paymentId, {
+          amount: values.amount,
+          method: values.method || order.paymentMethod || 'bank_transfer',
+          comment,
+        });
+        message = result.message;
+      } else if (values.status === 'paid') {
+        const result = await markPaymentPaid(paymentId);
+        message = result.message;
+      } else {
+        const result = await updatePaymentStatus(order.id, values.status === 'debt' ? 'debt' : 'not_paid', {
+          paymentMethod: values.method || order.paymentMethod || 'bank_transfer',
+          comment: values.comment,
+        });
+        message = result.message;
+      }
+      await refreshOrder();
+      toast.success(successMessage(message, values.status === 'paid' ? 'Оплата закрыта' : 'Статус оплаты обновлен'));
+    } catch (err) {
+      toast.error('Оплата не применена', errorMessage(err, 'Не удалось обновить оплату.'));
+      throw err;
     }
   };
 
@@ -2241,13 +2311,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     ? managerActionFlow.filter((action) => action.from.includes(order.status))
     : [];
   const accountantActions = role === 'ACCOUNTANT' ? [
-    order.status === 'Передано бухгалтеру' && { label: 'Выставить счет', onClick: () => setAccountantPayment('awaiting_invoice', 'Бухгалтер принял заявку и готовит счет'), variant: 'primary' as const },
-    ['Передано бухгалтеру', 'Ожидает счет'].includes(order.status) && { label: 'Прикрепить счет', onClick: () => setActiveTab('Счет и оплата'), variant: 'secondary' as const },
-    ['Ожидает счет'].includes(order.status) && { label: 'Отправить счет клиенту', onClick: () => setAccountantPayment('invoice_sent', 'Счет отправлен клиенту'), variant: 'primary' as const },
-    ['Счет отправлен'].includes(order.status) && { label: 'Ожидаем оплату', onClick: () => setAccountantPayment('awaiting_payment', 'Ожидаем оплату по счету'), variant: 'secondary' as const },
-    ['Счет отправлен', 'Ожидаем оплату', 'Частично оплачено'].includes(order.status) && { label: 'Отметить частичную оплату', onClick: () => setActiveTab('Счет и оплата'), variant: 'secondary' as const },
-    ['Счет отправлен', 'Ожидаем оплату', 'Частично оплачено'].includes(order.status) && { label: 'Отметить полную оплату', onClick: () => setAccountantPayment('paid', 'Полная оплата подтверждена'), variant: 'success' as const },
-    orderFinance(order).remaining > 0 && ['Ожидаем оплату', 'Частично оплачено'].includes(order.status) && { label: 'Отметить задолженность', onClick: () => setAccountantPayment('debt', 'Есть задолженность по оплате'), variant: 'secondary' as const },
+    ['Передано бухгалтеру', 'Ожидает счет', 'Счет отправлен', 'Ожидаем оплату', 'Частично оплачено'].includes(order.status) && { label: 'Счет и оплата', onClick: () => setActiveTab('Счет и оплата'), variant: 'primary' as const },
     ['Частично оплачено', 'Полностью оплачено'].includes(order.status) && { label: 'Передать специалисту', onClick: () => setAccountantPayment('transferred_to_specialist', 'Заявка передана специалисту'), variant: 'success' as const, disabled: !canTransferToSpecialist(order) },
   ].filter(Boolean) as Array<{ label: string; onClick: () => void | Promise<void>; variant: 'primary' | 'secondary' | 'success'; disabled?: boolean }> : [];
   const suggestedActions = role === 'ACCOUNTANT' ? accountantActions : role === 'MANAGER' && managerOrderStatuses.includes(order.status) ? [
@@ -2359,12 +2423,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                 canEdit={access.finance || access.all}
                 canConfirm={access.finance || access.all}
                 onSubmit={submitInvoicePayment}
-                onQuickStatus={async (status) => {
-                  if (status === 'paid') await setAccountantPayment('paid', 'Полная оплата подтверждена');
-                  else if (status === 'partial_paid') await setAccountantPayment('partial', 'Частичная оплата подтверждена');
-                  else if (status === 'debt') await setAccountantPayment('debt', 'Есть задолженность по оплате');
-                  else if (status === 'invoice_sent') await setAccountantPayment('invoice_sent', 'Счет отправлен клиенту');
-                }}
+                onPaymentStatusSubmit={submitInvoicePaymentStatus}
               />
             )}
 
@@ -2454,9 +2513,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               <ContractDetailsPanel
                 order={order}
                 canEdit={access.manager || access.finance || access.all}
-                onSubmit={submitFullContract}
                 onSendContract={sendFullContract}
-                onTransferToAccounting={async () => performManagerAction(managerActionFlow.find((action) => action.target === 'Передано бухгалтеру') || managerActionFlow[managerActionFlow.length - 1])}
               />
             )}
 

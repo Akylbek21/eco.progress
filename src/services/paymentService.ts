@@ -12,7 +12,8 @@ export const getClientPayments = async (): Promise<Payment[]> => {
 };
 
 export const getFinanceTransactions = async (): Promise<PaymentTransaction[]> => {
-  const { data } = await api.get<{ data: PaymentTransaction[]; message: string | null }>('/staff/payments');
+  if (!import.meta.env.DEV) return [];
+  const { data } = await api.get<{ data: PaymentTransaction[]; message: string | null }>('/staff/payment-transactions');
   return data.data;
 };
 

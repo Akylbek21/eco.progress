@@ -41,7 +41,7 @@ export type RegisterPayload =
 const TOKEN_KEY = 'eco-progress-token';
 const USER_KEY = 'eco-progress-user';
 
-const staffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
+const staffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY'];
 
 const AuthContext = createContext<AuthState | null>(null);
 

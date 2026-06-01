@@ -5,10 +5,57 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { fetcher } from '../services/api';
 import type { Employee } from '../types';
 
+const fallbackEmployees: Employee[] = [
+  {
+    id: 'employee-ecologist',
+    name: 'Эколог ECOPROGRESS',
+    position: 'Ведущий эколог',
+    experience: '8 лет опыта',
+    specialty: 'Экологическая документация',
+    summary: 'Сопровождает проекты, разрешения, отчеты и коммуникацию с клиентами по экологическим вопросам.',
+    avatar: '/jose.jpg',
+  },
+  {
+    id: 'employee-laboratory',
+    name: 'Лаборатория ECOPROGRESS',
+    position: 'Лабораторный специалист',
+    experience: '6 лет опыта',
+    specialty: 'Замеры и протоколы',
+    summary: 'Организует отбор проб, лабораторные исследования, протоколы и публикацию результатов.',
+    avatar: '/edward.jpg',
+  },
+  {
+    id: 'employee-waste',
+    name: 'Специалист по отходам',
+    position: 'Координатор вывоза',
+    experience: '5 лет опыта',
+    specialty: 'Вывоз и утилизация',
+    summary: 'Подбирает маршрут, транспорт и документы для вывоза, размещения и утилизации отходов.',
+    avatar: '/cottonbro.jpg',
+  },
+  {
+    id: 'employee-manager',
+    name: 'Менеджер проекта',
+    position: 'Клиентский менеджер',
+    experience: '7 лет опыта',
+    specialty: 'Сопровождение заявок',
+    summary: 'Ведет заявку от консультации до результата, согласует сроки, документы, договоры и оплаты.',
+    avatar: '/pexels-jan-van.jpg',
+  },
+];
+
 const EmployeesPage = () => {
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => fetcher<Employee[]>('/employees'),
+    queryFn: async () => {
+      try {
+        const employees = await fetcher<Employee[]>('/employees');
+        if (Array.isArray(employees) && employees.length) return employees;
+      } catch {
+        if (!import.meta.env.DEV) throw new Error('Не удалось загрузить сотрудников');
+      }
+      return import.meta.env.DEV ? fallbackEmployees : [];
+    },
   });
 
   if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;

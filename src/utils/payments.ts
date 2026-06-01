@@ -52,7 +52,7 @@ export const paymentMethodLabel = (method?: PaymentMethod) => {
   return method ? labels[method] : 'Не указан';
 };
 
-export const canAccessPayments = (role?: UserRole) => role === 'ADMIN' || role === 'DIRECTOR' || role === 'HEAD' || role === 'ACCOUNTANT';
+export const canAccessPayments = (role?: UserRole) => role === 'ADMIN' || role === 'ACCOUNTANT';
 
 export const calculateQuarterPeriod = (
   startDate: string,

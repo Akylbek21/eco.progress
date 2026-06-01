@@ -16,7 +16,7 @@ import {
   type UploadDocumentValues,
 } from '../components/modals';
 import { useAuth } from '../contexts/AuthContext';
-import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, signOrderContractWithNCALayer, payOrderOnline, uploadQuarterDocument, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications } from '../services/orderService';
+import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, uploadSignedContract, signOrderContractWithNCALayer, payOrderOnline, uploadQuarterDocument, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications } from '../services/orderService';
 import { requestCompanyProfileChange } from '../services/crmWorkflowService';
 import { getClientPayments, getClientDebts, getClientContracts } from '../services/paymentService';
 import { getServices } from '../services/serviceService';
@@ -581,6 +581,29 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       toast.error('Не удалось подписать договор', errorMessage(err, 'Проверьте, что NCALayer запущен, и попробуйте снова.'));
     }
   };
+  const submitSignedContract = async (values: UploadDocumentValues) => {
+    if (!values.file?.name) {
+      toast.error('Договор не загружен', 'Выберите подписанный PDF договора.');
+      return;
+    }
+    const isPdf = values.file.type === 'application/pdf' || values.file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      toast.error('Неверный формат', 'Загрузите подписанный договор в формате PDF.');
+      return;
+    }
+    try {
+      const result = await uploadSignedContract(order.id, {
+        file: values.file,
+        comment: values.comment || 'Клиент загрузил подписанный договор',
+      });
+      toast.success(result.message || 'Подписанный договор загружен', 'Менеджер проверит файл договора.');
+      load();
+      queryClient.invalidateQueries({ queryKey: ['client-orders'] });
+    } catch (err) {
+      toast.error('Договор не загружен', errorMessage(err, 'Не удалось загрузить подписанный договор.'));
+      throw err;
+    }
+  };
   const handlePay = async () => {
     try {
       await payOrderOnline(order.id, order.paymentMethod || 'Банковская карта');
@@ -652,7 +675,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       )}
 
       {activeTab === 'Договор и счет' && (
-        <ClientContractInvoicePanel order={order} onSign={handleSign} onPay={handlePay} onUploadReceipt={submitReceipt} serviceContract={serviceContract} />
+        <ClientContractInvoicePanel order={order} onSign={handleSign} onUploadSignedContract={submitSignedContract} onPay={handlePay} onUploadReceipt={submitReceipt} serviceContract={serviceContract} />
       )}
 
       {activeTab === 'Первичные документы' && (
@@ -981,12 +1004,14 @@ const ClientPrimaryDocumentsPanel = ({
 const ClientContractInvoicePanel = ({
   order,
   onSign,
+  onUploadSignedContract,
   onPay,
   onUploadReceipt,
   serviceContract,
 }: {
   order: Order;
   onSign: () => void;
+  onUploadSignedContract: (values: UploadDocumentValues) => void | Promise<void>;
   onPay: () => void;
   onUploadReceipt: (values: PaymentModalValues) => void | Promise<void>;
   serviceContract?: ReturnType<typeof getPrimaryContractForOrder>;
@@ -1016,7 +1041,7 @@ const ClientContractInvoicePanel = ({
           </div>
         </div>
         <div className="space-y-5">
-          <OnlineOrderPanel order={order} onSign={onSign} onPay={onPay} />
+          <OnlineOrderPanel order={order} onSign={onSign} onUploadSignedContract={onUploadSignedContract} onPay={onPay} />
           <ReceiptUploadCard order={order} onUploadReceipt={onUploadReceipt} />
         </div>
       </div>
@@ -1247,11 +1272,24 @@ const ClientQuarterCard = ({ quarter, isCurrent, onUpload }: { quarter: RequestQ
   );
 };
 
-const OnlineOrderPanel = ({ order, onSign, onPay }: { order: Order; onSign: () => void; onPay: () => void }) => {
-  const available = order.contractStatus === 'sent' || order.contractStatus === 'signed' || ['invoice_sent', 'awaiting_payment', 'pending', 'partial', 'paid', 'transferred_to_specialist'].includes(order.paymentStatus || '');
-  const signed = order.contractStatus === 'signed';
+const OnlineOrderPanel = ({
+  order,
+  onSign,
+  onUploadSignedContract,
+  onPay,
+}: {
+  order: Order;
+  onSign: () => void;
+  onUploadSignedContract: (values: UploadDocumentValues) => void | Promise<void>;
+  onPay: () => void;
+}) => {
+  const hasContractDocument = Boolean(findContractDocument(order));
+  const contractReady = ['sent', 'signed'].includes(order.contractStatus || '') || ['sent_to_client', 'waiting_signature', 'signed'].includes(order.crmContractStatus || '');
+  const available = hasContractDocument || contractReady || ['invoice_sent', 'awaiting_payment', 'pending', 'partial', 'paid', 'transferred_to_specialist'].includes(order.paymentStatus || '');
+  const signed = order.contractStatus === 'signed' || order.crmContractStatus === 'signed';
   const paid = order.paymentStatus === 'paid' || order.paymentStatus === 'transferred_to_specialist';
   const [confirm, setConfirm] = useState<'sign' | 'pay' | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
   if (!available) {
     return (
       <div className="rounded-[22px] bg-white p-5 shadow-sm">
@@ -1281,6 +1319,10 @@ const OnlineOrderPanel = ({ order, onSign, onPay }: { order: Order; onSign: () =
             </div>
           </div>
           <Button disabled={signed} onClick={() => setConfirm('sign')} className="mt-4 w-full">{signed ? 'Подписано' : 'Подписать ЭЦП'}</Button>
+          <Button disabled={signed} type="button" variant="secondary" onClick={() => setUploadOpen(true)} className="mt-3 w-full">
+            <Upload size={16} />
+            Загрузить подписанный договор
+          </Button>
         </div>
         <div className="rounded-2xl border border-slate-200 p-4">
           <div className="flex items-start gap-3">
@@ -1304,6 +1346,16 @@ const OnlineOrderPanel = ({ order, onSign, onPay }: { order: Order; onSign: () =
           await onSign();
           setConfirm(null);
         }}
+      />
+      <UploadDocumentModal
+        isOpen={uploadOpen}
+        title="Загрузить подписанный договор"
+        description="Выберите PDF-файл договора, который уже подписан клиентом."
+        defaultName="Подписанный договор"
+        defaultCategory="contract"
+        categories={['contract']}
+        onClose={() => setUploadOpen(false)}
+        onSubmit={onUploadSignedContract}
       />
       <ConfirmModal
         isOpen={confirm === 'pay'}

@@ -359,6 +359,7 @@ export type Order = {
   contractStatus?: 'not_sent' | 'sent' | 'signed';
   crmContractStatus?: StaffContractStatus;
   paymentStatus?: PaymentStatus;
+  paymentId?: string;
   signatureProvider?: string;
   paymentMethod?: string;
   paymentAmount?: string;
@@ -379,6 +380,8 @@ export type Order = {
   accountantComment?: string;
   invoiceFileName?: string;
   invoiceSentAt?: string;
+  invoiceDate?: string;
+  dueDate?: string;
   paymentHistory?: OrderPaymentHistoryItem[];
   invoiceNumber?: string;
   actNumber?: string;

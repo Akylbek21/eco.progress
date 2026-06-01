@@ -43,7 +43,7 @@ const ServicesPage = () => {
   useEffect(() => { if (services.length && !calculator.serviceId) setCalculator((c) => ({ ...c, serviceId: services[0].id })); }, [services, calculator.serviceId]);
   const items = useMemo(() => (category === 'Все' ? services : services.filter((item) => item.category === category)), [category, services]);
   const selectedService = services.find((service) => service.id === calculator.serviceId) ?? services[0];
-  const basePrice = servicePriceBase[selectedService.id] ?? 150000;
+  const basePrice = selectedService ? servicePriceBase[selectedService.id] ?? 150000 : 150000;
   const scaleMultiplier = calculator.objectScale === 'small' ? 0.85 : calculator.objectScale === 'large' ? 1.45 : 1;
   const urgencyMultiplier = calculator.urgency === 'fast' ? 1.25 : calculator.urgency === 'complex' ? 1.55 : 1;
   const wasteVolume = Number(calculator.wasteVolume) || 0;
@@ -79,7 +79,13 @@ const ServicesPage = () => {
   }, []);
 
   if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
-  if (!selectedService) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
+  if (!selectedService) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center px-5 text-center text-sm font-semibold text-slate-600">
+        Услуги временно недоступны. Попробуйте обновить страницу.
+      </div>
+    );
+  }
 
   return (
     <div>

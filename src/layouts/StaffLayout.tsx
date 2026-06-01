@@ -10,28 +10,25 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[] }> = [
   { label: 'Дашборд', path: '/staff', icon: LayoutDashboard },
   { label: 'Заявки', path: '/staff/orders', icon: ClipboardList },
-  { label: 'Клиенты', path: '/staff/clients', icon: Building2, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER'] },
-  { label: 'КП', path: '/staff/commercial-offers', icon: Handshake, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER'] },
-  { label: 'Договоры', path: '/staff/contracts', icon: FileSignature, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER', 'ACCOUNTANT'] },
-  { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT'] },
-  { label: 'Календарь', path: '/staff/calendar', icon: CalendarDays, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'WASTE_SPECIALIST'] },
+  { label: 'Клиенты', path: '/staff/clients', icon: Building2, allowedRoles: ['ADMIN', 'MANAGER'] },
+  { label: 'КП', path: '/staff/commercial-offers', icon: Handshake, allowedRoles: ['ADMIN', 'MANAGER'] },
+  { label: 'Договоры', path: '/staff/contracts', icon: FileSignature, allowedRoles: ['ADMIN', 'MANAGER', 'ACCOUNTANT'] },
+  { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
+  { label: 'Календарь', path: '/staff/calendar', icon: CalendarDays, allowedRoles: ['ADMIN', 'MANAGER', 'ECOLOGIST', 'LABORATORY'] },
   { label: 'Задачи', path: '/staff/tasks', icon: ClipboardCheck },
   { label: 'Документы', path: '/staff/documents', icon: FileText },
   { label: 'Уведомления', path: '/staff/notifications', icon: Bell },
-  { label: 'Отчеты', path: '/staff/reports', icon: BarChart3, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT'] },
+  { label: 'Отчеты', path: '/staff/reports', icon: BarChart3, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Роли пользователей', path: '/staff/user-roles', icon: ShieldCheck, rolesOnly: true },
 ];
 
 const roleLabel = (role?: string) => {
   const labels: Record<string, string> = {
     ADMIN: 'Администратор',
-    DIRECTOR: 'Руководитель',
-    HEAD: 'Руководитель',
     MANAGER: 'Менеджер',
     ACCOUNTANT: 'Бухгалтер',
     ECOLOGIST: 'Эколог',
     LABORATORY: 'Лаборатория',
-    WASTE_SPECIALIST: 'Специалист по отходам',
   };
   return labels[role || ''] || 'Manager';
 };

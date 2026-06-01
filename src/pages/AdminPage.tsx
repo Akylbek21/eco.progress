@@ -1,98 +1,79 @@
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { AdminEntityModal, type AdminEntityType, type AdminEntityValues } from '../components/modals';
 import { fetcher } from '../services/api';
-import { useToast } from '../hooks/useToast';
 import type { Employee, NewsItem, ServiceItem } from '../types';
 
+type AdminBlockItem = {
+  title: string;
+  subtitle?: string;
+  category?: string;
+  description?: string;
+};
+
 const AdminPage = () => {
-  const toast = useToast();
-  const [entityModal, setEntityModal] = useState<{
-    entityType: AdminEntityType;
-    mode: 'create' | 'edit';
-    initialValues?: Partial<AdminEntityValues>;
-  } | null>(null);
   const { data: services = [] } = useQuery({ queryKey: ['services'], queryFn: () => fetcher<ServiceItem[]>('/services') });
   const { data: news = [] } = useQuery({ queryKey: ['news'], queryFn: () => fetcher<NewsItem[]>('/news') });
   const { data: employees = [], isLoading } = useQuery({ queryKey: ['employees'], queryFn: () => fetcher<Employee[]>('/employees') });
 
   if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
 
-  const blocks: Array<{ title: string; entityType?: AdminEntityType; items: Array<Partial<AdminEntityValues> & { title: string }> }> = [
-    { title: 'услуги', entityType: 'service', items: services.map((item) => ({ title: item.title, subtitle: item.description, category: item.category, description: item.result })) },
-    { title: 'новости', entityType: 'news', items: news.map((item) => ({ title: item.title, subtitle: item.excerpt, category: item.category, description: item.content.join('\n') })) },
-    { title: 'сотрудники', entityType: 'employee', items: employees.map((item) => ({ title: item.name, subtitle: item.position, category: item.specialty, description: item.summary })) },
-    { title: 'настройки', items: ['Контакты', 'Главная страница', 'Публичное меню', 'Хранилище заявок'].map((title) => ({ title })) },
+  const blocks: Array<{ title: string; editable?: boolean; items: AdminBlockItem[] }> = [
+    { title: 'Услуги', editable: true, items: services.map((item) => ({ title: item.title, subtitle: item.description, category: item.category, description: item.result })) },
+    { title: 'Новости', editable: true, items: news.map((item) => ({ title: item.title, subtitle: item.excerpt, category: item.category, description: item.content.join('\n') })) },
+    { title: 'Сотрудники', editable: true, items: employees.map((item) => ({ title: item.name, subtitle: item.position, category: item.specialty, description: item.summary })) },
+    { title: 'Настройки', items: ['Контакты', 'Главная страница', 'Публичное меню', 'Хранилище заявок'].map((title) => ({ title })) },
   ];
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-2">
-      {blocks.map((block, index) => (
-        <Reveal key={block.title} delay={index * 0.04}>
-          <section id={block.title} className="rounded-[22px] bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-bold capitalize text-eco-900">{block.title}</h2>
-              {block.entityType && (
-                <button
-                  type="button"
-                  className="rounded-full bg-eco-800 px-4 py-2 text-sm font-semibold text-white"
-                  onClick={() => setEntityModal({ entityType: block.entityType!, mode: 'create' })}
-                >
-                  Добавить
-                </button>
-              )}
-            </div>
-            <div className="mt-5 space-y-3">
-              {block.items.map((item) => (
-                <div key={item.title} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4 text-sm">
-                  <span>{item.title}</span>
-                  {block.entityType ? (
-                    <button
-                      type="button"
-                      className="font-semibold text-eco-700"
-                      onClick={() => setEntityModal({ entityType: block.entityType!, mode: 'edit', initialValues: item })}
-                    >
-                      Редактировать
-                    </button>
-                  ) : (
-                    <span className="text-slate-400">Настроить</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        </Reveal>
-      ))}
+      <div className="mb-6 rounded-[22px] border border-amber-100 bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-900">
+        CRUD админки ожидает backend endpoint. Раздел временно работает в режиме просмотра, чтобы не показывать ложное сохранение.
       </div>
-      {entityModal && (
-        <AdminEntityModal
-          isOpen
-          entityType={entityModal.entityType}
-          mode={entityModal.mode}
-          initialValues={entityModal.initialValues}
-          onClose={() => setEntityModal(null)}
-          onSubmit={async () => {
-            toast.success(
-              entityModal.mode === 'create'
-                ? entityModal.entityType === 'service'
-                  ? 'Услуга добавлена'
-                  : entityModal.entityType === 'employee'
-                    ? 'Сотрудник добавлен'
-                    : 'Запись добавлена'
-                : entityModal.entityType === 'service'
-                  ? 'Услуга обновлена'
-                  : entityModal.entityType === 'employee'
-                    ? 'Сотрудник обновлен'
-                    : 'Запись обновлена',
-              entityModal.mode === 'create' ? 'Изменение появится после сохранения данных.' : 'Изменения сохранены.',
-            );
-            setEntityModal(null);
-          }}
-        />
-      )}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {blocks.map((block, index) => (
+          <Reveal key={block.title} delay={index * 0.04}>
+            <section id={block.title.toLowerCase()} className="rounded-[22px] bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="text-2xl font-bold capitalize text-eco-900">{block.title}</h2>
+                {block.editable && (
+                  <button
+                    type="button"
+                    disabled
+                    title="CRUD админки ожидает backend endpoint"
+                    className="cursor-not-allowed rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500"
+                  >
+                    Добавить
+                  </button>
+                )}
+              </div>
+              <div className="mt-5 space-y-3">
+                {block.items.map((item) => (
+                  <div key={item.title} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-900">{item.title}</p>
+                      {item.subtitle && <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{item.subtitle}</p>}
+                    </div>
+                    {block.editable ? (
+                      <button
+                        type="button"
+                        disabled
+                        title="CRUD админки ожидает backend endpoint"
+                        className="shrink-0 cursor-not-allowed font-semibold text-slate-400"
+                      >
+                        Read-only
+                      </button>
+                    ) : (
+                      <span className="shrink-0 text-slate-400">Read-only</span>
+                    )}
+                  </div>
+                ))}
+                {!block.items.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Данных пока нет</p>}
+              </div>
+            </section>
+          </Reveal>
+        ))}
+      </div>
     </>
   );
 };

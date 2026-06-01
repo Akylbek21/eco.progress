@@ -18,6 +18,13 @@ const mapDocumentType = (type: unknown): DocumentItem['type'] => {
   return 'client';
 };
 
+const mapPaymentStatus = (status: unknown): Order['paymentStatus'] => {
+  const raw = asString(status);
+  if (raw === 'not_paid') return 'not_sent';
+  if (raw === 'overdue') return 'debt';
+  return raw as Order['paymentStatus'];
+};
+
 export const mapDocument = (doc: AnyRecord = {}, orderId?: string): DocumentItem => ({
   id: asString(doc.id || doc.documentId),
   orderId,
@@ -151,7 +158,8 @@ export const mapOrder = (raw: AnyRecord): Order => {
     manager: asString(raw.managerName),
     contractStatus: raw.contractStatus || contract.status,
     crmContractStatus: raw.crmContractStatus || contract.crmStatus,
-    paymentStatus: raw.paymentStatus,
+    paymentStatus: mapPaymentStatus(raw.paymentStatus),
+    paymentId: asString(raw.paymentId || raw.payment?.id || raw.paymentRecord?.id || raw.paymentInfo?.id),
     signatureProvider: raw.signatureProvider,
     paymentMethod: raw.paymentMethod,
     paymentAmount: raw.paymentAmount ? String(raw.paymentAmount) : undefined,
@@ -161,6 +169,12 @@ export const mapOrder = (raw: AnyRecord): Order => {
     paidAmount,
     remainingAmount,
     invoiceNumber: raw.invoiceNumber,
+    invoiceFileName: raw.invoiceFileName,
+    invoiceSentAt: raw.invoiceSentAt,
+    invoiceDate: raw.invoiceDate || raw.payment?.invoiceDate || raw.paymentRecord?.invoiceDate,
+    dueDate: raw.dueDate || raw.payment?.dueDate || raw.paymentRecord?.dueDate,
+    paymentComment: raw.paymentComment || raw.payment?.comment || raw.paymentRecord?.comment,
+    accountantComment: raw.accountantComment,
     assignedAccountant: raw.accountantName,
     assignedEcologist: raw.ecologistName,
     assignedLaboratory: raw.laboratoryUserName,

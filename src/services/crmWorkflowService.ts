@@ -6,7 +6,6 @@ import type {
   CommercialOffer,
   CrmDocument,
   CrmNotification,
-  FullContract,
   InvoicePayment,
   Order,
   SendDocumentToClientPayload,
@@ -22,7 +21,8 @@ const dataOrFallback = async <T,>(request: Promise<{ data: { data: T } }>, fallb
     const { data } = await request;
     return data.data;
   } catch (error) {
-    if (import.meta.env.DEV) console.warn('CRM endpoint fallback:', error);
+    if (!import.meta.env.DEV) throw error;
+    console.warn('CRM endpoint fallback:', error);
     return fallback;
   }
 };
@@ -109,20 +109,6 @@ export const createCommercialOffer = async (orderId: string, payload: Partial<Co
 export const updateCommercialOfferStatus = async (orderId: string, offerId: string, status: CommercialOffer['status']) =>
   dataOrFallback(api.patch<{ data: CommercialOffer; message: string | null }>(`/staff/orders/${orderId}/commercial-offers/${offerId}`, { status }), undefined);
 
-export const saveContractDetails = async (orderId: string, payload: Partial<FullContract> & { file?: File | null; signedFile?: File | null }) => {
-  const formData = new FormData();
-  Object.entries(payload).forEach(([key, value]) => {
-    if (key === 'file' || key === 'signedFile') return;
-    if (value !== undefined && value !== null) formData.append(key, String(value));
-  });
-  if (payload.file) formData.append('file', payload.file);
-  if (payload.signedFile) formData.append('signedFile', payload.signedFile);
-  return dataOrFallback(
-    api.post<{ data: FullContract; message: string | null }>(`/staff/orders/${orderId}/contract`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-    undefined,
-  );
-};
-
 export const saveInvoicePayment = async (orderId: string, payload: Partial<InvoicePayment> & { invoiceFile?: File | null; paymentOrder?: File | null }) => {
   const formData = new FormData();
   Object.entries(payload).forEach(([key, value]) => {
@@ -174,4 +160,3 @@ export const requestCompanyProfileChange = async (payload: CompanyProfileChangeR
 
 export const updateClient = async (clientId: string, payload: Partial<Client>) =>
   dataOrFallback(api.patch<{ data: Client; message: string | null }>(`/staff/clients/${clientId}`, payload), undefined);
-

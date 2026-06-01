@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Send } from 'lucide-react';
 import Button from '../ui/Button';
-import type { InvoicePayment, Order, WasteRemoval } from '../../types';
+import type { Order, WasteRemoval } from '../../types';
 import { formatCurrency } from '../../utils/payments';
 
 type PanelProps = {
@@ -41,12 +41,10 @@ export const CommercialOfferPanel = ({ order, canEdit = false, onCreate, onStatu
 );
 
 type ContractPanelProps = PanelProps & {
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
   onSendContract: (form: HTMLFormElement) => void | Promise<void>;
-  onTransferToAccounting: () => void | Promise<void>;
 };
 
-export const ContractDetailsPanel = ({ order, canEdit = false, onSubmit, onSendContract, onTransferToAccounting }: ContractPanelProps) => (
+export const ContractDetailsPanel = ({ order, canEdit = false, onSendContract }: ContractPanelProps) => (
   <Panel title="Договор">
     <InfoGrid items={{
       Номер: order.contractId || 'Не создан',
@@ -57,10 +55,16 @@ export const ContractDetailsPanel = ({ order, canEdit = false, onSubmit, onSendC
       Файл: order.contractFileName || 'Не загружен',
     }} />
     {canEdit && (
-      <form onSubmit={onSubmit} className="mt-5 grid gap-4 md:grid-cols-2">
-        <Field label="Номер договора"><input name="number" defaultValue={order.contractId || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-        <Field label="Дата договора"><input name="contractDate" type="date" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-        <Field label="Сумма"><input name="amount" type="number" min="0" defaultValue={order.contractAmount || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void onSendContract(event.currentTarget);
+        }}
+        className="mt-5 grid gap-4 md:grid-cols-2"
+      >
+        <Field label="Номер договора"><input name="number" required defaultValue={order.contractId || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+        <Field label="Дата договора"><input name="contractDate" type="date" required className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+        <Field label="Сумма"><input name="amount" type="number" min="0" required defaultValue={order.contractAmount || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
         <Field label="Тип договора">
           <select name="type" defaultValue={order.contractType === 'annual_quarterly' ? 'annual' : 'one_time'} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3">
             <option value="one_time">Разовый</option>
@@ -72,26 +76,12 @@ export const ContractDetailsPanel = ({ order, canEdit = false, onSubmit, onSendC
             <option value="complex">Комплексный</option>
           </select>
         </Field>
-        <Field label="Дата начала"><input name="startDate" type="date" defaultValue={order.contractPeriodStart || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-        <Field label="Дата окончания"><input name="endDate" type="date" defaultValue={order.contractPeriodEnd || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-        <Field label="Файл договора"><input name="file" type="file" className="w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-        <Field label="Подписанный файл"><input name="signedFile" type="file" className="w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+        <Field label="Дата начала"><input name="startDate" type="date" required defaultValue={order.contractPeriodStart || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+        <Field label="Дата окончания"><input name="endDate" type="date" required defaultValue={order.contractPeriodEnd || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+        <Field label="Файл договора"><input name="file" type="file" required accept="application/pdf" className="w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
         <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий<textarea name="comment" rows={3} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
-        <div className="flex flex-wrap gap-3 md:col-span-2">
-          <Button>Сохранить договор</Button>
-          <Button
-            type="button"
-            variant="secondary"
-            className="gap-2"
-            onClick={(event) => {
-              const form = event.currentTarget.form;
-              if (form) void onSendContract(form);
-            }}
-          >
-            <Send size={16} aria-hidden="true" />
-            Отправить договор
-          </Button>
-          <Button type="button" variant="secondary" onClick={onTransferToAccounting}>Передать бухгалтеру</Button>
+        <div className="md:col-span-2">
+          <Button>Отправить договор клиенту</Button>
         </div>
       </form>
     )}
@@ -101,42 +91,112 @@ export const ContractDetailsPanel = ({ order, canEdit = false, onSubmit, onSendC
 type PaymentPanelProps = PanelProps & {
   canConfirm?: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
-  onQuickStatus: (status: InvoicePayment['paymentStatus']) => void | Promise<void>;
+  onPaymentStatusSubmit: (values: {
+    status: 'not_paid' | 'partial' | 'paid' | 'debt';
+    amount: string;
+    paidAt: string;
+    method: string;
+    comment: string;
+  }) => void | Promise<void>;
 };
 
-export const InvoicePaymentPanel = ({ order, canEdit = false, canConfirm = false, onSubmit, onQuickStatus }: PaymentPanelProps) => {
+const invoicePaymentStatusText = (order: Order) => {
+  const remaining = order.remainingAmount ?? 0;
+  const due = order.dueDate ? new Date(order.dueDate) : null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (due) due.setHours(0, 0, 0, 0);
+  const overdue = Boolean(due && !Number.isNaN(due.getTime()) && due.getTime() < today.getTime() && remaining > 0);
+  if (order.paymentStatus === 'debt' || order.paymentStatus === ('overdue' as never) || overdue) return 'Просрочено / долг';
+  if (order.paymentStatus === 'paid') return 'Полная оплата';
+  if (order.paymentStatus === 'partial') return 'Частичная оплата';
+  if (order.paymentStatus === 'pending' || order.paymentStatus === 'awaiting_payment' || order.paymentStatus === 'invoice_sent') return 'Ожидает оплаты';
+  return 'Не оплачено';
+};
+
+export const InvoicePaymentPanel = ({ order, canEdit = false, canConfirm = false, onSubmit, onPaymentStatusSubmit }: PaymentPanelProps) => {
   const total = order.totalAmount || order.contractAmount || order.offerAmount || 0;
   const paid = order.paidAmount || 0;
   const remaining = order.remainingAmount ?? Math.max(0, total - paid);
+  const [paymentStatus, setPaymentStatus] = useState<'not_paid' | 'partial' | 'paid' | 'debt'>(
+    order.paymentStatus === 'paid' ? 'paid' : order.paymentStatus === 'partial' ? 'partial' : order.paymentStatus === 'debt' ? 'debt' : 'not_paid',
+  );
+  const defaultMethod = order.paymentMethod || 'bank_transfer';
   return (
     <Panel title="Счет и оплата">
       <InfoGrid items={{
         Договор: order.contractId || 'Нет',
         'Сумма договора': formatCurrency(total),
         'Номер счета': order.invoiceNumber || 'Не указан',
-        'Дата счета': order.invoiceSentAt || 'Не указана',
-        'Статус оплаты': order.paymentStatus || 'not_sent',
+        'Дата счета': order.invoiceDate || order.invoiceSentAt || 'Не указана',
+        'Статус оплаты': invoicePaymentStatusText(order),
         Оплачено: formatCurrency(paid),
         Остаток: formatCurrency(remaining),
         Комментарий: order.accountantComment || order.paymentComment || 'Нет',
       }} />
       {canEdit && (
-        <form onSubmit={onSubmit} className="mt-5 grid gap-4 md:grid-cols-2">
-          <Field label="Номер счета"><input name="invoiceNumber" defaultValue={order.invoiceNumber || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-          <Field label="Сумма счета"><input name="invoiceAmount" type="number" defaultValue={total || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-          <Field label="Дата счета"><input name="invoiceDate" type="date" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-          <Field label="Срок оплаты"><input name="dueDate" type="date" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-          <Field label="Файл счета"><input name="invoiceFile" type="file" accept="application/pdf" className="w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-          <Field label="Платежное поручение"><input name="paymentOrder" type="file" className="w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-          <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий бухгалтера<textarea name="accountantComment" rows={3} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
-          <div className="flex flex-wrap gap-3 md:col-span-2">
-            <Button>Сохранить счет</Button>
-            <Button type="button" variant="secondary" onClick={() => onQuickStatus('invoice_sent')}>Отправить счет</Button>
-            <Button type="button" variant="secondary" disabled={!canConfirm} onClick={() => onQuickStatus('partial_paid')}>Частичная оплата</Button>
-            <Button type="button" disabled={!canConfirm} onClick={() => onQuickStatus('paid')}>Полная оплата</Button>
-            <Button type="button" variant="secondary" disabled={!canConfirm} onClick={() => onQuickStatus('debt')}>Поставить долг</Button>
-          </div>
-        </form>
+        <div className="mt-5 space-y-5">
+          <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2">
+            <Field label="Номер счета"><input name="invoiceNumber" defaultValue={order.invoiceNumber || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+            <Field label="Сумма счета"><input name="invoiceAmount" type="number" min="0" defaultValue={total || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+            <Field label="Дата счета"><input name="invoiceDate" type="date" defaultValue={order.invoiceDate || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+            <Field label="Срок оплаты"><input name="dueDate" type="date" defaultValue={order.dueDate || ''} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+            <Field label="Файл счета"><input name="invoiceFile" type="file" accept="application/pdf" className="w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+            <Field label="Способ оплаты">
+              <select name="paymentMethod" defaultValue={defaultMethod} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3">
+                <option value="bank_transfer">Банковский перевод</option>
+                <option value="card">Карта</option>
+                <option value="cash">Наличные</option>
+                <option value="other">Другое</option>
+              </select>
+            </Field>
+            <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий бухгалтера<textarea name="accountantComment" rows={3} defaultValue={order.accountantComment || order.paymentComment || ''} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
+            <div className="md:col-span-2"><Button>Отправить счет клиенту</Button></div>
+          </form>
+
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = new FormData(event.currentTarget);
+              onPaymentStatusSubmit({
+                status: paymentStatus,
+                amount: String(form.get('partialAmount') || ''),
+                paidAt: String(form.get('paidAt') || ''),
+                method: String(form.get('paymentMethod') || defaultMethod),
+                comment: String(form.get('paymentComment') || ''),
+              });
+            }}
+            className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Статус оплаты">
+                <select value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value as typeof paymentStatus)} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3">
+                  <option value="not_paid">Не оплачено</option>
+                  <option value="partial">Частичная оплата</option>
+                  <option value="paid">Полная оплата</option>
+                  <option value="debt">Просрочено / долг</option>
+                </select>
+              </Field>
+              {paymentStatus !== 'partial' && <input type="hidden" name="paymentMethod" value={defaultMethod} />}
+              {paymentStatus === 'partial' && (
+                <>
+                  <Field label="Сумма частичной оплаты"><input name="partialAmount" type="number" min="0" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+                  <Field label="Дата оплаты"><input name="paidAt" type="date" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
+                  <Field label="Способ оплаты">
+                    <select name="paymentMethod" defaultValue={defaultMethod} className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3">
+                      <option value="bank_transfer">Банковский перевод</option>
+                      <option value="card">Карта</option>
+                      <option value="cash">Наличные</option>
+                      <option value="other">Другое</option>
+                    </select>
+                  </Field>
+                  <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий<textarea name="paymentComment" rows={3} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
+                </>
+              )}
+            </div>
+            <Button type="submit" disabled={!canConfirm} className="mt-4">Применить оплату</Button>
+          </form>
+        </div>
       )}
       {!canConfirm && <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">Подтвердить оплату может только бухгалтер или администратор.</p>}
     </Panel>

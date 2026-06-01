@@ -101,22 +101,78 @@ export const uploadDocument = async (orderId: string, fileOrPayload: File | Uplo
   return mapDocument(data.data as never, orderId);
 };
 
+export type UploadContractDocumentPayload = {
+  file: File;
+  comment?: string;
+  dueDate?: string;
+};
+
+export const uploadContractDocument = async (
+  orderId: string,
+  payload: UploadContractDocumentPayload,
+): Promise<{ document: DocumentItem; message: string | null }> => {
+  const formData = new FormData();
+  formData.append('file', payload.file);
+  formData.append('type', 'contract');
+  formData.append('sendToClient', 'true');
+  formData.append('needsSignature', 'true');
+  formData.append('needsClientResponse', 'true');
+  formData.append('comment', payload.comment?.trim() || 'Подпишите договор через ЭЦП');
+  if (payload.dueDate) formData.append('dueDate', payload.dueDate);
+  const { data } = await api.post<{ data: DocumentItem; message: string | null }>(
+    `/staff/orders/${orderId}/documents`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return { document: mapDocument(data.data as never, orderId), message: data.message };
+};
+
+export type UploadInvoiceDocumentPayload = {
+  file: File;
+  comment?: string;
+  dueDate?: string;
+};
+
+export const uploadInvoiceDocument = async (
+  orderId: string,
+  payload: UploadInvoiceDocumentPayload,
+): Promise<{ document: DocumentItem; message: string | null }> => {
+  const formData = new FormData();
+  formData.append('file', payload.file);
+  formData.append('type', 'invoice');
+  formData.append('sendToClient', 'true');
+  formData.append('needsSignature', 'false');
+  formData.append('needsClientResponse', 'false');
+  formData.append('comment', payload.comment?.trim() || 'Счет на оплату');
+  if (payload.dueDate) formData.append('dueDate', payload.dueDate);
+  const { data } = await api.post<{ data: DocumentItem; message: string | null }>(
+    `/staff/orders/${orderId}/documents`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return { document: mapDocument(data.data as never, orderId), message: data.message };
+};
+
 export const sendContractAndInvoice = async (
   orderId: string,
   payload: { amount: string; paymentMethod?: string; signatureProvider?: string; contractFileName?: string; contractPeriodStart?: string; contractPeriodEnd?: string; contractServiceNote?: string; contractNote?: string },
 ) => {
   const { data } = await api.post<{ data: unknown; message: string | null }>(`/staff/orders/${orderId}/contract-and-invoice`, payload);
-  return mapOrder(data.data as never);
+  return { order: mapOrder(data.data as never), message: data.message };
 };
 
 export const updateContractStatus = async (orderId: string, status: StaffContractStatus | string, comment?: string) => {
-  const { data } = await api.patch<{ data: unknown; message: string | null }>(`/staff/orders/${orderId}/contract-status`, { crmContractStatus: status, comment });
-  return mapOrder(data.data as never);
+  const { data } = await api.patch<{ data: unknown; message: string | null }>(`/staff/orders/${orderId}/contract-status`, {
+    crmContractStatus: status,
+    status,
+    comment,
+  });
+  return { order: mapOrder(data.data as never), message: data.message };
 };
 
 export const updatePaymentStatus = async (
   orderId: string,
-  status: PaymentStatus,
+  status: PaymentStatus | string,
   payload: {
     amount?: string;
     totalAmount?: string | number;
@@ -124,18 +180,49 @@ export const updatePaymentStatus = async (
     paidAt?: string;
     comment?: string;
     method?: string;
+    paymentMethod?: string;
     invoiceNumber?: string;
     actNumber?: string;
     invoiceFileName?: string;
+    invoiceDate?: string;
+    dueDate?: string;
     paymentTerms?: Order['paymentTerms'];
     minPrepaymentPercent?: string | number;
   } = {},
 ) => {
   const { data } = await api.patch<{ data: unknown; message: string | null }>(`/staff/orders/${orderId}/payment`, {
     paymentStatus: toBackendPaymentStatus(status),
-    paymentMethod: payload.method,
+    paymentMethod: payload.paymentMethod || payload.method,
+    invoiceNumber: payload.invoiceNumber,
+    totalAmount: payload.totalAmount ?? payload.amount,
+    paidAmount: payload.paidAmount,
+    paidAt: payload.paidAt,
+    invoiceDate: payload.invoiceDate,
+    dueDate: payload.dueDate,
+    comment: payload.comment,
+    actNumber: payload.actNumber,
+    invoiceFileName: payload.invoiceFileName,
+    paymentTerms: payload.paymentTerms,
+    minPrepaymentPercent: payload.minPrepaymentPercent,
   });
-  return mapOrder(data.data as never);
+  return { order: mapOrder(data.data as never), message: data.message };
+};
+
+export const applyPartialPayment = async (
+  paymentId: string,
+  payload: { amount: string | number; method: string; comment?: string },
+): Promise<{ message: string | null }> => {
+  const { data } = await api.post<{ data: unknown; message: string | null }>(`/staff/payments/${paymentId}/partial`, {
+    amount: payload.amount,
+    method: payload.method,
+    comment: payload.comment,
+  });
+  return { message: data.message };
+};
+
+export const markPaymentPaid = async (paymentId: string): Promise<{ message: string | null }> => {
+  const { data } = await api.post<{ data: unknown; message: string | null }>(`/staff/payments/${paymentId}/mark-paid`);
+  return { message: data.message };
 };
 
 export const updateEcologyStatus = async (orderId: string, status: EcologyStatus, comment?: string) => {

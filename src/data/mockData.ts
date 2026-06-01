@@ -87,6 +87,7 @@ export const orders = [
     signatureProvider: 'NCALayer',
     signedAt: undefined,
     paymentStatus: 'partial',
+    paymentId: 'PAY-FIN-DEMO-001',
     paymentMethod: 'bank_transfer',
     paymentAmount: '1 200 000 ₸',
     offerAmount: 1200000,

@@ -43,7 +43,9 @@ const RegisterPage = ({ onSuccess }: { onSuccess?: (message: string) => void }) 
       onSuccess?.('Кабинет клиента создан. Теперь вы можете оставить заявку и отслеживать ее статус.');
       navigate('/cabinet');
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Ошибка регистрации';
+      const msg = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err as Error)?.message
+        || 'Ошибка регистрации';
       setError(msg);
       toast.error('Ошибка регистрации', msg);
     }

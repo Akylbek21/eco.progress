@@ -85,6 +85,24 @@ export const uploadDocument = async (orderId: string, fileOrPayload: File | Uplo
   return mapDocument(data.data as never, orderId);
 };
 
+export const uploadSignedContract = async (
+  orderId: string,
+  payload: { file: File; comment?: string },
+): Promise<{ document: DocumentItem; message: string | null }> => {
+  const formData = new FormData();
+  formData.append('file', payload.file);
+  formData.append('type', 'contract');
+  formData.append('title', 'Подписанный договор');
+  formData.append('comment', payload.comment?.trim() || 'Клиент загрузил подписанный договор');
+  formData.append('sendToClient', 'false');
+  formData.append('needsSignature', 'false');
+  formData.append('needsClientResponse', 'false');
+  const { data } = await api.post<{ data: DocumentItem; message: string | null }>(`/client/orders/${orderId}/documents`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return { document: mapDocument(data.data as never, orderId), message: data.message };
+};
+
 export type ContractSignaturePayload = {
   signatureProvider?: string;
   signedCms?: string;
@@ -116,7 +134,7 @@ const fileUrlToApiPath = (document: DocumentItem) => {
 };
 
 export const signOrderContractWithNCALayer = async (orderId: string, document: DocumentItem) => {
-  if (localStorage.getItem('eco-progress-token')?.startsWith('mock-session')) {
+  if (import.meta.env.DEV && localStorage.getItem('eco-progress-token')?.startsWith('mock-session')) {
     return signOrderContract(orderId, 'NCALayer');
   }
   const filePath = fileUrlToApiPath(document);

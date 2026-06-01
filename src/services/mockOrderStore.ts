@@ -199,6 +199,8 @@ export const updateMockPayment = (
     invoiceNumber?: string;
     actNumber?: string;
     invoiceFileName?: string;
+    invoiceDate?: string;
+    dueDate?: string;
     paymentTerms?: Order['paymentTerms'];
     minPrepaymentPercent?: string | number;
   } = {},
@@ -223,6 +225,8 @@ export const updateMockPayment = (
       invoiceNumber: payload.invoiceNumber ?? order.invoiceNumber,
       actNumber: payload.actNumber ?? order.actNumber,
       invoiceFileName: payload.invoiceFileName ?? order.invoiceFileName,
+      invoiceDate: payload.invoiceDate ?? order.invoiceDate,
+      dueDate: payload.dueDate ?? order.dueDate,
       paymentTerms: payload.paymentTerms ?? order.paymentTerms,
       minPrepaymentPercent: payload.minPrepaymentPercent !== undefined ? Number(payload.minPrepaymentPercent) : order.minPrepaymentPercent,
       accountantComment: payload.comment ?? order.accountantComment,
