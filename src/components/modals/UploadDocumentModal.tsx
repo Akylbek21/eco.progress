@@ -80,6 +80,7 @@ const UploadDocumentModal = ({
   onSubmit,
 }: UploadDocumentModalProps) => {
   const [error, setError] = useState('');
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
@@ -127,9 +128,15 @@ const UploadDocumentModal = ({
         </label>
         {allowSendToClient && (
           <div className="grid gap-3 rounded-2xl bg-slate-50 p-4">
-            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input name="sendToClient" type="checkbox" className="accent-[#38C7BA]" /> Отправить клиенту</label>
-            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input name="needsSignature" type="checkbox" className="accent-[#38C7BA]" /> Нужна подпись</label>
-            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input name="needsClientResponse" type="checkbox" className="accent-[#38C7BA]" /> Нужен ответ клиента</label>
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <input name="sendToClient" type="checkbox" className="accent-[#38C7BA]" /> Отправить клиенту
+            </label>
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <input name="needsSignature" type="checkbox" className="accent-[#38C7BA]" /> Нужна подпись
+            </label>
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <input name="needsClientResponse" type="checkbox" className="accent-[#38C7BA]" /> Нужен ответ клиента
+            </label>
             <label className="text-sm font-semibold text-slate-700">
               Срок ответа
               <input name="dueDate" type="date" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
@@ -146,4 +153,3 @@ const UploadDocumentModal = ({
 };
 
 export default UploadDocumentModal;
-

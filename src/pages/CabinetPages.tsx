@@ -16,7 +16,7 @@ import {
   type UploadDocumentValues,
 } from '../components/modals';
 import { useAuth } from '../contexts/AuthContext';
-import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, signOrderContract, payOrderOnline, uploadQuarterDocument, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications } from '../services/orderService';
+import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, signOrderContractWithNCALayer, payOrderOnline, uploadQuarterDocument, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications } from '../services/orderService';
 import { requestCompanyProfileChange } from '../services/crmWorkflowService';
 import { getClientPayments, getClientDebts, getClientContracts } from '../services/paymentService';
 import { getServices } from '../services/serviceService';
@@ -282,10 +282,15 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
         email: String(form.get('email')),
         companyName: String(form.get('companyName')),
         bin: String(form.get('bin')),
+        city: String(form.get('city') || ''),
+        objectAddress: String(form.get('objectAddress') || ''),
         serviceId: selectedOrderService.id,
         service: selectedOrderItems.length > 0 ? `${selectedOrderService.title}: ${selectedOrderItems.join('; ')}` : selectedOrderService.title,
         urgency: String(form.get('urgency')),
         comment: `${String(form.get('comment'))}\n\n${extraText}${selectedItemsText}`,
+        contractType: 'one_time',
+        signatureProvider: 'NCALayer',
+        paymentMethod: 'bank_transfer',
         fileName: file?.name,
       });
       toast.success('Заявка создана', 'Менеджер получил вашу заявку и свяжется с вами.');
@@ -358,6 +363,7 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
           <Input name="companyName" label="Название компании" defaultValue={user?.companyName ?? user?.name} />
           <Input name="bin" label="БИН / ИИН" defaultValue={user?.bin} />
           <Input name="city" label="Город" defaultValue={user?.city} />
+          <Input name="objectAddress" label="Адрес объекта" />
           <label className="text-sm font-semibold text-slate-700">Срочность<select name="urgency" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3"><option>Стандартная</option><option>Срочно</option><option>Не срочно</option></select></label>
         </div>
         <p className="mt-3 text-xs leading-5 text-slate-500">БИН/ИИН можно не заполнять, если вы пока хотите только консультацию.</p>
@@ -403,6 +409,10 @@ const StepTitle = ({ number, title }: { number: string; title: string }) => (
     <h3 className="text-lg font-bold text-eco-900">{title}</h3>
   </div>
 );
+
+const findContractDocument = (order: Order) =>
+  order.documents.find((doc) => doc.name.toLowerCase().includes('договор')) ||
+  order.resultDocuments.find((doc) => doc.name.toLowerCase().includes('договор'));
 
 export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: string) => void }) => {
   const { id } = useParams();
@@ -558,12 +568,17 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
   };
   const handleSign = async () => {
     try {
-      await signOrderContract(order.id, order.signatureProvider || 'NCALayer / ЭЦП');
+      const contractDoc = findContractDocument(order);
+      if (!contractDoc) {
+        toast.error('Договор не найден', 'Сначала сотрудник должен загрузить PDF договора для подписи.');
+        return;
+      }
+      await signOrderContractWithNCALayer(order.id, contractDoc);
       toast.success('Договор подписан', 'Менеджер получил подписанный договор.');
       load();
       queryClient.invalidateQueries({ queryKey: ['client-orders'] });
     } catch (err) {
-      toast.error('Не удалось подписать договор', errorMessage(err, 'Попробуйте снова или загрузите подписанный файл.'));
+      toast.error('Не удалось подписать договор', errorMessage(err, 'Проверьте, что NCALayer запущен, и попробуйте снова.'));
     }
   };
   const handlePay = async () => {
@@ -976,7 +991,7 @@ const ClientContractInvoicePanel = ({
   onUploadReceipt: (values: PaymentModalValues) => void | Promise<void>;
   serviceContract?: ReturnType<typeof getPrimaryContractForOrder>;
 }) => {
-  const contractDoc = order.documents.find((doc) => doc.name.toLowerCase().includes('договор')) || order.resultDocuments.find((doc) => doc.name.toLowerCase().includes('договор'));
+  const contractDoc = findContractDocument(order);
   const invoiceDoc = order.resultDocuments.find((doc) => doc.type === 'invoice' || doc.name.toLowerCase().includes('счет') || doc.name.toLowerCase().includes('счёт'));
   const paymentText = order.paymentStatus === 'paid' || order.paymentStatus === 'transferred_to_specialist'
     ? 'Оплата получена'

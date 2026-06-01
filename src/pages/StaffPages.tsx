@@ -2131,6 +2131,29 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     }
   };
 
+  const sendFullContract = async (formElement: HTMLFormElement) => {
+    if (!access.manager && !access.finance) {
+      toast.warning('Действие недоступно', 'Договор может отправить менеджер, бухгалтер или администратор.');
+      return;
+    }
+    const form = new FormData(formElement);
+    const contractFile = form.get('file') as File | null;
+    try {
+      await sendContractAndInvoice(order.id, {
+        amount: String(form.get('amount') || order.contractAmount || order.totalAmount || 0),
+        contractFileName: contractFile?.name || order.contractFileName,
+        contractPeriodStart: String(form.get('startDate') || order.contractPeriodStart || ''),
+        contractPeriodEnd: String(form.get('endDate') || order.contractPeriodEnd || ''),
+        contractServiceNote: order.service,
+        contractNote: String(form.get('comment') || order.contractNote || ''),
+      });
+      toast.success('Договор отправлен клиенту', 'Клиент сможет скачать и подписать договор.');
+      load();
+    } catch (err) {
+      toast.error('Не удалось отправить договор', errorMessage(err, 'Проверьте номер, сумму и файл договора.'));
+    }
+  };
+
   const submitInvoicePayment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!access.finance) {
@@ -2432,6 +2455,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                 order={order}
                 canEdit={access.manager || access.finance || access.all}
                 onSubmit={submitFullContract}
+                onSendContract={sendFullContract}
                 onTransferToAccounting={async () => performManagerAction(managerActionFlow.find((action) => action.target === 'Передано бухгалтеру') || managerActionFlow[managerActionFlow.length - 1])}
               />
             )}
@@ -2648,6 +2672,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               {canAccess(role, 'edit_documents') && (
                 <div className="mt-5 border-t border-slate-100 pt-5">
                   <StaffUploadDocumentAction onSubmit={async (values) => {
+                    const sentToClient = values.sendToClient || values.needsSignature || values.needsClientResponse;
                     if (values.file) await uploadDocument(order.id, {
                       file: values.file,
                       type: values.category || 'work_result',
@@ -2658,7 +2683,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                       needsClientResponse: values.needsClientResponse,
                       dueDate: values.dueDate,
                     });
-                    onNotify?.('Документ загружен');
+                    onNotify?.(sentToClient ? 'Документ отправлен клиенту' : 'Документ загружен');
                     load();
                   }} />
                 </div>
@@ -3101,7 +3126,7 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
     } catch {
       onNotify?.('Не удалось сохранить заметку');
     }
-    onNotify?.(config.uploadedMessage);
+    onNotify?.(sendToClient ? (needsSignature ? 'Документ отправлен клиенту на подпись' : 'Документ отправлен клиенту') : config.uploadedMessage);
     event.currentTarget.reset();
   };
 

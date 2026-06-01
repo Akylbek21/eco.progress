@@ -4,6 +4,8 @@ import {
   Building2,
   CheckCircle2,
   ClipboardCheck,
+  Download,
+  Eye,
   FileCheck2,
   FileText,
   FolderCheck,
@@ -29,6 +31,17 @@ type CardItem = {
   Icon: LucideIcon;
   examples?: string[];
   image?: string;
+};
+
+type PublicDocument = {
+  title: string;
+  href: string;
+};
+
+type PublicDocumentGroup = {
+  title: string;
+  description: string;
+  files: PublicDocument[];
 };
 
 const facts = ['Комплексный подход', 'Работа по Казахстану', 'Экологические документы', 'Лабораторные исследования', 'Транспортировка отходов', 'Утилизация и полигон'];
@@ -138,7 +151,59 @@ const trustItems: CardItem[] = [
   },
 ];
 
-const documents = ['Сертификаты специалистов', 'Разрешения', 'Лабораторные протоколы', 'Документы по транспортировке отходов', 'Документы по полигону', 'Экологические проекты'];
+const documents: PublicDocumentGroup[] = [
+  {
+    title: 'Сертификаты специалистов',
+    description: 'Квалификационные и подтверждающие документы команды.',
+    files: [
+      { title: '31 Өмірбаева А.Қ. 17043', href: '/docs/certificates/31 Өмірбаева А.Қ. 17043.pdf' },
+      { title: 'Бактыбай К.Н ГОСТ ISO.IEC 17025-2019', href: '/docs/certificates/Бактыбай К.Н ГОСТ ISO.IEC 17025-2019.PDF' },
+      { title: 'Бектибаева Р.М ГОСТ ISO.IEC 17025-2019', href: '/docs/certificates/Бектибаева Р.М ГОСТ ISO.IEC  17025-2019.PDF' },
+      { title: 'Дуйсенбай Р.С ГОСТ ISO.IEC 17025-2019', href: '/docs/certificates/Дуйсенбай Р.С Гост ISO.IEC 17025-2019.PDF' },
+      { title: 'Манап А.М ГОСТ ISO.IEC 17025-2019', href: '/docs/certificates/Манап А.М ГОСТ ISO.IEC 17025-2019.PDF' },
+      { title: 'Маханова сертификат', href: '/docs/certificates/Маханова сертификат.PDF' },
+      { title: 'Сейткарым А.Е РМГ 43-2001', href: '/docs/certificates/Сейткарым А.Е РМГ 43-2001.PDF' },
+      { title: 'Сертификат Дуйсенбай Р.С', href: '/docs/certificates/Сертификат Дуйсенбай Р.С.PDF' },
+      { title: 'Сертификат Сейткарым А.Е', href: '/docs/certificates/Сертификат Сейткарым А.Е.PDF' },
+      { title: 'Өмірбаева А.К ГОСТ ISO.IEC 17025-2019', href: '/docs/certificates/Өмірбаева А.К ГОСТ ISO.IEC 17025-2019.PDF' },
+    ],
+  },
+  {
+    title: 'Разрешения на деятельность',
+    description: 'Разрешительные документы по экологическим направлениям.',
+    files: [
+      { title: 'Аттестат TCG на казахском языке', href: '/docs/permits/Аттеста ТCG на каз.pdf' },
+      { title: 'Аттестат TCG на русском языке', href: '/docs/permits/Аттестат TCG на русс.pdf' },
+      { title: 'Лицензия на проектирование экология', href: '/docs/permits/лицензия на проектирование экология.pdf' },
+      { title: 'Лицензия на строительное проектирование Tumar', href: '/docs/permits/Лицензия на строит проек Тумар (1).pdf' },
+      { title: 'Разрешение Алеана Сервис новое', href: '/docs/permits/разрешение Алеана Сервис новый.pdf' },
+      { title: 'Разрешение Алеана Сервис', href: '/docs/permits/разрешение Алеана Сервис.pdf' },
+      { title: 'Разрешение ТОО TUMAR Partners', href: '/docs/permits/Разрешение ТОО TUMAR Partners.pdf' },
+    ],
+  },
+  {
+    title: 'Лабораторные протоколы',
+    description: 'Образцы и публичные протоколы лабораторных исследований.',
+    files: [],
+  },
+  {
+    title: 'Документы по полигону',
+    description: 'Материалы и подтверждения по работе полигона ТБО.',
+    files: [
+      { title: 'Разрешение Полигон ТБО с.о Буржар', href: '/docs/poligon/разрешение Полигон ТБО с.о Буржар.pdf' },
+    ],
+  },
+  {
+    title: 'Документы по транспортировке отходов',
+    description: 'Документы по вывозу и транспортировке отходов.',
+    files: [
+      { title: 'Certificate ISO 14001 EN', href: '/docs/waste-transport/certificate 14001 eng.pdf' },
+      { title: 'Certificate ISO 45001 EN', href: '/docs/waste-transport/certificate 45001 eng.pdf' },
+      { title: 'Certificate ISO 45001 KZ', href: '/docs/waste-transport/certificate 45001 kaz.pdf' },
+      { title: 'Certificate ISO 9001 EN', href: '/docs/waste-transport/certificate 9001 eng.pdf' },
+    ],
+  },
+];
 const steps = ['Вы оставляете заявку', 'Специалист уточняет задачу', 'Мы подбираем решение', 'Готовим документы / организуем услугу', 'Вы получаете результат и сопровождение'];
 
 const AboutPage = () => {
@@ -295,11 +360,44 @@ const AboutPage = () => {
           text="Мы сопровождаем работу подтверждающими материалами: сертификатами специалистов, разрешительными документами, лабораторными протоколами и документами по направлениям деятельности."
         />
         <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {/* Replace with real documents later. */}
-          {documents.map((item) => (
-            <div key={item} className="rounded-[20px] border border-dashed border-eco-200 bg-eco-50 p-5">
-              <FolderCheck className="text-eco-600" size={24} />
-              <p className="mt-4 text-sm font-bold text-eco-900">{item}</p>
+          {documents.map((group) => (
+            <div key={group.title} className="flex h-full flex-col rounded-[20px] border border-eco-100 bg-eco-50 p-5 shadow-sm">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-eco-700 shadow-sm">
+                <FolderCheck size={24} />
+              </div>
+              <p className="mt-4 text-sm font-bold text-eco-900">{group.title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{group.description}</p>
+              <div className="mt-5 flex flex-1 flex-col gap-2">
+                {group.files.map((file) => (
+                  <div key={file.href} className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl bg-white px-3 py-3 shadow-sm">
+                    <p className="min-w-0 break-words text-xs font-semibold leading-5 text-slate-700">{file.title}</p>
+                    <div className="flex gap-2">
+                      <a
+                        href={file.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Посмотреть"
+                        aria-label={`Посмотреть ${file.title}`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-eco-200 text-eco-900 transition hover:bg-eco-100"
+                      >
+                        <Eye size={16} aria-hidden="true" />
+                      </a>
+                      <a
+                        href={file.href}
+                        download
+                        title="Скачать"
+                        aria-label={`Скачать ${file.title}`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-eco-900 text-white transition hover:bg-eco-800"
+                      >
+                        <Download size={16} aria-hidden="true" />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+                {!group.files.length && (
+                  <p className="rounded-2xl bg-white px-3 py-3 text-sm font-semibold text-slate-500">Файлы будут добавлены позже.</p>
+                )}
+              </div>
             </div>
           ))}
         </div>

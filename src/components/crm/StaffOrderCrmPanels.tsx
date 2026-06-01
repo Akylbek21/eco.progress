@@ -42,10 +42,11 @@ export const CommercialOfferPanel = ({ order, canEdit = false, onCreate, onStatu
 
 type ContractPanelProps = PanelProps & {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
+  onSendContract: (form: HTMLFormElement) => void | Promise<void>;
   onTransferToAccounting: () => void | Promise<void>;
 };
 
-export const ContractDetailsPanel = ({ order, canEdit = false, onSubmit, onTransferToAccounting }: ContractPanelProps) => (
+export const ContractDetailsPanel = ({ order, canEdit = false, onSubmit, onSendContract, onTransferToAccounting }: ContractPanelProps) => (
   <Panel title="Договор">
     <InfoGrid items={{
       Номер: order.contractId || 'Не создан',
@@ -78,6 +79,18 @@ export const ContractDetailsPanel = ({ order, canEdit = false, onSubmit, onTrans
         <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий<textarea name="comment" rows={3} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
         <div className="flex flex-wrap gap-3 md:col-span-2">
           <Button>Сохранить договор</Button>
+          <Button
+            type="button"
+            variant="secondary"
+            className="gap-2"
+            onClick={(event) => {
+              const form = event.currentTarget.form;
+              if (form) void onSendContract(form);
+            }}
+          >
+            <Send size={16} aria-hidden="true" />
+            Отправить договор
+          </Button>
           <Button type="button" variant="secondary" onClick={onTransferToAccounting}>Передать бухгалтеру</Button>
         </div>
       </form>

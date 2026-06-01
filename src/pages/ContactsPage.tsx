@@ -1,5 +1,6 @@
 ﻿import { AtSign, Clock, Mail, MapPin, Phone } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
+import { Globe2 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import WhatsAppButton from '../components/WhatsAppButton';
@@ -13,6 +14,7 @@ const ContactsPage = () => {
     ['Телефон', company.phone, Phone],
     ['WhatsApp', company.whatsappDisplay, FaWhatsapp],
     ['Email', company.email, Mail],
+    ['Сайт', company.siteLabel, Globe2],
     ['Адрес', company.address, MapPin],
     ['График работы', company.schedule, Clock],
     ['Instagram', company.instagram, AtSign],

@@ -212,6 +212,27 @@ function mapNCAError(
 
 export const ncaLayer = new NCALayerClient();
 
+async function getSignerSubject(): Promise<string> {
+  try {
+    return await ncaLayer.getSubjectDN();
+  } catch {
+    return '';
+  }
+}
+
+export async function signBase64WithNCALayer(
+  dataBase64: string,
+): Promise<{ signedCms: string; signerSubject: string }> {
+  await ncaLayer.connect();
+  try {
+    const signedCms = await ncaLayer.sign(dataBase64);
+    const signerSubject = await getSignerSubject();
+    return { signedCms, signerSubject };
+  } finally {
+    ncaLayer.disconnect();
+  }
+}
+
 export async function signContractWithNCALayer(
   contractData: string,
 ): Promise<{ signedCms: string; signerSubject: string }> {
@@ -219,14 +240,7 @@ export async function signContractWithNCALayer(
   try {
     const dataBase64 = btoa(unescape(encodeURIComponent(contractData)));
     const signedCms = await ncaLayer.sign(dataBase64);
-
-    let signerSubject = '';
-    try {
-      signerSubject = await ncaLayer.getSubjectDN();
-    } catch {
-      // Subject DN extraction is optional
-    }
-
+    const signerSubject = await getSignerSubject();
     return { signedCms, signerSubject };
   } finally {
     ncaLayer.disconnect();

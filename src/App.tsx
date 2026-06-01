@@ -10,6 +10,7 @@ import ServicesPage from './pages/ServicesPage';
 import ServiceLandingPage from './pages/ServiceLandingPage';
 import ServiceDetailsPage from './pages/ServiceDetailsPage';
 import EmployeesPage from './pages/EmployeesPage';
+import PartnersPage from './pages/PartnersPage';
 import TariffsPage from './pages/TariffsPage';
 import NewsPage from './pages/NewsPage';
 import NewsDetailsPage from './pages/NewsDetailsPage';
@@ -61,11 +62,24 @@ function App() {
   const toast = useToast();
   const notify = (message: string) => {
     const lower = message.toLowerCase();
-    if (lower.includes('ошибка') || lower.includes('не удалось') || lower.includes('нельзя')) {
+    if (
+      lower.includes('ошибка') ||
+      lower.includes('не удалось') ||
+      lower.includes('нельзя') ||
+      lower.includes('не сохран') ||
+      lower.includes('не загруж') ||
+      lower.includes('не отправ')
+    ) {
       toast.error(message);
       return;
     }
-    if (lower.includes('выберите') || lower.includes('укажите') || lower.includes('сначала') || lower.includes('недоступ')) {
+    if (
+      lower.includes('выберите') ||
+      lower.includes('укажите') ||
+      lower.includes('сначала') ||
+      lower.includes('недоступ') ||
+      lower.includes('заполните')
+    ) {
       toast.warning(message);
       return;
     }
@@ -88,6 +102,7 @@ function App() {
         <Route path="/services/:id" element={<PublicLayout><ServiceDetailsPage /></PublicLayout>} />
         <Route path="/tariffs" element={<PublicLayout><TariffsPage /></PublicLayout>} />
         <Route path="/employees" element={<PublicLayout><EmployeesPage /></PublicLayout>} />
+        <Route path="/partners" element={<PublicLayout><PartnersPage /></PublicLayout>} />
         <Route path="/news" element={<PublicLayout><NewsPage /></PublicLayout>} />
         <Route path="/news/:id" element={<PublicLayout><NewsDetailsPage /></PublicLayout>} />
         <Route path="/faq" element={<PublicLayout><FaqPage /></PublicLayout>} />

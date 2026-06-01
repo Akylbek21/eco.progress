@@ -1,4 +1,5 @@
 import { Phone, Mail, MapPin, Clock } from 'lucide-react';
+import { company } from '../config/company';
 
 const ContactBlock = () => {
   return (
@@ -11,7 +12,7 @@ const ContactBlock = () => {
             <Phone size={20} className="text-accent" />
             <div>
               <p className="text-white font-medium">Телефон</p>
-              <p className="text-eco-200">+7 (7172) 34-56-78</p>
+              <p className="text-eco-200">{company.phone}</p>
             </div>
           </div>
 
@@ -19,7 +20,7 @@ const ContactBlock = () => {
             <Mail size={20} className="text-accent" />
             <div>
               <p className="text-white font-medium">Email</p>
-              <p className="text-eco-200">info@ecoprogress.kz</p>
+              <p className="text-eco-200">{company.email}</p>
             </div>
           </div>
 
@@ -27,7 +28,7 @@ const ContactBlock = () => {
             <MapPin size={20} className="text-accent" />
             <div>
               <p className="text-white font-medium">Адрес</p>
-              <p className="text-eco-200">г. Нур-Султан, ул. Экологическая, 23</p>
+              <p className="text-eco-200">{company.address}</p>
             </div>
           </div>
 
@@ -35,7 +36,7 @@ const ContactBlock = () => {
             <Clock size={20} className="text-accent" />
             <div>
               <p className="text-white font-medium">Режим работы</p>
-              <p className="text-eco-200">Пн-Пт: 9:00-18:00</p>
+              <p className="text-eco-200">{company.schedule}</p>
             </div>
           </div>
         </div>

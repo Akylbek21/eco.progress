@@ -13,6 +13,7 @@ const navItems = [
   { label: 'О компании', path: '/about' },
   { label: 'Услуги', path: '/services' },
   { label: 'Сотрудники', path: '/employees' },
+  { label: 'Наши партнеры', path: '/partners' },
   { label: 'Как это работает', path: '/#how-it-works' },
   { label: 'Контакты', path: '/contacts' },
 ];
@@ -25,7 +26,7 @@ const accountMenuItems = [
 
 const socialLinks = [
   { label: 'TikTok', href: 'https://www.tiktok.com/@ecoprogress.group', Icon: FaTiktok },
-  { label: 'Instagram', href: 'https://www.instagram.com/ecoprogress.group', Icon: FaInstagram },
+  { label: 'Instagram', href: company.instagramUrl, Icon: FaInstagram },
   { label: 'Telegram', href: 'https://t.me/ecoprogress_group', Icon: FaTelegramPlane },
 ];
 
@@ -202,6 +203,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 <li><a href={company.phoneHref} onClick={() => trackPhoneClick({ placement: 'footer' })} className="hover:text-white">{company.phone}</a></li>
                 <li className="flex items-center gap-2"><FaWhatsapp className="shrink-0 text-[#25D366]" size={16} aria-hidden="true" /> WhatsApp: {company.whatsappDisplay}</li>
                 <li>{company.email}</li>
+                <li><a href={company.siteUrl} target="_blank" rel="noreferrer" className="hover:text-white">{company.siteLabel}</a></li>
                 <li>{company.address}</li>
                 <li>{company.schedule}</li>
               </ul>
@@ -211,6 +213,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               <div className="mt-4 space-y-3 text-sm text-white/75">
                 <Link to="/tariffs" className="block hover:text-white">Тарифы</Link>
                 <Link to="/employees" className="block hover:text-white">Сотрудники</Link>
+                <Link to="/partners" className="block hover:text-white">Наши партнеры</Link>
                 <Link to="/faq" className="block hover:text-white">FAQ</Link>
                 <Link to="/contacts" className="block hover:text-white">Контакты</Link>
               </div>

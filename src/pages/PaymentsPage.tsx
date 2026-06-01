@@ -391,7 +391,7 @@ const PaymentsPage = () => {
   const submitQuarterPayment = async (values: PaymentModalValues, quarterItem: QuarterlyContractItem) => {
     if (!selectedContract) return;
     try {
-      await addQuarterPayment(selectedContract.id, quarterItem.id, {
+      await addQuarterPayment(selectedContract.requestId, quarterItem.id, {
         amount: values.amount,
         date: values.date,
         method: values.method,
@@ -410,7 +410,7 @@ const PaymentsPage = () => {
     if (!selectedContract) return;
     const form = new FormData(event.currentTarget);
     try {
-      await updateQuarterDetails(selectedContract.id, quarterItem.id, {
+      await updateQuarterDetails(selectedContract.requestId, quarterItem.id, {
         dueDate: String(form.get('dueDate') || ''),
         comment: String(form.get('comment') || ''),
         workStatus: String(form.get('workStatus') || quarterItem.workStatus) as QuarterWorkStatus,
@@ -425,7 +425,7 @@ const PaymentsPage = () => {
   const markQuarterCompleted = async (quarterItem: QuarterlyContractItem) => {
     if (!selectedContract) return;
     try {
-      await updateQuarterDetails(selectedContract.id, quarterItem.id, {
+      await updateQuarterDetails(selectedContract.requestId, quarterItem.id, {
         workStatus: 'completed',
         completedAt: new Date().toISOString().slice(0, 10),
       });
@@ -454,7 +454,7 @@ const PaymentsPage = () => {
   const markSelectedQuarterPaid = async (quarterItem: QuarterlyContractItem) => {
     if (!selectedContract) return;
     try {
-      await markQuarterPaid(selectedContract.id, quarterItem.id);
+      await markQuarterPaid(selectedContract.requestId, quarterItem.id, quarterItem.remainingAmount || quarterItem.plannedAmount);
       refresh();
       toast.success('Оплата закрыта полностью', 'Остаток по заявке равен 0.');
     } catch (err: unknown) {

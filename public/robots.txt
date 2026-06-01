@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://ecoprogress.kz/sitemap.xml
+Sitemap: https://eco.progress.kz/sitemap.xml

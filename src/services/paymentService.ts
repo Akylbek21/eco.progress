@@ -62,33 +62,33 @@ export const updateFinancePaymentDetails = async (
 };
 
 export const addQuarterPayment = async (
-  contractId: string,
+  orderId: string,
   quarterItemId: string,
   payload: AddPartialPaymentPayload,
 ) => {
   const { data } = await api.post<{ data: Contract; message: string | null }>(
-    `/staff/payments/contracts/${contractId}/quarters/${quarterItemId}/pay`,
-    payload,
+    `/staff/orders/${orderId}/quarters/${quarterItemId}/payments`,
+    { amount: payload.amount, method: payload.method, comment: payload.comment },
   );
   return data.data;
 };
 
-export const markQuarterPaid = async (contractId: string, quarterItemId: string, method: PaymentMethod = 'bank_transfer') => {
+export const markQuarterPaid = async (orderId: string, quarterItemId: string, amount: number, method: PaymentMethod = 'bank_transfer') => {
   const { data } = await api.post<{ data: Contract; message: string | null }>(
-    `/staff/payments/contracts/${contractId}/quarters/${quarterItemId}/mark-paid`,
-    { method },
+    `/staff/orders/${orderId}/quarters/${quarterItemId}/payments`,
+    { amount, method },
   );
   return data.data;
 };
 
 export const updateQuarterDetails = async (
-  contractId: string,
+  orderId: string,
   quarterItemId: string,
   payload: { dueDate?: string; comment?: string; workStatus?: string; completedAt?: string },
 ) => {
   const { data } = await api.patch<{ data: Contract; message: string | null }>(
-    `/staff/payments/contracts/${contractId}/quarters/${quarterItemId}`,
-    payload,
+    `/staff/orders/${orderId}/quarters/${quarterItemId}/work-status`,
+    { workStatus: payload.workStatus, comment: payload.comment },
   );
   return data.data;
 };

@@ -10,6 +10,8 @@ import type {
   RequestQuarter,
   UploadDocumentPayload,
 } from '../types';
+import { mapDocument, mapOrder, mapOrders } from './backendAdapters';
+import { signBase64WithNCALayer } from './ncalayer';
 
 export const primaryDocumentTemplates = [
   'Карточка компании',
@@ -21,15 +23,15 @@ export const primaryDocumentTemplates = [
 ] as const;
 
 export const getOrders = async (): Promise<Order[]> => {
-  const { data } = await api.get<{ data: Order[]; message: string | null }>('/client/orders');
-  return data.data;
+  const { data } = await api.get<{ data: unknown[]; message: string | null }>('/client/orders');
+  return mapOrders(data.data as never[]);
 };
 
 export const getClientOrders = async (): Promise<Order[]> => getOrders();
 
 export const getOrderById = async (id: string): Promise<Order | undefined> => {
-  const { data } = await api.get<{ data: Order; message: string | null }>(`/client/orders/${id}`);
-  return data.data;
+  const { data } = await api.get<{ data: unknown; message: string | null }>(`/client/orders/${id}`);
+  return mapOrder(data.data as never);
 };
 
 export type CreateOrderPayload = {
@@ -38,18 +40,21 @@ export type CreateOrderPayload = {
   email: string;
   companyName: string;
   bin: string;
+  city?: string;
+  objectAddress?: string;
   serviceId: string;
   service: string;
   urgency: string;
   comment: string;
+  contractType?: 'one_time' | 'annual_quarterly';
   signatureProvider?: string;
   paymentMethod?: string;
   fileName?: string;
 };
 
 export const createOrder = async (payload: CreateOrderPayload): Promise<Order> => {
-  const { data } = await api.post<{ data: Order; message: string | null }>('/client/orders', payload);
-  return data.data;
+  const { data } = await api.post<{ data: unknown; message: string | null }>('/client/orders', payload);
+  return mapOrder(data.data as never);
 };
 
 export const addComment = async (orderId: string, text: string, visibility: 'client' | 'internal' = 'client'): Promise<CommentItem> => {
@@ -77,17 +82,58 @@ export const uploadDocument = async (orderId: string, fileOrPayload: File | Uplo
   const { data } = await api.post<{ data: DocumentItem; message: string | null }>(`/client/orders/${orderId}/documents`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
-  return data.data;
+  return mapDocument(data.data as never, orderId);
 };
 
-export const signOrderContract = async (orderId: string, provider: string) => {
-  const { data } = await api.post<{ data: Order; message: string | null }>(`/client/orders/${orderId}/contract/sign`, { provider });
-  return data.data;
+export type ContractSignaturePayload = {
+  signatureProvider?: string;
+  signedCms?: string;
+  signerSubject?: string;
+  documentId?: string;
+  signedAt?: string;
+};
+
+export const signOrderContract = async (orderId: string, payload: string | ContractSignaturePayload = 'NCALayer') => {
+  const body = typeof payload === 'string' ? { signatureProvider: payload } : { signatureProvider: 'NCALayer', ...payload };
+  const { data } = await api.post<{ data: unknown; message: string | null }>(`/client/orders/${orderId}/contract/sign`, body);
+  return mapOrder(data.data as never);
+};
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = '';
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+};
+
+const fileUrlToApiPath = (document: DocumentItem) => {
+  const fileUrl = document.fileUrl || `/api/files/documents/${encodeURIComponent(document.id)}`;
+  if (fileUrl.startsWith('/api/')) return fileUrl.slice(4);
+  return fileUrl;
+};
+
+export const signOrderContractWithNCALayer = async (orderId: string, document: DocumentItem) => {
+  if (localStorage.getItem('eco-progress-token')?.startsWith('mock-session')) {
+    return signOrderContract(orderId, 'NCALayer');
+  }
+  const filePath = fileUrlToApiPath(document);
+  const { data: fileBytes } = await api.get<ArrayBuffer>(filePath, { responseType: 'arraybuffer' });
+  const { signedCms, signerSubject } = await signBase64WithNCALayer(arrayBufferToBase64(fileBytes));
+  return signOrderContract(orderId, {
+    signatureProvider: 'NCALayer',
+    signedCms,
+    signerSubject,
+    documentId: document.id,
+    signedAt: new Date().toISOString(),
+  });
 };
 
 export const payOrderOnline = async (orderId: string, method: string) => {
-  const { data } = await api.post<{ data: Order; message: string | null }>(`/client/orders/${orderId}/pay`, { method });
-  return data.data;
+  const { data } = await api.post<{ data: unknown; message: string | null }>(`/client/orders/${orderId}/pay`, { paymentMethod: method });
+  return mapOrder(data.data as never);
 };
 
 export const getQuarters = async (orderId: string): Promise<RequestQuarter[]> => {
@@ -108,7 +154,7 @@ export const uploadQuarterDocument = async (
 ) => {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('documentType', documentType);
+  formData.append('type', documentType);
   const { data } = await api.post<{ data: unknown; message: string | null }>(
     `/client/orders/${orderId}/quarters/${quarterId}/documents`,
     formData,
@@ -151,18 +197,18 @@ export const uploadPrimaryDocument = async (
 };
 
 export const deletePrimaryDocumentFile = async (orderId: string, documentId: string): Promise<Order | undefined> => {
-  const { data } = await api.delete<{ data: Order; message: string | null }>(`/client/orders/${orderId}/primary-documents/${documentId}/file`);
-  return data.data;
+  const { data } = await api.delete<{ data: unknown; message: string | null }>(`/client/orders/${orderId}/primary-documents/${documentId}/file`);
+  return mapOrder(data.data as never);
 };
 
 export const sendPrimaryDocumentsForReview = async (orderId: string, clientComment = ''): Promise<Order | undefined> => {
-  const { data } = await api.post<{ data: Order; message: string | null }>(`/client/orders/${orderId}/primary-documents/review`, { clientComment });
-  return data.data;
+  const { data } = await api.post<{ data: unknown; message: string | null }>(`/client/orders/${orderId}/primary-documents/review`, { clientComment });
+  return mapOrder(data.data as never);
 };
 
 export const sendPrimaryDocumentForReview = async (orderId: string, documentId: string, clientComment = ''): Promise<Order | undefined> => {
-  const { data } = await api.post<{ data: Order; message: string | null }>(`/client/orders/${orderId}/primary-documents/${documentId}/review`, { clientComment });
-  return data.data;
+  const { data } = await api.post<{ data: unknown; message: string | null }>(`/client/orders/${orderId}/primary-documents/${documentId}/review`, { clientComment });
+  return mapOrder(data.data as never);
 };
 
 export const uploadLaboratoryPrimaryDocument = async (
@@ -181,9 +227,15 @@ export const respondLaboratoryMeasurementAgreement = async (
   orderId: string,
   payload: { action: 'accept' | 'reschedule'; rescheduleDate?: string; rescheduleTime?: string; comment?: string },
 ): Promise<LaboratoryMeasurementAgreement | undefined> => {
+  const status = payload.action === 'reschedule' ? 'rescheduled' : 'accepted';
   const { data } = await api.post<{ data: LaboratoryMeasurementAgreement; message: string | null }>(
     `/client/orders/${orderId}/laboratory/measurement/respond`,
-    payload,
+    {
+      status,
+      comment: payload.comment,
+      rescheduleDate: payload.rescheduleDate,
+      rescheduleTime: payload.rescheduleTime,
+    },
   );
   return data.data;
 };
