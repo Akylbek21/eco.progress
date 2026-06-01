@@ -35,7 +35,7 @@ export const createStaffManualOrder = async (payload: StaffManualOrderPayload): 
   });
   payload.files?.forEach((file) => formData.append('files', file));
   return dataOrFallback(
-    api.post<{ data: Order; message: string | null }>('/staff/orders', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post<{ data: Order; message: string | null }>('/staff/orders', formData),
     undefined,
   );
 };
@@ -44,14 +44,13 @@ export const uploadCrmDocument = async (orderId: string, payload: UploadDocument
   const formData = new FormData();
   formData.append('file', payload.file);
   formData.append('type', payload.type);
-  formData.append('title', payload.title);
   formData.append('comment', payload.comment || '');
   formData.append('sendToClient', String(Boolean(payload.sendToClient)));
   formData.append('needsSignature', String(Boolean(payload.needsSignature)));
   formData.append('needsClientResponse', String(Boolean(payload.needsClientResponse)));
   if (payload.dueDate) formData.append('dueDate', payload.dueDate);
   return dataOrFallback(
-    api.post<{ data: CrmDocument; message: string | null }>(`/staff/orders/${orderId}/documents`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post<{ data: CrmDocument; message: string | null }>(`/staff/orders/${orderId}/documents`, formData),
     undefined,
   );
 };
@@ -65,16 +64,10 @@ export const sendDocumentToClient = async (orderId: string, documentId: string, 
 export const sendAgreementResponse = async (
   orderId: string,
   sourceDocumentId: string,
-  payload: { action: AgreementResponse['action']; comment?: string; file?: File | null },
+  payload: { action: 'accept' | 'reject' | 'sign'; comment?: string; signedCms?: string; signerSubject?: string },
 ) => {
-  const formData = new FormData();
-  formData.append('action', payload.action);
-  formData.append('comment', payload.comment || '');
-  if (payload.file) formData.append('file', payload.file);
-  return dataOrFallback(
-    api.post<{ data: AgreementResponse; message: string | null }>(`/client/orders/${orderId}/agreements/${sourceDocumentId}/responses`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-    undefined,
-  );
+  const { data } = await api.post<{ data: AgreementResponse; message: string | null }>(`/client/orders/${orderId}/agreements/${sourceDocumentId}/responses`, payload);
+  return data.data;
 };
 
 export const uploadClientPrimaryDocumentFile = async (orderId: string, documentId: string, file: File, comment = '') =>
@@ -88,7 +81,6 @@ export const uploadClientPrimaryDocumentFile = async (orderId: string, documentI
         formData.append('documentId', documentId);
         return formData;
       })(),
-      { headers: { 'Content-Type': 'multipart/form-data' } },
     ),
     undefined,
   );
@@ -101,7 +93,7 @@ export const createCommercialOffer = async (orderId: string, payload: Partial<Co
   });
   if (payload.file) formData.append('file', payload.file);
   return dataOrFallback(
-    api.post<{ data: CommercialOffer; message: string | null }>(`/staff/orders/${orderId}/commercial-offers`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post<{ data: CommercialOffer; message: string | null }>(`/staff/orders/${orderId}/commercial-offers`, formData),
     undefined,
   );
 };
@@ -118,7 +110,7 @@ export const saveInvoicePayment = async (orderId: string, payload: Partial<Invoi
   if (payload.invoiceFile) formData.append('invoiceFile', payload.invoiceFile);
   if (payload.paymentOrder) formData.append('paymentOrder', payload.paymentOrder);
   return dataOrFallback(
-    api.post<{ data: InvoicePayment; message: string | null }>(`/staff/orders/${orderId}/invoice-payment`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post<{ data: InvoicePayment; message: string | null }>(`/staff/orders/${orderId}/invoice-payment`, formData),
     undefined,
   );
 };
@@ -132,7 +124,7 @@ export const saveWasteRemoval = async (orderId: string, payload: Partial<WasteRe
   if (payload.act) formData.append('act', payload.act);
   payload.photos?.forEach((file) => formData.append('photos', file));
   return dataOrFallback(
-    api.post<{ data: WasteRemoval; message: string | null }>(`/staff/orders/${orderId}/waste-removal`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post<{ data: WasteRemoval; message: string | null }>(`/staff/orders/${orderId}/waste-removal`, formData),
     undefined,
   );
 };

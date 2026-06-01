@@ -9,6 +9,7 @@ import CaseStudies from '../components/CaseStudies';
 import SEO from '../components/SEO';
 import { DocumentsSection, TrustSection } from '../components/TrustBlocks';
 import { company } from '../config/company';
+import { seoPages } from '../data/seoPages';
 import { trackEvent } from '../services/analytics';
 
 const benefits = ['Экологическое проектирование', 'Лабораторные исследования', 'Вывоз и утилизация отходов', 'Полигон ТБО', 'Работаем по Казахстану', 'Документы и сопровождение'];
@@ -106,19 +107,26 @@ const visualHighlights = [
 
 const organizationSchema = {
   '@context': 'https://schema.org',
-  '@type': 'Organization',
+  '@type': 'LocalBusiness',
   name: company.name,
   url: company.siteUrl,
   email: company.email,
   telephone: company.phone,
-  address: company.address,
+  areaServed: 'Шымкент, Казахстан',
+  description: 'Экологические и лабораторные услуги для бизнеса в Шымкенте и Казахстане',
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: company.address,
+    addressLocality: 'Шымкент',
+    addressCountry: 'KZ',
+  },
 };
 
 const HomePage = () => (
   <div className="min-h-screen bg-white">
     <SEO
-      title="Экологические услуги для бизнеса | ecoprogress.kz"
-      description="Экологические документы, лабораторные исследования, вывоз и утилизация отходов, полигон ТБО и сопровождение проверок по Казахстану."
+      title="Экологические услуги в Шымкенте — лаборатория, СЭС, отходы | ECOPROGRESS"
+      description="ECOPROGRESS GROUP оказывает экологические и лабораторные услуги для бизнеса в Шымкенте: производственный контроль СЭС, замеры, ПЭК, паспорта отходов и утилизация."
       schema={organizationSchema}
     />
     <section id="lead" className="relative isolate overflow-hidden px-4 py-20 text-white sm:px-8 sm:py-28 lg:min-h-[760px]">
@@ -130,7 +138,7 @@ const HomePage = () => (
           <Reveal>
             <p className="text-sm font-bold uppercase tracking-[0.22em] text-accent">{company.name}</p>
             <h1 className="mt-5 max-w-5xl text-4xl font-bold leading-tight sm:text-6xl lg:text-[66px]">
-              Экологические документы, лаборатория и утилизация отходов для бизнеса
+              Экологические услуги, лабораторные замеры и утилизация отходов в Шымкенте
             </h1>
           </Reveal>
           <Reveal delay={0.08}>
@@ -217,6 +225,31 @@ const HomePage = () => (
                   <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{text}</p>
                   <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-eco-700">Подробнее <ArrowRight size={16} /></span>
                 </div>
+              </Link>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section className="bg-white px-4 py-16 sm:px-8 sm:py-20">
+      <div className="mx-auto max-w-7xl">
+        <Reveal>
+          <div className="max-w-3xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Направления</p>
+            <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Экологические услуги для бизнеса в Шымкенте и Казахстане</h2>
+            <p className="mt-4 text-base leading-7 text-slate-600">
+              Помогаем предприятиям с лабораторными замерами, производственным контролем СЭС, отчетами ПЭК, паспортами отходов, экологическим проектированием и утилизацией.
+            </p>
+          </div>
+        </Reveal>
+        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {seoPages.map((page, index) => (
+            <Reveal key={page.slug} delay={index * 0.03}>
+              <Link to={`/${page.slug}`} className="group block h-full rounded-[8px] border border-slate-200 bg-[#F7FBFD] p-5 shadow-sm transition hover:border-eco-300 hover:bg-white">
+                <h3 className="font-bold text-eco-900 group-hover:text-eco-600">{page.h1}</h3>
+                <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">{page.description}</p>
+                <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-eco-700">Открыть страницу <ArrowRight size={16} /></span>
               </Link>
             </Reveal>
           ))}

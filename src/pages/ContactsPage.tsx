@@ -9,6 +9,22 @@ import SEO from '../components/SEO';
 import { company } from '../config/company';
 import { trackPhoneClick } from '../services/analytics';
 
+const contactSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'LocalBusiness',
+  name: company.name,
+  url: company.siteUrl,
+  email: company.email,
+  telephone: company.phone,
+  areaServed: 'Шымкент, Казахстан',
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: company.address,
+    addressLocality: 'Шымкент',
+    addressCountry: 'KZ',
+  },
+};
+
 const ContactsPage = () => {
   const items = [
     ['Телефон', company.phone, Phone],
@@ -22,7 +38,7 @@ const ContactsPage = () => {
 
   return (
     <section className="bg-[#F7FBFD] px-4 py-16 sm:px-8 sm:py-20">
-      <SEO title="Контакты | ecoprogress.kz" description="Контакты ecoprogress.kz: телефон, WhatsApp, email, адрес и форма консультации по экологическим услугам." />
+      <SEO title="Контакты ECOPROGRESS GROUP | Экологические услуги Шымкент" description="Контакты ECOPROGRESS GROUP: телефон, WhatsApp, email, адрес и форма консультации по экологическим услугам в Шымкенте." schema={contactSchema} />
       <div className="mx-auto max-w-7xl">
         <Reveal>
           <div className="max-w-3xl">

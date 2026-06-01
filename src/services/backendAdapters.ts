@@ -36,6 +36,8 @@ export const mapDocument = (doc: AnyRecord = {}, orderId?: string): DocumentItem
   sentToClient: doc.sentToClient,
   needsSignature: doc.needsSignature,
   needsClientResponse: doc.needsClientResponse,
+  clientResponseStatus: doc.clientResponseStatus,
+  clientComment: doc.clientComment,
   staffComment: doc.staffComment,
   dueDate: doc.dueDate,
 });
@@ -191,6 +193,7 @@ export const mapOrder = (raw: AnyRecord): Order => {
     paidAt: raw.paidAt,
     completedAt: raw.completedAt,
     documents: (raw.documents || []).map((doc: AnyRecord) => mapDocument(doc, orderId)),
+    agreementDocuments: agreementDocuments.map((doc: AnyRecord) => mapDocument(doc, orderId)),
     primaryDocuments: raw.primaryDocuments || [],
     resultDocuments: [...agreementDocuments, ...resultDocuments].map((doc: AnyRecord) => mapDocument(doc, orderId)),
     comments: (raw.comments || []).map((comment: AnyRecord) => mapComment(comment, orderId)),

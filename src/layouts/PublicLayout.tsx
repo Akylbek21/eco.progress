@@ -6,6 +6,7 @@ import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
 import OrderChoiceModal from '../components/OrderChoiceModal';
 import { company } from '../config/company';
+import { seoPages } from '../data/seoPages';
 import { trackPhoneClick } from '../services/analytics';
 
 const navItems = [
@@ -195,6 +196,9 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 <li><Link to="/services/waste-recycling" className="hover:text-white">Утилизация отходов</Link></li>
                 <li><Link to="/services/laboratory-tests" className="hover:text-white">Лабораторные анализы</Link></li>
                 <li><Link to="/services/poligon-tbo" className="hover:text-white">Полигон ТБО</Link></li>
+                {seoPages.slice(0, 4).map((page) => (
+                  <li key={page.slug}><Link to={`/${page.slug}`} className="hover:text-white">{page.serviceType}</Link></li>
+                ))}
               </ul>
             </div>
             <div>
@@ -216,6 +220,9 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 <Link to="/partners" className="block hover:text-white">Наши партнеры</Link>
                 <Link to="/faq" className="block hover:text-white">FAQ</Link>
                 <Link to="/contacts" className="block hover:text-white">Контакты</Link>
+                {seoPages.slice(4).map((page) => (
+                  <Link key={page.slug} to={`/${page.slug}`} className="block hover:text-white">{page.serviceType}</Link>
+                ))}
               </div>
               <h4 className="mt-7 text-sm font-semibold uppercase text-eco-200">Личный кабинет</h4>
               <div className="mt-4 space-y-3 text-sm text-white/75">

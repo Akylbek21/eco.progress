@@ -1,14 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://eco.progress.kz/</loc></url>
-  <url><loc>https://eco.progress.kz/services</loc></url>
-  <url><loc>https://eco.progress.kz/services/ecological-documents</loc></url>
-  <url><loc>https://eco.progress.kz/services/waste-transportation</loc></url>
-  <url><loc>https://eco.progress.kz/services/waste-recycling</loc></url>
-  <url><loc>https://eco.progress.kz/services/laboratory-tests</loc></url>
-  <url><loc>https://eco.progress.kz/services/poligon-tbo</loc></url>
-  <url><loc>https://eco.progress.kz/services/environmental-audit</loc></url>
-  <url><loc>https://eco.progress.kz/tariffs</loc></url>
-  <url><loc>https://eco.progress.kz/contacts</loc></url>
-  <url><loc>https://eco.progress.kz/faq</loc></url>
+  <url><loc>https://ecoprogress.kz/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://ecoprogress.kz/services</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://ecoprogress.kz/contacts</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://ecoprogress.kz/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ecoprogress.kz/faq</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://ecoprogress.kz/tariffs</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://ecoprogress.kz/services/ecological-documents</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ecoprogress.kz/services/waste-transportation</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ecoprogress.kz/services/waste-recycling</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ecoprogress.kz/services/laboratory-tests</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ecoprogress.kz/services/poligon-tbo</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://ecoprogress.kz/services/environmental-audit</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://ecoprogress.kz/laboratornye-zamery-shymkent</loc><changefreq>monthly</changefreq><priority>0.95</priority></url>
+  <url><loc>https://ecoprogress.kz/ecologicheskie-uslugi-shymkent</loc><changefreq>monthly</changefreq><priority>0.95</priority></url>
+  <url><loc>https://ecoprogress.kz/proizvodstvennyy-kontrol-ses-shymkent</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://ecoprogress.kz/utilizaciya-othodov-shymkent</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://ecoprogress.kz/pasport-othodov-kazakhstan</loc><changefreq>monthly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://ecoprogress.kz/ekologicheskoe-proektirovanie-shymkent</loc><changefreq>monthly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://ecoprogress.kz/otchet-pek-kazakhstan</loc><changefreq>monthly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://ecoprogress.kz/shtrafy-za-ekologicheskie-narusheniya-kazakhstan</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
 </urlset>

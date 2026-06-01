@@ -42,10 +42,12 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('eco-progress-token');
-  if (token) {
+  const requestPath = String(config.url || '').replace(/^\/api/, '').split('?')[0];
+  const isPublicAuthRequest = ['/auth/login', '/auth/staff/login', '/auth/register'].includes(requestPath);
+  if (token && !isPublicAuthRequest) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  if (import.meta.env.DEV && token?.startsWith('mock-session')) {
+  if (import.meta.env.DEV && token?.startsWith('mock-session') && !requestPath.startsWith('/auth/')) {
     config.adapter = async (mockConfig) => mockResponse(mockConfig);
   }
   return config;
@@ -158,6 +160,7 @@ const mockResponse = async (config: InternalAxiosRequestConfig): Promise<AxiosRe
 
     if (orderId && parts[3] === 'documents') {
       if (parts[5] === 'send-to-client' && method === 'post') return ok(config, buildCrmDocument(orderId, parts[4], payload));
+      if (parts[5] === 'respond' && method === 'post') return ok(config, { id: parts[4], orderId, ...payload, clientResponseStatus: payload.action === 'accept' ? 'accepted' : payload.action === 'reject' ? 'rejected' : 'signed' });
       if (method === 'post') return ok(config, addMockDocument(orderId, fileNameFrom(payload.file, String(payload.title || 'Документ.pdf')), documentTypeFrom(payload.type), {
         sentToClient: boolFrom(payload.sendToClient),
         needsSignature: boolFrom(payload.needsSignature),
@@ -165,6 +168,10 @@ const mockResponse = async (config: InternalAxiosRequestConfig): Promise<AxiosRe
         staffComment: payload.comment ? String(payload.comment) : undefined,
         dueDate: payload.dueDate ? String(payload.dueDate) : undefined,
       }));
+    }
+
+    if (scope === 'client' && orderId && parts[3] === 'agreements' && parts[5] === 'responses' && method === 'post') {
+      return ok(config, { id: `AGR-RESP-${Date.now()}`, orderId, sourceDocumentId: parts[4], ...payload });
     }
 
     if (scope === 'client' && orderId && parts[3] === 'contract' && parts[4] === 'sign' && method === 'post') {
@@ -225,6 +232,17 @@ const mockResponse = async (config: InternalAxiosRequestConfig): Promise<AxiosRe
 
     if (orderId && parts[3] === 'primary-documents') {
       const documentId = parts[4];
+      if (documentId === 'batch' && method === 'post') {
+        const documents = Array.isArray(payload.documents) ? payload.documents : [];
+        const updated = documents.reduce((lastOrder: Order | undefined, document: { name?: string; required?: boolean; comment?: string }) =>
+          requestMockPrimaryDocument(
+            orderId,
+            String(document.name || 'Документ'),
+            Boolean(document.required ?? true),
+            String(document.comment || ''),
+          ) || lastOrder, undefined);
+        return ok(config, updated || getMockOrderById(orderId));
+      }
       if (!documentId && method === 'post') return ok(config, requestMockPrimaryDocument(orderId, String(payload.name || 'Документ'), Boolean(payload.required ?? true), String(payload.comment || '')));
       if (documentId && parts[5] === 'upload' && method === 'post') return ok(config, uploadMockPrimaryDocument(orderId, documentId, fileNameFrom(payload.file, 'Документ.pdf'), String(payload.comment || payload.clientComment || '')));
       if (documentId && parts[5] === 'review' && method === 'post') return ok(config, sendMockPrimaryDocumentForReview(orderId, documentId, String(payload.clientComment || '')));

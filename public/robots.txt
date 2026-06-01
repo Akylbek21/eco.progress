@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /cabinet
+Disallow: /staff
+Disallow: /admin
+Disallow: /login
+Disallow: /register
 
-Sitemap: https://eco.progress.kz/sitemap.xml
+Sitemap: https://ecoprogress.kz/sitemap.xml

@@ -2,7 +2,7 @@
 import { createWhatsAppUrl } from '../utils/whatsapp';
 
 export const company = {
-  name: 'ecoprogress.kz',
+  name: 'ECOPROGRESS GROUP',
   phone: COMPANY_CONTACTS.phoneDisplay,
   phoneHref: `tel:+${COMPANY_CONTACTS.phone}`,
   whatsapp: COMPANY_CONTACTS.whatsappPhone,
@@ -10,11 +10,11 @@ export const company = {
   email: 'ecoprogress@gmail.com',
   address: 'г. Шымкент, Алимбетова 199/2а',
   schedule: 'Пн-Пт, 09:00-18:00',
-  instagram: '@eco.progress.kz',
-  instagramUrl: 'https://www.instagram.com/eco.progress.kz',
+  instagram: '@ecoprogress.group',
+  instagramUrl: 'https://www.instagram.com/ecoprogress.group',
   mapsUrl: 'https://go.2gis.com/',
-  siteLabel: 'eco.progress.kz',
-  siteUrl: 'https://eco.progress.kz',
+  siteLabel: 'ecoprogress.kz',
+  siteUrl: 'https://ecoprogress.kz',
 };
 
 export const whatsappConsultationText = 'Здравствуйте! Хочу получить консультацию по экологическим услугам. Город: ';

@@ -87,17 +87,13 @@ export const uploadDocument = async (orderId: string, fileOrPayload: File | Uplo
     if (type) formData.append('type', type);
   } else {
     formData.append('type', fileOrPayload.type);
-    formData.append('title', fileOrPayload.title);
     formData.append('comment', fileOrPayload.comment || '');
     formData.append('sendToClient', String(Boolean(fileOrPayload.sendToClient)));
     formData.append('needsSignature', String(Boolean(fileOrPayload.needsSignature)));
     formData.append('needsClientResponse', String(Boolean(fileOrPayload.needsClientResponse)));
     if (fileOrPayload.dueDate) formData.append('dueDate', fileOrPayload.dueDate);
-    // TODO backend: accept extended document metadata above in addition to file/type.
   }
-  const { data } = await api.post<{ data: DocumentItem; message: string | null }>(`/staff/orders/${orderId}/documents`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const { data } = await api.post<{ data: DocumentItem; message: string | null }>(`/staff/orders/${orderId}/documents`, formData);
   return mapDocument(data.data as never, orderId);
 };
 
@@ -122,7 +118,6 @@ export const uploadContractDocument = async (
   const { data } = await api.post<{ data: DocumentItem; message: string | null }>(
     `/staff/orders/${orderId}/documents`,
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
   return { document: mapDocument(data.data as never, orderId), message: data.message };
 };
@@ -148,7 +143,6 @@ export const uploadInvoiceDocument = async (
   const { data } = await api.post<{ data: DocumentItem; message: string | null }>(
     `/staff/orders/${orderId}/documents`,
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
   return { document: mapDocument(data.data as never, orderId), message: data.message };
 };
@@ -242,6 +236,14 @@ export const requestPrimaryDocument = async (orderId: string, documentName: stri
   return data.data;
 };
 
+export const requestPrimaryDocumentsBatch = async (
+  orderId: string,
+  documents: Array<{ name: string; required: boolean; comment?: string }>,
+) => {
+  const { data } = await api.post<{ data: Order; message: string | null }>(`/staff/orders/${orderId}/primary-documents/batch`, { documents });
+  return data.data;
+};
+
 export const updatePrimaryDocumentStatus = async (orderId: string, documentId: string, status: string, managerComment = '') => {
   const { data } = await api.patch<{ data: Order; message: string | null }>(
     `/staff/orders/${orderId}/primary-documents/${documentId}`,
@@ -328,7 +330,6 @@ export const uploadAnnualQuarterDocument = async (
   const { data } = await api.post<{ data: { order: unknown; document: QuarterDocument }; message: string | null }>(
     `/staff/orders/${orderId}/quarters/${quarterId}/documents`,
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
   return { ...data.data, order: mapOrder(data.data.order as never) };
 };

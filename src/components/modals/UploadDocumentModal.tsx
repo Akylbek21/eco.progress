@@ -67,6 +67,15 @@ const defaultCategories = [
   'other',
 ];
 
+const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
+const maxFileSizeBytes = 20 * 1024 * 1024;
+const allowedAccept = '.pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+const isAllowedFile = (file: File) => {
+  const name = file.name.toLowerCase();
+  return allowedExtensions.some((extension) => name.endsWith(extension));
+};
+
 const UploadDocumentModal = ({
   isOpen,
   title = 'Загрузить документ',
@@ -86,11 +95,23 @@ const UploadDocumentModal = ({
     setError('');
     const form = new FormData(event.currentTarget);
     const file = form.get('file') as File | null;
+    if (!file?.name) {
+      setError('Выберите файл документа.');
+      return;
+    }
+    if (!isAllowedFile(file)) {
+      setError('Можно загрузить только PDF, Word или Excel файл.');
+      return;
+    }
+    if (file.size > maxFileSizeBytes) {
+      setError('Файл не должен быть больше 20MB.');
+      return;
+    }
     try {
       await onSubmit({
         name: String(form.get('name') || ''),
         category: String(form.get('category') || defaultCategory),
-        file: file?.name ? file : null,
+        file,
         comment: String(form.get('comment') || ''),
         sendToClient: form.get('sendToClient') === 'on',
         needsSignature: form.get('needsSignature') === 'on',
@@ -120,7 +141,7 @@ const UploadDocumentModal = ({
         </label>
         <label className="text-sm font-semibold text-slate-700">
           Файл
-          <input name="file" type="file" required className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+          <input name="file" type="file" required accept={allowedAccept} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
         </label>
         <label className="text-sm font-semibold text-slate-700">
           Комментарий

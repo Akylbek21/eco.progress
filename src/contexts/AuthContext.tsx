@@ -41,7 +41,67 @@ export type RegisterPayload =
 const TOKEN_KEY = 'eco-progress-token';
 const USER_KEY = 'eco-progress-user';
 
-const staffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY'];
+const staffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
+
+type AuthResponsePayload = {
+  data?: Record<string, unknown>;
+  token?: string;
+  accessToken?: string;
+  jwt?: string;
+  user?: Partial<User>;
+  employee?: Partial<User>;
+  staff?: Partial<User>;
+  account?: Partial<User>;
+  role?: unknown;
+  email?: unknown;
+  name?: unknown;
+  id?: unknown;
+};
+
+const normalizeRole = (value: unknown, fallback: UserRole): UserRole => {
+  const raw = String(value || fallback).trim().toUpperCase().replace(/^ROLE_/, '').replace(/^STAFF_/, '');
+  const map: Record<string, UserRole> = {
+    CLIENT: 'CLIENT',
+    USER: 'CLIENT',
+    MANAGER: 'MANAGER',
+    ADMIN: 'ADMIN',
+    DIRECTOR: 'DIRECTOR',
+    HEAD: 'HEAD',
+    ACCOUNTANT: 'ACCOUNTANT',
+    ECOLOGIST: 'ECOLOGIST',
+    ECOLOG: 'ECOLOGIST',
+    LABORATORY: 'LABORATORY',
+    LABORANT: 'LABORATORY',
+    WASTE_SPECIALIST: 'WASTE_SPECIALIST',
+    WASTE: 'WASTE_SPECIALIST',
+  };
+  return map[raw] || fallback;
+};
+
+const readAuthPayload = (payload: AuthResponsePayload, email: string, staff = false): { token: string; user: User } => {
+  const source = (payload.data || payload) as AuthResponsePayload;
+  const rawUser = (source.user || source.employee || source.staff || source.account || source) as Partial<User> & Record<string, unknown>;
+  const role = normalizeRole(rawUser.role ?? source.role, staff ? 'MANAGER' : 'CLIENT');
+  const token = String(source.token || source.accessToken || source.jwt || '');
+  if (!token) throw new Error('Backend не вернул token.');
+  return {
+    token,
+    user: {
+      id: String(rawUser.id || source.id || email),
+      role,
+      type: role === 'CLIENT' ? (rawUser.type as User['type']) || 'company' : role === 'ADMIN' ? 'admin' : 'staff',
+      email: String(rawUser.email || source.email || email),
+      name: String(rawUser.name || source.name || rawUser.email || email),
+      phone: rawUser.phone,
+      city: rawUser.city,
+      companyName: rawUser.companyName,
+      bin: rawUser.bin,
+      organizationType: rawUser.organizationType,
+      legalAddress: rawUser.legalAddress,
+      position: rawUser.position,
+    },
+  };
+};
 
 const AuthContext = createContext<AuthState | null>(null);
 
@@ -84,18 +144,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [clearSession]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const { data } = await api.post<{ data: { token: string; user: User }; message: string | null }>('/auth/login', { email, password });
-    saveSession(data.data.token, data.data.user);
+    const { data } = await api.post<AuthResponsePayload & { message?: string | null }>('/auth/login', { email, password });
+    const session = readAuthPayload(data, email);
+    saveSession(session.token, session.user);
   }, [saveSession]);
 
   const staffLogin = useCallback(async (email: string, password: string) => {
-    const { data } = await api.post<{ data: { token: string; user: User }; message: string | null }>('/auth/staff/login', { email, password });
-    saveSession(data.data.token, data.data.user);
+    let payload: AuthResponsePayload & { message?: string | null };
+    try {
+      const { data } = await api.post<AuthResponsePayload & { message?: string | null }>('/auth/staff/login', { email, password });
+      payload = data;
+    } catch (error) {
+      const status = (error as { response?: { status?: number; data?: { message?: string } } })?.response?.status;
+      const message = (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (error as Error)?.message || '';
+      if (status !== 404 && status !== 405 && !/No static resource|not found/i.test(message)) throw error;
+      const { data } = await api.post<AuthResponsePayload & { message?: string | null }>('/auth/login', { email, password, staff: true });
+      payload = data;
+    }
+    const session = readAuthPayload(payload, email, true);
+    if (!staffRoles.includes(session.user.role)) throw new Error('У пользователя нет роли сотрудника.');
+    saveSession(session.token, session.user);
   }, [saveSession]);
 
   const register = useCallback(async (payload: RegisterPayload) => {
-    const { data } = await api.post<{ data: { token: string; user: User }; message: string | null }>('/auth/register', payload);
-    saveSession(data.data.token, data.data.user);
+    const { data } = await api.post<AuthResponsePayload & { message?: string | null }>('/auth/register', payload);
+    const session = readAuthPayload(data, 'email' in payload ? payload.email : '');
+    saveSession(session.token, session.user);
   }, [saveSession]);
 
   const logout = useCallback(() => {

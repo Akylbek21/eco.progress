@@ -71,17 +71,13 @@ export const uploadDocument = async (orderId: string, fileOrPayload: File | Uplo
     if (type) formData.append('type', type);
   } else {
     formData.append('type', fileOrPayload.type);
-    formData.append('title', fileOrPayload.title);
     formData.append('comment', fileOrPayload.comment || '');
     formData.append('sendToClient', String(Boolean(fileOrPayload.sendToClient)));
     formData.append('needsSignature', String(Boolean(fileOrPayload.needsSignature)));
     formData.append('needsClientResponse', String(Boolean(fileOrPayload.needsClientResponse)));
     if (fileOrPayload.dueDate) formData.append('dueDate', fileOrPayload.dueDate);
-    // TODO backend: accept extended document metadata when client uploads a response/result file.
   }
-  const { data } = await api.post<{ data: DocumentItem; message: string | null }>(`/client/orders/${orderId}/documents`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const { data } = await api.post<{ data: DocumentItem; message: string | null }>(`/client/orders/${orderId}/documents`, formData);
   return mapDocument(data.data as never, orderId);
 };
 
@@ -92,14 +88,11 @@ export const uploadSignedContract = async (
   const formData = new FormData();
   formData.append('file', payload.file);
   formData.append('type', 'contract');
-  formData.append('title', 'Подписанный договор');
   formData.append('comment', payload.comment?.trim() || 'Клиент загрузил подписанный договор');
   formData.append('sendToClient', 'false');
   formData.append('needsSignature', 'false');
   formData.append('needsClientResponse', 'false');
-  const { data } = await api.post<{ data: DocumentItem; message: string | null }>(`/client/orders/${orderId}/documents`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const { data } = await api.post<{ data: DocumentItem; message: string | null }>(`/client/orders/${orderId}/documents`, formData);
   return { document: mapDocument(data.data as never, orderId), message: data.message };
 };
 
@@ -149,6 +142,31 @@ export const signOrderContractWithNCALayer = async (orderId: string, document: D
   });
 };
 
+export type ClientDocumentResponsePayload = {
+  action: 'accept' | 'reject' | 'sign';
+  comment?: string;
+  signedCms?: string;
+  signerSubject?: string;
+};
+
+export const respondOrderDocument = async (
+  orderId: string,
+  documentId: string,
+  payload: ClientDocumentResponsePayload,
+) => {
+  const { data } = await api.post<{ data: unknown; message: string | null }>(
+    `/client/orders/${orderId}/documents/${documentId}/respond`,
+    payload,
+  );
+  return data.data;
+};
+
+export const signDocumentForResponse = async (document: Pick<DocumentItem, 'id' | 'fileUrl'>) => {
+  const filePath = fileUrlToApiPath(document as DocumentItem);
+  const { data: fileBytes } = await api.get<ArrayBuffer>(filePath, { responseType: 'arraybuffer' });
+  return signBase64WithNCALayer(arrayBufferToBase64(fileBytes));
+};
+
 export const payOrderOnline = async (orderId: string, method: string) => {
   const { data } = await api.post<{ data: unknown; message: string | null }>(`/client/orders/${orderId}/pay`, { paymentMethod: method });
   return mapOrder(data.data as never);
@@ -176,7 +194,6 @@ export const uploadQuarterDocument = async (
   const { data } = await api.post<{ data: unknown; message: string | null }>(
     `/client/orders/${orderId}/quarters/${quarterId}/documents`,
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
   return data.data;
 };
@@ -195,7 +212,6 @@ export const uploadPrimaryDocument = async (
     const { data } = await api.post<{ data: OrderPrimaryDocument; message: string | null }>(
       `/client/orders/${orderId}/primary-documents/${documentId}/upload`,
       formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
     );
     return data.data;
   }
@@ -209,7 +225,6 @@ export const uploadPrimaryDocument = async (
       formData.append('documentId', documentId);
       return formData;
     })(),
-    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
   return data.data;
 };

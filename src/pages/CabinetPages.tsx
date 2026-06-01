@@ -16,8 +16,8 @@ import {
   type UploadDocumentValues,
 } from '../components/modals';
 import { useAuth } from '../contexts/AuthContext';
-import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, uploadSignedContract, signOrderContractWithNCALayer, payOrderOnline, uploadQuarterDocument, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications } from '../services/orderService';
-import { requestCompanyProfileChange } from '../services/crmWorkflowService';
+import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, uploadSignedContract, signOrderContractWithNCALayer, payOrderOnline, uploadQuarterDocument, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications, respondOrderDocument, signDocumentForResponse } from '../services/orderService';
+import { requestCompanyProfileChange, sendAgreementResponse as sendAgreementResponseRequest } from '../services/crmWorkflowService';
 import { getClientPayments, getClientDebts, getClientContracts } from '../services/paymentService';
 import { getServices } from '../services/serviceService';
 import {
@@ -42,19 +42,6 @@ import type { ClientPrimaryDocumentStatus, Contract, Debt, DocumentItem, Laborat
 
 type ClientSimpleStatus = 'Новая заявка' | 'На консультации' | 'Ожидаем документы' | 'Документы на проверке' | 'Договор и счет' | 'Ожидаем оплату' | 'Оплачено' | 'В работе' | 'На согласовании' | 'Завершено' | 'Отменено';
 type ClientOrderTab = 'Обзор' | 'Договор и счет' | 'Первичные документы' | 'Документы' | 'Согласование' | 'Результат';
-type ClientAgreementResponse = {
-  id: string;
-  requestId: string;
-  sourceDocumentId: string;
-  sourceDocumentTitle: string;
-  fileName?: string;
-  comment?: string;
-  action: 'accepted' | 'signed' | 'sent_without_signature' | 'revision_requested';
-  signed: boolean;
-  signedAt?: string;
-  sentAt: string;
-};
-
 const clientSimpleSteps: ClientSimpleStatus[] = ['Новая заявка', 'На консультации', 'Ожидаем документы', 'Договор и счет', 'Ожидаем оплату', 'В работе', 'На согласовании', 'Завершено'];
 
 const clientSimpleStatus = (order: Order): ClientSimpleStatus => {
@@ -501,24 +488,41 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
     }
   };
   const sendAgreementResponse = async (sourceDocument: AgreementSourceDocument, values: AgreementResponseValues) => {
-    const { file, action } = values;
-    const signed = action === 'signed';
-    const accepted = action === 'accepted';
+    const { action } = values;
+    const signed = action === 'sign';
+    const accepted = action === 'accept';
+    const rejected = action === 'reject';
     const commentText = values.comment;
-    const label = action === 'revision_requested'
+    const label = rejected
       ? `Документ "${sourceDocument.title}" отправлен на исправление`
       : accepted
       ? `Документ "${sourceDocument.title}" принят`
       : signed
       ? `Документ "${sourceDocument.title}" подписан`
-      : `Документ "${sourceDocument.title}" отправлен без подписи`;
+      : `Документ "${sourceDocument.title}" обработан`;
     try {
-      await addComment(order.id, `${label}${commentText ? `: ${commentText}` : ''}`, 'client');
-      if (file?.name) await uploadDocument(order.id, file, 'client');
-      if (action === 'revision_requested') toast.success('Запрос отправлен', 'Специалист увидит ваш комментарий по результату.');
+      let signedPayload: { signedCms?: string; signerSubject?: string } = {};
+      if (signed) {
+        signedPayload = await signDocumentForResponse({
+          id: sourceDocument.id,
+          fileUrl: sourceDocument.fileUrl,
+        });
+      }
+      const payload = {
+        action,
+        comment: commentText || (accepted ? 'Согласовано' : rejected ? 'Нужно исправить документ' : 'Подписано'),
+        ...signedPayload,
+      };
+      if (sourceDocument.source === 'agreementDocuments') {
+        await sendAgreementResponseRequest(order.id, sourceDocument.id, payload);
+      } else {
+        await respondOrderDocument(order.id, sourceDocument.id, payload);
+      }
+      if (rejected) toast.success('Запрос отправлен', 'Специалист увидит ваш комментарий по документу.');
       else if (accepted) toast.success('Документ принят', 'Менеджер увидит ваш ответ.');
-      else if (signed) toast.success('КП согласовано', 'Менеджер начнет подготовку договора.');
-      else toast.success('Документ отправлен', 'Менеджер увидит ваш ответ.');
+      else if (signed) toast.success('Документ подписан', 'Менеджер увидит подписанный документ.');
+      else toast.success('Ответ отправлен', 'Менеджер увидит ваш ответ.');
+      if (commentText) await addComment(order.id, `${label}: ${commentText}`, 'client').catch(() => undefined);
       load();
     } catch (err) {
       toast.error('Ошибка', errorMessage(err, 'Не удалось отправить ответ по документу.'));
@@ -768,8 +772,10 @@ const ClientDocumentCard = ({ doc }: { doc: DocumentItem }) => {
 
 type AgreementSourceDocument = {
   id: string;
+  source: 'agreementDocuments' | 'documents';
   title: string;
   fileName: string;
+  fileUrl?: string;
   comment?: string;
   status: string;
   uploadedBy: string;
@@ -777,36 +783,49 @@ type AgreementSourceDocument = {
   section: string;
   needsSignature?: boolean;
   needsClientResponse?: boolean;
+  clientResponseStatus?: string;
 };
 
 const getAgreementSourceDocuments = (order: Order): AgreementSourceDocument[] => {
-  const resultDocs = order.resultDocuments
-    .filter((doc) => doc.sentToClient || doc.needsSignature || doc.needsClientResponse || ['sent_to_client', 'published_to_client'].includes(doc.status))
+  const completedStatuses = ['accepted', 'rejected', 'signed'];
+  const agreementDocs = (order.agreementDocuments || [])
     .map((doc) => ({
-    id: `result-${doc.id}`,
+    id: doc.id,
+    source: 'agreementDocuments' as const,
     title: doc.name,
     fileName: doc.fileUrl || doc.name,
+    fileUrl: doc.fileUrl,
     comment: doc.staffComment || '',
     status: doc.status,
     uploadedBy: 'Сотрудник ecoprogress.kz',
     uploadedAt: doc.uploadedAt,
-    section: 'Документ от сотрудника',
+    section: 'Согласование',
     needsSignature: doc.needsSignature,
     needsClientResponse: doc.needsClientResponse,
+    clientResponseStatus: doc.clientResponseStatus,
   }));
-  const laboratoryDocs = (order.laboratoryResultDocuments || []).map((doc) => ({
-    id: `laboratory-${doc.id}`,
-    title: doc.name,
-    fileName: doc.fileName || doc.name,
-    comment: doc.comment || '',
-    status: doc.status,
-    uploadedBy: doc.uploadedBy || 'Лаборатория ecoprogress.kz',
-    uploadedAt: doc.uploadedAt || doc.readyAt || 'Дата не указана',
-    section: 'Лабораторный документ',
-    needsSignature: false,
-    needsClientResponse: true,
-  }));
-  return [...laboratoryDocs, ...resultDocs];
+  const resultDocs = (order.documents || [])
+    .filter((doc) =>
+      doc.sentToClient === true &&
+      (doc.needsSignature === true || doc.needsClientResponse === true) &&
+      !completedStatuses.includes(String(doc.clientResponseStatus || 'pending'))
+    )
+    .map((doc) => ({
+      id: doc.id,
+      source: 'documents' as const,
+      title: doc.name,
+      fileName: doc.fileUrl || doc.name,
+      fileUrl: doc.fileUrl,
+      comment: doc.staffComment || '',
+      status: doc.clientResponseStatus || doc.status,
+      uploadedBy: 'Сотрудник ecoprogress.kz',
+      uploadedAt: doc.uploadedAt,
+      section: 'Документ от сотрудника',
+      needsSignature: doc.needsSignature,
+      needsClientResponse: doc.needsClientResponse,
+      clientResponseStatus: doc.clientResponseStatus,
+    }));
+  return [...agreementDocs, ...resultDocs];
 };
 
 const ClientAgreementPanel = ({

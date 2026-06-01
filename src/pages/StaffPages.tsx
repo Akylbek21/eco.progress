@@ -51,11 +51,10 @@ import {
 } from '../components/crm/StaffOrderCrmPanels';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, applyPartialPayment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getOrderById, getOrders, markPaymentPaid, requestPrimaryDocument, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadContractDocument, uploadDocument, uploadInvoiceDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
+import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, applyPartialPayment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getOrderById, getOrders, markPaymentPaid, requestPrimaryDocumentsBatch, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadContractDocument, uploadDocument, uploadInvoiceDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
 import type { CreateClientPayload, StaffCreateOrderPayload } from '../services/staffOrderService';
 import { createCommercialOffer, createStaffManualOrder, getStaffCalendar, getTasks, saveTask, saveWasteRemoval, sendDocumentToClient, updateTaskStatus } from '../services/crmWorkflowService';
 import { getServices } from '../services/serviceService';
-import { primaryDocumentTemplates } from '../services/orderService';
 import { getBusinessCompanyById, statusDescriptions } from '../utils/crm';
 import type { ClientPrimaryDocumentStatus, ClientContract, DocumentItem, EcologyStatus, LaboratoryMeasurementAgreementStatus, LaboratoryPrimaryDocumentStatus, LaboratoryResultDocument, LaboratoryResultDocumentStatus, LaboratoryStatus, User, Order, OrderPrimaryDocument, OrderStatus, PaymentMethod, PaymentStatus, QuarterDocument, QuarterNumber, QuarterResult, QuarterWorkStatus, RequestQuarter, StaffCalendarEvent, StaffContractStatus, UserRole } from '../types';
 import { canAccess, permissionsForRole, type Permission } from '../config/permissions';
@@ -576,13 +575,52 @@ const ecoWorkStatuses = [
 ];
 const ecoProjectDocumentTypes = [
   'Бланк инвентаризация',
+  'Проектный документ',
   'Согласование предварительных материалов',
   'Скрининг',
   'Согласование о проведении организации общественных слушаний',
   'ОВОС отчет',
   'ОВОС',
   'Согласование ОС',
+  'Договор',
+  'Счет',
+  'Протокол',
+  'Отчет',
+  'Другое',
 ];
+
+const projectDocumentTypeMap: Record<string, string> = {
+  'Бланк инвентаризация': 'inventory_form',
+  'Проектный документ': 'project_document',
+  'Согласование предварительных материалов': 'agreement',
+  'Согласование о проведении организации общественных слушаний': 'agreement',
+  'Согласование ОС': 'agreement',
+  'Договор': 'contract',
+  'Счет': 'invoice',
+  'Протокол': 'protocol',
+  'ОВОС отчет': 'report',
+  'Отчет': 'report',
+  'Другое': 'other',
+};
+
+const allowedDocumentExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
+const maxDocumentSizeBytes = 20 * 1024 * 1024;
+
+const isAllowedDocumentFile = (file: File) => {
+  const name = file.name.toLowerCase();
+  return allowedDocumentExtensions.some((extension) => name.endsWith(extension));
+};
+
+const projectDocumentTypeCode = (label: string) => projectDocumentTypeMap[label] || 'project_document';
+const workDocumentTypeCode = (label: string, mode: EcoDocumentSection) => {
+  if (projectDocumentTypeMap[label]) return projectDocumentTypeMap[label];
+  if (label.includes('Протокол')) return 'protocol';
+  if (label.includes('отч') || label.includes('Отч') || label.includes('870')) return 'report';
+  if (label.includes('Согласование')) return 'agreement';
+  if (mode === 'projecting') return 'project_document';
+  if (mode === 'permit') return 'project_document';
+  return 'report';
+};
 const ecoPermitDocumentTypes = [
   'Заявление на разрешение',
   'Пакет документов для разрешения',
@@ -1722,8 +1760,23 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
       toast.error('Документ не загружен', 'Выберите файл и попробуйте снова.');
       return;
     }
+    if (!isAllowedDocumentFile(file)) {
+      toast.error('Документ не загружен', 'Можно загрузить только PDF, Word или Excel файл.');
+      return;
+    }
+    if (file.size > maxDocumentSizeBytes) {
+      toast.error('Документ не загружен', 'Файл не должен быть больше 20MB.');
+      return;
+    }
     try {
-      await uploadDocument(order.id, file, 'result');
+      await uploadDocument(order.id, {
+        file,
+        type: 'other',
+        title: file.name,
+        sendToClient: false,
+        needsSignature: false,
+        needsClientResponse: false,
+      });
       toast.success('Документ загружен', 'Документ добавлен к заявке.');
       event.currentTarget.reset();
       load();
@@ -2035,30 +2088,16 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
     }
   };
 
-  const submitRequestPrimaryDocument = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const selectedNames = form.getAll('documentNames').map(String).filter(Boolean);
-    const customNames = String(form.get('customDocumentName') || '')
-      .split(/[,;\n]/)
-      .map((name) => name.trim())
-      .filter(Boolean);
-    const documentNames = Array.from(new Set([...selectedNames, ...customNames]));
-    if (!documentNames.length) {
-      toast.error('Не удалось отправить запрос', 'Выберите документ или напишите название нового.');
+  const submitRequestPrimaryDocuments = async (
+    documents: Array<{ name: string; required: boolean; comment?: string }>,
+  ) => {
+    if (!documents.length) {
+      toast.error('Не удалось отправить запрос', 'Выберите хотя бы один документ.');
       return false;
     }
     try {
-      await Promise.all(documentNames.map((documentName) =>
-        requestPrimaryDocument(
-          order.id,
-          documentName,
-          Boolean(form.get('required')),
-          String(form.get('comment') || '')
-        )
-      ));
-      toast.success('Запрос документов отправлен', 'Клиент увидит список документов в кабинете.');
-      event.currentTarget.reset();
+      await requestPrimaryDocumentsBatch(order.id, documents);
+      toast.success('Запрос документов отправлен клиенту', 'Клиент увидит список документов в кабинете.');
       load();
       return true;
     } catch (err) {
@@ -2729,15 +2768,16 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
               {canAccess(role, 'edit_documents') && (
                 <div className="mt-5 border-t border-slate-100 pt-5">
                   <StaffUploadDocumentAction onSubmit={async (values) => {
-                    const sentToClient = values.sendToClient || values.needsSignature || values.needsClientResponse;
+                    const needsClientResponse = values.needsSignature || values.needsClientResponse;
+                    const sentToClient = values.sendToClient || values.needsSignature || needsClientResponse;
                     if (values.file) await uploadDocument(order.id, {
                       file: values.file,
                       type: values.category || 'work_result',
                       title: values.name || values.file.name,
                       comment: values.comment,
-                      sendToClient: values.sendToClient,
+                      sendToClient: sentToClient,
                       needsSignature: values.needsSignature,
-                      needsClientResponse: values.needsClientResponse,
+                      needsClientResponse,
                       dueDate: values.dueDate,
                     });
                     onNotify?.(sentToClient ? 'Документ отправлен клиенту' : 'Документ загружен');
@@ -2753,7 +2793,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
         open={primaryRequestOpen}
         order={order}
         onClose={() => setPrimaryRequestOpen(false)}
-        onRequest={submitRequestPrimaryDocument}
+        onRequest={submitRequestPrimaryDocuments}
       />
     </div>
   );
@@ -2841,12 +2881,38 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const file = form.get('file') as File | null;
-    if (!file?.name) return;
+    if (!file?.name) {
+      onNotify?.('Выберите файл документа');
+      return;
+    }
+    if (!isAllowedDocumentFile(file)) {
+      onNotify?.('Нельзя загрузить файл: можно только PDF, Word или Excel');
+      return;
+    }
+    if (file.size > maxDocumentSizeBytes) {
+      onNotify?.('Нельзя загрузить файл больше 20MB');
+      return;
+    }
     const documentType = String(form.get('documentType') || ecoProjectDocumentTypes[0]);
+    const needsSignature = form.get('needsSignature') === 'on';
+    const needsClientResponse = needsSignature || form.get('needsClientResponse') === 'on';
+    const sendToClient = needsSignature || needsClientResponse || form.get('sendToClient') === 'on';
+    const comment = String(form.get('comment') || '');
+    const dueDate = String(form.get('dueDate') || '');
     try {
-      await uploadDocument(order.id, file, 'result');
-    } catch {
-      onNotify?.('Не удалось загрузить документ');
+      await uploadDocument(order.id, {
+        file,
+        type: projectDocumentTypeCode(documentType),
+        title: documentType,
+        comment,
+        sendToClient,
+        needsSignature,
+        needsClientResponse,
+        dueDate,
+      });
+    } catch (err) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (err as Error)?.message || 'Не удалось загрузить документ';
+      onNotify?.(message);
       return;
     }
     const nextDocument: EcoDocument = {
@@ -2855,14 +2921,15 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
       section: 'projecting',
       documentType,
       fileName: file.name,
-      comment: String(form.get('comment') || ''),
-      status: 'Черновик',
+      comment,
+      status: sendToClient ? 'На проверке' : 'Черновик',
       uploadedBy: userName,
       uploadedAt: todayLabel(),
     };
     saveRequestDocuments([nextDocument, ...documents]);
     addAction('Загружен проектный документ', `${documentType}: ${file.name}`);
-    onNotify?.('Проектный документ загружен');
+    onNotify?.(sendToClient ? 'Проектный документ отправлен клиенту на согласование' : 'Проектный документ загружен');
+    await getOrderById(order.id).catch(() => undefined);
     event.currentTarget.reset();
   };
 
@@ -2870,12 +2937,32 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const file = form.get('file') as File | null;
-    if (!file?.name) return;
+    if (!file?.name) {
+      onNotify?.('Выберите файл документа');
+      return;
+    }
+    if (!isAllowedDocumentFile(file)) {
+      onNotify?.('Нельзя загрузить файл: можно только PDF, Word или Excel');
+      return;
+    }
+    if (file.size > maxDocumentSizeBytes) {
+      onNotify?.('Нельзя загрузить файл больше 20MB');
+      return;
+    }
     const title = String(form.get('title') || '').trim() || file.name;
     try {
-      await uploadDocument(order.id, file, 'result');
-    } catch {
-      onNotify?.('Не удалось загрузить документ');
+      await uploadDocument(order.id, {
+        file,
+        type: 'other',
+        title,
+        comment: String(form.get('comment') || ''),
+        sendToClient: false,
+        needsSignature: false,
+        needsClientResponse: false,
+      });
+    } catch (err) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (err as Error)?.message || 'Не удалось загрузить документ';
+      onNotify?.(message);
       return;
     }
     const nextDocument: EcoDocument = {
@@ -3060,11 +3147,31 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
                   </select>
                 </Field>
                 <Field label="Файл">
-                  <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                  <input
+                    name="file"
+                    type="file"
+                    required
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+                  />
                 </Field>
                 <label className="text-sm font-semibold text-slate-700">Замечание / комментарий к документу
                   <textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} />
                 </label>
+                <div className="grid gap-3 rounded-2xl bg-slate-50 p-4">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <input name="sendToClient" type="checkbox" className="accent-[#38C7BA]" /> Отправить клиенту на согласование
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <input name="needsSignature" type="checkbox" className="accent-[#38C7BA]" /> Нужна подпись
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <input name="needsClientResponse" type="checkbox" className="accent-[#38C7BA]" /> Нужен ответ клиента
+                  </label>
+                  <Field label="Срок ответа">
+                    <input name="dueDate" type="date" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
+                  </Field>
+                </div>
                 <Button type="submit" className="w-full">Загрузить документ</Button>
               </form>
             </Section>
@@ -3146,24 +3253,38 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const file = form.get('file') as File | null;
-    if (!file?.name) return;
+    if (!file?.name) {
+      onNotify?.('Выберите файл документа');
+      return;
+    }
+    if (!isAllowedDocumentFile(file)) {
+      onNotify?.('Нельзя загрузить файл: можно только PDF, Word или Excel');
+      return;
+    }
+    if (file.size > maxDocumentSizeBytes) {
+      onNotify?.('Нельзя загрузить файл больше 20MB');
+      return;
+    }
     const documentType = String(form.get('documentType') || config.types[0]);
     const comment = String(form.get('comment') || '');
     const needsSignature = form.get('needsSignature') === 'on';
-    const needsClientResponse = form.get('needsClientResponse') === 'on';
+    const needsClientResponse = needsSignature || form.get('needsClientResponse') === 'on';
     const sendToClient = form.get('sendToClient') === 'on' || needsSignature || needsClientResponse;
+    const dueDate = String(form.get('dueDate') || '');
     try {
       await uploadDocument(order.id, {
         file,
-        type: sendToClient ? 'result' : 'client',
+        type: workDocumentTypeCode(documentType, mode),
         title: `${documentType}: ${file.name}`,
         comment,
         sendToClient,
         needsSignature,
         needsClientResponse,
+        dueDate,
       });
-    } catch {
-      onNotify?.('Не удалось загрузить документ');
+    } catch (err) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (err as Error)?.message || 'Не удалось загрузить документ';
+      onNotify?.(message);
       return;
     }
     const nextDocument: EcoDocument = {
@@ -3184,6 +3305,7 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
       onNotify?.('Не удалось сохранить заметку');
     }
     onNotify?.(sendToClient ? (needsSignature ? 'Документ отправлен клиенту на подпись' : 'Документ отправлен клиенту') : config.uploadedMessage);
+    await getOrderById(order.id).catch(() => undefined);
     event.currentTarget.reset();
   };
 
@@ -3203,7 +3325,13 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
             </select>
           </Field>
           <Field label="Файл">
-            <input name="file" type="file" required className="w-full rounded-2xl border border-slate-200 px-4 py-3" />
+            <input
+              name="file"
+              type="file"
+              required
+              accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+            />
           </Field>
           <label className="text-sm font-semibold text-slate-700">{config.commentLabel}
             <textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" rows={4} />
@@ -3218,6 +3346,9 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
             <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
               <input name="needsClientResponse" type="checkbox" className="accent-[#38C7BA]" /> Нужен ответ клиента
             </label>
+            <Field label="Срок ответа">
+              <input name="dueDate" type="date" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" />
+            </Field>
           </div>
           <Button type="submit" className="w-full">Загрузить документ</Button>
         </form>
@@ -3358,6 +3489,22 @@ const ManagerPrimaryDocumentsPanel = ({
   );
 };
 
+type PrimaryDocOption = {
+  id: string;
+  name: string;
+  required: boolean;
+  isCustom?: boolean;
+};
+
+const DEFAULT_PRIMARY_DOCS: PrimaryDocOption[] = [
+  { id: 'company_card', name: 'Карточка компании', required: true },
+  { id: 'requisites', name: 'Реквизиты', required: true },
+  { id: 'bin_iin', name: 'БИН / ИИН', required: true },
+  { id: 'object_address', name: 'Адрес объекта', required: true },
+  { id: 'rent_contract', name: 'Договор аренды / право собственности', required: true },
+  { id: 'previous_environmental_docs', name: 'Предыдущие экологические документы', required: true },
+];
+
 const RequestPrimaryDocumentsModal = ({
   open,
   order,
@@ -3367,73 +3514,153 @@ const RequestPrimaryDocumentsModal = ({
   open: boolean;
   order: Order;
   onClose: () => void;
-  onRequest: (event: FormEvent<HTMLFormElement>) => boolean | void | Promise<boolean | void>;
+  onRequest: (documents: Array<{ name: string; required: boolean; comment?: string }>) => boolean | void | Promise<boolean | void>;
 }) => {
+  const toast = useToast();
+  const [customDocName, setCustomDocName] = useState('');
+  const [customDocs, setCustomDocs] = useState<PrimaryDocOption[]>([]);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
+  const [requiredDocs, setRequiredDocs] = useState(true);
+  const [clientComment, setClientComment] = useState('');
   const docs = order.primaryDocuments || [];
-  const requestedNames = new Set(docs.map((doc) => doc.name));
+  const requestedNames = new Set(docs.map((doc) => doc.name.toLowerCase()));
+  const allPrimaryDocOptions = [...DEFAULT_PRIMARY_DOCS, ...customDocs];
+
+  const handleAddCustomPrimaryDoc = () => {
+    const name = customDocName.trim();
+    if (!name) {
+      toast.error('Введите название документа');
+      return;
+    }
+    const exists = allPrimaryDocOptions.some((doc) => doc.name.toLowerCase() === name.toLowerCase());
+    if (exists || requestedNames.has(name.toLowerCase())) {
+      toast.error('Такой документ уже есть в списке');
+      return;
+    }
+    const newDoc: PrimaryDocOption = {
+      id: `custom_${Date.now()}`,
+      name,
+      required: requiredDocs,
+      isCustom: true,
+    };
+    setCustomDocs((prev) => [...prev, newDoc]);
+    setSelectedDocIds((prev) => [...prev, newDoc.id]);
+    setCustomDocName('');
+  };
+
+  const handleRemoveCustomPrimaryDoc = (id: string) => {
+    setCustomDocs((prev) => prev.filter((doc) => doc.id !== id));
+    setSelectedDocIds((prev) => prev.filter((docId) => docId !== id));
+  };
+
+  const handleToggleDoc = (id: string) => {
+    setSelectedDocIds((prev) => prev.includes(id) ? prev.filter((docId) => docId !== id) : [...prev, id]);
+  };
+
+  const selectAllNotRequested = () => {
+    setSelectedDocIds(allPrimaryDocOptions.filter((doc) => !requestedNames.has(doc.name.toLowerCase())).map((doc) => doc.id));
+  };
+
+  const resetLocalState = () => {
+    setCustomDocs([]);
+    setSelectedDocIds([]);
+    setCustomDocName('');
+    setClientComment('');
+    setRequiredDocs(true);
+  };
+
+  const closeAndReset = () => {
+    resetLocalState();
+    onClose();
+  };
+
   return (
     <Modal
       isOpen={open}
-      onClose={onClose}
+      onClose={closeAndReset}
       title="Запросить документы"
       description="Выберите один или несколько первичных документов для клиента."
       size="lg"
     >
       <form
         onSubmit={async (event) => {
-          const ok = await onRequest(event);
-          if (ok !== false) onClose();
+          event.preventDefault();
+          const selectedDocs = allPrimaryDocOptions.filter((doc) => selectedDocIds.includes(doc.id));
+          if (!selectedDocs.length) {
+            toast.error('Выберите хотя бы один документ');
+            return;
+          }
+          const ok = await onRequest(selectedDocs.map((doc) => ({
+            name: doc.name,
+            required: doc.required ?? requiredDocs,
+            comment: clientComment,
+          })));
+          if (ok !== false) closeAndReset();
         }}
         className="space-y-4"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-semibold text-slate-600">Можно отметить сразу несколько пунктов.</p>
           <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-            <input name="required" type="checkbox" defaultChecked /> Обязательные
+            <input type="checkbox" checked={requiredDocs} onChange={(event) => setRequiredDocs(event.target.checked)} /> Обязательные
           </label>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {primaryDocumentTemplates.map((name) => {
-            const alreadyRequested = requestedNames.has(name);
+          {DEFAULT_PRIMARY_DOCS.map((doc) => {
+            const alreadyRequested = requestedNames.has(doc.name.toLowerCase());
             return (
               <label
-                key={name}
+                key={doc.id}
                 className={`flex min-h-[48px] items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                   alreadyRequested
                     ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400'
                     : 'cursor-pointer border-slate-200 bg-white text-slate-700 hover:border-eco-200 hover:bg-eco-50'
-                }`}
+                  }`}
               >
-                <input name="documentNames" type="checkbox" value={name} disabled={alreadyRequested} />
-                <span>{name}</span>
+                <input type="checkbox" checked={selectedDocIds.includes(doc.id)} disabled={alreadyRequested} onChange={() => handleToggleDoc(doc.id)} />
+                <span>{doc.name}</span>
               </label>
             );
           })}
         </div>
-        <label className="block text-sm font-semibold text-slate-700">
-          Создать свой первичный документ
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm font-bold text-eco-900">Создать свой первичный документ</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
           <input
-            name="customDocumentName"
-            placeholder="Например: Паспорт отходов или схема точек отбора"
-            className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-          />
-          <span className="mt-1 block text-xs font-medium text-slate-500">Можно указать несколько через запятую.</span>
-        </label>
-        <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-          <input
-            type="checkbox"
-            onChange={(event) => {
-              const form = event.currentTarget.form;
-              form?.querySelectorAll<HTMLInputElement>('input[name="documentNames"]:not(:disabled)').forEach((input) => {
-                input.checked = event.currentTarget.checked;
-              });
+            value={customDocName}
+            onChange={(event) => setCustomDocName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                handleAddCustomPrimaryDoc();
+              }
             }}
+            placeholder="Например: Паспорт отходов или схема точек отбора"
+            className="input-focus w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
           />
-          Выбрать все незапрошенные
-        </label>
-        <input name="comment" placeholder="Комментарий для клиента" className="input-focus w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" />
+            <Button type="button" onClick={handleAddCustomPrimaryDoc}>Добавить</Button>
+          </div>
+        </div>
+        {customDocs.length > 0 && (
+          <div className="rounded-2xl border border-eco-100 bg-white p-4">
+            <p className="text-sm font-bold text-eco-900">Добавленные документы:</p>
+            <div className="mt-3 space-y-2">
+              {customDocs.map((doc) => (
+                <div key={doc.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-eco-50 px-4 py-3">
+                  <label className="flex min-w-0 flex-1 items-center gap-3 text-sm font-semibold text-eco-900">
+                    <input type="checkbox" checked={selectedDocIds.includes(doc.id)} onChange={() => handleToggleDoc(doc.id)} />
+                    <span className="truncate">{doc.name}</span>
+                  </label>
+                  <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={() => handleRemoveCustomPrimaryDoc(doc.id)}>Удалить</Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <Button type="button" variant="secondary" onClick={selectAllNotRequested}>Выбрать все незапрошенные</Button>
+        <input value={clientComment} onChange={(event) => setClientComment(event.target.value)} placeholder="Комментарий для клиента" className="input-focus w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" />
         <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
-          <Button type="button" variant="secondary" onClick={onClose}>Отмена</Button>
+          <Button type="button" variant="secondary" onClick={closeAndReset}>Отмена</Button>
           <Button type="submit">Запросить выбранные документы</Button>
         </div>
       </form>

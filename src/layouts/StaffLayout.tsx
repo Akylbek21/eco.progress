@@ -25,12 +25,15 @@ const links: Array<{ label: string; path: string; icon: typeof ClipboardList; pa
 const roleLabel = (role?: string) => {
   const labels: Record<string, string> = {
     ADMIN: 'Администратор',
+    DIRECTOR: 'Директор',
+    HEAD: 'Руководитель',
     MANAGER: 'Менеджер',
     ACCOUNTANT: 'Бухгалтер',
     ECOLOGIST: 'Эколог',
     LABORATORY: 'Лаборатория',
+    WASTE_SPECIALIST: 'Специалист по отходам',
   };
-  return labels[role || ''] || 'Manager';
+  return labels[role || ''] || 'Сотрудник';
 };
 
 const StaffLayout = ({ children }: { children: ReactNode }) => {

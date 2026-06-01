@@ -150,6 +150,8 @@ export type DocumentItem = {
   sentToClient?: boolean;
   needsSignature?: boolean;
   needsClientResponse?: boolean;
+  clientResponseStatus?: string;
+  clientComment?: string;
   staffComment?: string;
   dueDate?: string;
 };
@@ -409,6 +411,7 @@ export type Order = {
   signedAt?: string;
   paidAt?: string;
   documents: DocumentItem[];
+  agreementDocuments?: DocumentItem[];
   primaryDocuments?: OrderPrimaryDocument[];
   resultDocuments: DocumentItem[];
   comments: CommentItem[];
