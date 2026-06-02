@@ -127,9 +127,6 @@ const fileUrlToApiPath = (document: DocumentItem) => {
 };
 
 export const signOrderContractWithNCALayer = async (orderId: string, document: DocumentItem) => {
-  if (import.meta.env.DEV && localStorage.getItem('eco-progress-token')?.startsWith('mock-session')) {
-    return signOrderContract(orderId, 'NCALayer');
-  }
   const filePath = fileUrlToApiPath(document);
   const { data: fileBytes } = await api.get<ArrayBuffer>(filePath, { responseType: 'arraybuffer' });
   const { signedCms, signerSubject } = await signBase64WithNCALayer(arrayBufferToBase64(fileBytes));
