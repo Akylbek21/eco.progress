@@ -44,17 +44,99 @@ const fallbackEmployees: Employee[] = [
   },
 ];
 
+const addedEmployees: Employee[] = [
+  {
+    id: 'employee-kozhak-erasyl',
+    name: 'Қожақ Ерасыл Аманұлы',
+    position: 'Специалист ECOPROGRESS',
+    experience: 'Команда ECOPROGRESS',
+    specialty: 'Сопровождение проектов',
+    summary: 'Участвует в сопровождении заявок, подготовке материалов и коммуникации по экологическим услугам.',
+    avatar: '/jose.jpg',
+  },
+  {
+    id: 'employee-kurban-symbat',
+    name: 'Қурбан Сымбат Нұржанқыз',
+    position: 'Специалист ECOPROGRESS',
+    experience: 'Команда ECOPROGRESS',
+    specialty: 'Документы и заявки',
+    summary: 'Помогает вести клиентские заявки, документы и внутреннюю координацию рабочих этапов.',
+    avatar: '/edward.jpg',
+  },
+  {
+    id: 'employee-duysenbay-ruslan',
+    name: 'Дуйсенбай Руслан Серікбайұлы',
+    position: 'Специалист ECOPROGRESS',
+    experience: 'Команда ECOPROGRESS',
+    specialty: 'Экологическое сопровождение',
+    summary: 'Сопровождает задачи по экологическим услугам, проверке данных и подготовке результата для клиента.',
+    avatar: '/cottonbro.jpg',
+  },
+  {
+    id: 'employee-omirbayeva-aygerim',
+    name: 'Өмірбаева Айгерім Қазыбекқызы',
+    position: 'Специалист ECOPROGRESS',
+    experience: 'Команда ECOPROGRESS',
+    specialty: 'Лабораторные направления',
+    summary: 'Участвует в сопровождении лабораторных задач, протоколов, замеров и клиентских материалов.',
+    avatar: '/pexels-jan-van.jpg',
+  },
+  {
+    id: 'employee-ibrayeva-araylym',
+    name: 'Ибраева Арайлым Қуанышқызы',
+    position: 'Специалист ECOPROGRESS',
+    experience: 'Команда ECOPROGRESS',
+    specialty: 'Клиентское сопровождение',
+    summary: 'Помогает клиентам проходить этапы заявки, согласовывать данные и получать готовые документы.',
+    avatar: '/para.jpg',
+  },
+  {
+    id: 'employee-baktybay-kuralay',
+    name: 'Бақтыбай Құралай Нұрланқызы',
+    position: 'Специалист ECOPROGRESS',
+    experience: 'Команда ECOPROGRESS',
+    specialty: 'Экологическая документация',
+    summary: 'Работает с экологическими материалами, исходными данными и подготовкой документов по заявкам.',
+    avatar: '/images (1).jpg',
+  },
+  {
+    id: 'employee-ortay-saniya',
+    name: 'Ортай Сәния Бейбиталықызы',
+    position: 'Специалист ECOPROGRESS',
+    experience: 'Команда ECOPROGRESS',
+    specialty: 'Проектная координация',
+    summary: 'Координирует рабочие этапы, помогает поддерживать сроки и порядок в проектных материалах.',
+    avatar: '/pexels-enginakyurt.jpg',
+  },
+  {
+    id: 'employee-akhatay-zhuldyz',
+    name: 'Ахатай Жұлдыз Қуанышқызы',
+    position: 'Специалист ECOPROGRESS',
+    experience: 'Команда ECOPROGRESS',
+    specialty: 'Документальное сопровождение',
+    summary: 'Сопровождает документы, статусы заявок и передачу готовых материалов клиентам.',
+    avatar: '/utilizacija-othodov-3.jpg',
+  },
+];
+
+const addEmployeesToList = (employees: Employee[]) => {
+  const existingNames = new Set(employees.map((employee) => employee.name.toLocaleLowerCase('ru')));
+  const missingEmployees = addedEmployees.filter((employee) => !existingNames.has(employee.name.toLocaleLowerCase('ru')));
+
+  return [...employees, ...missingEmployees];
+};
+
 const EmployeesPage = () => {
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['employees'],
     queryFn: async () => {
       try {
         const employees = await fetcher<Employee[]>('/employees');
-        if (Array.isArray(employees) && employees.length) return employees;
+        if (Array.isArray(employees) && employees.length) return addEmployeesToList(employees);
       } catch {
-        if (!import.meta.env.DEV) throw new Error('Не удалось загрузить сотрудников');
+        return addEmployeesToList(fallbackEmployees);
       }
-      return import.meta.env.DEV ? fallbackEmployees : [];
+      return addEmployeesToList(fallbackEmployees);
     },
   });
 

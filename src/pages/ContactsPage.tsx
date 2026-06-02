@@ -6,6 +6,7 @@ import Reveal from '../components/animations/Reveal';
 import WhatsAppButton from '../components/WhatsAppButton';
 import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
+import TwoGisMap from '../components/TwoGisMap';
 import { company } from '../config/company';
 import { trackPhoneClick } from '../services/analytics';
 
@@ -72,6 +73,11 @@ const ContactsPage = () => {
             <WhatsAppLeadForm source="contacts_page_whatsapp" title="Заявка через WhatsApp" />
           </Reveal>
         </div>
+        <Reveal>
+          <div className="mt-10">
+            <TwoGisMap />
+          </div>
+        </Reveal>
       </div>
     </section>
   );

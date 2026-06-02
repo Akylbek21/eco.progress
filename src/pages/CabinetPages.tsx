@@ -397,9 +397,13 @@ const StepTitle = ({ number, title }: { number: string; title: string }) => (
   </div>
 );
 
+const isContractDocument = (doc: DocumentItem) => {
+  const name = doc.name.toLowerCase();
+  return doc.type === 'contract' || name.includes('договор') || name.includes('contract');
+};
+
 const findContractDocument = (order: Order) =>
-  order.documents.find((doc) => doc.name.toLowerCase().includes('договор')) ||
-  order.resultDocuments.find((doc) => doc.name.toLowerCase().includes('договор'));
+  [...(order.agreementDocuments || []), ...order.documents, ...order.resultDocuments].find(isContractDocument);
 
 export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: string) => void }) => {
   const { id } = useParams();
@@ -508,15 +512,19 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
           fileUrl: sourceDocument.fileUrl,
         });
       }
-      const payload = {
-        action,
-        comment: commentText || (accepted ? 'Согласовано' : rejected ? 'Нужно исправить документ' : 'Подписано'),
-        ...signedPayload,
-      };
+      const comment = commentText || (accepted ? 'Согласовано' : rejected ? 'Нужно исправить документ' : 'Подписано');
       if (sourceDocument.source === 'agreementDocuments') {
-        await sendAgreementResponseRequest(order.id, sourceDocument.id, payload);
+        await sendAgreementResponseRequest(order.id, sourceDocument.id, {
+          action: signed ? 'signed' : rejected ? 'revision_requested' : 'sent_without_signature',
+          comment,
+          ...signedPayload,
+        });
       } else {
-        await respondOrderDocument(order.id, sourceDocument.id, payload);
+        await respondOrderDocument(order.id, sourceDocument.id, {
+          action,
+          comment,
+          ...signedPayload,
+        });
       }
       if (rejected) toast.success('Запрос отправлен', 'Специалист увидит ваш комментарий по документу.');
       else if (accepted) toast.success('Документ принят', 'Менеджер увидит ваш ответ.');
@@ -536,7 +544,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       return;
     }
     try {
-      await uploadLaboratoryPrimaryDocument(order.id, document.id, file.name);
+      await uploadLaboratoryPrimaryDocument(order.id, document.id, file);
       toast.success('Документ загружен', 'Документ добавлен к заявке.');
       event.currentTarget.reset();
       load();
@@ -789,6 +797,10 @@ type AgreementSourceDocument = {
 const getAgreementSourceDocuments = (order: Order): AgreementSourceDocument[] => {
   const completedStatuses = ['accepted', 'rejected', 'signed'];
   const agreementDocs = (order.agreementDocuments || [])
+    .filter((doc) =>
+      !isContractDocument(doc) &&
+      !completedStatuses.includes(String(doc.clientResponseStatus || doc.status || 'pending'))
+    )
     .map((doc) => ({
     id: doc.id,
     source: 'agreementDocuments' as const,
@@ -807,6 +819,7 @@ const getAgreementSourceDocuments = (order: Order): AgreementSourceDocument[] =>
   const resultDocs = (order.documents || [])
     .filter((doc) =>
       doc.sentToClient === true &&
+      !isContractDocument(doc) &&
       (doc.needsSignature === true || doc.needsClientResponse === true) &&
       !completedStatuses.includes(String(doc.clientResponseStatus || 'pending'))
     )

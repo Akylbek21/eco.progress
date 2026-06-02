@@ -62,11 +62,21 @@ export const addComment = async (orderId: string, text: string, visibility: 'cli
   return data.data;
 };
 
+const appendFileMetadata = (formData: FormData, file: File, title?: string) => {
+  const documentName = title?.trim() || file.name || 'Документ';
+  formData.append('name', documentName);
+  formData.append('title', documentName);
+  formData.append('fileName', file.name || documentName);
+  formData.append('fileType', file.type || 'application/octet-stream');
+  formData.append('fileSize', String(file.size || 0));
+};
+
 export const uploadDocument = async (orderId: string, fileOrPayload: File | UploadDocumentPayload, type?: string): Promise<DocumentItem> => {
   const isFile = fileOrPayload instanceof File;
   const file = isFile ? fileOrPayload : fileOrPayload.file;
   const formData = new FormData();
   formData.append('file', file);
+  appendFileMetadata(formData, file, isFile ? file.name : fileOrPayload.title);
   if (isFile) {
     if (type) formData.append('type', type);
   } else {
@@ -87,6 +97,7 @@ export const uploadSignedContract = async (
 ): Promise<{ document: DocumentItem; message: string | null }> => {
   const formData = new FormData();
   formData.append('file', payload.file);
+  appendFileMetadata(formData, payload.file, payload.file.name || 'Подписанный договор');
   formData.append('type', 'contract');
   formData.append('comment', payload.comment?.trim() || 'Клиент загрузил подписанный договор');
   formData.append('sendToClient', 'false');
@@ -187,6 +198,7 @@ export const uploadQuarterDocument = async (
 ) => {
   const formData = new FormData();
   formData.append('file', file);
+  appendFileMetadata(formData, file, file.name);
   formData.append('type', documentType);
   const { data } = await api.post<{ data: unknown; message: string | null }>(
     `/client/orders/${orderId}/quarters/${quarterId}/documents`,
@@ -204,6 +216,7 @@ export const uploadPrimaryDocument = async (
   if (fileOrName instanceof File) {
     const formData = new FormData();
     formData.append('file', fileOrName);
+    appendFileMetadata(formData, fileOrName, fileOrName.name);
     formData.append('comment', clientComment);
     formData.append('documentId', documentId);
     const { data } = await api.post<{ data: OrderPrimaryDocument; message: string | null }>(
@@ -218,6 +231,7 @@ export const uploadPrimaryDocument = async (
       const formData = new FormData();
       const placeholder = new File([fileOrName], fileOrName || 'document.txt', { type: 'text/plain' });
       formData.append('file', placeholder);
+      appendFileMetadata(formData, placeholder, fileOrName || 'document.txt');
       formData.append('comment', clientComment);
       formData.append('documentId', documentId);
       return formData;
@@ -244,11 +258,17 @@ export const sendPrimaryDocumentForReview = async (orderId: string, documentId: 
 export const uploadLaboratoryPrimaryDocument = async (
   orderId: string,
   documentId: string,
-  fileName: string,
+  file: File,
+  comment = '',
 ): Promise<{ order?: Order; document?: LaboratoryPrimaryDocument }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  appendFileMetadata(formData, file, file.name);
+  formData.append('comment', comment);
+  formData.append('documentId', documentId);
   const { data } = await api.post<{ data: { order?: Order; document?: LaboratoryPrimaryDocument }; message: string | null }>(
     `/client/orders/${orderId}/laboratory/primary-documents/${documentId}`,
-    { fileName },
+    formData,
   );
   return data.data;
 };

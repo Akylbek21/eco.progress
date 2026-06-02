@@ -6,6 +6,7 @@ import WhatsAppButton from '../components/WhatsAppButton';
 import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import ServiceSelector from '../components/ServiceSelector';
 import CaseStudies from '../components/CaseStudies';
+import JivoChat from '../components/JivoChat';
 import SEO from '../components/SEO';
 import { DocumentsSection, TrustSection } from '../components/TrustBlocks';
 import { company } from '../config/company';
@@ -129,6 +130,7 @@ const HomePage = () => (
       description="ECOPROGRESS GROUP оказывает экологические и лабораторные услуги для бизнеса в Шымкенте: производственный контроль СЭС, замеры, ПЭК, паспорта отходов и утилизация."
       schema={organizationSchema}
     />
+    <JivoChat />
     <section id="lead" className="relative isolate overflow-hidden px-4 py-20 text-white sm:px-8 sm:py-28 lg:min-h-[760px]">
       <div className="hero-zoom absolute inset-0 -z-30 bg-windmill bg-cover bg-center" />
       <div className="absolute inset-0 -z-20 bg-eco-900/88" />

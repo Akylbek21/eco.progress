@@ -13,7 +13,9 @@ const asString = (value: unknown, fallback = '') => (value === undefined || valu
 const mapDocumentType = (type: unknown): DocumentItem['type'] => {
   const raw = asString(type, 'client');
   if (raw === 'invoice') return 'invoice';
-  if (['result', 'contract', 'act'].includes(raw)) return 'result';
+  if (raw === 'contract') return 'contract';
+  if (raw === 'act') return 'act';
+  if (raw === 'result') return 'result';
   if (raw === 'internal') return 'internal';
   return 'client';
 };

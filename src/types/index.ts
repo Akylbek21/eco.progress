@@ -143,7 +143,7 @@ export type DocumentItem = {
   id: string;
   orderId?: string;
   name: string;
-  type: 'client' | 'result' | 'invoice' | 'internal';
+  type: 'client' | 'result' | 'invoice' | 'contract' | 'act' | 'internal';
   uploadedAt: string;
   status: string;
   fileUrl?: string;

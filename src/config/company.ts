@@ -12,7 +12,7 @@ export const company = {
   schedule: 'Пн-Пт, 09:00-18:00',
   instagram: '@ecoprogress.group',
   instagramUrl: 'https://www.instagram.com/ecoprogress.group',
-  mapsUrl: 'https://go.2gis.com/',
+  mapsUrl: 'https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16',
   siteLabel: 'ecoprogress.kz',
   siteUrl: 'https://ecoprogress.kz',
 };

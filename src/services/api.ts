@@ -8,6 +8,16 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('eco-progress-token');
   const requestPath = String(config.url || '').replace(/^\/api/, '').split('?')[0];
   const isPublicAuthRequest = ['/auth/login', '/auth/staff/login', '/auth/register'].includes(requestPath);
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    const headers = config.headers as Record<string, unknown> & { delete?: (key: string) => void };
+    if (typeof headers.delete === 'function') {
+      headers.delete('Content-Type');
+      headers.delete('content-type');
+    } else {
+      delete headers['Content-Type'];
+      delete headers['content-type'];
+    }
+  }
   if (token && !isPublicAuthRequest) {
     config.headers.Authorization = `Bearer ${token}`;
   }

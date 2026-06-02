@@ -27,6 +27,15 @@ const dataOrFallback = async <T,>(request: Promise<{ data: { data: T } }>, fallb
   }
 };
 
+const appendFileMetadata = (formData: FormData, file: File, title?: string) => {
+  const documentName = title?.trim() || file.name || 'Документ';
+  formData.append('name', documentName);
+  formData.append('title', documentName);
+  formData.append('fileName', file.name || documentName);
+  formData.append('fileType', file.type || 'application/octet-stream');
+  formData.append('fileSize', String(file.size || 0));
+};
+
 export const createStaffManualOrder = async (payload: StaffManualOrderPayload): Promise<Order | undefined> => {
   const formData = new FormData();
   Object.entries(payload).forEach(([key, value]) => {
@@ -43,6 +52,7 @@ export const createStaffManualOrder = async (payload: StaffManualOrderPayload): 
 export const uploadCrmDocument = async (orderId: string, payload: UploadDocumentPayload): Promise<CrmDocument | undefined> => {
   const formData = new FormData();
   formData.append('file', payload.file);
+  appendFileMetadata(formData, payload.file, payload.title);
   formData.append('type', payload.type);
   formData.append('comment', payload.comment || '');
   formData.append('sendToClient', String(Boolean(payload.sendToClient)));
@@ -64,9 +74,12 @@ export const sendDocumentToClient = async (orderId: string, documentId: string, 
 export const sendAgreementResponse = async (
   orderId: string,
   sourceDocumentId: string,
-  payload: { action: 'accept' | 'reject' | 'sign'; comment?: string; signedCms?: string; signerSubject?: string },
+  payload: { action: 'signed' | 'sent_without_signature' | 'revision_requested'; comment?: string; signedCms?: string; signerSubject?: string },
 ) => {
-  const { data } = await api.post<{ data: AgreementResponse; message: string | null }>(`/client/orders/${orderId}/agreements/${sourceDocumentId}/responses`, payload);
+  const { data } = await api.post<{ data: AgreementResponse; message: string | null }>(`/client/orders/${orderId}/agreement-responses`, {
+    sourceDocumentId,
+    ...payload,
+  });
   return data.data;
 };
 

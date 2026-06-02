@@ -40,6 +40,22 @@ export type StaffOrderFilters = {
   dateTo?: string;
 };
 
+const toBackendDocumentType = (type: string | undefined, sentToClient = false): DocumentItem['type'] => {
+  const raw = String(type || '').trim();
+  if (['client', 'result', 'invoice', 'contract', 'act', 'internal'].includes(raw)) return raw as DocumentItem['type'];
+  if (['protocol', 'report', 'work_result', 'project_document', 'agreement'].includes(raw)) return 'result';
+  return sentToClient ? 'client' : 'internal';
+};
+
+const appendFileMetadata = (formData: FormData, file: File, title?: string) => {
+  const documentName = title?.trim() || file.name || 'Документ';
+  formData.append('name', documentName);
+  formData.append('title', documentName);
+  formData.append('fileName', file.name || documentName);
+  formData.append('fileType', file.type || 'application/octet-stream');
+  formData.append('fileSize', String(file.size || 0));
+};
+
 const applyStaffFilters = (orders: Order[], filters?: StaffOrderFilters) => {
   if (!filters) return orders;
   return orders
@@ -83,10 +99,13 @@ export const uploadDocument = async (orderId: string, fileOrPayload: File | Uplo
   const file = isFile ? fileOrPayload : fileOrPayload.file;
   const formData = new FormData();
   formData.append('file', file);
+  appendFileMetadata(formData, file, isFile ? file.name : fileOrPayload.title);
   if (isFile) {
-    if (type) formData.append('type', type);
+    if (type) formData.append('type', toBackendDocumentType(type));
   } else {
-    formData.append('type', fileOrPayload.type);
+    formData.append('type', toBackendDocumentType(fileOrPayload.type, fileOrPayload.sendToClient));
+    formData.append('category', fileOrPayload.type);
+    formData.append('documentType', fileOrPayload.type);
     formData.append('comment', fileOrPayload.comment || '');
     formData.append('sendToClient', String(Boolean(fileOrPayload.sendToClient)));
     formData.append('needsSignature', String(Boolean(fileOrPayload.needsSignature)));
@@ -109,6 +128,7 @@ export const uploadContractDocument = async (
 ): Promise<{ document: DocumentItem; message: string | null }> => {
   const formData = new FormData();
   formData.append('file', payload.file);
+  appendFileMetadata(formData, payload.file, payload.file.name || 'Договор');
   formData.append('type', 'contract');
   formData.append('sendToClient', 'true');
   formData.append('needsSignature', 'true');
@@ -134,6 +154,7 @@ export const uploadInvoiceDocument = async (
 ): Promise<{ document: DocumentItem; message: string | null }> => {
   const formData = new FormData();
   formData.append('file', payload.file);
+  appendFileMetadata(formData, payload.file, payload.file.name || 'Счет на оплату');
   formData.append('type', 'invoice');
   formData.append('sendToClient', 'true');
   formData.append('needsSignature', 'false');
