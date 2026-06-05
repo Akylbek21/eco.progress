@@ -1,8 +1,11 @@
 ﻿import { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { Settings } from 'lucide-react';
+import { Link, NavLink } from 'react-router-dom';
+import { Settings, Users } from 'lucide-react';
 
-const nav = ['услуги', 'новости', 'сотрудники', 'клиенты', 'пользователи', 'настройки'];
+const nav = [
+  { to: '/admin', label: 'Контент', hash: '#услуги' },
+  { to: '/admin/users', label: 'Пользователи' },
+];
 
 const AdminLayout = ({ children }: { children: ReactNode }) => (
   <div className="min-h-screen bg-slate-100 text-slate-900 lg:grid lg:grid-cols-[280px_1fr]">
@@ -13,9 +16,18 @@ const AdminLayout = ({ children }: { children: ReactNode }) => (
       </Link>
       <nav className="mt-8 space-y-2">
         {nav.map((item) => (
-          <a key={item} href={`#${item}`} className="block rounded-2xl px-4 py-3 text-sm font-medium capitalize text-slate-700 hover:bg-eco-50">
-            {item}
-          </a>
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-eco-50 ${
+                isActive ? 'bg-eco-50 text-eco-900' : ''
+              }`
+            }
+          >
+            {item.label === 'Пользователи' ? <Users size={16} /> : <Settings size={16} />}
+            {item.label}
+          </NavLink>
         ))}
       </nav>
     </aside>

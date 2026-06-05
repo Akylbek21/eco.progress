@@ -20,6 +20,7 @@ import RegisterPage from './pages/RegisterPage';
 import FaqPage from './pages/FaqPage';
 import ContactsPage from './pages/ContactsPage';
 import AdminPage from './pages/AdminPage';
+import AdminUsersPage from './pages/AdminUsersPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PaymentsPage from './pages/PaymentsPage';
 import { useToast } from './hooks/useToast';
@@ -165,6 +166,7 @@ function App() {
         <Route path="/dashboard/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><PaymentsPage /></StaffLayout></RoleAccess>} />
 
         <Route path="/admin" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminPage /></AdminLayout></RoleAccess>} />
+        <Route path="/admin/users" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminUsersPage /></AdminLayout></RoleAccess>} />
         <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
       </Routes>
     </div>
