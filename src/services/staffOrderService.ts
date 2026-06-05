@@ -116,6 +116,28 @@ export const uploadDocument = async (orderId: string, fileOrPayload: File | Uplo
   return mapDocument(data.data as never, orderId);
 };
 
+export const uploadStaffDocument = async (fileOrPayload: File | UploadDocumentPayload, type?: string): Promise<DocumentItem> => {
+  const isFile = fileOrPayload instanceof File;
+  const file = isFile ? fileOrPayload : fileOrPayload.file;
+  const formData = new FormData();
+  formData.append('file', file);
+  appendFileMetadata(formData, file, isFile ? file.name : fileOrPayload.title);
+  if (isFile) {
+    if (type) formData.append('type', toBackendDocumentType(type));
+  } else {
+    formData.append('type', toBackendDocumentType(fileOrPayload.type, fileOrPayload.sendToClient));
+    formData.append('category', fileOrPayload.type);
+    formData.append('documentType', fileOrPayload.type);
+    formData.append('comment', fileOrPayload.comment || '');
+    formData.append('sendToClient', String(Boolean(fileOrPayload.sendToClient)));
+    formData.append('needsSignature', String(Boolean(fileOrPayload.needsSignature)));
+    formData.append('needsClientResponse', String(Boolean(fileOrPayload.needsClientResponse)));
+    if (fileOrPayload.dueDate) formData.append('dueDate', fileOrPayload.dueDate);
+  }
+  const { data } = await api.post<{ data: DocumentItem; message: string | null }>('/staff/documents', formData);
+  return mapDocument(data.data as never);
+};
+
 export type UploadContractDocumentPayload = {
   file: File;
   comment?: string;

@@ -2,7 +2,6 @@
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   Bell,
-  Building2,
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
@@ -51,7 +50,7 @@ import {
 } from '../components/crm/StaffOrderCrmPanels';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, applyPartialPayment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getOrderById, getOrders, markPaymentPaid, requestPrimaryDocumentsBatch, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadContractDocument, uploadDocument, uploadInvoiceDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
+import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, applyPartialPayment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getOrderById, getOrders, markPaymentPaid, requestPrimaryDocumentsBatch, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadContractDocument, uploadDocument, uploadInvoiceDocument, uploadLaboratoryResultDocument, uploadStaffDocument } from '../services/staffOrderService';
 import type { CreateClientPayload, StaffCreateOrderPayload } from '../services/staffOrderService';
 import { createCommercialOffer, createStaffManualOrder, getStaffCalendar, getTasks, saveTask, saveWasteRemoval, sendDocumentToClient, updateTaskStatus } from '../services/crmWorkflowService';
 import { getServices } from '../services/serviceService';
@@ -535,6 +534,18 @@ const collectDocuments = (orders: Order[]): StaffDocument[] =>
     }))
   );
 
+const standaloneStaffDocument = (doc: DocumentItem): StaffDocument => ({
+  ...doc,
+  orderId: '',
+  company: 'Без заявки',
+  orderService: 'Общий документ',
+  orderStatus: 'Готово',
+  docType: documentType(doc),
+  uploadedBy: 'Сотрудник',
+  uploadedAt: doc.uploadedAt || new Date().toLocaleString('ru-RU'),
+});
+
+
 type EcoDocumentSection = 'overview' | 'projecting' | 'permit' | 'laboratory';
 type EcoDocument = {
   id: string;
@@ -752,17 +763,12 @@ const EcologistRequestList = ({ orders, title = 'Заявки эколога', c
 
 export const StaffDashboardPage = () => {
   const { orders, error } = useOrders();
-  const navigate = useNavigate();
   const role = useStaffRole();
   const { user } = useAuth();
   if (!canAccess(role, 'view_orders')) return <PermissionDenied permission="view_orders" />;
   const workplace = roleWorkplace(role);
   const roleOrders = roleOrderFilter(orders, role);
-  const [selectedCompany, setSelectedCompany] = useState('all');
-  const companies = useMemo(() => buildBusinessCompanySummaries(orders), [orders]);
-  const visibleOrders = useMemo(() => roleOrders
-    .filter((order) => selectedCompany === 'all' || order.businessCompanyId === selectedCompany)
-    .sort((a, b) => b.id.localeCompare(a.id)), [roleOrders, selectedCompany]);
+  const visibleOrders = useMemo(() => [...roleOrders].sort((a, b) => b.id.localeCompare(a.id)), [roleOrders]);
   const latestActions = orders.flatMap((order) => order.history.slice(0, 2).map((item) => ({ ...item, order }))).slice(0, 6);
   const roleNotifications = buildRoleNotifications(orders, role).slice(0, 5);
   const myTasks = buildMyTasks(orders, role);
@@ -774,10 +780,6 @@ export const StaffDashboardPage = () => {
       <AccountantDashboard
         orders={roleOrders}
         visibleOrders={visibleOrders}
-        companies={companies}
-        selectedCompany={selectedCompany}
-        onSelectCompany={setSelectedCompany}
-        onOpenCompany={(key) => navigate(key === 'all' ? '/staff/orders' : `/staff/orders/company/${key}`)}
         notifications={roleNotifications}
         tasks={myTasks}
         stats={stats}
@@ -791,10 +793,6 @@ export const StaffDashboardPage = () => {
       <ManagerDashboard
         orders={roleOrders}
         visibleOrders={visibleOrders}
-        companies={companies}
-        selectedCompany={selectedCompany}
-        onSelectCompany={setSelectedCompany}
-        onOpenCompany={(key) => navigate(key === 'all' ? '/staff/orders' : `/staff/orders/company/${key}`)}
         notifications={roleNotifications}
         tasks={myTasks}
         stats={stats}
@@ -833,22 +831,6 @@ export const StaffDashboardPage = () => {
           </Reveal>
         ))}
       </div>
-
-      <Reveal>
-        <div>
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-xl font-bold text-eco-900">Компании-исполнители</h3>
-            <button type="button" onClick={() => setSelectedCompany('all')} className="text-sm font-bold text-eco-700">Все</button>
-          </div>
-          <CompanyCards
-            companies={companies}
-            selectedCompany={selectedCompany}
-            onSelect={setSelectedCompany}
-            onOpenOrders={(key) => navigate(key === 'all' ? '/staff/orders' : `/staff/orders/company/${key}`)}
-            totalOrders={orders.length}
-          />
-        </div>
-      </Reveal>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         <StaffPanel title={workplace.queueTitle}>
@@ -901,10 +883,6 @@ export const StaffDashboardPage = () => {
 const ManagerDashboard = ({
   orders,
   visibleOrders,
-  companies,
-  selectedCompany,
-  onSelectCompany,
-  onOpenCompany,
   notifications,
   tasks,
   stats,
@@ -912,10 +890,6 @@ const ManagerDashboard = ({
 }: {
   orders: Order[];
   visibleOrders: Order[];
-  companies: ReturnType<typeof buildBusinessCompanySummaries>;
-  selectedCompany: string;
-  onSelectCompany: (key: string) => void;
-  onOpenCompany: (key: string) => void;
   notifications: ReturnType<typeof buildRoleNotifications>;
   tasks: WorkTask[];
   stats: Array<[string, number]>;
@@ -955,22 +929,6 @@ const ManagerDashboard = ({
           </Reveal>
         ))}
       </div>
-
-      <Reveal>
-        <div>
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-xl font-bold text-eco-900">Компании-исполнители</h3>
-            <button type="button" onClick={() => onSelectCompany('all')} className="text-sm font-bold text-eco-700">Все</button>
-          </div>
-          <CompanyCards
-            companies={companies}
-            selectedCompany={selectedCompany}
-            onSelect={onSelectCompany}
-            onOpenOrders={onOpenCompany}
-            totalOrders={orders.length}
-          />
-        </div>
-      </Reveal>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <div className="space-y-6">
@@ -1023,10 +981,6 @@ const ManagerDashboard = ({
 const AccountantDashboard = ({
   orders,
   visibleOrders,
-  companies,
-  selectedCompany,
-  onSelectCompany,
-  onOpenCompany,
   notifications,
   tasks,
   stats,
@@ -1034,10 +988,6 @@ const AccountantDashboard = ({
 }: {
   orders: Order[];
   visibleOrders: Order[];
-  companies: ReturnType<typeof buildBusinessCompanySummaries>;
-  selectedCompany: string;
-  onSelectCompany: (key: string) => void;
-  onOpenCompany: (key: string) => void;
   notifications: ReturnType<typeof buildRoleNotifications>;
   tasks: WorkTask[];
   stats: Array<[string, number]>;
@@ -1081,16 +1031,6 @@ const AccountantDashboard = ({
           </Reveal>
         ))}
       </div>
-
-      <Reveal>
-        <div>
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-xl font-bold text-eco-900">Компании-исполнители</h3>
-            <button type="button" onClick={() => onSelectCompany('all')} className="text-sm font-bold text-eco-700">Все</button>
-          </div>
-          <CompanyCards companies={companies} selectedCompany={selectedCompany} onSelect={onSelectCompany} onOpenOrders={onOpenCompany} totalOrders={orders.length} />
-        </div>
-      </Reveal>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <div className="space-y-6">
@@ -1307,140 +1247,6 @@ const OrderLine = ({ order }: { order: Order }) => {
   );
 };
 
-const CompanyCards = ({
-  companies,
-  selectedCompany,
-  onSelect,
-  onOpenOrders,
-  totalOrders,
-}: {
-  companies: ReturnType<typeof buildBusinessCompanySummaries> | ReturnType<typeof buildCompanySummaries>;
-  selectedCompany: string;
-  onSelect: (key: string) => void;
-  onOpenOrders?: (key: string) => void;
-  totalOrders: number;
-}) => {
-  const totals = companies.reduce(
-    (acc, company) => ({
-      active: acc.active + company.active,
-      waiting: acc.waiting + company.waiting,
-      completed: acc.completed + company.completed,
-      paid: acc.paid + company.paid,
-      pendingPayment: acc.pendingPayment + company.pendingPayment,
-    }),
-    { active: 0, waiting: 0, completed: 0, paid: 0, pendingPayment: 0 }
-  );
-
-  return (
-    <div className="mt-5 flex gap-3 overflow-x-auto pb-2">
-      <button
-        type="button"
-        onClick={() => onSelect('all')}
-        className={`min-w-[260px] rounded-[20px] border p-4 text-left transition ${
-          selectedCompany === 'all' ? 'border-eco-400 bg-eco-900 text-white shadow-lg shadow-eco-900/15' : 'border-slate-200 bg-white text-slate-900 hover:border-eco-200'
-        }`}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-lg font-bold">Все</p>
-          </div>
-          <Building2 size={20} />
-        </div>
-        <CompanyMetrics total={totalOrders} active={totals.active} waiting={totals.waiting} completed={totals.completed} dark={selectedCompany === 'all'} />
-        {totals.pendingPayment > 0 && <p className="mt-3 text-xs font-semibold opacity-75">{totals.pendingPayment} ждёт оплаты</p>}
-        {onOpenOrders && (
-          <span
-            role="button"
-            tabIndex={0}
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenOrders('all');
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                event.stopPropagation();
-                onOpenOrders('all');
-              }
-            }}
-            className={`mt-4 inline-flex rounded-full px-4 py-2 text-xs font-bold ${selectedCompany === 'all' ? 'bg-white text-eco-900' : 'bg-eco-900 text-white'}`}
-          >
-            Открыть заявки
-          </span>
-        )}
-      </button>
-
-      {companies.map((company) => {
-        const selected = selectedCompany === company.key;
-        return (
-          <button
-            type="button"
-            key={company.key}
-            onClick={() => onSelect(company.key)}
-            className={`min-w-[280px] rounded-[20px] border p-4 text-left transition ${
-              selected ? 'border-eco-400 bg-white shadow-lg shadow-eco-900/10 ring-2 ring-eco-200' : 'border-slate-200 bg-white shadow-sm hover:border-eco-200'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="mt-1 break-words text-lg font-bold text-eco-900">{company.name}</p>
-              </div>
-              <Building2 className={selected ? 'text-eco-700' : 'text-slate-400'} size={20} />
-            </div>
-            <CompanyMetrics total={company.total} active={company.active} waiting={company.waiting} completed={company.completed} />
-            {'description' in company && <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-500">{company.description}</p>}
-            {(company.pendingPayment > 0 || company.partialPayment > 0) && (
-              <p className="mt-3 text-xs font-semibold text-slate-500">
-                {company.pendingPayment > 0 && `${company.pendingPayment} ждёт оплаты`}{company.pendingPayment > 0 && company.partialPayment > 0 ? ' · ' : ''}{company.partialPayment > 0 && `${company.partialPayment} частично`}
-              </p>
-            )}
-            {onOpenOrders && (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onOpenOrders(company.key);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onOpenOrders(company.key);
-                  }
-                }}
-                className="mt-4 inline-flex rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white"
-              >
-                Открыть заявки
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-};
-
-const CompanyMetrics = ({ total, active, waiting, completed, dark = false }: { total: number; active: number; waiting: number; completed: number; dark?: boolean }) => {
-  const items = [
-    ['заявки', total],
-    active > 0 && ['в работе', active],
-    waiting > 0 && ['ждёт', waiting],
-    completed > 0 && ['готово', completed],
-  ].filter(Boolean) as Array<[string, number]>;
-
-  return (
-    <div className="mt-4 flex flex-wrap gap-2">
-      {items.map(([label, value]) => (
-      <div key={String(label)} className={`rounded-2xl px-2 py-2 ${dark ? 'bg-white/10' : 'bg-slate-50'}`}>
-        <p className={`text-lg font-bold ${dark ? 'text-white' : 'text-eco-900'}`}>{value}</p>
-        <p className={`text-[11px] font-semibold ${dark ? 'text-white/65' : 'text-slate-500'}`}>{label}</p>
-      </div>
-      ))}
-    </div>
-  );
-};
-
 const crmTabs = ['Обзор', 'Клиент', 'Обзор заявки', 'Документы', 'КП', 'Договор', 'Счет и оплата', 'Оплата', 'Работа специалиста', 'Проектирование', 'Разрешение', 'Экология', 'Лаборатория', 'Вывоз / Утилизация', 'Первичные документы', 'Согласование', 'Согласование замера', 'Протокол', '870 форма', 'База отчёт', 'Квартальный отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт', 'Результат', 'Завершение заявки', 'Комментарии', 'Сообщения', 'Заметки', 'История'] as const;
 type CrmTab = typeof crmTabs[number];
 
@@ -1521,10 +1327,6 @@ export const StaffOrdersPage = () => {
   useEffect(() => {
     setSelectedCompany(businessCompanyId ?? 'all');
   }, [businessCompanyId]);
-  const selectBusinessCompany = (key: string) => {
-    setSelectedCompany(key);
-    navigate(key === 'all' ? '/staff/orders' : `/staff/orders/company/${key}`);
-  };
   const companies = useMemo(() => buildBusinessCompanySummaries(orders), [orders]);
   const managers = useMemo(() => Array.from(new Set(orders.map((order) => order.manager || 'Не назначен'))).sort(), [orders]);
   const scopedOrders = useMemo(() => roleOrderFilter(orders, role), [orders, role]);
@@ -1552,22 +1354,9 @@ export const StaffOrdersPage = () => {
     .filter((o) => !date || o.createdAt.toLowerCase().includes(date.toLowerCase()))
     .filter((o) => `${o.id} ${o.clientName} ${getOrderCompanyName(o)} ${o.service}`.toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => Number(orderNeedsRole(b, role)) - Number(orderNeedsRole(a, role)) || b.id.localeCompare(a.id)), [scopedOrders, q, selectedCompany, status, payment, requestType, quarterFilter, manager, stage, date, onlyMyTasks, role]);
-  const activeCompany = selectedCompany === 'all' ? 'Все компании-исполнители' : companies.find((company) => company.key === selectedCompany)?.name || 'Компания';
+  const activeCompany = selectedCompany === 'all' ? (role === 'ADMIN' ? 'Все заявки' : 'Заявки по моей роли') : companies.find((company) => company.key === selectedCompany)?.name || 'Компания';
   return (
     <div className="space-y-6">
-      <Reveal>
-        <div>
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h2 className="text-3xl font-bold text-eco-900">{role === 'ADMIN' ? 'Все заявки' : 'Заявки по моей роли'}</h2>
-              <p className="mt-2 text-sm text-slate-600">{roleWorkplace(role).text}</p>
-            </div>
-            <p className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-eco-800 shadow-sm">Роль: {roleTitle(role)}</p>
-          </div>
-          <CompanyCards companies={companies} selectedCompany={selectedCompany} onSelect={selectBusinessCompany} totalOrders={orders.length} />
-        </div>
-      </Reveal>
-
       {error && (
         <Reveal>
           <div className="rounded-[24px] bg-rose-50 p-5 text-sm font-semibold text-rose-800 shadow-sm">{error}</div>
@@ -1608,7 +1397,7 @@ export const StaffOrdersPage = () => {
           {['ADMIN', 'MANAGER'].includes(role) && <select value={manager} onChange={(e) => setManager(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{managers.map((item) => <option key={item}>{item}</option>)}</select>}
           {role === 'ADMIN' && <select value={stage} onChange={(e) => setStage(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{['Менеджер', 'Бухгалтерия', 'Проектирование', 'Лаборатория', 'Вывоз', 'Утилизация', 'Проверка', 'Готово'].map((item) => <option key={item}>{item}</option>)}</select>}
           <input value={date} onChange={(e) => setDate(e.target.value)} placeholder="Дата" className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3" />
-          <button type="button" onClick={() => { setQ(''); setStatus('Все'); setPayment('Все'); setRequestType('Все'); setQuarterFilter('Все'); setManager('Все'); setStage('Все'); setDate(''); setOnlyMyTasks(false); selectBusinessCompany('all'); }} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-eco-800 transition hover:bg-eco-50">Сбросить</button>
+          <button type="button" onClick={() => { setQ(''); setStatus('Все'); setPayment('Все'); setRequestType('Все'); setQuarterFilter('Все'); setManager('Все'); setStage('Все'); setDate(''); setOnlyMyTasks(false); setSelectedCompany('all'); navigate('/staff/orders'); }} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-eco-800 transition hover:bg-eco-50">Сбросить</button>
         </div>
         <div className="mt-5 space-y-3 lg:hidden">
           {filtered.map((order) => <OrderLine key={order.id} order={order} />)}
@@ -4715,6 +4504,19 @@ export const StaffClientsPage = () => {
 const documentHref = (doc: StaffDocument) =>
   doc.fileUrl || `/api/files/documents/${doc.id}`;
 
+const staffDocumentUploadCategories = [
+  ['primary', 'Первичный документ'],
+  ['requisites', 'Реквизиты'],
+  ['contract', 'Договор'],
+  ['invoice', 'Счет'],
+  ['act', 'Акт'],
+  ['protocol', 'Протокол'],
+  ['ecological_project', 'Экологический проект'],
+  ['permit', 'Разрешение'],
+  ['work_result', 'Результат работы'],
+  ['other', 'Прочее'],
+] as const;
+
 const DocumentLine = ({ doc }: { doc: StaffDocument }) => (
   <div className="grid items-center gap-3 rounded-2xl bg-slate-50 p-4 lg:grid-cols-[1.6fr_1.1fr_0.8fr_0.9fr_auto]">
     <div className="min-w-0">
@@ -4730,7 +4532,11 @@ const DocumentLine = ({ doc }: { doc: StaffDocument }) => (
       <p>{doc.status}</p>
       <p>{doc.uploadedAt}</p>
     </div>
-    <Link to={`/staff/documents/${doc.orderId}`} className="inline-flex justify-center rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Открыть</Link>
+    {doc.orderId ? (
+      <Link to={`/staff/documents/${doc.orderId}`} className="inline-flex justify-center rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Открыть</Link>
+    ) : (
+      <a href={documentHref(doc)} target="_blank" rel="noreferrer" className="inline-flex justify-center rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Посмотреть</a>
+    )}
   </div>
 );
 
@@ -4750,14 +4556,18 @@ const DocumentFileRow = ({ doc }: { doc: StaffDocument }) => (
 );
 
 export const StaffDocumentsPage = () => {
-  const { orders } = useOrders();
+  const { orders, refresh } = useOrders();
   const { orderId } = useParams();
+  const toast = useToast();
   const [q, setQ] = useState('');
   const [company, setCompany] = useState('Все');
   const [type, setType] = useState('Все');
   const [status, setStatus] = useState('Все');
-  const completedOrders = useMemo(() => orders.filter((order) => ['Готово', 'Завершено'].includes(order.status)), [orders]);
-  const docs = useMemo(() => collectDocuments(completedOrders), [completedOrders]);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [standaloneDocs, setStandaloneDocs] = useState<StaffDocument[]>([]);
+  const docs = useMemo(() => [...collectDocuments(orders), ...standaloneDocs], [orders, standaloneDocs]);
   const companies = useMemo(() => Array.from(new Set(docs.map((doc) => doc.company))).sort(), [docs]);
   const types = useMemo(() => Array.from(new Set(docs.map((doc) => doc.docType))).sort(), [docs]);
   const statuses = useMemo(() => Array.from(new Set(docs.map((doc) => doc.status))).sort(), [docs]);
@@ -4770,78 +4580,186 @@ export const StaffDocumentsPage = () => {
     acc[doc.company] = [...(acc[doc.company] || []), doc];
     return acc;
   }, {}), [filtered]);
-  const selectedOrder = orderId ? completedOrders.find((order) => order.id === orderId) : undefined;
+  const selectedOrder = orderId ? orders.find((order) => order.id === orderId) : undefined;
   const selectedDocs = selectedOrder ? collectDocuments([selectedOrder]) : [];
+  const openUpload = () => {
+    setUploadError('');
+    setUploadOpen(true);
+  };
+  const closeUpload = () => {
+    if (uploadLoading) return;
+    setUploadOpen(false);
+    setUploadError('');
+  };
+  const submitUpload = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setUploadError('');
+    const form = new FormData(event.currentTarget);
+    const targetOrderId = selectedOrder?.id || '';
+    const title = String(form.get('name') || '').trim();
+    const category = String(form.get('category') || 'other');
+    const comment = String(form.get('comment') || '').trim();
+    const file = form.get('file');
+    if (!title) {
+      setUploadError('Укажите название документа.');
+      return;
+    }
+    if (!(file instanceof File) || !file.name) {
+      setUploadError('Выберите файл документа.');
+      return;
+    }
+    setUploadLoading(true);
+    try {
+      const payload = {
+        file,
+        title,
+        type: category,
+        comment,
+      };
+      if (targetOrderId) {
+        await uploadDocument(targetOrderId, payload);
+      } else {
+        const uploaded = await uploadStaffDocument(payload);
+        setStandaloneDocs((items) => [standaloneStaffDocument(uploaded), ...items]);
+      }
+      toast.success('Документ загружен', targetOrderId ? 'Файл добавлен в CRM и привязан к заявке.' : 'Файл добавлен в раздел документов.');
+      setUploadOpen(false);
+      event.currentTarget.reset();
+      refresh();
+    } catch (err) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (err as Error)?.message || 'Не удалось загрузить документ.';
+      setUploadError(message);
+      toast.error('Документ не загружен', message);
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+  const uploadModal = (
+    <Modal
+      isOpen={uploadOpen}
+      onClose={closeUpload}
+      title="Загрузить документ"
+      description={selectedOrder ? `Заявка ${selectedOrder.id} · ${getOrderCompanyName(selectedOrder)}` : 'Добавьте название и файл документа'}
+      loading={uploadLoading}
+    >
+      <form onSubmit={submitUpload} className="grid gap-4">
+        {uploadError && <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{uploadError}</p>}
+        <label className="text-sm font-semibold text-slate-700">
+          Название документа
+          <input name="name" required placeholder="Например: Протокол анализа воздуха" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+        </label>
+        <label className="text-sm font-semibold text-slate-700">
+          Тип документа
+          <select name="category" defaultValue="other" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            {staffDocumentUploadCategories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+        <label className="text-sm font-semibold text-slate-700">
+          Файл
+          <input name="file" type="file" required accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,application/pdf,application/zip" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+        </label>
+        <label className="text-sm font-semibold text-slate-700">
+          Комментарий
+          <textarea name="comment" rows={3} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+        </label>
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button type="button" variant="secondary" disabled={uploadLoading} onClick={closeUpload}>Отмена</Button>
+          <Button type="submit" disabled={uploadLoading}>{uploadLoading ? 'Загрузка...' : 'Загрузить документ'}</Button>
+        </div>
+      </form>
+    </Modal>
+  );
 
   if (orderId) {
     if (!selectedOrder) {
       return (
-        <Reveal>
-          <div className="rounded-[22px] bg-white p-6 shadow-sm">
-            <Link to="/staff/documents" className="text-sm font-bold text-eco-700">← Документы</Link>
-            <EmptyState text="Завершённая заявка не найдена" />
-          </div>
-        </Reveal>
+        <>
+          <Reveal>
+            <div className="rounded-[22px] bg-white p-6 shadow-sm">
+              <Link to="/staff/documents" className="text-sm font-bold text-eco-700">← Документы</Link>
+              <EmptyState text="Заявка не найдена" />
+            </div>
+          </Reveal>
+          {uploadModal}
+        </>
       );
     }
 
     return (
-      <Reveal>
-        <div className="rounded-[22px] bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <Link to="/staff/documents" className="text-sm font-bold text-eco-700">← Документы</Link>
-              <h2 className="mt-3 text-3xl font-bold text-eco-900">{selectedOrder.id} · {getOrderCompanyName(selectedOrder)}</h2>
-              <p className="mt-2 text-sm text-slate-500">{selectedOrder.service}</p>
+      <>
+        <Reveal>
+          <div className="rounded-[22px] bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <Link to="/staff/documents" className="text-sm font-bold text-eco-700">← Документы</Link>
+                <h2 className="mt-3 text-3xl font-bold text-eco-900">{selectedOrder.id} · {getOrderCompanyName(selectedOrder)}</h2>
+                <p className="mt-2 text-sm text-slate-500">{selectedOrder.service}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {badge(selectedOrder.status)}
+                <Button type="button" onClick={openUpload} className="gap-2">
+                  <Upload size={16} />
+                  Добавить
+                </Button>
+              </div>
             </div>
-            {badge(selectedOrder.status)}
-          </div>
 
-          <div className="mt-6 grid gap-3 md:grid-cols-4">
-            <InfoTile label="Компания" value={getOrderCompanyName(selectedOrder)} />
-            <InfoTile label="Контакт" value={selectedOrder.contactPerson || selectedOrder.clientName} />
-            <InfoTile label="Дата" value={selectedOrder.createdAt} />
-            <InfoTile label="Документы" value={String(selectedDocs.length)} />
-          </div>
+            <div className="mt-6 grid gap-3 md:grid-cols-4">
+              <InfoTile label="Компания" value={getOrderCompanyName(selectedOrder)} />
+              <InfoTile label="Контакт" value={selectedOrder.contactPerson || selectedOrder.clientName} />
+              <InfoTile label="Дата" value={selectedOrder.createdAt} />
+              <InfoTile label="Документы" value={String(selectedDocs.length)} />
+            </div>
 
-          <div className="mt-6 space-y-3">
-            {selectedDocs.map((doc) => <DocumentFileRow key={doc.id} doc={doc} />)}
-            {!selectedDocs.length && <EmptyState text="Документов нет" />}
+            <div className="mt-6 space-y-3">
+              {selectedDocs.map((doc) => <DocumentFileRow key={doc.id} doc={doc} />)}
+              {!selectedDocs.length && <EmptyState text="Документов нет" />}
+            </div>
           </div>
-        </div>
-      </Reveal>
+        </Reveal>
+        {uploadModal}
+      </>
     );
   }
 
   return (
-    <Reveal>
-      <div className="rounded-[22px] bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 className="text-3xl font-bold text-eco-900">Документы</h2>
-          </div>
-          <p className="rounded-full bg-eco-50 px-4 py-2 text-sm font-bold text-eco-800">Найдено: {filtered.length}</p>
-        </div>
-        <div className="mt-5 grid gap-3 lg:grid-cols-5">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
-          <select value={company} onChange={(e) => setCompany(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{companies.map((item) => <option key={item}>{item}</option>)}</select>
-          <select value={type} onChange={(e) => setType(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{types.map((item) => <option key={item}>{item}</option>)}</select>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{statuses.map((item) => <option key={item}>{item}</option>)}</select>
-          <button type="button" onClick={() => { setQ(''); setCompany('Все'); setType('Все'); setStatus('Все'); }} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-eco-800 transition hover:bg-eco-50">Сбросить</button>
-        </div>
-        <div className="mt-6 space-y-5">
-          {Object.entries(grouped).map(([companyName, items]) => (
-            <div key={companyName} className="rounded-[20px] border border-slate-100 p-4">
-              <h3 className="font-bold text-eco-900">{companyName}</h3>
-              <div className="mt-3 space-y-2">
-                {items.map((doc) => <DocumentLine key={doc.id} doc={doc} />)}
-              </div>
+    <>
+      <Reveal>
+        <div className="rounded-[22px] bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="text-3xl font-bold text-eco-900">Документы</h2>
             </div>
-          ))}
-          {!filtered.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Документов нет</p>}
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="rounded-full bg-eco-50 px-4 py-2 text-sm font-bold text-eco-800">Найдено: {filtered.length}</p>
+              <Button type="button" onClick={() => openUpload()} className="gap-2">
+                <Upload size={16} />
+                Добавить
+              </Button>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 lg:grid-cols-5">
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+            <select value={company} onChange={(e) => setCompany(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{companies.map((item) => <option key={item}>{item}</option>)}</select>
+            <select value={type} onChange={(e) => setType(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{types.map((item) => <option key={item}>{item}</option>)}</select>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{statuses.map((item) => <option key={item}>{item}</option>)}</select>
+            <button type="button" onClick={() => { setQ(''); setCompany('Все'); setType('Все'); setStatus('Все'); }} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-eco-800 transition hover:bg-eco-50">Сбросить</button>
+          </div>
+          <div className="mt-6 space-y-5">
+            {Object.entries(grouped).map(([companyName, items]) => (
+              <div key={companyName} className="rounded-[20px] border border-slate-100 p-4">
+                <h3 className="font-bold text-eco-900">{companyName}</h3>
+                <div className="mt-3 space-y-2">
+                  {items.map((doc) => <DocumentLine key={doc.id} doc={doc} />)}
+                </div>
+              </div>
+            ))}
+            {!filtered.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Документов нет</p>}
+          </div>
         </div>
-      </div>
-    </Reveal>
+      </Reveal>
+      {uploadModal}
+    </>
   );
 };
 
