@@ -9,7 +9,7 @@ import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import OrderChoiceModal from '../components/OrderChoiceModal';
-import { getServices } from '../services/serviceService';
+import { fallbackServices, getServices } from '../services/serviceService';
 import { getBusinessCompanyById } from '../utils/crm';
 import type { ServiceCategory } from '../types';
 
@@ -29,6 +29,7 @@ const formatPrice = (price: number) => `${Math.round(price).toLocaleString('ru-R
 
 const ServicesPage = () => {
   const { data: services = [], isLoading } = useQuery({ queryKey: ['services'], queryFn: getServices });
+  const usingFallbackServices = services === fallbackServices;
   const [category, setCategory] = useState<'Все' | ServiceCategory>('Все');
   const [expandedService, setExpandedService] = useState<string | null>(null);
   const [selectedIncludes, setSelectedIncludes] = useState<Record<string, string[]>>({});
@@ -76,7 +77,7 @@ const ServicesPage = () => {
     openServiceFromHash();
     window.addEventListener('hashchange', openServiceFromHash);
     return () => window.removeEventListener('hashchange', openServiceFromHash);
-  }, []);
+  }, [services]);
 
   if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
   if (!selectedService) {
@@ -114,6 +115,11 @@ const ServicesPage = () => {
             ))}
           </div>
           <div className="mt-8 grid gap-4 sm:mt-10 sm:gap-6 md:grid-cols-2">
+            {usingFallbackServices && (
+              <div className="rounded-[18px] border border-amber-100 bg-amber-50 p-4 text-sm font-semibold text-amber-900 md:col-span-2">
+                Сейчас показываем базовый список услуг. Данные с сервера временно недоступны.
+              </div>
+            )}
             {items.map((service, index) => (
               <Reveal key={service.id} delay={index * 0.04}>
                 <div id={`service-${service.id}`} className={`card-hover flex h-full scroll-mt-28 flex-col rounded-[18px] border bg-white p-5 sm:rounded-[22px] sm:p-6 ${(selectedIncludes[service.id] ?? []).length > 0 ? 'border-accent ring-4 ring-accent/15' : 'border-slate-200'}`}>

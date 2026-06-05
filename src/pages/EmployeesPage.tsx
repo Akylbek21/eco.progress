@@ -120,10 +120,11 @@ const addedEmployees: Employee[] = [
 ];
 
 const addEmployeesToList = (employees: Employee[]) => {
-  const existingNames = new Set(employees.map((employee) => employee.name.toLocaleLowerCase('ru')));
+  const publicEmployees = employees.filter((employee) => (employee as Employee & { isPublic?: boolean }).isPublic !== false);
+  const existingNames = new Set(publicEmployees.map((employee) => employee.name.toLocaleLowerCase('ru')));
   const missingEmployees = addedEmployees.filter((employee) => !existingNames.has(employee.name.toLocaleLowerCase('ru')));
 
-  return [...employees, ...missingEmployees];
+  return [...publicEmployees, ...missingEmployees];
 };
 
 const EmployeesPage = () => {

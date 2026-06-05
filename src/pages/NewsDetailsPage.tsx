@@ -1,4 +1,4 @@
-﻿import { Navigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
@@ -14,7 +14,20 @@ const NewsDetailsPage = () => {
   });
 
   if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
-  if (!item) return <Navigate to="/news" replace />;
+  if (!item) {
+    return (
+      <div className="bg-eco-50 px-5 py-20">
+        <SEO title="Новость не найдена | ecoprogress.kz" description="Материал не найден или был снят с публикации." />
+        <div className="mx-auto max-w-3xl rounded-[24px] bg-white p-8 text-center shadow-sm">
+          <h1 className="text-3xl font-bold text-eco-900">Новость не найдена</h1>
+          <p className="mt-3 text-slate-600">Материал мог быть снят с публикации или ссылка устарела.</p>
+          <Link to="/news" className="mt-6 inline-flex rounded-full bg-eco-800 px-5 py-3 text-sm font-semibold text-white">
+            Вернуться к новостям
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <article className="bg-white">

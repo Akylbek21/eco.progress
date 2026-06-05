@@ -3,10 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { getNews } from '../services/newsService';
+import { fallbackNews, getNews } from '../services/newsService';
 
 const NewsPage = () => {
   const { data: news = [], isLoading } = useQuery({ queryKey: ['news'], queryFn: getNews });
+  const usingFallbackNews = news === fallbackNews;
 
   if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
 
@@ -15,6 +16,11 @@ const NewsPage = () => {
       <SEO title="Новости | ecoprogress.kz" description="Новости и материалы ecoprogress.kz об экологических документах, отчетности, проверках и сопровождении бизнеса." />
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
         <Reveal><h1 className="text-4xl font-bold text-eco-900 sm:text-5xl">Новости</h1></Reveal>
+        {usingFallbackNews && (
+          <p className="mt-5 rounded-[20px] border border-amber-100 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+            Показываем базовые материалы. Новостной API временно недоступен.
+          </p>
+        )}
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {news.map((item, index) => (
             <Reveal key={item.id} delay={index * 0.05}>

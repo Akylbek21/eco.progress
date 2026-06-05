@@ -22,7 +22,11 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService }: Props) => {
   const [services, setServices] = useState<EcoService[]>([]);
 
   useEffect(() => {
-    if (open) getServices().then((list) => setServices(list.map((service) => ({ id: service.id, title: service.title }))));
+    if (open) {
+      getServices()
+        .then((list) => setServices(list.map((service) => ({ id: service.id, title: service.title }))))
+        .catch(() => setServices([]));
+    }
   }, [open]);
 
   const selectedServiceTitle = useMemo(

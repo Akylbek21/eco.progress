@@ -11,6 +11,46 @@ import type { TariffItem } from '../types';
 
 const modes = ['Все', 'Разовая задача', 'Ежемесячное сопровождение'] as const;
 
+const fallbackTariffs: TariffItem[] = [
+  {
+    id: 'consultation',
+    name: 'Первичная консультация',
+    price: 'от 25 000 ₸',
+    description: 'Разбор ситуации, проверка рисков и список следующих шагов по экологическим требованиям.',
+    features: ['Анализ задачи', 'Рекомендации по документам', 'План дальнейших действий'],
+    cta: 'Получить консультацию',
+    mode: 'Разовая задача',
+  },
+  {
+    id: 'documents',
+    name: 'Экологические документы',
+    price: 'от 180 000 ₸',
+    description: 'Подготовка проектных, разрешительных и отчетных материалов для бизнеса.',
+    features: ['Сбор исходных данных', 'Подготовка пакета документов', 'Сопровождение согласования'],
+    cta: 'Заказать документы',
+    mode: 'Разовая задача',
+    popular: true,
+  },
+  {
+    id: 'laboratory',
+    name: 'Лаборатория',
+    price: 'от 90 000 ₸',
+    description: 'Замеры, отбор проб, исследования и оформление лабораторных протоколов.',
+    features: ['Согласование точек', 'Выезд специалиста', 'Протоколы исследований'],
+    cta: 'Заказать анализы',
+    mode: 'Разовая задача',
+  },
+  {
+    id: 'support',
+    name: 'Сопровождение',
+    price: 'от 350 000 ₸ / мес',
+    description: 'Регулярное экологическое сопровождение предприятия, контроль сроков и отчетности.',
+    features: ['План работ', 'Контроль отчетности', 'Консультации команды', 'Подготовка к проверкам'],
+    cta: 'Обсудить сопровождение',
+    mode: 'Ежемесячное сопровождение',
+  },
+];
+
 const workflow = [
   ['Консультация', 'Клиент оставляет заявку, а специалист уточняет вид деятельности, объект и текущую задачу.'],
   ['Анализ', 'Проверяем исходные данные, документы, риски, объем работ и сроки.'],
@@ -27,8 +67,16 @@ const TariffsPage = () => {
   const [mode, setMode] = useState<(typeof modes)[number]>('Все');
   const { data: tariffs = [], isLoading } = useQuery({
     queryKey: ['tariffs'],
-    queryFn: () => fetcher<TariffItem[]>('/tariffs'),
+    queryFn: async () => {
+      try {
+        const response = await fetcher<TariffItem[]>('/tariffs');
+        return Array.isArray(response) && response.length ? response : fallbackTariffs;
+      } catch {
+        return fallbackTariffs;
+      }
+    },
   });
+  const usingFallbackTariffs = tariffs === fallbackTariffs;
   const filteredTariffs = useMemo(
     () => (mode === 'Все' ? tariffs : tariffs.filter((tariff) => tariff.mode === mode)),
     [mode, tariffs],
@@ -77,6 +125,12 @@ const TariffsPage = () => {
               </div>
             </div>
           </Reveal>
+
+          {usingFallbackTariffs && (
+            <p className="mt-8 rounded-[20px] border border-amber-100 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+              Показываем базовые тарифы. Данные с сервера временно недоступны.
+            </p>
+          )}
 
           <div className="mt-10 grid gap-6 lg:grid-cols-4">
             {filteredTariffs.map((tariff, index) => (

@@ -1,7 +1,7 @@
 import { fetcher } from './api';
 import type { ServiceItem } from '../types';
 
-const fallbackServices: ServiceItem[] = [
+export const fallbackServices: ServiceItem[] = [
   {
     id: 'ecological-documents',
     businessCompanyId: 'eco-docs',
@@ -65,16 +65,16 @@ export const getServices = async (): Promise<ServiceItem[]> => {
     const services = await fetcher<ServiceItem[]>('/services');
     if (Array.isArray(services) && services.length) return services;
   } catch {
-    if (!import.meta.env.DEV) throw new Error('Не удалось загрузить услуги');
+    return fallbackServices;
   }
-  return import.meta.env.DEV ? fallbackServices : [];
+  return fallbackServices;
 };
 
 export const getServiceById = async (id: string): Promise<ServiceItem | undefined> => {
   try {
     return await fetcher<ServiceItem>(`/services/${id}`);
   } catch {
-    if (!import.meta.env.DEV) throw new Error('Не удалось загрузить услугу');
+    return fallbackServices.find((service) => service.id === id);
   }
-  return import.meta.env.DEV ? fallbackServices.find((service) => service.id === id) : undefined;
+  return fallbackServices.find((service) => service.id === id);
 };

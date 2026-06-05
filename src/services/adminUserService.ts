@@ -18,10 +18,12 @@ export type AdminUserRecord = {
   createdAt?: string | null;
 };
 
+export type AdminUserStatus = 'active' | 'blocked';
+
 export type CreateAdminUserPayload = {
   email: string;
   name: string;
-  password: string;
+  password?: string;
   role: string;
   type?: string;
   phone?: string;
@@ -31,33 +33,34 @@ export type CreateAdminUserPayload = {
   organizationType?: string;
   legalAddress?: string;
   position?: string;
+  status?: AdminUserStatus;
 };
 
-export type UpdateAdminUserPayload = Partial<Omit<CreateAdminUserPayload, 'password'>> & {
-  password?: string;
-};
+export type UpdateAdminUserPayload = Partial<CreateAdminUserPayload>;
 
-export async function getAdminUsers(): Promise<AdminUserRecord[]> {
+export async function getUsers(): Promise<AdminUserRecord[]> {
   const { data } = await api.get<ApiResponse<AdminUserRecord[]>>('/admin/users');
   return data.data;
 }
 
-export async function getAdminUser(id: number): Promise<AdminUserRecord> {
-  const { data } = await api.get<ApiResponse<AdminUserRecord>>(`/admin/users/${id}`);
-  return data.data;
-}
-
-export async function createAdminUser(payload: CreateAdminUserPayload): Promise<AdminUserRecord> {
+export async function createUser(payload: CreateAdminUserPayload): Promise<AdminUserRecord> {
   const { data } = await api.post<ApiResponse<AdminUserRecord>>('/admin/users', payload);
   return data.data;
 }
 
-export async function updateAdminUser(id: number, payload: UpdateAdminUserPayload): Promise<AdminUserRecord> {
+export async function updateUser(id: number, payload: UpdateAdminUserPayload): Promise<AdminUserRecord> {
   const { data } = await api.patch<ApiResponse<AdminUserRecord>>(`/admin/users/${id}`, payload);
   return data.data;
 }
 
-export async function updateAdminUserStatus(id: number, status: 'active' | 'blocked'): Promise<AdminUserRecord> {
+export async function deleteUser(id: number): Promise<void> {
+  await api.delete<ApiResponse<null>>(`/admin/users/${id}`);
+}
+
+export async function changeUserStatus(id: number, status: AdminUserStatus): Promise<AdminUserRecord> {
   const { data } = await api.patch<ApiResponse<AdminUserRecord>>(`/admin/users/${id}/status`, { status });
   return data.data;
 }
+
+export const getAdminUsers = getUsers;
+export const createAdminUser = createUser;

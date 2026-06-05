@@ -313,11 +313,23 @@ export const updateLaboratoryMeasurementAgreementStatus = async (
 
 export const uploadLaboratoryResultDocument = async (
   orderId: string,
-  payload: { name: string; section: LaboratoryResultDocument['section']; fileName: string; status?: LaboratoryResultDocumentStatus; comment?: string; quarter?: number },
+  payload: { name: string; section: LaboratoryResultDocument['section']; file: File; fileName?: string; status?: LaboratoryResultDocumentStatus; comment?: string; quarter?: number },
 ) => {
+  if (!payload.file) throw new Error('Выберите файл лабораторного результата');
+  const formData = new FormData();
+  formData.append('file', payload.file);
+  formData.append('name', payload.name);
+  formData.append('title', payload.name);
+  formData.append('section', payload.section);
+  formData.append('fileName', payload.fileName || payload.file.name);
+  formData.append('fileType', payload.file.type || 'application/octet-stream');
+  formData.append('fileSize', String(payload.file.size || 0));
+  if (payload.status) formData.append('status', toBackendLaboratoryResultStatus(payload.status));
+  if (payload.comment) formData.append('comment', payload.comment);
+  if (payload.quarter) formData.append('quarter', String(payload.quarter));
   const { data } = await api.post<{ data: { order: Order; document: LaboratoryResultDocument }; message: string | null }>(
     `/staff/orders/${orderId}/laboratory/results`,
-    payload,
+    formData,
   );
   return data.data;
 };
@@ -343,11 +355,18 @@ export const updateAnnualQuarterWorkStatus = async (orderId: string, quarterId: 
 export const uploadAnnualQuarterDocument = async (
   orderId: string,
   quarterId: string,
-  payload: { file?: File; fileName: string; fileType: string; fileSize?: number; documentType: QuarterDocument['documentType']; uploadedByName?: string; uploadedByRole?: QuarterDocument['uploadedByRole'] },
+  payload: { file: File; fileName?: string; fileType?: string; fileSize?: number; documentType: QuarterDocument['documentType']; uploadedByName?: string; uploadedByRole?: QuarterDocument['uploadedByRole'] },
 ) => {
+  if (!payload.file) throw new Error('Выберите файл квартального документа');
   const formData = new FormData();
-  formData.append('file', payload.file || new File([payload.fileName], payload.fileName || 'quarter-document.pdf', { type: payload.fileType || 'application/pdf' }));
+  formData.append('file', payload.file);
   formData.append('type', payload.documentType);
+  formData.append('documentType', payload.documentType);
+  formData.append('fileName', payload.fileName || payload.file.name);
+  formData.append('fileType', payload.fileType || payload.file.type || 'application/octet-stream');
+  formData.append('fileSize', String(payload.fileSize || payload.file.size || 0));
+  if (payload.uploadedByName) formData.append('uploadedByName', payload.uploadedByName);
+  if (payload.uploadedByRole) formData.append('uploadedByRole', payload.uploadedByRole);
   const { data } = await api.post<{ data: { order: unknown; document: QuarterDocument }; message: string | null }>(
     `/staff/orders/${orderId}/quarters/${quarterId}/documents`,
     formData,

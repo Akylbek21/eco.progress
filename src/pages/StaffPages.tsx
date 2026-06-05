@@ -1957,6 +1957,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
           name: files.length > 1 ? `${baseName} - ${file.name}` : baseName,
           section,
           quarter,
+          file,
           fileName: file.name,
           status,
           comment: String(form.get('comment') || ''),

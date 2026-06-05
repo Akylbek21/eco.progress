@@ -4,6 +4,7 @@ import Button from './ui/Button';
 import { createLead } from '../services/leadService';
 import { trackLeadSubmit } from '../services/analytics';
 import { useToast } from '../hooks/useToast';
+import { createWhatsAppLeadMessage, createWhatsAppUrl } from '../utils/whatsapp';
 
 type LeadFormProps = {
   source?: string;
@@ -28,6 +29,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState(false);
+  const [whatsAppFallbackUrl, setWhatsAppFallbackUrl] = useState('');
   const isBlue = variant === 'blue';
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -39,7 +41,15 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
     const city = String(form.get('city') || '').trim();
     const serviceType = String(form.get('serviceType') || '').trim();
     const comment = String(form.get('comment') || '').trim();
-    if (!name || !phone || !serviceType) return;
+    setWhatsAppFallbackUrl('');
+    if (!name || !phone || !serviceType) {
+      toast.error('Заполните обязательные поля', 'Укажите имя, телефон и тип услуги.');
+      return;
+    }
+    if (phone.replace(/\D/g, '').length < 7) {
+      toast.error('Проверьте телефон', 'Введите корректный номер телефона или WhatsApp.');
+      return;
+    }
 
     setLoading(true);
     setError(false);
@@ -52,6 +62,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
       try { trackLeadSubmit({ source, serviceType, leadId: lead.id }); } catch {}
     } catch {
       setError(true);
+      setWhatsAppFallbackUrl(createWhatsAppUrl(createWhatsAppLeadMessage({ service: serviceType, name, phone, city, comment })));
       toast.error('Не удалось создать заявку', 'Проверьте данные и попробуйте снова.');
     } finally {
       setLoading(false);
@@ -88,7 +99,19 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
       </label>
       <Button disabled={loading} className={`mt-5 w-full ${isBlue ? 'bg-accent text-eco-900 hover:bg-accent/90' : ''}`}>{loading ? 'Отправляем...' : 'Отправить заявку'}</Button>
       {sent && <p className="mt-4 rounded-2xl bg-eco-50 p-4 text-sm font-semibold text-eco-900">Спасибо! Специалист ecoprogress.kz свяжется с вами в ближайшее время.</p>}
-      {error && <p className="mt-4 inline-flex w-full items-start gap-2 rounded-2xl bg-rose-50 p-4 text-sm font-semibold text-rose-800"><FaWhatsapp className="mt-0.5 shrink-0 text-[#25D366]" size={16} aria-hidden="true" /> Не удалось отправить заявку. Попробуйте позже или свяжитесь по WhatsApp.</p>}
+      {error && (
+        <div className="mt-4 rounded-2xl bg-rose-50 p-4 text-sm font-semibold text-rose-800">
+          <p className="inline-flex w-full items-start gap-2">
+            <FaWhatsapp className="mt-0.5 shrink-0 text-[#25D366]" size={16} aria-hidden="true" />
+            Не удалось отправить заявку через сайт. Можно отправить ее менеджеру в WhatsApp.
+          </p>
+          {whatsAppFallbackUrl && (
+            <a href={whatsAppFallbackUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#20bd5a]">
+              Открыть WhatsApp
+            </a>
+          )}
+        </div>
+      )}
     </form>
   );
 };

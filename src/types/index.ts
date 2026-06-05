@@ -44,6 +44,7 @@ export type Employee = {
   specialty: string;
   summary: string;
   avatar: string;
+  isPublic?: boolean;
 };
 
 export type OrderStatus =

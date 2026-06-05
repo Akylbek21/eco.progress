@@ -210,32 +210,18 @@ export const uploadQuarterDocument = async (
 export const uploadPrimaryDocument = async (
   orderId: string,
   documentId: string,
-  fileOrName: File | string,
+  file: File,
   clientComment = '',
 ): Promise<OrderPrimaryDocument | undefined> => {
-  if (fileOrName instanceof File) {
-    const formData = new FormData();
-    formData.append('file', fileOrName);
-    appendFileMetadata(formData, fileOrName, fileOrName.name);
-    formData.append('comment', clientComment);
-    formData.append('documentId', documentId);
-    const { data } = await api.post<{ data: OrderPrimaryDocument; message: string | null }>(
-      `/client/orders/${orderId}/primary-documents/${documentId}/upload`,
-      formData,
-    );
-    return data.data;
-  }
+  if (!file?.name) throw new Error('Выберите файл документа');
+  const formData = new FormData();
+  formData.append('file', file);
+  appendFileMetadata(formData, file, file.name);
+  formData.append('comment', clientComment);
+  formData.append('documentId', documentId);
   const { data } = await api.post<{ data: OrderPrimaryDocument; message: string | null }>(
     `/client/orders/${orderId}/primary-documents/${documentId}/upload`,
-    (() => {
-      const formData = new FormData();
-      const placeholder = new File([fileOrName], fileOrName || 'document.txt', { type: 'text/plain' });
-      formData.append('file', placeholder);
-      appendFileMetadata(formData, placeholder, fileOrName || 'document.txt');
-      formData.append('comment', clientComment);
-      formData.append('documentId', documentId);
-      return formData;
-    })(),
+    formData,
   );
   return data.data;
 };

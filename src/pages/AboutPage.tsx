@@ -4,7 +4,6 @@ import {
   Building2,
   CheckCircle2,
   ClipboardCheck,
-  Download,
   Eye,
   FileCheck2,
   FileText,
@@ -206,6 +205,8 @@ const documents: PublicDocumentGroup[] = [
 ];
 const steps = ['Вы оставляете заявку', 'Специалист уточняет задачу', 'Мы подбираем решение', 'Готовим документы / организуем услугу', 'Вы получаете результат и сопровождение'];
 
+const getPreviewHref = (href: string) => `${href}#toolbar=0&navpanes=0&scrollbar=1`;
+
 const AboutPage = () => {
   const [orderModalOpen, setOrderModalOpen] = useState(false);
 
@@ -373,23 +374,14 @@ const AboutPage = () => {
                     <p className="min-w-0 break-words text-xs font-semibold leading-5 text-slate-700">{file.title}</p>
                     <div className="flex gap-2">
                       <a
-                        href={file.href}
+                        href={getPreviewHref(file.href)}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         title="Посмотреть"
                         aria-label={`Посмотреть ${file.title}`}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-eco-200 text-eco-900 transition hover:bg-eco-100"
                       >
                         <Eye size={16} aria-hidden="true" />
-                      </a>
-                      <a
-                        href={file.href}
-                        download
-                        title="Скачать"
-                        aria-label={`Скачать ${file.title}`}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-eco-900 text-white transition hover:bg-eco-800"
-                      >
-                        <Download size={16} aria-hidden="true" />
                       </a>
                     </div>
                   </div>

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : '/api',
 });
 
 api.interceptors.request.use((config) => {
@@ -34,8 +34,10 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('eco-progress-token');
       localStorage.removeItem('eco-progress-user');
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
+      const path = window.location.pathname;
+      const loginPath = path.startsWith('/staff') || path.startsWith('/admin') ? '/staff/login' : '/login';
+      if (!path.includes('/login')) {
+        window.location.href = loginPath;
       }
     }
     return Promise.reject(error);

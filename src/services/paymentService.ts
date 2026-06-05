@@ -12,7 +12,6 @@ export const getClientPayments = async (): Promise<Payment[]> => {
 };
 
 export const getFinanceTransactions = async (): Promise<PaymentTransaction[]> => {
-  if (!import.meta.env.DEV) return [];
   const { data } = await api.get<{ data: PaymentTransaction[]; message: string | null }>('/staff/payment-transactions');
   return data.data;
 };
@@ -89,7 +88,12 @@ export const updateQuarterDetails = async (
 ) => {
   const { data } = await api.patch<{ data: Contract; message: string | null }>(
     `/staff/orders/${orderId}/quarters/${quarterItemId}/work-status`,
-    { workStatus: payload.workStatus, comment: payload.comment },
+    {
+      workStatus: payload.workStatus,
+      comment: payload.comment,
+      dueDate: payload.dueDate,
+      completedAt: payload.completedAt,
+    },
   );
   return data.data;
 };
