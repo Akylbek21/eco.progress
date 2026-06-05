@@ -33,12 +33,31 @@ export type CreateAdminUserPayload = {
   position?: string;
 };
 
+export type UpdateAdminUserPayload = Partial<Omit<CreateAdminUserPayload, 'password'>> & {
+  password?: string;
+};
+
 export async function getAdminUsers(): Promise<AdminUserRecord[]> {
   const { data } = await api.get<ApiResponse<AdminUserRecord[]>>('/admin/users');
   return data.data;
 }
 
+export async function getAdminUser(id: number): Promise<AdminUserRecord> {
+  const { data } = await api.get<ApiResponse<AdminUserRecord>>(`/admin/users/${id}`);
+  return data.data;
+}
+
 export async function createAdminUser(payload: CreateAdminUserPayload): Promise<AdminUserRecord> {
   const { data } = await api.post<ApiResponse<AdminUserRecord>>('/admin/users', payload);
+  return data.data;
+}
+
+export async function updateAdminUser(id: number, payload: UpdateAdminUserPayload): Promise<AdminUserRecord> {
+  const { data } = await api.patch<ApiResponse<AdminUserRecord>>(`/admin/users/${id}`, payload);
+  return data.data;
+}
+
+export async function updateAdminUserStatus(id: number, status: 'active' | 'blocked'): Promise<AdminUserRecord> {
+  const { data } = await api.patch<ApiResponse<AdminUserRecord>>(`/admin/users/${id}/status`, { status });
   return data.data;
 }
