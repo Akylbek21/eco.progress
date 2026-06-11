@@ -1,6 +1,6 @@
 ﻿import { ReactNode, useState } from 'react';
 import { NavLink, Link, Navigate } from 'react-router-dom';
-import { BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, Handshake, LayoutDashboard, LockKeyhole, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
+import { BarChart3, Bell, BookOpenCheck, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, FlaskConical, Gauge, Handshake, LayoutDashboard, LockKeyhole, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
 import { canAccess } from '../config/permissions';
@@ -15,6 +15,9 @@ const links: Array<{ label: string; path: string; icon: typeof ClipboardList; pa
   { label: 'Договоры', path: '/staff/contracts', icon: FileSignature, allowedRoles: ['ADMIN', 'MANAGER', 'ACCOUNTANT'] },
   { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Календарь', path: '/staff/calendar', icon: CalendarDays, allowedRoles: ['ADMIN', 'MANAGER', 'ECOLOGIST', 'LABORATORY'] },
+  { label: 'Протоколы', path: '/staff/protocols', icon: FlaskConical, allowedRoles: ['ADMIN', 'LABORATORY'] },
+  { label: 'Нормативы', path: '/staff/normatives', icon: BookOpenCheck, allowedRoles: ['ADMIN', 'LABORATORY'] },
+  { label: 'Средства измерений', path: '/staff/measurement-devices', icon: Gauge, allowedRoles: ['ADMIN', 'LABORATORY'] },
   { label: 'Задачи', path: '/staff/tasks', icon: ClipboardCheck },
   { label: 'Документы', path: '/staff/documents', icon: FileText },
   { label: 'Уведомления', path: '/staff/notifications', icon: Bell },

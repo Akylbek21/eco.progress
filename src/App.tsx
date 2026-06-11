@@ -33,6 +33,10 @@ const AdminPage = lazy(() => import('./pages/AdminPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
+const ProtocolsPage = lazy(() => import('./pages/ProtocolsPage'));
+const ProtocolEditorPage = lazy(() => import('./pages/ProtocolEditorPage'));
+const NormativeDirectoryPage = lazy(() => import('./pages/NormativeDirectoryPage'));
+const MeasurementDevicesPage = lazy(() => import('./pages/MeasurementDevicesPage'));
 
 const CabinetCompanyPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetCompanyPage');
 const CabinetDashboardPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetDashboardPage');
@@ -169,6 +173,10 @@ function App() {
         <Route path="/staff/documents/:orderId" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDocumentsPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/calendar" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']}><StaffCalendarPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/protocols" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><ProtocolsPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/protocols/:protocolId" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><ProtocolEditorPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/normatives" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/measurement-devices" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/reports" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><StaffReportsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/user-roles" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN']}><StaffUserRolesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/notifications" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffNotificationsPage /></StaffLayout></RoleAccess>} />
