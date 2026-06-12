@@ -35,6 +35,7 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
 const ProtocolsPage = lazy(() => import('./pages/ProtocolsPage'));
 const ProtocolEditorPage = lazy(() => import('./pages/ProtocolEditorPage'));
+const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
 const NormativeDirectoryPage = lazy(() => import('./pages/NormativeDirectoryPage'));
 const MeasurementDevicesPage = lazy(() => import('./pages/MeasurementDevicesPage'));
 
@@ -166,6 +167,10 @@ function App() {
         <Route path="/staff/orders/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffOrderDetailsPage onNotify={notify} /></StaffLayout></RoleAccess>} />
         <Route path="/staff/clients" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/clients/:companyKey" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'MANAGER']}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies/new" element={<RoleAccess roles={['ADMIN', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies/:companyId" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'MANAGER']}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies/:companyId/edit" element={<RoleAccess roles={['ADMIN', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/commercial-offers" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffCommercialOffersPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/contracts" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER', 'ACCOUNTANT']}><StaffContractsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/tasks" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffTasksPage /></StaffLayout></RoleAccess>} />

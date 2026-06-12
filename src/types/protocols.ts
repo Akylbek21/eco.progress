@@ -1,3 +1,5 @@
+import type { Company } from './companies';
+
 export type ProtocolStatus = 'DRAFT' | 'READY_FOR_APPROVAL' | 'APPROVED' | 'SIGNED' | 'CANCELLED' | 'REPLACED';
 
 export type ProtocolTemplateId =
@@ -69,6 +71,30 @@ export type ProtocolTestingData = {
 
 export type Protocol = {
   id: string;
+  companyId?: string;
+  company?: Company;
+  companyNameSnapshot?: string;
+  companyBinSnapshot?: string;
+  companyLegalAddressSnapshot?: string;
+  companyActualAddressSnapshot?: string;
+  companyPhoneSnapshot?: string;
+  companyEmailSnapshot?: string;
+  companyDirectorNameSnapshot?: string;
+  companyDirectorPositionSnapshot?: string;
+  companyResponsiblePersonSnapshot?: string;
+  companyResponsiblePersonPhoneSnapshot?: string;
+  companyBankNameSnapshot?: string;
+  companyIbanSnapshot?: string;
+  companyBikSnapshot?: string;
+  companyKbeSnapshot?: string;
+  companyKnpSnapshot?: string;
+  companyContractNumberSnapshot?: string;
+  companyContractDateSnapshot?: string;
+  objectNameSnapshot?: string;
+  objectAddressSnapshot?: string;
+  activityTypeSnapshot?: string;
+  samplingLocationSnapshot?: string;
+  customerRepresentativeSnapshot?: string;
   number: string;
   templateId: ProtocolTemplateId;
   templateName?: string;
@@ -100,19 +126,22 @@ export type ProtocolHistoryItem = {
 
 export type CreateProtocolPayload = {
   templateId: ProtocolTemplateId;
-  organizationName: string;
-  organizationAddress: string;
-  objectName: string;
-  productName: string;
+  companyId: string;
+  organizationName?: string;
+  organizationAddress?: string;
+  objectName?: string;
+  productName?: string;
   protocolDate: string;
-  samplingDate: string;
+  sampleDate?: string;
+  samplingDate?: string;
   testingDate: string;
-  testingPurpose: string;
+  testPurpose?: string;
+  testingPurpose?: string;
   environmentConditions: string;
 };
 
 export type UpdateProtocolPayload = Partial<
-  Pick<Protocol, 'number' | 'protocolDate' | 'executor' | 'approver' | 'status' | 'laboratory' | 'organization' | 'testing' | 'results' | 'instruments'>
+  Pick<Protocol, 'number' | 'companyId' | 'protocolDate' | 'executor' | 'approver' | 'status' | 'laboratory' | 'organization' | 'testing' | 'results' | 'instruments'>
 >;
 
 export type NormativeComparisonType = 'LESS_OR_EQUAL' | 'GREATER_OR_EQUAL' | 'RANGE' | 'EQUAL' | 'INFO';

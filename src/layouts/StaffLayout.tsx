@@ -11,6 +11,7 @@ const links: Array<{ label: string; path: string; icon: typeof ClipboardList; pa
   { label: 'Дашборд', path: '/staff', icon: LayoutDashboard },
   { label: 'Заявки', path: '/staff/orders', icon: ClipboardList },
   { label: 'Клиенты', path: '/staff/clients', icon: Building2, allowedRoles: ['ADMIN', 'MANAGER'] },
+  { label: 'Компании', path: '/staff/companies', icon: Building2, allowedRoles: ['ADMIN', 'MANAGER', 'LABORATORY'] },
   { label: 'КП', path: '/staff/commercial-offers', icon: Handshake, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Договоры', path: '/staff/contracts', icon: FileSignature, allowedRoles: ['ADMIN', 'MANAGER', 'ACCOUNTANT'] },
   { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },

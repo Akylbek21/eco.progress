@@ -11,6 +11,7 @@ import ProtocolResultsTable from '../components/protocols/ProtocolResultsTable';
 import ProtocolTestingForm from '../components/protocols/ProtocolTestingForm';
 import ReplaceProtocolModal from '../components/protocols/ReplaceProtocolModal';
 import SignProtocolModal from '../components/protocols/SignProtocolModal';
+import CompanyDetailsBlock from '../components/companies/CompanyDetailsBlock';
 import { templateName } from '../data/protocolTemplates';
 import { useToast } from '../hooks/useToast';
 import {
@@ -168,6 +169,8 @@ const ProtocolEditorPage = () => {
       const item = await getProtocol(protocolId);
       setProtocol({
         ...item,
+        companyId: item.companyId || item.company?.id,
+        company: item.company,
         laboratory: item.laboratory || emptyLaboratory,
         organization: item.organization || emptyOrganization,
         testing: item.testing || emptyTesting,
@@ -209,6 +212,7 @@ const ProtocolEditorPage = () => {
     try {
       const updated = await updateProtocol(protocol.id, {
         number: protocol.number,
+        companyId: protocol.companyId,
         protocolDate: protocol.protocolDate,
         executor: protocol.executor,
         approver: protocol.approver,
@@ -218,7 +222,7 @@ const ProtocolEditorPage = () => {
         results: protocol.results,
         instruments: protocol.instruments,
       });
-      setProtocol(updated);
+      setProtocol({ ...updated, companyId: updated.companyId || protocol.companyId, company: updated.company || protocol.company });
       toast.success('Протокол сохранен');
     } catch (saveError) {
       toast.error('Не удалось сохранить протокол', saveError instanceof Error ? saveError.message : undefined);
@@ -228,10 +232,12 @@ const ProtocolEditorPage = () => {
   };
 
   const run = async (action: () => Promise<Protocol>, success: string) => {
+    const currentProtocol = protocol;
+    if (!currentProtocol) return;
     setBusy(true);
     try {
       const updated = await action();
-      setProtocol(updated);
+      setProtocol({ ...updated, companyId: updated.companyId || currentProtocol.companyId, company: updated.company || currentProtocol.company });
       toast.success(success);
     } catch (actionError) {
       toast.error('Действие не выполнено', actionError instanceof Error ? actionError.message : undefined);
@@ -309,6 +315,7 @@ const ProtocolEditorPage = () => {
       )}
 
       <ProtocolGeneralForm protocol={protocol} readOnly={readOnly || protocol.status === 'APPROVED'} onChange={patchProtocol} />
+      {protocol.company && <CompanyDetailsBlock company={protocol.company} compact />}
       <ProtocolLaboratoryForm value={protocol.laboratory} readOnly={readOnly} onChange={(laboratory) => patchProtocol({ laboratory })} />
       <ProtocolOrganizationForm value={protocol.organization} readOnly={readOnly} onChange={(organization) => patchProtocol({ organization })} />
       <ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} readOnly={readOnly} onChange={(testing) => patchProtocol({ testing })} />
