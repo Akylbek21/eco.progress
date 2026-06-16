@@ -19,7 +19,7 @@ const ProtocolGeneralForm = ({ protocol, readOnly, onChange }: ProtocolGeneralFo
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <label className="space-y-1.5 text-sm font-semibold text-slate-700">
         <span>Номер протокола</span>
-        <input className={inputClass} disabled={readOnly} value={protocol.number || ''} onChange={(event) => onChange({ number: event.target.value })} />
+        <input className={inputClass} disabled={readOnly} value={protocol.protocolNumber || protocol.number || ''} onChange={(event) => onChange({ protocolNumber: event.target.value, number: event.target.value })} />
       </label>
       <label className="space-y-1.5 text-sm font-semibold text-slate-700">
         <span>Дата протокола</span>

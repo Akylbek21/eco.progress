@@ -8,6 +8,11 @@ export async function getMeasurementDevices(params?: DirectoryQuery): Promise<Me
   return unwrap(response);
 }
 
+export async function getAvailableMeasurementDevices(params?: DirectoryQuery): Promise<MeasurementDevice[]> {
+  const response = await api.get<ApiResponse<MeasurementDevice[]>>('/measurement-devices/available', { params });
+  return unwrap(response);
+}
+
 export async function createMeasurementDevice(payload: Omit<MeasurementDevice, 'id'>): Promise<MeasurementDevice> {
   const response = await api.post<ApiResponse<MeasurementDevice>>('/measurement-devices', payload);
   return unwrap(response);

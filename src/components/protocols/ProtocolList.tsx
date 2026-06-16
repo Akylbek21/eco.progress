@@ -44,10 +44,10 @@ const ProtocolList = ({ protocols, loading = false, onOpen, onDelete }: Protocol
         <tbody className="divide-y divide-slate-100">
           {loading ? <SkeletonRows /> : protocols.map((protocol) => (
             <tr key={protocol.id} className="hover:bg-slate-50">
-              <td className="px-4 py-4 font-bold text-slate-900">{protocol.number || '-'}</td>
+              <td className="px-4 py-4 font-bold text-slate-900">{protocol.protocolNumber || protocol.number || '-'}</td>
               <td className="px-4 py-4 text-slate-700">{protocol.templateName || templateName(protocol.templateId)}</td>
-              <td className="px-4 py-4 text-slate-700">{protocol.organization?.organizationName || '-'}</td>
-              <td className="px-4 py-4 text-slate-700">{protocol.organization?.objectName || '-'}</td>
+              <td className="px-4 py-4 text-slate-700">{protocol.companySnapshot?.companyName || protocol.organization?.organizationName || '-'}</td>
+              <td className="px-4 py-4 text-slate-700">{protocol.companySnapshot?.objectName || protocol.organization?.objectName || '-'}</td>
               <td className="px-4 py-4 text-slate-700">{protocol.protocolDate || '-'}</td>
               <td className="px-4 py-4 text-slate-700">{protocol.executor || '-'}</td>
               <td className="px-4 py-4"><ProtocolStatusBadge status={protocol.status} /></td>

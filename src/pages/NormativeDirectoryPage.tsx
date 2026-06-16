@@ -36,6 +36,7 @@ const NormativeDirectoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [researchObject, setResearchObject] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [editing, setEditing] = useState<NormativeRecord | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -58,9 +59,10 @@ const NormativeDirectoryPage = () => {
 
   const filtered = useMemo(() => items.filter((item) => {
     const matchesQuery = !query.trim() || item.indicator.toLowerCase().includes(query.trim().toLowerCase());
+    const matchesResearchObject = !researchObject.trim() || item.researchObject.toLowerCase().includes(researchObject.trim().toLowerCase());
     const matchesTemplate = !templateId || item.templateId === templateId;
-    return matchesQuery && matchesTemplate;
-  }), [items, query, templateId]);
+    return matchesQuery && matchesResearchObject && matchesTemplate;
+  }), [items, query, researchObject, templateId]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -122,11 +124,12 @@ const NormativeDirectoryPage = () => {
         </div>
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1fr_260px]">
+      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1fr_260px_260px]">
         <label className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по показателю" className={`${inputClass} pl-10`} />
         </label>
+        <input value={researchObject} onChange={(event) => setResearchObject(event.target.value)} placeholder="Объект исследования" className={inputClass} />
         <select value={templateId} onChange={(event) => setTemplateId(event.target.value)} className={inputClass}>
           <option value="">Все шаблоны</option>
           {protocolTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}

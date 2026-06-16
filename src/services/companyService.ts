@@ -1,5 +1,5 @@
 import api, { ApiResponse } from './api';
-import type { Company, CompanyPayload, CompanyQuery } from '../types/companies';
+import type { Company, CompanyObject, CompanyObjectPayload, CompanyPayload, CompanyQuery } from '../types/companies';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -14,10 +14,35 @@ const pick = (source: UnknownRecord, keys: string[]) => {
 };
 
 const normalizeStatus = (value: unknown): Company['status'] => String(value || '').toUpperCase() === 'ARCHIVED' ? 'ARCHIVED' : 'ACTIVE';
+const normalizeObjectStatus = (value: unknown): CompanyObject['status'] => String(value || '').toUpperCase() === 'ARCHIVED' ? 'ARCHIVED' : 'ACTIVE';
+
+export const normalizeCompanyObject = (raw: unknown, companyId = ''): CompanyObject => {
+  const source = (raw || {}) as UnknownRecord;
+  return {
+    id: pick(source, ['id', '_id', 'objectId', 'facilityId']),
+    companyId: pick(source, ['companyId', 'company_id']) || companyId,
+    name: pick(source, ['name', 'objectName', 'facilityName', 'title']),
+    address: pick(source, ['address', 'objectAddress', 'facilityAddress']),
+    activityType: pick(source, ['activityType', 'businessActivity']),
+    coordinates: pick(source, ['coordinates', 'coords']),
+    sanitaryZone: pick(source, ['sanitaryZone', 'sanitary_zone']),
+    notes: pick(source, ['notes', 'comment']),
+    status: normalizeObjectStatus(source.status),
+    createdAt: pick(source, ['createdAt', 'created_at']),
+    updatedAt: pick(source, ['updatedAt', 'updated_at']),
+  };
+};
 
 export const normalizeCompany = (raw: unknown): Company => {
   const source = (raw || {}) as UnknownRecord;
   const object = (source.object || source.facility || {}) as UnknownRecord;
+  const objectsSource = Array.isArray(source.objects)
+    ? source.objects
+    : Array.isArray(source.facilities)
+      ? source.facilities
+      : Array.isArray(source.companyObjects)
+        ? source.companyObjects
+        : [];
   const director = (source.director || source.manager || {}) as UnknownRecord;
   const bank = (source.bankDetails || source.requisites || {}) as UnknownRecord;
   const contract = (source.contract || {}) as UnknownRecord;
@@ -31,11 +56,14 @@ export const normalizeCompany = (raw: unknown): Company => {
     phone: pick(source, ['phone', 'phoneNumber']),
     email: pick(source, ['email']),
     comment: pick(source, ['comment', 'notes']),
+    notes: pick(source, ['notes', 'comment']),
     directorFullName: pick(source, ['directorFullName', 'directorName', 'headName']) || pick(director, ['fullName', 'name']),
+    director: pick(source, ['director', 'directorFullName', 'directorName', 'headName']) || pick(director, ['fullName', 'name']),
     directorPosition: pick(source, ['directorPosition', 'headPosition']) || pick(director, ['position']),
     contactPerson: pick(source, ['contactPerson', 'responsiblePerson']),
     contactPhone: pick(source, ['contactPhone', 'responsiblePersonPhone', 'responsiblePhone']),
     bank: pick(source, ['bank', 'bankName']) || pick(bank, ['bank', 'bankName', 'name']),
+    bankName: pick(source, ['bankName', 'bank']) || pick(bank, ['bankName', 'bank', 'name']),
     iban: pick(source, ['iban', 'bankAccount', 'accountNumber']) || pick(bank, ['iban', 'accountNumber']),
     bik: pick(source, ['bik', 'bic']) || pick(bank, ['bik', 'bic']),
     kbe: pick(source, ['kbe']) || pick(bank, ['kbe']),
@@ -47,6 +75,7 @@ export const normalizeCompany = (raw: unknown): Company => {
     activityType: pick(source, ['activityType', 'businessActivity']) || pick(object, ['activityType']),
     samplingLocation: pick(source, ['samplingLocation', 'samplingPlace']) || pick(object, ['samplingLocation', 'samplingPlace']),
     customerRepresentative: pick(source, ['customerRepresentative', 'clientRepresentative']) || pick(object, ['customerRepresentative', 'representative']),
+    objects: objectsSource.map((item) => normalizeCompanyObject(item, pick(source, ['id', '_id', 'companyId']))),
     status: normalizeStatus(source.status),
     createdAt: pick(source, ['createdAt', 'created_at']),
     updatedAt: pick(source, ['updatedAt', 'updated_at']),
@@ -61,11 +90,14 @@ const toCompanyApiPayload = (payload: CompanyPayload): UnknownRecord => ({
   phone: payload.phone,
   email: payload.email,
   comment: payload.comment,
+  notes: payload.notes || payload.comment,
   directorName: payload.directorFullName,
+  director: payload.director || payload.directorFullName,
   directorPosition: payload.directorPosition,
   responsiblePerson: payload.contactPerson,
   responsiblePersonPhone: payload.contactPhone,
   bankName: payload.bank,
+  bank: payload.bankName || payload.bank,
   iban: payload.iban,
   bik: payload.bik,
   kbe: payload.kbe,
@@ -77,6 +109,16 @@ const toCompanyApiPayload = (payload: CompanyPayload): UnknownRecord => ({
   activityType: payload.activityType,
   samplingLocation: payload.samplingLocation,
   customerRepresentative: payload.customerRepresentative,
+  status: payload.status,
+});
+
+const toCompanyObjectApiPayload = (payload: CompanyObjectPayload): UnknownRecord => ({
+  name: payload.name,
+  address: payload.address,
+  activityType: payload.activityType,
+  coordinates: payload.coordinates,
+  sanitaryZone: payload.sanitaryZone,
+  notes: payload.notes,
   status: payload.status,
 });
 
@@ -142,4 +184,41 @@ export async function deleteCompany(id: string): Promise<Company | null> {
 export async function archiveCompany(id: string): Promise<Company> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${id}/archive`);
   return normalizeCompany(unwrapItem(response.data));
+}
+
+export async function getCompanyObjects(companyId: string): Promise<CompanyObject[]> {
+  const response = await api.get<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects`);
+  return unwrapList(response.data).map((item) => normalizeCompanyObject(item, companyId));
+}
+
+export async function createCompanyObject(companyId: string, payload: CompanyObjectPayload): Promise<CompanyObject> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects`, toCompanyObjectApiPayload(payload));
+  return normalizeCompanyObject(unwrapItem(response.data), companyId);
+}
+
+export async function updateCompanyObject(companyId: string, objectId: string, payload: CompanyObjectPayload): Promise<CompanyObject> {
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}`, toCompanyObjectApiPayload(payload));
+  return normalizeCompanyObject(unwrapItem(response.data), companyId);
+}
+
+export async function deleteCompanyObject(companyId: string, objectId: string): Promise<CompanyObject | null> {
+  const response = await api.delete<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}`);
+  const item = unwrapItem(response.data);
+  return item ? normalizeCompanyObject(item, companyId) : null;
+}
+
+export async function archiveCompanyObject(companyId: string, objectId: string): Promise<CompanyObject> {
+  const response = await api.delete<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}`);
+  const item = unwrapItem(response.data);
+  return item ? normalizeCompanyObject(item, companyId) : {
+    id: objectId,
+    companyId,
+    name: '',
+    address: '',
+    activityType: '',
+    coordinates: '',
+    sanitaryZone: '',
+    notes: '',
+    status: 'ARCHIVED',
+  };
 }

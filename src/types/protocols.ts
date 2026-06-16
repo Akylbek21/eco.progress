@@ -1,5 +1,3 @@
-import type { Company } from './companies';
-
 export type ProtocolStatus = 'DRAFT' | 'READY_FOR_APPROVAL' | 'APPROVED' | 'SIGNED' | 'CANCELLED' | 'REPLACED';
 
 export type ProtocolTemplateId =
@@ -33,12 +31,24 @@ export type ProtocolResultColumn = {
   required?: boolean;
 };
 
-export type ProtocolResultRow = {
+export type ProtocolResult = {
   id: string;
   protocolId?: string;
   internalStatus?: ProtocolInternalStatus;
+  checkStatus?: ProtocolInternalStatus;
+  samplingPoint?: string;
+  indicator?: string;
+  unit?: string;
+  result?: string;
+  normative?: string;
+  testingMethod?: string;
+  samplingMethod?: string;
+  normativeDocument?: string;
+  comment?: string;
   values: Record<string, string | number | null | undefined>;
 };
+
+export type ProtocolResultRow = ProtocolResult;
 
 export type ProtocolLaboratoryData = {
   laboratoryName: string;
@@ -69,52 +79,76 @@ export type ProtocolTestingData = {
   physicalFactorType?: string;
 };
 
-export type Protocol = {
+export interface ProtocolCompanySnapshot {
+  companyName: string;
+  bin?: string;
+  legalAddress?: string;
+  actualAddress?: string;
+  phone?: string;
+  email?: string;
+  director?: string;
+  contactPerson?: string;
+  activityType?: string;
+  objectName?: string;
+  objectAddress?: string;
+  objectActivityType?: string;
+  coordinates?: string;
+  sanitaryZone?: string;
+  bankName?: string;
+  iban?: string;
+  bik?: string;
+  kbe?: string;
+  knp?: string;
+}
+
+export type ProtocolMeasurementDevice = {
   id: string;
-  companyId?: string;
-  company?: Company;
-  companyNameSnapshot?: string;
-  companyBinSnapshot?: string;
-  companyLegalAddressSnapshot?: string;
-  companyActualAddressSnapshot?: string;
-  companyPhoneSnapshot?: string;
-  companyEmailSnapshot?: string;
-  companyDirectorNameSnapshot?: string;
-  companyDirectorPositionSnapshot?: string;
-  companyResponsiblePersonSnapshot?: string;
-  companyResponsiblePersonPhoneSnapshot?: string;
-  companyBankNameSnapshot?: string;
-  companyIbanSnapshot?: string;
-  companyBikSnapshot?: string;
-  companyKbeSnapshot?: string;
-  companyKnpSnapshot?: string;
-  companyContractNumberSnapshot?: string;
-  companyContractDateSnapshot?: string;
-  objectNameSnapshot?: string;
-  objectAddressSnapshot?: string;
-  activityTypeSnapshot?: string;
-  samplingLocationSnapshot?: string;
-  customerRepresentativeSnapshot?: string;
-  number: string;
+  protocolId?: string;
+  deviceId: string;
+  deviceSnapshot: {
+    name: string;
+    model: string;
+    serialNumber: string;
+    verificationCertificateNumber: string;
+    verificationDate: string;
+    verificationValidUntil: string;
+    units: string;
+    status: MeasurementDeviceStatus;
+  };
+};
+
+export interface Protocol {
+  id: string;
+  protocolNumber: string;
+  number?: string;
   templateId: ProtocolTemplateId;
   templateName?: string;
   status: ProtocolStatus;
+  companyId?: string;
+  objectId?: string;
+  companySnapshot: ProtocolCompanySnapshot;
   protocolDate: string;
-  executor: string;
+  samplingDate?: string;
+  testingStartDate?: string;
+  testingEndDate?: string;
+  purpose?: string;
+  environmentalConditions?: string;
+  executor?: string;
   approver?: string;
   approvedAt?: string;
   signedAt?: string;
   organization: ProtocolOrganizationData;
   laboratory: ProtocolLaboratoryData;
   testing: ProtocolTestingData;
-  results: ProtocolResultRow[];
+  results: ProtocolResult[];
+  measurementDevices: ProtocolMeasurementDevice[];
   instruments?: MeasurementDevice[];
   history?: ProtocolHistoryItem[];
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
   replacedByProtocolId?: string;
   replacesProtocolId?: string;
-};
+}
 
 export type ProtocolHistoryItem = {
   id: string;
@@ -124,24 +158,21 @@ export type ProtocolHistoryItem = {
   comment?: string;
 };
 
-export type CreateProtocolPayload = {
-  templateId: ProtocolTemplateId;
+export interface CreateProtocolPayload {
   companyId: string;
-  organizationName?: string;
-  organizationAddress?: string;
-  objectName?: string;
-  productName?: string;
+  objectId?: string;
+  templateId: ProtocolTemplateId;
+  protocolNumber?: string;
   protocolDate: string;
-  sampleDate?: string;
   samplingDate?: string;
-  testingDate: string;
-  testPurpose?: string;
-  testingPurpose?: string;
-  environmentConditions: string;
-};
+  testingStartDate?: string;
+  testingEndDate?: string;
+  purpose?: string;
+  environmentalConditions?: string;
+}
 
 export type UpdateProtocolPayload = Partial<
-  Pick<Protocol, 'number' | 'companyId' | 'protocolDate' | 'executor' | 'approver' | 'status' | 'laboratory' | 'organization' | 'testing' | 'results' | 'instruments'>
+  Pick<Protocol, 'protocolNumber' | 'number' | 'protocolDate' | 'samplingDate' | 'testingStartDate' | 'testingEndDate' | 'purpose' | 'environmentalConditions' | 'executor' | 'approver' | 'laboratory' | 'organization' | 'testing' | 'results'>
 >;
 
 export type NormativeComparisonType = 'LESS_OR_EQUAL' | 'GREATER_OR_EQUAL' | 'RANGE' | 'EQUAL' | 'INFO';

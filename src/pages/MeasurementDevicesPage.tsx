@@ -15,6 +15,30 @@ const statusLabels: Record<MeasurementDeviceStatus, string> = {
   ARCHIVED: 'Архивный',
 };
 
+const effectiveStatus = (device: MeasurementDevice): MeasurementDeviceStatus => {
+  if (device.archived || device.status === 'ARCHIVED') return 'ARCHIVED';
+  if (!device.verificationValidUntil) return device.status || 'VALID';
+  const end = new Date(device.verificationValidUntil);
+  if (Number.isNaN(end.getTime())) return device.status || 'VALID';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysLeft = Math.ceil((end.getTime() - today.getTime()) / 86400000);
+  if (daysLeft < 0) return 'EXPIRED';
+  if (daysLeft <= 30) return 'EXPIRING';
+  return 'VALID';
+};
+
+const statusClass: Record<MeasurementDeviceStatus, string> = {
+  VALID: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  EXPIRING: 'bg-amber-50 text-amber-800 ring-amber-200',
+  EXPIRED: 'bg-rose-50 text-rose-800 ring-rose-200',
+  ARCHIVED: 'bg-slate-100 text-slate-600 ring-slate-200',
+};
+
+const StatusBadge = ({ status }: { status: MeasurementDeviceStatus }) => (
+  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${statusClass[status]}`}>{statusLabels[status]}</span>
+);
+
 const emptyDevice: Omit<MeasurementDevice, 'id'> = {
   name: '',
   model: '',
@@ -54,7 +78,7 @@ const MeasurementDevicesPage = () => {
     load();
   }, []);
 
-  const filtered = useMemo(() => items.filter((item) => !status || item.status === status), [items, status]);
+  const filtered = useMemo(() => items.filter((item) => !status || effectiveStatus(item) === status), [items, status]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -67,7 +91,11 @@ const MeasurementDevicesPage = () => {
       verificationDate: String(form.get('verificationDate') || ''),
       verificationValidUntil: String(form.get('verificationValidUntil') || ''),
       units: String(form.get('units') || ''),
-      status: String(form.get('status') || 'VALID') as MeasurementDeviceStatus,
+      status: effectiveStatus({
+        ...emptyDevice,
+        verificationValidUntil: String(form.get('verificationValidUntil') || ''),
+        archived: form.get('archived') === 'on',
+      } as MeasurementDevice),
       archived: form.get('archived') === 'on',
     };
 
@@ -137,8 +165,10 @@ const MeasurementDevicesPage = () => {
             <tbody className="divide-y divide-slate-100">
               {loading ? Array.from({ length: 4 }).map((_, index) => (
                 <tr key={index} className="animate-pulse">{Array.from({ length: 9 }).map((__, cell) => <td key={cell} className="px-4 py-4"><div className="h-4 rounded bg-slate-100" /></td>)}</tr>
-              )) : filtered.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50">
+              )) : filtered.map((item) => {
+                const statusValue = effectiveStatus(item);
+                return (
+                <tr key={item.id} className={`${statusValue === 'EXPIRED' ? 'bg-rose-50/70' : statusValue === 'EXPIRING' ? 'bg-amber-50/70' : 'hover:bg-slate-50'}`}>
                   <td className="px-4 py-4 font-bold text-slate-900">{item.name}</td>
                   <td className="px-4 py-4">{item.model || '-'}</td>
                   <td className="px-4 py-4">{item.serialNumber || '-'}</td>
@@ -146,7 +176,7 @@ const MeasurementDevicesPage = () => {
                   <td className="px-4 py-4">{item.verificationDate || '-'}</td>
                   <td className="px-4 py-4">{item.verificationValidUntil || '-'}</td>
                   <td className="px-4 py-4">{item.units || '-'}</td>
-                  <td className="px-4 py-4">{statusLabels[item.status]}</td>
+                  <td className="px-4 py-4"><StatusBadge status={statusValue} /></td>
                   <td className="px-4 py-4">
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="secondary" className="px-3" onClick={() => { setEditing(item); setModalOpen(true); }}><Edit3 className="h-4 w-4" /></Button>
@@ -154,7 +184,7 @@ const MeasurementDevicesPage = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         </div>

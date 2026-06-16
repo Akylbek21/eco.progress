@@ -1,4 +1,19 @@
 export type CompanyStatus = 'ACTIVE' | 'ARCHIVED';
+export type CompanyObjectStatus = 'ACTIVE' | 'ARCHIVED';
+
+export type CompanyObject = {
+  id: string;
+  companyId?: string;
+  name: string;
+  address: string;
+  activityType: string;
+  coordinates: string;
+  sanitaryZone: string;
+  notes: string;
+  status: CompanyObjectStatus;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 export type Company = {
   id: string;
@@ -9,11 +24,14 @@ export type Company = {
   phone: string;
   email: string;
   comment?: string;
+  notes?: string;
   directorFullName: string;
+  director?: string;
   directorPosition: string;
   contactPerson: string;
   contactPhone: string;
   bank: string;
+  bankName?: string;
   iban: string;
   bik: string;
   kbe: string;
@@ -25,13 +43,19 @@ export type Company = {
   activityType: string;
   samplingLocation: string;
   customerRepresentative: string;
+  objects: CompanyObject[];
   status: CompanyStatus;
   createdAt?: string;
   updatedAt?: string;
 };
 
-export type CompanyPayload = Omit<Company, 'id' | 'status' | 'createdAt' | 'updatedAt'> & {
+export type CompanyPayload = Omit<Company, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'objects'> & {
+  objects?: CompanyObject[];
   status?: CompanyStatus;
+};
+
+export type CompanyObjectPayload = Omit<CompanyObject, 'id' | 'companyId' | 'status' | 'createdAt' | 'updatedAt'> & {
+  status?: CompanyObjectStatus;
 };
 
 export type CompanyQuery = {
