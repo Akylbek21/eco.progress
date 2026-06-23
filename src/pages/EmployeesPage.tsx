@@ -1,7 +1,8 @@
 ﻿import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { PageSkeleton } from '../components/loading/PageLoader';
+import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { fetcher } from '../services/api';
 import type { Employee } from '../types';
 
@@ -141,7 +142,7 @@ const EmployeesPage = () => {
     },
   });
 
-  if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
+  if (isLoading) return <PageSkeleton />;
 
   return (
     <div className="bg-eco-50">
@@ -153,7 +154,7 @@ const EmployeesPage = () => {
           {employees.map((employee, index) => (
             <Reveal key={employee.id} delay={index * 0.05}>
               <div className="card-hover h-full overflow-hidden rounded-[22px] bg-white shadow-sm">
-                <img src={employee.avatar} alt="" className="h-40 w-full object-cover" />
+                <ResponsiveImage src={employee.avatar} alt={employee.name} width={640} height={360} wrapperClassName="aspect-[16/9] w-full" className="object-cover" />
                 <div className="p-5">
                   <h2 className="text-lg font-bold text-eco-900">{employee.name}</h2>
                   <p className="mt-1 text-sm font-semibold text-eco-500">{employee.position}</p>

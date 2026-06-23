@@ -43,7 +43,11 @@ const ProtocolTestingForm = ({ templateId, value, readOnly, onChange }: Props) =
       </label>
       <label className="space-y-1.5 text-sm font-semibold text-slate-700">
         <span>Дата проведения испытаний<Required /></span>
-        <input type="date" className={inputClass} disabled={readOnly} value={value.testingDate || ''} onChange={(event) => onChange({ ...value, testingDate: event.target.value })} />
+        <input type="date" className={inputClass} disabled={readOnly} value={value.testingStartDate || value.testingDate || ''} onChange={(event) => onChange({ ...value, testingStartDate: event.target.value, testingDate: event.target.value })} />
+      </label>
+      <label className="space-y-1.5 text-sm font-semibold text-slate-700">
+        <span>Окончание испытаний<Required /></span>
+        <input type="date" className={inputClass} disabled={readOnly} value={value.testingEndDate || value.testingDate || ''} onChange={(event) => onChange({ ...value, testingEndDate: event.target.value, testingDate: event.target.value })} />
       </label>
       <label className="space-y-1.5 text-sm font-semibold text-slate-700 md:col-span-2 xl:col-span-3">
         <span>Цель испытаний<Required /></span>

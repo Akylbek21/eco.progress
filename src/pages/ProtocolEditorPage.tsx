@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Download, FlaskConical, History, Plus, RotateCw, Search } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, History, Plus, RotateCw, Search, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -14,10 +14,14 @@ import ReplaceProtocolModal from '../components/protocols/ReplaceProtocolModal';
 import SignProtocolModal from '../components/protocols/SignProtocolModal';
 import { templateName } from '../data/protocolTemplates';
 import { useToast } from '../hooks/useToast';
+import { useAuth } from '../contexts/AuthContext';
 import { getAvailableMeasurementDevices } from '../services/measurementDeviceService';
+import { getApiStatus } from '../services/apiHelpers';
+import { signBase64WithNCALayer } from '../services/ncalayer';
 import {
   addProtocolMeasurementDevice,
   approveProtocol,
+  cancelProtocol,
   checkNormatives,
   deleteProtocol,
   downloadDocx,
@@ -27,6 +31,7 @@ import {
   getProtocol,
   previewProtocol,
   readyForApproval,
+  removeProtocolMeasurementDevice,
   replaceProtocol,
   returnToDraft,
   signProtocol,
@@ -57,6 +62,8 @@ const emptyTesting = {
   samplingMethodDocument: '',
   testingMethodDocument: '',
   samplingDate: '',
+  testingStartDate: '',
+  testingEndDate: '',
   testingDate: '',
   testingPurpose: '',
   environmentConditions: '',
@@ -75,6 +82,28 @@ const saveBlob = (blob: Blob, name: string) => {
   link.remove();
   URL.revokeObjectURL(url);
 };
+
+const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error('Не удалось прочитать документ для подписи.'));
+  reader.onload = () => {
+    const result = String(reader.result || '');
+    resolve(result.includes(',') ? result.slice(result.indexOf(',') + 1) : result);
+  };
+  reader.readAsDataURL(blob);
+});
+
+const editableSignature = (protocol: Protocol) => JSON.stringify({
+  number: protocol.protocolNumber || protocol.number || '',
+  protocolDate: protocol.protocolDate || '',
+  executor: protocol.executor || '',
+  approver: protocol.approver || '',
+  laboratory: protocol.laboratory,
+  organization: protocol.organization,
+  testing: protocol.testing,
+  results: protocol.results,
+  instruments: protocol.measurementDevices,
+});
 
 const SnapshotSection = ({ snapshot }: { snapshot: ProtocolCompanySnapshot }) => {
   const rows: Array<[string, string | undefined]> = [
@@ -140,7 +169,7 @@ const DevicePickerModal = ({
   open: boolean;
   loading?: boolean;
   onClose: () => void;
-  onSelect: (deviceId: string) => void | Promise<void>;
+  onSelect: (device: MeasurementDevice) => void | Promise<void>;
 }) => {
   const [devices, setDevices] = useState<MeasurementDevice[]>([]);
   const [query, setQuery] = useState('');
@@ -173,8 +202,8 @@ const DevicePickerModal = ({
             <button
               key={device.id}
               type="button"
-              disabled={loading || device.status === 'ARCHIVED'}
-              onClick={() => onSelect(device.id)}
+              disabled={loading || !['VALID', 'EXPIRING'].includes(device.status)}
+              onClick={() => onSelect(device)}
               className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-eco-300 hover:bg-eco-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -185,7 +214,7 @@ const DevicePickerModal = ({
                 </div>
                 <DeviceStatus status={device.status} />
               </div>
-              {device.status === 'EXPIRED' && <p className="mt-2 rounded-lg bg-rose-50 px-2 py-1 text-xs font-bold text-rose-700">Поверка истекла. Использовать прибор рискованно.</p>}
+              {device.status === 'EXPIRED' && <p className="mt-2 rounded-lg bg-rose-50 px-2 py-1 text-xs font-bold text-rose-700">Поверка истекла. Прибор недоступен.</p>}
             </button>
           ))}
           {filtered.length === 0 && <p className="py-8 text-center text-sm font-semibold text-slate-500">Приборы не найдены.</p>}
@@ -199,10 +228,12 @@ const MeasurementDevicesSection = ({
   devices,
   readOnly,
   onAdd,
+  onRemove,
 }: {
   devices: ProtocolMeasurementDevice[];
   readOnly: boolean;
   onAdd: () => void;
+  onRemove: (deviceId: string) => void | Promise<void>;
 }) => (
   <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -221,6 +252,7 @@ const MeasurementDevicesSection = ({
             <th className="px-3 py-3">Срок действия</th>
             <th className="px-3 py-3">Единицы</th>
             <th className="px-3 py-3">Статус</th>
+            <th className="px-3 py-3 text-right">Действия</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -236,6 +268,11 @@ const MeasurementDevicesSection = ({
                 <td className="px-3 py-3">{device.verificationValidUntil || '-'}</td>
                 <td className="px-3 py-3">{device.units || '-'}</td>
                 <td className="px-3 py-3"><DeviceStatus status={device.status} /></td>
+                <td className="px-3 py-3 text-right">
+                  <Button type="button" variant="secondary" className="px-3 text-rose-700 hover:bg-rose-50" disabled={readOnly} title="Удалить прибор" onClick={() => onRemove(item.deviceId)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </td>
               </tr>
             );
           })}
@@ -250,6 +287,7 @@ const ProtocolEditorPage = () => {
   const { protocolId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
   const [protocol, setProtocol] = useState<Protocol | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -260,24 +298,35 @@ const ProtocolEditorPage = () => {
   const [signOpen, setSignOpen] = useState(false);
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [devicePickerOpen, setDevicePickerOpen] = useState(false);
+  const savedSignatureRef = useRef('');
 
   const readOnly = useMemo(() => !protocol || protocol.status !== 'DRAFT', [protocol]);
+  const dirty = useMemo(() => Boolean(protocol && savedSignatureRef.current && editableSignature(protocol) !== savedSignatureRef.current), [protocol]);
+  const canApprove = user?.role === 'ADMIN' || user?.role === 'DIRECTOR' || user?.role === 'HEAD';
+
+  const applyServerProtocol = (item: Protocol) => {
+    const normalized = {
+      ...item,
+      laboratory: item.laboratory || emptyLaboratory,
+      organization: item.organization || emptyOrganization,
+      testing: item.testing || emptyTesting,
+      results: item.results || [],
+      measurementDevices: item.measurementDevices || [],
+      history: item.history || [],
+    };
+    savedSignatureRef.current = editableSignature(normalized);
+    setProtocol(normalized);
+    return normalized;
+  };
 
   const load = async () => {
     if (!protocolId) return;
+    if (dirty && !window.confirm('Есть несохранённые изменения. Обновить страницу протокола и потерять их?')) return;
     setLoading(true);
     setError('');
     try {
       const item = await getProtocol(protocolId);
-      setProtocol({
-        ...item,
-        laboratory: item.laboratory || emptyLaboratory,
-        organization: item.organization || emptyOrganization,
-        testing: item.testing || emptyTesting,
-        results: item.results || [],
-        measurementDevices: item.measurementDevices || [],
-        history: item.history || [],
-      });
+      applyServerProtocol(item);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить протокол');
     } finally {
@@ -289,55 +338,103 @@ const ProtocolEditorPage = () => {
     load();
   }, [protocolId]);
 
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!dirty) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    const beforeLinkNavigation = (event: MouseEvent) => {
+      if (!dirty || event.defaultPrevented || event.button !== 0) return;
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest('a[href]') as HTMLAnchorElement | null;
+      if (!anchor || anchor.target === '_blank' || anchor.origin !== window.location.origin) return;
+      if (!window.confirm('Есть несохранённые изменения. Уйти со страницы без сохранения?')) {
+        event.preventDefault();
+        event.stopPropagation();
+      } else {
+        savedSignatureRef.current = '';
+      }
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    document.addEventListener('click', beforeLinkNavigation, true);
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload);
+      document.removeEventListener('click', beforeLinkNavigation, true);
+    };
+  }, [dirty]);
+
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
   const patchProtocol = (patch: Partial<Protocol>) => {
-    if (!protocol) return;
-    setProtocol({ ...protocol, ...patch });
+    setProtocol((current) => current ? { ...current, ...patch } : current);
+  };
+
+  const navigateSafely = (to: string) => {
+    if (dirty && !window.confirm('Есть несохранённые изменения. Уйти со страницы без сохранения?')) return;
+    navigate(to);
   };
 
   const notify = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => toast[type](message);
 
-  const save = async () => {
-    if (!protocol) return;
+  const save = async (): Promise<Protocol | null> => {
+    if (!protocol) return null;
     if (protocol.status === 'SIGNED') {
       toast.warning('Нельзя редактировать подписанный протокол');
-      return;
+      return null;
+    }
+    if (protocol.testing.samplingDate && protocol.testing.testingStartDate && protocol.testing.samplingDate > protocol.testing.testingStartDate) {
+      toast.warning('Дата отбора не может быть позже начала испытаний.');
+      return null;
+    }
+    if (protocol.testing.testingStartDate && protocol.testing.testingEndDate && protocol.testing.testingStartDate > protocol.testing.testingEndDate) {
+      toast.warning('Дата начала испытаний не может быть позже окончания.');
+      return null;
     }
     setBusy(true);
     try {
       const updated = await updateProtocol(protocol.id, {
-        protocolNumber: protocol.protocolNumber,
-        number: protocol.number,
-        protocolDate: protocol.protocolDate,
-        samplingDate: protocol.samplingDate,
-        testingStartDate: protocol.testingStartDate,
-        testingEndDate: protocol.testingEndDate,
-        purpose: protocol.purpose,
-        environmentalConditions: protocol.environmentalConditions,
-        executor: protocol.executor,
-        approver: protocol.approver,
+        number: protocol.protocolNumber || protocol.number || '',
+        protocolDate: protocol.protocolDate || '',
+        executor: protocol.executor || '',
+        approver: protocol.approver || '',
         laboratory: protocol.laboratory,
         organization: protocol.organization,
         testing: protocol.testing,
         results: protocol.results,
+        instruments: (protocol.measurementDevices || []).map((item) => ({
+          id: item.deviceId,
+          ...item.deviceSnapshot,
+        })),
       });
-      setProtocol(updated);
+      applyServerProtocol(updated);
       toast.success('Протокол сохранен');
+      return updated;
     } catch (saveError) {
       toast.error('Не удалось сохранить протокол', saveError instanceof Error ? saveError.message : undefined);
+      return null;
     } finally {
       setBusy(false);
     }
+  };
+
+  const checkSavedNormatives = async () => {
+    if (!protocol) return;
+    if (dirty) {
+      toast.info('Сначала сохраняю локальные изменения, затем проверяю нормативы.');
+      const saved = await save();
+      if (!saved) return;
+    }
+    await run(() => checkNormatives(protocol.id), 'Нормативы проверены');
   };
 
   const run = async (action: () => Promise<Protocol>, success: string) => {
     setBusy(true);
     try {
       const updated = await action();
-      setProtocol(updated);
+      applyServerProtocol(updated);
       toast.success(success);
     } catch (actionError) {
       toast.error('Действие не выполнено', actionError instanceof Error ? actionError.message : undefined);
@@ -366,15 +463,23 @@ const ProtocolEditorPage = () => {
     if (!protocol) return;
     setBusy(true);
     try {
-      let blob: Blob;
+      let downloaded;
+      let shouldGenerate = false;
       try {
-        blob = kind === 'pdf' ? await downloadPdf(protocol.id) : await downloadDocx(protocol.id);
-      } catch {
-        const generated = kind === 'pdf' ? await generatePdf(protocol.id) : await generateDocx(protocol.id);
-        setProtocol(generated);
-        blob = kind === 'pdf' ? await downloadPdf(protocol.id) : await downloadDocx(protocol.id);
+        downloaded = kind === 'pdf' ? await downloadPdf(protocol.id) : await downloadDocx(protocol.id);
+        shouldGenerate = !downloaded.blob.size;
+      } catch (downloadError) {
+        if (![404, 409].includes(getApiStatus(downloadError) || 0)) throw downloadError;
+        shouldGenerate = window.confirm(`${kind.toUpperCase()} ещё не сформирован. Сформировать его сейчас?`);
       }
-      saveBlob(blob, fileName(protocol, kind));
+      if (!downloaded && !shouldGenerate) return;
+      if (shouldGenerate) {
+        const generated = kind === 'pdf' ? await generatePdf(protocol.id) : await generateDocx(protocol.id);
+        applyServerProtocol(generated);
+        downloaded = kind === 'pdf' ? await downloadPdf(protocol.id) : await downloadDocx(protocol.id);
+      }
+      if (!downloaded?.blob.size) throw new Error('Backend вернул пустой файл.');
+      saveBlob(downloaded.blob, downloaded.fileName || fileName(protocol, kind));
     } catch (downloadError) {
       toast.error('Не удалось скачать файл', downloadError instanceof Error ? downloadError.message : undefined);
     } finally {
@@ -382,16 +487,58 @@ const ProtocolEditorPage = () => {
     }
   };
 
-  const addDevice = async (deviceId: string) => {
+  const addDevice = async (device: MeasurementDevice) => {
     if (!protocol) return;
     setBusy(true);
     try {
-      const updated = await addProtocolMeasurementDevice(protocol.id, deviceId);
-      setProtocol(updated);
+      const updated = await addProtocolMeasurementDevice(protocol.id, device);
+      applyServerProtocol(updated);
       setDevicePickerOpen(false);
       toast.success('Средство измерения добавлено');
     } catch (addError) {
       toast.error('Не удалось добавить средство измерения', addError instanceof Error ? addError.message : undefined);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeDevice = async (deviceId: string) => {
+    if (!protocol || !window.confirm('Удалить прибор из протокола?')) return;
+    setBusy(true);
+    try {
+      const updated = await removeProtocolMeasurementDevice(protocol.id, deviceId);
+      applyServerProtocol(updated);
+      toast.success('Средство измерения удалено');
+    } catch (removeError) {
+      toast.error('Не удалось удалить средство измерения', removeError instanceof Error ? removeError.message : undefined);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const signCurrentProtocol = async () => {
+    if (!protocol || busy) return;
+    setBusy(true);
+    try {
+      let document;
+      try {
+        document = await downloadPdf(protocol.id);
+      } catch (downloadError) {
+        if ([404, 409].includes(getApiStatus(downloadError) || 0)) {
+          throw new Error('PDF ещё не сформирован. Сначала нажмите «PDF», затем повторите подписание.');
+        }
+        throw downloadError;
+      }
+      if (!document.blob.size) throw new Error('Backend вернул пустой PDF. Сформируйте документ повторно.');
+      const dataBase64 = await blobToBase64(document.blob);
+      const { signedCms } = await signBase64WithNCALayer(dataBase64);
+      if (!signedCms.trim()) throw new Error('NCALayer не вернул CMS-подпись.');
+      const updated = await signProtocol(protocol.id, signedCms);
+      applyServerProtocol(updated);
+      setSignOpen(false);
+      toast.success('Протокол подписан');
+    } catch (signError) {
+      toast.error('Не удалось подписать протокол', signError instanceof Error ? signError.message : undefined);
     } finally {
       setBusy(false);
     }
@@ -402,7 +549,7 @@ const ProtocolEditorPage = () => {
     return (
       <div className="space-y-4 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-900">
         <p className="font-bold">{error || 'Протокол не найден'}</p>
-        <Button type="button" variant="secondary" onClick={() => navigate('/staff/protocols')}>Вернуться к списку</Button>
+        <Button type="button" variant="secondary" onClick={() => navigateSafely('/staff/protocols')}>Вернуться к списку</Button>
       </div>
     );
   }
@@ -411,7 +558,7 @@ const ProtocolEditorPage = () => {
     <div className="space-y-6 pb-20">
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <button type="button" onClick={() => navigate('/staff/protocols')} className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-eco-700 hover:text-eco-900">
+          <button type="button" onClick={() => navigateSafely('/staff/protocols')} className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-eco-700 hover:text-eco-900">
             <ArrowLeft className="h-4 w-4" /> К протоколам
           </button>
           <p className="text-sm font-semibold uppercase tracking-wide text-eco-700">{templateName(protocol.templateId, protocol.templateName)}</p>
@@ -436,24 +583,15 @@ const ProtocolEditorPage = () => {
         templateId={protocol.templateId}
         rows={protocol.results}
         readOnly={readOnly}
+        busy={busy}
+        testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate}
         onChange={(results) => patchProtocol({ results })}
-        onSave={save}
-        onCheckNormatives={() => run(() => checkNormatives(protocol.id), 'Нормативы проверены')}
+        onSave={async () => { await save(); }}
+        onCheckNormatives={checkSavedNormatives}
         onImported={load}
         onNotify={notify}
       />
-      <MeasurementDevicesSection devices={protocol.measurementDevices || []} readOnly={readOnly} onAdd={() => setDevicePickerOpen(true)} />
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900"><FlaskConical className="h-5 w-5 text-eco-700" /> Генерация и подписание</h2>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" onClick={preview}>Предпросмотр</Button>
-          <Button type="button" variant="secondary" disabled={busy || protocol.status === 'DRAFT' || protocol.status === 'READY_FOR_APPROVAL'} onClick={() => run(() => generatePdf(protocol.id), 'PDF сформирован')}>Сформировать PDF</Button>
-          <Button type="button" variant="secondary" disabled={busy || protocol.status === 'DRAFT' || protocol.status === 'READY_FOR_APPROVAL'} onClick={() => run(() => generateDocx(protocol.id), 'DOCX сформирован')}>Сформировать DOCX</Button>
-          <Button type="button" variant="secondary" disabled={busy || protocol.status === 'DRAFT' || protocol.status === 'READY_FOR_APPROVAL'} onClick={() => generateAndDownload('pdf')}><Download className="h-4 w-4" /> Скачать PDF</Button>
-          <Button type="button" variant="secondary" disabled={busy || protocol.status === 'DRAFT' || protocol.status === 'READY_FOR_APPROVAL'} onClick={() => generateAndDownload('docx')}><Download className="h-4 w-4" /> Скачать DOCX</Button>
-        </div>
-      </section>
+      <MeasurementDevicesSection devices={protocol.measurementDevices || []} readOnly={readOnly || busy} onAdd={() => setDevicePickerOpen(true)} onRemove={removeDevice} />
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900"><History className="h-5 w-5 text-eco-700" /> История действий</h2>
@@ -471,30 +609,42 @@ const ProtocolEditorPage = () => {
       <ProtocolActionsBar
         status={protocol.status}
         busy={busy}
-        onSave={save}
+        canApprove={canApprove}
+        onSave={async () => { await save(); }}
         onPreview={preview}
-        onCheckNormatives={() => run(() => checkNormatives(protocol.id), 'Нормативы проверены')}
+        onCheckNormatives={checkSavedNormatives}
         onReady={() => run(() => readyForApproval(protocol.id), 'Протокол готов к утверждению')}
         onDelete={async () => {
           if (!window.confirm('Удалить черновик протокола?')) return;
-          await deleteProtocol(protocol.id);
-          toast.success('Протокол удален');
-          navigate('/staff/protocols');
-          return;
+          setBusy(true);
+          try {
+            await deleteProtocol(protocol.id);
+            savedSignatureRef.current = '';
+            toast.success('Протокол удален');
+            navigate('/staff/protocols');
+          } catch (deleteError) {
+            toast.error('Не удалось удалить протокол', deleteError instanceof Error ? deleteError.message : undefined);
+          } finally {
+            setBusy(false);
+          }
         }}
         onApprove={() => run(() => approveProtocol(protocol.id), 'Протокол утвержден')}
         onReturnDraft={() => run(() => returnToDraft(protocol.id), 'Протокол возвращен в черновик')}
+        onCancel={async () => {
+          if (!window.confirm('Отменить протокол? После отмены редактирование будет недоступно.')) return;
+          await run(() => cancelProtocol(protocol.id), 'Протокол отменен');
+        }}
         onGeneratePdf={() => run(() => generatePdf(protocol.id), 'PDF сформирован')}
         onGenerateDocx={() => run(() => generateDocx(protocol.id), 'DOCX сформирован')}
         onSign={() => setSignOpen(true)}
         onDownloadPdf={() => generateAndDownload('pdf')}
         onDownloadDocx={() => generateAndDownload('docx')}
         onReplace={() => setReplaceOpen(true)}
-        onOpenReplacement={protocol.replacedByProtocolId ? () => navigate(`/staff/protocols/${protocol.replacedByProtocolId}`) : undefined}
+        onOpenReplacement={protocol.replacedByProtocolId ? () => navigateSafely(`/staff/protocols/${protocol.replacedByProtocolId}`) : undefined}
       />
 
       <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} draft={protocol.status !== 'APPROVED' && protocol.status !== 'SIGNED'} onClose={() => setPreviewOpen(false)} />
-      <SignProtocolModal open={signOpen} loading={busy} onClose={() => setSignOpen(false)} onConfirm={async () => { await run(() => signProtocol(protocol.id), 'Протокол подписан'); setSignOpen(false); return; }} />
+      <SignProtocolModal open={signOpen} loading={busy} onClose={() => setSignOpen(false)} onConfirm={signCurrentProtocol} />
       <ReplaceProtocolModal
         open={replaceOpen}
         loading={busy}
@@ -504,6 +654,7 @@ const ProtocolEditorPage = () => {
           try {
             const replacement = await replaceProtocol(protocol.id, reason);
             toast.success('Создана исправленная версия');
+            savedSignatureRef.current = '';
             navigate(`/staff/protocols/${replacement.id}`);
           } catch (replaceError) {
             toast.error('Не удалось создать исправленную версию', replaceError instanceof Error ? replaceError.message : undefined);

@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import Button from '../components/ui/Button';
 import SEO from '../components/SEO';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { PageSkeleton } from '../components/loading/PageLoader';
 import { fetcher } from '../services/api';
 import type { TariffItem } from '../types';
 
@@ -82,7 +82,7 @@ const TariffsPage = () => {
     [mode, tariffs],
   );
 
-  if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
+  if (isLoading) return <PageSkeleton />;
 
   return (
     <div className="bg-[#F7FBFD]">

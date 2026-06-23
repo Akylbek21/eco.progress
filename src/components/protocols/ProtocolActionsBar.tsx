@@ -1,10 +1,11 @@
-import { CheckCircle2, Download, Eye, FileDown, FileText, RotateCcw, Save, SearchCheck, Signature, Trash2, Undo2 } from 'lucide-react';
+import { Ban, CheckCircle2, Download, Eye, FileDown, FileText, RotateCcw, Save, SearchCheck, Signature, Trash2, Undo2 } from 'lucide-react';
 import Button from '../ui/Button';
 import type { ProtocolStatus } from '../../types/protocols';
 
 type Props = {
   status: ProtocolStatus;
   busy?: boolean;
+  canApprove?: boolean;
   onSave: () => void | Promise<void>;
   onPreview: () => void | Promise<void>;
   onCheckNormatives: () => void | Promise<void>;
@@ -12,6 +13,7 @@ type Props = {
   onDelete: () => void | Promise<void>;
   onApprove: () => void | Promise<void>;
   onReturnDraft: () => void | Promise<void>;
+  onCancel: () => void | Promise<void>;
   onGeneratePdf: () => void | Promise<void>;
   onGenerateDocx: () => void | Promise<void>;
   onSign: () => void;
@@ -24,6 +26,7 @@ type Props = {
 const ProtocolActionsBar = ({
   status,
   busy = false,
+  canApprove = false,
   onSave,
   onPreview,
   onCheckNormatives,
@@ -31,6 +34,7 @@ const ProtocolActionsBar = ({
   onDelete,
   onApprove,
   onReturnDraft,
+  onCancel,
   onGeneratePdf,
   onGenerateDocx,
   onSign,
@@ -56,14 +60,15 @@ const ProtocolActionsBar = ({
         {status === 'READY_FOR_APPROVAL' && (
           <>
             <Button className={buttonClass} variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Предпросмотр</Button>
-            <Button className={buttonClass} disabled={busy} onClick={onApprove}><CheckCircle2 className="h-4 w-4" /> Утвердить</Button>
-            <Button className={buttonClass} variant="secondary" disabled={busy} onClick={onReturnDraft}><Undo2 className="h-4 w-4" /> Вернуть в черновик</Button>
+            {canApprove && <Button className={buttonClass} disabled={busy} onClick={onApprove}><CheckCircle2 className="h-4 w-4" /> Утвердить</Button>}
+            {canApprove && <Button className={buttonClass} variant="secondary" disabled={busy} onClick={onReturnDraft}><Undo2 className="h-4 w-4" /> Вернуть в черновик</Button>}
+            <Button className={`${buttonClass} text-rose-700 hover:bg-rose-50`} variant="secondary" disabled={busy} onClick={onCancel}><Ban className="h-4 w-4" /> Отменить</Button>
           </>
         )}
         {status === 'APPROVED' && (
           <>
-            <Button className={buttonClass} variant="secondary" disabled={busy} onClick={onGeneratePdf}><FileDown className="h-4 w-4" /> Сформировать PDF</Button>
-            <Button className={buttonClass} variant="secondary" disabled={busy} onClick={onGenerateDocx}><FileText className="h-4 w-4" /> Сформировать DOCX</Button>
+            <Button className={buttonClass} variant="secondary" disabled={busy} onClick={onGeneratePdf}><FileDown className="h-4 w-4" /> PDF</Button>
+            <Button className={buttonClass} variant="secondary" disabled={busy} onClick={onGenerateDocx}><FileText className="h-4 w-4" /> DOCX</Button>
             <Button className={buttonClass} disabled={busy} onClick={onSign}><Signature className="h-4 w-4" /> Подписать</Button>
             <Button className={buttonClass} variant="secondary" disabled={busy} onClick={onDownloadPdf}><Download className="h-4 w-4" /> Скачать PDF</Button>
             <Button className={buttonClass} variant="secondary" disabled={busy} onClick={onDownloadDocx}><Download className="h-4 w-4" /> Скачать DOCX</Button>

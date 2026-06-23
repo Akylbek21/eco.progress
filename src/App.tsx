@@ -1,11 +1,12 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import PublicLayout from './layouts/PublicLayout';
 import CabinetLayout from './layouts/CabinetLayout';
 import StaffLayout from './layouts/StaffLayout';
 import AdminLayout from './layouts/AdminLayout';
 import ScrollToTop from './components/ScrollToTop';
-import LoadingSpinner from './components/ui/LoadingSpinner';
+import ErrorBoundary from './components/ErrorBoundary';
+import PageLoader, { RouteProgressProvider } from './components/loading/PageLoader';
 import { useToast } from './hooks/useToast';
 import { useAuth } from './contexts/AuthContext';
 import type { UserRole } from './types';
@@ -64,6 +65,7 @@ const StaffTasksPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffTasks
 const StaffUserRolesPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffUserRolesPage');
 
 const allStaffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
+const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'];
 
 const StaffAccess = ({ roles, children }: { roles?: UserRole[]; children: ReactNode }) => {
   const { user } = useAuth();
@@ -80,11 +82,14 @@ const ForbiddenPage = () => (
   </div>
 );
 
-const PageLoader = () => (
-  <div className="flex min-h-[60vh] items-center justify-center">
-    <LoadingSpinner />
-  </div>
-);
+const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/partners', '/news', '/faq', '/contacts'];
+
+const RouteFallback = () => {
+  const { pathname } = useLocation();
+  const isPrivate = ['/cabinet', '/staff', '/admin', '/dashboard', '/login', '/register'].some((prefix) => pathname.startsWith(prefix));
+  const isPublic = !isPrivate && (publicPathPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)) || seoPages.some((page) => pathname === `/${page.slug}`));
+  return isPublic ? <PublicLayout><PageLoader /></PublicLayout> : <PageLoader />;
+};
 
 const RoleAccess = ({ roles, loginPath, children }: { roles: UserRole[]; loginPath: string; children: ReactNode }) => {
   const { user, loading, isAuthenticated } = useAuth();
@@ -123,10 +128,11 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-eco-50 text-slate-900">
-      <ScrollToTop />
-      <Suspense fallback={<PageLoader />}>
-      <Routes>
+    <RouteProgressProvider>
+      <div className="min-h-screen bg-eco-50 text-slate-900">
+        <ScrollToTop />
+        <Suspense fallback={<RouteFallback />}>
+        <Routes>
         <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
         <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
         <Route path="/services" element={<PublicLayout><ServicesPage /></PublicLayout>} />
@@ -167,10 +173,10 @@ function App() {
         <Route path="/staff/orders/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffOrderDetailsPage onNotify={notify} /></StaffLayout></RoleAccess>} />
         <Route path="/staff/clients" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/clients/:companyKey" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/companies" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/companies/new" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/companies/:companyId" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/companies/:companyId/edit" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies/new" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies/:companyId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies/:companyId/edit" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/commercial-offers" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffCommercialOffersPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/contracts" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER', 'ACCOUNTANT']}><StaffContractsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/tasks" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffTasksPage /></StaffLayout></RoleAccess>} />
@@ -178,10 +184,10 @@ function App() {
         <Route path="/staff/documents/:orderId" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDocumentsPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/calendar" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']}><StaffCalendarPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/protocols" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><ProtocolsPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/protocols/:protocolId" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><ProtocolEditorPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/normatives" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/measurement-devices" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/protocols" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть протоколы"><ProtocolsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/protocols/:protocolId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/normatives" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/measurement-devices" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/reports" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><StaffReportsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/user-roles" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN']}><StaffUserRolesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/notifications" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffNotificationsPage /></StaffLayout></RoleAccess>} />
@@ -191,9 +197,10 @@ function App() {
         <Route path="/admin" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminPage /></AdminLayout></RoleAccess>} />
         <Route path="/admin/users" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminUsersPage /></AdminLayout></RoleAccess>} />
         <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
-      </Routes>
-      </Suspense>
-    </div>
+        </Routes>
+        </Suspense>
+      </div>
+    </RouteProgressProvider>
   );
 }
 

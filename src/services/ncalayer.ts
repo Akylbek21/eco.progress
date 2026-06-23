@@ -4,7 +4,7 @@ interface NCALayerResponse {
   errorMessage?: string;
 }
 
-const NCALAYER_URL = 'wss://127.0.0.1:13579/';
+const NCALAYER_URL = import.meta.env.VITE_NCALAYER_URL || 'wss://127.0.0.1:13579/';
 const CONNECT_TIMEOUT_MS = 5_000;
 const SIGN_TIMEOUT_MS = 120_000;
 const MODULE = 'kz.gov.pki.knca.commonUtils';

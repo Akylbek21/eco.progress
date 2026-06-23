@@ -1,4 +1,5 @@
 import api, { ApiResponse } from './api';
+import { extractItem, extractList } from './apiHelpers';
 import type { Company, CompanyObject, CompanyObjectPayload, CompanyPayload, CompanyQuery } from '../types/companies';
 
 type UnknownRecord = Record<string, unknown>;
@@ -27,6 +28,7 @@ export const normalizeCompanyObject = (raw: unknown, companyId = ''): CompanyObj
     coordinates: pick(source, ['coordinates', 'coords']),
     sanitaryZone: pick(source, ['sanitaryZone', 'sanitary_zone']),
     notes: pick(source, ['notes', 'comment']),
+    samplingLocation: pick(source, ['samplingLocation', 'samplingPlace']),
     status: normalizeObjectStatus(source.status),
     createdAt: pick(source, ['createdAt', 'created_at']),
     updatedAt: pick(source, ['updatedAt', 'updated_at']),
@@ -119,97 +121,70 @@ const toCompanyObjectApiPayload = (payload: CompanyObjectPayload): UnknownRecord
   coordinates: payload.coordinates,
   sanitaryZone: payload.sanitaryZone,
   notes: payload.notes,
+  samplingLocation: payload.samplingLocation,
   status: payload.status,
 });
 
-const unwrap = <T>(payload: ApiResponse<T> | T): T => {
-  if (payload && typeof payload === 'object' && 'data' in payload) {
-    return (payload as ApiResponse<T>).data;
-  }
-  return payload as T;
-};
-
-const unwrapList = (payload: unknown): unknown[] => {
-  const data = unwrap(payload as ApiResponse<unknown> | unknown);
-  if (Array.isArray(data)) return data;
-  if (data && typeof data === 'object') {
-    const source = data as UnknownRecord;
-    if (Array.isArray(source.items)) return source.items;
-    if (Array.isArray(source.companies)) return source.companies;
-    if (Array.isArray(source.rows)) return source.rows;
-  }
-  return [];
-};
-
-const unwrapItem = (payload: unknown): unknown => {
-  const data = unwrap(payload as ApiResponse<unknown> | unknown);
-  if (data && typeof data === 'object') {
-    const source = data as UnknownRecord;
-    return source.company || source.item || source.row || data;
-  }
-  return data;
-};
-
 export async function getCompanies(params?: CompanyQuery): Promise<Company[]> {
   const response = await api.get<ApiResponse<unknown> | unknown>('/companies', { params });
-  return unwrapList(response.data).map(normalizeCompany);
+  return extractList(response, ['companies']).map(normalizeCompany);
 }
 
 export async function searchCompanies(query: string): Promise<Company[]> {
   const response = await api.get<ApiResponse<unknown> | unknown>('/companies/search', { params: { query } });
-  return unwrapList(response.data).map(normalizeCompany);
+  return extractList(response, ['companies']).map(normalizeCompany);
 }
 
 export async function getCompanyById(id: string): Promise<Company> {
   const response = await api.get<ApiResponse<unknown> | unknown>(`/companies/${id}`);
-  return normalizeCompany(unwrapItem(response.data));
+  return normalizeCompany(extractItem(response, ['company']));
 }
 
 export async function createCompany(payload: CompanyPayload): Promise<Company> {
   const response = await api.post<ApiResponse<unknown> | unknown>('/companies', toCompanyApiPayload(payload));
-  return normalizeCompany(unwrapItem(response.data));
+  return normalizeCompany(extractItem(response, ['company']));
 }
 
 export async function updateCompany(id: string, payload: CompanyPayload): Promise<Company> {
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/companies/${id}`, toCompanyApiPayload(payload));
-  return normalizeCompany(unwrapItem(response.data));
+  return normalizeCompany(extractItem(response, ['company']));
 }
 
 export async function deleteCompany(id: string): Promise<Company | null> {
   const response = await api.delete<ApiResponse<unknown> | unknown>(`/companies/${id}`);
-  const item = unwrapItem(response.data);
+  const item = extractItem(response, ['company']);
   return item ? normalizeCompany(item) : null;
 }
 
 export async function archiveCompany(id: string): Promise<Company> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${id}/archive`);
-  return normalizeCompany(unwrapItem(response.data));
+  return normalizeCompany(extractItem(response, ['company']));
 }
 
 export async function getCompanyObjects(companyId: string): Promise<CompanyObject[]> {
   const response = await api.get<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects`);
-  return unwrapList(response.data).map((item) => normalizeCompanyObject(item, companyId));
+  return extractList(response, ['objects', 'companyObjects', 'facilities']).map((item) => normalizeCompanyObject(item, companyId));
 }
 
 export async function createCompanyObject(companyId: string, payload: CompanyObjectPayload): Promise<CompanyObject> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects`, toCompanyObjectApiPayload(payload));
-  return normalizeCompanyObject(unwrapItem(response.data), companyId);
+  return normalizeCompanyObject(extractItem(response, ['object', 'companyObject']), companyId);
 }
 
 export async function updateCompanyObject(companyId: string, objectId: string, payload: CompanyObjectPayload): Promise<CompanyObject> {
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}`, toCompanyObjectApiPayload(payload));
-  return normalizeCompanyObject(unwrapItem(response.data), companyId);
+  return normalizeCompanyObject(extractItem(response, ['object', 'companyObject']), companyId);
 }
 
 export async function deleteCompanyObject(companyId: string, objectId: string): Promise<CompanyObject | null> {
   const response = await api.delete<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}`);
-  const item = unwrapItem(response.data);
+  const item = extractItem(response, ['object', 'companyObject']);
   return item ? normalizeCompanyObject(item, companyId) : null;
 }
 
 export async function archiveCompanyObject(companyId: string, objectId: string): Promise<CompanyObject> {
   const response = await api.delete<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}`);
-  const item = unwrapItem(response.data);
+  const item = extractItem(response, ['object', 'companyObject']);
   return item ? normalizeCompanyObject(item, companyId) : {
     id: objectId,
     companyId,
@@ -219,6 +194,7 @@ export async function archiveCompanyObject(companyId: string, objectId: string):
     coordinates: '',
     sanitaryZone: '',
     notes: '',
+    samplingLocation: '',
     status: 'ARCHIVED',
   };
 }

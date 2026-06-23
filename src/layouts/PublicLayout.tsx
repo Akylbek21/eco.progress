@@ -168,11 +168,20 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
           </div>
         )}
       </header>
-      <main>{children}</main>
+      <main className="route-page-enter min-h-[70vh]">{children}</main>
       <WhatsAppButton floating />
       <OrderChoiceModal open={orderModal} onClose={() => setOrderModal(false)} />
       <footer className="relative isolate overflow-hidden bg-eco-900 text-white">
-        <img src="/para.jpg" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+        <img
+          src="/para.jpg"
+          alt=""
+          width="1600"
+          height="900"
+          loading="lazy"
+          decoding="async"
+          onError={(event) => { event.currentTarget.style.display = 'none'; }}
+          className="absolute inset-0 -z-20 h-full w-full bg-eco-900 object-cover"
+        />
         <div className="absolute inset-0 -z-10 bg-eco-900/86" />
         <div className="relative mx-auto max-w-7xl px-5 py-14 sm:px-8">
           <div className="grid gap-10 lg:grid-cols-[1.3fr_0.8fr_1fr_1fr]">

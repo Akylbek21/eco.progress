@@ -7,18 +7,20 @@ import { canAccess } from '../config/permissions';
 import type { UserRole } from '../types';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
+const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'];
+
 const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[] }> = [
   { label: 'Дашборд', path: '/staff', icon: LayoutDashboard },
   { label: 'Заявки', path: '/staff/orders', icon: ClipboardList },
   { label: 'Клиенты', path: '/staff/clients', icon: Building2, allowedRoles: ['ADMIN', 'MANAGER'] },
-  { label: 'Компании', path: '/staff/companies', icon: Building2, allowedRoles: ['ADMIN', 'LABORATORY'] },
+  { label: 'Компании', path: '/staff/companies', icon: Building2, allowedRoles: protocolRoles },
   { label: 'КП', path: '/staff/commercial-offers', icon: Handshake, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Договоры', path: '/staff/contracts', icon: FileSignature, allowedRoles: ['ADMIN', 'MANAGER', 'ACCOUNTANT'] },
   { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Календарь', path: '/staff/calendar', icon: CalendarDays, allowedRoles: ['ADMIN', 'MANAGER', 'ECOLOGIST', 'LABORATORY'] },
-  { label: 'Протоколы', path: '/staff/protocols', icon: FlaskConical, allowedRoles: ['ADMIN', 'LABORATORY'] },
-  { label: 'Нормативы', path: '/staff/normatives', icon: BookOpenCheck, allowedRoles: ['ADMIN', 'LABORATORY'] },
-  { label: 'Средства измерений', path: '/staff/measurement-devices', icon: Gauge, allowedRoles: ['ADMIN', 'LABORATORY'] },
+  { label: 'Протоколы', path: '/staff/protocols', icon: FlaskConical, allowedRoles: protocolRoles },
+  { label: 'Нормативы', path: '/staff/normatives', icon: BookOpenCheck, allowedRoles: protocolRoles },
+  { label: 'Средства измерений', path: '/staff/measurement-devices', icon: Gauge, allowedRoles: protocolRoles },
   { label: 'Задачи', path: '/staff/tasks', icon: ClipboardCheck },
   { label: 'Документы', path: '/staff/documents', icon: FileText },
   { label: 'Уведомления', path: '/staff/notifications', icon: Bell },

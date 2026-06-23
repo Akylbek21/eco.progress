@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getApiErrorMessage } from './apiHelpers';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : '/api',
@@ -27,10 +28,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error.response?.data?.message;
-    if (typeof message === 'string' && message.trim()) {
-      error.message = message;
-    }
+    error.message = getApiErrorMessage(error, error.message);
     if (error.response?.status === 401) {
       localStorage.removeItem('eco-progress-token');
       localStorage.removeItem('eco-progress-user');

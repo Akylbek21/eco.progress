@@ -2,18 +2,21 @@ import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { PageSkeleton } from '../components/loading/PageLoader';
+import ErrorState from '../components/ui/ErrorState';
+import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { getNewsById } from '../services/newsService';
 
 const NewsDetailsPage = () => {
   const { id } = useParams();
-  const { data: item, isLoading } = useQuery({
+  const { data: item, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['news', id],
     queryFn: () => getNewsById(id!),
     enabled: !!id,
   });
 
-  if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
+  if (isLoading) return <PageSkeleton />;
+  if (isError) return <div className="mx-auto min-h-[60vh] max-w-3xl px-5 py-16"><ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} /></div>;
   if (!item) {
     return (
       <div className="bg-eco-50 px-5 py-20">
@@ -33,7 +36,7 @@ const NewsDetailsPage = () => {
     <article className="bg-white">
       <SEO title={`${item.title} | ecoprogress.kz`} description={item.excerpt} />
       <section className="relative overflow-hidden px-5 py-24 text-white sm:px-8">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${item.image})` }} />
+        <ResponsiveImage fill src={item.image} alt="" priority width={1600} height={900} className="object-cover" />
         <div className="absolute inset-0 bg-eco-900/78" />
         <div className="relative mx-auto max-w-4xl">
           <Reveal><p className="text-sm font-semibold uppercase tracking-[0.22em] text-eco-200">{item.category} · {item.date}</p></Reveal>

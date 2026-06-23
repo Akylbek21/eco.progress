@@ -1,4 +1,10 @@
 import api, { ApiResponse } from './api';
+import {
+  extractItem,
+  extractList,
+  getApiErrorMessage,
+  getContentDispositionFileName,
+} from './apiHelpers';
 import type {
   CreateProtocolPayload,
   MeasurementDevice,
@@ -13,7 +19,6 @@ import type {
 
 type UnknownRecord = Record<string, unknown>;
 
-const unwrap = <T>(response: { data: ApiResponse<T> }) => response.data.data;
 const asRecord = (value: unknown): UnknownRecord => value && typeof value === 'object' ? value as UnknownRecord : {};
 const asString = (value: unknown) => (typeof value === 'string' || typeof value === 'number' ? String(value) : '');
 
@@ -27,34 +32,43 @@ const pick = (source: UnknownRecord, keys: string[]) => {
 
 const normalizeCompanySnapshot = (raw: UnknownRecord): ProtocolCompanySnapshot => {
   const snapshot = asRecord(raw.companySnapshot || raw.company_snapshot || {});
-  const company = asRecord(raw.company || {});
-  const object = asRecord(raw.object || raw.companyObject || raw.company_object || {});
+  const company = asRecord(raw.company);
+  const organization = asRecord(raw.organization || {});
+  const companyObject = asRecord(company.object || company.companyObject || company.company_object);
+  const organizationObject = asRecord(organization.object || organization.companyObject || organization.company_object);
+  const object = Object.keys(companyObject).length ? companyObject : organizationObject;
   return {
-    companyName: pick(snapshot, ['companyName', 'name']) || pick(raw, ['companyNameSnapshot', 'company_name_snapshot']) || pick(company, ['name', 'companyName']),
-    bin: pick(snapshot, ['bin']) || pick(raw, ['companyBinSnapshot', 'company_bin_snapshot']) || pick(company, ['bin', 'iin']),
-    legalAddress: pick(snapshot, ['legalAddress']) || pick(raw, ['companyLegalAddressSnapshot', 'company_legal_address_snapshot']) || pick(company, ['legalAddress']),
-    actualAddress: pick(snapshot, ['actualAddress']) || pick(raw, ['companyActualAddressSnapshot', 'company_actual_address_snapshot']) || pick(company, ['actualAddress']),
-    phone: pick(snapshot, ['phone']) || pick(raw, ['companyPhoneSnapshot', 'company_phone_snapshot']) || pick(company, ['phone']),
-    email: pick(snapshot, ['email']) || pick(raw, ['companyEmailSnapshot', 'company_email_snapshot']) || pick(company, ['email']),
-    director: pick(snapshot, ['director']) || pick(raw, ['companyDirectorNameSnapshot', 'company_director_name_snapshot']) || pick(company, ['director', 'directorFullName']),
-    contactPerson: pick(snapshot, ['contactPerson']) || pick(raw, ['companyResponsiblePersonSnapshot', 'company_responsible_person_snapshot']) || pick(company, ['contactPerson']),
-    activityType: pick(snapshot, ['activityType']) || pick(raw, ['activityTypeSnapshot', 'activity_type_snapshot']) || pick(company, ['activityType']),
-    objectName: pick(snapshot, ['objectName']) || pick(raw, ['objectNameSnapshot', 'object_name_snapshot']) || pick(object, ['name', 'objectName']),
-    objectAddress: pick(snapshot, ['objectAddress']) || pick(raw, ['objectAddressSnapshot', 'object_address_snapshot']) || pick(object, ['address', 'objectAddress']),
-    objectActivityType: pick(snapshot, ['objectActivityType']) || pick(raw, ['objectActivityTypeSnapshot', 'object_activity_type_snapshot']) || pick(object, ['activityType']),
-    coordinates: pick(snapshot, ['coordinates']) || pick(object, ['coordinates']),
-    sanitaryZone: pick(snapshot, ['sanitaryZone']) || pick(object, ['sanitaryZone']),
-    bankName: pick(snapshot, ['bankName']) || pick(raw, ['companyBankNameSnapshot', 'company_bank_name_snapshot']) || pick(company, ['bankName', 'bank']),
-    iban: pick(snapshot, ['iban']) || pick(raw, ['companyIbanSnapshot', 'company_iban_snapshot']) || pick(company, ['iban']),
-    bik: pick(snapshot, ['bik']) || pick(raw, ['companyBikSnapshot', 'company_bik_snapshot']) || pick(company, ['bik']),
-    kbe: pick(snapshot, ['kbe']) || pick(raw, ['companyKbeSnapshot', 'company_kbe_snapshot']) || pick(company, ['kbe']),
-    knp: pick(snapshot, ['knp']) || pick(raw, ['companyKnpSnapshot', 'company_knp_snapshot']) || pick(company, ['knp']),
+    companyName: pick(company, ['name', 'companyName']) || pick(organization, ['organizationName', 'companyName', 'name']) || pick(snapshot, ['companyName', 'name']),
+    bin: pick(company, ['bin', 'iin']) || pick(organization, ['bin', 'iin']) || pick(snapshot, ['bin']),
+    legalAddress: pick(company, ['legalAddress']) || pick(organization, ['legalAddress']) || pick(snapshot, ['legalAddress']),
+    actualAddress: pick(company, ['actualAddress']) || pick(organization, ['actualAddress', 'organizationAddress']) || pick(snapshot, ['actualAddress']),
+    phone: pick(company, ['phone']) || pick(organization, ['phone']) || pick(snapshot, ['phone']),
+    email: pick(company, ['email']) || pick(organization, ['email']) || pick(snapshot, ['email']),
+    director: pick(company, ['director', 'directorFullName']) || pick(organization, ['director']) || pick(snapshot, ['director']),
+    contactPerson: pick(company, ['contactPerson']) || pick(organization, ['contactPerson']) || pick(snapshot, ['contactPerson']),
+    activityType: pick(company, ['activityType']) || pick(organization, ['activityType']) || pick(snapshot, ['activityType']),
+    objectName: pick(object, ['name', 'objectName']) || pick(company, ['objectName']) || pick(organization, ['objectName']) || pick(snapshot, ['objectName']),
+    objectAddress: pick(object, ['address', 'objectAddress']) || pick(company, ['objectAddress']) || pick(organization, ['objectAddress']) || pick(snapshot, ['objectAddress']),
+    objectActivityType: pick(object, ['activityType']) || pick(company, ['objectActivityType']) || pick(organization, ['objectActivityType']) || pick(snapshot, ['objectActivityType']),
+    coordinates: pick(object, ['coordinates']) || pick(company, ['coordinates']) || pick(organization, ['coordinates']) || pick(snapshot, ['coordinates']),
+    sanitaryZone: pick(object, ['sanitaryZone']) || pick(company, ['sanitaryZone']) || pick(organization, ['sanitaryZone']) || pick(snapshot, ['sanitaryZone']),
+    bankName: pick(company, ['bankName', 'bank']) || pick(snapshot, ['bankName']),
+    iban: pick(company, ['iban']) || pick(snapshot, ['iban']),
+    bik: pick(company, ['bik']) || pick(snapshot, ['bik']),
+    kbe: pick(company, ['kbe']) || pick(snapshot, ['kbe']),
+    knp: pick(company, ['knp']) || pick(snapshot, ['knp']),
   };
 };
 
 const normalizeResult = (raw: unknown): ProtocolResultRow => {
   const source = asRecord(raw);
   const values = asRecord(source.values);
+  const dynamicValues = Object.fromEntries(
+    Object.entries(source).filter(([key, value]) =>
+      !['id', '_id', 'resultId', 'protocolId', 'protocol_id', 'internalStatus', 'checkStatus', 'status', 'values'].includes(key)
+      && (typeof value === 'string' || typeof value === 'number' || value === null),
+    ),
+  );
   return {
     id: pick(source, ['id', '_id', 'resultId']) || `result-${Math.random().toString(16).slice(2)}`,
     protocolId: pick(source, ['protocolId', 'protocol_id']),
@@ -70,6 +84,8 @@ const normalizeResult = (raw: unknown): ProtocolResultRow => {
     normativeDocument: pick(source, ['normativeDocument', 'normative_document']) || asString(values.normativeDocument),
     comment: pick(source, ['comment']) || asString(values.comment),
     values: {
+      ...values,
+      ...dynamicValues,
       samplingPoint: pick(source, ['samplingPoint', 'sampling_point']) || asString(values.samplingPoint),
       indicator: pick(source, ['indicator']) || asString(values.indicator),
       unit: pick(source, ['unit']) || asString(values.unit),
@@ -79,14 +95,14 @@ const normalizeResult = (raw: unknown): ProtocolResultRow => {
       samplingMethod: pick(source, ['samplingMethod', 'sampling_method']) || asString(values.samplingMethod),
       normativeDocument: pick(source, ['normativeDocument', 'normative_document']) || asString(values.normativeDocument),
       comment: pick(source, ['comment']) || asString(values.comment),
-      ...values,
     },
   };
 };
 
 const normalizeMeasurementDevice = (raw: unknown): ProtocolMeasurementDevice => {
   const source = asRecord(raw);
-  const snapshot = asRecord(source.deviceSnapshot || source.device_snapshot || source.device || {});
+  const nestedSnapshot = asRecord(source.deviceSnapshot || source.device_snapshot || source.device || {});
+  const snapshot = Object.keys(nestedSnapshot).length ? nestedSnapshot : source;
   return {
     id: pick(source, ['id', '_id', 'protocolDeviceId']) || pick(snapshot, ['id']),
     protocolId: pick(source, ['protocolId', 'protocol_id']),
@@ -107,12 +123,15 @@ const normalizeMeasurementDevice = (raw: unknown): ProtocolMeasurementDevice => 
 export const normalizeProtocol = (raw: unknown): Protocol => {
   const source = asRecord(raw);
   const snapshot = normalizeCompanySnapshot(source);
+  const organization = asRecord(source.organization);
+  const laboratory = asRecord(source.laboratory);
+  const testing = asRecord(source.testing);
   const protocolNumber = pick(source, ['protocolNumber', 'protocol_number', 'number']);
-  const samplingDate = pick(source, ['samplingDate', 'sampling_date', 'sampleDate']);
-  const testingStartDate = pick(source, ['testingStartDate', 'testing_start_date']);
-  const testingEndDate = pick(source, ['testingEndDate', 'testing_end_date', 'testingDate']);
-  const purpose = pick(source, ['purpose', 'testPurpose', 'testingPurpose']);
-  const environmentalConditions = pick(source, ['environmentalConditions', 'environment_conditions', 'environmentConditions']);
+  const samplingDate = pick(testing, ['samplingDate', 'sampleDate']);
+  const testingStartDate = pick(testing, ['testingStartDate']);
+  const testingEndDate = pick(testing, ['testingEndDate', 'testingDate']);
+  const purpose = pick(testing, ['testingPurpose', 'testPurpose', 'purpose']);
+  const environmentalConditions = pick(testing, ['environmentConditions', 'environmentalConditions']);
   const resultsSource = Array.isArray(source.results) ? source.results : [];
   const devicesSource = Array.isArray(source.measurementDevices) ? source.measurementDevices : Array.isArray(source.instruments) ? source.instruments : [];
 
@@ -137,27 +156,41 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     approvedAt: pick(source, ['approvedAt', 'approved_at']),
     signedAt: pick(source, ['signedAt', 'signed_at']),
     organization: {
-      organizationName: snapshot.companyName,
-      organizationAddress: snapshot.legalAddress || snapshot.actualAddress || '',
-      objectName: snapshot.objectName || '',
-      productName: snapshot.objectName || snapshot.activityType || '',
-      testingBasis: pick(source, ['testingBasis', 'testing_basis']),
+      organizationName: pick(organization, ['organizationName', 'companyName', 'name']) || snapshot.companyName,
+      organizationAddress: pick(organization, ['organizationAddress', 'legalAddress', 'actualAddress', 'address']) || snapshot.legalAddress || snapshot.actualAddress || '',
+      objectName: pick(organization, ['objectName']) || snapshot.objectName || '',
+      productName: pick(organization, ['productName', 'product']) || snapshot.objectName || snapshot.activityType || '',
+      testingBasis: pick(organization, ['testingBasis', 'basis']) || pick(source, ['testingBasis', 'testing_basis']),
     },
-    laboratory: asRecord(source.laboratory) as Protocol['laboratory'],
+    laboratory: {
+      laboratoryName: pick(laboratory, ['laboratoryName', 'name']),
+      laboratoryAddress: pick(laboratory, ['laboratoryAddress', 'address']),
+      accreditationNumber: pick(laboratory, ['accreditationNumber', 'certificateNumber']),
+      accreditationValidUntil: pick(laboratory, ['accreditationValidUntil', 'certificateValidUntil']),
+      director: pick(laboratory, ['director']),
+      laboratoryHead: pick(laboratory, ['laboratoryHead', 'head']),
+      executor: pick(laboratory, ['executor']),
+    },
     testing: {
-      productNormativeDocument: pick(source, ['productNormativeDocument', 'product_normative_document']),
-      samplingMethodDocument: pick(source, ['samplingMethodDocument', 'sampling_method_document']),
-      testingMethodDocument: pick(source, ['testingMethodDocument', 'testing_method_document']),
+      productNormativeDocument: pick(testing, ['productNormativeDocument']) || pick(source, ['productNormativeDocument', 'product_normative_document']),
+      samplingMethodDocument: pick(testing, ['samplingMethodDocument', 'samplingMethod']) || pick(source, ['samplingMethodDocument', 'sampling_method_document']),
+      testingMethodDocument: pick(testing, ['testingMethodDocument', 'testingMethod']) || pick(source, ['testingMethodDocument', 'testing_method_document']),
       samplingDate,
-      testingDate: testingEndDate,
-      testingPurpose: purpose,
-      environmentConditions: environmentalConditions,
-      physicalFactorType: pick(source, ['physicalFactorType', 'physical_factor_type']),
+      testingStartDate,
+      testingEndDate,
+      testingDate: pick(testing, ['testingDate']) || testingEndDate,
+      testingPurpose: pick(testing, ['testingPurpose', 'testPurpose']) || purpose,
+      environmentConditions: pick(testing, ['environmentConditions', 'environmentalConditions']) || environmentalConditions,
+      physicalFactorType: pick(testing, ['physicalFactorType']) || pick(source, ['physicalFactorType', 'physical_factor_type']),
     },
     results: resultsSource.map(normalizeResult),
     measurementDevices: devicesSource.map(normalizeMeasurementDevice),
     instruments: devicesSource.map((item) => normalizeMeasurementDevice(item).deviceSnapshot as MeasurementDevice),
-    history: Array.isArray(source.history) ? source.history as Protocol['history'] : [],
+    history: Array.isArray(source.history)
+      ? source.history as Protocol['history']
+      : Array.isArray(source.audit)
+        ? source.audit as Protocol['history']
+        : [],
     createdAt: pick(source, ['createdAt', 'created_at']),
     updatedAt: pick(source, ['updatedAt', 'updated_at']),
     replacedByProtocolId: pick(source, ['replacedByProtocolId', 'replaced_by_protocol_id']),
@@ -166,43 +199,85 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
 };
 
 const toCreateProtocolApiPayload = (payload: CreateProtocolPayload) => ({
-  companyId: payload.companyId,
-  objectId: payload.objectId || undefined,
+  companyId: Number.isNaN(Number(payload.companyId)) ? payload.companyId : Number(payload.companyId),
+  objectId: payload.objectId === undefined || payload.objectId === '' ? undefined : Number.isNaN(Number(payload.objectId)) ? payload.objectId : Number(payload.objectId),
   templateId: payload.templateId,
-  protocolNumber: payload.protocolNumber || undefined,
+  protocolNumber: payload.protocolNumber || '',
   protocolDate: payload.protocolDate,
-  samplingDate: payload.samplingDate || undefined,
-  testingStartDate: payload.testingStartDate || undefined,
-  testingEndDate: payload.testingEndDate || undefined,
-  purpose: payload.purpose || undefined,
-  environmentalConditions: payload.environmentalConditions || undefined,
+  samplingDate: payload.samplingDate || '',
+  testingStartDate: payload.testingStartDate || '',
+  testingEndDate: payload.testingEndDate || '',
+  purpose: payload.purpose || '',
+  environmentalConditions: payload.environmentalConditions || '',
+});
+
+const isProtocolLike = (value: unknown) => {
+  const source = asRecord(value);
+  return Boolean(
+    pick(source, ['templateId', 'template_id', 'protocolNumber', 'protocol_number'])
+    || source.companySnapshot
+    || source.organization
+    || source.testing,
+  );
+};
+
+const protocolFromActionResponse = async (protocolId: string, response: unknown): Promise<Protocol> => {
+  const item = extractItem(response, ['protocol']);
+  return isProtocolLike(item) ? normalizeProtocol(item) : getProtocol(protocolId);
+};
+
+const serializeResult = (row: ProtocolResultRow): UnknownRecord => ({
+  ...(row.id && !row.id.startsWith('local-') && !row.id.startsWith('result-') ? { id: row.id } : {}),
+  values: { ...row.values },
+});
+
+const serializeInstrument = (device: MeasurementDevice): UnknownRecord => ({
+  id: device.id,
+  name: device.name,
+  model: device.model,
+  serialNumber: device.serialNumber,
+  verificationCertificateNumber: device.verificationCertificateNumber,
+  verificationDate: device.verificationDate,
+  verificationValidUntil: device.verificationValidUntil,
+  units: device.units,
+  status: device.status,
 });
 
 export async function getProtocols(params?: Record<string, string>): Promise<Protocol[]> {
-  const response = await api.get<ApiResponse<unknown[]>>('/protocols', { params });
-  return unwrap(response).map(normalizeProtocol);
+  const response = await api.get<ApiResponse<unknown> | unknown>('/protocols', { params });
+  return extractList(response, ['protocols']).map(normalizeProtocol);
 }
 
 export async function getProtocolTemplates(): Promise<ProtocolTemplate[]> {
-  const response = await api.get<ApiResponse<ProtocolTemplate[]>>('/protocols/templates');
-  return unwrap(response);
+  const response = await api.get<ApiResponse<unknown> | unknown>('/protocols/templates');
+  return extractList(response, ['templates']) as ProtocolTemplate[];
 }
 
 export async function createProtocol(payload: CreateProtocolPayload): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown>>('/protocols', toCreateProtocolApiPayload(payload));
-  return normalizeProtocol(unwrap(response));
+  const response = await api.post<ApiResponse<unknown> | unknown>('/protocols', toCreateProtocolApiPayload(payload));
+  return normalizeProtocol(extractItem(response, ['protocol']));
 }
 
 export async function getProtocol(protocolId: string): Promise<Protocol> {
-  const response = await api.get<ApiResponse<unknown>>(`/protocols/${protocolId}`);
-  return normalizeProtocol(unwrap(response));
+  const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}`);
+  return normalizeProtocol(extractItem(response, ['protocol']));
 }
 
 export const getProtocolById = getProtocol;
 
 export async function updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol> {
-  const response = await api.patch<ApiResponse<unknown>>(`/protocols/${protocolId}`, payload);
-  return normalizeProtocol(unwrap(response));
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}`, {
+    number: payload.number,
+    protocolDate: payload.protocolDate,
+    executor: payload.executor,
+    approver: payload.approver,
+    laboratory: payload.laboratory,
+    organization: payload.organization,
+    testing: payload.testing,
+    results: payload.results.map(serializeResult),
+    instruments: payload.instruments.map(serializeInstrument),
+  });
+  return protocolFromActionResponse(protocolId, response);
 }
 
 export async function deleteProtocol(protocolId: string): Promise<void> {
@@ -210,13 +285,13 @@ export async function deleteProtocol(protocolId: string): Promise<void> {
 }
 
 export async function addProtocolResult(protocolId: string, payload: Partial<ProtocolResultRow>): Promise<ProtocolResultRow> {
-  const response = await api.post<ApiResponse<unknown>>(`/protocols/${protocolId}/results`, payload);
-  return normalizeResult(unwrap(response));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results`, payload);
+  return normalizeResult(extractItem(response, ['result']));
 }
 
 export async function updateProtocolResult(resultId: string, payload: Partial<ProtocolResultRow>): Promise<ProtocolResultRow> {
-  const response = await api.patch<ApiResponse<unknown>>(`/protocol-results/${resultId}`, payload);
-  return normalizeResult(unwrap(response));
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocol-results/${resultId}`, payload);
+  return normalizeResult(extractItem(response, ['result']));
 }
 
 export async function deleteProtocolResult(resultId: string): Promise<void> {
@@ -224,33 +299,39 @@ export async function deleteProtocolResult(resultId: string): Promise<void> {
 }
 
 export async function checkNormatives(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown>>(`/protocols/${protocolId}/check-normatives`);
-  return normalizeProtocol(unwrap(response));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/check-normatives`);
+  return protocolFromActionResponse(protocolId, response);
 }
 
 export async function readyForApproval(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown>>(`/protocols/${protocolId}/ready-for-approval`);
-  return normalizeProtocol(unwrap(response));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/ready-for-approval`);
+  return protocolFromActionResponse(protocolId, response);
 }
 
 export async function approveProtocol(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown>>(`/protocols/${protocolId}/approve`);
-  return normalizeProtocol(unwrap(response));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/approve`);
+  return protocolFromActionResponse(protocolId, response);
 }
 
 export async function returnToDraft(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown>>(`/protocols/${protocolId}/return-to-draft`);
-  return normalizeProtocol(unwrap(response));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-to-draft`);
+  return protocolFromActionResponse(protocolId, response);
 }
 
-export async function signProtocol(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown>>(`/protocols/${protocolId}/sign`);
-  return normalizeProtocol(unwrap(response));
+export async function signProtocol(protocolId: string, cmsSignatureBase64: string): Promise<Protocol> {
+  if (!cmsSignatureBase64.trim()) throw new Error('NCALayer не вернул CMS-подпись.');
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/sign`, { cmsSignatureBase64 });
+  return protocolFromActionResponse(protocolId, response);
 }
 
 export async function replaceProtocol(protocolId: string, reason: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown>>(`/protocols/${protocolId}/replace`, { reason });
-  return normalizeProtocol(unwrap(response));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/replace`, { reason });
+  return normalizeProtocol(extractItem(response, ['protocol']));
+}
+
+export async function cancelProtocol(protocolId: string): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/cancel`);
+  return protocolFromActionResponse(protocolId, response);
 }
 
 export async function previewProtocol(protocolId: string): Promise<Blob> {
@@ -259,38 +340,83 @@ export async function previewProtocol(protocolId: string): Promise<Blob> {
 }
 
 export async function generateDocx(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown>>(`/protocols/${protocolId}/generate-docx`);
-  return normalizeProtocol(unwrap(response));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-docx`);
+  return protocolFromActionResponse(protocolId, response);
 }
 
 export async function generatePdf(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown>>(`/protocols/${protocolId}/generate-pdf`);
-  return normalizeProtocol(unwrap(response));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-pdf`);
+  return protocolFromActionResponse(protocolId, response);
 }
 
-export async function downloadDocx(protocolId: string): Promise<Blob> {
-  const response = await api.get<Blob>(`/protocols/${protocolId}/download-docx`, { responseType: 'blob' });
-  return response.data;
+export type DownloadedProtocolFile = {
+  blob: Blob;
+  fileName?: string;
+};
+
+export async function downloadDocx(protocolId: string): Promise<DownloadedProtocolFile> {
+  return downloadProtocolFile(protocolId, 'docx');
 }
 
-export async function downloadPdf(protocolId: string): Promise<Blob> {
-  const response = await api.get<Blob>(`/protocols/${protocolId}/download-pdf`, { responseType: 'blob' });
-  return response.data;
+export async function downloadPdf(protocolId: string): Promise<DownloadedProtocolFile> {
+  return downloadProtocolFile(protocolId, 'pdf');
 }
+
+const downloadProtocolFile = async (protocolId: string, kind: 'pdf' | 'docx'): Promise<DownloadedProtocolFile> => {
+  try {
+    const response = await api.get<Blob>(`/protocols/${protocolId}/download-${kind}`, { responseType: 'blob' });
+    return {
+      blob: response.data,
+      fileName: getContentDispositionFileName(response.headers['content-disposition']),
+    };
+  } catch (error) {
+    const blob = (error as { response?: { data?: unknown } })?.response?.data;
+    if (blob instanceof Blob && /json|text/.test(blob.type)) {
+      try {
+        const payload = JSON.parse(await blob.text()) as { message?: string; error?: string };
+        throw new Error(payload.message || payload.error || getApiErrorMessage(error));
+      } catch (parseError) {
+        if (parseError instanceof SyntaxError) throw new Error(getApiErrorMessage(error));
+        throw parseError;
+      }
+    }
+    throw error;
+  }
+};
 
 export async function importExcel(protocolId: string, file: File): Promise<Protocol> {
   const formData = new FormData();
   formData.append('file', file);
-  const response = await api.post<ApiResponse<unknown>>(`/protocols/${protocolId}/import-excel`, formData);
-  return normalizeProtocol(unwrap(response));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/import-excel`, formData);
+  return protocolFromActionResponse(protocolId, response);
 }
 
-export async function addProtocolMeasurementDevice(protocolId: string, deviceId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown>>(`/protocols/${protocolId}/measurement-devices`, { deviceId });
-  return normalizeProtocol(unwrap(response));
+export async function addProtocolMeasurementDevice(
+  protocolId: string,
+  device: MeasurementDevice,
+): Promise<Protocol> {
+  if (device.status !== 'VALID' && device.status !== 'EXPIRING') throw new Error('Этот прибор недоступен для выбора.');
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/measurement-devices`, { deviceId: device.id });
+  return protocolFromActionResponse(protocolId, response);
+}
+
+export async function removeProtocolMeasurementDevice(protocolId: string, deviceId: string): Promise<Protocol> {
+  const response = await api.delete<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/measurement-devices/${deviceId}`);
+  return protocolFromActionResponse(protocolId, response);
 }
 
 export async function searchNormative(params: Record<string, string>): Promise<NormativeSearchResult> {
-  const response = await api.get<ApiResponse<NormativeSearchResult>>('/normatives/search', { params });
-  return unwrap(response);
+  const response = await api.get<ApiResponse<NormativeSearchResult> | NormativeSearchResult>('/normatives/search', { params });
+  const candidates = extractList(response, ['normatives', 'items']) as NonNullable<NormativeSearchResult['normatives']>;
+  const item = extractItem(response) as NormativeSearchResult;
+  if (candidates.length) {
+    return {
+      ...item,
+      found: true,
+      normatives: candidates,
+      ambiguous: candidates.length > 1 || item.ambiguous,
+      normative: candidates.length === 1 ? candidates[0] : item.normative,
+    };
+  }
+  return item;
 }

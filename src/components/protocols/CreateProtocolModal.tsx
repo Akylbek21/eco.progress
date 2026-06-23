@@ -1,8 +1,9 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ClipboardPlus, Search } from 'lucide-react';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import { getCompanies, getCompanyById, getCompanyObjects } from '../../services/companyService';
+import { getApiErrorMessage } from '../../services/apiHelpers';
 import type { Company, CompanyObject } from '../../types/companies';
 import type { CreateProtocolPayload, ProtocolTemplate, ProtocolTemplateId } from '../../types/protocols';
 import { protocolTemplates } from '../../data/protocolTemplates';
@@ -44,14 +45,21 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   const [companyLoading, setCompanyLoading] = useState(false);
   const [objectLoading, setObjectLoading] = useState(false);
   const [error, setError] = useState('');
-  const visibleTemplates = useMemo(() => templates?.length ? templates : protocolTemplates, [templates]);
+  const [objectWarning, setObjectWarning] = useState('');
+  const [fallbackObjectId, setFallbackObjectId] = useState('');
+  const submittingRef = useRef(false);
+  const visibleTemplates = useMemo(() => {
+    const source = templates?.length ? templates : protocolTemplates;
+    return Array.from(new Map(source.map((template) => [template.id, template])).values());
+  }, [templates]);
 
   useEffect(() => {
     if (!open) return;
     setError('');
+    setObjectWarning('');
     getCompanies({ status: 'ACTIVE' })
       .then((items) => setCompanies(items.filter((company) => company.status !== 'ARCHIVED')))
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить компании'));
+      .catch((loadError) => setError(getApiErrorMessage(loadError, 'Не удалось загрузить компании')));
   }, [open]);
 
   useEffect(() => {
@@ -62,6 +70,8 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
     setSelectedObjectId('');
     setSelectedTemplate('');
     setError('');
+    setObjectWarning('');
+    setFallbackObjectId('');
   }, [open]);
 
   const filteredCompanies = useMemo(() => {
@@ -79,9 +89,13 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
     setCompanyLoading(true);
     setObjectLoading(true);
     setError('');
+    setObjectWarning('');
+    setFallbackObjectId('');
     setSelectedObjectId('');
+    let loadedCompany: Company | null = null;
     try {
       const company = await getCompanyById(companyId);
+      loadedCompany = company;
       if (company.status === 'ARCHIVED') {
         setSelectedCompany(null);
         setObjects([]);
@@ -90,14 +104,47 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       }
       setSelectedCompany(company);
       setCompanySearch(companyLabel(company));
-      const companyObjects = await getCompanyObjects(company.id);
-      const activeObjects = companyObjects.filter((object) => object.status !== 'ARCHIVED');
-      setObjects(activeObjects);
-      if (activeObjects.length === 1) setSelectedObjectId(activeObjects[0].id);
-    } catch (selectError) {
+    } catch (companyError) {
       setSelectedCompany(null);
       setObjects([]);
-      setError(selectError instanceof Error ? selectError.message : 'Не удалось загрузить данные компании');
+      setError(getApiErrorMessage(companyError, 'Не удалось загрузить данные компании'));
+      setCompanyLoading(false);
+      setObjectLoading(false);
+      return;
+    }
+
+    const applyObjectFallback = (companyObjects: CompanyObject[]) => {
+      const activeObjects = companyObjects.filter((object) => object.status !== 'ARCHIVED');
+      if (activeObjects.length) {
+        setObjects(activeObjects);
+        if (activeObjects.length === 1) setSelectedObjectId(activeObjects[0].id);
+        return;
+      }
+
+      const fallbackObject: CompanyObject = {
+        id: loadedCompany.id,
+        companyId: loadedCompany.id,
+        name: loadedCompany.objectName || loadedCompany.name,
+        address: loadedCompany.objectAddress || loadedCompany.actualAddress || loadedCompany.legalAddress,
+        activityType: loadedCompany.activityType,
+        coordinates: '',
+        sanitaryZone: '',
+        notes: '',
+        samplingLocation: loadedCompany.samplingLocation,
+        status: 'ACTIVE',
+      };
+      setObjects([fallbackObject]);
+      setSelectedObjectId(fallbackObject.id);
+      setFallbackObjectId(fallbackObject.id);
+      setObjectWarning('Отдельные объекты компании не найдены. Для предпросмотра используются данные самой компании; протокол будет создан без objectId.');
+    };
+
+    try {
+      const companyObjects = await getCompanyObjects(loadedCompany.id);
+      applyObjectFallback(companyObjects.length ? companyObjects : loadedCompany.objects || []);
+    } catch {
+      applyObjectFallback(loadedCompany.objects || []);
+      setObjectWarning((current) => current || 'Endpoint объектов компании недоступен. Используются объекты из карточки компании.');
     } finally {
       setCompanyLoading(false);
       setObjectLoading(false);
@@ -106,23 +153,45 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedCompany || !selectedTemplate) return;
+    if (!selectedCompany || !selectedTemplate || loading || submittingRef.current) return;
     const form = new FormData(event.currentTarget);
     const protocolDate = String(form.get('protocolDate') || '');
-    if (!protocolDate) return;
+    const samplingDate = String(form.get('samplingDate') || '');
+    const testingStartDate = String(form.get('testingStartDate') || '');
+    const testingEndDate = String(form.get('testingEndDate') || '');
+    if (!protocolDate) {
+      setError('Укажите дату протокола.');
+      return;
+    }
+    if (samplingDate && testingStartDate && samplingDate > testingStartDate) {
+      setError('Дата отбора не может быть позже начала испытаний.');
+      return;
+    }
+    if (testingStartDate && testingEndDate && testingStartDate > testingEndDate) {
+      setError('Дата начала испытаний не может быть позже даты окончания.');
+      return;
+    }
 
-    await onCreate({
-      companyId: selectedCompany.id,
-      objectId: selectedObjectId || undefined,
-      templateId: selectedTemplate,
-      protocolNumber: String(form.get('protocolNumber') || ''),
-      protocolDate,
-      samplingDate: String(form.get('samplingDate') || ''),
-      testingStartDate: String(form.get('testingStartDate') || ''),
-      testingEndDate: String(form.get('testingEndDate') || ''),
-      purpose: String(form.get('purpose') || ''),
-      environmentalConditions: String(form.get('environmentalConditions') || ''),
-    });
+    submittingRef.current = true;
+    setError('');
+    try {
+      await onCreate({
+        companyId: selectedCompany.id,
+        objectId: selectedObjectId && selectedObjectId !== fallbackObjectId ? selectedObjectId : undefined,
+        templateId: selectedTemplate,
+        protocolNumber: String(form.get('protocolNumber') || ''),
+        protocolDate,
+        samplingDate,
+        testingStartDate,
+        testingEndDate,
+        purpose: String(form.get('purpose') || ''),
+        environmentalConditions: String(form.get('environmentalConditions') || ''),
+      });
+    } catch (createError) {
+      setError(getApiErrorMessage(createError, 'Не удалось создать протокол'));
+    } finally {
+      submittingRef.current = false;
+    }
   };
 
   return (
@@ -141,6 +210,8 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
                   setSelectedCompany(null);
                   setObjects([]);
                   setSelectedObjectId('');
+                  setFallbackObjectId('');
+                  setObjectWarning('');
                 }}
                 placeholder="Начните вводить название или БИН"
                 className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100"
@@ -170,6 +241,11 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
           <section className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="mb-3 text-sm font-black uppercase tracking-wide text-slate-500">2. Объект компании</p>
             {objectLoading && <p className="text-sm font-semibold text-slate-500">Загрузка объектов...</p>}
+            {!objectLoading && objectWarning && (
+              <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+                {objectWarning}
+              </div>
+            )}
             {!objectLoading && objects.length === 0 && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
                 У компании нет объектов. Добавьте объект в карточке компании или создайте протокол без объекта, если backend разрешает.

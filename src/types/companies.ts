@@ -10,6 +10,7 @@ export type CompanyObject = {
   coordinates: string;
   sanitaryZone: string;
   notes: string;
+  samplingLocation?: string;
   status: CompanyObjectStatus;
   createdAt?: string;
   updatedAt?: string;

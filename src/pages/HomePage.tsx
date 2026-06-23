@@ -8,6 +8,7 @@ import ServiceSelector from '../components/ServiceSelector';
 import CaseStudies from '../components/CaseStudies';
 import JivoChat from '../components/JivoChat';
 import SEO from '../components/SEO';
+import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { DocumentsSection, TrustSection } from '../components/TrustBlocks';
 import { company } from '../config/company';
 import { seoPages } from '../data/seoPages';
@@ -100,10 +101,9 @@ const services = [
 ];
 
 const visualHighlights = [
-  { title: 'Лабораторный контроль', image: '/edward.jpg', className: 'sm:col-span-2' },
-  { title: 'Документы и сопровождение', image: '/images (1).jpg', className: '' },
-  { title: 'Вывоз отходов', image: '/jose.jpg', className: '' },
-  { title: 'Экологический мониторинг', image: '/para.jpg', className: 'sm:col-span-2' },
+  { title: 'Лабораторный контроль', image: '/edward.jpg', className: 'col-span-2 aspect-[16/9] lg:col-span-1 lg:row-span-2 lg:aspect-auto' },
+  { title: 'Документы и сопровождение', image: '/images (1).jpg', className: 'aspect-[4/3] lg:aspect-auto' },
+  { title: 'Вывоз и утилизация', image: '/jose.jpg', className: 'aspect-[4/3] lg:aspect-auto' },
 ];
 
 const organizationSchema = {
@@ -170,9 +170,9 @@ const HomePage = () => (
     <ServiceSelector />
 
     <section id="about-company" className="bg-white px-4 py-16 sm:px-8 sm:py-20">
-      <div className="mx-auto grid max-w-7xl gap-8 rounded-[28px] border border-slate-200 bg-[#F7FBFD] p-5 shadow-xl shadow-eco-900/6 sm:p-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-        <Reveal direction="right">
-          <div>
+      <div className="mx-auto grid max-w-7xl gap-8 overflow-hidden rounded-[28px] border border-eco-100 bg-gradient-to-br from-white to-eco-50/70 p-5 shadow-xl shadow-eco-900/6 sm:p-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-center lg:gap-12">
+        <Reveal direction="right" className="lg:pl-2">
+          <div className="max-w-xl">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">О компании</p>
             <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">ecoprogress.kz — комплексные экологические решения</h2>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
@@ -181,13 +181,13 @@ const HomePage = () => (
             <Link to="/about" className="mt-7 inline-block"><Button>Подробнее о компании</Button></Link>
           </div>
         </Reveal>
-        <Reveal direction="left">
-          <div className="grid gap-3 sm:grid-cols-2">
+        <Reveal direction="left" className="min-w-0">
+          <div className="grid grid-cols-2 gap-3 lg:h-[430px] lg:grid-cols-[1.18fr_0.82fr] lg:grid-rows-2">
             {visualHighlights.map((item) => (
-              <div key={item.title} className={`group relative min-h-[150px] overflow-hidden rounded-[20px] bg-eco-900 shadow-sm ${item.className}`}>
-                <img src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-eco-900/88 via-eco-900/30 to-transparent" />
-                <div className="relative flex h-full min-h-[150px] items-end p-5">
+              <div key={item.title} className={`group relative min-h-[145px] overflow-hidden rounded-[20px] bg-eco-900 shadow-sm ${item.className}`}>
+                <ResponsiveImage fill src={item.image} alt={item.title} width={900} height={506} className="object-cover transition duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-eco-900/90 via-eco-900/10 to-transparent" />
+                <div className="relative flex h-full min-h-[145px] items-end p-4 sm:p-5">
                   <span className="inline-flex items-center gap-2 text-sm font-bold text-white">
                     <Building2 className="shrink-0 text-accent" size={18} />
                     {item.title}
@@ -216,7 +216,7 @@ const HomePage = () => (
             <Reveal key={title} delay={index * 0.04}>
               <Link to={href} className="group card-hover flex h-full flex-col rounded-[20px] border border-slate-200 bg-white shadow-lg shadow-eco-900/5">
                 <div className="relative h-44 overflow-hidden">
-                  <img src={image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  <ResponsiveImage src={image} alt={title} width={900} height={506} wrapperClassName="h-44 w-full" className="object-cover transition duration-500 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-eco-900/70 to-transparent" />
                   <div className="absolute bottom-4 left-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/92 text-eco-700 shadow-sm">
                     <Icon size={24} />

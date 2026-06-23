@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { PageSkeleton } from '../components/loading/PageLoader';
+import ErrorState from '../components/ui/ErrorState';
 import OrderChoiceModal from '../components/OrderChoiceModal';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { getServiceById } from '../services/serviceService';
@@ -13,13 +14,14 @@ import { createBlankWhatsAppRequestMessage } from '../utils/whatsapp';
 const ServiceDetailsPage = () => {
   const { id } = useParams();
   const [orderModal, setOrderModal] = useState(false);
-  const { data: service, isLoading } = useQuery({
+  const { data: service, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['services', id],
     queryFn: () => getServiceById(id!),
     enabled: !!id,
   });
 
-  if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
+  if (isLoading) return <PageSkeleton />;
+  if (isError) return <div className="mx-auto min-h-[60vh] max-w-3xl px-5 py-16"><ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} /></div>;
   if (!service) return <Navigate to="/services" replace />;
 
   return (

@@ -56,7 +56,7 @@ const PartnersPage = () => (
     />
 
     <section className="relative isolate overflow-hidden bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-20">
-      <img src="/para.jpg" alt="" className="absolute inset-0 -z-30 h-full w-full object-cover" />
+      <img src="/para.jpg" alt="" width="1600" height="900" loading="eager" fetchPriority="high" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="absolute inset-0 -z-30 h-full w-full bg-eco-900 object-cover" />
       <div className="absolute inset-0 -z-20 bg-eco-900/82" />
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
         <Reveal>
@@ -72,7 +72,7 @@ const PartnersPage = () => (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {partners.slice(0, 5).map((partner) => (
               <div key={partner.title} className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[18px] border border-white/14 bg-white p-3 shadow-xl shadow-eco-950/20">
-                <img src={partner.logo} alt={partner.title} className="max-h-full max-w-full object-contain" />
+                <img src={partner.logo} alt={partner.title} width="640" height="480" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="max-h-full max-w-full object-contain" />
               </div>
             ))}
           </div>
@@ -93,7 +93,7 @@ const PartnersPage = () => (
             <Reveal key={partner.title} delay={index * 0.04}>
               <article className="flex h-full flex-col rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex aspect-[5/3] items-center justify-center rounded-2xl bg-slate-50 p-4">
-                  <img src={partner.logo} alt={partner.title} className="max-h-full max-w-full object-contain" />
+                  <img src={partner.logo} alt={partner.title} width="640" height="384" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="max-h-full max-w-full object-contain" />
                 </div>
                 <h3 className="mt-5 text-lg font-bold text-eco-900">{partner.title}</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-600">{partner.description}</p>

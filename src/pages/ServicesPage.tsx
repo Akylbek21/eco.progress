@@ -7,7 +7,7 @@ import Reveal from '../components/animations/Reveal';
 import WhatsAppButton from '../components/WhatsAppButton';
 import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { PageSkeleton } from '../components/loading/PageLoader';
 import OrderChoiceModal from '../components/OrderChoiceModal';
 import { fallbackServices, getServices } from '../services/serviceService';
 import { getBusinessCompanyById } from '../utils/crm';
@@ -79,7 +79,7 @@ const ServicesPage = () => {
     return () => window.removeEventListener('hashchange', openServiceFromHash);
   }, [services]);
 
-  if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center"><LoadingSpinner /></div>;
+  if (isLoading) return <PageSkeleton />;
   if (!selectedService) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-5 text-center text-sm font-semibold text-slate-600">

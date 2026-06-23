@@ -15,6 +15,7 @@ export type ProtocolInternalStatus =
   | 'BELOW_REQUIRED'
   | 'NORMATIVE_NOT_FOUND'
   | 'UNIT_MISMATCH'
+  | 'NEEDS_REVIEW'
   | 'EMPTY_RESULT'
   | 'INFO';
 
@@ -73,6 +74,8 @@ export type ProtocolTestingData = {
   samplingMethodDocument: string;
   testingMethodDocument: string;
   samplingDate: string;
+  testingStartDate: string;
+  testingEndDate: string;
   testingDate: string;
   testingPurpose: string;
   environmentConditions: string;
@@ -124,8 +127,8 @@ export interface Protocol {
   templateId: ProtocolTemplateId;
   templateName?: string;
   status: ProtocolStatus;
-  companyId?: string;
-  objectId?: string;
+  companyId?: string | number;
+  objectId?: string | number;
   companySnapshot: ProtocolCompanySnapshot;
   protocolDate: string;
   samplingDate?: string;
@@ -159,8 +162,8 @@ export type ProtocolHistoryItem = {
 };
 
 export interface CreateProtocolPayload {
-  companyId: string;
-  objectId?: string;
+  companyId: string | number;
+  objectId?: string | number;
   templateId: ProtocolTemplateId;
   protocolNumber?: string;
   protocolDate: string;
@@ -171,9 +174,17 @@ export interface CreateProtocolPayload {
   environmentalConditions?: string;
 }
 
-export type UpdateProtocolPayload = Partial<
-  Pick<Protocol, 'protocolNumber' | 'number' | 'protocolDate' | 'samplingDate' | 'testingStartDate' | 'testingEndDate' | 'purpose' | 'environmentalConditions' | 'executor' | 'approver' | 'laboratory' | 'organization' | 'testing' | 'results'>
->;
+export type UpdateProtocolPayload = {
+  number: string;
+  protocolDate: string;
+  executor: string;
+  approver: string;
+  laboratory: ProtocolLaboratoryData;
+  organization: ProtocolOrganizationData;
+  testing: ProtocolTestingData;
+  results: ProtocolResultRow[];
+  instruments: MeasurementDevice[];
+};
 
 export type NormativeComparisonType = 'LESS_OR_EQUAL' | 'GREATER_OR_EQUAL' | 'RANGE' | 'EQUAL' | 'INFO';
 
@@ -200,6 +211,9 @@ export type NormativeRecord = {
 export type NormativeSearchResult = {
   found: boolean;
   normative?: NormativeRecord;
+  normatives?: NormativeRecord[];
+  items?: NormativeRecord[];
+  ambiguous?: boolean;
   warning?: string;
 };
 

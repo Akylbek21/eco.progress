@@ -5,12 +5,33 @@ import Button from '../components/ui/Button';
 import CreateProtocolModal from '../components/protocols/CreateProtocolModal';
 import ProtocolList from '../components/protocols/ProtocolList';
 import { protocolStatusLabels } from '../components/protocols/ProtocolStatusBadge';
-import { createProtocol, deleteProtocol, getProtocols, getProtocolTemplates } from '../services/protocolService';
+import {
+  createProtocol,
+  deleteProtocol,
+  downloadDocx,
+  downloadPdf,
+  generateDocx,
+  generatePdf,
+  getProtocols,
+  getProtocolTemplates,
+} from '../services/protocolService';
 import { protocolTemplates, templateName } from '../data/protocolTemplates';
 import { useToast } from '../hooks/useToast';
+import { getApiStatus } from '../services/apiHelpers';
 import type { CreateProtocolPayload, Protocol, ProtocolStatus, ProtocolTemplate } from '../types/protocols';
 
 const statuses: ProtocolStatus[] = ['DRAFT', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED', 'CANCELLED', 'REPLACED'];
+
+const saveBlob = (blob: Blob, name: string) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
 
 const statCards: Array<{ key: 'total' | ProtocolStatus; label: string }> = [
   { key: 'total', label: 'Всего протоколов' },
@@ -42,7 +63,8 @@ const ProtocolsPage = () => {
         getProtocolTemplates().catch(() => protocolTemplates),
       ]);
       setProtocols(protocolItems);
-      setTemplates(templateItems.length ? templateItems : protocolTemplates);
+      const templateSource = templateItems.length ? templateItems : protocolTemplates;
+      setTemplates(Array.from(new Map(templateSource.map((template) => [template.id, template])).values()));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить протоколы');
       setProtocols([]);
@@ -56,7 +78,9 @@ const ProtocolsPage = () => {
   }, []);
 
   const filtered = useMemo(() => protocols.filter((protocol) => {
-    const matchesQuery = !query.trim() || protocol.number?.toLowerCase().includes(query.trim().toLowerCase());
+    const normalizedQuery = query.trim().toLowerCase();
+    const searchable = `${protocol.protocolNumber || protocol.number || ''} ${protocol.companySnapshot?.companyName || protocol.organization?.organizationName || ''}`.toLowerCase();
+    const matchesQuery = !normalizedQuery || searchable.includes(normalizedQuery);
     const matchesStatus = !status || protocol.status === status;
     const matchesTemplate = !templateId || protocol.templateId === templateId;
     return matchesQuery && matchesStatus && matchesTemplate;
@@ -76,6 +100,7 @@ const ProtocolsPage = () => {
       navigate(`/staff/protocols/${protocol.id}`);
     } catch (createError) {
       toast.error('Не удалось создать протокол', createError instanceof Error ? createError.message : undefined);
+      throw createError;
     } finally {
       setCreating(false);
     }
@@ -89,6 +114,31 @@ const ProtocolsPage = () => {
       await load();
     } catch (deleteError) {
       toast.error('Не удалось удалить протокол', deleteError instanceof Error ? deleteError.message : undefined);
+    }
+  };
+
+  const download = async (protocol: Protocol, kind: 'pdf' | 'docx') => {
+    try {
+      let downloaded;
+      let shouldGenerate = false;
+      try {
+        downloaded = kind === 'pdf' ? await downloadPdf(protocol.id) : await downloadDocx(protocol.id);
+        shouldGenerate = !downloaded.blob.size;
+      } catch (downloadError) {
+        if (![404, 409].includes(getApiStatus(downloadError) || 0)) throw downloadError;
+        shouldGenerate = window.confirm(`${kind.toUpperCase()} ещё не сформирован. Сформировать его сейчас?`);
+      }
+      if (!downloaded && !shouldGenerate) return;
+      if (shouldGenerate) {
+        if (kind === 'pdf') await generatePdf(protocol.id);
+        else await generateDocx(protocol.id);
+        downloaded = kind === 'pdf' ? await downloadPdf(protocol.id) : await downloadDocx(protocol.id);
+      }
+      if (!downloaded?.blob.size) throw new Error('Backend вернул пустой файл.');
+      const fallbackName = `${protocol.protocolNumber || protocol.number || `protocol-${protocol.id}`}.${kind}`;
+      saveBlob(downloaded.blob, downloaded.fileName || fallbackName);
+    } catch (downloadError) {
+      toast.error(`Не удалось скачать ${kind.toUpperCase()}`, downloadError instanceof Error ? downloadError.message : undefined);
     }
   };
 
@@ -120,7 +170,7 @@ const ProtocolsPage = () => {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Поиск по номеру протокола"
+            placeholder="Поиск по номеру протокола или компании"
             className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-3 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100"
           />
         </label>
@@ -145,6 +195,8 @@ const ProtocolsPage = () => {
         loading={loading}
         onOpen={(protocol) => navigate(`/staff/protocols/${protocol.id}`)}
         onDelete={remove}
+        onDownloadPdf={(protocol) => download(protocol, 'pdf')}
+        onDownloadDocx={(protocol) => download(protocol, 'docx')}
       />
 
       <CreateProtocolModal

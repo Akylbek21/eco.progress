@@ -6,14 +6,22 @@ const ScrollToTop = () => {
 
   useEffect(() => {
     if (hash) {
-      window.setTimeout(() => {
+      let attempts = 0;
+      let timer = 0;
+      const scrollToHash = () => {
         const target = document.getElementById(hash.slice(1));
-        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 0);
-      return;
+        if (target) {
+          target.scrollIntoView({ behavior: 'auto', block: 'start' });
+          return;
+        }
+        attempts += 1;
+        if (attempts < 20) timer = window.setTimeout(scrollToHash, 50);
+      };
+      scrollToHash();
+      return () => window.clearTimeout(timer);
     }
 
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
   }, [pathname, search, hash]);
 
   return null;

@@ -4,6 +4,7 @@ import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
 import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
+import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { TrustCompact } from '../components/TrustBlocks';
 import { company } from '../config/company';
 import { trackServiceView } from '../services/analytics';
@@ -152,7 +153,7 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
     <div className="bg-white">
       <SEO title={page.metaTitle} description={page.description} canonical={`${company.siteUrl}/services/${page.slug}`} schema={schema} />
       <section className="relative isolate overflow-hidden bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-24">
-        <img src={page.image} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+        <ResponsiveImage fill src={page.image} alt="" priority width={1600} height={900} wrapperClassName="-z-20" className="object-cover" />
         <div className="absolute inset-0 -z-10 bg-eco-900/82" />
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
           <div>

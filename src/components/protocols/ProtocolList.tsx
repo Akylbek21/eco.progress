@@ -1,4 +1,4 @@
-import { Eye, FilePenLine, Trash2 } from 'lucide-react';
+import { Download, Eye, FilePenLine, FileText, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 import ProtocolStatusBadge from './ProtocolStatusBadge';
 import type { Protocol } from '../../types/protocols';
@@ -9,6 +9,8 @@ type ProtocolListProps = {
   loading?: boolean;
   onOpen: (protocol: Protocol) => void;
   onDelete: (protocol: Protocol) => void;
+  onDownloadPdf: (protocol: Protocol) => void | Promise<void>;
+  onDownloadDocx: (protocol: Protocol) => void | Promise<void>;
 };
 
 const SkeletonRows = () => (
@@ -25,7 +27,7 @@ const SkeletonRows = () => (
   </>
 );
 
-const ProtocolList = ({ protocols, loading = false, onOpen, onDelete }: ProtocolListProps) => (
+const ProtocolList = ({ protocols, loading = false, onOpen, onDelete, onDownloadPdf, onDownloadDocx }: ProtocolListProps) => (
   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div className="overflow-x-auto">
       <table className="min-w-[1120px] w-full text-left text-sm">
@@ -56,6 +58,16 @@ const ProtocolList = ({ protocols, loading = false, onOpen, onDelete }: Protocol
                   <Button type="button" variant="secondary" className="px-3" title="Открыть" onClick={() => onOpen(protocol)}>
                     {protocol.status === 'SIGNED' || protocol.status === 'REPLACED' || protocol.status === 'CANCELLED' ? <Eye className="h-4 w-4" /> : <FilePenLine className="h-4 w-4" />}
                   </Button>
+                  {['APPROVED', 'SIGNED', 'REPLACED'].includes(protocol.status) && (
+                    <>
+                      <Button type="button" variant="secondary" className="px-3" title="Скачать PDF" onClick={() => onDownloadPdf(protocol)}>
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button type="button" variant="secondary" className="px-3" title="Скачать DOCX" onClick={() => onDownloadDocx(protocol)}>
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                   {protocol.status === 'DRAFT' && (
                     <Button type="button" variant="secondary" className="px-3 text-rose-700 hover:bg-rose-50" title="Удалить" onClick={() => onDelete(protocol)}>
                       <Trash2 className="h-4 w-4" />
