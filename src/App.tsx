@@ -36,6 +36,7 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
 const ProtocolsPage = lazy(() => import('./pages/ProtocolsPage'));
 const ProtocolEditorPage = lazy(() => import('./pages/ProtocolEditorPage'));
+const ProtocolCreatePage = lazy(() => import('./pages/ProtocolCreatePage'));
 const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
 const NormativeDirectoryPage = lazy(() => import('./pages/NormativeDirectoryPage'));
 const MeasurementDevicesPage = lazy(() => import('./pages/MeasurementDevicesPage'));
@@ -101,6 +102,7 @@ const RoleAccess = ({ roles, loginPath, children }: { roles: UserRole[]; loginPa
 
 function App() {
   const toast = useToast();
+  const protocolMockMode = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
   const notify = (message: string) => {
     const lower = message.toLowerCase();
     if (
@@ -133,7 +135,7 @@ function App() {
         <ScrollToTop />
         <Suspense fallback={<RouteFallback />}>
         <Routes>
-        <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
+        <Route path="/" element={protocolMockMode ? <Navigate to="/staff/protocols" replace /> : <PublicLayout><HomePage /></PublicLayout>} />
         <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
         <Route path="/services" element={<PublicLayout><ServicesPage /></PublicLayout>} />
         <Route path="/services/ecological-documents" element={<PublicLayout><ServiceLandingPage slug="ecological-documents" /></PublicLayout>} />
@@ -166,7 +168,7 @@ function App() {
         <Route path="/cabinet/company" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetCompanyPage /></CabinetLayout></RoleAccess>} />
         <Route path="/cabinet/notifications" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetNotificationsPage /></CabinetLayout></RoleAccess>} />
 
-        <Route path="/staff" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDashboardPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff" element={protocolMockMode ? <Navigate to="/staff/protocols" replace /> : <RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDashboardPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/orders" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffOrdersPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/orders/new" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffNewOrderPage onNotify={notify} /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/orders/company/:businessCompanyId" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffOrdersPage /></StaffLayout></RoleAccess>} />
@@ -185,6 +187,7 @@ function App() {
         <Route path="/staff/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/calendar" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']}><StaffCalendarPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть протоколы"><ProtocolsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/protocols/new" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ProtocolCreatePage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols/:protocolId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/normatives" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/measurement-devices" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />

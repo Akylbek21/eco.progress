@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, History, Plus, RotateCw, Search, Trash2 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import ProtocolActionsBar from '../components/protocols/ProtocolActionsBar';
@@ -19,28 +19,10 @@ import SignProtocolModal from '../components/protocols/SignProtocolModal';
 import { templateName } from '../data/protocolTemplates';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../contexts/AuthContext';
-import { getAvailableMeasurementDevices } from '../services/measurementDeviceService';
+import { getMeasurementDevices } from '../services/measurementDeviceService';
 import { getApiStatus } from '../services/apiHelpers';
 import { signBase64WithNCALayer } from '../services/ncalayer';
-import {
-  addProtocolMeasurementDevice,
-  approveProtocol,
-  cancelProtocol,
-  checkNormatives,
-  deleteProtocol,
-  downloadDocx,
-  downloadPdf,
-  generateDocx,
-  generatePdf,
-  getProtocol,
-  previewProtocol,
-  readyForApproval,
-  removeProtocolMeasurementDevice,
-  replaceProtocol,
-  returnToDraft,
-  signProtocol,
-  updateProtocol,
-} from '../services/protocolService';
+import protocolService, { useProtocolMocks } from '../services/protocolService';
 import type { MeasurementDevice, Protocol, ProtocolCompanySnapshot, ProtocolMeasurementDevice } from '../types/protocols';
 
 const emptyLaboratory = {
@@ -182,7 +164,7 @@ const DevicePickerModal = ({
   useEffect(() => {
     if (!open) return;
     setError('');
-    getAvailableMeasurementDevices()
+    getMeasurementDevices()
       .then(setDevices)
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить средства измерений'));
   }, [open]);
@@ -290,6 +272,7 @@ const MeasurementDevicesSection = ({
 const ProtocolEditorPage = () => {
   const { protocolId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const { user } = useAuth();
   const [protocol, setProtocol] = useState<Protocol | null>(null);
@@ -304,10 +287,11 @@ const ProtocolEditorPage = () => {
   const [devicePickerOpen, setDevicePickerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const savedSignatureRef = useRef('');
+  const autoPreviewRef = useRef(false);
 
   const readOnly = useMemo(() => !protocol || protocol.status !== 'DRAFT', [protocol]);
   const dirty = useMemo(() => Boolean(protocol && savedSignatureRef.current && editableSignature(protocol) !== savedSignatureRef.current), [protocol]);
-  const canApprove = user?.role === 'ADMIN' || user?.role === 'DIRECTOR' || user?.role === 'HEAD';
+  const canApprove = useProtocolMocks || user?.role === 'ADMIN' || user?.role === 'DIRECTOR' || user?.role === 'HEAD';
   const tabs = [
     { id: 'general', label: 'Общие данные' },
     { id: 'organization', label: 'Организация' },
@@ -342,7 +326,7 @@ const ProtocolEditorPage = () => {
     setLoading(true);
     setError('');
     try {
-      const item = await getProtocol(protocolId);
+      const item = await protocolService.getProtocol(protocolId);
       applyServerProtocol(item);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить протокол');
@@ -385,6 +369,12 @@ const ProtocolEditorPage = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
+  useEffect(() => {
+    if (!protocol || autoPreviewRef.current || !new URLSearchParams(location.search).has('preview')) return;
+    autoPreviewRef.current = true;
+    preview();
+  }, [protocol, location.search]);
+
   const patchProtocol = (patch: Partial<Protocol>) => {
     setProtocol((current) => current ? { ...current, ...patch } : current);
   };
@@ -412,9 +402,11 @@ const ProtocolEditorPage = () => {
     }
     setBusy(true);
     try {
-      const updated = await updateProtocol(protocol.id, {
+      const updated = await protocolService.updateProtocol(protocol.id, {
         number: protocol.protocolNumber || protocol.number || '',
         protocolDate: protocol.protocolDate || '',
+        formCode: protocol.formCode,
+        application: protocol.application,
         executor: protocol.executor || '',
         approver: protocol.approver || '',
         laboratory: protocol.laboratory,
@@ -441,7 +433,7 @@ const ProtocolEditorPage = () => {
       const saved = await save();
       if (!saved) return;
     }
-    await run(() => checkNormatives(protocol.id), 'Нормативы проверены');
+    await run(() => protocolService.checkNormatives(protocol.id), 'Нормативы проверены');
   };
 
   const run = async (action: () => Promise<Protocol>, success: string) => {
@@ -462,7 +454,7 @@ const ProtocolEditorPage = () => {
     setPreviewOpen(true);
     setPreviewLoading(true);
     try {
-      const blob = await previewProtocol(protocol.id);
+      const blob = await protocolService.previewProtocol(protocol.id);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(blob));
     } catch (previewError) {
@@ -477,21 +469,9 @@ const ProtocolEditorPage = () => {
     if (!protocol) return;
     setBusy(true);
     try {
-      let downloaded;
-      let shouldGenerate = false;
-      try {
-        downloaded = kind === 'pdf' ? await downloadPdf(protocol.id) : await downloadDocx(protocol.id);
-        shouldGenerate = !downloaded.blob.size;
-      } catch (downloadError) {
-        if (![404, 409].includes(getApiStatus(downloadError) || 0)) throw downloadError;
-        shouldGenerate = window.confirm(`${kind.toUpperCase()} ещё не сформирован. Сформировать его сейчас?`);
-      }
-      if (!downloaded && !shouldGenerate) return;
-      if (shouldGenerate) {
-        const generated = kind === 'pdf' ? await generatePdf(protocol.id) : await generateDocx(protocol.id);
-        applyServerProtocol(generated);
-        downloaded = kind === 'pdf' ? await downloadPdf(protocol.id) : await downloadDocx(protocol.id);
-      }
+      const generated = kind === 'pdf' ? await protocolService.generatePdf(protocol.id) : await protocolService.generateDocx(protocol.id);
+      applyServerProtocol(generated);
+      const downloaded = kind === 'pdf' ? await protocolService.downloadPdf(protocol.id) : await protocolService.downloadDocx(protocol.id);
       if (!downloaded?.blob.size) throw new Error('Backend вернул пустой файл.');
       saveBlob(downloaded.blob, downloaded.fileName || fileName(protocol, kind));
     } catch (downloadError) {
@@ -505,7 +485,7 @@ const ProtocolEditorPage = () => {
     if (!protocol) return;
     setBusy(true);
     try {
-      const updated = await addProtocolMeasurementDevice(protocol.id, device);
+      const updated = await protocolService.addProtocolMeasurementDevice(protocol.id, device);
       applyServerProtocol(updated);
       setDevicePickerOpen(false);
       toast.success('Средство измерения добавлено');
@@ -520,7 +500,7 @@ const ProtocolEditorPage = () => {
     if (!protocol || !window.confirm('Удалить прибор из протокола?')) return;
     setBusy(true);
     try {
-      const updated = await removeProtocolMeasurementDevice(protocol.id, deviceId);
+      const updated = await protocolService.removeProtocolMeasurementDevice(protocol.id, deviceId);
       applyServerProtocol(updated);
       toast.success('Средство измерения удалено');
     } catch (removeError) {
@@ -534,9 +514,16 @@ const ProtocolEditorPage = () => {
     if (!protocol || busy) return;
     setBusy(true);
     try {
+      if (useProtocolMocks) {
+        const updated = await protocolService.signProtocol(protocol.id, 'mock-signature');
+        applyServerProtocol(updated);
+        setSignOpen(false);
+        toast.success('Протокол подписан в демонстрационном режиме');
+        return;
+      }
       let document;
       try {
-        document = await downloadPdf(protocol.id);
+        document = await protocolService.downloadPdf(protocol.id);
       } catch (downloadError) {
         if ([404, 409].includes(getApiStatus(downloadError) || 0)) {
           throw new Error('PDF ещё не сформирован. Сначала нажмите «PDF», затем повторите подписание.');
@@ -547,7 +534,7 @@ const ProtocolEditorPage = () => {
       const dataBase64 = await blobToBase64(document.blob);
       const { signedCms } = await signBase64WithNCALayer(dataBase64);
       if (!signedCms.trim()) throw new Error('NCALayer не вернул CMS-подпись.');
-      const updated = await signProtocol(protocol.id, signedCms);
+      const updated = await protocolService.signProtocol(protocol.id, signedCms);
       applyServerProtocol(updated);
       setSignOpen(false);
       toast.success('Протокол подписан');
@@ -626,7 +613,14 @@ const ProtocolEditorPage = () => {
         onNotify={notify}
       />}
       {activeTab === 'devices' && <MeasurementDevicesSection devices={protocol.measurementDevices || []} readOnly={readOnly || busy} onAdd={() => setDevicePickerOpen(true)} onRemove={removeDevice} />}
-      {activeTab === 'note' && <ProtocolExplanatoryNoteForm value={protocol.explanatoryNote || ''} readOnly={readOnly} onChange={(explanatoryNote) => patchProtocol({ explanatoryNote })} />}
+      {activeTab === 'note' && <ProtocolExplanatoryNoteForm
+        value={protocol.explanatoryNote || ''}
+        readOnly={readOnly}
+        onChange={(explanatoryNote) => patchProtocol({ explanatoryNote })}
+        onGenerate={() => patchProtocol({ explanatoryNote: protocol.templateId === 'industrial_emissions'
+          ? `В рамках производственного экологического контроля проведены инструментальные замеры на источниках выбросов объекта «${protocol.companySnapshot.objectName}». В период обследования выполнены измерения параметров газовоздушной смеси и концентраций определяемых веществ. Работающие источники: ${Array.from(new Set(protocol.results.map((row) => String(row.values.sourceNumber || row.values.samplingPlace || '')).filter(Boolean))).join(', ') || 'не указаны'}. Неработавшие источники на момент обследования не выявлены. Определяемые вещества: ${Array.from(new Set(protocol.results.map((row) => String(row.values.indicator || '')).filter(Boolean))).join(', ') || 'не указаны'}. Использованные приборы: ${protocol.measurementDevices.map((item) => item.deviceSnapshot.name).join(', ') || 'не указаны'}. Измерения выполнены в соответствии с нормативными документами и областью аккредитации испытательной лаборатории.`
+          : `Испытания проведены в соответствии с областью аккредитации лаборатории. Полученные результаты приведены в таблице протокола и относятся только к исследованным пробам и объектам.` })}
+      />}
 
       {activeTab === 'history' && <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900"><History className="h-5 w-5 text-eco-700" /> История действий</h2>
@@ -648,12 +642,12 @@ const ProtocolEditorPage = () => {
         onSave={async () => { await save(); }}
         onPreview={preview}
         onCheckNormatives={checkSavedNormatives}
-        onReady={() => run(() => readyForApproval(protocol.id), 'Протокол готов к утверждению')}
+        onReady={() => run(() => protocolService.readyForApproval(protocol.id), 'Протокол готов к утверждению')}
         onDelete={async () => {
           if (!window.confirm('Удалить черновик протокола?')) return;
           setBusy(true);
           try {
-            await deleteProtocol(protocol.id);
+            await protocolService.deleteProtocol(protocol.id);
             savedSignatureRef.current = '';
             toast.success('Протокол удален');
             navigate('/staff/protocols');
@@ -663,14 +657,14 @@ const ProtocolEditorPage = () => {
             setBusy(false);
           }
         }}
-        onApprove={() => run(() => approveProtocol(protocol.id), 'Протокол утвержден')}
-        onReturnDraft={() => run(() => returnToDraft(protocol.id), 'Протокол возвращен в черновик')}
+        onApprove={() => run(() => protocolService.approveProtocol(protocol.id), 'Протокол утвержден')}
+        onReturnDraft={() => run(() => protocolService.returnToDraft(protocol.id), 'Протокол возвращен в черновик')}
         onCancel={async () => {
           if (!window.confirm('Отменить протокол? После отмены редактирование будет недоступно.')) return;
-          await run(() => cancelProtocol(protocol.id), 'Протокол отменен');
+          await run(() => protocolService.cancelProtocol(protocol.id), 'Протокол отменен');
         }}
-        onGeneratePdf={() => run(() => generatePdf(protocol.id), 'PDF сформирован')}
-        onGenerateDocx={() => run(() => generateDocx(protocol.id), 'DOCX сформирован')}
+        onGeneratePdf={() => run(() => protocolService.generatePdf(protocol.id), 'PDF сформирован')}
+        onGenerateDocx={() => run(() => protocolService.generateDocx(protocol.id), 'DOCX сформирован')}
         onSign={() => setSignOpen(true)}
         onDownloadPdf={() => generateAndDownload('pdf')}
         onDownloadDocx={() => generateAndDownload('docx')}
@@ -678,7 +672,7 @@ const ProtocolEditorPage = () => {
         onOpenReplacement={protocol.replacedByProtocolId ? () => navigateSafely(`/staff/protocols/${protocol.replacedByProtocolId}`) : undefined}
       />
 
-      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} draft={protocol.status !== 'APPROVED' && protocol.status !== 'SIGNED'} onClose={() => setPreviewOpen(false)} />
+      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} protocol={protocol} draft={protocol.status !== 'APPROVED' && protocol.status !== 'SIGNED'} onClose={() => setPreviewOpen(false)} />
       <SignProtocolModal open={signOpen} loading={busy} onClose={() => setSignOpen(false)} onConfirm={signCurrentProtocol} />
       <ReplaceProtocolModal
         open={replaceOpen}
@@ -687,7 +681,7 @@ const ProtocolEditorPage = () => {
         onConfirm={async (reason) => {
           setBusy(true);
           try {
-            const replacement = await replaceProtocol(protocol.id, reason);
+            const replacement = await protocolService.replaceProtocol(protocol.id, reason);
             toast.success('Создана исправленная версия');
             savedSignatureRef.current = '';
             navigate(`/staff/protocols/${replacement.id}`);

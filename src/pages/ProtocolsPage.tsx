@@ -1,29 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Search, Plus } from 'lucide-react';
+import { Plus, RefreshCw, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
-import CreateProtocolModal from '../components/protocols/CreateProtocolModal';
 import ProtocolList from '../components/protocols/ProtocolList';
 import ProtocolPreviewModal from '../components/protocols/ProtocolPreviewModal';
 import { protocolStatusLabels } from '../components/protocols/ProtocolStatusBadge';
-import {
-  createProtocol,
-  deleteProtocol,
-  downloadDocx,
-  downloadPdf,
-  generateDocx,
-  generatePdf,
-  getProtocols,
-  getProtocolTemplates,
-  previewProtocol,
-  replaceProtocol,
-} from '../services/protocolService';
+import protocolService from '../services/protocolService';
 import { physicalFactorTypes, protocolTemplates, templateName } from '../data/protocolTemplates';
 import { useToast } from '../hooks/useToast';
-import { getApiStatus } from '../services/apiHelpers';
-import type { CreateProtocolPayload, Protocol, ProtocolStatus, ProtocolTemplate } from '../types/protocols';
+import type { Protocol, ProtocolStatus, ProtocolTemplate } from '../types/protocols';
 
 const statuses: ProtocolStatus[] = ['DRAFT', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED', 'CANCELLED', 'REPLACED'];
+const statCards: Array<{ key: 'total' | ProtocolStatus; label: string }> = [
+  { key: 'total', label: 'Всего протоколов' },
+  { key: 'DRAFT', label: 'Черновики' },
+  { key: 'READY_FOR_APPROVAL', label: 'Готовы к утверждению' },
+  { key: 'APPROVED', label: 'Утверждены' },
+  { key: 'SIGNED', label: 'Подписаны' },
+];
 
 const saveBlob = (blob: Blob, name: string) => {
   const url = URL.createObjectURL(blob);
@@ -36,87 +30,99 @@ const saveBlob = (blob: Blob, name: string) => {
   URL.revokeObjectURL(url);
 };
 
-const statCards: Array<{ key: 'total' | ProtocolStatus; label: string }> = [
-  { key: 'total', label: 'Всего протоколов' },
-  { key: 'DRAFT', label: 'Черновики' },
-  { key: 'READY_FOR_APPROVAL', label: 'Готовые к утверждению' },
-  { key: 'APPROVED', label: 'Утвержденные' },
-  { key: 'SIGNED', label: 'Подписанные' },
-];
-
 const ProtocolsPage = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [templates, setTemplates] = useState<ProtocolTemplate[]>(protocolTemplates);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [subtype, setSubtype] = useState('');
   const [compliance, setCompliance] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [previewUrl, setPreviewUrl] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewProtocolId, setPreviewProtocolId] = useState('');
 
   const load = async () => {
     setLoading(true);
     setError('');
     try {
-      const [protocolItems, templateItems] = await Promise.all([
-        getProtocols(),
-        getProtocolTemplates().catch(() => protocolTemplates),
-      ]);
-      setProtocols(protocolItems);
-      const templateSource = templateItems.length ? templateItems : protocolTemplates;
-      setTemplates(Array.from(new Map(templateSource.map((template) => [template.id, template])).values()));
+      const [items, templateItems] = await Promise.all([protocolService.getProtocols(), protocolService.getProtocolTemplates()]);
+      setProtocols(items);
+      setTemplates(templateItems.length ? templateItems : protocolTemplates);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить протоколы');
-      setProtocols([]);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => protocols.filter((protocol) => {
-    const normalizedQuery = query.trim().toLowerCase();
-    const searchable = `${protocol.protocolNumber || protocol.number || ''} ${protocol.companySnapshot?.companyName || protocol.organization?.organizationName || ''} ${protocol.companySnapshot?.bin || ''}`.toLowerCase();
-    const matchesQuery = !normalizedQuery || searchable.includes(normalizedQuery);
-    const matchesStatus = !status || protocol.status === status;
-    const matchesTemplate = !templateId || protocol.templateId === templateId;
-    const matchesSubtype = !subtype || protocol.subtype === subtype;
-    const matchesCompliance = !compliance || protocol.complianceResult === compliance;
-    const matchesFrom = !dateFrom || protocol.protocolDate >= dateFrom;
-    const matchesTo = !dateTo || protocol.protocolDate <= dateTo;
-    return matchesQuery && matchesStatus && matchesTemplate && matchesSubtype && matchesCompliance && matchesFrom && matchesTo;
-  }), [protocols, query, status, templateId, subtype, compliance, dateFrom, dateTo]);
+    const needle = query.trim().toLowerCase();
+    const haystack = `${protocol.protocolNumber} ${protocol.companySnapshot.companyName} ${protocol.companySnapshot.bin || ''} ${protocol.companySnapshot.objectName || ''}`.toLowerCase();
+    return (!needle || haystack.includes(needle))
+      && (!status || protocol.status === status)
+      && (!templateId || protocol.templateId === templateId)
+      && (!subtype || protocol.subtype === subtype)
+      && (!compliance || protocol.complianceResult === compliance);
+  }), [protocols, query, status, templateId, subtype, compliance]);
 
-  useEffect(() => () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-  }, [previewUrl]);
+  const stats = useMemo(() => statCards.map((card) => ({
+    ...card,
+    value: card.key === 'total' ? protocols.length : protocols.filter((protocol) => protocol.status === card.key).length,
+  })), [protocols]);
 
   const preview = async (protocol: Protocol) => {
+    setPreviewProtocolId(protocol.id);
     setPreviewOpen(true);
     setPreviewLoading(true);
     try {
-      const blob = await previewProtocol(protocol.id);
-      if (!blob.size) throw new Error('Backend вернул пустой файл предпросмотра.');
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(blob));
+      await protocolService.previewProtocol(protocol.id);
     } catch (previewError) {
-      setPreviewUrl('');
       toast.error('Не удалось открыть предпросмотр', previewError instanceof Error ? previewError.message : undefined);
     } finally {
       setPreviewLoading(false);
+    }
+  };
+
+  const remove = async (protocol: Protocol) => {
+    if (!window.confirm(`Удалить черновик ${protocol.protocolNumber}?`)) return;
+    try {
+      await protocolService.deleteProtocol(protocol.id);
+      toast.success('Черновик удалён');
+      await load();
+    } catch (deleteError) {
+      toast.error('Не удалось удалить протокол', deleteError instanceof Error ? deleteError.message : undefined);
+    }
+  };
+
+  const copy = async (protocol: Protocol) => {
+    try {
+      const duplicate = await protocolService.createProtocol({
+        companyId: protocol.companyId || '',
+        objectId: protocol.objectId || '',
+        templateId: protocol.templateId,
+        subtype: protocol.subtype,
+        protocolDate: protocol.protocolDate,
+        samplingDate: protocol.testing.samplingDate,
+        testingStartDate: protocol.testing.testingStartDate,
+        testingEndDate: protocol.testing.testingEndDate,
+        productName: protocol.organization.productName,
+        testingBasis: protocol.organization.testingBasis,
+        productNormativeDocument: protocol.testing.productNormativeDocument,
+        samplingMethodDocument: protocol.testing.samplingMethodDocument,
+        testingMethodDocument: protocol.testing.testingMethodDocument,
+        purpose: protocol.testing.testingPurpose,
+        environment: protocol.environment,
+      });
+      toast.success('Создана копия протокола');
+      navigate(`/staff/protocols/${duplicate.id}`);
+    } catch (copyError) {
+      toast.error('Не удалось скопировать протокол', copyError instanceof Error ? copyError.message : undefined);
     }
   };
 
@@ -124,65 +130,20 @@ const ProtocolsPage = () => {
     const reason = window.prompt('Укажите причину создания исправленной версии:');
     if (!reason?.trim()) return;
     try {
-      const replacement = await replaceProtocol(protocol.id, reason.trim());
-      toast.success('Исправленная версия создана');
+      const replacement = await protocolService.replaceProtocol(protocol.id, reason.trim());
       navigate(`/staff/protocols/${replacement.id}`);
     } catch (replaceError) {
       toast.error('Не удалось создать исправленную версию', replaceError instanceof Error ? replaceError.message : undefined);
     }
   };
 
-  const stats = useMemo(() => statCards.map((card) => {
-    if (card.key === 'total') return { ...card, value: protocols.length };
-    return { ...card, value: protocols.filter((protocol) => protocol.status === card.key).length };
-  }), [protocols]);
-
-  const submitCreate = async (payload: CreateProtocolPayload) => {
-    setCreating(true);
-    try {
-      const protocol = await createProtocol(payload);
-      toast.success('Протокол успешно создан');
-      setModalOpen(false);
-      navigate(`/staff/protocols/${protocol.id}`);
-    } catch (createError) {
-      toast.error('Не удалось создать протокол', createError instanceof Error ? createError.message : undefined);
-      throw createError;
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const remove = async (protocol: Protocol) => {
-    if (!window.confirm(`Удалить протокол ${protocol.number || protocol.id}?`)) return;
-    try {
-      await deleteProtocol(protocol.id);
-      toast.success('Протокол удален');
-      await load();
-    } catch (deleteError) {
-      toast.error('Не удалось удалить протокол', deleteError instanceof Error ? deleteError.message : undefined);
-    }
-  };
-
   const download = async (protocol: Protocol, kind: 'pdf' | 'docx') => {
     try {
-      let downloaded;
-      let shouldGenerate = false;
-      try {
-        downloaded = kind === 'pdf' ? await downloadPdf(protocol.id) : await downloadDocx(protocol.id);
-        shouldGenerate = !downloaded.blob.size;
-      } catch (downloadError) {
-        if (![404, 409].includes(getApiStatus(downloadError) || 0)) throw downloadError;
-        shouldGenerate = window.confirm(`${kind.toUpperCase()} ещё не сформирован. Сформировать его сейчас?`);
-      }
-      if (!downloaded && !shouldGenerate) return;
-      if (shouldGenerate) {
-        if (kind === 'pdf') await generatePdf(protocol.id);
-        else await generateDocx(protocol.id);
-        downloaded = kind === 'pdf' ? await downloadPdf(protocol.id) : await downloadDocx(protocol.id);
-      }
-      if (!downloaded?.blob.size) throw new Error('Backend вернул пустой файл.');
-      const fallbackName = `${protocol.protocolNumber || protocol.number || `protocol-${protocol.id}`}.${kind}`;
-      saveBlob(downloaded.blob, downloaded.fileName || fallbackName);
+      if (kind === 'pdf') await protocolService.generatePdf(protocol.id);
+      else await protocolService.generateDocx(protocol.id);
+      const file = kind === 'pdf' ? await protocolService.downloadPdf(protocol.id) : await protocolService.downloadDocx(protocol.id);
+      if (!file.blob.size) throw new Error('Файл пуст.');
+      saveBlob(file.blob, file.fileName || `${protocol.protocolNumber}.${kind}`);
     } catch (downloadError) {
       toast.error(`Не удалось скачать ${kind.toUpperCase()}`, downloadError instanceof Error ? downloadError.message : undefined);
     }
@@ -190,90 +151,33 @@ const ProtocolsPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:flex-row xl:items-end xl:justify-between">
+      <header className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-eco-700">Лаборатория</p>
-          <h1 className="mt-1 text-2xl font-black text-slate-950 sm:text-3xl">Протоколы испытаний</h1>
+          <p className="text-sm font-bold uppercase tracking-wide text-eco-700">Испытательная лаборатория</p>
+          <h1 className="mt-1 text-3xl font-black text-slate-950">Протоколы испытаний</h1>
+          <p className="mt-2 text-sm text-slate-500">Создание, проверка нормативов, утверждение и официальный предпросмотр.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={() => setModalOpen(true)}><Plus className="h-4 w-4" /> Создать протокол</Button>
+          <Button type="button" onClick={() => navigate('/staff/protocols/new')}><Plus className="h-4 w-4" /> Создать протокол</Button>
           <Button type="button" variant="secondary" onClick={load} disabled={loading}><RefreshCw className="h-4 w-4" /> Обновить</Button>
         </div>
+      </header>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {stats.map((card) => <div key={card.key} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{card.label}</p><p className="mt-2 text-3xl font-black text-slate-950">{card.value}</p></div>)}
       </div>
 
-      <div className="grid gap-3 md:grid-cols-5">
-        {stats.map((card) => (
-          <div key={card.key} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{card.label}</p>
-            <p className="mt-2 text-3xl font-black text-slate-950">{card.value}</p>
-          </div>
-        ))}
-      </div>
+      <section className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-5">
+        <label className="relative xl:col-span-2"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Номер, компания, БИН или объект" className="w-full rounded-lg border border-slate-200 py-3 pl-10 pr-3 text-sm outline-none focus:border-eco-500 focus:ring-4 focus:ring-eco-100" /></label>
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-3 text-sm"><option value="">Все статусы</option>{statuses.map((item) => <option key={item} value={item}>{protocolStatusLabels[item]}</option>)}</select>
+        <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-3 text-sm"><option value="">Все типы</option>{templates.map((item) => <option key={item.id} value={item.id}>{item.name || templateName(item.id)}</option>)}</select>
+        <select value={subtype} onChange={(e) => setSubtype(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-3 text-sm"><option value="">Все подтипы</option>{physicalFactorTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+        <select value={compliance} onChange={(e) => setCompliance(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-3 text-sm"><option value="">Любое соответствие</option><option value="COMPLIES">Соответствует</option><option value="DOES_NOT_COMPLY">Не соответствует</option><option value="NEEDS_REVIEW">Требует проверки</option></select>
+      </section>
 
-      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-4">
-        <label className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Поиск по номеру протокола или компании"
-            className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-3 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100"
-          />
-        </label>
-        <select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100">
-          <option value="">Все статусы</option>
-          {statuses.map((item) => <option key={item} value={item}>{protocolStatusLabels[item]}</option>)}
-        </select>
-        <select value={templateId} onChange={(event) => setTemplateId(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100">
-          <option value="">Все шаблоны</option>
-          {templates.map((template) => <option key={template.id} value={template.id}>{template.name || templateName(template.id)}</option>)}
-        </select>
-        <select value={subtype} onChange={(event) => setSubtype(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100">
-          <option value="">Все подтипы</option>
-          {physicalFactorTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-        </select>
-        <select value={compliance} onChange={(event) => setCompliance(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100">
-          <option value="">Любое соответствие</option>
-          <option value="NORMAL">Соответствует</option>
-          <option value="EXCEEDED">Превышение</option>
-          <option value="BELOW_REQUIRED">Ниже требуемого</option>
-          <option value="NEEDS_REVIEW">Требует проверки</option>
-        </select>
-        <label className="space-y-1 text-xs font-bold uppercase tracking-wide text-slate-500">
-          <span>Период с</span>
-          <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal text-slate-800 outline-none focus:border-eco-500" />
-        </label>
-        <label className="space-y-1 text-xs font-bold uppercase tracking-wide text-slate-500">
-          <span>Период по</span>
-          <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal text-slate-800 outline-none focus:border-eco-500" />
-        </label>
-      </div>
-
-      {error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
-          {error}
-        </div>
-      )}
-
-      <ProtocolList
-        protocols={filtered}
-        loading={loading}
-        onOpen={(protocol) => navigate(`/staff/protocols/${protocol.id}`)}
-        onPreview={preview}
-        onDelete={remove}
-        onReplace={replace}
-        onDownloadPdf={(protocol) => download(protocol, 'pdf')}
-        onDownloadDocx={(protocol) => download(protocol, 'docx')}
-      />
-
-      <CreateProtocolModal
-        open={modalOpen}
-        loading={creating}
-        templates={templates}
-        onClose={() => setModalOpen(false)}
-        onCreate={submitCreate}
-      />
-      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} draft onClose={() => setPreviewOpen(false)} />
+      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{error}</div>}
+      <ProtocolList protocols={filtered} loading={loading} onOpen={(protocol) => navigate(`/staff/protocols/${protocol.id}`)} onPreview={preview} onCopy={copy} onDelete={remove} onReplace={replace} onDownloadPdf={(protocol) => download(protocol, 'pdf')} onDownloadDocx={(protocol) => download(protocol, 'docx')} />
+      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} protocol={protocols.find((item) => item.id === previewProtocolId) || null} draft={protocols.find((item) => item.id === previewProtocolId)?.status === 'DRAFT'} onClose={() => setPreviewOpen(false)} />
     </div>
   );
 };

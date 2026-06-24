@@ -53,15 +53,15 @@ const emptyMain: MainData = {
   purpose: '',
 };
 const emptyEnvironment: ProtocolEnvironmentalConditions = {
-  temperature: '',
+  temperature: '31.4',
   minTemperature: '',
   maxTemperature: '',
-  humidity: '',
+  humidity: '29',
   minHumidity: '',
   maxHumidity: '',
-  pressureKpa: '',
-  windSpeed: '',
-  comment: '',
+  pressureKpa: '94.7922039473684',
+  windSpeed: '3.2',
+  comment: 'Условия проведения измерений соответствуют требованиям методик.',
 };
 
 const Field = ({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) => (
@@ -216,6 +216,18 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   const setMainField = (key: keyof MainData, value: string) => setMain((current) => ({ ...current, [key]: value }));
   const setEnvironmentField = (key: keyof ProtocolEnvironmentalConditions, value: string) =>
     setEnvironment((current) => ({ ...current, [key]: value }));
+  const fillMainExample = () => setMain((current) => ({
+    ...current,
+    samplingDate: current.samplingDate || today(),
+    testingStartDate: current.testingStartDate || today(),
+    testingEndDate: current.testingEndDate || today(),
+    productName: selectedObject?.activityType || 'Объект производственного экологического контроля',
+    testingBasis: company?.contractNumber ? `Договор ${company.contractNumber} от ${company.contractDate}` : 'Договор на проведение лабораторных испытаний',
+    productNormativeDocument: 'Экологический кодекс Республики Казахстан',
+    samplingMethodDocument: 'Методика отбора проб согласно области аккредитации',
+    testingMethodDocument: 'Методики выполнения измерений испытательной лаборатории',
+    purpose: 'Производственный экологический контроль',
+  }));
 
   return (
     <Modal open={open} onClose={onClose} title="Создать лабораторный протокол" description={`Шаг ${step} из 7`} size="xl" loading={loading}>
@@ -277,7 +289,8 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {visibleTemplates.map((item) => (
               <button key={item.id} type="button" onClick={() => { setTemplateId(item.id); if (item.id !== 'physical_factors') setSubtype(''); }} className={`min-h-24 rounded-2xl border p-4 text-left font-bold ${templateId === item.id ? 'border-eco-600 bg-eco-50 ring-2 ring-eco-100' : 'border-slate-200 hover:border-eco-300'}`}>
-                {item.name}
+                <span className="block">{item.name}</span>
+                <span className="mt-2 block text-xs font-semibold text-slate-500">{item.description}</span>
               </button>
             ))}
           </div>
@@ -299,7 +312,10 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
 
       {step === 5 && (
         <section className="grid gap-4 sm:grid-cols-2">
-          <h3 className="text-lg font-black text-slate-900 sm:col-span-2">Основные данные</h3>
+          <div className="flex items-center justify-between gap-3 sm:col-span-2">
+            <h3 className="text-lg font-black text-slate-900">Основные данные</h3>
+            <button type="button" onClick={fillMainExample} className="rounded-lg border border-eco-200 px-3 py-2 text-sm font-bold text-eco-800 hover:bg-eco-50">Заполнить примером</button>
+          </div>
           <Field label="Номер протокола"><input value={main.protocolNumber} onChange={(e) => setMainField('protocolNumber', e.target.value)} className={inputClass} /></Field>
           <Field label="Дата протокола *"><input type="date" value={main.protocolDate} onChange={(e) => setMainField('protocolDate', e.target.value)} className={inputClass} /></Field>
           <Field label="Дата отбора"><input type="date" value={main.samplingDate} onChange={(e) => setMainField('samplingDate', e.target.value)} className={inputClass} /></Field>

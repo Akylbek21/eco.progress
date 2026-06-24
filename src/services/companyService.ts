@@ -2,6 +2,9 @@ import api, { ApiResponse } from './api';
 import { extractItem, extractList } from './apiHelpers';
 import type { Company, CompanyObject, CompanyObjectPayload, CompanyPayload, CompanyQuery } from '../types/companies';
 
+const useMocks = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
+const mockDelay = () => new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 301)));
+
 type UnknownRecord = Record<string, unknown>;
 
 const asString = (value: unknown) => (typeof value === 'string' || typeof value === 'number' ? String(value) : '');
@@ -126,16 +129,34 @@ const toCompanyObjectApiPayload = (payload: CompanyObjectPayload): UnknownRecord
 });
 
 export async function getCompanies(params?: CompanyQuery): Promise<Company[]> {
+  if (useMocks) {
+    await mockDelay();
+    const { mockCompanies } = await import('../mocks/mockCompanies');
+    const query = String(params?.search || params?.name || params?.bin || '').toLowerCase();
+    return mockCompanies.filter((company) => (!params?.status || company.status === params.status) && (!query || `${company.name} ${company.bin}`.toLowerCase().includes(query)));
+  }
   const response = await api.get<ApiResponse<unknown> | unknown>('/companies', { params });
   return extractList(response, ['companies']).map(normalizeCompany);
 }
 
 export async function searchCompanies(query: string): Promise<Company[]> {
+  if (useMocks) {
+    await mockDelay();
+    const { mockCompanies } = await import('../mocks/mockCompanies');
+    return mockCompanies.filter((company) => `${company.name} ${company.bin}`.toLowerCase().includes(query.toLowerCase()));
+  }
   const response = await api.get<ApiResponse<unknown> | unknown>('/companies/search', { params: { query } });
   return extractList(response, ['companies']).map(normalizeCompany);
 }
 
 export async function getCompanyById(id: string): Promise<Company> {
+  if (useMocks) {
+    await mockDelay();
+    const { mockCompanies } = await import('../mocks/mockCompanies');
+    const company = mockCompanies.find((item) => item.id === id);
+    if (!company) throw new Error('Компания не найдена.');
+    return company;
+  }
   const response = await api.get<ApiResponse<unknown> | unknown>(`/companies/${id}`);
   return normalizeCompany(extractItem(response, ['company']));
 }
@@ -162,6 +183,11 @@ export async function archiveCompany(id: string): Promise<Company> {
 }
 
 export async function getCompanyObjects(companyId: string): Promise<CompanyObject[]> {
+  if (useMocks) {
+    await mockDelay();
+    const { mockCompanies } = await import('../mocks/mockCompanies');
+    return mockCompanies.find((company) => company.id === companyId)?.objects || [];
+  }
   const response = await api.get<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects`);
   return extractList(response, ['objects', 'companyObjects', 'facilities']).map((item) => normalizeCompanyObject(item, companyId));
 }

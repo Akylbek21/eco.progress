@@ -1,24 +1,11 @@
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Copy, FileSpreadsheet, Plus, Save, SearchCheck, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Copy, Edit3, Plus, SearchCheck, Sparkles, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import NormativeStatusBadge from './NormativeStatusBadge';
-import {
-  addProtocolResult,
-  deleteProtocolResult,
-  importExcel,
-  searchNormative,
-  updateProtocolResult,
-} from '../../services/protocolService';
+import protocolService from '../../services/protocolService';
 import { getProtocolResultColumns } from '../../data/protocolTemplates';
-import type {
-  NormativeRecord,
-  ProtocolMeasurementDevice,
-  ProtocolResultPayload,
-  ProtocolResultRow,
-  ProtocolSubtype,
-  ProtocolTemplateId,
-} from '../../types/protocols';
+import type { ProtocolMeasurementDevice, ProtocolResultPayload, ProtocolResultRow, ProtocolSubtype, ProtocolTemplateId } from '../../types/protocols';
 
 type Props = {
   protocolId: string;
@@ -36,187 +23,149 @@ type Props = {
   onNotify: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
 };
 
-const inputClass = 'min-w-[150px] rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
-let draftSequence = 0;
-const createDraft = (values: ProtocolResultRow['values'] = {}): ProtocolResultRow => ({
-  id: `draft-${++draftSequence}`,
-  internalStatus: 'EMPTY_RESULT',
-  checkStatus: 'EMPTY_RESULT',
-  values,
-});
-const isDraft = (row: ProtocolResultRow) => row.id.startsWith('draft-');
+const inputClass = 'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100';
 
-const toPayload = (row: ProtocolResultRow): ProtocolResultPayload => ({
-  values: { ...row.values },
-  measurementDeviceId: String(row.values.measurementDeviceId || row.measurementDeviceId || '') || undefined,
-  normativeId: String(row.values.normativeId || '') || undefined,
-});
+const examples = (templateId: ProtocolTemplateId, subtype?: ProtocolSubtype): ProtocolResultPayload[] => {
+  if (templateId === 'industrial_emissions') {
+    return [
+      ['Диоксид азота', '200', '142.6'],
+      ['Оксид азота', '400', '186.2'],
+      ['Диоксид серы', '500', '18.4'],
+      ['Оксид углерода', '250', '212.8'],
+    ].map(([indicator, mdvMg, resultMg]) => ({ values: { samplingDate: '2026-06-24', samplingPlace: 'Паровой котёл', sourceNumber: '0001', indicator, temperature: '118', speed: '8.4', gasVolume: '2.18', ductArea: '0.28', mdvMg, mdvGs: '0.55', resultMg, resultGs: String(Number(resultMg) * 0.00218), measurementDeviceId: 'device-dag' }, measurementDeviceId: 'device-dag' }));
+  }
+  if (templateId === 'water_wastewater') {
+    return ['Взвешенные вещества', 'БПК', 'ХПК', 'Азот аммонийный', 'Нитриты', 'Нитраты', 'Фосфаты', 'ПАВ', 'Сульфаты', 'Хлориды', 'Жиры']
+      .map((indicator, index) => ({ values: { object: 'Водовыпуск №2', sampleName: 'Проба №12', indicator, unit: 'мг/дм³', testingMethodDocument: 'Методика согласно области аккредитации', normative: String([15, 6, 30, 2, 0.08, 40, 3.5, 0.5, 100, 300, 1][index]), result: String([11, 4.8, 24.2, 1.4, 0.04, 22, 2.1, 0.2, 72, 188, 0.4][index]), externalLaboratory: 'Нет' } }));
+  }
+  if (templateId === 'ambient_air') {
+    return ['Север', 'Юг', 'Восток', 'Запад'].map((direction, index) => ({ values: { direction, samplingPlace: 'Граница СЗЗ', indicator: 'Диоксид азота', unit: 'мг/м³', pdkBackground: '0.2', result: String([0.087, 0.092, 0.078, 0.101][index]), testingMethod: 'МВИ 01-2024', measurementDeviceId: 'device-dag' }, measurementDeviceId: 'device-dag' }));
+  }
+  if (templateId === 'soil') {
+    return [
+      ['Мышьяк', '2.0', '1.62', 'ГОСТ 26930'],
+      ['Свинец', '32.0', '26.8', 'ГОСТ 26932'],
+      ['Нефтепродукты', '0.3', '0.21', 'ПНД Ф 16.1:2.2.22'],
+    ].map(([indicator, normativeMax, result, method]) => ({ values: { sampleName: 'Проба почвы №1', samplingPlace: 'Южная граница', indicator, unit: 'мг/кг', testingMethodDocument: method, normativeMax, result } }));
+  }
+  if (subtype === 'MICROCLIMATE') {
+    return [
+      ['Температура', '°C', '18', '26', '23.4', 'device-thermometer'],
+      ['Влажность', '%', '30', '60', '42', 'device-barometer'],
+      ['Скорость движения воздуха', 'м/с', '0', '0.5', '0.18', 'device-anemometer'],
+    ].map(([indicator, unit, normativeMin, normativeMax, result, device]) => ({ values: { measurementPlace: 'Рабочее место №1', indicator, unit, testingMethodDocument: 'Санитарные правила РК', normativeMin, normativeMax, result, comparisonType: 'RANGE', measurementDeviceId: device }, measurementDeviceId: device }));
+  }
+  if (subtype === 'LIGHTING') {
+    return [{ values: { measurementPlace: 'Рабочее место №1', indicator: 'Освещённость', unit: 'лк', normativeMin: '300', result: '418', comparisonType: 'GREATER_OR_EQUAL', measurementDeviceId: 'device-lux' }, measurementDeviceId: 'device-lux' }];
+  }
+  return [
+    { values: { measurementPlace: 'Рабочее место №1', factorType: subtype === 'VIBRATION' ? 'VIBRATION' : 'NOISE', indicator: subtype === 'VIBRATION' ? 'Виброускорение' : 'Уровень звука', unit: subtype === 'VIBRATION' ? 'дБ' : 'дБА', normativeMax: subtype === 'VIBRATION' ? '112' : '80', result: subtype === 'VIBRATION' ? '96' : '71', measurementDeviceId: 'device-noise' }, measurementDeviceId: 'device-noise' },
+    ...(subtype === 'NOISE_VIBRATION' ? [{ values: { measurementPlace: 'Рабочее место №1', factorType: 'VIBRATION', indicator: 'Виброускорение', unit: 'дБ', normativeMax: '112', result: '96', measurementDeviceId: 'device-noise' }, measurementDeviceId: 'device-noise' }] : []),
+  ];
+};
 
-const ProtocolResultsTable = ({
-  protocolId,
-  templateId,
-  subtype,
-  rows,
-  devices = [],
-  readOnly,
-  busy = false,
-  testingDate = '',
-  onChange,
-  onCheckNormatives,
-  onImported,
-  onNotify,
-}: Props) => {
-  const [savingRowId, setSavingRowId] = useState('');
-  const [importing, setImporting] = useState(false);
-  const [normativeChoice, setNormativeChoice] = useState<{ rowId: string; items: NormativeRecord[] } | null>(null);
-  const rowsRef = useRef(rows);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+const ProtocolResultsTable = ({ protocolId, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '', onChange, onCheckNormatives, onNotify }: Props) => {
   const columns = useMemo(() => getProtocolResultColumns(templateId, subtype), [templateId, subtype]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<ProtocolResultRow | null>(null);
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => { rowsRef.current = rows; }, [rows]);
-  useEffect(() => () => Object.values(debounceTimers.current).forEach(clearTimeout), []);
-
-  const replaceRow = (rowId: string, next: ProtocolResultRow) => {
-    const updated = rowsRef.current.map((row) => row.id === rowId ? next : row);
-    rowsRef.current = updated;
-    onChange(updated);
+  const openNew = (initial: Record<string, string> = {}) => {
+    setEditing(null);
+    setForm(initial);
+    setModalOpen(true);
+  };
+  const openEdit = (row: ProtocolResultRow) => {
+    setEditing(row);
+    setForm(Object.fromEntries(Object.entries(row.values).map(([key, value]) => [key, String(value ?? '')])));
+    setModalOpen(true);
   };
 
-  const applyNormative = (rowId: string, normative: NormativeRecord) => {
-    const row = rowsRef.current.find((item) => item.id === rowId);
-    if (!row) return;
-    replaceRow(rowId, {
-      ...row,
-      values: {
-        ...row.values,
-        normativeId: normative.id,
+  const findNormative = async () => {
+    if (!form.indicator) return;
+    try {
+      const found = await protocolService.searchNormative({ templateId, subtype: subtype || '', indicator: form.indicator, unit: form.unit || '', date: testingDate });
+      const normative = found.normative || found.normatives?.[0];
+      if (!normative) return onNotify('Норматив не найден', 'warning');
+      setForm((current) => ({
+        ...current,
         unit: normative.unit,
         normative: normative.value,
-        normativeMin: normative.min,
-        normativeMax: normative.max,
+        normativeMin: normative.min || '',
+        normativeMax: normative.max || normative.value,
         comparisonType: normative.comparisonType,
-        normativeDocument: normative.normativeDocument,
         testingMethod: normative.testingMethod,
         testingMethodDocument: normative.testingMethod,
-        samplingMethod: normative.samplingMethod,
-      },
-    });
-    setNormativeChoice(null);
-  };
-
-  const findNormative = async (rowId: string) => {
-    const row = rowsRef.current.find((item) => item.id === rowId);
-    const indicator = String(row?.values.indicator || '').trim();
-    if (!row || !indicator) return;
-    try {
-      const result = await searchNormative({
-        templateId,
-        subtype: subtype || '',
-        indicator,
-        objectType: String(row.values.objectType || row.values.object || row.values.samplingPlace || row.values.measurementPlace || ''),
-        unit: String(row.values.unit || ''),
-        testingDate,
-      });
-      const candidates = result.normatives || result.items || (result.normative ? [result.normative] : []);
-      if (result.ambiguous || candidates.length > 1) {
-        setNormativeChoice({ rowId, items: candidates });
-      } else if (candidates.length === 1) {
-        applyNormative(rowId, candidates[0]);
-      } else {
-        onNotify('Норматив не найден. Статус проверки установит backend после сохранения результата.', 'warning');
-      }
+        normativeDocument: normative.normativeDocument,
+        normativeId: normative.id,
+      }));
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось найти норматив', 'error');
+      onNotify(error instanceof Error ? error.message : 'Не удалось подобрать норматив', 'error');
     }
   };
 
-  const updateCell = (rowId: string, key: string, value: string) => {
-    const row = rowsRef.current.find((item) => item.id === rowId);
-    if (!row) return;
-    replaceRow(rowId, { ...row, values: { ...row.values, [key]: value } });
-    if (!['indicator', 'objectType', 'object', 'samplingPlace', 'measurementPlace', 'unit'].includes(key)) return;
-    clearTimeout(debounceTimers.current[rowId]);
-    debounceTimers.current[rowId] = setTimeout(() => findNormative(rowId), 500);
-  };
-
-  const saveRow = async (row: ProtocolResultRow) => {
-    const missing = columns.find((column) => column.required && !String(row.values[column.key] || '').trim());
-    if (missing) return onNotify(`Заполните поле «${missing.label}».`, 'warning');
-    setSavingRowId(row.id);
+  const save = async () => {
+    const missing = columns.find((column) => column.required && !form[column.key]?.trim());
+    if (missing) return onNotify(`Заполните поле «${missing.label}»`, 'warning');
+    setSaving(true);
     try {
-      const saved = isDraft(row)
-        ? await addProtocolResult(protocolId, toPayload(row))
-        : await updateProtocolResult(protocolId, row.id, toPayload(row));
-      replaceRow(row.id, saved);
-      onNotify(isDraft(row) ? 'Результат добавлен' : 'Результат обновлён', 'success');
+      const payload = { values: form, measurementDeviceId: form.measurementDeviceId || undefined, normativeId: form.normativeId || undefined };
+      const saved = editing
+        ? await protocolService.updateProtocolResult(protocolId, editing.id, payload)
+        : await protocolService.addProtocolResult(protocolId, payload);
+      onChange(editing ? rows.map((row) => row.id === editing.id ? saved : row) : [...rows, saved]);
+      setModalOpen(false);
+      onNotify(editing ? 'Результат изменён' : 'Результат добавлен', 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось сохранить результат', 'error');
     } finally {
-      setSavingRowId('');
+      setSaving(false);
     }
   };
 
-  const removeRow = async (row: ProtocolResultRow) => {
+  const remove = async (row: ProtocolResultRow) => {
     if (!window.confirm('Удалить строку результата?')) return;
-    if (!isDraft(row)) {
-      setSavingRowId(row.id);
-      try {
-        await deleteProtocolResult(protocolId, row.id);
-        onNotify('Результат удалён', 'success');
-      } catch (error) {
-        onNotify(error instanceof Error ? error.message : 'Не удалось удалить результат', 'error');
-        setSavingRowId('');
-        return;
-      }
-    }
-    const updated = rowsRef.current.filter((item) => item.id !== row.id);
-    rowsRef.current = updated;
-    onChange(updated);
-    setSavingRowId('');
-  };
-
-  const copyRow = (row: ProtocolResultRow) => {
-    const index = rowsRef.current.findIndex((item) => item.id === row.id);
-    const updated = [...rowsRef.current];
-    updated.splice(index + 1, 0, createDraft({ ...row.values }));
-    rowsRef.current = updated;
-    onChange(updated);
-  };
-
-  const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setImporting(true);
     try {
-      await importExcel(protocolId, file);
-      await onImported();
-      onNotify('Данные импортированы из Excel', 'success');
+      await protocolService.deleteProtocolResult(protocolId, row.id);
+      onChange(rows.filter((item) => item.id !== row.id));
+      onNotify('Результат удалён', 'success');
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось импортировать Excel', 'error');
+      onNotify(error instanceof Error ? error.message : 'Не удалось удалить результат', 'error');
+    }
+  };
+
+  const duplicate = (row: ProtocolResultRow) => openNew(Object.fromEntries(Object.entries(row.values).map(([key, value]) => [key, String(value ?? '')])));
+
+  const fillExamples = async () => {
+    setSaving(true);
+    try {
+      const saved = await Promise.all(examples(templateId, subtype).map((payload) => protocolService.addProtocolResult(protocolId, payload)));
+      onChange([...rows, ...saved]);
+      onNotify('Пример результатов добавлен', 'success');
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : 'Не удалось добавить пример', 'error');
     } finally {
-      setImporting(false);
-      event.target.value = '';
+      setSaving(false);
     }
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Результаты измерений</h2>
-          <p className="mt-1 text-sm text-slate-500">Каждая строка создаётся и обновляется отдельным backend-запросом. Нормативный статус рассчитывает только backend.</p>
+          <h2 className="text-lg font-bold text-slate-900">Результаты испытаний</h2>
+          <p className="mt-1 text-sm text-slate-500">Структура таблицы соответствует выбранному типу протокола.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" disabled={readOnly || busy} onClick={() => onChange([...rowsRef.current, createDraft()])}><Plus className="h-4 w-4" /> Добавить строку</Button>
-          <Button type="button" variant="secondary" disabled={readOnly || busy || importing} onClick={() => fileInputRef.current?.click()}><FileSpreadsheet className="h-4 w-4" /> {importing ? 'Импорт…' : 'Импорт Excel'}</Button>
-          <Button type="button" variant="secondary" disabled={busy} onClick={onCheckNormatives}><SearchCheck className="h-4 w-4" /> Проверить нормативы</Button>
-          <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
+          <Button type="button" variant="secondary" disabled={readOnly || busy || saving} onClick={fillExamples}><Sparkles className="h-4 w-4" /> Заполнить примером</Button>
+          <Button type="button" variant="secondary" disabled={busy || saving} onClick={onCheckNormatives}><SearchCheck className="h-4 w-4" /> Проверить нормативы</Button>
+          <Button type="button" disabled={readOnly || busy || saving} onClick={() => openNew()}><Plus className="h-4 w-4" /> Добавить строку</Button>
         </div>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm" style={{ minWidth: `${Math.max(980, columns.length * 175 + 230)}px` }}>
+        <table className="w-full text-left text-sm" style={{ minWidth: `${Math.max(960, columns.length * 150 + 210)}px` }}>
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               {columns.map((column) => <th key={column.key} className="px-3 py-3">{column.label}</th>)}
@@ -226,43 +175,14 @@ const ProtocolResultsTable = ({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {rows.map((row) => (
-              <tr key={row.id}>
-                {columns.map((column) => (
-                  <td key={column.key} className="px-3 py-3 align-top">
-                    {column.type === 'device' ? (
-                      <select className={inputClass} disabled={readOnly} value={String(row.values[column.key] || '')} onChange={(event) => updateCell(row.id, column.key, event.target.value)}>
-                        <option value="">Не выбран</option>
-                        {devices.map((item) => (
-                          <option key={item.deviceId} value={item.deviceId} disabled={['ARCHIVED', 'EXPIRED'].includes(item.deviceSnapshot.status)}>
-                            {item.deviceSnapshot.name} · {item.deviceSnapshot.model} · {item.deviceSnapshot.serialNumber}{item.deviceSnapshot.status === 'EXPIRING' ? ' (поверка скоро истекает)' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    ) : column.type === 'select' ? (
-                      <select className={inputClass} disabled={readOnly} required={column.required} value={String(row.values[column.key] || '')} onChange={(event) => updateCell(row.id, column.key, event.target.value)}>
-                        <option value="">Выберите</option>
-                        {column.options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                      </select>
-                    ) : (
-                      <input
-                        className={inputClass}
-                        disabled={readOnly}
-                        type={column.type === 'indicator' ? 'text' : column.type || 'text'}
-                        step={column.type === 'number' ? 'any' : undefined}
-                        required={column.required}
-                        value={String(row.values[column.key] ?? '')}
-                        onChange={(event) => updateCell(row.id, column.key, event.target.value)}
-                        onBlur={() => column.key === 'indicator' && findNormative(row.id)}
-                      />
-                    )}
-                  </td>
-                ))}
-                <td className="px-3 py-3 align-top"><NormativeStatusBadge status={row.internalStatus || row.checkStatus} /></td>
-                <td className="px-3 py-3 align-top">
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="secondary" className="px-3" disabled={readOnly || busy} title="Копировать" onClick={() => copyRow(row)}><Copy className="h-4 w-4" /></Button>
-                    <Button type="button" variant="secondary" className="px-3" disabled={readOnly || busy || savingRowId === row.id} title="Сохранить строку" onClick={() => saveRow(row)}><Save className="h-4 w-4" /></Button>
-                    <Button type="button" variant="secondary" className="px-3 text-rose-700 hover:bg-rose-50" disabled={readOnly || busy || savingRowId === row.id} title="Удалить" onClick={() => removeRow(row)}><Trash2 className="h-4 w-4" /></Button>
+              <tr key={row.id} className="hover:bg-slate-50">
+                {columns.map((column) => <td key={column.key} className="max-w-[220px] break-words px-3 py-3">{String(row.values[column.key] ?? '—')}</td>)}
+                <td className="px-3 py-3"><NormativeStatusBadge status={row.internalStatus || row.checkStatus} /></td>
+                <td className="px-3 py-3">
+                  <div className="flex justify-end gap-1">
+                    <Button type="button" variant="secondary" className="px-2.5" disabled={readOnly} title="Редактировать" onClick={() => openEdit(row)}><Edit3 className="h-4 w-4" /></Button>
+                    <Button type="button" variant="secondary" className="px-2.5" disabled={readOnly} title="Дублировать" onClick={() => duplicate(row)}><Copy className="h-4 w-4" /></Button>
+                    <Button type="button" variant="secondary" className="px-2.5 text-rose-700" disabled={readOnly} title="Удалить" onClick={() => remove(row)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </td>
               </tr>
@@ -270,17 +190,39 @@ const ProtocolResultsTable = ({
           </tbody>
         </table>
       </div>
-      {rows.length === 0 && <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-500">Нет строк результатов.</div>}
+      {!rows.length && <div className="border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">Результаты ещё не добавлены.</div>}
 
-      <Modal open={Boolean(normativeChoice)} onClose={() => setNormativeChoice(null)} title="Выберите норматив" size="lg">
-        <div className="space-y-3">
-          {normativeChoice?.items.map((item) => (
-            <button key={item.id} type="button" className="w-full rounded-xl border border-slate-200 p-3 text-left hover:border-eco-400 hover:bg-eco-50" onClick={() => applyNormative(normativeChoice.rowId, item)}>
-              <span className="block font-bold text-slate-900">{item.indicator} · {item.value || item.max || item.min || 'информационный'}</span>
-              <span className="mt-1 block text-sm text-slate-600">{item.unit || 'без единицы'} · {item.comparisonType}</span>
-              <span className="mt-1 block break-words text-xs font-semibold text-slate-500">{item.normativeDocument || 'Документ не указан'}</span>
-            </button>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Редактировать результат' : 'Добавить результат'} size="xl" loading={saving}>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {columns.map((column) => (
+            <label key={column.key} className="space-y-1.5 text-sm font-semibold text-slate-700">
+              <span>{column.label}{column.required && <span className="text-rose-600"> *</span>}</span>
+              {column.type === 'select' ? (
+                <select value={form[column.key] || ''} onChange={(event) => setForm({ ...form, [column.key]: event.target.value })} className={inputClass}>
+                  <option value="">Выберите</option>
+                  {column.options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              ) : column.type === 'device' ? (
+                <select value={form[column.key] || ''} onChange={(event) => setForm({ ...form, [column.key]: event.target.value })} className={inputClass}>
+                  <option value="">Не выбран</option>
+                  {devices.map((device) => <option key={device.deviceId} value={device.deviceId} disabled={device.deviceSnapshot.status === 'EXPIRED'}>{device.deviceSnapshot.name} · {device.deviceSnapshot.serialNumber}</option>)}
+                </select>
+              ) : (
+                <input
+                  type={column.type === 'number' ? 'number' : column.type === 'date' ? 'date' : 'text'}
+                  step={column.type === 'number' ? 'any' : undefined}
+                  value={form[column.key] || ''}
+                  onChange={(event) => setForm({ ...form, [column.key]: event.target.value })}
+                  onBlur={column.key === 'indicator' ? findNormative : undefined}
+                  className={inputClass}
+                />
+              )}
+            </label>
           ))}
+        </div>
+        <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
+          <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Отмена</Button>
+          <Button type="button" onClick={save} disabled={saving}>{editing ? 'Сохранить изменения' : 'Добавить результат'}</Button>
         </div>
       </Modal>
     </section>

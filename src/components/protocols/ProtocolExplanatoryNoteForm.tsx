@@ -2,11 +2,18 @@ type Props = {
   value: string;
   readOnly: boolean;
   onChange: (value: string) => void;
+  onGenerate?: () => void;
 };
 
-const ProtocolExplanatoryNoteForm = ({ value, readOnly, onChange }: Props) => (
+const ProtocolExplanatoryNoteForm = ({ value, readOnly, onChange, onGenerate }: Props) => (
   <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-    <h2 className="mb-4 text-lg font-bold text-slate-900">Пояснительная записка</h2>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <h2 className="text-lg font-bold text-slate-900">Пояснительная записка</h2>
+      {!readOnly && <div className="flex gap-2">
+        <button type="button" onClick={onGenerate} className="rounded-lg border border-eco-200 px-3 py-2 text-sm font-bold text-eco-800 hover:bg-eco-50">Сформировать пример</button>
+        <button type="button" onClick={() => onChange('')} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50">Очистить</button>
+      </div>}
+    </div>
     <textarea
       rows={14}
       disabled={readOnly}

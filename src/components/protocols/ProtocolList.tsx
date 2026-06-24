@@ -1,4 +1,4 @@
-import { Download, Eye, FilePenLine, FileText, RotateCcw, Trash2 } from 'lucide-react';
+import { Copy, Download, Eye, FilePenLine, FileText, RotateCcw, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 import ProtocolStatusBadge from './ProtocolStatusBadge';
 import NormativeStatusBadge from './NormativeStatusBadge';
@@ -10,13 +10,14 @@ type Props = {
   loading?: boolean;
   onOpen: (protocol: Protocol) => void;
   onPreview: (protocol: Protocol) => void | Promise<void>;
+  onCopy: (protocol: Protocol) => void | Promise<void>;
   onDelete: (protocol: Protocol) => void;
   onReplace: (protocol: Protocol) => void | Promise<void>;
   onDownloadPdf: (protocol: Protocol) => void | Promise<void>;
   onDownloadDocx: (protocol: Protocol) => void | Promise<void>;
 };
 
-const ProtocolList = ({ protocols, loading = false, onOpen, onPreview, onDelete, onReplace, onDownloadPdf, onDownloadDocx }: Props) => (
+const ProtocolList = ({ protocols, loading = false, onOpen, onPreview, onCopy, onDelete, onReplace, onDownloadPdf, onDownloadDocx }: Props) => (
   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div className="overflow-x-auto">
       <table className="min-w-[1660px] w-full text-left text-sm">
@@ -56,6 +57,7 @@ const ProtocolList = ({ protocols, loading = false, onOpen, onPreview, onDelete,
                     {protocol.status === 'DRAFT' ? <FilePenLine className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                   <Button type="button" variant="secondary" className="px-3" title="Предпросмотр" onClick={() => onPreview(protocol)}><Eye className="h-4 w-4" /></Button>
+                  <Button type="button" variant="secondary" className="px-3" title="Копировать протокол" onClick={() => onCopy(protocol)}><Copy className="h-4 w-4" /></Button>
                   <Button type="button" variant="secondary" className="px-3" title="Скачать DOCX" onClick={() => onDownloadDocx(protocol)}><FileText className="h-4 w-4" /></Button>
                   <Button type="button" variant="secondary" className="px-3" title="Скачать PDF" onClick={() => onDownloadPdf(protocol)}><Download className="h-4 w-4" /></Button>
                   {protocol.status === 'DRAFT' && <Button type="button" variant="secondary" className="px-3 text-rose-700 hover:bg-rose-50" title="Удалить черновик" onClick={() => onDelete(protocol)}><Trash2 className="h-4 w-4" /></Button>}

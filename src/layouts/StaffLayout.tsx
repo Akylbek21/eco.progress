@@ -8,9 +8,10 @@ import type { UserRole } from '../types';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'];
+const protocolMockMode = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
 
 const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[] }> = [
-  { label: 'Дашборд', path: '/staff', icon: LayoutDashboard },
+  { label: 'Обзор', path: '/staff', icon: LayoutDashboard },
   { label: 'Заявки', path: '/staff/orders', icon: ClipboardList },
   { label: 'Клиенты', path: '/staff/clients', icon: Building2, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Компании', path: '/staff/companies', icon: Building2, allowedRoles: protocolRoles },
@@ -52,7 +53,10 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
 
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
-      {links.map((item) => {
+      {(protocolMockMode
+        ? links.filter((item) => ['/staff', '/staff/companies', '/staff/protocols', '/staff/normatives', '/staff/measurement-devices'].includes(item.path))
+        : links
+      ).map((item) => {
         const Icon = item.icon;
         if (item.allowedRoles && (!user?.role || !item.allowedRoles.includes(user.role))) return null;
         const locked = (item.paymentsOnly && !canAccessPayments(user?.role)) || (item.rolesOnly && !canAccess(user?.role, 'manage_roles') && !canAccess(user?.role, 'manage_employees'));
@@ -120,7 +124,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
               <h1 className="truncate text-base font-semibold text-eco-900 sm:text-lg">{user?.name || 'Сотрудник ecoprogress.kz'}</h1>
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <Link to="/" className="hidden text-sm font-semibold text-eco-700 hover:text-eco-900 sm:block">На сайт</Link>
+              {!protocolMockMode && <Link to="/" className="hidden text-sm font-semibold text-eco-700 hover:text-eco-900 sm:block">На сайт</Link>}
               <Link to="/staff/login" onClick={logout} className="inline-flex items-center gap-2 rounded-full bg-eco-900 px-3 py-2 text-sm font-semibold text-white sm:px-4">
                 <LogOut size={16} />
                 <span className="hidden sm:inline">Выйти</span>

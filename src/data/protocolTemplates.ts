@@ -1,11 +1,11 @@
 import type { ProtocolResultColumn, ProtocolTemplate, ProtocolSubtype } from '../types/protocols';
 
 export const protocolTemplates: ProtocolTemplate[] = [
-  { id: 'industrial_emissions', name: 'Промышленные выбросы' },
-  { id: 'water_wastewater', name: 'Вода / сточные воды' },
-  { id: 'ambient_air', name: 'Воздух СЗЗ / промплощадки' },
-  { id: 'physical_factors', name: 'Физические факторы' },
-  { id: 'soil', name: 'Почва' },
+  { id: 'industrial_emissions', name: 'Промышленные выбросы', description: 'Ф 01' },
+  { id: 'water_wastewater', name: 'Вода и сточные воды', description: 'Ф 02' },
+  { id: 'ambient_air', name: 'Воздух СЗЗ', description: 'Ф 03' },
+  { id: 'physical_factors', name: 'Физические факторы', description: 'Ф 04' },
+  { id: 'soil', name: 'Почва', description: 'Протокол исследования почвы' },
 ];
 
 export const physicalFactorTypes: Array<{ value: ProtocolSubtype; label: string }> = [

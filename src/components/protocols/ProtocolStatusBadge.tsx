@@ -4,13 +4,13 @@ import type { ProtocolStatus } from '../../types/protocols';
 export const protocolStatusLabels: Record<ProtocolStatus, string> = {
   DRAFT: 'Черновик',
   READY_FOR_APPROVAL: 'Готов к утверждению',
-  APPROVED: 'Утвержден',
+  APPROVED: 'Утверждён',
   SIGNED: 'Подписан',
   CANCELLED: 'Аннулирован',
-  REPLACED: 'Заменен',
+  REPLACED: 'Заменён',
 };
 
-const protocolStatusClasses: Record<ProtocolStatus, string> = {
+const classes: Record<ProtocolStatus, string> = {
   DRAFT: 'bg-slate-100 text-slate-700 ring-slate-200',
   READY_FOR_APPROVAL: 'bg-amber-50 text-amber-800 ring-amber-200',
   APPROVED: 'bg-blue-50 text-blue-800 ring-blue-200',
@@ -20,9 +20,7 @@ const protocolStatusClasses: Record<ProtocolStatus, string> = {
 };
 
 const ProtocolStatusBadge = ({ status }: { status: ProtocolStatus }) => (
-  <span className={clsx('inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1', protocolStatusClasses[status])}>
-    {protocolStatusLabels[status]}
-  </span>
+  <span className={clsx('inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1', classes[status])}>{protocolStatusLabels[status]}</span>
 );
 
 export default ProtocolStatusBadge;

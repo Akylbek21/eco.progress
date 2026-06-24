@@ -158,6 +158,8 @@ export interface Protocol {
   objectId?: string | number;
   companySnapshot: ProtocolCompanySnapshot;
   protocolDate: string;
+  formCode?: string;
+  application?: string;
   samplingDate?: string;
   testingStartDate?: string;
   testingEndDate?: string;
@@ -218,6 +220,8 @@ export interface CreateProtocolPayload {
 export type UpdateProtocolPayload = {
   number: string;
   protocolDate: string;
+  formCode?: string;
+  application?: string;
   executor: string;
   approver: string;
   laboratory: ProtocolLaboratoryData;

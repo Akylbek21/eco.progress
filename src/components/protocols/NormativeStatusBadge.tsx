@@ -12,6 +12,12 @@ export const normativeStatusLabels: Record<ProtocolInternalStatus, string> = {
   INFO: 'Информационно',
 };
 
+const overallLabels: Record<string, string> = {
+  COMPLIES: 'Соответствует',
+  DOES_NOT_COMPLY: 'Не соответствует',
+  NEEDS_REVIEW: 'Требует проверки',
+};
+
 const normativeStatusClasses: Record<ProtocolInternalStatus, string> = {
   NORMAL: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
   EXCEEDED: 'bg-rose-50 text-rose-800 ring-rose-200',
@@ -23,12 +29,13 @@ const normativeStatusClasses: Record<ProtocolInternalStatus, string> = {
   INFO: 'bg-blue-50 text-blue-800 ring-blue-200',
 };
 
-const NormativeStatusBadge = ({ status }: { status?: ProtocolInternalStatus }) => {
+const NormativeStatusBadge = ({ status }: { status?: ProtocolInternalStatus | string }) => {
   if (!status) return <span className="text-xs font-medium text-slate-400">-</span>;
+  const mapped = status === 'COMPLIES' ? 'NORMAL' : status === 'DOES_NOT_COMPLY' ? 'EXCEEDED' : status as ProtocolInternalStatus;
 
   return (
-    <span className={clsx('inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1', normativeStatusClasses[status])}>
-      {normativeStatusLabels[status]}
+    <span className={clsx('inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1', normativeStatusClasses[mapped] || normativeStatusClasses.NEEDS_REVIEW)}>
+      {overallLabels[status] || normativeStatusLabels[mapped] || status}
     </span>
   );
 };
