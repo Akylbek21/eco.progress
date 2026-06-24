@@ -3,11 +3,19 @@ export type ProtocolStatus = 'DRAFT' | 'READY_FOR_APPROVAL' | 'APPROVED' | 'SIGN
 export type ProtocolTemplateId =
   | 'industrial_emissions'
   | 'water_wastewater'
-  | 'workplace_air'
   | 'ambient_air'
-  | 'vehicle_emissions'
   | 'physical_factors'
+  | 'soil'
+  | 'workplace_air'
+  | 'vehicle_emissions'
   | 'sanitary_hygiene';
+
+export type ProtocolSubtype =
+  | 'MICROCLIMATE'
+  | 'LIGHTING'
+  | 'NOISE'
+  | 'VIBRATION'
+  | 'NOISE_VIBRATION';
 
 export type ProtocolInternalStatus =
   | 'NORMAL'
@@ -28,8 +36,10 @@ export type ProtocolTemplate = {
 export type ProtocolResultColumn = {
   key: string;
   label: string;
-  type?: 'text' | 'number' | 'date' | 'select';
+  type?: 'text' | 'number' | 'date' | 'select' | 'indicator' | 'device';
   required?: boolean;
+  options?: Array<{ value: string; label: string }>;
+  placeholder?: string;
 };
 
 export type ProtocolResult = {
@@ -46,6 +56,10 @@ export type ProtocolResult = {
   samplingMethod?: string;
   normativeDocument?: string;
   comment?: string;
+  measurementDeviceId?: string;
+  comparisonType?: NormativeComparisonType;
+  normativeMin?: string;
+  normativeMax?: string;
   values: Record<string, string | number | null | undefined>;
 };
 
@@ -79,7 +93,19 @@ export type ProtocolTestingData = {
   testingDate: string;
   testingPurpose: string;
   environmentConditions: string;
-  physicalFactorType?: string;
+  physicalFactorType?: ProtocolSubtype | string;
+};
+
+export type ProtocolEnvironmentalConditions = {
+  temperature?: string;
+  minTemperature?: string;
+  maxTemperature?: string;
+  humidity?: string;
+  minHumidity?: string;
+  maxHumidity?: string;
+  pressureKpa?: string;
+  windSpeed?: string;
+  comment?: string;
 };
 
 export interface ProtocolCompanySnapshot {
@@ -125,6 +151,7 @@ export interface Protocol {
   protocolNumber: string;
   number?: string;
   templateId: ProtocolTemplateId;
+  subtype?: ProtocolSubtype;
   templateName?: string;
   status: ProtocolStatus;
   companyId?: string | number;
@@ -136,6 +163,14 @@ export interface Protocol {
   testingEndDate?: string;
   purpose?: string;
   environmentalConditions?: string;
+  environment?: ProtocolEnvironmentalConditions;
+  productName?: string;
+  testingBasis?: string;
+  productNormativeDocument?: string;
+  samplingMethodDocument?: string;
+  testingMethodDocument?: string;
+  explanatoryNote?: string;
+  complianceResult?: ProtocolInternalStatus | string;
   executor?: string;
   approver?: string;
   approvedAt?: string;
@@ -163,15 +198,21 @@ export type ProtocolHistoryItem = {
 
 export interface CreateProtocolPayload {
   companyId: string | number;
-  objectId?: string | number;
+  objectId: string | number;
   templateId: ProtocolTemplateId;
+  subtype?: ProtocolSubtype;
   protocolNumber?: string;
   protocolDate: string;
   samplingDate?: string;
   testingStartDate?: string;
   testingEndDate?: string;
+  productName?: string;
+  testingBasis?: string;
+  productNormativeDocument?: string;
+  samplingMethodDocument?: string;
+  testingMethodDocument?: string;
   purpose?: string;
-  environmentalConditions?: string;
+  environment?: ProtocolEnvironmentalConditions;
 }
 
 export type UpdateProtocolPayload = {
@@ -182,8 +223,14 @@ export type UpdateProtocolPayload = {
   laboratory: ProtocolLaboratoryData;
   organization: ProtocolOrganizationData;
   testing: ProtocolTestingData;
-  results: ProtocolResultRow[];
-  instruments: MeasurementDevice[];
+  environment?: ProtocolEnvironmentalConditions;
+  explanatoryNote?: string;
+};
+
+export type ProtocolResultPayload = {
+  values: Record<string, string | number | null | undefined>;
+  measurementDeviceId?: string;
+  normativeId?: string;
 };
 
 export type NormativeComparisonType = 'LESS_OR_EQUAL' | 'GREATER_OR_EQUAL' | 'RANGE' | 'EQUAL' | 'INFO';

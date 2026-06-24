@@ -15,10 +15,10 @@ export const normativeStatusLabels: Record<ProtocolInternalStatus, string> = {
 const normativeStatusClasses: Record<ProtocolInternalStatus, string> = {
   NORMAL: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
   EXCEEDED: 'bg-rose-50 text-rose-800 ring-rose-200',
-  BELOW_REQUIRED: 'bg-orange-50 text-orange-800 ring-orange-200',
+  BELOW_REQUIRED: 'bg-rose-50 text-rose-800 ring-rose-200',
   NORMATIVE_NOT_FOUND: 'bg-amber-50 text-amber-800 ring-amber-200',
-  UNIT_MISMATCH: 'bg-fuchsia-50 text-fuchsia-800 ring-fuchsia-200',
-  NEEDS_REVIEW: 'bg-violet-50 text-violet-800 ring-violet-200',
+  UNIT_MISMATCH: 'bg-amber-50 text-amber-800 ring-amber-200',
+  NEEDS_REVIEW: 'bg-orange-50 text-orange-800 ring-orange-200',
   EMPTY_RESULT: 'bg-slate-100 text-slate-700 ring-slate-200',
   INFO: 'bg-blue-50 text-blue-800 ring-blue-200',
 };

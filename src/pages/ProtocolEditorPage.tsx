@@ -4,7 +4,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import ProtocolActionsBar from '../components/protocols/ProtocolActionsBar';
+import ProtocolStatusBadge from '../components/protocols/ProtocolStatusBadge';
+import NormativeStatusBadge from '../components/protocols/NormativeStatusBadge';
 import ProtocolGeneralForm from '../components/protocols/ProtocolGeneralForm';
+import ProtocolEnvironmentForm from '../components/protocols/ProtocolEnvironmentForm';
+import ProtocolExplanatoryNoteForm from '../components/protocols/ProtocolExplanatoryNoteForm';
 import ProtocolLaboratoryForm from '../components/protocols/ProtocolLaboratoryForm';
 import ProtocolOrganizationForm from '../components/protocols/ProtocolOrganizationForm';
 import ProtocolPreviewModal from '../components/protocols/ProtocolPreviewModal';
@@ -101,8 +105,8 @@ const editableSignature = (protocol: Protocol) => JSON.stringify({
   laboratory: protocol.laboratory,
   organization: protocol.organization,
   testing: protocol.testing,
-  results: protocol.results,
-  instruments: protocol.measurementDevices,
+  environment: protocol.environment,
+  explanatoryNote: protocol.explanatoryNote,
 });
 
 const SnapshotSection = ({ snapshot }: { snapshot: ProtocolCompanySnapshot }) => {
@@ -298,11 +302,22 @@ const ProtocolEditorPage = () => {
   const [signOpen, setSignOpen] = useState(false);
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [devicePickerOpen, setDevicePickerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('general');
   const savedSignatureRef = useRef('');
 
   const readOnly = useMemo(() => !protocol || protocol.status !== 'DRAFT', [protocol]);
   const dirty = useMemo(() => Boolean(protocol && savedSignatureRef.current && editableSignature(protocol) !== savedSignatureRef.current), [protocol]);
   const canApprove = user?.role === 'ADMIN' || user?.role === 'DIRECTOR' || user?.role === 'HEAD';
+  const tabs = [
+    { id: 'general', label: 'Общие данные' },
+    { id: 'organization', label: 'Организация' },
+    { id: 'laboratory', label: 'Лаборатория' },
+    { id: 'environment', label: 'Условия среды' },
+    { id: 'results', label: 'Результаты' },
+    { id: 'devices', label: 'Приборы' },
+    { id: 'note', label: 'Пояснительная записка' },
+    { id: 'history', label: 'История' },
+  ];
 
   const applyServerProtocol = (item: Protocol) => {
     const normalized = {
@@ -313,6 +328,8 @@ const ProtocolEditorPage = () => {
       results: item.results || [],
       measurementDevices: item.measurementDevices || [],
       history: item.history || [],
+      environment: item.environment || {},
+      explanatoryNote: item.explanatoryNote || '',
     };
     savedSignatureRef.current = editableSignature(normalized);
     setProtocol(normalized);
@@ -403,11 +420,8 @@ const ProtocolEditorPage = () => {
         laboratory: protocol.laboratory,
         organization: protocol.organization,
         testing: protocol.testing,
-        results: protocol.results,
-        instruments: (protocol.measurementDevices || []).map((item) => ({
-          id: item.deviceId,
-          ...item.deviceSnapshot,
-        })),
+        environment: protocol.environment,
+        explanatoryNote: protocol.explanatoryNote,
       });
       applyServerProtocol(updated);
       toast.success('Протокол сохранен');
@@ -562,6 +576,10 @@ const ProtocolEditorPage = () => {
             <ArrowLeft className="h-4 w-4" /> К протоколам
           </button>
           <p className="text-sm font-semibold uppercase tracking-wide text-eco-700">{templateName(protocol.templateId, protocol.templateName)}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <ProtocolStatusBadge status={protocol.status} />
+            <NormativeStatusBadge status={protocol.complianceResult as any} />
+          </div>
           <h1 className="mt-1 text-2xl font-black text-slate-950 sm:text-3xl">{protocol.protocolNumber || protocol.number || 'Новый протокол'}</h1>
         </div>
         <Button type="button" variant="secondary" onClick={load}><RotateCw className="h-4 w-4" /> Обновить</Button>
@@ -573,27 +591,44 @@ const ProtocolEditorPage = () => {
         </div>
       )}
 
-      <ProtocolGeneralForm protocol={protocol} readOnly={readOnly || protocol.status === 'APPROVED'} onChange={patchProtocol} />
-      <SnapshotSection snapshot={protocol.companySnapshot} />
-      <ProtocolLaboratoryForm value={protocol.laboratory} readOnly={readOnly} onChange={(laboratory) => patchProtocol({ laboratory })} />
-      <ProtocolOrganizationForm value={protocol.organization} readOnly={readOnly} onChange={(organization) => patchProtocol({ organization })} />
-      <ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} readOnly={readOnly} onChange={(testing) => patchProtocol({ testing })} />
-      <ProtocolResultsTable
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+        <div className="flex min-w-max gap-1">
+          {tabs.map((tab) => (
+            <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`rounded-xl px-4 py-2.5 text-sm font-bold transition ${activeTab === tab.id ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {activeTab === 'general' && <div className="space-y-6">
+        <ProtocolGeneralForm protocol={protocol} readOnly={readOnly || protocol.status === 'APPROVED'} onChange={patchProtocol} />
+        <ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} readOnly={readOnly} onChange={(testing) => patchProtocol({ testing })} />
+      </div>}
+      {activeTab === 'organization' && <div className="space-y-6">
+        <SnapshotSection snapshot={protocol.companySnapshot} />
+        <ProtocolOrganizationForm value={protocol.organization} readOnly={readOnly} onChange={(organization) => patchProtocol({ organization })} />
+      </div>}
+      {activeTab === 'laboratory' && <ProtocolLaboratoryForm value={protocol.laboratory} readOnly={readOnly} onChange={(laboratory) => patchProtocol({ laboratory })} />}
+      {activeTab === 'environment' && <ProtocolEnvironmentForm value={protocol.environment || {}} readOnly={readOnly} onChange={(environment) => patchProtocol({ environment })} />}
+      {activeTab === 'results' && <ProtocolResultsTable
         protocolId={protocol.id}
         templateId={protocol.templateId}
+        subtype={protocol.subtype}
         rows={protocol.results}
+        devices={protocol.measurementDevices}
         readOnly={readOnly}
         busy={busy}
         testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate}
         onChange={(results) => patchProtocol({ results })}
-        onSave={async () => { await save(); }}
         onCheckNormatives={checkSavedNormatives}
         onImported={load}
         onNotify={notify}
-      />
-      <MeasurementDevicesSection devices={protocol.measurementDevices || []} readOnly={readOnly || busy} onAdd={() => setDevicePickerOpen(true)} onRemove={removeDevice} />
+      />}
+      {activeTab === 'devices' && <MeasurementDevicesSection devices={protocol.measurementDevices || []} readOnly={readOnly || busy} onAdd={() => setDevicePickerOpen(true)} onRemove={removeDevice} />}
+      {activeTab === 'note' && <ProtocolExplanatoryNoteForm value={protocol.explanatoryNote || ''} readOnly={readOnly} onChange={(explanatoryNote) => patchProtocol({ explanatoryNote })} />}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {activeTab === 'history' && <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900"><History className="h-5 w-5 text-eco-700" /> История действий</h2>
         <div className="space-y-3">
           {protocol.history?.length ? protocol.history.map((item) => (
@@ -604,7 +639,7 @@ const ProtocolEditorPage = () => {
             </div>
           )) : <p className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-500">История действий пока пуста.</p>}
         </div>
-      </section>
+      </section>}
 
       <ProtocolActionsBar
         status={protocol.status}

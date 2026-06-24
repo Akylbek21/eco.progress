@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import CreateProtocolModal from '../components/protocols/CreateProtocolModal';
 import ProtocolList from '../components/protocols/ProtocolList';
+import ProtocolPreviewModal from '../components/protocols/ProtocolPreviewModal';
 import { protocolStatusLabels } from '../components/protocols/ProtocolStatusBadge';
 import {
   createProtocol,
@@ -14,8 +15,10 @@ import {
   generatePdf,
   getProtocols,
   getProtocolTemplates,
+  previewProtocol,
+  replaceProtocol,
 } from '../services/protocolService';
-import { protocolTemplates, templateName } from '../data/protocolTemplates';
+import { physicalFactorTypes, protocolTemplates, templateName } from '../data/protocolTemplates';
 import { useToast } from '../hooks/useToast';
 import { getApiStatus } from '../services/apiHelpers';
 import type { CreateProtocolPayload, Protocol, ProtocolStatus, ProtocolTemplate } from '../types/protocols';
@@ -53,6 +56,13 @@ const ProtocolsPage = () => {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
   const [templateId, setTemplateId] = useState('');
+  const [subtype, setSubtype] = useState('');
+  const [compliance, setCompliance] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -79,12 +89,48 @@ const ProtocolsPage = () => {
 
   const filtered = useMemo(() => protocols.filter((protocol) => {
     const normalizedQuery = query.trim().toLowerCase();
-    const searchable = `${protocol.protocolNumber || protocol.number || ''} ${protocol.companySnapshot?.companyName || protocol.organization?.organizationName || ''}`.toLowerCase();
+    const searchable = `${protocol.protocolNumber || protocol.number || ''} ${protocol.companySnapshot?.companyName || protocol.organization?.organizationName || ''} ${protocol.companySnapshot?.bin || ''}`.toLowerCase();
     const matchesQuery = !normalizedQuery || searchable.includes(normalizedQuery);
     const matchesStatus = !status || protocol.status === status;
     const matchesTemplate = !templateId || protocol.templateId === templateId;
-    return matchesQuery && matchesStatus && matchesTemplate;
-  }), [protocols, query, status, templateId]);
+    const matchesSubtype = !subtype || protocol.subtype === subtype;
+    const matchesCompliance = !compliance || protocol.complianceResult === compliance;
+    const matchesFrom = !dateFrom || protocol.protocolDate >= dateFrom;
+    const matchesTo = !dateTo || protocol.protocolDate <= dateTo;
+    return matchesQuery && matchesStatus && matchesTemplate && matchesSubtype && matchesCompliance && matchesFrom && matchesTo;
+  }), [protocols, query, status, templateId, subtype, compliance, dateFrom, dateTo]);
+
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
+
+  const preview = async (protocol: Protocol) => {
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    try {
+      const blob = await previewProtocol(protocol.id);
+      if (!blob.size) throw new Error('Backend вернул пустой файл предпросмотра.');
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(blob));
+    } catch (previewError) {
+      setPreviewUrl('');
+      toast.error('Не удалось открыть предпросмотр', previewError instanceof Error ? previewError.message : undefined);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const replace = async (protocol: Protocol) => {
+    const reason = window.prompt('Укажите причину создания исправленной версии:');
+    if (!reason?.trim()) return;
+    try {
+      const replacement = await replaceProtocol(protocol.id, reason.trim());
+      toast.success('Исправленная версия создана');
+      navigate(`/staff/protocols/${replacement.id}`);
+    } catch (replaceError) {
+      toast.error('Не удалось создать исправленную версию', replaceError instanceof Error ? replaceError.message : undefined);
+    }
+  };
 
   const stats = useMemo(() => statCards.map((card) => {
     if (card.key === 'total') return { ...card, value: protocols.length };
@@ -164,7 +210,7 @@ const ProtocolsPage = () => {
         ))}
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1fr_240px_260px]">
+      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-4">
         <label className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
@@ -182,6 +228,25 @@ const ProtocolsPage = () => {
           <option value="">Все шаблоны</option>
           {templates.map((template) => <option key={template.id} value={template.id}>{template.name || templateName(template.id)}</option>)}
         </select>
+        <select value={subtype} onChange={(event) => setSubtype(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100">
+          <option value="">Все подтипы</option>
+          {physicalFactorTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+        </select>
+        <select value={compliance} onChange={(event) => setCompliance(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100">
+          <option value="">Любое соответствие</option>
+          <option value="NORMAL">Соответствует</option>
+          <option value="EXCEEDED">Превышение</option>
+          <option value="BELOW_REQUIRED">Ниже требуемого</option>
+          <option value="NEEDS_REVIEW">Требует проверки</option>
+        </select>
+        <label className="space-y-1 text-xs font-bold uppercase tracking-wide text-slate-500">
+          <span>Период с</span>
+          <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal text-slate-800 outline-none focus:border-eco-500" />
+        </label>
+        <label className="space-y-1 text-xs font-bold uppercase tracking-wide text-slate-500">
+          <span>Период по</span>
+          <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal text-slate-800 outline-none focus:border-eco-500" />
+        </label>
       </div>
 
       {error && (
@@ -194,7 +259,9 @@ const ProtocolsPage = () => {
         protocols={filtered}
         loading={loading}
         onOpen={(protocol) => navigate(`/staff/protocols/${protocol.id}`)}
+        onPreview={preview}
         onDelete={remove}
+        onReplace={replace}
         onDownloadPdf={(protocol) => download(protocol, 'pdf')}
         onDownloadDocx={(protocol) => download(protocol, 'docx')}
       />
@@ -206,6 +273,7 @@ const ProtocolsPage = () => {
         onClose={() => setModalOpen(false)}
         onCreate={submitCreate}
       />
+      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} draft onClose={() => setPreviewOpen(false)} />
     </div>
   );
 };

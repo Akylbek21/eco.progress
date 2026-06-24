@@ -43,6 +43,7 @@ export const extractItem = (input: unknown, keys: string[] = []): unknown => {
   const itemKeys = [...keys, 'protocol', 'company', 'normative', 'device', 'measurementDevice', 'result', 'item', 'row'];
 
   for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate[0];
     const record = asRecord(candidate);
     if (!record) continue;
     for (const key of itemKeys) {
@@ -50,7 +51,11 @@ export const extractItem = (input: unknown, keys: string[] = []): unknown => {
     }
   }
 
-  return candidates[0];
+  const direct = candidates.find((candidate) => {
+    const record = asRecord(candidate);
+    return record && !('data' in record && Object.keys(record).every((key) => ['data', 'message'].includes(key)));
+  });
+  return direct;
 };
 
 export const getApiStatus = (error: unknown): number | undefined =>
@@ -65,7 +70,11 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Не удалос
 
   const responseData = asRecord(error.response?.data);
   const nestedData = asRecord(responseData?.data);
-  const backendMessage = responseData?.message || responseData?.error || nestedData?.message || nestedData?.error;
+  const backendMessage = responseData?.message
+    || responseData?.error
+    || nestedData?.message
+    || nestedData?.error
+    || (typeof error.response?.data === 'string' ? error.response.data : undefined);
   if (typeof backendMessage === 'string' && backendMessage.trim()) return backendMessage;
 
   const validationErrors = responseData?.errors || nestedData?.errors;

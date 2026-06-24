@@ -21,7 +21,7 @@ const ProtocolTestingForm = ({ templateId, value, readOnly, onChange }: Props) =
           <span>Тип замера<Required /></span>
           <select className={inputClass} disabled={readOnly} value={value.physicalFactorType || ''} onChange={(event) => onChange({ ...value, physicalFactorType: event.target.value })}>
             <option value="">Выберите тип</option>
-            {physicalFactorTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+            {physicalFactorTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
           </select>
         </label>
       )}
