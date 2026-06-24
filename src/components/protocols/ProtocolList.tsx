@@ -1,5 +1,3 @@
-import { Copy, Download, Eye, FilePenLine, FileText, RotateCcw, Trash2 } from 'lucide-react';
-import Button from '../ui/Button';
 import ProtocolStatusBadge from './ProtocolStatusBadge';
 import NormativeStatusBadge from './NormativeStatusBadge';
 import type { Protocol } from '../../types/protocols';
@@ -52,17 +50,31 @@ const ProtocolList = ({ protocols, loading = false, onOpen, onPreview, onCopy, o
               <td className="px-4 py-4">{protocol.executor || protocol.laboratory?.executor || '—'}</td>
               <td className="px-4 py-4">{protocol.createdAt || '—'}</td>
               <td className="px-4 py-4">
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="secondary" className="px-3" title={protocol.status === 'DRAFT' ? 'Редактировать' : 'Открыть'} onClick={() => onOpen(protocol)}>
-                    {protocol.status === 'DRAFT' ? <FilePenLine className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                  <Button type="button" variant="secondary" className="px-3" title="Предпросмотр" onClick={() => onPreview(protocol)}><Eye className="h-4 w-4" /></Button>
-                  <Button type="button" variant="secondary" className="px-3" title="Копировать протокол" onClick={() => onCopy(protocol)}><Copy className="h-4 w-4" /></Button>
-                  <Button type="button" variant="secondary" className="px-3" title="Скачать DOCX" onClick={() => onDownloadDocx(protocol)}><FileText className="h-4 w-4" /></Button>
-                  <Button type="button" variant="secondary" className="px-3" title="Скачать PDF" onClick={() => onDownloadPdf(protocol)}><Download className="h-4 w-4" /></Button>
-                  {protocol.status === 'DRAFT' && <Button type="button" variant="secondary" className="px-3 text-rose-700 hover:bg-rose-50" title="Удалить черновик" onClick={() => onDelete(protocol)}><Trash2 className="h-4 w-4" /></Button>}
-                  {protocol.status === 'SIGNED' && <Button type="button" variant="secondary" className="px-3" title="Создать исправленную версию" onClick={() => onReplace(protocol)}><RotateCcw className="h-4 w-4" /></Button>}
-                </div>
+                <select
+                  aria-label={`Действия с протоколом ${protocol.protocolNumber || protocol.number || ''}`}
+                  defaultValue=""
+                  className="ml-auto block w-full max-w-[140px] rounded-lg border border-eco-300 bg-white px-2 py-2 text-xs font-semibold text-eco-800 outline-none hover:bg-eco-50 focus:border-eco-500 focus:ring-2 focus:ring-eco-100"
+                  onChange={(event) => {
+                    const action = event.target.value;
+                    event.target.value = '';
+                    if (action === 'open') onOpen(protocol);
+                    if (action === 'preview') void onPreview(protocol);
+                    if (action === 'copy') void onCopy(protocol);
+                    if (action === 'docx') void onDownloadDocx(protocol);
+                    if (action === 'pdf') void onDownloadPdf(protocol);
+                    if (action === 'delete') onDelete(protocol);
+                    if (action === 'replace') void onReplace(protocol);
+                  }}
+                >
+                  <option value="" disabled>Выберите…</option>
+                  <option value="open">{protocol.status === 'DRAFT' ? 'Изменить' : 'Открыть'}</option>
+                  <option value="preview">Предпросмотр</option>
+                  <option value="copy">Создать копию</option>
+                  <option value="docx">Скачать DOCX</option>
+                  <option value="pdf">Скачать PDF</option>
+                  {protocol.status === 'DRAFT' && <option value="delete">Удалить черновик</option>}
+                  {protocol.status === 'SIGNED' && <option value="replace">Исправленная версия</option>}
+                </select>
               </td>
             </tr>
           ))}
