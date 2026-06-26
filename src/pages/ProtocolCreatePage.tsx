@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import CreateProtocolModal from '../components/protocols/CreateProtocolModal';
 import protocolService from '../services/protocolService';
 import { protocolTemplates } from '../data/protocolTemplates';
-import type { CreateProtocolPayload, ProtocolTemplate } from '../types/protocols';
+import type { CreateProtocolPayload, ProtocolResultPayload, ProtocolTemplate } from '../types/protocols';
 import { useToast } from '../hooks/useToast';
 
 const ProtocolCreatePage = () => {
@@ -16,12 +16,19 @@ const ProtocolCreatePage = () => {
     protocolService.getProtocolTemplates().then((items) => items.length && setTemplates(items)).catch(() => setTemplates(protocolTemplates));
   }, []);
 
-  const create = async (payload: CreateProtocolPayload) => {
+  const create = async (payload: CreateProtocolPayload, results: ProtocolResultPayload[]) => {
     setLoading(true);
     try {
-      const protocol = await protocolService.createProtocol(payload);
-      toast.success('Черновик протокола создан');
-      navigate(`/staff/protocols/${protocol.id}`, { replace: true });
+      let protocol = await protocolService.createProtocol(payload);
+      for (const result of results) {
+        await protocolService.addProtocolResult(protocol.id, result);
+      }
+      protocol = await protocolService.calculateProtocol(protocol.id);
+      toast.success('Протокол рассчитан и создан');
+      navigate(`/staff/protocols/${protocol.id}?preview=1`, { replace: true });
+    } catch (error) {
+      toast.error('Не удалось создать протокол', error instanceof Error ? error.message : undefined);
+      throw error;
     } finally {
       setLoading(false);
     }

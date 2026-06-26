@@ -14,7 +14,7 @@ type Props = {
 
 const value = (raw: unknown) => raw === undefined || raw === null || raw === '' ? '—' : String(raw);
 
-const ProtocolPreviewModal = ({ open, loading = false, protocol, draft = false, onClose }: Props) => {
+const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, draft = false, onClose }: Props) => {
   if (!open) return null;
   const landscape = protocol?.templateId === 'industrial_emissions';
   const columns = protocol ? getProtocolResultColumns(protocol.templateId, protocol.subtype) : [];
@@ -30,11 +30,12 @@ const ProtocolPreviewModal = ({ open, loading = false, protocol, draft = false, 
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-8">
         {loading && <div className="mx-auto flex h-80 max-w-5xl items-center justify-center bg-white text-sm font-semibold text-slate-500">Формирование предпросмотра…</div>}
-        {!loading && protocol && (
+        {!loading && previewUrl && <iframe title="Предпросмотр протокола от backend" src={previewUrl} className="mx-auto h-full min-h-[80vh] w-full max-w-7xl rounded-xl bg-white shadow-2xl" />}
+        {!loading && !previewUrl && protocol && (
           <article className={`relative mx-auto min-h-[1120px] bg-white p-8 text-[11px] leading-snug text-slate-950 shadow-2xl sm:p-12 ${landscape ? 'w-[1120px] min-w-[1120px]' : 'w-[794px] min-w-[794px]'}`}>
             {draft && <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"><span className="-rotate-12 text-8xl font-black uppercase tracking-[0.2em] text-slate-100">Черновик</span></div>}
             <header className="relative grid grid-cols-[90px_1fr_180px] items-center border-b-2 border-slate-900 pb-4">
-              <div className="flex h-16 w-16 items-center justify-center border-2 border-emerald-800 text-emerald-800"><FlaskConical className="h-9 w-9" /></div>
+              <div className="flex h-16 w-16 items-center justify-center border-2 border-emerald-800 text-emerald-800">{protocol.laboratory.logoUrl ? <img src={protocol.laboratory.logoUrl} alt="" className="h-full w-full object-contain p-1" /> : <FlaskConical className="h-9 w-9" />}</div>
               <div className="text-center">
                 <p className="text-sm font-black uppercase">{protocol.laboratory.laboratoryName}</p>
                 <p className="mt-1">{protocol.laboratory.laboratoryAddress}</p>
@@ -102,7 +103,7 @@ const ProtocolPreviewModal = ({ open, loading = false, protocol, draft = false, 
             </section>
 
             <footer className="absolute bottom-8 left-12 right-12 border-t border-slate-700 pt-3 text-[9px]">
-              <p>Результаты испытаний относятся только к представленным объектам и пробам. Частичное воспроизведение протокола без письменного разрешения испытательной лаборатории не допускается.</p>
+              <p>{protocol.laboratory.standardNote || 'Результаты испытаний относятся только к представленным объектам и пробам. Частичное воспроизведение протокола без письменного разрешения испытательной лаборатории не допускается.'}</p>
               <p className="mt-1 font-bold text-rose-700">Демонстрационный макет. Не является официальным документом.</p>
             </footer>
           </article>

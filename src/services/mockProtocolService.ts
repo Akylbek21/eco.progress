@@ -1,17 +1,26 @@
 import type {
   CreateProtocolPayload,
+  CalculationResultResponse,
   MeasurementDevice,
+  MethodTemplateResponse,
+  LaboratoryProfile,
   NormativeRecord,
   NormativeSearchResult,
+  Pollutant,
   Protocol,
   ProtocolHistoryItem,
   ProtocolInternalStatus,
+  ProtocolLaboratorySnapshot,
   ProtocolMeasurementDevice,
   ProtocolResultPayload,
   ProtocolResultRow,
   ProtocolStatus,
+  ProtocolCalculationSummaryResponse,
   ProtocolTemplate,
+  RawMeasurementRequest,
+  RawMeasurementsResponse,
   UpdateProtocolPayload,
+  WeatherConditions,
 } from '../types/protocols';
 import { mockCompanies } from '../mocks/mockCompanies';
 import { mockDevices, mockLaboratory } from '../mocks/mockDevices';
@@ -24,6 +33,34 @@ const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const wait = async () => new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 301)));
 const now = () => new Date().toISOString();
+const laboratorySnapshot = (
+  profile: LaboratoryProfile,
+  executorId?: string,
+): ProtocolLaboratorySnapshot => {
+  const executor = profile.employees.find((employee) => (employee.userId || employee.id) === executorId && employee.active)
+    || profile.employees.find((employee) => employee.active);
+  return {
+    laboratoryId: profile.id,
+    laboratoryName: profile.name,
+    legalName: profile.legalName,
+    bin: profile.bin,
+    laboratoryAddress: profile.address,
+    phone: profile.phone,
+    email: profile.email,
+    accreditationNumber: profile.accreditationNumber || '',
+    accreditationIssuedAt: profile.accreditationIssuedAt,
+    accreditationValidUntil: profile.accreditationValidUntil || '',
+    directorId: profile.directorId,
+    director: profile.directorName || '',
+    laboratoryHeadId: profile.laboratoryHeadId,
+    laboratoryHead: profile.laboratoryHeadName || '',
+    executorId: executor?.userId || executor?.id,
+    executor: executor?.fullName || '',
+    logoUrl: profile.logoUrl,
+    standardNote: profile.standardNote,
+    capturedAt: now(),
+  };
+};
 
 const read = (): Protocol[] => {
   try {
@@ -73,17 +110,18 @@ const numberFor = (templateId: Protocol['templateId'], sequence: number) => {
 const compare = (row: ProtocolResultRow): ProtocolInternalStatus => {
   const result = Number(row.values.result ?? row.values.resultMg ?? row.values.resultGs);
   if (!Number.isFinite(result)) return 'EMPTY_RESULT';
-  const normative = Number(row.values.normative ?? row.values.normativeMax ?? row.values.normativeMin ?? row.values.pdkBackground ?? row.values.mdvMg);
+  const normative = Number(row.values.normative ?? row.values.pdk ?? row.values.normativeMax ?? row.values.normativeMin ?? row.values.pdkBackground ?? row.values.mdvMg);
   const min = Number(row.values.normativeMin);
   const max = Number(row.values.normativeMax);
   const comparison = String(row.values.comparisonType || (Number.isFinite(min) && Number.isFinite(max) ? 'RANGE' : 'LESS_OR_EQUAL'));
+  const hasReferenceNormative = Boolean(row.normativeReference?.id || row.values.normativeId);
   if (comparison === 'RANGE') {
     if (!Number.isFinite(min) || !Number.isFinite(max)) return 'NORMATIVE_NOT_FOUND';
-    return result >= min && result <= max ? 'NORMAL' : 'EXCEEDED';
+    return result >= min && result <= max ? (hasReferenceNormative ? 'NORMAL' : 'OK_MANUAL') : 'EXCEEDED';
   }
   if (!Number.isFinite(normative)) return 'NORMATIVE_NOT_FOUND';
-  if (comparison === 'GREATER_OR_EQUAL') return result >= normative ? 'NORMAL' : 'BELOW_REQUIRED';
-  return result <= normative ? 'NORMAL' : 'EXCEEDED';
+  if (comparison === 'GREATER_OR_EQUAL') return result >= normative ? (hasReferenceNormative ? 'NORMAL' : 'OK_MANUAL') : 'BELOW_REQUIRED';
+  return result <= normative ? (hasReferenceNormative ? 'NORMAL' : 'OK_MANUAL') : 'EXCEEDED';
 };
 
 const overall = (rows: ProtocolResultRow[]) => {
@@ -120,6 +158,15 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   const protocolId = id('protocol');
   const protocolNumber = payload.protocolNumber?.trim() || numberFor(payload.templateId, items.length + 1);
   const createdAt = now();
+  const laboratoryService = await import('./laboratorySettingsService');
+  const laboratories = await laboratoryService.getLaboratories();
+  const selectedLaboratory = payload.laboratoryId
+    ? laboratories.find((item) => item.id === payload.laboratoryId)
+    : laboratories.find((item) => item.isDefault) || (laboratories.length === 1 ? laboratories[0] : undefined);
+  if (!selectedLaboratory) throw new Error('Лаборатория по умолчанию не настроена.');
+  const laboratoryProfile = await laboratoryService.getLaboratory(selectedLaboratory.id);
+  const snapshot = laboratorySnapshot(laboratoryProfile, payload.executorId);
+  if (!snapshot.executorId) throw new Error('Текущий пользователь не может быть исполнителем. Выберите активного сотрудника.');
   const protocol: Protocol = {
     id: protocolId,
     protocolNumber,
@@ -142,8 +189,13 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
       objectName: companyObject.name,
       objectAddress: companyObject.address,
       objectActivityType: companyObject.activityType,
+      coordinates: companyObject.coordinates,
     },
     protocolDate: payload.protocolDate,
+    measurementDate: payload.measurementDate,
+    measurementTime: payload.measurementTime,
+    measurementPlace: payload.measurementPlace,
+    sourceNumber: payload.sourceNumber,
     samplingDate: payload.samplingDate,
     testingStartDate: payload.testingStartDate,
     testingEndDate: payload.testingEndDate,
@@ -156,7 +208,7 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
       productName: payload.productName || companyObject.activityType,
       testingBasis: payload.testingBasis || `Договор ${company.contractNumber} от ${company.contractDate}`,
     },
-    laboratory: clone(mockLaboratory),
+    laboratory: snapshot,
     testing: {
       productNormativeDocument: payload.productNormativeDocument || '',
       samplingMethodDocument: payload.samplingMethodDocument || '',
@@ -172,8 +224,9 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
     results: [],
     measurementDevices: [],
     explanatoryNote: '',
-    executor: mockLaboratory.executor,
-    approver: mockLaboratory.laboratoryHead,
+    executor: snapshot.executor,
+    executorId: snapshot.executorId,
+    approver: snapshot.laboratoryHead,
     complianceResult: 'NEEDS_REVIEW',
     history: [history('Протокол создан')],
     createdAt,
@@ -190,11 +243,20 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
     protocolNumber: payload.number,
     number: payload.number,
     protocolDate: payload.protocolDate,
+    objectId: payload.objectId || protocol.objectId,
+    measurementDate: payload.measurementDate || protocol.measurementDate,
+    measurementTime: payload.measurementTime || protocol.measurementTime,
+    measurementPlace: payload.measurementPlace || protocol.measurementPlace,
     formCode: payload.formCode,
     application: payload.application,
     executor: payload.executor,
+    executorId: payload.executorId || protocol.executorId,
     approver: payload.approver,
-    laboratory: clone(payload.laboratory),
+    laboratory: payload.executorId ? {
+      ...protocol.laboratory,
+      executorId: payload.executorId,
+      executor: payload.executor || protocol.laboratory.executor,
+    } : protocol.laboratory,
     organization: clone(payload.organization),
     testing: clone(payload.testing),
     environment: clone(payload.environment || {}),
@@ -214,7 +276,13 @@ export async function deleteProtocol(protocolId: string): Promise<void> {
 
 export async function addResult(protocolId: string, payload: ProtocolResultPayload): Promise<ProtocolResultRow> {
   await wait();
-  const result: ProtocolResultRow = { id: id('result'), values: clone(payload.values), measurementDeviceId: payload.measurementDeviceId, internalStatus: 'NEEDS_REVIEW', checkStatus: 'NEEDS_REVIEW' };
+  const result: ProtocolResultRow = {
+    id: id('result'),
+    values: { ...clone(payload.values), normativeId: payload.normativeId ?? payload.values.normativeId },
+    measurementDeviceId: payload.measurementDeviceId,
+    internalStatus: 'NEEDS_REVIEW',
+    checkStatus: 'NEEDS_REVIEW',
+  };
   updateStored(protocolId, (protocol) => ({ ...protocol, results: [...protocol.results, result], history: [...(protocol.history || []), history('Строка результата добавлена')] }));
   return clone(result);
 }
@@ -228,7 +296,13 @@ export async function updateResult(protocolId: string, resultId: string, payload
     ...protocol,
     results: protocol.results.map((row) => {
       if (row.id !== resultId) return row;
-      saved = { ...row, values: clone(payload.values), measurementDeviceId: payload.measurementDeviceId, internalStatus: 'NEEDS_REVIEW', checkStatus: 'NEEDS_REVIEW' };
+      saved = {
+        ...row,
+        values: { ...clone(payload.values), normativeId: payload.normativeId ?? payload.values.normativeId },
+        measurementDeviceId: payload.measurementDeviceId,
+        internalStatus: 'NEEDS_REVIEW',
+        checkStatus: 'NEEDS_REVIEW',
+      };
       return saved;
     }),
     history: [...(protocol.history || []), history('Строка результата изменена')],
@@ -250,8 +324,28 @@ export async function checkNormatives(protocolId: string): Promise<Protocol> {
   await wait();
   return updateStored(protocolId, (protocol) => {
     const results = protocol.results.map((row) => {
-      const internalStatus = compare(row);
-      return { ...row, internalStatus, checkStatus: internalStatus };
+      const primary = row.values.primaryReading ?? row.values.measurementReadings;
+      const values = row.values.result || row.values.resultMg
+        ? row.values
+        : { ...row.values, result: primary, resultMg: protocol.templateId === 'industrial_emissions' ? primary : row.values.resultMg };
+      const calculated = { ...row, values };
+      const internalStatus = compare(calculated);
+      const normativeValue = String(values.normative ?? values.normativeMax ?? values.normativeMin ?? '');
+      return {
+        ...calculated,
+        result: String(values.result ?? values.resultMg ?? ''),
+        internalStatus,
+        checkStatus: internalStatus,
+        calculationDetails: {
+          formula: 'Официальная формула методики (демонстрационный backend)',
+          substitutedValues: String(primary ?? ''),
+          finalValue: String(values.result ?? values.resultMg ?? ''),
+          unit: String(values.unit || ''),
+          normativeValue,
+          comparisonResult: internalStatus,
+          methodVersion: String(values.methodVersion || 'demo-1'),
+        },
+      };
     });
     return { ...protocol, results, complianceResult: overall(results), history: [...(protocol.history || []), history('Нормативы проверены')] };
   });
@@ -319,8 +413,253 @@ export async function removeProtocolMeasurementDevice(protocolId: string, device
 export async function searchNormative(params: Record<string, string>): Promise<NormativeSearchResult> {
   await wait();
   const query = String(params.indicator || '').trim().toLowerCase();
-  const items = mockNormatives.filter((item) => item.templateId === params.templateId && item.indicator.toLowerCase().includes(query));
+  const codeMap: Record<string, string> = { '0301': 'n-no2', '0304': 'n-no', '0330': 'n-so2', '0337': 'n-co' };
+  const items = mockNormatives.filter((item) =>
+    item.templateId === params.templateId
+    && (codeMap[params.code] ? item.id === codeMap[params.code] : item.indicator.toLowerCase().includes(query)));
   return { found: items.length > 0, normative: items[0], normatives: clone(items), ambiguous: items.length > 1 };
+}
+
+const demoPollutants: Pollutant[] = [
+  { code: '0301', name: 'Азота диоксид', formula: 'NO₂', cas: '10102-44-0', unit: 'мг/м³', testingMethod: 'МВИ 01-2024' },
+  { code: '0304', name: 'Азота оксид', formula: 'NO', cas: '10102-43-9', unit: 'мг/м³', testingMethod: 'МВИ 01-2024' },
+  { code: '0330', name: 'Сера диоксид', formula: 'SO₂', cas: '7446-09-5', unit: 'мг/м³', testingMethod: 'МВИ 02-2024' },
+  { code: '0337', name: 'Углерода оксид', formula: 'CO', cas: '630-08-0', unit: 'мг/м³', testingMethod: 'МВИ 03-2024' },
+];
+
+const demoMethodTemplates: MethodTemplateResponse[] = [
+  {
+    id: 'demo-method-air',
+    code: 'DEMO-AIR-001',
+    name: 'Demo calculation method',
+    protocolTemplateCode: 'industrial_emissions',
+    methodDocument: 'MVI DEMO-001',
+    measurementUnit: 'mg/m3',
+    resultUnit: 'mg/m3',
+    formulaExpression: '(reading1 + reading2) / 2',
+    decimalPlaces: 3,
+    active: true,
+    variables: [
+      { id: 'v-reading-1', variableKey: 'reading1', variableLabel: 'Reading 1', unit: 'mg/m3', type: 'number', required: true, displayOrder: 1 },
+      { id: 'v-reading-2', variableKey: 'reading2', variableLabel: 'Reading 2', unit: 'mg/m3', type: 'number', required: false, displayOrder: 2 },
+    ],
+  },
+];
+
+const defaultMethodTemplate = (row?: ProtocolResultRow): MethodTemplateResponse => ({
+  ...demoMethodTemplates[0],
+  pollutantCode: String(row?.values.pollutantCode || row?.code || row?.values.code || ''),
+  pollutantName: String(row?.values.indicator || row?.indicatorName || row?.indicator || ''),
+  methodDocument: String(row?.testingMethodDocument || row?.testingMethod || row?.values.testingMethodDocument || row?.values.testingMethod || demoMethodTemplates[0].methodDocument),
+  measurementUnit: String(row?.unit || row?.values.unit || demoMethodTemplates[0].measurementUnit),
+  resultUnit: String(row?.unit || row?.values.unit || demoMethodTemplates[0].resultUnit),
+});
+
+const rawMeasurementsFor = (protocolId: string, row: ProtocolResultRow): RawMeasurementsResponse => {
+  const methodTemplate = defaultMethodTemplate(row);
+  const measurements = methodTemplate.variables.map<RawMeasurementRequest>((variable) => ({
+    variableKey: variable.variableKey,
+    variableValue: row.values[`raw_${variable.variableKey}`] ?? row.values[variable.variableKey] ?? variable.defaultValue ?? '',
+    unit: variable.unit,
+    sourceType: 'MANUAL',
+    deviceId: row.measurementDeviceId || row.deviceId || String(row.values.measurementDeviceId || row.values.deviceId || ''),
+  }));
+  return {
+    protocolId,
+    resultId: row.id,
+    methodTemplate,
+    variables: methodTemplate.variables,
+    measurements,
+    calculationStatus: row.calculationStatus,
+    calculationMessage: row.calculationMessage,
+  };
+};
+
+const calculationResponseFor = (protocolId: string, row: ProtocolResultRow): CalculationResultResponse => ({
+  protocolId,
+  resultId: row.id,
+  result: row.result || row.values.result || row.values.resultMg || null,
+  uncertaintyValue: row.uncertaintyValue || row.values.uncertaintyValue || null,
+  normativeValue: row.normativeValue || row.normative || row.pdk || row.values.normative || row.values.pdk || null,
+  internalStatus: row.internalStatus,
+  calculationStatus: row.calculationStatus,
+  calculationMessage: row.calculationMessage,
+  warnings: row.warnings,
+  row,
+});
+
+const calculateMockRow = (row: ProtocolResultRow): ProtocolResultRow => {
+  const rawValues = ['reading1', 'reading2']
+    .map((key) => Number(String(row.values[`raw_${key}`] ?? row.values[key] ?? '').replace(',', '.')))
+    .filter(Number.isFinite);
+  const manual = Number(String(row.values.primaryReading ?? row.values.result ?? row.result ?? '').replace(',', '.'));
+  const resultNumber = rawValues.length
+    ? rawValues.reduce((sum, value) => sum + value, 0) / rawValues.length
+    : manual;
+  if (!Number.isFinite(resultNumber)) {
+    return {
+      ...row,
+      calculationStatus: 'WAITING_INPUTS',
+      calculationMessage: 'Waiting for raw inputs',
+      internalStatus: 'EMPTY_RESULT',
+      checkStatus: 'EMPTY_RESULT',
+    };
+  }
+  const result = resultNumber.toFixed(3).replace(/\.?0+$/, '');
+  const calculated: ProtocolResultRow = {
+    ...row,
+    result,
+    calculationStatus: rawValues.length ? 'CALCULATED' : 'MANUAL',
+    calculationMessage: rawValues.length ? 'Calculated' : 'Manual input',
+    uncertaintyValue: String(row.values.uncertaintyValue || ''),
+    values: {
+      ...row.values,
+      result,
+      resultMg: result,
+      resultValue: result,
+      calculationStatus: rawValues.length ? 'CALCULATED' : 'MANUAL',
+      calculationMessage: rawValues.length ? 'Calculated' : 'Manual input',
+    },
+  };
+  const internalStatus = compare(calculated);
+  return { ...calculated, internalStatus, checkStatus: internalStatus };
+};
+
+export async function getMethodTemplates(): Promise<MethodTemplateResponse[]> {
+  await wait();
+  return clone(demoMethodTemplates);
+}
+
+export async function getMethodTemplate(id: string): Promise<MethodTemplateResponse> {
+  await wait();
+  return clone(demoMethodTemplates.find((item) => item.id === id) || demoMethodTemplates[0]);
+}
+
+export async function getRawMeasurements(protocolId: string, resultId: string): Promise<RawMeasurementsResponse> {
+  await wait();
+  const protocol = await getProtocol(protocolId);
+  const row = protocol.results.find((item) => item.id === resultId);
+  if (!row) throw new Error('Result row not found.');
+  return clone(rawMeasurementsFor(protocolId, row));
+}
+
+export async function saveRawMeasurements(protocolId: string, resultId: string, payload: RawMeasurementRequest[]): Promise<RawMeasurementsResponse> {
+  await wait();
+  let saved: ProtocolResultRow | undefined;
+  updateStored(protocolId, (protocol) => ({
+    ...protocol,
+    results: protocol.results.map((row) => {
+      if (row.id !== resultId) return row;
+      const rawValues = Object.fromEntries(payload.map((item) => [`raw_${item.variableKey}`, item.variableValue ?? '']));
+      saved = {
+        ...row,
+        calculationStatus: 'WAITING_INPUTS',
+        calculationMessage: '',
+        values: {
+          ...row.values,
+          ...rawValues,
+          measurementDeviceId: payload.find((item) => item.deviceId)?.deviceId || row.values.measurementDeviceId,
+        },
+      };
+      return saved;
+    }),
+    history: [...(protocol.history || []), history('Raw measurements saved')],
+  }));
+  if (!saved) throw new Error('Result row not found.');
+  return clone(rawMeasurementsFor(protocolId, saved));
+}
+
+export async function calculateResult(protocolId: string, resultId: string): Promise<CalculationResultResponse> {
+  await wait();
+  let saved: ProtocolResultRow | undefined;
+  updateStored(protocolId, (protocol) => {
+    const results = protocol.results.map((row) => {
+      if (row.id !== resultId) return row;
+      saved = calculateMockRow(row);
+      return saved;
+    });
+    return { ...protocol, results, complianceResult: overall(results), history: [...(protocol.history || []), history('Result calculated')] };
+  });
+  if (!saved) throw new Error('Result row not found.');
+  return clone(calculationResponseFor(protocolId, saved));
+}
+
+export async function calculateProtocolSummary(protocolId: string): Promise<ProtocolCalculationSummaryResponse> {
+  await wait();
+  let savedRows: ProtocolResultRow[] = [];
+  updateStored(protocolId, (protocol) => {
+    savedRows = protocol.results.map(calculateMockRow);
+    return { ...protocol, results: savedRows, complianceResult: overall(savedRows), history: [...(protocol.history || []), history('Protocol calculated')] };
+  });
+  const rows = savedRows.map((row) => calculationResponseFor(protocolId, row));
+  return {
+    protocolId,
+    total: rows.length,
+    calculated: rows.filter((row) => row.calculationStatus === 'CALCULATED').length,
+    manual: rows.filter((row) => row.calculationStatus === 'MANUAL').length,
+    waitingInputs: rows.filter((row) => row.calculationStatus === 'WAITING_INPUTS').length,
+    needsRepeat: rows.filter((row) => row.calculationStatus === 'NEEDS_REPEAT').length,
+    normativeNotFound: rows.filter((row) => row.internalStatus === 'NORMATIVE_NOT_FOUND').length,
+    errors: rows.filter((row) => row.calculationStatus === 'ERROR').length,
+    exceeded: rows.filter((row) => row.internalStatus === 'EXCEEDED').length,
+    complies: rows.filter((row) => ['NORMAL', 'OK', 'OK_MANUAL', 'MANUAL_NORMATIVE'].includes(String(row.internalStatus))).length,
+    rows,
+  };
+}
+
+export async function getCalculationHistory(): Promise<CalculationResultResponse[]> {
+  await wait();
+  return [];
+}
+
+export async function searchPollutants(query: string): Promise<Pollutant[]> {
+  await wait();
+  const tokens = query.toLowerCase().split(/[\s,;]+/).filter(Boolean);
+  return clone(demoPollutants.filter((item) => tokens.some((token) =>
+    `${item.code} ${item.name} ${item.cas} ${item.formula}`.toLowerCase().includes(token))));
+}
+
+export async function getWeatherConditions(): Promise<WeatherConditions> {
+  await wait();
+  return {
+    temperature: '24.6',
+    minTemperature: '23.9',
+    maxTemperature: '25.1',
+    humidity: '41',
+    minHumidity: '39',
+    maxHumidity: '43',
+    pressureKpa: '96.8',
+    windSpeed: '2.4',
+    status: 'LOADED',
+    source: 'API',
+    dataSource: 'Демонстрационный погодный архив',
+    observedAt: now(),
+    loadedAt: now(),
+  };
+}
+
+export const calculateProtocol = checkNormatives;
+
+export async function refreshProtocolLaboratoryData(protocolId: string): Promise<Protocol> {
+  await wait();
+  const protocol = await getProtocol(protocolId);
+  if (protocol.status !== 'DRAFT') throw new Error('Обновить данные лаборатории можно только в черновике.');
+  const laboratoryService = await import('./laboratorySettingsService');
+  const summaries = await laboratoryService.getLaboratories();
+  const laboratoryId = protocol.laboratory.laboratoryId
+    || summaries.find((item) => item.isDefault)?.id
+    || (summaries.length === 1 ? summaries[0].id : '');
+  if (!laboratoryId) throw new Error('Лаборатория по умолчанию не настроена.');
+  const profile = await laboratoryService.getLaboratory(laboratoryId);
+  const snapshot = laboratorySnapshot(profile, protocol.executorId || protocol.laboratory.executorId);
+  return updateStored(protocolId, (current) => ({
+    ...current,
+    laboratory: snapshot,
+    executor: snapshot.executor,
+    executorId: snapshot.executorId,
+    approver: snapshot.laboratoryHead,
+    history: [...(current.history || []), history('Snapshot лаборатории обновлён')],
+  }));
 }
 
 export async function previewProtocol(protocolId: string): Promise<Blob> {

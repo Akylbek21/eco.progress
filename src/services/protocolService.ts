@@ -1,12 +1,19 @@
 import type {
   CreateProtocolPayload,
+  CalculationResultResponse,
   MeasurementDevice,
+  MethodTemplateResponse,
   NormativeSearchResult,
+  Pollutant,
   Protocol,
+  ProtocolCalculationSummaryResponse,
   ProtocolResultPayload,
   ProtocolResultRow,
   ProtocolTemplate,
+  RawMeasurementRequest,
+  RawMeasurementsResponse,
   UpdateProtocolPayload,
+  WeatherConditions,
 } from '../types/protocols';
 
 export type DownloadedProtocolFile = {
@@ -17,6 +24,8 @@ export type DownloadedProtocolFile = {
 export interface ProtocolService {
   getProtocols(params?: Record<string, string>): Promise<Protocol[]>;
   getProtocolTemplates(): Promise<ProtocolTemplate[]>;
+  getMethodTemplates(): Promise<MethodTemplateResponse[]>;
+  getMethodTemplate(id: string): Promise<MethodTemplateResponse>;
   getProtocol(protocolId: string): Promise<Protocol>;
   getProtocolById(protocolId: string): Promise<Protocol>;
   createProtocol(payload: CreateProtocolPayload): Promise<Protocol>;
@@ -25,6 +34,11 @@ export interface ProtocolService {
   addProtocolResult(protocolId: string, payload: ProtocolResultPayload): Promise<ProtocolResultRow>;
   updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload): Promise<ProtocolResultRow>;
   deleteProtocolResult(protocolId: string, resultId: string): Promise<void>;
+  getRawMeasurements(protocolId: string, resultId: string): Promise<RawMeasurementsResponse>;
+  saveRawMeasurements(protocolId: string, resultId: string, payload: RawMeasurementRequest[]): Promise<RawMeasurementsResponse>;
+  calculateResult(protocolId: string, resultId: string): Promise<CalculationResultResponse>;
+  calculateProtocolSummary(protocolId: string): Promise<ProtocolCalculationSummaryResponse>;
+  getCalculationHistory(protocolId: string, resultId: string): Promise<CalculationResultResponse[]>;
   checkNormatives(protocolId: string): Promise<Protocol>;
   readyForApproval(protocolId: string): Promise<Protocol>;
   approveProtocol(protocolId: string): Promise<Protocol>;
@@ -41,6 +55,16 @@ export interface ProtocolService {
   addProtocolMeasurementDevice(protocolId: string, device: MeasurementDevice): Promise<Protocol>;
   removeProtocolMeasurementDevice(protocolId: string, deviceId: string): Promise<Protocol>;
   searchNormative(params: Record<string, string>): Promise<NormativeSearchResult>;
+  searchPollutants(query: string, params?: Record<string, string>): Promise<Pollutant[]>;
+  getWeatherConditions(params: {
+    objectId: string | number;
+    coordinates?: string;
+    date: string;
+    time: string;
+    signal?: AbortSignal;
+  }): Promise<WeatherConditions>;
+  calculateProtocol(protocolId: string): Promise<Protocol>;
+  refreshProtocolLaboratoryData(protocolId: string): Promise<Protocol>;
 }
 
 export const useProtocolMocks = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
@@ -58,6 +82,8 @@ const implementation = () => {
 const protocolService: ProtocolService = {
   getProtocols: async (params) => (await implementation()).getProtocols(params),
   getProtocolTemplates: async () => (await implementation()).getProtocolTemplates(),
+  getMethodTemplates: async () => (await implementation()).getMethodTemplates(),
+  getMethodTemplate: async (id) => (await implementation()).getMethodTemplate(id),
   getProtocol: async (protocolId) => (await implementation()).getProtocol(protocolId),
   getProtocolById: async (protocolId) => (await implementation()).getProtocolById(protocolId),
   createProtocol: async (payload) => (await implementation()).createProtocol(payload),
@@ -66,6 +92,11 @@ const protocolService: ProtocolService = {
   addProtocolResult: async (protocolId, payload) => (await implementation()).addProtocolResult(protocolId, payload),
   updateProtocolResult: async (protocolId, resultId, payload) => (await implementation()).updateProtocolResult(protocolId, resultId, payload),
   deleteProtocolResult: async (protocolId, resultId) => (await implementation()).deleteProtocolResult(protocolId, resultId),
+  getRawMeasurements: async (protocolId, resultId) => (await implementation()).getRawMeasurements(protocolId, resultId),
+  saveRawMeasurements: async (protocolId, resultId, payload) => (await implementation()).saveRawMeasurements(protocolId, resultId, payload),
+  calculateResult: async (protocolId, resultId) => (await implementation()).calculateResult(protocolId, resultId),
+  calculateProtocolSummary: async (protocolId) => (await implementation()).calculateProtocolSummary(protocolId),
+  getCalculationHistory: async (protocolId, resultId) => (await implementation()).getCalculationHistory(protocolId, resultId),
   checkNormatives: async (protocolId) => (await implementation()).checkNormatives(protocolId),
   readyForApproval: async (protocolId) => (await implementation()).readyForApproval(protocolId),
   approveProtocol: async (protocolId) => (await implementation()).approveProtocol(protocolId),
@@ -82,6 +113,10 @@ const protocolService: ProtocolService = {
   addProtocolMeasurementDevice: async (protocolId, device) => (await implementation()).addProtocolMeasurementDevice(protocolId, device),
   removeProtocolMeasurementDevice: async (protocolId, deviceId) => (await implementation()).removeProtocolMeasurementDevice(protocolId, deviceId),
   searchNormative: async (params) => (await implementation()).searchNormative(params),
+  searchPollutants: async (query, params) => (await implementation()).searchPollutants(query, params),
+  getWeatherConditions: async (params) => (await implementation()).getWeatherConditions(params),
+  calculateProtocol: async (protocolId) => (await implementation()).calculateProtocol(protocolId),
+  refreshProtocolLaboratoryData: async (protocolId) => (await implementation()).refreshProtocolLaboratoryData(protocolId),
 };
 
 export default protocolService;

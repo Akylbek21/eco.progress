@@ -17,8 +17,11 @@ export type ProtocolSubtype =
   | 'VIBRATION'
   | 'NOISE_VIBRATION';
 
-export type ProtocolInternalStatus =
+export type ComplianceStatus =
   | 'NORMAL'
+  | 'OK'
+  | 'OK_MANUAL'
+  | 'MANUAL_NORMATIVE'
   | 'EXCEEDED'
   | 'BELOW_REQUIRED'
   | 'NORMATIVE_NOT_FOUND'
@@ -26,6 +29,16 @@ export type ProtocolInternalStatus =
   | 'NEEDS_REVIEW'
   | 'EMPTY_RESULT'
   | 'INFO';
+
+export type ProtocolInternalStatus = ComplianceStatus;
+
+export type CalculationStatus =
+  | 'WAITING_INPUTS'
+  | 'CALCULATED'
+  | 'MANUAL'
+  | 'ERROR'
+  | 'NEEDS_REPEAT'
+  | 'NORMATIVE_NOT_FOUND';
 
 export type ProtocolTemplate = {
   id: ProtocolTemplateId;
@@ -47,33 +60,103 @@ export type ProtocolResult = {
   protocolId?: string;
   internalStatus?: ProtocolInternalStatus;
   checkStatus?: ProtocolInternalStatus;
+  indicatorName?: string;
+  code?: string;
   samplingPoint?: string;
   indicator?: string;
   unit?: string;
   result?: string;
   normative?: string;
+  normativeValue?: string;
+  pdk?: string;
   testingMethod?: string;
+  testingMethodDocument?: string;
   samplingMethod?: string;
   normativeDocument?: string;
   comment?: string;
+  measurementPlace?: string;
+  sampleName?: string;
+  deviceId?: string;
+  deviceName?: string;
   measurementDeviceId?: string;
   comparisonType?: NormativeComparisonType;
   normativeMin?: string;
   normativeMax?: string;
+  pollutant?: Pollutant;
+  normativeReference?: NormativeReference;
+  measurementSeries?: MeasurementSeries;
+  calculationDetails?: CalculationDetails;
+  uncertaintyValue?: string;
+  calculationStatus?: CalculationStatus | string;
+  calculationMessage?: string;
+  warnings?: string[];
+  methodTemplate?: MethodTemplateResponse;
   values: Record<string, string | number | null | undefined>;
 };
 
 export type ProtocolResultRow = ProtocolResult;
 
-export type ProtocolLaboratoryData = {
-  laboratoryName: string;
-  laboratoryAddress: string;
-  accreditationNumber: string;
-  accreditationValidUntil: string;
-  director: string;
-  laboratoryHead: string;
-  executor: string;
+export type LaboratoryEmployee = {
+  id: string;
+  laboratoryId?: string;
+  userId?: string;
+  fullName: string;
+  position?: string;
+  email?: string;
+  role?: string;
+  active: boolean;
 };
+
+export type LaboratorySummary = {
+  id: string;
+  name: string;
+  legalName?: string;
+  accreditationNumber?: string;
+  accreditationValidUntil?: string;
+  laboratoryHeadName?: string;
+  isDefault: boolean;
+  active: boolean;
+};
+
+export type LaboratoryProfile = LaboratorySummary & {
+  bin: string;
+  address: string;
+  phone: string;
+  email: string;
+  accreditationIssuedAt: string;
+  directorId?: string;
+  directorName?: string;
+  laboratoryHeadId?: string;
+  logoUrl?: string;
+  standardNote?: string;
+  employees: LaboratoryEmployee[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ProtocolLaboratorySnapshot = {
+  laboratoryId?: string;
+  laboratoryName: string;
+  legalName?: string;
+  bin?: string;
+  laboratoryAddress: string;
+  phone?: string;
+  email?: string;
+  accreditationNumber: string;
+  accreditationIssuedAt?: string;
+  accreditationValidUntil: string;
+  directorId?: string;
+  director: string;
+  laboratoryHeadId?: string;
+  laboratoryHead: string;
+  executorId?: string;
+  executor: string;
+  logoUrl?: string;
+  standardNote?: string;
+  capturedAt?: string;
+};
+
+export type ProtocolLaboratoryData = ProtocolLaboratorySnapshot;
 
 export type ProtocolOrganizationData = {
   organizationName: string;
@@ -106,6 +189,38 @@ export type ProtocolEnvironmentalConditions = {
   pressureKpa?: string;
   windSpeed?: string;
   comment?: string;
+  status?: WeatherConditionsStatus;
+  source?: 'API' | 'MANUAL';
+  dataSource?: string;
+  observedAt?: string;
+  loadedAt?: string;
+  manualChangeReason?: string;
+};
+
+export type WeatherConditionsStatus =
+  | 'IDLE'
+  | 'LOADING'
+  | 'LOADED'
+  | 'API_UNAVAILABLE'
+  | 'COORDINATES_MISSING'
+  | 'MANUAL';
+
+export type WeatherConditions = {
+  temperature?: string;
+  minTemperature?: string;
+  maxTemperature?: string;
+  humidity?: string;
+  minHumidity?: string;
+  maxHumidity?: string;
+  pressureKpa?: string;
+  windSpeed?: string;
+  status: WeatherConditionsStatus;
+  source: 'API' | 'MANUAL';
+  dataSource?: string;
+  observedAt?: string;
+  loadedAt?: string;
+  manualChangeReason?: string;
+  warning?: string;
 };
 
 export interface ProtocolCompanySnapshot {
@@ -158,6 +273,10 @@ export interface Protocol {
   objectId?: string | number;
   companySnapshot: ProtocolCompanySnapshot;
   protocolDate: string;
+  measurementDate?: string;
+  measurementTime?: string;
+  measurementPlace?: string;
+  sourceNumber?: string;
   formCode?: string;
   application?: string;
   samplingDate?: string;
@@ -174,11 +293,12 @@ export interface Protocol {
   explanatoryNote?: string;
   complianceResult?: ProtocolInternalStatus | string;
   executor?: string;
+  executorId?: string;
   approver?: string;
   approvedAt?: string;
   signedAt?: string;
   organization: ProtocolOrganizationData;
-  laboratory: ProtocolLaboratoryData;
+  laboratory: ProtocolLaboratorySnapshot;
   testing: ProtocolTestingData;
   results: ProtocolResult[];
   measurementDevices: ProtocolMeasurementDevice[];
@@ -214,17 +334,28 @@ export interface CreateProtocolPayload {
   samplingMethodDocument?: string;
   testingMethodDocument?: string;
   purpose?: string;
+  measurementDate?: string;
+  measurementTime?: string;
+  measurementPlace?: string;
+  sourceNumber?: string;
+  laboratoryId?: string;
+  executorId?: string;
   environment?: ProtocolEnvironmentalConditions;
 }
 
 export type UpdateProtocolPayload = {
   number: string;
   protocolDate: string;
+  objectId?: string | number;
+  measurementDate?: string;
+  measurementTime?: string;
+  measurementPlace?: string;
   formCode?: string;
   application?: string;
   executor: string;
+  executorId?: string;
   approver: string;
-  laboratory: ProtocolLaboratoryData;
+  laboratory?: ProtocolLaboratorySnapshot;
   organization: ProtocolOrganizationData;
   testing: ProtocolTestingData;
   environment?: ProtocolEnvironmentalConditions;
@@ -237,13 +368,169 @@ export type ProtocolResultPayload = {
   normativeId?: string;
 };
 
+export type MethodVariableResponse = {
+  id: string;
+  variableKey: string;
+  variableLabel: string;
+  unit?: string;
+  type?: string;
+  required?: boolean;
+  minValue?: string | number | null;
+  maxValue?: string | number | null;
+  defaultValue?: string | number | null;
+  displayOrder?: number;
+};
+
+export type MethodTemplateResponse = {
+  id: string;
+  code: string;
+  name: string;
+  protocolTemplateCode?: string;
+  pollutantCode?: string;
+  pollutantName?: string;
+  methodDocument?: string;
+  measurementUnit?: string;
+  resultUnit?: string;
+  formulaExpression?: string;
+  decimalPlaces?: number;
+  active?: boolean;
+  variables: MethodVariableResponse[];
+};
+
+export type RawMeasurementRequest = {
+  variableKey: string;
+  variableValue: string | number | null;
+  unit?: string;
+  sourceType?: string;
+  deviceId?: string;
+};
+
+export type RawMeasurementsResponse = {
+  protocolId: string;
+  resultId: string;
+  methodTemplate?: MethodTemplateResponse;
+  variables: MethodVariableResponse[];
+  measurements: RawMeasurementRequest[];
+  calculationStatus?: CalculationStatus | string;
+  calculationMessage?: string;
+};
+
+export type CalculationResultResponse = {
+  protocolId: string;
+  resultId: string;
+  result?: string | number | null;
+  uncertaintyValue?: string | number | null;
+  normativeValue?: string | number | null;
+  internalStatus?: ProtocolInternalStatus | string;
+  calculationStatus?: CalculationStatus | string;
+  calculationMessage?: string;
+  warnings?: string[];
+  row?: ProtocolResultRow;
+};
+
+export type ProtocolCalculationSummaryResponse = {
+  protocolId: string;
+  total: number;
+  calculated: number;
+  manual: number;
+  waitingInputs: number;
+  needsRepeat: number;
+  normativeNotFound: number;
+  errors: number;
+  exceeded: number;
+  complies: number;
+  rows: CalculationResultResponse[];
+};
+
+export type MeasurementReading = {
+  id?: string;
+  value: string;
+  unit?: string;
+  measuredAt?: string;
+  place?: string;
+  deviceId?: string;
+  note?: string;
+};
+
+export type MeasurementSeries = {
+  type: 'CONCENTRATION' | 'MICROCLIMATE' | 'LIGHTING' | 'NOISE' | 'VIBRATION' | 'LAB_RESULT';
+  readings: MeasurementReading[];
+  sourceParameters?: Record<string, string>;
+  externalLaboratory?: {
+    name?: string;
+    accreditationNumber?: string;
+    documentName?: string;
+    documentId?: string;
+  };
+};
+
+export type CalculationDetails = {
+  formula?: string;
+  substitutedValues?: string;
+  intermediateResults?: Array<{ label: string; value: string }>;
+  rounding?: string;
+  finalValue?: string;
+  unit?: string;
+  normativeValue?: string;
+  comparisonResult?: string;
+  methodVersion?: string;
+};
+
+export type Pollutant = {
+  id?: string;
+  code: string;
+  name: string;
+  cas?: string;
+  formula?: string;
+  unit?: string;
+  testingMethod?: string;
+  samplingMethod?: string;
+  normatives?: NormativeReference[];
+};
+
+export type NormativeReference = {
+  id: string;
+  code?: string;
+  pollutantCode?: string;
+  indicator: string;
+  environment?: string;
+  unit: string;
+  normativeType: string;
+  value?: string;
+  min?: string;
+  max?: string;
+  comparisonType: NormativeComparisonType;
+  normativeDocument: string;
+  testingMethod?: string;
+  samplingMethod?: string;
+  validFrom?: string;
+  validUntil?: string;
+  version?: string;
+  active?: boolean;
+};
+
+export type ObjectEmissionLimit = {
+  id?: string;
+  objectId: string;
+  sourceNumber: string;
+  pollutantCode: string;
+  concentrationLimit?: string;
+  massFlowLimit?: string;
+  unit?: string;
+  validFrom?: string;
+  validUntil?: string;
+};
+
 export type NormativeComparisonType = 'LESS_OR_EQUAL' | 'GREATER_OR_EQUAL' | 'RANGE' | 'EQUAL' | 'INFO';
 
 export type NormativeRecord = {
   id: string;
   templateId: ProtocolTemplateId;
+  code?: string;
+  pollutantCode?: string;
   researchObject: string;
   indicator: string;
+  environment?: string;
   unit: string;
   normativeType: string;
   value: string;
@@ -255,6 +542,8 @@ export type NormativeRecord = {
   samplingMethod: string;
   validFrom: string;
   validUntil?: string;
+  version?: string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
   active: boolean;
   archived?: boolean;
 };

@@ -18,7 +18,6 @@ const ProtocolGeneralForm = ({ protocol, readOnly, onChange }: Props) => (
       <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Приложение</span><input className={inputClass} disabled={readOnly} value={protocol.application || ''} onChange={(e) => onChange({ application: e.target.value })} placeholder="При наличии" /></label>
       <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Тип протокола</span><input className={inputClass} disabled value={templateName(protocol.templateId)} /></label>
       <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Подтип</span><input className={inputClass} disabled value={subtypeName(protocol.subtype)} /></label>
-      <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Исполнитель</span><input className={inputClass} disabled={readOnly} value={protocol.executor || ''} onChange={(e) => onChange({ executor: e.target.value })} /></label>
       <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Утверждающий</span><input className={inputClass} disabled={readOnly} value={protocol.approver || ''} onChange={(e) => onChange({ approver: e.target.value })} /></label>
     </div>
   </section>

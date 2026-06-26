@@ -1,11 +1,21 @@
-import { useMemo, useState } from 'react';
-import { Copy, Edit3, Plus, SearchCheck, Sparkles, Trash2 } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Calculator, Copy, FileSpreadsheet, Plus, Search, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import NormativeStatusBadge from './NormativeStatusBadge';
+import RawMeasurementsModal from './RawMeasurementsModal';
 import protocolService from '../../services/protocolService';
-import { getProtocolResultColumns } from '../../data/protocolTemplates';
-import type { ProtocolMeasurementDevice, ProtocolResultPayload, ProtocolResultRow, ProtocolSubtype, ProtocolTemplateId } from '../../types/protocols';
+import { useAuth } from '../../contexts/AuthContext';
+import type {
+  CalculationDetails,
+  Pollutant,
+  ProtocolCalculationSummaryResponse,
+  ProtocolMeasurementDevice,
+  ProtocolResultPayload,
+  ProtocolResultRow,
+  ProtocolSubtype,
+  ProtocolTemplateId,
+} from '../../types/protocols';
 
 type Props = {
   protocolId: string;
@@ -23,128 +33,314 @@ type Props = {
   onNotify: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
 };
 
-const inputClass = 'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100';
+const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
+const automaticClass = 'rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700';
+const valueOf = (row: ProtocolResultRow, keys: string[]) => {
+  for (const key of keys) {
+    const value = row.values[key];
+    if (value !== undefined && value !== null && String(value) !== '') return String(value);
+  }
+  return '';
+};
+const officialResult = (row: ProtocolResultRow, templateId: ProtocolTemplateId) => {
+  if (row.result) return row.result;
+  if (templateId === 'industrial_emissions') return valueOf(row, ['resultMg', 'calculatedConcentration', 'resultValue']);
+  return valueOf(row, ['result', 'resultValue', 'calculatedResult']);
+};
+const normativeValue = (row: ProtocolResultRow) =>
+  row.normativeReference?.value || row.normative || row.normativeValue || row.pdk || valueOf(row, ['normative', 'pdk', 'normativeMax', 'normativeMin']) || row.normativeMax || row.normativeMin || '';
+const pollutantCode = (row: ProtocolResultRow) => row.pollutant?.code || row.code || valueOf(row, ['pollutantCode', 'code']);
+const indicator = (row: ProtocolResultRow) => row.pollutant?.name || row.indicatorName || row.indicator || valueOf(row, ['indicator', 'substanceName']);
+const unit = (row: ProtocolResultRow) => row.unit || valueOf(row, ['unit']);
+const primaryReading = (row: ProtocolResultRow) => valueOf(row, ['primaryReading', 'measurementReadings', 'readings', 'concentration']);
+const rawDataLabel = (row: ProtocolResultRow) =>
+  primaryReading(row)
+  || ['reading1', 'reading2', 'sampleWeight', 'volume'].map((key) => valueOf(row, [`raw_${key}`, key])).filter(Boolean).join(', ');
+const measurementPlace = (row: ProtocolResultRow) => row.measurementPlace || valueOf(row, ['measurementPlace', 'samplingPlace', 'object']);
+const testingMethod = (row: ProtocolResultRow) => row.testingMethodDocument || row.testingMethod || valueOf(row, ['testingMethodDocument', 'testingMethod']);
+const statusOf = (row: ProtocolResultRow) =>
+  (row.internalStatus || row.checkStatus) === 'NORMATIVE_NOT_FOUND' && normativeValue(row)
+    ? 'MANUAL_NORMATIVE'
+    : row.internalStatus || row.checkStatus;
 
-const examples = (templateId: ProtocolTemplateId, subtype?: ProtocolSubtype): ProtocolResultPayload[] => {
-  if (templateId === 'industrial_emissions') {
-    return [
-      ['Диоксид азота', '200', '142.6'],
-      ['Оксид азота', '400', '186.2'],
-      ['Диоксид серы', '500', '18.4'],
-      ['Оксид углерода', '250', '212.8'],
-    ].map(([indicator, mdvMg, resultMg]) => ({ values: { samplingDate: '2026-06-24', samplingPlace: 'Паровой котёл', sourceNumber: '0001', indicator, temperature: '118', speed: '8.4', gasVolume: '2.18', ductArea: '0.28', mdvMg, mdvGs: '0.55', resultMg, resultGs: String(Number(resultMg) * 0.00218), measurementDeviceId: 'device-dag' }, measurementDeviceId: 'device-dag' }));
-  }
-  if (templateId === 'water_wastewater') {
-    return ['Взвешенные вещества', 'БПК', 'ХПК', 'Азот аммонийный', 'Нитриты', 'Нитраты', 'Фосфаты', 'ПАВ', 'Сульфаты', 'Хлориды', 'Жиры']
-      .map((indicator, index) => ({ values: { object: 'Водовыпуск №2', sampleName: 'Проба №12', indicator, unit: 'мг/дм³', testingMethodDocument: 'Методика согласно области аккредитации', normative: String([15, 6, 30, 2, 0.08, 40, 3.5, 0.5, 100, 300, 1][index]), result: String([11, 4.8, 24.2, 1.4, 0.04, 22, 2.1, 0.2, 72, 188, 0.4][index]), externalLaboratory: 'Нет' } }));
-  }
-  if (templateId === 'ambient_air') {
-    return ['Север', 'Юг', 'Восток', 'Запад'].map((direction, index) => ({ values: { direction, samplingPlace: 'Граница СЗЗ', indicator: 'Диоксид азота', unit: 'мг/м³', pdkBackground: '0.2', result: String([0.087, 0.092, 0.078, 0.101][index]), testingMethod: 'МВИ 01-2024', measurementDeviceId: 'device-dag' }, measurementDeviceId: 'device-dag' }));
-  }
-  if (templateId === 'soil') {
-    return [
-      ['Мышьяк', '2.0', '1.62', 'ГОСТ 26930'],
-      ['Свинец', '32.0', '26.8', 'ГОСТ 26932'],
-      ['Нефтепродукты', '0.3', '0.21', 'ПНД Ф 16.1:2.2.22'],
-    ].map(([indicator, normativeMax, result, method]) => ({ values: { sampleName: 'Проба почвы №1', samplingPlace: 'Южная граница', indicator, unit: 'мг/кг', testingMethodDocument: method, normativeMax, result } }));
-  }
-  if (subtype === 'MICROCLIMATE') {
-    return [
-      ['Температура', '°C', '18', '26', '23.4', 'device-thermometer'],
-      ['Влажность', '%', '30', '60', '42', 'device-barometer'],
-      ['Скорость движения воздуха', 'м/с', '0', '0.5', '0.18', 'device-anemometer'],
-    ].map(([indicator, unit, normativeMin, normativeMax, result, device]) => ({ values: { measurementPlace: 'Рабочее место №1', indicator, unit, testingMethodDocument: 'Санитарные правила РК', normativeMin, normativeMax, result, comparisonType: 'RANGE', measurementDeviceId: device }, measurementDeviceId: device }));
-  }
-  if (subtype === 'LIGHTING') {
-    return [{ values: { measurementPlace: 'Рабочее место №1', indicator: 'Освещённость', unit: 'лк', normativeMin: '300', result: '418', comparisonType: 'GREATER_OR_EQUAL', measurementDeviceId: 'device-lux' }, measurementDeviceId: 'device-lux' }];
-  }
-  return [
-    { values: { measurementPlace: 'Рабочее место №1', factorType: subtype === 'VIBRATION' ? 'VIBRATION' : 'NOISE', indicator: subtype === 'VIBRATION' ? 'Виброускорение' : 'Уровень звука', unit: subtype === 'VIBRATION' ? 'дБ' : 'дБА', normativeMax: subtype === 'VIBRATION' ? '112' : '80', result: subtype === 'VIBRATION' ? '96' : '71', measurementDeviceId: 'device-noise' }, measurementDeviceId: 'device-noise' },
-    ...(subtype === 'NOISE_VIBRATION' ? [{ values: { measurementPlace: 'Рабочее место №1', factorType: 'VIBRATION', indicator: 'Виброускорение', unit: 'дБ', normativeMax: '112', result: '96', measurementDeviceId: 'device-noise' }, measurementDeviceId: 'device-noise' }] : []),
-  ];
+const calculationStatusLabel = (status?: string) => ({
+  WAITING_INPUTS: 'Ожидает исходные данные',
+  CALCULATED: 'Рассчитано',
+  MANUAL: 'Ручной ввод',
+  ERROR: 'Ошибка расчета',
+  NEEDS_REPEAT: 'Требуется повторный анализ',
+  NORMATIVE_NOT_FOUND: 'Норматив не найден',
+}[String(status || '')] || '');
+
+const uncertaintyValue = (row: ProtocolResultRow) => row.uncertaintyValue || valueOf(row, ['uncertaintyValue', 'uncertainty']);
+
+const resolveDeviceName = (row: ProtocolResultRow, devices: ProtocolMeasurementDevice[]) => {
+  const ids = [
+    row.deviceId,
+    row.measurementDeviceId,
+    valueOf(row, ['device', 'deviceId', 'measurementDeviceId']),
+  ].filter(Boolean).map(String);
+  const device = devices.find((item) => ids.includes(String(item.deviceId)) || ids.includes(String(item.id)));
+  const name = device?.deviceSnapshot.name || row.deviceName || valueOf(row, ['deviceName']);
+  return name && name !== '—' ? name : '';
 };
 
-const ProtocolResultsTable = ({ protocolId, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '', onChange, onCheckNormatives, onNotify }: Props) => {
-  const columns = useMemo(() => getProtocolResultColumns(templateId, subtype), [templateId, subtype]);
-  const [modalOpen, setModalOpen] = useState(false);
+const exceededText = (row: ProtocolResultRow, templateId: ProtocolTemplateId) => {
+  if (statusOf(row) !== 'EXCEEDED') return '';
+  const actual = Number(officialResult(row, templateId).replace(',', '.'));
+  const limit = Number(normativeValue(row).replace(',', '.'));
+  if (!Number.isFinite(actual) || !Number.isFinite(limit) || !limit) return '';
+  return `Факт: ${officialResult(row, templateId)} ${unit(row)} · Норматив: ${normativeValue(row)} ${unit(row)} · Превышение: ${Math.max(0, ((actual - limit) / limit) * 100).toFixed(0)}%`;
+};
+
+const ProtocolResultsTable = ({
+  protocolId, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '',
+  onChange, onCheckNormatives, onImported, onNotify,
+}: Props) => {
+  const { user } = useAuth();
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<Pollutant[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulkDeviceId, setBulkDeviceId] = useState('');
+  const [bulkPlace, setBulkPlace] = useState('');
   const [editing, setEditing] = useState<ProtocolResultRow | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [calculation, setCalculation] = useState<{ row: ProtocolResultRow; details: CalculationDetails } | null>(null);
+  const [deleteRow, setDeleteRow] = useState<ProtocolResultRow | null>(null);
+  const [rawRow, setRawRow] = useState<ProtocolResultRow | null>(null);
+  const [calculationSummary, setCalculationSummary] = useState<ProtocolCalculationSummaryResponse | null>(null);
+  const [advanced, setAdvanced] = useState(false);
+  const [extraActionsOpen, setExtraActionsOpen] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const canUseAdvanced = user?.role === 'ADMIN' || user?.role === 'HEAD' || user?.role === 'DIRECTOR';
 
-  const openNew = (initial: Record<string, string> = {}) => {
-    setEditing(null);
-    setForm(initial);
-    setModalOpen(true);
-  };
-  const openEdit = (row: ProtocolResultRow) => {
-    setEditing(row);
-    setForm(Object.fromEntries(Object.entries(row.values).map(([key, value]) => [key, String(value ?? '')])));
-    setModalOpen(true);
-  };
+  const selectedRows = useMemo(() => rows.filter((row) => selected.includes(row.id)), [rows, selected]);
+  const reviewRow = rows.find((row) => ['EXCEEDED', 'BELOW_REQUIRED', 'UNIT_MISMATCH', 'NEEDS_REVIEW', 'MANUAL_NORMATIVE'].includes(String(statusOf(row))));
 
-  const findNormative = async () => {
-    if (!form.indicator) return;
+  const search = async (value: string) => {
+    setQuery(value);
+    if (value.trim().length < 2) return setSuggestions([]);
+    setSearching(true);
     try {
-      const found = await protocolService.searchNormative({ templateId, subtype: subtype || '', indicator: form.indicator, unit: form.unit || '', date: testingDate });
-      const normative = found.normative || found.normatives?.[0];
-      if (!normative) return onNotify('Норматив не найден', 'warning');
-      setForm((current) => ({
-        ...current,
-        unit: normative.unit,
-        normative: normative.value,
-        normativeMin: normative.min || '',
-        normativeMax: normative.max || normative.value,
-        comparisonType: normative.comparisonType,
-        testingMethod: normative.testingMethod,
-        testingMethodDocument: normative.testingMethod,
-        normativeDocument: normative.normativeDocument,
-        normativeId: normative.id,
-      }));
-    } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось подобрать норматив', 'error');
+      setSuggestions((await protocolService.searchPollutants(value, { templateId, subtype: subtype || '' })).slice(0, 8));
+    } catch {
+      setSuggestions([]);
+    } finally {
+      setSearching(false);
     }
   };
 
-  const save = async () => {
-    const missing = columns.find((column) => column.required && !form[column.key]?.trim());
-    if (missing) return onNotify(`Заполните поле «${missing.label}»`, 'warning');
+  const addPollutant = async (pollutant: Pollutant) => {
     setSaving(true);
     try {
-      const payload = { values: form, measurementDeviceId: form.measurementDeviceId || undefined, normativeId: form.normativeId || undefined };
-      const saved = editing
-        ? await protocolService.updateProtocolResult(protocolId, editing.id, payload)
-        : await protocolService.addProtocolResult(protocolId, payload);
-      onChange(editing ? rows.map((row) => row.id === editing.id ? saved : row) : [...rows, saved]);
-      setModalOpen(false);
-      onNotify(editing ? 'Результат изменён' : 'Результат добавлен', 'success');
+      const found = await protocolService.searchNormative({
+        templateId, subtype: subtype || '', code: pollutant.code, indicator: pollutant.name,
+        unit: pollutant.unit || '', date: testingDate,
+      });
+      const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
+      const normative = candidates.length === 1 ? candidates[0] : undefined;
+      const saved = await protocolService.addProtocolResult(protocolId, {
+        normativeId: normative?.id,
+        values: {
+          pollutantCode: pollutant.code,
+          indicator: pollutant.name,
+          cas: pollutant.cas || '',
+          formula: pollutant.formula || '',
+          unit: normative?.unit || pollutant.unit || '',
+          primaryReading: '',
+          normative: normative?.value || '',
+          normativeMin: normative?.min || '',
+          normativeMax: normative?.max || normative?.value || '',
+          normativeDocument: normative?.normativeDocument || '',
+          testingMethod: normative?.testingMethod || pollutant.testingMethod || '',
+          normativeSelectionRequired: candidates.length > 1 ? 'true' : '',
+        },
+      });
+      onChange([...rows, saved]);
+      setQuery('');
+      setSuggestions([]);
+      onNotify(candidates.length > 1 ? 'Строка добавлена. Требуется выбрать норматив.' : candidates.length ? 'Вещество и норматив добавлены' : 'Вещество добавлено, норматив не найден', candidates.length ? 'success' : 'warning');
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось сохранить результат', 'error');
+      onNotify(error instanceof Error ? error.message : 'Не удалось добавить вещество', 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  const remove = async (row: ProtocolResultRow) => {
-    if (!window.confirm('Удалить строку результата?')) return;
+  const addBulk = async () => {
+    const tokens = query.split(/[\s,;]+/).filter(Boolean);
+    if (!tokens.length) return;
+    setSearching(true);
     try {
-      await protocolService.deleteProtocolResult(protocolId, row.id);
-      onChange(rows.filter((item) => item.id !== row.id));
-      onNotify('Результат удалён', 'success');
-    } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось удалить результат', 'error');
+      const found = await protocolService.searchPollutants(tokens.join(','), { templateId, subtype: subtype || '' });
+      for (const token of tokens) {
+        const item = found.find((pollutant) => pollutant.code.toLowerCase() === token.toLowerCase());
+        if (item && !rows.some((row) => pollutantCode(row) === item.code)) await addPollutant(item);
+      }
+    } finally {
+      setSearching(false);
     }
   };
 
-  const duplicate = (row: ProtocolResultRow) => openNew(Object.fromEntries(Object.entries(row.values).map(([key, value]) => [key, String(value ?? '')])));
+  const openEdit = (row: ProtocolResultRow) => {
+    setEditing(row);
+    setForm({
+      primaryReading: primaryReading(row),
+      measurementDeviceId: row.measurementDeviceId || valueOf(row, ['measurementDeviceId']),
+      measurementPlace: valueOf(row, ['measurementPlace', 'samplingPlace']),
+      sourceNumber: valueOf(row, ['sourceNumber']),
+      readings: valueOf(row, ['readings', 'measurementReadings']),
+      externalLaboratory: valueOf(row, ['externalLaboratory']),
+      externalLaboratoryDocument: valueOf(row, ['externalLaboratoryDocument']),
+    });
+  };
 
-  const fillExamples = async () => {
+  const save = async () => {
+    if (!editing) return;
+    if (!form.primaryReading.trim() && !form.readings.trim()) return onNotify('Введите первичные показания', 'warning');
     setSaving(true);
     try {
-      const saved = await Promise.all(examples(templateId, subtype).map((payload) => protocolService.addProtocolResult(protocolId, payload)));
-      onChange([...rows, ...saved]);
-      onNotify('Пример результатов добавлен', 'success');
+      const saved = await protocolService.updateProtocolResult(protocolId, editing.id, {
+        measurementDeviceId: form.measurementDeviceId || undefined,
+        normativeId: valueOf(editing, ['normativeId']) || editing.normativeReference?.id,
+        values: {
+          ...editing.values,
+          primaryReading: form.primaryReading,
+          readings: form.readings,
+          measurementReadings: form.readings || form.primaryReading,
+          measurementDeviceId: form.measurementDeviceId,
+          measurementPlace: form.measurementPlace,
+          samplingPlace: form.measurementPlace,
+          sourceNumber: form.sourceNumber,
+          externalLaboratory: form.externalLaboratory,
+          externalLaboratoryDocument: form.externalLaboratoryDocument,
+        },
+      });
+      onChange(rows.map((row) => row.id === editing.id ? saved : row));
+      setEditing(null);
+      onNotify('Первичные показания сохранены', 'success');
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось добавить пример', 'error');
+      onNotify(error instanceof Error ? error.message : 'Не удалось сохранить показания', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const duplicate = async (row: ProtocolResultRow) => {
+    setSaving(true);
+    try {
+      const saved = await protocolService.addProtocolResult(protocolId, {
+        measurementDeviceId: row.measurementDeviceId,
+        normativeId: row.normativeReference?.id || valueOf(row, ['normativeId']),
+        values: { ...row.values, primaryReading: '', result: '', resultMg: '', resultValue: '' },
+      });
+      onChange([...rows, saved]);
+      onNotify('Строка дублирована', 'success');
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : 'Не удалось дублировать строку', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!deleteRow) return;
+    try {
+      await protocolService.deleteProtocolResult(protocolId, deleteRow.id);
+      onChange(rows.filter((item) => item.id !== deleteRow.id));
+      setDeleteRow(null);
+      onNotify('Строка удалена', 'success');
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : 'Не удалось удалить строку', 'error');
+    }
+  };
+
+  const removeSelected = async () => {
+    if (!selectedRows.length) return onNotify('Выберите строки', 'warning');
+    if (!window.confirm(`Удалить выбранные строки: ${selectedRows.length}?`)) return;
+    setSaving(true);
+    try {
+      await Promise.all(selectedRows.map((row) => protocolService.deleteProtocolResult(protocolId, row.id)));
+      const selectedSet = new Set(selectedRows.map((row) => row.id));
+      onChange(rows.filter((row) => !selectedSet.has(row.id)));
+      setSelected([]);
+      onNotify('Выбранные строки удалены', 'success');
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : 'Не удалось удалить выбранные строки', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const applyToSelected = async (patch: Record<string, string>) => {
+    if (!selectedRows.length) return onNotify('Выберите строки', 'warning');
+    setSaving(true);
+    try {
+      const saved = await Promise.all(selectedRows.map((row) => protocolService.updateProtocolResult(protocolId, row.id, {
+        measurementDeviceId: patch.measurementDeviceId || row.measurementDeviceId,
+        normativeId: row.normativeReference?.id || valueOf(row, ['normativeId']),
+        values: { ...row.values, ...patch },
+      })));
+      const map = new Map(saved.map((row) => [row.id, row]));
+      onChange(rows.map((row) => map.get(row.id) || row));
+      onNotify('Значение применено к выбранным строкам', 'success');
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : 'Массовое изменение не выполнено', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const importFile = async (file?: File) => {
+    if (!file) return;
+    setSaving(true);
+    try {
+      await protocolService.importExcel(protocolId, file);
+      await onImported();
+      onNotify('Показания импортированы из Excel', 'success');
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : 'Не удалось импортировать Excel', 'error');
+    } finally {
+      setSaving(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const applyCalculatedRow = async (row?: ProtocolResultRow) => {
+    if (row?.id) {
+      onChange(rows.map((item) => item.id === row.id ? row : item));
+      return;
+    }
+    await onImported();
+  };
+
+  const calculateRow = async (row: ProtocolResultRow) => {
+    setSaving(true);
+    try {
+      const result = await protocolService.calculateResult(protocolId, row.id);
+      await applyCalculatedRow(result.row);
+      onNotify('Результат рассчитан', 'success');
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать строку', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const calculateAll = async () => {
+    setSaving(true);
+    try {
+      const summary = await protocolService.calculateProtocolSummary(protocolId);
+      setCalculationSummary(summary);
+      const rowMap = new Map(summary.rows.filter((item) => item.row?.id).map((item) => [item.row!.id, item.row!]));
+      if (rowMap.size) onChange(rows.map((row) => rowMap.get(row.id) || row));
+      await onImported();
+      onNotify('Результаты рассчитаны', summary.errors || summary.waitingInputs ? 'warning' : 'success');
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать результаты', 'error');
+      await onCheckNormatives();
     } finally {
       setSaving(false);
     }
@@ -152,78 +348,144 @@ const ProtocolResultsTable = ({ protocolId, templateId, subtype, rows, devices =
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <h2 className="text-lg font-bold text-slate-900">Результаты испытаний</h2>
-          <p className="mt-1 text-sm text-slate-500">Структура таблицы соответствует выбранному типу протокола.</p>
+          <p className="mt-1 text-sm text-slate-500">Добавьте показатели, введите показания и запустите расчет результатов.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" disabled={readOnly || busy || saving} onClick={fillExamples}><Sparkles className="h-4 w-4" /> Заполнить примером</Button>
-          <Button type="button" variant="secondary" disabled={busy || saving} onClick={onCheckNormatives}><SearchCheck className="h-4 w-4" /> Проверить нормативы</Button>
-          <Button type="button" disabled={readOnly || busy || saving} onClick={() => openNew()}><Plus className="h-4 w-4" /> Добавить строку</Button>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
+          <Button type="button" variant="secondary" disabled={readOnly || busy || saving || !query.trim()} onClick={addBulk}><Plus className="h-4 w-4" /> Добавить показатель</Button>
+          <Button type="button" variant="secondary" disabled={readOnly || busy || saving} onClick={() => fileRef.current?.click()}><FileSpreadsheet className="h-4 w-4" /> Импорт из Excel</Button>
+          <Button type="button" disabled={busy || saving || !rows.length} onClick={calculateAll}><Calculator className="h-4 w-4" /> Рассчитать результаты</Button>
         </div>
       </div>
+
+      {calculationSummary && <div className="mb-4 grid gap-2 rounded-xl border border-eco-100 bg-eco-50 p-3 text-sm sm:grid-cols-3 xl:grid-cols-6">
+        <div><span className="text-slate-500">Всего</span><p className="font-black text-slate-900">{calculationSummary.total}</p></div>
+        <div><span className="text-slate-500">Рассчитано</span><p className="font-black text-slate-900">{calculationSummary.calculated}</p></div>
+        <div><span className="text-slate-500">Ручной ввод</span><p className="font-black text-slate-900">{calculationSummary.manual}</p></div>
+        <div><span className="text-slate-500">Ошибки</span><p className="font-black text-slate-900">{calculationSummary.errors}</p></div>
+        <div><span className="text-slate-500">Повторный анализ</span><p className="font-black text-slate-900">{calculationSummary.needsRepeat}</p></div>
+        <div><span className="text-slate-500">Не соответствует</span><p className="font-black text-slate-900">{calculationSummary.exceeded}</p></div>
+      </div>}
+
+      {!readOnly && <div className="mb-4 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+          <input value={query} onChange={(event) => search(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addBulk(); } }} placeholder="Код или название вещества; массово: 0301, 0304, 0330, 0337" className={`${inputClass} pl-10`} />
+          {suggestions.length > 0 && <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+            {suggestions.map((item) => <button key={`${item.code}-${item.id || item.name}`} type="button" onClick={() => addPollutant(item)} className="flex w-full flex-wrap gap-x-3 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-eco-50">
+              <span className="font-black text-eco-800">{item.code}</span><span className="font-bold">{item.name}</span><span className="text-slate-500">{item.formula}</span><span className="text-slate-500">{item.cas}</span>
+            </button>)}
+          </div>}
+        </div>
+        {selectedRows.length > 0 && <div className="grid gap-2 rounded-xl border border-eco-100 bg-white p-3 lg:grid-cols-[1fr_auto_1fr_auto_auto]">
+          <select value={bulkDeviceId} onChange={(event) => setBulkDeviceId(event.target.value)} className={inputClass}><option value="">Прибор для выбранных строк</option>{devices.map((item) => <option key={item.deviceId} value={item.deviceId}>{item.deviceSnapshot.name} · {item.deviceSnapshot.serialNumber}</option>)}</select>
+          <Button type="button" variant="secondary" disabled={!bulkDeviceId || saving} onClick={() => applyToSelected({ measurementDeviceId: bulkDeviceId })}>Применить прибор</Button>
+          <input value={bulkPlace} onChange={(event) => setBulkPlace(event.target.value)} placeholder="Одно место замера" className={inputClass} />
+          <Button type="button" variant="secondary" disabled={!bulkPlace || saving} onClick={() => applyToSelected({ measurementPlace: bulkPlace, samplingPlace: bulkPlace })}>Применить место</Button>
+          <Button type="button" variant="secondary" className="text-rose-700 hover:bg-rose-50" disabled={saving} onClick={removeSelected}>Удалить выбранные</Button>
+        </div>}
+      </div>}
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm" style={{ minWidth: `${Math.max(960, columns.length * 150 + 210)}px` }}>
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr>
-              {columns.map((column) => <th key={column.key} className="px-3 py-3">{column.label}</th>)}
-              <th className="px-3 py-3">Статус</th>
-              <th className="px-3 py-3 text-right">Действия</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {rows.map((row) => (
-              <tr key={row.id} className="hover:bg-slate-50">
-                {columns.map((column) => <td key={column.key} className="max-w-[220px] break-words px-3 py-3">{String(row.values[column.key] ?? '—')}</td>)}
-                <td className="px-3 py-3"><NormativeStatusBadge status={row.internalStatus || row.checkStatus} /></td>
-                <td className="px-3 py-3">
-                  <div className="flex justify-end gap-1">
-                    <Button type="button" variant="secondary" className="px-2.5" disabled={readOnly} title="Редактировать" onClick={() => openEdit(row)}><Edit3 className="h-4 w-4" /></Button>
-                    <Button type="button" variant="secondary" className="px-2.5" disabled={readOnly} title="Дублировать" onClick={() => duplicate(row)}><Copy className="h-4 w-4" /></Button>
-                    <Button type="button" variant="secondary" className="px-2.5 text-rose-700" disabled={readOnly} title="Удалить" onClick={() => remove(row)}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+        <table className="min-w-[1320px] w-full text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>
+            {!readOnly && <th className="px-3 py-3"><input type="checkbox" checked={rows.length > 0 && selected.length === rows.length} onChange={(event) => setSelected(event.target.checked ? rows.map((row) => row.id) : [])} /></th>}
+            <th className="px-3 py-3">Код</th><th className="px-3 py-3">Показатель</th><th className="px-3 py-3">Методика</th><th className="px-3 py-3">Сырые данные</th><th className="px-3 py-3">Прибор</th><th className="bg-slate-100 px-3 py-3">Результат</th><th className="bg-slate-100 px-3 py-3">Погрешность</th><th className="bg-slate-100 px-3 py-3">Норматив</th><th className="bg-slate-100 px-3 py-3">Статус</th><th className="px-3 py-3 text-right">Действия</th>
+          </tr></thead>
+          <tbody className="divide-y divide-slate-100">{rows.map((row) => {
+            const calculationLabel = calculationStatusLabel(row.calculationStatus || valueOf(row, ['calculationStatus']));
+            return <tr key={row.id} className="align-top hover:bg-slate-50">
+              {!readOnly && <td className="px-3 py-3"><input type="checkbox" checked={selected.includes(row.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, row.id] : current.filter((id) => id !== row.id))} /></td>}
+              <td className="px-3 py-3 font-black text-eco-800">{pollutantCode(row) || '—'}</td>
+              <td className="px-3 py-3"><p className="font-bold text-slate-900">{indicator(row) || '—'}</p>{advanced && <p className="mt-1 text-xs text-slate-500">{valueOf(row, ['formula'])} {valueOf(row, ['cas'])}</p>}</td>
+              <td className="px-3 py-3"><div className="max-w-60"><p className="font-semibold text-slate-800">{testingMethod(row) || '—'}</p>{measurementPlace(row) && <p className="mt-1 text-xs text-slate-500">{measurementPlace(row)}</p>}{row.sampleName && <p className="mt-1 text-xs text-slate-500">{row.sampleName}</p>}</div></td>
+              <td className="px-3 py-3"><button type="button" disabled={readOnly} onClick={() => setRawRow(row)} className="min-w-32 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-eco-800 disabled:cursor-default">{rawDataLabel(row) || 'Ввести данные'}</button></td>
+              <td className="px-3 py-3">{resolveDeviceName(row, devices) || '—'}</td>
+              <td className="bg-slate-50 px-3 py-3"><div className={automaticClass}>{officialResult(row, templateId) || 'Ожидает расчёта'} {officialResult(row, templateId) && unit(row)}</div></td>
+              <td className="bg-slate-50 px-3 py-3"><div className={automaticClass}>{uncertaintyValue(row) || '—'}</div></td>
+              <td className="bg-slate-50 px-3 py-3"><div className={automaticClass}>{normativeValue(row) ? `${normativeValue(row)} ${unit(row)}` : 'Норматив не найден'}</div></td>
+              <td className="bg-slate-50 px-3 py-3"><div className="space-y-2"><NormativeStatusBadge status={statusOf(row)} />{calculationLabel && <p className="text-xs font-semibold text-slate-600">{calculationLabel}</p>}{exceededText(row, templateId) && <p className="max-w-56 text-xs font-semibold text-rose-700">{exceededText(row, templateId)}</p>}</div></td>
+              <td className="px-3 py-3"><div className="flex flex-wrap justify-end gap-1">
+                <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => setRawRow(row)}>Ввести данные</Button>
+                <Button type="button" variant="secondary" className="px-3" disabled={saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
+                <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} title="Изменить" onClick={() => openEdit(row)}>Изменить</Button>
+                <Button type="button" variant="secondary" className="px-2.5" disabled={readOnly || saving} title="Копировать строку" onClick={() => duplicate(row)}><Copy className="h-4 w-4" /></Button>
+                <Button type="button" variant="secondary" className="px-2.5 text-rose-700" disabled={readOnly || saving} title="Удалить" onClick={() => setDeleteRow(row)}><Trash2 className="h-4 w-4" /></Button>
+              </div></td>
+            </tr>;
+          })}</tbody>
         </table>
       </div>
-      {!rows.length && <div className="border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">Результаты ещё не добавлены.</div>}
+      {!rows.length && <div className="border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">Показания ещё не добавлены.</div>}
+      {reviewRow && <div className="mt-3 inline-block max-w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+        <button type="button" onClick={() => setExtraActionsOpen((value) => !value)} className="text-sm font-bold text-amber-900">
+          Дополнительные действия
+        </button>
+        {extraActionsOpen && <div className="mt-3 flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" onClick={() => setCalculation({ row: reviewRow, details: reviewRow.calculationDetails || {} })}>Проверить расчет</Button>
+          <Button type="button" variant="secondary" disabled={readOnly} onClick={() => openEdit(reviewRow)}>Исправить исходные данные</Button>
+          <Button type="button" variant="secondary" disabled={readOnly || saving} onClick={() => duplicate(reviewRow)}>Добавить повторный замер</Button>
+          <Button type="button" variant="secondary" disabled={busy} onClick={async () => {
+            try {
+              await protocolService.readyForApproval(protocolId);
+              await onImported();
+              onNotify('Протокол отправлен на проверку', 'success');
+            } catch (error) {
+              onNotify(error instanceof Error ? error.message : 'Не удалось отправить на проверку', 'error');
+            }
+          }}>Отправить на проверку</Button>
+        </div>}
+      </div>}
+      {canUseAdvanced && <button type="button" onClick={() => setAdvanced((value) => !value)} className="mt-4 text-sm font-bold text-eco-700">{advanced ? 'Скрыть расширенные данные' : 'Расширенный режим'}</button>}
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Редактировать результат' : 'Добавить результат'} size="xl" loading={saving}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {columns.map((column) => (
-            <label key={column.key} className="space-y-1.5 text-sm font-semibold text-slate-700">
-              <span>{column.label}{column.required && <span className="text-rose-600"> *</span>}</span>
-              {column.type === 'select' ? (
-                <select value={form[column.key] || ''} onChange={(event) => setForm({ ...form, [column.key]: event.target.value })} className={inputClass}>
-                  <option value="">Выберите</option>
-                  {column.options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                </select>
-              ) : column.type === 'device' ? (
-                <select value={form[column.key] || ''} onChange={(event) => setForm({ ...form, [column.key]: event.target.value })} className={inputClass}>
-                  <option value="">Не выбран</option>
-                  {devices.map((device) => <option key={device.deviceId} value={device.deviceId} disabled={device.deviceSnapshot.status === 'EXPIRED'}>{device.deviceSnapshot.name} · {device.deviceSnapshot.serialNumber}</option>)}
-                </select>
-              ) : (
-                <input
-                  type={column.type === 'number' ? 'number' : column.type === 'date' ? 'date' : 'text'}
-                  step={column.type === 'number' ? 'any' : undefined}
-                  value={form[column.key] || ''}
-                  onChange={(event) => setForm({ ...form, [column.key]: event.target.value })}
-                  onBlur={column.key === 'indicator' ? findNormative : undefined}
-                  className={inputClass}
-                />
-              )}
-            </label>
-          ))}
+      <RawMeasurementsModal
+        open={Boolean(rawRow)}
+        protocolId={protocolId}
+        row={rawRow}
+        devices={devices}
+        onClose={() => setRawRow(null)}
+        onCalculated={applyCalculatedRow}
+        onReload={onImported}
+        onNotify={onNotify}
+      />
+
+      <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title="Первичные показания" description="Официальный результат будет рассчитан backend после сохранения." size="lg" loading={saving}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-1.5 text-sm font-bold text-slate-700">Показание / концентрация<input autoFocus value={form.primaryReading || ''} onChange={(event) => setForm({ ...form, primaryReading: event.target.value })} className={inputClass} /></label>
+          <label className="space-y-1.5 text-sm font-bold text-slate-700">Серия показаний<textarea rows={2} value={form.readings || ''} onChange={(event) => setForm({ ...form, readings: event.target.value })} placeholder="Через запятую: 418, 421, 416" className={inputClass} /></label>
+          <label className="space-y-1.5 text-sm font-bold text-slate-700">Прибор<select value={form.measurementDeviceId || ''} onChange={(event) => setForm({ ...form, measurementDeviceId: event.target.value })} className={inputClass}><option value="">Не выбран</option>{devices.map((item) => <option key={item.deviceId} value={item.deviceId}>{item.deviceSnapshot.name} · {item.deviceSnapshot.serialNumber}</option>)}</select></label>
+          <label className="space-y-1.5 text-sm font-bold text-slate-700">Место замера<input value={form.measurementPlace || ''} onChange={(event) => setForm({ ...form, measurementPlace: event.target.value })} className={inputClass} /></label>
+          {templateId === 'industrial_emissions' && <label className="space-y-1.5 text-sm font-bold text-slate-700">Источник<input value={form.sourceNumber || ''} onChange={(event) => setForm({ ...form, sourceNumber: event.target.value })} className={inputClass} /></label>}
+          {(templateId === 'water_wastewater' || templateId === 'soil') && <>
+            <label className="space-y-1.5 text-sm font-bold text-slate-700">Внешняя лаборатория<input value={form.externalLaboratory || ''} onChange={(event) => setForm({ ...form, externalLaboratory: event.target.value })} className={inputClass} /></label>
+            <label className="space-y-1.5 text-sm font-bold text-slate-700">Документ внешней лаборатории<input value={form.externalLaboratoryDocument || ''} onChange={(event) => setForm({ ...form, externalLaboratoryDocument: event.target.value })} className={inputClass} /></label>
+          </>}
         </div>
-        <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
-          <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Отмена</Button>
-          <Button type="button" onClick={save} disabled={saving}>{editing ? 'Сохранить изменения' : 'Добавить результат'}</Button>
-        </div>
+        <div className="mt-5 flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setEditing(null)}>Отмена</Button><Button type="button" onClick={save} disabled={saving}>Сохранить показания</Button></div>
+      </Modal>
+
+      <Modal open={Boolean(calculation)} onClose={() => setCalculation(null)} title="Расчёт результата" size="lg">
+        {calculation && <dl className="grid gap-3 sm:grid-cols-2">
+          {[
+            ['Исходные показания', primaryReading(calculation.row) || '—'],
+            ['Формула', calculation.details.formula || 'Backend не передал формулу'],
+            ['Подставленные числа', calculation.details.substitutedValues || '—'],
+            ['Округление', calculation.details.rounding || '—'],
+            ['Итог', calculation.details.finalValue || officialResult(calculation.row, templateId) || '—'],
+            ['Норматив', calculation.details.normativeValue || normativeValue(calculation.row) || 'Не найден'],
+            ['Сравнение', calculation.details.comparisonResult || String(calculation.row.internalStatus || calculation.row.checkStatus || '—')],
+            ['Версия методики', calculation.details.methodVersion || valueOf(calculation.row, ['methodVersion']) || '—'],
+          ].map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-3"><dt className="text-xs font-bold uppercase text-slate-400">{label}</dt><dd className="mt-1 whitespace-pre-wrap font-semibold text-slate-800">{value}</dd></div>)}
+          {calculation.details.intermediateResults?.length ? <div className="rounded-xl bg-slate-50 p-3 sm:col-span-2"><dt className="text-xs font-bold uppercase text-slate-400">Промежуточные результаты</dt>{calculation.details.intermediateResults.map((item) => <dd key={item.label} className="mt-1 font-semibold">{item.label}: {item.value}</dd>)}</div> : null}
+        </dl>}
+      </Modal>
+
+      <Modal open={Boolean(deleteRow)} onClose={() => setDeleteRow(null)} title="Удалить строку?" size="sm">
+        <p className="text-sm text-slate-600">Будут удалены первичные показания и связанный расчёт. Это действие нельзя отменить.</p>
+        <div className="mt-5 flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setDeleteRow(null)}>Отмена</Button><Button type="button" onClick={remove}>Удалить</Button></div>
       </Modal>
     </section>
   );

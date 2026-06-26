@@ -1,6 +1,6 @@
 ﻿import { ReactNode, useState } from 'react';
 import { NavLink, Link, Navigate } from 'react-router-dom';
-import { BarChart3, Bell, BookOpenCheck, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, FlaskConical, Gauge, Handshake, LayoutDashboard, LockKeyhole, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
+import { BarChart3, Bell, BookOpenCheck, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, FlaskConical, Gauge, Handshake, LayoutDashboard, LockKeyhole, LogOut, Menu, Settings, ShieldCheck, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
 import { canAccess } from '../config/permissions';
@@ -20,8 +20,9 @@ const links: Array<{ label: string; path: string; icon: typeof ClipboardList; pa
   { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Календарь', path: '/staff/calendar', icon: CalendarDays, allowedRoles: ['ADMIN', 'MANAGER', 'ECOLOGIST', 'LABORATORY'] },
   { label: 'Протоколы', path: '/staff/protocols', icon: FlaskConical, allowedRoles: protocolRoles },
-  { label: 'Нормативы', path: '/staff/normatives', icon: BookOpenCheck, allowedRoles: protocolRoles },
+  { label: 'Нормативы', path: '/staff/normatives', icon: BookOpenCheck, allowedRoles: ['ADMIN', 'HEAD'] },
   { label: 'Средства измерений', path: '/staff/measurement-devices', icon: Gauge, allowedRoles: protocolRoles },
+  { label: 'Настройки лаборатории', path: '/staff/settings/laboratory', icon: Settings, allowedRoles: ['ADMIN', 'HEAD', 'LABORATORY'] },
   { label: 'Задачи', path: '/staff/tasks', icon: ClipboardCheck },
   { label: 'Документы', path: '/staff/documents', icon: FileText },
   { label: 'Уведомления', path: '/staff/notifications', icon: Bell },
@@ -54,7 +55,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
       {(protocolMockMode
-        ? links.filter((item) => ['/staff', '/staff/companies', '/staff/protocols', '/staff/normatives', '/staff/measurement-devices'].includes(item.path))
+        ? links.filter((item) => ['/staff', '/staff/companies', '/staff/protocols', '/staff/normatives', '/staff/measurement-devices', '/staff/settings/laboratory'].includes(item.path))
         : links
       ).map((item) => {
         const Icon = item.icon;

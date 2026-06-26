@@ -76,6 +76,8 @@ const normalizeRole = (value: unknown, fallback: UserRole): UserRole => {
     ADMIN: 'ADMIN',
     DIRECTOR: 'DIRECTOR',
     HEAD: 'HEAD',
+    LAB_HEAD: 'HEAD',
+    LABORATORY_HEAD: 'HEAD',
     ACCOUNTANT: 'ACCOUNTANT',
     ECOLOGIST: 'ECOLOGIST',
     ECOLOG: 'ECOLOGIST',
@@ -113,13 +115,14 @@ const readAuthPayload = (payload: AuthResponsePayload, email: string, staff = fa
 };
 
 const AuthContext = createContext<AuthState | null>(null);
+const normalizeStoredUser = (value: User): User => ({ ...value, role: normalizeRole(value.role, value.role === 'CLIENT' ? 'CLIENT' : 'MANAGER') });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUserState] = useState<User | null>(() => {
     if (protocolMockMode) return mockStaffUser;
     const raw = localStorage.getItem(USER_KEY);
     if (!raw) return null;
-    try { return JSON.parse(raw) as User; } catch { return null; }
+    try { return normalizeStoredUser(JSON.parse(raw) as User); } catch { return null; }
   });
   const [token, setToken] = useState<string | null>(() => protocolMockMode ? 'mock-protocol-token' : localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(protocolMockMode ? false : !!localStorage.getItem(TOKEN_KEY));
@@ -149,7 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!storedToken) { setLoading(false); return; }
     api.get<{ data: User; message: string | null }>('/auth/me')
       .then(({ data }) => {
-        const u = data.data;
+        const u = normalizeStoredUser(data.data);
         localStorage.setItem(USER_KEY, JSON.stringify(u));
         setUserState(u);
       })

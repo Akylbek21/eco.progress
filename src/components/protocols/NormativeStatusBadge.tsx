@@ -2,11 +2,14 @@ import clsx from 'clsx';
 import type { ProtocolInternalStatus } from '../../types/protocols';
 
 export const normativeStatusLabels: Record<ProtocolInternalStatus, string> = {
-  NORMAL: 'Норма',
+  NORMAL: 'Соответствует',
+  OK: 'Соответствует',
+  OK_MANUAL: 'Норматив введен вручную',
+  MANUAL_NORMATIVE: 'Проверить норматив',
   EXCEEDED: 'Превышение',
   BELOW_REQUIRED: 'Ниже нормы',
   NORMATIVE_NOT_FOUND: 'Норматив не найден',
-  UNIT_MISMATCH: 'Единица не совпадает',
+  UNIT_MISMATCH: 'Проверьте единицу',
   NEEDS_REVIEW: 'Требуется проверка',
   EMPTY_RESULT: 'Нет результата',
   INFO: 'Информационно',
@@ -20,6 +23,9 @@ const overallLabels: Record<string, string> = {
 
 const normativeStatusClasses: Record<ProtocolInternalStatus, string> = {
   NORMAL: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+  OK: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+  OK_MANUAL: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+  MANUAL_NORMATIVE: 'bg-amber-50 text-amber-800 ring-amber-200',
   EXCEEDED: 'bg-rose-50 text-rose-800 ring-rose-200',
   BELOW_REQUIRED: 'bg-rose-50 text-rose-800 ring-rose-200',
   NORMATIVE_NOT_FOUND: 'bg-amber-50 text-amber-800 ring-amber-200',

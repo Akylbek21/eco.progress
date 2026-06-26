@@ -3,24 +3,41 @@ import {
   extractItem,
   extractList,
   getApiErrorMessage,
+  getApiStatus,
   getContentDispositionFileName,
 } from './apiHelpers';
 import type {
   CreateProtocolPayload,
+  CalculationResultResponse,
+  CalculationDetails,
   MeasurementDevice,
+  MethodTemplateResponse,
+  MethodVariableResponse,
   NormativeSearchResult,
+  Pollutant,
   Protocol,
+  ProtocolCalculationSummaryResponse,
   ProtocolCompanySnapshot,
+  ProtocolEnvironmentalConditions,
   ProtocolMeasurementDevice,
   ProtocolResultPayload,
   ProtocolResultRow,
   ProtocolTemplate,
+  RawMeasurementRequest,
+  RawMeasurementsResponse,
   UpdateProtocolPayload,
+  WeatherConditions,
 } from '../types/protocols';
 
 type UnknownRecord = Record<string, unknown>;
 
 const asRecord = (value: unknown): UnknownRecord => value && typeof value === 'object' ? value as UnknownRecord : {};
+const unwrapData = (value: unknown): unknown => {
+  const response = asRecord(value);
+  const data = response.data ?? value;
+  const body = asRecord(data);
+  return body.data ?? data;
+};
 const asString = (value: unknown) => (typeof value === 'string' || typeof value === 'number' ? String(value) : '');
 const nullableDecimal = (value: unknown): string | null => {
   const normalized = asString(value).trim();
@@ -34,6 +51,16 @@ const pick = (source: UnknownRecord, keys: string[]) => {
   }
   return '';
 };
+
+const hasValue = (value: unknown) => value !== undefined && value !== null && String(value) !== '';
+const firstString = (...values: unknown[]) => {
+  for (const value of values) {
+    if (hasValue(value)) return asString(value);
+  }
+  return '';
+};
+const scalarOrNull = (value: unknown): string | number | null =>
+  typeof value === 'string' || typeof value === 'number' ? value : null;
 
 const normalizeCompanySnapshot = (raw: UnknownRecord): ProtocolCompanySnapshot => {
   const snapshot = asRecord(raw.companySnapshot || raw.company_snapshot || {});
@@ -65,14 +92,14 @@ const normalizeCompanySnapshot = (raw: UnknownRecord): ProtocolCompanySnapshot =
   };
 };
 
-const normalizeResult = (raw: unknown): ProtocolResultRow => {
+export const normalizeProtocolResult = (raw: unknown): ProtocolResultRow => {
   const source = asRecord(raw);
   const apiValues = asRecord(source.values);
   const values: UnknownRecord = {
     ...apiValues,
     normativeMin: apiValues.normativeMin ?? apiValues.minValue,
     normativeMax: apiValues.normativeMax ?? apiValues.maxValue,
-    measurementDeviceId: apiValues.measurementDeviceId ?? apiValues.deviceId,
+    measurementDeviceId: apiValues.measurementDeviceId ?? apiValues.deviceId ?? apiValues.device,
     factorType: apiValues.factorType ?? apiValues.subtype,
   };
   const dynamicValues = Object.fromEntries(
@@ -81,41 +108,285 @@ const normalizeResult = (raw: unknown): ProtocolResultRow => {
       && (typeof value === 'string' || typeof value === 'number' || value === null),
     ),
   );
+  const pollutantSource = asRecord(source.pollutant || apiValues.pollutant);
+  const normativeSource = asRecord(source.normativeReference || (typeof source.normative === 'object' ? source.normative : undefined) || apiValues.normativeReference);
+  const calculationSource = asRecord(source.calculationDetails || source.calculation || apiValues.calculationDetails);
+  const result = firstString(source.result, values.resultMg, values.result);
+  const normative = firstString(source.normative, source.normativeValue, values.normative, values.pdk);
+  const pdk = firstString(source.pdk, values.pdk);
+  const status = firstString(source.internalStatus, source.checkStatus, source.status) || 'EMPTY_RESULT';
+  const normalizedStatus = status === 'NORMATIVE_NOT_FOUND' && (normative || pdk) ? 'MANUAL_NORMATIVE' : status;
+  const indicatorName = firstString(source.indicatorName, values.indicator);
+  const code = firstString(source.code, values.code) || '—';
+  const unit = firstString(source.unit, values.unit);
+  const testingMethodDocument = firstString(source.testingMethodDocument, values.testingMethodDocument, values.testingMethod);
+  const measurementPlace = firstString(source.measurementPlace, values.object, values.measurementPlace, values.samplingPlace);
+  const sampleName = firstString(source.sampleName, values.sampleName);
+  const deviceId = firstString(source.deviceId, values.device, values.deviceId);
+  const measurementDeviceId = firstString(source.measurementDeviceId, source.deviceId, values.measurementDeviceId, values.deviceId, values.device);
+  const deviceName = firstString(source.deviceName, values.deviceName) || '—';
   return {
     id: pick(source, ['id', '_id', 'resultId']),
     protocolId: pick(source, ['protocolId', 'protocol_id']),
-    internalStatus: (pick(source, ['internalStatus', 'checkStatus', 'status']) || 'EMPTY_RESULT') as ProtocolResultRow['internalStatus'],
-    checkStatus: (pick(source, ['checkStatus', 'internalStatus', 'status']) || 'EMPTY_RESULT') as ProtocolResultRow['checkStatus'],
+    internalStatus: normalizedStatus as ProtocolResultRow['internalStatus'],
+    checkStatus: normalizedStatus as ProtocolResultRow['checkStatus'],
+    indicatorName,
+    code,
     samplingPoint: pick(source, ['samplingPoint', 'sampling_point']) || asString(values.samplingPoint),
-    indicator: pick(source, ['indicator']) || asString(values.indicator),
-    unit: pick(source, ['unit']) || asString(values.unit),
-    result: pick(source, ['result']) || asString(values.result),
-    normative: pick(source, ['normative']) || asString(values.normative),
-    testingMethod: pick(source, ['testingMethod', 'testing_method']) || asString(values.testingMethod),
+    indicator: firstString(source.indicator, indicatorName),
+    unit,
+    result,
+    normative,
+    normativeValue: firstString(source.normativeValue, normative),
+    pdk,
+    testingMethod: firstString(source.testingMethod, source.testing_method, values.testingMethod),
+    testingMethodDocument,
     samplingMethod: pick(source, ['samplingMethod', 'sampling_method']) || asString(values.samplingMethod),
     normativeDocument: pick(source, ['normativeDocument', 'normative_document']) || asString(values.normativeDocument),
     comment: pick(source, ['comment']) || asString(values.comment),
-    measurementDeviceId: pick(source, ['measurementDeviceId', 'deviceId']) || asString(values.measurementDeviceId),
+    measurementPlace,
+    sampleName,
+    deviceId,
+    deviceName,
+    measurementDeviceId,
     comparisonType: (pick(source, ['comparisonType']) || asString(values.comparisonType)) as ProtocolResultRow['comparisonType'],
     normativeMin: pick(source, ['normativeMin', 'min']) || asString(values.normativeMin),
     normativeMax: pick(source, ['normativeMax', 'max']) || asString(values.normativeMax),
+    pollutant: Object.keys(pollutantSource).length ? normalizePollutant(pollutantSource) : undefined,
+    normativeReference: Object.keys(normativeSource).length ? {
+      id: pick(normativeSource, ['id', '_id']),
+      code: pick(normativeSource, ['code']),
+      pollutantCode: pick(normativeSource, ['pollutantCode', 'pollutant_code']),
+      indicator: pick(normativeSource, ['indicator', 'name']),
+      environment: pick(normativeSource, ['environment', 'researchObject']),
+      unit: pick(normativeSource, ['unit']),
+      normativeType: pick(normativeSource, ['normativeType', 'type']),
+      value: pick(normativeSource, ['value']),
+      min: pick(normativeSource, ['min', 'minValue']),
+      max: pick(normativeSource, ['max', 'maxValue']),
+      comparisonType: (pick(normativeSource, ['comparisonType']) || 'LESS_OR_EQUAL') as Exclude<ProtocolResultRow['comparisonType'], undefined>,
+      normativeDocument: pick(normativeSource, ['normativeDocument', 'document']),
+      testingMethod: pick(normativeSource, ['testingMethod']),
+      samplingMethod: pick(normativeSource, ['samplingMethod']),
+      validFrom: pick(normativeSource, ['validFrom']),
+      validUntil: pick(normativeSource, ['validUntil']),
+      version: pick(normativeSource, ['version']),
+      active: normativeSource.active !== false,
+    } : undefined,
+    calculationDetails: Object.keys(calculationSource).length ? normalizeCalculationDetails(calculationSource) : undefined,
+    uncertaintyValue: firstString(source.uncertaintyValue, values.uncertaintyValue),
+    calculationStatus: firstString(source.calculationStatus, values.calculationStatus) as ProtocolResultRow['calculationStatus'],
+    calculationMessage: firstString(source.calculationMessage, values.calculationMessage),
+    warnings: Array.isArray(source.warnings) ? source.warnings.map(String) : undefined,
     values: {
       ...values,
       ...dynamicValues,
       samplingPoint: pick(source, ['samplingPoint', 'sampling_point']) || asString(values.samplingPoint),
-      indicator: pick(source, ['indicator']) || asString(values.indicator),
-      unit: pick(source, ['unit']) || asString(values.unit),
-      result: pick(source, ['result']) || asString(values.result),
-      normative: pick(source, ['normative']) || asString(values.normative),
-      testingMethod: pick(source, ['testingMethod', 'testing_method']) || asString(values.testingMethod),
+      indicator: firstString(source.indicator, indicatorName),
+      indicatorName,
+      code,
+      unit,
+      result,
+      normative,
+      normativeValue: firstString(source.normativeValue, normative),
+      pdk,
+      testingMethod: firstString(source.testingMethod, source.testing_method, values.testingMethod),
+      testingMethodDocument,
       samplingMethod: pick(source, ['samplingMethod', 'sampling_method']) || asString(values.samplingMethod),
       normativeDocument: pick(source, ['normativeDocument', 'normative_document']) || asString(values.normativeDocument),
       comment: pick(source, ['comment']) || asString(values.comment),
-      measurementDeviceId: pick(source, ['measurementDeviceId', 'deviceId']) || asString(values.measurementDeviceId),
+      measurementPlace,
+      object: firstString(values.object, measurementPlace),
+      sampleName,
+      device: firstString(values.device, deviceId),
+      deviceId,
+      deviceName,
+      measurementDeviceId,
       comparisonType: pick(source, ['comparisonType']) || asString(values.comparisonType),
       normativeMin: pick(source, ['normativeMin', 'min']) || asString(values.normativeMin),
       normativeMax: pick(source, ['normativeMax', 'max']) || asString(values.normativeMax),
+      uncertaintyValue: firstString(source.uncertaintyValue, values.uncertaintyValue),
+      calculationStatus: firstString(source.calculationStatus, values.calculationStatus),
+      calculationMessage: firstString(source.calculationMessage, values.calculationMessage),
     },
+  };
+};
+
+const normalizeResult = normalizeProtocolResult;
+
+export const normalizePollutant = (raw: unknown): Pollutant => {
+  const source = asRecord(raw);
+  return {
+    id: pick(source, ['id', '_id']),
+    code: pick(source, ['code', 'pollutantCode', 'substanceCode']),
+    name: pick(source, ['name', 'indicator', 'title']),
+    cas: pick(source, ['cas', 'casNumber']),
+    formula: pick(source, ['formula', 'chemicalFormula']),
+    unit: pick(source, ['unit']),
+    testingMethod: pick(source, ['testingMethod', 'method']),
+    samplingMethod: pick(source, ['samplingMethod']),
+  };
+};
+
+const normalizeCalculationDetails = (raw: unknown): CalculationDetails => {
+  const source = asRecord(raw);
+  const intermediate = Array.isArray(source.intermediateResults) ? source.intermediateResults : [];
+  return {
+    formula: pick(source, ['formula']),
+    substitutedValues: pick(source, ['substitutedValues', 'substitution']),
+    intermediateResults: intermediate.map((item) => {
+      const row = asRecord(item);
+      return { label: pick(row, ['label', 'name']), value: pick(row, ['value']) };
+    }),
+    rounding: pick(source, ['rounding']),
+    finalValue: pick(source, ['finalValue', 'result']),
+    unit: pick(source, ['unit']),
+    normativeValue: pick(source, ['normativeValue', 'normative']),
+    comparisonResult: pick(source, ['comparisonResult', 'comparison']),
+    methodVersion: pick(source, ['methodVersion', 'version']),
+  };
+};
+
+const normalizeMethodVariable = (raw: unknown): MethodVariableResponse => {
+  const source = asRecord(raw);
+  const displayOrder = Number(source.displayOrder ?? source.display_order);
+  return {
+    id: pick(source, ['id', '_id']),
+    variableKey: pick(source, ['variableKey', 'variable_key', 'key', 'code']),
+    variableLabel: pick(source, ['variableLabel', 'variable_label', 'label', 'name']),
+    unit: pick(source, ['unit']),
+    type: pick(source, ['type', 'valueType', 'value_type']),
+    required: source.required === true || source.required === 'true',
+    minValue: scalarOrNull(source.minValue ?? source.min_value),
+    maxValue: scalarOrNull(source.maxValue ?? source.max_value),
+    defaultValue: scalarOrNull(source.defaultValue ?? source.default_value),
+    displayOrder: Number.isFinite(displayOrder) ? displayOrder : undefined,
+  };
+};
+
+const normalizeMethodTemplate = (raw: unknown): MethodTemplateResponse => {
+  const source = asRecord(raw);
+  const variables = Array.isArray(source.variables) ? source.variables : [];
+  const decimalPlaces = Number(source.decimalPlaces ?? source.decimal_places);
+  return {
+    id: pick(source, ['id', '_id']),
+    code: pick(source, ['code']),
+    name: pick(source, ['name', 'title']),
+    protocolTemplateCode: pick(source, ['protocolTemplateCode', 'protocol_template_code', 'templateCode']),
+    pollutantCode: pick(source, ['pollutantCode', 'pollutant_code']),
+    pollutantName: pick(source, ['pollutantName', 'pollutant_name']),
+    methodDocument: pick(source, ['methodDocument', 'method_document']),
+    measurementUnit: pick(source, ['measurementUnit', 'measurement_unit']),
+    resultUnit: pick(source, ['resultUnit', 'result_unit']),
+    formulaExpression: pick(source, ['formulaExpression', 'formula_expression', 'formula']),
+    decimalPlaces: Number.isFinite(decimalPlaces) ? decimalPlaces : undefined,
+    active: source.active !== false,
+    variables: variables.map(normalizeMethodVariable).sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
+  };
+};
+
+const normalizeRawMeasurements = (raw: unknown, fallbackProtocolId = '', fallbackResultId = ''): RawMeasurementsResponse => {
+  const payload = unwrapData(raw);
+  const source = asRecord(payload);
+  const templateSource = source.methodTemplate ?? source.method_template ?? source.template;
+  const methodTemplate = templateSource ? normalizeMethodTemplate(templateSource) : undefined;
+  const variablesSource = Array.isArray(source.variables)
+    ? source.variables
+    : methodTemplate?.variables || [];
+  const measurementsSource = Array.isArray(source.measurements)
+    ? source.measurements
+    : Array.isArray(source.rawMeasurements)
+      ? source.rawMeasurements
+      : [];
+  return {
+    protocolId: pick(source, ['protocolId', 'protocol_id']) || fallbackProtocolId,
+    resultId: pick(source, ['resultId', 'result_id']) || fallbackResultId,
+    methodTemplate,
+    variables: variablesSource.map(normalizeMethodVariable).sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
+    measurements: measurementsSource.map((item) => {
+      const measurement = asRecord(item);
+      return {
+        variableKey: pick(measurement, ['variableKey', 'variable_key', 'key']),
+        variableValue: scalarOrNull(measurement.variableValue ?? measurement.variable_value ?? measurement.value),
+        unit: pick(measurement, ['unit']),
+        sourceType: pick(measurement, ['sourceType', 'source_type']) || 'MANUAL',
+        deviceId: pick(measurement, ['deviceId', 'device_id']),
+      };
+    }),
+    calculationStatus: pick(source, ['calculationStatus', 'calculation_status']) as RawMeasurementsResponse['calculationStatus'],
+    calculationMessage: pick(source, ['calculationMessage', 'calculation_message', 'message']),
+  };
+};
+
+const normalizeCalculationResult = (raw: unknown, fallbackProtocolId = '', fallbackResultId = ''): CalculationResultResponse => {
+  const payload = unwrapData(raw);
+  const source = asRecord(payload);
+  const embeddedResult = source.result;
+  const rowSource = source.row
+    ?? source.resultRow
+    ?? source.result_row
+    ?? (source.values || source.indicatorName || source.indicator ? source : embeddedResult);
+  const row = rowSource && typeof rowSource === 'object' ? normalizeResult(rowSource) : undefined;
+  return {
+    protocolId: pick(source, ['protocolId', 'protocol_id']) || row?.protocolId || fallbackProtocolId,
+    resultId: pick(source, ['resultId', 'result_id', 'id', '_id']) || row?.id || fallbackResultId,
+    result: scalarOrNull(source.result ?? row?.result),
+    uncertaintyValue: scalarOrNull(source.uncertaintyValue ?? source.uncertainty_value ?? row?.uncertaintyValue),
+    normativeValue: scalarOrNull(source.normativeValue ?? source.normative_value ?? row?.normativeValue ?? row?.normative),
+    internalStatus: (pick(source, ['internalStatus', 'internal_status', 'status']) || row?.internalStatus) as CalculationResultResponse['internalStatus'],
+    calculationStatus: (pick(source, ['calculationStatus', 'calculation_status']) || row?.calculationStatus) as CalculationResultResponse['calculationStatus'],
+    calculationMessage: pick(source, ['calculationMessage', 'calculation_message', 'message']) || row?.calculationMessage,
+    warnings: Array.isArray(source.warnings) ? source.warnings.map(String) : undefined,
+    row,
+  };
+};
+
+const numberFrom = (value: unknown) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+};
+
+const normalizeCalculationSummary = (raw: unknown, protocolId: string): ProtocolCalculationSummaryResponse => {
+  const payload = unwrapData(raw);
+  const source = asRecord(payload);
+  const rowsSource = Array.isArray(source.rows)
+    ? source.rows
+    : Array.isArray(source.results)
+      ? source.results
+      : [];
+  const rows = rowsSource.map((item) => normalizeCalculationResult(item, protocolId));
+  return {
+    protocolId: pick(source, ['protocolId', 'protocol_id']) || protocolId,
+    total: numberFrom(source.total ?? rows.length),
+    calculated: numberFrom(source.calculated),
+    manual: numberFrom(source.manual),
+    waitingInputs: numberFrom(source.waitingInputs ?? source.waiting_inputs),
+    needsRepeat: numberFrom(source.needsRepeat ?? source.needs_repeat),
+    normativeNotFound: numberFrom(source.normativeNotFound ?? source.normative_not_found),
+    errors: numberFrom(source.errors),
+    exceeded: numberFrom(source.exceeded),
+    complies: numberFrom(source.complies),
+    rows,
+  };
+};
+
+export const normalizeWeatherConditions = (raw: unknown): WeatherConditions => {
+  const source = asRecord(extractItem(raw, ['conditions', 'weather']));
+  return {
+    temperature: pick(source, ['temperature', 'temperatureC']),
+    minTemperature: pick(source, ['minTemperature', 'temperatureMinC']),
+    maxTemperature: pick(source, ['maxTemperature', 'temperatureMaxC']),
+    humidity: pick(source, ['humidity', 'humidityPercent']),
+    minHumidity: pick(source, ['minHumidity', 'humidityMinPercent']),
+    maxHumidity: pick(source, ['maxHumidity', 'humidityMaxPercent']),
+    pressureKpa: pick(source, ['pressureKpa', 'pressure']),
+    windSpeed: pick(source, ['windSpeed', 'windSpeedMs']),
+    status: 'LOADED',
+    source: 'API',
+    dataSource: pick(source, ['dataSource', 'sourceName', 'provider', 'source']) || 'Погодный сервис',
+    observedAt: pick(source, ['observedAt', 'recordedAt', 'weatherTimestamp', 'observationTime']),
+    loadedAt: pick(source, ['loadedAt', 'observedAt']) || new Date().toISOString(),
+    warning: pick(source, ['warning']),
   };
 };
 
@@ -144,7 +415,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
   const source = asRecord(raw);
   const snapshot = normalizeCompanySnapshot(source);
   const organization = asRecord(source.organization);
-  const laboratory = asRecord(source.laboratory);
+  const laboratory = asRecord(source.laboratorySnapshot || source.laboratory_snapshot || source.laboratory);
   const testing = asRecord(source.testing);
   const protocolNumber = pick(source, ['protocolNumber', 'protocol_number', 'number']);
   const samplingDate = pick(testing, ['samplingDate', 'sampleDate']);
@@ -164,7 +435,12 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     id: pick(source, ['id', '_id', 'protocolId']),
     protocolNumber,
     number: protocolNumber,
-    templateId: pick(source, ['templateId', 'template_id']) as Protocol['templateId'],
+    templateId: pick(source, [
+      'templateId',
+      'template_id',
+      'templateCode',
+      'template_code',
+    ]).toLowerCase() as Protocol['templateId'],
     subtype: (pick(source, ['subtype', 'physicalFactorType', 'physical_factor_type'])
       || pick(testing, ['physicalFactorType'])) as Protocol['subtype'],
     templateName: pick(source, ['templateName', 'template_name']),
@@ -173,6 +449,10 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     objectId: pick(source, ['objectId', 'object_id']),
     companySnapshot: snapshot,
     protocolDate: pick(source, ['protocolDate', 'protocol_date']),
+    measurementDate: pick(source, ['measurementDate', 'measurement_date']) || samplingDate,
+    measurementTime: pick(source, ['measurementTime', 'measurement_time']),
+    measurementPlace: pick(source, ['measurementPlace', 'measurement_place']),
+    sourceNumber: pick(source, ['sourceNumber', 'source_number']),
     formCode: pick(source, ['formCode', 'form_code']),
     application: pick(source, ['appendixNumber', 'application', 'appendix_number']),
     samplingDate,
@@ -190,6 +470,12 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
       pressureKpa: pick(environment, ['pressureKpa', 'pressure']),
       windSpeed: pick(environment, ['windSpeedMs', 'windSpeed']),
       comment: pick(environment, ['conditionsComment', 'comment']) || environmentalConditions,
+      status: pick(environment, ['status']) as ProtocolEnvironmentalConditions['status'],
+      source: (pick(environment, ['source']) || 'API') as ProtocolEnvironmentalConditions['source'],
+      dataSource: pick(environment, ['dataSource', 'sourceName', 'provider']),
+      observedAt: pick(environment, ['observedAt', 'recordedAt', 'weatherTimestamp']),
+      loadedAt: pick(environment, ['loadedAt']),
+      manualChangeReason: pick(environment, ['manualChangeReason', 'changeReason']),
     },
     productName: pick(source, ['productName']) || pick(organization, ['productName']),
     testingBasis: pick(source, ['testingBasis']) || pick(organization, ['testingBasis']),
@@ -198,7 +484,8 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     testingMethodDocument: pick(source, ['testingMethodDocument']) || pick(testing, ['testingMethodDocument']),
     explanatoryNote: pick(source, ['explanatoryNote', 'note']),
     complianceResult: pick(source, ['complianceStatus', 'complianceResult', 'overallStatus', 'internalStatus']),
-    executor: pick(source, ['executor']),
+    executor: pick(source, ['executor']) || pick(laboratory, ['executor', 'executorName']),
+    executorId: pick(source, ['executorId', 'executor_id']) || pick(laboratory, ['executorId']),
     approver: pick(source, ['approver']),
     approvedAt: pick(source, ['approvedAt', 'approved_at']),
     signedAt: pick(source, ['signedAt', 'signed_at']),
@@ -210,13 +497,25 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
       testingBasis: pick(organization, ['testingBasis', 'basis']) || pick(source, ['testingBasis', 'testing_basis']),
     },
     laboratory: {
+      laboratoryId: pick(laboratory, ['laboratoryId', 'id']),
       laboratoryName: pick(laboratory, ['laboratoryName', 'name']),
+      legalName: pick(laboratory, ['legalName']),
+      bin: pick(laboratory, ['bin']),
       laboratoryAddress: pick(laboratory, ['laboratoryAddress', 'address']),
+      phone: pick(laboratory, ['phone']),
+      email: pick(laboratory, ['email']),
       accreditationNumber: pick(laboratory, ['accreditationNumber', 'certificateNumber']),
+      accreditationIssuedAt: pick(laboratory, ['accreditationIssuedAt', 'certificateIssuedAt']),
       accreditationValidUntil: pick(laboratory, ['accreditationValidUntil', 'certificateValidUntil']),
-      director: pick(laboratory, ['director']),
-      laboratoryHead: pick(laboratory, ['laboratoryHead', 'head']),
-      executor: pick(laboratory, ['executor']),
+      directorId: pick(laboratory, ['directorId']),
+      director: pick(laboratory, ['director', 'directorName']),
+      laboratoryHeadId: pick(laboratory, ['laboratoryHeadId', 'headId']),
+      laboratoryHead: pick(laboratory, ['laboratoryHead', 'head', 'laboratoryHeadName']),
+      executorId: pick(laboratory, ['executorId']) || pick(source, ['executorId', 'executor_id']),
+      executor: pick(laboratory, ['executor', 'executorName']) || pick(source, ['executor']),
+      logoUrl: pick(laboratory, ['logoUrl', 'logo']),
+      standardNote: pick(laboratory, ['standardNote', 'note']),
+      capturedAt: pick(laboratory, ['capturedAt', 'snapshotAt']),
     },
     testing: {
       productNormativeDocument: pick(testing, ['productNormativeDocument']) || pick(source, ['productNormativeDocument', 'product_normative_document']),
@@ -261,6 +560,12 @@ const toCreateProtocolApiPayload = (payload: CreateProtocolPayload) => ({
   samplingMethodDocument: payload.samplingMethodDocument || '',
   testingMethodDocument: payload.testingMethodDocument || '',
   purpose: payload.purpose || '',
+  measurementDate: payload.measurementDate || payload.samplingDate || null,
+  measurementTime: payload.measurementTime || null,
+  measurementPlace: payload.measurementPlace || null,
+  sourceNumber: payload.sourceNumber || null,
+  laboratoryId: payload.laboratoryId || null,
+  executorId: payload.executorId || null,
   environment: {
     temperatureC: nullableDecimal(payload.environment?.temperature),
     temperatureMinC: nullableDecimal(payload.environment?.minTemperature),
@@ -271,6 +576,11 @@ const toCreateProtocolApiPayload = (payload: CreateProtocolPayload) => ({
     pressureKpa: nullableDecimal(payload.environment?.pressureKpa),
     windSpeedMs: nullableDecimal(payload.environment?.windSpeed),
     conditionsComment: payload.environment?.comment || '',
+    source: payload.environment?.source || null,
+    dataSource: payload.environment?.dataSource || null,
+    observedAt: payload.environment?.observedAt || null,
+    loadedAt: payload.environment?.loadedAt || null,
+    manualChangeReason: payload.environment?.manualChangeReason || null,
   },
 });
 
@@ -284,6 +594,11 @@ const toApiEnvironment = (environment: UpdateProtocolPayload['environment']) => 
   pressureKpa: nullableDecimal(environment?.pressureKpa),
   windSpeedMs: nullableDecimal(environment?.windSpeed),
   conditionsComment: environment?.comment || '',
+  source: environment?.source || null,
+  dataSource: environment?.dataSource || null,
+  observedAt: environment?.observedAt || null,
+  loadedAt: environment?.loadedAt || null,
+  manualChangeReason: environment?.manualChangeReason || null,
 });
 
 const toApiResultPayload = (payload: ProtocolResultPayload) => {
@@ -304,23 +619,57 @@ const toApiResultPayload = (payload: ProtocolResultPayload) => {
 
 const isProtocolLike = (value: unknown) => {
   const source = asRecord(value);
+
   return Boolean(
-    pick(source, ['templateId', 'template_id', 'protocolNumber', 'protocol_number'])
-    || source.companySnapshot
-    || source.organization
-    || source.testing,
+    pick(source, ['id', '_id', 'protocolId']) &&
+    (
+      pick(source, [
+        'templateId',
+        'template_id',
+        'templateCode',
+        'template_code',
+        'protocolNumber',
+        'protocol_number',
+        'number',
+      ])
+      || source.organization
+      || source.testing
+    )
   );
 };
 
 const protocolFromActionResponse = async (protocolId: string, response: unknown): Promise<Protocol> => {
-  const item = extractItem(response, ['protocol']);
-  return isProtocolLike(item) ? normalizeProtocol(item) : getProtocol(protocolId);
+  const axiosResponse = asRecord(response);
+  const body = asRecord(axiosResponse?.data);
+  const payload = body?.data ?? axiosResponse?.data ?? response;
+
+  if (isProtocolLike(payload)) {
+    return normalizeProtocol(payload);
+  }
+
+  return getProtocol(protocolId);
 };
 
 const requireProtocol = (input: unknown, action: string): Protocol => {
-  const item = extractItem(input, ['protocol']);
+  const direct = asRecord(input);
+  const item = direct && isProtocolLike(direct)
+    ? direct
+    : extractItem(input, ['protocol']);
+
+  if (!item || !isProtocolLike(item)) {
+    throw new Error(
+      `Backend не вернул протокол после операции «${action}».`
+    );
+  }
+
   const protocol = normalizeProtocol(item);
-  if (!protocol.id || !isProtocolLike(item)) throw new Error(`Backend не вернул протокол после операции «${action}».`);
+
+  if (!protocol.id) {
+    throw new Error(
+      `Backend вернул протокол без id после операции «${action}».`
+    );
+  }
+
   return protocol;
 };
 
@@ -341,13 +690,22 @@ export async function getProtocolTemplates(): Promise<ProtocolTemplate[]> {
 }
 
 export async function createProtocol(payload: CreateProtocolPayload): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>('/protocols', toCreateProtocolApiPayload(payload));
-  return requireProtocol(response, 'создание');
+  const response = await api.post<ApiResponse<unknown>>(
+    '/protocols',
+    toCreateProtocolApiPayload(payload)
+  );
+
+  const result = response.data?.data ?? response.data;
+  return requireProtocol(result, 'создание');
 }
 
 export async function getProtocol(protocolId: string): Promise<Protocol> {
-  const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}`);
-  return requireProtocol(response, 'загрузка');
+  const response = await api.get<ApiResponse<unknown>>(
+    `/protocols/${protocolId}`
+  );
+
+  const payload = response.data?.data ?? response.data;
+  return requireProtocol(payload, 'загрузка');
 }
 
 export const getProtocolById = getProtocol;
@@ -356,11 +714,15 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}`, {
     number: payload.number,
     protocolDate: payload.protocolDate,
+    objectId: payload.objectId,
+    measurementDate: payload.measurementDate || null,
+    measurementTime: payload.measurementTime || null,
+    measurementPlace: payload.measurementPlace || null,
     formCode: payload.formCode,
     appendixNumber: payload.application,
     executor: payload.executor,
+    executorId: payload.executorId || null,
     approver: payload.approver,
-    laboratory: payload.laboratory,
     organization: payload.organization,
     testing: payload.testing,
     environment: toApiEnvironment(payload.environment),
@@ -414,8 +776,17 @@ export async function signProtocol(protocolId: string, cmsSignatureBase64: strin
 }
 
 export async function replaceProtocol(protocolId: string, reason: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/replace`, { reason });
-  return requireProtocol(response, 'создание исправленной версии');
+  const response = await api.post<ApiResponse<unknown>>(
+    `/protocols/${protocolId}/replace`,
+    { reason }
+  );
+
+  const result = response.data?.data ?? response.data;
+
+  return requireProtocol(
+    result,
+    'создание исправленной версии'
+  );
 }
 
 export async function cancelProtocol(protocolId: string): Promise<Protocol> {
@@ -521,4 +892,103 @@ export async function searchNormative(params: Record<string, string>): Promise<N
     };
   }
   return item;
+}
+
+export async function searchPollutants(query: string, params: Record<string, string> = {}): Promise<Pollutant[]> {
+  try {
+    const response = await api.get<ApiResponse<unknown> | unknown>('/pollutants/search', {
+      params: { query, q: query, ...params },
+    });
+    return extractList(response, ['pollutants', 'items', 'results']).map(normalizePollutant);
+  } catch (error) {
+    if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
+    const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/search', {
+      params: { query, q: query, ...params },
+    });
+    return extractList(response, ['normatives', 'items', 'results']).map((item) => {
+      const source = asRecord(item);
+      return normalizePollutant({
+        id: source.pollutantId || source.id,
+        code: source.pollutantCode || source.code,
+        name: source.indicator || source.name,
+        cas: source.cas,
+        formula: source.formula,
+        unit: source.unit,
+        testingMethod: source.testingMethod,
+        samplingMethod: source.samplingMethod,
+      });
+    });
+  }
+}
+
+export async function getMethodTemplates(): Promise<MethodTemplateResponse[]> {
+  const response = await api.get<ApiResponse<unknown> | unknown>('/protocols/method-templates');
+  return extractList(response, ['methodTemplates', 'method_templates', 'templates']).map(normalizeMethodTemplate);
+}
+
+export async function getMethodTemplate(id: string): Promise<MethodTemplateResponse> {
+  const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/method-templates/${id}`);
+  return normalizeMethodTemplate(extractItem(response, ['methodTemplate', 'method_template', 'template']));
+}
+
+export async function getRawMeasurements(protocolId: string, resultId: string): Promise<RawMeasurementsResponse> {
+  const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}/raw-measurements`);
+  return normalizeRawMeasurements(response, protocolId, resultId);
+}
+
+export async function saveRawMeasurements(
+  protocolId: string,
+  resultId: string,
+  payload: RawMeasurementRequest[],
+): Promise<RawMeasurementsResponse> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(
+    `/protocols/${protocolId}/results/${resultId}/raw-measurements`,
+    payload,
+  );
+  return normalizeRawMeasurements(response, protocolId, resultId);
+}
+
+export async function calculateResult(protocolId: string, resultId: string): Promise<CalculationResultResponse> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}/calculate`);
+  return normalizeCalculationResult(response, protocolId, resultId);
+}
+
+export async function calculateProtocolSummary(protocolId: string): Promise<ProtocolCalculationSummaryResponse> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`);
+  return normalizeCalculationSummary(response, protocolId);
+}
+
+export async function getCalculationHistory(protocolId: string, resultId: string): Promise<CalculationResultResponse[]> {
+  const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}/calculation-history`);
+  return extractList(response, ['history', 'calculationHistory', 'calculation_history', 'rows']).map((item) =>
+    normalizeCalculationResult(item, protocolId, resultId),
+  );
+}
+
+export async function getWeatherConditions(params: {
+  objectId: string | number;
+  coordinates?: string;
+  date: string;
+  time: string;
+  signal?: AbortSignal;
+}): Promise<WeatherConditions> {
+  const response = await api.get<ApiResponse<unknown> | unknown>('/weather/conditions', {
+    params: {
+      objectId: params.objectId,
+      date: params.date,
+      time: params.time,
+    },
+    signal: params.signal,
+  });
+  return normalizeWeatherConditions(response);
+}
+
+export async function calculateProtocol(protocolId: string): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`);
+  return protocolFromActionResponse(protocolId, response);
+}
+
+export async function refreshProtocolLaboratoryData(protocolId: string): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/refresh-laboratory-data`);
+  return protocolFromActionResponse(protocolId, response);
 }
