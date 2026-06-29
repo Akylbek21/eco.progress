@@ -4,7 +4,7 @@ import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import { getCompanies, getCompanyById, getCompanyObjects } from '../../services/companyService';
 import { getMeasurementDevices } from '../../services/measurementDeviceService';
-import { getApiErrorMessage } from '../../services/apiHelpers';
+import { getApiErrorMessage, getApiStatus } from '../../services/apiHelpers';
 import protocolService from '../../services/protocolService';
 import { accreditationState, getLaboratories, getLaboratory, getLaboratoryEmployees } from '../../services/laboratorySettingsService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,6 +25,7 @@ import type {
   WeatherConditionsStatus,
 } from '../../types/protocols';
 import { physicalFactorTypes, protocolTemplates, subtypeName, templateName } from '../../data/protocolTemplates';
+import { filterPhysicalFactorIndicators, getPhysicalFactorIndicators } from '../../data/physicalFactors';
 
 type Props = {
   open: boolean;
@@ -49,6 +50,8 @@ const DEFAULT_WEATHER_TIME = '12:00';
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = `${inputClass} bg-slate-100 text-slate-600`;
 const allowedTemplateIds = new Set(protocolTemplates.map((item) => item.id));
+const searchUnavailableMessage = 'Поиск временно недоступен. Добавьте показатель вручную.';
+const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
 const weatherLabels: Record<WeatherConditionsStatus, string> = {
   IDLE: 'Ожидает даты, времени и объекта',
   LOADING: 'Загрузка условий…',
@@ -112,6 +115,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   const selectedObject = objects.find((item) => item.id === objectId);
   const canUseAdvanced = user?.role === 'ADMIN' || user?.role === 'HEAD' || user?.role === 'DIRECTOR';
   const laboratoryAccreditation = accreditationState(laboratory?.accreditationValidUntil);
+  const isPhysicalFactors = templateId === 'physical_factors';
 
   useEffect(() => {
     if (!open) return;
@@ -181,6 +185,11 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
 
   useEffect(() => {
     const query = pollutantQuery.trim();
+    if (isPhysicalFactors) {
+      setSuggestions(query.length ? filterPhysicalFactorIndicators(query, subtype).slice(0, 10) : getPhysicalFactorIndicators(subtype).slice(0, 10));
+      setSearching(false);
+      return;
+    }
     if (query.length < 2 || query.includes(',')) {
       setSuggestions([]);
       return;
@@ -189,16 +198,19 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
     const timer = window.setTimeout(async () => {
       setSearching(true);
       try {
-        const items = await protocolService.searchPollutants(query, { templateId, objectId });
+        const items = await protocolService.searchPollutants(query, { templateId, subtype: subtype || '', objectId });
         if (requestId === searchAbortRef.current) setSuggestions(items.slice(0, 10));
-      } catch {
-        if (requestId === searchAbortRef.current) setSuggestions([]);
+      } catch (searchError) {
+        if (requestId === searchAbortRef.current) {
+          if (getApiStatus(searchError) === 500) setError(searchUnavailableMessage);
+          setSuggestions([]);
+        }
       } finally {
         if (requestId === searchAbortRef.current) setSearching(false);
       }
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [pollutantQuery, templateId, objectId]);
+  }, [pollutantQuery, templateId, subtype, objectId, isPhysicalFactors]);
 
   const selectCompany = async (id: string) => {
     setError('');
@@ -259,15 +271,23 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   const loadNormative = async (pollutant: Pollutant): Promise<Pick<DraftRow, 'normative' | 'normativeCandidates' | 'warning'>> => {
     try {
       const found = await protocolService.searchNormative({
-        templateId, subtype: subtype || '', code: pollutant.code, indicator: pollutant.name,
-        unit: pollutant.unit || '', objectId, date: measurementDate,
+        templateId,
+        subtype: subtype || '',
+        code: pollutant.code,
+        pollutantCode: pollutant.code,
+        indicator: pollutant.name,
+        query: `${pollutant.code} ${pollutant.name}`.trim(),
+        unit: pollutant.unit || '',
+        objectId,
+        date: measurementDate,
       });
       const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
-      if (!candidates.length) return { warning: 'Норматив не найден' };
+      if (!candidates.length) return { warning: normativeNotFoundMessage };
       if (candidates.length > 1) return { normativeCandidates: candidates, warning: 'Выберите норматив' };
       return { normative: candidates[0] };
-    } catch {
-      return { warning: 'Норматив не найден' };
+    } catch (searchError) {
+      if (getApiStatus(searchError) === 500) return { warning: searchUnavailableMessage };
+      return { warning: normativeNotFoundMessage };
     }
   };
 
@@ -302,7 +322,12 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
     }
     setSearching(true);
     try {
-      const found = await protocolService.searchPollutants(tokens.join(','), { templateId, objectId }).catch(() => []);
+      const found = isPhysicalFactors
+        ? getPhysicalFactorIndicators(subtype)
+        : await protocolService.searchPollutants(tokens.join(','), { templateId, subtype: subtype || '', objectId }).catch((searchError) => {
+          if (getApiStatus(searchError) === 500) setError(searchUnavailableMessage);
+          return [];
+        });
       for (const token of tokens) {
         const normalized = token.toLowerCase();
         const pollutant = found.find((item) => item.code.toLowerCase() === normalized)
@@ -319,16 +344,12 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
     }
   };
 
-  const addPhysicalMeasurement = () => {
-    const defaults: Record<string, Pollutant> = {
-      MICROCLIMATE: { code: 'MICROCLIMATE', name: 'Параметры микроклимата', unit: '' },
-      LIGHTING: { code: 'LIGHTING', name: 'Освещённость', unit: 'лк' },
-      NOISE: { code: 'NOISE', name: 'Уровень шума', unit: 'дБА' },
-      VIBRATION: { code: 'VIBRATION', name: 'Вибрация', unit: 'дБ' },
-      NOISE_VIBRATION: { code: 'NOISE', name: 'Шум / вибрация', unit: 'дБА' },
-    };
-    const pollutant = defaults[subtype || 'MICROCLIMATE'];
-    setRows((current) => [...current, { key: `${pollutant.code}-${Date.now()}`, pollutant, reading: '', deviceId: lastDeviceId }]);
+  const addPhysicalMeasurement = async (pollutant?: Pollutant) => {
+    const selected = pollutant || filterPhysicalFactorIndicators(pollutantQuery, subtype)[0] || manualPollutantFromText(pollutantQuery || subtypeName(subtype));
+    const normativeState = await loadNormative(selected);
+    setRows((current) => [...current, { key: `${selected.code}-${Date.now()}`, pollutant: selected, reading: '', deviceId: lastDeviceId, ...normativeState }]);
+    setPollutantQuery('');
+    setSuggestions([]);
   };
 
   const validate = () => {
@@ -369,6 +390,8 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         cas: row.pollutant.cas || '',
         formula: row.pollutant.formula || '',
         unit: row.normative?.unit || row.pollutant.unit || '',
+        result: row.reading,
+        ...(templateId === 'industrial_emissions' ? { resultMg: row.reading } : {}),
         primaryReading: row.reading,
         measurementReadings: row.reading,
         measurementDeviceId: row.deviceId,
@@ -381,6 +404,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         comparisonType: row.normative?.comparisonType || '',
         measurementPlace: place,
         samplingPlace: place,
+        ...(templateId === 'physical_factors' ? { factorType: subtype || '', subtype: subtype || '' } : {}),
         sourceNumber,
         measurementDate,
         measurementTime: DEFAULT_WEATHER_TIME,
@@ -576,21 +600,29 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
             </div>
           </div>}
 
-          {templateId !== 'physical_factors' ? <div>
-            <label className="text-sm font-bold text-slate-700">Код или название вещества</label>
+          <div>
+            <label className="text-sm font-bold text-slate-700">{isPhysicalFactors ? 'Показатель' : 'Код или название вещества'}</label>
             <div className="relative mt-2">
               <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
               <input value={pollutantQuery} onChange={(event) => setPollutantQuery(event.target.value)}
                 onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addBulk(); } }}
-                placeholder="0301 или 0301, 0304, 0330, 0337" className={`${inputClass} pl-10 pr-28`} />
-              <button type="button" disabled={searching} onClick={addBulk} className="absolute right-2 top-1.5 rounded-lg bg-eco-700 px-3 py-2 text-xs font-bold text-white">Добавить</button>
+                placeholder={isPhysicalFactors ? 'Показатель: освещённость, шум, температура…' : 'Код или название вещества: 0301, азот…'} className={`${inputClass} pl-10 pr-28`} />
+              <button type="button" disabled={searching} onClick={isPhysicalFactors ? () => addPhysicalMeasurement() : addBulk} className="absolute right-2 top-1.5 rounded-lg bg-eco-700 px-3 py-2 text-xs font-bold text-white">Добавить</button>
             </div>
             {suggestions.length > 0 && <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-              {suggestions.map((item) => <button key={`${item.code}-${item.id || item.name}`} type="button" onClick={() => addPollutant(item)} className="flex w-full flex-col border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-eco-50 sm:flex-row sm:items-center sm:gap-3">
+              {suggestions.map((item) => <button key={`${item.code}-${item.id || item.name}`} type="button" onClick={() => isPhysicalFactors ? addPhysicalMeasurement(item) : addPollutant(item)} className="flex w-full flex-col border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-eco-50 sm:flex-row sm:items-center sm:gap-3">
                 <span className="font-black text-eco-800">{item.code}</span><span className="font-bold text-slate-900">{item.name}</span><span className="text-sm text-slate-500">{item.formula || ''}</span><span className="text-sm text-slate-500">{item.unit || ''}</span>
               </button>)}
             </div>}
-          </div> : <Button type="button" onClick={addPhysicalMeasurement}><Plus className="h-4 w-4" /> Добавить измерение: {subtypeName(subtype)}</Button>}
+            {isPhysicalFactors && pollutantQuery.trim() && !suggestions.length && (
+              <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+                Показатель не найден в локальном списке. <button type="button" onClick={() => addPhysicalMeasurement(manualPollutantFromText(pollutantQuery))} className="font-black text-eco-800 underline">Добавить вручную</button>
+              </div>
+            )}
+            {isPhysicalFactors && !pollutantQuery.trim() && (
+              <Button type="button" variant="secondary" className="mt-2" onClick={() => setSuggestions(getPhysicalFactorIndicators(subtype).slice(0, 10))}><Plus className="h-4 w-4" /> Показать список: {subtypeName(subtype)}</Button>
+            )}
+          </div>
 
           <div className="overflow-x-auto rounded-2xl border border-slate-200">
             <table className="min-w-[900px] w-full text-left text-sm">

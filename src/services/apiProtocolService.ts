@@ -888,8 +888,21 @@ export async function removeProtocolMeasurementDevice(protocolId: string, device
 
 export async function searchNormative(params: Record<string, string>): Promise<NormativeSearchResult> {
   const { testingDate, ...rest } = params;
+  const query = params.query || [params.code || params.pollutantCode, params.indicator].filter(Boolean).join(' ').trim();
   const response = await api.get<ApiResponse<NormativeSearchResult> | NormativeSearchResult>('/normatives/search', {
-    params: { ...rest, date: params.date || testingDate || undefined },
+    params: {
+      ...rest,
+      query,
+      q: params.q || query,
+      code: params.code || params.pollutantCode || undefined,
+      pollutantCode: params.pollutantCode || params.code || undefined,
+      indicator: params.indicator || undefined,
+      templateId: params.templateId || undefined,
+      subtype: params.subtype || undefined,
+      unit: params.unit || undefined,
+      objectId: params.objectId || undefined,
+      date: params.date || testingDate || undefined,
+    },
   });
   const candidates = extractList(response, ['normatives', 'items']) as NonNullable<NormativeSearchResult['normatives']>;
   const item = extractItem(response) as NormativeSearchResult;
@@ -908,13 +921,13 @@ export async function searchNormative(params: Record<string, string>): Promise<N
 export async function searchPollutants(query: string, params: Record<string, string> = {}): Promise<Pollutant[]> {
   try {
     const response = await api.get<ApiResponse<unknown> | unknown>('/pollutants/search', {
-      params: { query, q: query, ...params },
+      params: { ...params, query, q: query },
     });
     return extractList(response, ['pollutants', 'items', 'results']).map(normalizePollutant);
   } catch (error) {
     if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
     const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/search', {
-      params: { query, q: query, ...params },
+      params: { ...params, query, q: query },
     });
     return extractList(response, ['normatives', 'items', 'results']).map((item) => {
       const source = asRecord(item);

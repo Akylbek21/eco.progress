@@ -5,10 +5,14 @@ import Modal from '../ui/Modal';
 import NormativeStatusBadge from './NormativeStatusBadge';
 import RawMeasurementsModal from './RawMeasurementsModal';
 import protocolService from '../../services/protocolService';
+import { getApiStatus } from '../../services/apiHelpers';
+import { filterPhysicalFactorIndicators, getPhysicalFactorIndicators } from '../../data/physicalFactors';
+import { subtypeName } from '../../data/protocolTemplates';
 import { useAuth } from '../../contexts/AuthContext';
 import type {
   CalculationDetails,
   CalculationResultResponse,
+  NormativeRecord,
   Pollutant,
   ProtocolCalculationSummaryResponse,
   ProtocolMeasurementDevice,
@@ -27,6 +31,8 @@ type Props = {
   readOnly: boolean;
   busy?: boolean;
   testingDate?: string;
+  objectId?: string | number;
+  measurementPlace?: string;
   allowManualIndicator?: boolean;
   onChange: (rows: ProtocolResultRow[]) => void;
   onCheckNormatives: () => void | Promise<void>;
@@ -36,6 +42,8 @@ type Props = {
 
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = 'rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700';
+const searchUnavailableMessage = 'Поиск временно недоступен. Добавьте показатель вручную.';
+const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
 const valueOf = (row: ProtocolResultRow, keys: string[]) => {
   for (const key of keys) {
     const value = row.values[key];
@@ -100,7 +108,7 @@ const exceededText = (row: ProtocolResultRow, templateId: ProtocolTemplateId) =>
 };
 
 const ProtocolResultsTable = ({
-  protocolId, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '',
+  protocolId, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '', objectId, measurementPlace: defaultMeasurementPlace = '',
   onChange, onCheckNormatives, onImported, onNotify,
 }: Props) => {
   const { user } = useAuth();
@@ -121,19 +129,26 @@ const ProtocolResultsTable = ({
   const [advanced, setAdvanced] = useState(false);
   const [rowMenuId, setRowMenuId] = useState<string | null>(null);
   const [extraActionsOpen, setExtraActionsOpen] = useState(false);
+  const [normativeChoices, setNormativeChoices] = useState<Record<string, NormativeRecord[]>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const canUseAdvanced = user?.role === 'ADMIN' || user?.role === 'HEAD' || user?.role === 'DIRECTOR';
+  const isPhysicalFactors = templateId === 'physical_factors';
 
   const selectedRows = useMemo(() => rows.filter((row) => selected.includes(row.id)), [rows, selected]);
   const reviewRow = rows.find((row) => ['EXCEEDED', 'BELOW_REQUIRED', 'UNIT_MISMATCH', 'NEEDS_REVIEW', 'MANUAL_NORMATIVE'].includes(String(statusOf(row))));
 
   const search = async (value: string) => {
     setQuery(value);
+    if (isPhysicalFactors) {
+      setSuggestions(value.trim() ? filterPhysicalFactorIndicators(value, subtype).slice(0, 8) : getPhysicalFactorIndicators(subtype).slice(0, 8));
+      return;
+    }
     if (value.trim().length < 2) return setSuggestions([]);
     setSearching(true);
     try {
       setSuggestions((await protocolService.searchPollutants(value, { templateId, subtype: subtype || '' })).slice(0, 8));
-    } catch {
+    } catch (error) {
+      if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
       setSuggestions([]);
     } finally {
       setSearching(false);
@@ -144,28 +159,57 @@ const ProtocolResultsTable = ({
     setSaving(true);
     try {
       const found = await protocolService.searchNormative({
-        templateId, subtype: subtype || '', code: pollutant.code, indicator: pollutant.name,
-        unit: pollutant.unit || '', date: testingDate,
-      }).catch(() => ({ found: false, normatives: [], items: [], normative: undefined }));
+        templateId,
+        subtype: subtype || '',
+        code: pollutant.code,
+        pollutantCode: pollutant.code,
+        indicator: pollutant.name,
+        query: `${pollutant.code} ${pollutant.name}`.trim(),
+        unit: pollutant.unit || '',
+        objectId: objectId ? String(objectId) : '',
+        date: testingDate,
+      }).catch((error) => {
+        if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
+        return { found: false, normatives: [], items: [], normative: undefined };
+      });
       const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
       const normative = candidates.length === 1 ? candidates[0] : undefined;
+      const values = isPhysicalFactors ? {
+        pollutantCode: pollutant.code,
+        indicator: pollutant.name,
+        unit: normative?.unit || pollutant.unit || '',
+        result: '',
+        measurementPlace: defaultMeasurementPlace || '',
+        factorType: subtype || '',
+        subtype: subtype || '',
+        normative: normative?.value || '',
+        normativeMin: normative?.min || '',
+        normativeMax: normative?.max || normative?.value || '',
+        normativeDocument: normative?.normativeDocument || '',
+        testingMethod: normative?.testingMethod || pollutant.testingMethod || '',
+        normativeSelectionRequired: candidates.length > 1 ? 'true' : '',
+        normativeSearchWarning: candidates.length ? '' : normativeNotFoundMessage,
+      } : {
+        pollutantCode: pollutant.code,
+        indicator: pollutant.name,
+        cas: pollutant.cas || '',
+        formula: pollutant.formula || '',
+        unit: normative?.unit || pollutant.unit || '',
+        primaryReading: '',
+        result: '',
+        normative: normative?.value || '',
+        normativeMin: normative?.min || '',
+        normativeMax: normative?.max || normative?.value || '',
+        normativeDocument: normative?.normativeDocument || '',
+        testingMethod: normative?.testingMethod || pollutant.testingMethod || '',
+        normativeSelectionRequired: candidates.length > 1 ? 'true' : '',
+        normativeSearchWarning: candidates.length ? '' : normativeNotFoundMessage,
+      };
       const saved = await protocolService.addProtocolResult(protocolId, {
         normativeId: normative?.id,
-        values: {
-          pollutantCode: pollutant.code,
-          indicator: pollutant.name,
-          cas: pollutant.cas || '',
-          formula: pollutant.formula || '',
-          unit: normative?.unit || pollutant.unit || '',
-          primaryReading: '',
-          normative: normative?.value || '',
-          normativeMin: normative?.min || '',
-          normativeMax: normative?.max || normative?.value || '',
-          normativeDocument: normative?.normativeDocument || '',
-          testingMethod: normative?.testingMethod || pollutant.testingMethod || '',
-          normativeSelectionRequired: candidates.length > 1 ? 'true' : '',
-        },
+        values,
       });
+      if (candidates.length > 1) setNormativeChoices((current) => ({ ...current, [saved.id]: candidates }));
       if (append) onChange([...rows, saved]);
       setQuery('');
       setSuggestions([]);
@@ -187,7 +231,12 @@ const ProtocolResultsTable = ({
     }
     setSearching(true);
     try {
-      const found = await protocolService.searchPollutants(tokens.join(','), { templateId, subtype: subtype || '' }).catch(() => []);
+      const found = isPhysicalFactors
+        ? getPhysicalFactorIndicators(subtype)
+        : await protocolService.searchPollutants(tokens.join(','), { templateId, subtype: subtype || '' }).catch((error) => {
+          if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
+          return [];
+        });
       const created: ProtocolResultRow[] = [];
       for (const token of tokens) {
         const normalized = token.toLowerCase();
@@ -229,6 +278,7 @@ const ProtocolResultsTable = ({
     if (!form.primaryReading.trim() && !form.readings.trim()) return onNotify('Введите первичные показания', 'warning');
     setSaving(true);
     try {
+      const resultValue = form.primaryReading || form.readings;
       const saved = await protocolService.updateProtocolResult(protocolId, editing.id, {
         measurementDeviceId: form.measurementDeviceId || undefined,
         normativeId: valueOf(editing, ['normativeId']) || editing.normativeReference?.id,
@@ -237,6 +287,8 @@ const ProtocolResultsTable = ({
           primaryReading: form.primaryReading,
           readings: form.readings,
           measurementReadings: form.readings || form.primaryReading,
+          result: resultValue,
+          ...(templateId === 'industrial_emissions' ? { resultMg: resultValue } : {}),
           measurementDeviceId: form.measurementDeviceId,
           measurementPlace: form.measurementPlace,
           samplingPlace: form.measurementPlace,
@@ -253,6 +305,57 @@ const ProtocolResultsTable = ({
     } finally {
       setSaving(false);
     }
+  };
+
+  const selectNormative = async (row: ProtocolResultRow, normativeId: string) => {
+    const normative = normativeChoices[row.id]?.find((item) => item.id === normativeId);
+    if (!normative) return;
+    setSaving(true);
+    try {
+      const saved = await protocolService.updateProtocolResult(protocolId, row.id, {
+        measurementDeviceId: row.measurementDeviceId || valueOf(row, ['measurementDeviceId']),
+        normativeId: normative.id,
+        values: {
+          ...row.values,
+          normativeId: normative.id,
+          normative: normative.value || '',
+          normativeMin: normative.min || '',
+          normativeMax: normative.max || normative.value || '',
+          normativeDocument: normative.normativeDocument || '',
+          testingMethod: normative.testingMethod || valueOf(row, ['testingMethod']),
+          unit: normative.unit || unit(row),
+          comparisonType: normative.comparisonType || '',
+          normativeSelectionRequired: '',
+          normativeSearchWarning: '',
+        },
+      });
+      setNormativeChoices((current) => {
+        const next = { ...current };
+        delete next[row.id];
+        return next;
+      });
+      onChange(rows.map((item) => item.id === row.id ? saved : item));
+      onNotify('Норматив выбран', 'success');
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : 'Не удалось сохранить норматив', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderNormativeCell = (row: ProtocolResultRow) => {
+    const choices = normativeChoices[row.id];
+    if (choices?.length) {
+      return (
+        <select value="" onChange={(event) => selectNormative(row, event.target.value)} disabled={saving || readOnly} className={inputClass}>
+          <option value="">Выберите норматив</option>
+          {choices.map((item) => <option key={item.id} value={item.id}>{item.value || `${item.min || '—'}–${item.max || '—'}`} {item.unit} · {item.normativeDocument}</option>)}
+        </select>
+      );
+    }
+    const value = normativeValue(row);
+    if (value) return <div className={automaticClass}>{value} {unit(row)}</div>;
+    return <div className={automaticClass}>{valueOf(row, ['normativeSearchWarning']) || 'Норматив не найден'}</div>;
   };
 
   const duplicate = async (row: ProtocolResultRow) => {
@@ -412,12 +515,17 @@ const ProtocolResultsTable = ({
       {!readOnly && <div className="mb-4 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-          <input value={query} onChange={(event) => search(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addBulk(); } }} placeholder="Код или название вещества; массово: 0301, 0304, 0330, 0337" className={`${inputClass} pl-10`} />
+          <input value={query} onChange={(event) => search(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addBulk(); } }} placeholder={isPhysicalFactors ? 'Показатель: освещённость, шум, температура…' : 'Код или название вещества: 0301, азот…'} className={`${inputClass} pl-10`} />
           {suggestions.length > 0 && <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
             {suggestions.map((item) => <button key={`${item.code}-${item.id || item.name}`} type="button" onClick={() => addPollutant(item)} className="flex w-full flex-wrap gap-x-3 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-eco-50">
-              <span className="font-black text-eco-800">{item.code}</span><span className="font-bold">{item.name}</span><span className="text-slate-500">{item.formula}</span><span className="text-slate-500">{item.cas}</span>
+              <span className="font-black text-eco-800">{item.code}</span><span className="font-bold">{item.name}</span><span className="text-slate-500">{item.formula}</span><span className="text-slate-500">{item.cas}</span><span className="text-slate-500">{item.unit}</span>
             </button>)}
           </div>}
+          {isPhysicalFactors && query.trim() && !suggestions.length && (
+            <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+              Показатель не найден в локальном списке. <button type="button" onClick={() => addPollutant(manualPollutantFromText(query))} className="font-black text-eco-800 underline">Добавить вручную</button>
+            </div>
+          )}
         </div>
         {selectedRows.length > 0 && <div className="grid gap-2 rounded-xl border border-eco-100 bg-white p-3 lg:grid-cols-[1fr_auto_1fr_auto_auto]">
           <select value={bulkDeviceId} onChange={(event) => setBulkDeviceId(event.target.value)} className={inputClass}><option value="">Прибор для выбранных строк</option>{devices.map((item) => <option key={item.deviceId} value={item.deviceId}>{item.deviceSnapshot.name} · {item.deviceSnapshot.serialNumber}</option>)}</select>
@@ -429,6 +537,49 @@ const ProtocolResultsTable = ({
       </div>}
 
       <div className="overflow-x-auto">
+        {isPhysicalFactors ? (
+          <table className="min-w-[1120px] w-full text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>
+              {!readOnly && <th className="px-3 py-3"><input type="checkbox" checked={rows.length > 0 && selected.length === rows.length} onChange={(event) => setSelected(event.target.checked ? rows.map((row) => row.id) : [])} /></th>}
+              <th className="px-3 py-3">Место замера</th><th className="px-3 py-3">Вид фактора</th><th className="px-3 py-3">Показатель</th><th className="px-3 py-3">Единица</th><th className="bg-slate-100 px-3 py-3">Результат</th><th className="bg-slate-100 px-3 py-3">Норматив</th><th className="bg-slate-100 px-3 py-3">Статус</th><th className="px-3 py-3">Прибор</th><th className="px-3 py-3 text-right">Действия</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">{rows.map((row) => {
+              const calculationLabel = calculationStatusLabel(row.calculationStatus || valueOf(row, ['calculationStatus']));
+              return <tr key={row.id} className="align-top hover:bg-slate-50">
+                {!readOnly && <td className="px-3 py-3"><input type="checkbox" checked={selected.includes(row.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, row.id] : current.filter((id) => id !== row.id))} /></td>}
+                <td className="px-3 py-3 font-semibold text-slate-800">{measurementPlace(row) || '—'}</td>
+                <td className="px-3 py-3">{subtypeName(valueOf(row, ['factorType', 'subtype']) || subtype)}</td>
+                <td className="px-3 py-3"><p className="font-bold text-slate-900">{indicator(row) || '—'}</p><p className="mt-1 text-xs font-black text-eco-800">{pollutantCode(row) || '—'}</p></td>
+                <td className="px-3 py-3">{unit(row) || '—'}</td>
+                <td className="bg-slate-50 px-3 py-3"><div className={automaticClass}>{officialResult(row, templateId) || 'Ожидает ввода'} {officialResult(row, templateId) && unit(row)}</div></td>
+                <td className="bg-slate-50 px-3 py-3">{renderNormativeCell(row)}</td>
+                <td className="bg-slate-50 px-3 py-3"><div className="space-y-2"><NormativeStatusBadge status={statusOf(row)} />{calculationLabel && <p className="text-xs font-semibold text-slate-600">{calculationLabel}</p>}</div></td>
+                <td className="px-3 py-3">{resolveDeviceName(row, devices) || '—'}</td>
+                <td className="px-3 py-3"><div className="relative flex flex-wrap justify-end gap-1">
+                  <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => setRawRow(row)}>Ввести данные</Button>
+                  <Button type="button" variant="secondary" className="px-3" disabled={saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
+                  <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} title="Изменить" onClick={() => openEdit(row)}>Изменить</Button>
+                  <Button type="button" variant="secondary" className="px-2.5" disabled={saving} title="Еще" onClick={() => setRowMenuId((current) => current === row.id ? null : row.id)}>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                  {rowMenuId === row.id && (
+                    <div className="absolute right-0 top-10 z-20 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-left shadow-xl">
+                      <button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400" disabled={readOnly || saving} onClick={() => { setRowMenuId(null); duplicate(row); }}>
+                        <Copy className="h-4 w-4" /> Дублировать
+                      </button>
+                      <button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" disabled={saving} onClick={() => openCalculationHistory(row)}>
+                        <History className="h-4 w-4" /> История расчета
+                      </button>
+                      <button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-slate-400" disabled={readOnly || saving} onClick={() => { setRowMenuId(null); setDeleteRow(row); }}>
+                        <Trash2 className="h-4 w-4" /> Удалить
+                      </button>
+                    </div>
+                  )}
+                </div></td>
+              </tr>;
+            })}</tbody>
+          </table>
+        ) : (
         <table className="min-w-[1320px] w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>
             {!readOnly && <th className="px-3 py-3"><input type="checkbox" checked={rows.length > 0 && selected.length === rows.length} onChange={(event) => setSelected(event.target.checked ? rows.map((row) => row.id) : [])} /></th>}
@@ -445,7 +596,7 @@ const ProtocolResultsTable = ({
               <td className="px-3 py-3">{resolveDeviceName(row, devices) || '—'}</td>
               <td className="bg-slate-50 px-3 py-3"><div className={automaticClass}>{officialResult(row, templateId) || 'Ожидает расчёта'} {officialResult(row, templateId) && unit(row)}</div></td>
               <td className="bg-slate-50 px-3 py-3"><div className={automaticClass}>{uncertaintyValue(row) || '—'}</div></td>
-              <td className="bg-slate-50 px-3 py-3"><div className={automaticClass}>{normativeValue(row) ? `${normativeValue(row)} ${unit(row)}` : 'Норматив не найден'}</div></td>
+              <td className="bg-slate-50 px-3 py-3">{renderNormativeCell(row)}</td>
               <td className="bg-slate-50 px-3 py-3"><div className="space-y-2"><NormativeStatusBadge status={statusOf(row)} />{calculationLabel && <p className="text-xs font-semibold text-slate-600">{calculationLabel}</p>}{exceededText(row, templateId) && <p className="max-w-56 text-xs font-semibold text-rose-700">{exceededText(row, templateId)}</p>}</div></td>
               <td className="px-3 py-3"><div className="relative flex flex-wrap justify-end gap-1">
                 <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => setRawRow(row)}>Ввести данные</Button>
@@ -471,6 +622,7 @@ const ProtocolResultsTable = ({
             </tr>;
           })}</tbody>
         </table>
+        )}
       </div>
       {!rows.length && <div className="border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">Показания ещё не добавлены.</div>}
       {reviewRow && <div className="mt-3 inline-block max-w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">

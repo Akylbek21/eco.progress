@@ -1113,6 +1113,8 @@ const ProtocolEditorPage = () => {
         devices={protocol.measurementDevices}
         readOnly={readOnly}
         busy={busy}
+        objectId={protocol.objectId}
+        measurementPlace={protocol.measurementPlace || ''}
         testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate}
         onChange={(results) => patchProtocol({ results })}
         onCheckNormatives={checkSavedNormatives}
@@ -1219,6 +1221,8 @@ const ProtocolEditorPage = () => {
           devices={protocol.measurementDevices}
           readOnly={readOnly}
           busy={busy}
+          objectId={protocol.objectId}
+          measurementPlace={protocol.measurementPlace || ''}
           testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate}
           onChange={(results) => patchProtocol({ results })}
           onCheckNormatives={checkSavedNormatives}
@@ -1280,6 +1284,8 @@ const ProtocolEditorPage = () => {
         devices={protocol.measurementDevices}
         readOnly={readOnly}
         busy={busy}
+        objectId={protocol.objectId}
+        measurementPlace={protocol.measurementPlace || ''}
         testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate}
         onChange={(results) => patchProtocol({ results })}
         onCheckNormatives={checkSavedNormatives}

@@ -51,6 +51,7 @@ const RawMeasurementsModal = ({
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<RawMeasurementsResponse | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [manualResult, setManualResult] = useState('');
   const [deviceId, setDeviceId] = useState('');
   const [error, setError] = useState('');
 
@@ -69,6 +70,7 @@ const RawMeasurementsModal = ({
           nextValues[variable.variableKey] = String(measurement?.variableValue ?? variable.defaultValue ?? '');
         });
         setValues(nextValues);
+        setManualResult(String(row.result || valueOf(row, ['result', 'resultMg', 'resultValue', 'primaryReading']) || ''));
         setDeviceId(String(
           response.measurements.find((item) => item.deviceId)?.deviceId
           || row.measurementDeviceId
@@ -104,16 +106,35 @@ const RawMeasurementsModal = ({
 
   const save = async (calculate = false) => {
     if (!row || !data) return;
-    if (missing.length) {
+    const hasMethodTemplate = Boolean(data.methodTemplate);
+    if (hasMethodTemplate && missing.length) {
       setError(`Не заполнено: ${missing.join(', ')}`);
+      return;
+    }
+    if (!hasMethodTemplate && !manualResult.trim()) {
+      setError('Введите результат измерения');
       return;
     }
     setSaving(true);
     setError('');
     try {
-      await protocolService.saveRawMeasurements(protocolId, row.id, payload(), data.methodTemplate?.id);
+      if (hasMethodTemplate) {
+        await protocolService.saveRawMeasurements(protocolId, row.id, payload(), data.methodTemplate?.id);
+      } else {
+        await protocolService.updateProtocolResult(protocolId, row.id, {
+          measurementDeviceId: deviceId || row.measurementDeviceId || valueOf(row, ['measurementDeviceId']) || undefined,
+          normativeId: valueOf(row, ['normativeId']) || row.normativeReference?.id,
+          values: {
+            ...row.values,
+            result: manualResult,
+            primaryReading: manualResult,
+            measurementReadings: manualResult,
+            measurementDeviceId: deviceId,
+          },
+        });
+      }
       if (!calculate) {
-        onNotify('Исходные данные сохранены', 'success');
+        onNotify(hasMethodTemplate ? 'Исходные данные сохранены' : 'Результат измерения сохранен', 'success');
         await onReload?.();
         onClose();
         return;
@@ -150,13 +171,13 @@ const RawMeasurementsModal = ({
 
           {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{error}</div>}
 
-          {!loading && !data?.variables.length && (
+          {!loading && !data?.methodTemplate && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
               Методика расчета не настроена. Можно ввести результат вручную.
             </div>
           )}
 
-          {Boolean(data?.variables.length) && (
+          {Boolean(data?.methodTemplate) && (
             <div className="grid gap-4 sm:grid-cols-2">
               {data?.variables.map((variable) => (
                 <label key={variable.variableKey} className="space-y-1.5 text-sm font-bold text-slate-700">
@@ -192,10 +213,28 @@ const RawMeasurementsModal = ({
             </div>
           )}
 
+          {!loading && !data?.methodTemplate && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-1.5 text-sm font-bold text-slate-700">
+                <span>Результат измерения</span>
+                <input autoFocus value={manualResult} onChange={(event) => setManualResult(event.target.value)} className={inputClass} />
+              </label>
+              <label className="space-y-1.5 text-sm font-bold text-slate-700">
+                <span>Прибор</span>
+                <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} className={inputClass}>
+                  <option value="">Не выбран</option>
+                  {devices.map((device) => (
+                    <option key={device.deviceId} value={device.deviceId}>{device.deviceSnapshot.name} · {device.deviceSnapshot.serialNumber}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+
           <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Отмена</Button>
-            <Button type="button" variant="secondary" onClick={() => save(false)} disabled={saving || loading || !data?.variables.length}>Сохранить</Button>
-            <Button type="button" onClick={() => save(true)} disabled={saving || loading || !data?.variables.length}>Сохранить и рассчитать</Button>
+            <Button type="button" variant="secondary" onClick={() => save(false)} disabled={saving || loading || !data}>Сохранить</Button>
+            <Button type="button" onClick={() => save(true)} disabled={saving || loading || !data}>Сохранить и рассчитать</Button>
           </div>
         </div>
       )}
