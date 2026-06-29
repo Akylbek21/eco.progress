@@ -19,7 +19,7 @@ const payloadCandidates = (input: unknown): unknown[] => {
 export const extractList = (input: unknown, keys: string[] = []): unknown[] => {
   const candidates = payloadCandidates(input);
   for (const candidate of candidates) if (Array.isArray(candidate)) return candidate;
-  const listKeys = [...keys, 'items', 'protocols', 'companies', 'normatives', 'devices', 'measurementDevices', 'templates', 'results', 'rows'];
+  const listKeys = [...keys, 'content', 'items', 'protocols', 'companies', 'normatives', 'devices', 'measurementDevices', 'templates', 'results', 'rows'];
   for (const candidate of candidates) {
     const record = asRecord(candidate);
     if (!record) continue;

@@ -69,13 +69,13 @@ const RawMeasurementsModal = ({
           nextValues[variable.variableKey] = String(measurement?.variableValue ?? variable.defaultValue ?? '');
         });
         setValues(nextValues);
-        setDeviceId(
+        setDeviceId(String(
           response.measurements.find((item) => item.deviceId)?.deviceId
           || row.measurementDeviceId
           || row.deviceId
           || valueOf(row, ['measurementDeviceId', 'deviceId', 'device'])
           || '',
-        );
+        ));
       })
       .catch((loadError) => {
         if (!active) return;
@@ -111,18 +111,18 @@ const RawMeasurementsModal = ({
     setSaving(true);
     setError('');
     try {
-      await protocolService.saveRawMeasurements(protocolId, row.id, payload());
+      await protocolService.saveRawMeasurements(protocolId, row.id, payload(), data.methodTemplate?.id);
       if (!calculate) {
         onNotify('Исходные данные сохранены', 'success');
         await onReload?.();
         onClose();
         return;
       }
-      const result = await protocolService.calculateResult(protocolId, row.id);
-      await onCalculated(result.row);
-      if (!result.row) await onReload?.();
-      onNotify('Результат рассчитан', 'success');
+      await protocolService.calculateResult(protocolId, row.id);
       onClose();
+      await onReload?.();
+      await onCalculated();
+      onNotify('Результат рассчитан', 'success');
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : 'Не удалось сохранить исходные данные';
       setError(message);

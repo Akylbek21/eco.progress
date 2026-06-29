@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, CloudSun, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import { getCompanies, getCompanyById, getCompanyObjects } from '../../services/companyService';
@@ -46,7 +45,7 @@ type DraftRow = {
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
-const currentTime = () => new Date().toTimeString().slice(0, 5);
+const DEFAULT_WEATHER_TIME = '12:00';
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = `${inputClass} bg-slate-100 text-slate-600`;
 const allowedTemplateIds = new Set(protocolTemplates.map((item) => item.id));
@@ -72,7 +71,6 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   const [place, setPlace] = useState('');
   const [sourceNumber, setSourceNumber] = useState('');
   const [measurementDate, setMeasurementDate] = useState(today());
-  const [measurementTime, setMeasurementTime] = useState(currentTime());
   const [environment, setEnvironment] = useState<ProtocolEnvironmentalConditions>({ status: 'IDLE', source: 'API' });
   const [weatherDetails, setWeatherDetails] = useState(false);
   const [weatherRefresh, setWeatherRefresh] = useState(0);
@@ -118,9 +116,9 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   useEffect(() => {
     if (!open) return;
     Promise.all([
-      getCompanies({ status: 'ACTIVE' }),
+      getCompanies({ status: 'ACTIVE' }).catch(() => []),
       getMeasurementDevices().catch(() => []),
-      getLaboratories(),
+      getLaboratories().catch(() => []),
     ]).then(([companyItems, deviceItems, laboratoryItems]) => {
       setCompanies(companyItems);
       setDevices(deviceItems.filter((item) => item.status === 'VALID' || item.status === 'EXPIRING'));
@@ -128,6 +126,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       setLaboratories(active);
       const selected = active.length === 1 ? active[0] : active.find((item) => item.isDefault);
       setLaboratoryId(selected?.id || '');
+      if (!selected) setLaboratory(null);
       setLaboratoryError(active.length > 1 && !selected ? 'Лаборатория по умолчанию не настроена. Выберите лабораторию.' : '');
     }).catch((loadError) => {
       setError(getApiErrorMessage(loadError, 'Не удалось загрузить справочники'));
@@ -161,7 +160,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   }, [laboratoryId, user?.id]);
 
   useEffect(() => {
-    if (!objectId || !measurementDate || !measurementTime) return;
+    if (!objectId || !measurementDate) return;
     const timer = window.setTimeout(async () => {
       weatherAbortRef.current?.abort();
       const controller = new AbortController();
@@ -169,7 +168,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       setEnvironment((current) => ({ ...current, status: 'LOADING', source: 'API' }));
       try {
         const weather = await protocolService.getWeatherConditions({
-          objectId, date: measurementDate, time: measurementTime, signal: controller.signal,
+          objectId, date: measurementDate, time: DEFAULT_WEATHER_TIME, signal: controller.signal,
         });
         setEnvironment({ ...weather });
       } catch (loadError) {
@@ -178,7 +177,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       }
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [objectId, measurementDate, measurementTime, objects, weatherRefresh]);
+  }, [objectId, measurementDate, weatherRefresh]);
 
   useEffect(() => {
     const query = pollutantQuery.trim();
@@ -273,32 +272,46 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   };
 
   const addPollutant = async (pollutant: Pollutant) => {
-    if (rows.some((row) => row.pollutant.code === pollutant.code)) return;
     const normativeState = await loadNormative(pollutant);
-    setRows((current) => [...current, {
-      key: `${pollutant.code}-${Date.now()}-${Math.random()}`,
-      pollutant,
-      reading: '',
-      deviceId: lastDeviceId,
-      ...normativeState,
-    }]);
+    setRows((current) => (
+      current.some((row) => row.pollutant.code.toLowerCase() === pollutant.code.toLowerCase())
+        ? current
+        : [...current, {
+          key: `${pollutant.code}-${Date.now()}-${Math.random()}`,
+          pollutant,
+          reading: '',
+          deviceId: lastDeviceId,
+          ...normativeState,
+        }]
+    ));
     setPollutantQuery('');
     setSuggestions([]);
   };
 
+  const manualPollutantFromText = (text: string): Pollutant => {
+    const value = text.trim();
+    const firstToken = value.split(/\s+/)[0] || value;
+    return { code: firstToken, name: value };
+  };
+
   const addBulk = async () => {
-    const tokens = pollutantQuery.split(/[\s,;]+/).map((item) => item.trim()).filter(Boolean);
-    if (!tokens.length) return;
+    const tokens = pollutantQuery.split(/[,;]+/).map((item) => item.trim()).filter(Boolean);
+    if (!tokens.length) {
+      setError('Введите код или название показателя');
+      return;
+    }
     setSearching(true);
     try {
-      const found = await protocolService.searchPollutants(tokens.join(','), { templateId, objectId });
+      const found = await protocolService.searchPollutants(tokens.join(','), { templateId, objectId }).catch(() => []);
       for (const token of tokens) {
-        const pollutant = found.find((item) => item.code.toLowerCase() === token.toLowerCase())
-          || found.find((item) => `${item.code} ${item.name}`.toLowerCase().includes(token.toLowerCase()));
-        if (pollutant) await addPollutant(pollutant);
+        const normalized = token.toLowerCase();
+        const pollutant = found.find((item) => item.code.toLowerCase() === normalized)
+          || found.find((item) => `${item.code} ${item.name}`.toLowerCase().includes(normalized))
+          || (tokens.length === 1 ? found[0] : undefined)
+          || manualPollutantFromText(token);
+        await addPollutant(pollutant);
       }
-      const missing = tokens.filter((token) => !found.some((item) => item.code.toLowerCase() === token.toLowerCase()));
-      if (missing.length) setError(`Не найдены коды: ${missing.join(', ')}`);
+      setError('');
     } catch (searchError) {
       setError(getApiErrorMessage(searchError, 'Не удалось выполнить массовый поиск веществ'));
     } finally {
@@ -325,9 +338,6 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
     if (step === 2 && !company) next.company = 'Выберите компанию';
     if (step === 2 && !objectId) next.objectId = 'Выберите объект';
     if (step === 2 && !measurementDate) next.measurementDate = 'Укажите дату';
-    if (step === 2 && !measurementTime) next.measurementTime = 'Укажите время';
-    if (step === 2 && !laboratoryId) next.laboratoryId = 'Выберите лабораторию';
-    if (step === 2 && !executorId) next.executorId = 'Выберите активного исполнителя';
     if (step === 3 && !rows.length) next.rows = 'Добавьте хотя бы одно измерение';
     if (step === 3 && rows.some((row) => !row.reading.trim())) next.rows = 'Заполните первичные показания';
     setFieldErrors(next);
@@ -373,7 +383,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         samplingPlace: place,
         sourceNumber,
         measurementDate,
-        measurementTime,
+        measurementTime: DEFAULT_WEATHER_TIME,
         ...sourceParameters,
       },
     }));
@@ -389,7 +399,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         testingStartDate: measurementDate,
         testingEndDate: measurementDate,
         measurementDate,
-        measurementTime,
+        measurementTime: DEFAULT_WEATHER_TIME,
         measurementPlace: place,
         sourceNumber,
         laboratoryId,
@@ -470,10 +480,19 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
               <input value={sourceNumber} onChange={(event) => setSourceNumber(event.target.value)} placeholder="0001" className={inputClass} />
             </label>}
             <label className="space-y-2 text-sm font-bold text-slate-700">Дата замера
-              <input type="date" max={today()} value={measurementDate} onChange={(event) => setMeasurementDate(event.target.value)} className={inputClass} />
+              <input
+                type="date"
+                max={today()}
+                value={measurementDate}
+                onChange={(event) => {
+                  setMeasurementDate(event.target.value);
+                }}
+                className={inputClass}
+              />
             </label>
             <label className="space-y-2 text-sm font-bold text-slate-700">Время замера
-              <input type="time" value={measurementTime} onChange={(event) => setMeasurementTime(event.target.value)} className={inputClass} />
+              <input type="time" value={DEFAULT_WEATHER_TIME} readOnly disabled className={inputClass} />
+              <span className="block text-xs font-semibold text-slate-500">Погодные данные автоматически берутся на 12:00</span>
             </label>
           </div>
 
@@ -511,8 +530,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
                   {[['Юридическое название', laboratory.legalName], ['БИН', laboratory.bin], ['Адрес', laboratory.address], ['Телефон', laboratory.phone], ['Email', laboratory.email], ['Директор', laboratory.directorName], ['Дата выдачи', laboratory.accreditationIssuedAt], ['Примечание', laboratory.standardNote]].map(([label, value]) => <div key={label}><dt className="text-xs font-bold text-slate-400">{label}</dt><dd className="mt-1 text-sm font-semibold text-slate-700">{value || '—'}</dd></div>)}
                 </dl>}
               </> : <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
-                <p>{laboratoryError || 'Карточка лаборатории не настроена.'}</p>
-                {user?.role === 'ADMIN' && <Link to="/staff/settings/laboratory" className="mt-2 inline-flex rounded-lg bg-eco-700 px-3 py-2 text-xs font-bold text-white">Заполните данные лаборатории в настройках</Link>}
+                <p>Лаборатория будет заполнена позже в редакторе протокола.</p>
               </div>}
             {laboratoryError && laboratory && <p className="mt-3 text-sm font-semibold text-amber-700">{laboratoryError}</p>}
             {(fieldErrors.laboratoryId || fieldErrors.executorId) && <p className="mt-2 text-sm font-semibold text-rose-700">{fieldErrors.laboratoryId || fieldErrors.executorId}</p>}
@@ -597,7 +615,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
 
         {step === 4 && <section className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {[['Тип', templateName(templateId)], ['Компания', company?.name || '—'], ['Объект', selectedObject?.name || '—'], ['Дата', measurementDate], ['Время', measurementTime]].map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-3"><p className="text-xs font-bold uppercase text-slate-400">{label}</p><p className="mt-1 font-bold text-slate-800">{value}</p></div>)}
+            {[['Тип', templateName(templateId)], ['Компания', company?.name || '—'], ['Объект', selectedObject?.name || '—'], ['Дата', measurementDate], ['Время', DEFAULT_WEATHER_TIME]].map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-3"><p className="text-xs font-bold uppercase text-slate-400">{label}</p><p className="mt-1 font-bold text-slate-800">{value}</p></div>)}
           </div>
           <div className="rounded-2xl border border-slate-200 p-4">
             <p className="flex items-center gap-2 font-black text-slate-900"><Check className="h-5 w-5 text-emerald-600" /> Готово к серверному расчёту</p>

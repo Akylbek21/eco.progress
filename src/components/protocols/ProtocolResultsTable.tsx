@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Calculator, Copy, FileSpreadsheet, Plus, Search, Trash2 } from 'lucide-react';
+import { Calculator, Copy, FileSpreadsheet, History, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import NormativeStatusBadge from './NormativeStatusBadge';
@@ -8,6 +8,7 @@ import protocolService from '../../services/protocolService';
 import { useAuth } from '../../contexts/AuthContext';
 import type {
   CalculationDetails,
+  CalculationResultResponse,
   Pollutant,
   ProtocolCalculationSummaryResponse,
   ProtocolMeasurementDevice,
@@ -52,6 +53,11 @@ const normativeValue = (row: ProtocolResultRow) =>
 const pollutantCode = (row: ProtocolResultRow) => row.pollutant?.code || row.code || valueOf(row, ['pollutantCode', 'code']);
 const indicator = (row: ProtocolResultRow) => row.pollutant?.name || row.indicatorName || row.indicator || valueOf(row, ['indicator', 'substanceName']);
 const unit = (row: ProtocolResultRow) => row.unit || valueOf(row, ['unit']);
+const manualPollutantFromText = (text: string): Pollutant => {
+  const value = text.trim();
+  const firstToken = value.split(/\s+/)[0] || value;
+  return { code: firstToken, name: value };
+};
 const primaryReading = (row: ProtocolResultRow) => valueOf(row, ['primaryReading', 'measurementReadings', 'readings', 'concentration']);
 const rawDataLabel = (row: ProtocolResultRow) =>
   primaryReading(row)
@@ -108,10 +114,12 @@ const ProtocolResultsTable = ({
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [calculation, setCalculation] = useState<{ row: ProtocolResultRow; details: CalculationDetails } | null>(null);
+  const [calculationHistory, setCalculationHistory] = useState<CalculationResultResponse[] | null>(null);
   const [deleteRow, setDeleteRow] = useState<ProtocolResultRow | null>(null);
   const [rawRow, setRawRow] = useState<ProtocolResultRow | null>(null);
   const [calculationSummary, setCalculationSummary] = useState<ProtocolCalculationSummaryResponse | null>(null);
   const [advanced, setAdvanced] = useState(false);
+  const [rowMenuId, setRowMenuId] = useState<string | null>(null);
   const [extraActionsOpen, setExtraActionsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const canUseAdvanced = user?.role === 'ADMIN' || user?.role === 'HEAD' || user?.role === 'DIRECTOR';
@@ -132,13 +140,13 @@ const ProtocolResultsTable = ({
     }
   };
 
-  const addPollutant = async (pollutant: Pollutant) => {
+  const addPollutant = async (pollutant: Pollutant, append = true): Promise<ProtocolResultRow | null> => {
     setSaving(true);
     try {
       const found = await protocolService.searchNormative({
         templateId, subtype: subtype || '', code: pollutant.code, indicator: pollutant.name,
         unit: pollutant.unit || '', date: testingDate,
-      });
+      }).catch(() => ({ found: false, normatives: [], items: [], normative: undefined }));
       const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
       const normative = candidates.length === 1 ? candidates[0] : undefined;
       const saved = await protocolService.addProtocolResult(protocolId, {
@@ -158,26 +166,45 @@ const ProtocolResultsTable = ({
           normativeSelectionRequired: candidates.length > 1 ? 'true' : '',
         },
       });
-      onChange([...rows, saved]);
+      if (append) onChange([...rows, saved]);
       setQuery('');
       setSuggestions([]);
       onNotify(candidates.length > 1 ? 'Строка добавлена. Требуется выбрать норматив.' : candidates.length ? 'Вещество и норматив добавлены' : 'Вещество добавлено, норматив не найден', candidates.length ? 'success' : 'warning');
+      return saved;
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось добавить вещество', 'error');
+      return null;
     } finally {
       setSaving(false);
     }
   };
 
   const addBulk = async () => {
-    const tokens = query.split(/[\s,;]+/).filter(Boolean);
-    if (!tokens.length) return;
+    const tokens = query.split(/[,;]+/).map((item) => item.trim()).filter(Boolean);
+    if (!tokens.length) {
+      onNotify('Введите код или название показателя', 'warning');
+      return;
+    }
     setSearching(true);
     try {
-      const found = await protocolService.searchPollutants(tokens.join(','), { templateId, subtype: subtype || '' });
+      const found = await protocolService.searchPollutants(tokens.join(','), { templateId, subtype: subtype || '' }).catch(() => []);
+      const created: ProtocolResultRow[] = [];
       for (const token of tokens) {
-        const item = found.find((pollutant) => pollutant.code.toLowerCase() === token.toLowerCase());
-        if (item && !rows.some((row) => pollutantCode(row) === item.code)) await addPollutant(item);
+        const normalized = token.toLowerCase();
+        const item = found.find((pollutant) => pollutant.code.toLowerCase() === normalized)
+          || found.find((pollutant) => `${pollutant.code} ${pollutant.name}`.toLowerCase().includes(normalized))
+          || (tokens.length === 1 ? found[0] : undefined)
+          || manualPollutantFromText(token);
+        const exists = [...rows, ...created].some((row) => pollutantCode(row).toLowerCase() === item.code.toLowerCase());
+        if (!exists) {
+          const saved = await addPollutant(item, false);
+          if (saved) created.push(saved);
+        }
+      }
+      if (created.length) {
+        onChange([...rows, ...created]);
+        setQuery('');
+        setSuggestions([]);
       }
     } finally {
       setSearching(false);
@@ -311,19 +338,31 @@ const ProtocolResultsTable = ({
   const applyCalculatedRow = async (row?: ProtocolResultRow) => {
     if (row?.id) {
       onChange(rows.map((item) => item.id === row.id ? row : item));
-      return;
     }
-    await onImported();
   };
 
   const calculateRow = async (row: ProtocolResultRow) => {
     setSaving(true);
     try {
-      const result = await protocolService.calculateResult(protocolId, row.id);
-      await applyCalculatedRow(result.row);
+      await protocolService.calculateResult(protocolId, row.id);
+      await onImported();
       onNotify('Результат рассчитан', 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать строку', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openCalculationHistory = async (row: ProtocolResultRow) => {
+    setSaving(true);
+    setRowMenuId(null);
+    try {
+      const history = await protocolService.getCalculationHistory(protocolId, row.id);
+      setCalculationHistory(history);
+      if (!history.length) onNotify('История расчета пуста', 'info');
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : 'Не удалось загрузить историю расчета', 'error');
     } finally {
       setSaving(false);
     }
@@ -355,7 +394,7 @@ const ProtocolResultsTable = ({
         </div>
         <div className="flex flex-wrap gap-2">
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
-          <Button type="button" variant="secondary" disabled={readOnly || busy || saving || !query.trim()} onClick={addBulk}><Plus className="h-4 w-4" /> Добавить показатель</Button>
+          <Button type="button" variant="secondary" disabled={readOnly || busy || saving} onClick={addBulk}><Plus className="h-4 w-4" /> Добавить показатель</Button>
           <Button type="button" variant="secondary" disabled={readOnly || busy || saving} onClick={() => fileRef.current?.click()}><FileSpreadsheet className="h-4 w-4" /> Импорт из Excel</Button>
           <Button type="button" disabled={busy || saving || !rows.length} onClick={calculateAll}><Calculator className="h-4 w-4" /> Рассчитать результаты</Button>
         </div>
@@ -408,12 +447,26 @@ const ProtocolResultsTable = ({
               <td className="bg-slate-50 px-3 py-3"><div className={automaticClass}>{uncertaintyValue(row) || '—'}</div></td>
               <td className="bg-slate-50 px-3 py-3"><div className={automaticClass}>{normativeValue(row) ? `${normativeValue(row)} ${unit(row)}` : 'Норматив не найден'}</div></td>
               <td className="bg-slate-50 px-3 py-3"><div className="space-y-2"><NormativeStatusBadge status={statusOf(row)} />{calculationLabel && <p className="text-xs font-semibold text-slate-600">{calculationLabel}</p>}{exceededText(row, templateId) && <p className="max-w-56 text-xs font-semibold text-rose-700">{exceededText(row, templateId)}</p>}</div></td>
-              <td className="px-3 py-3"><div className="flex flex-wrap justify-end gap-1">
+              <td className="px-3 py-3"><div className="relative flex flex-wrap justify-end gap-1">
                 <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => setRawRow(row)}>Ввести данные</Button>
                 <Button type="button" variant="secondary" className="px-3" disabled={saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
                 <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} title="Изменить" onClick={() => openEdit(row)}>Изменить</Button>
-                <Button type="button" variant="secondary" className="px-2.5" disabled={readOnly || saving} title="Копировать строку" onClick={() => duplicate(row)}><Copy className="h-4 w-4" /></Button>
-                <Button type="button" variant="secondary" className="px-2.5 text-rose-700" disabled={readOnly || saving} title="Удалить" onClick={() => setDeleteRow(row)}><Trash2 className="h-4 w-4" /></Button>
+                <Button type="button" variant="secondary" className="px-2.5" disabled={saving} title="Еще" onClick={() => setRowMenuId((current) => current === row.id ? null : row.id)}>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+                {rowMenuId === row.id && (
+                  <div className="absolute right-0 top-10 z-20 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-left shadow-xl">
+                    <button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400" disabled={readOnly || saving} onClick={() => { setRowMenuId(null); duplicate(row); }}>
+                      <Copy className="h-4 w-4" /> Дублировать
+                    </button>
+                    <button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" disabled={saving} onClick={() => openCalculationHistory(row)}>
+                      <History className="h-4 w-4" /> История расчета
+                    </button>
+                    <button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-slate-400" disabled={readOnly || saving} onClick={() => { setRowMenuId(null); setDeleteRow(row); }}>
+                      <Trash2 className="h-4 w-4" /> Удалить
+                    </button>
+                  </div>
+                )}
               </div></td>
             </tr>;
           })}</tbody>
@@ -481,6 +534,25 @@ const ProtocolResultsTable = ({
           ].map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-3"><dt className="text-xs font-bold uppercase text-slate-400">{label}</dt><dd className="mt-1 whitespace-pre-wrap font-semibold text-slate-800">{value}</dd></div>)}
           {calculation.details.intermediateResults?.length ? <div className="rounded-xl bg-slate-50 p-3 sm:col-span-2"><dt className="text-xs font-bold uppercase text-slate-400">Промежуточные результаты</dt>{calculation.details.intermediateResults.map((item) => <dd key={item.label} className="mt-1 font-semibold">{item.label}: {item.value}</dd>)}</div> : null}
         </dl>}
+      </Modal>
+
+      <Modal open={calculationHistory !== null} onClose={() => setCalculationHistory(null)} title="История расчета" size="lg">
+        <div className="space-y-3">
+          {calculationHistory?.length ? calculationHistory.map((item, index) => (
+            <div key={`${item.resultId}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-black text-slate-900">Расчет {index + 1}</p>
+                <p className="text-xs font-semibold text-slate-500">{calculationStatusLabel(item.calculationStatus)}</p>
+              </div>
+              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+                <div><dt className="text-xs font-bold uppercase text-slate-400">Результат</dt><dd className="font-semibold text-slate-800">{item.result ?? '—'}</dd></div>
+                <div><dt className="text-xs font-bold uppercase text-slate-400">Норматив</dt><dd className="font-semibold text-slate-800">{item.normativeValue ?? 'Норматив не найден'}</dd></div>
+                <div><dt className="text-xs font-bold uppercase text-slate-400">Статус</dt><dd className="font-semibold text-slate-800"><NormativeStatusBadge status={item.internalStatus} /></dd></div>
+              </dl>
+              {item.calculationMessage && <p className="mt-2 text-sm text-slate-600">{item.calculationMessage}</p>}
+            </div>
+          )) : <p className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-500">История расчета пуста.</p>}
+        </div>
       </Modal>
 
       <Modal open={Boolean(deleteRow)} onClose={() => setDeleteRow(null)} title="Удалить строку?" size="sm">

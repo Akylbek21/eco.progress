@@ -61,6 +61,7 @@ const emptyTesting = {
 
 const fileName = (protocol: Protocol, extension: string) => `${protocol.protocolNumber || protocol.number || `protocol-${protocol.id}`}.${extension}`;
 const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100';
+const DEFAULT_WEATHER_TIME = '12:00';
 
 const saveBlob = (blob: Blob, name: string) => {
   const url = URL.createObjectURL(blob);
@@ -777,10 +778,13 @@ const ProtocolEditorPage = () => {
     }
     setBusy(true);
     try {
-      await protocolService.calculateProtocolSummary(protocol.id);
+      const summary = await protocolService.calculateProtocolSummary(protocol.id);
       const updated = await protocolService.getProtocol(protocol.id);
       applyServerProtocol(updated);
-      toast.success('Результаты рассчитаны');
+      toast.success(
+        'Результаты рассчитаны',
+        `Всего: ${summary.total}; рассчитано: ${summary.calculated}; ручной ввод: ${summary.manual}; ошибки: ${summary.errors}; повторный анализ: ${summary.needsRepeat}; не соответствует: ${summary.exceeded}`,
+      );
     } catch {
       toast.warning('Новый расчет недоступен, запускаю старую проверку нормативов');
       setBusy(false);
@@ -798,7 +802,7 @@ const ProtocolEditorPage = () => {
       const weather = await protocolService.getWeatherConditions({
         objectId: selection.objectId,
         date: selection.date,
-        time: selection.time,
+        time: DEFAULT_WEATHER_TIME,
         signal: selection.signal,
       });
       patchProtocol({ environment: weather });
@@ -816,7 +820,7 @@ const ProtocolEditorPage = () => {
     patchProtocol({
       objectId: selection.objectId,
       measurementDate: selection.date,
-      measurementTime: selection.time,
+      measurementTime: DEFAULT_WEATHER_TIME,
       measurementPlace: object?.name || protocol.measurementPlace,
       testing: {
         ...protocol.testing,

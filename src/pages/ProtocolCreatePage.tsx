@@ -20,12 +20,28 @@ const ProtocolCreatePage = () => {
     setLoading(true);
     try {
       let protocol = await protocolService.createProtocol(payload);
+      let failedResults = 0;
       for (const result of results) {
-        await protocolService.addProtocolResult(protocol.id, result);
+        try {
+          await protocolService.addProtocolResult(protocol.id, result);
+        } catch {
+          failedResults += 1;
+        }
       }
-      protocol = await protocolService.calculateProtocol(protocol.id);
-      toast.success('Протокол рассчитан и создан');
-      navigate(`/staff/protocols/${protocol.id}?preview=1`, { replace: true });
+      if (failedResults) {
+        toast.warning('Протокол создан', `Не удалось добавить показателей: ${failedResults}. Их можно добавить в редакторе.`);
+      }
+      try {
+        protocol = await protocolService.calculateProtocol(protocol.id);
+        toast.success('Протокол создан', 'Расчет выполнен.');
+        navigate(`/staff/protocols/${protocol.id}?preview=1`, { replace: true });
+      } catch (calculateError) {
+        toast.warning(
+          'Протокол создан',
+          calculateError instanceof Error ? `Расчет пока не выполнен: ${calculateError.message}` : 'Расчет пока не выполнен.',
+        );
+        navigate(`/staff/protocols/${protocol.id}`, { replace: true });
+      }
     } catch (error) {
       toast.error('Не удалось создать протокол', error instanceof Error ? error.message : undefined);
       throw error;

@@ -369,15 +369,15 @@ export type ProtocolResultPayload = {
 };
 
 export type MethodVariableResponse = {
-  id: string;
+  id: string | number;
   variableKey: string;
   variableLabel: string;
-  unit?: string;
+  unit?: string | null;
   type?: string;
   required?: boolean;
-  minValue?: string | number | null;
-  maxValue?: string | number | null;
-  defaultValue?: string | number | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  defaultValue?: number | null;
   displayOrder?: number;
 };
 
@@ -400,15 +400,20 @@ export type MethodTemplateResponse = {
 export type RawMeasurementRequest = {
   variableKey: string;
   variableValue: string | number | null;
-  unit?: string;
-  sourceType?: string;
-  deviceId?: string;
+  unit?: string | null;
+  sourceType?: 'MANUAL' | 'DEVICE_IMPORT' | 'EXCEL_IMPORT';
+  deviceId?: string | number | null;
+};
+
+export type SaveRawMeasurementsRequest = {
+  methodTemplateId?: string | number | null;
+  measurements: RawMeasurementRequest[];
 };
 
 export type RawMeasurementsResponse = {
-  protocolId: string;
-  resultId: string;
-  methodTemplate?: MethodTemplateResponse;
+  protocolId: string | number;
+  resultId: string | number;
+  methodTemplate?: MethodTemplateResponse | null;
   variables: MethodVariableResponse[];
   measurements: RawMeasurementRequest[];
   calculationStatus?: CalculationStatus | string;

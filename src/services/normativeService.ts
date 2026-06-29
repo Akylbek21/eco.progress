@@ -41,8 +41,8 @@ export async function getNormatives(params?: DirectoryQuery): Promise<NormativeR
     const query = String(params?.search || '').toLowerCase();
     return mockNormatives.filter((item) => (!params?.templateId || item.templateId === params.templateId) && (!query || `${item.indicator} ${item.normativeDocument}`.toLowerCase().includes(query)));
   }
-  const response = await api.get<ApiResponse<unknown> | unknown>('/normatives', { params });
-  return extractList(response, ['normatives']).map(normalizeNormative);
+  const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params });
+  return extractList(response, ['records', 'content', 'items', 'normatives']).map(normalizeNormative);
 }
 
 export async function createNormative(payload: Omit<NormativeRecord, 'id'>): Promise<NormativeRecord> {

@@ -21,6 +21,7 @@ type Props = {
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
+const DEFAULT_WEATHER_TIME = '12:00';
 const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const statusLabels: Record<WeatherConditionsStatus, string> = {
   IDLE: 'Сохранённые условия',
@@ -37,10 +38,10 @@ const formatDateTime = (value?: string) => {
 };
 
 const ProtocolEnvironmentForm = ({
-  value, measurementDate, measurementTime, objectId, objectName, objectOptions = [], readOnly, loading = false,
+  value, measurementDate, objectId, objectName, objectOptions = [], readOnly, loading = false,
   onSelectionChange, onRequestConditions, onChange,
 }: Props) => {
-  const [selection, setSelection] = useState({ objectId, date: measurementDate, time: measurementTime });
+  const [selection, setSelection] = useState({ objectId, date: measurementDate, time: DEFAULT_WEATHER_TIME });
   const [editOpen, setEditOpen] = useState(false);
   const [draft, setDraft] = useState(value);
   const [reason, setReason] = useState('');
@@ -52,8 +53,8 @@ const ProtocolEnvironmentForm = ({
   ];
 
   useEffect(() => {
-    setSelection({ objectId, date: measurementDate, time: measurementTime });
-  }, [objectId, measurementDate, measurementTime]);
+    setSelection({ objectId, date: measurementDate, time: DEFAULT_WEATHER_TIME });
+  }, [objectId, measurementDate]);
 
   useEffect(() => {
     if (initialRender.current) {
@@ -73,7 +74,7 @@ const ProtocolEnvironmentForm = ({
   useEffect(() => () => abortRef.current?.abort(), []);
 
   const updateSelection = (patch: Partial<typeof selection>) => {
-    const next = { ...selection, ...patch };
+    const next = { ...selection, ...patch, time: DEFAULT_WEATHER_TIME };
     setSelection(next);
     onSelectionChange(next);
   };
@@ -125,7 +126,11 @@ const ProtocolEnvironmentForm = ({
 
         <div className="grid gap-4 md:grid-cols-3">
           <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Дата замера</span><input type="date" max={today()} disabled={readOnly} value={selection.date} onChange={(event) => updateSelection({ date: event.target.value })} className={inputClass} /></label>
-          <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Время замера</span><input type="time" disabled={readOnly} value={selection.time} onChange={(event) => updateSelection({ time: event.target.value })} className={inputClass} /></label>
+          <label className="space-y-1.5 text-sm font-semibold text-slate-700">
+            <span>Время замера</span>
+            <input type="time" readOnly disabled value={DEFAULT_WEATHER_TIME} className={inputClass} />
+            <span className="block text-xs font-semibold text-slate-500">Погодные данные автоматически берутся на 12:00</span>
+          </label>
           <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Место / объект</span>
             {objectOptions.length > 1
               ? <select disabled={readOnly} value={selection.objectId} onChange={(event) => updateSelection({ objectId: event.target.value })} className={inputClass}>{objectOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>

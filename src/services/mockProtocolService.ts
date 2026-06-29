@@ -62,6 +62,17 @@ const laboratorySnapshot = (
   };
 };
 
+const emptyLaboratorySnapshot = (): ProtocolLaboratorySnapshot => ({
+  laboratoryName: '',
+  laboratoryAddress: '',
+  accreditationNumber: '',
+  accreditationValidUntil: '',
+  director: '',
+  laboratoryHead: '',
+  executor: '',
+  capturedAt: now(),
+});
+
 const read = (): Protocol[] => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -158,15 +169,14 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   const protocolId = id('protocol');
   const protocolNumber = payload.protocolNumber?.trim() || numberFor(payload.templateId, items.length + 1);
   const createdAt = now();
+  let snapshot = emptyLaboratorySnapshot();
   const laboratoryService = await import('./laboratorySettingsService');
   const laboratories = await laboratoryService.getLaboratories();
   const selectedLaboratory = payload.laboratoryId
     ? laboratories.find((item) => item.id === payload.laboratoryId)
     : laboratories.find((item) => item.isDefault) || (laboratories.length === 1 ? laboratories[0] : undefined);
-  if (!selectedLaboratory) throw new Error('Лаборатория по умолчанию не настроена.');
-  const laboratoryProfile = await laboratoryService.getLaboratory(selectedLaboratory.id);
-  const snapshot = laboratorySnapshot(laboratoryProfile, payload.executorId);
-  if (!snapshot.executorId) throw new Error('Текущий пользователь не может быть исполнителем. Выберите активного сотрудника.');
+  const laboratoryProfile = selectedLaboratory ? await laboratoryService.getLaboratory(selectedLaboratory.id) : undefined;
+  if (laboratoryProfile) snapshot = laboratorySnapshot(laboratoryProfile, payload.executorId);
   const protocol: Protocol = {
     id: protocolId,
     protocolNumber,
@@ -543,7 +553,12 @@ export async function getRawMeasurements(protocolId: string, resultId: string): 
   return clone(rawMeasurementsFor(protocolId, row));
 }
 
-export async function saveRawMeasurements(protocolId: string, resultId: string, payload: RawMeasurementRequest[]): Promise<RawMeasurementsResponse> {
+export async function saveRawMeasurements(
+  protocolId: string,
+  resultId: string,
+  payload: RawMeasurementRequest[],
+  methodTemplateId?: string | number | null,
+): Promise<void> {
   await wait();
   let saved: ProtocolResultRow | undefined;
   updateStored(protocolId, (protocol) => ({
@@ -558,6 +573,7 @@ export async function saveRawMeasurements(protocolId: string, resultId: string, 
         values: {
           ...row.values,
           ...rawValues,
+          methodTemplateId: methodTemplateId || row.values.methodTemplateId,
           measurementDeviceId: payload.find((item) => item.deviceId)?.deviceId || row.values.measurementDeviceId,
         },
       };
@@ -566,7 +582,6 @@ export async function saveRawMeasurements(protocolId: string, resultId: string, 
     history: [...(protocol.history || []), history('Raw measurements saved')],
   }));
   if (!saved) throw new Error('Result row not found.');
-  return clone(rawMeasurementsFor(protocolId, saved));
 }
 
 export async function calculateResult(protocolId: string, resultId: string): Promise<CalculationResultResponse> {

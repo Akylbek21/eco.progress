@@ -35,7 +35,12 @@ export interface ProtocolService {
   updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload): Promise<ProtocolResultRow>;
   deleteProtocolResult(protocolId: string, resultId: string): Promise<void>;
   getRawMeasurements(protocolId: string, resultId: string): Promise<RawMeasurementsResponse>;
-  saveRawMeasurements(protocolId: string, resultId: string, payload: RawMeasurementRequest[]): Promise<RawMeasurementsResponse>;
+  saveRawMeasurements(
+    protocolId: string,
+    resultId: string,
+    payload: RawMeasurementRequest[],
+    methodTemplateId?: string | number | null,
+  ): Promise<void>;
   calculateResult(protocolId: string, resultId: string): Promise<CalculationResultResponse>;
   calculateProtocolSummary(protocolId: string): Promise<ProtocolCalculationSummaryResponse>;
   getCalculationHistory(protocolId: string, resultId: string): Promise<CalculationResultResponse[]>;
@@ -93,7 +98,8 @@ const protocolService: ProtocolService = {
   updateProtocolResult: async (protocolId, resultId, payload) => (await implementation()).updateProtocolResult(protocolId, resultId, payload),
   deleteProtocolResult: async (protocolId, resultId) => (await implementation()).deleteProtocolResult(protocolId, resultId),
   getRawMeasurements: async (protocolId, resultId) => (await implementation()).getRawMeasurements(protocolId, resultId),
-  saveRawMeasurements: async (protocolId, resultId, payload) => (await implementation()).saveRawMeasurements(protocolId, resultId, payload),
+  saveRawMeasurements: async (protocolId, resultId, payload, methodTemplateId) =>
+    (await implementation()).saveRawMeasurements(protocolId, resultId, payload, methodTemplateId),
   calculateResult: async (protocolId, resultId) => (await implementation()).calculateResult(protocolId, resultId),
   calculateProtocolSummary: async (protocolId) => (await implementation()).calculateProtocolSummary(protocolId),
   getCalculationHistory: async (protocolId, resultId) => (await implementation()).getCalculationHistory(protocolId, resultId),

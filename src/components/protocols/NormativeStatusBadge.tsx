@@ -5,12 +5,12 @@ export const normativeStatusLabels: Record<ProtocolInternalStatus, string> = {
   NORMAL: 'Соответствует',
   OK: 'Соответствует',
   OK_MANUAL: 'Норматив введен вручную',
-  MANUAL_NORMATIVE: 'Проверить норматив',
-  EXCEEDED: 'Превышение',
-  BELOW_REQUIRED: 'Ниже нормы',
+  MANUAL_NORMATIVE: 'Проверьте норматив',
+  EXCEEDED: 'Не соответствует',
+  BELOW_REQUIRED: 'Ниже допустимого',
   NORMATIVE_NOT_FOUND: 'Норматив не найден',
-  UNIT_MISMATCH: 'Проверьте единицу',
-  NEEDS_REVIEW: 'Требуется проверка',
+  UNIT_MISMATCH: 'Проверьте единицы',
+  NEEDS_REVIEW: 'Нужна проверка',
   EMPTY_RESULT: 'Нет результата',
   INFO: 'Информационно',
 };
@@ -18,7 +18,7 @@ export const normativeStatusLabels: Record<ProtocolInternalStatus, string> = {
 const overallLabels: Record<string, string> = {
   COMPLIES: 'Соответствует',
   DOES_NOT_COMPLY: 'Не соответствует',
-  NEEDS_REVIEW: 'Требует проверки',
+  NEEDS_REVIEW: 'Нужна проверка',
 };
 
 const normativeStatusClasses: Record<ProtocolInternalStatus, string> = {

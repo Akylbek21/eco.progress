@@ -25,6 +25,7 @@ import type {
   ProtocolTemplate,
   RawMeasurementRequest,
   RawMeasurementsResponse,
+  SaveRawMeasurementsRequest,
   UpdateProtocolPayload,
   WeatherConditions,
 } from '../types/protocols';
@@ -38,6 +39,9 @@ const unwrapData = (value: unknown): unknown => {
   const body = asRecord(data);
   return body.data ?? data;
 };
+function unwrapApiResponse<T>(response: any): T {
+  return response?.data?.data ?? response?.data;
+}
 const asString = (value: unknown) => (typeof value === 'string' || typeof value === 'number' ? String(value) : '');
 const nullableDecimal = (value: unknown): string | null => {
   const normalized = asString(value).trim();
@@ -61,6 +65,11 @@ const firstString = (...values: unknown[]) => {
 };
 const scalarOrNull = (value: unknown): string | number | null =>
   typeof value === 'string' || typeof value === 'number' ? value : null;
+const numberOrNull = (value: unknown): number | null => {
+  if (value === undefined || value === null || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
 
 const normalizeCompanySnapshot = (raw: UnknownRecord): ProtocolCompanySnapshot => {
   const snapshot = asRecord(raw.companySnapshot || raw.company_snapshot || {});
@@ -257,9 +266,9 @@ const normalizeMethodVariable = (raw: unknown): MethodVariableResponse => {
     unit: pick(source, ['unit']),
     type: pick(source, ['type', 'valueType', 'value_type']),
     required: source.required === true || source.required === 'true',
-    minValue: scalarOrNull(source.minValue ?? source.min_value),
-    maxValue: scalarOrNull(source.maxValue ?? source.max_value),
-    defaultValue: scalarOrNull(source.defaultValue ?? source.default_value),
+    minValue: numberOrNull(source.minValue ?? source.min_value),
+    maxValue: numberOrNull(source.maxValue ?? source.max_value),
+    defaultValue: numberOrNull(source.defaultValue ?? source.default_value),
     displayOrder: Number.isFinite(displayOrder) ? displayOrder : undefined,
   };
 };
@@ -309,7 +318,7 @@ const normalizeRawMeasurements = (raw: unknown, fallbackProtocolId = '', fallbac
         variableKey: pick(measurement, ['variableKey', 'variable_key', 'key']),
         variableValue: scalarOrNull(measurement.variableValue ?? measurement.variable_value ?? measurement.value),
         unit: pick(measurement, ['unit']),
-        sourceType: pick(measurement, ['sourceType', 'source_type']) || 'MANUAL',
+        sourceType: (pick(measurement, ['sourceType', 'source_type']) || 'MANUAL') as RawMeasurementRequest['sourceType'],
         deviceId: pick(measurement, ['deviceId', 'device_id']),
       };
     }),
@@ -603,18 +612,20 @@ const toApiEnvironment = (environment: UpdateProtocolPayload['environment']) => 
 
 const toApiResultPayload = (payload: ProtocolResultPayload) => {
   const values = { ...payload.values };
+  const measurementDeviceId = payload.measurementDeviceId ?? values.measurementDeviceId ?? values.deviceId ?? null;
+  const normativeId = payload.normativeId ?? values.normativeId ?? null;
   const mapped: Record<string, string | number | null | undefined> = {
     ...values,
     minValue: values.minValue ?? values.normativeMin ?? null,
     maxValue: values.maxValue ?? values.normativeMax ?? null,
-    deviceId: values.deviceId ?? values.measurementDeviceId ?? payload.measurementDeviceId ?? null,
+    deviceId: values.deviceId ?? measurementDeviceId,
     subtype: values.subtype ?? values.factorType ?? null,
   };
   delete mapped.normativeMin;
   delete mapped.normativeMax;
   delete mapped.measurementDeviceId;
   delete mapped.factorType;
-  return { values: mapped };
+  return { measurementDeviceId, normativeId, values: mapped };
 };
 
 const isProtocolLike = (value: unknown) => {
@@ -923,44 +934,51 @@ export async function searchPollutants(query: string, params: Record<string, str
 
 export async function getMethodTemplates(): Promise<MethodTemplateResponse[]> {
   const response = await api.get<ApiResponse<unknown> | unknown>('/protocols/method-templates');
-  return extractList(response, ['methodTemplates', 'method_templates', 'templates']).map(normalizeMethodTemplate);
+  const payload = unwrapApiResponse<unknown>(response);
+  return extractList(payload, ['methodTemplates', 'method_templates', 'templates']).map(normalizeMethodTemplate);
 }
 
 export async function getMethodTemplate(id: string): Promise<MethodTemplateResponse> {
   const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/method-templates/${id}`);
-  return normalizeMethodTemplate(extractItem(response, ['methodTemplate', 'method_template', 'template']));
+  const payload = unwrapApiResponse<unknown>(response);
+  return normalizeMethodTemplate(extractItem(payload, ['methodTemplate', 'method_template', 'template']));
 }
 
 export async function getRawMeasurements(protocolId: string, resultId: string): Promise<RawMeasurementsResponse> {
   const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}/raw-measurements`);
-  return normalizeRawMeasurements(response, protocolId, resultId);
+  return normalizeRawMeasurements(unwrapApiResponse<unknown>(response), protocolId, resultId);
 }
 
 export async function saveRawMeasurements(
   protocolId: string,
   resultId: string,
   payload: RawMeasurementRequest[],
-): Promise<RawMeasurementsResponse> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(
+  methodTemplateId?: string | number | null,
+): Promise<void> {
+  const request: SaveRawMeasurementsRequest = {
+    methodTemplateId: methodTemplateId || null,
+    measurements: payload,
+  };
+  await api.post<ApiResponse<unknown> | unknown>(
     `/protocols/${protocolId}/results/${resultId}/raw-measurements`,
-    payload,
+    request,
   );
-  return normalizeRawMeasurements(response, protocolId, resultId);
 }
 
 export async function calculateResult(protocolId: string, resultId: string): Promise<CalculationResultResponse> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}/calculate`);
-  return normalizeCalculationResult(response, protocolId, resultId);
+  return normalizeCalculationResult(unwrapApiResponse<unknown>(response), protocolId, resultId);
 }
 
 export async function calculateProtocolSummary(protocolId: string): Promise<ProtocolCalculationSummaryResponse> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`);
-  return normalizeCalculationSummary(response, protocolId);
+  return normalizeCalculationSummary(unwrapApiResponse<unknown>(response), protocolId);
 }
 
 export async function getCalculationHistory(protocolId: string, resultId: string): Promise<CalculationResultResponse[]> {
   const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}/calculation-history`);
-  return extractList(response, ['history', 'calculationHistory', 'calculation_history', 'rows']).map((item) =>
+  const payload = unwrapApiResponse<unknown>(response);
+  return extractList(payload, ['history', 'calculationHistory', 'calculation_history', 'rows']).map((item) =>
     normalizeCalculationResult(item, protocolId, resultId),
   );
 }
@@ -972,7 +990,7 @@ export async function getWeatherConditions(params: {
   time: string;
   signal?: AbortSignal;
 }): Promise<WeatherConditions> {
-  const response = await api.get<ApiResponse<unknown> | unknown>('/weather/conditions', {
+  const response = await api.get<ApiResponse<unknown> | unknown>('/weather/shymkent', {
     params: {
       objectId: params.objectId,
       date: params.date,
@@ -985,7 +1003,7 @@ export async function getWeatherConditions(params: {
 
 export async function calculateProtocol(protocolId: string): Promise<Protocol> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`);
-  return protocolFromActionResponse(protocolId, response);
+  return protocolFromActionResponse(protocolId, unwrapApiResponse<unknown>(response));
 }
 
 export async function refreshProtocolLaboratoryData(protocolId: string): Promise<Protocol> {
