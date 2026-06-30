@@ -81,8 +81,17 @@ const RawMeasurementsModal = ({
       })
       .catch((loadError) => {
         if (!active) return;
-        setData(null);
-        setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить исходные данные');
+        const message = loadError instanceof Error ? loadError.message : 'Не удалось загрузить исходные данные';
+        setData({
+          protocolId,
+          resultId: row.id,
+          variables: [],
+          measurements: [],
+          calculationMessage: message,
+        });
+        setManualResult(String(row.result || valueOf(row, ['result', 'resultMg', 'resultValue', 'primaryReading']) || ''));
+        setDeviceId(String(row.measurementDeviceId || row.deviceId || valueOf(row, ['measurementDeviceId', 'deviceId', 'device']) || ''));
+        setError('');
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -118,10 +127,11 @@ const RawMeasurementsModal = ({
     setSaving(true);
     setError('');
     try {
+      let savedRow: ProtocolResultRow | undefined;
       if (hasMethodTemplate) {
-        await protocolService.saveRawMeasurements(protocolId, row.id, payload(), data.methodTemplate?.id);
+        savedRow = await protocolService.saveRawMeasurements(protocolId, row.id, payload(), data.methodTemplate?.id);
       } else {
-        await protocolService.updateProtocolResult(protocolId, row.id, {
+        savedRow = await protocolService.updateProtocolResult(protocolId, row.id, {
           measurementDeviceId: deviceId || row.measurementDeviceId || valueOf(row, ['measurementDeviceId']) || undefined,
           normativeId: valueOf(row, ['normativeId']) || row.normativeReference?.id,
           values: {
@@ -134,15 +144,16 @@ const RawMeasurementsModal = ({
         });
       }
       if (!calculate) {
+        if (savedRow) await onCalculated(savedRow);
+        else await onReload?.();
         onNotify(hasMethodTemplate ? 'Исходные данные сохранены' : 'Результат измерения сохранен', 'success');
-        await onReload?.();
         onClose();
         return;
       }
-      await protocolService.calculateResult(protocolId, row.id);
+      const calculated = await protocolService.calculateResult(protocolId, row.id);
       onClose();
-      await onReload?.();
-      await onCalculated();
+      if (calculated.row) await onCalculated(calculated.row);
+      else await onReload?.();
       onNotify('Результат рассчитан', 'success');
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : 'Не удалось сохранить исходные данные';

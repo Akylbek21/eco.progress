@@ -34,9 +34,11 @@ export const physicalFactorIndicators: Record<ProtocolSubtype, Pollutant[]> = {
 export const getPhysicalFactorIndicators = (subtype?: string): Pollutant[] =>
   physicalFactorIndicators[(subtype || 'MICROCLIMATE') as ProtocolSubtype] || physicalFactorIndicators.MICROCLIMATE;
 
+const normalizeSearch = (value: string) => value.trim().toLowerCase().replace(/ё/g, 'е');
+
 export const filterPhysicalFactorIndicators = (query: string, subtype?: string): Pollutant[] => {
-  const value = query.trim().toLowerCase();
+  const value = normalizeSearch(query);
   const indicators = getPhysicalFactorIndicators(subtype);
   if (!value) return indicators;
-  return indicators.filter((item) => `${item.code} ${item.name}`.toLowerCase().includes(value));
+  return indicators.filter((item) => normalizeSearch(`${item.code} ${item.name}`).includes(value));
 };

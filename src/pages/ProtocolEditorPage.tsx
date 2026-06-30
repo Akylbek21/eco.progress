@@ -696,6 +696,16 @@ const ProtocolEditorPage = () => {
     setProtocol((current) => current ? { ...current, ...patch } : current);
   };
 
+  const applyServerResults = (results: Protocol['results']) => {
+    setProtocol((current) => {
+      if (!current) return current;
+      const updated = { ...current, results };
+      savedSignatureRef.current = editableSignature(updated);
+      setSaveStatus('saved');
+      return updated;
+    });
+  };
+
   const navigateSafely = (to: string) => {
     if (dirty && !window.confirm('Есть несохранённые изменения. Уйти со страницы без сохранения?')) return;
     navigate(to);
@@ -1116,7 +1126,7 @@ const ProtocolEditorPage = () => {
         objectId={protocol.objectId}
         measurementPlace={protocol.measurementPlace || ''}
         testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate}
-        onChange={(results) => patchProtocol({ results })}
+        onChange={applyServerResults}
         onCheckNormatives={checkSavedNormatives}
         onImported={load}
         onNotify={notify}
@@ -1224,7 +1234,7 @@ const ProtocolEditorPage = () => {
           objectId={protocol.objectId}
           measurementPlace={protocol.measurementPlace || ''}
           testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate}
-          onChange={(results) => patchProtocol({ results })}
+          onChange={applyServerResults}
           onCheckNormatives={checkSavedNormatives}
           onImported={load}
           onNotify={notify}
@@ -1287,7 +1297,7 @@ const ProtocolEditorPage = () => {
         objectId={protocol.objectId}
         measurementPlace={protocol.measurementPlace || ''}
         testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate}
-        onChange={(results) => patchProtocol({ results })}
+        onChange={applyServerResults}
         onCheckNormatives={checkSavedNormatives}
         onImported={load}
         onNotify={notify}

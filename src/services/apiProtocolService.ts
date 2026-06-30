@@ -13,6 +13,7 @@ import type {
   MeasurementDevice,
   MethodTemplateResponse,
   MethodVariableResponse,
+  NormativeRecord,
   NormativeSearchResult,
   Pollutant,
   Protocol,
@@ -228,12 +229,40 @@ export const normalizePollutant = (raw: unknown): Pollutant => {
   return {
     id: pick(source, ['id', '_id']),
     code: pick(source, ['code', 'pollutantCode', 'substanceCode']),
-    name: pick(source, ['name', 'indicator', 'title']),
+    name: pick(source, ['name', 'nameRu', 'nameKz', 'indicator', 'indicatorName', 'indicatorNameRu', 'indicatorNameKz', 'title']),
     cas: pick(source, ['cas', 'casNumber']),
     formula: pick(source, ['formula', 'chemicalFormula']),
     unit: pick(source, ['unit']),
     testingMethod: pick(source, ['testingMethod', 'method']),
     samplingMethod: pick(source, ['samplingMethod']),
+  };
+};
+
+const normalizeNormativeRecord = (raw: unknown): NormativeRecord => {
+  const source = asRecord(raw);
+  return {
+    id: pick(source, ['id', '_id']),
+    templateId: pick(source, ['templateId', 'templateCode']).toLowerCase() as NormativeRecord['templateId'],
+    code: pick(source, ['code']),
+    pollutantCode: pick(source, ['pollutantCode', 'pollutant_code', 'substanceCode']),
+    researchObject: pick(source, ['researchObject', 'environment']),
+    environment: pick(source, ['environment', 'researchObject']),
+    indicator: pick(source, ['indicator', 'indicatorName', 'indicatorNameRu', 'indicatorNameKz', 'name', 'nameRu', 'nameKz']),
+    unit: pick(source, ['unit']),
+    normativeType: pick(source, ['normativeType', 'type']),
+    value: pick(source, ['value', 'normative', 'normativeValue']),
+    min: pick(source, ['min', 'minValue', 'normativeMin']),
+    max: pick(source, ['max', 'maxValue', 'normativeMax']),
+    comparisonType: (pick(source, ['comparisonType']) || 'LESS_OR_EQUAL') as NormativeRecord['comparisonType'],
+    normativeDocument: pick(source, ['normativeDocument', 'document']),
+    testingMethod: pick(source, ['testingMethod']),
+    samplingMethod: pick(source, ['samplingMethod']),
+    validFrom: pick(source, ['validFrom']),
+    validUntil: pick(source, ['validUntil']),
+    version: pick(source, ['version']),
+    status: (pick(source, ['status']) || (source.active === false ? 'INACTIVE' : 'ACTIVE')) as NormativeRecord['status'],
+    active: source.active !== false,
+    archived: source.archived === true || source.status === 'ARCHIVED',
   };
 };
 
@@ -621,8 +650,6 @@ const toApiResultPayload = (payload: ProtocolResultPayload) => {
     deviceId: values.deviceId ?? measurementDeviceId,
     subtype: values.subtype ?? values.factorType ?? null,
   };
-  delete mapped.normativeMin;
-  delete mapped.normativeMax;
   delete mapped.measurementDeviceId;
   delete mapped.factorType;
   return { measurementDeviceId, normativeId, values: mapped };
@@ -904,18 +931,19 @@ export async function searchNormative(params: Record<string, string>): Promise<N
       date: params.date || testingDate || undefined,
     },
   });
-  const candidates = extractList(response, ['normatives', 'items']) as NonNullable<NormativeSearchResult['normatives']>;
+  const candidates = extractList(response, ['normatives', 'items']).map(normalizeNormativeRecord);
   const item = extractItem(response) as NormativeSearchResult;
+  const normative = item.normative ? normalizeNormativeRecord(item.normative) : undefined;
   if (candidates.length) {
     return {
       ...item,
       found: true,
       normatives: candidates,
       ambiguous: candidates.length > 1 || item.ambiguous,
-      normative: candidates.length === 1 ? candidates[0] : item.normative,
+      normative: candidates.length === 1 ? candidates[0] : normative,
     };
   }
-  return item;
+  return { ...item, normative };
 }
 
 export async function searchPollutants(query: string, params: Record<string, string> = {}): Promise<Pollutant[]> {
@@ -967,15 +995,20 @@ export async function saveRawMeasurements(
   resultId: string,
   payload: RawMeasurementRequest[],
   methodTemplateId?: string | number | null,
-): Promise<void> {
+): Promise<ProtocolResultRow | undefined> {
   const request: SaveRawMeasurementsRequest = {
     methodTemplateId: methodTemplateId || null,
     measurements: payload,
   };
-  await api.post<ApiResponse<unknown> | unknown>(
+  const response = await api.post<ApiResponse<unknown> | unknown>(
     `/protocols/${protocolId}/results/${resultId}/raw-measurements`,
     request,
   );
+  const item = extractItem(response, ['result', 'row']);
+  const source = asRecord(item);
+  if (!Object.keys(source).length) return undefined;
+  const row = normalizeResult(item);
+  return row.id ? row : undefined;
 }
 
 export async function calculateResult(protocolId: string, resultId: string): Promise<CalculationResultResponse> {

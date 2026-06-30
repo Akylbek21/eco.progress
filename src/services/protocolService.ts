@@ -40,7 +40,7 @@ export interface ProtocolService {
     resultId: string,
     payload: RawMeasurementRequest[],
     methodTemplateId?: string | number | null,
-  ): Promise<void>;
+  ): Promise<ProtocolResultRow | undefined>;
   calculateResult(protocolId: string, resultId: string): Promise<CalculationResultResponse>;
   calculateProtocolSummary(protocolId: string): Promise<ProtocolCalculationSummaryResponse>;
   getCalculationHistory(protocolId: string, resultId: string): Promise<CalculationResultResponse[]>;

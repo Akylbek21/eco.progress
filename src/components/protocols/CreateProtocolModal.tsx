@@ -60,6 +60,11 @@ const weatherLabels: Record<WeatherConditionsStatus, string> = {
   COORDINATES_MISSING: 'У объекта отсутствуют координаты',
   MANUAL: 'Значения введены вручную',
 };
+const numericOnly = (value: string) => {
+  const normalized = value.trim();
+  if (!/^[+-]?\d+(?:[.,]\d+)?$/.test(normalized)) return false;
+  return !/^0\d{3,}$/.test(normalized);
+};
 
 const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCreate }: Props) => {
   const { user } = useAuth();
@@ -190,7 +195,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       setSearching(false);
       return;
     }
-    if (query.length < 2 || query.includes(',')) {
+    if (query.length < 1 || query.includes(',')) {
       setSuggestions([]);
       return;
     }
@@ -320,6 +325,10 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       setError('Введите код или название показателя');
       return;
     }
+    if (tokens.some(numericOnly)) {
+      setError('Сначала выберите показатель. Число вводится как результат замера.');
+      return;
+    }
     setSearching(true);
     try {
       const found = isPhysicalFactors
@@ -332,7 +341,6 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         const normalized = token.toLowerCase();
         const pollutant = found.find((item) => item.code.toLowerCase() === normalized)
           || found.find((item) => `${item.code} ${item.name}`.toLowerCase().includes(normalized))
-          || (tokens.length === 1 ? found[0] : undefined)
           || manualPollutantFromText(token);
         await addPollutant(pollutant);
       }
@@ -345,7 +353,20 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   };
 
   const addPhysicalMeasurement = async (pollutant?: Pollutant) => {
-    const selected = pollutant || filterPhysicalFactorIndicators(pollutantQuery, subtype)[0] || manualPollutantFromText(pollutantQuery || subtypeName(subtype));
+    if (!pollutant && numericOnly(pollutantQuery)) {
+      setError('Сначала выберите показатель. Число вводится как результат замера.');
+      return;
+    }
+    if (!pollutant && !pollutantQuery.trim()) {
+      setSuggestions(getPhysicalFactorIndicators(subtype).slice(0, 10));
+      return;
+    }
+    const matches = filterPhysicalFactorIndicators(pollutantQuery, subtype);
+    const selected = pollutant || matches[0];
+    if (!selected) {
+      setError('Показатель не найден. Выберите показатель из списка или добавьте вручную.');
+      return;
+    }
     const normativeState = await loadNormative(selected);
     setRows((current) => [...current, { key: `${selected.code}-${Date.now()}`, pollutant: selected, reading: '', deviceId: lastDeviceId, ...normativeState }]);
     setPollutantQuery('');
@@ -399,6 +420,8 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         normative: row.normative?.value || '',
         normativeMin: row.normative?.min || '',
         normativeMax: row.normative?.max || row.normative?.value || '',
+        minValue: row.normative?.min || '',
+        maxValue: row.normative?.max || row.normative?.value || '',
         normativeDocument: row.normative?.normativeDocument || '',
         testingMethod: row.normative?.testingMethod || row.pollutant.testingMethod || '',
         comparisonType: row.normative?.comparisonType || '',

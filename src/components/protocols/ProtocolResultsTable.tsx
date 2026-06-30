@@ -57,7 +57,7 @@ const officialResult = (row: ProtocolResultRow, templateId: ProtocolTemplateId) 
   return valueOf(row, ['result', 'resultValue', 'calculatedResult']);
 };
 const normativeValue = (row: ProtocolResultRow) =>
-  row.normativeReference?.value || row.normative || row.normativeValue || row.pdk || valueOf(row, ['normative', 'pdk', 'normativeMax', 'normativeMin']) || row.normativeMax || row.normativeMin || '';
+  row.normativeReference?.value || row.normative || row.normativeValue || row.pdk || valueOf(row, ['normative', 'normativeValue', 'pdk', 'normativeMax', 'maxValue', 'normativeMin', 'minValue']) || row.normativeMax || row.normativeMin || '';
 const pollutantCode = (row: ProtocolResultRow) => row.pollutant?.code || row.code || valueOf(row, ['pollutantCode', 'code']);
 const indicator = (row: ProtocolResultRow) => row.pollutant?.name || row.indicatorName || row.indicator || valueOf(row, ['indicator', 'substanceName']);
 const unit = (row: ProtocolResultRow) => row.unit || valueOf(row, ['unit']);
@@ -72,6 +72,7 @@ const rawDataLabel = (row: ProtocolResultRow) =>
   || ['reading1', 'reading2', 'sampleWeight', 'volume'].map((key) => valueOf(row, [`raw_${key}`, key])).filter(Boolean).join(', ');
 const measurementPlace = (row: ProtocolResultRow) => row.measurementPlace || valueOf(row, ['measurementPlace', 'samplingPlace', 'object']);
 const testingMethod = (row: ProtocolResultRow) => row.testingMethodDocument || row.testingMethod || valueOf(row, ['testingMethodDocument', 'testingMethod']);
+const needsNormativeSelection = (row: ProtocolResultRow) => valueOf(row, ['normativeSelectionRequired']) === 'true';
 const statusOf = (row: ProtocolResultRow) =>
   (row.internalStatus || row.checkStatus) === 'NORMATIVE_NOT_FOUND' && normativeValue(row)
     ? 'MANUAL_NORMATIVE'
@@ -85,6 +86,12 @@ const calculationStatusLabel = (status?: string) => ({
   NEEDS_REPEAT: 'Требуется повторный анализ',
   NORMATIVE_NOT_FOUND: 'Норматив не найден',
 }[String(status || '')] || '');
+
+const numericOnly = (value: string) => {
+  const normalized = value.trim();
+  if (!/^[+-]?\d+(?:[.,]\d+)?$/.test(normalized)) return false;
+  return !/^0\d{3,}$/.test(normalized);
+};
 
 const uncertaintyValue = (row: ProtocolResultRow) => row.uncertaintyValue || valueOf(row, ['uncertaintyValue', 'uncertainty']);
 
@@ -143,7 +150,7 @@ const ProtocolResultsTable = ({
       setSuggestions(value.trim() ? filterPhysicalFactorIndicators(value, subtype).slice(0, 8) : getPhysicalFactorIndicators(subtype).slice(0, 8));
       return;
     }
-    if (value.trim().length < 2) return setSuggestions([]);
+    if (value.trim().length < 1) return setSuggestions([]);
     setSearching(true);
     try {
       setSuggestions((await protocolService.searchPollutants(value, { templateId, subtype: subtype || '' })).slice(0, 8));
@@ -185,6 +192,8 @@ const ProtocolResultsTable = ({
         normative: normative?.value || '',
         normativeMin: normative?.min || '',
         normativeMax: normative?.max || normative?.value || '',
+        minValue: normative?.min || '',
+        maxValue: normative?.max || normative?.value || '',
         normativeDocument: normative?.normativeDocument || '',
         testingMethod: normative?.testingMethod || pollutant.testingMethod || '',
         normativeSelectionRequired: candidates.length > 1 ? 'true' : '',
@@ -200,6 +209,8 @@ const ProtocolResultsTable = ({
         normative: normative?.value || '',
         normativeMin: normative?.min || '',
         normativeMax: normative?.max || normative?.value || '',
+        minValue: normative?.min || '',
+        maxValue: normative?.max || normative?.value || '',
         normativeDocument: normative?.normativeDocument || '',
         testingMethod: normative?.testingMethod || pollutant.testingMethod || '',
         normativeSelectionRequired: candidates.length > 1 ? 'true' : '',
@@ -211,6 +222,7 @@ const ProtocolResultsTable = ({
       });
       if (candidates.length > 1) setNormativeChoices((current) => ({ ...current, [saved.id]: candidates }));
       if (append) onChange([...rows, saved]);
+      if (append && isPhysicalFactors) setRawRow(saved);
       setQuery('');
       setSuggestions([]);
       onNotify(candidates.length > 1 ? 'Строка добавлена. Требуется выбрать норматив.' : candidates.length ? 'Вещество и норматив добавлены' : 'Вещество добавлено, норматив не найден', candidates.length ? 'success' : 'warning');
@@ -226,7 +238,15 @@ const ProtocolResultsTable = ({
   const addBulk = async () => {
     const tokens = query.split(/[,;]+/).map((item) => item.trim()).filter(Boolean);
     if (!tokens.length) {
+      if (isPhysicalFactors) {
+        setSuggestions(getPhysicalFactorIndicators(subtype).slice(0, 8));
+        return;
+      }
       onNotify('Введите код или название показателя', 'warning');
+      return;
+    }
+    if (tokens.some(numericOnly)) {
+      onNotify('Сначала выберите показатель. Число вводится как результат замера.', 'warning');
       return;
     }
     setSearching(true);
@@ -242,7 +262,6 @@ const ProtocolResultsTable = ({
         const normalized = token.toLowerCase();
         const item = found.find((pollutant) => pollutant.code.toLowerCase() === normalized)
           || found.find((pollutant) => `${pollutant.code} ${pollutant.name}`.toLowerCase().includes(normalized))
-          || (tokens.length === 1 ? found[0] : undefined)
           || manualPollutantFromText(token);
         const exists = [...rows, ...created].some((row) => pollutantCode(row).toLowerCase() === item.code.toLowerCase());
         if (!exists) {
@@ -321,6 +340,8 @@ const ProtocolResultsTable = ({
           normative: normative.value || '',
           normativeMin: normative.min || '',
           normativeMax: normative.max || normative.value || '',
+          minValue: normative.min || '',
+          maxValue: normative.max || normative.value || '',
           normativeDocument: normative.normativeDocument || '',
           testingMethod: normative.testingMethod || valueOf(row, ['testingMethod']),
           unit: normative.unit || unit(row),
@@ -343,6 +364,33 @@ const ProtocolResultsTable = ({
     }
   };
 
+  const loadNormativeChoices = async (row: ProtocolResultRow) => {
+    setSaving(true);
+    try {
+      const found = await protocolService.searchNormative({
+        templateId,
+        subtype: subtype || '',
+        code: pollutantCode(row),
+        pollutantCode: pollutantCode(row),
+        indicator: indicator(row),
+        query: `${pollutantCode(row)} ${indicator(row)}`.trim(),
+        unit: unit(row),
+        objectId: objectId ? String(objectId) : '',
+        date: testingDate,
+      });
+      const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
+      if (!candidates.length) {
+        onNotify(normativeNotFoundMessage, 'warning');
+        return;
+      }
+      setNormativeChoices((current) => ({ ...current, [row.id]: candidates }));
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : normativeNotFoundMessage, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const renderNormativeCell = (row: ProtocolResultRow) => {
     const choices = normativeChoices[row.id];
     if (choices?.length) {
@@ -354,6 +402,9 @@ const ProtocolResultsTable = ({
       );
     }
     const value = normativeValue(row);
+    if (!value && needsNormativeSelection(row)) {
+      return <Button type="button" variant="secondary" disabled={saving || readOnly} onClick={() => loadNormativeChoices(row)}>Выбрать норматив</Button>;
+    }
     if (value) return <div className={automaticClass}>{value} {unit(row)}</div>;
     return <div className={automaticClass}>{valueOf(row, ['normativeSearchWarning']) || 'Норматив не найден'}</div>;
   };
@@ -427,8 +478,8 @@ const ProtocolResultsTable = ({
     if (!file) return;
     setSaving(true);
     try {
-      await protocolService.importExcel(protocolId, file);
-      await onImported();
+      const imported = await protocolService.importExcel(protocolId, file);
+      onChange(imported.results || []);
       onNotify('Показания импортированы из Excel', 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось импортировать Excel', 'error');
@@ -447,8 +498,9 @@ const ProtocolResultsTable = ({
   const calculateRow = async (row: ProtocolResultRow) => {
     setSaving(true);
     try {
-      await protocolService.calculateResult(protocolId, row.id);
-      await onImported();
+      const calculated = await protocolService.calculateResult(protocolId, row.id);
+      if (calculated.row?.id) onChange(rows.map((item) => item.id === calculated.row!.id ? calculated.row! : item));
+      else await onImported();
       onNotify('Результат рассчитан', 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать строку', 'error');
@@ -478,7 +530,7 @@ const ProtocolResultsTable = ({
       setCalculationSummary(summary);
       const rowMap = new Map(summary.rows.filter((item) => item.row?.id).map((item) => [item.row!.id, item.row!]));
       if (rowMap.size) onChange(rows.map((row) => rowMap.get(row.id) || row));
-      await onImported();
+      else await onImported();
       onNotify('Результаты рассчитаны', summary.errors || summary.waitingInputs ? 'warning' : 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать результаты', 'error');

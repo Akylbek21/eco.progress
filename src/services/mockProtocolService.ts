@@ -558,7 +558,7 @@ export async function saveRawMeasurements(
   resultId: string,
   payload: RawMeasurementRequest[],
   methodTemplateId?: string | number | null,
-): Promise<void> {
+): Promise<ProtocolResultRow | undefined> {
   await wait();
   let saved: ProtocolResultRow | undefined;
   updateStored(protocolId, (protocol) => ({
@@ -582,6 +582,7 @@ export async function saveRawMeasurements(
     history: [...(protocol.history || []), history('Raw measurements saved')],
   }));
   if (!saved) throw new Error('Result row not found.');
+  return clone(saved);
 }
 
 export async function calculateResult(protocolId: string, resultId: string): Promise<CalculationResultResponse> {
