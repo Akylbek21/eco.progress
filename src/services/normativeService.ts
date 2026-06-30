@@ -1,30 +1,89 @@
 import api, { ApiResponse } from './api';
-import { extractItem, extractList } from './apiHelpers';
+import { extractItem, extractList, getApiStatus } from './apiHelpers';
 import type { DirectoryQuery, NormativeRecord } from '../types/protocols';
 
 const useMocks = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
 const mockDelay = () => new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 301)));
 type UnknownRecord = Record<string, unknown>;
 const stringValue = (value: unknown) => value === undefined || value === null ? '' : String(value);
+const asRecord = (value: unknown): UnknownRecord =>
+  value && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : {};
+const firstString = (...values: unknown[]) => {
+  for (const value of values) {
+    const text = stringValue(value).trim();
+    if (text) return text;
+  }
+  return '';
+};
+const normalizeText = (value: unknown) => stringValue(value).trim().toLowerCase().replace(/ё/g, 'е');
+const demoIndicators = ['e.coli', 'пыль', 'железо', 'шум', 'диоксид азота'];
+const demoSourceMarkers = ['сэм рк (демо)', 'demo', 'демо'];
+const isExcelSource = (item: NormativeRecord) => [
+  item.sourceFile,
+  item.importFileName,
+  item.source,
+  item.normativeDocument,
+].some((value) => {
+  const text = normalizeText(value);
+  return text.includes('.xls') || text.includes('.xlsx') || text.includes('with_pollutant_codes') || text.includes('sourcefile');
+});
+const isDemoNormative = (item: NormativeRecord) => {
+  const sourceText = normalizeText([item.source, item.normativeDocument].filter(Boolean).join(' '));
+  const indicatorText = normalizeText([item.indicator, item.indicatorName, item.pollutantName].filter(Boolean).join(' '));
+  return demoSourceMarkers.some((marker) => sourceText.includes(marker))
+    || demoIndicators.some((indicator) => indicatorText === indicator || indicatorText.includes(indicator));
+};
+const isVisibleNormative = (item: NormativeRecord) => isExcelSource(item) && !isDemoNormative(item);
+
 const normalizeNormative = (raw: unknown): NormativeRecord => {
-  const source = (raw && typeof raw === 'object' ? raw : {}) as UnknownRecord;
+  const source = asRecord(raw);
+  const pollutant = asRecord(source.pollutant || source.substance || source.indicatorReference);
+  const code = firstString(source.code, source.pollutantCode, source.substanceCode, source.indicatorCode, source.referenceCode, pollutant.code, pollutant.pollutantCode);
+  const indicator = firstString(
+    source.indicator,
+    source.indicatorName,
+    source.indicatorNameRu,
+    source.indicatorNameKz,
+    source.name,
+    source.nameRu,
+    source.nameKz,
+    source.title,
+    source.pollutantName,
+    source.substanceName,
+    pollutant.name,
+    pollutant.nameRu,
+    pollutant.indicator,
+  );
   return {
-    id: stringValue(source.id || source._id),
-    templateId: stringValue(source.templateId || source.templateCode).toLowerCase() as NormativeRecord['templateId'],
-    code: stringValue(source.code),
-    pollutantCode: stringValue(source.pollutantCode || source.substanceCode),
-    researchObject: stringValue(source.researchObject || source.environment),
-    environment: stringValue(source.environment || source.researchObject),
-    indicator: stringValue(source.indicator || source.name),
-    unit: stringValue(source.unit),
-    normativeType: stringValue(source.normativeType || source.type),
-    value: stringValue(source.value),
-    min: stringValue(source.min ?? source.minValue),
-    max: stringValue(source.max ?? source.maxValue),
+    id: firstString(source.id, source._id, source.referenceId, `${code}-${indicator}-${source.normativeDocument || source.document}`),
+    templateId: firstString(source.templateId, source.templateCode, source.protocolTemplateCode).toLowerCase() as NormativeRecord['templateId'],
+    code,
+    pollutantCode: firstString(source.pollutantCode, source.substanceCode, code),
+    indicatorName: firstString(source.indicatorName, source.indicatorNameRu, source.name, source.nameRu, indicator),
+    pollutantName: firstString(source.pollutantName, source.substanceName, indicator),
+    researchObject: firstString(source.researchObject, source.object, source.objectName, source.environment, source.medium, source.sampleType),
+    environment: firstString(source.environment, source.researchObject, source.medium, source.sampleType),
+    indicator,
+    cas: firstString(source.cas, source.casNumber, pollutant.cas, pollutant.casNumber),
+    casNumber: firstString(source.casNumber, source.cas, pollutant.casNumber, pollutant.cas),
+    formula: firstString(source.formula, source.chemicalFormula, pollutant.formula, pollutant.chemicalFormula),
+    chemicalFormula: firstString(source.chemicalFormula, source.formula, pollutant.chemicalFormula, pollutant.formula),
+    unit: firstString(source.unit, source.measurementUnit, source.resultUnit),
+    normativeType: firstString(source.normativeType, source.type, source.limitType, source.category),
+    normativeSubType: firstString(source.normativeSubType, source.normativeSubtype, source.subType, source.subtype),
+    subtype: firstString(source.subtype, source.subType, source.normativeSubType, source.normativeSubtype),
+    value: stringValue(source.value ?? source.normative ?? source.normativeValue),
+    min: stringValue(source.min ?? source.minValue ?? source.normativeMin),
+    max: stringValue(source.max ?? source.maxValue ?? source.normativeMax),
     comparisonType: stringValue(source.comparisonType || 'LESS_OR_EQUAL') as NormativeRecord['comparisonType'],
-    normativeDocument: stringValue(source.normativeDocument || source.document),
-    testingMethod: stringValue(source.testingMethod),
-    samplingMethod: stringValue(source.samplingMethod),
+    normativeDocument: firstString(source.normativeDocument, source.document, source.documentName, source.standard),
+    hazardClass: firstString(source.hazardClass, source.dangerClass, source.hazard, source.hazardClassName),
+    limitingIndicator: firstString(source.limitingIndicator, source.limitingSign, source.lpv, source.limitingFactor),
+    source: firstString(source.source, source.sourceName, source.dataSource, source.normativeDocument, source.document, source.documentName),
+    sourceFile: firstString(source.sourceFile, source.sourceFileName, source.fileName, source.importFileName, source.excelFileName, source.workbookName),
+    importFileName: firstString(source.importFileName, source.fileName, source.sourceFile, source.excelFileName, source.workbookName),
+    testingMethod: firstString(source.testingMethod, source.method, source.methodName, source.measurementMethod),
+    samplingMethod: firstString(source.samplingMethod, source.sampleMethod, source.samplingMethodName),
     validFrom: stringValue(source.validFrom),
     validUntil: stringValue(source.validUntil),
     version: stringValue(source.version),
@@ -34,15 +93,61 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
   };
 };
 
+export const extractNormatives = (response: unknown): NormativeRecord[] => {
+  const lists = [
+    extractList(response, ['records']),
+    extractList(response, ['normatives']),
+    extractList(response, ['items']),
+    extractList(response, ['content']),
+  ];
+  const single = extractItem(response, ['normative', 'record', 'item']);
+  const singleRecord = asRecord(single);
+  if (singleRecord.id || singleRecord.code || singleRecord.pollutantCode || singleRecord.indicator || singleRecord.indicatorName || singleRecord.name) lists.push([single]);
+  const map = new Map<string, NormativeRecord>();
+  lists.flat().map(normalizeNormative).filter(isVisibleNormative).forEach((item, index) => {
+    const key = item.id || `${item.pollutantCode || item.code}-${item.indicator}-${item.normativeDocument}-${index}`;
+    map.set(key, item);
+  });
+  return Array.from(map.values());
+};
+
+const extractNormativeRecords = extractNormatives;
+
+const directoryParams = (params?: DirectoryQuery) => {
+  const search = params?.search?.trim();
+  return {
+    ...params,
+    search: search || undefined,
+    query: search || undefined,
+    q: search || undefined,
+  };
+};
+
 export async function getNormatives(params?: DirectoryQuery): Promise<NormativeRecord[]> {
   if (useMocks) {
     await mockDelay();
-    const { mockNormatives } = await import('../mocks/mockNormatives');
-    const query = String(params?.search || '').toLowerCase();
-    return mockNormatives.filter((item) => (!params?.templateId || item.templateId === params.templateId) && (!query || `${item.indicator} ${item.normativeDocument}`.toLowerCase().includes(query)));
+    return [];
   }
-  const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params });
-  return extractList(response, ['records', 'content', 'items', 'normatives']).map(normalizeNormative);
+  const requestParams = directoryParams(params);
+  const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams });
+  let records = extractNormativeRecords(response);
+
+  if (!records.length && requestParams.search) {
+    try {
+      const searchResponse = await api.get<ApiResponse<unknown> | unknown>('/normatives/search', { params: requestParams });
+      records = extractNormativeRecords(searchResponse);
+    } catch (error) {
+      if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
+    }
+  }
+
+  if (!records.length && requestParams.search) {
+    const { search: _search, query: _query, q: _q, ...baseParams } = requestParams;
+    const fullResponse = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: baseParams });
+    records = extractNormativeRecords(fullResponse);
+  }
+
+  return records;
 }
 
 export async function createNormative(payload: Omit<NormativeRecord, 'id'>): Promise<NormativeRecord> {
@@ -65,16 +170,45 @@ export type NormativeImportPreview = {
   total: number;
   valid: number;
   invalid: number;
+  created?: number;
+  updated?: number;
   errors: Array<{ row?: number; message: string }>;
+  importId?: string;
 };
 
-export async function importNormativesExcel(file: File, preview = true): Promise<NormativeImportPreview> {
+const isImportFallbackStatus = (error: unknown) => [400, 404, 405].includes(getApiStatus(error) || 0);
+
+const postLegacyNormativeImport = (file: File, preview: boolean) => {
+  const legacyFormData = new FormData();
+  legacyFormData.append('file', file);
+  legacyFormData.append('preview', String(preview));
+  return api.post<ApiResponse<unknown> | unknown>('/normatives/import-excel', legacyFormData);
+};
+
+const postNormativeImport = async (file: File, preview: boolean, importId?: string) => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('preview', String(preview));
-  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives/import-excel', formData);
+  const endpoint = preview ? '/normatives/import/preview' : '/normatives/import/confirm';
+  if (!preview && importId) {
+    try {
+      return await api.post<ApiResponse<unknown> | unknown>(endpoint, { importId, previewId: importId });
+    } catch (error) {
+      if (!isImportFallbackStatus(error)) throw error;
+    }
+  }
+  try {
+    return await api.post<ApiResponse<unknown> | unknown>(endpoint, formData);
+  } catch (error) {
+    if (!isImportFallbackStatus(error)) throw error;
+    return postLegacyNormativeImport(file, preview);
+  }
+};
+
+export async function importNormativesExcel(file: File, preview = true, importId?: string): Promise<NormativeImportPreview> {
+  const response = await postNormativeImport(file, preview, importId);
   const item = extractItem(response, ['preview', 'result']) as unknown as UnknownRecord;
-  const items = extractList(response, ['normatives', 'items']).map(normalizeNormative);
+  const items = extractNormativeRecords(response);
   const errors = Array.isArray(item.errors) ? item.errors.map((error) => {
     const value = error as UnknownRecord;
     return { row: Number(value.row) || undefined, message: stringValue(value.message || value.error) };
@@ -84,6 +218,9 @@ export async function importNormativesExcel(file: File, preview = true): Promise
     total: Number(item.total ?? items.length),
     valid: Number(item.valid ?? items.length),
     invalid: Number(item.invalid ?? errors.length),
+    created: Number(item.created ?? item.new ?? item.newRows ?? item.toCreate ?? 0),
+    updated: Number(item.updated ?? item.update ?? item.updatedRows ?? item.toUpdate ?? 0),
     errors,
+    importId: stringValue(item.importId || item.previewId || item.batchId) || undefined,
   };
 }

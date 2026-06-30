@@ -4,7 +4,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import ConfirmModal from '../components/modals/ConfirmModal';
-import ProtocolActionsBar from '../components/protocols/ProtocolActionsBar';
 import ProtocolStatusBadge from '../components/protocols/ProtocolStatusBadge';
 import NormativeStatusBadge from '../components/protocols/NormativeStatusBadge';
 import ProtocolGeneralForm from '../components/protocols/ProtocolGeneralForm';
@@ -22,12 +21,12 @@ import { useToast } from '../hooks/useToast';
 import { useAuth } from '../contexts/AuthContext';
 import { getMeasurementDevices } from '../services/measurementDeviceService';
 import { getCompanyObjects } from '../services/companyService';
-import { accreditationState, getLaboratoryEmployees } from '../services/laboratorySettingsService';
+import { accreditationState, getLaboratory, getLaboratoryEmployees } from '../services/laboratorySettingsService';
 import { getApiStatus } from '../services/apiHelpers';
 import { signBase64WithNCALayer } from '../services/ncalayer';
 import protocolService, { useProtocolMocks } from '../services/protocolService';
 import type { CompanyObject } from '../types/companies';
-import type { LaboratoryEmployee, MeasurementDevice, Protocol, ProtocolCompanySnapshot, ProtocolMeasurementDevice, WeatherConditions } from '../types/protocols';
+import type { LaboratoryEmployee, LaboratoryProfile, MeasurementDevice, Protocol, ProtocolCompanySnapshot, ProtocolLaboratorySnapshot, ProtocolMeasurementDevice, WeatherConditions } from '../types/protocols';
 
 const emptyLaboratory = {
   laboratoryName: '',
@@ -193,6 +192,30 @@ const hasCheckedResults = (protocol: Protocol) =>
     const status = row.internalStatus || row.checkStatus;
     return status && !['EMPTY_RESULT', 'NEEDS_REVIEW', 'NORMATIVE_NOT_FOUND'].includes(status);
   });
+
+const laboratorySnapshotFromProfile = (
+  profile: LaboratoryProfile,
+  current: ProtocolLaboratorySnapshot,
+): ProtocolLaboratorySnapshot => ({
+  ...current,
+  laboratoryId: profile.id || current.laboratoryId,
+  laboratoryName: profile.name || current.laboratoryName,
+  legalName: profile.legalName || current.legalName,
+  bin: profile.bin || current.bin,
+  laboratoryAddress: profile.address || current.laboratoryAddress,
+  phone: profile.phone || current.phone,
+  email: profile.email || current.email,
+  accreditationNumber: profile.accreditationNumber || current.accreditationNumber,
+  accreditationIssuedAt: profile.accreditationIssuedAt || current.accreditationIssuedAt,
+  accreditationValidUntil: profile.accreditationValidUntil || current.accreditationValidUntil,
+  directorId: profile.directorId || current.directorId,
+  director: profile.directorName || current.director,
+  laboratoryHeadId: profile.laboratoryHeadId || current.laboratoryHeadId,
+  laboratoryHead: profile.laboratoryHeadName || current.laboratoryHead,
+  logoUrl: profile.logoUrl || current.logoUrl,
+  standardNote: profile.standardNote || current.standardNote,
+  capturedAt: current.capturedAt || new Date().toISOString(),
+});
 
 const getMissingFields = (protocol: Protocol): MissingField[] => {
   const items: MissingField[] = [];
@@ -576,7 +599,6 @@ const ProtocolEditorPage = () => {
   const [devicePickerOpen, setDevicePickerOpen] = useState(false);
   const [laboratoryEmployees, setLaboratoryEmployees] = useState<LaboratoryEmployee[]>([]);
   const [companyObjects, setCompanyObjects] = useState<CompanyObject[]>([]);
-  const [refreshLaboratoryOpen, setRefreshLaboratoryOpen] = useState(false);
   const [activeStep, setActiveStep] = useState<ProtocolStepKey>('general');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [moreOpen, setMoreOpen] = useState(false);
@@ -588,11 +610,6 @@ const ProtocolEditorPage = () => {
   const readOnly = useMemo(() => !protocol || protocol.status !== 'DRAFT', [protocol]);
   const dirty = useMemo(() => Boolean(protocol && savedSignatureRef.current && editableSignature(protocol) !== savedSignatureRef.current), [protocol]);
   const canApprove = useProtocolMocks || user?.role === 'ADMIN' || user?.role === 'DIRECTOR' || user?.role === 'HEAD';
-  const activeTab: string = '__hidden';
-  const setActiveTab = (_id: string) => undefined;
-  const canUseAdvanced = false;
-  const tabs: Array<{ id: string; label: string }> = [];
-
   const applyServerProtocol = (item: Protocol) => {
     const normalized = {
       ...item,
@@ -761,6 +778,50 @@ const ProtocolEditorPage = () => {
     }
   };
 
+  const refreshLaboratorySnapshot = async () => {
+    if (!protocol) return;
+    const laboratoryId = protocol.laboratory?.laboratoryId;
+    if (!laboratoryId) {
+      toast.warning('Лаборатория не выбрана');
+      return;
+    }
+    setBusy(true);
+    try {
+      const profile = await getLaboratory(laboratoryId);
+      const laboratory = laboratorySnapshotFromProfile(profile, protocol.laboratory);
+      const updated = await protocolService.updateProtocol(protocol.id, {
+        number: protocol.protocolNumber || protocol.number || '',
+        protocolDate: protocol.protocolDate || '',
+        objectId: protocol.objectId,
+        measurementDate: protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate,
+        measurementTime: protocol.measurementTime,
+        measurementPlace: protocol.measurementPlace,
+        formCode: protocol.formCode,
+        application: protocol.application,
+        executor: protocol.executor || laboratory.executor || '',
+        executorId: protocol.executorId || laboratory.executorId,
+        approver: protocol.approver || '',
+        laboratory,
+        organization: protocol.organization,
+        testing: protocol.testing,
+        environment: protocol.environment,
+        explanatoryNote: protocol.explanatoryNote,
+      });
+      applyServerProtocol(updated);
+      toast.success('Данные лаборатории обновлены из настроек');
+    } catch (error) {
+      toast.error('Не удалось обновить данные лаборатории', error instanceof Error ? error.message : undefined);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    const laboratoryId = protocol?.laboratory?.laboratoryId;
+    if (!protocol || !laboratoryId || hasLaboratory(protocol) || readOnly || busy) return;
+    refreshLaboratorySnapshot().catch(() => undefined);
+  }, [protocol?.id, protocol?.laboratory?.laboratoryId, readOnly]);
+
   useEffect(() => {
     if (!dirty || readOnly || busy) return;
     const timer = window.setTimeout(() => {
@@ -776,7 +837,10 @@ const ProtocolEditorPage = () => {
       const saved = await save();
       if (!saved) return;
     }
-    await run(() => protocolService.calculateProtocol(protocol.id), 'Расчёт выполнен backend');
+    await run(async () => {
+      await protocolService.calculateProtocolSummary(protocol.id);
+      return protocolService.getProtocol(protocol.id);
+    }, 'Расчёт выполнен backend');
   };
 
   const calculateProtocolResults = async () => {
@@ -812,7 +876,7 @@ const ProtocolEditorPage = () => {
       const weather = await protocolService.getWeatherConditions({
         objectId: selection.objectId,
         date: selection.date,
-        time: DEFAULT_WEATHER_TIME,
+        time: selection.time || protocol.measurementTime || DEFAULT_WEATHER_TIME,
         signal: selection.signal,
       });
       patchProtocol({ environment: weather });
@@ -830,7 +894,7 @@ const ProtocolEditorPage = () => {
     patchProtocol({
       objectId: selection.objectId,
       measurementDate: selection.date,
-      measurementTime: DEFAULT_WEATHER_TIME,
+      measurementTime: selection.time || DEFAULT_WEATHER_TIME,
       measurementPlace: object?.name || protocol.measurementPlace,
       testing: {
         ...protocol.testing,
@@ -1010,6 +1074,7 @@ const ProtocolEditorPage = () => {
     : 'Испытания проведены в соответствии с областью аккредитации лаборатории. Полученные результаты приведены в таблице протокола и относятся только к исследованным пробам и объектам.';
 
   return (
+    <>
     <div className="space-y-6 pb-20">
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div>
@@ -1092,7 +1157,7 @@ const ProtocolEditorPage = () => {
               executor: employee.fullName,
             },
           })}
-          onRefresh={protocol.status === 'DRAFT' ? () => setRefreshLaboratoryOpen(true) : undefined}
+          onRefresh={refreshLaboratorySnapshot}
         />
       </div>}
 
@@ -1187,180 +1252,6 @@ const ProtocolEditorPage = () => {
         onOpenReplacement={protocol.replacedByProtocolId ? () => navigateSafely(`/staff/protocols/${protocol.replacedByProtocolId}`) : undefined}
       />
 
-      <div className="hidden">
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-        <div className="flex min-w-max gap-1">
-          {tabs.filter((tab) => canUseAdvanced || ['quick', 'history'].includes(tab.id)).map((tab) => (
-            <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`rounded-xl px-4 py-2.5 text-sm font-bold transition ${activeTab === tab.id ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {activeTab === 'quick' && <div className="space-y-6">
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {[
-              ['Тип протокола', templateName(protocol.templateId, protocol.templateName)],
-              ['Компания', protocol.companySnapshot.companyName],
-              ['Объект', protocol.companySnapshot.objectName],
-              ['Дата', protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate],
-              ['Время', protocol.measurementTime || '—'],
-            ].map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-3"><dt className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</dt><dd className="mt-1 font-bold text-slate-800">{value || '—'}</dd></div>)}
-          </dl>
-        </section>
-        <ProtocolEnvironmentForm
-          value={protocol.environment || {}}
-          measurementDate={protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate}
-          measurementTime={protocol.measurementTime || ''}
-          objectId={String(protocol.objectId || '')}
-          objectName={companyObjects.find((item) => item.id === String(protocol.objectId))?.name || protocol.companySnapshot.objectName || ''}
-          objectOptions={companyObjects.map((item) => ({ id: item.id, name: item.name }))}
-          readOnly={readOnly}
-          loading={busy}
-          onSelectionChange={changeWeatherSelection}
-          onRequestConditions={refreshWeather}
-          onChange={(environment) => patchProtocol({ environment })}
-        />
-        <ProtocolResultsTable
-          protocolId={protocol.id}
-          templateId={protocol.templateId}
-          subtype={protocol.subtype}
-          rows={protocol.results}
-          devices={protocol.measurementDevices}
-          readOnly={readOnly}
-          busy={busy}
-          objectId={protocol.objectId}
-          measurementPlace={protocol.measurementPlace || ''}
-          testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate}
-          onChange={applyServerResults}
-          onCheckNormatives={checkSavedNormatives}
-          onImported={load}
-          onNotify={notify}
-        />
-      </div>}
-
-      {activeTab === 'general' && <div className="space-y-6">
-        <ProtocolGeneralForm protocol={protocol} readOnly={readOnly || protocol.status === 'APPROVED'} onChange={patchProtocol} />
-        <ProtocolTestingForm
-          templateId={protocol.templateId}
-          value={protocol.testing}
-          measurementDate={protocol.measurementDate || protocol.testing.samplingDate}
-          readOnly={readOnly}
-          onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })}
-          onChange={(testing) => patchProtocol({ testing })}
-        />
-      </div>}
-      {activeTab === 'organization' && <div className="space-y-6">
-        <SnapshotSection snapshot={protocol.companySnapshot} />
-        <ProtocolOrganizationForm value={protocol.organization} readOnly={readOnly} onChange={(organization) => patchProtocol({ organization })} />
-      </div>}
-      {activeTab === 'laboratory' && <ProtocolLaboratoryForm
-        value={protocol.laboratory}
-        employees={laboratoryEmployees}
-        readOnly={readOnly}
-        loading={busy}
-        canOpenSettings={user?.role === 'ADMIN'}
-        onExecutorChange={(employee) => patchProtocol({
-          executorId: employee.userId || employee.id,
-          executor: employee.fullName,
-          laboratory: {
-            ...protocol.laboratory,
-            executorId: employee.userId || employee.id,
-            executor: employee.fullName,
-          },
-        })}
-        onRefresh={protocol.status === 'DRAFT' ? () => setRefreshLaboratoryOpen(true) : undefined}
-      />}
-      {activeTab === 'environment' && <ProtocolEnvironmentForm
-        value={protocol.environment || {}}
-        measurementDate={protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate}
-        measurementTime={protocol.measurementTime || ''}
-        objectId={String(protocol.objectId || '')}
-        objectName={companyObjects.find((item) => item.id === String(protocol.objectId))?.name || protocol.companySnapshot.objectName || ''}
-        objectOptions={companyObjects.map((item) => ({ id: item.id, name: item.name }))}
-        readOnly={readOnly}
-        loading={busy}
-        onSelectionChange={changeWeatherSelection}
-        onRequestConditions={refreshWeather}
-        onChange={(environment) => patchProtocol({ environment })}
-      />}
-      {activeTab === 'results' && <ProtocolResultsTable
-        protocolId={protocol.id}
-        templateId={protocol.templateId}
-        subtype={protocol.subtype}
-        rows={protocol.results}
-        devices={protocol.measurementDevices}
-        readOnly={readOnly}
-        busy={busy}
-        objectId={protocol.objectId}
-        measurementPlace={protocol.measurementPlace || ''}
-        testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate}
-        onChange={applyServerResults}
-        onCheckNormatives={checkSavedNormatives}
-        onImported={load}
-        onNotify={notify}
-      />}
-      {activeTab === 'devices' && <MeasurementDevicesSection devices={protocol.measurementDevices || []} readOnly={readOnly || busy} onAdd={() => setDevicePickerOpen(true)} onRemove={removeDevice} />}
-      {activeTab === 'note' && <ProtocolExplanatoryNoteForm
-        value={protocol.explanatoryNote || ''}
-        readOnly={readOnly}
-        onChange={(explanatoryNote) => patchProtocol({ explanatoryNote })}
-        onGenerate={() => patchProtocol({ explanatoryNote: protocol.templateId === 'industrial_emissions'
-          ? `В рамках производственного экологического контроля проведены инструментальные замеры на источниках выбросов объекта «${protocol.companySnapshot.objectName}». В период обследования выполнены измерения параметров газовоздушной смеси и концентраций определяемых веществ. Работающие источники: ${Array.from(new Set(protocol.results.map((row) => String(row.values.sourceNumber || row.values.samplingPlace || '')).filter(Boolean))).join(', ') || 'не указаны'}. Неработавшие источники на момент обследования не выявлены. Определяемые вещества: ${Array.from(new Set(protocol.results.map((row) => String(row.values.indicator || '')).filter(Boolean))).join(', ') || 'не указаны'}. Использованные приборы: ${protocol.measurementDevices.map((item) => item.deviceSnapshot.name).join(', ') || 'не указаны'}. Измерения выполнены в соответствии с нормативными документами и областью аккредитации испытательной лаборатории.`
-          : `Испытания проведены в соответствии с областью аккредитации лаборатории. Полученные результаты приведены в таблице протокола и относятся только к исследованным пробам и объектам.` })}
-      />}
-
-      {activeTab === 'history' && <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900"><History className="h-5 w-5 text-eco-700" /> История действий</h2>
-        <div className="space-y-3">
-          {protocol.history?.length ? protocol.history.map((item) => (
-            <div key={item.id} className="rounded-xl bg-slate-50 p-3 text-sm">
-              <p className="font-bold text-slate-900">{item.action}</p>
-              <p className="mt-1 text-slate-500">{item.createdAt} · {item.actorName || 'Система'}</p>
-              {item.comment && <p className="mt-2 text-slate-700">{item.comment}</p>}
-            </div>
-          )) : <p className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-500">История действий пока пуста.</p>}
-        </div>
-      </section>}
-
-      <ProtocolActionsBar
-        status={protocol.status}
-        busy={busy}
-        canApprove={canApprove}
-        onSave={async () => { await save(); }}
-        onPreview={preview}
-        onCheckNormatives={checkSavedNormatives}
-        onReady={() => run(() => protocolService.readyForApproval(protocol.id), 'Протокол готов к утверждению')}
-        onDelete={async () => {
-          if (!window.confirm('Удалить черновик протокола?')) return;
-          setBusy(true);
-          try {
-            await protocolService.deleteProtocol(protocol.id);
-            savedSignatureRef.current = '';
-            toast.success('Протокол удален');
-            navigate('/staff/protocols');
-          } catch (deleteError) {
-            toast.error('Не удалось удалить протокол', deleteError instanceof Error ? deleteError.message : undefined);
-          } finally {
-            setBusy(false);
-          }
-        }}
-        onApprove={() => run(() => protocolService.approveProtocol(protocol.id), 'Протокол утвержден')}
-        onReturnDraft={() => run(() => protocolService.returnToDraft(protocol.id), 'Протокол возвращен в черновик')}
-        onCancel={async () => {
-          if (!window.confirm('Отменить протокол? После отмены редактирование будет недоступно.')) return;
-          await run(() => protocolService.cancelProtocol(protocol.id), 'Протокол отменен');
-        }}
-        onGeneratePdf={() => run(() => protocolService.generatePdf(protocol.id), 'PDF сформирован')}
-        onGenerateDocx={() => run(() => protocolService.generateDocx(protocol.id), 'DOCX сформирован')}
-        onSign={() => setSignOpen(true)}
-        onDownloadPdf={() => generateAndDownload('pdf')}
-        onDownloadDocx={() => generateAndDownload('docx')}
-        onReplace={() => setReplaceOpen(true)}
-        onOpenReplacement={protocol.replacedByProtocolId ? () => navigateSafely(`/staff/protocols/${protocol.replacedByProtocolId}`) : undefined}
-      />
       </div>
 
       <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} protocol={protocol} draft={protocol.status !== 'APPROVED' && protocol.status !== 'SIGNED'} onClose={() => setPreviewOpen(false)} />
@@ -1406,19 +1297,7 @@ const ProtocolEditorPage = () => {
           if (deviceToRemove) await removeDevice(deviceToRemove);
         }}
       />
-      <ConfirmModal
-        isOpen={refreshLaboratoryOpen}
-        title="Обновить данные лаборатории?"
-        description="Текущий snapshot черновика будет заменён актуальными данными из настроек лаборатории. Результаты и сведения заказчика не изменятся."
-        confirmText="Обновить snapshot"
-        loading={busy}
-        onClose={() => setRefreshLaboratoryOpen(false)}
-        onConfirm={async () => {
-          await run(() => protocolService.refreshProtocolLaboratoryData(protocol.id), 'Данные лаборатории обновлены');
-          setRefreshLaboratoryOpen(false);
-        }}
-      />
-    </div>
+    </>
   );
 };
 

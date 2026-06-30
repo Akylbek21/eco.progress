@@ -656,28 +656,6 @@ export async function getWeatherConditions(): Promise<WeatherConditions> {
 
 export const calculateProtocol = checkNormatives;
 
-export async function refreshProtocolLaboratoryData(protocolId: string): Promise<Protocol> {
-  await wait();
-  const protocol = await getProtocol(protocolId);
-  if (protocol.status !== 'DRAFT') throw new Error('Обновить данные лаборатории можно только в черновике.');
-  const laboratoryService = await import('./laboratorySettingsService');
-  const summaries = await laboratoryService.getLaboratories();
-  const laboratoryId = protocol.laboratory.laboratoryId
-    || summaries.find((item) => item.isDefault)?.id
-    || (summaries.length === 1 ? summaries[0].id : '');
-  if (!laboratoryId) throw new Error('Лаборатория по умолчанию не настроена.');
-  const profile = await laboratoryService.getLaboratory(laboratoryId);
-  const snapshot = laboratorySnapshot(profile, protocol.executorId || protocol.laboratory.executorId);
-  return updateStored(protocolId, (current) => ({
-    ...current,
-    laboratory: snapshot,
-    executor: snapshot.executor,
-    executorId: snapshot.executorId,
-    approver: snapshot.laboratoryHead,
-    history: [...(current.history || []), history('Snapshot лаборатории обновлён')],
-  }));
-}
-
 export async function previewProtocol(protocolId: string): Promise<Blob> {
   const protocol = await getProtocol(protocolId);
   updateStored(protocolId, (item) => ({ ...item, history: [...(item.history || []), history('Предпросмотр открыт')] }));

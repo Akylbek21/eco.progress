@@ -113,9 +113,15 @@ export async function getLaboratories(): Promise<LaboratorySummary[]> {
   return extractList(response, ['laboratories', 'items']).map(normalizeLaboratoryProfile);
 }
 
-export async function getLaboratory(id: string): Promise<LaboratoryProfile> {
+const isInvalidLaboratoryId = (id: unknown) => {
+  const value = text(id).trim();
+  return !value || value.toLowerCase() === 'employees';
+};
+
+export async function getLaboratory(id: string | number): Promise<LaboratoryProfile> {
+  if (isInvalidLaboratoryId(id)) throw new Error('Лаборатория не выбрана.');
   if (useMocks) {
-    const item = readMocks().find((profile) => profile.id === id);
+    const item = readMocks().find((profile) => profile.id === text(id));
     if (!item) throw new Error('Карточка лаборатории не найдена.');
     return structuredClone(item);
   }
@@ -126,8 +132,9 @@ export async function getLaboratory(id: string): Promise<LaboratoryProfile> {
   return normalizeLaboratoryProfile(extractItem(response, ['laboratory', 'profile']));
 }
 
-export async function getLaboratoryEmployees(id: string): Promise<LaboratoryEmployee[]> {
-  if (useMocks) return readMocks().find((profile) => profile.id === id)?.employees.filter((employee) => employee.active) || [];
+export async function getLaboratoryEmployees(id: string | number): Promise<LaboratoryEmployee[]> {
+  if (isInvalidLaboratoryId(id)) return [];
+  if (useMocks) return readMocks().find((profile) => profile.id === text(id))?.employees.filter((employee) => employee.active) || [];
   const response = await requestWithSettingsFallback(
     () => api.get<ApiResponse<unknown> | unknown>(`/laboratories/${id}/employees`, { params: { status: 'ACTIVE' } }),
     () => api.get<ApiResponse<unknown> | unknown>(`/settings/laboratories/${id}/employees`, { params: { status: 'ACTIVE' } }),
@@ -137,11 +144,17 @@ export async function getLaboratoryEmployees(id: string): Promise<LaboratoryEmpl
 
 export async function getEligibleLaboratoryEmployees(): Promise<LaboratoryEmployee[]> {
   if (useMocks) return demoEmployees;
-  const response = await requestWithSettingsFallback(
-    () => api.get<ApiResponse<unknown> | unknown>('/laboratories/employees', { params: { status: 'ACTIVE' } }),
-    () => api.get<ApiResponse<unknown> | unknown>('/staff/employees', { params: { status: 'ACTIVE' } }),
-  );
-  return extractList(response, ['employees', 'users', 'items']).map(normalizeLaboratoryEmployee).filter((employee) => employee.active);
+  try {
+    const laboratories = await getLaboratories();
+    const employees = await Promise.all(laboratories.map((laboratory) => getLaboratoryEmployees(laboratory.id)));
+    const unique = new Map<string, LaboratoryEmployee>();
+    employees.flat().forEach((employee) => unique.set(employee.userId || employee.id, employee));
+    return Array.from(unique.values()).filter((employee) => employee.active);
+  } catch (error) {
+    if (![404, 405].includes(getApiStatus(error) || 0)) throw error;
+    const response = await api.get<ApiResponse<unknown> | unknown>('/staff/employees', { params: { status: 'ACTIVE' } });
+    return extractList(response, ['employees', 'users', 'items']).map(normalizeLaboratoryEmployee).filter((employee) => employee.active);
+  }
 }
 
 export async function saveLaboratory(payload: LaboratoryProfile): Promise<LaboratoryProfile> {

@@ -69,7 +69,6 @@ export interface ProtocolService {
     signal?: AbortSignal;
   }): Promise<WeatherConditions>;
   calculateProtocol(protocolId: string): Promise<Protocol>;
-  refreshProtocolLaboratoryData(protocolId: string): Promise<Protocol>;
 }
 
 export const useProtocolMocks = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
@@ -122,7 +121,6 @@ const protocolService: ProtocolService = {
   searchPollutants: async (query, params) => (await implementation()).searchPollutants(query, params),
   getWeatherConditions: async (params) => (await implementation()).getWeatherConditions(params),
   calculateProtocol: async (protocolId) => (await implementation()).calculateProtocol(protocolId),
-  refreshProtocolLaboratoryData: async (protocolId) => (await implementation()).refreshProtocolLaboratoryData(protocolId),
 };
 
 export default protocolService;

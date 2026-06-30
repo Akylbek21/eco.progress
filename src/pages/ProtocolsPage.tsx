@@ -50,9 +50,9 @@ const ProtocolsPage = () => {
     setLoading(true);
     setError('');
     try {
-      const [items, templateItems] = await Promise.all([protocolService.getProtocols(), protocolService.getProtocolTemplates()]);
+      const items = await protocolService.getProtocols();
       setProtocols(items);
-      setTemplates(templateItems.length ? templateItems : protocolTemplates);
+      setTemplates(protocolTemplates);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить протоколы');
     } finally {

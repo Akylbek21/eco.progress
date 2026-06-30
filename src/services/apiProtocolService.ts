@@ -228,8 +228,8 @@ export const normalizePollutant = (raw: unknown): Pollutant => {
   const source = asRecord(raw);
   return {
     id: pick(source, ['id', '_id']),
-    code: pick(source, ['code', 'pollutantCode', 'substanceCode']),
-    name: pick(source, ['name', 'nameRu', 'nameKz', 'indicator', 'indicatorName', 'indicatorNameRu', 'indicatorNameKz', 'title']),
+    code: pick(source, ['code', 'pollutantCode', 'substanceCode', 'indicatorCode', 'referenceCode']),
+    name: pick(source, ['name', 'nameRu', 'nameKz', 'indicator', 'indicatorName', 'indicatorNameRu', 'indicatorNameKz', 'pollutantName', 'substanceName', 'title']),
     cas: pick(source, ['cas', 'casNumber']),
     formula: pick(source, ['formula', 'chemicalFormula']),
     unit: pick(source, ['unit']),
@@ -243,20 +243,33 @@ const normalizeNormativeRecord = (raw: unknown): NormativeRecord => {
   return {
     id: pick(source, ['id', '_id']),
     templateId: pick(source, ['templateId', 'templateCode']).toLowerCase() as NormativeRecord['templateId'],
-    code: pick(source, ['code']),
-    pollutantCode: pick(source, ['pollutantCode', 'pollutant_code', 'substanceCode']),
-    researchObject: pick(source, ['researchObject', 'environment']),
-    environment: pick(source, ['environment', 'researchObject']),
-    indicator: pick(source, ['indicator', 'indicatorName', 'indicatorNameRu', 'indicatorNameKz', 'name', 'nameRu', 'nameKz']),
-    unit: pick(source, ['unit']),
-    normativeType: pick(source, ['normativeType', 'type']),
+    code: pick(source, ['code', 'pollutantCode', 'substanceCode', 'indicatorCode', 'referenceCode']),
+    pollutantCode: pick(source, ['pollutantCode', 'pollutant_code', 'substanceCode', 'code', 'indicatorCode', 'referenceCode']),
+    indicatorName: pick(source, ['indicatorName', 'indicatorNameRu', 'name', 'nameRu', 'indicator']),
+    pollutantName: pick(source, ['pollutantName', 'substanceName', 'indicatorName', 'name']),
+    researchObject: pick(source, ['researchObject', 'environment', 'object', 'objectName', 'medium', 'sampleType']),
+    environment: pick(source, ['environment', 'researchObject', 'medium', 'sampleType']),
+    indicator: pick(source, ['indicator', 'indicatorName', 'indicatorNameRu', 'indicatorNameKz', 'name', 'nameRu', 'nameKz', 'pollutantName', 'substanceName']),
+    cas: pick(source, ['cas', 'casNumber']),
+    casNumber: pick(source, ['casNumber', 'cas']),
+    formula: pick(source, ['formula', 'chemicalFormula']),
+    chemicalFormula: pick(source, ['chemicalFormula', 'formula']),
+    unit: pick(source, ['unit', 'measurementUnit', 'resultUnit']),
+    normativeType: pick(source, ['normativeType', 'type', 'limitType', 'category']),
+    normativeSubType: pick(source, ['normativeSubType', 'normativeSubtype', 'subType', 'subtype']),
+    subtype: pick(source, ['subtype', 'subType', 'normativeSubType', 'normativeSubtype']),
     value: pick(source, ['value', 'normative', 'normativeValue']),
     min: pick(source, ['min', 'minValue', 'normativeMin']),
     max: pick(source, ['max', 'maxValue', 'normativeMax']),
     comparisonType: (pick(source, ['comparisonType']) || 'LESS_OR_EQUAL') as NormativeRecord['comparisonType'],
-    normativeDocument: pick(source, ['normativeDocument', 'document']),
-    testingMethod: pick(source, ['testingMethod']),
-    samplingMethod: pick(source, ['samplingMethod']),
+    normativeDocument: pick(source, ['normativeDocument', 'document', 'documentName', 'standard']),
+    hazardClass: pick(source, ['hazardClass', 'dangerClass', 'hazard', 'hazardClassName']),
+    limitingIndicator: pick(source, ['limitingIndicator', 'limitingSign', 'lpv', 'limitingFactor']),
+    source: pick(source, ['source', 'sourceName', 'dataSource', 'normativeDocument', 'document', 'documentName']),
+    sourceFile: pick(source, ['sourceFile', 'sourceFileName', 'fileName', 'importFileName', 'excelFileName', 'workbookName']),
+    importFileName: pick(source, ['importFileName', 'fileName', 'sourceFile', 'excelFileName', 'workbookName']),
+    testingMethod: pick(source, ['testingMethod', 'method', 'methodName', 'measurementMethod']),
+    samplingMethod: pick(source, ['samplingMethod', 'sampleMethod', 'samplingMethodName']),
     validFrom: pick(source, ['validFrom']),
     validUntil: pick(source, ['validUntil']),
     version: pick(source, ['version']),
@@ -264,6 +277,56 @@ const normalizeNormativeRecord = (raw: unknown): NormativeRecord => {
     active: source.active !== false,
     archived: source.archived === true || source.status === 'ARCHIVED',
   };
+};
+
+const normalizeNormativeText = (value: unknown) => String(value || '').trim().toLowerCase().replace(/ё/g, 'е');
+const demoNormativeIndicators = ['e.coli', 'пыль', 'железо', 'шум', 'диоксид азота'];
+const demoNormativeSources = ['сэм рк (демо)', 'demo', 'демо'];
+const hasExcelNormativeSource = (item: NormativeRecord) => [
+  item.sourceFile,
+  item.importFileName,
+  item.source,
+  item.normativeDocument,
+].some((value) => {
+  const text = normalizeNormativeText(value);
+  return text.includes('.xls') || text.includes('.xlsx') || text.includes('with_pollutant_codes') || text.includes('sourcefile');
+});
+const isDemoNormativeRecord = (item: NormativeRecord) => {
+  const sourceText = normalizeNormativeText([item.source, item.normativeDocument].filter(Boolean).join(' '));
+  const indicatorText = normalizeNormativeText([item.indicator, item.indicatorName, item.pollutantName].filter(Boolean).join(' '));
+  return demoNormativeSources.some((marker) => sourceText.includes(marker))
+    || demoNormativeIndicators.some((indicator) => indicatorText === indicator || indicatorText.includes(indicator));
+};
+const isVisibleNormativeRecord = (item: NormativeRecord) => hasExcelNormativeSource(item) && !isDemoNormativeRecord(item);
+
+const extractNormativeRecords = (response: unknown): NormativeRecord[] => {
+  const map = new Map<string, NormativeRecord>();
+  [
+    extractList(response, ['records']),
+    extractList(response, ['normatives']),
+    extractList(response, ['items']),
+    extractList(response, ['results']),
+    extractList(response, ['content']),
+  ].flat().map(normalizeNormativeRecord).filter(isVisibleNormativeRecord).forEach((item, index) => {
+    const key = item.id || `${item.pollutantCode || item.code}-${item.indicator}-${item.normativeDocument}-${index}`;
+    map.set(key, item);
+  });
+  return Array.from(map.values());
+};
+
+const extractPollutants = (response: unknown): Pollutant[] => {
+  const map = new Map<string, Pollutant>();
+  [
+    extractList(response, ['pollutants']),
+    extractList(response, ['records']),
+    extractList(response, ['normatives']),
+    extractList(response, ['items']),
+    extractList(response, ['results']),
+    extractList(response, ['content']),
+  ].flat().map(normalizePollutant).filter((item) => item.code || item.name).forEach((item, index) => {
+    map.set(item.id || `${item.code}-${item.name}-${index}`, item);
+  });
+  return Array.from(map.values());
 };
 
 const normalizeCalculationDetails = (raw: unknown): CalculationDetails => {
@@ -535,20 +598,20 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
       testingBasis: pick(organization, ['testingBasis', 'basis']) || pick(source, ['testingBasis', 'testing_basis']),
     },
     laboratory: {
-      laboratoryId: pick(laboratory, ['laboratoryId', 'id']),
-      laboratoryName: pick(laboratory, ['laboratoryName', 'name']),
-      legalName: pick(laboratory, ['legalName']),
-      bin: pick(laboratory, ['bin']),
-      laboratoryAddress: pick(laboratory, ['laboratoryAddress', 'address']),
-      phone: pick(laboratory, ['phone']),
+      laboratoryId: pick(laboratory, ['laboratoryId', 'id']) || pick(source, ['laboratoryId', 'laboratory_id', 'labId']),
+      laboratoryName: pick(laboratory, ['laboratoryName', 'name', 'legalName']) || pick(source, ['laboratoryName']),
+      legalName: pick(laboratory, ['legalName', 'fullName']),
+      bin: pick(laboratory, ['bin', 'iin', 'taxId']),
+      laboratoryAddress: pick(laboratory, ['laboratoryAddress', 'address', 'legalAddress']),
+      phone: pick(laboratory, ['phone', 'phoneNumber']),
       email: pick(laboratory, ['email']),
-      accreditationNumber: pick(laboratory, ['accreditationNumber', 'certificateNumber']),
-      accreditationIssuedAt: pick(laboratory, ['accreditationIssuedAt', 'certificateIssuedAt']),
-      accreditationValidUntil: pick(laboratory, ['accreditationValidUntil', 'certificateValidUntil']),
+      accreditationNumber: pick(laboratory, ['accreditationNumber', 'certificateNumber', 'certificateNo', 'accreditationCertificateNumber']),
+      accreditationIssuedAt: pick(laboratory, ['accreditationIssuedAt', 'certificateIssuedAt', 'accreditationDate']),
+      accreditationValidUntil: pick(laboratory, ['accreditationValidUntil', 'certificateValidUntil', 'validUntil', 'certificateExpiresAt']),
       directorId: pick(laboratory, ['directorId']),
       director: pick(laboratory, ['director', 'directorName']),
       laboratoryHeadId: pick(laboratory, ['laboratoryHeadId', 'headId']),
-      laboratoryHead: pick(laboratory, ['laboratoryHead', 'head', 'laboratoryHeadName']),
+      laboratoryHead: pick(laboratory, ['laboratoryHead', 'head', 'laboratoryHeadName', 'headName']),
       executorId: pick(laboratory, ['executorId']) || pick(source, ['executorId', 'executor_id']),
       executor: pick(laboratory, ['executor', 'executorName']) || pick(source, ['executor']),
       logoUrl: pick(laboratory, ['logoUrl', 'logo']),
@@ -652,7 +715,7 @@ const toApiResultPayload = (payload: ProtocolResultPayload) => {
   };
   delete mapped.measurementDeviceId;
   delete mapped.factorType;
-  return { measurementDeviceId, normativeId, values: mapped };
+  return { ...mapped, measurementDeviceId, normativeId, values: mapped };
 };
 
 const isProtocolLike = (value: unknown) => {
@@ -916,22 +979,28 @@ export async function removeProtocolMeasurementDevice(protocolId: string, device
 export async function searchNormative(params: Record<string, string>): Promise<NormativeSearchResult> {
   const { testingDate, ...rest } = params;
   const query = params.query || [params.code || params.pollutantCode, params.indicator].filter(Boolean).join(' ').trim();
-  const response = await api.get<ApiResponse<NormativeSearchResult> | NormativeSearchResult>('/normatives/search', {
-    params: {
-      ...rest,
-      query,
-      q: params.q || query,
-      code: params.code || params.pollutantCode || undefined,
-      pollutantCode: params.pollutantCode || params.code || undefined,
-      indicator: params.indicator || undefined,
-      templateId: params.templateId || undefined,
-      subtype: params.subtype || undefined,
-      unit: params.unit || undefined,
-      objectId: params.objectId || undefined,
-      date: params.date || testingDate || undefined,
-    },
-  });
-  const candidates = extractList(response, ['normatives', 'items']).map(normalizeNormativeRecord);
+  const requestParams = {
+    ...rest,
+    search: params.search || query,
+    query,
+    q: params.q || query,
+    code: params.code || params.pollutantCode || undefined,
+    pollutantCode: params.pollutantCode || params.code || undefined,
+    indicator: params.indicator || undefined,
+    templateId: params.templateId || undefined,
+    subtype: params.subtype || undefined,
+    unit: params.unit || undefined,
+    objectId: params.objectId || undefined,
+    date: params.date || testingDate || undefined,
+  };
+  let response: ApiResponse<NormativeSearchResult> | NormativeSearchResult | unknown;
+  try {
+    response = await api.get<ApiResponse<NormativeSearchResult> | NormativeSearchResult>('/normatives/search', { params: requestParams });
+  } catch (error) {
+    if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
+    response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams });
+  }
+  const candidates = extractNormativeRecords(response);
   const item = extractItem(response) as NormativeSearchResult;
   const normative = item.normative ? normalizeNormativeRecord(item.normative) : undefined;
   if (candidates.length) {
@@ -951,13 +1020,13 @@ export async function searchPollutants(query: string, params: Record<string, str
     const response = await api.get<ApiResponse<unknown> | unknown>('/pollutants/search', {
       params: { ...params, query, q: query },
     });
-    return extractList(response, ['pollutants', 'items', 'results']).map(normalizePollutant);
+    return extractPollutants(response);
   } catch (error) {
     if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
     const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/search', {
       params: { ...params, query, q: query },
     });
-    return extractList(response, ['normatives', 'items', 'results']).map((item) => {
+    return extractNormativeRecords(response).map((item) => {
       const source = asRecord(item);
       return normalizePollutant({
         id: source.pollutantId || source.id,
@@ -1048,11 +1117,6 @@ export async function getWeatherConditions(params: {
 }
 
 export async function calculateProtocol(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`);
-  return protocolFromActionResponse(protocolId, unwrapApiResponse<unknown>(response));
-}
-
-export async function refreshProtocolLaboratoryData(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/refresh-laboratory-data`);
-  return protocolFromActionResponse(protocolId, response);
+  await calculateProtocolSummary(protocolId);
+  return getProtocol(protocolId);
 }
