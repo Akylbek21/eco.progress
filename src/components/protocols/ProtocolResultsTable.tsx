@@ -138,8 +138,14 @@ const normativeValuesFromRecord = (normative: NormativeRecord, templateId: Proto
     normativeId: normative.id,
     sourceDocumentCode: normative.sourceDocumentCode || sourceDocumentCodeForTemplate(templateId, physicalFactorTemplateIds.includes(templateId)),
     sourceDocumentName: normative.sourceDocumentName || normative.normativeDocument || '',
+    documentNumber: normative.documentNumber || '',
+    documentDate: normative.documentDate || '',
     appendixNo: normative.appendixNo || '',
     tableNo: normative.tableNo || '',
+    matrixType: normative.matrixType || '',
+    assessmentCategory: normative.assessmentCategory || '',
+    pollutionDegree: normative.pollutionDegree || '',
+    formType: normative.formType || '',
     factorType: normative.factorType || '',
     factorCode: normative.factorCode || normative.code || normative.pollutantCode || '',
     season: normative.season || '',
@@ -158,6 +164,7 @@ const normativeValuesFromRecord = (normative: NormativeRecord, templateId: Proto
     unit,
     comparisonType: normative.comparisonType || 'LESS_OR_EQUAL',
     normativeDocument: normative.normativeDocument || normative.sourceDocumentName || normative.sourceDocumentCode || '',
+    limitingIndicator: normative.limitingIndicator || '',
     testingMethod: normative.testingMethod || '',
   };
 };
@@ -285,9 +292,18 @@ const ProtocolResultsTable = ({
   const searchRequestRef = useRef(0);
   const canUseAdvanced = user?.role === 'ADMIN' || user?.role === 'HEAD' || user?.role === 'DIRECTOR';
   const isPhysicalFactors = physicalFactorTemplateIds.includes(templateId);
+  const isSoilProtocol = templateId === 'soil';
   const isChemicalProtocol = chemicalTemplateIds.includes(templateId);
   const physicalSubtype = physicalSubtypeForTemplate(templateId, subtype);
   const sourceDocumentCode = sourceDocumentCodeForTemplate(templateId, isPhysicalFactors);
+
+  const filterNormativeCandidates = (items: NormativeRecord[]) => items.filter((item) => {
+    if (!isSoilProtocol) return true;
+    return item.templateId === 'soil'
+      && item.sourceDocumentCode === 'DSM_32'
+      && item.comparisonType !== 'INFO'
+      && String(item.normativeType || '').toUpperCase() === 'PDK';
+  });
 
   const buildNormativeSearchParams = (value: string, pollutant?: Pollutant): Record<string, string> => {
     const code = pollutant?.code || value;
@@ -304,6 +320,11 @@ const ProtocolResultsTable = ({
       date: testingDate,
       sourceDocumentCode,
     };
+    if (isSoilProtocol) {
+      params.templateId = 'soil';
+      params.sourceDocumentCode = 'DSM_32';
+      params.normativeType = 'PDK';
+    }
     if (isPhysicalFactors) {
       params.factorType = physicalSubtype;
       params.factorCode = code;
@@ -363,7 +384,7 @@ const ProtocolResultsTable = ({
     setNormativeSearchDone(false);
     try {
       const found = await protocolService.searchNormative(buildNormativeSearchParams(value));
-      const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
+      const candidates = filterNormativeCandidates(found.normatives || found.items || (found.normative ? [found.normative] : []));
       setNormativeResults(candidates);
       setNormativeSearchDone(true);
       if (!candidates.length) onNotify('Норматив не найден. Проверьте код или добавьте норматив в справочник.', 'warning');
@@ -448,13 +469,13 @@ const ProtocolResultsTable = ({
       try {
         const found = await protocolService.searchNormative(buildNormativeSearchParams(value));
         if (requestId !== searchRequestRef.current) return;
-        const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
+        const candidates = filterNormativeCandidates(found.normatives || found.items || (found.normative ? [found.normative] : []));
         if (candidates.length) {
           setSuggestions(candidates.map(normativeToSuggestion).slice(0, 12));
           setSearchState('ready');
           return;
         }
-        const apiItems = isPhysicalFactors ? [] : (await protocolService.searchPollutants(value, {
+        const apiItems = (isPhysicalFactors || isSoilProtocol) ? [] : (await protocolService.searchPollutants(value, {
           templateId,
           subtype: subtype || '',
           code: value,
@@ -477,7 +498,7 @@ const ProtocolResultsTable = ({
       }
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [query, templateId, subtype, objectId, testingDate, isPhysicalFactors, sourceDocumentCode, physicalSubtype, physicalConditions]);
+  }, [query, templateId, subtype, objectId, testingDate, isPhysicalFactors, isSoilProtocol, sourceDocumentCode, physicalSubtype, physicalConditions]);
 
   const search = (value: string) => {
     setQuery(value);
@@ -485,9 +506,9 @@ const ProtocolResultsTable = ({
 
   const searchNow = async (value: string) => {
     const found = await protocolService.searchNormative(buildNormativeSearchParams(value));
-    const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
+    const candidates = filterNormativeCandidates(found.normatives || found.items || (found.normative ? [found.normative] : []));
     if (candidates.length) return candidates.map(normativeToSuggestion).slice(0, 12);
-    const apiItems = isPhysicalFactors ? [] : (await protocolService.searchPollutants(value, {
+    const apiItems = (isPhysicalFactors || isSoilProtocol) ? [] : (await protocolService.searchPollutants(value, {
       templateId,
       subtype: subtype || '',
       code: value,
@@ -495,6 +516,7 @@ const ProtocolResultsTable = ({
       objectId: objectId ? String(objectId) : '',
       sourceDocumentCode,
     })).slice(0, 8);
+    if (isSoilProtocol) return [];
     return apiItems.length || !isPhysicalFactors ? apiItems : filterPhysicalFactorIndicators(value, subtype).slice(0, 8);
   };
 
@@ -509,7 +531,7 @@ const ProtocolResultsTable = ({
         if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
         return { found: false, normatives: [], items: [], normative: undefined };
       });
-      const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
+      const candidates = filterNormativeCandidates(found.normatives || found.items || (found.normative ? [found.normative] : []));
       const normative = selectedNormative || (candidates.length === 1 ? candidates[0] : undefined);
       if (!normative) {
         onNotify(candidates.length > 1 ? 'Выберите конкретный норматив перед вводом результата' : (isPhysicalFactors ? physicalNormativeNotFoundMessage : normativeNotFoundMessage), 'warning');
@@ -715,7 +737,7 @@ const ProtocolResultsTable = ({
         ...buildNormativeSearchParams(`${pollutantCode(row)} ${indicator(row)}`.trim(), { code: pollutantCode(row), name: indicator(row), unit: unit(row) }),
         unit: unit(row),
       });
-      const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
+      const candidates = filterNormativeCandidates(found.normatives || found.items || (found.normative ? [found.normative] : []));
       if (!candidates.length) {
         onNotify(isPhysicalFactors ? physicalNormativeNotFoundMessage : normativeNotFoundMessage, 'warning');
         return;
@@ -1034,6 +1056,45 @@ const ProtocolResultsTable = ({
               </tr>;
             })}</tbody>
           </table>
+        ) : isSoilProtocol ? (
+        <table className="min-w-[1180px] w-full text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>
+            {!readOnly && <th className="px-3 py-3"><input type="checkbox" checked={rows.length > 0 && selected.length === rows.length} onChange={(event) => setSelected(event.target.checked ? rows.map((row) => row.id) : [])} /></th>}
+            <th className="px-3 py-3">Вещество</th>
+            <th className="px-3 py-3">Форма</th>
+            <th className="bg-slate-100 px-3 py-3">Факт</th>
+            <th className="bg-slate-100 px-3 py-3">Норматив</th>
+            <th className="px-3 py-3">Ед.</th>
+            <th className="px-3 py-3">Лимитирующий показатель</th>
+            <th className="bg-slate-100 px-3 py-3">Вывод</th>
+            <th className="px-3 py-3">Документ</th>
+            <th className="px-3 py-3 text-right">Действия</th>
+          </tr></thead>
+          <tbody className="divide-y divide-slate-100">{rows.map((row) => {
+            const calculationLabel = calculationStatusLabel(row.calculationStatus || valueOf(row, ['calculationStatus']));
+            const documentLabel = [
+              normativeDocumentLabel(row),
+              valueOf(row, ['tableNo']) ? `табл. ${valueOf(row, ['tableNo'])}` : '',
+            ].filter(Boolean).join(', ');
+            return <tr key={row.id} className="align-top hover:bg-slate-50">
+              {!readOnly && <td className="px-3 py-3"><input type="checkbox" checked={selected.includes(row.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, row.id] : current.filter((id) => id !== row.id))} /></td>}
+              <td className="px-3 py-3"><p className="font-bold text-slate-900">{indicator(row) || '—'}</p><p className="mt-1 text-xs font-black text-eco-800">{pollutantCode(row) || '—'}</p>{measurementPlace(row) && <p className="mt-1 text-xs text-slate-500">{measurementPlace(row)}</p>}</td>
+              <td className="px-3 py-3">{valueOf(row, ['formType', 'aggregateState', 'normativeSubType', 'subtype']) || '—'}</td>
+              <td className="bg-slate-50 px-3 py-3"><div className={automaticClass}>{officialResult(row, templateId) || 'Ожидает ввод'} {officialResult(row, templateId) && unit(row)}</div></td>
+              <td className="bg-slate-50 px-3 py-3">{renderNormativeCell(row)}</td>
+              <td className="px-3 py-3">{unit(row) || '—'}</td>
+              <td className="px-3 py-3">{valueOf(row, ['limitingIndicator']) || '—'}</td>
+              <td className="bg-slate-50 px-3 py-3"><div className="space-y-2"><NormativeStatusBadge status={statusOf(row)} />{calculationLabel && <p className="text-xs font-semibold text-slate-600">{calculationLabel}</p>}</div></td>
+              <td className="px-3 py-3"><div className="max-w-56 text-xs font-semibold text-slate-700">{documentLabel || '—'}</div></td>
+              <td className="px-3 py-3"><div className="flex flex-wrap justify-end gap-1">
+                <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => setRawRow(row)}>Ввести данные</Button>
+                <Button type="button" variant="secondary" className="px-3" disabled={saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
+                <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => openEdit(row)}>Изменить</Button>
+                <Button type="button" variant="secondary" className="px-3 text-rose-700 hover:bg-rose-50" disabled={readOnly || saving} onClick={() => setDeleteRow(row)}>Удалить</Button>
+              </div></td>
+            </tr>;
+          })}</tbody>
+        </table>
         ) : (
         <table className="min-w-[1320px] w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>

@@ -246,8 +246,14 @@ const normalizeNormativeRecord = (raw: unknown): NormativeRecord => {
     templateId: pick(source, ['templateId', 'templateCode']).toLowerCase() as NormativeRecord['templateId'],
     sourceDocumentCode: pick(source, ['sourceDocumentCode', 'source_document_code', 'documentCode', 'dsmCode']),
     sourceDocumentName: pick(source, ['sourceDocumentName', 'source_document_name', 'documentName', 'document']),
+    documentNumber: pick(source, ['documentNumber', 'document_number', 'orderNumber', 'orderNo']),
+    documentDate: pick(source, ['documentDate', 'document_date', 'orderDate']),
     appendixNo: pick(source, ['appendixNo', 'appendixNumber', 'appendix', 'attachmentNo']),
     tableNo: pick(source, ['tableNo', 'tableNumber', 'table']),
+    matrixType: pick(source, ['matrixType', 'matrix_type']),
+    assessmentCategory: pick(source, ['assessmentCategory', 'assessment_category']),
+    pollutionDegree: pick(source, ['pollutionDegree', 'pollution_degree']),
+    formType: pick(source, ['formType', 'form_type', 'form', 'normativeSubType', 'normativeSubtype']),
     factorType: pick(source, ['factorType', 'factor_type', 'subtype', 'physicalFactorType']),
     factorCode: pick(source, ['factorCode', 'factor_code', 'indicatorCode', 'code']),
     roomType: pick(source, ['roomType', 'room_type']),
@@ -297,25 +303,15 @@ const normalizeNormativeRecord = (raw: unknown): NormativeRecord => {
   };
 };
 
-const normalizeNormativeText = (value: unknown) => String(value || '').trim().toLowerCase().replace(/ё/g, 'е');
-const demoNormativeIndicators = ['e.coli', 'пыль', 'железо', 'шум', 'диоксид азота'];
-const demoNormativeSources = ['сэм рк (демо)', 'demo', 'демо'];
 const hasExcelNormativeSource = (item: NormativeRecord) => [
   item.sourceFile,
   item.importFileName,
   item.source,
   item.normativeDocument,
 ].some((value) => {
-  const text = normalizeNormativeText(value);
+  const text = String(value || '').trim().toLowerCase().replace(/ё/g, 'е');
   return text.includes('.xls') || text.includes('.xlsx') || text.includes('with_pollutant_codes') || text.includes('sourcefile');
 });
-const isDemoNormativeRecord = (item: NormativeRecord) => {
-  const sourceText = normalizeNormativeText([item.source, item.normativeDocument].filter(Boolean).join(' '));
-  const indicatorText = normalizeNormativeText([item.indicator, item.indicatorName, item.pollutantName].filter(Boolean).join(' '));
-  return demoNormativeSources.some((marker) => sourceText.includes(marker))
-    || demoNormativeIndicators.some((indicator) => indicatorText === indicator || indicatorText.includes(indicator));
-};
-const isVisibleNormativeRecord = (item: NormativeRecord) => !isDemoNormativeRecord(item);
 
 const extractNormativeRecords = (response: unknown): NormativeRecord[] => {
   const map = new Map<string, NormativeRecord>();
@@ -325,7 +321,7 @@ const extractNormativeRecords = (response: unknown): NormativeRecord[] => {
     extractList(response, ['items']),
     extractList(response, ['results']),
     extractList(response, ['content']),
-  ].flat().map(normalizeNormativeRecord).filter(isVisibleNormativeRecord).forEach((item, index) => {
+  ].flat().map(normalizeNormativeRecord).forEach((item, index) => {
     const key = item.id || `${item.pollutantCode || item.code}-${item.indicator}-${item.normativeDocument}-${index}`;
     map.set(key, item);
   });

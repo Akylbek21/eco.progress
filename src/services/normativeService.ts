@@ -16,13 +16,6 @@ const firstString = (...values: unknown[]) => {
   return '';
 };
 const normalizeText = (value: unknown) => stringValue(value).trim().toLowerCase().replace(/ё/g, 'е');
-const demoSourceMarkers = ['сэм рк (демо)', 'сем рк (демо)', 'demo', 'демо', 'mock'];
-const isDemoNormative = (item: NormativeRecord) => {
-  const sourceText = normalizeText([item.source, item.sourceFile, item.importFileName].filter(Boolean).join(' '));
-  return demoSourceMarkers.some((marker) => sourceText.includes(marker));
-};
-const isVisibleNormative = (item: NormativeRecord) => !isDemoNormative(item);
-
 const normalizeNormative = (raw: unknown): NormativeRecord => {
   const source = asRecord(raw);
   const pollutant = asRecord(source.pollutant || source.substance || source.indicatorReference);
@@ -54,8 +47,14 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     templateId: firstString(source.templateId, source.templateCode, source.protocolTemplateCode).toLowerCase() as NormativeRecord['templateId'],
     sourceDocumentCode: firstString(source.sourceDocumentCode, source.source_document_code, source.documentCode, source.dsmCode),
     sourceDocumentName: firstString(source.sourceDocumentName, source.source_document_name, source.documentName, source.document),
+    documentNumber: firstString(source.documentNumber, source.document_number, source.orderNumber, source.orderNo),
+    documentDate: firstString(source.documentDate, source.document_date, source.orderDate),
     appendixNo: firstString(source.appendixNo, source.appendixNumber, source.appendix, source.attachmentNo),
     tableNo: firstString(source.tableNo, source.tableNumber, source.table),
+    matrixType: firstString(source.matrixType, source.matrix_type),
+    assessmentCategory: firstString(source.assessmentCategory, source.assessment_category),
+    pollutionDegree: firstString(source.pollutionDegree, source.pollution_degree),
+    formType: firstString(source.formType, source.form_type, source.form, source.normativeSubType, source.normativeSubtype),
     factorType: firstString(source.factorType, source.factor_type, source.subtype, source.physicalFactorType),
     factorCode: firstString(source.factorCode, source.factor_code, source.indicatorCode, source.code),
     roomType: firstString(source.roomType, source.room_type),
@@ -118,7 +117,7 @@ export const extractNormatives = (response: unknown): NormativeRecord[] => {
   const singleRecord = asRecord(single);
   if (singleRecord.id || singleRecord.code || singleRecord.pollutantCode || singleRecord.indicator || singleRecord.indicatorName || singleRecord.name) lists.push([single]);
   const map = new Map<string, NormativeRecord>();
-  lists.flat().map(normalizeNormative).filter(isVisibleNormative).forEach((item, index) => {
+  lists.flat().map(normalizeNormative).forEach((item, index) => {
     const key = item.id || `${item.pollutantCode || item.code}-${item.indicator}-${item.normativeDocument}-${index}`;
     map.set(key, item);
   });
@@ -200,6 +199,17 @@ export type NormativeResourceImportResult = {
 
 export async function importPhysicalFactorsFromResources(): Promise<NormativeResourceImportResult> {
   const response = await api.post<ApiResponse<unknown> | unknown>('/normatives/physical-factors/import-resources');
+  const item = unwrapImportData(response);
+  return {
+    created: Number(item.created ?? item.createdCount ?? item.newNormatives ?? 0),
+    updated: Number(item.updated ?? item.updatedCount ?? item.updatedNormatives ?? 0),
+    warnings: Number(item.warnings ?? item.warningCount ?? item.warningsCount ?? 0),
+    items: extractNormativeRecords(response),
+  };
+}
+
+export async function importDsm32FromResources(): Promise<NormativeResourceImportResult> {
+  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives/dsm32/import-resources');
   const item = unwrapImportData(response);
   return {
     created: Number(item.created ?? item.createdCount ?? item.newNormatives ?? 0),

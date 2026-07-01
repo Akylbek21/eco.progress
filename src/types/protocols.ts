@@ -576,8 +576,14 @@ export type NormativeRecord = {
   templateId: ProtocolTemplateId;
   sourceDocumentCode?: string;
   sourceDocumentName?: string;
+  documentNumber?: string;
+  documentDate?: string;
   appendixNo?: string;
   tableNo?: string;
+  matrixType?: string;
+  assessmentCategory?: string;
+  pollutionDegree?: string;
+  formType?: string;
   factorType?: string;
   factorCode?: string;
   roomType?: string;
@@ -660,6 +666,7 @@ export type DirectoryQuery = {
   factorType?: string;
   appendixNo?: string;
   tableNo?: string;
+  formType?: string;
   normativeType?: string;
   subtype?: string;
   status?: string;

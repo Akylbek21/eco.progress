@@ -27,6 +27,8 @@ type QuickForm = {
   measurementDate: string;
   measurementTime: string;
   measurementPlace: string;
+  sampleNumber: string;
+  samplingDepth: string;
   laboratoryId: string;
   executorId: string;
   season: string;
@@ -133,6 +135,8 @@ const ProtocolCreatePage = () => {
     measurementDate: today(),
     measurementTime: '12:00',
     measurementPlace: '',
+    sampleNumber: '',
+    samplingDepth: '',
     laboratoryId: '',
     executorId: '',
     season: 'COLD',
@@ -151,6 +155,7 @@ const ProtocolCreatePage = () => {
   );
   const selectedSubtype = selectedChoice.key === 'radiation' ? form.radiationSubtype : selectedChoice.subtype;
   const isPhysical = selectedChoice.group === 'physical' || selectedChoice.group === 'radiation';
+  const isSoil = selectedChoice.templateId === 'soil';
   const sourceDocumentCode = sourceDocumentCodeFor(selectedChoice.templateId, isPhysical);
   const selectedCompany = companies.find((item) => item.id === form.companyId);
   const filteredCompanies = useMemo(() => {
@@ -256,6 +261,7 @@ const ProtocolCreatePage = () => {
         const params = {
           templateId: selectedChoice.templateId,
           sourceDocumentCode,
+          normativeType: isSoil ? 'PDK' : '',
           query: value,
           q: value,
           search: value,
@@ -265,9 +271,20 @@ const ProtocolCreatePage = () => {
         };
         const found = await protocolService.searchNormative(params);
         if (requestId !== searchRequestRef.current) return;
-        const normatives = found.normatives || found.items || (found.normative ? [found.normative] : []);
+        const normatives = (found.normatives || found.items || (found.normative ? [found.normative] : []))
+          .filter((item) => !isSoil || (
+            item.templateId === 'soil'
+            && item.sourceDocumentCode === 'DSM_32'
+            && item.comparisonType !== 'INFO'
+            && String(item.normativeType || '').toUpperCase() === 'PDK'
+          ));
         if (normatives.length) {
           setChemicalSuggestions(normatives.map(normalizeNormativeIndicator).slice(0, 10));
+          setSearchDone(true);
+          return;
+        }
+        if (isSoil) {
+          setChemicalSuggestions([]);
           setSearchDone(true);
           return;
         }
@@ -285,7 +302,7 @@ const ProtocolCreatePage = () => {
       }
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [chemicalQuery, selectedChoice.templateId, sourceDocumentCode, isPhysical]);
+  }, [chemicalQuery, selectedChoice.templateId, sourceDocumentCode, isPhysical, isSoil]);
 
   const selectCompany = (company: Company) => {
     setField('companyId', company.id);
@@ -350,8 +367,14 @@ const ProtocolCreatePage = () => {
       normativeId: normative.id,
       sourceDocumentCode: normative.sourceDocumentCode || sourceDocumentCode,
       sourceDocumentName: normative.sourceDocumentName || normative.normativeDocument || '',
+      documentNumber: normative.documentNumber || '',
+      documentDate: normative.documentDate || '',
       appendixNo: normative.appendixNo || '',
       tableNo: normative.tableNo || '',
+      matrixType: normative.matrixType || '',
+      assessmentCategory: normative.assessmentCategory || '',
+      pollutionDegree: normative.pollutionDegree || '',
+      formType: normative.formType || '',
       factorType: normative.factorType || (isPhysical ? selectedSubtype || '' : ''),
       factorCode: normative.factorCode || '',
       normativeType: normative.normativeType || '',
@@ -364,6 +387,7 @@ const ProtocolCreatePage = () => {
       maxValue: normative.max || normative.value || normative.maxOneTimeValue || normative.dailyAverageValue || normative.obuvValue || '',
       comparisonType: normative.comparisonType || 'LESS_OR_EQUAL',
       normativeDocument: normative.normativeDocument || normative.sourceDocumentName || '',
+      limitingIndicator: normative.limitingIndicator || '',
       testingMethod: normative.testingMethod || '',
     };
   };
@@ -403,7 +427,14 @@ const ProtocolCreatePage = () => {
       laboratoryId: form.laboratoryId,
       executorId: form.executorId,
       sourceDocumentCode,
-      conditions: physicalConditionValues(),
+      conditions: isSoil
+        ? {
+          sourceDocumentCode: 'DSM_32',
+          sampleNumber: form.sampleNumber,
+          samplingDepth: form.samplingDepth,
+          samplingPlace: form.measurementPlace,
+        }
+        : physicalConditionValues(),
       measurements: selectedIndicators.map((item) => ({
         factorType: isPhysical ? selectedSubtype || '' : '',
         factorCode: isPhysical ? item.code : item.normative?.factorCode || '',
@@ -418,6 +449,10 @@ const ProtocolCreatePage = () => {
           factorCode: isPhysical ? item.code : item.normative?.factorCode || '',
           indicator: item.name,
           indicatorName: item.name,
+          formType: item.normative?.formType || '',
+          limitingIndicator: item.normative?.limitingIndicator || '',
+          sampleNumber: isSoil ? form.sampleNumber : '',
+          samplingDepth: isSoil ? form.samplingDepth : '',
           cas: item.cas || '',
           formula: item.formula || '',
         },
@@ -520,9 +555,15 @@ const ProtocolCreatePage = () => {
       <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 xl:grid-cols-4">
         <h2 className="text-lg font-black text-slate-900 md:col-span-2 xl:col-span-4">3. Дата и место</h2>
         <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Дата протокола</span><input type="date" value={form.protocolDate} onChange={(event) => setField('protocolDate', event.target.value)} className={inputClass} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Дата измерения</span><input type="date" value={form.measurementDate} onChange={(event) => setField('measurementDate', event.target.value)} className={inputClass} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Дата отбора' : 'Дата измерения'}</span><input type="date" value={form.measurementDate} onChange={(event) => setField('measurementDate', event.target.value)} className={inputClass} /></label>
         <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Время</span><input type="time" value={form.measurementTime} onChange={(event) => setField('measurementTime', event.target.value)} className={inputClass} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Место измерения</span><input value={form.measurementPlace} onChange={(event) => setField('measurementPlace', event.target.value)} placeholder="Например: рабочее место оператора" className={inputClass} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Место отбора' : 'Место измерения'}</span><input value={form.measurementPlace} onChange={(event) => setField('measurementPlace', event.target.value)} placeholder={isSoil ? 'Например: участок 1, точка 3' : 'Например: рабочее место оператора'} className={inputClass} /></label>
+        {isSoil && (
+          <>
+            <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Номер пробы</span><input value={form.sampleNumber} onChange={(event) => setField('sampleNumber', event.target.value)} placeholder="Например: 1/24" className={inputClass} /></label>
+            <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Глубина отбора</span><input value={form.samplingDepth} onChange={(event) => setField('samplingDepth', event.target.value)} placeholder="Например: 0-20 см" className={inputClass} /></label>
+          </>
+        )}
       </section>
 
       {isPhysical && ['MICROCLIMATE', 'NOISE', 'LIGHTING'].includes(String(selectedSubtype)) && (

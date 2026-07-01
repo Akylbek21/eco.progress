@@ -5,7 +5,7 @@ import Modal from '../components/ui/Modal';
 import { templateName } from '../data/protocolTemplates';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { archiveNormative, getNormatives, importNormativesExcel, importPhysicalFactorsFromResources, updateNormative, type NormativeImportPreview } from '../services/normativeService';
+import { archiveNormative, getNormatives, importDsm32FromResources, importNormativesExcel, importPhysicalFactorsFromResources, updateNormative, type NormativeImportPreview } from '../services/normativeService';
 import { getApiStatus } from '../services/apiHelpers';
 import type { NormativeRecord } from '../types/protocols';
 
@@ -30,7 +30,8 @@ const environmentOptions = [
   'Специальные УДМГ',
 ];
 
-const typeOptions = ['ПДК', 'ОБУВ', 'ПДУ', 'ADI', 'Exposure limit'];
+const typeOptions = ['ПДК', 'Оценочная матрица', 'ОБУВ', 'ПДУ', 'ADI', 'Exposure limit'];
+const soilFormOptions = ['подвижная форма', 'водорастворимая форма'];
 const subtypeOptions = ['Максимальная разовая', 'Среднесуточная', 'Среднесменная', 'Разовая', 'Суточная'];
 const sourceDocumentOptions = [
   { value: '', label: 'Документ: все' },
@@ -62,6 +63,8 @@ const typeLabels: Record<string, string> = {
   PDU: 'ПДУ',
   ADI: 'ADI',
   EXPOSURE_LIMIT: 'Exposure limit',
+  ASSESSMENT_MATRIX: 'Оценочная матрица',
+  MATRIX: 'Оценочная матрица',
 };
 
 const subtypeLabels: Record<string, string> = {
@@ -98,6 +101,7 @@ const displayEnvironment = (item: NormativeRecord) =>
   textValue(item.environment, item.researchObject, templateEnvironment[item.templateId], templateName(item.templateId));
 
 const displayType = (item: NormativeRecord) => {
+  if (item.comparisonType === 'INFO' || item.matrixType || item.assessmentCategory || ['2', '3', '4'].includes(textValue(item.tableNo))) return 'Оценочная матрица';
   const raw = textValue(item.normativeType);
   return typeLabels[raw.toUpperCase().replace(/[\s-]+/g, '_')] || raw;
 };
@@ -152,6 +156,15 @@ const itemDocumentText = (item: NormativeRecord) => normalizeSearch([
 const hasDocumentCode = (item: NormativeRecord, code: string) =>
   itemDocumentText(item).includes(code.toLowerCase().replace(/-/g, '_'));
 
+const normalizedDocumentCode = (item: NormativeRecord) =>
+  textValue(item.sourceDocumentCode).toUpperCase().replace(/-/g, '_');
+
+const isDsm32SoilRecord = (item: NormativeRecord) =>
+  item.templateId === 'soil'
+  && normalizedDocumentCode(item) === 'DSM_32'
+  && item.active !== false
+  && !item.archived;
+
 const isAtmosphericAir = (item: NormativeRecord) => {
   const text = itemEnvironmentText(item);
   const isDsm70 = hasDocumentCode(item, 'DSM_70') || hasDocumentCode(item, 'ДСМ_70');
@@ -176,8 +189,7 @@ const isWorkZoneAir = (item: NormativeRecord) => {
 };
 
 const isSoilNormative = (item: NormativeRecord) => {
-  const text = itemEnvironmentText(item);
-  return hasDocumentCode(item, 'DSM_32') || hasDocumentCode(item, 'ДСМ_32') || item.templateId === 'soil' || text.includes('soil') || text.includes('почв');
+  return isDsm32SoilRecord(item);
 };
 
 const isPhysicalNormative = (item: NormativeRecord) => {
@@ -274,6 +286,12 @@ const recordSearchText = (item: NormativeRecord) => normalizeSearch([
   item.chemicalFormula,
   item.hazardClass,
   item.limitingIndicator,
+  item.formType,
+  item.matrixType,
+  item.assessmentCategory,
+  item.pollutionDegree,
+  item.tableNo,
+  item.conditionJson,
   item.maxOneTimeValue,
   item.dailyAverageValue,
   item.singleValue,
@@ -315,6 +333,7 @@ const NormativeDirectoryPage = () => {
   const [factorTypeFilter, setFactorTypeFilter] = useState('');
   const [appendixFilter, setAppendixFilter] = useState('');
   const [tableFilter, setTableFilter] = useState('');
+  const [formTypeFilter, setFormTypeFilter] = useState('');
   const [editing, setEditing] = useState<NormativeRecord | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -337,6 +356,7 @@ const NormativeDirectoryPage = () => {
         factorType: factorTypeFilter || undefined,
         appendixNo: appendixFilter || undefined,
         tableNo: tableFilter || undefined,
+        formType: formTypeFilter || undefined,
         normativeType: typeFilter || undefined,
         subtype: subtypeFilter || undefined,
       }));
@@ -353,7 +373,7 @@ const NormativeDirectoryPage = () => {
   useEffect(() => {
     const timer = window.setTimeout(load, query.trim() ? 300 : 0);
     return () => window.clearTimeout(timer);
-  }, [query, activeTab, sourceDocumentFilter, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, typeFilter, subtypeFilter]);
+  }, [query, activeTab, sourceDocumentFilter, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, formTypeFilter, typeFilter, subtypeFilter]);
 
   const filtered = useMemo(() => items.filter((item) => {
     const terms = normalizeSearch(query).split(/\s+/).filter(Boolean);
@@ -372,11 +392,12 @@ const NormativeDirectoryPage = () => {
     const matchesFactorType = matchesOption(item.factorType || '', factorTypeFilter);
     const matchesAppendix = matchesOption(item.appendixNo || '', appendixFilter);
     const matchesTable = matchesOption(item.tableNo || '', tableFilter);
+    const matchesForm = matchesOption(item.formType || item.normativeSubType || item.subtype || '', formTypeFilter);
     const matchesEnvironment = matchesOption(displayEnvironment(item), environmentFilter);
     const matchesType = matchesOption(displayType(item), typeFilter);
     const matchesSubtype = matchesOption(displaySubtype(item), subtypeFilter);
-    return matchesTab && matchesQuery && matchesDocument && matchesTemplate && matchesFactorType && matchesAppendix && matchesTable && matchesEnvironment && matchesType && matchesSubtype && !item.archived;
-  }), [items, query, activeTab, sourceDocumentFilter, templateFilter, factorTypeFilter, appendixFilter, tableFilter, environmentFilter, typeFilter, subtypeFilter]);
+    return matchesTab && matchesQuery && matchesDocument && matchesTemplate && matchesFactorType && matchesAppendix && matchesTable && matchesForm && matchesEnvironment && matchesType && matchesSubtype && !item.archived;
+  }), [items, query, activeTab, sourceDocumentFilter, templateFilter, factorTypeFilter, appendixFilter, tableFilter, formTypeFilter, environmentFilter, typeFilter, subtypeFilter]);
 
   const groupedRows = useMemo(() => groupNormatives(filtered), [filtered]);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -444,6 +465,20 @@ const NormativeDirectoryPage = () => {
       await load();
     } catch (error) {
       toast.error('Не удалось импортировать ДСМ-15 из resources', error instanceof Error ? error.message : undefined);
+    } finally {
+      setImportingResources(false);
+    }
+  };
+
+  const importDsm32Resources = async () => {
+    if (!canImportResources) return;
+    setImportingResources(true);
+    try {
+      const result = await importDsm32FromResources();
+      toast.success(`ДСМ-32 импортирован: создано ${result.created}, обновлено ${result.updated}`);
+      await load();
+    } catch (error) {
+      toast.error('Не удалось импортировать ДСМ-32', error instanceof Error ? error.message : undefined);
     } finally {
       setImportingResources(false);
     }
@@ -524,6 +559,11 @@ const NormativeDirectoryPage = () => {
               <FileSpreadsheet className="h-4 w-4" /> Импортировать ДСМ-15 из backend resources
             </Button>
           )}
+          {activeTab === 'soil' && canImportResources && (
+            <Button type="button" variant="secondary" disabled={importingResources} onClick={importDsm32Resources}>
+              <FileSpreadsheet className="h-4 w-4" /> Импортировать ДСМ-32
+            </Button>
+          )}
           <Button type="button" variant="secondary" onClick={load}>
             <RefreshCw className="h-4 w-4" /> Обновить
           </Button>
@@ -575,14 +615,22 @@ const NormativeDirectoryPage = () => {
           <option value="">factorType: все</option>
           {factorTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
         </select>
-        {activeTab === 'physical_factors' && (
+        {activeTab === 'soil' && (
+          <select value={formTypeFilter} onChange={(event) => setFormTypeFilter(event.target.value)} className={inputClass}>
+            <option value="">Форма: все</option>
+            {soilFormOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+          </select>
+        )}
+        {(activeTab === 'physical_factors' || activeTab === 'soil') && (
           <>
-            <input
-              value={appendixFilter}
-              onChange={(event) => setAppendixFilter(event.target.value)}
-              placeholder="Приложение"
-              className={inputClass}
-            />
+            {activeTab === 'physical_factors' && (
+              <input
+                value={appendixFilter}
+                onChange={(event) => setAppendixFilter(event.target.value)}
+                placeholder="Приложение"
+                className={inputClass}
+              />
+            )}
             <input
               value={tableFilter}
               onChange={(event) => setTableFilter(event.target.value)}
@@ -644,29 +692,35 @@ const NormativeDirectoryPage = () => {
             </tbody>
           </table>
           ) : activeTab === 'soil' ? (
-          <table className="min-w-[1050px] w-full text-left text-sm">
+          <table className="min-w-[1250px] w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="px-3 py-3">Вещество</th>
+                <th className="px-3 py-3">Тип записи</th>
+                <th className="px-3 py-3">Вещество / показатель</th>
                 <th className="px-3 py-3">Форма</th>
-                <th className="px-3 py-3">ПДК</th>
+                <th className="px-3 py-3">Норматив</th>
                 <th className="px-3 py-3">Ед.</th>
                 <th className="px-3 py-3">Лимитирующий показатель</th>
+                <th className="px-3 py-3">Категория оценки</th>
                 <th className="px-3 py-3">Документ</th>
+                <th className="px-3 py-3">Таблица</th>
                 <th className="px-3 py-3 text-right">Действия</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? Array.from({ length: 5 }).map((_, index) => (
-                <tr key={index} className="animate-pulse">{Array.from({ length: 7 }).map((__, cell) => <td key={cell} className="px-4 py-4"><div className="h-4 rounded bg-slate-100" /></td>)}</tr>
+                <tr key={index} className="animate-pulse">{Array.from({ length: 10 }).map((__, cell) => <td key={cell} className="px-4 py-4"><div className="h-4 rounded bg-slate-100" /></td>)}</tr>
               )) : filtered.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50">
-                  <td className="px-3 py-3 font-bold text-slate-900">{displayCell(item.indicator, item.indicatorName, item.pollutantName)}</td>
-                  <td className="px-3 py-3">{displayCell(item.aggregateState, item.normativeSubType, item.subtype)}</td>
-                  <td className="px-3 py-3 font-semibold">{displayNormativeCell(displayNormative(item))}</td>
+                  <td className="px-3 py-3 font-semibold">{displayType(item) || 'ПДК'}</td>
+                  <td className="px-3 py-3 font-bold text-slate-900">{displayCell(item.assessmentCategory, item.indicator, item.indicatorName, item.pollutantName)}</td>
+                  <td className="px-3 py-3">{displayCell(item.formType, item.aggregateState, item.normativeSubType, item.subtype)}</td>
+                  <td className="px-3 py-3 font-semibold">{item.comparisonType === 'INFO' ? displayCell(item.value, item.conditionJson) : displayNormativeCell(displayNormative(item))}</td>
                   <td className="px-3 py-3">{displayCell(item.unit)}</td>
                   <td className="px-3 py-3">{displayCell(item.limitingIndicator)}</td>
+                  <td className="px-3 py-3">{displayCell(item.assessmentCategory, item.pollutionDegree, item.matrixType)}</td>
                   <td className="px-3 py-3">{displayCell(item.sourceDocumentName, item.sourceDocumentCode, item.normativeDocument)}</td>
+                  <td className="px-3 py-3">{displayCell(item.tableNo)}</td>
                   <td className="px-3 py-3 text-right">{canManage ? <Button type="button" variant="secondary" className="px-3" onClick={() => setEditing(item)}><Edit3 className="h-4 w-4" /></Button> : '-'}</td>
                 </tr>
               ))}
