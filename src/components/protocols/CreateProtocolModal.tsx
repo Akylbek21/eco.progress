@@ -45,13 +45,19 @@ type DraftRow = {
   warning?: string;
 };
 
+type SearchState = 'idle' | 'minLength' | 'searching' | 'empty' | 'ready' | 'error';
+
 const today = () => new Date().toISOString().slice(0, 10);
 const DEFAULT_WEATHER_TIME = '12:00';
+const MIN_SEARCH_LENGTH = 3;
+const SEARCH_DEBOUNCE_MS = 700;
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = `${inputClass} bg-slate-100 text-slate-600`;
 const allowedTemplateIds = new Set(protocolTemplates.map((item) => item.id));
 const searchUnavailableMessage = 'Поиск временно недоступен. Добавьте показатель вручную.';
 const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
+const notFoundSearchMessage = 'Норматив или показатель не найден. Проверьте код или добавьте норматив в справочник.';
+const canSearch = (value: string) => value.trim().length >= MIN_SEARCH_LENGTH;
 const weatherLabels: Record<WeatherConditionsStatus, string> = {
   IDLE: 'Ожидает даты, времени и объекта',
   LOADING: 'Загрузка условий…',
@@ -60,12 +66,6 @@ const weatherLabels: Record<WeatherConditionsStatus, string> = {
   COORDINATES_MISSING: 'У объекта отсутствуют координаты',
   MANUAL: 'Значения введены вручную',
 };
-const numericOnly = (value: string) => {
-  const normalized = value.trim();
-  if (!/^[+-]?\d+(?:[.,]\d+)?$/.test(normalized)) return false;
-  return !/^0\d{3,}$/.test(normalized);
-};
-
 const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCreate }: Props) => {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
@@ -99,6 +99,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   const [pollutantQuery, setPollutantQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Pollutant[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchState, setSearchState] = useState<SearchState>('idle');
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [sourceParameters, setSourceParameters] = useState<Record<string, string>>({
     flowSpeed: '', ductShape: 'ROUND', diameter: '', width: '', height: '', temperature: '', pressureKpa: '',
@@ -191,30 +192,49 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
 
   useEffect(() => {
     const query = pollutantQuery.trim();
-    if (isPhysicalFactors) {
-      setSuggestions(query.length ? filterPhysicalFactorIndicators(query, subtype).slice(0, 10) : getPhysicalFactorIndicators(subtype).slice(0, 10));
-      setSearching(false);
-      return;
-    }
-    if (query.length < 1 || query.includes(',')) {
-      setSuggestions([]);
-      return;
-    }
     const requestId = ++searchAbortRef.current;
+    if (!query) {
+      setSuggestions([]);
+      setSearching(false);
+      setSearchState('idle');
+      return;
+    }
+    if (!canSearch(query) || query.includes(',') || query.includes(';')) {
+      setSuggestions([]);
+      setSearching(false);
+      setSearchState('minLength');
+      return;
+    }
+    setSuggestions([]);
+    setSearching(false);
+    setSearchState('idle');
     const timer = window.setTimeout(async () => {
       setSearching(true);
+      setSearchState('searching');
       try {
-        const items = await protocolService.searchPollutants(query, { templateId, subtype: subtype || '', objectId });
-        if (requestId === searchAbortRef.current) setSuggestions(items.slice(0, 10));
+        const apiItems = await protocolService.searchPollutants(query, {
+          templateId,
+          subtype: subtype || '',
+          objectId,
+          code: query,
+          pollutantCode: query,
+        });
+        if (requestId === searchAbortRef.current) {
+          const localItems = isPhysicalFactors ? filterPhysicalFactorIndicators(query, subtype).slice(0, 10) : [];
+          const next = (apiItems.length ? apiItems : localItems).slice(0, 10);
+          setSuggestions(next);
+          setSearchState(next.length ? 'ready' : 'empty');
+        }
       } catch (searchError) {
         if (requestId === searchAbortRef.current) {
           if (getApiStatus(searchError) === 500) setError(searchUnavailableMessage);
           setSuggestions([]);
+          setSearchState('error');
         }
       } finally {
         if (requestId === searchAbortRef.current) setSearching(false);
       }
-    }, 350);
+    }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [pollutantQuery, templateId, subtype, objectId, isPhysicalFactors]);
 
@@ -314,42 +334,42 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
     setSuggestions([]);
   };
 
-  const manualPollutantFromText = (text: string): Pollutant => {
-    const value = text.trim();
-    const firstToken = value.split(/\s+/)[0] || value;
-    return { code: firstToken, name: value };
-  };
-
   const addBulk = async () => {
     const tokens = pollutantQuery.split(/[,;]+/).map((item) => item.trim()).filter(Boolean);
     if (!tokens.length) {
       setError('Введите код или название показателя');
       return;
     }
-    if (tokens.some(numericOnly)) {
-      setError('Сначала выберите показатель. Число вводится как результат замера.');
+    if (tokens.some((token) => !canSearch(token))) {
+      setError('Введите минимум 3 символа для поиска');
       return;
     }
     setSearching(true);
     try {
-      const found = isPhysicalFactors
-        ? getPhysicalFactorIndicators(subtype)
-        : await protocolService.searchPollutants(tokens.join(','), { templateId, subtype: subtype || '', objectId }).catch((searchError) => {
-          if (getApiStatus(searchError) === 500) setError(searchUnavailableMessage);
-          return [];
-        });
+      let hasMissing = false;
       for (const token of tokens) {
+        const apiItems = await protocolService.searchPollutants(token, {
+          templateId,
+          subtype: subtype || '',
+          objectId,
+          code: token,
+          pollutantCode: token,
+        }).catch((searchError) => {
+            if (getApiStatus(searchError) === 500) setError(searchUnavailableMessage);
+            return [];
+          });
+        const found = apiItems.length || !isPhysicalFactors ? apiItems : getPhysicalFactorIndicators(subtype);
         const normalized = token.toLowerCase();
         const pollutant = found.find((item) => item.code.toLowerCase() === normalized)
           || found.find((item) => `${item.code} ${item.name}`.toLowerCase().includes(normalized));
         if (!pollutant) {
-          if (isPhysicalFactors) setError('Показатель не найден в локальном списке. Выберите показатель из справочника.');
-          else await addPollutant(manualPollutantFromText(token));
+          hasMissing = true;
+          setError(notFoundSearchMessage);
           continue;
         }
         await addPollutant(pollutant);
       }
-      setError('');
+      if (!hasMissing) setError('');
     } catch (searchError) {
       setError(getApiErrorMessage(searchError, 'Не удалось выполнить массовый поиск веществ'));
     } finally {
@@ -358,12 +378,12 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   };
 
   const addPhysicalMeasurement = async (pollutant?: Pollutant) => {
-    if (!pollutant && numericOnly(pollutantQuery)) {
-      setError('Сначала выберите показатель. Число вводится как результат замера.');
-      return;
-    }
     if (!pollutant && !pollutantQuery.trim()) {
       setSuggestions(getPhysicalFactorIndicators(subtype).slice(0, 10));
+      return;
+    }
+    if (!pollutant && !canSearch(pollutantQuery)) {
+      setError('Введите минимум 3 символа для поиска');
       return;
     }
     const matches = filterPhysicalFactorIndicators(pollutantQuery, subtype);
@@ -452,6 +472,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         templateId,
         subtype: templateId === 'physical_factors' ? subtype || undefined : undefined,
         protocolDate: measurementDate,
+        sampleDate: measurementDate,
         samplingDate: measurementDate,
         testingStartDate: measurementDate,
         testingEndDate: measurementDate,
@@ -642,16 +663,29 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
               <input value={pollutantQuery} onChange={(event) => setPollutantQuery(event.target.value)}
                 onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addBulk(); } }}
                 placeholder={isPhysicalFactors ? 'Показатель: освещённость, шум, температура…' : 'Код или название вещества: 0301, азот…'} className={`${inputClass} pl-10 pr-28`} />
-              <button type="button" disabled={searching} onClick={isPhysicalFactors ? () => addPhysicalMeasurement() : addBulk} className="absolute right-2 top-1.5 rounded-lg bg-eco-700 px-3 py-2 text-xs font-bold text-white">Добавить</button>
+              <button type="button" disabled={searching} onClick={addBulk} className="absolute right-2 top-1.5 rounded-lg bg-eco-700 px-3 py-2 text-xs font-bold text-white">Добавить</button>
             </div>
+            {searchState === 'minLength' && (
+              <div className="mt-2 rounded-xl border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-600">
+                Введите минимум 3 символа для поиска
+              </div>
+            )}
+            {searching && (
+              <div className="mt-2 rounded-xl border border-eco-100 bg-eco-50 p-3 text-sm font-semibold text-eco-800">
+                Поиск...
+              </div>
+            )}
+            {!searching && suggestions.length > 0 && (
+              <p className="mt-2 text-xs font-bold uppercase text-slate-500">Выберите норматив из списка</p>
+            )}
             {suggestions.length > 0 && <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
               {suggestions.map((item) => <button key={`${item.code}-${item.id || item.name}`} type="button" onClick={() => isPhysicalFactors ? addPhysicalMeasurement(item) : addPollutant(item)} className="flex w-full flex-col border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-eco-50 sm:flex-row sm:items-center sm:gap-3">
                 <span className="font-black text-eco-800">{item.code}</span><span className="font-bold text-slate-900">{item.name}</span><span className="text-sm text-slate-500">{item.formula || ''}</span><span className="text-sm text-slate-500">{item.unit || ''}</span>
               </button>)}
             </div>}
-            {isPhysicalFactors && pollutantQuery.trim() && !suggestions.length && (
+            {!searching && searchState === 'empty' && (
               <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
-                Показатель не найден в локальном списке. Выберите показатель из справочника.
+                {notFoundSearchMessage}
               </div>
             )}
             {isPhysicalFactors && !pollutantQuery.trim() && (

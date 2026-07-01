@@ -9,6 +9,16 @@ const STORAGE_KEY = 'eco-progress-mock-laboratories-v1';
 const asRecord = (value: unknown): UnknownRecord => value && typeof value === 'object' ? value as UnknownRecord : {};
 const text = (value: unknown) => value === undefined || value === null ? '' : String(value);
 const bool = (value: unknown, fallback = false) => value === undefined || value === null ? fallback : value === true || value === 'true' || value === 1;
+const isoDate = (value: unknown) => {
+  const raw = text(value).trim();
+  if (!raw) return '';
+  const direct = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (direct) return `${direct[1]}-${direct[2]}-${direct[3]}`;
+  const dotted = raw.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (dotted) return `${dotted[3]}-${dotted[2]}-${dotted[1]}`;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10);
+};
 
 export const normalizeLaboratoryEmployee = (raw: unknown): LaboratoryEmployee => {
   const source = asRecord(raw);
@@ -39,8 +49,8 @@ export const normalizeLaboratoryProfile = (raw: unknown): LaboratoryProfile => {
     phone: text(source.phone),
     email: text(source.email),
     accreditationNumber: text(source.accreditationNumber || source.certificateNumber),
-    accreditationIssuedAt: text(source.accreditationIssuedAt || source.certificateIssuedAt),
-    accreditationValidUntil: text(source.accreditationValidUntil || source.certificateValidUntil),
+    accreditationIssuedAt: isoDate(source.accreditationIssuedAt || source.certificateIssuedAt),
+    accreditationValidUntil: isoDate(source.accreditationValidUntil || source.certificateValidUntil),
     directorId: text(source.directorId || director.id),
     directorName: text(source.directorName || director.fullName || director.name),
     laboratoryHeadId: text(source.laboratoryHeadId || source.headId || head.id),
@@ -132,14 +142,18 @@ export async function getLaboratory(id: string | number): Promise<LaboratoryProf
   return normalizeLaboratoryProfile(extractItem(response, ['laboratory', 'profile']));
 }
 
-export async function getLaboratoryEmployees(id: string | number): Promise<LaboratoryEmployee[]> {
+export async function getLaboratoryEmployees(id: string | number, options: { includeInactive?: boolean } = {}): Promise<LaboratoryEmployee[]> {
   if (isInvalidLaboratoryId(id)) return [];
-  if (useMocks) return readMocks().find((profile) => profile.id === text(id))?.employees.filter((employee) => employee.active) || [];
+  if (useMocks) {
+    const employees = readMocks().find((profile) => profile.id === text(id))?.employees || [];
+    return options.includeInactive ? structuredClone(employees) : employees.filter((employee) => employee.active);
+  }
   const response = await requestWithSettingsFallback(
-    () => api.get<ApiResponse<unknown> | unknown>(`/laboratories/${id}/employees`, { params: { status: 'ACTIVE' } }),
-    () => api.get<ApiResponse<unknown> | unknown>(`/settings/laboratories/${id}/employees`, { params: { status: 'ACTIVE' } }),
+    () => api.get<ApiResponse<unknown> | unknown>(`/laboratories/${id}/employees`, { params: { status: options.includeInactive ? undefined : 'ACTIVE' } }),
+    () => api.get<ApiResponse<unknown> | unknown>(`/settings/laboratories/${id}/employees`, { params: { status: options.includeInactive ? undefined : 'ACTIVE' } }),
   );
-  return extractList(response, ['employees', 'items']).map(normalizeLaboratoryEmployee).filter((employee) => employee.active);
+  const employees = extractList(response, ['employees', 'items']).map(normalizeLaboratoryEmployee);
+  return options.includeInactive ? employees : employees.filter((employee) => employee.active);
 }
 
 export async function getEligibleLaboratoryEmployees(): Promise<LaboratoryEmployee[]> {
@@ -161,7 +175,7 @@ export async function saveLaboratory(payload: LaboratoryProfile): Promise<Labora
   if (useMocks) {
     const items = readMocks();
     const id = payload.id || `laboratory-${Date.now()}`;
-    const saved = { ...payload, id, employees: payload.employees.length ? payload.employees : demoEmployees, updatedAt: new Date().toISOString() };
+    const saved = { ...payload, id, employees: payload.employees || [], updatedAt: new Date().toISOString() };
     const normalized = saved.isDefault
       ? items.map((item) => ({ ...item, isDefault: item.id === id }))
       : items;
@@ -199,6 +213,79 @@ export async function saveLaboratory(payload: LaboratoryProfile): Promise<Labora
   return normalizeLaboratoryProfile(extractItem(response, ['laboratory', 'profile']));
 }
 
+export async function saveLaboratoryEmployee(laboratoryId: string, payload: Partial<LaboratoryEmployee>): Promise<LaboratoryEmployee> {
+  if (isInvalidLaboratoryId(laboratoryId)) throw new Error('Сначала сохраните карточку лаборатории.');
+  if (useMocks) {
+    const items = readMocks();
+    const index = items.findIndex((item) => item.id === laboratoryId);
+    if (index < 0) throw new Error('Карточка лаборатории не найдена.');
+    const employeeId = payload.id || `lab-employee-${Date.now()}`;
+    const saved: LaboratoryEmployee = {
+      id: employeeId,
+      laboratoryId,
+      userId: payload.userId || employeeId,
+      fullName: text(payload.fullName),
+      position: text(payload.position),
+      email: text(payload.email),
+      role: text(payload.role || 'LABORATORY'),
+      active: payload.active !== false,
+    };
+    const employees = items[index].employees || [];
+    const employeeIndex = employees.findIndex((employee) => employee.id === employeeId);
+    if (employeeIndex >= 0) employees[employeeIndex] = saved;
+    else employees.push(saved);
+    items[index] = { ...items[index], employees, updatedAt: new Date().toISOString() };
+    writeMocks(items);
+    return structuredClone(saved);
+  }
+  const body = {
+    userId: payload.userId || null,
+    fullName: payload.fullName || '',
+    position: payload.position || '',
+    email: payload.email || '',
+    role: payload.role || 'LABORATORY',
+    active: payload.active !== false,
+  };
+  const response = payload.id
+    ? await requestWithSettingsFallback(
+      () => api.patch<ApiResponse<unknown> | unknown>(`/laboratories/${laboratoryId}/employees/${payload.id}`, body),
+      () => api.patch<ApiResponse<unknown> | unknown>(`/settings/laboratories/${laboratoryId}/employees/${payload.id}`, body),
+    )
+    : await requestWithSettingsFallback(
+      () => api.post<ApiResponse<unknown> | unknown>(`/laboratories/${laboratoryId}/employees`, body),
+      () => api.post<ApiResponse<unknown> | unknown>(`/settings/laboratories/${laboratoryId}/employees`, body),
+    );
+  return normalizeLaboratoryEmployee(extractItem(response, ['employee', 'item', 'user']));
+}
+
+export async function deactivateLaboratoryEmployee(laboratoryId: string, employeeId: string): Promise<LaboratoryEmployee> {
+  if (isInvalidLaboratoryId(laboratoryId)) throw new Error('Лаборатория не выбрана.');
+  if (useMocks) {
+    const items = readMocks();
+    const index = items.findIndex((item) => item.id === laboratoryId);
+    if (index < 0) throw new Error('Карточка лаборатории не найдена.');
+    const employeeIndex = items[index].employees.findIndex((employee) => employee.id === employeeId);
+    if (employeeIndex < 0) throw new Error('Сотрудник не найден.');
+    items[index].employees[employeeIndex] = { ...items[index].employees[employeeIndex], active: false };
+    writeMocks(items);
+    return structuredClone(items[index].employees[employeeIndex]);
+  }
+  try {
+    const response = await requestWithSettingsFallback(
+      () => api.patch<ApiResponse<unknown> | unknown>(`/laboratories/${laboratoryId}/employees/${employeeId}`, { active: false }),
+      () => api.patch<ApiResponse<unknown> | unknown>(`/settings/laboratories/${laboratoryId}/employees/${employeeId}`, { active: false }),
+    );
+    return normalizeLaboratoryEmployee(extractItem(response, ['employee', 'item', 'user']));
+  } catch (error) {
+    if (![404, 405].includes(getApiStatus(error) || 0)) throw error;
+    const response = await requestWithSettingsFallback(
+      () => api.delete<ApiResponse<unknown> | unknown>(`/laboratories/${laboratoryId}/employees/${employeeId}`),
+      () => api.delete<ApiResponse<unknown> | unknown>(`/settings/laboratories/${laboratoryId}/employees/${employeeId}`),
+    );
+    return normalizeLaboratoryEmployee(extractItem(response, ['employee', 'item', 'user']));
+  }
+}
+
 export async function uploadLaboratoryLogo(id: string, file: File): Promise<LaboratoryProfile> {
   if (useMocks) {
     const items = readMocks();
@@ -223,6 +310,6 @@ export const accreditationState = (validUntil?: string) => {
   if (Number.isNaN(end.getTime())) return { status: 'MISSING' as const, daysLeft: null };
   const daysLeft = Math.ceil((end.getTime() - Date.now()) / 86_400_000);
   if (daysLeft < 0) return { status: 'EXPIRED' as const, daysLeft };
-  if (daysLeft <= 60) return { status: 'EXPIRING' as const, daysLeft };
+  if (daysLeft < 30) return { status: 'EXPIRING' as const, daysLeft };
   return { status: 'VALID' as const, daysLeft };
 };

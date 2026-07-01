@@ -1,10 +1,14 @@
 export type ProtocolStatus = 'DRAFT' | 'READY_FOR_APPROVAL' | 'APPROVED' | 'SIGNED' | 'CANCELLED' | 'REPLACED';
+export type ProtocolResultValue = string | number | null | undefined | Array<string | number | null>;
 
 export type ProtocolTemplateId =
   | 'industrial_emissions'
   | 'water_wastewater'
   | 'ambient_air'
   | 'physical_factors'
+  | 'microclimate'
+  | 'lighting'
+  | 'noise_vibration'
   | 'soil'
   | 'workplace_air'
   | 'vehicle_emissions'
@@ -91,7 +95,7 @@ export type ProtocolResult = {
   calculationMessage?: string;
   warnings?: string[];
   methodTemplate?: MethodTemplateResponse;
-  values: Record<string, string | number | null | undefined>;
+  values: Record<string, ProtocolResultValue>;
 };
 
 export type ProtocolResultRow = ProtocolResult;
@@ -135,10 +139,13 @@ export type LaboratoryProfile = LaboratorySummary & {
 };
 
 export type ProtocolLaboratorySnapshot = {
+  id?: string;
   laboratoryId?: string;
+  name?: string;
   laboratoryName: string;
   legalName?: string;
   bin?: string;
+  address?: string;
   laboratoryAddress: string;
   phone?: string;
   email?: string;
@@ -146,10 +153,13 @@ export type ProtocolLaboratorySnapshot = {
   accreditationIssuedAt?: string;
   accreditationValidUntil: string;
   directorId?: string;
+  directorName?: string;
   director: string;
   laboratoryHeadId?: string;
+  laboratoryHeadName?: string;
   laboratoryHead: string;
   executorId?: string;
+  executorName?: string;
   executor: string;
   logoUrl?: string;
   standardNote?: string;
@@ -325,6 +335,7 @@ export interface CreateProtocolPayload {
   subtype?: ProtocolSubtype;
   protocolNumber?: string;
   protocolDate: string;
+  sampleDate?: string;
   samplingDate?: string;
   testingStartDate?: string;
   testingEndDate?: string;
@@ -363,9 +374,9 @@ export type UpdateProtocolPayload = {
 };
 
 export type ProtocolResultPayload = {
-  values: Record<string, string | number | null | undefined>;
-  measurementDeviceId?: string;
-  normativeId?: string;
+  values: Record<string, ProtocolResultValue>;
+  measurementDeviceId?: string | null;
+  normativeId?: string | null;
 };
 
 export type MethodVariableResponse = {
@@ -547,12 +558,18 @@ export type NormativeRecord = {
   normativeSubType?: string;
   subtype?: string;
   value: string;
+  maxOneTimeValue?: string;
+  dailyAverageValue?: string;
+  singleValue?: string;
+  obuvValue?: string;
   min?: string;
   max?: string;
   comparisonType: NormativeComparisonType;
   normativeDocument: string;
   hazardClass?: string;
   limitingIndicator?: string;
+  aggregateState?: string;
+  actionFeatures?: string;
   source?: string;
   sourceFile?: string;
   importFileName?: string;

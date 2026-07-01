@@ -21,9 +21,9 @@ const templateChoices: TemplateChoice[] = [
   { key: 'industrial_emissions', label: 'Промышленные выбросы', templateId: 'industrial_emissions' },
   { key: 'water_wastewater', label: 'Вода / сточная вода', templateId: 'water_wastewater' },
   { key: 'soil', label: 'Почва', templateId: 'soil' },
-  { key: 'microclimate', label: 'Микроклимат', templateId: 'physical_factors', subtype: 'MICROCLIMATE' },
-  { key: 'lighting', label: 'Освещённость', templateId: 'physical_factors', subtype: 'LIGHTING' },
-  { key: 'noise_vibration', label: 'Шум / вибрация', templateId: 'physical_factors', subtype: 'NOISE_VIBRATION' },
+  { key: 'microclimate', label: 'Микроклимат', templateId: 'microclimate', subtype: 'MICROCLIMATE' },
+  { key: 'lighting', label: 'Освещённость', templateId: 'lighting', subtype: 'LIGHTING' },
+  { key: 'noise_vibration', label: 'Шум / вибрация', templateId: 'noise_vibration', subtype: 'NOISE_VIBRATION' },
 ];
 
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100';
@@ -82,11 +82,12 @@ const ProtocolCreatePage = () => {
         ]);
         if (!mounted) return;
         setCompanies(companyItems);
-        setLaboratories(laboratoryItems);
+        const activeLaboratories = laboratoryItems.filter((item) => item.active);
+        setLaboratories(activeLaboratories);
         if (!companyItems.length) setWarning('Компании не найдены. Создать протокол можно будет после добавления компании.');
-        const defaultLab = laboratoryItems.find((item) => item.isDefault) || (laboratoryItems.length === 1 ? laboratoryItems[0] : undefined);
+        const defaultLab = activeLaboratories.find((item) => item.isDefault) || (activeLaboratories.length === 1 ? activeLaboratories[0] : undefined);
         if (defaultLab) setForm((current) => ({ ...current, laboratoryId: defaultLab.id }));
-        if (!laboratoryItems.length) setWarning((current) => current || 'Лаборатория не настроена. Заполните справочник лаборатории.');
+        if (!activeLaboratories.length) setWarning((current) => current || 'Лаборатория не настроена или не активна. Заполните справочник лаборатории.');
       } finally {
         if (mounted) setBooting(false);
       }
@@ -127,7 +128,7 @@ const ProtocolCreatePage = () => {
       .then((items) => {
         setEmployees(items);
         if (!items.length) setEmployeeWarning('Сотрудники лаборатории не найдены');
-        setForm((current) => ({ ...current, executorId: items[0]?.id || '' }));
+        setForm((current) => ({ ...current, executorId: items[0] ? (items[0].userId || items[0].id) : '' }));
       })
       .catch((error) => {
         setEmployees([]);
@@ -167,6 +168,7 @@ const ProtocolCreatePage = () => {
       templateId: selectedTemplate.templateId,
       subtype: selectedTemplate.subtype,
       protocolDate: form.protocolDate,
+      sampleDate: form.samplingDate,
       samplingDate: form.samplingDate,
       testingStartDate: form.testingStartDate || form.samplingDate,
       testingEndDate: form.testingEndDate || form.samplingDate,
@@ -190,7 +192,7 @@ const ProtocolCreatePage = () => {
     try {
       const protocol = await protocolService.createProtocol(payload);
       if (!protocol.id) throw new Error('Backend не вернул id протокола');
-      toast.success('Протокол создан');
+      toast.success('Протокол создан. Теперь добавьте результаты испытаний.');
       navigate(`/staff/protocols/${protocol.id}`, { replace: true });
     } catch (error) {
       toast.error('Не удалось создать протокол', error instanceof Error ? error.message : undefined);
@@ -207,7 +209,7 @@ const ProtocolCreatePage = () => {
             <ArrowLeft className="h-4 w-4" /> Назад к протоколам
           </button>
           <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">Создать протокол</h1>
-          <p className="mt-1 text-sm text-slate-500">Заполните основные данные. Результаты испытаний добавляются в редакторе.</p>
+          <p className="mt-1 text-sm text-slate-500">Заполните основные данные протокола. Результаты испытаний добавляются в редакторе после создания.</p>
         </div>
         <Button type="submit" disabled={loading || booting}>
           <Save className="h-4 w-4" /> Создать протокол
@@ -263,7 +265,7 @@ const ProtocolCreatePage = () => {
           <span>Исполнитель</span>
           <select value={form.executorId} onChange={(event) => setField('executorId', event.target.value)} className={inputClass} disabled={!employees.length}>
             <option value="">Выберите исполнителя</option>
-            {employees.map((item) => <option key={item.id} value={item.id}>{item.fullName} {item.position ? `· ${item.position}` : ''}</option>)}
+            {employees.map((item) => <option key={item.id} value={item.userId || item.id}>{item.fullName} {item.position ? `· ${item.position}` : ''}</option>)}
           </select>
           {employeeWarning && <p className="text-sm font-semibold text-amber-700">{employeeWarning}</p>}
         </label>

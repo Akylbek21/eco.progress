@@ -33,6 +33,10 @@ const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const wait = async () => new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 301)));
 const now = () => new Date().toISOString();
+const scalarValue = (value: unknown): string | number | null => {
+  if (Array.isArray(value)) return scalarValue(value.find((item) => item !== undefined && item !== null && String(item) !== ''));
+  return typeof value === 'string' || typeof value === 'number' ? value : null;
+};
 const laboratorySnapshot = (
   profile: LaboratoryProfile,
   executorId?: string,
@@ -40,10 +44,13 @@ const laboratorySnapshot = (
   const executor = profile.employees.find((employee) => (employee.userId || employee.id) === executorId && employee.active)
     || profile.employees.find((employee) => employee.active);
   return {
+    id: profile.id,
     laboratoryId: profile.id,
+    name: profile.name,
     laboratoryName: profile.name,
     legalName: profile.legalName,
     bin: profile.bin,
+    address: profile.address,
     laboratoryAddress: profile.address,
     phone: profile.phone,
     email: profile.email,
@@ -51,10 +58,13 @@ const laboratorySnapshot = (
     accreditationIssuedAt: profile.accreditationIssuedAt,
     accreditationValidUntil: profile.accreditationValidUntil || '',
     directorId: profile.directorId,
+    directorName: profile.directorName || '',
     director: profile.directorName || '',
     laboratoryHeadId: profile.laboratoryHeadId,
+    laboratoryHeadName: profile.laboratoryHeadName || '',
     laboratoryHead: profile.laboratoryHeadName || '',
     executorId: executor?.userId || executor?.id,
+    executorName: executor?.fullName || '',
     executor: executor?.fullName || '',
     logoUrl: profile.logoUrl,
     standardNote: profile.standardNote,
@@ -110,6 +120,9 @@ const numberFor = (templateId: Protocol['templateId'], sequence: number) => {
     water_wastewater: 'Ф 02',
     ambient_air: 'Ф 03',
     physical_factors: 'Ф 04',
+    microclimate: 'Ф 04',
+    lighting: 'Ф 04',
+    noise_vibration: 'Ф 04',
     soil: 'П',
     workplace_air: 'Ф 03',
     vehicle_emissions: 'Ф 05',
@@ -169,6 +182,7 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   const protocolId = id('protocol');
   const protocolNumber = payload.protocolNumber?.trim() || numberFor(payload.templateId, items.length + 1);
   const createdAt = now();
+  const sampleDate = payload.sampleDate || payload.samplingDate || payload.measurementDate || '';
   let snapshot = emptyLaboratorySnapshot();
   const laboratoryService = await import('./laboratorySettingsService');
   const laboratories = await laboratoryService.getLaboratories();
@@ -206,7 +220,7 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
     measurementTime: payload.measurementTime,
     measurementPlace: payload.measurementPlace,
     sourceNumber: payload.sourceNumber,
-    samplingDate: payload.samplingDate,
+    samplingDate: sampleDate,
     testingStartDate: payload.testingStartDate,
     testingEndDate: payload.testingEndDate,
     purpose: payload.purpose,
@@ -223,7 +237,7 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
       productNormativeDocument: payload.productNormativeDocument || '',
       samplingMethodDocument: payload.samplingMethodDocument || '',
       testingMethodDocument: payload.testingMethodDocument || '',
-      samplingDate: payload.samplingDate || '',
+      samplingDate: sampleDate,
       testingStartDate: payload.testingStartDate || '',
       testingEndDate: payload.testingEndDate || '',
       testingDate: payload.testingEndDate || '',
@@ -289,7 +303,7 @@ export async function addResult(protocolId: string, payload: ProtocolResultPaylo
   const result: ProtocolResultRow = {
     id: id('result'),
     values: { ...clone(payload.values), normativeId: payload.normativeId ?? payload.values.normativeId },
-    measurementDeviceId: payload.measurementDeviceId,
+    measurementDeviceId: payload.measurementDeviceId || undefined,
     internalStatus: 'NEEDS_REVIEW',
     checkStatus: 'NEEDS_REVIEW',
   };
@@ -309,7 +323,7 @@ export async function updateResult(protocolId: string, resultId: string, payload
       saved = {
         ...row,
         values: { ...clone(payload.values), normativeId: payload.normativeId ?? payload.values.normativeId },
-        measurementDeviceId: payload.measurementDeviceId,
+        measurementDeviceId: payload.measurementDeviceId || undefined,
         internalStatus: 'NEEDS_REVIEW',
         checkStatus: 'NEEDS_REVIEW',
       };
@@ -422,11 +436,12 @@ export async function removeProtocolMeasurementDevice(protocolId: string, device
 
 export async function searchNormative(params: Record<string, string>): Promise<NormativeSearchResult> {
   await wait();
-  const query = String(params.indicator || '').trim().toLowerCase();
+  const query = String(params.query || params.code || params.pollutantCode || params.indicator || '').trim().toLowerCase();
+  if (query.length < 3) return { found: false, normatives: [], items: [] };
   const codeMap: Record<string, string> = { '0301': 'n-no2', '0304': 'n-no', '0330': 'n-so2', '0337': 'n-co' };
   const items = mockNormatives.filter((item) =>
     item.templateId === params.templateId
-    && (codeMap[params.code] ? item.id === codeMap[params.code] : item.indicator.toLowerCase().includes(query)));
+    && (codeMap[params.code] ? item.id === codeMap[params.code] : `${item.code || ''} ${item.pollutantCode || ''} ${item.indicator || ''}`.toLowerCase().includes(query))).slice(0, 20);
   return { found: items.length > 0, normative: items[0], normatives: clone(items), ambiguous: items.length > 1 };
 }
 
@@ -469,7 +484,7 @@ const rawMeasurementsFor = (protocolId: string, row: ProtocolResultRow): RawMeas
   const methodTemplate = defaultMethodTemplate(row);
   const measurements = methodTemplate.variables.map<RawMeasurementRequest>((variable) => ({
     variableKey: variable.variableKey,
-    variableValue: row.values[`raw_${variable.variableKey}`] ?? row.values[variable.variableKey] ?? variable.defaultValue ?? '',
+    variableValue: scalarValue(row.values[`raw_${variable.variableKey}`]) ?? scalarValue(row.values[variable.variableKey]) ?? variable.defaultValue ?? '',
     unit: variable.unit,
     sourceType: 'MANUAL',
     deviceId: row.measurementDeviceId || row.deviceId || String(row.values.measurementDeviceId || row.values.deviceId || ''),
@@ -488,9 +503,9 @@ const rawMeasurementsFor = (protocolId: string, row: ProtocolResultRow): RawMeas
 const calculationResponseFor = (protocolId: string, row: ProtocolResultRow): CalculationResultResponse => ({
   protocolId,
   resultId: row.id,
-  result: row.result || row.values.result || row.values.resultMg || null,
-  uncertaintyValue: row.uncertaintyValue || row.values.uncertaintyValue || null,
-  normativeValue: row.normativeValue || row.normative || row.pdk || row.values.normative || row.values.pdk || null,
+  result: row.result || scalarValue(row.values.result) || scalarValue(row.values.resultMg),
+  uncertaintyValue: row.uncertaintyValue || scalarValue(row.values.uncertaintyValue),
+  normativeValue: row.normativeValue || row.normative || row.pdk || scalarValue(row.values.normative) || scalarValue(row.values.pdk),
   internalStatus: row.internalStatus,
   calculationStatus: row.calculationStatus,
   calculationMessage: row.calculationMessage,
@@ -630,9 +645,10 @@ export async function getCalculationHistory(): Promise<CalculationResultResponse
 
 export async function searchPollutants(query: string): Promise<Pollutant[]> {
   await wait();
+  if (query.trim().length < 3) return [];
   const tokens = query.toLowerCase().split(/[\s,;]+/).filter(Boolean);
   return clone(demoPollutants.filter((item) => tokens.some((token) =>
-    `${item.code} ${item.name} ${item.cas} ${item.formula}`.toLowerCase().includes(token))));
+    `${item.code} ${item.name} ${item.cas} ${item.formula}`.toLowerCase().includes(token))).slice(0, 20));
 }
 
 export async function getWeatherConditions(): Promise<WeatherConditions> {

@@ -16,29 +16,24 @@ const firstString = (...values: unknown[]) => {
   return '';
 };
 const normalizeText = (value: unknown) => stringValue(value).trim().toLowerCase().replace(/ё/g, 'е');
-const demoIndicators = ['e.coli', 'пыль', 'железо', 'шум', 'диоксид азота'];
-const demoSourceMarkers = ['сэм рк (демо)', 'demo', 'демо'];
-const isExcelSource = (item: NormativeRecord) => [
-  item.sourceFile,
-  item.importFileName,
-  item.source,
-  item.normativeDocument,
-].some((value) => {
-  const text = normalizeText(value);
-  return text.includes('.xls') || text.includes('.xlsx') || text.includes('with_pollutant_codes') || text.includes('sourcefile');
-});
+const demoSourceMarkers = ['сэм рк (демо)', 'сем рк (демо)', 'demo', 'демо', 'mock'];
 const isDemoNormative = (item: NormativeRecord) => {
-  const sourceText = normalizeText([item.source, item.normativeDocument].filter(Boolean).join(' '));
-  const indicatorText = normalizeText([item.indicator, item.indicatorName, item.pollutantName].filter(Boolean).join(' '));
-  return demoSourceMarkers.some((marker) => sourceText.includes(marker))
-    || demoIndicators.some((indicator) => indicatorText === indicator || indicatorText.includes(indicator));
+  const sourceText = normalizeText([item.source, item.sourceFile, item.importFileName].filter(Boolean).join(' '));
+  return demoSourceMarkers.some((marker) => sourceText.includes(marker));
 };
-const isVisibleNormative = (item: NormativeRecord) => isExcelSource(item) && !isDemoNormative(item);
+const isVisibleNormative = (item: NormativeRecord) => !isDemoNormative(item);
 
 const normalizeNormative = (raw: unknown): NormativeRecord => {
   const source = asRecord(raw);
   const pollutant = asRecord(source.pollutant || source.substance || source.indicatorReference);
   const code = firstString(source.code, source.pollutantCode, source.substanceCode, source.indicatorCode, source.referenceCode, pollutant.code, pollutant.pollutantCode);
+  const normativeType = firstString(source.normativeType, source.type, source.limitType, source.category);
+  const normativeSubType = firstString(source.normativeSubType, source.normativeSubtype, source.subType, source.subtype);
+  const value = stringValue(source.value ?? source.normative ?? source.normativeValue);
+  const maxOneTimeValue = stringValue(source.maxOneTimeValue ?? source.max_one_time_value ?? source.maximumOneTimeValue ?? source.oneTimeValue ?? source.pdkMaxOneTime);
+  const dailyAverageValue = stringValue(source.dailyAverageValue ?? source.daily_average_value ?? source.averageDailyValue ?? source.pdkDailyAverage);
+  const singleValue = stringValue(source.singleValue ?? source.single_value ?? source.pdkValue);
+  const obuvValue = stringValue(source.obuvValue ?? source.obuv_value ?? source.obuv ?? (normativeType === 'OBUV' ? source.value ?? source.normative ?? source.normativeValue : undefined));
   const indicator = firstString(
     source.indicator,
     source.indicatorName,
@@ -69,16 +64,22 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     formula: firstString(source.formula, source.chemicalFormula, pollutant.formula, pollutant.chemicalFormula),
     chemicalFormula: firstString(source.chemicalFormula, source.formula, pollutant.chemicalFormula, pollutant.formula),
     unit: firstString(source.unit, source.measurementUnit, source.resultUnit),
-    normativeType: firstString(source.normativeType, source.type, source.limitType, source.category),
-    normativeSubType: firstString(source.normativeSubType, source.normativeSubtype, source.subType, source.subtype),
+    normativeType,
+    normativeSubType,
     subtype: firstString(source.subtype, source.subType, source.normativeSubType, source.normativeSubtype),
-    value: stringValue(source.value ?? source.normative ?? source.normativeValue),
+    value,
+    maxOneTimeValue,
+    dailyAverageValue,
+    singleValue,
+    obuvValue,
     min: stringValue(source.min ?? source.minValue ?? source.normativeMin),
     max: stringValue(source.max ?? source.maxValue ?? source.normativeMax),
     comparisonType: stringValue(source.comparisonType || 'LESS_OR_EQUAL') as NormativeRecord['comparisonType'],
     normativeDocument: firstString(source.normativeDocument, source.document, source.documentName, source.standard),
     hazardClass: firstString(source.hazardClass, source.dangerClass, source.hazard, source.hazardClassName),
     limitingIndicator: firstString(source.limitingIndicator, source.limitingSign, source.lpv, source.limitingFactor),
+    aggregateState: firstString(source.aggregateState, source.aggregationState, source.physicalState, source.state),
+    actionFeatures: firstString(source.actionFeatures, source.featuresOfAction, source.actionSpecifics, source.specialAction, source.effectFeatures),
     source: firstString(source.source, source.sourceName, source.dataSource, source.normativeDocument, source.document, source.documentName),
     sourceFile: firstString(source.sourceFile, source.sourceFileName, source.fileName, source.importFileName, source.excelFileName, source.workbookName),
     importFileName: firstString(source.importFileName, source.fileName, source.sourceFile, source.excelFileName, source.workbookName),
@@ -174,6 +175,7 @@ export type NormativeImportPreview = {
   updated?: number;
   errors: Array<{ row?: number; message: string }>;
   importId?: string;
+  fileName?: string;
 };
 
 const isImportFallbackStatus = (error: unknown) => [400, 404, 405].includes(getApiStatus(error) || 0);
@@ -188,15 +190,8 @@ const postLegacyNormativeImport = (file: File, preview: boolean) => {
 const postNormativeImport = async (file: File, preview: boolean, importId?: string) => {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('preview', String(preview));
   const endpoint = preview ? '/normatives/import/preview' : '/normatives/import/confirm';
-  if (!preview && importId) {
-    try {
-      return await api.post<ApiResponse<unknown> | unknown>(endpoint, { importId, previewId: importId });
-    } catch (error) {
-      if (!isImportFallbackStatus(error)) throw error;
-    }
-  }
+  if (!preview && importId) formData.append('importId', String(importId));
   try {
     return await api.post<ApiResponse<unknown> | unknown>(endpoint, formData);
   } catch (error) {
@@ -205,9 +200,18 @@ const postNormativeImport = async (file: File, preview: boolean, importId?: stri
   }
 };
 
+const unwrapImportData = (response: unknown): UnknownRecord => {
+  const axiosResponse = asRecord(response);
+  const body = asRecord(axiosResponse.data);
+  const nested = asRecord(body.data);
+  if (Object.keys(nested).length) return nested;
+  if (Object.keys(body).length) return body;
+  return axiosResponse;
+};
+
 export async function importNormativesExcel(file: File, preview = true, importId?: string): Promise<NormativeImportPreview> {
   const response = await postNormativeImport(file, preview, importId);
-  const item = extractItem(response, ['preview', 'result']) as unknown as UnknownRecord;
+  const item = unwrapImportData(response);
   const items = extractNormativeRecords(response);
   const errors = Array.isArray(item.errors) ? item.errors.map((error) => {
     const value = error as UnknownRecord;
@@ -215,12 +219,13 @@ export async function importNormativesExcel(file: File, preview = true, importId
   }) : [];
   return {
     items,
-    total: Number(item.total ?? items.length),
-    valid: Number(item.valid ?? items.length),
-    invalid: Number(item.invalid ?? errors.length),
-    created: Number(item.created ?? item.new ?? item.newRows ?? item.toCreate ?? 0),
-    updated: Number(item.updated ?? item.update ?? item.updatedRows ?? item.toUpdate ?? 0),
+    total: Number(item.totalRows ?? item.total ?? item.rowsTotal ?? item.totalCount ?? items.length),
+    valid: Number(item.validRows ?? item.valid ?? item.validCount ?? items.length),
+    invalid: Number(item.errorRows ?? item.invalid ?? item.invalidRows ?? item.errorsCount ?? errors.length),
+    created: Number(item.newNormatives ?? item.created ?? item.new ?? item.newRows ?? item.toCreate ?? 0),
+    updated: Number(item.updatedNormatives ?? item.updated ?? item.update ?? item.updatedRows ?? item.toUpdate ?? 0),
     errors,
     importId: stringValue(item.importId || item.previewId || item.batchId) || undefined,
+    fileName: stringValue(item.fileName || item.sourceFile || file.name) || undefined,
   };
 }

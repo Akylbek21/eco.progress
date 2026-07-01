@@ -130,6 +130,19 @@ const physicalColumns: Record<ProtocolSubtype, ProtocolResultColumn[]> = {
   NOISE_VIBRATION: noiseVibration,
 };
 
+const physicalTemplateSubtypes: Record<string, ProtocolSubtype> = {
+  physical_factors: 'MICROCLIMATE',
+  microclimate: 'MICROCLIMATE',
+  lighting: 'LIGHTING',
+  noise_vibration: 'NOISE_VIBRATION',
+};
+
+const templateDisplayNames: Record<string, string> = {
+  microclimate: 'Микроклимат',
+  lighting: 'Освещённость',
+  noise_vibration: 'Шум / вибрация',
+};
+
 export const protocolResultColumns: Record<string, ProtocolResultColumn[]> = {
   industrial_emissions: industrialEmissions,
   water_wastewater: water,
@@ -141,10 +154,12 @@ export const protocolResultColumns: Record<string, ProtocolResultColumn[]> = {
   vehicle_emissions: [],
 };
 
-export const getProtocolResultColumns = (templateId: string, subtype?: string): ProtocolResultColumn[] =>
-  templateId === 'physical_factors'
-    ? physicalColumns[(subtype || 'MICROCLIMATE') as ProtocolSubtype] || microclimate
+export const getProtocolResultColumns = (templateId: string, subtype?: string): ProtocolResultColumn[] => {
+  const defaultPhysicalSubtype = physicalTemplateSubtypes[templateId];
+  return defaultPhysicalSubtype
+    ? physicalColumns[(subtype || defaultPhysicalSubtype) as ProtocolSubtype] || microclimate
     : protocolResultColumns[templateId] || [];
+};
 
 export const templateName = (templateId: string, fallback = '') =>
-  protocolTemplates.find((template) => template.id === templateId)?.name || fallback || templateId;
+  protocolTemplates.find((template) => template.id === templateId)?.name || templateDisplayNames[templateId] || fallback || templateId;

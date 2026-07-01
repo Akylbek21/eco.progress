@@ -108,6 +108,7 @@ const ProtocolsPage = () => {
         templateId: protocol.templateId,
         subtype: protocol.subtype,
         protocolDate: protocol.protocolDate,
+        sampleDate: protocol.testing.samplingDate || protocol.measurementDate,
         samplingDate: protocol.testing.samplingDate,
         testingStartDate: protocol.testing.testingStartDate,
         testingEndDate: protocol.testing.testingEndDate,

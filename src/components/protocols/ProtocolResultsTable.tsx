@@ -40,16 +40,24 @@ type Props = {
   onCheckNormatives: () => void | Promise<void>;
   onImported: () => void | Promise<void>;
   onNotify: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
+  onGoToInstruments?: () => void;
 };
 
 type NormativeSuggestion = Pollutant & {
   selectedNormative?: NormativeRecord;
 };
 
+type SearchState = 'idle' | 'minLength' | 'searching' | 'empty' | 'ready' | 'error';
+
+const MIN_SEARCH_LENGTH = 3;
+const SEARCH_DEBOUNCE_MS = 700;
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = 'rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700';
+const physicalFactorTemplateIds: ProtocolTemplateId[] = ['physical_factors', 'microclimate', 'lighting', 'noise_vibration'];
 const searchUnavailableMessage = 'Поиск временно недоступен. Добавьте показатель вручную.';
 const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
+const notFoundSearchMessage = 'Норматив или показатель не найден. Проверьте код или добавьте норматив в справочник.';
+const canSearch = (value: string) => value.trim().length >= MIN_SEARCH_LENGTH;
 const valueOf = (row: ProtocolResultRow, keys: string[]) => {
   for (const key of keys) {
     const value = row.values[key];
@@ -67,25 +75,53 @@ const normativeValue = (row: ProtocolResultRow) =>
 const pollutantCode = (row: ProtocolResultRow) => row.pollutant?.code || row.code || valueOf(row, ['pollutantCode', 'code']);
 const indicator = (row: ProtocolResultRow) => row.pollutant?.name || row.indicatorName || row.indicator || valueOf(row, ['indicator', 'substanceName']);
 const unit = (row: ProtocolResultRow) => row.unit || valueOf(row, ['unit']);
-const manualPollutantFromText = (text: string): Pollutant => {
-  const value = text.trim();
-  const firstToken = value.split(/\s+/)[0] || value;
-  return { code: firstToken, name: value };
-};
 const normativeDisplayValue = (normative?: NormativeRecord) => {
   if (!normative) return '';
   if (normative.value) return normative.value;
   if (normative.min && normative.max) return `${normative.min}-${normative.max}`;
-  return normative.max || normative.min || '';
+  return normative.max || normative.min || normative.maxOneTimeValue || normative.dailyAverageValue || normative.singleValue || normative.obuvValue || '';
 };
 const normativeSubtype = (normative?: NormativeRecord) => normative?.normativeSubType || normative?.subtype || '';
+const normalizeText = (value: unknown) => String(value || '').trim().toLowerCase().replace(/ё/g, 'е');
+const fallbackUnitForEnvironment = (templateId: ProtocolTemplateId, normative?: NormativeRecord | null) => {
+  const text = normalizeText([
+    templateId,
+    normative?.templateId,
+    normative?.environment,
+    normative?.researchObject,
+    normative?.normativeType,
+  ].filter(Boolean).join(' '));
+
+  if (text.includes('surface') || text.includes('поверх')) return 'мг/см²';
+  if (text.includes('food') || text.includes('пищ')) return 'мг/кг';
+  if (text.includes('soil') || text.includes('почв')) return 'мг/кг';
+  if (text.includes('water') || text.includes('вода') || text.includes('водн')) return 'мг/дм³';
+  if (
+    text.includes('atmospheric_air')
+    || text.includes('ambient_air')
+    || text.includes('work_zone_air')
+    || text.includes('workplace_air')
+    || text.includes('industrial_emissions')
+    || text.includes('air')
+    || text.includes('воздух')
+    || text.includes('выброс')
+  ) return 'мг/м³';
+
+  return '';
+};
+const parseMeasurementNumber = (value: string) => {
+  const normalized = value.trim().replace(',', '.');
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 const normativeToSuggestion = (normative: NormativeRecord): NormativeSuggestion => ({
   id: normative.id,
   code: normative.pollutantCode || normative.code || '',
   name: normative.indicator || normative.indicatorName || normative.pollutantName || '',
   cas: normative.cas || normative.casNumber || '',
   formula: normative.formula || normative.chemicalFormula || '',
-  unit: normative.unit || '',
+  unit: normative.unit || fallbackUnitForEnvironment((normative.templateId || 'ambient_air') as ProtocolTemplateId, normative),
   testingMethod: normative.testingMethod || '',
   samplingMethod: normative.samplingMethod || '',
   selectedNormative: normative,
@@ -111,12 +147,6 @@ const calculationStatusLabel = (status?: string) => ({
   NORMATIVE_NOT_FOUND: 'Норматив не найден',
 }[String(status || '')] || '');
 
-const numericOnly = (value: string) => {
-  const normalized = value.trim();
-  if (!/^[+-]?\d+(?:[.,]\d+)?$/.test(normalized)) return false;
-  return !/^0\d{3,}$/.test(normalized);
-};
-
 const uncertaintyValue = (row: ProtocolResultRow) => row.uncertaintyValue || valueOf(row, ['uncertaintyValue', 'uncertainty']);
 
 const resolveDeviceName = (row: ProtocolResultRow, devices: ProtocolMeasurementDevice[]) => {
@@ -140,12 +170,13 @@ const exceededText = (row: ProtocolResultRow, templateId: ProtocolTemplateId) =>
 
 const ProtocolResultsTable = ({
   protocolId, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '', objectId, measurementPlace: defaultMeasurementPlace = '',
-  onChange, onCheckNormatives, onImported, onNotify,
+  onChange, onCheckNormatives, onImported, onNotify, onGoToInstruments,
 }: Props) => {
   const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<NormativeSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchState, setSearchState] = useState<SearchState>('idle');
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkDeviceId, setBulkDeviceId] = useState('');
   const [bulkPlace, setBulkPlace] = useState('');
@@ -164,14 +195,16 @@ const ProtocolResultsTable = ({
   const [addOpen, setAddOpen] = useState(false);
   const [normativeQuery, setNormativeQuery] = useState('');
   const [normativeLoading, setNormativeLoading] = useState(false);
+  const [normativeSearchDone, setNormativeSearchDone] = useState(false);
   const [normativeResults, setNormativeResults] = useState<NormativeRecord[]>([]);
   const [selectedNormative, setSelectedNormative] = useState<NormativeRecord | null>(null);
   const [resultValue, setResultValue] = useState('');
   const [resultDeviceId, setResultDeviceId] = useState('');
   const [availableDevices, setAvailableDevices] = useState<MeasurementDevice[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const searchRequestRef = useRef(0);
   const canUseAdvanced = user?.role === 'ADMIN' || user?.role === 'HEAD' || user?.role === 'DIRECTOR';
-  const isPhysicalFactors = templateId === 'physical_factors';
+  const isPhysicalFactors = physicalFactorTemplateIds.includes(templateId);
 
   const selectedRows = useMemo(() => rows.filter((row) => selected.includes(row.id)), [rows, selected]);
   const reviewRow = rows.find((row) => ['EXCEEDED', 'BELOW_REQUIRED', 'UNIT_MISMATCH', 'NEEDS_REVIEW', 'MANUAL_NORMATIVE'].includes(String(statusOf(row))));
@@ -187,6 +220,7 @@ const ProtocolResultsTable = ({
     setAddOpen(true);
     setNormativeQuery('');
     setNormativeResults([]);
+    setNormativeSearchDone(false);
     setSelectedNormative(null);
     setResultValue('');
     setResultDeviceId('');
@@ -194,11 +228,15 @@ const ProtocolResultsTable = ({
 
   const searchNormativesForDialog = async () => {
     const value = normativeQuery.trim();
-    if (!value) {
-      onNotify('Введите название, код, CAS или формулу', 'warning');
+    setSelectedNormative(null);
+    if (!canSearch(value)) {
+      setNormativeResults([]);
+      setNormativeSearchDone(false);
+      onNotify('Введите минимум 3 символа для поиска', 'warning');
       return;
     }
     setNormativeLoading(true);
+    setNormativeSearchDone(false);
     try {
       const found = await protocolService.searchNormative({
         templateId,
@@ -214,10 +252,12 @@ const ProtocolResultsTable = ({
       });
       const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
       setNormativeResults(candidates);
-      if (!candidates.length) onNotify('Норматив не найден', 'warning');
+      setNormativeSearchDone(true);
+      if (!candidates.length) onNotify('Норматив не найден. Проверьте код или добавьте норматив в справочник.', 'warning');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось загрузить нормативы', 'error');
       setNormativeResults([]);
+      setNormativeSearchDone(true);
     } finally {
       setNormativeLoading(false);
     }
@@ -227,7 +267,10 @@ const ProtocolResultsTable = ({
     if (!selectedNormative) return onNotify('Выберите показатель', 'warning');
     if (!normativeDisplayValue(selectedNormative)) return onNotify('Выберите норматив', 'warning');
     if (!resultValue.trim()) return onNotify('Введите результат измерения', 'warning');
-    if (!selectedNormative.unit) return onNotify('У норматива не указана единица измерения', 'warning');
+    const parsedResult = parseMeasurementNumber(resultValue);
+    if (parsedResult === null) return onNotify('Результат измерения должен быть числом', 'warning');
+    const selectedUnit = selectedNormative.unit || fallbackUnitForEnvironment(templateId, selectedNormative);
+    if (!selectedUnit) return onNotify('У норматива не указана единица измерения', 'warning');
 
     setSaving(true);
     try {
@@ -253,14 +296,14 @@ const ProtocolResultsTable = ({
           normativeMax: selectedNormative.max || selectedNormative.value || '',
           minValue: selectedNormative.min || '',
           maxValue: selectedNormative.max || selectedNormative.value || '',
-          unit: selectedNormative.unit,
+          unit: selectedUnit,
           comparisonType: selectedNormative.comparisonType || 'LESS_OR_EQUAL',
-          primaryReading: resultValue.trim(),
-          measurementReadings: resultValue.trim(),
-          result: resultValue.trim(),
-          resultValue: resultValue.trim(),
-          deviceId: resultDeviceId || '',
-          measurementDeviceId: resultDeviceId || '',
+          primaryReading: parsedResult,
+          measurementReadings: [parsedResult],
+          result: parsedResult,
+          resultValue: parsedResult,
+          deviceId: resultDeviceId || null,
+          measurementDeviceId: resultDeviceId || null,
           normativeDocument: selectedNormative.normativeDocument || '',
           testingMethod: selectedNormative.testingMethod || '',
           measurementPlace: defaultMeasurementPlace || '',
@@ -277,42 +320,101 @@ const ProtocolResultsTable = ({
     }
   };
 
-  const search = async (value: string) => {
-    setQuery(value);
-    if (isPhysicalFactors) {
-      setSuggestions(value.trim() ? filterPhysicalFactorIndicators(value, subtype).slice(0, 8) : getPhysicalFactorIndicators(subtype).slice(0, 8));
+  useEffect(() => {
+    const value = query.trim();
+    const requestId = ++searchRequestRef.current;
+    if (!value) {
+      setSuggestions([]);
+      setSearching(false);
+      setSearchState('idle');
       return;
     }
-    if (value.trim().length < 1) return setSuggestions([]);
-    setSearching(true);
-    try {
-      const found = await protocolService.searchNormative({
-        templateId,
-        subtype: subtype || '',
-        query: value,
-        q: value,
-        search: value,
-        code: value,
-        pollutantCode: value,
-        indicator: value,
-        objectId: objectId ? String(objectId) : '',
-        date: testingDate,
-      });
-      const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
-      if (candidates.length) {
-        setSuggestions(candidates.map(normativeToSuggestion).slice(0, 12));
-        return;
-      }
-      setSuggestions((await protocolService.searchPollutants(value, { templateId, subtype: subtype || '' })).slice(0, 8));
-    } catch (error) {
-      if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
+    if (!canSearch(value) || value.includes(',') || value.includes(';')) {
       setSuggestions([]);
-    } finally {
       setSearching(false);
+      setSearchState('minLength');
+      return;
     }
+    setSuggestions([]);
+    setSearching(false);
+    setSearchState('idle');
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      setSearchState('searching');
+      try {
+        const found = await protocolService.searchNormative({
+          templateId,
+          subtype: subtype || '',
+          query: value,
+          q: value,
+          search: value,
+          code: value,
+          pollutantCode: value,
+          indicator: value,
+          objectId: objectId ? String(objectId) : '',
+          date: testingDate,
+        });
+        if (requestId !== searchRequestRef.current) return;
+        const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
+        if (candidates.length) {
+          setSuggestions(candidates.map(normativeToSuggestion).slice(0, 12));
+          setSearchState('ready');
+          return;
+        }
+        const apiItems = (await protocolService.searchPollutants(value, {
+          templateId,
+          subtype: subtype || '',
+          code: value,
+          pollutantCode: value,
+          objectId: objectId ? String(objectId) : '',
+        })).slice(0, 8);
+        if (requestId !== searchRequestRef.current) return;
+        const localItems = isPhysicalFactors ? filterPhysicalFactorIndicators(value, subtype).slice(0, 8) : [];
+        const items = apiItems.length ? apiItems : localItems;
+        setSuggestions(items);
+        setSearchState(items.length ? 'ready' : 'empty');
+      } catch (error) {
+        if (requestId !== searchRequestRef.current) return;
+        if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
+        setSuggestions([]);
+        setSearchState('error');
+      } finally {
+        if (requestId === searchRequestRef.current) setSearching(false);
+      }
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [query, templateId, subtype, objectId, testingDate, isPhysicalFactors]);
+
+  const search = (value: string) => {
+    setQuery(value);
   };
 
-  const addPollutant = async (pollutant: Pollutant, append = true): Promise<ProtocolResultRow | null> => {
+  const searchNow = async (value: string) => {
+    const found = await protocolService.searchNormative({
+      templateId,
+      subtype: subtype || '',
+      query: value,
+      q: value,
+      search: value,
+      code: value,
+      pollutantCode: value,
+      indicator: value,
+      objectId: objectId ? String(objectId) : '',
+      date: testingDate,
+    });
+    const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
+    if (candidates.length) return candidates.map(normativeToSuggestion).slice(0, 12);
+    const apiItems = (await protocolService.searchPollutants(value, {
+      templateId,
+      subtype: subtype || '',
+      code: value,
+      pollutantCode: value,
+      objectId: objectId ? String(objectId) : '',
+    })).slice(0, 8);
+    return apiItems.length || !isPhysicalFactors ? apiItems : filterPhysicalFactorIndicators(value, subtype).slice(0, 8);
+  };
+
+  const addPollutant = async (pollutant: Pollutant, _append = true): Promise<ProtocolResultRow | null> => {
     setSaving(true);
     try {
       const selectedNormative = (pollutant as NormativeSuggestion).selectedNormative;
@@ -332,55 +434,26 @@ const ProtocolResultsTable = ({
       });
       const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
       const normative = selectedNormative || (candidates.length === 1 ? candidates[0] : undefined);
-      const code = pollutant.code || normative?.pollutantCode || normative?.code || '';
-      const name = pollutant.name || normative?.indicator || normative?.indicatorName || '';
-      const normativeValueText = normativeDisplayValue(normative);
-      const commonValues = {
-        normativeId: normative?.id || '',
-        pollutantCode: code,
-        code,
-        indicator: name,
-        indicatorName: name,
-        cas: pollutant.cas || normative?.cas || normative?.casNumber || '',
-        casNumber: pollutant.cas || normative?.casNumber || normative?.cas || '',
-        formula: pollutant.formula || normative?.formula || normative?.chemicalFormula || '',
-        unit: normative?.unit || pollutant.unit || '',
-        normativeType: normative?.normativeType || '',
-        normativeSubType: normativeSubtype(normative),
-        normativeValue: normativeValueText,
-        normative: normativeValueText,
-        normativeMin: normative?.min || '',
-        normativeMax: normative?.max || normative?.value || '',
-        minValue: normative?.min || '',
-        maxValue: normative?.max || normative?.value || '',
-        normativeDocument: normative?.normativeDocument || '',
-        testingMethod: normative?.testingMethod || pollutant.testingMethod || '',
-        comparisonType: normative?.comparisonType || 'LESS_OR_EQUAL',
-        normativeSelectionRequired: !selectedNormative && candidates.length > 1 ? 'true' : '',
-        normativeSearchWarning: candidates.length ? '' : normativeNotFoundMessage,
-      };
-      const values = isPhysicalFactors ? {
-        ...commonValues,
-        result: '',
-        measurementPlace: defaultMeasurementPlace || '',
-        factorType: subtype || '',
-        subtype: subtype || '',
-      } : {
-        ...commonValues,
-        primaryReading: '',
-        result: '',
-      };
-      const saved = await protocolService.addProtocolResult(protocolId, {
-        normativeId: normative?.id,
-        values,
-      });
-      if (candidates.length > 1) setNormativeChoices((current) => ({ ...current, [saved.id]: candidates }));
-      if (append) onChange([...rows, saved]);
-      if (append && isPhysicalFactors) setRawRow(saved);
+      if (!normative) {
+        onNotify(candidates.length > 1 ? 'Выберите конкретный норматив перед вводом результата' : normativeNotFoundMessage, 'warning');
+        setNormativeResults(candidates);
+        setAddOpen(true);
+        return null;
+      }
+      const resolvedUnit = normative?.unit || pollutant.unit || fallbackUnitForEnvironment(templateId, normative);
+      if (!resolvedUnit) {
+        onNotify('У выбранного показателя не указана единица измерения', 'warning');
+        return null;
+      }
+      setSelectedNormative({ ...normative, unit: resolvedUnit });
+      setNormativeResults(candidates.length ? candidates : [normative]);
+      setResultValue('');
+      setResultDeviceId('');
+      setAddOpen(true);
       setQuery('');
       setSuggestions([]);
-      onNotify(candidates.length > 1 ? 'Строка добавлена. Требуется выбрать норматив.' : candidates.length ? 'Вещество и норматив добавлены' : 'Вещество добавлено, норматив не найден', candidates.length ? 'success' : 'warning');
-      return saved;
+      onNotify('Введите результат измерения перед сохранением показателя', 'info');
+      return null;
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось добавить вещество', 'error');
       return null;
@@ -399,40 +472,23 @@ const ProtocolResultsTable = ({
       onNotify('Введите код или название показателя', 'warning');
       return;
     }
-    if (tokens.some(numericOnly)) {
-      onNotify('Сначала выберите показатель. Число вводится как результат замера.', 'warning');
+    if (tokens.some((token) => !canSearch(token))) {
+      onNotify('Введите минимум 3 символа для поиска', 'warning');
       return;
     }
     setSearching(true);
     try {
-      const found = isPhysicalFactors
-        ? getPhysicalFactorIndicators(subtype)
-        : await protocolService.searchNormative({
-          templateId,
-          subtype: subtype || '',
-          query: tokens.join(','),
-          q: tokens.join(','),
-          search: tokens.join(','),
-          objectId: objectId ? String(objectId) : '',
-          date: testingDate,
-        }).then((result) => {
-          const candidates = result.normatives || result.items || (result.normative ? [result.normative] : []);
-          return candidates.map(normativeToSuggestion);
-        }).catch((error) => {
+      const created: ProtocolResultRow[] = [];
+      for (const token of tokens) {
+        const found = await searchNow(token).catch((error) => {
           if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
           return [];
         });
-      const created: ProtocolResultRow[] = [];
-      for (const token of tokens) {
         const normalized = token.toLowerCase();
         const item = found.find((pollutant) => pollutant.code.toLowerCase() === normalized)
           || found.find((pollutant) => `${pollutant.code} ${pollutant.name}`.toLowerCase().includes(normalized));
         if (!item) {
-          if (isPhysicalFactors) onNotify('Показатель не найден в локальном списке. Выберите показатель из справочника.', 'warning');
-          else {
-            const saved = await addPollutant(manualPollutantFromText(token), false);
-            if (saved) created.push(saved);
-          }
+          onNotify(notFoundSearchMessage, 'warning');
           continue;
         }
         const exists = [...rows, ...created].some((row) => pollutantCode(row).toLowerCase() === item.code.toLowerCase());
@@ -448,6 +504,42 @@ const ProtocolResultsTable = ({
       }
     } finally {
       setSearching(false);
+    }
+  };
+
+  const addManualIndicator = async () => {
+    const value = query.trim();
+    if (!canSearch(value)) {
+      onNotify('Введите минимум 3 символа для поиска', 'warning');
+      return;
+    }
+    setSaving(true);
+    try {
+      const saved = await protocolService.addProtocolResult(protocolId, {
+        values: {
+          code: value,
+          pollutantCode: value,
+          indicator: value,
+          indicatorName: value,
+          normativeSearchWarning: normativeNotFoundMessage,
+          normativeSelectionRequired: 'true',
+          result: null,
+          resultValue: null,
+          measurementPlace: defaultMeasurementPlace || '',
+          samplingPlace: defaultMeasurementPlace || '',
+          subtype: subtype || null,
+          factorType: isPhysicalFactors ? subtype || null : null,
+        },
+      });
+      onChange([...rows, saved]);
+      setQuery('');
+      setSuggestions([]);
+      setSearchState('idle');
+      onNotify('Показатель добавлен вручную без норматива. Выберите норматив позже или добавьте его в справочник.', 'warning');
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : 'Не удалось добавить показатель вручную', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -501,6 +593,7 @@ const ProtocolResultsTable = ({
   const selectNormative = async (row: ProtocolResultRow, normativeId: string) => {
     const normative = normativeChoices[row.id]?.find((item) => item.id === normativeId);
     if (!normative) return;
+    const resolvedUnit = normative.unit || fallbackUnitForEnvironment(templateId, normative) || unit(row);
     setSaving(true);
     try {
       const saved = await protocolService.updateProtocolResult(protocolId, row.id, {
@@ -525,7 +618,7 @@ const ProtocolResultsTable = ({
           maxValue: normative.max || normative.value || '',
           normativeDocument: normative.normativeDocument || '',
           testingMethod: normative.testingMethod || valueOf(row, ['testingMethod']),
-          unit: normative.unit || unit(row),
+          unit: resolvedUnit,
           comparisonType: normative.comparisonType || '',
           normativeSelectionRequired: '',
           normativeSearchWarning: '',
@@ -596,7 +689,7 @@ const ProtocolResultsTable = ({
       const saved = await protocolService.addProtocolResult(protocolId, {
         measurementDeviceId: row.measurementDeviceId,
         normativeId: row.normativeReference?.id || valueOf(row, ['normativeId']),
-        values: { ...row.values, primaryReading: '', result: '', resultMg: '', resultValue: '' },
+        values: { ...row.values },
       });
       onChange([...rows, saved]);
       onNotify('Строка дублирована', 'success');
@@ -745,10 +838,32 @@ const ProtocolResultsTable = ({
         <div><span className="text-slate-500">Не соответствует</span><p className="font-black text-slate-900">{calculationSummary.exceeded}</p></div>
       </div>}
 
+      {devices.length === 0 && <div className="mb-4 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+        <p>К протоколу не прикреплены средства измерений. Сначала добавьте прибор на шаге «Средства измерений».</p>
+        {onGoToInstruments && (
+          <Button type="button" variant="secondary" onClick={onGoToInstruments}>
+            Перейти к средствам измерений
+          </Button>
+        )}
+      </div>}
+
       {!readOnly && <div className="mb-4 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
           <input value={query} onChange={(event) => search(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addBulk(); } }} placeholder={isPhysicalFactors ? 'Показатель: освещённость, шум, температура…' : 'Код или название вещества: 0301, азот…'} className={`${inputClass} pl-10`} />
+          {searchState === 'minLength' && (
+            <div className="mt-2 rounded-xl border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-600">
+              Введите минимум 3 символа для поиска
+            </div>
+          )}
+          {searching && (
+            <div className="mt-2 rounded-xl border border-eco-100 bg-eco-50 p-3 text-sm font-semibold text-eco-800">
+              Поиск...
+            </div>
+          )}
+          {!searching && suggestions.length > 0 && (
+            <p className="mt-2 text-xs font-bold uppercase text-slate-500">Выберите норматив из списка</p>
+          )}
           {suggestions.length > 0 && <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
             {suggestions.map((item) => <button key={`${item.code}-${item.id || item.name}`} type="button" onClick={() => addPollutant(item)} className="flex w-full flex-wrap gap-x-3 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-eco-50">
               <span className="font-black text-eco-800">{item.code}</span>
@@ -759,9 +874,12 @@ const ProtocolResultsTable = ({
               {item.selectedNormative && <span className="font-semibold text-slate-700">{normativeSubtype(item.selectedNormative) || item.selectedNormative.normativeType || 'Норматив'}: {normativeDisplayValue(item.selectedNormative)} {item.selectedNormative.unit}</span>}
             </button>)}
           </div>}
-          {isPhysicalFactors && query.trim() && !suggestions.length && (
-            <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
-              Показатель не найден в локальном списке. Выберите показатель из справочника.
+          {!searching && searchState === 'empty' && (
+            <div className="mt-2 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+              <span>{notFoundSearchMessage}</span>
+              <Button type="button" variant="secondary" className="shrink-0" disabled={readOnly || saving} onClick={addManualIndicator}>
+                Добавить вручную без норматива
+              </Button>
             </div>
           )}
         </div>
@@ -929,8 +1047,12 @@ const ProtocolResultsTable = ({
                       <td className="px-3 py-3">{item.unit || '-'}</td>
                     </tr>
                   );
-                }) : (
-                  <tr><td colSpan={7} className="px-3 py-8 text-center text-sm font-semibold text-slate-500">Введите запрос и нажмите “Найти”.</td></tr>
+                }) : normativeSearchDone ? (
+                  <tr><td colSpan={7} className="px-3 py-8 text-center text-sm font-semibold text-amber-800">Норматив не найден. Проверьте код или добавьте норматив в справочник.</td></tr>
+                ) : normativeQuery.trim() && !canSearch(normativeQuery) ? (
+                  <tr><td colSpan={7} className="px-3 py-8 text-center text-sm font-semibold text-slate-500">Введите минимум 3 символа для поиска.</td></tr>
+                ) : (
+                  <tr><td colSpan={7} className="px-3 py-8 text-center text-sm font-semibold text-slate-500">Введите код, название, CAS или формулу и нажмите “Найти”.</td></tr>
                 )}
               </tbody>
             </table>

@@ -21,7 +21,7 @@ import { useToast } from '../hooks/useToast';
 import { useAuth } from '../contexts/AuthContext';
 import { getMeasurementDevices } from '../services/measurementDeviceService';
 import { getCompanyObjects } from '../services/companyService';
-import { accreditationState, getLaboratory, getLaboratoryEmployees } from '../services/laboratorySettingsService';
+import { accreditationState, getLaboratories, getLaboratory, getLaboratoryEmployees } from '../services/laboratorySettingsService';
 import { getApiStatus } from '../services/apiHelpers';
 import { signBase64WithNCALayer } from '../services/ncalayer';
 import protocolService, { useProtocolMocks } from '../services/protocolService';
@@ -196,12 +196,16 @@ const hasCheckedResults = (protocol: Protocol) =>
 const laboratorySnapshotFromProfile = (
   profile: LaboratoryProfile,
   current: ProtocolLaboratorySnapshot,
+  executor?: LaboratoryEmployee,
 ): ProtocolLaboratorySnapshot => ({
   ...current,
-  laboratoryId: profile.id || current.laboratoryId,
+  id: profile.id || current.id || current.laboratoryId,
+  laboratoryId: profile.id || current.laboratoryId || current.id,
+  name: profile.name || current.name || current.laboratoryName,
   laboratoryName: profile.name || current.laboratoryName,
   legalName: profile.legalName || current.legalName,
   bin: profile.bin || current.bin,
+  address: profile.address || current.address || current.laboratoryAddress,
   laboratoryAddress: profile.address || current.laboratoryAddress,
   phone: profile.phone || current.phone,
   email: profile.email || current.email,
@@ -209,12 +213,17 @@ const laboratorySnapshotFromProfile = (
   accreditationIssuedAt: profile.accreditationIssuedAt || current.accreditationIssuedAt,
   accreditationValidUntil: profile.accreditationValidUntil || current.accreditationValidUntil,
   directorId: profile.directorId || current.directorId,
+  directorName: profile.directorName || current.directorName || current.director,
   director: profile.directorName || current.director,
   laboratoryHeadId: profile.laboratoryHeadId || current.laboratoryHeadId,
+  laboratoryHeadName: profile.laboratoryHeadName || current.laboratoryHeadName || current.laboratoryHead,
   laboratoryHead: profile.laboratoryHeadName || current.laboratoryHead,
+  executorId: executor?.userId || executor?.id || current.executorId,
+  executorName: executor?.fullName || current.executorName || current.executor,
+  executor: executor?.fullName || current.executor,
   logoUrl: profile.logoUrl || current.logoUrl,
   standardNote: profile.standardNote || current.standardNote,
-  capturedAt: current.capturedAt || new Date().toISOString(),
+  capturedAt: new Date().toISOString(),
 });
 
 const getMissingFields = (protocol: Protocol): MissingField[] => {
@@ -779,16 +788,38 @@ const ProtocolEditorPage = () => {
   };
 
   const refreshLaboratorySnapshot = async () => {
-    if (!protocol) return;
-    const laboratoryId = protocol.laboratory?.laboratoryId;
-    if (!laboratoryId) {
-      toast.warning('Лаборатория не выбрана');
-      return;
-    }
+    if (!protocol || readOnly || busy) return;
     setBusy(true);
     try {
-      const profile = await getLaboratory(laboratoryId);
-      const laboratory = laboratorySnapshotFromProfile(profile, protocol.laboratory);
+      let laboratoryId = protocol.laboratory?.laboratoryId || protocol.laboratory?.id;
+
+      if (!laboratoryId) {
+        const laboratories = await getLaboratories();
+        const active = laboratories.filter((item) => item.active);
+        const defaultLaboratory = active.find((item) => item.isDefault) || (active.length === 1 ? active[0] : undefined);
+
+        if (!defaultLaboratory) {
+          toast.warning(
+            active.length
+              ? 'Выберите лабораторию в настройках протокола или назначьте лабораторию по умолчанию'
+              : 'Лаборатория не настроена. Заполните настройки лаборатории'
+          );
+          return;
+        }
+
+        laboratoryId = defaultLaboratory.id;
+      }
+
+      const [profile, employees] = await Promise.all([
+        getLaboratory(laboratoryId),
+        getLaboratoryEmployees(laboratoryId),
+      ]);
+      const activeEmployees = employees.filter((item) => item.active);
+      const currentExecutorId = protocol.executorId || protocol.laboratory?.executorId;
+      const executor = activeEmployees.find((item) => String(item.userId || item.id) === String(currentExecutorId))
+        || activeEmployees[0];
+      const laboratory = laboratorySnapshotFromProfile(profile, protocol.laboratory, executor);
+      setLaboratoryEmployees(activeEmployees);
       const updated = await protocolService.updateProtocol(protocol.id, {
         number: protocol.protocolNumber || protocol.number || '',
         protocolDate: protocol.protocolDate || '',
@@ -798,8 +829,8 @@ const ProtocolEditorPage = () => {
         measurementPlace: protocol.measurementPlace,
         formCode: protocol.formCode,
         application: protocol.application,
-        executor: protocol.executor || laboratory.executor || '',
-        executorId: protocol.executorId || laboratory.executorId,
+        executor: executor?.fullName || protocol.executor || laboratory.executor || '',
+        executorId: executor?.userId || executor?.id || protocol.executorId || laboratory.executorId,
         approver: protocol.approver || '',
         laboratory,
         organization: protocol.organization,
@@ -810,7 +841,7 @@ const ProtocolEditorPage = () => {
       applyServerProtocol(updated);
       toast.success('Данные лаборатории обновлены из настроек');
     } catch (error) {
-      toast.error('Не удалось обновить данные лаборатории', error instanceof Error ? error.message : undefined);
+      toast.error('Не удалось обновить лабораторию', error instanceof Error ? error.message : undefined);
     } finally {
       setBusy(false);
     }
@@ -1195,6 +1226,7 @@ const ProtocolEditorPage = () => {
         onCheckNormatives={checkSavedNormatives}
         onImported={load}
         onNotify={notify}
+        onGoToInstruments={() => setActiveStep('instruments')}
       />}
 
       {activeStep === 'instruments' && <MeasurementDevicesSection devices={protocol.measurementDevices || []} readOnly={readOnly || busy} onAdd={() => setDevicePickerOpen(true)} onRemove={(deviceId) => setDeviceToRemove(deviceId)} />}

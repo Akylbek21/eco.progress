@@ -259,6 +259,10 @@ const normalizeNormativeRecord = (raw: unknown): NormativeRecord => {
     normativeSubType: pick(source, ['normativeSubType', 'normativeSubtype', 'subType', 'subtype']),
     subtype: pick(source, ['subtype', 'subType', 'normativeSubType', 'normativeSubtype']),
     value: pick(source, ['value', 'normative', 'normativeValue']),
+    maxOneTimeValue: pick(source, ['maxOneTimeValue', 'max_one_time_value', 'maximumOneTimeValue', 'oneTimeValue', 'pdkMaxOneTime']),
+    dailyAverageValue: pick(source, ['dailyAverageValue', 'daily_average_value', 'averageDailyValue', 'pdkDailyAverage']),
+    singleValue: pick(source, ['singleValue', 'single_value', 'pdkValue']),
+    obuvValue: pick(source, ['obuvValue', 'obuv_value', 'obuv']),
     min: pick(source, ['min', 'minValue', 'normativeMin']),
     max: pick(source, ['max', 'maxValue', 'normativeMax']),
     comparisonType: (pick(source, ['comparisonType']) || 'LESS_OR_EQUAL') as NormativeRecord['comparisonType'],
@@ -297,7 +301,7 @@ const isDemoNormativeRecord = (item: NormativeRecord) => {
   return demoNormativeSources.some((marker) => sourceText.includes(marker))
     || demoNormativeIndicators.some((indicator) => indicatorText === indicator || indicatorText.includes(indicator));
 };
-const isVisibleNormativeRecord = (item: NormativeRecord) => hasExcelNormativeSource(item) && !isDemoNormativeRecord(item);
+const isVisibleNormativeRecord = (item: NormativeRecord) => !isDemoNormativeRecord(item);
 
 const extractNormativeRecords = (response: unknown): NormativeRecord[] => {
   const map = new Map<string, NormativeRecord>();
@@ -598,10 +602,13 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
       testingBasis: pick(organization, ['testingBasis', 'basis']) || pick(source, ['testingBasis', 'testing_basis']),
     },
     laboratory: {
+      id: pick(laboratory, ['id', 'laboratoryId']) || pick(source, ['laboratoryId', 'laboratory_id', 'labId']),
       laboratoryId: pick(laboratory, ['laboratoryId', 'id']) || pick(source, ['laboratoryId', 'laboratory_id', 'labId']),
+      name: pick(laboratory, ['name', 'laboratoryName', 'legalName']) || pick(source, ['laboratoryName']),
       laboratoryName: pick(laboratory, ['laboratoryName', 'name', 'legalName']) || pick(source, ['laboratoryName']),
       legalName: pick(laboratory, ['legalName', 'fullName']),
       bin: pick(laboratory, ['bin', 'iin', 'taxId']),
+      address: pick(laboratory, ['address', 'laboratoryAddress', 'legalAddress']),
       laboratoryAddress: pick(laboratory, ['laboratoryAddress', 'address', 'legalAddress']),
       phone: pick(laboratory, ['phone', 'phoneNumber']),
       email: pick(laboratory, ['email']),
@@ -609,10 +616,13 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
       accreditationIssuedAt: pick(laboratory, ['accreditationIssuedAt', 'certificateIssuedAt', 'accreditationDate']),
       accreditationValidUntil: pick(laboratory, ['accreditationValidUntil', 'certificateValidUntil', 'validUntil', 'certificateExpiresAt']),
       directorId: pick(laboratory, ['directorId']),
+      directorName: pick(laboratory, ['directorName', 'director']),
       director: pick(laboratory, ['director', 'directorName']),
       laboratoryHeadId: pick(laboratory, ['laboratoryHeadId', 'headId']),
+      laboratoryHeadName: pick(laboratory, ['laboratoryHeadName', 'headName', 'laboratoryHead', 'head']),
       laboratoryHead: pick(laboratory, ['laboratoryHead', 'head', 'laboratoryHeadName', 'headName']),
       executorId: pick(laboratory, ['executorId']) || pick(source, ['executorId', 'executor_id']),
+      executorName: pick(laboratory, ['executorName', 'executor']) || pick(source, ['executor']),
       executor: pick(laboratory, ['executor', 'executorName']) || pick(source, ['executor']),
       logoUrl: pick(laboratory, ['logoUrl', 'logo']),
       standardNote: pick(laboratory, ['standardNote', 'note']),
@@ -645,45 +655,50 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
   };
 };
 
-const toCreateProtocolApiPayload = (payload: CreateProtocolPayload) => ({
-  companyId: Number.isNaN(Number(payload.companyId)) ? payload.companyId : Number(payload.companyId),
-  objectId: Number.isNaN(Number(payload.objectId)) ? payload.objectId : Number(payload.objectId),
-  templateId: payload.templateId,
-  subtype: payload.subtype || null,
-  protocolNumber: payload.protocolNumber || '',
-  protocolDate: payload.protocolDate,
-  samplingDate: payload.samplingDate || null,
-  testingStartDate: payload.testingStartDate || null,
-  testingEndDate: payload.testingEndDate || null,
-  productName: payload.productName || '',
-  testingBasis: payload.testingBasis || '',
-  productNormativeDocument: payload.productNormativeDocument || '',
-  samplingMethodDocument: payload.samplingMethodDocument || '',
-  testingMethodDocument: payload.testingMethodDocument || '',
-  purpose: payload.purpose || '',
-  measurementDate: payload.measurementDate || payload.samplingDate || null,
-  measurementTime: payload.measurementTime || null,
-  measurementPlace: payload.measurementPlace || null,
-  sourceNumber: payload.sourceNumber || null,
-  laboratoryId: payload.laboratoryId || null,
-  executorId: payload.executorId || null,
-  environment: {
-    temperatureC: nullableDecimal(payload.environment?.temperature),
-    temperatureMinC: nullableDecimal(payload.environment?.minTemperature),
-    temperatureMaxC: nullableDecimal(payload.environment?.maxTemperature),
-    humidityPercent: nullableDecimal(payload.environment?.humidity),
-    humidityMinPercent: nullableDecimal(payload.environment?.minHumidity),
-    humidityMaxPercent: nullableDecimal(payload.environment?.maxHumidity),
-    pressureKpa: nullableDecimal(payload.environment?.pressureKpa),
-    windSpeedMs: nullableDecimal(payload.environment?.windSpeed),
-    conditionsComment: payload.environment?.comment || '',
-    source: payload.environment?.source || null,
-    dataSource: payload.environment?.dataSource || null,
-    observedAt: payload.environment?.observedAt || null,
-    loadedAt: payload.environment?.loadedAt || null,
-    manualChangeReason: payload.environment?.manualChangeReason || null,
-  },
-});
+const toCreateProtocolApiPayload = (payload: CreateProtocolPayload) => {
+  const sampleDate = payload.sampleDate || payload.samplingDate || payload.measurementDate || null;
+
+  return {
+    companyId: Number.isNaN(Number(payload.companyId)) ? payload.companyId : Number(payload.companyId),
+    objectId: Number.isNaN(Number(payload.objectId)) ? payload.objectId : Number(payload.objectId),
+    templateId: payload.templateId,
+    subtype: payload.subtype || null,
+    protocolNumber: payload.protocolNumber || '',
+    protocolDate: payload.protocolDate,
+    sampleDate,
+    samplingDate: sampleDate,
+    testingStartDate: payload.testingStartDate || null,
+    testingEndDate: payload.testingEndDate || null,
+    productName: payload.productName || '',
+    testingBasis: payload.testingBasis || '',
+    productNormativeDocument: payload.productNormativeDocument || '',
+    samplingMethodDocument: payload.samplingMethodDocument || '',
+    testingMethodDocument: payload.testingMethodDocument || '',
+    purpose: payload.purpose || '',
+    measurementDate: payload.measurementDate || sampleDate,
+    measurementTime: payload.measurementTime || null,
+    measurementPlace: payload.measurementPlace || null,
+    sourceNumber: payload.sourceNumber || null,
+    laboratoryId: payload.laboratoryId || null,
+    executorId: payload.executorId || null,
+    environment: {
+      temperatureC: nullableDecimal(payload.environment?.temperature),
+      temperatureMinC: nullableDecimal(payload.environment?.minTemperature),
+      temperatureMaxC: nullableDecimal(payload.environment?.maxTemperature),
+      humidityPercent: nullableDecimal(payload.environment?.humidity),
+      humidityMinPercent: nullableDecimal(payload.environment?.minHumidity),
+      humidityMaxPercent: nullableDecimal(payload.environment?.maxHumidity),
+      pressureKpa: nullableDecimal(payload.environment?.pressureKpa),
+      windSpeedMs: nullableDecimal(payload.environment?.windSpeed),
+      conditionsComment: payload.environment?.comment || '',
+      source: payload.environment?.source || null,
+      dataSource: payload.environment?.dataSource || null,
+      observedAt: payload.environment?.observedAt || null,
+      loadedAt: payload.environment?.loadedAt || null,
+      manualChangeReason: payload.environment?.manualChangeReason || null,
+    },
+  };
+};
 
 const toApiEnvironment = (environment: UpdateProtocolPayload['environment']) => ({
   temperatureC: nullableDecimal(environment?.temperature),
@@ -702,17 +717,65 @@ const toApiEnvironment = (environment: UpdateProtocolPayload['environment']) => 
   manualChangeReason: environment?.manualChangeReason || null,
 });
 
+type ApiResultValue = string | number | null | undefined | Array<string | number | null>;
+
+const resultIdKeys = new Set(['normativeId', 'measurementDeviceId', 'deviceId', 'methodTemplateId']);
+const resultNumericKeys = new Set([
+  'primaryReading',
+  'measurementReadings',
+  'readings',
+  'result',
+  'resultMg',
+  'resultMgM3',
+  'resultValue',
+  'normative',
+  'normativeValue',
+  'normativeMin',
+  'normativeMax',
+  'minValue',
+  'maxValue',
+  'value',
+]);
+
+const decimalNumberOrNull = (value: unknown): number | null => {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const normalized = String(value).trim().replace(',', '.');
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const sanitizeResultField = (key: string, value: ApiResultValue): ApiResultValue => {
+  if (Array.isArray(value)) {
+    const sanitized = value.map((item) => resultNumericKeys.has(key) ? decimalNumberOrNull(item) : item);
+    return sanitized.length ? sanitized : null;
+  }
+  if (resultIdKeys.has(key)) return String(value ?? '').trim() || null;
+  if (resultNumericKeys.has(key)) {
+    if (value === undefined || value === null || String(value).trim() === '') return null;
+    const parsed = decimalNumberOrNull(value);
+    return parsed ?? value;
+  }
+  if (typeof value === 'string' && value.trim() === '') return null;
+  return value;
+};
+
+const sanitizeResultValues = (values: Record<string, ApiResultValue>) => Object.fromEntries(
+  Object.entries(values).map(([key, value]) => [key, sanitizeResultField(key, value)])
+) as Record<string, ApiResultValue>;
+
 const toApiResultPayload = (payload: ProtocolResultPayload) => {
   const values = { ...payload.values };
-  const measurementDeviceId = payload.measurementDeviceId ?? values.measurementDeviceId ?? values.deviceId ?? null;
-  const normativeId = payload.normativeId ?? values.normativeId ?? null;
-  const mapped: Record<string, string | number | null | undefined> = {
+  const measurementDeviceId = sanitizeResultField('measurementDeviceId', payload.measurementDeviceId ?? values.measurementDeviceId ?? values.deviceId ?? null);
+  const normativeId = sanitizeResultField('normativeId', payload.normativeId ?? values.normativeId ?? null);
+  const mapped = sanitizeResultValues({
     ...values,
     minValue: values.minValue ?? values.normativeMin ?? null,
     maxValue: values.maxValue ?? values.normativeMax ?? null,
     deviceId: values.deviceId ?? measurementDeviceId,
     subtype: values.subtype ?? values.factorType ?? null,
-  };
+  });
   delete mapped.measurementDeviceId;
   delete mapped.factorType;
   return { ...mapped, measurementDeviceId, normativeId, values: mapped };
@@ -976,14 +1039,20 @@ export async function removeProtocolMeasurementDevice(protocolId: string, device
   return protocolFromActionResponse(protocolId, response);
 }
 
+const MIN_NORMATIVE_SEARCH_LENGTH = 3;
+const NORMATIVE_SEARCH_LIMIT = 20;
+const canRunNormativeSearch = (value: string) => value.trim().length >= MIN_NORMATIVE_SEARCH_LENGTH;
+
 export async function searchNormative(params: Record<string, string>): Promise<NormativeSearchResult> {
   const { testingDate, ...rest } = params;
   const query = params.query || [params.code || params.pollutantCode, params.indicator].filter(Boolean).join(' ').trim();
+  if (!canRunNormativeSearch(query)) return { found: false, normatives: [], items: [] };
   const requestParams = {
     ...rest,
     search: params.search || query,
     query,
     q: params.q || query,
+    limit: params.limit || NORMATIVE_SEARCH_LIMIT,
     code: params.code || params.pollutantCode || undefined,
     pollutantCode: params.pollutantCode || params.code || undefined,
     indicator: params.indicator || undefined,
@@ -1016,29 +1085,42 @@ export async function searchNormative(params: Record<string, string>): Promise<N
 }
 
 export async function searchPollutants(query: string, params: Record<string, string> = {}): Promise<Pollutant[]> {
-  try {
-    const response = await api.get<ApiResponse<unknown> | unknown>('/pollutants/search', {
-      params: { ...params, query, q: query },
-    });
-    return extractPollutants(response);
-  } catch (error) {
-    if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
+  if (!canRunNormativeSearch(query)) return [];
+  const fromNormatives = async () => {
     const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/search', {
-      params: { ...params, query, q: query },
+      params: {
+        ...params,
+        query,
+        q: query,
+        code: params.code || query,
+        pollutantCode: params.pollutantCode || query,
+        search: params.search || query,
+        limit: params.limit || NORMATIVE_SEARCH_LIMIT,
+      },
     });
     return extractNormativeRecords(response).map((item) => {
       const source = asRecord(item);
       return normalizePollutant({
         id: source.pollutantId || source.id,
         code: source.pollutantCode || source.code,
-        name: source.indicator || source.name,
-        cas: source.cas,
-        formula: source.formula,
+        name: source.indicator || source.indicatorName || source.pollutantName || source.name,
+        cas: source.cas || source.casNumber,
+        formula: source.formula || source.chemicalFormula,
         unit: source.unit,
         testingMethod: source.testingMethod,
         samplingMethod: source.samplingMethod,
       });
     });
+  };
+  try {
+    const response = await api.get<ApiResponse<unknown> | unknown>('/pollutants/search', {
+      params: { ...params, query, q: query, limit: params.limit || NORMATIVE_SEARCH_LIMIT },
+    });
+    const pollutants = extractPollutants(response);
+    return pollutants.length ? pollutants : fromNormatives();
+  } catch (error) {
+    if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
+    return fromNormatives();
   }
 }
 
