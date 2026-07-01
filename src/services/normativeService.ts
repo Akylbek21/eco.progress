@@ -52,12 +52,25 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
   return {
     id: firstString(source.id, source._id, source.referenceId, `${code}-${indicator}-${source.normativeDocument || source.document}`),
     templateId: firstString(source.templateId, source.templateCode, source.protocolTemplateCode).toLowerCase() as NormativeRecord['templateId'],
+    sourceDocumentCode: firstString(source.sourceDocumentCode, source.source_document_code, source.documentCode, source.dsmCode),
+    sourceDocumentName: firstString(source.sourceDocumentName, source.source_document_name, source.documentName, source.document),
+    appendixNo: firstString(source.appendixNo, source.appendixNumber, source.appendix, source.attachmentNo),
+    tableNo: firstString(source.tableNo, source.tableNumber, source.table),
+    factorType: firstString(source.factorType, source.factor_type, source.subtype, source.physicalFactorType),
+    factorCode: firstString(source.factorCode, source.factor_code, source.indicatorCode, source.code),
+    roomType: firstString(source.roomType, source.room_type),
+    season: firstString(source.season, source.period, source.yearPeriod),
+    workCategory: firstString(source.workCategory, source.work_category, source.categoryOfWork),
+    workplaceType: firstString(source.workplaceType, source.workplace_type, source.workPlaceType),
+    normLevel: firstString(source.normLevel, source.norm_level, source.level, source.normativeLevel),
+    conditionJson: firstString(source.conditionJson, source.condition_json, source.conditionsJson, source.conditions),
     code,
     pollutantCode: firstString(source.pollutantCode, source.substanceCode, code),
     indicatorName: firstString(source.indicatorName, source.indicatorNameRu, source.name, source.nameRu, indicator),
     pollutantName: firstString(source.pollutantName, source.substanceName, indicator),
-    researchObject: firstString(source.researchObject, source.object, source.objectName, source.environment, source.medium, source.sampleType),
-    environment: firstString(source.environment, source.researchObject, source.medium, source.sampleType),
+    researchObject: firstString(source.researchObject, source.object, source.objectName, source.environmentType, source.environment, source.medium, source.sampleType),
+    environmentType: firstString(source.environmentType, source.environment_type, source.mediumType, source.environmentCode),
+    environment: firstString(source.environment, source.environmentType, source.environment_type, source.researchObject, source.medium, source.sampleType),
     indicator,
     cas: firstString(source.cas, source.casNumber, pollutant.cas, pollutant.casNumber),
     casNumber: firstString(source.casNumber, source.cas, pollutant.casNumber, pollutant.cas),
@@ -177,6 +190,24 @@ export type NormativeImportPreview = {
   importId?: string;
   fileName?: string;
 };
+
+export type NormativeResourceImportResult = {
+  created: number;
+  updated: number;
+  warnings: number;
+  items?: NormativeRecord[];
+};
+
+export async function importPhysicalFactorsFromResources(): Promise<NormativeResourceImportResult> {
+  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives/physical-factors/import-resources');
+  const item = unwrapImportData(response);
+  return {
+    created: Number(item.created ?? item.createdCount ?? item.newNormatives ?? 0),
+    updated: Number(item.updated ?? item.updatedCount ?? item.updatedNormatives ?? 0),
+    warnings: Number(item.warnings ?? item.warningCount ?? item.warningsCount ?? 0),
+    items: extractNormativeRecords(response),
+  };
+}
 
 const isImportFallbackStatus = (error: unknown) => [400, 404, 405].includes(getApiStatus(error) || 0);
 

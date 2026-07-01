@@ -21,6 +21,7 @@ import type {
   ProtocolCompanySnapshot,
   ProtocolEnvironmentalConditions,
   ProtocolMeasurementDevice,
+  QuickProtocolCreatePayload,
   ProtocolResultPayload,
   ProtocolResultRow,
   ProtocolTemplate,
@@ -243,12 +244,25 @@ const normalizeNormativeRecord = (raw: unknown): NormativeRecord => {
   return {
     id: pick(source, ['id', '_id']),
     templateId: pick(source, ['templateId', 'templateCode']).toLowerCase() as NormativeRecord['templateId'],
+    sourceDocumentCode: pick(source, ['sourceDocumentCode', 'source_document_code', 'documentCode', 'dsmCode']),
+    sourceDocumentName: pick(source, ['sourceDocumentName', 'source_document_name', 'documentName', 'document']),
+    appendixNo: pick(source, ['appendixNo', 'appendixNumber', 'appendix', 'attachmentNo']),
+    tableNo: pick(source, ['tableNo', 'tableNumber', 'table']),
+    factorType: pick(source, ['factorType', 'factor_type', 'subtype', 'physicalFactorType']),
+    factorCode: pick(source, ['factorCode', 'factor_code', 'indicatorCode', 'code']),
+    roomType: pick(source, ['roomType', 'room_type']),
+    season: pick(source, ['season', 'period', 'yearPeriod']),
+    workCategory: pick(source, ['workCategory', 'work_category', 'categoryOfWork']),
+    workplaceType: pick(source, ['workplaceType', 'workplace_type', 'workPlaceType']),
+    normLevel: pick(source, ['normLevel', 'norm_level', 'level', 'normativeLevel']),
+    conditionJson: pick(source, ['conditionJson', 'condition_json', 'conditionsJson', 'conditions']),
     code: pick(source, ['code', 'pollutantCode', 'substanceCode', 'indicatorCode', 'referenceCode']),
     pollutantCode: pick(source, ['pollutantCode', 'pollutant_code', 'substanceCode', 'code', 'indicatorCode', 'referenceCode']),
     indicatorName: pick(source, ['indicatorName', 'indicatorNameRu', 'name', 'nameRu', 'indicator']),
     pollutantName: pick(source, ['pollutantName', 'substanceName', 'indicatorName', 'name']),
-    researchObject: pick(source, ['researchObject', 'environment', 'object', 'objectName', 'medium', 'sampleType']),
-    environment: pick(source, ['environment', 'researchObject', 'medium', 'sampleType']),
+    researchObject: pick(source, ['researchObject', 'environmentType', 'environment', 'object', 'objectName', 'medium', 'sampleType']),
+    environmentType: pick(source, ['environmentType', 'environment_type', 'mediumType', 'environmentCode']),
+    environment: pick(source, ['environment', 'environmentType', 'environment_type', 'researchObject', 'medium', 'sampleType']),
     indicator: pick(source, ['indicator', 'indicatorName', 'indicatorNameRu', 'indicatorNameKz', 'name', 'nameRu', 'nameKz', 'pollutantName', 'substanceName']),
     cas: pick(source, ['cas', 'casNumber']),
     casNumber: pick(source, ['casNumber', 'cas']),
@@ -863,6 +877,64 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   return requireProtocol(result, 'создание');
 }
 
+const quickCreateFallback = async (payload: QuickProtocolCreatePayload): Promise<Protocol> => {
+  const protocol = await createProtocol({
+    companyId: payload.companyId,
+    objectId: payload.objectId || '',
+    templateId: payload.templateId,
+    subtype: payload.subtype,
+    protocolDate: payload.protocolDate,
+    sampleDate: payload.measurementDate,
+    samplingDate: payload.measurementDate,
+    testingStartDate: payload.measurementDate,
+    testingEndDate: payload.measurementDate,
+    measurementDate: payload.measurementDate,
+    measurementTime: payload.measurementTime,
+    measurementPlace: payload.measurementPlace,
+    laboratoryId: payload.laboratoryId,
+    executorId: payload.executorId,
+    purpose: 'Лабораторные испытания',
+    environment: { source: 'MANUAL', dataSource: 'manual' },
+  });
+
+  await Promise.all(payload.measurements.map((measurement) => addProtocolResult(protocol.id, {
+    normativeId: measurement.normativeId,
+    values: {
+      ...(payload.conditions || {}),
+      ...(measurement.values || {}),
+      factorType: measurement.factorType || payload.subtype || '',
+      factorCode: measurement.factorCode || '',
+      indicator: measurement.indicatorName,
+      indicatorName: measurement.indicatorName,
+      unit: measurement.unit || '',
+      primaryReading: measurement.value,
+      measurementReadings: measurement.value,
+      result: measurement.value,
+      resultValue: measurement.value,
+      measurementPlace: payload.measurementPlace || '',
+      samplingPlace: payload.measurementPlace || '',
+      sourceDocumentCode: payload.sourceDocumentCode || '',
+    },
+  })));
+
+  try {
+    return await checkNormatives(protocol.id);
+  } catch {
+    return getProtocol(protocol.id);
+  }
+};
+
+export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): Promise<Protocol> {
+  try {
+    const response = await api.post<ApiResponse<unknown> | unknown>('/protocols/quick-create', payload);
+    const result = unwrapData(response);
+    return requireProtocol(result, 'быстрое создание');
+  } catch (error) {
+    if (![404, 405].includes(getApiStatus(error) || 0)) throw error;
+    return quickCreateFallback(payload);
+  }
+}
+
 export async function getProtocol(protocolId: string): Promise<Protocol> {
   const response = await api.get<ApiResponse<unknown>>(
     `/protocols/${protocolId}`
@@ -1058,6 +1130,14 @@ export async function searchNormative(params: Record<string, string>): Promise<N
     indicator: params.indicator || undefined,
     templateId: params.templateId || undefined,
     subtype: params.subtype || undefined,
+    sourceDocumentCode: params.sourceDocumentCode || undefined,
+    factorType: params.factorType || undefined,
+    factorCode: params.factorCode || undefined,
+    roomType: params.roomType || undefined,
+    season: params.season || undefined,
+    workCategory: params.workCategory || undefined,
+    workplaceType: params.workplaceType || undefined,
+    normLevel: params.normLevel || undefined,
     unit: params.unit || undefined,
     objectId: params.objectId || undefined,
     date: params.date || testingDate || undefined,

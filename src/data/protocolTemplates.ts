@@ -14,6 +14,12 @@ export const physicalFactorTypes: Array<{ value: ProtocolSubtype; label: string 
   { value: 'NOISE', label: 'Шум' },
   { value: 'VIBRATION', label: 'Вибрация' },
   { value: 'NOISE_VIBRATION', label: 'Шум и вибрация' },
+  { value: 'INFRASOUND', label: 'Инфразвук' },
+  { value: 'ULTRASOUND', label: 'Ультразвук' },
+  { value: 'UV', label: 'Ультрафиолет' },
+  { value: 'AEROIONS', label: 'Аэроионы' },
+  { value: 'ELECTROMAGNETIC_FIELD', label: 'ЭМП' },
+  { value: 'LASER', label: 'Лазерное излучение' },
 ];
 
 export const subtypeName = (subtype?: string) =>
@@ -128,6 +134,15 @@ const physicalColumns: Record<ProtocolSubtype, ProtocolResultColumn[]> = {
   VIBRATION: noiseVibration.map((column) =>
     column.key === 'factorType' ? { ...column, options: [{ value: 'VIBRATION', label: 'Вибрация' }] } : column),
   NOISE_VIBRATION: noiseVibration,
+  INFRASOUND: noiseVibration.map((column) =>
+    column.key === 'factorType' ? { ...column, options: [{ value: 'INFRASOUND', label: 'Инфразвук' }] } : column),
+  ULTRASOUND: noiseVibration.map((column) =>
+    column.key === 'factorType' ? { ...column, options: [{ value: 'ULTRASOUND', label: 'Ультразвук' }] } : column),
+  UV: lighting,
+  AEROIONS: lighting,
+  ELECTROMAGNETIC_FIELD: noiseVibration.map((column) =>
+    column.key === 'factorType' ? { ...column, options: [{ value: 'ELECTROMAGNETIC_FIELD', label: 'ЭМП' }] } : column),
+  LASER: lighting,
 };
 
 const physicalTemplateSubtypes: Record<string, ProtocolSubtype> = {

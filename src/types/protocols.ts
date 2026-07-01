@@ -19,7 +19,13 @@ export type ProtocolSubtype =
   | 'LIGHTING'
   | 'NOISE'
   | 'VIBRATION'
-  | 'NOISE_VIBRATION';
+  | 'NOISE_VIBRATION'
+  | 'INFRASOUND'
+  | 'ULTRASOUND'
+  | 'UV'
+  | 'AEROIONS'
+  | 'ELECTROMAGNETIC_FIELD'
+  | 'LASER';
 
 export type ComplianceStatus =
   | 'NORMAL'
@@ -379,6 +385,32 @@ export type ProtocolResultPayload = {
   normativeId?: string | null;
 };
 
+export type QuickProtocolMeasurementPayload = {
+  factorType?: string;
+  factorCode?: string;
+  indicatorName: string;
+  value: string | number;
+  unit?: string;
+  normativeId?: string;
+  values?: Record<string, ProtocolResultValue>;
+};
+
+export type QuickProtocolCreatePayload = {
+  templateId: ProtocolTemplateId;
+  subtype?: ProtocolSubtype;
+  companyId: string | number;
+  objectId?: string | number;
+  protocolDate: string;
+  measurementDate: string;
+  measurementTime?: string;
+  measurementPlace?: string;
+  laboratoryId?: string;
+  executorId?: string;
+  sourceDocumentCode?: string;
+  conditions?: Record<string, ProtocolResultValue>;
+  measurements: QuickProtocolMeasurementPayload[];
+};
+
 export type MethodVariableResponse = {
   id: string | number;
   variableKey: string;
@@ -542,12 +574,25 @@ export type NormativeComparisonType = 'LESS_OR_EQUAL' | 'GREATER_OR_EQUAL' | 'RA
 export type NormativeRecord = {
   id: string;
   templateId: ProtocolTemplateId;
+  sourceDocumentCode?: string;
+  sourceDocumentName?: string;
+  appendixNo?: string;
+  tableNo?: string;
+  factorType?: string;
+  factorCode?: string;
+  roomType?: string;
+  season?: string;
+  workCategory?: string;
+  workplaceType?: string;
+  normLevel?: string;
+  conditionJson?: string;
   code?: string;
   pollutantCode?: string;
   indicatorName?: string;
   pollutantName?: string;
   researchObject: string;
   indicator: string;
+  environmentType?: string;
   environment?: string;
   cas?: string;
   casNumber?: string;
@@ -610,5 +655,12 @@ export type MeasurementDevice = {
 export type DirectoryQuery = {
   search?: string;
   templateId?: string;
+  environmentType?: string;
+  sourceDocumentCode?: string;
+  factorType?: string;
+  appendixNo?: string;
+  tableNo?: string;
+  normativeType?: string;
+  subtype?: string;
   status?: string;
 };

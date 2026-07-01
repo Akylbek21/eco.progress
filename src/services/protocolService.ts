@@ -7,6 +7,7 @@ import type {
   Pollutant,
   Protocol,
   ProtocolCalculationSummaryResponse,
+  QuickProtocolCreatePayload,
   ProtocolResultPayload,
   ProtocolResultRow,
   ProtocolTemplate,
@@ -29,6 +30,7 @@ export interface ProtocolService {
   getProtocol(protocolId: string): Promise<Protocol>;
   getProtocolById(protocolId: string): Promise<Protocol>;
   createProtocol(payload: CreateProtocolPayload): Promise<Protocol>;
+  quickCreateProtocol(payload: QuickProtocolCreatePayload): Promise<Protocol>;
   updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol>;
   deleteProtocol(protocolId: string): Promise<void>;
   addProtocolResult(protocolId: string, payload: ProtocolResultPayload): Promise<ProtocolResultRow>;
@@ -91,6 +93,7 @@ const protocolService: ProtocolService = {
   getProtocol: async (protocolId) => (await implementation()).getProtocol(protocolId),
   getProtocolById: async (protocolId) => (await implementation()).getProtocolById(protocolId),
   createProtocol: async (payload) => (await implementation()).createProtocol(payload),
+  quickCreateProtocol: async (payload) => (await implementation()).quickCreateProtocol(payload),
   updateProtocol: async (protocolId, payload) => (await implementation()).updateProtocol(protocolId, payload),
   deleteProtocol: async (protocolId) => (await implementation()).deleteProtocol(protocolId),
   addProtocolResult: async (protocolId, payload) => (await implementation()).addProtocolResult(protocolId, payload),

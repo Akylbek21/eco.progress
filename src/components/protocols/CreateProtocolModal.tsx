@@ -58,6 +58,12 @@ const searchUnavailableMessage = 'Поиск временно недоступе
 const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
 const notFoundSearchMessage = 'Норматив или показатель не найден. Проверьте код или добавьте норматив в справочник.';
 const canSearch = (value: string) => value.trim().length >= MIN_SEARCH_LENGTH;
+const sourceDocumentCodeForTemplate = (templateId: ProtocolTemplateId | '', isPhysicalFactors: boolean) => {
+  if (isPhysicalFactors) return 'DSM_15';
+  if (templateId === 'soil') return 'DSM_32';
+  if (['ambient_air', 'workplace_air', 'industrial_emissions'].includes(String(templateId))) return 'DSM_70';
+  return '';
+};
 const weatherLabels: Record<WeatherConditionsStatus, string> = {
   IDLE: 'Ожидает даты, времени и объекта',
   LOADING: 'Загрузка условий…',
@@ -218,6 +224,9 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
           objectId,
           code: query,
           pollutantCode: query,
+          sourceDocumentCode: sourceDocumentCodeForTemplate(templateId, isPhysicalFactors),
+          factorType: isPhysicalFactors ? subtype || '' : '',
+          factorCode: isPhysicalFactors ? query : '',
         });
         if (requestId === searchAbortRef.current) {
           const localItems = isPhysicalFactors ? filterPhysicalFactorIndicators(query, subtype).slice(0, 10) : [];
@@ -300,12 +309,15 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         templateId,
         subtype: subtype || '',
         code: pollutant.code,
-        pollutantCode: pollutant.code,
+        pollutantCode: isPhysicalFactors ? '' : pollutant.code,
         indicator: pollutant.name,
         query: `${pollutant.code} ${pollutant.name}`.trim(),
         unit: pollutant.unit || '',
         objectId,
         date: measurementDate,
+        sourceDocumentCode: sourceDocumentCodeForTemplate(templateId, isPhysicalFactors),
+        factorType: isPhysicalFactors ? subtype || '' : '',
+        factorCode: isPhysicalFactors ? pollutant.code : '',
       });
       const candidates = found.normatives || found.items || (found.normative ? [found.normative] : []);
       if (!candidates.length) return { warning: normativeNotFoundMessage };
@@ -354,6 +366,9 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
           objectId,
           code: token,
           pollutantCode: token,
+          sourceDocumentCode: sourceDocumentCodeForTemplate(templateId, isPhysicalFactors),
+          factorType: isPhysicalFactors ? subtype || '' : '',
+          factorCode: isPhysicalFactors ? token : '',
         }).catch((searchError) => {
             if (getApiStatus(searchError) === 500) setError(searchUnavailableMessage);
             return [];
@@ -453,6 +468,11 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         minValue: row.normative?.min || '',
         maxValue: row.normative?.max || row.normative?.value || '',
         normativeDocument: row.normative?.normativeDocument || '',
+        sourceDocumentCode: row.normative?.sourceDocumentCode || sourceDocumentCodeForTemplate(templateId, templateId === 'physical_factors'),
+        sourceDocumentName: row.normative?.sourceDocumentName || '',
+        appendixNo: row.normative?.appendixNo || '',
+        tableNo: row.normative?.tableNo || '',
+        factorCode: row.normative?.factorCode || row.pollutant.code,
         testingMethod: row.normative?.testingMethod || row.pollutant.testingMethod || '',
         comparisonType: row.normative?.comparisonType || '',
         measurementPlace: place,

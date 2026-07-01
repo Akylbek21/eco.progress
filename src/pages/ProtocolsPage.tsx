@@ -159,7 +159,7 @@ const ProtocolsPage = () => {
           <p className="mt-2 text-sm text-slate-500">Создание, проверка нормативов, утверждение и официальный предпросмотр.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={() => navigate('/staff/protocols/new')}><Plus className="h-4 w-4" /> Создать протокол</Button>
+          <Button type="button" onClick={() => navigate('/staff/protocols/create')}><Plus className="h-4 w-4" /> Создать протокол</Button>
           <Button type="button" variant="secondary" onClick={load} disabled={loading}><RefreshCw className="h-4 w-4" /> Обновить</Button>
         </div>
       </header>

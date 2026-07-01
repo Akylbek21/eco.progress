@@ -12,6 +12,7 @@ import type {
   ProtocolInternalStatus,
   ProtocolLaboratorySnapshot,
   ProtocolMeasurementDevice,
+  QuickProtocolCreatePayload,
   ProtocolResultPayload,
   ProtocolResultRow,
   ProtocolStatus,
@@ -258,6 +259,49 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   };
   write([protocol, ...items]);
   return clone(protocol);
+}
+
+export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): Promise<Protocol> {
+  const protocol = await createProtocol({
+    companyId: payload.companyId,
+    objectId: payload.objectId || '',
+    templateId: payload.templateId,
+    subtype: payload.subtype,
+    protocolDate: payload.protocolDate,
+    sampleDate: payload.measurementDate,
+    samplingDate: payload.measurementDate,
+    testingStartDate: payload.measurementDate,
+    testingEndDate: payload.measurementDate,
+    measurementDate: payload.measurementDate,
+    measurementTime: payload.measurementTime,
+    measurementPlace: payload.measurementPlace,
+    laboratoryId: payload.laboratoryId,
+    executorId: payload.executorId,
+    purpose: 'Лабораторные испытания',
+    environment: { source: 'MANUAL', dataSource: 'manual' },
+  });
+  for (const measurement of payload.measurements) {
+    await addResult(protocol.id, {
+      normativeId: measurement.normativeId,
+      values: {
+        ...(payload.conditions || {}),
+        ...(measurement.values || {}),
+        factorType: measurement.factorType || payload.subtype || '',
+        factorCode: measurement.factorCode || '',
+        indicator: measurement.indicatorName,
+        indicatorName: measurement.indicatorName,
+        unit: measurement.unit || '',
+        primaryReading: measurement.value,
+        measurementReadings: measurement.value,
+        result: measurement.value,
+        resultValue: measurement.value,
+        measurementPlace: payload.measurementPlace || '',
+        samplingPlace: payload.measurementPlace || '',
+        sourceDocumentCode: payload.sourceDocumentCode || '',
+      },
+    });
+  }
+  return checkNormatives(protocol.id);
 }
 
 export async function updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol> {
