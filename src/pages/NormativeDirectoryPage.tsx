@@ -10,7 +10,7 @@ import { getApiStatus } from '../services/apiHelpers';
 import type { NormativeRecord } from '../types/protocols';
 
 const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100';
-type DirectoryTab = 'ambient_air' | 'soil' | 'physical_factors';
+type DirectoryTab = 'ambient_air' | 'workplace_air' | 'soil' | 'physical_factors';
 const emptyImportPreview: NormativeImportPreview = {
   items: [],
   total: 0,
@@ -42,6 +42,7 @@ const sourceDocumentOptions = [
 const factorTypeOptions = ['MICROCLIMATE', 'LIGHTING', 'NOISE', 'VIBRATION', 'NOISE_VIBRATION', 'INFRASOUND', 'ULTRASOUND', 'UV', 'AEROIONS', 'ELECTROMAGNETIC_FIELD', 'LASER'];
 const directoryTabs: Array<{ key: DirectoryTab; label: string; sourceDocumentCode?: string; templateId?: string }> = [
   { key: 'ambient_air', label: 'Атмосферный воздух', sourceDocumentCode: 'DSM_70', templateId: 'ambient_air' },
+  { key: 'workplace_air', label: 'Воздух рабочей зоны', sourceDocumentCode: 'DSM_70', templateId: 'workplace_air' },
   { key: 'soil', label: 'Почва / среда обитания', sourceDocumentCode: 'DSM_32', templateId: 'soil' },
   { key: 'physical_factors', label: 'Физические факторы', sourceDocumentCode: 'DSM_15', templateId: 'physical_factors' },
 ];
@@ -378,15 +379,9 @@ const NormativeDirectoryPage = () => {
   const filtered = useMemo(() => items.filter((item) => {
     const terms = normalizeSearch(query).split(/\s+/).filter(Boolean);
     const matchesQuery = !terms.length || terms.every((term) => recordSearchText(item).includes(term));
-    const documentCode = textValue(item.sourceDocumentCode).toUpperCase().replace(/-/g, '_');
-    const matchesTab = activeTab === 'ambient_air'
-      ? isAtmosphericAir(item) && !isPhysicalNormative(item) && !isSoilNormative(item)
-      : activeTab === 'soil'
-        ? isSoilNormative(item)
-        : activeTab === 'physical_factors'
-          ? (documentCode === 'DSM_15' || hasDocumentCode(item, 'DSM_15') || hasDocumentCode(item, 'ДСМ_15'))
-            && ['physical_factors', 'microclimate', 'lighting', 'noise_vibration'].includes(item.templateId)
-          : true;
+    const tab = directoryTabs.find((item) => item.key === activeTab);
+    const matchesTab = (!tab?.templateId || item.templateId === tab.templateId)
+      && (!tab?.sourceDocumentCode || normalizedDocumentCode(item) === tab.sourceDocumentCode);
     const matchesDocument = matchesOption(item.sourceDocumentCode || '', sourceDocumentFilter);
     const matchesTemplate = matchesOption(item.templateId || '', templateFilter);
     const matchesFactorType = matchesOption(item.factorType || '', factorTypeFilter);

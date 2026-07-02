@@ -5,7 +5,6 @@ import Button from '../components/ui/Button';
 import { getCompanies, getCompanyObjects } from '../services/companyService';
 import { getLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
 import protocolService from '../services/protocolService';
-import { getPhysicalFactorIndicators } from '../data/physicalFactors';
 import { useToast } from '../hooks/useToast';
 import type { Company, CompanyObject } from '../types/companies';
 import type { LaboratoryEmployee, LaboratorySummary, NormativeRecord, Pollutant, ProtocolSubtype, ProtocolTemplateId, QuickProtocolCreatePayload } from '../types/protocols';
@@ -44,6 +43,7 @@ type QuickForm = {
 type SelectedIndicator = Pollutant & {
   key: string;
   normative?: NormativeRecord;
+  manual?: boolean;
   result: string;
 };
 
@@ -56,9 +56,9 @@ const protocolChoices: QuickProtocolChoice[] = [
   { key: 'ambient_air', label: 'Атмосферный воздух', templateId: 'ambient_air', group: 'chemical' },
   { key: 'workplace_air', label: 'Воздух рабочей зоны', templateId: 'workplace_air', group: 'chemical' },
   { key: 'soil', label: 'Почва', templateId: 'soil', group: 'chemical' },
-  { key: 'microclimate', label: 'Микроклимат', templateId: 'microclimate', subtype: 'MICROCLIMATE', group: 'physical' },
-  { key: 'noise', label: 'Шум', templateId: 'noise_vibration', subtype: 'NOISE', group: 'physical' },
-  { key: 'lighting', label: 'Освещенность', templateId: 'lighting', subtype: 'LIGHTING', group: 'physical' },
+  { key: 'microclimate', label: 'Микроклимат', templateId: 'physical_factors', subtype: 'MICROCLIMATE', group: 'physical' },
+  { key: 'noise', label: 'Шум', templateId: 'physical_factors', subtype: 'NOISE', group: 'physical' },
+  { key: 'lighting', label: 'Освещенность', templateId: 'physical_factors', subtype: 'LIGHTING', group: 'physical' },
   { key: 'vibration', label: 'Вибрация', templateId: 'physical_factors', subtype: 'VIBRATION', group: 'physical' },
   { key: 'radiation', label: 'УФ / ЭМП / Лазер', templateId: 'physical_factors', subtype: 'UV', group: 'radiation' },
 ];
@@ -246,7 +246,6 @@ const ProtocolCreatePage = () => {
   }, [form.laboratoryId]);
 
   useEffect(() => {
-    if (isPhysical) return;
     const value = chemicalQuery.trim();
     const requestId = ++searchRequestRef.current;
     setSearchDone(false);
@@ -258,32 +257,66 @@ const ProtocolCreatePage = () => {
     const timer = window.setTimeout(async () => {
       setSearching(true);
       try {
-        const params = {
-          templateId: selectedChoice.templateId,
+        const commonParams: Record<string, string> = {
+          templateId: isPhysical ? 'physical_factors' : selectedChoice.templateId,
           sourceDocumentCode,
-          normativeType: isSoil ? 'PDK' : '',
           query: value,
           q: value,
           search: value,
-          code: value,
-          pollutantCode: value,
-          indicator: value,
         };
+        const physicalParams: Record<string, string> = isPhysical
+          ? {
+            factorType: selectedSubtype || '',
+            factorCode: value,
+            conditionJson: JSON.stringify(physicalConditionValues()),
+            ...(selectedSubtype === 'MICROCLIMATE' ? {
+              season: form.season,
+              workCategory: form.workCategory,
+              workplaceType: form.workplaceType,
+              normLevel: form.normLevel,
+            } : {}),
+            ...(selectedSubtype === 'NOISE' ? {
+              roomType: form.roomType,
+              workplaceType: form.workplaceType,
+              noiseType: form.noiseType,
+            } : {}),
+            ...(selectedSubtype === 'LIGHTING' ? {
+              roomType: form.roomType,
+              visualWorkCategory: form.visualWorkCategory,
+              lightingType: form.lightingType,
+            } : {}),
+          }
+          : {
+            normativeType: isSoil ? 'PDK' : '',
+            code: value,
+            pollutantCode: value,
+            indicator: value,
+          };
+        const params = { ...commonParams, ...physicalParams };
         const found = await protocolService.searchNormative(params);
         if (requestId !== searchRequestRef.current) return;
         const normatives = (found.normatives || found.items || (found.normative ? [found.normative] : []))
-          .filter((item) => !isSoil || (
-            item.templateId === 'soil'
-            && item.sourceDocumentCode === 'DSM_32'
-            && item.comparisonType !== 'INFO'
-            && String(item.normativeType || '').toUpperCase() === 'PDK'
-          ));
+          .filter((item) => item.active !== false && !item.archived)
+          .filter((item) => {
+            if (isPhysical) {
+              return item.templateId === 'physical_factors'
+                && String(item.sourceDocumentCode || '').toUpperCase().replace(/-/g, '_') === 'DSM_15'
+                && (!selectedSubtype || item.factorType === selectedSubtype);
+            }
+            if (isSoil) {
+              return item.templateId === 'soil'
+                && String(item.sourceDocumentCode || '').toUpperCase().replace(/-/g, '_') === 'DSM_32'
+                && item.comparisonType !== 'INFO'
+                && String(item.normativeType || '').toUpperCase() === 'PDK';
+            }
+            return item.templateId === selectedChoice.templateId && String(item.sourceDocumentCode || '').toUpperCase().replace(/-/g, '_') === sourceDocumentCode;
+          });
         if (normatives.length) {
-          setChemicalSuggestions(normatives.map(normalizeNormativeIndicator).slice(0, 10));
+          setChemicalSuggestions(normatives.map(normalizeNormativeIndicator).slice(0, 20));
           setSearchDone(true);
           return;
         }
-        if (isSoil) {
+        if (isPhysical || isSoil) {
           setChemicalSuggestions([]);
           setSearchDone(true);
           return;
@@ -296,30 +329,37 @@ const ProtocolCreatePage = () => {
         if (requestId !== searchRequestRef.current) return;
         setChemicalSuggestions([]);
         setSearchDone(true);
-        toast.error('Не удалось выполнить поиск вещества', error instanceof Error ? error.message : undefined);
+        toast.error('Не удалось выполнить поиск норматива', error instanceof Error ? error.message : undefined);
       } finally {
         if (requestId === searchRequestRef.current) setSearching(false);
       }
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [chemicalQuery, selectedChoice.templateId, sourceDocumentCode, isPhysical, isSoil]);
+  }, [
+    chemicalQuery,
+    selectedChoice.templateId,
+    sourceDocumentCode,
+    isPhysical,
+    isSoil,
+    selectedSubtype,
+    form.season,
+    form.workCategory,
+    form.workplaceType,
+    form.normLevel,
+    form.roomType,
+    form.visualWorkCategory,
+    form.lightingType,
+    form.noiseType,
+  ]);
 
   const selectCompany = (company: Company) => {
     setField('companyId', company.id);
     setCompanySearch(company.name);
   };
 
-  const togglePhysicalIndicator = (indicator: Pollutant) => {
-    setSelectedIndicators((current) => {
-      const exists = current.some((item) => item.code === indicator.code);
-      if (exists) return current.filter((item) => item.code !== indicator.code);
-      return [...current, { ...indicator, key: indicator.code, result: '' }];
-    });
-  };
-
   const addChemicalIndicator = (indicator: SelectedIndicator) => {
     setSelectedIndicators((current) => {
-      if (current.some((item) => item.code === indicator.code)) return current;
+      if (current.some((item) => item.key === indicator.key || (item.code === indicator.code && item.normative?.id === indicator.normative?.id))) return current;
       return [...current, indicator];
     });
     setChemicalQuery('');
@@ -327,8 +367,23 @@ const ProtocolCreatePage = () => {
     setSearchDone(false);
   };
 
-  const setIndicatorResult = (code: string, result: string) => {
-    setSelectedIndicators((current) => current.map((item) => item.code === code ? { ...item, result } : item));
+  const addManualIndicator = () => {
+    const value = chemicalQuery.trim();
+    if (!value) return;
+    const code = isPhysical ? value.toUpperCase().replace(/\s+/g, '_') : value;
+    addChemicalIndicator({
+      key: `manual-${selectedChoice.key}-${selectedSubtype || 'chemical'}-${code}`,
+      id: undefined,
+      code,
+      name: value,
+      unit: '',
+      manual: true,
+      result: '',
+    });
+  };
+
+  const setIndicatorResult = (key: string, result: string) => {
+    setSelectedIndicators((current) => current.map((item) => item.key === key ? { ...item, result } : item));
   };
 
   const physicalConditionValues = () => {
@@ -337,16 +392,6 @@ const ProtocolCreatePage = () => {
       sourceDocumentCode: 'DSM_15',
       subtype: selectedSubtype || '',
       factorType: selectedSubtype || '',
-      conditionJson: JSON.stringify({
-        season: form.season,
-        workCategory: form.workCategory,
-        workplaceType: form.workplaceType,
-        normLevel: form.normLevel,
-        roomType: form.roomType,
-        visualWorkCategory: form.visualWorkCategory,
-        lightingType: form.lightingType,
-        noiseType: form.noiseType,
-      }),
     };
     if (selectedSubtype === 'MICROCLIMATE') {
       return { ...base, season: form.season, workCategory: form.workCategory, workplaceType: form.workplaceType, normLevel: form.normLevel };
@@ -443,10 +488,12 @@ const ProtocolCreatePage = () => {
         unit: item.normative?.unit || item.unit || '',
         normativeId: item.normative?.id,
         values: {
+          ...(isPhysical ? physicalConditionValues() : {}),
           ...normativeValues(item.normative),
           code: item.code,
           pollutantCode: isPhysical ? '' : item.code,
           factorCode: isPhysical ? item.code : item.normative?.factorCode || '',
+          factorType: isPhysical ? selectedSubtype || '' : item.normative?.factorType || '',
           indicator: item.name,
           indicatorName: item.name,
           formType: item.normative?.formType || '',
@@ -455,6 +502,7 @@ const ProtocolCreatePage = () => {
           samplingDepth: isSoil ? form.samplingDepth : '',
           cas: item.cas || '',
           formula: item.formula || '',
+          conditionJson: isPhysical ? JSON.stringify(physicalConditionValues()) : '',
         },
       })),
     };
@@ -471,8 +519,6 @@ const ProtocolCreatePage = () => {
       setLoading(false);
     }
   };
-
-  const physicalIndicators = isPhysical ? getPhysicalFactorIndicators(selectedSubtype) : [];
 
   return (
     <form onSubmit={submit} className="space-y-5">
@@ -596,42 +642,42 @@ const ProtocolCreatePage = () => {
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-black text-slate-900">5. Показатели</h2>
-        {isPhysical ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {physicalIndicators.map((indicator) => {
-              const active = selectedIndicators.some((item) => item.code === indicator.code);
-              return (
-                <label key={indicator.code} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 ${active ? 'border-eco-500 bg-eco-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
-                  <input type="checkbox" checked={active} onChange={() => togglePhysicalIndicator(indicator)} className="mt-1 h-4 w-4 rounded border-slate-300 text-eco-700" />
-                  <span><span className="block font-bold text-slate-900">{indicator.name}</span><span className="text-xs font-black text-eco-800">{indicator.code} {indicator.unit ? `· ${indicator.unit}` : ''}</span></span>
-                </label>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="mt-4">
-            <label className="relative block">
-              <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-              <input value={chemicalQuery} onChange={(event) => setChemicalQuery(event.target.value)} placeholder="Введите минимум 3 символа: код, вещество, CAS" className={`${inputClass} pl-10`} />
-            </label>
-            {chemicalQuery.trim() && !canSearch(chemicalQuery) && <p className="mt-2 text-sm font-semibold text-slate-500">Введите минимум 3 символа для поиска</p>}
-            {searching && <p className="mt-2 text-sm font-semibold text-eco-700">Поиск...</p>}
-            {chemicalSuggestions.length > 0 && (
-              <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
-                {chemicalSuggestions.map((item) => (
-                  <button key={item.key} type="button" onClick={() => addChemicalIndicator(item)} className="flex w-full flex-wrap gap-x-3 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-eco-50">
-                    <span className="font-black text-eco-800">{item.code}</span>
-                    <span className="font-bold text-slate-900">{item.name}</span>
-                    {item.cas && <span className="text-slate-500">{item.cas}</span>}
-                    {item.formula && <span className="text-slate-500">{item.formula}</span>}
-                    {item.normative && <span className="font-semibold text-slate-700">Норматив: {normativeDisplayValue(item.normative)} {item.normative.unit}</span>}
-                  </button>
-                ))}
-              </div>
-            )}
-            {searchDone && chemicalQuery.trim() && canSearch(chemicalQuery) && !chemicalSuggestions.length && <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">Норматив не найден. Проверьте код или добавьте норматив в справочник.</p>}
-          </div>
-        )}
+        <div className="mt-4">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+            <input value={chemicalQuery} onChange={(event) => setChemicalQuery(event.target.value)} placeholder={isPhysical ? 'Введите минимум 3 символа: код или название показателя' : 'Введите минимум 3 символа: код, вещество, CAS'} className={`${inputClass} pl-10`} />
+          </label>
+          {chemicalQuery.trim() && !canSearch(chemicalQuery) && <p className="mt-2 text-sm font-semibold text-slate-500">Введите минимум 3 символа для поиска</p>}
+          {searching && <p className="mt-2 text-sm font-semibold text-eco-700">Поиск...</p>}
+          {chemicalSuggestions.length > 0 && (
+            <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
+              {chemicalSuggestions.map((item) => (
+                <button key={item.key} type="button" onClick={() => addChemicalIndicator(item)} className="grid w-full gap-1 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-eco-50 md:grid-cols-[160px_1fr_180px] md:items-start md:gap-3">
+                  <span className="font-black text-eco-800">{item.code}</span>
+                  <span>
+                    <span className="block font-bold text-slate-900">{item.name}</span>
+                    <span className="mt-1 block text-xs font-semibold text-slate-500">
+                      {item.normative?.sourceDocumentCode || sourceDocumentCode}
+                      {item.normative?.appendixNo ? ` · приложение ${item.normative.appendixNo}` : ''}
+                      {item.normative?.tableNo ? ` · таблица ${item.normative.tableNo}` : ''}
+                      {item.normative?.conditionJson ? ` · ${item.normative.conditionJson}` : ''}
+                    </span>
+                  </span>
+                  <span className="font-semibold text-slate-700">
+                    {item.unit || item.normative?.unit || ''}
+                    {item.normative ? ` · норматив ${normativeDisplayValue(item.normative)} ${item.normative.unit}` : ''}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          {searchDone && chemicalQuery.trim() && canSearch(chemicalQuery) && !chemicalSuggestions.length && (
+            <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+              <p>Норматив не найден. Проверьте условия или импорт DSM_15/DSM_32/DSM_70 в справочник.</p>
+              <Button type="button" variant="secondary" className="mt-3" onClick={addManualIndicator}>Создать без норматива / вручную</Button>
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -644,8 +690,8 @@ const ProtocolCreatePage = () => {
                   <p className="font-bold text-slate-900">{item.name}</p>
                   <p className="text-xs font-semibold text-slate-500">{item.code}{item.unit ? ` · ${item.unit}` : ''}{item.normative ? ` · норматив ${normativeDisplayValue(item.normative)} ${item.normative.unit}` : ''}</p>
                 </div>
-                <input value={item.result} onChange={(event) => setIndicatorResult(item.code, event.target.value)} placeholder="Факт" className={inputClass} />
-                <Button type="button" variant="secondary" className="text-rose-700 hover:bg-rose-50" onClick={() => setSelectedIndicators((current) => current.filter((selected) => selected.code !== item.code))}>Убрать</Button>
+                <input value={item.result} onChange={(event) => setIndicatorResult(item.key, event.target.value)} placeholder="Факт" className={inputClass} />
+                <Button type="button" variant="secondary" className="text-rose-700 hover:bg-rose-50" onClick={() => setSelectedIndicators((current) => current.filter((selected) => selected.key !== item.key))}>Убрать</Button>
               </div>
             ))}
           </div>

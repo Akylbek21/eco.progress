@@ -404,9 +404,9 @@ export type QuickProtocolCreatePayload = {
   measurementDate: string;
   measurementTime?: string;
   measurementPlace?: string;
-  laboratoryId?: string;
-  executorId?: string;
-  sourceDocumentCode?: string;
+  laboratoryId: string;
+  executorId: string;
+  sourceDocumentCode: string;
   conditions?: Record<string, ProtocolResultValue>;
   measurements: QuickProtocolMeasurementPayload[];
 };
@@ -660,10 +660,13 @@ export type MeasurementDevice = {
 
 export type DirectoryQuery = {
   search?: string;
+  query?: string;
+  q?: string;
   templateId?: string;
   environmentType?: string;
   sourceDocumentCode?: string;
   factorType?: string;
+  factorCode?: string;
   appendixNo?: string;
   tableNo?: string;
   formType?: string;

@@ -127,9 +127,10 @@ export const extractNormatives = (response: unknown): NormativeRecord[] => {
 const extractNormativeRecords = extractNormatives;
 
 const directoryParams = (params?: DirectoryQuery) => {
-  const search = params?.search?.trim();
+  const search = firstString(params?.search, params?.query, params?.q);
   return {
     ...params,
+    status: params?.status || 'ACTIVE',
     search: search || undefined,
     query: search || undefined,
     q: search || undefined,
@@ -143,24 +144,8 @@ export async function getNormatives(params?: DirectoryQuery): Promise<NormativeR
   }
   const requestParams = directoryParams(params);
   const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams });
-  let records = extractNormativeRecords(response);
-
-  if (!records.length && requestParams.search) {
-    try {
-      const searchResponse = await api.get<ApiResponse<unknown> | unknown>('/normatives/search', { params: requestParams });
-      records = extractNormativeRecords(searchResponse);
-    } catch (error) {
-      if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
-    }
-  }
-
-  if (!records.length && requestParams.search) {
-    const { search: _search, query: _query, q: _q, ...baseParams } = requestParams;
-    const fullResponse = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: baseParams });
-    records = extractNormativeRecords(fullResponse);
-  }
-
-  return records;
+  const records = extractNormativeRecords(response);
+  return records.filter((item) => item.active !== false && !item.archived && item.status !== 'ARCHIVED');
 }
 
 export async function createNormative(payload: Omit<NormativeRecord, 'id'>): Promise<NormativeRecord> {
