@@ -22,7 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getMeasurementDevices } from '../services/measurementDeviceService';
 import { getCompanyObjects } from '../services/companyService';
 import { accreditationState, getLaboratories, getLaboratory, getLaboratoryEmployees } from '../services/laboratorySettingsService';
-import { getApiStatus } from '../services/apiHelpers';
+import { getApiErrorMessage, getApiStatus } from '../services/apiHelpers';
 import { signBase64WithNCALayer } from '../services/ncalayer';
 import protocolService, { useProtocolMocks } from '../services/protocolService';
 import type { CompanyObject } from '../types/companies';
@@ -1025,19 +1025,20 @@ const ProtocolEditorPage = () => {
     }
   };
 
-  const deleteDraftProtocol = async () => {
+  const deleteCurrentProtocol = async () => {
     if (!protocol) return;
     setBusy(true);
     try {
       await protocolService.deleteProtocol(protocol.id);
       savedSignatureRef.current = '';
-      toast.success('Протокол удален');
+      setMoreOpen(false);
+      setDeleteProtocolOpen(false);
+      toast.success('Протокол удалён');
       navigate('/staff/protocols');
     } catch (deleteError) {
-      toast.error('Не удалось удалить протокол', deleteError instanceof Error ? deleteError.message : undefined);
+      toast.error(getApiErrorMessage(deleteError, 'Не удалось удалить протокол'));
     } finally {
       setBusy(false);
-      setDeleteProtocolOpen(false);
     }
   };
 
@@ -1125,7 +1126,7 @@ const ProtocolEditorPage = () => {
           {moreOpen && (
             <div className="absolute right-0 top-full z-30 mt-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-sm shadow-xl">
               <button type="button" className="w-full rounded-lg px-3 py-2 text-left font-semibold text-slate-700 hover:bg-slate-50" onClick={() => { setMoreOpen(false); void load(); }}>Обновить данные</button>
-              {protocol.status === 'DRAFT' && <button type="button" className="w-full rounded-lg px-3 py-2 text-left font-semibold text-rose-700 hover:bg-rose-50" onClick={() => { setMoreOpen(false); setDeleteProtocolOpen(true); }}>Удалить черновик</button>}
+              <button type="button" className="w-full rounded-lg px-3 py-2 text-left font-semibold text-rose-700 hover:bg-rose-50" onClick={() => { setMoreOpen(false); setDeleteProtocolOpen(true); }}>Удалить протокол</button>
               {protocol.status !== 'SIGNED' && protocol.status !== 'CANCELLED' && <button type="button" className="w-full rounded-lg px-3 py-2 text-left font-semibold text-rose-700 hover:bg-rose-50" onClick={async () => {
                 setMoreOpen(false);
                 if (!window.confirm('Отменить протокол? После отмены редактирование будет недоступно.')) return;
@@ -1310,12 +1311,12 @@ const ProtocolEditorPage = () => {
       <ConfirmModal
         isOpen={deleteProtocolOpen}
         title="Удалить протокол?"
-        description={`Вы действительно хотите удалить протокол ${protocol.protocolNumber || protocol.number || protocol.id}? Это действие нельзя отменить.`}
+        description="Данные будут скрыты из списка."
         confirmText="Удалить протокол"
         variant="danger"
         loading={busy}
         onClose={() => setDeleteProtocolOpen(false)}
-        onConfirm={deleteDraftProtocol}
+        onConfirm={deleteCurrentProtocol}
       />
       <ConfirmModal
         isOpen={Boolean(deviceToRemove)}

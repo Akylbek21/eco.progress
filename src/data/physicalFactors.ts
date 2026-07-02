@@ -1,5 +1,42 @@
 import type { Pollutant, ProtocolSubtype } from '../types/protocols';
 
+export const PHYSICAL_FACTOR_UNITS: Record<string, string> = {
+  UV_A: 'Вт/м²',
+  UV_B: 'Вт/м²',
+  UV_C: 'Вт/м²',
+  AIR_TEMPERATURE: '°C',
+  HUMIDITY: '%',
+  AIR_SPEED: 'м/с',
+  THC_INDEX: '°C',
+  NOISE: 'дБА',
+  NOISE_LEVEL: 'дБА',
+  NOISE_EQUIVALENT: 'дБА',
+  NOISE_MAX: 'дБА',
+  LIGHTING: 'лк',
+  KEO: '%',
+  LIGHT_PULSATION: '%',
+  GLARE_INDEX: 'ед.',
+  VIBRATION: 'м/с²',
+  VIBRATION_SPEED: 'м/с',
+  VIBRATION_ACCELERATION: 'м/с²',
+  INFRASOUND_LEVEL: 'дБ',
+  INFRASOUND_EQUIVALENT: 'дБ',
+  ULTRASOUND_AIR: 'дБ',
+  ULTRASOUND_CONTACT: 'дБ',
+  EMF: 'В/м',
+  ELECTRIC_FIELD: 'В/м',
+  MAGNETIC_FIELD: 'А/м',
+  MAGNETIC_FLUX_DENSITY: 'мкТл',
+  ENERGY_FLUX_DENSITY: 'мкВт/см²',
+  LASER: 'Дж/см²',
+  LASER_ENERGY_EXPOSURE: 'Дж/см²',
+  LASER_POWER_DENSITY: 'Вт/см²',
+  AEROIONS: 'ион/см³',
+  AEROIONS_POSITIVE: 'ион/см³',
+  AEROIONS_NEGATIVE: 'ион/см³',
+  UNIPOLARITY_COEFFICIENT: 'ед.',
+};
+
 export const physicalFactorIndicators: Record<ProtocolSubtype, Pollutant[]> = {
   MICROCLIMATE: [
     { code: 'AIR_TEMPERATURE', name: 'Температура воздуха', unit: '°C' },

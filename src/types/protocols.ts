@@ -388,9 +388,10 @@ export type ProtocolResultPayload = {
 export type QuickProtocolMeasurementPayload = {
   factorType?: string;
   factorCode?: string;
+  pollutantCode?: string;
   indicatorName: string;
   value: string | number;
-  unit?: string;
+  unit: string;
   normativeId?: string;
   values?: Record<string, ProtocolResultValue>;
 };

@@ -58,10 +58,10 @@ const pick = (source: UnknownRecord, keys: string[]) => {
   return '';
 };
 
-const hasValue = (value: unknown) => value !== undefined && value !== null && String(value) !== '';
 const firstString = (...values: unknown[]) => {
   for (const value of values) {
-    if (hasValue(value)) return asString(value);
+    const scalar = asString(value);
+    if (scalar.trim() !== '') return scalar;
   }
   return '';
 };
@@ -442,12 +442,13 @@ const normalizeCalculationResult = (raw: unknown, fallbackProtocolId = '', fallb
     ?? source.result_row
     ?? (source.values || source.indicatorName || source.indicator ? source : embeddedResult);
   const row = rowSource && typeof rowSource === 'object' ? normalizeResult(rowSource) : undefined;
+  const rowNormativeValue = row?.normativeValue || row?.normative || row?.pdk || (row ? asString(row.values.pdk) : '');
   return {
     protocolId: pick(source, ['protocolId', 'protocol_id']) || row?.protocolId || fallbackProtocolId,
     resultId: pick(source, ['resultId', 'result_id', 'id', '_id']) || row?.id || fallbackResultId,
     result: scalarOrNull(source.result ?? row?.result),
     uncertaintyValue: scalarOrNull(source.uncertaintyValue ?? source.uncertainty_value ?? row?.uncertaintyValue),
-    normativeValue: scalarOrNull(source.normativeValue ?? source.normative_value ?? row?.normativeValue ?? row?.normative),
+    normativeValue: scalarOrNull(source.normativeValue ?? source.normative_value ?? rowNormativeValue),
     internalStatus: (pick(source, ['internalStatus', 'internal_status', 'status']) || row?.internalStatus) as CalculationResultResponse['internalStatus'],
     calculationStatus: (pick(source, ['calculationStatus', 'calculation_status']) || row?.calculationStatus) as CalculationResultResponse['calculationStatus'],
     calculationMessage: pick(source, ['calculationMessage', 'calculation_message', 'message']) || row?.calculationMessage,
@@ -847,8 +848,18 @@ const requireProtocol = (input: unknown, action: string): Protocol => {
   return protocol;
 };
 
+const extractActionResult = (input: unknown): unknown => {
+  const axiosResponse = asRecord(input);
+  const responseBody = asRecord(axiosResponse.data);
+  const payload = responseBody.data ?? axiosResponse.data ?? input;
+  const payloadRecord = asRecord(payload);
+
+  if (payloadRecord.id || payloadRecord._id || payloadRecord.resultId) return payload;
+  return extractItem(payload, ['result', 'row', 'item']);
+};
+
 const requireResult = (input: unknown): ProtocolResultRow => {
-  const result = normalizeResult(extractItem(input, ['result']));
+  const result = normalizeResult(extractActionResult(input));
   if (!result.id) throw new Error('Backend не вернул сохранённый результат с id.');
   return result;
 };
@@ -1120,7 +1131,7 @@ export async function searchNormative(params: Record<string, string>): Promise<N
     search: params.search || query,
     query,
     q: params.q || query,
-    limit: params.limit || NORMATIVE_SEARCH_LIMIT,
+    limit: params.limit || undefined,
     code: params.code || params.pollutantCode || undefined,
     pollutantCode: params.pollutantCode || params.code || undefined,
     indicator: params.indicator || undefined,

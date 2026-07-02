@@ -6,6 +6,7 @@ import ProtocolList from '../components/protocols/ProtocolList';
 import ProtocolPreviewModal from '../components/protocols/ProtocolPreviewModal';
 import { protocolStatusLabels } from '../components/protocols/ProtocolStatusBadge';
 import protocolService from '../services/protocolService';
+import { getApiErrorMessage } from '../services/apiHelpers';
 import { physicalFactorTypes, protocolTemplates, templateName } from '../data/protocolTemplates';
 import { useToast } from '../hooks/useToast';
 import type { Protocol, ProtocolStatus, ProtocolTemplate } from '../types/protocols';
@@ -90,13 +91,13 @@ const ProtocolsPage = () => {
   };
 
   const remove = async (protocol: Protocol) => {
-    if (!window.confirm(`Удалить черновик ${protocol.protocolNumber}?`)) return;
+    if (!window.confirm('Удалить протокол? Данные будут скрыты из списка.')) return;
     try {
       await protocolService.deleteProtocol(protocol.id);
-      toast.success('Черновик удалён');
+      toast.success('Протокол удалён');
       await load();
     } catch (deleteError) {
-      toast.error('Не удалось удалить протокол', deleteError instanceof Error ? deleteError.message : undefined);
+      toast.error(getApiErrorMessage(deleteError, 'Не удалось удалить протокол'));
     }
   };
 

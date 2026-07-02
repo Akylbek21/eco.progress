@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, CheckCircle2, Save, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
+import { PHYSICAL_FACTOR_UNITS } from '../data/physicalFactors';
 import { getCompanies, getCompanyObjects } from '../services/companyService';
 import { getLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
 import protocolService from '../services/protocolService';
@@ -42,6 +43,11 @@ type QuickForm = {
 
 type SelectedIndicator = Pollutant & {
   key: string;
+  factorCode?: string;
+  factorType?: string;
+  indicatorName?: string;
+  measurementUnit?: string;
+  units?: string;
   normative?: NormativeRecord;
   manual?: boolean;
   result: string;
@@ -85,6 +91,21 @@ const sourceDocumentCodeFor = (templateId: ProtocolTemplateId, physical: boolean
   if (physical) return 'DSM_15';
   if (templateId === 'soil') return 'DSM_32';
   return 'DSM_70';
+};
+
+const resolveUnitByTemplate = (
+  templateId: ProtocolTemplateId,
+  sourceDocumentCode = '',
+  physical = false,
+  factorCode = '',
+) => {
+  if (physical) return PHYSICAL_FACTOR_UNITS[factorCode] || '';
+  if (templateId === 'ambient_air') return 'мг/м³';
+  if (templateId === 'workplace_air') return 'мг/м³';
+  if (templateId === 'soil') return 'мг/кг';
+  if (sourceDocumentCode === 'DSM_70') return 'мг/м³';
+  if (sourceDocumentCode === 'DSM_32') return 'мг/кг';
+  return '';
 };
 
 const normativeDisplayValue = (normative?: NormativeRecord) => {
@@ -376,7 +397,7 @@ const ProtocolCreatePage = () => {
       id: undefined,
       code,
       name: value,
-      unit: '',
+      unit: resolveUnitByTemplate(selectedChoice.templateId, sourceDocumentCode, isPhysical, code),
       manual: true,
       result: '',
     });
@@ -437,6 +458,19 @@ const ProtocolCreatePage = () => {
     };
   };
 
+  const unitForIndicator = (item: SelectedIndicator) => {
+    const factorCode = item.factorCode || item.code;
+    return String(
+      item.normative?.unit ||
+      item.unit ||
+      item.measurementUnit ||
+      item.units ||
+      PHYSICAL_FACTOR_UNITS[factorCode] ||
+      resolveUnitByTemplate(selectedChoice.templateId, sourceDocumentCode, isPhysical, factorCode) ||
+      '',
+    ).trim();
+  };
+
   const validate = () => {
     if (!selectedChoice.templateId) return 'Выберите тип протокола';
     if (!form.companyId) return 'Выберите компанию';
@@ -459,10 +493,67 @@ const ProtocolCreatePage = () => {
       toast.warning(message);
       return;
     }
+    if (!selectedCompany?.id) {
+      toast.warning('Выберите компанию');
+      return;
+    }
+    const selectedObject = objects.find((item) => String(item.id) === String(form.objectId));
+    if (!selectedObject?.id) {
+      toast.warning('Выберите объект');
+      return;
+    }
+
+    const measurements: QuickProtocolCreatePayload['measurements'] = selectedIndicators.map((item) => {
+      const factorCode = isPhysical ? item.factorCode || item.code : item.normative?.factorCode || item.factorCode || '';
+      const factorType = isPhysical ? item.factorType || selectedSubtype || '' : item.normative?.factorType || item.factorType || '';
+      const pollutantCode = isPhysical ? '' : item.normative?.pollutantCode || item.normative?.code || item.code || item.factorCode || '';
+      const indicatorName = item.indicatorName || item.name;
+      const unit = unitForIndicator(item);
+
+      return {
+        factorType,
+        factorCode,
+        pollutantCode,
+        indicatorName,
+        value: item.result,
+        unit,
+        normativeId: item.normative?.id,
+        values: {
+          ...(isPhysical ? physicalConditionValues() : {}),
+          ...normativeValues(item.normative),
+          code: item.code,
+          pollutantCode,
+          factorCode,
+          factorType,
+          indicator: indicatorName,
+          indicatorName,
+          unit,
+          formType: item.normative?.formType || '',
+          limitingIndicator: item.normative?.limitingIndicator || '',
+          sampleNumber: isSoil ? form.sampleNumber : '',
+          samplingDepth: isSoil ? form.samplingDepth : '',
+          cas: item.cas || '',
+          formula: item.formula || '',
+          conditionJson: isPhysical ? JSON.stringify(physicalConditionValues()) : '',
+        },
+      };
+    });
+    const invalidPollutant = !isPhysical
+      ? measurements.find((item) => !item.pollutantCode || !String(item.pollutantCode).trim())
+      : undefined;
+    if (invalidPollutant) {
+      toast.warning(`Укажите код загрязняющего вещества для: ${invalidPollutant.indicatorName}`);
+      return;
+    }
+    const invalid = measurements.find((item) => !item.unit || !String(item.unit).trim());
+    if (invalid) {
+      toast.warning(`Укажите единицу измерения для: ${invalid.indicatorName}`);
+      return;
+    }
 
     const quickPayload: QuickProtocolCreatePayload = {
-      companyId: form.companyId,
-      objectId: form.objectId,
+      companyId: selectedCompany.id,
+      objectId: selectedObject.id,
       templateId: selectedChoice.templateId,
       subtype: selectedSubtype,
       protocolDate: form.protocolDate,
@@ -480,32 +571,9 @@ const ProtocolCreatePage = () => {
           samplingPlace: form.measurementPlace,
         }
         : physicalConditionValues(),
-      measurements: selectedIndicators.map((item) => ({
-        factorType: isPhysical ? selectedSubtype || '' : '',
-        factorCode: isPhysical ? item.code : item.normative?.factorCode || '',
-        indicatorName: item.name,
-        value: item.result,
-        unit: item.normative?.unit || item.unit || '',
-        normativeId: item.normative?.id,
-        values: {
-          ...(isPhysical ? physicalConditionValues() : {}),
-          ...normativeValues(item.normative),
-          code: item.code,
-          pollutantCode: isPhysical ? '' : item.code,
-          factorCode: isPhysical ? item.code : item.normative?.factorCode || '',
-          factorType: isPhysical ? selectedSubtype || '' : item.normative?.factorType || '',
-          indicator: item.name,
-          indicatorName: item.name,
-          formType: item.normative?.formType || '',
-          limitingIndicator: item.normative?.limitingIndicator || '',
-          sampleNumber: isSoil ? form.sampleNumber : '',
-          samplingDepth: isSoil ? form.samplingDepth : '',
-          cas: item.cas || '',
-          formula: item.formula || '',
-          conditionJson: isPhysical ? JSON.stringify(physicalConditionValues()) : '',
-        },
-      })),
+      measurements,
     };
+    console.log('quick-create payload', quickPayload);
 
     setLoading(true);
     try {

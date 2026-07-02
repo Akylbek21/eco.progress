@@ -72,7 +72,7 @@ const ProtocolList = ({ protocols, loading = false, onOpen, onPreview, onCopy, o
                   <option value="copy">Создать копию</option>
                   <option value="docx">Скачать DOCX</option>
                   <option value="pdf">Скачать PDF</option>
-                  {protocol.status === 'DRAFT' && <option value="delete">Удалить черновик</option>}
+                  <option value="delete">Удалить протокол</option>
                   {protocol.status === 'SIGNED' && <option value="replace">Исправленная версия</option>}
                 </select>
               </td>
