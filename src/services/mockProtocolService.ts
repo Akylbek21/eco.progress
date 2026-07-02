@@ -118,12 +118,14 @@ const updateStored = (protocolId: string, updater: (protocol: Protocol) => Proto
 const numberFor = (templateId: Protocol['templateId'], sequence: number) => {
   const prefix = {
     industrial_emissions: 'Ф 01',
+    water: 'Ф 02',
     water_wastewater: 'Ф 02',
     ambient_air: 'Ф 03',
     physical_factors: 'Ф 04',
     microclimate: 'Ф 04',
     lighting: 'Ф 04',
     noise_vibration: 'Ф 04',
+    uv_emf_laser: 'Ф 04',
     soil: 'П',
     workplace_air: 'Ф 03',
     vehicle_emissions: 'Ф 05',

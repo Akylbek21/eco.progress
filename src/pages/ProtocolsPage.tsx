@@ -11,10 +11,12 @@ import { physicalFactorTypes, protocolTemplates, templateName } from '../data/pr
 import { useToast } from '../hooks/useToast';
 import type { Protocol, ProtocolStatus, ProtocolTemplate } from '../types/protocols';
 
-const statuses: ProtocolStatus[] = ['DRAFT', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED', 'CANCELLED', 'REPLACED'];
+const statuses: ProtocolStatus[] = ['DRAFT', 'CALCULATED', 'READY', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED', 'ARCHIVED', 'CANCELLED', 'REPLACED'];
 const statCards: Array<{ key: 'total' | ProtocolStatus; label: string }> = [
   { key: 'total', label: 'Всего протоколов' },
   { key: 'DRAFT', label: 'Черновики' },
+  { key: 'CALCULATED', label: 'Рассчитаны' },
+  { key: 'READY', label: 'Готовы' },
   { key: 'READY_FOR_APPROVAL', label: 'Готовы к утверждению' },
   { key: 'APPROVED', label: 'Утверждены' },
   { key: 'SIGNED', label: 'Подписаны' },

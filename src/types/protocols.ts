@@ -1,14 +1,25 @@
-export type ProtocolStatus = 'DRAFT' | 'READY_FOR_APPROVAL' | 'APPROVED' | 'SIGNED' | 'CANCELLED' | 'REPLACED';
+export type ProtocolStatus =
+  | 'DRAFT'
+  | 'CALCULATED'
+  | 'READY'
+  | 'SIGNED'
+  | 'ARCHIVED'
+  | 'READY_FOR_APPROVAL'
+  | 'APPROVED'
+  | 'CANCELLED'
+  | 'REPLACED';
 export type ProtocolResultValue = string | number | null | undefined | Array<string | number | null>;
 
 export type ProtocolTemplateId =
   | 'industrial_emissions'
+  | 'water'
   | 'water_wastewater'
   | 'ambient_air'
   | 'physical_factors'
   | 'microclimate'
   | 'lighting'
   | 'noise_vibration'
+  | 'uv_emf_laser'
   | 'soil'
   | 'workplace_air'
   | 'vehicle_emissions'
@@ -393,6 +404,9 @@ export type QuickProtocolMeasurementPayload = {
   value: string | number;
   unit: string;
   normativeId?: string;
+  normativeValue?: string | number | null;
+  testingMethodNd?: string;
+  samplingMethodNd?: string;
   values?: Record<string, ProtocolResultValue>;
 };
 
@@ -407,7 +421,10 @@ export type QuickProtocolCreatePayload = {
   measurementPlace?: string;
   laboratoryId: string;
   executorId: string;
-  sourceDocumentCode: string;
+  sourceDocumentCode?: string | null;
+  docxTemplateCode?: string;
+  normativeTemplateId?: ProtocolTemplateId;
+  resultMode?: 'CHEMICAL' | 'PHYSICAL';
   conditions?: Record<string, ProtocolResultValue>;
   measurements: QuickProtocolMeasurementPayload[];
 };

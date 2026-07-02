@@ -911,9 +911,13 @@ const quickCreateFallback = async (payload: QuickProtocolCreatePayload): Promise
       ...(measurement.values || {}),
       factorType: measurement.factorType || payload.subtype || '',
       factorCode: measurement.factorCode || '',
+      pollutantCode: measurement.pollutantCode || '',
       indicator: measurement.indicatorName,
       indicatorName: measurement.indicatorName,
       unit: measurement.unit || '',
+      normativeValue: measurement.normativeValue ?? null,
+      testingMethodNd: measurement.testingMethodNd || '',
+      samplingMethodNd: measurement.samplingMethodNd || '',
       primaryReading: measurement.value,
       measurementReadings: measurement.value,
       result: measurement.value,
@@ -921,6 +925,9 @@ const quickCreateFallback = async (payload: QuickProtocolCreatePayload): Promise
       measurementPlace: payload.measurementPlace || '',
       samplingPlace: payload.measurementPlace || '',
       sourceDocumentCode: payload.sourceDocumentCode || '',
+      docxTemplateCode: payload.docxTemplateCode || '',
+      normativeTemplateId: payload.normativeTemplateId || '',
+      resultMode: payload.resultMode || '',
     },
   })));
 

@@ -2,9 +2,15 @@ import type { ProtocolResultColumn, ProtocolTemplate, ProtocolSubtype } from '..
 
 export const protocolTemplates: ProtocolTemplate[] = [
   { id: 'industrial_emissions', name: 'Промышленные выбросы', description: 'Ф 01' },
+  { id: 'water', name: 'Вода', description: 'Протокол исследования воды' },
   { id: 'water_wastewater', name: 'Вода и сточные воды', description: 'Ф 02' },
   { id: 'ambient_air', name: 'Воздух СЗЗ', description: 'Ф 03' },
+  { id: 'workplace_air', name: 'Воздух рабочей зоны', description: 'Ф 03' },
   { id: 'physical_factors', name: 'Физические факторы', description: 'Ф 04' },
+  { id: 'microclimate', name: 'Микроклимат', description: 'Физические факторы' },
+  { id: 'lighting', name: 'Освещенность', description: 'Физические факторы' },
+  { id: 'noise_vibration', name: 'Шум / вибрация', description: 'Физические факторы' },
+  { id: 'uv_emf_laser', name: 'УФ / ЭМП / Лазер', description: 'Физические факторы' },
   { id: 'soil', name: 'Почва', description: 'Протокол исследования почвы' },
 ];
 
@@ -153,17 +159,26 @@ const physicalTemplateSubtypes: Record<string, ProtocolSubtype> = {
 };
 
 const templateDisplayNames: Record<string, string> = {
+  ambient_air: 'Атмосферный воздух',
+  workplace_air: 'Воздух рабочей зоны',
+  water: 'Вода',
   microclimate: 'Микроклимат',
   lighting: 'Освещённость',
   noise_vibration: 'Шум / вибрация',
+  uv_emf_laser: 'УФ / ЭМП / Лазер',
 };
 
 export const protocolResultColumns: Record<string, ProtocolResultColumn[]> = {
   industrial_emissions: industrialEmissions,
+  water,
   water_wastewater: water,
   ambient_air: ambientAir,
   soil,
   physical_factors: microclimate,
+  microclimate,
+  lighting,
+  noise_vibration: noiseVibration,
+  uv_emf_laser: lighting,
   workplace_air: ambientAir,
   sanitary_hygiene: soil,
   vehicle_emissions: [],
