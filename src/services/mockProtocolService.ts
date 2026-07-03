@@ -8,6 +8,7 @@ import type {
   NormativeSearchResult,
   Pollutant,
   Protocol,
+  ProtocolEnvironmentalConditions,
   ProtocolHistoryItem,
   ProtocolInternalStatus,
   ProtocolLaboratorySnapshot,
@@ -280,7 +281,7 @@ export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): 
     laboratoryId: payload.laboratoryId,
     executorId: payload.executorId,
     purpose: 'Лабораторные испытания',
-    environment: { source: 'MANUAL', dataSource: 'manual' },
+    environment: { ...(payload.conditions || {}), source: 'MANUAL', dataSource: 'manual' } as ProtocolEnvironmentalConditions,
   });
   for (const measurement of payload.measurements) {
     await addResult(protocol.id, {
@@ -340,7 +341,7 @@ export async function deleteProtocol(protocolId: string): Promise<void> {
   const items = read();
   const item = items.find((protocol) => protocol.id === protocolId);
   if (!item) throw new Error('Протокол не найден.');
-  if (item.status !== 'DRAFT') throw new Error('Удалить можно только черновик.');
+  if (item.status !== 'DRAFT') throw new Error('Удалить можно только активный протокол.');
   write(items.filter((protocol) => protocol.id !== protocolId));
 }
 

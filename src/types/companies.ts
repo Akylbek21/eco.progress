@@ -4,6 +4,7 @@ export type CompanyObjectStatus = 'ACTIVE' | 'ARCHIVED';
 export type CompanyObject = {
   id: string;
   companyId?: string;
+  virtual?: boolean;
   name: string;
   address: string;
   activityType: string;

@@ -55,7 +55,7 @@ export const normalizeLaboratoryProfile = (raw: unknown): LaboratoryProfile => {
     directorName: text(source.directorName || director.fullName || director.name),
     laboratoryHeadId: text(source.laboratoryHeadId || source.headId || head.id),
     laboratoryHeadName: text(source.laboratoryHeadName || source.headName || head.fullName || head.name),
-    logoUrl: text(source.logoUrl || source.logo),
+    logoUrl: text(source.logoUrl || source.logo || source.url || source.fileUrl),
     standardNote: text(source.standardNote || source.note),
     isDefault: bool(source.isDefault || source.defaultLaboratory),
     active: source.active !== false && text(source.status).toUpperCase() !== 'ARCHIVED',
@@ -296,11 +296,19 @@ export async function uploadLaboratoryLogo(id: string, file: File): Promise<Labo
     return structuredClone(items[index]);
   }
   const formData = new FormData();
+  formData.append('logo', file);
   formData.append('file', file);
-  const response = await requestWithSettingsFallback(
-    () => api.post<ApiResponse<unknown> | unknown>(`/laboratories/${id}/logo`, formData),
-    () => api.post<ApiResponse<unknown> | unknown>(`/settings/laboratories/${id}/logo`, formData),
-  );
+  let response: ApiResponse<unknown> | unknown;
+  try {
+    response = await api.post<ApiResponse<unknown> | unknown>(`/settings/laboratories/${id}/logo`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  } catch (error) {
+    if (getApiStatus(error) === 404) {
+      throw new Error('На сервере не подключена загрузка логотипа лаборатории');
+    }
+    throw error;
+  }
   return normalizeLaboratoryProfile(extractItem(response, ['laboratory', 'profile']));
 }
 

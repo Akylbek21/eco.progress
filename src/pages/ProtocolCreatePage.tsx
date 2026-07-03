@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Save, Search } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, CloudSun, Save, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import {
@@ -38,6 +38,10 @@ type QuickForm = {
   visualWorkCategory: string;
   lightingType: string;
   noiseType: string;
+  temperature: string;
+  humidity: string;
+  pressureKpa: string;
+  windSpeed: string;
 };
 
 type SelectedIndicator = Pollutant & {
@@ -68,7 +72,12 @@ const roomTypeOptions = [
 ];
 const lightingTypeOptions = [{ value: 'GENERAL', label: 'Общее' }, { value: 'COMBINED', label: 'Комбинированное' }, { value: 'NATURAL', label: 'Естественное' }];
 const noiseTypeOptions = [{ value: 'CONSTANT', label: 'Постоянный' }, { value: 'VARIABLE', label: 'Непостоянный' }, { value: 'IMPULSE', label: 'Импульсный' }];
-const canSearch = (value: string) => value.trim().length >= MIN_SEARCH_LENGTH;
+const canSearch = (value: string) => {
+  const normalized = value.trim();
+  const letters = (normalized.match(/[A-Za-zА-Яа-яЁё]/g) || []).length;
+  const digits = (normalized.match(/\d/g) || []).length;
+  return letters >= MIN_SEARCH_LENGTH || digits >= MIN_SEARCH_LENGTH;
+};
 const sameDocumentCode = (value?: string | null, expected?: string | null) =>
   !expected || String(value || '').toUpperCase().replace(/-/g, '_') === expected;
 const readNormativeRecords = (found: Awaited<ReturnType<typeof protocolService.searchNormative>>) =>
@@ -102,11 +111,13 @@ const ProtocolCreatePage = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const searchRequestRef = useRef(0);
+  const weatherRequestRef = useRef(0);
   const [loading, setLoading] = useState(false);
   const [booting, setBooting] = useState(true);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companySearch, setCompanySearch] = useState('');
   const [objects, setObjects] = useState<CompanyObject[]>([]);
+  const [objectWarning, setObjectWarning] = useState('');
   const [laboratories, setLaboratories] = useState<LaboratorySummary[]>([]);
   const [employees, setEmployees] = useState<LaboratoryEmployee[]>([]);
   const [warning, setWarning] = useState('');
@@ -115,6 +126,8 @@ const ProtocolCreatePage = () => {
   const [chemicalSuggestions, setChemicalSuggestions] = useState<SelectedIndicator[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchDone, setSearchDone] = useState(false);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [weatherMessage, setWeatherMessage] = useState('');
   const [selectedIndicators, setSelectedIndicators] = useState<SelectedIndicator[]>([]);
   const [form, setForm] = useState<QuickForm>({
     templateKey: 'ambient_air',
@@ -136,6 +149,10 @@ const ProtocolCreatePage = () => {
     visualWorkCategory: '',
     lightingType: 'GENERAL',
     noiseType: 'CONSTANT',
+    temperature: '',
+    humidity: '',
+    pressureKpa: '',
+    windSpeed: '',
   });
 
   const selectedChoice = useMemo(
@@ -148,6 +165,7 @@ const ProtocolCreatePage = () => {
   const isSoil = selectedChoice.templateId === 'soil';
   const sourceDocumentCode = selectedChoice.sourceDocumentCode;
   const selectedCompany = companies.find((item) => item.id === form.companyId);
+  const selectedObject = objects.find((item) => String(item.id) === String(form.objectId));
   const filteredCompanies = useMemo(() => {
     const query = companySearch.trim().toLowerCase();
     if (!query) return companies.slice(0, 8);
@@ -198,13 +216,16 @@ const ProtocolCreatePage = () => {
   useEffect(() => {
     if (!form.companyId) {
       setObjects([]);
+      setObjectWarning('');
       setForm((current) => ({ ...current, objectId: '' }));
       return;
     }
+    setObjectWarning('');
     getCompanyObjects(form.companyId)
       .then((items) => {
-        const active = items.filter((item) => item.status === 'ACTIVE');
+        const active = items.filter((item) => item.status === 'ACTIVE' || item.virtual === true);
         setObjects(active);
+        if (!active.length) setObjectWarning('У компании не заполнен объект. Заполните объект в карточке компании.');
         setForm((current) => ({ ...current, objectId: active.find((item) => item.id === current.objectId)?.id || active[0]?.id || '' }));
       })
       .catch((error) => {
@@ -234,6 +255,37 @@ const ProtocolCreatePage = () => {
         toast.error('Не удалось загрузить исполнителей лаборатории', error instanceof Error ? error.message : undefined);
       });
   }, [form.laboratoryId]);
+
+  useEffect(() => {
+    if (!form.objectId || !form.measurementDate || !form.measurementTime) return;
+    const requestId = ++weatherRequestRef.current;
+    const timer = window.setTimeout(async () => {
+      setWeatherLoading(true);
+      setWeatherMessage('');
+      try {
+        const weather = await protocolService.getWeatherConditions({
+          objectId: form.objectId,
+          coordinates: selectedObject?.coordinates,
+          date: form.measurementDate,
+          time: form.measurementTime,
+        });
+        if (requestId !== weatherRequestRef.current) return;
+        setForm((current) => ({
+          ...current,
+          temperature: weather.temperature || current.temperature,
+          humidity: weather.humidity || current.humidity,
+          pressureKpa: weather.pressureKpa || weather.pressure || current.pressureKpa,
+          windSpeed: weather.windSpeed || current.windSpeed,
+        }));
+        if (weather.warning) setWeatherMessage(weather.warning);
+      } catch {
+        if (requestId === weatherRequestRef.current) setWeatherMessage('Погоду не удалось подтянуть. Заполните условия вручную.');
+      } finally {
+        if (requestId === weatherRequestRef.current) setWeatherLoading(false);
+      }
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [form.objectId, form.measurementDate, form.measurementTime, selectedObject?.coordinates]);
 
   useEffect(() => {
     const value = chemicalQuery.trim();
@@ -319,7 +371,7 @@ const ProtocolCreatePage = () => {
         const fallbackNormatives = readNormativeRecords(fallbackFound).filter((item) => item.active !== false && !item.archived);
         if (fallbackNormatives.length) {
           toast.warning('Норматив найден в другом разделе. Проверьте тип протокола.');
-          setChemicalSuggestions(fallbackNormatives.map(normalizeNormativeIndicator).slice(0, 20));
+          setChemicalSuggestions([]);
           setSearchDone(true);
           return;
         }
@@ -412,6 +464,28 @@ const ProtocolCreatePage = () => {
     return base;
   };
 
+  const weatherConditionValues = () => ({
+    temperature: form.temperature,
+    humidity: form.humidity,
+    pressure: form.pressureKpa,
+    pressureKpa: form.pressureKpa,
+    windSpeed: form.windSpeed,
+  });
+
+  const baseConditionValues = () => ({
+    ...(isPhysical ? physicalConditionValues() : {}),
+    ...(isSoil ? {
+      sampleNumber: form.sampleNumber,
+      samplingDepth: form.samplingDepth,
+      samplingPlace: form.measurementPlace,
+    } : {}),
+    ...weatherConditionValues(),
+    sourceDocumentCode,
+    docxTemplateCode: selectedChoice.docxTemplateCode,
+    normativeTemplateId: selectedChoice.normativeTemplateId,
+    resultMode: selectedChoice.resultMode,
+  });
+
   const normativeValues = (normative?: NormativeRecord) => {
     if (!normative) return {};
     const value = normativeDisplayValue(normative);
@@ -479,7 +553,6 @@ const ProtocolCreatePage = () => {
       toast.warning('Выберите компанию');
       return;
     }
-    const selectedObject = objects.find((item) => String(item.id) === String(form.objectId));
     if (!selectedObject?.id) {
       toast.warning('Выберите объект');
       return;
@@ -492,21 +565,38 @@ const ProtocolCreatePage = () => {
       const indicatorName = item.indicatorName || item.name || item.normative?.indicator || item.normative?.indicatorName || item.normative?.pollutantName || '';
       const unit = unitForIndicator(item);
       const normativeValue = normativeDisplayValue(item.normative);
+      const testingMethodNd = item.normative?.testingMethod || item.testingMethod || '';
+      const samplingMethodNd = item.normative?.samplingMethod || item.samplingMethod || '';
+      const normativeId = item.normative?.id || '';
+      const normativeDocument = item.normative?.normativeDocument || item.normative?.sourceDocumentName || '';
+      const normativeMin = item.normative?.min || '';
+      const normativeMax = item.normative?.max || item.normative?.value || item.normative?.maxOneTimeValue || item.normative?.dailyAverageValue || item.normative?.obuvValue || '';
+      const conditionJson = isPhysical ? JSON.stringify(physicalConditionValues()) : item.normative?.conditionJson || '';
 
       return {
-        ...(isPhysical ? { factorType, factorCode } : {}),
-        ...(isChemical ? { pollutantCode } : {}),
+        factorType,
+        factorCode,
+        pollutantCode,
         indicatorName,
         value: item.result,
         unit,
-        normativeId: item.normative?.id,
+        normativeId,
         normativeValue,
-        testingMethodNd: item.normative?.testingMethod || item.testingMethod || '',
-        samplingMethodNd: item.normative?.samplingMethod || item.samplingMethod || '',
+        testingMethodNd,
+        samplingMethodNd,
         values: {
-          ...(isPhysical ? physicalConditionValues() : {}),
+          ...baseConditionValues(),
           ...normativeValues(item.normative),
           code: item.code,
+          sourceDocumentCode: item.normative?.sourceDocumentCode || sourceDocumentCode || '',
+          normativeDocument,
+          normativeId,
+          normativeValue,
+          comparisonType: item.normative?.comparisonType || '',
+          normativeMin,
+          normativeMax,
+          minValue: normativeMin,
+          maxValue: normativeMax,
           pollutantCode,
           factorCode,
           factorType,
@@ -516,16 +606,25 @@ const ProtocolCreatePage = () => {
           docxTemplateCode: selectedChoice.docxTemplateCode,
           normativeTemplateId: selectedChoice.normativeTemplateId,
           resultMode: selectedChoice.resultMode,
-          normativeValue,
-          testingMethodNd: item.normative?.testingMethod || item.testingMethod || '',
-          samplingMethodNd: item.normative?.samplingMethod || item.samplingMethod || '',
+          testingMethodNd,
+          samplingMethodNd,
           formType: item.normative?.formType || '',
           limitingIndicator: item.normative?.limitingIndicator || '',
           sampleNumber: isSoil ? form.sampleNumber : '',
           samplingDepth: isSoil ? form.samplingDepth : '',
-          cas: item.cas || '',
-          formula: item.formula || '',
-          conditionJson: isPhysical ? JSON.stringify(physicalConditionValues()) : '',
+          samplingPlace: form.measurementPlace,
+          measurementPlace: form.measurementPlace,
+          cas: item.cas || item.normative?.cas || item.normative?.casNumber || '',
+          formula: item.formula || item.normative?.formula || item.normative?.chemicalFormula || '',
+          conditionJson,
+          lightingType: form.lightingType,
+          noiseType: form.noiseType,
+          visualWorkCategory: form.visualWorkCategory,
+          roomType: form.roomType,
+          season: form.season,
+          workCategory: form.workCategory,
+          workplaceType: form.workplaceType,
+          normLevel: form.normLevel,
         },
       };
     });
@@ -569,23 +668,7 @@ const ProtocolCreatePage = () => {
       docxTemplateCode: selectedChoice.docxTemplateCode,
       normativeTemplateId: selectedChoice.normativeTemplateId,
       resultMode: selectedChoice.resultMode,
-      conditions: isSoil
-        ? {
-          sourceDocumentCode,
-          docxTemplateCode: selectedChoice.docxTemplateCode,
-          normativeTemplateId: selectedChoice.normativeTemplateId,
-          resultMode: selectedChoice.resultMode,
-          sampleNumber: form.sampleNumber,
-          samplingDepth: form.samplingDepth,
-          samplingPlace: form.measurementPlace,
-        }
-        : {
-          ...(isPhysical ? physicalConditionValues() : {}),
-          sourceDocumentCode,
-          docxTemplateCode: selectedChoice.docxTemplateCode,
-          normativeTemplateId: selectedChoice.normativeTemplateId,
-          resultMode: selectedChoice.resultMode,
-        },
+      conditions: baseConditionValues(),
       measurements,
     };
     console.log('quick-create payload', quickPayload);
@@ -664,6 +747,7 @@ const ProtocolCreatePage = () => {
             {objects.map((item) => <option key={item.id} value={item.id}>{item.name} {item.address ? `· ${item.address}` : ''}</option>)}
           </select>
           {selectedCompany && <p className="text-xs font-semibold text-slate-500">Данные компании будут сохранены в snapshot протокола.</p>}
+          {objectWarning && <p className="text-sm font-semibold text-amber-700">{objectWarning}</p>}
         </label>
       </section>
 
@@ -679,6 +763,17 @@ const ProtocolCreatePage = () => {
             <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Глубина отбора</span><input value={form.samplingDepth} onChange={(event) => setField('samplingDepth', event.target.value)} placeholder="Например: 0-20 см" className={inputClass} /></label>
           </>
         )}
+      </section>
+
+      <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 xl:grid-cols-4">
+        <h2 className="flex items-center gap-2 text-lg font-black text-slate-900 md:col-span-2 xl:col-span-4">
+          <CloudSun className="h-5 w-5 text-eco-700" /> Погодные условия
+        </h2>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Температура, °C</span><input type="number" step="any" value={form.temperature} onChange={(event) => setField('temperature', event.target.value)} className={inputClass} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Влажность, %</span><input type="number" step="any" value={form.humidity} onChange={(event) => setField('humidity', event.target.value)} className={inputClass} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Давление, кПа</span><input type="number" step="any" value={form.pressureKpa} onChange={(event) => setField('pressureKpa', event.target.value)} className={inputClass} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Скорость ветра, м/с</span><input type="number" step="any" value={form.windSpeed} onChange={(event) => setField('windSpeed', event.target.value)} className={inputClass} /></label>
+        {(weatherLoading || weatherMessage) && <p className="text-sm font-semibold text-slate-500 md:col-span-2 xl:col-span-4">{weatherLoading ? 'Пробуем подтянуть погоду...' : weatherMessage}</p>}
       </section>
 
       {isPhysical && ['MICROCLIMATE', 'NOISE', 'NOISE_VIBRATION', 'LIGHTING'].includes(String(selectedSubtype)) && (

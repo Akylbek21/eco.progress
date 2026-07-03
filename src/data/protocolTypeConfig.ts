@@ -61,7 +61,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   },
   microclimate: {
     title: 'Микроклимат',
-    templateId: 'microclimate',
+    templateId: 'physical_factors',
     sourceDocumentCode: 'DSM_15',
     docxTemplateCode: 'protocol_microclimate',
     defaultUnit: null,
@@ -70,7 +70,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   },
   lighting: {
     title: 'Освещенность',
-    templateId: 'lighting',
+    templateId: 'physical_factors',
     sourceDocumentCode: 'DSM_15',
     docxTemplateCode: 'protocol_lighting',
     defaultUnit: 'лк',
@@ -79,7 +79,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   },
   noise_vibration: {
     title: 'Шум / вибрация',
-    templateId: 'noise_vibration',
+    templateId: 'physical_factors',
     sourceDocumentCode: 'DSM_15',
     docxTemplateCode: 'protocol_noise_vibration',
     defaultUnit: null,
@@ -88,7 +88,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   },
   uv_emf_laser: {
     title: 'УФ / ЭМП / Лазер',
-    templateId: 'uv_emf_laser',
+    templateId: 'physical_factors',
     sourceDocumentCode: 'DSM_15',
     docxTemplateCode: 'protocol_physical_factors',
     defaultUnit: null,

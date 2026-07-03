@@ -2,12 +2,12 @@ import clsx from 'clsx';
 import type { ProtocolStatus } from '../../types/protocols';
 
 export const protocolStatusLabels: Record<ProtocolStatus, string> = {
-  DRAFT: 'Черновик',
+  DRAFT: 'Готов',
   CALCULATED: 'Рассчитан',
   READY: 'Готов',
-  READY_FOR_APPROVAL: 'Готов к утверждению',
-  APPROVED: 'Утверждён',
-  SIGNED: 'Подписан',
+  READY_FOR_APPROVAL: 'Готов',
+  APPROVED: 'Готов',
+  SIGNED: 'Готов',
   ARCHIVED: 'В архиве',
   CANCELLED: 'Аннулирован',
   REPLACED: 'Заменён',

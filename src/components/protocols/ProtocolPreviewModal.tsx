@@ -33,7 +33,6 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
         {!loading && previewUrl && <iframe title="Предпросмотр протокола от backend" src={previewUrl} className="mx-auto h-full min-h-[80vh] w-full max-w-7xl rounded-xl bg-white shadow-2xl" />}
         {!loading && !previewUrl && protocol && (
           <article className={`relative mx-auto min-h-[1120px] bg-white p-8 text-[11px] leading-snug text-slate-950 shadow-2xl sm:p-12 ${landscape ? 'w-[1120px] min-w-[1120px]' : 'w-[794px] min-w-[794px]'}`}>
-            {draft && <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"><span className="-rotate-12 text-8xl font-black uppercase tracking-[0.2em] text-slate-100">Черновик</span></div>}
             <header className="relative grid grid-cols-[90px_1fr_180px] items-center border-b-2 border-slate-900 pb-4">
               <div className="flex h-16 w-16 items-center justify-center border-2 border-emerald-800 text-emerald-800">{protocol.laboratory.logoUrl ? <img src={protocol.laboratory.logoUrl} alt="" className="h-full w-full object-contain p-1" /> : <FlaskConical className="h-9 w-9" />}</div>
               <div className="text-center">

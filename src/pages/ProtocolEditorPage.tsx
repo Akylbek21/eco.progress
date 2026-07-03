@@ -182,8 +182,17 @@ const stepStatusClasses: Record<StepStatus, string> = {
 
 type MissingField = { label: string; stepKey: ProtocolStepKey };
 
-const editableProtocolStatuses = new Set<Protocol['status']>(['DRAFT', 'CALCULATED', 'READY']);
+const editableProtocolStatuses = new Set<Protocol['status']>(['DRAFT', 'CALCULATED', 'READY', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED']);
 const isEditableProtocol = (protocol?: Protocol | null) => Boolean(protocol && editableProtocolStatuses.has(protocol.status));
+const userProtocolError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : '';
+  const normalized = message.toLowerCase();
+  if (normalized.includes('только в статусах') || normalized.includes('only in statuses') || normalized.includes('draft') && normalized.includes('calculated')) {
+    return 'Backend пока не разрешает сохранять протокол в текущем статусе. Нужно обновить backend: PATCH/PUT протокола должен работать без перевода в DRAFT.';
+  }
+  if (normalized.includes('черновик')) return 'Backend пока требует черновик для сохранения. Нужно обновить backend, frontend не переводит протокол в DRAFT.';
+  return message || undefined;
+};
 const hasText = (value?: string | number | null) => value !== undefined && value !== null && String(value).trim() !== '';
 const hasEnvironment = (protocol: Protocol) =>
   ['temperature', 'humidity', 'pressureKpa', 'windSpeed'].every((key) => hasText(protocol.environment?.[key as keyof NonNullable<Protocol['environment']>]));
@@ -496,7 +505,6 @@ const ProtocolStepFooter = ({
   onPreview,
   onReady,
   onApprove,
-  onReturnDraft,
   onGenerateDocx,
   onGeneratePdf,
   onSign,
@@ -519,7 +527,6 @@ const ProtocolStepFooter = ({
   onPreview: () => void | Promise<void>;
   onReady: () => void | Promise<void>;
   onApprove: () => void | Promise<void>;
-  onReturnDraft: () => void | Promise<void>;
   onGenerateDocx: () => void | Promise<void>;
   onGeneratePdf: () => void | Promise<void>;
   onSign: () => void;
@@ -544,26 +551,25 @@ const ProtocolStepFooter = ({
           {isEditableProtocol(protocol) && (
             <>
               {activeIndex > 0 && <Button type="button" variant="secondary" disabled={busy} onClick={onPrevious}><ChevronLeft className="h-4 w-4" /> Назад</Button>}
-              {activeStep !== 'review' && <Button type="button" variant="secondary" disabled={busy || readOnly} onClick={onSave}><Save className="h-4 w-4" /> Сохранить черновик</Button>}
+              {activeStep !== 'review' && <Button type="button" variant="secondary" disabled={busy || readOnly} onClick={onSave}><Save className="h-4 w-4" /> Сохранить</Button>}
               {activeStep === 'results' && <Button type="button" variant="secondary" disabled={busy} onClick={onCalculate}><SearchCheck className="h-4 w-4" /> Рассчитать и проверить</Button>}
               {activeStep !== 'review' && <Button type="button" variant={activeStep === 'results' ? 'secondary' : 'primary'} disabled={busy} onClick={onNext}>Далее <ArrowRight className="h-4 w-4" /></Button>}
               {activeStep === 'review' && (
                 <>
                   <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
                   <Button type="button" variant="secondary" disabled={busy} onClick={onGenerateDocx}><FileCheck2 className="h-4 w-4" /> Сформировать документ</Button>
-                  <Button type="button" disabled={busy || missingFields.length > 0} onClick={onReady}><CheckCircle2 className="h-4 w-4" /> Отправить на утверждение</Button>
+                  <Button type="button" disabled={busy || missingFields.length > 0} onClick={onReady}><CheckCircle2 className="h-4 w-4" /> Готово</Button>
                 </>
               )}
             </>
           )}
-          {protocol.status === 'READY_FOR_APPROVAL' && (
+          {!isEditableProtocol(protocol) && protocol.status === 'READY_FOR_APPROVAL' && (
             <>
               <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
-              {canApprove && <Button type="button" variant="secondary" disabled={busy} onClick={onReturnDraft}>Вернуть в черновик</Button>}
               {canApprove && <Button type="button" disabled={busy} onClick={onApprove}><CheckCircle2 className="h-4 w-4" /> Утвердить</Button>}
             </>
           )}
-          {protocol.status === 'APPROVED' && (
+          {!isEditableProtocol(protocol) && protocol.status === 'APPROVED' && (
             <>
               <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
               <Button type="button" variant="secondary" disabled={busy} onClick={onGenerateDocx}>DOCX</Button>
@@ -571,7 +577,7 @@ const ProtocolStepFooter = ({
               <Button type="button" disabled={busy} onClick={onSign}>Подписать</Button>
             </>
           )}
-          {protocol.status === 'SIGNED' && (
+          {!isEditableProtocol(protocol) && protocol.status === 'SIGNED' && (
             <>
               <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
               <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadDocx}>Скачать DOCX</Button>
@@ -641,10 +647,7 @@ const ProtocolEditorPage = () => {
   };
 
   const ensureDraftProtocol = async (item: Protocol) => {
-    if (item.status === 'DRAFT') return item;
-    if (!editableProtocolStatuses.has(item.status)) return item;
-    const draft = await protocolService.returnToDraft(item.id);
-    return applyServerProtocol(draft);
+    return item;
   };
 
   const load = async () => {
@@ -667,23 +670,8 @@ const ProtocolEditorPage = () => {
   }, [protocolId]);
 
   useEffect(() => {
-    if (!protocol || protocol.status === 'DRAFT' || !editableProtocolStatuses.has(protocol.status) || busy) return;
-    const key = `${protocol.id}:${protocol.status}`;
-    if (draftUnlockRef.current === key) return;
-    draftUnlockRef.current = key;
-    setBusy(true);
-    setSaveStatus('saving');
-    protocolService.returnToDraft(protocol.id)
-      .then((item) => {
-        applyServerProtocol(item);
-        toast.info('Протокол возвращен в черновик для редактирования');
-      })
-      .catch((error) => {
-        setSaveStatus('error');
-        toast.error('Не удалось вернуть протокол в черновик', error instanceof Error ? error.message : undefined);
-      })
-      .finally(() => setBusy(false));
-  }, [protocol?.id, protocol?.status, busy]);
+    draftUnlockRef.current = protocol?.id || '';
+  }, [protocol?.id]);
 
   useEffect(() => {
     if (dirty && saveStatus !== 'saving') setSaveStatus('dirty');
@@ -810,7 +798,7 @@ const ProtocolEditorPage = () => {
       return updated;
     } catch (saveError) {
       setSaveStatus('error');
-      toast.error('Не удалось сохранить протокол', saveError instanceof Error ? saveError.message : undefined);
+      toast.error('Не удалось сохранить протокол', userProtocolError(saveError));
       return null;
     } finally {
       setBusy(false);
@@ -911,7 +899,7 @@ const ProtocolEditorPage = () => {
   const calculateProtocolResults = async () => {
     if (!protocol) return;
     if (dirty) {
-      toast.info('Сначала сохраняю черновик, затем запускаю расчет.');
+      toast.info('Сначала сохраняю данные, затем запускаю расчет.');
       const saved = await save();
       if (!saved) return;
     }
@@ -975,7 +963,7 @@ const ProtocolEditorPage = () => {
       applyServerProtocol(updated);
       toast.success(success);
     } catch (actionError) {
-      toast.error('Действие не выполнено', actionError instanceof Error ? actionError.message : undefined);
+      toast.error('Действие не выполнено', userProtocolError(actionError));
     } finally {
       setBusy(false);
     }
@@ -990,7 +978,7 @@ const ProtocolEditorPage = () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(blob));
     } catch (previewError) {
-      toast.error('Не удалось открыть предпросмотр', previewError instanceof Error ? previewError.message : undefined);
+      toast.error('Не удалось открыть предпросмотр', userProtocolError(previewError));
       setPreviewUrl('');
     } finally {
       setPreviewLoading(false);
@@ -1007,7 +995,7 @@ const ProtocolEditorPage = () => {
       if (!downloaded?.blob.size) throw new Error('Backend вернул пустой файл.');
       saveBlob(downloaded.blob, downloaded.fileName || fileName(protocol, kind));
     } catch (downloadError) {
-      toast.error('Не удалось скачать файл', downloadError instanceof Error ? downloadError.message : undefined);
+      toast.error('Не удалось скачать файл', userProtocolError(downloadError));
     } finally {
       setBusy(false);
     }
@@ -1023,7 +1011,7 @@ const ProtocolEditorPage = () => {
       applyServerProtocol(pdf);
       toast.success('Документы сформированы');
     } catch (generateError) {
-      toast.error('Не удалось сформировать документы', generateError instanceof Error ? generateError.message : undefined);
+      toast.error('Не удалось сформировать документы', userProtocolError(generateError));
     } finally {
       setBusy(false);
     }
@@ -1171,18 +1159,12 @@ const ProtocolEditorPage = () => {
         </div>
       </div>
 
-      {protocol.status === 'SIGNED' && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">
-          Протокол подписан. Редактирование закрыто, доступны скачивание PDF/DOCX и исправленная версия.
-        </div>
-      )}
-
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Заполните протокол по шагам</h2>
             <p className="mt-1 max-w-3xl text-sm text-slate-600">
-              Заполните данные по шагам. Система сохранит черновик, проверит нормативы и подготовит протокол к утверждению.
+              Заполните данные по шагам. Система сохранит данные, проверит нормативы и подготовит протокол.
             </p>
             {missingFields.length > 0 && (
               <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
@@ -1199,7 +1181,7 @@ const ProtocolEditorPage = () => {
       <ProtocolStepWizard activeStep={activeStep} protocol={protocol} onSelect={setActiveStep} />
 
       {activeStep === 'general' && <div className="space-y-6">
-        <ProtocolGeneralForm protocol={protocol} readOnly={readOnly || protocol.status === 'APPROVED'} onChange={patchProtocol} />
+        <ProtocolGeneralForm protocol={protocol} readOnly={readOnly} onChange={patchProtocol} />
         <ProtocolTestingForm
           templateId={protocol.templateId}
           value={protocol.testing}
@@ -1306,10 +1288,9 @@ const ProtocolEditorPage = () => {
             setActiveStep(firstMissingStep);
             return;
           }
-          return run(() => protocolService.readyForApproval(protocol.id), 'Протокол отправлен на утверждение');
+          return run(() => protocolService.readyForApproval(protocol.id), 'Данные сохранены');
         }}
-        onApprove={() => run(() => protocolService.approveProtocol(protocol.id), 'Протокол утвержден')}
-        onReturnDraft={() => run(() => protocolService.returnToDraft(protocol.id), 'Протокол возвращен в черновик')}
+        onApprove={() => run(() => protocolService.approveProtocol(protocol.id), 'Протокол готов')}
         onGenerateDocx={generateDocuments}
         onGeneratePdf={generateDocuments}
         onSign={() => setSignOpen(true)}
@@ -1321,7 +1302,7 @@ const ProtocolEditorPage = () => {
 
       </div>
 
-      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} protocol={protocol} draft={protocol.status !== 'APPROVED' && protocol.status !== 'SIGNED'} onClose={() => setPreviewOpen(false)} />
+      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} protocol={protocol} draft={false} onClose={() => setPreviewOpen(false)} />
       <SignProtocolModal open={signOpen} loading={busy} onClose={() => setSignOpen(false)} onConfirm={signCurrentProtocol} />
       <ReplaceProtocolModal
         open={replaceOpen}

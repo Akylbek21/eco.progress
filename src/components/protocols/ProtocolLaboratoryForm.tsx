@@ -85,7 +85,7 @@ const ProtocolLaboratoryForm = ({ value, employees, readOnly, loading = false, c
       </div>
 
       {!value.laboratoryHead && <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-800">В snapshot не выбран заведующий лабораторией.</div>}
-      {certificate.status === 'EXPIRED' && <div className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-800">Подписание заблокировано до обновления действующего аттестата и snapshot черновика.</div>}
+      {certificate.status === 'EXPIRED' && <div className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-800">Подписание заблокировано до обновления действующего аттестата и данных протокола.</div>}
       <button type="button" onClick={() => setDetails((current) => !current)} className="mt-4 text-sm font-bold text-eco-700">{details ? 'Скрыть подробности' : 'Подробнее'}</button>
       {details && <dl className="mt-3 grid gap-3 rounded-xl bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map(([label, content]) => <div key={label}><dt className="text-xs font-bold uppercase text-slate-400">{label}</dt><dd className="mt-1 text-sm font-semibold text-slate-800">{content || '—'}</dd></div>)}

@@ -679,7 +679,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
                     </select>
                   </label>
                 </div>
-                {laboratoryAccreditation.status === 'EXPIRED' && <div className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-800">Аттестат лаборатории истёк. Создать черновик можно, но подписание будет заблокировано.</div>}
+                {laboratoryAccreditation.status === 'EXPIRED' && <div className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-800">Аттестат лаборатории истёк. Создать протокол можно, но подписание будет заблокировано.</div>}
                 {laboratoryAccreditation.status === 'EXPIRING' && <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-800">Срок аттестата скоро закончится: осталось {laboratoryAccreditation.daysLeft} дн.</div>}
                 <button type="button" onClick={() => setLaboratoryDetails((value) => !value)} className="mt-3 text-sm font-bold text-eco-700">{laboratoryDetails ? 'Скрыть подробности' : 'Подробнее'}</button>
                 {laboratoryDetails && <dl className="mt-3 grid gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-2 lg:grid-cols-4">

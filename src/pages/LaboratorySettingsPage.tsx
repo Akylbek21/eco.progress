@@ -232,18 +232,28 @@ const LaboratorySettingsPage = () => {
       });
       if (logoFile) {
         try {
-          saved = await uploadLaboratoryLogo(saved.id, logoFile);
+          const logoProfile = await uploadLaboratoryLogo(saved.id, logoFile);
+          saved = {
+            ...saved,
+            logoUrl: logoProfile.logoUrl || saved.logoUrl,
+            updatedAt: logoProfile.updatedAt || saved.updatedAt,
+          };
         } catch (logoError) {
-          toast.error('Лаборатория сохранена, но логотип загрузить не удалось', logoError instanceof Error ? logoError.message : undefined);
-          throw logoError;
+          toast.warning('Настройки сохранены, но логотип не удалось загрузить', logoError instanceof Error ? logoError.message : undefined);
         }
       }
       setProfile(saved);
       setSelectedId(saved.id);
+      setSummaries((current) => {
+        const summary = { ...saved, employees: [] };
+        const normalized = saved.isDefault ? current.map((item) => ({ ...item, isDefault: item.id === saved.id })) : current;
+        const index = normalized.findIndex((item) => item.id === saved.id);
+        if (index >= 0) return normalized.map((item, itemIndex) => (itemIndex === index ? summary : item));
+        return [...normalized, summary];
+      });
       setLogoFile(null);
       setDirty(false);
       toast.success('Карточка лаборатории сохранена');
-      await load(saved.id, { skipDirtyCheck: true });
     } catch (saveError) {
       toast.error('Не удалось сохранить лабораторию', saveError instanceof Error ? saveError.message : undefined);
     } finally {

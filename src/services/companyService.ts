@@ -25,6 +25,7 @@ export const normalizeCompanyObject = (raw: unknown, companyId = ''): CompanyObj
   return {
     id: pick(source, ['id', '_id', 'objectId', 'facilityId']),
     companyId: pick(source, ['companyId', 'company_id']) || companyId,
+    virtual: source.virtual === true,
     name: pick(source, ['name', 'objectName', 'facilityName', 'title']),
     address: pick(source, ['address', 'objectAddress', 'facilityAddress']),
     activityType: pick(source, ['activityType', 'businessActivity']),

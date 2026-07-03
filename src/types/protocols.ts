@@ -214,6 +214,7 @@ export type ProtocolEnvironmentalConditions = {
   minHumidity?: string;
   maxHumidity?: string;
   pressureKpa?: string;
+  pressure?: string;
   windSpeed?: string;
   comment?: string;
   status?: WeatherConditionsStatus;
@@ -240,6 +241,7 @@ export type WeatherConditions = {
   minHumidity?: string;
   maxHumidity?: string;
   pressureKpa?: string;
+  pressure?: string;
   windSpeed?: string;
   status: WeatherConditionsStatus;
   source: 'API' | 'MANUAL';

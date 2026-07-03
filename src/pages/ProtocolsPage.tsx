@@ -163,7 +163,7 @@ const ProtocolsPage = () => {
 
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{error}</div>}
       <ProtocolList protocols={filtered} loading={loading} onOpen={(protocol) => navigate(`/staff/protocols/${protocol.id}`)} onPreview={preview} onCopy={copy} onDelete={remove} onReplace={replace} onDownloadPdf={(protocol) => download(protocol, 'pdf')} onDownloadDocx={(protocol) => download(protocol, 'docx')} />
-      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} protocol={protocols.find((item) => item.id === previewProtocolId) || null} draft={protocols.find((item) => item.id === previewProtocolId)?.status === 'DRAFT'} onClose={() => setPreviewOpen(false)} />
+      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} protocol={protocols.find((item) => item.id === previewProtocolId) || null} draft={false} onClose={() => setPreviewOpen(false)} />
     </div>
   );
 };

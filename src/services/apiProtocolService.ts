@@ -488,6 +488,11 @@ const normalizeCalculationSummary = (raw: unknown, protocolId: string): Protocol
 
 export const normalizeWeatherConditions = (raw: unknown): WeatherConditions => {
   const source = asRecord(extractItem(raw, ['conditions', 'weather']));
+  const pressureKpa = pick(source, ['pressureKpa', 'pressure_kpa']);
+  const pressureHpa = pick(source, ['pressureHpa', 'pressure_hpa']);
+  const convertedPressureKpa = pressureHpa && Number.isFinite(Number(pressureHpa))
+    ? String(Number(pressureHpa) / 10)
+    : '';
   return {
     temperature: pick(source, ['temperature', 'temperatureC']),
     minTemperature: pick(source, ['minTemperature', 'temperatureMinC']),
@@ -495,7 +500,8 @@ export const normalizeWeatherConditions = (raw: unknown): WeatherConditions => {
     humidity: pick(source, ['humidity', 'humidityPercent']),
     minHumidity: pick(source, ['minHumidity', 'humidityMinPercent']),
     maxHumidity: pick(source, ['maxHumidity', 'humidityMaxPercent']),
-    pressureKpa: pick(source, ['pressureKpa', 'pressure']),
+    pressureKpa: pressureKpa || convertedPressureKpa || pick(source, ['pressure']),
+    pressure: pressureKpa || convertedPressureKpa || pick(source, ['pressure']),
     windSpeed: pick(source, ['windSpeed', 'windSpeedMs']),
     status: 'LOADED',
     source: 'API',
@@ -901,7 +907,7 @@ const quickCreateFallback = async (payload: QuickProtocolCreatePayload): Promise
     laboratoryId: payload.laboratoryId,
     executorId: payload.executorId,
     purpose: 'Лабораторные испытания',
-    environment: { source: 'MANUAL', dataSource: 'manual' },
+    environment: { ...(payload.conditions || {}), source: 'MANUAL', dataSource: 'manual' } as ProtocolEnvironmentalConditions,
   });
 
   await Promise.all(payload.measurements.map((measurement) => addProtocolResult(protocol.id, {
