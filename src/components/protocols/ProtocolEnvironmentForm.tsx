@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Archive, CloudSun, RefreshCw } from 'lucide-react';
+import { Archive, Check, CloudSun, Copy, RefreshCw } from 'lucide-react';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import type { ProtocolEnvironmentalConditions, WeatherConditions, WeatherConditionsStatus } from '../../types/protocols';
@@ -36,6 +36,26 @@ const formatDateTime = (value?: string) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString('ru-RU');
 };
+const displayValue = (value?: string | number | null) => {
+  const text = value === undefined || value === null ? '' : String(value).trim();
+  return text || 'Не указано';
+};
+
+const writeClipboardText = async (text: string) => {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
+};
 
 const ProtocolEnvironmentForm = ({
   value, measurementDate, objectId, objectName, objectOptions = [], readOnly, loading = false,
@@ -46,6 +66,7 @@ const ProtocolEnvironmentForm = ({
   const [draft, setDraft] = useState(value);
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
   const initialRender = useRef(true);
   const abortRef = useRef<AbortController | null>(null);
   const mainFields: Array<[keyof ProtocolEnvironmentalConditions, string]> = [
@@ -104,6 +125,24 @@ const ProtocolEnvironmentForm = ({
     });
     setEditOpen(false);
   };
+  const copyConditions = async () => {
+    const place = objectOptions.find((item) => item.id === selection.objectId)?.name || objectName;
+    const source = value.dataSource || (value.source === 'MANUAL' ? 'Введено сотрудником' : 'Погодный сервис');
+    const text = [
+      `Дата замера: ${displayValue(selection.date)}`,
+      `Время замера: ${displayValue(selection.time || DEFAULT_WEATHER_TIME)}`,
+      `Место / объект: ${displayValue(place)}`,
+      `Температура: ${displayValue(value.temperature)} °C`,
+      `Влажность: ${displayValue(value.humidity)} %`,
+      `Давление: ${displayValue(value.pressureKpa || value.pressure)} кПа`,
+      `Скорость ветра: ${displayValue(value.windSpeed)} м/с`,
+      `Источник данных: ${displayValue(source)}`,
+      `Фактическое время погодной записи: ${formatDateTime(value.observedAt)}`,
+    ].join('\n');
+    await writeClipboardText(text);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  };
   const isArchive = Boolean(selection.date && selection.date < today());
   const isLoading = loading || value.status === 'LOADING';
 
@@ -118,10 +157,15 @@ const ProtocolEnvironmentForm = ({
               {isArchive && <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 font-bold text-sky-800"><Archive className="h-3.5 w-3.5" /> Архивные погодные данные</span>}
             </div>
           </div>
-          {!readOnly && <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" disabled={isLoading || !selection.objectId || !selection.date || !selection.time} onClick={refresh}><RefreshCw className="h-4 w-4" /> Получить погоду</Button>
-            <Button type="button" variant="secondary" disabled={isLoading} onClick={openEdit}>Ввести вручную</Button>
-          </div>}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="secondary" disabled={isLoading} onClick={copyConditions}>
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? 'Скопировано' : 'Копировать'}
+            </Button>
+            {!readOnly && <>
+              <Button type="button" variant="secondary" disabled={isLoading || !selection.objectId || !selection.date || !selection.time} onClick={refresh}><RefreshCw className="h-4 w-4" /> Получить погоду</Button>
+              <Button type="button" variant="secondary" disabled={isLoading} onClick={openEdit}>Ввести вручную</Button>
+            </>}
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
