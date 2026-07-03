@@ -226,7 +226,7 @@ const ProtocolCreatePage = () => {
       .then((items) => {
         setEmployees(items);
         if (!items.length) setEmployeeWarning('Сотрудники лаборатории не найдены');
-        setForm((current) => ({ ...current, executorId: items.find((item) => (item.userId || item.id) === current.executorId)?.userId || items[0]?.userId || items[0]?.id || '' }));
+        setForm((current) => ({ ...current, executorId: items.find((item) => item.id === current.executorId)?.id || items[0]?.id || '' }));
       })
       .catch((error) => {
         setEmployees([]);
@@ -779,7 +779,7 @@ const ProtocolCreatePage = () => {
           <span>Исполнитель</span>
           <select value={form.executorId} onChange={(event) => setField('executorId', event.target.value)} className={inputClass} disabled={!employees.length}>
             <option value="">Выберите исполнителя</option>
-            {employees.map((item) => <option key={item.id} value={item.userId || item.id}>{item.fullName} {item.position ? `· ${item.position}` : ''}</option>)}
+            {employees.map((item) => <option key={item.id} value={item.id}>{item.fullName} {item.position ? `· ${item.position}` : ''}</option>)}
           </select>
           {employeeWarning && <p className="text-sm font-semibold text-amber-700">{employeeWarning}</p>}
         </label>

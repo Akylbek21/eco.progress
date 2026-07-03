@@ -12,15 +12,6 @@ import { useToast } from '../hooks/useToast';
 import type { Protocol, ProtocolStatus, ProtocolTemplate } from '../types/protocols';
 
 const statuses: ProtocolStatus[] = ['DRAFT', 'CALCULATED', 'READY', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED', 'ARCHIVED', 'CANCELLED', 'REPLACED'];
-const statCards: Array<{ key: 'total' | ProtocolStatus; label: string }> = [
-  { key: 'total', label: 'Всего протоколов' },
-  { key: 'DRAFT', label: 'Черновики' },
-  { key: 'CALCULATED', label: 'Рассчитаны' },
-  { key: 'READY', label: 'Готовы' },
-  { key: 'READY_FOR_APPROVAL', label: 'Готовы к утверждению' },
-  { key: 'APPROVED', label: 'Утверждены' },
-  { key: 'SIGNED', label: 'Подписаны' },
-];
 
 const saveBlob = (blob: Blob, name: string) => {
   const url = URL.createObjectURL(blob);
@@ -73,11 +64,6 @@ const ProtocolsPage = () => {
       && (!subtype || protocol.subtype === subtype)
       && (!compliance || protocol.complianceResult === compliance);
   }), [protocols, query, status, templateId, subtype, compliance]);
-
-  const stats = useMemo(() => statCards.map((card) => ({
-    ...card,
-    value: card.key === 'total' ? protocols.length : protocols.filter((protocol) => protocol.status === card.key).length,
-  })), [protocols]);
 
   const preview = async (protocol: Protocol) => {
     setPreviewProtocolId(protocol.id);
@@ -166,10 +152,6 @@ const ProtocolsPage = () => {
           <Button type="button" variant="secondary" onClick={load} disabled={loading}><RefreshCw className="h-4 w-4" /> Обновить</Button>
         </div>
       </header>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {stats.map((card) => <div key={card.key} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{card.label}</p><p className="mt-2 text-3xl font-black text-slate-950">{card.value}</p></div>)}
-      </div>
 
       <section className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-5">
         <label className="relative xl:col-span-2"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Номер, компания, БИН или объект" className="w-full rounded-lg border border-slate-200 py-3 pl-10 pr-3 text-sm outline-none focus:border-eco-500 focus:ring-4 focus:ring-eco-100" /></label>

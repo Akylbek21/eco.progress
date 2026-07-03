@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Archive, Edit3, FileSpreadsheet, RefreshCw, Search } from 'lucide-react';
+import { Archive, Copy, Edit3, FileSpreadsheet, RefreshCw, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { templateName } from '../data/protocolTemplates';
@@ -10,7 +10,38 @@ import { getApiStatus } from '../services/apiHelpers';
 import type { NormativeRecord } from '../types/protocols';
 
 const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100';
-type DirectoryTab = 'ambient_air' | 'workplace_air' | 'soil' | 'physical_factors';
+type NormativeDocumentCode = 'DSM_70' | 'DSM_15' | 'DSM_32';
+type NormativeCategoryCode =
+  | 'ambient_air'
+  | 'workplace_air'
+  | 'summation_groups'
+  | 'rocket_fuel'
+  | 'microclimate'
+  | 'noise'
+  | 'lighting'
+  | 'infrasound'
+  | 'ultrasound'
+  | 'uv'
+  | 'aeroions'
+  | 'emf'
+  | 'laser'
+  | 'soil_pdk'
+  | 'soil_sanitary_chemical'
+  | 'soil_microbiology'
+  | 'soil_degradation';
+
+type NormativeCategory = {
+  code: NormativeCategoryCode;
+  label: string;
+};
+
+type NormativeColumn = {
+  key: string;
+  label: string;
+  className?: string;
+  render: (row: NormativeTableRow, index: number) => string;
+};
+
 const emptyImportPreview: NormativeImportPreview = {
   items: [],
   total: 0,
@@ -33,18 +64,38 @@ const environmentOptions = [
 const typeOptions = ['ПДК', 'Оценочная матрица', 'ОБУВ', 'ПДУ', 'ADI', 'Exposure limit'];
 const soilFormOptions = ['подвижная форма', 'водорастворимая форма'];
 const subtypeOptions = ['Максимальная разовая', 'Среднесуточная', 'Среднесменная', 'Разовая', 'Суточная'];
-const sourceDocumentOptions = [
-  { value: '', label: 'Документ: все' },
-  { value: 'DSM_70', label: 'ДСМ-70' },
-  { value: 'DSM_32', label: 'ДСМ-32' },
-  { value: 'DSM_15', label: 'ДСМ-15' },
-];
 const factorTypeOptions = ['MICROCLIMATE', 'LIGHTING', 'NOISE', 'VIBRATION', 'NOISE_VIBRATION', 'INFRASOUND', 'ULTRASOUND', 'UV', 'AEROIONS', 'ELECTROMAGNETIC_FIELD', 'LASER'];
-const directoryTabs: Array<{ key: DirectoryTab; label: string; sourceDocumentCode?: string; templateId?: string }> = [
-  { key: 'ambient_air', label: 'Атмосферный воздух', sourceDocumentCode: 'DSM_70', templateId: 'ambient_air' },
-  { key: 'workplace_air', label: 'Воздух рабочей зоны', sourceDocumentCode: 'DSM_70', templateId: 'workplace_air' },
-  { key: 'soil', label: 'Почва / среда обитания', sourceDocumentCode: 'DSM_32', templateId: 'soil' },
-  { key: 'physical_factors', label: 'Физические факторы', sourceDocumentCode: 'DSM_15', templateId: 'physical_factors' },
+
+const NORMATIVE_DOCUMENTS: Array<{ code: NormativeDocumentCode; label: string }> = [
+  { code: 'DSM_70', label: 'ДСМ-70 Атмосферный воздух' },
+  { code: 'DSM_15', label: 'ДСМ-15 Физические факторы' },
+  { code: 'DSM_32', label: 'ДСМ-32 Безопасность среды' },
+];
+
+const DSM15_CATEGORIES: NormativeCategory[] = [
+  { code: 'microclimate', label: 'Микроклимат' },
+  { code: 'noise', label: 'Шум' },
+  { code: 'lighting', label: 'Освещенность' },
+  { code: 'infrasound', label: 'Инфразвук' },
+  { code: 'ultrasound', label: 'Ультразвук' },
+  { code: 'uv', label: 'Ультрафиолет' },
+  { code: 'aeroions', label: 'Аэроионы' },
+  { code: 'emf', label: 'Электрические и магнитные поля' },
+  { code: 'laser', label: 'Лазерное излучение' },
+];
+
+const DSM70_CATEGORIES: NormativeCategory[] = [
+  { code: 'ambient_air', label: 'Атмосферный воздух' },
+  { code: 'workplace_air', label: 'Воздух рабочей зоны' },
+  { code: 'summation_groups', label: 'Группы суммации' },
+  { code: 'rocket_fuel', label: 'Ракетное топливо' },
+];
+
+const DSM32_CATEGORIES: NormativeCategory[] = [
+  { code: 'soil_pdk', label: 'ПДК химических веществ в почве' },
+  { code: 'soil_sanitary_chemical', label: 'Санитарно-химическая оценка' },
+  { code: 'soil_microbiology', label: 'Микробиология и паразитология' },
+  { code: 'soil_degradation', label: 'Критерии деградации' },
 ];
 
 const templateEnvironment: Record<string, string> = {
@@ -79,6 +130,7 @@ const subtypeLabels: Record<string, string> = {
 };
 
 const normalizeSearch = (value: unknown) => String(value || '').trim().toLowerCase().replace(/ё/g, 'е');
+const normalizeKey = (value: unknown) => textValue(value).toUpperCase().replace(/[\s-]+/g, '_');
 
 const textValue = (...values: unknown[]) => {
   for (const value of values) {
@@ -86,6 +138,99 @@ const textValue = (...values: unknown[]) => {
     if (text) return text;
   }
   return '';
+};
+
+const getCategories = (documentCode: NormativeDocumentCode) => {
+  if (documentCode === 'DSM_15') return DSM15_CATEGORIES;
+  if (documentCode === 'DSM_32') return DSM32_CATEGORIES;
+  return DSM70_CATEGORIES;
+};
+
+const documentCodeForItem = (item: NormativeRecord): NormativeDocumentCode | '' => {
+  const sourceCode = normalizeKey(item.sourceDocumentCode);
+  if (sourceCode.includes('DSM_70')) return 'DSM_70';
+  if (sourceCode.includes('DSM_15')) return 'DSM_15';
+  if (sourceCode.includes('DSM_32')) return 'DSM_32';
+
+  const templateId = normalizeSearch(item.templateId);
+  if (['ambient_air', 'workplace_air', 'industrial_emissions'].includes(templateId)) return 'DSM_70';
+  if (['physical_factors', 'microclimate', 'lighting', 'noise_vibration'].includes(templateId)) return 'DSM_15';
+  if (templateId === 'soil') return 'DSM_32';
+  return '';
+};
+
+const containsAny = (value: string, needles: string[]) => needles.some((needle) => value.includes(normalizeSearch(needle)));
+
+const combinedText = (item: NormativeRecord) => normalizeSearch([
+  item.factorType,
+  item.templateId,
+  item.indicatorName,
+  item.indicator,
+  item.pollutantName,
+  item.tableTitle,
+  item.sourceDocumentName,
+  item.sourceFileName,
+  item.sourceFile,
+  item.name,
+  item.category,
+  item.categoryName,
+].filter(Boolean).join(' '));
+
+const dsm15CategoryForItem = (item: NormativeRecord): NormativeCategoryCode => {
+  const factorType = normalizeKey(item.factorType || item.templateId || item.category);
+  const text = combinedText(item);
+  if (factorType.includes('MICROCLIMATE') || containsAny(text, ['микроклимат'])) return 'microclimate';
+  if (factorType.includes('NOISE') || factorType.includes('VIBRATION') || containsAny(text, ['шум', 'вибрац'])) return 'noise';
+  if (factorType.includes('LIGHTING') || containsAny(text, ['освещ', 'свет'])) return 'lighting';
+  if (factorType.includes('INFRASOUND') || containsAny(text, ['инфразвук'])) return 'infrasound';
+  if (factorType.includes('ULTRASOUND') || containsAny(text, ['ультразвук'])) return 'ultrasound';
+  if (factorType === 'UV' || factorType.includes('ULTRAVIOLET') || containsAny(text, ['ультрафиолет', 'уф'])) return 'uv';
+  if (factorType.includes('AEROION') || containsAny(text, ['аэроион'])) return 'aeroions';
+  if (factorType.includes('EMF') || factorType.includes('ELECTROMAGNETIC') || containsAny(text, ['электрическ', 'магнитн', 'электромагнит'])) return 'emf';
+  if (factorType.includes('LASER') || containsAny(text, ['лазер'])) return 'laser';
+  return 'microclimate';
+};
+
+const dsm70CategoryForItem = (item: NormativeRecord): NormativeCategoryCode => {
+  const text = combinedText(item);
+  const normativeType = normalizeKey(item.normativeType);
+  if (normativeType === 'SUMMATION_GROUP' || item.summationGroup) return 'summation_groups';
+  if (containsAny(text, ['ракет', 'ндмг', 'udmh', 'диметилгидразин'])) return 'rocket_fuel';
+  if (item.templateId === 'workplace_air' || containsAny(text, ['рабочей зоны', 'workplace', 'work zone'])) return 'workplace_air';
+  return 'ambient_air';
+};
+
+const dsm32CategoryForItem = (item: NormativeRecord): NormativeCategoryCode => {
+  const tableNo = textValue(item.tableNo).replace(/\D/g, '');
+  const normativeType = normalizeKey(item.normativeType);
+  if (tableNo === '2' || item.hazardLevel || item.pollutionLevel || item.radioactiveIndicator) return 'soil_sanitary_chemical';
+  if (tableNo === '3' || item.coliTiter || item.helminth || item.flyLarvae) return 'soil_microbiology';
+  if (tableNo === '4' || item.ecologicalDisaster || item.emergencySituation || item.satisfactorySituation) return 'soil_degradation';
+  if (tableNo === '1' || (item.templateId === 'soil' && (normativeType === 'PDK' || normativeType === 'MPC'))) return 'soil_pdk';
+  return 'soil_pdk';
+};
+
+const categoryForItem = (documentCode: NormativeDocumentCode, item: NormativeRecord): NormativeCategoryCode => {
+  if (documentCode === 'DSM_15') return dsm15CategoryForItem(item);
+  if (documentCode === 'DSM_32') return dsm32CategoryForItem(item);
+  return dsm70CategoryForItem(item);
+};
+
+const isGarbageNormativeRow = (item: NormativeRecord) => {
+  const name = textValue(item.indicatorName, item.pollutantName, item.indicator, item.name, item.assessmentCategory, item.hazardLevel, item.categoryName, item.tableTitle);
+  if (!name) return true;
+
+  const normalizedName = normalizeSearch(name);
+  const compactName = normalizedName.replace(/[№#.,;:\-\s]/g, '');
+  if (normalizedName === 'скачать') return true;
+  if (normalizedName.startsWith('таблица') || normalizedName.startsWith('приложение')) return true;
+  if (normalizedName === '№' || /^[1-5]$/.test(normalizedName)) return true;
+  if (/^[\d\s№#.,;:-]+$/.test(normalizedName)) return true;
+  if (/^(12345|1234|2345)$/.test(compactName)) return true;
+
+  const headerHits = ['код', 'наименование', 'вещество', 'показатель', 'пдк', 'обув', 'cas', 'формула', 'ед', 'документ']
+    .filter((token) => normalizedName.includes(token)).length;
+  return headerHits >= 3;
 };
 
 type NormativeTableRow = {
@@ -135,6 +280,167 @@ const formatNormativeNumber = (value: unknown) => {
   return trimmedFraction ? `${integer},${trimmedFraction}` : integer;
 };
 const displayNormativeCell = (...values: unknown[]) => formatNormativeNumber(textValue(...values));
+const displayComparisonType = (item: NormativeRecord) => {
+  const labels: Record<string, string> = {
+    LESS_OR_EQUAL: '<=',
+    GREATER_OR_EQUAL: '>=',
+    RANGE: 'Диапазон',
+    EQUAL: '=',
+    INFO: 'Инфо',
+  };
+  return labels[item.comparisonType] || item.comparisonType || '-';
+};
+
+const displayConditions = (item: NormativeRecord) => [
+  item.season,
+  item.workCategory,
+  item.workplaceType,
+  item.roomType,
+  item.normLevel,
+  item.lightingType,
+  item.noiseType,
+  item.visualWorkCategory,
+  item.factorCode,
+].filter(Boolean).join(', ') || '-';
+
+const displayTableLabel = (item: NormativeRecord) => {
+  const appendix = textValue(item.appNo, item.appendixNo);
+  const tableNo = textValue(item.tableNo);
+  const tableTitle = textValue(item.tableTitle, item.sourceFileName, item.sourceFile, item.categoryName, item.category);
+  const parts = [
+    appendix ? `Прил. ${appendix}` : '',
+    tableNo ? `Таблица ${tableNo}` : '',
+    tableTitle,
+  ].filter(Boolean);
+  return parts.join(' · ') || '-';
+};
+
+const displayDocument = (item: NormativeRecord) =>
+  displayCell(item.sourceDocumentName, item.sourceDocumentCode, item.normativeDocument);
+
+const displayPollutantName = (row: NormativeTableRow) =>
+  displayCell(firstGroupValue(row, (record) => record.indicator || record.indicatorName || record.pollutantName || record.name));
+
+const displayGeneralNormative = (row: NormativeTableRow) =>
+  displayNormativeCell(row.generalValue, displayNormative(row.primary));
+
+const displaySubstances = (row: NormativeTableRow) =>
+  displayCell(Array.from(new Set(row.records.map((record) => textValue(record.pollutantName, record.indicatorName, record.indicator, record.name)).filter(Boolean))).join(', '));
+
+const displayCodes = (row: NormativeTableRow) =>
+  displayCell(Array.from(new Set(row.records.map((record) => textValue(record.pollutantCode, record.code, record.factorCode)).filter(Boolean))).join(', '));
+
+const groupTitleForRow = (row: NormativeTableRow) => displayTableLabel(row.primary);
+
+const singleRecordRow = (item: NormativeRecord, index: number): NormativeTableRow => {
+  const row: NormativeTableRow = {
+    key: item.id || `record:${index}`,
+    records: [item],
+    primary: item,
+    maxOneTimeValue: '',
+    dailyAverageValue: '',
+    generalValue: '',
+    unit: '',
+  };
+  addNormativeToRow(row, item);
+  return row;
+};
+
+const groupSummationRows = (records: NormativeRecord[]) => {
+  const rows = new Map<string, NormativeTableRow>();
+  records.forEach((item, index) => {
+    const key = textValue(item.summationGroup, item.categoryName, item.category, item.tableTitle, item.code, `record:${index}`);
+    const existing = rows.get(key);
+    if (existing) {
+      existing.records.push(item);
+      addNormativeToRow(existing, item);
+      return;
+    }
+    const row = singleRecordRow(item, index);
+    row.key = `summation:${key}`;
+    rows.set(key, row);
+  });
+  return Array.from(rows.values());
+};
+
+const getVisibleColumns = (documentCode: NormativeDocumentCode, categoryCode: NormativeCategoryCode): NormativeColumn[] => {
+  if (documentCode === 'DSM_15') {
+    return [
+      { key: 'table', label: 'Таблица', render: (row) => displayTableLabel(row.primary) },
+      { key: 'indicator', label: 'Показатель', render: (row) => displayCell(row.primary.indicator, row.primary.indicatorName, row.primary.pollutantName) },
+      { key: 'conditions', label: 'Условия', render: (row) => displayConditions(row.primary) },
+      { key: 'normative', label: 'Норматив', render: (row) => displayGeneralNormative(row) },
+      { key: 'unit', label: 'Единица', render: (row) => displayCell(row.unit, row.primary.unit) },
+      { key: 'comparison', label: 'Тип сравнения', render: (row) => displayComparisonType(row.primary) },
+      { key: 'note', label: 'Примечание', render: (row) => displayCell(row.primary.conditionJson, row.primary.normativeDocument) },
+    ];
+  }
+
+  if (documentCode === 'DSM_32' && categoryCode === 'soil_sanitary_chemical') {
+    return [
+      { key: 'hazard', label: 'Степень опасности', render: (row) => displayCell(row.primary.hazardLevel, row.primary.assessmentCategory) },
+      { key: 'pollution', label: 'Степень загрязнения', render: (row) => displayCell(row.primary.pollutionLevel, row.primary.pollutionDegree) },
+      { key: 'excess', label: 'Кратность превышения ПДК', render: (row) => displayCell(row.primary.value, row.primary.conditionJson) },
+      { key: 'radio', label: 'Радиологический показатель', render: (row) => displayCell(row.primary.radioactiveIndicator) },
+    ];
+  }
+
+  if (documentCode === 'DSM_32' && categoryCode === 'soil_microbiology') {
+    return [
+      { key: 'hazard', label: 'Степень опасности', render: (row) => displayCell(row.primary.hazardLevel, row.primary.assessmentCategory) },
+      { key: 'pollution', label: 'Степень загрязнения', render: (row) => displayCell(row.primary.pollutionLevel, row.primary.pollutionDegree) },
+      { key: 'coli', label: 'Коли-титр', render: (row) => displayCell(row.primary.coliTiter) },
+      { key: 'anaerobe', label: 'Титр анаэробов', render: (row) => displayCell(row.primary.anaerobeTiter) },
+      { key: 'helminth', label: 'Яйца гельминтов', render: (row) => displayCell(row.primary.helminth) },
+      { key: 'fly', label: 'Личинки/куколки мух', render: (row) => displayCell(row.primary.flyLarvae) },
+      { key: 'sanitary', label: 'Санитарное число', render: (row) => displayCell(row.primary.sanitaryNumber) },
+    ];
+  }
+
+  if (documentCode === 'DSM_32' && categoryCode === 'soil_degradation') {
+    return [
+      { key: 'group', label: 'Группа', render: (row) => displayCell(row.primary.categoryName, row.primary.category, row.primary.tableTitle) },
+      { key: 'indicator', label: 'Показатель', render: (row) => displayCell(row.primary.indicator, row.primary.indicatorName, row.primary.pollutantName) },
+      { key: 'disaster', label: 'Экологическое бедствие', render: (row) => displayCell(row.primary.ecologicalDisaster) },
+      { key: 'emergency', label: 'Чрезвычайная ситуация', render: (row) => displayCell(row.primary.emergencySituation) },
+      { key: 'satisfactory', label: 'Относительно удовлетворительная ситуация', render: (row) => displayCell(row.primary.satisfactorySituation) },
+      { key: 'unit', label: 'Единица', render: (row) => displayCell(row.primary.unit) },
+    ];
+  }
+
+  if (documentCode === 'DSM_32') {
+    return [
+      { key: 'section', label: 'Раздел', render: (row) => displayCell(row.primary.formType, row.primary.categoryName, row.primary.category, row.primary.tableTitle) },
+      { key: 'substance', label: 'Вещество', render: (row) => displayPollutantName(row) },
+      { key: 'pdk', label: 'ПДК', render: (row) => displayGeneralNormative(row) },
+      { key: 'unit', label: 'Ед. изм.', render: (row) => displayCell(row.unit, row.primary.unit) },
+      { key: 'limiting', label: 'Лимитирующий показатель', render: (row) => displayCell(row.primary.limitingIndicator) },
+      { key: 'document', label: 'Документ', render: (row) => displayDocument(row.primary) },
+    ];
+  }
+
+  if (categoryCode === 'summation_groups') {
+    return [
+      { key: 'group', label: 'Группа', render: (row) => displayCell(row.primary.summationGroup, row.primary.code, row.primary.categoryName) },
+      { key: 'substances', label: 'Вещества', render: (row) => displaySubstances(row) },
+      { key: 'codes', label: 'Коды веществ', render: (row) => displayCodes(row) },
+      { key: 'note', label: 'Примечание', render: (row) => displayCell(row.primary.conditionJson, row.primary.normativeDocument) },
+    ];
+  }
+
+  return [
+    { key: 'code', label: 'Код', render: (row) => displayCodes(row) },
+    { key: 'name', label: 'Наименование вещества', render: (row) => displayPollutantName(row) },
+    { key: 'cas', label: 'CAS', render: (row) => displayCell(firstGroupValue(row, (record) => record.casNumber || record.cas)) },
+    { key: 'formula', label: 'Формула', render: (row) => displayCell(firstGroupValue(row, (record) => record.formula || record.chemicalFormula)) },
+    { key: 'pdk', label: 'ПДК / ОБУВ', render: (row) => displayGeneralNormative(row) },
+    { key: 'max', label: 'Максимальная разовая', render: (row) => displayNormativeCell(row.maxOneTimeValue) },
+    { key: 'daily', label: 'Среднесуточная', render: (row) => displayNormativeCell(row.dailyAverageValue) },
+    { key: 'hazard', label: 'Класс опасности', render: (row) => displayCell(firstGroupValue(row, (record) => record.hazardClass)) },
+    { key: 'limiting', label: 'Лимитирующий показатель', render: (row) => displayCell(firstGroupValue(row, (record) => record.limitingIndicator)) },
+    { key: 'document', label: 'Документ', render: (row) => displayDocument(row.primary) },
+  ];
+};
 
 const itemEnvironmentText = (item: NormativeRecord) => normalizeSearch([
   item.templateId,
@@ -281,16 +587,23 @@ const recordSearchText = (item: NormativeRecord) => normalizeSearch([
   item.indicator,
   item.indicatorName,
   item.pollutantName,
+  item.name,
   item.cas,
   item.casNumber,
   item.formula,
   item.chemicalFormula,
+  item.factorCode,
   item.hazardClass,
   item.limitingIndicator,
+  item.tableTitle,
+  item.categoryName,
+  item.category,
   item.formType,
   item.matrixType,
   item.assessmentCategory,
   item.pollutionDegree,
+  item.hazardLevel,
+  item.pollutionLevel,
   item.tableNo,
   item.conditionJson,
   item.maxOneTimeValue,
@@ -316,6 +629,11 @@ const matchesOption = (value: string, option: string) => {
   return left === right || left.includes(right) || right.includes(left);
 };
 
+const isSearchReady = (value: string) => {
+  const text = value.trim();
+  return text.length >= 3 || /\d{3}/.test(text);
+};
+
 const NormativeDirectoryPage = () => {
   const toast = useToast();
   const { user } = useAuth();
@@ -324,9 +642,9 @@ const NormativeDirectoryPage = () => {
   const [items, setItems] = useState<NormativeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<DirectoryTab>('ambient_air');
+  const [activeDocument, setActiveDocument] = useState<NormativeDocumentCode>('DSM_70');
+  const [activeCategory, setActiveCategory] = useState<NormativeCategoryCode>('ambient_air');
   const [query, setQuery] = useState('');
-  const [sourceDocumentFilter, setSourceDocumentFilter] = useState('');
   const [templateFilter, setTemplateFilter] = useState('');
   const [environmentFilter, setEnvironmentFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -347,12 +665,10 @@ const NormativeDirectoryPage = () => {
     setLoading(true);
     setError('');
     try {
-      const tab = directoryTabs.find((item) => item.key === activeTab);
       setItems(await getNormatives({
-        search: query.trim() || undefined,
+        search: isSearchReady(query) ? query.trim() : undefined,
         status: 'ACTIVE',
-        sourceDocumentCode: sourceDocumentFilter || tab?.sourceDocumentCode,
-        templateId: templateFilter || tab?.templateId,
+        templateId: templateFilter || undefined,
         environmentType: environmentFilter || undefined,
         factorType: factorTypeFilter || undefined,
         appendixNo: appendixFilter || undefined,
@@ -372,17 +688,23 @@ const NormativeDirectoryPage = () => {
   };
 
   useEffect(() => {
-    const timer = window.setTimeout(load, query.trim() ? 300 : 0);
+    const timer = window.setTimeout(load, isSearchReady(query) ? 300 : 0);
     return () => window.clearTimeout(timer);
-  }, [query, activeTab, sourceDocumentFilter, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, formTypeFilter, typeFilter, subtypeFilter]);
+  }, [query, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, formTypeFilter, typeFilter, subtypeFilter]);
+
+  useEffect(() => {
+    setActiveCategory(getCategories(activeDocument)[0].code);
+  }, [activeDocument]);
+
+  const visibleCategories = useMemo(() => getCategories(activeDocument), [activeDocument]);
+  const searchActive = isSearchReady(query);
 
   const filtered = useMemo(() => items.filter((item) => {
-    const terms = normalizeSearch(query).split(/\s+/).filter(Boolean);
+    if (isGarbageNormativeRow(item)) return false;
+    const terms = searchActive ? normalizeSearch(query).split(/\s+/).filter(Boolean) : [];
     const matchesQuery = !terms.length || terms.every((term) => recordSearchText(item).includes(term));
-    const tab = directoryTabs.find((item) => item.key === activeTab);
-    const matchesTab = (!tab?.templateId || item.templateId === tab.templateId)
-      && (!tab?.sourceDocumentCode || normalizedDocumentCode(item) === tab.sourceDocumentCode);
-    const matchesDocument = matchesOption(item.sourceDocumentCode || '', sourceDocumentFilter);
+    const matchesDocument = documentCodeForItem(item) === activeDocument;
+    const matchesCategory = categoryForItem(activeDocument, item) === activeCategory;
     const matchesTemplate = matchesOption(item.templateId || '', templateFilter);
     const matchesFactorType = matchesOption(item.factorType || '', factorTypeFilter);
     const matchesAppendix = matchesOption(item.appendixNo || '', appendixFilter);
@@ -391,10 +713,24 @@ const NormativeDirectoryPage = () => {
     const matchesEnvironment = matchesOption(displayEnvironment(item), environmentFilter);
     const matchesType = matchesOption(displayType(item), typeFilter);
     const matchesSubtype = matchesOption(displaySubtype(item), subtypeFilter);
-    return matchesTab && matchesQuery && matchesDocument && matchesTemplate && matchesFactorType && matchesAppendix && matchesTable && matchesForm && matchesEnvironment && matchesType && matchesSubtype && !item.archived;
-  }), [items, query, activeTab, sourceDocumentFilter, templateFilter, factorTypeFilter, appendixFilter, tableFilter, formTypeFilter, environmentFilter, typeFilter, subtypeFilter]);
+    return matchesDocument && matchesCategory && matchesQuery && matchesTemplate && matchesFactorType && matchesAppendix && matchesTable && matchesForm && matchesEnvironment && matchesType && matchesSubtype && !item.archived;
+  }), [items, query, searchActive, activeDocument, activeCategory, templateFilter, factorTypeFilter, appendixFilter, tableFilter, formTypeFilter, environmentFilter, typeFilter, subtypeFilter]);
 
-  const groupedRows = useMemo(() => groupNormatives(filtered), [filtered]);
+  const groupedRows = useMemo(() => {
+    if (activeDocument === 'DSM_70' && activeCategory !== 'summation_groups') return groupNormatives(filtered);
+    if (activeDocument === 'DSM_70' && activeCategory === 'summation_groups') return groupSummationRows(filtered);
+    return filtered.map(singleRecordRow);
+  }, [filtered, activeDocument, activeCategory]);
+
+  const visibleColumns = useMemo(() => getVisibleColumns(activeDocument, activeCategory), [activeDocument, activeCategory]);
+  const tableGroups = useMemo(() => {
+    const map = new Map<string, NormativeTableRow[]>();
+    groupedRows.forEach((row) => {
+      const key = groupTitleForRow(row);
+      map.set(key, [...(map.get(key) || []), row]);
+    });
+    return Array.from(map.entries()).map(([title, rows]) => ({ title, rows }));
+  }, [groupedRows]);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editing || !canManage) return;
@@ -436,6 +772,19 @@ const NormativeDirectoryPage = () => {
       toast.success(row.records.length > 1 ? 'Нормативы архивированы' : 'Норматив архивирован');
     } catch (archiveError) {
       toast.error('Не удалось архивировать норматив', archiveError instanceof Error ? archiveError.message : undefined);
+    }
+  };
+
+  const copyNormative = async (row: NormativeTableRow) => {
+    const text = visibleColumns
+      .map((column) => `${column.label}: ${column.render(row, 0)}`)
+      .join('\n');
+
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Норматив скопирован');
+    } catch (copyError) {
+      toast.error('Не удалось скопировать норматив', copyError instanceof Error ? copyError.message : undefined);
     }
   };
 
@@ -534,7 +883,7 @@ const NormativeDirectoryPage = () => {
 
   const importStats = importPreview || emptyImportPreview;
   const confirmImportDisabled = !importFile || !importStats.importId || !importStats.valid || importing || Boolean(importError);
-  const displayedCount = activeTab === 'physical_factors' || activeTab === 'soil' ? filtered.length : groupedRows.length;
+  const displayedCount = groupedRows.length;
 
   return (
     <div className="space-y-5">
@@ -549,12 +898,12 @@ const NormativeDirectoryPage = () => {
               <FileSpreadsheet className="h-4 w-4" /> Импорт Excel
             </Button>
           )}
-          {activeTab === 'physical_factors' && canImportResources && (
+          {activeDocument === 'DSM_15' && canImportResources && (
             <Button type="button" variant="secondary" disabled={importingResources} onClick={importDsm15Resources}>
               <FileSpreadsheet className="h-4 w-4" /> Импортировать ДСМ-15 из backend resources
             </Button>
           )}
-          {activeTab === 'soil' && canImportResources && (
+          {activeDocument === 'DSM_32' && canImportResources && (
             <Button type="button" variant="secondary" disabled={importingResources} onClick={importDsm32Resources}>
               <FileSpreadsheet className="h-4 w-4" /> Импортировать ДСМ-32
             </Button>
@@ -566,14 +915,27 @@ const NormativeDirectoryPage = () => {
       </div>
 
       <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
-        {directoryTabs.map((tab) => (
+        {NORMATIVE_DOCUMENTS.map((tab) => (
           <button
-            key={tab.key}
+            key={tab.code}
             type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={`rounded-lg px-3 py-2 text-sm font-bold transition ${activeTab === tab.key ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+            onClick={() => setActiveDocument(tab.code)}
+            className={`rounded-lg px-3 py-2 text-sm font-bold transition ${activeDocument === tab.code ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
           >
             {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+        {visibleCategories.map((category) => (
+          <button
+            key={category.code}
+            type="button"
+            onClick={() => setActiveCategory(category.code)}
+            className={`rounded-lg px-3 py-2 text-sm font-bold transition ${activeCategory === category.code ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+          >
+            {category.label}
           </button>
         ))}
       </div>
@@ -588,9 +950,6 @@ const NormativeDirectoryPage = () => {
             className={`${inputClass} pl-10`}
           />
         </label>
-        <select value={sourceDocumentFilter} onChange={(event) => setSourceDocumentFilter(event.target.value)} className={inputClass}>
-          {sourceDocumentOptions.map((option) => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
-        </select>
         <select value={templateFilter} onChange={(event) => setTemplateFilter(event.target.value)} className={inputClass}>
           <option value="">templateId: все</option>
           <option value="ambient_air">ambient_air</option>
@@ -610,15 +969,15 @@ const NormativeDirectoryPage = () => {
           <option value="">factorType: все</option>
           {factorTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
         </select>
-        {activeTab === 'soil' && (
+        {activeDocument === 'DSM_32' && (
           <select value={formTypeFilter} onChange={(event) => setFormTypeFilter(event.target.value)} className={inputClass}>
             <option value="">Форма: все</option>
             {soilFormOptions.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
         )}
-        {(activeTab === 'physical_factors' || activeTab === 'soil') && (
+        {(activeDocument === 'DSM_15' || activeDocument === 'DSM_32') && (
           <>
-            {activeTab === 'physical_factors' && (
+            {activeDocument === 'DSM_15' && (
               <input
                 value={appendixFilter}
                 onChange={(event) => setAppendixFilter(event.target.value)}
@@ -650,142 +1009,73 @@ const NormativeDirectoryPage = () => {
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{error}</div>}
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          {activeTab === 'physical_factors' ? (
-          <table className="min-w-[1180px] w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-3 py-3">Фактор</th>
-                <th className="px-3 py-3">Показатель</th>
-                <th className="px-3 py-3">Условия</th>
-                <th className="px-3 py-3">Норматив</th>
-                <th className="px-3 py-3">Ед.</th>
-                <th className="px-3 py-3">Документ</th>
-                <th className="px-3 py-3">Приложение</th>
-                <th className="px-3 py-3">Таблица</th>
-                <th className="px-3 py-3">Статус</th>
-                <th className="px-3 py-3 text-right">Действия</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? Array.from({ length: 5 }).map((_, index) => (
-                <tr key={index} className="animate-pulse">{Array.from({ length: 10 }).map((__, cell) => <td key={cell} className="px-4 py-4"><div className="h-4 rounded bg-slate-100" /></td>)}</tr>
-              )) : filtered.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50">
-                  <td className="px-3 py-3 font-bold text-slate-900">{displayCell(item.factorType, item.subtype)}</td>
-                  <td className="px-3 py-3"><p className="font-bold text-slate-900">{displayCell(item.indicator, item.indicatorName, item.pollutantName)}</p><p className="mt-1 text-xs font-black text-eco-800">{displayCell(item.factorCode, item.code, item.pollutantCode)}</p></td>
-                  <td className="px-3 py-3 text-xs font-semibold text-slate-700">{[item.season, item.workCategory, item.workplaceType, item.roomType, item.normLevel].filter(Boolean).join(', ') || '-'}</td>
-                  <td className="px-3 py-3 font-semibold">{displayNormativeCell(displayNormative(item))}</td>
-                  <td className="px-3 py-3">{displayCell(item.unit)}</td>
-                  <td className="px-3 py-3">{displayCell(item.sourceDocumentName, item.sourceDocumentCode, item.normativeDocument)}</td>
-                  <td className="px-3 py-3">{displayCell(item.appendixNo)}</td>
-                  <td className="px-3 py-3">{displayCell(item.tableNo)}</td>
-                  <td className="px-3 py-3">{item.active === false ? 'Неактивен' : 'Активен'}</td>
-                  <td className="px-3 py-3 text-right">{canManage ? <Button type="button" variant="secondary" className="px-3" onClick={() => setEditing(item)}><Edit3 className="h-4 w-4" /></Button> : '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          ) : activeTab === 'soil' ? (
-          <table className="min-w-[1250px] w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-3 py-3">Тип записи</th>
-                <th className="px-3 py-3">Вещество / показатель</th>
-                <th className="px-3 py-3">Форма</th>
-                <th className="px-3 py-3">Норматив</th>
-                <th className="px-3 py-3">Ед.</th>
-                <th className="px-3 py-3">Лимитирующий показатель</th>
-                <th className="px-3 py-3">Категория оценки</th>
-                <th className="px-3 py-3">Документ</th>
-                <th className="px-3 py-3">Таблица</th>
-                <th className="px-3 py-3 text-right">Действия</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? Array.from({ length: 5 }).map((_, index) => (
-                <tr key={index} className="animate-pulse">{Array.from({ length: 10 }).map((__, cell) => <td key={cell} className="px-4 py-4"><div className="h-4 rounded bg-slate-100" /></td>)}</tr>
-              )) : filtered.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50">
-                  <td className="px-3 py-3 font-semibold">{displayType(item) || 'ПДК'}</td>
-                  <td className="px-3 py-3 font-bold text-slate-900">{displayCell(item.assessmentCategory, item.indicator, item.indicatorName, item.pollutantName)}</td>
-                  <td className="px-3 py-3">{displayCell(item.formType, item.aggregateState, item.normativeSubType, item.subtype)}</td>
-                  <td className="px-3 py-3 font-semibold">{item.comparisonType === 'INFO' ? displayCell(item.value, item.conditionJson) : displayNormativeCell(displayNormative(item))}</td>
-                  <td className="px-3 py-3">{displayCell(item.unit)}</td>
-                  <td className="px-3 py-3">{displayCell(item.limitingIndicator)}</td>
-                  <td className="px-3 py-3">{displayCell(item.assessmentCategory, item.pollutionDegree, item.matrixType)}</td>
-                  <td className="px-3 py-3">{displayCell(item.sourceDocumentName, item.sourceDocumentCode, item.normativeDocument)}</td>
-                  <td className="px-3 py-3">{displayCell(item.tableNo)}</td>
-                  <td className="px-3 py-3 text-right">{canManage ? <Button type="button" variant="secondary" className="px-3" onClick={() => setEditing(item)}><Edit3 className="h-4 w-4" /></Button> : '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          ) : (
-          <table className="min-w-[1290px] w-full table-fixed text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="w-12 px-3 py-3">№</th>
-                <th className="w-[260px] px-3 py-3">Наименование вещества / показателя</th>
-                <th className="w-[110px] px-3 py-3">CAS</th>
-                <th className="w-[100px] px-3 py-3">Формула</th>
-                <th className="w-[72px] px-2 py-3 text-center" title="ПДК максимально-разовая">М.р.</th>
-                <th className="w-[72px] px-2 py-3 text-center" title="ПДК среднесуточная">С.с.</th>
-                <th className="w-[72px] px-2 py-3 text-center" title="ОБУВ / общий норматив">ОБУВ</th>
-                <th className="w-[92px] px-3 py-3">Ед.</th>
-                <th className="w-28 px-3 py-3">ЛПВ</th>
-                <th className="w-16 px-3 py-3">Класс</th>
-                <th className="w-24 px-3 py-3">Код</th>
-                <th className="w-28 px-3 py-3 text-right">Действия</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? Array.from({ length: 5 }).map((_, index) => (
-                <tr key={index} className="animate-pulse">
-                  {Array.from({ length: 12 }).map((__, cell) => <td key={cell} className="px-4 py-4"><div className="h-4 rounded bg-slate-100" /></td>)}
-                </tr>
-              )) : groupedRows.map((row, index) => {
-                const item = row.primary;
-                const substanceName = displayCell(firstGroupValue(row, (record) => record.indicator || record.indicatorName || record.pollutantName));
-                const cas = displayCell(firstGroupValue(row, (record) => record.casNumber || record.cas));
-                const formula = displayCell(firstGroupValue(row, (record) => record.formula || record.chemicalFormula));
-                const limitingIndicator = displayCell(firstGroupValue(row, (record) => record.limitingIndicator));
-                const hazardClass = displayCell(firstGroupValue(row, (record) => record.hazardClass));
-                const pollutantCode = displayCell(firstGroupValue(row, (record) => record.pollutantCode || record.code));
-                return (
-                <tr key={row.key} className="hover:bg-slate-50">
-                  <td className="px-3 py-3 font-semibold text-slate-600">{index + 1}</td>
-                  <td className="px-3 py-3 font-bold text-slate-900"><div className="truncate" title={substanceName}>{substanceName}</div></td>
-                  <td className="px-3 py-3"><div className="truncate" title={cas}>{cas}</div></td>
-                  <td className="px-3 py-3"><div className="truncate" title={formula}>{formula}</div></td>
-                  <td className="px-2 py-3 text-center text-xs font-semibold"><div className="truncate" title={displayCell(row.maxOneTimeValue)}>{displayNormativeCell(row.maxOneTimeValue)}</div></td>
-                  <td className="px-2 py-3 text-center text-xs font-semibold"><div className="truncate" title={displayCell(row.dailyAverageValue)}>{displayNormativeCell(row.dailyAverageValue)}</div></td>
-                  <td className="px-2 py-3 text-center text-xs font-semibold"><div className="truncate" title={displayCell(row.generalValue)}>{displayNormativeCell(row.generalValue)}</div></td>
-                  <td className="px-3 py-3"><div className="truncate" title={displayCell(row.unit)}>{displayCell(row.unit)}</div></td>
-                  <td className="px-3 py-3"><div className="truncate" title={limitingIndicator}>{limitingIndicator}</div></td>
-                  <td className="px-3 py-3"><div className="truncate" title={hazardClass}>{hazardClass}</div></td>
-                  <td className="px-3 py-3 font-black text-eco-800"><div className="truncate" title={pollutantCode}>{pollutantCode}</div></td>
-                  <td className="px-3 py-3">
-                    {canManage ? (
-                      <div className="flex justify-end gap-2">
-                        <Button type="button" variant="secondary" className="px-3" title="Изменить" onClick={() => setEditing(item)}>
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                        <Button type="button" variant="secondary" className="px-3" title="Архивировать" onClick={() => archiveGroup(row)}>
-                          <Archive className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : <span className="block text-right text-slate-400">-</span>}
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          )}
+        <div className="divide-y divide-slate-100">
+          {loading ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-[1180px] w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    {visibleColumns.map((column) => <th key={column.key} className="px-3 py-3">{column.label}</th>)}
+                    <th className="px-3 py-3 text-right">Действия</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {Array.from({ length: 5 }).map((_, rowIndex) => (
+                    <tr key={rowIndex} className="animate-pulse">
+                      {Array.from({ length: visibleColumns.length + 1 }).map((__, cell) => (
+                        <td key={cell} className="px-4 py-4"><div className="h-4 rounded bg-slate-100" /></td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : tableGroups.map((group) => (
+            <div key={group.title}>
+              <div className="bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">{group.title}</div>
+              <div className="overflow-x-auto">
+                <table className="min-w-[1180px] w-full text-left text-sm">
+                  <thead className="bg-white text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      {visibleColumns.map((column) => <th key={column.key} className="px-3 py-3">{column.label}</th>)}
+                      <th className="px-3 py-3 text-right">Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {group.rows.map((row, index) => (
+                      <tr key={row.key} className="hover:bg-slate-50">
+                        {visibleColumns.map((column) => (
+                          <td key={column.key} className={`px-3 py-3 ${column.className || ''}`}>
+                            <div className="max-w-[320px] truncate" title={column.render(row, index)}>{column.render(row, index)}</div>
+                          </td>
+                        ))}
+                        <td className="px-3 py-3">
+                          <div className="flex justify-end gap-2">
+                            <Button type="button" variant="secondary" className="px-3" title="Скопировать норматив" onClick={() => copyNormative(row)}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            {canManage ? (
+                              <>
+                              <Button type="button" variant="secondary" className="px-3" title="Изменить" onClick={() => setEditing(row.primary)}>
+                                <Edit3 className="h-4 w-4" />
+                              </Button>
+                              <Button type="button" variant="secondary" className="px-3" title="Архивировать" onClick={() => archiveGroup(row)}>
+                                <Archive className="h-4 w-4" />
+                              </Button>
+                              </>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
         </div>
         {!loading && !error && displayedCount === 0 && (
-          <p className="px-6 py-10 text-center text-sm font-semibold text-slate-500">Нормативы не загружены. Импортируйте Excel-файл.</p>
+          <p className="px-6 py-10 text-center text-sm font-semibold text-slate-500">Нет данных по этой таблице. Проверьте импорт нормативов.</p>
         )}
       </div>
 

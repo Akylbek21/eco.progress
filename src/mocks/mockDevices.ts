@@ -31,4 +31,3 @@ export const mockLaboratory = {
   laboratoryHead: 'Дуйсенбай Р.С.',
   executor: 'Маханова К.М.',
 };
-

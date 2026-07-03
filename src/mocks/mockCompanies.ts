@@ -118,4 +118,3 @@ export const mockCompanies: Company[] = [
     status: 'ACTIVE',
   },
 ];
-

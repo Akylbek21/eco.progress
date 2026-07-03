@@ -42,7 +42,7 @@ const laboratorySnapshot = (
   profile: LaboratoryProfile,
   executorId?: string,
 ): ProtocolLaboratorySnapshot => {
-  const executor = profile.employees.find((employee) => (employee.userId || employee.id) === executorId && employee.active)
+  const executor = profile.employees.find((employee) => employee.id === executorId && employee.active)
     || profile.employees.find((employee) => employee.active);
   return {
     id: profile.id,
@@ -64,7 +64,7 @@ const laboratorySnapshot = (
     laboratoryHeadId: profile.laboratoryHeadId,
     laboratoryHeadName: profile.laboratoryHeadName || '',
     laboratoryHead: profile.laboratoryHeadName || '',
-    executorId: executor?.userId || executor?.id,
+    executorId: executor?.id,
     executorName: executor?.fullName || '',
     executor: executor?.fullName || '',
     logoUrl: profile.logoUrl,

@@ -19,6 +19,10 @@ const ProtocolLaboratoryForm = ({ value, employees, readOnly, loading = false, c
   const [details, setDetails] = useState(false);
   const certificate = accreditationState(value.accreditationValidUntil);
   const configured = Boolean(value.laboratoryName && value.accreditationNumber);
+  const selectedExecutorId = employees.find((employee) =>
+    String(employee.id) === String(value.executorId)
+    || String(employee.userId || '') === String(value.executorId)
+  )?.id || value.executorId || '';
   const rows: Array<[string, string | undefined]> = [
     ['Юридическое название', value.legalName],
     ['БИН', value.bin],
@@ -66,16 +70,16 @@ const ProtocolLaboratoryForm = ({ value, employees, readOnly, loading = false, c
         ].map(([label, content]) => <div key={label} className="rounded-xl bg-slate-50 p-3"><p className="text-xs font-bold uppercase text-slate-400">{label}</p><p className="mt-1 text-sm font-bold text-slate-800">{content || '—'}</p></div>)}
         <label className="rounded-xl text-xs font-bold uppercase text-slate-400">Исполнитель
           <select
-            value={value.executorId || ''}
+            value={selectedExecutorId}
             disabled={readOnly}
             onChange={(event) => {
-              const employee = employees.find((item) => String(item.userId || item.id) === event.target.value);
+              const employee = employees.find((item) => String(item.id) === event.target.value);
               if (employee) onExecutorChange(employee);
             }}
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold normal-case text-slate-800 disabled:bg-slate-100"
           >
             {!value.executorId && <option value="">{value.executor || 'Выберите исполнителя'}</option>}
-            {employees.filter((item) => item.active).map((employee) => <option key={employee.id} value={employee.userId || employee.id}>{employee.fullName} · {employee.position || 'сотрудник'}</option>)}
+            {employees.filter((item) => item.active).map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName} · {employee.position || 'сотрудник'}</option>)}
           </select>
         </label>
       </div>

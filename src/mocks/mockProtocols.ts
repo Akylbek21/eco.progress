@@ -132,4 +132,3 @@ soil.results = [
 ];
 
 export const mockProtocols: Protocol[] = [emissions, water, air, soil];
-

@@ -185,9 +185,9 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         setLaboratory(profile);
         setLaboratoryEmployees(active);
         const current = active.find((employee) => String(employee.userId || employee.id) === String(user?.id));
-        setExecutorId((existing) => active.some((employee) => String(employee.userId || employee.id) === existing)
+        setExecutorId((existing) => active.some((employee) => String(employee.id) === existing)
           ? existing
-          : String(current?.userId || current?.id || ''));
+          : String(current?.id || ''));
         if (!profile.laboratoryHeadId && !profile.laboratoryHeadName) setLaboratoryError('В карточке лаборатории не выбран заведующий.');
         else if (!current) setLaboratoryError('Текущий пользователь не может быть исполнителем. Выберите активного сотрудника.');
       })
@@ -675,7 +675,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
                   <label className="rounded-xl bg-white text-xs font-bold uppercase text-slate-400">Исполнитель
                     <select value={executorId} onChange={(event) => { setExecutorId(event.target.value); if (laboratory?.laboratoryHeadId || laboratory?.laboratoryHeadName) setLaboratoryError(''); }} className={`${inputClass} mt-1 normal-case`}>
                       <option value="">Выберите исполнителя</option>
-                      {laboratoryEmployees.map((employee) => <option key={employee.id} value={employee.userId || employee.id}>{employee.fullName} · {employee.position || 'сотрудник'}</option>)}
+                      {laboratoryEmployees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName} · {employee.position || 'сотрудник'}</option>)}
                     </select>
                   </label>
                 </div>

@@ -182,6 +182,8 @@ const stepStatusClasses: Record<StepStatus, string> = {
 
 type MissingField = { label: string; stepKey: ProtocolStepKey };
 
+const editableProtocolStatuses = new Set<Protocol['status']>(['DRAFT', 'CALCULATED', 'READY']);
+const isEditableProtocol = (protocol?: Protocol | null) => Boolean(protocol && editableProtocolStatuses.has(protocol.status));
 const hasText = (value?: string | number | null) => value !== undefined && value !== null && String(value).trim() !== '';
 const hasEnvironment = (protocol: Protocol) =>
   ['temperature', 'humidity', 'pressureKpa', 'windSpeed'].every((key) => hasText(protocol.environment?.[key as keyof NonNullable<Protocol['environment']>]));
@@ -218,7 +220,7 @@ const laboratorySnapshotFromProfile = (
   laboratoryHeadId: profile.laboratoryHeadId || current.laboratoryHeadId,
   laboratoryHeadName: profile.laboratoryHeadName || current.laboratoryHeadName || current.laboratoryHead,
   laboratoryHead: profile.laboratoryHeadName || current.laboratoryHead,
-  executorId: executor?.userId || executor?.id || current.executorId,
+  executorId: executor?.id || current.executorId,
   executorName: executor?.fullName || current.executorName || current.executor,
   executor: executor?.fullName || current.executor,
   logoUrl: profile.logoUrl || current.logoUrl,
@@ -539,7 +541,7 @@ const ProtocolStepFooter = ({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className={`text-sm font-semibold ${saveStatus === 'error' ? 'text-rose-700' : saveStatus === 'dirty' ? 'text-amber-700' : 'text-slate-500'}`}>{saveText}</div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {protocol.status === 'DRAFT' && (
+          {isEditableProtocol(protocol) && (
             <>
               {activeIndex > 0 && <Button type="button" variant="secondary" disabled={busy} onClick={onPrevious}><ChevronLeft className="h-4 w-4" /> Назад</Button>}
               {activeStep !== 'review' && <Button type="button" variant="secondary" disabled={busy || readOnly} onClick={onSave}><Save className="h-4 w-4" /> Сохранить черновик</Button>}
@@ -615,8 +617,9 @@ const ProtocolEditorPage = () => {
   const [deviceToRemove, setDeviceToRemove] = useState<string | null>(null);
   const savedSignatureRef = useRef('');
   const autoPreviewRef = useRef(false);
+  const draftUnlockRef = useRef('');
 
-  const readOnly = useMemo(() => !protocol || protocol.status !== 'DRAFT', [protocol]);
+  const readOnly = useMemo(() => !isEditableProtocol(protocol), [protocol]);
   const dirty = useMemo(() => Boolean(protocol && savedSignatureRef.current && editableSignature(protocol) !== savedSignatureRef.current), [protocol]);
   const canApprove = useProtocolMocks || user?.role === 'ADMIN' || user?.role === 'DIRECTOR' || user?.role === 'HEAD';
   const applyServerProtocol = (item: Protocol) => {
@@ -637,6 +640,13 @@ const ProtocolEditorPage = () => {
     return normalized;
   };
 
+  const ensureDraftProtocol = async (item: Protocol) => {
+    if (item.status === 'DRAFT') return item;
+    if (!editableProtocolStatuses.has(item.status)) return item;
+    const draft = await protocolService.returnToDraft(item.id);
+    return applyServerProtocol(draft);
+  };
+
   const load = async () => {
     if (!protocolId) return;
     if (dirty && !window.confirm('Есть несохранённые изменения. Обновить страницу протокола и потерять их?')) return;
@@ -655,6 +665,25 @@ const ProtocolEditorPage = () => {
   useEffect(() => {
     load();
   }, [protocolId]);
+
+  useEffect(() => {
+    if (!protocol || protocol.status === 'DRAFT' || !editableProtocolStatuses.has(protocol.status) || busy) return;
+    const key = `${protocol.id}:${protocol.status}`;
+    if (draftUnlockRef.current === key) return;
+    draftUnlockRef.current = key;
+    setBusy(true);
+    setSaveStatus('saving');
+    protocolService.returnToDraft(protocol.id)
+      .then((item) => {
+        applyServerProtocol(item);
+        toast.info('Протокол возвращен в черновик для редактирования');
+      })
+      .catch((error) => {
+        setSaveStatus('error');
+        toast.error('Не удалось вернуть протокол в черновик', error instanceof Error ? error.message : undefined);
+      })
+      .finally(() => setBusy(false));
+  }, [protocol?.id, protocol?.status, busy]);
 
   useEffect(() => {
     if (dirty && saveStatus !== 'saving') setSaveStatus('dirty');
@@ -741,8 +770,8 @@ const ProtocolEditorPage = () => {
 
   const save = async (): Promise<Protocol | null> => {
     if (!protocol) return null;
-    if (protocol.status === 'SIGNED') {
-      toast.warning('Нельзя редактировать подписанный протокол');
+    if (!isEditableProtocol(protocol)) {
+      toast.warning('Редактирование протокола закрыто для текущего статуса');
       return null;
     }
     if (protocol.testing.samplingDate && protocol.testing.testingStartDate && protocol.testing.samplingDate > protocol.testing.testingStartDate) {
@@ -756,7 +785,8 @@ const ProtocolEditorPage = () => {
     setSaveStatus('saving');
     setBusy(true);
     try {
-      const updated = await protocolService.updateProtocol(protocol.id, {
+      const draftProtocol = await ensureDraftProtocol(protocol);
+      const updated = await protocolService.updateProtocol(draftProtocol.id, {
         number: protocol.protocolNumber || protocol.number || '',
         protocolDate: protocol.protocolDate || '',
         objectId: protocol.objectId,
@@ -791,6 +821,7 @@ const ProtocolEditorPage = () => {
     if (!protocol || readOnly || busy) return;
     setBusy(true);
     try {
+      const draftProtocol = await ensureDraftProtocol(protocol);
       let laboratoryId = protocol.laboratory?.laboratoryId || protocol.laboratory?.id;
 
       if (!laboratoryId) {
@@ -816,11 +847,14 @@ const ProtocolEditorPage = () => {
       ]);
       const activeEmployees = employees.filter((item) => item.active);
       const currentExecutorId = protocol.executorId || protocol.laboratory?.executorId;
-      const executor = activeEmployees.find((item) => String(item.userId || item.id) === String(currentExecutorId))
+      const executor = activeEmployees.find((item) =>
+        String(item.id) === String(currentExecutorId)
+        || String(item.userId || '') === String(currentExecutorId)
+      )
         || activeEmployees[0];
       const laboratory = laboratorySnapshotFromProfile(profile, protocol.laboratory, executor);
       setLaboratoryEmployees(activeEmployees);
-      const updated = await protocolService.updateProtocol(protocol.id, {
+      const updated = await protocolService.updateProtocol(draftProtocol.id, {
         number: protocol.protocolNumber || protocol.number || '',
         protocolDate: protocol.protocolDate || '',
         objectId: protocol.objectId,
@@ -830,7 +864,7 @@ const ProtocolEditorPage = () => {
         formCode: protocol.formCode,
         application: protocol.application,
         executor: executor?.fullName || protocol.executor || laboratory.executor || '',
-        executorId: executor?.userId || executor?.id || protocol.executorId || laboratory.executorId,
+        executorId: executor?.id || protocol.executorId || laboratory.executorId,
         approver: protocol.approver || '',
         laboratory,
         organization: protocol.organization,
@@ -1181,11 +1215,11 @@ const ProtocolEditorPage = () => {
           loading={busy}
           canOpenSettings={user?.role === 'ADMIN'}
           onExecutorChange={(employee) => patchProtocol({
-            executorId: employee.userId || employee.id,
+            executorId: employee.id,
             executor: employee.fullName,
             laboratory: {
               ...protocol.laboratory,
-              executorId: employee.userId || employee.id,
+              executorId: employee.id,
               executor: employee.fullName,
             },
           })}
