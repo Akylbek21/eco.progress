@@ -61,12 +61,20 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    if (axios.isCancel(error) || error?.code === 'ERR_CANCELED') {
+      return Promise.reject(error);
+    }
+
     if (import.meta.env.DEV) {
       console.error('[API error]', {
         url: error.config?.url,
+        baseURL: error.config?.baseURL,
         method: String(error.config?.method || 'GET').toUpperCase(),
+        params: error.config?.params,
         status: error.response?.status,
         body: error.response?.data instanceof Blob ? `[Blob ${error.response.data.size} bytes]` : error.response?.data,
+        message: error.message,
+        code: error.code,
       });
     }
     error.message = getApiErrorMessage(error, error.message);

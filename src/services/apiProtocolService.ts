@@ -1110,6 +1110,20 @@ export type DownloadedProtocolFile = {
   fileName?: string;
 };
 
+const protocolFileMimeTypes: Record<'pdf' | 'docx', string> = {
+  pdf: 'application/pdf',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+};
+
+const ensureFileExtension = (fileName: string | undefined, extension: 'pdf' | 'docx') => {
+  const normalized = fileName?.trim();
+  if (!normalized) return undefined;
+  return normalized.toLowerCase().endsWith(`.${extension}`) ? normalized : `${normalized}.${extension}`;
+};
+
+const normalizeDownloadedProtocolBlob = (blob: Blob, kind: 'pdf' | 'docx') =>
+  blob.type === protocolFileMimeTypes[kind] ? blob : new Blob([blob], { type: protocolFileMimeTypes[kind] });
+
 export async function downloadDocx(protocolId: string): Promise<DownloadedProtocolFile> {
   return downloadProtocolFile(protocolId, 'docx');
 }
@@ -1123,8 +1137,8 @@ const downloadProtocolFile = async (protocolId: string, kind: 'pdf' | 'docx'): P
     const response = await api.get<Blob>(`/protocols/${protocolId}/download-${kind}`, { responseType: 'blob' });
     if (!response.data.size) throw new Error(`Backend вернул пустой ${kind.toUpperCase()} файл.`);
     return {
-      blob: response.data,
-      fileName: getContentDispositionFileName(response.headers['content-disposition']),
+      blob: normalizeDownloadedProtocolBlob(response.data, kind),
+      fileName: ensureFileExtension(getContentDispositionFileName(response.headers['content-disposition']), kind),
     };
   } catch (error) {
     throw await normalizeBlobError(error);
