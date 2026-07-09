@@ -42,6 +42,8 @@ type QuickForm = {
   humidity: string;
   pressureKpa: string;
   windSpeed: string;
+  waterType: string;
+  waterUseCategory: string;
 };
 
 type SelectedIndicator = Pollutant & {
@@ -72,6 +74,14 @@ const roomTypeOptions = [
 ];
 const lightingTypeOptions = [{ value: 'GENERAL', label: 'Общее' }, { value: 'COMBINED', label: 'Комбинированное' }, { value: 'NATURAL', label: 'Естественное' }];
 const noiseTypeOptions = [{ value: 'CONSTANT', label: 'Постоянный' }, { value: 'VARIABLE', label: 'Непостоянный' }, { value: 'IMPULSE', label: 'Импульсный' }];
+const waterTypeOptions = [
+  { value: 'DRINKING_WATER', label: 'Питьевая вода' },
+  { value: 'SURFACE_WATER', label: 'Вода водного объекта' },
+];
+const waterUseCategoryOptions = [
+  { value: 'I', label: 'I категория' },
+  { value: 'II', label: 'II категория' },
+];
 const canSearch = (value: string) => {
   const normalized = value.trim();
   const letters = (normalized.match(/[A-Za-zА-Яа-яЁё]/g) || []).length;
@@ -80,6 +90,12 @@ const canSearch = (value: string) => {
 };
 const sameDocumentCode = (value?: string | null, expected?: string | null) =>
   !expected || String(value || '').toUpperCase().replace(/-/g, '_') === expected;
+const waterCategoryAllowed = (item: NormativeRecord, waterType: string) => {
+  const category = String(item.categoryCode || item.category || '').toUpperCase();
+  if (waterType === 'DRINKING_WATER') return ['DRINKING_WATER_SAFETY', 'DRINKING_WATER_CHEMICALS'].includes(category) || !category;
+  if (waterType === 'SURFACE_WATER') return ['SURFACE_WATER_SAFETY', 'SURFACE_WATER_PDK'].includes(category) || !category;
+  return true;
+};
 const readNormativeRecords = (found: Awaited<ReturnType<typeof protocolService.searchNormative>>) =>
   found.normatives || found.items || (found.normative ? [found.normative] : []);
 
@@ -153,6 +169,8 @@ const ProtocolCreatePage = () => {
     humidity: '',
     pressureKpa: '',
     windSpeed: '',
+    waterType: 'DRINKING_WATER',
+    waterUseCategory: 'I',
   });
 
   const selectedChoice = useMemo(
@@ -163,6 +181,7 @@ const ProtocolCreatePage = () => {
   const isPhysical = isPhysicalProtocolType(selectedChoice);
   const isChemical = isChemicalProtocolType(selectedChoice);
   const isSoil = selectedChoice.templateId === 'soil';
+  const isWater = selectedChoice.templateId === 'water';
   const sourceDocumentCode = selectedChoice.sourceDocumentCode;
   const selectedCompany = companies.find((item) => item.id === form.companyId);
   const selectedObject = objects.find((item) => String(item.id) === String(form.objectId));
@@ -306,8 +325,12 @@ const ProtocolCreatePage = () => {
           query: value,
           q: value,
           search: value,
+          page: '0',
+          size: '20',
         };
         if (sourceDocumentCode) commonParams.sourceDocumentCode = sourceDocumentCode;
+        if (selectedChoice.environmentType) commonParams.environmentType = selectedChoice.environmentType;
+        if (isWater) commonParams.waterType = form.waterType;
         const physicalParams: Record<string, string> = isPhysical
           ? {
             factorType: selectedSubtype || '',
@@ -353,7 +376,8 @@ const ProtocolCreatePage = () => {
                 && String(item.normativeType || '').toUpperCase() === 'PDK';
             }
             return item.templateId === selectedChoice.normativeTemplateId
-              && sameDocumentCode(item.sourceDocumentCode, sourceDocumentCode);
+              && sameDocumentCode(item.sourceDocumentCode, sourceDocumentCode)
+              && (!isWater || waterCategoryAllowed(item, form.waterType));
           });
         if (normatives.length) {
           setChemicalSuggestions(normatives.map(normalizeNormativeIndicator).slice(0, 20));
@@ -400,7 +424,9 @@ const ProtocolCreatePage = () => {
     sourceDocumentCode,
     isPhysical,
     isSoil,
+    isWater,
     selectedSubtype,
+    form.waterType,
     form.season,
     form.workCategory,
     form.workplaceType,
@@ -479,6 +505,13 @@ const ProtocolCreatePage = () => {
       samplingDepth: form.samplingDepth,
       samplingPlace: form.measurementPlace,
     } : {}),
+    ...(isWater ? {
+      waterType: form.waterType,
+      waterUseCategory: form.waterType === 'SURFACE_WATER' ? form.waterUseCategory : '',
+      environmentType: selectedChoice.environmentType || 'WATER',
+      defaultUnit: selectedChoice.defaultUnit || 'мг/л',
+      productNormativeDocument: 'Приказ Министра здравоохранения Республики Казахстан от 24 ноября 2022 года № ҚР ДСМ-138',
+    } : {}),
     ...weatherConditionValues(),
     sourceDocumentCode,
     docxTemplateCode: selectedChoice.docxTemplateCode,
@@ -497,6 +530,8 @@ const ProtocolCreatePage = () => {
       documentDate: normative.documentDate || '',
       appendixNo: normative.appendixNo || '',
       tableNo: normative.tableNo || '',
+      categoryCode: normative.categoryCode || normative.category || '',
+      waterType: normative.waterType || (isWater ? form.waterType : ''),
       matrixType: normative.matrixType || '',
       assessmentCategory: normative.assessmentCategory || '',
       pollutionDegree: normative.pollutionDegree || '',
@@ -509,6 +544,7 @@ const ProtocolCreatePage = () => {
       normative: value,
       normativeMin: normative.min || '',
       normativeMax: normative.max || normative.value || normative.maxOneTimeValue || normative.dailyAverageValue || normative.obuvValue || '',
+      alternativeNormativeValue: normative.alternativeNormativeValue || '',
       minValue: normative.min || '',
       maxValue: normative.max || normative.value || normative.maxOneTimeValue || normative.dailyAverageValue || normative.obuvValue || '',
       comparisonType: normative.comparisonType || 'LESS_OR_EQUAL',
@@ -628,7 +664,7 @@ const ProtocolCreatePage = () => {
         },
       };
     });
-    const invalidPollutant = !isPhysical
+    const invalidPollutant = !isPhysical && !isWater
       ? measurements.find((item) => !item.pollutantCode || !String(item.pollutantCode).trim())
       : undefined;
     if (invalidPollutant) {
@@ -667,6 +703,10 @@ const ProtocolCreatePage = () => {
       sourceDocumentCode,
       docxTemplateCode: selectedChoice.docxTemplateCode,
       normativeTemplateId: selectedChoice.normativeTemplateId,
+      environmentType: selectedChoice.environmentType,
+      defaultUnit: selectedChoice.defaultUnit || undefined,
+      waterType: isWater ? form.waterType : undefined,
+      waterUseCategory: isWater && form.waterType === 'SURFACE_WATER' ? form.waterUseCategory : undefined,
       resultMode: selectedChoice.resultMode,
       conditions: baseConditionValues(),
       measurements,
@@ -722,6 +762,29 @@ const ProtocolCreatePage = () => {
           })}
         </div>
       </section>
+
+      {isWater && (
+        <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2">
+          <h2 className="text-lg font-black text-slate-900 md:col-span-2">Параметры воды</h2>
+          <label className="space-y-1.5 text-sm font-bold text-slate-700">
+            <span>Тип воды</span>
+            <select value={form.waterType} onChange={(event) => setField('waterType', event.target.value)} className={inputClass}>
+              {waterTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </label>
+          {form.waterType === 'SURFACE_WATER' && (
+            <label className="space-y-1.5 text-sm font-bold text-slate-700">
+              <span>Категория водопользования</span>
+              <select value={form.waterUseCategory} onChange={(event) => setField('waterUseCategory', event.target.value)} className={inputClass}>
+                {waterUseCategoryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </label>
+          )}
+          <p className="text-sm font-semibold text-slate-500 md:col-span-2">
+            Нормативный документ: Приказ Министра здравоохранения Республики Казахстан от 24 ноября 2022 года № ҚР ДСМ-138.
+          </p>
+        </section>
+      )}
 
       <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-2">
         <h2 className="text-lg font-black text-slate-900 lg:col-span-2">2. Компания и объект</h2>

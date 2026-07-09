@@ -19,6 +19,7 @@ export type ProtocolTypeConfig = {
   docxTemplateCode: string;
   defaultUnit: string | null;
   normativeTemplateId: ProtocolTemplateId;
+  environmentType?: string;
   resultMode: ProtocolResultMode;
 };
 
@@ -53,10 +54,11 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   water: {
     title: 'Вода',
     templateId: 'water',
-    sourceDocumentCode: null,
+    sourceDocumentCode: 'DSM_138',
     docxTemplateCode: 'protocol_water',
-    defaultUnit: 'мг/дм³',
-    normativeTemplateId: 'water_wastewater',
+    defaultUnit: 'мг/л',
+    normativeTemplateId: 'water',
+    environmentType: 'WATER',
     resultMode: 'CHEMICAL',
   },
   microclimate: {

@@ -35,6 +35,8 @@ type Props = {
   testingDate?: string;
   objectId?: string | number;
   measurementPlace?: string;
+  waterType?: string;
+  waterUseCategory?: string;
   allowManualIndicator?: boolean;
   onChange: (rows: ProtocolResultRow[]) => void;
   onCheckNormatives: () => void | Promise<void>;
@@ -59,7 +61,7 @@ const SEARCH_DEBOUNCE_MS = 500;
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = 'rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700';
 const physicalFactorTemplateIds: ProtocolTemplateId[] = ['physical_factors', 'microclimate', 'lighting', 'noise_vibration'];
-const chemicalTemplateIds: ProtocolTemplateId[] = ['industrial_emissions', 'ambient_air', 'workplace_air', 'water_wastewater', 'soil'];
+const chemicalTemplateIds: ProtocolTemplateId[] = ['industrial_emissions', 'ambient_air', 'workplace_air', 'water', 'water_wastewater', 'soil'];
 const searchUnavailableMessage = 'Поиск временно недоступен. Добавьте показатель вручную.';
 const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
 const notFoundSearchMessage = 'Норматив или показатель не найден. Проверьте код или добавьте норматив в справочник.';
@@ -83,6 +85,7 @@ const normalizeProtocolTemplate = (value: string) => {
   if (['ambient_air', 'atmospheric_air', 'industrial_emissions'].includes(key)) return 'ambient_air';
   if (['workplace_air', 'work_zone_air'].includes(key)) return 'workplace_air';
   if (['soil'].includes(key)) return 'soil';
+  if (['water', 'water_wastewater'].includes(key)) return 'water';
   if ([
     'physical_factors',
     'microclimate',
@@ -98,6 +101,7 @@ const sourceDocumentCodeForTemplate = (templateId: string, isPhysicalFactors: bo
   const normalized = normalizeProtocolTemplate(templateId);
   if (isPhysicalFactors || normalized === 'physical_factors') return 'DSM_15';
   if (normalized === 'soil') return 'DSM_32';
+  if (normalized === 'water') return 'DSM_138';
   if (['ambient_air', 'workplace_air'].includes(normalized)) return 'DSM_70';
   return '';
 };
@@ -166,6 +170,9 @@ const normativeValuesFromRecord = (normative: NormativeRecord, templateId: Proto
     documentDate: normative.documentDate || '',
     appendixNo: normative.appendixNo || '',
     tableNo: normative.tableNo || '',
+    categoryCode: normative.categoryCode || normative.category || '',
+    waterType: normative.waterType || '',
+    waterUseCategory: '',
     matrixType: normative.matrixType || '',
     assessmentCategory: normative.assessmentCategory || '',
     pollutionDegree: normative.pollutionDegree || '',
@@ -183,6 +190,7 @@ const normativeValuesFromRecord = (normative: NormativeRecord, templateId: Proto
     normative: value,
     normativeMin: normative.min || '',
     normativeMax: normative.max || normative.value || normative.maxOneTimeValue || normative.dailyAverageValue || normative.obuvValue || '',
+    alternativeNormativeValue: normative.alternativeNormativeValue || '',
     minValue: normative.min || '',
     maxValue: normative.max || normative.value || normative.maxOneTimeValue || normative.dailyAverageValue || normative.obuvValue || '',
     unit,
@@ -248,13 +256,15 @@ const numericValue = (value: string) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 const derivedStatusFromValues = (row: ProtocolResultRow, templateId: ProtocolTemplateId) => {
+  const min = numericValue(valueOf(row, ['normativeMin', 'minValue']));
+  const comparisonType = String(row.comparisonType || valueOf(row, ['comparisonType']) || 'LESS_OR_EQUAL').toUpperCase();
+  const actualText = officialResult(row, templateId).trim().toLowerCase();
+  if (comparisonType === 'ABSENT') return ['отсутствие', 'не обнаружено', 'не обнаружен', '0'].includes(actualText) ? 'NORMAL' : 'EXCEEDED';
+
   const actual = numericValue(officialResult(row, templateId));
   const normative = numericValue(normativeValue(row));
   if (actual === null || normative === null) return '';
-
-  const min = numericValue(valueOf(row, ['normativeMin', 'minValue']));
   const max = numericValue(valueOf(row, ['normativeMax', 'maxValue'])) ?? normative;
-  const comparisonType = String(row.comparisonType || valueOf(row, ['comparisonType']) || 'LESS_OR_EQUAL').toUpperCase();
 
   if (comparisonType === 'GREATER_OR_EQUAL') return actual >= normative ? 'NORMAL' : 'BELOW_REQUIRED';
   if (comparisonType === 'RANGE') {
@@ -342,7 +352,7 @@ const exceededText = (row: ProtocolResultRow, templateId: ProtocolTemplateId) =>
 };
 
 const ProtocolResultsTable = ({
-  protocolId, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '', objectId, measurementPlace: defaultMeasurementPlace = '',
+  protocolId, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '', objectId, measurementPlace: defaultMeasurementPlace = '', waterType = '', waterUseCategory = '',
   onChange, onCheckNormatives, onImported, onNotify, onGoToInstruments,
 }: Props) => {
   const { user } = useAuth();
@@ -386,6 +396,8 @@ const ProtocolResultsTable = ({
   const physicalSubtype = physicalSubtypeForTemplate(templateId, subtype);
   const normalizedTemplateId = normalizeProtocolTemplate(templateId);
   const sourceDocumentCode = sourceDocumentCodeForTemplate(templateId, isPhysicalFactors);
+  const isWaterProtocol = normalizedTemplateId === 'water';
+  const effectiveWaterType = waterType || valueOf(rows[0] || ({ values: {} } as ProtocolResultRow), ['waterType']) || 'DRINKING_WATER';
 
   const matchesProtocolNormative = (item: NormativeRecord) => {
     if (item.active === false || item.archived) return false;
@@ -396,6 +408,17 @@ const ProtocolResultsTable = ({
         && String(item.normativeType || '').toUpperCase() === 'PDK';
     }
     if (isPhysicalFactors) return isPhysicalNormative(item);
+    if (isWaterProtocol) {
+      const category = String(item.categoryCode || item.category || '').toUpperCase();
+      const matchesWaterType = !item.waterType || item.waterType === effectiveWaterType;
+      const matchesCategory = effectiveWaterType === 'SURFACE_WATER'
+        ? ['SURFACE_WATER_SAFETY', 'SURFACE_WATER_PDK', ''].includes(category)
+        : ['DRINKING_WATER_SAFETY', 'DRINKING_WATER_CHEMICALS', ''].includes(category);
+      return documentCode(item).includes('dsm_138')
+        && (item.templateId === 'water' || !item.templateId)
+        && matchesWaterType
+        && matchesCategory;
+    }
     if (templateId === 'workplace_air') return isWorkZoneNormative(item);
     if (templateId === 'ambient_air' || templateId === 'industrial_emissions') return isAtmosphericNormative(item);
     return item.templateId === templateId || !item.templateId;
@@ -407,6 +430,7 @@ const ProtocolResultsTable = ({
     if ((templateId === 'industrial_emissions' || templateId === 'ambient_air') && isAtmosphericNormative(item)) score += 60;
     if (templateId === 'workplace_air' && isWorkZoneNormative(item)) score += 60;
     if (isPhysicalFactors && isPhysicalNormative(item)) score += 60;
+    if (isWaterProtocol && documentCode(item).includes('dsm_138')) score += 70;
     if (sourceDocumentCode && documentCode(item).includes(sourceDocumentCode.toLowerCase())) score += 30;
     if (item.value || item.min || item.max || item.maxOneTimeValue || item.dailyAverageValue || item.singleValue || item.obuvValue) score += 10;
     return score;
@@ -422,6 +446,8 @@ const ProtocolResultsTable = ({
       status: 'ACTIVE',
       templateId: normalizedTemplateId,
       sourceDocumentCode,
+      environmentType: isWaterProtocol ? 'WATER' : '',
+      waterType: isWaterProtocol ? effectiveWaterType : '',
       query: searchText,
       q: searchText,
       search: searchText,
@@ -429,6 +455,10 @@ const ProtocolResultsTable = ({
     if (isNumericNormativeSearch(searchText)) {
       params.code = code;
       params.pollutantCode = code;
+    }
+    if (isWaterProtocol) {
+      params.page = '0';
+      params.size = '20';
     }
     return params;
   };
@@ -529,8 +559,10 @@ const ProtocolResultsTable = ({
     if (!selectedNormative) return onNotify('Выберите показатель', 'warning');
     if (!normativeDisplayValue(selectedNormative)) return onNotify('Выберите норматив', 'warning');
     if (!resultValue.trim()) return onNotify('Введите результат измерения', 'warning');
+    const isAbsentNormative = String(selectedNormative.comparisonType || '').toUpperCase() === 'ABSENT';
     const parsedResult = parseMeasurementNumber(resultValue);
-    if (parsedResult === null) return onNotify('Результат измерения должен быть числом', 'warning');
+    if (!isAbsentNormative && parsedResult === null) return onNotify('Результат измерения должен быть числом', 'warning');
+    const savedResult = parsedResult ?? resultValue.trim();
     const selectedUnit = selectedNormative.unit || fallbackUnitForEnvironment(templateId, selectedNormative);
     if (!selectedUnit) return onNotify('У норматива не указана единица измерения', 'warning');
 
@@ -553,14 +585,16 @@ const ProtocolResultsTable = ({
           cas: selectedNormative.cas || selectedNormative.casNumber || '',
           casNumber: selectedNormative.casNumber || selectedNormative.cas || '',
           formula: selectedNormative.formula || selectedNormative.chemicalFormula || '',
-          primaryReading: parsedResult,
-          measurementReadings: [parsedResult],
-          result: parsedResult,
-          resultValue: parsedResult,
+          primaryReading: savedResult,
+          measurementReadings: savedResult,
+          result: savedResult,
+          resultValue: savedResult,
           deviceId: resultDeviceId || null,
           measurementDeviceId: resultDeviceId || null,
           measurementPlace: defaultMeasurementPlace || '',
           samplingPlace: defaultMeasurementPlace || '',
+          waterType: isWaterProtocol ? selectedNormative.waterType || effectiveWaterType : '',
+          waterUseCategory: isWaterProtocol ? waterUseCategory : '',
         },
       });
       onChange([...rows, saved]);
@@ -632,7 +666,7 @@ const ProtocolResultsTable = ({
       }
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [query, templateId, subtype, objectId, testingDate, isPhysicalFactors, isSoilProtocol, sourceDocumentCode, physicalSubtype, physicalConditions]);
+  }, [query, templateId, subtype, objectId, testingDate, isPhysicalFactors, isSoilProtocol, isWaterProtocol, sourceDocumentCode, effectiveWaterType, physicalSubtype, physicalConditions]);
 
   const search = (value: string) => {
     setQuery(value);
@@ -759,6 +793,9 @@ const ProtocolResultsTable = ({
           normativeSearchWarning: normativeNotFoundMessage,
           normativeSelectionRequired: 'true',
           sourceDocumentCode: sourceDocumentCode,
+          environmentType: isWaterProtocol ? 'WATER' : '',
+          waterType: isWaterProtocol ? effectiveWaterType : '',
+          waterUseCategory: isWaterProtocol ? waterUseCategory : '',
           ...physicalConditionValues(),
           result: null,
           resultValue: null,
@@ -848,6 +885,8 @@ const ProtocolResultsTable = ({
           casNumber: normative.casNumber || normative.cas || valueOf(row, ['casNumber', 'cas']),
           formula: normative.formula || normative.chemicalFormula || valueOf(row, ['formula']),
           testingMethod: normative.testingMethod || valueOf(row, ['testingMethod']),
+          waterType: isWaterProtocol ? normative.waterType || effectiveWaterType : valueOf(row, ['waterType']),
+          waterUseCategory: isWaterProtocol ? waterUseCategory : valueOf(row, ['waterUseCategory']),
           normativeSelectionRequired: '',
           normativeSearchWarning: '',
         },
@@ -1197,6 +1236,42 @@ const ProtocolResultsTable = ({
               </tr>;
             })}</tbody>
           </table>
+        ) : isWaterProtocol ? (
+        <table className="min-w-[1180px] w-full text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>
+            {!readOnly && <th className="px-3 py-3"><input type="checkbox" checked={rows.length > 0 && selected.length === rows.length} onChange={(event) => setSelected(event.target.checked ? rows.map((row) => row.id) : [])} /></th>}
+            <th className="px-3 py-3">№</th>
+            <th className="px-3 py-3">Показатель / вещество</th>
+            <th className="bg-slate-100 px-3 py-3">Фактическое значение</th>
+            <th className="px-3 py-3">Единица измерения</th>
+            <th className="bg-slate-100 px-3 py-3">Норматив</th>
+            <th className="bg-slate-100 px-3 py-3">Результат</th>
+            <th className="px-3 py-3">Документ</th>
+            <th className="px-3 py-3">Приложение</th>
+            <th className="px-3 py-3">Таблица</th>
+            <th className="px-3 py-3 text-right">Действия</th>
+          </tr></thead>
+          <tbody className="divide-y divide-slate-100">{rows.map((row, index) => (
+            <tr key={row.id} className="align-top hover:bg-slate-50">
+              {!readOnly && <td className="px-3 py-3"><input type="checkbox" checked={selected.includes(row.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, row.id] : current.filter((id) => id !== row.id))} /></td>}
+              <td className="px-3 py-3 font-bold text-slate-900">{index + 1}</td>
+              <td className="px-3 py-3"><p className="font-bold text-slate-900">{indicator(row) || '—'}</p><p className="mt-1 text-xs font-semibold text-slate-500">{pollutantCode(row) || valueOf(row, ['categoryCode']) || '—'}</p></td>
+              <td className="bg-slate-50 px-3 py-3"><div className={automaticClass}>{officialResult(row, templateId) || 'Ожидает ввода'}</div></td>
+              <td className="px-3 py-3">{unit(row) || '—'}</td>
+              <td className="bg-slate-50 px-3 py-3">{renderNormativeCell(row)}</td>
+              <td className="bg-slate-50 px-3 py-3"><NormativeStatusBadge status={statusOf(row, templateId)} /></td>
+              <td className="px-3 py-3"><div className="max-w-56 text-xs font-semibold text-slate-700">{valueOf(row, ['sourceDocumentCode']) || normativeDocumentLabel(row) || 'DSM_138'}</div></td>
+              <td className="px-3 py-3">{valueOf(row, ['appendixNo']) || '—'}</td>
+              <td className="px-3 py-3">{valueOf(row, ['tableNo']) || '—'}</td>
+              <td className="px-3 py-3"><div className="flex flex-wrap justify-end gap-1">
+                <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => setRawRow(row)}>Ввести данные</Button>
+                <Button type="button" variant="secondary" className="px-3" disabled={saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
+                <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => openEdit(row)}>Изменить</Button>
+                <Button type="button" variant="secondary" className="px-3 text-rose-700 hover:bg-rose-50" disabled={readOnly || saving} onClick={() => setDeleteRow(row)}>Удалить</Button>
+              </div></td>
+            </tr>
+          ))}</tbody>
+        </table>
         ) : isSoilProtocol ? (
         <table className="min-w-[1180px] w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>

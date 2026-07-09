@@ -1,9 +1,16 @@
 User-agent: *
 Allow: /
+
 Disallow: /cabinet
+Disallow: /cabinet/
 Disallow: /staff
+Disallow: /staff/
 Disallow: /admin
+Disallow: /admin/
 Disallow: /login
 Disallow: /register
+Disallow: /api
+Disallow: /api/
 
 Sitemap: https://ecoprogress.kz/sitemap.xml
+Host: https://ecoprogress.kz

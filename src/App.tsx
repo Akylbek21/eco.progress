@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'react';
 import PublicLayout from './layouts/PublicLayout';
 import CabinetLayout from './layouts/CabinetLayout';
 import StaffLayout from './layouts/StaffLayout';
@@ -21,6 +21,7 @@ const ServicesPage = lazy(() => import('./pages/ServicesPage'));
 const SeoLandingPage = lazy(() => import('./pages/SeoLandingPage'));
 const ServiceLandingPage = lazy(() => import('./pages/ServiceLandingPage'));
 const ServiceDetailsPage = lazy(() => import('./pages/ServiceDetailsPage'));
+const ServiceRoutePage = lazy(() => import('./pages/ServiceRoutePage'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
 const PartnersPage = lazy(() => import('./pages/PartnersPage'));
 const TariffsPage = lazy(() => import('./pages/TariffsPage'));
@@ -42,6 +43,7 @@ const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
 const NormativeDirectoryPage = lazy(() => import('./pages/NormativeDirectoryPage'));
 const MeasurementDevicesPage = lazy(() => import('./pages/MeasurementDevicesPage'));
 const LaboratorySettingsPage = lazy(() => import('./pages/LaboratorySettingsPage'));
+const LabJournalsPage = lazy(() => import('./pages/LabJournalsPage'));
 
 const CabinetCompanyPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetCompanyPage');
 const CabinetDashboardPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetDashboardPage');
@@ -104,7 +106,20 @@ const RoleAccess = ({ roles, loginPath, children }: { roles: UserRole[]; loginPa
 
 function App() {
   const toast = useToast();
+  const location = useLocation();
   const protocolMockMode = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
+
+  useEffect(() => {
+    const privatePrefixes = ['/cabinet', '/staff', '/admin', '/dashboard', '/login', '/register', '/api', '/crm'];
+    const isPrivate = privatePrefixes.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
+    let meta = document.head.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'robots');
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute('content', isPrivate ? 'noindex,nofollow' : 'index,follow');
+  }, [location.pathname]);
   const notify = (message: string) => {
     const lower = message.toLowerCase();
     if (
@@ -146,7 +161,7 @@ function App() {
         <Route path="/services/laboratory-tests" element={<PublicLayout><ServiceLandingPage slug="laboratory-tests" /></PublicLayout>} />
         <Route path="/services/poligon-tbo" element={<PublicLayout><ServiceLandingPage slug="poligon-tbo" /></PublicLayout>} />
         <Route path="/services/environmental-audit" element={<PublicLayout><ServiceLandingPage slug="environmental-audit" /></PublicLayout>} />
-        <Route path="/services/:id" element={<PublicLayout><ServiceDetailsPage /></PublicLayout>} />
+        <Route path="/services/:id" element={<PublicLayout><ServiceRoutePage /></PublicLayout>} />
         <Route path="/tariffs" element={<PublicLayout><TariffsPage /></PublicLayout>} />
         <Route path="/employees" element={<PublicLayout><EmployeesPage /></PublicLayout>} />
         <Route path="/partners" element={<PublicLayout><PartnersPage /></PublicLayout>} />
@@ -194,6 +209,7 @@ function App() {
         <Route path="/staff/protocols/:protocolId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/normatives" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/measurement-devices" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/journals" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><LabJournalsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/settings/laboratory" element={<RoleAccess roles={['ADMIN', 'HEAD', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'HEAD', 'LABORATORY']}><LaboratorySettingsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/reports" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><StaffReportsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/user-roles" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN']}><StaffUserRolesPage /></StaffAccess></StaffLayout></RoleAccess>} />

@@ -1,16 +1,17 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, Copy, Edit3, FileSpreadsheet, RefreshCw, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { templateName } from '../data/protocolTemplates';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { archiveNormative, getNormatives, importDsm32FromResources, importNormativesExcel, importPhysicalFactorsFromResources, updateNormative, type NormativeImportPreview } from '../services/normativeService';
+import { archiveNormative, confirmDsm138Import, getNormativeRecords, importDsm32FromResources, importNormativesExcel, importPhysicalFactorsFromResources, previewDsm138Import, rollbackDsm138Import, updateNormative, type NormativeImportPreview, type NormativeRecordsParams } from '../services/normativeService';
 import { getApiStatus } from '../services/apiHelpers';
 import type { NormativeRecord } from '../types/protocols';
 
 const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100';
-type NormativeDocumentCode = 'DSM_70' | 'DSM_15' | 'DSM_32';
+type NormativeDocumentCode = 'DSM_70' | 'DSM_15' | 'DSM_32' | 'DSM_138';
 type NormativeCategoryCode =
   | 'ambient_air'
   | 'workplace_air'
@@ -28,7 +29,11 @@ type NormativeCategoryCode =
   | 'soil_pdk'
   | 'soil_sanitary_chemical'
   | 'soil_microbiology'
-  | 'soil_degradation';
+  | 'soil_degradation'
+  | 'DRINKING_WATER_SAFETY'
+  | 'DRINKING_WATER_CHEMICALS'
+  | 'SURFACE_WATER_SAFETY'
+  | 'SURFACE_WATER_PDK';
 
 type NormativeCategory = {
   code: NormativeCategoryCode;
@@ -65,11 +70,16 @@ const typeOptions = ['ПДК', 'Оценочная матрица', 'ОБУВ', 
 const soilFormOptions = ['подвижная форма', 'водорастворимая форма'];
 const subtypeOptions = ['Максимальная разовая', 'Среднесуточная', 'Среднесменная', 'Разовая', 'Суточная'];
 const factorTypeOptions = ['MICROCLIMATE', 'LIGHTING', 'NOISE', 'VIBRATION', 'NOISE_VIBRATION', 'INFRASOUND', 'ULTRASOUND', 'UV', 'AEROIONS', 'ELECTROMAGNETIC_FIELD', 'LASER'];
+const MIN_SEARCH_LENGTH = 3;
+const SEARCH_DEBOUNCE_MS = 500;
+const DEFAULT_PAGE_SIZE = 50;
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 const NORMATIVE_DOCUMENTS: Array<{ code: NormativeDocumentCode; label: string }> = [
-  { code: 'DSM_70', label: 'ДСМ-70 Атмосферный воздух' },
-  { code: 'DSM_15', label: 'ДСМ-15 Физические факторы' },
-  { code: 'DSM_32', label: 'ДСМ-32 Безопасность среды' },
+  { code: 'DSM_70', label: 'DSM_70 — Атмосферный воздух / воздух рабочей зоны' },
+  { code: 'DSM_32', label: 'DSM_32 — Почва' },
+  { code: 'DSM_15', label: 'DSM_15 — Физические факторы' },
+  { code: 'DSM_138', label: 'DSM_138 — Вода: хозяйственно-питьевое и культурно-бытовое водопользование' },
 ];
 
 const DSM15_CATEGORIES: NormativeCategory[] = [
@@ -96,6 +106,18 @@ const DSM32_CATEGORIES: NormativeCategory[] = [
   { code: 'soil_sanitary_chemical', label: 'Санитарно-химическая оценка' },
   { code: 'soil_microbiology', label: 'Микробиология и паразитология' },
   { code: 'soil_degradation', label: 'Критерии деградации' },
+];
+
+const DSM138_CATEGORIES: NormativeCategory[] = [
+  { code: 'DRINKING_WATER_SAFETY', label: 'Показатели безопасности питьевой воды' },
+  { code: 'DRINKING_WATER_CHEMICALS', label: 'Вредные химические вещества в питьевой воде' },
+  { code: 'SURFACE_WATER_SAFETY', label: 'Показатели безопасности воды водных объектов' },
+  { code: 'SURFACE_WATER_PDK', label: 'ПДК веществ в воде водных объектов' },
+];
+
+const waterTypeOptions = [
+  { value: 'DRINKING_WATER', label: 'Питьевая вода' },
+  { value: 'SURFACE_WATER', label: 'Вода водного объекта' },
 ];
 
 const templateEnvironment: Record<string, string> = {
@@ -143,6 +165,7 @@ const textValue = (...values: unknown[]) => {
 const getCategories = (documentCode: NormativeDocumentCode) => {
   if (documentCode === 'DSM_15') return DSM15_CATEGORIES;
   if (documentCode === 'DSM_32') return DSM32_CATEGORIES;
+  if (documentCode === 'DSM_138') return DSM138_CATEGORIES;
   return DSM70_CATEGORIES;
 };
 
@@ -151,11 +174,13 @@ const documentCodeForItem = (item: NormativeRecord): NormativeDocumentCode | '' 
   if (sourceCode.includes('DSM_70')) return 'DSM_70';
   if (sourceCode.includes('DSM_15')) return 'DSM_15';
   if (sourceCode.includes('DSM_32')) return 'DSM_32';
+  if (sourceCode.includes('DSM_138')) return 'DSM_138';
 
   const templateId = normalizeSearch(item.templateId);
   if (['ambient_air', 'workplace_air', 'industrial_emissions'].includes(templateId)) return 'DSM_70';
   if (['physical_factors', 'microclimate', 'lighting', 'noise_vibration'].includes(templateId)) return 'DSM_15';
   if (templateId === 'soil') return 'DSM_32';
+  if (templateId === 'water') return 'DSM_138';
   return '';
 };
 
@@ -210,9 +235,23 @@ const dsm32CategoryForItem = (item: NormativeRecord): NormativeCategoryCode => {
   return 'soil_pdk';
 };
 
+const dsm138CategoryForItem = (item: NormativeRecord): NormativeCategoryCode => {
+  const category = normalizeKey(item.categoryCode || item.category || item.categoryName);
+  if (category.includes('DRINKING_WATER_CHEMICALS')) return 'DRINKING_WATER_CHEMICALS';
+  if (category.includes('DRINKING_WATER_SAFETY')) return 'DRINKING_WATER_SAFETY';
+  if (category.includes('SURFACE_WATER_PDK')) return 'SURFACE_WATER_PDK';
+  if (category.includes('SURFACE_WATER_SAFETY')) return 'SURFACE_WATER_SAFETY';
+  const waterType = normalizeKey(item.waterType);
+  const text = combinedText(item);
+  if (waterType.includes('SURFACE') || containsAny(text, ['водных объектов', 'поверхност'])) return 'SURFACE_WATER_PDK';
+  if (waterType.includes('DRINKING') || containsAny(text, ['питьевой', 'питьевая'])) return 'DRINKING_WATER_CHEMICALS';
+  return 'DRINKING_WATER_SAFETY';
+};
+
 const categoryForItem = (documentCode: NormativeDocumentCode, item: NormativeRecord): NormativeCategoryCode => {
   if (documentCode === 'DSM_15') return dsm15CategoryForItem(item);
   if (documentCode === 'DSM_32') return dsm32CategoryForItem(item);
+  if (documentCode === 'DSM_138') return dsm138CategoryForItem(item);
   return dsm70CategoryForItem(item);
 };
 
@@ -261,9 +300,17 @@ const displayNormative = (item: NormativeRecord) => {
   const value = textValue(item.value);
   const min = textValue(item.min);
   const max = textValue(item.max);
-  if (value) return value;
-  if (min && max) return `${displayNormativeCell(min)}-${displayNormativeCell(max)}`;
-  return textValue(max, min);
+  const unit = textValue(item.unit);
+  const alternative = textValue(item.alternativeNormativeValue);
+  const comparisonType = normalizeKey(item.comparisonType);
+  let result = '';
+  if (comparisonType === 'RANGE' && min && max) result = `${displayNormativeCell(min)} - ${displayNormativeCell(max)}${unit ? ` ${unit}` : ''}`;
+  else if (comparisonType === 'LESS_OR_EQUAL' && (max || value)) result = `≤ ${displayNormativeCell(max || value)}${unit ? ` ${unit}` : ''}`;
+  else if (comparisonType === 'ABSENT') result = 'Отсутствие';
+  else if (value) result = value;
+  else if (min && max) result = `${displayNormativeCell(min)}-${displayNormativeCell(max)}`;
+  else result = textValue(max, min);
+  return alternative ? `${result} (${alternative})` : result;
 };
 
 const normalizedTypeKey = (value: unknown) => textValue(value).toUpperCase().replace(/[\s-]+/g, '_');
@@ -364,6 +411,22 @@ const groupSummationRows = (records: NormativeRecord[]) => {
 };
 
 const getVisibleColumns = (documentCode: NormativeDocumentCode, categoryCode: NormativeCategoryCode): NormativeColumn[] => {
+  if (documentCode === 'DSM_138') {
+    return [
+      { key: 'name', label: 'Наименование показателя / вещества', render: (row) => displayCell(row.primary.indicatorName, row.primary.pollutantName, row.primary.indicator, row.primary.name) },
+      { key: 'synonyms', label: 'Синонимы', render: (row) => displayCell(row.primary.name, row.primary.indicator) },
+      { key: 'cas', label: 'CAS', render: (row) => displayCell(row.primary.cas, row.primary.casNumber) },
+      { key: 'unit', label: 'Единица измерения', render: (row) => displayCell(row.primary.unit) },
+      { key: 'normative', label: 'Норматив', render: (row) => displayNormative(row.primary) || '-' },
+      { key: 'appendix', label: 'Приложение', render: (row) => displayCell(row.primary.appendixNo, row.primary.appNo) },
+      { key: 'table', label: 'Таблица', render: (row) => displayCell(row.primary.tableNo, row.primary.tableTitle) },
+      { key: 'category', label: 'Категория', render: (row) => displayCell(row.primary.categoryName, row.primary.categoryCode, row.primary.category) },
+      { key: 'limiting', label: 'Показатель вредности', render: (row) => displayCell(row.primary.limitingIndicator) },
+      { key: 'hazard', label: 'Класс опасности', render: (row) => displayCell(row.primary.hazardClass) },
+      { key: 'document', label: 'Документ', render: (row) => displayDocument(row.primary) },
+    ];
+  }
+
   if (documentCode === 'DSM_15') {
     return [
       { key: 'table', label: 'Таблица', render: (row) => displayTableLabel(row.primary) },
@@ -581,70 +644,62 @@ const groupNormatives = (records: NormativeRecord[]) => {
   return Array.from(rows.values());
 };
 
-const recordSearchText = (item: NormativeRecord) => normalizeSearch([
-  item.code,
-  item.pollutantCode,
-  item.indicator,
-  item.indicatorName,
-  item.pollutantName,
-  item.name,
-  item.cas,
-  item.casNumber,
-  item.formula,
-  item.chemicalFormula,
-  item.factorCode,
-  item.hazardClass,
-  item.limitingIndicator,
-  item.tableTitle,
-  item.categoryName,
-  item.category,
-  item.formType,
-  item.matrixType,
-  item.assessmentCategory,
-  item.pollutionDegree,
-  item.hazardLevel,
-  item.pollutionLevel,
-  item.tableNo,
-  item.conditionJson,
-  item.maxOneTimeValue,
-  item.dailyAverageValue,
-  item.singleValue,
-  item.obuvValue,
-  item.aggregateState,
-  item.actionFeatures,
-  displayEnvironment(item),
-  displayType(item),
-  displaySubtype(item),
-  item.unit,
-  item.normativeDocument,
-  item.source,
-  item.sourceFile,
-  item.importFileName,
-].filter(Boolean).join(' '));
-
-const matchesOption = (value: string, option: string) => {
-  if (!option) return true;
-  const left = normalizeSearch(value);
-  const right = normalizeSearch(option);
-  return left === right || left.includes(right) || right.includes(left);
+const normalizeSearchInput = (value: string) => value.trim();
+const canSubmitSearch = (value: string) => {
+  const text = normalizeSearchInput(value);
+  return text.length === 0 || text.length >= MIN_SEARCH_LENGTH;
 };
 
-const isSearchReady = (value: string) => {
-  const text = value.trim();
-  return text.length >= 3 || /\d{3}/.test(text);
+const factorTypeForCategory: Partial<Record<NormativeCategoryCode, string>> = {
+  microclimate: 'MICROCLIMATE',
+  noise: 'NOISE',
+  lighting: 'LIGHTING',
+  infrasound: 'INFRASOUND',
+  ultrasound: 'ULTRASOUND',
+  uv: 'UV',
+  aeroions: 'AEROIONS',
+  emf: 'ELECTROMAGNETIC_FIELD',
+  laser: 'LASER',
+};
+
+const tableNoForCategory: Partial<Record<NormativeCategoryCode, string>> = {
+  soil_pdk: '1',
+  soil_sanitary_chemical: '2',
+  soil_microbiology: '3',
+  soil_degradation: '4',
+};
+
+const categoryRequestParams = (documentCode: NormativeDocumentCode, categoryCode: NormativeCategoryCode): Partial<NormativeRecordsParams> => {
+  if (documentCode === 'DSM_70') {
+    if (categoryCode === 'ambient_air') return { templateId: 'ambient_air' };
+    if (categoryCode === 'workplace_air') return { templateId: 'workplace_air' };
+    if (categoryCode === 'summation_groups') return { normativeType: 'SUMMATION_GROUP' };
+    return {};
+  }
+  if (documentCode === 'DSM_15') {
+    return { templateId: 'physical_factors', factorType: factorTypeForCategory[categoryCode] };
+  }
+  if (documentCode === 'DSM_32') {
+    return { templateId: 'soil', tableNo: tableNoForCategory[categoryCode] };
+  }
+  if (documentCode === 'DSM_138') {
+    return { templateId: 'water', environmentType: 'WATER', categoryCode };
+  }
+  return {};
 };
 
 const NormativeDirectoryPage = () => {
   const toast = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const canManage = ['ADMIN', 'DIRECTOR', 'HEAD'].includes(user?.role || '');
   const canImportResources = user?.role === 'ADMIN';
-  const [items, setItems] = useState<NormativeRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [activeDocument, setActiveDocument] = useState<NormativeDocumentCode>('DSM_70');
   const [activeCategory, setActiveCategory] = useState<NormativeCategoryCode>('ambient_air');
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [templateFilter, setTemplateFilter] = useState('');
   const [environmentFilter, setEnvironmentFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -652,6 +707,7 @@ const NormativeDirectoryPage = () => {
   const [factorTypeFilter, setFactorTypeFilter] = useState('');
   const [appendixFilter, setAppendixFilter] = useState('');
   const [tableFilter, setTableFilter] = useState('');
+  const [waterTypeFilter, setWaterTypeFilter] = useState('');
   const [formTypeFilter, setFormTypeFilter] = useState('');
   const [editing, setEditing] = useState<NormativeRecord | null>(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -661,60 +717,90 @@ const NormativeDirectoryPage = () => {
   const [importing, setImporting] = useState(false);
   const [importingResources, setImportingResources] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setItems(await getNormatives({
-        search: isSearchReady(query) ? query.trim() : undefined,
-        status: 'ACTIVE',
-        templateId: templateFilter || undefined,
-        environmentType: environmentFilter || undefined,
-        factorType: factorTypeFilter || undefined,
-        appendixNo: appendixFilter || undefined,
-        tableNo: tableFilter || undefined,
-        formType: formTypeFilter || undefined,
-        normativeType: typeFilter || undefined,
-        subtype: subtypeFilter || undefined,
-      }));
-    } catch (loadError) {
-      const status = getApiStatus(loadError);
-      setError(status === 401 || status === 403
-        ? 'Нет доступа к нормативам'
-        : loadError instanceof Error ? loadError.message : 'Не удалось загрузить нормативы');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  const visibleCategories = useMemo(() => getCategories(activeDocument), [activeDocument]);
+  const normalizedQuery = normalizeSearchInput(query);
+  const searchAllowed = canSubmitSearch(normalizedQuery);
+  const debouncedSearchReady = searchAllowed && normalizedQuery === debouncedQuery;
+  const searchHintVisible = normalizedQuery.length > 0 && !searchAllowed;
+  const categoryParams = useMemo(() => categoryRequestParams(activeDocument, activeCategory), [activeDocument, activeCategory]);
+  const requestParams = useMemo<NormativeRecordsParams>(() => ({
+    page,
+    size,
+    search: debouncedSearchReady ? debouncedQuery : undefined,
+    sourceDocumentCode: activeDocument,
+    status: 'ACTIVE',
+    templateId: templateFilter || categoryParams.templateId,
+    environmentType: environmentFilter || undefined,
+    factorType: factorTypeFilter || categoryParams.factorType,
+    appendixNo: appendixFilter || undefined,
+    tableNo: tableFilter || categoryParams.tableNo,
+    categoryCode: categoryParams.categoryCode,
+    waterType: activeDocument === 'DSM_138' ? waterTypeFilter || undefined : undefined,
+    formType: formTypeFilter || undefined,
+    normativeType: typeFilter || categoryParams.normativeType,
+    subtype: subtypeFilter || undefined,
+  }), [page, size, debouncedSearchReady, debouncedQuery, activeDocument, templateFilter, categoryParams, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, formTypeFilter, typeFilter, subtypeFilter]);
+  const normativeQueryKey = useMemo(() => [
+    'normatives',
+    requestParams.page,
+    requestParams.size,
+    !searchAllowed ? '__too_short__' : debouncedSearchReady ? requestParams.search || '' : '__typing__',
+    requestParams.sourceDocumentCode || '',
+    requestParams.templateId || '',
+    requestParams.environmentType || '',
+    requestParams.factorType || '',
+    requestParams.appendixNo || '',
+    requestParams.tableNo || '',
+    requestParams.categoryCode || '',
+    requestParams.waterType || '',
+    requestParams.normativeType || '',
+    requestParams.status || '',
+    requestParams.formType || '',
+    requestParams.subtype || '',
+  ], [requestParams, searchAllowed, debouncedSearchReady]);
+  const {
+    data: recordsPage,
+    error: loadError,
+    isFetching,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: normativeQueryKey,
+    queryFn: ({ signal }) => getNormativeRecords(requestParams, signal),
+    enabled: debouncedSearchReady,
+    staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
+  });
+  const items = recordsPage?.items || [];
+  const loading = debouncedSearchReady && isLoading;
+  const error = loadError ? (getApiStatus(loadError) === 401 || getApiStatus(loadError) === 403
+    ? 'Нет доступа к нормативам'
+    : loadError instanceof Error ? loadError.message : 'Не удалось загрузить нормативы') : '';
+  const load = useCallback(async () => {
+    if (!debouncedSearchReady) return;
+    await refetch();
+  }, [refetch, debouncedSearchReady]);
   useEffect(() => {
-    const timer = window.setTimeout(load, isSearchReady(query) ? 300 : 0);
+    const timer = window.setTimeout(() => setDebouncedQuery(normalizeSearchInput(query)), SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [query, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, formTypeFilter, typeFilter, subtypeFilter]);
+  }, [query]);
 
   useEffect(() => {
     setActiveCategory(getCategories(activeDocument)[0].code);
+    if (activeDocument !== 'DSM_138') setWaterTypeFilter('');
   }, [activeDocument]);
 
-  const visibleCategories = useMemo(() => getCategories(activeDocument), [activeDocument]);
-  const searchActive = isSearchReady(query);
+  useEffect(() => {
+    setPage(0);
+  }, [query, activeDocument, activeCategory, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, formTypeFilter, typeFilter, subtypeFilter]);
 
   const filtered = useMemo(() => items.filter((item) => {
     if (isGarbageNormativeRow(item)) return false;
-    const terms = searchActive ? normalizeSearch(query).split(/\s+/).filter(Boolean) : [];
-    const matchesQuery = !terms.length || terms.every((term) => recordSearchText(item).includes(term));
     const matchesDocument = documentCodeForItem(item) === activeDocument;
     const matchesCategory = categoryForItem(activeDocument, item) === activeCategory;
-    const matchesTemplate = matchesOption(item.templateId || '', templateFilter);
-    const matchesFactorType = matchesOption(item.factorType || '', factorTypeFilter);
-    const matchesAppendix = matchesOption(item.appendixNo || '', appendixFilter);
-    const matchesTable = matchesOption(item.tableNo || '', tableFilter);
-    const matchesForm = matchesOption(item.formType || item.normativeSubType || item.subtype || '', formTypeFilter);
-    const matchesEnvironment = matchesOption(displayEnvironment(item), environmentFilter);
-    const matchesType = matchesOption(displayType(item), typeFilter);
-    const matchesSubtype = matchesOption(displaySubtype(item), subtypeFilter);
-    return matchesDocument && matchesCategory && matchesQuery && matchesTemplate && matchesFactorType && matchesAppendix && matchesTable && matchesForm && matchesEnvironment && matchesType && matchesSubtype && !item.archived;
-  }), [items, query, searchActive, activeDocument, activeCategory, templateFilter, factorTypeFilter, appendixFilter, tableFilter, formTypeFilter, environmentFilter, typeFilter, subtypeFilter]);
+    const matchesWaterType = activeDocument !== 'DSM_138' || !waterTypeFilter || item.waterType === waterTypeFilter;
+    return matchesDocument && matchesCategory && matchesWaterType && !item.archived;
+  }), [items, activeDocument, activeCategory, waterTypeFilter]);
 
   const groupedRows = useMemo(() => {
     if (activeDocument === 'DSM_70' && activeCategory !== 'summation_groups') return groupNormatives(filtered);
@@ -753,8 +839,8 @@ const NormativeDirectoryPage = () => {
     };
 
     try {
-      const saved = await updateNormative(editing.id, payload);
-      setItems((current) => current.map((item) => item.id === editing.id ? { ...item, ...saved } : item));
+      await updateNormative(editing.id, payload);
+      await queryClient.invalidateQueries({ queryKey: ['normatives'] });
       setEditing(null);
       toast.success('Норматив обновлен');
     } catch (submitError) {
@@ -767,8 +853,7 @@ const NormativeDirectoryPage = () => {
     if (!canManage || !window.confirm(`Архивировать нормативы "${name}"?`)) return;
     try {
       await Promise.all(row.records.map((record) => archiveNormative(record.id)));
-      const archivedIds = new Set(row.records.map((record) => record.id));
-      setItems((current) => current.filter((record) => !archivedIds.has(record.id)));
+      await queryClient.invalidateQueries({ queryKey: ['normatives'] });
       toast.success(row.records.length > 1 ? 'Нормативы архивированы' : 'Норматив архивирован');
     } catch (archiveError) {
       toast.error('Не удалось архивировать норматив', archiveError instanceof Error ? archiveError.message : undefined);
@@ -844,7 +929,9 @@ const NormativeDirectoryPage = () => {
     setImportError('');
     setImporting(true);
     try {
-      const preview = await importNormativesExcel(file, true);
+      const preview = activeDocument === 'DSM_138'
+        ? await previewDsm138Import(file)
+        : await importNormativesExcel(file, true);
       setImportPreview(preview);
       if (!preview.total || !preview.valid) {
         setImportError('Файл прочитан, но валидные строки нормативов не найдены. Проверьте формат таблицы.');
@@ -868,7 +955,11 @@ const NormativeDirectoryPage = () => {
     if (!stats.importId || !stats.valid || importError) return;
     setImporting(true);
     try {
-      await importNormativesExcel(importFile, false, stats.importId);
+      if (activeDocument === 'DSM_138') {
+        await confirmDsm138Import(stats.importId);
+      } else {
+        await importNormativesExcel(importFile, false, stats.importId);
+      }
       toast.success('Нормативы импортированы');
       closeImport();
       await load();
@@ -883,7 +974,36 @@ const NormativeDirectoryPage = () => {
 
   const importStats = importPreview || emptyImportPreview;
   const confirmImportDisabled = !importFile || !importStats.importId || !importStats.valid || importing || Boolean(importError);
+  const rollbackImport = async () => {
+    if (!importStats.importId || activeDocument !== 'DSM_138') return;
+    setImporting(true);
+    setImportError('');
+    try {
+      await rollbackDsm138Import(importStats.importId);
+      toast.success('Импорт DSM_138 откачен');
+      closeImport();
+      await load();
+    } catch (rollbackError) {
+      const message = rollbackError instanceof Error ? rollbackError.message : 'Не удалось откатить импорт DSM_138';
+      setImportError(message);
+      toast.error('Не удалось откатить импорт DSM_138', message);
+    } finally {
+      setImporting(false);
+    }
+  };
   const displayedCount = groupedRows.length;
+  const totalElements = recordsPage?.totalElements ?? 0;
+  const totalPages = Math.max(1, recordsPage?.totalPages ?? 1);
+  const currentPage = Math.min(page, totalPages - 1);
+  const canGoBack = page > 0 && !isFetching;
+  const canGoForward = page + 1 < totalPages && !isFetching;
+  const handleQueryChange = useCallback((event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value), []);
+  const handlePageSizeChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
+    setSize(Number(event.target.value));
+    setPage(0);
+  }, []);
+  const goToPreviousPage = useCallback(() => setPage((current) => Math.max(0, current - 1)), []);
+  const goToNextPage = useCallback(() => setPage((current) => Math.min(totalPages - 1, current + 1)), [totalPages]);
 
   return (
     <div className="space-y-5">
@@ -945,7 +1065,7 @@ const NormativeDirectoryPage = () => {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={handleQueryChange}
             placeholder="Название, код, CAS, формула"
             className={`${inputClass} pl-10`}
           />
@@ -955,6 +1075,8 @@ const NormativeDirectoryPage = () => {
           <option value="ambient_air">ambient_air</option>
           <option value="workplace_air">workplace_air</option>
           <option value="industrial_emissions">industrial_emissions</option>
+          <option value="water">water</option>
+          <option value="water_wastewater">water_wastewater</option>
           <option value="soil">soil</option>
           <option value="physical_factors">physical_factors</option>
           <option value="microclimate">microclimate</option>
@@ -975,9 +1097,15 @@ const NormativeDirectoryPage = () => {
             {soilFormOptions.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
         )}
-        {(activeDocument === 'DSM_15' || activeDocument === 'DSM_32') && (
+        {activeDocument === 'DSM_138' && (
+          <select value={waterTypeFilter} onChange={(event) => setWaterTypeFilter(event.target.value)} className={inputClass}>
+            <option value="">Тип воды: все</option>
+            {waterTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+        )}
+        {(activeDocument === 'DSM_15' || activeDocument === 'DSM_32' || activeDocument === 'DSM_138') && (
           <>
-            {activeDocument === 'DSM_15' && (
+            {(activeDocument === 'DSM_15' || activeDocument === 'DSM_138') && (
               <input
                 value={appendixFilter}
                 onChange={(event) => setAppendixFilter(event.target.value)}
@@ -1002,8 +1130,14 @@ const NormativeDirectoryPage = () => {
           {subtypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
         </select>
         <p className="text-xs font-semibold text-slate-500 md:col-span-2 xl:col-span-4">
-          Загружено: {items.length}. Показано: {displayedCount}.
+          Загружено на странице: {items.length}. Показано: {displayedCount}.
         </p>
+        <p className="text-xs font-semibold text-slate-500 md:col-span-2 xl:col-span-4">
+          Всего: {totalElements}. Страница: {currentPage + 1} / {totalPages}.{isFetching && !loading ? ' Обновляем...' : ''}
+        </p>
+        {searchHintVisible && (
+          <p className="text-xs font-semibold text-amber-700 md:col-span-2 xl:col-span-4">Введите минимум 3 символа для поиска</p>
+        )}
       </div>
 
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{error}</div>}
@@ -1079,6 +1213,22 @@ const NormativeDirectoryPage = () => {
         )}
       </div>
 
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-600 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          Страница {currentPage + 1} из {totalPages} · всего {totalElements}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2">
+            <span>Строк</span>
+            <select value={size} onChange={handlePageSizeChange} className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-eco-500 focus:ring-4 focus:ring-eco-100">
+              {PAGE_SIZE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <Button type="button" variant="secondary" disabled={!canGoBack} onClick={goToPreviousPage}>Назад</Button>
+          <Button type="button" variant="secondary" disabled={!canGoForward} onClick={goToNextPage}>Вперёд</Button>
+        </div>
+      </div>
+
       <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title="Изменить норматив" size="lg">
         {editing && (
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
@@ -1114,7 +1264,7 @@ const NormativeDirectoryPage = () => {
           <div className="space-y-4">
             <input
               type="file"
-              accept=".xls,.xlsx,.xls.xls"
+              accept={activeDocument === 'DSM_138' ? '.zip' : '.xls,.xlsx,.xls.xls'}
               onChange={(event) => previewImport(event.target.files?.[0])}
               className={inputClass}
             />
@@ -1141,6 +1291,9 @@ const NormativeDirectoryPage = () => {
             {importStats.errors.length > 0 && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{importStats.errors.slice(0, 10).map((item, index) => <p key={index}>Строка {item.row || '-'}: {item.message}</p>)}</div>}
             <div className="flex justify-end gap-3">
               <Button type="button" variant="secondary" onClick={closeImport}>Отмена</Button>
+              {activeDocument === 'DSM_138' && importStats.importId && (
+                <Button type="button" variant="secondary" disabled={importing} onClick={rollbackImport}>Откатить импорт</Button>
+              )}
               <Button type="button" disabled={confirmImportDisabled} onClick={commitImport}>Подтвердить импорт</Button>
             </div>
           </div>

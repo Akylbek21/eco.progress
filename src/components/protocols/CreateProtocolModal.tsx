@@ -50,7 +50,7 @@ type SearchState = 'idle' | 'minLength' | 'searching' | 'empty' | 'ready' | 'err
 const today = () => new Date().toISOString().slice(0, 10);
 const DEFAULT_WEATHER_TIME = '12:00';
 const MIN_SEARCH_LENGTH = 3;
-const SEARCH_DEBOUNCE_MS = 700;
+const SEARCH_DEBOUNCE_MS = 500;
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = `${inputClass} bg-slate-100 text-slate-600`;
 const allowedTemplateIds = new Set(protocolTemplates.map((item) => item.id));
@@ -60,9 +60,25 @@ const notFoundSearchMessage = 'Норматив или показатель не
 const canSearch = (value: string) => value.trim().length >= MIN_SEARCH_LENGTH;
 const sourceDocumentCodeForTemplate = (templateId: ProtocolTemplateId | '', isPhysicalFactors: boolean) => {
   if (isPhysicalFactors) return 'DSM_15';
+  if (templateId === 'water' || templateId === 'water_wastewater') return 'DSM_138';
   if (templateId === 'soil') return 'DSM_32';
   if (['ambient_air', 'workplace_air', 'industrial_emissions'].includes(String(templateId))) return 'DSM_70';
   return '';
+};
+const waterTypeOptions = [
+  { value: 'DRINKING_WATER', label: 'Питьевая вода' },
+  { value: 'SURFACE_WATER', label: 'Вода водного объекта' },
+];
+const waterUseCategoryOptions = [
+  { value: 'I', label: 'I категория' },
+  { value: 'II', label: 'II категория' },
+];
+const waterCategoryAllowed = (item: NormativeRecord, waterType: string) => {
+  const category = String(item.categoryCode || item.category || '').toUpperCase();
+  if (!category) return true;
+  if (waterType === 'DRINKING_WATER') return ['DRINKING_WATER_SAFETY', 'DRINKING_WATER_CHEMICALS'].includes(category);
+  if (waterType === 'SURFACE_WATER') return ['SURFACE_WATER_SAFETY', 'SURFACE_WATER_PDK'].includes(category);
+  return true;
 };
 const isDsm32PdkNormative = (item: NormativeRecord) =>
   item.templateId === 'soil'
@@ -95,6 +111,8 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   const [step, setStep] = useState(1);
   const [templateId, setTemplateId] = useState<ProtocolTemplateId | ''>('');
   const [subtype, setSubtype] = useState<ProtocolSubtype | ''>('');
+  const [waterType, setWaterType] = useState('DRINKING_WATER');
+  const [waterUseCategory, setWaterUseCategory] = useState('I');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companySearch, setCompanySearch] = useState('');
   const [company, setCompany] = useState<Company | null>(null);
@@ -148,6 +166,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   const laboratoryAccreditation = accreditationState(laboratory?.accreditationValidUntil);
   const isPhysicalFactors = templateId === 'physical_factors';
   const isSoilTemplate = templateId === 'soil';
+  const isWaterTemplate = templateId === 'water' || templateId === 'water_wastewater';
 
   useEffect(() => {
     if (!open) return;
@@ -250,6 +269,22 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
             indicator: query,
             objectId,
           })).filter(isDsm32PdkNormative).map(normativeToPollutant)
+          : isWaterTemplate
+          ? normativeSearchItems(await protocolService.searchNormative({
+            templateId: 'water',
+            sourceDocumentCode: 'DSM_138',
+            environmentType: 'WATER',
+            waterType,
+            query,
+            q: query,
+            search: query,
+            code: query,
+            pollutantCode: query,
+            indicator: query,
+            objectId,
+            page: '0',
+            size: '20',
+          })).filter((item) => waterCategoryAllowed(item, waterType)).map(normativeToPollutant)
           : await protocolService.searchPollutants(query, {
             templateId,
             subtype: subtype || '',
@@ -277,7 +312,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       }
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [pollutantQuery, templateId, subtype, objectId, isPhysicalFactors, isSoilTemplate]);
+  }, [pollutantQuery, templateId, subtype, objectId, isPhysicalFactors, isSoilTemplate, isWaterTemplate, waterType]);
 
   const selectCompany = async (id: string) => {
     setError('');
@@ -348,12 +383,17 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         objectId,
         date: measurementDate,
         sourceDocumentCode: isSoilTemplate ? 'DSM_32' : sourceDocumentCodeForTemplate(templateId, isPhysicalFactors),
+        environmentType: isWaterTemplate ? 'WATER' : '',
+        waterType: isWaterTemplate ? waterType : '',
         normativeType: isSoilTemplate ? 'PDK' : '',
         factorType: isPhysicalFactors ? subtype || '' : '',
         factorCode: isPhysicalFactors ? pollutant.code : '',
+        page: '0',
+        size: '20',
       });
       const candidates = (found.normatives || found.items || (found.normative ? [found.normative] : []))
-        .filter((item) => !isSoilTemplate || isDsm32PdkNormative(item));
+        .filter((item) => !isSoilTemplate || isDsm32PdkNormative(item))
+        .filter((item) => !isWaterTemplate || waterCategoryAllowed(item, waterType));
       if (!candidates.length) return { warning: normativeNotFoundMessage };
       if (candidates.length > 1) return { normativeCandidates: candidates, warning: 'Выберите норматив' };
       return { normative: candidates[0] };
@@ -410,6 +450,25 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
             if (getApiStatus(searchError) === 500) setError(searchUnavailableMessage);
             return { found: false, normatives: [], items: [] };
           })).filter(isDsm32PdkNormative).map(normativeToPollutant)
+          : isWaterTemplate
+          ? normativeSearchItems(await protocolService.searchNormative({
+            templateId: 'water',
+            sourceDocumentCode: 'DSM_138',
+            environmentType: 'WATER',
+            waterType,
+            query: token,
+            q: token,
+            search: token,
+            code: token,
+            pollutantCode: token,
+            indicator: token,
+            objectId,
+            page: '0',
+            size: '20',
+          }).catch((searchError) => {
+            if (getApiStatus(searchError) === 500) setError(searchUnavailableMessage);
+            return { found: false, normatives: [], items: [] };
+          })).filter((item) => waterCategoryAllowed(item, waterType)).map(normativeToPollutant)
           : await protocolService.searchPollutants(token, {
             templateId,
             subtype: subtype || '',
@@ -513,8 +572,11 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         measurementDeviceId: row.deviceId,
         normativeId: row.normative?.id || '',
         normative: row.normative?.value || '',
+        normativeValue: row.normative?.value || '',
         normativeMin: row.normative?.min || '',
         normativeMax: row.normative?.max || row.normative?.value || '',
+        indicatorName: row.normative?.indicatorName || row.pollutant.name,
+        pollutantName: row.normative?.pollutantName || row.pollutant.name,
         minValue: row.normative?.min || '',
         maxValue: row.normative?.max || row.normative?.value || '',
         normativeDocument: row.normative?.normativeDocument || '',
@@ -524,11 +586,18 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         documentDate: row.normative?.documentDate || '',
         appendixNo: row.normative?.appendixNo || '',
         tableNo: row.normative?.tableNo || '',
+        categoryCode: row.normative?.categoryCode || '',
+        waterType: isWaterTemplate ? waterType : '',
+        waterUseCategory: isWaterTemplate && waterType === 'SURFACE_WATER' ? waterUseCategory : '',
+        alternativeNormativeValue: row.normative?.alternativeNormativeValue || '',
         formType: row.normative?.formType || '',
         matrixType: row.normative?.matrixType || '',
         assessmentCategory: row.normative?.assessmentCategory || '',
         pollutionDegree: row.normative?.pollutionDegree || '',
         limitingIndicator: row.normative?.limitingIndicator || '',
+        hazardClass: row.normative?.hazardClass || '',
+        environmentType: isWaterTemplate ? 'WATER' : '',
+        defaultUnit: isWaterTemplate ? 'мг/л' : '',
         factorCode: row.normative?.factorCode || row.pollutant.code,
         testingMethod: row.normative?.testingMethod || row.pollutant.testingMethod || '',
         comparisonType: row.normative?.comparisonType || '',
@@ -560,6 +629,13 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         laboratoryId,
         executorId,
         environment,
+        sourceDocumentCode: sourceDocumentCodeForTemplate(templateId, isPhysicalFactors),
+        docxTemplateCode: isWaterTemplate ? 'protocol_water' : undefined,
+        normativeTemplateId: isWaterTemplate ? 'water' : templateId,
+        environmentType: isWaterTemplate ? 'WATER' : undefined,
+        defaultUnit: isWaterTemplate ? 'мг/л' : undefined,
+        waterType: isWaterTemplate ? waterType : undefined,
+        waterUseCategory: isWaterTemplate && waterType === 'SURFACE_WATER' ? waterUseCategory : undefined,
       }, results);
     } catch (createError) {
       setError(getApiErrorMessage(createError, 'Не удалось создать протокол. Введённые данные сохранены в форме.'));
@@ -603,6 +679,21 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
                 className={`rounded-xl border px-4 py-2.5 text-sm font-bold ${subtype === item.value ? 'border-eco-600 bg-eco-50 text-eco-800' : 'border-slate-200 text-slate-600'}`}>{item.label}</button>)}
             </div>
             {fieldErrors.subtype && <p className="mt-2 text-sm font-semibold text-rose-700">{fieldErrors.subtype}</p>}
+          </div>}
+          {isWaterTemplate && <div className="grid gap-3 rounded-2xl border border-sky-100 bg-sky-50/60 p-4 sm:grid-cols-2">
+            <label className="space-y-2 text-sm font-bold text-slate-700">Тип воды
+              <select value={waterType} onChange={(event) => setWaterType(event.target.value)} className={inputClass}>
+                {waterTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </label>
+            {waterType === 'SURFACE_WATER' && <label className="space-y-2 text-sm font-bold text-slate-700">Категория водопользования
+              <select value={waterUseCategory} onChange={(event) => setWaterUseCategory(event.target.value)} className={inputClass}>
+                {waterUseCategoryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </label>}
+            <p className="text-xs font-semibold leading-5 text-slate-600 sm:col-span-2">
+              Нормативный документ: Приказ Министра здравоохранения Республики Казахстан от 24 ноября 2022 года № ҚР ДСМ-138
+            </p>
           </div>}
         </section>}
 

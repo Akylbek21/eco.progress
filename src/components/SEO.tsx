@@ -7,6 +7,7 @@ type SEOProps = {
   canonical?: string;
   ogImage?: string;
   type?: 'website' | 'article';
+  robots?: string;
   schema?: Record<string, unknown> | Record<string, unknown>[];
 };
 
@@ -21,12 +22,13 @@ const setMeta = (selector: string, attr: 'content' | 'href', value: string) => {
   element.setAttribute(attr, value);
 };
 
-const SEO = ({ title, description, canonical, ogImage = `${company.siteUrl}/og-cover.jpg`, type = 'website', schema }: SEOProps) => {
+const SEO = ({ title, description, canonical, ogImage = `${company.siteUrl}/og-cover.jpg`, type = 'website', robots = 'index,follow', schema }: SEOProps) => {
   useEffect(() => {
     const url = canonical ?? `${company.siteUrl}${window.location.pathname}`;
     document.title = title;
     setMeta('meta[name="description"]', 'content', description);
     setMeta('meta[property="og:title"]', 'content', title);
+    setMeta('meta[name="robots"]', 'content', robots);
     setMeta('meta[property="og:description"]', 'content', description);
     setMeta('meta[property="og:type"]', 'content', type);
     setMeta('meta[property="og:site_name"]', 'content', company.name);
@@ -47,7 +49,7 @@ const SEO = ({ title, description, canonical, ogImage = `${company.siteUrl}/og-c
       script.text = JSON.stringify(schema);
       document.head.appendChild(script);
     }
-  }, [title, description, canonical, ogImage, type, schema]);
+  }, [title, description, canonical, ogImage, type, robots, schema]);
 
   return null;
 };

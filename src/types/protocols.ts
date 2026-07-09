@@ -370,6 +370,13 @@ export interface CreateProtocolPayload {
   sourceNumber?: string;
   laboratoryId?: string;
   executorId?: string;
+  sourceDocumentCode?: string | null;
+  docxTemplateCode?: string;
+  normativeTemplateId?: ProtocolTemplateId;
+  environmentType?: string;
+  defaultUnit?: string;
+  waterType?: string;
+  waterUseCategory?: string;
   environment?: ProtocolEnvironmentalConditions;
 }
 
@@ -426,6 +433,10 @@ export type QuickProtocolCreatePayload = {
   sourceDocumentCode?: string | null;
   docxTemplateCode?: string;
   normativeTemplateId?: ProtocolTemplateId;
+  environmentType?: string;
+  defaultUnit?: string;
+  waterType?: string;
+  waterUseCategory?: string;
   resultMode?: 'CHEMICAL' | 'PHYSICAL';
   conditions?: Record<string, ProtocolResultValue>;
   measurements: QuickProtocolMeasurementPayload[];
@@ -589,7 +600,7 @@ export type ObjectEmissionLimit = {
   validUntil?: string;
 };
 
-export type NormativeComparisonType = 'LESS_OR_EQUAL' | 'GREATER_OR_EQUAL' | 'RANGE' | 'EQUAL' | 'INFO';
+export type NormativeComparisonType = 'LESS_OR_EQUAL' | 'GREATER_OR_EQUAL' | 'RANGE' | 'EQUAL' | 'ABSENT' | 'INFO';
 
 export type NormativeRecord = {
   id: string;
@@ -602,8 +613,11 @@ export type NormativeRecord = {
   appNo?: string;
   tableNo?: string;
   tableTitle?: string;
+  categoryCode?: string;
   category?: string;
   categoryName?: string;
+  waterType?: string;
+  waterUseCategory?: string;
   matrixType?: string;
   assessmentCategory?: string;
   pollutionDegree?: string;
@@ -655,6 +669,7 @@ export type NormativeRecord = {
   obuvValue?: string;
   min?: string;
   max?: string;
+  alternativeNormativeValue?: string;
   comparisonType: NormativeComparisonType;
   normativeDocument: string;
   hazardClass?: string;
@@ -706,6 +721,8 @@ export type DirectoryQuery = {
   templateId?: string;
   environmentType?: string;
   sourceDocumentCode?: string;
+  categoryCode?: string;
+  waterType?: string;
   factorType?: string;
   factorCode?: string;
   appendixNo?: string;

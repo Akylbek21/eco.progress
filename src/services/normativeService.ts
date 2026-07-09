@@ -16,6 +16,7 @@ const firstString = (...values: unknown[]) => {
   return '';
 };
 const normalizeText = (value: unknown) => stringValue(value).trim().toLowerCase().replace(/ё/g, 'е');
+const normalizeKey = (value: unknown) => normalizeText(value).replace(/[\s-]+/g, '_').toUpperCase();
 const normalizeNormative = (raw: unknown): NormativeRecord => {
   const source = asRecord(raw);
   const pollutant = asRecord(source.pollutant || source.substance || source.indicatorReference);
@@ -53,8 +54,11 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     appNo: firstString(source.appNo, source.applicationNo, source.applicationNumber, source.appendixNo, source.appendixNumber, source.appendix, source.attachmentNo),
     tableNo: firstString(source.tableNo, source.tableNumber, source.table),
     tableTitle: firstString(source.tableTitle, source.tableName, source.title),
+    categoryCode: firstString(source.categoryCode, source.category_code, source.category),
     category: firstString(source.category, source.categoryCode, source.group),
     categoryName: firstString(source.categoryName, source.categoryTitle, source.sectionName),
+    waterType: firstString(source.waterType, source.water_type),
+    waterUseCategory: firstString(source.waterUseCategory, source.water_use_category),
     matrixType: firstString(source.matrixType, source.matrix_type),
     assessmentCategory: firstString(source.assessmentCategory, source.assessment_category),
     pollutionDegree: firstString(source.pollutionDegree, source.pollution_degree),
@@ -106,6 +110,7 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     obuvValue,
     min: stringValue(source.min ?? source.minValue ?? source.normativeMin),
     max: stringValue(source.max ?? source.maxValue ?? source.normativeMax),
+    alternativeNormativeValue: firstString(source.alternativeNormativeValue, source.alternative_normative_value, source.altValue),
     comparisonType: stringValue(source.comparisonType || 'LESS_OR_EQUAL') as NormativeRecord['comparisonType'],
     normativeDocument: firstString(source.normativeDocument, source.document, source.documentName, source.standard),
     hazardClass: firstString(source.hazardClass, source.dangerClass, source.hazard, source.hazardClassName),
@@ -147,26 +152,167 @@ export const extractNormatives = (response: unknown): NormativeRecord[] => {
 
 const extractNormativeRecords = extractNormatives;
 
-const directoryParams = (params?: DirectoryQuery) => {
-  const search = firstString(params?.search, params?.query, params?.q);
+export interface NormativeRecordsParams {
+  page?: number;
+  size?: number;
+  search?: string;
+  sourceDocumentCode?: string;
+  templateId?: string;
+  environmentType?: string;
+  factorType?: string;
+  appendixNo?: string | number;
+  tableNo?: string | number;
+  categoryCode?: string;
+  waterType?: string;
+  normativeType?: string;
+  status?: string;
+  formType?: string;
+  subtype?: string;
+}
+
+export interface NormativeRecordsPage {
+  items: NormativeRecord[];
+  totalElements: number;
+  totalPages: number;
+  page: number;
+  size: number;
+}
+
+const DEFAULT_PAGE = 0;
+const DEFAULT_SIZE = 50;
+
+const unwrapCandidates = (input: unknown): unknown[] => {
+  const candidates: unknown[] = [input];
+  let current = input;
+  for (let depth = 0; depth < 4; depth += 1) {
+    const record = asRecord(current);
+    if (!record || !('data' in record)) break;
+    current = record.data;
+    candidates.unshift(current);
+  }
+  return candidates;
+};
+
+const firstNumber = (candidates: unknown[], keys: string[]) => {
+  for (const candidate of candidates) {
+    const record = asRecord(candidate);
+    for (const key of keys) {
+      const value = record[key];
+      if (value !== undefined && value !== null && value !== '') {
+        const numeric = Number(value);
+        if (Number.isFinite(numeric)) return numeric;
+      }
+    }
+  }
+  return undefined;
+};
+
+const hasPagingMetadata = (candidates: unknown[]) =>
+  candidates.some((candidate) => {
+    const record = asRecord(candidate);
+    return ['totalElements', 'total', 'totalCount', 'totalPages', 'number', 'page', 'size'].some((key) => record[key] !== undefined);
+  });
+
+const compactParams = (params: NormativeRecordsParams) =>
+  Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+
+const includesText = (value: unknown, expected?: string | number) => {
+  const right = normalizeText(expected);
+  if (!right) return true;
+  const left = normalizeText(value);
+  return left === right || left.includes(right) || right.includes(left);
+};
+
+const matchesDocumentCode = (item: NormativeRecord, expected?: string) => {
+  if (!expected) return true;
+  const requested = normalizeKey(expected);
+  return [item.sourceDocumentCode, item.sourceDocumentName, item.normativeDocument]
+    .some((value) => normalizeKey(value).includes(requested));
+};
+
+const localSearchText = (item: NormativeRecord) =>
+  normalizeText(Object.values(item).filter((value) => typeof value !== 'object').join(' '));
+
+const locallyFilterNormatives = (items: NormativeRecord[], params: NormativeRecordsParams) => {
+  const terms = normalizeText(params.search).split(/\s+/).filter(Boolean);
+  return items.filter((item) => {
+    const matchesSearch = !terms.length || terms.every((term) => localSearchText(item).includes(term));
+    return matchesSearch
+      && matchesDocumentCode(item, params.sourceDocumentCode)
+      && includesText(item.templateId, params.templateId)
+      && includesText([item.environmentType, item.environment, item.researchObject].join(' '), params.environmentType)
+      && includesText(item.factorType, params.factorType)
+      && includesText([item.appendixNo, item.appNo].join(' '), params.appendixNo)
+      && includesText(item.tableNo, params.tableNo)
+      && includesText([item.categoryCode, item.category].join(' '), params.categoryCode)
+      && includesText(item.waterType, params.waterType)
+      && includesText(item.normativeType, params.normativeType)
+      && includesText([item.formType, item.normativeSubType, item.subtype].join(' '), params.formType || params.subtype);
+  });
+};
+
+const normalizeNormativeRecordsPage = (response: unknown, params: NormativeRecordsParams): NormativeRecordsPage => {
+  const page = Number(params.page ?? DEFAULT_PAGE);
+  const size = Number(params.size ?? DEFAULT_SIZE);
+  const candidates = unwrapCandidates(response);
+  const allItems = extractNormativeRecords(response).filter((item) => item.active !== false && !item.archived && item.status !== 'ARCHIVED');
+
+  if (!hasPagingMetadata(candidates)) {
+    const filtered = locallyFilterNormatives(allItems, params);
+    const start = page * size;
+    const totalElements = filtered.length;
+    return {
+      items: filtered.slice(start, start + size),
+      totalElements,
+      totalPages: Math.max(1, Math.ceil(totalElements / size)),
+      page,
+      size,
+    };
+  }
+
+  const totalElements = firstNumber(candidates, ['totalElements', 'total', 'totalCount', 'count']) ?? allItems.length;
+  const totalPages = firstNumber(candidates, ['totalPages', 'pages']) ?? Math.max(1, Math.ceil(totalElements / size));
   return {
-    ...params,
-    status: params?.status || 'ACTIVE',
-    search: search || undefined,
-    query: search || undefined,
-    q: search || undefined,
+    items: allItems,
+    totalElements,
+    totalPages,
+    page: firstNumber(candidates, ['number', 'page', 'currentPage']) ?? page,
+    size: firstNumber(candidates, ['size', 'pageSize', 'limit']) ?? size,
   };
 };
 
-export async function getNormatives(params?: DirectoryQuery): Promise<NormativeRecord[]> {
+const directoryParams = (params?: NormativeRecordsParams) => {
+  const page = Number(params?.page ?? DEFAULT_PAGE);
+  const size = Number(params?.size ?? DEFAULT_SIZE);
+  const search = firstString(params?.search);
+  return compactParams({
+    ...params,
+    page,
+    size,
+    status: params?.status || 'ACTIVE',
+    search: search || undefined,
+  });
+};
+
+export async function getNormativeRecords(params: NormativeRecordsParams = {}, signal?: AbortSignal): Promise<NormativeRecordsPage> {
   if (useMocks) {
     await mockDelay();
-    return [];
+    return {
+      items: [],
+      totalElements: 0,
+      totalPages: 1,
+      page: Number(params.page ?? DEFAULT_PAGE),
+      size: Number(params.size ?? DEFAULT_SIZE),
+    };
   }
   const requestParams = directoryParams(params);
-  const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams });
-  const records = extractNormativeRecords(response);
-  return records.filter((item) => item.active !== false && !item.archived && item.status !== 'ARCHIVED');
+  const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams, signal });
+  return normalizeNormativeRecordsPage(response, params);
+}
+
+export async function getNormatives(params?: DirectoryQuery): Promise<NormativeRecord[]> {
+  const recordsPage = await getNormativeRecords(params);
+  return recordsPage.items;
 }
 
 export async function createNormative(payload: Omit<NormativeRecord, 'id'>): Promise<NormativeRecord> {
@@ -275,4 +421,40 @@ export async function importNormativesExcel(file: File, preview = true, importId
     importId: stringValue(item.importId || item.previewId || item.batchId) || undefined,
     fileName: stringValue(item.fileName || item.sourceFile || file.name) || undefined,
   };
+}
+
+const normalizeImportPreview = (response: unknown, fileName?: string): NormativeImportPreview => {
+  const item = unwrapImportData(response);
+  const items = extractNormativeRecords(response);
+  const errors = Array.isArray(item.errors) ? item.errors.map((error) => {
+    const value = error as UnknownRecord;
+    return { row: Number(value.row) || undefined, message: stringValue(value.message || value.error) };
+  }) : [];
+  return {
+    items,
+    total: Number(item.totalRows ?? item.total ?? item.rowsTotal ?? item.totalCount ?? items.length),
+    valid: Number(item.validRows ?? item.valid ?? item.validCount ?? items.length),
+    invalid: Number(item.errorRows ?? item.invalid ?? item.invalidRows ?? item.errorsCount ?? errors.length),
+    created: Number(item.newNormatives ?? item.created ?? item.new ?? item.newRows ?? item.toCreate ?? 0),
+    updated: Number(item.updatedNormatives ?? item.updated ?? item.update ?? item.updatedRows ?? item.toUpdate ?? 0),
+    errors,
+    importId: stringValue(item.importId || item.previewId || item.batchId || item.importBatchId) || undefined,
+    fileName: stringValue(item.fileName || item.sourceFile || fileName) || undefined,
+  };
+};
+
+export async function previewDsm138Import(file: File): Promise<NormativeImportPreview> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives/import/dsm-138/preview', formData);
+  return normalizeImportPreview(response, file.name);
+}
+
+export async function confirmDsm138Import(importBatchId?: string): Promise<NormativeImportPreview> {
+  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives/import/dsm-138/confirm', importBatchId ? { importBatchId } : {});
+  return normalizeImportPreview(response);
+}
+
+export async function rollbackDsm138Import(importBatchId: string): Promise<void> {
+  await api.post(`/normatives/import/dsm-138/rollback/${encodeURIComponent(importBatchId)}`);
 }

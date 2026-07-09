@@ -11,7 +11,7 @@ import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { DocumentsSection, TrustSection } from '../components/TrustBlocks';
 import { company } from '../config/company';
-import { seoPages } from '../data/seoPages';
+import { citySeoPages, serviceCitySeoPages } from '../data/seoPages';
 import { trackEvent } from '../services/analytics';
 
 const benefits = ['Экологическое проектирование', 'Лабораторные исследования', 'Вывоз и утилизация отходов', 'Полигон ТБО', 'Работаем по Казахстану', 'Документы и сопровождение'];
@@ -246,7 +246,7 @@ const HomePage = () => (
           </div>
         </Reveal>
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {seoPages.map((page, index) => (
+          {[...citySeoPages.slice(0, 9), ...serviceCitySeoPages.slice(0, 9)].map((page, index) => (
             <Reveal key={page.slug} delay={index * 0.03}>
               <Link to={`/${page.slug}`} className="group block h-full rounded-[8px] border border-slate-200 bg-[#F7FBFD] p-5 shadow-sm transition hover:border-eco-300 hover:bg-white">
                 <h3 className="font-bold text-eco-900 group-hover:text-eco-600">{page.h1}</h3>

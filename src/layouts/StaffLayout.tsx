@@ -20,6 +20,7 @@ const links: Array<{ label: string; path: string; icon: typeof ClipboardList; pa
   { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Календарь', path: '/staff/calendar', icon: CalendarDays, allowedRoles: ['ADMIN', 'MANAGER', 'ECOLOGIST', 'LABORATORY'] },
   { label: 'Протоколы', path: '/staff/protocols', icon: FlaskConical, allowedRoles: protocolRoles },
+  { label: 'Журналы', path: '/staff/journals', icon: BookOpenCheck, allowedRoles: ['ADMIN', 'LABORATORY'] },
   { label: 'Нормативы', path: '/staff/normatives', icon: BookOpenCheck, allowedRoles: protocolRoles },
   { label: 'Средства измерений', path: '/staff/measurement-devices', icon: Gauge, allowedRoles: protocolRoles },
   { label: 'Настройки лаборатории', path: '/staff/settings/laboratory', icon: Settings, allowedRoles: ['ADMIN', 'HEAD', 'LABORATORY'] },
@@ -55,9 +56,9 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
       {(user?.role === 'LABORATORY'
-        ? links.filter((item) => item.path === '/staff/protocols')
+        ? links.filter((item) => ['/staff/protocols', '/staff/journals'].includes(item.path))
         : protocolMockMode
-        ? links.filter((item) => ['/staff', '/staff/companies', '/staff/protocols', '/staff/normatives', '/staff/measurement-devices', '/staff/settings/laboratory'].includes(item.path))
+        ? links.filter((item) => ['/staff', '/staff/companies', '/staff/protocols', '/staff/journals', '/staff/normatives', '/staff/measurement-devices', '/staff/settings/laboratory'].includes(item.path))
         : links
       ).map((item) => {
         const Icon = item.icon;

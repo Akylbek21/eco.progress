@@ -6,17 +6,17 @@ import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
 import OrderChoiceModal from '../components/OrderChoiceModal';
 import { company } from '../config/company';
-import { seoPages } from '../data/seoPages';
+import { citySeoPages } from '../data/seoPages';
 import { trackPhoneClick } from '../services/analytics';
 
 const navItems = [
-  { label: 'Главная', path: '/' },
-  { label: 'О компании', path: '/about' },
   { label: 'Услуги', path: '/services' },
-  { label: 'Сотрудники', path: '/employees' },
-  { label: 'Наши партнеры', path: '/partners' },
-  { label: 'Как это работает', path: '/#how-it-works' },
+  { label: 'Города', path: '/ecologicheskie-uslugi-almaty' },
+  { label: 'Статьи', path: '/news' },
+  { label: 'О компании', path: '/about' },
   { label: 'Контакты', path: '/contacts' },
+  { label: 'WhatsApp', path: 'https://wa.me/77082553000' },
+  { label: 'Войти', path: '/login' },
 ];
 
 const accountMenuItems = [
@@ -52,7 +52,11 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
             <span className="leading-none">ecoprogress.kz</span>
           </Link>
           <nav className="hidden items-center gap-5 xl:gap-6 lg:flex">
-            {navItems.map((item) => (
+            {navItems.map((item) => item.path.startsWith('http') ? (
+              <a key={item.path} href={item.path} target="_blank" rel="noreferrer" className="relative text-sm font-medium text-slate-700 transition after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:bg-accent after:transition-all hover:text-eco-800 hover:after:w-full">
+                {item.label}
+              </a>
+            ) : (
               <NavLink
                 key={item.path}
                 to={item.path}
@@ -126,7 +130,11 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
         {menuOpen && (
           <div className="border-t border-eco-100 bg-white px-5 py-5 shadow-xl lg:hidden">
             <div className="space-y-2">
-              {navItems.map((item) => (
+              {navItems.map((item) => item.path.startsWith('http') ? (
+                <a key={item.path} href={item.path} target="_blank" rel="noreferrer" onClick={() => setMenuOpen(false)} className="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-eco-50">
+                  {item.label}
+                </a>
+              ) : (
                 <NavLink
                   key={item.path}
                   to={item.path}
@@ -200,18 +208,24 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
             <div>
               <h4 className="text-sm font-semibold uppercase text-eco-200">Услуги</h4>
               <ul className="mt-4 space-y-3 text-sm text-white/75">
-                <li><Link to="/services/ecological-documents" className="hover:text-white">Экологические документы</Link></li>
-                <li><Link to="/services/waste-transportation" className="hover:text-white">Вывоз отходов</Link></li>
-                <li><Link to="/services/waste-recycling" className="hover:text-white">Утилизация отходов</Link></li>
-                <li><Link to="/services/laboratory-tests" className="hover:text-white">Лабораторные анализы</Link></li>
-                <li><Link to="/services/poligon-tbo" className="hover:text-white">Полигон ТБО</Link></li>
-                {seoPages.slice(0, 4).map((page) => (
-                  <li key={page.slug}><Link to={`/${page.slug}`} className="hover:text-white">{page.serviceType}</Link></li>
-                ))}
+                <li><Link to="/services/environmental-design" className="hover:text-white">Экологическое проектирование</Link></li>
+                <li><Link to="/services/laboratory-tests" className="hover:text-white">Лабораторные замеры</Link></li>
+                <li><Link to="/services/industrial-control" className="hover:text-white">Производственный контроль</Link></li>
+                <li><Link to="/services/waste-management" className="hover:text-white">Утилизация отходов</Link></li>
+                <li><Link to="/passport-othodov-kazakhstan" className="hover:text-white">Паспорт отходов</Link></li>
+                <li><Link to="/otchet-pek-kazakhstan" className="hover:text-white">Отчет ПЭК</Link></li>
+                <li><Link to="/services/environmental-permits" className="hover:text-white">Разрешения</Link></li>
+                <li><Link to="/ses-proverka-proizvodstvennyy-kontrol" className="hover:text-white">Сопровождение проверок</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-sm font-semibold uppercase text-eco-200">Контакты</h4>
+              <h4 className="text-sm font-semibold uppercase text-eco-200">Города</h4>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-white/75">
+                {citySeoPages.slice(0, 9).map((page) => (
+                  <Link key={page.slug} to={`/${page.slug}`} className="hover:text-white">{page.city}</Link>
+                ))}
+              </div>
+              <h4 className="mt-7 text-sm font-semibold uppercase text-eco-200">Контакты</h4>
               <ul className="mt-4 space-y-3 text-sm text-white/75">
                 <li><a href={company.phoneHref} onClick={() => trackPhoneClick({ placement: 'footer' })} className="hover:text-white">{company.phone}</a></li>
                 <li className="flex items-center gap-2"><FaWhatsapp className="shrink-0 text-[#25D366]" size={16} aria-hidden="true" /> WhatsApp: {company.whatsappDisplay}</li>
@@ -224,14 +238,12 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
             <div>
               <h4 className="text-sm font-semibold uppercase text-eco-200">Компания</h4>
               <div className="mt-4 space-y-3 text-sm text-white/75">
-                <Link to="/tariffs" className="block hover:text-white">Тарифы</Link>
-                <Link to="/employees" className="block hover:text-white">Сотрудники</Link>
-                <Link to="/partners" className="block hover:text-white">Наши партнеры</Link>
-                <Link to="/faq" className="block hover:text-white">FAQ</Link>
+                <Link to="/about" className="block hover:text-white">О компании</Link>
                 <Link to="/contacts" className="block hover:text-white">Контакты</Link>
-                {seoPages.slice(4).map((page) => (
-                  <Link key={page.slug} to={`/${page.slug}`} className="block hover:text-white">{page.serviceType}</Link>
-                ))}
+                <Link to="/partners" className="block hover:text-white">Партнеры</Link>
+                <Link to="/employees" className="block hover:text-white">Сотрудники</Link>
+                <Link to="/news" className="block hover:text-white">Новости</Link>
+                <Link to="/faq" className="block hover:text-white">FAQ</Link>
               </div>
               <h4 className="mt-7 text-sm font-semibold uppercase text-eco-200">Личный кабинет</h4>
               <div className="mt-4 space-y-3 text-sm text-white/75">

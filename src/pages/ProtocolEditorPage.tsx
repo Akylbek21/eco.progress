@@ -1239,6 +1239,8 @@ const ProtocolEditorPage = () => {
         objectId={protocol.objectId}
         measurementPlace={protocol.measurementPlace || ''}
         testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate}
+        waterType={String((protocol.testing as Record<string, unknown>).waterType || protocol.results[0]?.values.waterType || '')}
+        waterUseCategory={String((protocol.testing as Record<string, unknown>).waterUseCategory || protocol.results[0]?.values.waterUseCategory || '')}
         onChange={applyServerResults}
         onCheckNormatives={checkSavedNormatives}
         onImported={load}
