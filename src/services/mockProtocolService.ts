@@ -128,6 +128,9 @@ const numberFor = (templateId: Protocol['templateId'], sequence: number) => {
     noise_vibration: 'Ф 04',
     uv_emf_laser: 'Ф 04',
     soil: 'П',
+    food_products: 'ПП',
+    surfaces: 'ПВ',
+    udmh_special: 'РТ',
     workplace_air: 'Ф 03',
     vehicle_emissions: 'Ф 05',
     sanitary_hygiene: 'СГ',
@@ -158,7 +161,7 @@ const overall = (rows: ProtocolResultRow[]) => {
   return 'COMPLIES';
 };
 
-export async function getProtocols(): Promise<Protocol[]> {
+export async function getProtocols(_params?: Record<string, string>): Promise<Protocol[]> {
   await wait();
   return read();
 }
@@ -464,6 +467,33 @@ export async function replaceProtocol(protocolId: string, reason: string): Promi
   items[sourceIndex] = { ...source, status: 'REPLACED', replacedByProtocolId: replacementId, history: [...(source.history || []), history('Протокол заменён исправленной версией', reason)] };
   write([replacement, ...items]);
   return clone(replacement);
+}
+
+export async function duplicateProtocol(protocolId: string): Promise<Protocol> {
+  await wait();
+  const items = read();
+  const source = items.find((item) => item.id === protocolId);
+  if (!source) throw new Error('Протокол не найден.');
+  const duplicateId = id('protocol');
+  const duplicateNumber = `${source.protocolNumber || source.number}-COPY-${items.filter((item) => item.replacesProtocolId === protocolId).length + 1}`;
+  const duplicate: Protocol = {
+    ...clone(source),
+    id: duplicateId,
+    protocolNumber: duplicateNumber,
+    number: duplicateNumber,
+    status: 'DRAFT',
+    approvedAt: undefined,
+    signedAt: undefined,
+    replacesProtocolId: undefined,
+    replacedByProtocolId: undefined,
+    results: source.results.map((row) => ({ ...clone(row), id: id('result') })),
+    measurementDevices: source.measurementDevices.map((device) => ({ ...clone(device), id: id('protocol-device'), protocolId: duplicateId })),
+    history: [history('Создана копия протокола', source.protocolNumber || source.number)],
+    createdAt: now(),
+    updatedAt: now(),
+  };
+  write([duplicate, ...items]);
+  return clone(duplicate);
 }
 
 export async function addProtocolMeasurementDevice(protocolId: string, device: MeasurementDevice): Promise<Protocol> {

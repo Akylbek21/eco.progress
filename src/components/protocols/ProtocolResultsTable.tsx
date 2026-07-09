@@ -9,6 +9,7 @@ import { getApiStatus } from '../../services/apiHelpers';
 import { getMeasurementDevices } from '../../services/measurementDeviceService';
 import { filterPhysicalFactorIndicators, getPhysicalFactorIndicators } from '../../data/physicalFactors';
 import { subtypeName } from '../../data/protocolTemplates';
+import { resolveNormativeSearchContext } from '../../data/protocolTypeConfig';
 import { useAuth } from '../../contexts/AuthContext';
 import type {
   CalculationDetails,
@@ -60,8 +61,8 @@ const MIN_SEARCH_LENGTH = 3;
 const SEARCH_DEBOUNCE_MS = 500;
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = 'rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700';
-const physicalFactorTemplateIds: ProtocolTemplateId[] = ['physical_factors', 'microclimate', 'lighting', 'noise_vibration'];
-const chemicalTemplateIds: ProtocolTemplateId[] = ['industrial_emissions', 'ambient_air', 'workplace_air', 'water', 'water_wastewater', 'soil'];
+const physicalFactorTemplateIds: ProtocolTemplateId[] = ['physical_factors', 'microclimate', 'lighting', 'noise_vibration', 'uv_emf_laser'];
+const chemicalTemplateIds: ProtocolTemplateId[] = ['industrial_emissions', 'ambient_air', 'workplace_air', 'water', 'water_wastewater', 'soil', 'food_products', 'surfaces', 'udmh_special'];
 const searchUnavailableMessage = 'Поиск временно недоступен. Добавьте показатель вручную.';
 const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
 const notFoundSearchMessage = 'Норматив или показатель не найден. Проверьте код или добавьте норматив в справочник.';
@@ -85,12 +86,16 @@ const normalizeProtocolTemplate = (value: string) => {
   if (['ambient_air', 'atmospheric_air', 'industrial_emissions'].includes(key)) return 'ambient_air';
   if (['workplace_air', 'work_zone_air'].includes(key)) return 'workplace_air';
   if (['soil'].includes(key)) return 'soil';
+  if (['food_products', 'food'].includes(key)) return 'food_products';
+  if (['surfaces', 'surface'].includes(key)) return 'surfaces';
+  if (['udmh_special', 'rocket_fuel'].includes(key)) return 'udmh_special';
   if (['water', 'water_wastewater'].includes(key)) return 'water';
   if ([
     'physical_factors',
     'microclimate',
     'lighting',
     'noise_vibration',
+    'uv_emf_laser',
     'uv',
     'emf',
     'laser',
@@ -102,7 +107,7 @@ const sourceDocumentCodeForTemplate = (templateId: string, isPhysicalFactors: bo
   if (isPhysicalFactors || normalized === 'physical_factors') return 'DSM_15';
   if (normalized === 'soil') return 'DSM_32';
   if (normalized === 'water') return 'DSM_138';
-  if (['ambient_air', 'workplace_air'].includes(normalized)) return 'DSM_70';
+  if (['ambient_air', 'workplace_air', 'food_products', 'surfaces', 'udmh_special'].includes(normalized)) return 'DSM_70';
   return '';
 };
 const isNumericNormativeSearch = (value: string) => /^\d{3,10}$/.test(value.trim());
@@ -125,6 +130,24 @@ const valueOf = (row: ProtocolResultRow, keys: string[]) => {
     if (value !== undefined && value !== null && String(value) !== '') return String(value);
   }
   return '';
+};
+const resultKeyOf = (row: ProtocolResultRow) => {
+  if (row.id && !String(row.id).startsWith('tmp_')) return `id:${row.id}`;
+  return [
+    pollutantCode(row),
+    indicator(row),
+    valueOf(row, ['samplingPlace', 'measurementPlace']),
+  ].join('|').toLowerCase();
+};
+const mergeProtocolResults = (currentRows: ProtocolResultRow[], importedRows: ProtocolResultRow[]) => {
+  const map = new Map<string, ProtocolResultRow>();
+  currentRows.forEach((row) => map.set(resultKeyOf(row), row));
+  importedRows.forEach((row) => {
+    const key = resultKeyOf(row);
+    const existing = map.get(key);
+    map.set(key, existing ? { ...existing, ...row, values: { ...existing.values, ...row.values } } : row);
+  });
+  return Array.from(map.values());
 };
 const officialResult = (row: ProtocolResultRow, templateId: ProtocolTemplateId) => {
   if (row.result) return row.result;
@@ -390,12 +413,14 @@ const ProtocolResultsTable = ({
   const fileRef = useRef<HTMLInputElement>(null);
   const searchRequestRef = useRef(0);
   const canUseAdvanced = user?.role === 'ADMIN' || user?.role === 'HEAD' || user?.role === 'DIRECTOR';
-  const isPhysicalFactors = physicalFactorTemplateIds.includes(templateId);
+  const searchContext = resolveNormativeSearchContext({ templateId, subtype });
+  const contextTemplateId = (searchContext.templateId || searchContext.normativeTemplateId || normalizeProtocolTemplate(templateId)) as ProtocolTemplateId;
+  const isPhysicalFactors = searchContext.sourceDocumentCode === 'DSM_15' || physicalFactorTemplateIds.includes(templateId);
   const isSoilProtocol = templateId === 'soil';
   const isChemicalProtocol = chemicalTemplateIds.includes(templateId);
   const physicalSubtype = physicalSubtypeForTemplate(templateId, subtype);
-  const normalizedTemplateId = normalizeProtocolTemplate(templateId);
-  const sourceDocumentCode = sourceDocumentCodeForTemplate(templateId, isPhysicalFactors);
+  const normalizedTemplateId = contextTemplateId;
+  const sourceDocumentCode = searchContext.sourceDocumentCode || sourceDocumentCodeForTemplate(templateId, isPhysicalFactors);
   const isWaterProtocol = normalizedTemplateId === 'water';
   const effectiveWaterType = waterType || valueOf(rows[0] || ({ values: {} } as ProtocolResultRow), ['waterType']) || 'DRINKING_WATER';
 
@@ -421,7 +446,12 @@ const ProtocolResultsTable = ({
     }
     if (templateId === 'workplace_air') return isWorkZoneNormative(item);
     if (templateId === 'ambient_air' || templateId === 'industrial_emissions') return isAtmosphericNormative(item);
-    return item.templateId === templateId || !item.templateId;
+    if (searchContext.category) {
+      return String(item.categoryCode || item.category || '').toUpperCase() === String(searchContext.category).toUpperCase()
+        || item.templateId === normalizedTemplateId
+        || !item.templateId;
+    }
+    return item.templateId === normalizedTemplateId || item.templateId === templateId || !item.templateId;
   };
 
   const candidateScore = (item: NormativeRecord) => {
@@ -442,23 +472,27 @@ const ProtocolResultsTable = ({
   const buildNormativeSearchParams = (value: string, pollutant?: Pollutant): Record<string, string> => {
     const searchText = value.trim();
     const code = pollutant?.code || searchText;
+    const isCodeSearch = /^\d{3,10}$/.test(searchText);
     const params: Record<string, string> = {
       status: 'ACTIVE',
       templateId: normalizedTemplateId,
+      normativeTemplateId: String(searchContext.normativeTemplateId || normalizedTemplateId),
       sourceDocumentCode,
+      category: searchContext.category || '',
+      factorType: String(searchContext.factorType || (isPhysicalFactors ? physicalSubtype : '')),
       environmentType: isWaterProtocol ? 'WATER' : '',
       waterType: isWaterProtocol ? effectiveWaterType : '',
-      query: searchText,
-      q: searchText,
-      search: searchText,
+      page: '0',
+      size: '20',
     };
-    if (isNumericNormativeSearch(searchText)) {
+    if (isCodeSearch) {
       params.code = code;
       params.pollutantCode = code;
-    }
-    if (isWaterProtocol) {
-      params.page = '0';
-      params.size = '20';
+    } else {
+      params.query = searchText;
+      params.q = searchText;
+      params.search = searchText;
+      params.indicator = searchText;
     }
     return params;
   };
@@ -731,6 +765,40 @@ const ProtocolResultsTable = ({
     }
   };
 
+  const createResultRowFromNormative = async (normative: NormativeRecord): Promise<ProtocolResultRow> => {
+    const resolvedUnit = normative.unit || fallbackUnitForEnvironment(templateId, normative);
+    const code = normative.factorCode || normative.pollutantCode || normative.code || '';
+    const name = normative.indicator || normative.indicatorName || normative.pollutantName || '';
+    const normativeValues = normativeValuesFromRecord(normative, templateId, resolvedUnit);
+    return protocolService.addProtocolResult(protocolId, {
+      normativeId: normative.id,
+      values: {
+        ...normativeValues,
+        ...physicalConditionValues(),
+        code,
+        pollutantCode: code,
+        factorCode: isPhysicalFactors ? code : normativeValues.factorCode,
+        indicator: name,
+        indicatorName: name,
+        cas: normative.cas || normative.casNumber || '',
+        casNumber: normative.casNumber || normative.cas || '',
+        formula: normative.formula || normative.chemicalFormula || '',
+        chemicalFormula: normative.chemicalFormula || normative.formula || '',
+        result: null,
+        resultValue: null,
+        primaryReading: null,
+        measurementReadings: null,
+        measurementPlace: defaultMeasurementPlace || '',
+        samplingPlace: defaultMeasurementPlace || '',
+        waterType: isWaterProtocol ? normative.waterType || effectiveWaterType : '',
+        waterUseCategory: isWaterProtocol ? waterUseCategory : '',
+        sourceDocumentCode: normative.sourceDocumentCode || sourceDocumentCode,
+        templateId: normative.templateId || normalizedTemplateId,
+        category: normative.category || normative.categoryCode || searchContext.category || '',
+      },
+    });
+  };
+
   const addBulk = async () => {
     const tokens = query.split(/[,;]+/).map((item) => item.trim()).filter(Boolean);
     if (!tokens.length) {
@@ -746,33 +814,37 @@ const ProtocolResultsTable = ({
       return;
     }
     setSearching(true);
+    setSaving(true);
     try {
       const created: ProtocolResultRow[] = [];
       for (const token of tokens) {
-        const found = await searchNow(token).catch((error) => {
+        const { candidates } = await searchNormativeCandidates(token, { code: token, name: token }).catch((error) => {
           if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
-          return [];
+          return { candidates: [], fromFallback: false };
         });
         const normalized = token.toLowerCase();
-        const item = found.find((pollutant) => pollutant.code.toLowerCase() === normalized)
-          || found.find((pollutant) => `${pollutant.code} ${pollutant.name}`.toLowerCase().includes(normalized));
-        if (!item) {
-          onNotify(isPhysicalFactors ? physicalNormativeNotFoundMessage : notFoundSearchMessage, 'warning');
+        const normative = candidates.find((item) => String(item.pollutantCode || item.code || item.factorCode || '').toLowerCase() === normalized)
+          || (candidates.length === 1 ? candidates[0] : undefined);
+        if (!normative) {
+          onNotify(candidates.length > 1 ? 'Выберите конкретный норматив через поиск, найдено несколько совпадений' : (isPhysicalFactors ? physicalNormativeNotFoundMessage : notFoundSearchMessage), 'warning');
           continue;
         }
-        const exists = [...rows, ...created].some((row) => pollutantCode(row).toLowerCase() === item.code.toLowerCase());
+        const normativeCode = normative.pollutantCode || normative.code || normative.factorCode || token;
+        const exists = [...rows, ...created].some((row) => pollutantCode(row).toLowerCase() === normativeCode.toLowerCase());
         if (!exists) {
-          const saved = await addPollutant(item, false);
-          if (saved) created.push(saved);
+          const saved = await createResultRowFromNormative(normative);
+          created.push(saved);
         }
       }
       if (created.length) {
         onChange([...rows, ...created]);
         setQuery('');
         setSuggestions([]);
+        onNotify(`Добавлено показателей: ${created.length}`, 'success');
       }
     } finally {
       setSearching(false);
+      setSaving(false);
     }
   };
 
@@ -1013,7 +1085,12 @@ const ProtocolResultsTable = ({
     setSaving(true);
     try {
       const imported = await protocolService.importExcel(protocolId, file);
-      onChange(imported.results || []);
+      const importedRows = imported.results || [];
+      if (importedRows.length) {
+        onChange(mergeProtocolResults(rows, importedRows));
+      } else {
+        await onImported();
+      }
       onNotify('Показания импортированы из Excel', 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось импортировать Excel', 'error');
@@ -1085,7 +1162,7 @@ const ProtocolResultsTable = ({
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
           <Button type="button" variant="secondary" disabled={readOnly || busy || saving} onClick={openAddDialog}><Plus className="h-4 w-4" /> Добавить показатель</Button>
           <Button type="button" variant="secondary" disabled={readOnly || busy || saving} onClick={() => fileRef.current?.click()}><FileSpreadsheet className="h-4 w-4" /> Импорт из Excel</Button>
-          <Button type="button" disabled={busy || saving || !rows.length} onClick={calculateAll}><Calculator className="h-4 w-4" /> Рассчитать результаты</Button>
+          <Button type="button" disabled={readOnly || busy || saving || !rows.length} onClick={calculateAll}><Calculator className="h-4 w-4" /> Рассчитать результаты</Button>
         </div>
       </div>
 
@@ -1214,7 +1291,7 @@ const ProtocolResultsTable = ({
                 <td className="px-3 py-3">{resolveDeviceName(row, devices) || '—'}</td>
                 <td className="px-3 py-3"><div className="relative flex flex-wrap justify-end gap-1">
                   <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => setRawRow(row)}>Ввести данные</Button>
-                  <Button type="button" variant="secondary" className="px-3" disabled={saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
+                  <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
                   <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} title="Изменить" onClick={() => openEdit(row)}>Изменить</Button>
                   <Button type="button" variant="secondary" className="px-2.5" disabled={saving} title="Еще" onClick={() => setRowMenuId((current) => current === row.id ? null : row.id)}>
                     <MoreHorizontal className="h-4 w-4" />
@@ -1265,7 +1342,7 @@ const ProtocolResultsTable = ({
               <td className="px-3 py-3">{valueOf(row, ['tableNo']) || '—'}</td>
               <td className="px-3 py-3"><div className="flex flex-wrap justify-end gap-1">
                 <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => setRawRow(row)}>Ввести данные</Button>
-                <Button type="button" variant="secondary" className="px-3" disabled={saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
+                <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
                 <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => openEdit(row)}>Изменить</Button>
                 <Button type="button" variant="secondary" className="px-3 text-rose-700 hover:bg-rose-50" disabled={readOnly || saving} onClick={() => setDeleteRow(row)}>Удалить</Button>
               </div></td>
@@ -1304,7 +1381,7 @@ const ProtocolResultsTable = ({
               <td className="px-3 py-3"><div className="max-w-56 text-xs font-semibold text-slate-700">{documentLabel || '—'}</div></td>
               <td className="px-3 py-3"><div className="flex flex-wrap justify-end gap-1">
                 <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => setRawRow(row)}>Ввести данные</Button>
-                <Button type="button" variant="secondary" className="px-3" disabled={saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
+                <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
                 <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => openEdit(row)}>Изменить</Button>
                 <Button type="button" variant="secondary" className="px-3 text-rose-700 hover:bg-rose-50" disabled={readOnly || saving} onClick={() => setDeleteRow(row)}>Удалить</Button>
               </div></td>
@@ -1332,7 +1409,7 @@ const ProtocolResultsTable = ({
               <td className="bg-slate-50 px-3 py-3"><div className="space-y-2"><NormativeStatusBadge status={statusOf(row, templateId)} />{calculationLabel && <p className="text-xs font-semibold text-slate-600">{calculationLabel}</p>}{exceededText(row, templateId) && <p className="max-w-56 text-xs font-semibold text-rose-700">{exceededText(row, templateId)}</p>}</div></td>
               <td className="px-3 py-3"><div className="relative flex flex-wrap justify-end gap-1">
                 <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => setRawRow(row)}>Ввести данные</Button>
-                <Button type="button" variant="secondary" className="px-3" disabled={saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
+                <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
                 <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} title="Изменить" onClick={() => openEdit(row)}>Изменить</Button>
                 <Button type="button" variant="secondary" className="px-2.5" disabled={saving} title="Еще" onClick={() => setRowMenuId((current) => current === row.id ? null : row.id)}>
                   <MoreHorizontal className="h-4 w-4" />
@@ -1466,7 +1543,7 @@ const ProtocolResultsTable = ({
 
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setAddOpen(false)}>Отмена</Button>
-            <Button type="button" disabled={saving || !selectedNormative || !resultValue.trim()} onClick={saveDialogResult}>Сохранить результат</Button>
+            <Button type="button" disabled={readOnly || saving || !selectedNormative || !resultValue.trim()} onClick={saveDialogResult}>Сохранить результат</Button>
           </div>
         </div>
       </Modal>
@@ -1476,6 +1553,7 @@ const ProtocolResultsTable = ({
         protocolId={protocolId}
         row={rawRow}
         devices={devices}
+        readOnly={readOnly}
         onClose={() => setRawRow(null)}
         onCalculated={applyCalculatedRow}
         onReload={onImported}
@@ -1534,7 +1612,7 @@ const ProtocolResultsTable = ({
 
       <Modal open={Boolean(deleteRow)} onClose={() => setDeleteRow(null)} title="Удалить строку?" size="sm">
         <p className="text-sm text-slate-600">Будут удалены первичные показания и связанный расчёт. Это действие нельзя отменить.</p>
-        <div className="mt-5 flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setDeleteRow(null)}>Отмена</Button><Button type="button" onClick={remove}>Удалить</Button></div>
+        <div className="mt-5 flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setDeleteRow(null)}>Отмена</Button><Button type="button" disabled={readOnly} onClick={remove}>Удалить</Button></div>
       </Modal>
     </section>
   );

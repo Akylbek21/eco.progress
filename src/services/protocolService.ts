@@ -49,8 +49,10 @@ export interface ProtocolService {
   checkNormatives(protocolId: string): Promise<Protocol>;
   readyForApproval(protocolId: string): Promise<Protocol>;
   approveProtocol(protocolId: string): Promise<Protocol>;
+  returnToDraft(protocolId: string): Promise<Protocol>;
   signProtocol(protocolId: string, cmsSignatureBase64: string): Promise<Protocol>;
   replaceProtocol(protocolId: string, reason: string): Promise<Protocol>;
+  duplicateProtocol(protocolId: string): Promise<Protocol>;
   cancelProtocol(protocolId: string): Promise<Protocol>;
   previewProtocol(protocolId: string): Promise<Blob>;
   generateDocx(protocolId: string): Promise<Protocol>;
@@ -107,8 +109,10 @@ const protocolService: ProtocolService = {
   checkNormatives: async (protocolId) => (await implementation()).checkNormatives(protocolId),
   readyForApproval: async (protocolId) => (await implementation()).readyForApproval(protocolId),
   approveProtocol: async (protocolId) => (await implementation()).approveProtocol(protocolId),
+  returnToDraft: async (protocolId) => (await implementation()).returnToDraft(protocolId),
   signProtocol: async (protocolId, cmsSignatureBase64) => (await implementation()).signProtocol(protocolId, cmsSignatureBase64),
   replaceProtocol: async (protocolId, reason) => (await implementation()).replaceProtocol(protocolId, reason),
+  duplicateProtocol: async (protocolId) => (await implementation()).duplicateProtocol(protocolId),
   cancelProtocol: async (protocolId) => (await implementation()).cancelProtocol(protocolId),
   previewProtocol: async (protocolId) => (await implementation()).previewProtocol(protocolId),
   generateDocx: async (protocolId) => (await implementation()).generateDocx(protocolId),

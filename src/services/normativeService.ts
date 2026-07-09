@@ -8,6 +8,24 @@ type UnknownRecord = Record<string, unknown>;
 const stringValue = (value: unknown) => value === undefined || value === null ? '' : String(value);
 const asRecord = (value: unknown): UnknownRecord =>
   value && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : {};
+const safeJsonRecord = (value: unknown): UnknownRecord => {
+  if (!value) return {};
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return asRecord(parsed);
+    } catch {
+      return {};
+    }
+  }
+  return asRecord(value);
+};
+const jsonString = (value: unknown) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  const record = asRecord(value);
+  return Object.keys(record).length ? JSON.stringify(record) : '';
+};
 const firstString = (...values: unknown[]) => {
   for (const value of values) {
     const text = stringValue(value).trim();
@@ -19,6 +37,7 @@ const normalizeText = (value: unknown) => stringValue(value).trim().toLowerCase(
 const normalizeKey = (value: unknown) => normalizeText(value).replace(/[\s-]+/g, '_').toUpperCase();
 const normalizeNormative = (raw: unknown): NormativeRecord => {
   const source = asRecord(raw);
+  const conditions = safeJsonRecord(source.conditionJson ?? source.condition_json ?? source.conditionsJson ?? source.conditions);
   const pollutant = asRecord(source.pollutant || source.substance || source.indicatorReference);
   const code = firstString(source.code, source.pollutantCode, source.substanceCode, source.indicatorCode, source.referenceCode, pollutant.code, pollutant.pollutantCode);
   const normativeType = firstString(source.normativeType, source.type, source.limitType, source.category);
@@ -50,31 +69,31 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     sourceDocumentName: firstString(source.sourceDocumentName, source.source_document_name, source.documentName, source.document),
     documentNumber: firstString(source.documentNumber, source.document_number, source.orderNumber, source.orderNo),
     documentDate: firstString(source.documentDate, source.document_date, source.orderDate),
-    appendixNo: firstString(source.appendixNo, source.appendixNumber, source.appendix, source.attachmentNo),
-    appendix: firstString(source.appendix, source.appendixNo, source.appendixNumber, source.attachmentNo),
-    appNo: firstString(source.appNo, source.applicationNo, source.applicationNumber, source.appendixNo, source.appendixNumber, source.appendix, source.attachmentNo),
-    tableNo: firstString(source.tableNo, source.tableNumber, source.table),
-    tableNumber: firstString(source.tableNumber, source.tableNo, source.table),
-    tableTitle: firstString(source.tableTitle, source.tableName, source.title),
+    appendixNo: firstString(source.appendixNo, source.appendixNumber, source.appendix, source.attachmentNo, conditions.appendixNo, conditions.appendixNumber),
+    appendix: firstString(source.appendix, source.appendixNo, source.appendixNumber, source.attachmentNo, conditions.appendix, conditions.appendixNo),
+    appNo: firstString(source.appNo, source.applicationNo, source.applicationNumber, source.appendixNo, source.appendixNumber, source.appendix, source.attachmentNo, conditions.appNo, conditions.appendixNo),
+    tableNo: firstString(source.tableNo, source.tableNumber, source.table, conditions.tableNo, conditions.tableNumber),
+    tableNumber: firstString(source.tableNumber, source.tableNo, source.table, conditions.tableNumber, conditions.tableNo),
+    tableTitle: firstString(source.tableTitle, source.tableName, source.title, conditions.tableTitle, conditions.sectionName),
     categoryCode: firstString(source.categoryCode, source.category_code, source.category),
     category: firstString(source.category, source.categoryCode, source.group),
     categoryName: firstString(source.categoryName, source.categoryTitle, source.sectionName),
-    waterType: firstString(source.waterType, source.water_type),
-    waterUseCategory: firstString(source.waterUseCategory, source.water_use_category),
+    waterType: firstString(source.waterType, source.water_type, conditions.waterType),
+    waterUseCategory: firstString(source.waterUseCategory, source.water_use_category, conditions.waterUseCategory),
     matrixType: firstString(source.matrixType, source.matrix_type),
     assessmentCategory: firstString(source.assessmentCategory, source.assessment_category),
     pollutionDegree: firstString(source.pollutionDegree, source.pollution_degree),
     hazardLevel: firstString(source.hazardLevel, source.hazard_level, source.dangerLevel, source.assessmentCategory),
     pollutionLevel: firstString(source.pollutionLevel, source.pollution_level, source.pollutionDegree),
-    radioactiveIndicator: firstString(source.radioactiveIndicator, source.radioactive_indicator, source.radiologicalIndicator),
-    coliTiter: firstString(source.coliTiter, source.coli_titer),
-    anaerobeTiter: firstString(source.anaerobeTiter, source.anaerobe_titer, source.anaerobicTiter),
-    helminth: firstString(source.helminth, source.helminthEggs, source.helminth_eggs),
-    flyLarvae: firstString(source.flyLarvae, source.fly_larvae, source.flyPupae, source.fly_larvae_pupae),
-    sanitaryNumber: firstString(source.sanitaryNumber, source.sanitary_number),
-    ecologicalDisaster: firstString(source.ecologicalDisaster, source.ecological_disaster),
-    emergencySituation: firstString(source.emergencySituation, source.emergency_situation),
-    satisfactorySituation: firstString(source.satisfactorySituation, source.satisfactory_situation),
+    radioactiveIndicator: firstString(source.radioactiveIndicator, source.radioactive_indicator, source.radiologicalIndicator, conditions.radioactiveIndicator),
+    coliTiter: firstString(source.coliTiter, source.coli_titer, conditions.coliTiter),
+    anaerobeTiter: firstString(source.anaerobeTiter, source.anaerobe_titer, source.anaerobicTiter, conditions.anaerobeTiter),
+    helminth: firstString(source.helminth, source.helminthEggs, source.helminth_eggs, conditions.helminth),
+    flyLarvae: firstString(source.flyLarvae, source.fly_larvae, source.flyPupae, source.fly_larvae_pupae, conditions.flyLarvae),
+    sanitaryNumber: firstString(source.sanitaryNumber, source.sanitary_number, conditions.sanitaryNumber),
+    ecologicalDisaster: firstString(source.ecologicalDisaster, source.ecological_disaster, conditions.ecologicalDisaster),
+    emergencySituation: firstString(source.emergencySituation, source.emergency_situation, conditions.emergencySituation),
+    satisfactorySituation: firstString(source.satisfactorySituation, source.satisfactory_situation, conditions.satisfactorySituation),
     formType: firstString(source.formType, source.form_type, source.form, source.normativeSubType, source.normativeSubtype),
     factorType: firstString(source.factorType, source.factor_type, source.subtype, source.physicalFactorType),
     factorCode: firstString(source.factorCode, source.factor_code, source.indicatorCode, source.code),
@@ -86,7 +105,7 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     lightingType: firstString(source.lightingType, source.lighting_type),
     noiseType: firstString(source.noiseType, source.noise_type),
     visualWorkCategory: firstString(source.visualWorkCategory, source.visual_work_category),
-    conditionJson: firstString(source.conditionJson, source.condition_json, source.conditionsJson, source.conditions),
+    conditionJson: jsonString(source.conditionJson ?? source.condition_json ?? source.conditionsJson ?? source.conditions),
     summationGroup: firstString(source.summationGroup, source.summation_group, source.groupNo, source.groupNumber),
     name: firstString(source.name, source.nameRu, indicator),
     code,
@@ -98,16 +117,16 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     environmentType: firstString(source.environmentType, source.environment_type, source.mediumType, source.environmentCode),
     environment: firstString(source.environment, source.environmentType, source.environment_type, source.researchObject, source.medium, source.sampleType),
     indicator,
-    cas: firstString(source.cas, source.casNumber, pollutant.cas, pollutant.casNumber),
-    casNumber: firstString(source.casNumber, source.cas, pollutant.casNumber, pollutant.cas),
-    formula: firstString(source.formula, source.chemicalFormula, pollutant.formula, pollutant.chemicalFormula),
-    chemicalFormula: firstString(source.chemicalFormula, source.formula, pollutant.chemicalFormula, pollutant.formula),
-    unit: firstString(source.unit, source.measurementUnit, source.resultUnit),
+    cas: firstString(source.cas, source.casNumber, pollutant.cas, pollutant.casNumber, conditions.cas, conditions.casNumber),
+    casNumber: firstString(source.casNumber, source.cas, pollutant.casNumber, pollutant.cas, conditions.casNumber, conditions.cas),
+    formula: firstString(source.formula, source.chemicalFormula, pollutant.formula, pollutant.chemicalFormula, conditions.formula, conditions.chemicalFormula),
+    chemicalFormula: firstString(source.chemicalFormula, source.formula, pollutant.chemicalFormula, pollutant.formula, conditions.chemicalFormula, conditions.formula),
+    unit: firstString(source.unit, source.measurementUnit, source.resultUnit, conditions.unit, conditions.measurementUnit),
     normativeType,
     normativeSubType,
     subtype: firstString(source.subtype, source.subType, source.normativeSubType, source.normativeSubtype),
     value,
-    normativeValue: firstString(source.normativeValue, source.normative, source.value, source.pdk, source.obuv, source.limitValue),
+    normativeValue: firstString(source.normativeValue, source.normative, source.value, source.pdk, source.obuv, source.limitValue, conditions.normativeValue),
     pdk: firstString(source.pdk, source.pdkValue, normativeType === 'PDK' ? source.value ?? source.normative ?? source.normativeValue : undefined),
     limitValue: firstString(source.limitValue, source.limit, source.value, source.normativeValue),
     maxOneTimeValue,
@@ -122,9 +141,9 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     alternativeNormativeValue: firstString(source.alternativeNormativeValue, source.alternative_normative_value, source.altValue),
     comparisonType: stringValue(source.comparisonType || 'LESS_OR_EQUAL') as NormativeRecord['comparisonType'],
     normativeDocument: firstString(source.normativeDocument, source.document, source.documentName, source.standard),
-    hazardClass: firstString(source.hazardClass, source.dangerClass, source.hazard, source.hazardClassName),
-    limitingIndicator: firstString(source.limitingIndicator, source.limitingSign, source.lpv, source.limitingFactor),
-    limitingHazardIndicator: firstString(source.limitingHazardIndicator, source.limitingIndicator, source.limitingSign, source.lpv, source.limitingFactor),
+    hazardClass: firstString(source.hazardClass, source.dangerClass, source.hazard, source.hazardClassName, conditions.hazardClass),
+    limitingIndicator: firstString(source.limitingIndicator, source.limitingSign, source.lpv, source.limitingFactor, conditions.limitingIndicator),
+    limitingHazardIndicator: firstString(source.limitingHazardIndicator, source.limitingIndicator, source.limitingSign, source.lpv, source.limitingFactor, conditions.limitingHazardIndicator, conditions.limitingIndicator),
     aggregateState: firstString(source.aggregateState, source.aggregationState, source.physicalState, source.state),
     actionFeatures: firstString(source.actionFeatures, source.featuresOfAction, source.actionSpecifics, source.specialAction, source.effectFeatures),
     source: firstString(source.source, source.sourceName, source.dataSource, source.normativeDocument, source.document, source.documentName),
@@ -179,6 +198,7 @@ export interface NormativeRecordsParams {
   categoryCode?: string;
   waterType?: string;
   normativeType?: string;
+  normativeSubType?: string;
   status?: string;
   formType?: string;
   subtype?: string;
@@ -274,15 +294,18 @@ export function normalizeNormativePageResponse(response: unknown, page = DEFAULT
     'x-total-elements',
     'x-total-records',
   ]);
+  const responsePage = firstNumber(candidates, ['number', 'page', 'currentPage', 'pageNumber', 'pageIndex']) ?? safePage;
+  const responseSizeValue = firstNumber(candidates, ['size', 'pageSize', 'limit', 'perPage']);
+  const responseSize = responseSizeValue && responseSizeValue > 0 ? responseSizeValue : safeSize;
   const responseTotalPages = firstNumber(candidates, ['totalPages', 'pages', 'pageCount', 'total_pages', 'x-total-pages']);
   const totalElements = explicitTotal ?? items.length;
-  const totalPages = responseTotalPages ?? Math.max(1, Math.ceil(totalElements / safeSize));
+  const totalPages = responseTotalPages ?? Math.max(1, Math.ceil(totalElements / responseSize));
   return {
     items,
     totalElements,
     totalPages,
-    page: firstNumber(candidates, ['number', 'page', 'currentPage', 'pageNumber', 'pageIndex']) ?? safePage,
-    size: firstNumber(candidates, ['size', 'pageSize', 'limit', 'perPage']) ?? safeSize,
+    page: responsePage,
+    size: responseSize,
   };
 }
 
@@ -353,6 +376,9 @@ export type NormativeImportPreview = {
   importId?: string;
   importBatchId?: string;
   fileName?: string;
+  totalFiles?: number;
+  files?: Array<Record<string, unknown>>;
+  warnings?: Array<{ row?: number; message: string }>;
 };
 
 export type NormativeResourceImportResult = {
@@ -397,11 +423,17 @@ const postNormativeImport = async (file: File, preview: boolean, importId?: stri
   const formData = new FormData();
   formData.append('file', file);
   const endpoint = preview ? '/normatives/import/preview' : '/normatives/import/confirm';
-  if (!preview && importId) formData.append('importId', String(importId));
   try {
+    if (!preview) {
+      return await api.post<ApiResponse<unknown> | unknown>(endpoint, {
+        importBatchId: importId,
+        importId,
+      });
+    }
     return await api.post<ApiResponse<unknown> | unknown>(endpoint, formData);
   } catch (error) {
     if (!isImportFallbackStatus(error)) throw error;
+    if (!preview && importId) formData.append('importId', String(importId));
     return postLegacyNormativeImport(file, preview);
   }
 };
@@ -428,13 +460,23 @@ const normalizeImportErrors = (...values: unknown[]): Array<{ row?: number; mess
   }).filter((item) => item.message);
 };
 
+const extractImportPreviewItems = (response: unknown): NormativeRecord[] => {
+  const item = unwrapImportData(response);
+  const source = [item.items, item.rows, item.previewRows, item.records, item.normatives, item.content].find(Array.isArray);
+  if (Array.isArray(source)) return source.map(normalizeNormative);
+  return extractNormativeRecords(response);
+};
+
 export function normalizeImportPreviewResponse(response: unknown, fileName?: string): NormativeImportPreview {
   const item = unwrapImportData(response);
-  const items = extractNormativeRecords(response);
+  const items = extractImportPreviewItems(response);
   const errors = normalizeImportErrors(item.errors, item.warnings, item.validationErrors);
+  const warnings = normalizeImportErrors(item.warnings);
+  const files = Array.isArray(item.files) ? item.files.map(asRecord) : [];
   const totalRecords = Number(item.totalRecords ?? item.recordsTotal ?? item.totalRows ?? item.total ?? item.rowsTotal ?? item.totalCount ?? items.length);
   const validRows = Number(item.validRows ?? item.valid ?? item.validCount ?? item.totalRecords ?? item.totalRows ?? items.length);
-  const errorRows = Number(item.errorRows ?? item.invalid ?? item.invalidRows ?? item.errorsCount ?? errors.length);
+  const errorRows = Number(item.errorRows ?? item.invalidRows ?? item.invalid ?? item.invalidCount ?? item.errorsCount ?? errors.length);
+  const totalFiles = Number(item.totalFiles ?? files.length ?? 0);
   const importId = firstString(item.importId, item.importBatchId, item.id, item.previewId, item.batchId);
 
   return {
@@ -448,6 +490,9 @@ export function normalizeImportPreviewResponse(response: unknown, fileName?: str
     importId: importId || undefined,
     importBatchId: firstString(item.importBatchId, item.batchId, importId) || undefined,
     fileName: firstString(item.fileName, item.sourceFile, fileName) || undefined,
+    totalFiles: Number.isFinite(totalFiles) ? totalFiles : 0,
+    files,
+    warnings,
   };
 }
 
@@ -479,3 +524,14 @@ export async function confirmDsm138Import(importBatchId?: string, files?: File[]
 export async function rollbackDsm138Import(importBatchId: string): Promise<void> {
   await api.post(`/normatives/import/dsm-138/rollback/${encodeURIComponent(importBatchId)}`);
 }
+
+export const normativeService = {
+  getRecords: getNormativeRecords,
+  updateRecord: updateNormative,
+  archiveRecord: archiveNormative,
+  previewImport: (formData: FormData) => api.post<ApiResponse<unknown> | unknown>('/normatives/import/preview', formData),
+  confirmImport: (payload: { importBatchId?: string; importId?: string }) => api.post<ApiResponse<unknown> | unknown>('/normatives/import/confirm', payload),
+  previewDsm138Import,
+  confirmDsm138Import,
+  rollbackDsm138Import,
+};

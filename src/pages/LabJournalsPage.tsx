@@ -1,10 +1,12 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Download, Edit3, FileDown, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
+import { getApiStatus } from '../services/apiHelpers';
 import { getLaboratories } from '../services/laboratorySettingsService';
 import {
   createEntry,
@@ -297,7 +299,6 @@ const LabJournalsPage = () => {
   const [page, setPage] = useState(0);
   const [entriesPage, setEntriesPage] = useState<LabJournalPage>(emptyPage);
   const [loading, setLoading] = useState(false);
-  const [typesLoading, setTypesLoading] = useState(true);
   const [laboratoriesLoading, setLaboratoriesLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -306,6 +307,16 @@ const LabJournalsPage = () => {
   const [editing, setEditing] = useState<LabJournalEntry | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LabJournalEntry | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const {
+    data: backendTypes,
+    error: typesError,
+    isError: typesFailed,
+    isLoading: typesLoading,
+  } = useQuery({
+    queryKey: ['lab-journal-types'],
+    queryFn: ({ signal }) => getJournalTypes(signal),
+    retry: false,
+  });
 
   const selectedDefinition = useMemo(
     () => types.find((item) => item.code === selectedJournalType),
@@ -331,15 +342,18 @@ const LabJournalsPage = () => {
   }, [searchDraft]);
 
   useEffect(() => {
-    setTypesLoading(true);
-    getJournalTypes()
-      .then((items) => setTypes(items.length ? items : JOURNAL_TYPES))
-      .catch((loadError) => {
-        toast.warning('Не удалось загрузить типы журналов', loadError instanceof Error ? loadError.message : undefined);
-        setTypes(JOURNAL_TYPES);
-      })
-      .finally(() => setTypesLoading(false));
-  }, [toast]);
+    if (backendTypes) setTypes(backendTypes.length ? backendTypes : JOURNAL_TYPES);
+  }, [backendTypes]);
+
+  useEffect(() => {
+    if (!typesFailed) return;
+    const status = getApiStatus(typesError);
+    const message = status === 404
+      ? 'Endpoint /api/lab-journals/types пока недоступен, используем fallback types.'
+      : typesError instanceof Error ? typesError.message : undefined;
+    toast.warning('Не удалось загрузить типы журналов', message);
+    setTypes(JOURNAL_TYPES);
+  }, [typesFailed, typesError, toast]);
 
   useEffect(() => {
     if (!canFilterLaboratory) return;

@@ -5,35 +5,6 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : '/api',
 });
 
-const sanitizeHeaders = (headers: unknown) => {
-  if (!headers || typeof headers !== 'object') return headers;
-  const copy = { ...(headers as Record<string, unknown>) };
-  delete copy.Authorization;
-  delete copy.authorization;
-  return copy;
-};
-
-const logRequest = (config: { url?: string; method?: string; data?: unknown; params?: unknown; headers?: unknown }) => {
-  if (!import.meta.env.DEV) return;
-  console.debug('[API request]', {
-    url: `${config.url || ''}`,
-    method: String(config.method || 'GET').toUpperCase(),
-    params: config.params,
-    payload: config.data instanceof FormData ? '[FormData]' : config.data,
-    headers: sanitizeHeaders(config.headers),
-  });
-};
-
-const logResponse = (response: { config?: { url?: string; method?: string }; status?: number; data?: unknown }) => {
-  if (!import.meta.env.DEV) return;
-  console.debug('[API response]', {
-    url: response.config?.url,
-    method: String(response.config?.method || 'GET').toUpperCase(),
-    status: response.status,
-    body: response.data instanceof Blob ? `[Blob ${response.data.size} bytes]` : response.data,
-  });
-};
-
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('eco-progress-token');
   const requestPath = String(config.url || '').replace(/^\/api/, '').split('?')[0];
@@ -51,15 +22,11 @@ api.interceptors.request.use((config) => {
   if (token && !isPublicAuthRequest) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  logRequest(config);
   return config;
 });
 
 api.interceptors.response.use(
-  (response) => {
-    logResponse(response);
-    return response;
-  },
+  (response) => response,
   (error) => {
     if (axios.isCancel(error) || error?.code === 'ERR_CANCELED') {
       return Promise.reject(error);
@@ -71,6 +38,7 @@ api.interceptors.response.use(
         baseURL: error.config?.baseURL,
         method: String(error.config?.method || 'GET').toUpperCase(),
         params: error.config?.params,
+        data: error.config?.data instanceof FormData ? '[FormData]' : error.config?.data,
         status: error.response?.status,
         body: error.response?.data instanceof Blob ? `[Blob ${error.response.data.size} bytes]` : error.response?.data,
         message: error.message,

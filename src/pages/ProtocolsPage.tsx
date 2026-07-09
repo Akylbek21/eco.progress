@@ -11,7 +11,7 @@ import { physicalFactorTypes, protocolTemplates, templateName } from '../data/pr
 import { useToast } from '../hooks/useToast';
 import type { Protocol, ProtocolStatus, ProtocolTemplate } from '../types/protocols';
 
-const statuses: ProtocolStatus[] = ['DRAFT', 'CALCULATED', 'READY', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED', 'ARCHIVED', 'CANCELLED', 'REPLACED'];
+const statuses: ProtocolStatus[] = ['DRAFT', 'NEEDS_REVISION', 'RETURNED', 'CORRECTION', 'CALCULATED', 'READY', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED', 'ARCHIVED', 'CANCELLED', 'REPLACED'];
 
 const saveBlob = (blob: Blob, name: string) => {
   const url = URL.createObjectURL(blob);
@@ -32,50 +32,82 @@ const ProtocolsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [status, setStatus] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [subtype, setSubtype] = useState('');
   const [compliance, setCompliance] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewProtocolId, setPreviewProtocolId] = useState('');
+  const [previewProtocol, setPreviewProtocol] = useState<Protocol | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
 
   const load = async () => {
     setLoading(true);
     setError('');
     try {
-      const items = await protocolService.getProtocols();
+      const params: Record<string, string> = {};
+      if (debouncedQuery.trim()) params.search = debouncedQuery.trim();
+      if (status) params.status = status;
+      if (templateId) {
+        params.templateId = templateId;
+        params.protocolType = templateId;
+      }
+      if (subtype) params.subtype = subtype;
+      if (compliance) params.compliance = compliance;
+      params.page = '0';
+      params.size = '100';
+      const items = await protocolService.getProtocols(params);
       setProtocols(items);
-      setTemplates(protocolTemplates);
+      protocolService.getProtocolTemplates()
+        .then((templateItems) => setTemplates(templateItems.length ? templateItems : protocolTemplates))
+        .catch(() => setTemplates(protocolTemplates));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить протоколы');
     } finally {
       setLoading(false);
     }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 500);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+  useEffect(() => { load(); }, [debouncedQuery, status, templateId, subtype, compliance]);
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
 
   const filtered = useMemo(() => protocols.filter((protocol) => {
-    const needle = query.trim().toLowerCase();
+    const needle = debouncedQuery.trim().toLowerCase();
     const haystack = `${protocol.protocolNumber} ${protocol.companySnapshot.companyName} ${protocol.companySnapshot.bin || ''} ${protocol.companySnapshot.objectName || ''}`.toLowerCase();
     return (!needle || haystack.includes(needle))
       && (!status || protocol.status === status)
       && (!templateId || protocol.templateId === templateId)
       && (!subtype || protocol.subtype === subtype)
       && (!compliance || protocol.complianceResult === compliance);
-  }), [protocols, query, status, templateId, subtype, compliance]);
+  }), [protocols, debouncedQuery, status, templateId, subtype, compliance]);
 
   const preview = async (protocol: Protocol) => {
-    setPreviewProtocolId(protocol.id);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl('');
+    setPreviewProtocol(protocol);
     setPreviewOpen(true);
     setPreviewLoading(true);
     try {
-      await protocolService.previewProtocol(protocol.id);
+      const blob = await protocolService.previewProtocol(protocol.id);
+      setPreviewUrl(URL.createObjectURL(blob));
     } catch (previewError) {
       toast.error('Не удалось открыть предпросмотр', previewError instanceof Error ? previewError.message : undefined);
     } finally {
       setPreviewLoading(false);
     }
+  };
+
+  const closePreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl('');
+    setPreviewProtocol(null);
+    setPreviewOpen(false);
   };
 
   const remove = async (protocol: Protocol) => {
@@ -91,24 +123,7 @@ const ProtocolsPage = () => {
 
   const copy = async (protocol: Protocol) => {
     try {
-      const duplicate = await protocolService.createProtocol({
-        companyId: protocol.companyId || '',
-        objectId: protocol.objectId || '',
-        templateId: protocol.templateId,
-        subtype: protocol.subtype,
-        protocolDate: protocol.protocolDate,
-        sampleDate: protocol.testing.samplingDate || protocol.measurementDate,
-        samplingDate: protocol.testing.samplingDate,
-        testingStartDate: protocol.testing.testingStartDate,
-        testingEndDate: protocol.testing.testingEndDate,
-        productName: protocol.organization.productName,
-        testingBasis: protocol.organization.testingBasis,
-        productNormativeDocument: protocol.testing.productNormativeDocument,
-        samplingMethodDocument: protocol.testing.samplingMethodDocument,
-        testingMethodDocument: protocol.testing.testingMethodDocument,
-        purpose: protocol.testing.testingPurpose,
-        environment: protocol.environment,
-      });
+      const duplicate = await protocolService.duplicateProtocol(protocol.id);
       toast.success('Создана копия протокола');
       navigate(`/staff/protocols/${duplicate.id}`);
     } catch (copyError) {
@@ -163,7 +178,7 @@ const ProtocolsPage = () => {
 
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{error}</div>}
       <ProtocolList protocols={filtered} loading={loading} onOpen={(protocol) => navigate(`/staff/protocols/${protocol.id}`)} onPreview={preview} onCopy={copy} onDelete={remove} onReplace={replace} onDownloadPdf={(protocol) => download(protocol, 'pdf')} onDownloadDocx={(protocol) => download(protocol, 'docx')} />
-      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} protocol={protocols.find((item) => item.id === previewProtocolId) || null} draft={false} onClose={() => setPreviewOpen(false)} />
+      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} protocol={previewProtocol} draft={false} onClose={closePreview} />
     </div>
   );
 };

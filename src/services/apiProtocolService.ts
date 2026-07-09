@@ -450,6 +450,23 @@ const normalizeRawMeasurements = (raw: unknown, fallbackProtocolId = '', fallbac
   };
 };
 
+const normalizeProtocolsResponse = (response: unknown): Protocol[] => {
+  const data = unwrapData(response);
+  const source = asRecord(data);
+  const items = Array.isArray(data)
+    ? data
+    : Array.isArray(source.items)
+      ? source.items
+      : Array.isArray(source.records)
+        ? source.records
+        : Array.isArray(source.protocols)
+          ? source.protocols
+          : Array.isArray(source.content)
+            ? source.content
+            : [];
+  return items.map(normalizeProtocol);
+};
+
 const normalizeCalculationResult = (raw: unknown, fallbackProtocolId = '', fallbackResultId = ''): CalculationResultResponse => {
   const payload = unwrapData(raw);
   const source = asRecord(payload);
@@ -896,7 +913,7 @@ const requireResult = (input: unknown): ProtocolResultRow => {
 
 export async function getProtocols(params?: Record<string, string>): Promise<Protocol[]> {
   const response = await api.get<ApiResponse<unknown> | unknown>('/protocols', { params });
-  return extractList(response, ['protocols']).map(normalizeProtocol);
+  return normalizeProtocolsResponse(response);
 }
 
 export async function getProtocolTemplates(): Promise<ProtocolTemplate[]> {
@@ -1066,18 +1083,89 @@ export async function signProtocol(protocolId: string, cmsSignatureBase64: strin
   return protocolFromActionResponse(protocolId, response);
 }
 
+const duplicateProtocolFallback = async (protocolId: string): Promise<Protocol> => {
+  const source = await getProtocol(protocolId);
+  const created = await createProtocol({
+    companyId: source.companyId || '',
+    objectId: source.objectId || '',
+    templateId: source.templateId,
+    subtype: source.subtype,
+    protocolDate: source.protocolDate,
+    sampleDate: source.testing.samplingDate || source.measurementDate,
+    samplingDate: source.testing.samplingDate,
+    testingStartDate: source.testing.testingStartDate,
+    testingEndDate: source.testing.testingEndDate,
+    measurementDate: source.measurementDate,
+    measurementTime: source.measurementTime,
+    measurementPlace: source.measurementPlace,
+    productName: source.organization.productName,
+    testingBasis: source.organization.testingBasis,
+    productNormativeDocument: source.testing.productNormativeDocument,
+    samplingMethodDocument: source.testing.samplingMethodDocument,
+    testingMethodDocument: source.testing.testingMethodDocument,
+    purpose: source.testing.testingPurpose,
+    environment: source.environment,
+  });
+
+  await Promise.all((source.measurementDevices || []).map(async (device) => {
+    if (!device.deviceId) return;
+    try {
+      await api.post<ApiResponse<unknown> | unknown>(`/protocols/${created.id}/measurement-devices`, { deviceId: device.deviceId });
+    } catch {
+      // Device copying is best-effort when backend has no duplicate endpoint.
+    }
+  }));
+
+  const copiedResults: Array<{ source: ProtocolResultRow; target: ProtocolResultRow }> = [];
+  for (const row of source.results || []) {
+    const rowValues = asRecord(row.values);
+    const saved = await addProtocolResult(created.id, {
+      measurementDeviceId: row.measurementDeviceId || asString(rowValues.measurementDeviceId),
+      normativeId: row.normativeReference?.id || asString(rowValues.normativeId),
+      values: {
+        ...row.values,
+        copiedFromResultId: row.id,
+      },
+    });
+    copiedResults.push({ source: row, target: saved });
+  }
+
+  for (const pair of copiedResults) {
+    try {
+      const raw = await getRawMeasurements(protocolId, pair.source.id);
+      if (raw.measurements.length) {
+        await saveRawMeasurements(created.id, pair.target.id, raw.measurements, raw.methodTemplate?.id);
+      }
+    } catch {
+      // Raw measurements are copied only when backend exposes them for the source row.
+    }
+  }
+
+  return getProtocol(created.id);
+};
+
+export async function duplicateProtocol(protocolId: string): Promise<Protocol> {
+  for (const endpoint of [`/protocols/${protocolId}/duplicate`, `/protocols/${protocolId}/copy`]) {
+    try {
+      const response = await api.post<ApiResponse<unknown> | unknown>(endpoint);
+      return requireProtocol(unwrapData(response), 'создание копии');
+    } catch (error) {
+      if (![404, 405].includes(getApiStatus(error) || 0)) throw error;
+    }
+  }
+  return duplicateProtocolFallback(protocolId);
+}
+
 export async function replaceProtocol(protocolId: string, reason: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown>>(
-    `/protocols/${protocolId}/replace`,
-    { reason }
-  );
-
-  const result = response.data?.data ?? response.data;
-
-  return requireProtocol(
-    result,
-    'создание исправленной версии'
-  );
+  for (const endpoint of [`/protocols/${protocolId}/correction`, `/protocols/${protocolId}/replace`]) {
+    try {
+      const response = await api.post<ApiResponse<unknown> | unknown>(endpoint, { reason });
+      return requireProtocol(unwrapData(response), 'создание исправленной версии');
+    } catch (error) {
+      if (![404, 405].includes(getApiStatus(error) || 0)) throw error;
+    }
+  }
+  throw new Error('Backend не поддерживает создание исправленной версии протокола.');
 }
 
 export async function cancelProtocol(protocolId: string): Promise<Protocol> {
@@ -1186,13 +1274,14 @@ const canRunNormativeSearch = (value: string) => value.trim().length >= MIN_NORM
 
 export async function searchNormative(params: Record<string, string>): Promise<NormativeSearchResult> {
   const { testingDate, ...rest } = params;
-  const query = params.query || [params.code || params.pollutantCode, params.indicator].filter(Boolean).join(' ').trim();
+  const hasTextSearch = Boolean(params.query || params.q || params.search || params.indicator);
+  const query = params.query || params.search || params.q || [params.code || params.pollutantCode, params.indicator].filter(Boolean).join(' ').trim();
   if (!canRunNormativeSearch(query)) return { found: false, normatives: [], items: [] };
   const requestParams = {
     ...rest,
-    search: params.search || query,
-    query,
-    q: params.q || query,
+    search: hasTextSearch ? params.search || query : undefined,
+    query: hasTextSearch ? query : undefined,
+    q: hasTextSearch ? params.q || query : undefined,
     limit: params.limit || undefined,
     code: params.code || params.pollutantCode || undefined,
     pollutantCode: params.pollutantCode || params.code || undefined,

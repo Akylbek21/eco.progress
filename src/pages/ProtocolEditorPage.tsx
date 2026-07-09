@@ -182,8 +182,75 @@ const stepStatusClasses: Record<StepStatus, string> = {
 
 type MissingField = { label: string; stepKey: ProtocolStepKey };
 
-const editableProtocolStatuses = new Set<Protocol['status']>(['DRAFT', 'CALCULATED', 'READY', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED']);
-const isEditableProtocol = (protocol?: Protocol | null) => Boolean(protocol && editableProtocolStatuses.has(protocol.status));
+const EDITABLE_STATUSES = new Set<string>(['DRAFT', 'NEEDS_REVISION', 'RETURNED', 'CORRECTION']);
+const READONLY_STATUSES = new Set<string>(['READY_FOR_APPROVAL', 'APPROVED', 'SIGNED', 'ARCHIVED', 'CANCELLED', 'REPLACED']);
+const isProtocolEditable = (status?: string) => EDITABLE_STATUSES.has(String(status || '').toUpperCase());
+const isProtocolReadonly = (status?: string) => READONLY_STATUSES.has(String(status || '').toUpperCase()) || !isProtocolEditable(status);
+const isEditableProtocol = (protocol?: Protocol | null) => Boolean(protocol && isProtocolEditable(protocol.status));
+
+type ProtocolActionState = {
+  canSave: boolean;
+  canCalculate: boolean;
+  canSendToApproval: boolean;
+  canApprove: boolean;
+  canReturn: boolean;
+  canSign: boolean;
+  canDownload: boolean;
+  canCreateCorrection: boolean;
+};
+
+const emptyProtocolActions: ProtocolActionState = {
+  canSave: false,
+  canCalculate: false,
+  canSendToApproval: false,
+  canApprove: false,
+  canReturn: false,
+  canSign: false,
+  canDownload: false,
+  canCreateCorrection: false,
+};
+
+const getProtocolActions = (protocol: Protocol | null | undefined, canApproveRole: boolean): ProtocolActionState => {
+  const status = String(protocol?.status || '').toUpperCase();
+  if (EDITABLE_STATUSES.has(status)) {
+    return {
+      ...emptyProtocolActions,
+      canSave: true,
+      canCalculate: true,
+      canSendToApproval: true,
+    };
+  }
+  if (status === 'READY_FOR_APPROVAL') {
+    return {
+      ...emptyProtocolActions,
+      canApprove: canApproveRole,
+      canReturn: canApproveRole,
+      canDownload: true,
+    };
+  }
+  if (status === 'APPROVED') {
+    return {
+      ...emptyProtocolActions,
+      canSign: true,
+      canDownload: true,
+      canCreateCorrection: true,
+    };
+  }
+  if (status === 'SIGNED') {
+    return {
+      ...emptyProtocolActions,
+      canDownload: true,
+      canCreateCorrection: true,
+    };
+  }
+  if (status === 'ARCHIVED' || status === 'REPLACED') {
+    return {
+      ...emptyProtocolActions,
+      canDownload: true,
+    };
+  }
+  return emptyProtocolActions;
+};
 const userProtocolError = (error: unknown) => {
   const message = error instanceof Error ? error.message : '';
   const normalized = message.toLowerCase();
@@ -495,7 +562,7 @@ const ProtocolStepFooter = ({
   activeStep,
   busy,
   readOnly,
-  canApprove,
+  actions,
   saveStatus,
   missingFields,
   onPrevious,
@@ -505,6 +572,7 @@ const ProtocolStepFooter = ({
   onPreview,
   onReady,
   onApprove,
+  onReturn,
   onGenerateDocx,
   onGeneratePdf,
   onSign,
@@ -517,7 +585,7 @@ const ProtocolStepFooter = ({
   activeStep: ProtocolStepKey;
   busy: boolean;
   readOnly: boolean;
-  canApprove: boolean;
+  actions: ProtocolActionState;
   saveStatus: SaveStatus;
   missingFields: MissingField[];
   onPrevious: () => void;
@@ -527,6 +595,7 @@ const ProtocolStepFooter = ({
   onPreview: () => void | Promise<void>;
   onReady: () => void | Promise<void>;
   onApprove: () => void | Promise<void>;
+  onReturn: () => void | Promise<void>;
   onGenerateDocx: () => void | Promise<void>;
   onGeneratePdf: () => void | Promise<void>;
   onSign: () => void;
@@ -548,41 +617,45 @@ const ProtocolStepFooter = ({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className={`text-sm font-semibold ${saveStatus === 'error' ? 'text-rose-700' : saveStatus === 'dirty' ? 'text-amber-700' : 'text-slate-500'}`}>{saveText}</div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {isEditableProtocol(protocol) && (
+          {actions.canSave && (
             <>
               {activeIndex > 0 && <Button type="button" variant="secondary" disabled={busy} onClick={onPrevious}><ChevronLeft className="h-4 w-4" /> Назад</Button>}
               {activeStep !== 'review' && <Button type="button" variant="secondary" disabled={busy || readOnly} onClick={onSave}><Save className="h-4 w-4" /> Сохранить</Button>}
-              {activeStep === 'results' && <Button type="button" variant="secondary" disabled={busy} onClick={onCalculate}><SearchCheck className="h-4 w-4" /> Рассчитать и проверить</Button>}
+              {activeStep === 'results' && actions.canCalculate && <Button type="button" variant="secondary" disabled={busy || readOnly} onClick={onCalculate}><SearchCheck className="h-4 w-4" /> Рассчитать и проверить</Button>}
               {activeStep !== 'review' && <Button type="button" variant={activeStep === 'results' ? 'secondary' : 'primary'} disabled={busy} onClick={onNext}>Далее <ArrowRight className="h-4 w-4" /></Button>}
               {activeStep === 'review' && (
                 <>
                   <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
                   <Button type="button" variant="secondary" disabled={busy} onClick={onGenerateDocx}><FileCheck2 className="h-4 w-4" /> Сформировать документ</Button>
-                  <Button type="button" disabled={busy || missingFields.length > 0} onClick={onReady}><CheckCircle2 className="h-4 w-4" /> Готово</Button>
+                  {actions.canSendToApproval && <Button type="button" disabled={busy || missingFields.length > 0} onClick={onReady}><CheckCircle2 className="h-4 w-4" /> Готово</Button>}
                 </>
               )}
             </>
           )}
-          {!isEditableProtocol(protocol) && protocol.status === 'READY_FOR_APPROVAL' && (
+          {String(protocol.status).toUpperCase() === 'READY_FOR_APPROVAL' && (
             <>
               <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
-              {canApprove && <Button type="button" disabled={busy} onClick={onApprove}><CheckCircle2 className="h-4 w-4" /> Утвердить</Button>}
+              {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadDocx}>DOCX</Button>}
+              {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadPdf}>PDF</Button>}
+              {actions.canReturn && <Button type="button" variant="secondary" disabled={busy} onClick={onReturn}>Вернуть</Button>}
+              {actions.canApprove && <Button type="button" disabled={busy} onClick={onApprove}><CheckCircle2 className="h-4 w-4" /> Утвердить</Button>}
             </>
           )}
-          {!isEditableProtocol(protocol) && protocol.status === 'APPROVED' && (
+          {String(protocol.status).toUpperCase() === 'APPROVED' && (
             <>
               <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
-              <Button type="button" variant="secondary" disabled={busy} onClick={onGenerateDocx}>DOCX</Button>
-              <Button type="button" variant="secondary" disabled={busy} onClick={onGeneratePdf}>PDF</Button>
-              <Button type="button" disabled={busy} onClick={onSign}>Подписать</Button>
+              {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadDocx}>DOCX</Button>}
+              {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadPdf}>PDF</Button>}
+              {actions.canCreateCorrection && <Button type="button" variant="secondary" disabled={busy} onClick={onReplace}>Создать исправленную версию</Button>}
+              {actions.canSign && <Button type="button" disabled={busy} onClick={onSign}>Подписать</Button>}
             </>
           )}
-          {!isEditableProtocol(protocol) && protocol.status === 'SIGNED' && (
+          {String(protocol.status).toUpperCase() === 'SIGNED' && (
             <>
               <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
-              <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadDocx}>Скачать DOCX</Button>
-              <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadPdf}>Скачать PDF</Button>
-              <Button type="button" disabled={busy} onClick={onReplace}>Создать исправленную версию</Button>
+              {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadDocx}>Скачать DOCX</Button>}
+              {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadPdf}>Скачать PDF</Button>}
+              {actions.canCreateCorrection && <Button type="button" disabled={busy} onClick={onReplace}>Создать исправленную версию</Button>}
             </>
           )}
           {protocol.status === 'REPLACED' && (
@@ -625,9 +698,10 @@ const ProtocolEditorPage = () => {
   const autoPreviewRef = useRef(false);
   const draftUnlockRef = useRef('');
 
-  const readOnly = useMemo(() => !isEditableProtocol(protocol), [protocol]);
+  const readOnly = useMemo(() => isProtocolReadonly(protocol?.status), [protocol?.status]);
   const dirty = useMemo(() => Boolean(protocol && savedSignatureRef.current && editableSignature(protocol) !== savedSignatureRef.current), [protocol]);
   const canApprove = useProtocolMocks || user?.role === 'ADMIN' || user?.role === 'DIRECTOR' || user?.role === 'HEAD';
+  const protocolActions = useMemo(() => getProtocolActions(protocol, canApprove), [protocol?.status, canApprove]);
   const applyServerProtocol = (item: Protocol) => {
     const normalized = {
       ...item,
@@ -1277,7 +1351,7 @@ const ProtocolEditorPage = () => {
         activeStep={activeStep}
         busy={busy}
         readOnly={readOnly}
-        canApprove={canApprove}
+        actions={protocolActions}
         saveStatus={saveStatus}
         missingFields={missingFields}
         onPrevious={goPreviousStep}
@@ -1293,6 +1367,7 @@ const ProtocolEditorPage = () => {
           return run(() => protocolService.readyForApproval(protocol.id), 'Данные сохранены');
         }}
         onApprove={() => run(() => protocolService.approveProtocol(protocol.id), 'Протокол готов')}
+        onReturn={() => run(() => protocolService.returnToDraft(protocol.id), 'Протокол возвращён на доработку')}
         onGenerateDocx={generateDocuments}
         onGeneratePdf={generateDocuments}
         onSign={() => setSignOpen(true)}

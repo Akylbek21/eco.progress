@@ -12,6 +12,9 @@ export const protocolTemplates: ProtocolTemplate[] = [
   { id: 'noise_vibration', name: 'Шум / вибрация', description: 'Физические факторы' },
   { id: 'uv_emf_laser', name: 'УФ / ЭМП / Лазер', description: 'Физические факторы' },
   { id: 'soil', name: 'Почва', description: 'Протокол исследования почвы' },
+  { id: 'food_products', name: 'Пищевые продукты', description: 'ДСМ-70' },
+  { id: 'surfaces', name: 'Поверхности', description: 'ДСМ-70' },
+  { id: 'udmh_special', name: 'Компоненты ракетного топлива', description: 'ДСМ-70' },
 ];
 
 export const physicalFactorTypes: Array<{ value: ProtocolSubtype; label: string }> = [
@@ -166,6 +169,9 @@ const templateDisplayNames: Record<string, string> = {
   lighting: 'Освещённость',
   noise_vibration: 'Шум / вибрация',
   uv_emf_laser: 'УФ / ЭМП / Лазер',
+  food_products: 'Пищевые продукты',
+  surfaces: 'Поверхности',
+  udmh_special: 'Компоненты ракетного топлива',
 };
 
 export const protocolResultColumns: Record<string, ProtocolResultColumn[]> = {
@@ -174,6 +180,9 @@ export const protocolResultColumns: Record<string, ProtocolResultColumn[]> = {
   water_wastewater: water,
   ambient_air: ambientAir,
   soil,
+  food_products: soil,
+  surfaces: soil,
+  udmh_special: ambientAir,
   physical_factors: microclimate,
   microclimate,
   lighting,

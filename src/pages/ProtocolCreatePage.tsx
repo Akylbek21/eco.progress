@@ -711,8 +711,6 @@ const ProtocolCreatePage = () => {
       conditions: baseConditionValues(),
       measurements,
     };
-    console.log('quick-create payload', quickPayload);
-
     setLoading(true);
     try {
       const protocol = await protocolService.quickCreateProtocol(quickPayload);

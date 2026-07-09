@@ -146,6 +146,7 @@ export type LabJournalQuery = {
 export type SaveLabJournalEntryPayload = {
   journalType: JournalType;
   entryDate?: string;
+  preparationDate?: string;
   data: LabJournalEntryData;
   laboratoryId?: string | number;
 };

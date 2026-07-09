@@ -10,7 +10,11 @@ export type ProtocolTypeKey =
   | 'microclimate'
   | 'lighting'
   | 'noise_vibration'
-  | 'uv_emf_laser';
+  | 'uv_emf_laser'
+  | 'food_products'
+  | 'surfaces'
+  | 'udmh_special'
+  | 'rocket_fuel';
 
 export type ProtocolTypeConfig = {
   title: string;
@@ -20,7 +24,16 @@ export type ProtocolTypeConfig = {
   defaultUnit: string | null;
   normativeTemplateId: ProtocolTemplateId;
   environmentType?: string;
+  category?: string;
   resultMode: ProtocolResultMode;
+};
+
+export type NormativeSearchContext = {
+  sourceDocumentCode?: string;
+  templateId?: ProtocolTemplateId;
+  normativeTemplateId?: ProtocolTemplateId;
+  category?: string;
+  factorType?: ProtocolSubtype | string;
 };
 
 export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> = {
@@ -67,7 +80,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
     sourceDocumentCode: 'DSM_15',
     docxTemplateCode: 'protocol_microclimate',
     defaultUnit: null,
-    normativeTemplateId: 'physical_factors',
+    normativeTemplateId: 'microclimate',
     resultMode: 'PHYSICAL',
   },
   lighting: {
@@ -76,7 +89,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
     sourceDocumentCode: 'DSM_15',
     docxTemplateCode: 'protocol_lighting',
     defaultUnit: 'лк',
-    normativeTemplateId: 'physical_factors',
+    normativeTemplateId: 'lighting',
     resultMode: 'PHYSICAL',
   },
   noise_vibration: {
@@ -85,17 +98,59 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
     sourceDocumentCode: 'DSM_15',
     docxTemplateCode: 'protocol_noise_vibration',
     defaultUnit: null,
-    normativeTemplateId: 'physical_factors',
+    normativeTemplateId: 'noise_vibration',
     resultMode: 'PHYSICAL',
   },
   uv_emf_laser: {
     title: 'УФ / ЭМП / Лазер',
     templateId: 'physical_factors',
     sourceDocumentCode: 'DSM_15',
-    docxTemplateCode: 'protocol_physical_factors',
+    docxTemplateCode: 'protocol_uv_emf_laser',
     defaultUnit: null,
-    normativeTemplateId: 'physical_factors',
+    normativeTemplateId: 'uv_emf_laser',
     resultMode: 'PHYSICAL',
+  },
+  food_products: {
+    title: 'Пищевые продукты',
+    templateId: 'food_products',
+    sourceDocumentCode: 'DSM_70',
+    // TODO: replace with protocol_food_products after backend DOCX template is deployed.
+    docxTemplateCode: 'protocol_soil',
+    defaultUnit: 'мг/кг',
+    normativeTemplateId: 'food_products',
+    resultMode: 'CHEMICAL',
+  },
+  surfaces: {
+    title: 'Поверхности',
+    templateId: 'surfaces',
+    sourceDocumentCode: 'DSM_70',
+    // TODO: replace with protocol_surfaces after backend DOCX template is deployed.
+    docxTemplateCode: 'protocol_soil',
+    defaultUnit: 'мг/см²',
+    normativeTemplateId: 'surfaces',
+    resultMode: 'CHEMICAL',
+  },
+  udmh_special: {
+    title: 'Компоненты ракетного топлива',
+    templateId: 'udmh_special',
+    sourceDocumentCode: 'DSM_70',
+    // TODO: replace with protocol_udmh_special after backend DOCX template is deployed.
+    docxTemplateCode: 'protocol_ambient_air',
+    defaultUnit: 'мг/м³',
+    normativeTemplateId: 'udmh_special',
+    category: 'ROCKET_FUEL',
+    resultMode: 'CHEMICAL',
+  },
+  rocket_fuel: {
+    title: 'Компоненты ракетного топлива',
+    templateId: 'udmh_special',
+    sourceDocumentCode: 'DSM_70',
+    // TODO: replace with protocol_udmh_special after backend DOCX template is deployed.
+    docxTemplateCode: 'protocol_ambient_air',
+    defaultUnit: 'мг/м³',
+    normativeTemplateId: 'udmh_special',
+    category: 'ROCKET_FUEL',
+    resultMode: 'CHEMICAL',
   },
 };
 
@@ -109,6 +164,65 @@ export const protocolFactorType: Partial<Record<ProtocolTypeKey, ProtocolSubtype
   lighting: 'LIGHTING',
   noise_vibration: 'NOISE_VIBRATION',
   uv_emf_laser: 'UV',
+};
+
+const subtypeContextKey: Partial<Record<ProtocolSubtype, ProtocolTypeKey>> = {
+  MICROCLIMATE: 'microclimate',
+  LIGHTING: 'lighting',
+  NOISE: 'noise_vibration',
+  VIBRATION: 'noise_vibration',
+  NOISE_VIBRATION: 'noise_vibration',
+  INFRASOUND: 'noise_vibration',
+  ULTRASOUND: 'noise_vibration',
+  UV: 'uv_emf_laser',
+  ELECTROMAGNETIC_FIELD: 'uv_emf_laser',
+  LASER: 'uv_emf_laser',
+};
+
+export const resolveNormativeSearchContext = (
+  protocol: Partial<{
+    templateId: ProtocolTemplateId | string;
+    protocolType: string;
+    type: string;
+    subtype: ProtocolSubtype | string;
+    physicalFactorType: ProtocolSubtype | string;
+    sourceDocumentCode: string;
+    normativeTemplateId: ProtocolTemplateId | string;
+    category: string;
+  }> = {},
+  protocolType?: string,
+): NormativeSearchContext => {
+  const subtype = String(protocol.subtype || protocol.physicalFactorType || '').toUpperCase() as ProtocolSubtype;
+  const rawType = String(protocol.templateId || protocol.protocolType || protocol.type || protocolType || '').toLowerCase();
+  const normalizedType = rawType === 'physical_factors' && subtypeContextKey[subtype]
+    ? subtypeContextKey[subtype]
+    : rawType;
+  const config = PROTOCOL_TYPE_CONFIG[normalizedType as ProtocolTypeKey];
+
+  if (config) {
+    return {
+      sourceDocumentCode: config.sourceDocumentCode || undefined,
+      templateId: config.normativeTemplateId || config.templateId,
+      normativeTemplateId: config.normativeTemplateId || config.templateId,
+      category: config.category,
+      factorType: protocolFactorType[normalizedType as ProtocolTypeKey] || subtype || undefined,
+    };
+  }
+
+  if (rawType === 'industrial_emissions') {
+    return { sourceDocumentCode: 'DSM_70', templateId: 'ambient_air', normativeTemplateId: 'ambient_air' };
+  }
+  if (rawType === 'water_wastewater') {
+    return { sourceDocumentCode: 'DSM_138', templateId: 'water', normativeTemplateId: 'water' };
+  }
+
+  return {
+    sourceDocumentCode: protocol.sourceDocumentCode || undefined,
+    templateId: protocol.templateId as ProtocolTemplateId | undefined,
+    normativeTemplateId: protocol.normativeTemplateId as ProtocolTemplateId | undefined,
+    category: protocol.category || undefined,
+    factorType: subtype || undefined,
+  };
 };
 
 export const isChemicalProtocolType = (config: ProtocolTypeConfig) => config.resultMode === 'CHEMICAL';

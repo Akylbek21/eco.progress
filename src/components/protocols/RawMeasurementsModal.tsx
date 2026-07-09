@@ -14,6 +14,7 @@ type Props = {
   protocolId: string;
   row: ProtocolResultRow | null;
   devices?: ProtocolMeasurementDevice[];
+  readOnly?: boolean;
   onClose: () => void;
   onCalculated: (row?: ProtocolResultRow) => void | Promise<void>;
   onReload?: () => void | Promise<void>;
@@ -42,6 +43,7 @@ const RawMeasurementsModal = ({
   protocolId,
   row,
   devices = [],
+  readOnly = false,
   onClose,
   onCalculated,
   onReload,
@@ -115,6 +117,10 @@ const RawMeasurementsModal = ({
 
   const save = async (calculate = false) => {
     if (!row || !data) return;
+    if (readOnly) {
+      setError('Протокол доступен только для просмотра.');
+      return;
+    }
     const hasMethodTemplate = Boolean(data.methodTemplate);
     if (hasMethodTemplate && missing.length) {
       setError(`Не заполнено: ${missing.join(', ')}`);
@@ -199,6 +205,7 @@ const RawMeasurementsModal = ({
                       value={values[variable.variableKey] || ''}
                       min={variable.minValue ?? undefined}
                       max={variable.maxValue ?? undefined}
+                      disabled={readOnly}
                       onChange={(event) => setValues((current) => ({ ...current, [variable.variableKey]: event.target.value }))}
                       className={inputClass}
                     />
@@ -214,7 +221,7 @@ const RawMeasurementsModal = ({
               ))}
               <label className="space-y-1.5 text-sm font-bold text-slate-700">
                 <span>Прибор</span>
-                <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} className={inputClass}>
+                <select value={deviceId} disabled={readOnly} onChange={(event) => setDeviceId(event.target.value)} className={inputClass}>
                   <option value="">Не выбран</option>
                   {devices.map((device) => (
                     <option key={device.deviceId} value={device.deviceId}>{device.deviceSnapshot.name} · {device.deviceSnapshot.serialNumber}</option>
@@ -228,11 +235,11 @@ const RawMeasurementsModal = ({
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-1.5 text-sm font-bold text-slate-700">
                 <span>Результат измерения</span>
-                <input autoFocus value={manualResult} onChange={(event) => setManualResult(event.target.value)} className={inputClass} />
+                <input autoFocus value={manualResult} disabled={readOnly} onChange={(event) => setManualResult(event.target.value)} className={inputClass} />
               </label>
               <label className="space-y-1.5 text-sm font-bold text-slate-700">
                 <span>Прибор</span>
-                <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} className={inputClass}>
+                <select value={deviceId} disabled={readOnly} onChange={(event) => setDeviceId(event.target.value)} className={inputClass}>
                   <option value="">Не выбран</option>
                   {devices.map((device) => (
                     <option key={device.deviceId} value={device.deviceId}>{device.deviceSnapshot.name} · {device.deviceSnapshot.serialNumber}</option>
@@ -244,8 +251,8 @@ const RawMeasurementsModal = ({
 
           <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Отмена</Button>
-            <Button type="button" variant="secondary" onClick={() => save(false)} disabled={saving || loading || !data}>Сохранить</Button>
-            <Button type="button" onClick={() => save(true)} disabled={saving || loading || !data}>Сохранить и рассчитать</Button>
+            <Button type="button" variant="secondary" onClick={() => save(false)} disabled={readOnly || saving || loading || !data}>Сохранить</Button>
+            <Button type="button" onClick={() => save(true)} disabled={readOnly || saving || loading || !data}>Сохранить и рассчитать</Button>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import api, { type ApiResponse } from './api';
-import { extractItem, extractList, getApiStatus, getContentDispositionFileName } from './apiHelpers';
+import { extractItem, extractList, getContentDispositionFileName } from './apiHelpers';
 import {
   JOURNAL_TYPES,
   JournalType,
@@ -107,7 +107,7 @@ const normalizeEntry = (raw: unknown): LabJournalEntry => {
   const source = asRecord(raw);
   const laboratory = asRecord(source.laboratory);
   const createdBy = asRecord(source.createdBy || source.createdByUser || source.creator || source.user);
-  const data = parseData(source.data);
+  const data = parseData(source.fields ?? source.data);
   const rowNumber = numberOrUndefined(source.rowNumber ?? source.row_number ?? data.rowNumber);
   if (rowNumber !== undefined) data.rowNumber = rowNumber;
 
@@ -115,7 +115,7 @@ const normalizeEntry = (raw: unknown): LabJournalEntry => {
     id: text(source.id),
     journalType: text(source.journalType || source.journal_type || source.type),
     rowNumber,
-    entryDate: text(source.entryDate || source.entry_date || source.date || data.date || data.preparedDate || data.samplingDate),
+    entryDate: text(source.entryDate || source.entry_date || source.preparationDate || source.preparation_date || source.date || data.date || data.preparationDate || data.preparedDate || data.samplingDate),
     data,
     laboratoryId: source.laboratoryId as string | number | null | undefined ?? laboratory.id as string | number | null | undefined,
     laboratoryName: text(source.laboratoryName || laboratory.name || laboratory.laboratoryName),
@@ -170,10 +170,36 @@ const toQueryParams = (params: LabJournalQuery | ExportLabJournalParams) =>
   );
 
 const firstDateFromData = (data: LabJournalEntryData) =>
-  text(data.date || data.preparedDate || data.samplingDate || data.entryDate || data.registrationDate);
+  text(data.date || data.preparationDate || data.preparedDate || data.samplingDate || data.entryDate || data.registrationDate);
 
 const inferEntryDate = (payload: SaveLabJournalEntryPayload) =>
-  payload.entryDate || firstDateFromData(payload.data) || new Date().toISOString().slice(0, 10);
+  payload.preparationDate || payload.entryDate || firstDateFromData(payload.data) || new Date().toISOString().slice(0, 10);
+
+const isReagentPreparationJournal = (journalType: JournalType) =>
+  text(journalType).trim().toUpperCase() === 'REAGENT_PREPARATION';
+
+const toApiSavePayload = (payload: SaveLabJournalEntryPayload) => {
+  const entryDate = inferEntryDate(payload);
+  const data = { ...payload.data };
+  const base = {
+    journalType: payload.journalType,
+    data,
+    laboratoryId: payload.laboratoryId || undefined,
+  };
+
+  if (isReagentPreparationJournal(payload.journalType)) {
+    return {
+      ...base,
+      fields: data,
+      preparationDate: payload.preparationDate || entryDate,
+    };
+  }
+
+  return {
+    ...base,
+    entryDate,
+  };
+};
 
 const nextRowNumber = (journalType: JournalType, items: LabJournalEntry[]) =>
   items.filter((item) => item.journalType === journalType).reduce((max, item) => Math.max(max, item.rowNumber || 0), 0) + 1;
@@ -195,16 +221,11 @@ const tableToExcelBlob = (definition: JournalTypeDefinition, rows: LabJournalEnt
   return new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
 };
 
-export async function getJournalTypes(): Promise<JournalTypeDefinition[]> {
+export async function getJournalTypes(signal?: AbortSignal): Promise<JournalTypeDefinition[]> {
   if (useMocks) return JOURNAL_TYPES;
-  try {
-    const response = await api.get<ApiResponse<unknown> | unknown>('/lab-journals/types');
-    const items = extractList(response, ['types', 'journals', 'journalTypes']).map(normalizeType).filter(Boolean) as JournalTypeDefinition[];
-    return items.length ? items : JOURNAL_TYPES;
-  } catch (error) {
-    if ([404, 405].includes(getApiStatus(error) || 0)) return JOURNAL_TYPES;
-    throw error;
-  }
+  const response = await api.get<ApiResponse<unknown> | unknown>('/lab-journals/types', { signal });
+  const items = extractList(response, ['types', 'journals', 'journalTypes']).map(normalizeType).filter(Boolean) as JournalTypeDefinition[];
+  return items.length ? items : JOURNAL_TYPES;
 }
 
 export async function getEntries(params: LabJournalQuery): Promise<LabJournalPage> {
@@ -250,7 +271,7 @@ export async function createEntry(payload: SaveLabJournalEntryPayload): Promise<
     return entry;
   }
 
-  const response = await api.post<ApiResponse<unknown> | unknown>('/lab-journals/entries', payload);
+  const response = await api.post<ApiResponse<unknown> | unknown>('/lab-journals/entries', toApiSavePayload(payload));
   return normalizeEntry(extractItem(response, ['entry', 'item']));
 }
 
@@ -274,7 +295,7 @@ export async function updateEntry(id: string | number, payload: SaveLabJournalEn
     return entry;
   }
 
-  const response = await api.put<ApiResponse<unknown> | unknown>(`/lab-journals/entries/${id}`, payload);
+  const response = await api.put<ApiResponse<unknown> | unknown>(`/lab-journals/entries/${id}`, toApiSavePayload(payload));
   return normalizeEntry(extractItem(response, ['entry', 'item']));
 }
 
