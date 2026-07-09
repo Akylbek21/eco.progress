@@ -51,8 +51,10 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     documentNumber: firstString(source.documentNumber, source.document_number, source.orderNumber, source.orderNo),
     documentDate: firstString(source.documentDate, source.document_date, source.orderDate),
     appendixNo: firstString(source.appendixNo, source.appendixNumber, source.appendix, source.attachmentNo),
+    appendix: firstString(source.appendix, source.appendixNo, source.appendixNumber, source.attachmentNo),
     appNo: firstString(source.appNo, source.applicationNo, source.applicationNumber, source.appendixNo, source.appendixNumber, source.appendix, source.attachmentNo),
     tableNo: firstString(source.tableNo, source.tableNumber, source.table),
+    tableNumber: firstString(source.tableNumber, source.tableNo, source.table),
     tableTitle: firstString(source.tableTitle, source.tableName, source.title),
     categoryCode: firstString(source.categoryCode, source.category_code, source.category),
     category: firstString(source.category, source.categoryCode, source.group),
@@ -91,6 +93,7 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     pollutantCode: firstString(source.pollutantCode, source.substanceCode, code),
     indicatorName: firstString(source.indicatorName, source.indicatorNameRu, source.name, source.nameRu, indicator),
     pollutantName: firstString(source.pollutantName, source.substanceName, indicator),
+    synonyms: firstString(source.synonyms, source.synonym, source.aliases, asRecord(source.primary).synonyms, pollutant.synonyms, pollutant.aliases),
     researchObject: firstString(source.researchObject, source.object, source.objectName, source.environmentType, source.environment, source.medium, source.sampleType),
     environmentType: firstString(source.environmentType, source.environment_type, source.mediumType, source.environmentCode),
     environment: firstString(source.environment, source.environmentType, source.environment_type, source.researchObject, source.medium, source.sampleType),
@@ -104,17 +107,24 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     normativeSubType,
     subtype: firstString(source.subtype, source.subType, source.normativeSubType, source.normativeSubtype),
     value,
+    normativeValue: firstString(source.normativeValue, source.normative, source.value, source.pdk, source.obuv, source.limitValue),
+    pdk: firstString(source.pdk, source.pdkValue, normativeType === 'PDK' ? source.value ?? source.normative ?? source.normativeValue : undefined),
+    limitValue: firstString(source.limitValue, source.limit, source.value, source.normativeValue),
     maxOneTimeValue,
     dailyAverageValue,
     singleValue,
     obuvValue,
+    obuv: firstString(source.obuv, source.obuvValue, source.obuv_value, normativeType === 'OBUV' ? source.value ?? source.normative ?? source.normativeValue : undefined),
     min: stringValue(source.min ?? source.minValue ?? source.normativeMin),
     max: stringValue(source.max ?? source.maxValue ?? source.normativeMax),
+    minValue: firstString(source.minValue, source.min, source.normativeMin),
+    maxValue: firstString(source.maxValue, source.max, source.normativeMax),
     alternativeNormativeValue: firstString(source.alternativeNormativeValue, source.alternative_normative_value, source.altValue),
     comparisonType: stringValue(source.comparisonType || 'LESS_OR_EQUAL') as NormativeRecord['comparisonType'],
     normativeDocument: firstString(source.normativeDocument, source.document, source.documentName, source.standard),
     hazardClass: firstString(source.hazardClass, source.dangerClass, source.hazard, source.hazardClassName),
     limitingIndicator: firstString(source.limitingIndicator, source.limitingSign, source.lpv, source.limitingFactor),
+    limitingHazardIndicator: firstString(source.limitingHazardIndicator, source.limitingIndicator, source.limitingSign, source.lpv, source.limitingFactor),
     aggregateState: firstString(source.aggregateState, source.aggregationState, source.physicalState, source.state),
     actionFeatures: firstString(source.actionFeatures, source.featuresOfAction, source.actionSpecifics, source.specialAction, source.effectFeatures),
     source: firstString(source.source, source.sourceName, source.dataSource, source.normativeDocument, source.document, source.documentName),
@@ -150,14 +160,18 @@ export const extractNormatives = (response: unknown): NormativeRecord[] => {
   return Array.from(map.values());
 };
 
+export const extractNormativeItems = extractNormatives;
+
 const extractNormativeRecords = extractNormatives;
 
 export interface NormativeRecordsParams {
   page?: number;
   size?: number;
   search?: string;
+  query?: string;
   sourceDocumentCode?: string;
   templateId?: string;
+  category?: string;
   environmentType?: string;
   factorType?: string;
   appendixNo?: string | number;
@@ -182,14 +196,29 @@ const DEFAULT_PAGE = 0;
 const DEFAULT_SIZE = 50;
 
 const unwrapCandidates = (input: unknown): unknown[] => {
-  const candidates: unknown[] = [input];
+  const candidates: unknown[] = [];
+  const seen = new Set<unknown>();
+  const pushCandidate = (value: unknown) => {
+    const record = asRecord(value);
+    if (!Object.keys(record).length || seen.has(value)) return;
+    candidates.push(value);
+    seen.add(value);
+  };
+
+  pushCandidate(input);
   let current = input;
   for (let depth = 0; depth < 4; depth += 1) {
     const record = asRecord(current);
     if (!record || !('data' in record)) break;
     current = record.data;
-    candidates.unshift(current);
+    pushCandidate(current);
   }
+
+  for (let index = 0; index < candidates.length; index += 1) {
+    const record = asRecord(candidates[index]);
+    ['pagination', 'page', 'pageable', 'pageInfo', 'paging', 'meta', 'metadata', 'headers'].forEach((key) => pushCandidate(record[key]));
+  }
+
   return candidates;
 };
 
@@ -197,7 +226,9 @@ const firstNumber = (candidates: unknown[], keys: string[]) => {
   for (const candidate of candidates) {
     const record = asRecord(candidate);
     for (const key of keys) {
-      const value = record[key];
+      const value = record[key]
+        ?? record[key.toLowerCase()]
+        ?? record[key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)];
       if (value !== undefined && value !== null && value !== '') {
         const numeric = Number(value);
         if (Number.isFinite(numeric)) return numeric;
@@ -210,7 +241,29 @@ const firstNumber = (candidates: unknown[], keys: string[]) => {
 const hasPagingMetadata = (candidates: unknown[]) =>
   candidates.some((candidate) => {
     const record = asRecord(candidate);
-    return ['totalElements', 'total', 'totalCount', 'totalPages', 'number', 'page', 'size'].some((key) => record[key] !== undefined);
+    return [
+      'totalElements',
+      'totalRecords',
+      'recordsTotal',
+      'totalItems',
+      'total',
+      'totalCount',
+      'count',
+      'totalPages',
+      'pages',
+      'pageCount',
+      'number',
+      'page',
+      'currentPage',
+      'pageNumber',
+      'size',
+      'pageSize',
+      'limit',
+      'x-total-count',
+      'x-total-elements',
+      'x-total-records',
+      'x-total-pages',
+    ].some((key) => record[key] !== undefined);
   });
 
 const compactParams = (params: NormativeRecordsParams) =>
@@ -259,38 +312,67 @@ const normalizeNormativeRecordsPage = (response: unknown, params: NormativeRecor
 
   if (!hasPagingMetadata(candidates)) {
     const filtered = locallyFilterNormatives(allItems, params);
-    const start = page * size;
-    const totalElements = filtered.length;
+    const shouldTreatAsCurrentPage = page > 0 || allItems.length <= size;
+    const start = shouldTreatAsCurrentPage ? 0 : page * size;
+    const visibleItems = filtered.slice(start, start + size);
+    const inferredHasNextPage = allItems.length >= size;
+    const totalElements = shouldTreatAsCurrentPage
+      ? page * size + filtered.length + (inferredHasNextPage ? 1 : 0)
+      : filtered.length;
     return {
-      items: filtered.slice(start, start + size),
+      items: visibleItems,
       totalElements,
-      totalPages: Math.max(1, Math.ceil(totalElements / size)),
+      totalPages: Math.max(page + 1, Math.ceil(totalElements / size)),
       page,
       size,
     };
   }
 
-  const totalElements = firstNumber(candidates, ['totalElements', 'total', 'totalCount', 'count']) ?? allItems.length;
-  const totalPages = firstNumber(candidates, ['totalPages', 'pages']) ?? Math.max(1, Math.ceil(totalElements / size));
+  const explicitTotal = firstNumber(candidates, [
+    'totalElements',
+    'totalRecords',
+    'recordsTotal',
+    'totalItems',
+    'totalCount',
+    'total_records',
+    'total_items',
+    'x-total-count',
+    'x-total-elements',
+    'x-total-records',
+  ]);
+  const looseTotal = firstNumber(candidates, ['total']);
+  const responseTotalPages = firstNumber(candidates, ['totalPages', 'pages', 'pageCount', 'total_pages', 'x-total-pages']);
+  const looksLikePageSizeTotal = allItems.length >= size
+    && (explicitTotal === undefined || explicitTotal <= page * size + allItems.length)
+    && (responseTotalPages === undefined || responseTotalPages <= page + 1);
+  const totalElements = looksLikePageSizeTotal
+    ? page * size + allItems.length + 1
+    : explicitTotal
+    ?? (looseTotal !== undefined && (responseTotalPages !== undefined || looseTotal > allItems.length) ? looseTotal : undefined)
+    ?? (allItems.length >= size ? page * size + allItems.length + 1 : page * size + allItems.length);
+  const totalPages = looksLikePageSizeTotal
+    ? page + 2
+    : responseTotalPages ?? Math.max(page + 1, Math.ceil(totalElements / size));
   return {
     items: allItems,
     totalElements,
     totalPages,
-    page: firstNumber(candidates, ['number', 'page', 'currentPage']) ?? page,
-    size: firstNumber(candidates, ['size', 'pageSize', 'limit']) ?? size,
+    page: firstNumber(candidates, ['number', 'page', 'currentPage', 'pageNumber', 'pageIndex']) ?? page,
+    size: firstNumber(candidates, ['size', 'pageSize', 'limit', 'perPage']) ?? size,
   };
 };
 
 const directoryParams = (params?: NormativeRecordsParams) => {
   const page = Number(params?.page ?? DEFAULT_PAGE);
   const size = Number(params?.size ?? DEFAULT_SIZE);
-  const search = firstString(params?.search);
+  const search = firstString(params?.search, params?.query);
   return compactParams({
     ...params,
     page,
     size,
     status: params?.status || 'ACTIVE',
     search: search || undefined,
+    query: search || undefined,
   });
 };
 
@@ -339,6 +421,7 @@ export type NormativeImportPreview = {
   updated?: number;
   errors: Array<{ row?: number; message: string }>;
   importId?: string;
+  importBatchId?: string;
   fileName?: string;
 };
 
@@ -402,57 +485,58 @@ const unwrapImportData = (response: unknown): UnknownRecord => {
   return axiosResponse;
 };
 
-export async function importNormativesExcel(file: File, preview = true, importId?: string): Promise<NormativeImportPreview> {
-  const response = await postNormativeImport(file, preview, importId);
-  const item = unwrapImportData(response);
-  const items = extractNormativeRecords(response);
-  const errors = Array.isArray(item.errors) ? item.errors.map((error) => {
-    const value = error as UnknownRecord;
-    return { row: Number(value.row) || undefined, message: stringValue(value.message || value.error) };
-  }) : [];
-  return {
-    items,
-    total: Number(item.totalRows ?? item.total ?? item.rowsTotal ?? item.totalCount ?? items.length),
-    valid: Number(item.validRows ?? item.valid ?? item.validCount ?? items.length),
-    invalid: Number(item.errorRows ?? item.invalid ?? item.invalidRows ?? item.errorsCount ?? errors.length),
-    created: Number(item.newNormatives ?? item.created ?? item.new ?? item.newRows ?? item.toCreate ?? 0),
-    updated: Number(item.updatedNormatives ?? item.updated ?? item.update ?? item.updatedRows ?? item.toUpdate ?? 0),
-    errors,
-    importId: stringValue(item.importId || item.previewId || item.batchId) || undefined,
-    fileName: stringValue(item.fileName || item.sourceFile || file.name) || undefined,
-  };
-}
-
-const normalizeImportPreview = (response: unknown, fileName?: string): NormativeImportPreview => {
-  const item = unwrapImportData(response);
-  const items = extractNormativeRecords(response);
-  const errors = Array.isArray(item.errors) ? item.errors.map((error) => {
-    const value = error as UnknownRecord;
-    return { row: Number(value.row) || undefined, message: stringValue(value.message || value.error) };
-  }) : [];
-  return {
-    items,
-    total: Number(item.totalRows ?? item.total ?? item.rowsTotal ?? item.totalCount ?? items.length),
-    valid: Number(item.validRows ?? item.valid ?? item.validCount ?? items.length),
-    invalid: Number(item.errorRows ?? item.invalid ?? item.invalidRows ?? item.errorsCount ?? errors.length),
-    created: Number(item.newNormatives ?? item.created ?? item.new ?? item.newRows ?? item.toCreate ?? 0),
-    updated: Number(item.updatedNormatives ?? item.updated ?? item.update ?? item.updatedRows ?? item.toUpdate ?? 0),
-    errors,
-    importId: stringValue(item.importId || item.previewId || item.batchId || item.importBatchId) || undefined,
-    fileName: stringValue(item.fileName || item.sourceFile || fileName) || undefined,
-  };
+const normalizeImportErrors = (...values: unknown[]): Array<{ row?: number; message: string }> => {
+  const source = values.find(Array.isArray);
+  if (!Array.isArray(source)) return [];
+  return source.map((item) => {
+    if (typeof item === 'string') return { message: item };
+    const value = asRecord(item);
+    return {
+      row: Number(value.row ?? value.rowNumber ?? value.line) || undefined,
+      message: firstString(value.message, value.error, value.warning, item),
+    };
+  }).filter((item) => item.message);
 };
 
-export async function previewDsm138Import(file: File): Promise<NormativeImportPreview> {
-  const formData = new FormData();
-  formData.append('file', file);
-  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives/import/dsm-138/preview', formData);
-  return normalizeImportPreview(response, file.name);
+export function normalizeImportPreviewResponse(response: unknown, fileName?: string): NormativeImportPreview {
+  const item = unwrapImportData(response);
+  const items = extractNormativeRecords(response);
+  const errors = normalizeImportErrors(item.errors, item.warnings, item.validationErrors);
+  const totalRecords = Number(item.totalRecords ?? item.recordsTotal ?? item.totalRows ?? item.total ?? item.rowsTotal ?? item.totalCount ?? items.length);
+  const validRows = Number(item.validRows ?? item.valid ?? item.validCount ?? item.totalRecords ?? item.totalRows ?? items.length);
+  const errorRows = Number(item.errorRows ?? item.invalid ?? item.invalidRows ?? item.errorsCount ?? errors.length);
+  const importId = firstString(item.importId, item.importBatchId, item.id, item.previewId, item.batchId);
+
+  return {
+    items,
+    total: Number.isFinite(totalRecords) ? totalRecords : 0,
+    valid: Number.isFinite(validRows) ? validRows : 0,
+    invalid: Number.isFinite(errorRows) ? errorRows : 0,
+    created: Number(item.newNormatives ?? item.created ?? item.new ?? item.newRows ?? item.toCreate ?? item.totalRecords ?? 0),
+    updated: Number(item.updatedNormatives ?? item.updated ?? item.update ?? item.updatedRows ?? item.toUpdate ?? 0),
+    errors,
+    importId: importId || undefined,
+    importBatchId: firstString(item.importBatchId, item.batchId, importId) || undefined,
+    fileName: firstString(item.fileName, item.sourceFile, fileName) || undefined,
+  };
 }
 
-export async function confirmDsm138Import(importBatchId?: string): Promise<NormativeImportPreview> {
-  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives/import/dsm-138/confirm', importBatchId ? { importBatchId } : {});
-  return normalizeImportPreview(response);
+export async function importNormativesExcel(file: File, preview = true, importId?: string): Promise<NormativeImportPreview> {
+  const response = await postNormativeImport(file, preview, importId);
+  return normalizeImportPreviewResponse(response, file.name);
+}
+
+export async function previewDsm138Import(files: File | File[]): Promise<NormativeImportPreview> {
+  const selectedFiles = Array.isArray(files) ? files : [files];
+  const formData = new FormData();
+  selectedFiles.forEach((file) => formData.append('files', file));
+  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives/import/dsm-138/preview', formData);
+  return normalizeImportPreviewResponse(response, selectedFiles.map((file) => file.name).join(', '));
+}
+
+export async function confirmDsm138Import(importBatchId: string): Promise<NormativeImportPreview> {
+  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives/import/dsm-138/confirm', { importBatchId });
+  return normalizeImportPreviewResponse(response);
 }
 
 export async function rollbackDsm138Import(importBatchId: string): Promise<void> {

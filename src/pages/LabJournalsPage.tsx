@@ -2,31 +2,36 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Download, Edit3, FileDown, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import ConfirmModal from '../components/modals/ConfirmModal';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
+import { getLaboratories } from '../services/laboratorySettingsService';
 import {
-  createLabJournalEntry,
-  deleteLabJournalEntry,
-  exportLabJournalExcel,
-  getLabJournalEntries,
-  getLabJournalTypes,
-  updateLabJournalEntry,
+  createEntry,
+  deleteEntry,
+  downloadExcel,
+  downloadTemplate,
+  getEntries,
+  getJournalTypes,
+  updateEntry,
 } from '../services/labJournalService';
 import {
   JOURNAL_TYPES,
-  JournalType,
   type JournalColumn,
+  type JournalKind,
+  type JournalType,
   type JournalTypeDefinition,
   type LabJournalEntry,
   type LabJournalEntryData,
   type LabJournalPage,
+  type LabJournalValue,
 } from '../types/labJournal';
+import type { LaboratorySummary } from '../types/protocols';
 
 const PAGE_SIZE = 50;
 const MIN_SEARCH_LENGTH = 3;
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const panelClass = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm';
-
-const today = () => new Date().toISOString().slice(0, 10);
 
 const emptyPage: LabJournalPage = {
   content: [],
@@ -36,22 +41,105 @@ const emptyPage: LabJournalPage = {
   size: PAGE_SIZE,
 };
 
-const dateColumnKeys = new Set(['registrationDate', 'date', 'protocolRegistrationDate', 'protocolIssueDate', 'preparationDate']);
+const today = () => new Date().toISOString().slice(0, 10);
 
-const formatValue = (value: unknown, column: JournalColumn) => {
-  if (value === undefined || value === null || value === '') return '—';
-  if (column.type !== 'date') return String(value);
-  const text = String(value).slice(0, 10);
-  const [year, month, day] = text.split('-');
-  return year && month && day ? `${day}.${month}.${year}` : String(value);
+const text = (value: unknown) => value === undefined || value === null ? '' : String(value);
+const firstText = (data: LabJournalEntryData, keys: string[]) => keys.map((key) => text(data[key]).trim()).find(Boolean) || '';
+const isAdminOrHead = (role?: string) => role === 'ADMIN' || role === 'HEAD';
+
+const formatDate = (value: unknown) => {
+  const raw = text(value).slice(0, 10);
+  const [year, month, day] = raw.split('-');
+  return year && month && day ? `${day}.${month}.${year}` : raw || '—';
 };
 
-const valueForColumn = (entry: LabJournalEntry, column: JournalColumn) =>
-  column.key === 'rowNumber' ? entry.rowNumber ?? entry.data.rowNumber : entry.data[column.key];
+const formatDateTime = (value: unknown) => {
+  const raw = text(value);
+  if (!raw) return '—';
+  const date = formatDate(raw);
+  const time = raw.match(/T(\d{2}:\d{2})/)?.[1];
+  return time ? `${date} ${time}` : date;
+};
 
-const firstDateValue = (columns: JournalColumn[], data: LabJournalEntryData) => {
-  const dateColumn = columns.find((column) => column.type === 'date' && column.key !== 'rowNumber');
-  return dateColumn ? String(data[dateColumn.key] || '') : '';
+const kindFromDefinition = (definition?: JournalTypeDefinition): JournalKind => {
+  if (!definition) return 'custom';
+  if (definition.kind) return definition.kind;
+  const value = `${definition.code} ${definition.title}`.toLowerCase();
+  if (/solution|preparation|reagent_preparation|приготов/.test(value)) return 'solution';
+  if (/chemical|reagent|reactive|веществ|реактив|хим/.test(value)) return 'chemical';
+  if (/environment|condition|humidity|temperature|услов|сред|температур|влаж/.test(value)) return 'environment';
+  if (/sample|sampling|проб/.test(value)) return 'sample';
+  if (/result|test|protocol|испыт|результ|протокол/.test(value)) return 'results';
+  return 'custom';
+};
+
+const fieldsForDefinition = (definition: JournalTypeDefinition): JournalColumn[] => {
+  const fallback = JOURNAL_TYPES.find((item) => item.kind === kindFromDefinition(definition));
+  if (fallback) return fallback.columns;
+  return definition.columns.length ? definition.columns.filter((column) => column.key !== 'rowNumber') : [
+    { key: 'date', title: 'Дата', type: 'date' },
+    { key: 'note', title: 'Примечание', type: 'textarea' },
+  ];
+};
+
+const primaryDateForEntry = (entry: LabJournalEntry) =>
+  entry.entryDate
+  || firstText(entry.data, ['date', 'preparedDate', 'samplingDate', 'registrationDate', 'protocolDate'])
+  || entry.createdAt;
+
+const renderEntrySummary = (entry: LabJournalEntry, definition?: JournalTypeDefinition) => {
+  const data = entry.data;
+  const unit = firstText(data, ['unit']);
+  const valueWithUnit = (value: string) => value ? `${value}${unit ? ` ${unit}` : ''}` : '0';
+
+  switch (kindFromDefinition(definition)) {
+    case 'chemical': {
+      const name = firstText(data, ['substanceName', 'reagentName', 'name']) || 'Вещество';
+      const income = firstText(data, ['income', 'incomingQuantity']);
+      const expense = firstText(data, ['expense', 'outgoingQuantity']);
+      const balance = firstText(data, ['balance']);
+      return `${name} — приход: ${valueWithUnit(income)}, расход: ${valueWithUnit(expense)}${balance ? `, остаток: ${valueWithUnit(balance)}` : ''}`;
+    }
+    case 'environment': {
+      const room = firstText(data, ['room', 'cabinet', 'place']) || 'Помещение';
+      const temperature = firstText(data, ['temperature']);
+      const humidity = firstText(data, ['humidity', 'relativeHumidity']);
+      const pressure = firstText(data, ['pressure']);
+      return [room, temperature && `${temperature}°C`, humidity && `влажность ${humidity}%`, pressure && `давление ${pressure}`].filter(Boolean).join(' — ');
+    }
+    case 'sample': {
+      const number = firstText(data, ['sampleNumber', 'number']) || entry.rowNumber || '—';
+      const name = firstText(data, ['sampleName', 'name']) || 'проба';
+      const place = firstText(data, ['samplingPlace', 'place']);
+      return `Проба №${number} — ${name}${place ? `, место отбора: ${place}` : ''}`;
+    }
+    case 'solution': {
+      const name = firstText(data, ['solutionName', 'preparedReagentName', 'reagentName']) || 'Раствор';
+      const concentration = firstText(data, ['concentration']);
+      const preparedBy = firstText(data, ['preparedBy']);
+      return [name, concentration, preparedBy && `приготовил: ${preparedBy}`].filter(Boolean).join(' — ');
+    }
+    case 'results': {
+      const protocolNumber = firstText(data, ['protocolNumber']);
+      const sampleNumber = firstText(data, ['sampleNumber']);
+      const indicator = firstText(data, ['indicatorName', 'indicator']);
+      const result = firstText(data, ['result']);
+      const resultUnit = firstText(data, ['unit']);
+      return [
+        protocolNumber && `Протокол №${protocolNumber}`,
+        sampleNumber && `проба №${sampleNumber}`,
+        indicator,
+        result && `результат: ${result}${resultUnit ? ` ${resultUnit}` : ''}`,
+      ].filter(Boolean).join(' — ') || 'Результат испытаний';
+    }
+    default: {
+      const visible = Object.entries(data)
+        .filter(([key, value]) => key !== 'rowNumber' && value !== undefined && value !== null && value !== '')
+        .slice(0, 3)
+        .map(([, value]) => text(value));
+      return visible.join(' — ') || 'Запись журнала';
+    }
+  }
 };
 
 const downloadBlob = (blob: Blob, fileName: string) => {
@@ -65,64 +153,7 @@ const downloadBlob = (blob: Blob, fileName: string) => {
   window.URL.revokeObjectURL(url);
 };
 
-type JournalTableProps = {
-  columns: JournalColumn[];
-  rows: LabJournalEntry[];
-  loading: boolean;
-  onEdit: (entry: LabJournalEntry) => void;
-  onDelete: (entry: LabJournalEntry) => void;
-};
-
-const JournalTable = ({ columns, rows, loading, onEdit, onDelete }: JournalTableProps) => (
-  <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[980px] text-left text-sm">
-        <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key} className="px-3 py-3 align-top">{column.title}</th>
-            ))}
-            <th className="px-3 py-3 text-right align-top">Действия</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {loading ? Array.from({ length: 5 }).map((_, rowIndex) => (
-            <tr key={rowIndex} className="animate-pulse">
-              {Array.from({ length: columns.length + 1 }).map((__, cellIndex) => (
-                <td key={cellIndex} className="px-3 py-4"><div className="h-4 rounded bg-slate-100" /></td>
-              ))}
-            </tr>
-          )) : rows.map((entry) => (
-            <tr key={entry.id} className="align-top hover:bg-slate-50">
-              {columns.map((column) => (
-                <td key={column.key} className="max-w-[260px] px-3 py-3 text-slate-700">
-                  <span className={column.key === 'rowNumber' ? 'font-bold text-slate-950' : 'whitespace-pre-wrap break-words'}>
-                    {formatValue(valueForColumn(entry, column), column)}
-                  </span>
-                </td>
-              ))}
-              <td className="px-3 py-3">
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="secondary" className="px-3 py-2" onClick={() => onEdit(entry)}>
-                    <Edit3 className="h-4 w-4" /> Изменить
-                  </Button>
-                  <Button type="button" variant="ghost" className="px-3 py-2 text-rose-700 hover:bg-rose-50" onClick={() => onDelete(entry)}>
-                    <Trash2 className="h-4 w-4" /> Удалить
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-    {!loading && rows.length === 0 && (
-      <div className="px-6 py-10 text-center text-sm font-semibold text-slate-500">
-        Записи не найдены.
-      </div>
-    )}
-  </div>
-);
+const toFormValue = (value: LabJournalValue | undefined) => value === undefined || value === null ? '' : String(value);
 
 type EntryModalProps = {
   open: boolean;
@@ -134,39 +165,110 @@ type EntryModalProps = {
 };
 
 const EntryModal = ({ open, definition, entry, saving, onClose, onSubmit }: EntryModalProps) => {
-  const fields = definition.columns.filter((column) => column.key !== 'rowNumber');
+  const [formError, setFormError] = useState('');
+  const fields = useMemo(() => fieldsForDefinition(definition), [definition]);
+  const kind = kindFromDefinition(definition);
+
+  useEffect(() => {
+    if (open) setFormError('');
+  }, [open, entry, definition.code]);
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setFormError('');
+
     const form = new FormData(event.currentTarget);
-    const data = fields.reduce<LabJournalEntryData>((acc, column) => {
-      if (column.key === 'balance' && !form.get(column.key)) return acc;
-      const value = String(form.get(column.key) || '').trim();
-      if (!value) return acc;
-      acc[column.key] = column.type === 'number' ? Number(value) : value;
+    const data = fields.reduce<LabJournalEntryData>((acc, field) => {
+      if (field.readOnly) return acc;
+      const raw = text(form.get(field.key)).trim();
+      if (!raw) return acc;
+      acc[field.key] = field.type === 'number' ? Number(raw) : raw;
       return acc;
     }, entry?.rowNumber ? { rowNumber: entry.rowNumber } : {});
-    const entryDate = firstDateValue(definition.columns, data) || entry?.entryDate || today();
+
+    const requiredError = fields.find((field) => field.required && !text(data[field.key]).trim());
+    if (requiredError) {
+      setFormError(`Заполните поле «${requiredError.title}».`);
+      return;
+    }
+
+    if (kind === 'environment') {
+      if (!data.date) {
+        setFormError('Дата обязательна.');
+        return;
+      }
+      const temperature = data.temperature;
+      const humidity = data.humidity;
+      const pressure = data.pressure;
+      if (temperature !== undefined && !Number.isFinite(Number(temperature))) {
+        setFormError('Температура должна быть числом.');
+        return;
+      }
+      if (humidity !== undefined && (!Number.isFinite(Number(humidity)) || Number(humidity) < 0 || Number(humidity) > 100)) {
+        setFormError('Влажность должна быть числом от 0 до 100.');
+        return;
+      }
+      if (pressure !== undefined && !Number.isFinite(Number(pressure))) {
+        setFormError('Давление должно быть числом.');
+        return;
+      }
+    }
+
+    if (kind === 'solution') {
+      if (!data.solutionName) {
+        setFormError('Название раствора обязательное.');
+        return;
+      }
+      if (!data.preparedDate) {
+        setFormError('Дата приготовления обязательна.');
+        return;
+      }
+      if (data.expiryDate && text(data.expiryDate) < text(data.preparedDate)) {
+        setFormError('Срок годности не должен быть раньше даты приготовления.');
+        return;
+      }
+    }
+
+    const entryDate = firstText(data, ['date', 'preparedDate', 'samplingDate']) || entry?.entryDate || today();
     await onSubmit(data, entryDate);
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={entry ? 'Изменить запись' : 'Добавить запись'} size="xl" loading={saving}>
+    <Modal open={open} onClose={onClose} title={entry ? 'Редактировать запись' : 'Добавить запись'} size="xl" loading={saving}>
       <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
-        {fields.map((column) => {
-          const value = entry?.data[column.key] ?? '';
-          const isAutoBalance = column.key === 'balance';
+        <div className="rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700 md:col-span-2">
+          {definition.title}
+        </div>
+        {formError && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800 md:col-span-2">
+            {formError}
+          </div>
+        )}
+        {fields.map((field) => {
+          const value = toFormValue(entry?.data[field.key]);
+          const isTextarea = field.type === 'textarea';
+          const commonProps = {
+            name: field.key,
+            defaultValue: value,
+            readOnly: field.readOnly,
+            required: field.required,
+            className: `${inputClass} ${field.readOnly ? 'bg-slate-100 text-slate-500' : ''}`,
+            placeholder: field.readOnly ? 'Рассчитывается backend' : undefined,
+          };
           return (
-            <label key={column.key} className="space-y-1.5 text-sm font-semibold text-slate-700">
-              <span>{column.title}</span>
-              <input
-                name={column.key}
-                type={column.type === 'date' || dateColumnKeys.has(column.key) ? 'date' : column.type === 'number' ? 'number' : 'text'}
-                step={column.type === 'number' ? 'any' : undefined}
-                defaultValue={String(value)}
-                readOnly={isAutoBalance}
-                placeholder={isAutoBalance ? 'Рассчитывается автоматически' : undefined}
-                className={`${inputClass} ${isAutoBalance ? 'bg-slate-100 text-slate-500' : ''}`}
-              />
+            <label key={field.key} className={`space-y-1.5 text-sm font-semibold text-slate-700 ${isTextarea ? 'md:col-span-2' : ''}`}>
+              <span>{field.title}{field.required ? ' *' : ''}</span>
+              {isTextarea ? (
+                <textarea {...commonProps} rows={3} />
+              ) : (
+                <input
+                  {...commonProps}
+                  type={field.type === 'date' || field.type === 'time' ? field.type : field.type === 'number' ? 'number' : 'text'}
+                  step={field.type === 'number' ? 'any' : undefined}
+                  min={field.key === 'humidity' ? 0 : undefined}
+                  max={field.key === 'humidity' ? 100 : undefined}
+                />
+              )}
             </label>
           );
         })}
@@ -181,8 +283,13 @@ const EntryModal = ({ open, definition, entry, saving, onClose, onSubmit }: Entr
 
 const LabJournalsPage = () => {
   const toast = useToast();
+  const { user } = useAuth();
+  const canFilterLaboratory = isAdminOrHead(user?.role);
+
   const [types, setTypes] = useState<JournalTypeDefinition[]>(JOURNAL_TYPES);
-  const [selectedJournalType, setSelectedJournalType] = useState<JournalType | ''>('');
+  const [selectedJournalType, setSelectedJournalType] = useState<JournalType>('');
+  const [laboratories, setLaboratories] = useState<LaboratorySummary[]>([]);
+  const [laboratoryId, setLaboratoryId] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [searchDraft, setSearchDraft] = useState('');
@@ -191,40 +298,66 @@ const LabJournalsPage = () => {
   const [entriesPage, setEntriesPage] = useState<LabJournalPage>(emptyPage);
   const [loading, setLoading] = useState(false);
   const [typesLoading, setTypesLoading] = useState(true);
+  const [laboratoriesLoading, setLaboratoriesLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [downloading, setDownloading] = useState<'excel' | 'template' | ''>('');
   const [error, setError] = useState('');
   const [editing, setEditing] = useState<LabJournalEntry | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<LabJournalEntry | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   const selectedDefinition = useMemo(
     () => types.find((item) => item.code === selectedJournalType),
     [selectedJournalType, types],
   );
+
+  const typeTitleByCode = useMemo(
+    () => new Map(types.map((item) => [item.code, item.title])),
+    [types],
+  );
+
+  const laboratoryNameById = useMemo(
+    () => new Map(laboratories.map((item) => [text(item.id), item.name])),
+    [laboratories],
+  );
+
   const searchTrimmed = debouncedSearch.trim();
   const searchReady = searchTrimmed.length === 0 || searchTrimmed.length >= MIN_SEARCH_LENGTH;
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedSearch(searchDraft), 500);
+    const timer = window.setTimeout(() => setDebouncedSearch(searchDraft), 450);
     return () => window.clearTimeout(timer);
   }, [searchDraft]);
 
   useEffect(() => {
-    getLabJournalTypes()
-      .then(setTypes)
+    setTypesLoading(true);
+    getJournalTypes()
+      .then((items) => setTypes(items.length ? items : JOURNAL_TYPES))
       .catch((loadError) => {
-        toast.warning('Не удалось загрузить список журналов с сервера', loadError instanceof Error ? loadError.message : undefined);
+        toast.warning('Не удалось загрузить типы журналов', loadError instanceof Error ? loadError.message : undefined);
         setTypes(JOURNAL_TYPES);
       })
       .finally(() => setTypesLoading(false));
   }, [toast]);
+
+  useEffect(() => {
+    if (!canFilterLaboratory) return;
+    setLaboratoriesLoading(true);
+    getLaboratories()
+      .then((items) => setLaboratories(items.filter((item) => item.active)))
+      .catch((loadError) => toast.warning('Не удалось загрузить список лабораторий', loadError instanceof Error ? loadError.message : undefined))
+      .finally(() => setLaboratoriesLoading(false));
+  }, [canFilterLaboratory, toast]);
 
   const loadEntries = async () => {
     if (!selectedJournalType || !searchReady) return;
     setLoading(true);
     setError('');
     try {
-      setEntriesPage(await getLabJournalEntries({
+      setEntriesPage(await getEntries({
         journalType: selectedJournalType,
+        laboratoryId: laboratoryId || undefined,
         page,
         size: PAGE_SIZE,
         dateFrom: dateFrom || undefined,
@@ -232,9 +365,9 @@ const LabJournalsPage = () => {
         search: searchTrimmed || undefined,
       }));
     } catch (loadError) {
-      const message = loadError instanceof Error ? loadError.message : 'Не удалось загрузить записи журнала.';
-      setError(message);
-      toast.error('Не удалось загрузить записи журнала', message);
+      const message = loadError instanceof Error ? loadError.message : 'Не удалось загрузить журналы';
+      setError('Не удалось загрузить журналы');
+      toast.error('Не удалось загрузить журналы', message);
     } finally {
       setLoading(false);
     }
@@ -245,15 +378,14 @@ const LabJournalsPage = () => {
       setEntriesPage(emptyPage);
       return;
     }
-    if (!searchReady) return;
-    loadEntries();
-  }, [selectedJournalType, page, dateFrom, dateTo, searchReady, searchTrimmed]);
+    if (searchReady) loadEntries();
+  }, [selectedJournalType, laboratoryId, page, dateFrom, dateTo, searchReady, searchTrimmed]);
 
   const resetPage = () => setPage(0);
 
   const openCreate = () => {
     if (!selectedDefinition) {
-      toast.warning('Сначала выберите журнал');
+      toast.warning('Сначала выберите тип журнала');
       return;
     }
     setEditing(null);
@@ -264,11 +396,17 @@ const LabJournalsPage = () => {
     if (!selectedJournalType) return;
     setSaving(true);
     try {
+      const payload = {
+        journalType: selectedJournalType,
+        entryDate,
+        data,
+        laboratoryId: laboratoryId || undefined,
+      };
       if (editing) {
-        await updateLabJournalEntry(editing.id, { journalType: selectedJournalType, entryDate, data });
+        await updateEntry(editing.id, payload);
         toast.success('Запись обновлена');
       } else {
-        await createLabJournalEntry({ journalType: selectedJournalType, entryDate, data });
+        await createEntry(payload);
         toast.success('Запись добавлена');
       }
       setModalOpen(false);
@@ -281,32 +419,41 @@ const LabJournalsPage = () => {
     }
   };
 
-  const removeEntry = async (entry: LabJournalEntry) => {
-    if (!window.confirm(`Удалить запись №${entry.rowNumber || entry.id}?`)) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteLabJournalEntry(entry.id);
+      await deleteEntry(deleteTarget.id);
+      setDeleteTarget(null);
       toast.success('Запись удалена');
       await loadEntries();
     } catch (deleteError) {
       toast.error('Не удалось удалить запись', deleteError instanceof Error ? deleteError.message : undefined);
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const downloadExcel = async (template = false) => {
+  const handleDownload = async (template: boolean) => {
     if (!selectedJournalType) {
-      toast.warning('Сначала выберите журнал');
+      toast.warning('Сначала выберите тип журнала');
       return;
     }
+    const state = template ? 'template' : 'excel';
+    setDownloading(state);
     try {
-      const { blob, fileName } = await exportLabJournalExcel({
+      const params = {
         journalType: selectedJournalType,
+        laboratoryId: laboratoryId || undefined,
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
-        template,
-      });
-      downloadBlob(blob, fileName || `journal_${selectedJournalType}_${template ? 'template' : today()}.xlsx`);
+      };
+      const { blob, fileName } = template ? await downloadTemplate(params) : await downloadExcel(params);
+      downloadBlob(blob, fileName);
     } catch (downloadError) {
       toast.error('Не удалось скачать Excel', downloadError instanceof Error ? downloadError.message : undefined);
+    } finally {
+      setDownloading('');
     }
   };
 
@@ -318,14 +465,14 @@ const LabJournalsPage = () => {
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-eco-700">Лаборатория</p>
           <h1 className="mt-1 text-2xl font-black text-slate-950 sm:text-3xl">Журналы лаборатории</h1>
-          <p className="mt-2 max-w-3xl text-sm text-slate-500">Выберите журнал, чтобы добавить записи, отфильтровать данные и скачать Excel.</p>
+          <p className="mt-2 max-w-3xl text-sm text-slate-500">Выберите тип журнала, ведите записи и скачивайте Excel по текущим фильтрам.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" onClick={() => downloadExcel(true)} disabled={!selectedJournalType}>
-            <FileDown className="h-4 w-4" /> Скачать пустой шаблон Excel
+          <Button type="button" variant="secondary" onClick={() => handleDownload(false)} disabled={!selectedJournalType || downloading !== ''}>
+            <Download className="h-4 w-4" /> {downloading === 'excel' ? 'Скачивание...' : 'Скачать Excel'}
           </Button>
-          <Button type="button" variant="secondary" onClick={() => downloadExcel(false)} disabled={!selectedJournalType}>
-            <Download className="h-4 w-4" /> Скачать Excel
+          <Button type="button" variant="secondary" onClick={() => handleDownload(true)} disabled={!selectedJournalType || downloading !== ''}>
+            <FileDown className="h-4 w-4" /> {downloading === 'template' ? 'Скачивание...' : 'Скачать пустой шаблон Excel'}
           </Button>
           <Button type="button" onClick={openCreate} disabled={!selectedJournalType}>
             <Plus className="h-4 w-4" /> Добавить запись
@@ -333,29 +480,45 @@ const LabJournalsPage = () => {
         </div>
       </header>
 
-      <section className={`${panelClass} grid gap-3 xl:grid-cols-[minmax(280px,1.5fr)_160px_160px_minmax(220px,1fr)_auto] xl:items-end`}>
+      <section className={`${panelClass} grid gap-3 xl:grid-cols-[minmax(260px,1.4fr)_minmax(180px,1fr)_150px_150px_minmax(210px,1fr)_auto] xl:items-end`}>
         <label className="space-y-1.5 text-sm font-semibold text-slate-700">
-          <span>Выберите журнал</span>
+          <span>Тип журнала</span>
           <select
             value={selectedJournalType}
             onChange={(event) => {
-              setSelectedJournalType(event.target.value as JournalType | '');
+              setSelectedJournalType(event.target.value);
               setEntriesPage(emptyPage);
               setPage(0);
             }}
             className={inputClass}
             disabled={typesLoading}
           >
-            <option value="">{typesLoading ? 'Загрузка...' : 'Выберите журнал'}</option>
+            <option value="">{typesLoading ? 'Загрузка типов...' : 'Выберите тип журнала'}</option>
             {types.map((item) => <option key={item.code} value={item.code}>{item.title}</option>)}
           </select>
         </label>
+
+        {canFilterLaboratory ? (
+          <label className="space-y-1.5 text-sm font-semibold text-slate-700">
+            <span>Лаборатория</span>
+            <select
+              value={laboratoryId}
+              onChange={(event) => { setLaboratoryId(event.target.value); resetPage(); }}
+              className={inputClass}
+              disabled={laboratoriesLoading}
+            >
+              <option value="">{laboratoriesLoading ? 'Загрузка...' : 'Все лаборатории'}</option>
+              {laboratories.map((item) => <option key={item.id} value={item.id}>{item.name}{item.isDefault ? ' · по умолчанию' : ''}</option>)}
+            </select>
+          </label>
+        ) : <div className="hidden xl:block" />}
+
         <label className="space-y-1.5 text-sm font-semibold text-slate-700">
-          <span>Дата с</span>
+          <span>Дата от</span>
           <input type="date" value={dateFrom} onChange={(event) => { setDateFrom(event.target.value); resetPage(); }} className={inputClass} />
         </label>
         <label className="space-y-1.5 text-sm font-semibold text-slate-700">
-          <span>Дата по</span>
+          <span>Дата до</span>
           <input type="date" value={dateTo} onChange={(event) => { setDateTo(event.target.value); resetPage(); }} className={inputClass} />
         </label>
         <label className="space-y-1.5 text-sm font-semibold text-slate-700">
@@ -366,7 +529,7 @@ const LabJournalsPage = () => {
           </div>
         </label>
         <Button type="button" variant="secondary" onClick={loadEntries} disabled={!selectedJournalType || loading || !searchReady}>
-          <RefreshCw className="h-4 w-4" /> Обновить
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Обновить
         </Button>
       </section>
 
@@ -386,13 +549,68 @@ const LabJournalsPage = () => {
             </div>
             <div className="text-sm font-semibold text-slate-500">Страница {totalPages ? page + 1 : 0} из {totalPages}</div>
           </div>
-          <JournalTable
-            columns={selectedDefinition.columns}
-            rows={entriesPage.content}
-            loading={loading}
-            onEdit={(entry) => { setEditing(entry); setModalOpen(true); }}
-            onDelete={removeEntry}
-          />
+
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1040px] text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-3 py-3">№</th>
+                    <th className="px-3 py-3">Дата</th>
+                    <th className="px-3 py-3">Тип журнала</th>
+                    <th className="px-3 py-3">Основные данные записи</th>
+                    <th className="px-3 py-3">Лаборатория</th>
+                    <th className="px-3 py-3">Создал</th>
+                    <th className="px-3 py-3 text-right">Действия</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {loading ? Array.from({ length: 5 }).map((_, rowIndex) => (
+                    <tr key={rowIndex} className="animate-pulse">
+                      {Array.from({ length: 7 }).map((__, cellIndex) => (
+                        <td key={cellIndex} className="px-3 py-4"><div className="h-4 rounded bg-slate-100" /></td>
+                      ))}
+                    </tr>
+                  )) : entriesPage.content.map((entry, index) => {
+                    const definition = types.find((item) => item.code === entry.journalType) || selectedDefinition;
+                    const rowNumber = entry.rowNumber || page * PAGE_SIZE + index + 1;
+                    const laboratoryName = entry.laboratoryName || laboratoryNameById.get(text(entry.laboratoryId)) || '—';
+                    return (
+                      <tr key={entry.id} className="align-top hover:bg-slate-50">
+                        <td className="px-3 py-3 font-bold text-slate-950">{rowNumber}</td>
+                        <td className="px-3 py-3 text-slate-700">{formatDate(primaryDateForEntry(entry))}</td>
+                        <td className="max-w-[220px] px-3 py-3 font-semibold text-slate-800">{typeTitleByCode.get(entry.journalType) || definition.title || entry.journalType}</td>
+                        <td className="max-w-[360px] px-3 py-3 text-slate-700">
+                          <span className="whitespace-pre-wrap break-words">{renderEntrySummary(entry, definition)}</span>
+                        </td>
+                        <td className="max-w-[220px] px-3 py-3 text-slate-700">{laboratoryName}</td>
+                        <td className="px-3 py-3 text-slate-700">
+                          <div>{entry.createdByName || '—'}</div>
+                          {entry.createdAt && <div className="mt-1 text-xs text-slate-400">{formatDateTime(entry.createdAt)}</div>}
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="flex justify-end gap-2">
+                            <Button type="button" variant="secondary" className="px-3 py-2" onClick={() => { setEditing(entry); setModalOpen(true); }}>
+                              <Edit3 className="h-4 w-4" /> Изменить
+                            </Button>
+                            <Button type="button" variant="ghost" className="px-3 py-2 text-rose-700 hover:bg-rose-50" onClick={() => setDeleteTarget(entry)}>
+                              <Trash2 className="h-4 w-4" /> Удалить
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {!loading && entriesPage.content.length === 0 && (
+              <div className="px-6 py-10 text-center text-sm font-semibold text-slate-500">
+                Записей пока нет
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-semibold text-slate-500">Показывается до {PAGE_SIZE} записей на странице.</p>
             <div className="flex gap-2">
@@ -400,6 +618,7 @@ const LabJournalsPage = () => {
               <Button type="button" variant="secondary" disabled={loading || page + 1 >= totalPages} onClick={() => setPage((current) => current + 1)}>Вперед</Button>
             </div>
           </div>
+
           <EntryModal
             open={modalOpen}
             definition={selectedDefinition}
@@ -411,9 +630,22 @@ const LabJournalsPage = () => {
         </>
       ) : (
         <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm font-semibold text-slate-500">
-          Выберите журнал, чтобы увидеть таблицу записей.
+          {typesLoading ? 'Загрузка типов журналов...' : 'Выберите тип журнала, чтобы увидеть записи.'}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="Удалить запись журнала?"
+        description="Запись будет удалена из выбранного журнала."
+        confirmText="Удалить"
+        variant="danger"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onClose={() => {
+          if (!deleting) setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 };

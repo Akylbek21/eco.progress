@@ -13,7 +13,7 @@ import type { UserRole } from './types';
 import { seoPages } from './data/seoPages';
 
 const lazyNamed = <T extends Record<string, unknown>, K extends keyof T>(loader: () => Promise<T>, key: K) =>
-  lazy(() => loader().then((module) => ({ default: module[key] as ComponentType<any> })));
+  lazy(() => loader().then((module) => ({ default: module[key] as unknown as ComponentType<Record<string, unknown>> })));
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
@@ -78,11 +78,11 @@ const StaffAccess = ({ roles, children }: { roles?: UserRole[]; children: ReactN
   return <StaffDashboardPage />;
 };
 
-const ForbiddenPage = () => (
+const ForbiddenPage = ({ message = 'У вашей роли нет прав для открытия этого раздела.' }: { message?: string }) => (
   <div className="flex min-h-[60vh] items-center justify-center px-5">
     <div className="max-w-md rounded-[24px] bg-white p-8 text-center shadow-sm">
       <h1 className="text-2xl font-bold text-eco-900">Нет доступа</h1>
-      <p className="mt-2 text-sm leading-6 text-slate-600">У вашей роли нет прав для открытия этого раздела.</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{message}</p>
     </div>
   </div>
 );
@@ -96,11 +96,11 @@ const RouteFallback = () => {
   return isPublic ? <PublicLayout><PageLoader /></PublicLayout> : <PageLoader />;
 };
 
-const RoleAccess = ({ roles, loginPath, children }: { roles: UserRole[]; loginPath: string; children: ReactNode }) => {
+const RoleAccess = ({ roles, loginPath, forbiddenMessage, children }: { roles: UserRole[]; loginPath: string; forbiddenMessage?: string; children: ReactNode }) => {
   const { user, loading, isAuthenticated } = useAuth();
   if (loading) return null;
   if (!isAuthenticated) return <Navigate to={loginPath} replace />;
-  if (!user?.role || !roles.includes(user.role)) return <ForbiddenPage />;
+  if (!user?.role || !roles.includes(user.role)) return <ForbiddenPage message={forbiddenMessage} />;
   return <>{children}</>;
 };
 
@@ -209,7 +209,7 @@ function App() {
         <Route path="/staff/protocols/:protocolId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/normatives" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/measurement-devices" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/journals" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><LabJournalsPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/journals" element={<RoleAccess roles={['ADMIN', 'HEAD', 'LABORATORY']} loginPath="/staff/login" forbiddenMessage="Нет доступа к разделу журналов"><StaffLayout><StaffAccess roles={['ADMIN', 'HEAD', 'LABORATORY']}><LabJournalsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/settings/laboratory" element={<RoleAccess roles={['ADMIN', 'HEAD', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'HEAD', 'LABORATORY']}><LaboratorySettingsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/reports" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><StaffReportsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/user-roles" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN']}><StaffUserRolesPage /></StaffAccess></StaffLayout></RoleAccess>} />

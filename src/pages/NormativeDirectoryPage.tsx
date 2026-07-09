@@ -17,8 +17,13 @@ type NormativeCategoryCode =
   | 'workplace_air'
   | 'summation_groups'
   | 'rocket_fuel'
+  | 'water'
+  | 'soil'
+  | 'food_products'
+  | 'surfaces'
   | 'microclimate'
   | 'noise'
+  | 'vibration'
   | 'lighting'
   | 'infrasound'
   | 'ultrasound'
@@ -30,7 +35,11 @@ type NormativeCategoryCode =
   | 'soil_sanitary_chemical'
   | 'soil_microbiology'
   | 'soil_degradation'
-  | 'DRINKING_WATER_SAFETY'
+  | 'DRINKING_WATER_GENERAL_CHEMICAL'
+  | 'WATER_TREATMENT_REAGENTS'
+  | 'ORGANOLEPTIC'
+  | 'RADIATION_SAFETY'
+  | 'MICROBIOLOGY_PARASITOLOGY'
   | 'DRINKING_WATER_CHEMICALS'
   | 'SURFACE_WATER_SAFETY'
   | 'SURFACE_WATER_PDK';
@@ -76,15 +85,16 @@ const DEFAULT_PAGE_SIZE = 50;
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 const NORMATIVE_DOCUMENTS: Array<{ code: NormativeDocumentCode; label: string }> = [
-  { code: 'DSM_70', label: 'DSM_70 — Атмосферный воздух / воздух рабочей зоны' },
-  { code: 'DSM_32', label: 'DSM_32 — Почва' },
-  { code: 'DSM_15', label: 'DSM_15 — Физические факторы' },
-  { code: 'DSM_138', label: 'DSM_138 — Вода: хозяйственно-питьевое и культурно-бытовое водопользование' },
+  { code: 'DSM_70', label: 'ДСМ-70' },
+  { code: 'DSM_15', label: 'ДСМ-15' },
+  { code: 'DSM_32', label: 'ДСМ-32' },
+  { code: 'DSM_138', label: 'ДСМ-138' },
 ];
 
 const DSM15_CATEGORIES: NormativeCategory[] = [
   { code: 'microclimate', label: 'Микроклимат' },
   { code: 'noise', label: 'Шум' },
+  { code: 'vibration', label: 'Вибрация' },
   { code: 'lighting', label: 'Освещенность' },
   { code: 'infrasound', label: 'Инфразвук' },
   { code: 'ultrasound', label: 'Ультразвук' },
@@ -99,6 +109,10 @@ const DSM70_CATEGORIES: NormativeCategory[] = [
   { code: 'workplace_air', label: 'Воздух рабочей зоны' },
   { code: 'summation_groups', label: 'Группы суммации' },
   { code: 'rocket_fuel', label: 'Ракетное топливо' },
+  { code: 'water', label: 'Вода' },
+  { code: 'soil', label: 'Почва' },
+  { code: 'food_products', label: 'Пищевые продукты' },
+  { code: 'surfaces', label: 'Поверхности' },
 ];
 
 const DSM32_CATEGORIES: NormativeCategory[] = [
@@ -109,10 +123,14 @@ const DSM32_CATEGORIES: NormativeCategory[] = [
 ];
 
 const DSM138_CATEGORIES: NormativeCategory[] = [
-  { code: 'DRINKING_WATER_SAFETY', label: 'Показатели безопасности питьевой воды' },
-  { code: 'DRINKING_WATER_CHEMICALS', label: 'Вредные химические вещества в питьевой воде' },
-  { code: 'SURFACE_WATER_SAFETY', label: 'Показатели безопасности воды водных объектов' },
+  { code: 'DRINKING_WATER_GENERAL_CHEMICAL', label: 'Питьевая вода — обобщенные химические показатели' },
+  { code: 'WATER_TREATMENT_REAGENTS', label: 'Реагенты для обработки воды' },
+  { code: 'ORGANOLEPTIC', label: 'Органолептические показатели' },
+  { code: 'RADIATION_SAFETY', label: 'Радиационная безопасность' },
+  { code: 'MICROBIOLOGY_PARASITOLOGY', label: 'Микробиологические и паразитологические показатели' },
+  { code: 'DRINKING_WATER_CHEMICALS', label: 'Химические вещества в питьевой воде' },
   { code: 'SURFACE_WATER_PDK', label: 'ПДК веществ в воде водных объектов' },
+  { code: 'SURFACE_WATER_SAFETY', label: 'Показатели безопасности воды водных объектов' },
 ];
 
 const waterTypeOptions = [
@@ -192,6 +210,7 @@ const combinedText = (item: NormativeRecord) => normalizeSearch([
   item.indicatorName,
   item.indicator,
   item.pollutantName,
+  item.synonyms,
   item.tableTitle,
   item.sourceDocumentName,
   item.sourceFileName,
@@ -205,7 +224,8 @@ const dsm15CategoryForItem = (item: NormativeRecord): NormativeCategoryCode => {
   const factorType = normalizeKey(item.factorType || item.templateId || item.category);
   const text = combinedText(item);
   if (factorType.includes('MICROCLIMATE') || containsAny(text, ['микроклимат'])) return 'microclimate';
-  if (factorType.includes('NOISE') || factorType.includes('VIBRATION') || containsAny(text, ['шум', 'вибрац'])) return 'noise';
+  if (factorType.includes('VIBRATION') || containsAny(text, ['вибрац'])) return 'vibration';
+  if (factorType.includes('NOISE') || containsAny(text, ['шум'])) return 'noise';
   if (factorType.includes('LIGHTING') || containsAny(text, ['освещ', 'свет'])) return 'lighting';
   if (factorType.includes('INFRASOUND') || containsAny(text, ['инфразвук'])) return 'infrasound';
   if (factorType.includes('ULTRASOUND') || containsAny(text, ['ультразвук'])) return 'ultrasound';
@@ -221,6 +241,10 @@ const dsm70CategoryForItem = (item: NormativeRecord): NormativeCategoryCode => {
   const normativeType = normalizeKey(item.normativeType);
   if (normativeType === 'SUMMATION_GROUP' || item.summationGroup) return 'summation_groups';
   if (containsAny(text, ['ракет', 'ндмг', 'udmh', 'диметилгидразин'])) return 'rocket_fuel';
+  if (containsAny(text, ['поверхност', 'surface'])) return 'surfaces';
+  if (containsAny(text, ['пищ', 'food'])) return 'food_products';
+  if (item.templateId === 'soil' || containsAny(text, ['почв', 'soil'])) return 'soil';
+  if (item.templateId === 'water' || item.templateId === 'water_wastewater' || containsAny(text, ['вода', 'водн', 'water'])) return 'water';
   if (item.templateId === 'workplace_air' || containsAny(text, ['рабочей зоны', 'workplace', 'work zone'])) return 'workplace_air';
   return 'ambient_air';
 };
@@ -237,15 +261,27 @@ const dsm32CategoryForItem = (item: NormativeRecord): NormativeCategoryCode => {
 
 const dsm138CategoryForItem = (item: NormativeRecord): NormativeCategoryCode => {
   const category = normalizeKey(item.categoryCode || item.category || item.categoryName);
+  if (category.includes('GENERAL') || category.includes('GENERAL_CHEMICAL')) return 'DRINKING_WATER_GENERAL_CHEMICAL';
+  if (category.includes('REAGENT')) return 'WATER_TREATMENT_REAGENTS';
+  if (category.includes('ORGANOLEPTIC')) return 'ORGANOLEPTIC';
+  if (category.includes('RADIATION') || category.includes('RADIO')) return 'RADIATION_SAFETY';
+  if (category.includes('MICROBIO') || category.includes('PARASIT')) return 'MICROBIOLOGY_PARASITOLOGY';
   if (category.includes('DRINKING_WATER_CHEMICALS')) return 'DRINKING_WATER_CHEMICALS';
-  if (category.includes('DRINKING_WATER_SAFETY')) return 'DRINKING_WATER_SAFETY';
+  if (category.includes('DRINKING_WATER_SAFETY')) return 'DRINKING_WATER_GENERAL_CHEMICAL';
   if (category.includes('SURFACE_WATER_PDK')) return 'SURFACE_WATER_PDK';
   if (category.includes('SURFACE_WATER_SAFETY')) return 'SURFACE_WATER_SAFETY';
   const waterType = normalizeKey(item.waterType);
   const text = combinedText(item);
+  const appendix = textValue(item.appendixNo, item.appNo, item.appendix).replace(/\D/g, '');
+  const tableNo = textValue(item.tableNo, item.tableNumber).replace(/\D/g, '');
+  if (appendix === '3') return 'WATER_TREATMENT_REAGENTS';
+  if (appendix === '2' && tableNo === '1') return 'DRINKING_WATER_GENERAL_CHEMICAL';
+  if (appendix === '2' && tableNo === '2') return 'ORGANOLEPTIC';
+  if (appendix === '2' && tableNo === '3') return 'RADIATION_SAFETY';
+  if (appendix === '2' && tableNo === '4') return 'MICROBIOLOGY_PARASITOLOGY';
   if (waterType.includes('SURFACE') || containsAny(text, ['водных объектов', 'поверхност'])) return 'SURFACE_WATER_PDK';
   if (waterType.includes('DRINKING') || containsAny(text, ['питьевой', 'питьевая'])) return 'DRINKING_WATER_CHEMICALS';
-  return 'DRINKING_WATER_SAFETY';
+  return 'DRINKING_WATER_GENERAL_CHEMICAL';
 };
 
 const categoryForItem = (documentCode: NormativeDocumentCode, item: NormativeRecord): NormativeCategoryCode => {
@@ -296,22 +332,26 @@ const displaySubtype = (item: NormativeRecord) => {
   return subtypeLabels[raw.toUpperCase().replace(/[\s-]+/g, '_')] || raw;
 };
 
-const displayNormative = (item: NormativeRecord) => {
-  const value = textValue(item.value);
-  const min = textValue(item.min);
-  const max = textValue(item.max);
+const getNormativeDisplay = (item: NormativeRecord) => {
+  const value = textValue(item.normativeValue, item.value, item.pdk, item.obuv, item.limitValue);
+  const min = textValue(item.minValue, item.min);
+  const max = textValue(item.maxValue, item.max);
   const unit = textValue(item.unit);
   const alternative = textValue(item.alternativeNormativeValue);
   const comparisonType = normalizeKey(item.comparisonType);
   let result = '';
-  if (comparisonType === 'RANGE' && min && max) result = `${displayNormativeCell(min)} - ${displayNormativeCell(max)}${unit ? ` ${unit}` : ''}`;
+  if (comparisonType === 'RANGE' && min && max) result = `${displayNormativeCell(min)}-${displayNormativeCell(max)}${unit ? ` ${unit}` : ''}`;
   else if (comparisonType === 'LESS_OR_EQUAL' && (max || value)) result = `≤ ${displayNormativeCell(max || value)}${unit ? ` ${unit}` : ''}`;
-  else if (comparisonType === 'ABSENT') result = 'Отсутствие';
-  else if (value) result = value;
-  else if (min && max) result = `${displayNormativeCell(min)}-${displayNormativeCell(max)}`;
+  else if (comparisonType === 'GREATER_OR_EQUAL' && (min || value)) result = `≥ ${displayNormativeCell(min || value)}${unit ? ` ${unit}` : ''}`;
+  else if (comparisonType === 'EQUAL' && value) result = `= ${displayNormativeCell(value)}${unit ? ` ${unit}` : ''}`;
+  else if (comparisonType === 'ABSENT') result = 'не допускается';
+  else if (value) result = `${displayNormativeCell(value)}${unit && /^[<>≤≥=]?\s*[\d.,-]+$/.test(value) ? ` ${unit}` : ''}`;
+  else if (min && max) result = `${displayNormativeCell(min)}-${displayNormativeCell(max)}${unit ? ` ${unit}` : ''}`;
   else result = textValue(max, min);
   return alternative ? `${result} (${alternative})` : result;
 };
+
+const displayNormative = getNormativeDisplay;
 
 const normalizedTypeKey = (value: unknown) => textValue(value).toUpperCase().replace(/[\s-]+/g, '_');
 const normalizedItemType = (item: NormativeRecord) => normalizedTypeKey(item.normativeType);
@@ -329,13 +369,42 @@ const formatNormativeNumber = (value: unknown) => {
 const displayNormativeCell = (...values: unknown[]) => formatNormativeNumber(textValue(...values));
 const displayComparisonType = (item: NormativeRecord) => {
   const labels: Record<string, string> = {
-    LESS_OR_EQUAL: '<=',
-    GREATER_OR_EQUAL: '>=',
+    LESS_OR_EQUAL: '≤',
+    GREATER_OR_EQUAL: '≥',
     RANGE: 'Диапазон',
     EQUAL: '=',
     INFO: 'Инфо',
   };
   return labels[item.comparisonType] || item.comparisonType || '-';
+};
+
+const formatMetadata = (value: unknown) => {
+  const raw = textValue(value);
+  if (!raw) return '';
+  if (!raw.trim().startsWith('{')) return raw;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const labels: Record<string, string> = {
+      appendix: 'Приложение',
+      appendixNo: 'Приложение',
+      appNo: 'Приложение',
+      table: 'таблица',
+      tableNo: 'таблица',
+      tableNumber: 'таблица',
+      hazardClass: 'класс опасности',
+      limitingIndicator: 'лимитирующий показатель',
+      limitingHazardIndicator: 'лимитирующий показатель',
+      roomType: 'помещение',
+      workCategory: 'категория работ',
+      season: 'период года',
+    };
+    return Object.entries(parsed)
+      .filter(([, item]) => item !== undefined && item !== null && textValue(item))
+      .map(([key, item]) => `${labels[key] || key} ${textValue(item)}`)
+      .join(', ');
+  } catch {
+    return raw;
+  }
 };
 
 const displayConditions = (item: NormativeRecord) => [
@@ -348,11 +417,12 @@ const displayConditions = (item: NormativeRecord) => [
   item.noiseType,
   item.visualWorkCategory,
   item.factorCode,
+  formatMetadata(item.conditionJson),
 ].filter(Boolean).join(', ') || '-';
 
 const displayTableLabel = (item: NormativeRecord) => {
-  const appendix = textValue(item.appNo, item.appendixNo);
-  const tableNo = textValue(item.tableNo);
+  const appendix = textValue(item.appNo, item.appendixNo, item.appendix);
+  const tableNo = textValue(item.tableNo, item.tableNumber);
   const tableTitle = textValue(item.tableTitle, item.sourceFileName, item.sourceFile, item.categoryName, item.category);
   const parts = [
     appendix ? `Прил. ${appendix}` : '',
@@ -413,15 +483,17 @@ const groupSummationRows = (records: NormativeRecord[]) => {
 const getVisibleColumns = (documentCode: NormativeDocumentCode, categoryCode: NormativeCategoryCode): NormativeColumn[] => {
   if (documentCode === 'DSM_138') {
     return [
+      { key: 'code', label: 'Код', render: (row) => displayCodes(row) },
       { key: 'name', label: 'Наименование показателя / вещества', render: (row) => displayCell(row.primary.indicatorName, row.primary.pollutantName, row.primary.indicator, row.primary.name) },
-      { key: 'synonyms', label: 'Синонимы', render: (row) => displayCell(row.primary.name, row.primary.indicator) },
+      { key: 'synonyms', label: 'Синонимы', render: (row) => displayCell(row.primary.synonyms) },
       { key: 'cas', label: 'CAS', render: (row) => displayCell(row.primary.cas, row.primary.casNumber) },
+      { key: 'formula', label: 'Формула', render: (row) => displayCell(row.primary.formula, row.primary.chemicalFormula) },
       { key: 'unit', label: 'Единица измерения', render: (row) => displayCell(row.primary.unit) },
       { key: 'normative', label: 'Норматив', render: (row) => displayNormative(row.primary) || '-' },
       { key: 'appendix', label: 'Приложение', render: (row) => displayCell(row.primary.appendixNo, row.primary.appNo) },
       { key: 'table', label: 'Таблица', render: (row) => displayCell(row.primary.tableNo, row.primary.tableTitle) },
       { key: 'category', label: 'Категория', render: (row) => displayCell(row.primary.categoryName, row.primary.categoryCode, row.primary.category) },
-      { key: 'limiting', label: 'Показатель вредности', render: (row) => displayCell(row.primary.limitingIndicator) },
+      { key: 'limiting', label: 'Лимитирующий показатель вредности', render: (row) => displayCell(row.primary.limitingHazardIndicator, row.primary.limitingIndicator) },
       { key: 'hazard', label: 'Класс опасности', render: (row) => displayCell(row.primary.hazardClass) },
       { key: 'document', label: 'Документ', render: (row) => displayDocument(row.primary) },
     ];
@@ -429,13 +501,19 @@ const getVisibleColumns = (documentCode: NormativeDocumentCode, categoryCode: No
 
   if (documentCode === 'DSM_15') {
     return [
-      { key: 'table', label: 'Таблица', render: (row) => displayTableLabel(row.primary) },
+      { key: 'code', label: 'Код', render: (row) => displayCell(row.primary.factorCode, row.primary.code) },
       { key: 'indicator', label: 'Показатель', render: (row) => displayCell(row.primary.indicator, row.primary.indicatorName, row.primary.pollutantName) },
-      { key: 'conditions', label: 'Условия', render: (row) => displayConditions(row.primary) },
-      { key: 'normative', label: 'Норматив', render: (row) => displayGeneralNormative(row) },
+      { key: 'factorType', label: 'Тип фактора', render: (row) => displayCell(row.primary.factorType, row.primary.subtype) },
+      { key: 'room', label: 'Помещение / категория работ', render: (row) => displayCell(row.primary.roomType, row.primary.workCategory, row.primary.workplaceType) },
+      { key: 'season', label: 'Период года', render: (row) => displayCell(row.primary.season) },
+      { key: 'min', label: 'Минимум', render: (row) => displayCell(row.primary.minValue, row.primary.min) },
+      { key: 'max', label: 'Максимум', render: (row) => displayCell(row.primary.maxValue, row.primary.max, row.primary.value) },
+      { key: 'normative', label: 'Норматив', render: (row) => displayNormative(row.primary) || displayGeneralNormative(row) },
       { key: 'unit', label: 'Единица', render: (row) => displayCell(row.unit, row.primary.unit) },
       { key: 'comparison', label: 'Тип сравнения', render: (row) => displayComparisonType(row.primary) },
-      { key: 'note', label: 'Примечание', render: (row) => displayCell(row.primary.conditionJson, row.primary.normativeDocument) },
+      { key: 'table', label: 'Таблица', render: (row) => displayTableLabel(row.primary) },
+      { key: 'document', label: 'Документ', render: (row) => displayDocument(row.primary) },
+      { key: 'note', label: 'Примечание', render: (row) => displayCell(formatMetadata(row.primary.conditionJson)) },
     ];
   }
 
@@ -443,8 +521,10 @@ const getVisibleColumns = (documentCode: NormativeDocumentCode, categoryCode: No
     return [
       { key: 'hazard', label: 'Степень опасности', render: (row) => displayCell(row.primary.hazardLevel, row.primary.assessmentCategory) },
       { key: 'pollution', label: 'Степень загрязнения', render: (row) => displayCell(row.primary.pollutionLevel, row.primary.pollutionDegree) },
-      { key: 'excess', label: 'Кратность превышения ПДК', render: (row) => displayCell(row.primary.value, row.primary.conditionJson) },
+      { key: 'excess', label: 'Кратность превышения ПДК', render: (row) => displayCell(row.primary.value, formatMetadata(row.primary.conditionJson)) },
       { key: 'radio', label: 'Радиологический показатель', render: (row) => displayCell(row.primary.radioactiveIndicator) },
+      { key: 'document', label: 'Документ', render: (row) => displayDocument(row.primary) },
+      { key: 'table', label: 'Таблица/приложение', render: (row) => displayTableLabel(row.primary) },
     ];
   }
 
@@ -457,6 +537,8 @@ const getVisibleColumns = (documentCode: NormativeDocumentCode, categoryCode: No
       { key: 'helminth', label: 'Яйца гельминтов', render: (row) => displayCell(row.primary.helminth) },
       { key: 'fly', label: 'Личинки/куколки мух', render: (row) => displayCell(row.primary.flyLarvae) },
       { key: 'sanitary', label: 'Санитарное число', render: (row) => displayCell(row.primary.sanitaryNumber) },
+      { key: 'document', label: 'Документ', render: (row) => displayDocument(row.primary) },
+      { key: 'table', label: 'Таблица/приложение', render: (row) => displayTableLabel(row.primary) },
     ];
   }
 
@@ -468,17 +550,22 @@ const getVisibleColumns = (documentCode: NormativeDocumentCode, categoryCode: No
       { key: 'emergency', label: 'Чрезвычайная ситуация', render: (row) => displayCell(row.primary.emergencySituation) },
       { key: 'satisfactory', label: 'Относительно удовлетворительная ситуация', render: (row) => displayCell(row.primary.satisfactorySituation) },
       { key: 'unit', label: 'Единица', render: (row) => displayCell(row.primary.unit) },
+      { key: 'document', label: 'Документ', render: (row) => displayDocument(row.primary) },
+      { key: 'table', label: 'Таблица/приложение', render: (row) => displayTableLabel(row.primary) },
     ];
   }
 
   if (documentCode === 'DSM_32') {
     return [
+      { key: 'code', label: 'Код', render: (row) => displayCodes(row) },
       { key: 'section', label: 'Раздел', render: (row) => displayCell(row.primary.formType, row.primary.categoryName, row.primary.category, row.primary.tableTitle) },
-      { key: 'substance', label: 'Вещество', render: (row) => displayPollutantName(row) },
-      { key: 'pdk', label: 'ПДК', render: (row) => displayGeneralNormative(row) },
-      { key: 'unit', label: 'Ед. изм.', render: (row) => displayCell(row.unit, row.primary.unit) },
+      { key: 'substance', label: 'Название показателя', render: (row) => displayPollutantName(row) },
+      { key: 'unit', label: 'Единица измерения', render: (row) => displayCell(row.unit, row.primary.unit) },
+      { key: 'pdk', label: 'Нормативное значение', render: (row) => displayNormative(row.primary) || displayGeneralNormative(row) },
+      { key: 'comparison', label: 'Тип сравнения', render: (row) => displayComparisonType(row.primary) },
       { key: 'limiting', label: 'Лимитирующий показатель', render: (row) => displayCell(row.primary.limitingIndicator) },
       { key: 'document', label: 'Документ', render: (row) => displayDocument(row.primary) },
+      { key: 'table', label: 'Таблица/приложение', render: (row) => displayTableLabel(row.primary) },
     ];
   }
 
@@ -487,7 +574,7 @@ const getVisibleColumns = (documentCode: NormativeDocumentCode, categoryCode: No
       { key: 'group', label: 'Группа', render: (row) => displayCell(row.primary.summationGroup, row.primary.code, row.primary.categoryName) },
       { key: 'substances', label: 'Вещества', render: (row) => displaySubstances(row) },
       { key: 'codes', label: 'Коды веществ', render: (row) => displayCodes(row) },
-      { key: 'note', label: 'Примечание', render: (row) => displayCell(row.primary.conditionJson, row.primary.normativeDocument) },
+      { key: 'note', label: 'Примечание', render: (row) => displayCell(formatMetadata(row.primary.conditionJson), row.primary.normativeDocument) },
     ];
   }
 
@@ -653,6 +740,7 @@ const canSubmitSearch = (value: string) => {
 const factorTypeForCategory: Partial<Record<NormativeCategoryCode, string>> = {
   microclimate: 'MICROCLIMATE',
   noise: 'NOISE',
+  vibration: 'VIBRATION',
   lighting: 'LIGHTING',
   infrasound: 'INFRASOUND',
   ultrasound: 'ULTRASOUND',
@@ -674,6 +762,10 @@ const categoryRequestParams = (documentCode: NormativeDocumentCode, categoryCode
     if (categoryCode === 'ambient_air') return { templateId: 'ambient_air' };
     if (categoryCode === 'workplace_air') return { templateId: 'workplace_air' };
     if (categoryCode === 'summation_groups') return { normativeType: 'SUMMATION_GROUP' };
+    if (categoryCode === 'water') return { templateId: 'water' };
+    if (categoryCode === 'soil') return { templateId: 'soil' };
+    if (categoryCode === 'food_products') return { category: 'FOOD_PRODUCTS' };
+    if (categoryCode === 'surfaces') return { category: 'SURFACES' };
     return {};
   }
   if (documentCode === 'DSM_15') {
@@ -683,7 +775,10 @@ const categoryRequestParams = (documentCode: NormativeDocumentCode, categoryCode
     return { templateId: 'soil', tableNo: tableNoForCategory[categoryCode] };
   }
   if (documentCode === 'DSM_138') {
-    return { templateId: 'water', environmentType: 'WATER', categoryCode };
+    const appendixByCategory: Partial<Record<NormativeCategoryCode, string>> = {
+      WATER_TREATMENT_REAGENTS: '3',
+    };
+    return { templateId: 'water', environmentType: 'WATER', categoryCode, category: categoryCode, appendixNo: appendixByCategory[categoryCode] };
   }
   return {};
 };
@@ -711,7 +806,7 @@ const NormativeDirectoryPage = () => {
   const [formTypeFilter, setFormTypeFilter] = useState('');
   const [editing, setEditing] = useState<NormativeRecord | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importFiles, setImportFiles] = useState<File[]>([]);
   const [importPreview, setImportPreview] = useState<NormativeImportPreview | null>(null);
   const [importError, setImportError] = useState('');
   const [importing, setImporting] = useState(false);
@@ -727,6 +822,7 @@ const NormativeDirectoryPage = () => {
     page,
     size,
     search: debouncedSearchReady ? debouncedQuery : undefined,
+    query: debouncedSearchReady ? debouncedQuery : undefined,
     sourceDocumentCode: activeDocument,
     status: 'ACTIVE',
     templateId: templateFilter || categoryParams.templateId,
@@ -735,6 +831,7 @@ const NormativeDirectoryPage = () => {
     appendixNo: appendixFilter || undefined,
     tableNo: tableFilter || categoryParams.tableNo,
     categoryCode: categoryParams.categoryCode,
+    category: categoryParams.category,
     waterType: activeDocument === 'DSM_138' ? waterTypeFilter || undefined : undefined,
     formType: formTypeFilter || undefined,
     normativeType: typeFilter || categoryParams.normativeType,
@@ -752,6 +849,7 @@ const NormativeDirectoryPage = () => {
     requestParams.appendixNo || '',
     requestParams.tableNo || '',
     requestParams.categoryCode || '',
+    requestParams.category || '',
     requestParams.waterType || '',
     requestParams.normativeType || '',
     requestParams.status || '',
@@ -808,7 +906,14 @@ const NormativeDirectoryPage = () => {
     return filtered.map(singleRecordRow);
   }, [filtered, activeDocument, activeCategory]);
 
-  const visibleColumns = useMemo(() => getVisibleColumns(activeDocument, activeCategory), [activeDocument, activeCategory]);
+  const baseColumns = useMemo(() => getVisibleColumns(activeDocument, activeCategory), [activeDocument, activeCategory]);
+  const visibleColumns = useMemo(() => {
+    const alwaysVisible = new Set(['code', 'name', 'indicator', 'substance', 'normative', 'pdk', 'document', 'table', 'section']);
+    if (!groupedRows.length) return baseColumns;
+    return baseColumns.filter((column) =>
+      alwaysVisible.has(column.key) || groupedRows.some((row, index) => column.render(row, index) !== '-'),
+    );
+  }, [baseColumns, groupedRows]);
   const tableGroups = useMemo(() => {
     const map = new Map<string, NormativeTableRow[]>();
     groupedRows.forEach((row) => {
@@ -874,7 +979,7 @@ const NormativeDirectoryPage = () => {
   };
 
   const resetImportState = () => {
-    setImportFile(null);
+    setImportFiles([]);
     setImportPreview(null);
     setImportError('');
     setImporting(false);
@@ -918,20 +1023,21 @@ const NormativeDirectoryPage = () => {
     resetImportState();
   };
 
-  const previewImport = async (file?: File) => {
-    if (!file) {
-      setImportError('Выберите файл Excel');
-      toast.warning('Выберите файл Excel');
+  const previewImport = async (fileList?: FileList | null) => {
+    const selectedFiles = Array.from(fileList || []);
+    if (!selectedFiles.length) {
+      setImportError('Выберите файл для импорта');
+      toast.warning('Выберите файл для импорта');
       return;
     }
-    setImportFile(file);
+    setImportFiles(selectedFiles);
     setImportPreview(null);
     setImportError('');
     setImporting(true);
     try {
       const preview = activeDocument === 'DSM_138'
-        ? await previewDsm138Import(file)
-        : await importNormativesExcel(file, true);
+        ? await previewDsm138Import(selectedFiles)
+        : await importNormativesExcel(selectedFiles[0], true);
       setImportPreview(preview);
       if (!preview.total || !preview.valid) {
         setImportError('Файл прочитан, но валидные строки нормативов не найдены. Проверьте формат таблицы.');
@@ -947,18 +1053,18 @@ const NormativeDirectoryPage = () => {
 
   const commitImport = async () => {
     const stats = importPreview || emptyImportPreview;
-    if (!importFile || !canManage) {
-      setImportError('Выберите файл Excel');
-      toast.warning('Выберите файл Excel');
+    if (!importFiles.length || !canManage) {
+      setImportError('Выберите файл для импорта');
+      toast.warning('Выберите файл для импорта');
       return;
     }
     if (!stats.importId || !stats.valid || importError) return;
     setImporting(true);
     try {
       if (activeDocument === 'DSM_138') {
-        await confirmDsm138Import(stats.importId);
+        await confirmDsm138Import(stats.importBatchId || stats.importId || '');
       } else {
-        await importNormativesExcel(importFile, false, stats.importId);
+        await importNormativesExcel(importFiles[0], false, stats.importId);
       }
       toast.success('Нормативы импортированы');
       closeImport();
@@ -973,7 +1079,13 @@ const NormativeDirectoryPage = () => {
   };
 
   const importStats = importPreview || emptyImportPreview;
-  const confirmImportDisabled = !importFile || !importStats.importId || !importStats.valid || importing || Boolean(importError);
+  const confirmImportDisabled = !importFiles.length || !importStats.importId || !importStats.valid || importing || Boolean(importError);
+  const activeCategoryLabel = visibleCategories.find((category) => category.code === activeCategory)?.label || 'выбранной категории';
+  const emptyMessage = activeDocument === 'DSM_138' && activeCategory === 'WATER_TREATMENT_REAGENTS'
+    ? 'Данные по приложению 3 не загружены'
+    : normalizedQuery.length > 0 && searchAllowed
+      ? 'Нормативы не найдены'
+      : `По выбранной категории данные пока не загружены: ${activeCategoryLabel}`;
   const rollbackImport = async () => {
     if (!importStats.importId || activeDocument !== 'DSM_138') return;
     setImporting(true);
@@ -1146,6 +1258,7 @@ const NormativeDirectoryPage = () => {
         <div className="divide-y divide-slate-100">
           {loading ? (
             <div className="overflow-x-auto">
+              <div className="px-4 py-3 text-sm font-semibold text-slate-500">Загрузка нормативов...</div>
               <table className="min-w-[1180px] w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
@@ -1209,7 +1322,7 @@ const NormativeDirectoryPage = () => {
           ))}
         </div>
         {!loading && !error && displayedCount === 0 && (
-          <p className="px-6 py-10 text-center text-sm font-semibold text-slate-500">Нет данных по этой таблице. Проверьте импорт нормативов.</p>
+          <p className="px-6 py-10 text-center text-sm font-semibold text-slate-500">{emptyMessage}</p>
         )}
       </div>
 
@@ -1264,13 +1377,14 @@ const NormativeDirectoryPage = () => {
           <div className="space-y-4">
             <input
               type="file"
-              accept={activeDocument === 'DSM_138' ? '.zip' : '.xls,.xlsx,.xls.xls'}
-              onChange={(event) => previewImport(event.target.files?.[0])}
+              multiple={activeDocument === 'DSM_138'}
+              accept={activeDocument === 'DSM_138' ? '.xls,.xlsx,.zip' : '.xls,.xlsx,.xls.xls'}
+              onChange={(event) => previewImport(event.target.files)}
               className={inputClass}
             />
             <div className="rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700">
-              {importFile ? (
-                <span>Файл: <span className="font-black text-slate-950">{importFile.name}</span></span>
+              {importFiles.length ? (
+                <span>Файлы: <span className="font-black text-slate-950">{importFiles.map((file) => file.name).join(', ')}</span></span>
               ) : 'Выберите файл Excel для проверки'}
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
