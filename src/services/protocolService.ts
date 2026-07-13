@@ -33,6 +33,7 @@ export interface ProtocolService {
   getProtocolById(protocolId: string): Promise<Protocol>;
   createProtocol(payload: CreateProtocolPayload): Promise<Protocol>;
   quickCreateProtocol(payload: QuickProtocolCreatePayload): Promise<Protocol>;
+  refreshLaboratoryData(protocolId: string): Promise<Protocol>;
   updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol>;
   deleteProtocol(protocolId: string): Promise<void>;
   addProtocolResult(protocolId: string, payload: ProtocolResultPayload): Promise<ProtocolResultRow>;
@@ -91,13 +92,15 @@ const implementation = () => {
 const protocolService: ProtocolService = {
   getProtocols: async (params) => (await implementation()).getProtocols(params),
   getProtocolsPage: async (params, signal) => (await implementation()).getProtocolsPage(params, signal),
-  getProtocolTemplates: async () => (await implementation()).getProtocolTemplates(),
+  getProtocolTemplates: async () => (await import('./apiProtocolService')).getProtocolTemplates(),
   getMethodTemplates: async () => (await implementation()).getMethodTemplates(),
   getMethodTemplate: async (id) => (await implementation()).getMethodTemplate(id),
-  getProtocol: async (protocolId) => (await implementation()).getProtocol(protocolId),
+  getProtocol: async (protocolId) => (await import('./apiProtocolService')).getProtocol(protocolId),
   getProtocolById: async (protocolId) => (await implementation()).getProtocolById(protocolId),
   createProtocol: async (payload) => (await implementation()).createProtocol(payload),
-  quickCreateProtocol: async (payload) => (await implementation()).quickCreateProtocol(payload),
+  quickCreateProtocol: async (payload) => (await import('./apiProtocolService')).quickCreateProtocol(payload),
+  // Snapshot refresh must always use the real transactional backend endpoint.
+  refreshLaboratoryData: async (protocolId) => (await import('./apiProtocolService')).refreshLaboratoryData(protocolId),
   updateProtocol: async (protocolId, payload) => (await implementation()).updateProtocol(protocolId, payload),
   deleteProtocol: async (protocolId) => (await implementation()).deleteProtocol(protocolId),
   addProtocolResult: async (protocolId, payload) => (await implementation()).addProtocolResult(protocolId, payload),

@@ -972,81 +972,15 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   return requireProtocol(result, 'создание');
 }
 
-const quickCreateFallback = async (payload: QuickProtocolCreatePayload): Promise<Protocol> => {
-  const protocol = await createProtocol({
-    companyId: payload.companyId,
-    objectId: payload.objectId || '',
-    templateId: payload.templateId,
-    subtype: payload.subtype,
-    protocolDate: payload.protocolDate,
-    sampleDate: payload.measurementDate,
-    samplingDate: payload.measurementDate,
-    testingStartDate: payload.measurementDate,
-    testingEndDate: payload.measurementDate,
-    measurementDate: payload.measurementDate,
-    measurementTime: payload.measurementTime,
-    measurementPlace: payload.measurementPlace,
-    laboratoryId: payload.laboratoryId,
-    executorId: payload.executorId,
-    sourceDocumentCode: payload.sourceDocumentCode,
-    docxTemplateCode: payload.docxTemplateCode,
-    normativeTemplateId: payload.normativeTemplateId,
-    environmentType: payload.environmentType,
-    defaultUnit: payload.defaultUnit,
-    waterType: payload.waterType,
-    waterUseCategory: payload.waterUseCategory,
-    purpose: 'Лабораторные испытания',
-    environment: { ...(payload.conditions || {}), source: 'MANUAL', dataSource: 'manual' } as ProtocolEnvironmentalConditions,
-  });
-
-  await Promise.all(payload.measurements.map((measurement) => addProtocolResult(protocol.id, {
-    normativeId: measurement.normativeId,
-    values: {
-      ...(payload.conditions || {}),
-      ...(measurement.values || {}),
-      factorType: measurement.factorType || payload.subtype || '',
-      factorCode: measurement.factorCode || '',
-      pollutantCode: measurement.pollutantCode || '',
-      indicator: measurement.indicatorName,
-      indicatorName: measurement.indicatorName,
-      unit: measurement.unit || '',
-      normativeValue: measurement.normativeValue ?? null,
-      testingMethodNd: measurement.testingMethodNd || '',
-      samplingMethodNd: measurement.samplingMethodNd || '',
-      primaryReading: measurement.value,
-      measurementReadings: measurement.value,
-      result: measurement.value,
-      resultValue: measurement.value,
-      measurementPlace: payload.measurementPlace || '',
-      samplingPlace: payload.measurementPlace || '',
-      sourceDocumentCode: payload.sourceDocumentCode || '',
-      docxTemplateCode: payload.docxTemplateCode || '',
-      normativeTemplateId: payload.normativeTemplateId || '',
-      environmentType: payload.environmentType || '',
-      defaultUnit: payload.defaultUnit || '',
-      waterType: payload.waterType || '',
-      waterUseCategory: payload.waterUseCategory || '',
-      resultMode: payload.resultMode || '',
-    },
-  })));
-
-  try {
-    return await checkNormatives(protocol.id);
-  } catch (error) {
-    console.warn('Protocol normative check failed after fallback quick-create; reloading saved protocol.', error);
-    return getProtocol(protocol.id);
-  }
-};
-
 export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): Promise<Protocol> {
-  try {
-    const response = await api.post<ApiResponse<unknown> | unknown>('/protocols/quick-create', payload);
-    const result = unwrapData(response);
-    return requireProtocol(result, 'быстрое создание');
-  } catch (error) {
-    if (![404, 405].includes(getApiStatus(error) || 0)) throw error;
-    return quickCreateFallback(payload);
-  }
+  const response = await api.post<ApiResponse<unknown> | unknown>('/protocols/quick-create', payload);
+  const result = unwrapData(response);
+  return requireProtocol(result, 'быстрое создание');
+}
+
+export async function refreshLaboratoryData(protocolId: string): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/refresh-laboratory-data`);
+  return requireProtocol(unwrapData(response), 'refresh laboratory data');
 }
 
 export async function getProtocol(protocolId: string): Promise<Protocol> {

@@ -10,11 +10,7 @@ export type ProtocolTypeKey =
   | 'microclimate'
   | 'lighting'
   | 'noise_vibration'
-  | 'uv_emf_laser'
-  | 'food_products'
-  | 'surfaces'
-  | 'udmh_special'
-  | 'rocket_fuel';
+  | 'uv_emf_laser';
 
 export type ProtocolTypeConfig = {
   title: string;
@@ -76,7 +72,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   },
   microclimate: {
     title: 'Микроклимат',
-    templateId: 'physical_factors',
+    templateId: 'microclimate',
     sourceDocumentCode: 'DSM_15',
     docxTemplateCode: 'protocol_microclimate',
     defaultUnit: null,
@@ -85,7 +81,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   },
   lighting: {
     title: 'Освещенность',
-    templateId: 'physical_factors',
+    templateId: 'lighting',
     sourceDocumentCode: 'DSM_15',
     docxTemplateCode: 'protocol_lighting',
     defaultUnit: 'лк',
@@ -94,69 +90,38 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   },
   noise_vibration: {
     title: 'Шум / вибрация',
-    templateId: 'physical_factors',
+    templateId: 'noise_vibration',
     sourceDocumentCode: 'DSM_15',
     docxTemplateCode: 'protocol_noise_vibration',
-    defaultUnit: null,
+    defaultUnit: 'дБА',
     normativeTemplateId: 'noise_vibration',
     resultMode: 'PHYSICAL',
   },
   uv_emf_laser: {
     title: 'УФ / ЭМП / Лазер',
-    templateId: 'physical_factors',
+    templateId: 'uv_emf_laser',
     sourceDocumentCode: 'DSM_15',
-    docxTemplateCode: 'protocol_uv_emf_laser',
+    docxTemplateCode: 'protocol_physical_factors',
     defaultUnit: null,
     normativeTemplateId: 'uv_emf_laser',
     resultMode: 'PHYSICAL',
   },
-  food_products: {
-    title: 'Пищевые продукты',
-    templateId: 'food_products',
-    sourceDocumentCode: 'DSM_70',
-    // TODO: replace with protocol_food_products after backend DOCX template is deployed.
-    docxTemplateCode: 'protocol_soil',
-    defaultUnit: 'мг/кг',
-    normativeTemplateId: 'food_products',
-    resultMode: 'CHEMICAL',
-  },
-  surfaces: {
-    title: 'Поверхности',
-    templateId: 'surfaces',
-    sourceDocumentCode: 'DSM_70',
-    // TODO: replace with protocol_surfaces after backend DOCX template is deployed.
-    docxTemplateCode: 'protocol_soil',
-    defaultUnit: 'мг/см²',
-    normativeTemplateId: 'surfaces',
-    resultMode: 'CHEMICAL',
-  },
-  udmh_special: {
-    title: 'Компоненты ракетного топлива',
-    templateId: 'udmh_special',
-    sourceDocumentCode: 'DSM_70',
-    // TODO: replace with protocol_udmh_special after backend DOCX template is deployed.
-    docxTemplateCode: 'protocol_ambient_air',
-    defaultUnit: 'мг/м³',
-    normativeTemplateId: 'udmh_special',
-    category: 'ROCKET_FUEL',
-    resultMode: 'CHEMICAL',
-  },
-  rocket_fuel: {
-    title: 'Компоненты ракетного топлива',
-    templateId: 'udmh_special',
-    sourceDocumentCode: 'DSM_70',
-    // TODO: replace with protocol_udmh_special after backend DOCX template is deployed.
-    docxTemplateCode: 'protocol_ambient_air',
-    defaultUnit: 'мг/м³',
-    normativeTemplateId: 'udmh_special',
-    category: 'ROCKET_FUEL',
-    resultMode: 'CHEMICAL',
-  },
 };
 
-export const PROTOCOL_TYPE_OPTIONS = Object.entries(PROTOCOL_TYPE_CONFIG).map(([key, config]) => ({
-  key: key as ProtocolTypeKey,
-  title: config.title,
+export const SUPPORTED_PROTOCOL_TYPE_KEYS: ProtocolTypeKey[] = [
+  'ambient_air',
+  'workplace_air',
+  'soil',
+  'water',
+  'microclimate',
+  'lighting',
+  'noise_vibration',
+  'uv_emf_laser',
+];
+
+export const PROTOCOL_TYPE_OPTIONS = SUPPORTED_PROTOCOL_TYPE_KEYS.map((key) => ({
+  key,
+  title: PROTOCOL_TYPE_CONFIG[key].title,
 }));
 
 export const protocolFactorType: Partial<Record<ProtocolTypeKey, ProtocolSubtype>> = {

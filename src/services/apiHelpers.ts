@@ -60,13 +60,6 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Не удалос
   const status = error.response?.status;
   const responseData = asRecord(error.response?.data);
   const nestedData = asRecord(responseData?.data);
-  const backendMessage = responseData?.message
-    || responseData?.error
-    || nestedData?.message
-    || nestedData?.error
-    || (typeof error.response?.data === 'string' ? error.response.data : undefined);
-  if (typeof backendMessage === 'string' && backendMessage.trim()) return backendMessage;
-
   const validationErrors = responseData?.errors || nestedData?.errors;
   if (Array.isArray(validationErrors) && validationErrors.length) {
     const message = validationErrors.map((item) => {
@@ -75,6 +68,12 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Не удалос
     }).filter(Boolean).join('\n');
     if (message) return message;
   }
+  const backendMessage = responseData?.message
+    || responseData?.error
+    || nestedData?.message
+    || nestedData?.error
+    || (typeof error.response?.data === 'string' ? error.response.data : undefined);
+  if (typeof backendMessage === 'string' && backendMessage.trim()) return backendMessage;
 
   if (status === 400) return 'Проверьте заполнение полей и отправленные данные.';
   if (status === 401) return 'Сессия истекла. Войдите заново.';

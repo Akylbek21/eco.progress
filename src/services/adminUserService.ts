@@ -6,6 +6,10 @@ export type AdminUserRecord = {
   type: string;
   email: string;
   name: string;
+  fullName?: string | null;
+  lastName?: string | null;
+  firstName?: string | null;
+  middleName?: string | null;
   phone?: string | null;
   city?: string | null;
   companyName?: string | null;
@@ -39,8 +43,9 @@ export type CreateAdminUserPayload = {
 export type UpdateAdminUserPayload = Partial<CreateAdminUserPayload>;
 
 export async function getUsers(): Promise<AdminUserRecord[]> {
-  const { data } = await api.get<ApiResponse<AdminUserRecord[]>>('/admin/users');
-  return data.data;
+  const response = await api.get<ApiResponse<AdminUserRecord[]> | AdminUserRecord[]>('/admin/users');
+  const payload = Array.isArray(response.data) ? response.data : response.data.data;
+  return Array.isArray(payload) ? payload : [];
 }
 
 export async function createUser(payload: CreateAdminUserPayload): Promise<AdminUserRecord> {

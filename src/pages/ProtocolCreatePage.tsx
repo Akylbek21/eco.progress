@@ -12,12 +12,20 @@ import {
   resolveProtocolUnit,
 } from '../data/protocolTypeConfig';
 import { getCompanies, getCompanyObjects } from '../services/companyService';
-import { getLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
+import { getDefaultLaboratory, getLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
 import { getNormativeRecords } from '../services/normativeService';
 import protocolService from '../services/protocolService';
+import { getApiErrorMessage } from '../services/apiHelpers';
 import { useToast } from '../hooks/useToast';
 import type { Company, CompanyObject } from '../types/companies';
-import type { LaboratoryEmployee, LaboratorySummary, NormativeRecord, Pollutant, ProtocolSubtype, QuickProtocolCreatePayload } from '../types/protocols';
+import type { LaboratoryEmployee, LaboratorySummary, NormativeRecord, Pollutant, ProtocolResultValue, ProtocolSubtype, QuickProtocolCreatePayload } from '../types/protocols';
+
+type SelectedExecutor = {
+  laboratoryEmployeeId: string;
+  userId?: string;
+  fullName: string;
+  position?: string;
+};
 
 type QuickForm = {
   templateKey: ProtocolTypeKey;
@@ -63,6 +71,10 @@ const MIN_SEARCH_LENGTH = 3;
 const SEARCH_DEBOUNCE_MS = 120;
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const today = () => new Date().toISOString().slice(0, 10);
+const emptyToUndefined = <T,>(value: T): T | undefined => typeof value === 'string' && value.trim() === '' ? undefined : value;
+const compactValues = (values: Record<string, ProtocolResultValue>) => Object.fromEntries(
+  Object.entries(values).filter(([, value]) => emptyToUndefined(value) !== undefined),
+) as Record<string, ProtocolResultValue>;
 
 const seasonOptions = [{ value: 'COLD', label: 'Холодный период' }, { value: 'WARM', label: 'Теплый период' }];
 const workCategoryOptions = ['IA', 'IB', 'IIA', 'IIB', 'III'];
@@ -140,14 +152,18 @@ const ProtocolCreatePage = () => {
   const searchAbortRef = useRef<AbortController | null>(null);
   const weatherRequestRef = useRef(0);
   const weatherAbortRef = useRef<AbortController | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [booting, setBooting] = useState(true);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
+  const [templateError, setTemplateError] = useState('');
+  const [backendTemplateIds, setBackendTemplateIds] = useState<Set<string>>(new Set());
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companySearch, setCompanySearch] = useState('');
   const [objects, setObjects] = useState<CompanyObject[]>([]);
   const [objectWarning, setObjectWarning] = useState('');
   const [laboratories, setLaboratories] = useState<LaboratorySummary[]>([]);
   const [employees, setEmployees] = useState<LaboratoryEmployee[]>([]);
+  const [selectedExecutor, setSelectedExecutor] = useState<SelectedExecutor | null>(null);
   const [warning, setWarning] = useState('');
   const [employeeWarning, setEmployeeWarning] = useState('');
   const [chemicalQuery, setChemicalQuery] = useState('');
@@ -202,8 +218,33 @@ const ProtocolCreatePage = () => {
     if (!query) return companies.slice(0, 8);
     return companies.filter((item) => `${item.name} ${item.bin || ''}`.toLowerCase().includes(query)).slice(0, 12);
   }, [companies, companySearch]);
+  const availableTypeOptions = useMemo(
+    () => PROTOCOL_TYPE_OPTIONS.filter((option) => backendTemplateIds.has(PROTOCOL_TYPE_CONFIG[option.key].templateId)),
+    [backendTemplateIds],
+  );
 
   const setField = <K extends keyof QuickForm>(key: K, value: QuickForm[K]) => setForm((current) => ({ ...current, [key]: value }));
+
+  const loadTemplates = async () => {
+    setIsLoadingTemplates(true);
+    setTemplateError('');
+    try {
+      const templates = await protocolService.getProtocolTemplates();
+      const ids = new Set(templates.map((template) => String(template.id).trim().toLowerCase()));
+      setBackendTemplateIds(ids);
+      const firstAvailable = PROTOCOL_TYPE_OPTIONS.find((option) => ids.has(PROTOCOL_TYPE_CONFIG[option.key].templateId));
+      if (firstAvailable) {
+        setForm((current) => ids.has(PROTOCOL_TYPE_CONFIG[current.templateKey].templateId)
+          ? current
+          : { ...current, templateKey: firstAvailable.key });
+      }
+    } catch (error) {
+      setBackendTemplateIds(new Set());
+      setTemplateError(getApiErrorMessage(error, 'Не удалось загрузить доступные типы протоколов'));
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -211,29 +252,33 @@ const ProtocolCreatePage = () => {
       setBooting(true);
       setWarning('');
       try {
-        const [companyItems, laboratoryItems] = await Promise.all([
+        const [companyItems, defaultLaboratory] = await Promise.all([
           getCompanies({ status: 'ACTIVE' }).catch((error) => {
             toast.error('Не удалось загрузить компании', error instanceof Error ? error.message : undefined);
             return [];
           }),
-          getLaboratories().catch((error) => {
-            toast.warning('Лаборатория не настроена', error instanceof Error ? error.message : undefined);
-            return [];
-          }),
+          getDefaultLaboratory(),
         ]);
         if (!mounted) return;
         setCompanies(companyItems);
+        const laboratoryItems = defaultLaboratory?.active ? [defaultLaboratory] : await getLaboratories();
+        if (!mounted) return;
         const activeLaboratories = laboratoryItems.filter((item) => item.active);
         setLaboratories(activeLaboratories);
-        const defaultLab = activeLaboratories.find((item) => item.isDefault) || (activeLaboratories.length === 1 ? activeLaboratories[0] : undefined);
-        if (defaultLab) setForm((current) => ({ ...current, laboratoryId: defaultLab.id }));
+        if (defaultLaboratory?.active) setForm((current) => ({ ...current, laboratoryId: defaultLaboratory.id }));
         if (!companyItems.length) setWarning('Компании не найдены. Добавьте компанию перед созданием протокола.');
-        if (!activeLaboratories.length) setWarning((current) => current || 'Лаборатория не настроена или не активна.');
+        if (!activeLaboratories.length) setWarning((current) => current || 'Перед созданием протокола необходимо заполнить настройки лаборатории');
+      } catch (error) {
+        if (mounted) {
+          const message = getApiErrorMessage(error, 'Не удалось загрузить лабораторию');
+          setWarning(message);
+          toast.error('Не удалось загрузить лабораторию', message);
+        }
       } finally {
         if (mounted) setBooting(false);
       }
     };
-    boot();
+    void Promise.all([boot(), loadTemplates()]);
     return () => { mounted = false; };
   }, []);
 
@@ -242,6 +287,21 @@ const ProtocolCreatePage = () => {
     setChemicalQuery('');
     setChemicalSuggestions([]);
     setSearchDone(false);
+    setForm((current) => ({
+      ...current,
+      sampleNumber: '',
+      samplingDepth: '',
+      waterType: form.templateKey === 'water' ? 'DRINKING_WATER' : '',
+      waterUseCategory: form.templateKey === 'water' ? 'I' : '',
+      season: form.templateKey === 'microclimate' ? 'COLD' : '',
+      workCategory: form.templateKey === 'microclimate' ? 'IA' : '',
+      workplaceType: ['microclimate', 'lighting', 'noise_vibration'].includes(form.templateKey) ? 'PERMANENT' : '',
+      normLevel: form.templateKey === 'microclimate' ? 'OPTIMAL' : '',
+      roomType: ['microclimate', 'lighting', 'noise_vibration'].includes(form.templateKey) ? 'PRODUCTION_ROOM' : '',
+      visualWorkCategory: '',
+      lightingType: form.templateKey === 'lighting' ? 'GENERAL' : '',
+      noiseType: form.templateKey === 'noise_vibration' ? 'CONSTANT' : '',
+    }));
   }, [form.templateKey]);
 
   useEffect(() => {
@@ -270,15 +330,18 @@ const ProtocolCreatePage = () => {
       setEmployees([]);
       setEmployeeWarning('');
       setForm((current) => ({ ...current, executorId: '' }));
+      setSelectedExecutor(null);
       return;
     }
     setEmployees([]);
     setEmployeeWarning('');
     getLaboratoryEmployees(form.laboratoryId)
       .then((items) => {
-        setEmployees(items);
-        if (!items.length) setEmployeeWarning('Сотрудники лаборатории не найдены');
-        setForm((current) => ({ ...current, executorId: items.find((item) => item.id === current.executorId)?.id || items[0]?.id || '' }));
+        const active = items.filter((item) => item.active && item.id && String(item.laboratoryId || form.laboratoryId) === String(form.laboratoryId));
+        setEmployees(active);
+        if (!active.length) setEmployeeWarning('Сотрудники лаборатории не найдены');
+        setForm((current) => ({ ...current, executorId: active.some((item) => item.id === current.executorId) ? current.executorId : '' }));
+        setSelectedExecutor(null);
       })
       .catch((error) => {
         setEmployees([]);
@@ -349,10 +412,8 @@ const ProtocolCreatePage = () => {
           search: value,
           sourceDocumentCode: sourceDocumentCode || undefined,
           environmentType: selectedChoice.environmentType || undefined,
-          factorType: isPhysical ? selectedSubtype || undefined : undefined,
           waterType: isWater ? form.waterType || undefined : undefined,
           normativeType: isSoil ? 'PDK' : undefined,
-          subtype: isPhysical ? selectedSubtype || undefined : undefined,
         }, controller.signal);
         if (requestId !== searchRequestRef.current) return;
         const normatives = recordsPage.items
@@ -360,8 +421,7 @@ const ProtocolCreatePage = () => {
           .filter((item) => {
             if (isPhysical) {
               return sameTemplateId(item.templateId, selectedChoice.normativeTemplateId, selectedChoice.templateId)
-                && sameDocumentCode(item.sourceDocumentCode, sourceDocumentCode)
-                && (!selectedSubtype || item.factorType === selectedSubtype);
+                && sameDocumentCode(item.sourceDocumentCode, sourceDocumentCode);
             }
             if (isSoil) {
               return sameTemplateId(item.templateId, 'soil', selectedChoice.templateId)
@@ -455,13 +515,13 @@ const ProtocolCreatePage = () => {
       factorType: selectedSubtype || '',
     };
     if (selectedSubtype === 'MICROCLIMATE') {
-      return { ...base, season: form.season, workCategory: form.workCategory, workplaceType: form.workplaceType, normLevel: form.normLevel };
+      return { ...base, season: form.season, workCategory: form.workCategory, workplaceType: form.workplaceType, roomType: form.roomType, normLevel: form.normLevel };
     }
     if (selectedSubtype === 'NOISE' || selectedSubtype === 'NOISE_VIBRATION') {
       return { ...base, roomType: form.roomType, workplaceType: form.workplaceType, noiseType: form.noiseType };
     }
     if (selectedSubtype === 'LIGHTING') {
-      return { ...base, roomType: form.roomType, visualWorkCategory: form.visualWorkCategory, lightingType: form.lightingType };
+      return { ...base, roomType: form.roomType, workplaceType: form.workplaceType, visualWorkCategory: form.visualWorkCategory, lightingType: form.lightingType };
     }
     return base;
   };
@@ -484,6 +544,8 @@ const ProtocolCreatePage = () => {
     ...(isWater ? {
       waterType: form.waterType,
       waterUseCategory: form.waterType === 'SURFACE_WATER' ? form.waterUseCategory : '',
+      sampleNumber: form.sampleNumber,
+      samplingPlace: form.measurementPlace,
       environmentType: selectedChoice.environmentType || 'WATER',
       defaultUnit: selectedChoice.defaultUnit || 'мг/л',
       productNormativeDocument: 'Приказ Министра здравоохранения Республики Казахстан от 24 ноября 2022 года № ҚР ДСМ-138',
@@ -539,6 +601,17 @@ const ProtocolCreatePage = () => {
     })).trim();
   };
 
+  const selectExecutor = (employeeId: string) => {
+    const employee = employees.find((item) => item.id === employeeId && item.active);
+    setField('executorId', employee?.id || '');
+    setSelectedExecutor(employee ? {
+      laboratoryEmployeeId: employee.id,
+      userId: employee.userId,
+      fullName: employee.fullName,
+      position: employee.position,
+    } : null);
+  };
+
   const validate = () => {
     if (!selectedChoice.templateId) return 'Выберите тип протокола';
     if (!form.companyId) return 'Выберите компанию';
@@ -556,6 +629,7 @@ const ProtocolCreatePage = () => {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isCreating) return;
     const message = validate();
     if (message) {
       toast.warning(message);
@@ -569,11 +643,36 @@ const ProtocolCreatePage = () => {
       toast.warning('Выберите объект');
       return;
     }
+    const executor = employees.find((item) => item.id === form.executorId);
+    if (!executor || !executor.active || !executor.id || String(executor.laboratoryId || form.laboratoryId) !== String(form.laboratoryId)) {
+      toast.warning('Выберите активного сотрудника выбранной лаборатории');
+      return;
+    }
+    if (!selectedExecutor || selectedExecutor.laboratoryEmployeeId !== executor.id) {
+      toast.warning('Повторно выберите исполнителя лаборатории');
+      return;
+    }
+    const companyId = Number(selectedCompany.id);
+    const objectId = Number(selectedObject.id);
+    const laboratoryId = Number(form.laboratoryId);
+    const executorId = Number(executor.id);
+    if (![companyId, objectId, laboratoryId, executorId].every(Number.isFinite)) {
+      toast.error('Не удалось создать протокол', 'Backend требует числовые ID компании, объекта, лаборатории и сотрудника');
+      return;
+    }
+    if (!selectedChoice.templateId || !sourceDocumentCode || !selectedChoice.docxTemplateCode || !selectedChoice.normativeTemplateId || !selectedChoice.resultMode
+      || selectedChoice.templateId !== form.templateKey || selectedChoice.normativeTemplateId !== form.templateKey
+      || !availableTypeOptions.some((option) => option.key === form.templateKey)) {
+      toast.error('Конфигурация типа протокола некорректна', 'Проверьте templateId, sourceDocumentCode, docxTemplateCode, normativeTemplateId и resultMode');
+      return;
+    }
 
     const measurements: QuickProtocolCreatePayload['measurements'] = selectedIndicators.map((item) => {
       const factorCode = isPhysical ? item.factorCode || item.normative?.factorCode || item.code : item.normative?.factorCode || item.factorCode || '';
       const factorType = isPhysical ? item.factorType || item.normative?.factorType || selectedSubtype || '' : item.normative?.factorType || item.factorType || '';
-      const pollutantCode = isChemical ? item.normative?.pollutantCode || item.normative?.code || item.code || item.factorCode || '' : '';
+      const pollutantCode = isPhysical
+        ? factorCode
+        : item.normative?.pollutantCode || item.normative?.code || item.code || item.factorCode || '';
       const indicatorName = item.indicatorName || item.name || item.normative?.indicator || item.normative?.indicatorName || item.normative?.pollutantName || '';
       const unit = unitForIndicator(item);
       const normativeValue = normativeDisplayValue(item.normative);
@@ -586,17 +685,22 @@ const ProtocolCreatePage = () => {
       const conditionJson = isPhysical ? JSON.stringify(physicalConditionValues()) : item.normative?.conditionJson || '';
 
       return {
-        factorType,
-        factorCode,
+        ...(factorType ? { factorType } : {}),
+        ...(factorCode ? { factorCode } : {}),
         pollutantCode,
         indicatorName,
         value: item.result,
         unit,
-        normativeId,
-        normativeValue,
-        testingMethodNd,
-        samplingMethodNd,
-        values: {
+        normativeId: normativeId || undefined,
+        normativeValue: normativeValue || undefined,
+        normativeMin: normativeMin || undefined,
+        normativeMax: normativeMax || undefined,
+        comparisonType: item.normative?.comparisonType || undefined,
+        normativeDocument: normativeDocument || undefined,
+        sourceDocumentCode: item.normative?.sourceDocumentCode || sourceDocumentCode,
+        testingMethodNd: testingMethodNd || undefined,
+        samplingMethodNd: samplingMethodNd || undefined,
+        values: compactValues({
           ...baseConditionValues(),
           ...normativeValues(item.normative),
           code: item.code,
@@ -629,20 +733,10 @@ const ProtocolCreatePage = () => {
           cas: item.cas || item.normative?.cas || item.normative?.casNumber || '',
           formula: item.formula || item.normative?.formula || item.normative?.chemicalFormula || '',
           conditionJson,
-          lightingType: form.lightingType,
-          noiseType: form.noiseType,
-          visualWorkCategory: form.visualWorkCategory,
-          roomType: form.roomType,
-          season: form.season,
-          workCategory: form.workCategory,
-          workplaceType: form.workplaceType,
-          normLevel: form.normLevel,
-        },
+        }),
       };
     });
-    const invalidPollutant = !isPhysical && !isWater
-      ? measurements.find((item) => !item.pollutantCode || !String(item.pollutantCode).trim())
-      : undefined;
+    const invalidPollutant = measurements.find((item) => !item.pollutantCode || !String(item.pollutantCode).trim());
     if (invalidPollutant) {
       toast.warning(`Укажите код загрязняющего вещества для: ${invalidPollutant.indicatorName}`);
       return;
@@ -666,16 +760,16 @@ const ProtocolCreatePage = () => {
     }
 
     const quickPayload: QuickProtocolCreatePayload = {
-      companyId: selectedCompany.id,
-      objectId: selectedObject.id,
+      companyId,
+      objectId,
       templateId: selectedChoice.templateId,
       subtype: selectedSubtype,
       protocolDate: form.protocolDate,
       measurementDate: form.measurementDate,
       measurementTime: form.measurementTime,
       measurementPlace: form.measurementPlace,
-      laboratoryId: form.laboratoryId,
-      executorId: form.executorId,
+      laboratoryId,
+      executorId,
       sourceDocumentCode,
       docxTemplateCode: selectedChoice.docxTemplateCode,
       normativeTemplateId: selectedChoice.normativeTemplateId,
@@ -684,10 +778,10 @@ const ProtocolCreatePage = () => {
       waterType: isWater ? form.waterType : undefined,
       waterUseCategory: isWater && form.waterType === 'SURFACE_WATER' ? form.waterUseCategory : undefined,
       resultMode: selectedChoice.resultMode,
-      conditions: baseConditionValues(),
+      conditions: compactValues(baseConditionValues()),
       measurements,
     };
-    setLoading(true);
+    setIsCreating(true);
     try {
       const created = await protocolService.quickCreateProtocol(quickPayload);
       const protocol = await protocolService.getProtocol(created.id);
@@ -698,9 +792,9 @@ const ProtocolCreatePage = () => {
       toast.success('Протокол создан, нормативы проверены');
       navigate(`/staff/protocols/${protocol.id}`, { replace: true });
     } catch (error) {
-      toast.error('Не удалось создать протокол', error instanceof Error ? error.message : undefined);
+      toast.error('Не удалось создать протокол', getApiErrorMessage(error, 'Не удалось создать протокол'));
     } finally {
-      setLoading(false);
+      setIsCreating(false);
     }
   };
 
@@ -714,8 +808,8 @@ const ProtocolCreatePage = () => {
           <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">Быстрое создание протокола</h1>
           <p className="mt-1 text-sm text-slate-500">Выберите тип, объект, показатели и внесите фактические значения. Нормативы подтянутся автоматически.</p>
         </div>
-        <Button type="submit" disabled={loading || booting}>
-          <Save className="h-4 w-4" /> Создать протокол
+        <Button type="submit" disabled={isCreating || booting || isLoadingTemplates || Boolean(templateError)}>
+          <Save className="h-4 w-4" /> {isCreating ? 'Создание...' : 'Создать протокол'}
         </Button>
       </header>
 
@@ -723,8 +817,15 @@ const ProtocolCreatePage = () => {
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-black text-slate-900">1. Тип протокола</h2>
+        {templateError && (
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
+            <p>{templateError}</p>
+            <Button type="button" variant="secondary" className="mt-3" onClick={() => void loadTemplates()} disabled={isLoadingTemplates}>Повторить</Button>
+          </div>
+        )}
+        {isLoadingTemplates && <p className="mt-4 text-sm font-semibold text-slate-500">Загрузка доступных типов протоколов...</p>}
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {PROTOCOL_TYPE_OPTIONS.map((choice) => {
+          {availableTypeOptions.map((choice) => {
             const active = form.templateKey === choice.key;
             return (
               <button
@@ -798,10 +899,10 @@ const ProtocolCreatePage = () => {
         <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Дата отбора' : 'Дата измерения'}</span><input type="date" value={form.measurementDate} onChange={(event) => setField('measurementDate', event.target.value)} className={inputClass} /></label>
         <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Время</span><input type="time" value={form.measurementTime} onChange={(event) => setField('measurementTime', event.target.value)} className={inputClass} /></label>
         <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Место отбора' : 'Место измерения'}</span><input value={form.measurementPlace} onChange={(event) => setField('measurementPlace', event.target.value)} placeholder={isSoil ? 'Например: участок 1, точка 3' : 'Например: рабочее место оператора'} className={inputClass} /></label>
-        {isSoil && (
+        {(isSoil || isWater) && (
           <>
             <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Номер пробы</span><input value={form.sampleNumber} onChange={(event) => setField('sampleNumber', event.target.value)} placeholder="Например: 1/24" className={inputClass} /></label>
-            <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Глубина отбора</span><input value={form.samplingDepth} onChange={(event) => setField('samplingDepth', event.target.value)} placeholder="Например: 0-20 см" className={inputClass} /></label>
+            {isSoil && <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Глубина отбора</span><input value={form.samplingDepth} onChange={(event) => setField('samplingDepth', event.target.value)} placeholder="Например: 0-20 см" className={inputClass} /></label>}
           </>
         )}
       </section>
@@ -825,6 +926,7 @@ const ProtocolCreatePage = () => {
               <select value={form.season} onChange={(event) => setField('season', event.target.value)} className={inputClass}>{seasonOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
               <select value={form.workCategory} onChange={(event) => setField('workCategory', event.target.value)} className={inputClass}>{workCategoryOptions.map((item) => <option key={item} value={item}>Категория работ {item}</option>)}</select>
               <select value={form.workplaceType} onChange={(event) => setField('workplaceType', event.target.value)} className={inputClass}>{workplaceTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+              <select value={form.roomType} onChange={(event) => setField('roomType', event.target.value)} className={inputClass}>{roomTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
               <select value={form.normLevel} onChange={(event) => setField('normLevel', event.target.value)} className={inputClass}>{normLevelOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
             </>
           )}
@@ -838,6 +940,7 @@ const ProtocolCreatePage = () => {
           {selectedSubtype === 'LIGHTING' && (
             <>
               <select value={form.roomType} onChange={(event) => setField('roomType', event.target.value)} className={inputClass}>{roomTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+              <select value={form.workplaceType} onChange={(event) => setField('workplaceType', event.target.value)} className={inputClass}>{workplaceTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
               <input value={form.visualWorkCategory} onChange={(event) => setField('visualWorkCategory', event.target.value)} placeholder="Разряд зрительной работы" className={inputClass} />
               <select value={form.lightingType} onChange={(event) => setField('lightingType', event.target.value)} className={inputClass}>{lightingTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
             </>
@@ -921,17 +1024,23 @@ const ProtocolCreatePage = () => {
         </label>
         <label className="space-y-1.5 text-sm font-bold text-slate-700">
           <span>Исполнитель</span>
-          <select value={form.executorId} onChange={(event) => setField('executorId', event.target.value)} className={inputClass} disabled={!employees.length}>
+          <select value={form.executorId} onChange={(event) => selectExecutor(event.target.value)} className={inputClass} disabled={!employees.length}>
             <option value="">Выберите исполнителя</option>
             {employees.map((item) => <option key={item.id} value={item.id}>{item.fullName} {item.position ? `· ${item.position}` : ''}</option>)}
           </select>
           {employeeWarning && <p className="text-sm font-semibold text-amber-700">{employeeWarning}</p>}
         </label>
       </section>
+      {!laboratories.length && !booting && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+          <p>Перед созданием протокола необходимо заполнить настройки лаборатории</p>
+          <Button type="button" variant="secondary" className="mt-3" onClick={() => navigate('/staff/settings/laboratory')}>Перейти в настройки лаборатории</Button>
+        </div>
+      )}
 
       <div className="sticky bottom-0 flex justify-end border-t border-slate-200 bg-white/95 py-4 backdrop-blur">
-        <Button type="submit" disabled={loading || booting}>
-          <Save className="h-4 w-4" /> Создать протокол
+        <Button type="submit" disabled={isCreating || booting || isLoadingTemplates || Boolean(templateError)}>
+          <Save className="h-4 w-4" /> {isCreating ? 'Создание...' : 'Создать протокол'}
         </Button>
       </div>
     </form>

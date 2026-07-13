@@ -21,12 +21,12 @@ import { useToast } from '../hooks/useToast';
 import { useAuth } from '../contexts/AuthContext';
 import { getMeasurementDevices } from '../services/measurementDeviceService';
 import { getCompanyObjects } from '../services/companyService';
-import { accreditationState, getLaboratories, getLaboratory, getLaboratoryEmployees } from '../services/laboratorySettingsService';
+import { accreditationState, getLaboratoryEmployees } from '../services/laboratorySettingsService';
 import { getApiErrorMessage, getApiStatus } from '../services/apiHelpers';
 import { signBase64WithNCALayer } from '../services/ncalayer';
 import protocolService, { useProtocolMocks } from '../services/protocolService';
 import type { CompanyObject } from '../types/companies';
-import type { LaboratoryEmployee, LaboratoryProfile, MeasurementDevice, Protocol, ProtocolCompanySnapshot, ProtocolLaboratorySnapshot, ProtocolMeasurementDevice, WeatherConditions } from '../types/protocols';
+import type { LaboratoryEmployee, MeasurementDevice, Protocol, ProtocolCompanySnapshot, ProtocolMeasurementDevice, WeatherConditions } from '../types/protocols';
 import { getProtocolPermissions, type ProtocolPermissions } from '../utils/protocolPermissions';
 
 const emptyLaboratory = {
@@ -249,39 +249,6 @@ const hasValidResultDevices = (protocol: Protocol) => protocol.results.every((ro
   if (!attached) return false;
   const validUntil = attached.deviceSnapshot.verificationValidUntil;
   return !validUntil || !protocol.measurementDate || validUntil >= protocol.measurementDate;
-});
-
-const laboratorySnapshotFromProfile = (
-  profile: LaboratoryProfile,
-  current: ProtocolLaboratorySnapshot,
-  executor?: LaboratoryEmployee,
-): ProtocolLaboratorySnapshot => ({
-  ...current,
-  id: profile.id || current.id || current.laboratoryId,
-  laboratoryId: profile.id || current.laboratoryId || current.id,
-  name: profile.name || current.name || current.laboratoryName,
-  laboratoryName: profile.name || current.laboratoryName,
-  legalName: profile.legalName || current.legalName,
-  bin: profile.bin || current.bin,
-  address: profile.address || current.address || current.laboratoryAddress,
-  laboratoryAddress: profile.address || current.laboratoryAddress,
-  phone: profile.phone || current.phone,
-  email: profile.email || current.email,
-  accreditationNumber: profile.accreditationNumber || current.accreditationNumber,
-  accreditationIssuedAt: profile.accreditationIssuedAt || current.accreditationIssuedAt,
-  accreditationValidUntil: profile.accreditationValidUntil || current.accreditationValidUntil,
-  directorId: profile.directorId || current.directorId,
-  directorName: profile.directorName || current.directorName || current.director,
-  director: profile.directorName || current.director,
-  laboratoryHeadId: profile.laboratoryHeadId || current.laboratoryHeadId,
-  laboratoryHeadName: profile.laboratoryHeadName || current.laboratoryHeadName || current.laboratoryHead,
-  laboratoryHead: profile.laboratoryHeadName || current.laboratoryHead,
-  executorId: executor?.id || current.executorId,
-  executorName: executor?.fullName || current.executorName || current.executor,
-  executor: executor?.fullName || current.executor,
-  logoUrl: profile.logoUrl || current.logoUrl,
-  standardNote: profile.standardNote || current.standardNote,
-  capturedAt: new Date().toISOString(),
 });
 
 const getMissingFields = (protocol: Protocol): MissingField[] => {
@@ -904,7 +871,10 @@ const ProtocolEditorPage = () => {
         if (getApiStatus(saveError) === 409) {
           conflictDetected = true;
           saveQueuedRef.current = false;
-          const fresh = await protocolService.getProtocol(snapshot.id).catch(() => null);
+          const fresh = await protocolService.getProtocol(snapshot.id).catch((reloadError) => {
+            console.error('Failed to reload protocol after save conflict.', reloadError);
+            return null;
+          });
           const hasNewerLocalEdits = startedVersion !== editVersionRef.current;
           if (fresh && !hasNewerLocalEdits) applyServerProtocol(fresh);
           else setSaveStatus('dirty');
@@ -944,60 +914,16 @@ const ProtocolEditorPage = () => {
     setBusy(true);
     try {
       const draftProtocol = await ensureDraftProtocol(protocol);
-      let laboratoryId = protocol.laboratory?.laboratoryId || protocol.laboratory?.id;
-
-      if (!laboratoryId) {
-        const laboratories = await getLaboratories();
-        const active = laboratories.filter((item) => item.active);
-        const defaultLaboratory = active.find((item) => item.isDefault) || (active.length === 1 ? active[0] : undefined);
-
-        if (!defaultLaboratory) {
-          toast.warning(
-            active.length
-              ? 'Выберите лабораторию в настройках протокола или назначьте лабораторию по умолчанию'
-              : 'Лаборатория не настроена. Заполните настройки лаборатории'
-          );
-          return;
-        }
-
-        laboratoryId = defaultLaboratory.id;
-      }
-
-      const [profile, employees] = await Promise.all([
-        getLaboratory(laboratoryId),
-        getLaboratoryEmployees(laboratoryId),
-      ]);
-      const activeEmployees = employees.filter((item) => item.active);
-      const currentExecutorId = protocol.executorId || protocol.laboratory?.executorId;
-      const executor = activeEmployees.find((item) =>
-        String(item.id) === String(currentExecutorId)
-        || String(item.userId || '') === String(currentExecutorId)
-      )
-        || activeEmployees[0];
-      const laboratory = laboratorySnapshotFromProfile(profile, protocol.laboratory, executor);
-      setLaboratoryEmployees(activeEmployees);
-      const updated = await protocolService.updateProtocol(draftProtocol.id, {
-        number: protocol.protocolNumber || protocol.number || '',
-        protocolDate: protocol.protocolDate || '',
-        objectId: protocol.objectId,
-        measurementDate: protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate,
-        measurementTime: protocol.measurementTime,
-        measurementPlace: protocol.measurementPlace,
-        formCode: protocol.formCode,
-        application: protocol.application,
-        executor: executor?.fullName || protocol.executor || laboratory.executor || '',
-        executorId: executor?.id || protocol.executorId || laboratory.executorId,
-        approver: protocol.approver || '',
-        laboratory,
-        organization: protocol.organization,
-        testing: protocol.testing,
-        environment: protocol.environment,
-        explanatoryNote: protocol.explanatoryNote,
-      });
+      const updated = await protocolService.refreshLaboratoryData(draftProtocol.id);
       applyServerProtocol(updated);
-      toast.success('Данные лаборатории обновлены из настроек');
+      const laboratoryId = updated.laboratory?.laboratoryId || updated.laboratory?.id;
+      if (laboratoryId) {
+        const employees = await getLaboratoryEmployees(laboratoryId);
+        setLaboratoryEmployees(employees.filter((item) => item.active));
+      }
+      toast.success('Данные лаборатории обновлены');
     } catch (error) {
-      toast.error('Не удалось обновить лабораторию', error instanceof Error ? error.message : undefined);
+      toast.error('Не удалось обновить лабораторию', getApiErrorMessage(error, 'Не удалось обновить лабораторию'));
     } finally {
       setBusy(false);
     }
@@ -1006,13 +932,13 @@ const ProtocolEditorPage = () => {
   useEffect(() => {
     const laboratoryId = protocol?.laboratory?.laboratoryId;
     if (!protocol || !laboratoryId || hasLaboratory(protocol) || readOnly || busy) return;
-    refreshLaboratorySnapshot().catch(() => undefined);
+    refreshLaboratorySnapshot().catch((error) => console.error('Automatic laboratory snapshot refresh failed.', error));
   }, [protocol?.id, protocol?.laboratory?.laboratoryId, readOnly]);
 
   useEffect(() => {
     if (!dirty || readOnly || busy) return;
     const timer = window.setTimeout(() => {
-      save().catch(() => undefined);
+      save().catch((saveError) => console.error('Protocol autosave failed.', saveError));
     }, 1800);
     return () => window.clearTimeout(timer);
   }, [dirty, readOnly, busy, protocol]);
@@ -1046,11 +972,8 @@ const ProtocolEditorPage = () => {
         'Результаты рассчитаны',
         `Всего: ${summary.total}; рассчитано: ${summary.calculated}; ручной ввод: ${summary.manual}; ошибки: ${summary.errors}; повторный анализ: ${summary.needsRepeat}; не соответствует: ${summary.exceeded}`,
       );
-    } catch {
-      toast.warning('Новый расчет недоступен, запускаю старую проверку нормативов');
-      setBusy(false);
-      await checkSavedNormatives();
-      return;
+    } catch (calculationError) {
+      toast.error('Не удалось рассчитать результаты', getApiErrorMessage(calculationError, 'Не удалось рассчитать результаты'));
     } finally {
       setBusy(false);
     }

@@ -308,8 +308,8 @@ export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): 
     measurementDate: payload.measurementDate,
     measurementTime: payload.measurementTime,
     measurementPlace: payload.measurementPlace,
-    laboratoryId: payload.laboratoryId,
-    executorId: payload.executorId,
+    laboratoryId: String(payload.laboratoryId),
+    executorId: String(payload.executorId),
     purpose: 'Лабораторные испытания',
     environment: { ...(payload.conditions || {}), source: 'MANUAL', dataSource: 'manual' } as ProtocolEnvironmentalConditions,
   });

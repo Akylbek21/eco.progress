@@ -29,11 +29,11 @@ export const CommercialOfferPanel = ({ order, canEdit = false, onCreate, onStatu
         <Field label="Срок выполнения"><input name="deadline" type="date" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
         <Field label="PDF"><input name="file" type="file" accept="application/pdf" className="w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
         <Field label="Комментарий"><input name="comment" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-        <div className="flex flex-wrap gap-3 md:col-span-2">
+        <div className="grid gap-3 sm:grid-cols-2 md:col-span-2 xl:grid-cols-4">
           <Button>Создать КП</Button>
           <Button type="button" variant="secondary" onClick={() => onStatus('sent_to_client')}>Отправить клиенту</Button>
           <Button type="button" variant="secondary" onClick={() => onStatus('approved')}>Согласовано</Button>
-          <Button type="button" variant="secondary" onClick={() => onStatus('rejected')}>Отказ</Button>
+          <Button type="button" variant="danger" onClick={() => onStatus('rejected')}>Отказ</Button>
         </div>
       </form>
     )}
@@ -272,7 +272,7 @@ export const StaffAgreementPanel = ({ order, canEdit = false, onSendDocument }: 
               <p className="font-bold text-slate-900">{doc.name}</p>
               <p className="mt-1 text-sm text-slate-500">{doc.status}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <a href={doc.fileUrl || `/api/files/documents/${doc.id}`} className="rounded-full bg-white px-3 py-2 text-xs font-bold text-eco-800">Скачать</a>
               {canEdit && <button type="button" onClick={() => setDocumentId(doc.id)} className="inline-flex items-center gap-2 rounded-full bg-eco-900 px-3 py-2 text-xs font-bold text-white"><Send size={14} /> Отправить клиенту</button>}
             </div>
@@ -289,7 +289,7 @@ export const StaffAgreementPanel = ({ order, canEdit = false, onSendDocument }: 
             <label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input name="needsClientResponse" type="checkbox" className="accent-[#38C7BA]" /> Нужен ответ</label>
             <label className="text-sm font-semibold text-slate-700">Срок ответа<input name="dueDate" type="date" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <Button>Отправить клиенту</Button>
             <Button type="button" variant="secondary" onClick={() => setDocumentId('')}>Отмена</Button>
           </div>
@@ -386,8 +386,10 @@ const wasteStatus = (order: Order) => {
 };
 
 const Panel = ({ title, children }: { title: string; children: ReactNode }) => (
-  <section className="rounded-[22px] bg-white p-5 shadow-sm sm:p-6">
-    <h3 className="text-xl font-bold text-eco-900">{title}</h3>
+  <section className="overflow-hidden rounded-[22px] border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+    <div className="border-b border-slate-100 pb-4">
+      <h3 className="text-xl font-bold text-eco-900">{title}</h3>
+    </div>
     <div className="mt-5">{children}</div>
   </section>
 );
@@ -395,7 +397,7 @@ const Panel = ({ title, children }: { title: string; children: ReactNode }) => (
 const InfoGrid = ({ items }: { items: Record<string, string | number> }) => (
   <div className="grid gap-3 md:grid-cols-3">
     {Object.entries(items).map(([label, value]) => (
-      <div key={label} className="rounded-2xl bg-slate-50 p-4">
+      <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
         <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
         <p className="mt-2 break-words font-bold text-slate-900">{value || 'Нет'}</p>
       </div>
