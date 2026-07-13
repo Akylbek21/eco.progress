@@ -13,6 +13,7 @@ import {
 } from '../data/protocolTypeConfig';
 import { getCompanies, getCompanyObjects } from '../services/companyService';
 import { getLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
+import { getNormativeRecords } from '../services/normativeService';
 import protocolService from '../services/protocolService';
 import { useToast } from '../hooks/useToast';
 import type { Company, CompanyObject } from '../types/companies';
@@ -59,7 +60,7 @@ type SelectedIndicator = Pollutant & {
 };
 
 const MIN_SEARCH_LENGTH = 3;
-const SEARCH_DEBOUNCE_MS = 250;
+const SEARCH_DEBOUNCE_MS = 120;
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -105,14 +106,14 @@ const waterCategoryAllowed = (item: NormativeRecord, waterType: string) => {
   if (waterType === 'SURFACE_WATER') return ['SURFACE_WATER_SAFETY', 'SURFACE_WATER_PDK'].includes(category) || !category;
   return true;
 };
-const readNormativeRecords = (found: Awaited<ReturnType<typeof protocolService.searchNormative>>) =>
-  found.normatives || found.items || (found.normative ? [found.normative] : []);
-
 const normativeDisplayValue = (normative?: NormativeRecord) => {
   if (!normative) return '';
-  if (normative.value) return normative.value;
-  if (normative.min && normative.max) return `${normative.min}-${normative.max}`;
-  return normative.max || normative.min || normative.maxOneTimeValue || normative.dailyAverageValue || normative.singleValue || normative.obuvValue || '';
+  const value = normative.value || normative.normativeValue || normative.pdk || normative.limitValue;
+  if (value !== undefined && value !== null && String(value).trim()) return String(value);
+  const min = normative.min || normative.minValue;
+  const max = normative.max || normative.maxValue;
+  if (min && max) return `${min}-${max}`;
+  return String(max || min || normative.maxOneTimeValue || normative.dailyAverageValue || normative.singleValue || normative.obuvValue || normative.obuv || '');
 };
 
 const normalizeNormativeIndicator = (item: NormativeRecord): SelectedIndicator => ({
@@ -339,60 +340,22 @@ const ProtocolCreatePage = () => {
       searchAbortRef.current = controller;
       setSearching(true);
       try {
-        const numericSearch = /^\d{3,10}$/.test(value);
-        const commonParams: Record<string, string> = {
+        const recordsPage = await getNormativeRecords({
+          page: 0,
+          size: 20,
           status: 'ACTIVE',
           templateId: selectedChoice.normativeTemplateId,
           query: value,
-          q: value,
           search: value,
-          page: '0',
-          size: '20',
-        };
-        if (sourceDocumentCode) commonParams.sourceDocumentCode = sourceDocumentCode;
-        if (selectedChoice.environmentType) commonParams.environmentType = selectedChoice.environmentType;
-        if (isWater) commonParams.waterType = form.waterType;
-        const physicalParams: Record<string, string> = isPhysical
-          ? {
-            factorType: selectedSubtype || '',
-            factorCode: value,
-            conditionJson: JSON.stringify(physicalConditionValues()),
-            ...(selectedSubtype === 'MICROCLIMATE' ? {
-              season: form.season,
-              workCategory: form.workCategory,
-              workplaceType: form.workplaceType,
-              normLevel: form.normLevel,
-            } : {}),
-            ...(selectedSubtype === 'NOISE' || selectedSubtype === 'NOISE_VIBRATION' ? {
-              roomType: form.roomType,
-              workplaceType: form.workplaceType,
-              noiseType: form.noiseType,
-            } : {}),
-            ...(selectedSubtype === 'LIGHTING' ? {
-              roomType: form.roomType,
-              visualWorkCategory: form.visualWorkCategory,
-              lightingType: form.lightingType,
-            } : {}),
-          }
-          : {
-            normativeType: isSoil ? 'PDK' : '',
-            indicator: value,
-            ...(numericSearch ? { code: value, pollutantCode: value } : {}),
-          };
-        const params = { ...commonParams, ...physicalParams };
-        const fallbackParams = {
-          status: 'ACTIVE',
-          query: value,
-          q: value,
-          search: value,
-          ...(numericSearch ? { code: value, pollutantCode: value } : {}),
-        };
-        const [found, fallbackFound] = await Promise.all([
-          protocolService.searchNormative(params, controller.signal),
-          protocolService.searchNormative(fallbackParams, controller.signal),
-        ]);
+          sourceDocumentCode: sourceDocumentCode || undefined,
+          environmentType: selectedChoice.environmentType || undefined,
+          factorType: isPhysical ? selectedSubtype || undefined : undefined,
+          waterType: isWater ? form.waterType || undefined : undefined,
+          normativeType: isSoil ? 'PDK' : undefined,
+          subtype: isPhysical ? selectedSubtype || undefined : undefined,
+        }, controller.signal);
         if (requestId !== searchRequestRef.current) return;
-        const normatives = readNormativeRecords(found)
+        const normatives = recordsPage.items
           .filter((item) => item.active !== false && !item.archived)
           .filter((item) => {
             if (isPhysical) {
@@ -415,21 +378,7 @@ const ProtocolCreatePage = () => {
           setSearchDone(true);
           return;
         }
-        const fallbackNormatives = readNormativeRecords(fallbackFound).filter((item) => item.active !== false && !item.archived);
-        if (fallbackNormatives.length) {
-          toast.warning('Норматив найден в другом разделе. Проверьте тип протокола.');
-          setChemicalSuggestions(fallbackNormatives.map(normalizeNormativeIndicator).slice(0, 20));
-          setSearchDone(true);
-          return;
-        }
-        if (isPhysical || isSoil || selectedChoice.templateId === 'water') {
-          setChemicalSuggestions([]);
-          setSearchDone(true);
-          return;
-        }
-        const pollutants = await protocolService.searchPollutants(value, params, controller.signal);
-        if (requestId !== searchRequestRef.current) return;
-        setChemicalSuggestions(pollutants.map((item) => ({ ...item, key: item.id || `${item.code}-${item.name}`, result: '' })).slice(0, 10));
+        setChemicalSuggestions([]);
         setSearchDone(true);
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -940,10 +889,18 @@ const ProtocolCreatePage = () => {
         {selectedIndicators.length ? (
           <div className="mt-4 grid gap-3">
             {selectedIndicators.map((item) => (
-              <div key={item.key} className="grid gap-3 rounded-xl border border-slate-200 p-4 md:grid-cols-[1fr_180px_auto] md:items-center">
+              <div key={item.key} className="grid gap-3 rounded-xl border border-slate-200 p-4 md:grid-cols-[1fr_220px_180px_auto] md:items-center">
                 <div>
                   <p className="font-bold text-slate-900">{item.name}</p>
-                  <p className="text-xs font-semibold text-slate-500">{item.code}{item.unit ? ` · ${item.unit}` : ''}{item.normative ? ` · норматив ${normativeDisplayValue(item.normative)} ${item.normative.unit}` : ''}</p>
+                  <p className="text-xs font-semibold text-slate-500">{item.code}{unitForIndicator(item) ? ` · ${unitForIndicator(item)}` : ''}</p>
+                </div>
+                <div className="rounded-xl border border-eco-200 bg-eco-50 px-3 py-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-eco-700">Норматив</p>
+                  <p className="mt-0.5 font-black text-eco-900">
+                    {normativeDisplayValue(item.normative)
+                      ? `${normativeDisplayValue(item.normative)}${unitForIndicator(item) ? ` ${unitForIndicator(item)}` : ''}`
+                      : 'Не найден'}
+                  </p>
                 </div>
                 <input value={item.result} onChange={(event) => setIndicatorResult(item.key, event.target.value)} placeholder="Факт" className={inputClass} />
                 <Button type="button" variant="secondary" className="text-rose-700 hover:bg-rose-50" onClick={() => setSelectedIndicators((current) => current.filter((selected) => selected.key !== item.key))}>Убрать</Button>

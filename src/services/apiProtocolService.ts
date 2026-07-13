@@ -1388,20 +1388,13 @@ export async function searchNormative(params: Record<string, string>, signal?: A
     return value;
   };
   let response: ApiResponse<NormativeSearchResult> | NormativeSearchResult | unknown;
-  let usedRecordsEndpoint = false;
   try {
     response = await api.get<ApiResponse<NormativeSearchResult> | NormativeSearchResult>('/normatives/search', { params: requestParams, signal });
   } catch (error) {
     if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
-    usedRecordsEndpoint = true;
     response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams, signal });
   }
-  let candidates = extractNormativeRecords(response);
-  if (!candidates.length && !usedRecordsEndpoint) {
-    const recordsResponse = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams, signal });
-    candidates = extractNormativeRecords(recordsResponse);
-    response = recordsResponse;
-  }
+  const candidates = extractNormativeRecords(response);
   const item = extractItem(response) as NormativeSearchResult;
   const itemRecord = asRecord(item);
   const normative = item.normative
@@ -1463,7 +1456,7 @@ export async function searchPollutants(query: string, params: Record<string, str
       signal,
     });
     const pollutants = extractPollutants(response);
-    return remember(pollutants.length ? pollutants : await fromNormatives());
+    return remember(pollutants);
   } catch (error) {
     if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
     return remember(await fromNormatives());
