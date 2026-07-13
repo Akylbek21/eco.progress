@@ -9,7 +9,7 @@ type Props = {
   onMeasurementDateChange?: (value: string) => void;
   onChange: (value: ProtocolTestingData) => void;
 };
-const inputClass = 'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100';
+const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 
 const ProtocolTestingForm = ({ templateId, value, measurementDate, readOnly, onMeasurementDateChange, onChange }: Props) => (
   <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

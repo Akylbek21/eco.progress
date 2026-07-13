@@ -8,6 +8,7 @@
     "generate:sitemap": "node scripts/generate-sitemap.js",
     "prerender": "node scripts/prerender.js",
     "build": "npm run generate:sitemap && tsc && vite build && npm run prerender",
+    "test": "node --test tests/protocol-logic.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

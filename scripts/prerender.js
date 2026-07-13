@@ -5,6 +5,7 @@ import { LASTMOD, OG_IMAGE, SITE_URL, publicStaticPages, seoArticles, seoPages }
 const root = process.cwd();
 const distDir = path.join(root, 'dist');
 const templatePath = path.join(distDir, 'index.html');
+const whatsappUrl = 'https://wa.me/77771858088';
 
 if (!fs.existsSync(templatePath)) {
   throw new Error('dist/index.html not found. Run vite build before prerender.');
@@ -186,7 +187,7 @@ const renderSeoPage = (page) => layout(`
     <p>${escapeHtml(page.city || page.service || 'ECOPROGRESS')}</p>
     <h1>${escapeHtml(page.h1)}</h1>
     <p>${escapeHtml(page.intro)}</p>
-    <p><a href="/contacts">Получить консультацию</a> <a href="https://wa.me/77082553000">Написать в WhatsApp</a></p>
+    <p><a href="/contacts">Получить консультацию</a> <a href="${whatsappUrl}">Написать в WhatsApp</a></p>
   </section>
   <section><h2>Услуги</h2>${renderLinks(page.services)}</section>
   <section><h2>Кому нужно</h2>${renderList(page.audience)}</section>
@@ -216,7 +217,7 @@ const renderStaticPage = (page) => {
   return layout(`
   <main class="seo-static-page">
     <nav class="seo-breadcrumbs"><a href="/">Главная</a></nav>
-    <section><h1>${escapeHtml(page.h1)}</h1><p>${escapeHtml(page.description)}</p><p><a href="/contacts">Получить консультацию</a> <a href="https://wa.me/77082553000">WhatsApp</a></p></section>
+    <section><h1>${escapeHtml(page.h1)}</h1><p>${escapeHtml(page.description)}</p><p><a href="/contacts">Получить консультацию</a> <a href="${whatsappUrl}">WhatsApp</a></p></section>
     <section><h2>Основные услуги</h2>${renderLinks([
       { label: 'Экологическое проектирование', path: '/services/environmental-design' },
       { label: 'Лабораторные замеры', path: '/services/laboratory-tests' },

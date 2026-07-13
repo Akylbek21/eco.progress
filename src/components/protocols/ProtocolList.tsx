@@ -13,9 +13,12 @@ type Props = {
   onReplace: (protocol: Protocol) => void | Promise<void>;
   onDownloadPdf: (protocol: Protocol) => void | Promise<void>;
   onDownloadDocx: (protocol: Protocol) => void | Promise<void>;
+  canCopy?: boolean;
+  canDelete?: boolean;
+  canReplace?: boolean;
 };
 
-const ProtocolList = ({ protocols, loading = false, onOpen, onPreview, onCopy, onDelete, onReplace, onDownloadPdf, onDownloadDocx }: Props) => (
+const ProtocolList = ({ protocols, loading = false, onOpen, onPreview, onCopy, onDelete, onReplace, onDownloadPdf, onDownloadDocx, canCopy = false, canDelete = false, canReplace = false }: Props) => (
   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div className="overflow-x-auto">
       <table className="min-w-[1660px] w-full text-left text-sm">
@@ -67,13 +70,13 @@ const ProtocolList = ({ protocols, loading = false, onOpen, onPreview, onCopy, o
                   }}
                 >
                   <option value="" disabled>Выберите…</option>
-                  <option value="open">{protocol.status === 'DRAFT' ? 'Изменить' : 'Открыть'}</option>
+                  <option value="open">{String(protocol.status).trim().toUpperCase() === 'DRAFT' ? 'Изменить' : 'Открыть'}</option>
                   <option value="preview">Предпросмотр</option>
-                  <option value="copy">Создать копию</option>
+                  {canCopy && <option value="copy">Создать копию</option>}
                   <option value="docx">Скачать DOCX</option>
                   <option value="pdf">Скачать PDF</option>
-                  <option value="delete">Удалить протокол</option>
-                  {protocol.status === 'SIGNED' && <option value="replace">Исправленная версия</option>}
+                  {canDelete && String(protocol.status).trim().toUpperCase() === 'DRAFT' && <option value="delete">Удалить протокол</option>}
+                  {canReplace && ['APPROVED', 'SIGNED'].includes(String(protocol.status).trim().toUpperCase()) && <option value="replace">Исправленная версия</option>}
                 </select>
               </td>
             </tr>

@@ -223,7 +223,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       setEnvironment((current) => ({ ...current, status: 'LOADING', source: 'API' }));
       try {
         const weather = await protocolService.getWeatherConditions({
-          objectId, date: measurementDate, time: measurementTime, signal: controller.signal,
+          objectId, coordinates: selectedObject?.coordinates, date: measurementDate, time: measurementTime, signal: controller.signal,
         });
         setEnvironment({ ...weather });
       } catch (loadError) {
@@ -232,7 +232,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       }
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [objectId, measurementDate, measurementTime, weatherRefresh]);
+  }, [objectId, measurementDate, measurementTime, weatherRefresh, selectedObject?.coordinates]);
 
   useEffect(() => {
     const query = pollutantQuery.trim();

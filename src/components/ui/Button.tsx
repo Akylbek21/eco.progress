@@ -12,6 +12,7 @@ const Button = ({ variant = 'primary', children, className, ...props }: ButtonPr
       className={clsx(
         'inline-flex min-w-0 max-w-full items-center justify-center rounded-full px-5 py-3 text-center text-sm font-semibold leading-snug transition-all duration-200',
         'shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-eco-700',
+        'disabled:cursor-not-allowed disabled:opacity-55 disabled:shadow-none',
         {
           'bg-eco-600 text-white hover:bg-eco-700': variant === 'primary',
           'bg-white text-eco-800 border border-eco-300 hover:bg-eco-50': variant === 'secondary',

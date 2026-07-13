@@ -5,7 +5,7 @@ import { FaInstagram, FaTelegramPlane, FaTiktok, FaWhatsapp } from 'react-icons/
 import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
 import OrderChoiceModal from '../components/OrderChoiceModal';
-import { company } from '../config/company';
+import { company, getWhatsAppUrl } from '../config/company';
 import { citySeoPages } from '../data/seoPages';
 import { trackPhoneClick } from '../services/analytics';
 
@@ -15,7 +15,7 @@ const navItems = [
   { label: 'Статьи', path: '/news' },
   { label: 'О компании', path: '/about' },
   { label: 'Контакты', path: '/contacts' },
-  { label: 'WhatsApp', path: 'https://wa.me/77082553000' },
+  { label: 'WhatsApp', path: getWhatsAppUrl() },
   { label: 'Войти', path: '/login' },
 ];
 
@@ -191,7 +191,9 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
           className="absolute inset-0 -z-20 h-full w-full bg-eco-900 object-cover"
         />
         <div className="absolute inset-0 -z-10 bg-eco-900/86" />
-        <div className="relative mx-auto max-w-7xl px-5 py-14 sm:px-8">
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-[5] h-40 bg-gradient-to-b from-[#F7FBFD] via-[#F7FBFD]/88 to-transparent backdrop-blur-xl" />
+        <div className="pointer-events-none absolute inset-x-0 top-12 -z-[5] h-24 bg-[#F7FBFD]/45 blur-2xl" />
+        <div className="relative mx-auto max-w-7xl px-5 pb-14 pt-44 sm:px-8">
           <div className="grid gap-10 lg:grid-cols-[1.3fr_0.8fr_1fr_1fr]">
             <div>
               <h3 className="text-2xl font-bold leading-tight">

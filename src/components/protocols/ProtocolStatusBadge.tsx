@@ -31,10 +31,13 @@ const classes: Record<ProtocolStatus, string> = {
   REPLACED: 'bg-violet-50 text-violet-800 ring-violet-200',
 };
 
-const ProtocolStatusBadge = ({ status }: { status: ProtocolStatus }) => (
-  <span className={clsx('inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1', classes[status])}>
-    {protocolStatusLabels[status]}
-  </span>
-);
+const ProtocolStatusBadge = ({ status }: { status: ProtocolStatus | string }) => {
+  const normalized = String(status || '').trim().toUpperCase() as ProtocolStatus;
+  return (
+    <span className={clsx('inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1', classes[normalized] || 'bg-slate-100 text-slate-700 ring-slate-200')}>
+      {protocolStatusLabels[normalized] || status || 'Неизвестный статус'}
+    </span>
+  );
+};
 
 export default ProtocolStatusBadge;

@@ -59,7 +59,7 @@ type SelectedIndicator = Pollutant & {
 };
 
 const MIN_SEARCH_LENGTH = 3;
-const SEARCH_DEBOUNCE_MS = 600;
+const SEARCH_DEBOUNCE_MS = 250;
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -88,8 +88,17 @@ const canSearch = (value: string) => {
   const digits = (normalized.match(/\d/g) || []).length;
   return letters >= MIN_SEARCH_LENGTH || digits >= MIN_SEARCH_LENGTH;
 };
-const sameDocumentCode = (value?: string | null, expected?: string | null) =>
-  !expected || String(value || '').toUpperCase().replace(/-/g, '_') === expected;
+const normalizeCode = (value?: string | null) => String(value || '').toUpperCase().replace(/-/g, '_');
+const sameDocumentCode = (value?: string | null, expected?: string | null) => {
+  const current = normalizeCode(value);
+  const target = normalizeCode(expected);
+  return !target || !current || current === target;
+};
+const sameTemplateId = (value?: string | null, ...expected: Array<string | null | undefined>) => {
+  const current = String(value || '').toLowerCase();
+  const targets = expected.map((item) => String(item || '').toLowerCase()).filter(Boolean);
+  return !targets.length || !current || targets.includes(current);
+};
 const waterCategoryAllowed = (item: NormativeRecord, waterType: string) => {
   const category = String(item.categoryCode || item.category || '').toUpperCase();
   if (waterType === 'DRINKING_WATER') return ['DRINKING_WATER_SAFETY', 'DRINKING_WATER_CHEMICALS'].includes(category) || !category;
@@ -127,7 +136,9 @@ const ProtocolCreatePage = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const searchRequestRef = useRef(0);
+  const searchAbortRef = useRef<AbortController | null>(null);
   const weatherRequestRef = useRef(0);
+  const weatherAbortRef = useRef<AbortController | null>(null);
   const [loading, setLoading] = useState(false);
   const [booting, setBooting] = useState(true);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -279,6 +290,9 @@ const ProtocolCreatePage = () => {
     if (!form.objectId || !form.measurementDate || !form.measurementTime) return;
     const requestId = ++weatherRequestRef.current;
     const timer = window.setTimeout(async () => {
+      weatherAbortRef.current?.abort();
+      const controller = new AbortController();
+      weatherAbortRef.current = controller;
       setWeatherLoading(true);
       setWeatherMessage('');
       try {
@@ -287,6 +301,7 @@ const ProtocolCreatePage = () => {
           coordinates: selectedObject?.coordinates,
           date: form.measurementDate,
           time: form.measurementTime,
+          signal: controller.signal,
         });
         if (requestId !== weatherRequestRef.current) return;
         setForm((current) => ({
@@ -298,17 +313,21 @@ const ProtocolCreatePage = () => {
         }));
         if (weather.warning) setWeatherMessage(weather.warning);
       } catch {
-        if (requestId === weatherRequestRef.current) setWeatherMessage('Погоду не удалось подтянуть. Заполните условия вручную.');
+        if (!controller.signal.aborted && requestId === weatherRequestRef.current) setWeatherMessage('Погоду не удалось подтянуть. Заполните условия вручную.');
       } finally {
         if (requestId === weatherRequestRef.current) setWeatherLoading(false);
       }
     }, 650);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      weatherAbortRef.current?.abort();
+    };
   }, [form.objectId, form.measurementDate, form.measurementTime, selectedObject?.coordinates]);
 
   useEffect(() => {
     const value = chemicalQuery.trim();
     const requestId = ++searchRequestRef.current;
+    searchAbortRef.current?.abort();
     setSearchDone(false);
     if (!value || !canSearch(value)) {
       setChemicalSuggestions([]);
@@ -316,6 +335,8 @@ const ProtocolCreatePage = () => {
       return;
     }
     const timer = window.setTimeout(async () => {
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
       setSearching(true);
       try {
         const numericSearch = /^\d{3,10}$/.test(value);
@@ -359,23 +380,33 @@ const ProtocolCreatePage = () => {
             ...(numericSearch ? { code: value, pollutantCode: value } : {}),
           };
         const params = { ...commonParams, ...physicalParams };
-        const found = await protocolService.searchNormative(params);
+        const fallbackParams = {
+          status: 'ACTIVE',
+          query: value,
+          q: value,
+          search: value,
+          ...(numericSearch ? { code: value, pollutantCode: value } : {}),
+        };
+        const [found, fallbackFound] = await Promise.all([
+          protocolService.searchNormative(params, controller.signal),
+          protocolService.searchNormative(fallbackParams, controller.signal),
+        ]);
         if (requestId !== searchRequestRef.current) return;
         const normatives = readNormativeRecords(found)
           .filter((item) => item.active !== false && !item.archived)
           .filter((item) => {
             if (isPhysical) {
-              return item.templateId === selectedChoice.normativeTemplateId
+              return sameTemplateId(item.templateId, selectedChoice.normativeTemplateId, selectedChoice.templateId)
                 && sameDocumentCode(item.sourceDocumentCode, sourceDocumentCode)
                 && (!selectedSubtype || item.factorType === selectedSubtype);
             }
             if (isSoil) {
-              return item.templateId === 'soil'
+              return sameTemplateId(item.templateId, 'soil', selectedChoice.templateId)
                 && sameDocumentCode(item.sourceDocumentCode, sourceDocumentCode)
                 && item.comparisonType !== 'INFO'
                 && String(item.normativeType || '').toUpperCase() === 'PDK';
             }
-            return item.templateId === selectedChoice.normativeTemplateId
+            return sameTemplateId(item.templateId, selectedChoice.normativeTemplateId, selectedChoice.templateId)
               && sameDocumentCode(item.sourceDocumentCode, sourceDocumentCode)
               && (!isWater || waterCategoryAllowed(item, form.waterType));
           });
@@ -384,18 +415,10 @@ const ProtocolCreatePage = () => {
           setSearchDone(true);
           return;
         }
-        const fallbackFound = await protocolService.searchNormative({
-          status: 'ACTIVE',
-          query: value,
-          q: value,
-          search: value,
-          ...(numericSearch ? { code: value, pollutantCode: value } : {}),
-        });
-        if (requestId !== searchRequestRef.current) return;
         const fallbackNormatives = readNormativeRecords(fallbackFound).filter((item) => item.active !== false && !item.archived);
         if (fallbackNormatives.length) {
           toast.warning('Норматив найден в другом разделе. Проверьте тип протокола.');
-          setChemicalSuggestions([]);
+          setChemicalSuggestions(fallbackNormatives.map(normalizeNormativeIndicator).slice(0, 20));
           setSearchDone(true);
           return;
         }
@@ -404,11 +427,12 @@ const ProtocolCreatePage = () => {
           setSearchDone(true);
           return;
         }
-        const pollutants = await protocolService.searchPollutants(value, params);
+        const pollutants = await protocolService.searchPollutants(value, params, controller.signal);
         if (requestId !== searchRequestRef.current) return;
         setChemicalSuggestions(pollutants.map((item) => ({ ...item, key: item.id || `${item.code}-${item.name}`, result: '' })).slice(0, 10));
         setSearchDone(true);
       } catch (error) {
+        if (controller.signal.aborted) return;
         if (requestId !== searchRequestRef.current) return;
         setChemicalSuggestions([]);
         setSearchDone(true);
@@ -417,7 +441,10 @@ const ProtocolCreatePage = () => {
         if (requestId === searchRequestRef.current) setSearching(false);
       }
     }, SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      searchAbortRef.current?.abort();
+    };
   }, [
     chemicalQuery,
     selectedChoice,
@@ -713,8 +740,12 @@ const ProtocolCreatePage = () => {
     };
     setLoading(true);
     try {
-      const protocol = await protocolService.quickCreateProtocol(quickPayload);
+      const created = await protocolService.quickCreateProtocol(quickPayload);
+      const protocol = await protocolService.getProtocol(created.id);
       if (!protocol.id) throw new Error('Backend не вернул id протокола');
+      if (protocol.results.length !== measurements.length) {
+        toast.warning(`Backend сохранил ${protocol.results.length} из ${measurements.length} строк. Откройте протокол и проверьте результаты.`);
+      }
       toast.success('Протокол создан, нормативы проверены');
       navigate(`/staff/protocols/${protocol.id}`, { replace: true });
     } catch (error) {

@@ -43,7 +43,10 @@ const emptyPage: LabJournalPage = {
   size: PAGE_SIZE,
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+};
 
 const text = (value: unknown) => value === undefined || value === null ? '' : String(value);
 const firstText = (data: LabJournalEntryData, keys: string[]) => keys.map((key) => text(data[key]).trim()).find(Boolean) || '';
@@ -180,6 +183,15 @@ const EntryModal = ({ open, definition, entry, saving, onClose, onSubmit }: Entr
     setFormError('');
 
     const form = new FormData(event.currentTarget);
+    const entryDate = text(form.get('journalEntryDate')).trim();
+    if (!entryDate) {
+      setFormError('Укажите дату записи в журнале.');
+      return;
+    }
+    if (entryDate > today()) {
+      setFormError('Дата записи не может быть позже сегодняшней.');
+      return;
+    }
     const data = fields.reduce<LabJournalEntryData>((acc, field) => {
       if (field.readOnly) return acc;
       const raw = text(form.get(field.key)).trim();
@@ -187,6 +199,7 @@ const EntryModal = ({ open, definition, entry, saving, onClose, onSubmit }: Entr
       acc[field.key] = field.type === 'number' ? Number(raw) : raw;
       return acc;
     }, entry?.rowNumber ? { rowNumber: entry.rowNumber } : {});
+    if (kind === 'environment' && !data.date) data.date = entryDate;
 
     const requiredError = fields.find((field) => field.required && !text(data[field.key]).trim());
     if (requiredError) {
@@ -231,7 +244,6 @@ const EntryModal = ({ open, definition, entry, saving, onClose, onSubmit }: Entr
       }
     }
 
-    const entryDate = firstText(data, ['date', 'preparedDate', 'samplingDate']) || entry?.entryDate || today();
     await onSubmit(data, entryDate);
   };
 
@@ -246,7 +258,19 @@ const EntryModal = ({ open, definition, entry, saving, onClose, onSubmit }: Entr
             {formError}
           </div>
         )}
-        {fields.map((field) => {
+        <label className="space-y-1.5 text-sm font-semibold text-slate-700 md:col-span-2">
+          <span>Дата записи в журнале *</span>
+          <input
+            name="journalEntryDate"
+            type="date"
+            defaultValue={entry?.entryDate?.slice(0, 10) || today()}
+            max={today()}
+            required
+            className={inputClass}
+          />
+          <span className="block text-xs font-medium text-slate-500">Можно выбрать сегодняшний или любой прошедший день.</span>
+        </label>
+        {fields.filter((field) => !(kind === 'environment' && field.key === 'date')).map((field) => {
           const value = toFormValue(entry?.data[field.key]);
           const isTextarea = field.type === 'textarea';
           const commonProps = {

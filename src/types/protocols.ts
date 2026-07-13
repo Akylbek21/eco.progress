@@ -93,12 +93,17 @@ export type ProtocolResult = {
   indicator?: string;
   unit?: string;
   result?: string;
+  resultValue?: string;
+  primaryReading?: string;
   normative?: string;
   normativeValue?: string;
   pdk?: string;
   testingMethod?: string;
   testingMethodDocument?: string;
+  testingMethodNd?: string;
   samplingMethod?: string;
+  samplingMethodDocument?: string;
+  samplingMethodNd?: string;
   normativeDocument?: string;
   comment?: string;
   measurementPlace?: string;
@@ -341,9 +346,18 @@ export interface Protocol {
   history?: ProtocolHistoryItem[];
   createdAt: string;
   updatedAt: string;
+  version?: string | number;
   replacedByProtocolId?: string;
   replacesProtocolId?: string;
 }
+
+export type ProtocolPage = {
+  items: Protocol[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
 
 export type ProtocolHistoryItem = {
   id: string;

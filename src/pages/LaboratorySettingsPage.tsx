@@ -1,12 +1,14 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Building2, CheckCircle2, ImagePlus, Pencil, Plus, RefreshCw, Save, Star, UserCheck, UserMinus } from 'lucide-react';
+import { AlertTriangle, Building2, CheckCircle2, ImagePlus, Pencil, Plus, RefreshCw, Save, Star, Trash2, UserCheck, UserMinus } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import AuthenticatedImage from '../components/ui/AuthenticatedImage';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import {
   accreditationState,
   deactivateLaboratoryEmployee,
+  deleteLaboratory,
   getEligibleLaboratoryEmployees,
   getLaboratories,
   getLaboratory,
@@ -91,6 +93,7 @@ const LaboratorySettingsPage = () => {
   const [logoPreview, setLogoPreview] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState('');
   const [employeeSaving, setEmployeeSaving] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -173,6 +176,7 @@ const LaboratorySettingsPage = () => {
   }, [logoFile, profile.logoUrl]);
 
   const selectLaboratory = async (id: string) => {
+    if (id === selectedId) return;
     if (!confirmDiscard()) return;
     setSelectedId(id);
     setLoading(true);
@@ -201,6 +205,43 @@ const LaboratorySettingsPage = () => {
     setLogoFile(null);
     setErrors({});
     setDirty(true);
+  };
+
+  const removeLaboratory = async (laboratory: LaboratorySummary) => {
+    if (!isAdmin || deletingId) return;
+    if (!window.confirm(`Удалить лабораторию «${laboratory.name || 'Без названия'}»? Это действие нельзя отменить.`)) return;
+
+    setDeletingId(laboratory.id);
+    try {
+      await deleteLaboratory(laboratory.id);
+      const remaining = summaries.filter((item) => item.id !== laboratory.id);
+      setSummaries(remaining);
+
+      if (selectedId === laboratory.id) {
+        const nextId = remaining.find((item) => item.isDefault)?.id || remaining[0]?.id || '';
+        setSelectedId(nextId);
+        if (nextId) {
+          const [nextProfile, staff] = await Promise.all([
+            getLaboratory(nextId),
+            getLaboratoryEmployees(nextId, { includeInactive: true }),
+          ]);
+          setProfile(nextProfile);
+          setEmployees(staff);
+        } else {
+          setProfile(emptyProfile());
+          setEmployees([]);
+        }
+        setLogoFile(null);
+        setErrors({});
+        setDirty(false);
+      }
+
+      toast.success('Лаборатория удалена');
+    } catch (deleteError) {
+      toast.error('Не удалось удалить лабораторию', deleteError instanceof Error ? deleteError.message : undefined);
+    } finally {
+      setDeletingId('');
+    }
   };
 
   const validate = () => {
@@ -385,14 +426,20 @@ const LaboratorySettingsPage = () => {
               {summaries.map((item) => {
                 const active = item.id === selectedId;
                 return (
-                  <button key={item.id} type="button" onClick={() => selectLaboratory(item.id)} className={`w-full rounded-xl border px-3 py-3 text-left transition ${active ? 'border-eco-300 bg-eco-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-black text-slate-900">{item.name || 'Без названия'}</p>
-                      {item.isDefault && <Star className="h-4 w-4 shrink-0 fill-amber-400 text-amber-400" />}
+                  <div key={item.id} className={`rounded-xl border p-3 transition ${active ? 'border-eco-300 bg-eco-50' : 'border-slate-200 bg-white'}`}>
+                    <button type="button" onClick={() => selectLaboratory(item.id)} className="w-full text-left">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-black text-slate-900">{item.name || 'Без названия'}</p>
+                        {item.isDefault && <Star className="h-4 w-4 shrink-0 fill-amber-400 text-amber-400" />}
+                      </div>
+                      <p className="mt-1 text-xs font-semibold text-slate-500">{item.accreditationNumber || 'Аттестат не указан'}</p>
+                      <p className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-bold ${item.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{item.active ? 'Активна' : 'Неактивна'}</p>
+                    </button>
+                    <div className="mt-3 flex gap-2 border-t border-slate-200 pt-3">
+                      {canEdit && <Button type="button" variant="secondary" className="flex-1 px-3 py-2 text-xs" onClick={() => selectLaboratory(item.id)} disabled={loading || Boolean(deletingId)}><Pencil className="h-3.5 w-3.5" /> Редактировать</Button>}
+                      {isAdmin && <Button type="button" variant="ghost" className="px-3 py-2 text-xs text-rose-700 hover:bg-rose-50" onClick={() => removeLaboratory(item)} disabled={loading || Boolean(deletingId)}><Trash2 className="h-3.5 w-3.5" /> {deletingId === item.id ? 'Удаление...' : 'Удалить'}</Button>}
                     </div>
-                    <p className="mt-1 text-xs font-semibold text-slate-500">{item.accreditationNumber || 'Аттестат не указан'}</p>
-                    <p className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-bold ${item.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{item.active ? 'Активна' : 'Неактивна'}</p>
-                  </button>
+                  </div>
                 );
               })}
               {!summaries.length && <div className="rounded-xl border border-dashed border-slate-300 p-4 text-sm font-semibold text-slate-500">Лаборатории еще не созданы.</div>}
@@ -431,7 +478,9 @@ const LaboratorySettingsPage = () => {
               </div>
 
               <div className="mt-5 grid gap-4 md:grid-cols-[180px_1fr]">
-                <div className="flex h-32 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">{logoPreview ? <img src={logoPreview} alt="Логотип лаборатории" className="h-full w-full object-contain p-3" /> : <ImagePlus className="h-8 w-8 text-slate-300" />}</div>
+                <div className="flex h-32 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
+                  <AuthenticatedImage src={logoPreview} alt="Логотип лаборатории" className="h-full w-full object-contain p-3" fallback={<ImagePlus className="h-8 w-8 text-slate-300" />} />
+                </div>
                 <div className="space-y-3">
                   <p className="text-sm font-bold text-slate-700">Логотип</p>
                   <input disabled={!isAdmin} type="file" accept="image/png,image/jpeg" onChange={onLogoChange} className={inputClass} />

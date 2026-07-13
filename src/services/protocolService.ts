@@ -7,6 +7,7 @@ import type {
   Pollutant,
   Protocol,
   ProtocolCalculationSummaryResponse,
+  ProtocolPage,
   QuickProtocolCreatePayload,
   ProtocolResultPayload,
   ProtocolResultRow,
@@ -24,6 +25,7 @@ export type DownloadedProtocolFile = {
 
 export interface ProtocolService {
   getProtocols(params?: Record<string, string>): Promise<Protocol[]>;
+  getProtocolsPage(params?: Record<string, string>, signal?: AbortSignal): Promise<ProtocolPage>;
   getProtocolTemplates(): Promise<ProtocolTemplate[]>;
   getMethodTemplates(): Promise<MethodTemplateResponse[]>;
   getMethodTemplate(id: string): Promise<MethodTemplateResponse>;
@@ -62,8 +64,8 @@ export interface ProtocolService {
   importExcel(protocolId: string, file: File): Promise<Protocol>;
   addProtocolMeasurementDevice(protocolId: string, device: MeasurementDevice): Promise<Protocol>;
   removeProtocolMeasurementDevice(protocolId: string, deviceId: string): Promise<Protocol>;
-  searchNormative(params: Record<string, string>): Promise<NormativeSearchResult>;
-  searchPollutants(query: string, params?: Record<string, string>): Promise<Pollutant[]>;
+  searchNormative(params: Record<string, string>, signal?: AbortSignal): Promise<NormativeSearchResult>;
+  searchPollutants(query: string, params?: Record<string, string>, signal?: AbortSignal): Promise<Pollutant[]>;
   getWeatherConditions(params: {
     objectId: string | number;
     coordinates?: string;
@@ -88,6 +90,7 @@ const implementation = () => {
 
 const protocolService: ProtocolService = {
   getProtocols: async (params) => (await implementation()).getProtocols(params),
+  getProtocolsPage: async (params, signal) => (await implementation()).getProtocolsPage(params, signal),
   getProtocolTemplates: async () => (await implementation()).getProtocolTemplates(),
   getMethodTemplates: async () => (await implementation()).getMethodTemplates(),
   getMethodTemplate: async (id) => (await implementation()).getMethodTemplate(id),
@@ -122,8 +125,8 @@ const protocolService: ProtocolService = {
   importExcel: async (protocolId, file) => (await implementation()).importExcel(protocolId, file),
   addProtocolMeasurementDevice: async (protocolId, device) => (await implementation()).addProtocolMeasurementDevice(protocolId, device),
   removeProtocolMeasurementDevice: async (protocolId, deviceId) => (await implementation()).removeProtocolMeasurementDevice(protocolId, deviceId),
-  searchNormative: async (params) => (await implementation()).searchNormative(params),
-  searchPollutants: async (query, params) => (await implementation()).searchPollutants(query, params),
+  searchNormative: async (params, signal) => (await implementation()).searchNormative(params, signal),
+  searchPollutants: async (query, params, signal) => (await implementation()).searchPollutants(query, params, signal),
   getWeatherConditions: async (params) => (await implementation()).getWeatherConditions(params),
   calculateProtocol: async (protocolId) => (await implementation()).calculateProtocol(protocolId),
 };

@@ -272,37 +272,11 @@ const rawDataLabel = (row: ProtocolResultRow) =>
   primaryReading(row)
   || ['reading1', 'reading2', 'sampleWeight', 'volume'].map((key) => valueOf(row, [`raw_${key}`, key])).filter(Boolean).join(', ');
 const measurementPlace = (row: ProtocolResultRow) => row.measurementPlace || valueOf(row, ['measurementPlace', 'samplingPlace', 'object']);
-const testingMethod = (row: ProtocolResultRow) => row.testingMethodDocument || row.testingMethod || valueOf(row, ['testingMethodDocument', 'testingMethod']);
+const testingMethod = (row: ProtocolResultRow) => row.testingMethodNd || row.testingMethodDocument || row.testingMethod || valueOf(row, ['testingMethodNd', 'testingMethodDocument', 'testingMethod']);
 const needsNormativeSelection = (row: ProtocolResultRow) => valueOf(row, ['normativeSelectionRequired']) === 'true';
-const numericValue = (value: string) => {
-  const parsed = Number(String(value || '').replace(',', '.').replace(/[^\d.+-]/g, ''));
-  return Number.isFinite(parsed) ? parsed : null;
-};
-const derivedStatusFromValues = (row: ProtocolResultRow, templateId: ProtocolTemplateId) => {
-  const min = numericValue(valueOf(row, ['normativeMin', 'minValue']));
-  const comparisonType = String(row.comparisonType || valueOf(row, ['comparisonType']) || 'LESS_OR_EQUAL').toUpperCase();
-  const actualText = officialResult(row, templateId).trim().toLowerCase();
-  if (comparisonType === 'ABSENT') return ['отсутствие', 'не обнаружено', 'не обнаружен', '0'].includes(actualText) ? 'NORMAL' : 'EXCEEDED';
-
-  const actual = numericValue(officialResult(row, templateId));
-  const normative = numericValue(normativeValue(row));
-  if (actual === null || normative === null) return '';
-  const max = numericValue(valueOf(row, ['normativeMax', 'maxValue'])) ?? normative;
-
-  if (comparisonType === 'GREATER_OR_EQUAL') return actual >= normative ? 'NORMAL' : 'BELOW_REQUIRED';
-  if (comparisonType === 'RANGE') {
-    const lower = min ?? normative;
-    return actual >= lower && actual <= max ? 'NORMAL' : 'EXCEEDED';
-  }
-  if (comparisonType === 'EQUAL') return actual === normative ? 'NORMAL' : 'EXCEEDED';
-  return actual <= normative ? 'NORMAL' : 'EXCEEDED';
-};
 const statusOf = (row: ProtocolResultRow, templateId: ProtocolTemplateId) => {
-  const status = row.internalStatus || row.checkStatus;
-  if (['NORMATIVE_NOT_FOUND', 'MANUAL_NORMATIVE', 'NEEDS_REVIEW'].includes(String(status)) && normativeValue(row)) {
-    return derivedStatusFromValues(row, templateId) || 'MANUAL_NORMATIVE';
-  }
-  return status;
+  void templateId;
+  return String(row.internalStatus || row.checkStatus || '').trim().toUpperCase();
 };
 const statusLabel = (status?: string) =>
   normativeStatusLabels[status as keyof typeof normativeStatusLabels] || status || '—';
@@ -548,12 +522,15 @@ const ProtocolResultsTable = ({
     if (!addOpen) return;
     getMeasurementDevices({ status: 'VALID' })
       .then((items) => setAvailableDevices(items))
-      .catch(() => setAvailableDevices([]));
+      .catch((loadError) => {
+        setAvailableDevices([]);
+        onNotify(loadError instanceof Error ? loadError.message : 'Не удалось загрузить доступные приборы', 'error');
+      });
   }, [addOpen]);
 
-  const openAddDialog = () => {
+  const openAddDialog = (initialQuery = '') => {
     setAddOpen(true);
-    setNormativeQuery('');
+    setNormativeQuery(initialQuery);
     setNormativeResults([]);
     setNormativeSearchDone(false);
     setNormativeFallbackWarning('');
@@ -907,7 +884,7 @@ const ProtocolResultsTable = ({
     if (!form.primaryReading.trim() && !form.readings.trim()) return onNotify('Введите первичные показания', 'warning');
     setSaving(true);
     try {
-      const resultValue = form.primaryReading || form.readings;
+      const resultValue = form.primaryReading.trim() || null;
       const saved = await protocolService.updateProtocolResult(protocolId, editing.id, {
         measurementDeviceId: form.measurementDeviceId || undefined,
         normativeId: valueOf(editing, ['normativeId']) || editing.normativeReference?.id,
@@ -917,6 +894,7 @@ const ProtocolResultsTable = ({
           readings: form.readings,
           measurementReadings: form.readings || form.primaryReading,
           result: resultValue,
+          resultValue,
           ...(templateId === 'industrial_emissions' ? { resultMg: resultValue } : {}),
           measurementDeviceId: form.measurementDeviceId,
           measurementPlace: form.measurementPlace,
@@ -926,9 +904,22 @@ const ProtocolResultsTable = ({
           externalLaboratoryDocument: form.externalLaboratoryDocument,
         },
       });
-      onChange(rows.map((row) => row.id === editing.id ? saved : row));
+      let latestRow = saved;
+      let recalculated = true;
+      try {
+        const calculation = await protocolService.calculateResult(protocolId, editing.id);
+        if (calculation.row) latestRow = calculation.row;
+      } catch (calculationError) {
+        recalculated = false;
+        console.warn(`Result ${editing.id} was updated but could not be recalculated automatically.`, calculationError);
+      }
+      onChange(rows.map((row) => row.id === editing.id ? latestRow : row));
+      await onImported();
       setEditing(null);
-      onNotify('Первичные показания сохранены', 'success');
+      onNotify(
+        recalculated ? 'Результат замера изменён и пересчитан' : 'Результат замера изменён. Нажмите «Рассчитать», чтобы обновить статус.',
+        recalculated ? 'success' : 'warning',
+      );
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось сохранить показания', 'error');
     } finally {
@@ -1034,6 +1025,7 @@ const ProtocolResultsTable = ({
 
   const remove = async () => {
     if (!deleteRow) return;
+    setSaving(true);
     try {
       await protocolService.deleteProtocolResult(protocolId, deleteRow.id);
       onChange(rows.filter((item) => item.id !== deleteRow.id));
@@ -1041,6 +1033,8 @@ const ProtocolResultsTable = ({
       onNotify('Строка удалена', 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось удалить строку', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1049,11 +1043,17 @@ const ProtocolResultsTable = ({
     if (!window.confirm(`Удалить выбранные строки: ${selectedRows.length}?`)) return;
     setSaving(true);
     try {
-      await Promise.all(selectedRows.map((row) => protocolService.deleteProtocolResult(protocolId, row.id)));
-      const selectedSet = new Set(selectedRows.map((row) => row.id));
-      onChange(rows.filter((row) => !selectedSet.has(row.id)));
+      const settled = await Promise.allSettled(selectedRows.map((row) => protocolService.deleteProtocolResult(protocolId, row.id)));
+      const deletedIds = new Set(selectedRows.filter((_, index) => settled[index].status === 'fulfilled').map((row) => row.id));
+      const failed = settled.length - deletedIds.size;
+      if (failed) {
+        await onImported();
+        onNotify(`Удалено ${deletedIds.size} из ${settled.length}. ${failed} строк не удалено; данные перезагружены.`, 'warning');
+      } else {
+        onChange(rows.filter((row) => !deletedIds.has(row.id)));
+        onNotify('Выбранные строки удалены', 'success');
+      }
       setSelected([]);
-      onNotify('Выбранные строки удалены', 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось удалить выбранные строки', 'error');
     } finally {
@@ -1065,11 +1065,18 @@ const ProtocolResultsTable = ({
     if (!selectedRows.length) return onNotify('Выберите строки', 'warning');
     setSaving(true);
     try {
-      const saved = await Promise.all(selectedRows.map((row) => protocolService.updateProtocolResult(protocolId, row.id, {
+      const settled = await Promise.allSettled(selectedRows.map((row) => protocolService.updateProtocolResult(protocolId, row.id, {
         measurementDeviceId: patch.measurementDeviceId || row.measurementDeviceId,
         normativeId: row.normativeReference?.id || valueOf(row, ['normativeId']),
         values: { ...row.values, ...patch },
       })));
+      const saved = settled.flatMap((item) => item.status === 'fulfilled' ? [item.value] : []);
+      const failed = settled.length - saved.length;
+      if (failed) {
+        await onImported();
+        onNotify(`Обновлено ${saved.length} из ${settled.length}. ${failed} строк не обновлено; данные перезагружены.`, 'warning');
+        return;
+      }
       const map = new Map(saved.map((row) => [row.id, row]));
       onChange(rows.map((row) => map.get(row.id) || row));
       onNotify('Значение применено к выбранным строкам', 'success');
@@ -1160,7 +1167,7 @@ const ProtocolResultsTable = ({
         </div>
         <div className="flex flex-wrap gap-2">
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
-          <Button type="button" variant="secondary" disabled={readOnly || busy || saving} onClick={openAddDialog}><Plus className="h-4 w-4" /> Добавить показатель</Button>
+          <Button type="button" variant="secondary" disabled={readOnly || busy || saving} onClick={() => openAddDialog()}><Plus className="h-4 w-4" /> Добавить показатель</Button>
           <Button type="button" variant="secondary" disabled={readOnly || busy || saving} onClick={() => fileRef.current?.click()}><FileSpreadsheet className="h-4 w-4" /> Импорт из Excel</Button>
           <Button type="button" disabled={readOnly || busy || saving || !rows.length} onClick={calculateAll}><Calculator className="h-4 w-4" /> Рассчитать результаты</Button>
         </div>
@@ -1248,7 +1255,7 @@ const ProtocolResultsTable = ({
             <div className="mt-2 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900 sm:flex-row sm:items-center sm:justify-between">
               <span>{isPhysicalFactors ? physicalNormativeNotFoundMessage : notFoundSearchMessage}</span>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="secondary" className="shrink-0" disabled={readOnly || saving} onClick={() => setAddOpen(true)}>
+                <Button type="button" variant="secondary" className="shrink-0" disabled={readOnly || saving} onClick={() => openAddDialog(query.trim())}>
                   Выбрать вручную
                 </Button>
                 <a href="/staff/normatives" className="inline-flex items-center rounded-lg bg-white px-3 py-2 text-sm font-bold text-eco-700 ring-1 ring-slate-200 hover:bg-eco-50">
@@ -1442,15 +1449,6 @@ const ProtocolResultsTable = ({
           <Button type="button" variant="secondary" onClick={() => setCalculation({ row: reviewRow, details: reviewRow.calculationDetails || {} })}>Проверить расчет</Button>
           <Button type="button" variant="secondary" disabled={readOnly} onClick={() => openEdit(reviewRow)}>Исправить исходные данные</Button>
           <Button type="button" variant="secondary" disabled={readOnly || saving} onClick={() => duplicate(reviewRow)}>Добавить повторный замер</Button>
-          <Button type="button" variant="secondary" disabled={busy} onClick={async () => {
-            try {
-              await protocolService.readyForApproval(protocolId);
-              await onImported();
-              onNotify('Протокол отправлен на проверку', 'success');
-            } catch (error) {
-              onNotify(error instanceof Error ? error.message : 'Не удалось отправить на проверку', 'error');
-            }
-          }}>Отправить на проверку</Button>
         </div>}
       </div>}
       {canUseAdvanced && <button type="button" onClick={() => setAdvanced((value) => !value)} className="mt-4 text-sm font-bold text-eco-700">{advanced ? 'Скрыть расширенные данные' : 'Расширенный режим'}</button>}
@@ -1560,7 +1558,7 @@ const ProtocolResultsTable = ({
         onNotify={onNotify}
       />
 
-      <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title="Первичные показания" description="Официальный результат будет рассчитан backend после сохранения." size="lg" loading={saving}>
+      <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title="Изменить результат замера" description="Исправьте значение. После сохранения строка будет повторно рассчитана и загружена с backend." size="lg" loading={saving}>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-1.5 text-sm font-bold text-slate-700">Показание / концентрация<input autoFocus value={form.primaryReading || ''} onChange={(event) => setForm({ ...form, primaryReading: event.target.value })} className={inputClass} /></label>
           <label className="space-y-1.5 text-sm font-bold text-slate-700">Серия показаний<textarea rows={2} value={form.readings || ''} onChange={(event) => setForm({ ...form, readings: event.target.value })} placeholder="Через запятую: 418, 421, 416" className={inputClass} /></label>
@@ -1572,7 +1570,7 @@ const ProtocolResultsTable = ({
             <label className="space-y-1.5 text-sm font-bold text-slate-700">Документ внешней лаборатории<input value={form.externalLaboratoryDocument || ''} onChange={(event) => setForm({ ...form, externalLaboratoryDocument: event.target.value })} className={inputClass} /></label>
           </>}
         </div>
-        <div className="mt-5 flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setEditing(null)}>Отмена</Button><Button type="button" onClick={save} disabled={saving}>Сохранить показания</Button></div>
+        <div className="mt-5 flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setEditing(null)}>Отмена</Button><Button type="button" onClick={save} disabled={saving}>Сохранить и пересчитать</Button></div>
       </Modal>
 
       <Modal open={Boolean(calculation)} onClose={() => setCalculation(null)} title="Расчёт результата" size="lg">

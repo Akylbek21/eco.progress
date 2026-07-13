@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, RefreshCw, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
@@ -9,7 +9,9 @@ import protocolService from '../services/protocolService';
 import { getApiErrorMessage } from '../services/apiHelpers';
 import { physicalFactorTypes, protocolTemplates, templateName } from '../data/protocolTemplates';
 import { useToast } from '../hooks/useToast';
+import { useAuth } from '../contexts/AuthContext';
 import type { Protocol, ProtocolStatus, ProtocolTemplate } from '../types/protocols';
+import { getProtocolPermissions } from '../utils/protocolPermissions';
 
 const statuses: ProtocolStatus[] = ['DRAFT', 'NEEDS_REVISION', 'RETURNED', 'CORRECTION', 'CALCULATED', 'READY', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED', 'ARCHIVED', 'CANCELLED', 'REPLACED'];
 
@@ -27,6 +29,7 @@ const saveBlob = (blob: Blob, name: string) => {
 const ProtocolsPage = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [templates, setTemplates] = useState<ProtocolTemplate[]>(protocolTemplates);
   const [loading, setLoading] = useState(true);
@@ -41,8 +44,20 @@ const ProtocolsPage = () => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewProtocol, setPreviewProtocol] = useState<Protocol | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+  const requestIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const pageSize = 25;
+  const draftPermissions = getProtocolPermissions('DRAFT', user?.role);
+  const signedPermissions = getProtocolPermissions('SIGNED', user?.role);
 
   const load = async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError('');
     try {
@@ -55,24 +70,34 @@ const ProtocolsPage = () => {
       }
       if (subtype) params.subtype = subtype;
       if (compliance) params.compliance = compliance;
-      params.page = '0';
-      params.size = '100';
-      const items = await protocolService.getProtocols(params);
-      setProtocols(items);
-      protocolService.getProtocolTemplates()
-        .then((templateItems) => setTemplates(templateItems.length ? templateItems : protocolTemplates))
-        .catch(() => setTemplates(protocolTemplates));
+      params.page = String(page);
+      params.size = String(pageSize);
+      const result = await protocolService.getProtocolsPage(params, controller.signal);
+      if (requestId !== requestIdRef.current || controller.signal.aborted) return;
+      setProtocols(result.items);
+      setTotalPages(result.totalPages);
+      setTotalElements(result.totalElements);
     } catch (loadError) {
+      if (controller.signal.aborted || requestId !== requestIdRef.current) return;
       setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить протоколы');
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   };
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 500);
     return () => window.clearTimeout(timer);
   }, [query]);
-  useEffect(() => { load(); }, [debouncedQuery, status, templateId, subtype, compliance]);
+  useEffect(() => {
+    protocolService.getProtocolTemplates()
+      .then((templateItems) => setTemplates(templateItems.length ? templateItems : protocolTemplates))
+      .catch(() => setTemplates(protocolTemplates));
+  }, []);
+  useEffect(() => { setPage(0); }, [debouncedQuery, status, templateId, subtype, compliance]);
+  useEffect(() => {
+    void load();
+    return () => abortRef.current?.abort();
+  }, [debouncedQuery, status, templateId, subtype, compliance, page]);
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
@@ -81,10 +106,10 @@ const ProtocolsPage = () => {
     const needle = debouncedQuery.trim().toLowerCase();
     const haystack = `${protocol.protocolNumber} ${protocol.companySnapshot.companyName} ${protocol.companySnapshot.bin || ''} ${protocol.companySnapshot.objectName || ''}`.toLowerCase();
     return (!needle || haystack.includes(needle))
-      && (!status || protocol.status === status)
+      && (!status || String(protocol.status).trim().toUpperCase() === status)
       && (!templateId || protocol.templateId === templateId)
       && (!subtype || protocol.subtype === subtype)
-      && (!compliance || protocol.complianceResult === compliance);
+      && (!compliance || String(protocol.complianceResult || '').trim().toUpperCase() === compliance);
   }), [protocols, debouncedQuery, status, templateId, subtype, compliance]);
 
   const preview = async (protocol: Protocol) => {
@@ -144,8 +169,11 @@ const ProtocolsPage = () => {
 
   const download = async (protocol: Protocol, kind: 'pdf' | 'docx') => {
     try {
-      if (kind === 'pdf') await protocolService.generatePdf(protocol.id);
-      else await protocolService.generateDocx(protocol.id);
+      const immutable = ['SIGNED', 'ARCHIVED', 'REPLACED'].includes(String(protocol.status).trim().toUpperCase());
+      if (!immutable) {
+        if (kind === 'pdf') await protocolService.generatePdf(protocol.id);
+        else await protocolService.generateDocx(protocol.id);
+      }
       const file = kind === 'pdf' ? await protocolService.downloadPdf(protocol.id) : await protocolService.downloadDocx(protocol.id);
       if (!file.blob.size) throw new Error('Файл пуст.');
       saveBlob(file.blob, file.fileName || `${protocol.protocolNumber}.${kind}`);
@@ -177,7 +205,15 @@ const ProtocolsPage = () => {
       </section>
 
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{error}</div>}
-      <ProtocolList protocols={filtered} loading={loading} onOpen={(protocol) => navigate(`/staff/protocols/${protocol.id}`)} onPreview={preview} onCopy={copy} onDelete={remove} onReplace={replace} onDownloadPdf={(protocol) => download(protocol, 'pdf')} onDownloadDocx={(protocol) => download(protocol, 'docx')} />
+      <ProtocolList protocols={filtered} loading={loading} onOpen={(protocol) => navigate(`/staff/protocols/${protocol.id}`)} onPreview={preview} onCopy={copy} onDelete={remove} onReplace={replace} onDownloadPdf={(protocol) => download(protocol, 'pdf')} onDownloadDocx={(protocol) => download(protocol, 'docx')} canCopy={draftPermissions.canCopy} canDelete={draftPermissions.canDelete} canReplace={signedPermissions.canCreateCorrection} />
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600">
+        <span>Всего протоколов: {totalElements}</span>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="secondary" disabled={loading || page <= 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>Назад</Button>
+          <span>Страница {page + 1} из {Math.max(1, totalPages)}</span>
+          <Button type="button" variant="secondary" disabled={loading || page + 1 >= totalPages} onClick={() => setPage((current) => current + 1)}>Далее</Button>
+        </div>
+      </div>
       <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} protocol={previewProtocol} draft={false} onClose={closePreview} />
     </div>
   );

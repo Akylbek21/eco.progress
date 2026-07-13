@@ -13,6 +13,7 @@ import type {
   ProtocolInternalStatus,
   ProtocolLaboratorySnapshot,
   ProtocolMeasurementDevice,
+  ProtocolPage,
   QuickProtocolCreatePayload,
   ProtocolResultPayload,
   ProtocolResultRow,
@@ -164,6 +165,32 @@ const overall = (rows: ProtocolResultRow[]) => {
 export async function getProtocols(_params?: Record<string, string>): Promise<Protocol[]> {
   await wait();
   return read();
+}
+
+export async function getProtocolsPage(params?: Record<string, string>, _signal?: AbortSignal): Promise<ProtocolPage> {
+  await wait();
+  const search = String(params?.search || '').trim().toLowerCase();
+  const status = String(params?.status || '').trim().toUpperCase();
+  const templateId = String(params?.templateId || params?.protocolType || '').trim().toLowerCase();
+  const subtype = String(params?.subtype || '').trim().toUpperCase();
+  const compliance = String(params?.compliance || '').trim().toUpperCase();
+  const filtered = read().filter((protocol) => {
+    const haystack = `${protocol.protocolNumber} ${protocol.companySnapshot.companyName} ${protocol.companySnapshot.bin || ''} ${protocol.companySnapshot.objectName || ''}`.toLowerCase();
+    return (!search || haystack.includes(search))
+      && (!status || String(protocol.status).toUpperCase() === status)
+      && (!templateId || String(protocol.templateId).toLowerCase() === templateId)
+      && (!subtype || String(protocol.subtype || '').toUpperCase() === subtype)
+      && (!compliance || String(protocol.complianceResult || '').toUpperCase() === compliance);
+  });
+  const page = Math.max(0, Number(params?.page || 0));
+  const size = Math.max(1, Number(params?.size || 25));
+  return {
+    items: clone(filtered.slice(page * size, page * size + size)),
+    page,
+    size,
+    totalElements: filtered.length,
+    totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+  };
 }
 
 export async function getProtocol(protocolId: string): Promise<Protocol> {
@@ -326,7 +353,12 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
     executor: payload.executor,
     executorId: payload.executorId || protocol.executorId,
     approver: payload.approver,
-    laboratory: payload.executorId ? {
+    laboratory: payload.laboratory ? clone({
+      ...protocol.laboratory,
+      ...payload.laboratory,
+      executorId: payload.executorId || payload.laboratory.executorId || protocol.laboratory.executorId,
+      executor: payload.executor || payload.laboratory.executor || protocol.laboratory.executor,
+    }) : payload.executorId ? {
       ...protocol.laboratory,
       executorId: payload.executorId,
       executor: payload.executor || protocol.laboratory.executor,
@@ -511,7 +543,7 @@ export async function removeProtocolMeasurementDevice(protocolId: string, device
   return updateStored(protocolId, (protocol) => ({ ...protocol, measurementDevices: protocol.measurementDevices.filter((item) => item.deviceId !== deviceId), history: [...(protocol.history || []), history('Прибор удалён')] }));
 }
 
-export async function searchNormative(params: Record<string, string>): Promise<NormativeSearchResult> {
+export async function searchNormative(params: Record<string, string>, _signal?: AbortSignal): Promise<NormativeSearchResult> {
   await wait();
   const query = String(params.query || params.code || params.pollutantCode || params.indicator || '').trim().toLowerCase();
   if (query.length < 3) return { found: false, normatives: [], items: [] };
@@ -720,7 +752,7 @@ export async function getCalculationHistory(): Promise<CalculationResultResponse
   return [];
 }
 
-export async function searchPollutants(query: string): Promise<Pollutant[]> {
+export async function searchPollutants(query: string, _params?: Record<string, string>, _signal?: AbortSignal): Promise<Pollutant[]> {
   await wait();
   if (query.trim().length < 3) return [];
   const tokens = query.toLowerCase().split(/[\s,;]+/).filter(Boolean);

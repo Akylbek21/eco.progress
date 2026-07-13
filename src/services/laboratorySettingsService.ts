@@ -213,6 +213,26 @@ export async function saveLaboratory(payload: LaboratoryProfile): Promise<Labora
   return normalizeLaboratoryProfile(extractItem(response, ['laboratory', 'profile']));
 }
 
+export async function deleteLaboratory(id: string | number): Promise<void> {
+  if (isInvalidLaboratoryId(id)) throw new Error('Лаборатория не выбрана.');
+  const laboratoryId = text(id);
+  if (useMocks) {
+    const items = readMocks();
+    const deleted = items.find((item) => item.id === laboratoryId);
+    if (!deleted) throw new Error('Карточка лаборатории не найдена.');
+    const remaining = items.filter((item) => item.id !== laboratoryId);
+    if (deleted.isDefault && remaining.length && !remaining.some((item) => item.isDefault)) {
+      remaining[0] = { ...remaining[0], isDefault: true };
+    }
+    writeMocks(remaining);
+    return;
+  }
+  await requestWithSettingsFallback(
+    () => api.delete(`/laboratories/${laboratoryId}`),
+    () => api.delete(`/settings/laboratories/${laboratoryId}`),
+  );
+}
+
 export async function saveLaboratoryEmployee(laboratoryId: string, payload: Partial<LaboratoryEmployee>): Promise<LaboratoryEmployee> {
   if (isInvalidLaboratoryId(laboratoryId)) throw new Error('Сначала сохраните карточку лаборатории.');
   if (useMocks) {

@@ -21,6 +21,7 @@ import type {
   ProtocolCompanySnapshot,
   ProtocolEnvironmentalConditions,
   ProtocolMeasurementDevice,
+  ProtocolPage,
   QuickProtocolCreatePayload,
   ProtocolResultPayload,
   ProtocolResultRow,
@@ -31,6 +32,7 @@ import type {
   UpdateProtocolPayload,
   WeatherConditions,
 } from '../types/protocols';
+import { canonicalProtocolResultAliases } from '../utils/protocolResultAliases';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -122,20 +124,22 @@ export const normalizeProtocolResult = (raw: unknown): ProtocolResultRow => {
   const pollutantSource = asRecord(source.pollutant || apiValues.pollutant);
   const normativeSource = asRecord(source.normativeReference || (typeof source.normative === 'object' ? source.normative : undefined) || apiValues.normativeReference);
   const calculationSource = asRecord(source.calculationDetails || source.calculation || apiValues.calculationDetails);
-  const result = firstString(source.result, values.resultMg, values.result);
-  const normative = firstString(source.normative, source.normativeValue, values.normative, values.pdk);
+  const aliases = canonicalProtocolResultAliases(source, values);
+  const result = aliases.result;
+  const normative = aliases.normative;
   const pdk = firstString(source.pdk, values.pdk);
-  const status = firstString(source.internalStatus, source.checkStatus, source.status) || 'EMPTY_RESULT';
+  const status = String(firstString(source.internalStatus, source.checkStatus, source.status) || 'EMPTY_RESULT').trim().toUpperCase();
   const normalizedStatus = status === 'NORMATIVE_NOT_FOUND' && (normative || pdk) ? 'MANUAL_NORMATIVE' : status;
-  const indicatorName = firstString(source.indicatorName, values.indicator);
-  const code = firstString(source.code, values.code) || '—';
+  const indicatorName = aliases.indicatorName;
+  const code = aliases.code;
   const unit = firstString(source.unit, values.unit);
-  const testingMethodDocument = firstString(source.testingMethodDocument, values.testingMethodDocument, values.testingMethod);
+  const testingMethodDocument = aliases.testingMethodDocument;
+  const samplingMethodDocument = aliases.samplingMethodDocument;
   const measurementPlace = firstString(source.measurementPlace, values.object, values.measurementPlace, values.samplingPlace);
   const sampleName = firstString(source.sampleName, values.sampleName);
   const deviceId = firstString(source.deviceId, values.device, values.deviceId);
-  const measurementDeviceId = firstString(source.measurementDeviceId, source.deviceId, values.measurementDeviceId, values.deviceId, values.device);
-  const deviceName = firstString(source.deviceName, values.deviceName) || '—';
+  const measurementDeviceId = aliases.measurementDeviceId;
+  const deviceName = firstString(source.deviceName, values.deviceName);
   return {
     id: pick(source, ['id', '_id', 'resultId']),
     protocolId: pick(source, ['protocolId', 'protocol_id']),
@@ -147,12 +151,17 @@ export const normalizeProtocolResult = (raw: unknown): ProtocolResultRow => {
     indicator: firstString(source.indicator, indicatorName),
     unit,
     result,
+    resultValue: result,
+    primaryReading: firstString(source.primaryReading, values.primaryReading, result),
     normative,
     normativeValue: firstString(source.normativeValue, normative),
     pdk,
-    testingMethod: firstString(source.testingMethod, source.testing_method, values.testingMethod),
+    testingMethod: testingMethodDocument,
     testingMethodDocument,
-    samplingMethod: pick(source, ['samplingMethod', 'sampling_method']) || asString(values.samplingMethod),
+    testingMethodNd: testingMethodDocument,
+    samplingMethod: samplingMethodDocument,
+    samplingMethodDocument,
+    samplingMethodNd: samplingMethodDocument,
     normativeDocument: pick(source, ['normativeDocument', 'normative_document']) || asString(values.normativeDocument),
     comment: pick(source, ['comment']) || asString(values.comment),
     measurementPlace,
@@ -198,12 +207,17 @@ export const normalizeProtocolResult = (raw: unknown): ProtocolResultRow => {
       code,
       unit,
       result,
+      resultValue: result,
+      primaryReading: firstString(source.primaryReading, values.primaryReading, result),
       normative,
       normativeValue: firstString(source.normativeValue, normative),
       pdk,
-      testingMethod: firstString(source.testingMethod, source.testing_method, values.testingMethod),
+      testingMethod: testingMethodDocument,
       testingMethodDocument,
-      samplingMethod: pick(source, ['samplingMethod', 'sampling_method']) || asString(values.samplingMethod),
+      testingMethodNd: testingMethodDocument,
+      samplingMethod: samplingMethodDocument,
+      samplingMethodDocument,
+      samplingMethodNd: samplingMethodDocument,
       normativeDocument: pick(source, ['normativeDocument', 'normative_document']) || asString(values.normativeDocument),
       comment: pick(source, ['comment']) || asString(values.comment),
       measurementPlace,
@@ -574,11 +588,16 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
   const laboratory = asRecord(source.laboratorySnapshot || source.laboratory_snapshot || source.laboratory);
   const testing = asRecord(source.testing);
   const protocolNumber = pick(source, ['protocolNumber', 'protocol_number', 'number']);
-  const samplingDate = pick(testing, ['samplingDate', 'sampleDate']);
-  const testingStartDate = pick(testing, ['testingStartDate']);
-  const testingEndDate = pick(testing, ['testingEndDate', 'testingDate']);
-  const purpose = pick(testing, ['testingPurpose', 'testPurpose', 'purpose']);
-  const environmentalConditions = pick(testing, ['environmentConditions', 'environmentalConditions']);
+  const samplingDate = pick(testing, ['samplingDate', 'sampleDate'])
+    || pick(source, ['samplingDate', 'sampleDate', 'measurementDate', 'measurement_date']);
+  const testingStartDate = pick(testing, ['testingStartDate'])
+    || pick(source, ['testingStartDate', 'testing_start_date']);
+  const testingEndDate = pick(testing, ['testingEndDate', 'testingDate'])
+    || pick(source, ['testingEndDate', 'testingDate', 'testing_end_date']);
+  const purpose = pick(testing, ['testingPurpose', 'testPurpose', 'purpose'])
+    || pick(source, ['testingPurpose', 'testPurpose', 'purpose']);
+  const environmentalConditions = pick(testing, ['environmentConditions', 'environmentalConditions'])
+    || pick(source, ['environmentConditions', 'environmentalConditions']);
   const environment = asRecord(
     source.environment
     || source.environmentalConditionsData
@@ -600,7 +619,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     subtype: (pick(source, ['subtype', 'physicalFactorType', 'physical_factor_type'])
       || pick(testing, ['physicalFactorType'])) as Protocol['subtype'],
     templateName: pick(source, ['templateName', 'template_name']),
-    status: (pick(source, ['status']) || 'DRAFT') as Protocol['status'],
+    status: String(pick(source, ['status']) || 'DRAFT').trim().toUpperCase() as Protocol['status'],
     companyId: pick(source, ['companyId', 'company_id']),
     objectId: pick(source, ['objectId', 'object_id']),
     companySnapshot: snapshot,
@@ -701,6 +720,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
         : [],
     createdAt: pick(source, ['createdAt', 'created_at']),
     updatedAt: pick(source, ['updatedAt', 'updated_at']),
+    version: source.version === undefined || source.version === null ? undefined : asString(source.version),
     replacedByProtocolId: pick(source, ['replacedByProtocolId', 'replaced_by_protocol_id']),
     replacesProtocolId: pick(source, ['replacesProtocolId', 'replaces_protocol_id']),
   };
@@ -861,14 +881,9 @@ const isProtocolLike = (value: unknown) => {
 };
 
 const protocolFromActionResponse = async (protocolId: string, response: unknown): Promise<Protocol> => {
-  const axiosResponse = asRecord(response);
-  const body = asRecord(axiosResponse?.data);
-  const payload = body?.data ?? axiosResponse?.data ?? response;
-
-  if (isProtocolLike(payload)) {
-    return normalizeProtocol(payload);
-  }
-
+  // Action and PATCH endpoints may return only changed fields. Always reload
+  // the aggregate so absent collections cannot erase data in the editor.
+  void response;
   return getProtocol(protocolId);
 };
 
@@ -914,6 +929,32 @@ const requireResult = (input: unknown): ProtocolResultRow => {
 export async function getProtocols(params?: Record<string, string>): Promise<Protocol[]> {
   const response = await api.get<ApiResponse<unknown> | unknown>('/protocols', { params });
   return normalizeProtocolsResponse(response);
+}
+
+export async function getProtocolsPage(params?: Record<string, string>, signal?: AbortSignal): Promise<ProtocolPage> {
+  const response = await api.get<ApiResponse<unknown> | unknown>('/protocols', { params, signal });
+  const items = normalizeProtocolsResponse(response);
+  const payload = asRecord(unwrapData(response));
+  const responseBody = asRecord(asRecord(response).data);
+  const page = Number(payload.number ?? payload.page ?? responseBody.number ?? params?.page ?? 0);
+  const size = Number(payload.size ?? responseBody.size ?? params?.size ?? (items.length || 1));
+  const hasTotalElements = payload.totalElements !== undefined || payload.total_elements !== undefined || responseBody.totalElements !== undefined;
+  const hasTotalPages = payload.totalPages !== undefined || payload.total_pages !== undefined || responseBody.totalPages !== undefined;
+  const inferredTotal = Math.max(0, page) * Math.max(1, size) + items.length;
+  const totalElements = Number(payload.totalElements ?? payload.total_elements ?? responseBody.totalElements ?? inferredTotal);
+  const totalPages = Number(payload.totalPages ?? payload.total_pages ?? responseBody.totalPages
+    ?? (hasTotalElements
+      ? Math.max(1, Math.ceil(totalElements / Math.max(1, size)))
+      : Math.max(1, page + (items.length >= size ? 2 : 1))));
+  return {
+    items,
+    page: Number.isFinite(page) ? page : 0,
+    size: Number.isFinite(size) && size > 0 ? size : Math.max(1, items.length),
+    totalElements: Number.isFinite(totalElements) ? totalElements : items.length,
+    totalPages: hasTotalPages || items.length < size
+      ? (Number.isFinite(totalPages) && totalPages > 0 ? totalPages : 1)
+      : Math.max(page + 2, totalPages),
+  };
 }
 
 export async function getProtocolTemplates(): Promise<ProtocolTemplate[]> {
@@ -991,7 +1032,8 @@ const quickCreateFallback = async (payload: QuickProtocolCreatePayload): Promise
 
   try {
     return await checkNormatives(protocol.id);
-  } catch {
+  } catch (error) {
+    console.warn('Protocol normative check failed after fallback quick-create; reloading saved protocol.', error);
     return getProtocol(protocol.id);
   }
 };
@@ -1031,6 +1073,17 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
     executor: payload.executor,
     executorId: payload.executorId || null,
     approver: payload.approver,
+    productName: payload.organization.productName || '',
+    testingBasis: payload.organization.testingBasis || '',
+    sampleDate: payload.testing.samplingDate || payload.measurementDate || null,
+    samplingDate: payload.testing.samplingDate || payload.measurementDate || null,
+    testingStartDate: payload.testing.testingStartDate || null,
+    testingEndDate: payload.testing.testingEndDate || payload.testing.testingDate || null,
+    productNormativeDocument: payload.testing.productNormativeDocument || '',
+    samplingMethodDocument: payload.testing.samplingMethodDocument || '',
+    testingMethodDocument: payload.testing.testingMethodDocument || '',
+    purpose: payload.testing.testingPurpose || '',
+    environmentalConditions: payload.testing.environmentConditions || '',
     organization: payload.organization,
     testing: payload.testing,
     environment: toApiEnvironment(payload.environment),
@@ -1050,6 +1103,11 @@ export async function addProtocolResult(protocolId: string, payload: ProtocolRes
 
 export async function updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload): Promise<ProtocolResultRow> {
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}`, toApiResultPayload(payload));
+  // Some backend versions return 204 or a partial result after PATCH. Reload
+  // the protocol so the editor always receives the actually persisted row.
+  const protocol = await getProtocol(protocolId);
+  const saved = protocol.results.find((row) => String(row.id) === String(resultId));
+  if (saved) return saved;
   return requireResult(response);
 }
 
@@ -1098,6 +1156,8 @@ const duplicateProtocolFallback = async (protocolId: string): Promise<Protocol> 
     measurementDate: source.measurementDate,
     measurementTime: source.measurementTime,
     measurementPlace: source.measurementPlace,
+    laboratoryId: source.laboratory?.laboratoryId || source.laboratory?.id,
+    executorId: source.executorId || source.laboratory?.executorId,
     productName: source.organization.productName,
     testingBasis: source.organization.testingBasis,
     productNormativeDocument: source.testing.productNormativeDocument,
@@ -1111,7 +1171,8 @@ const duplicateProtocolFallback = async (protocolId: string): Promise<Protocol> 
     if (!device.deviceId) return;
     try {
       await api.post<ApiResponse<unknown> | unknown>(`/protocols/${created.id}/measurement-devices`, { deviceId: device.deviceId });
-    } catch {
+    } catch (error) {
+      console.warn(`Measurement device ${device.deviceId} was not copied to protocol ${created.id}.`, error);
       // Device copying is best-effort when backend has no duplicate endpoint.
     }
   }));
@@ -1136,7 +1197,8 @@ const duplicateProtocolFallback = async (protocolId: string): Promise<Protocol> 
       if (raw.measurements.length) {
         await saveRawMeasurements(created.id, pair.target.id, raw.measurements, raw.methodTemplate?.id);
       }
-    } catch {
+    } catch (error) {
+      console.warn(`Raw measurements for result ${pair.source.id} were not copied to protocol ${created.id}.`, error);
       // Raw measurements are copied only when backend exposes them for the source row.
     }
   }
@@ -1270,9 +1332,15 @@ export async function removeProtocolMeasurementDevice(protocolId: string, device
 
 const MIN_NORMATIVE_SEARCH_LENGTH = 3;
 const NORMATIVE_SEARCH_LIMIT = 20;
+const SEARCH_CACHE_TTL_MS = 30_000;
 const canRunNormativeSearch = (value: string) => value.trim().length >= MIN_NORMATIVE_SEARCH_LENGTH;
+const normativeSearchCache = new Map<string, { expiresAt: number; value: NormativeSearchResult }>();
+const pollutantSearchCache = new Map<string, { expiresAt: number; value: Pollutant[] }>();
+const searchCacheKey = (params: Record<string, string>) => JSON.stringify(
+  Object.entries(params).filter(([, value]) => value !== undefined).sort(([left], [right]) => left.localeCompare(right)),
+);
 
-export async function searchNormative(params: Record<string, string>): Promise<NormativeSearchResult> {
+export async function searchNormative(params: Record<string, string>, signal?: AbortSignal): Promise<NormativeSearchResult> {
   const { testingDate, ...rest } = params;
   const hasTextSearch = Boolean(params.query || params.q || params.search || params.indicator);
   const query = params.query || params.search || params.q || [params.code || params.pollutantCode, params.indicator].filter(Boolean).join(' ').trim();
@@ -1312,30 +1380,56 @@ export async function searchNormative(params: Record<string, string>): Promise<N
     objectId: params.objectId || undefined,
     date: params.date || testingDate || undefined,
   };
+  const cacheKey = searchCacheKey(params);
+  const cached = normativeSearchCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  const remember = (value: NormativeSearchResult) => {
+    normativeSearchCache.set(cacheKey, { expiresAt: Date.now() + SEARCH_CACHE_TTL_MS, value });
+    return value;
+  };
   let response: ApiResponse<NormativeSearchResult> | NormativeSearchResult | unknown;
+  let usedRecordsEndpoint = false;
   try {
-    response = await api.get<ApiResponse<NormativeSearchResult> | NormativeSearchResult>('/normatives/search', { params: requestParams });
+    response = await api.get<ApiResponse<NormativeSearchResult> | NormativeSearchResult>('/normatives/search', { params: requestParams, signal });
   } catch (error) {
     if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
-    response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams });
+    usedRecordsEndpoint = true;
+    response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams, signal });
   }
-  const candidates = extractNormativeRecords(response);
+  let candidates = extractNormativeRecords(response);
+  if (!candidates.length && !usedRecordsEndpoint) {
+    const recordsResponse = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams, signal });
+    candidates = extractNormativeRecords(recordsResponse);
+    response = recordsResponse;
+  }
   const item = extractItem(response) as NormativeSearchResult;
-  const normative = item.normative ? normalizeNormativeRecord(item.normative) : undefined;
+  const itemRecord = asRecord(item);
+  const normative = item.normative
+    ? normalizeNormativeRecord(item.normative)
+    : itemRecord && (itemRecord.id || itemRecord.indicator || itemRecord.indicatorName || itemRecord.pollutantName || itemRecord.name)
+      ? normalizeNormativeRecord(item)
+      : undefined;
   if (candidates.length) {
-    return {
+    return remember({
       ...item,
       found: true,
       normatives: candidates,
       ambiguous: candidates.length > 1 || item.ambiguous,
       normative: candidates.length === 1 ? candidates[0] : normative,
-    };
+    });
   }
-  return { ...item, normative };
+  return remember({ ...item, normative });
 }
 
-export async function searchPollutants(query: string, params: Record<string, string> = {}): Promise<Pollutant[]> {
+export async function searchPollutants(query: string, params: Record<string, string> = {}, signal?: AbortSignal): Promise<Pollutant[]> {
   if (!canRunNormativeSearch(query)) return [];
+  const cacheKey = searchCacheKey({ ...params, query });
+  const cached = pollutantSearchCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  const remember = (value: Pollutant[]) => {
+    pollutantSearchCache.set(cacheKey, { expiresAt: Date.now() + SEARCH_CACHE_TTL_MS, value });
+    return value;
+  };
   const fromNormatives = async () => {
     const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/search', {
       params: {
@@ -1347,6 +1441,7 @@ export async function searchPollutants(query: string, params: Record<string, str
         search: params.search || query,
         limit: params.limit || NORMATIVE_SEARCH_LIMIT,
       },
+      signal,
     });
     return extractNormativeRecords(response).map((item) => {
       const source = asRecord(item);
@@ -1365,12 +1460,13 @@ export async function searchPollutants(query: string, params: Record<string, str
   try {
     const response = await api.get<ApiResponse<unknown> | unknown>('/pollutants/search', {
       params: { ...params, query, q: query, limit: params.limit || NORMATIVE_SEARCH_LIMIT },
+      signal,
     });
     const pollutants = extractPollutants(response);
-    return pollutants.length ? pollutants : fromNormatives();
+    return remember(pollutants.length ? pollutants : await fromNormatives());
   } catch (error) {
     if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
-    return fromNormatives();
+    return remember(await fromNormatives());
   }
 }
 
@@ -1440,6 +1536,7 @@ export async function getWeatherConditions(params: {
   const response = await api.get<ApiResponse<unknown> | unknown>('/weather/shymkent', {
     params: {
       objectId: params.objectId,
+      coordinates: params.coordinates || undefined,
       date: params.date,
       time: params.time,
     },

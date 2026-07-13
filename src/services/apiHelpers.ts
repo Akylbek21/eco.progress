@@ -46,6 +46,14 @@ export const extractItem = (input: unknown, keys: string[] = []): unknown => {
 export const getApiStatus = (error: unknown): number | undefined =>
   axios.isAxiosError(error) ? error.response?.status : undefined;
 
+export const getApiErrorCode = (error: unknown): string | undefined => {
+  if (!axios.isAxiosError(error)) return undefined;
+  const responseData = asRecord(error.response?.data);
+  const nestedData = asRecord(responseData?.data);
+  const code = responseData?.code || responseData?.errorCode || nestedData?.code || nestedData?.errorCode;
+  return typeof code === 'string' ? code.trim().toUpperCase() : undefined;
+};
+
 export const getApiErrorMessage = (error: unknown, fallback = 'Не удалось выполнить запрос.'): string => {
   if (!axios.isAxiosError(error)) return error instanceof Error && error.message ? error.message : fallback;
 

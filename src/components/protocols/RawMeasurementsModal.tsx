@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import protocolService from '../../services/protocolService';
+import { getApiErrorCode, getApiErrorMessage, getApiStatus } from '../../services/apiHelpers';
 import type {
   ProtocolMeasurementDevice,
   ProtocolResultRow,
@@ -83,17 +84,19 @@ const RawMeasurementsModal = ({
       })
       .catch((loadError) => {
         if (!active) return;
-        const message = loadError instanceof Error ? loadError.message : 'Не удалось загрузить исходные данные';
-        setData({
-          protocolId,
-          resultId: row.id,
-          variables: [],
-          measurements: [],
-          calculationMessage: message,
-        });
-        setManualResult(String(row.result || valueOf(row, ['result', 'resultMg', 'resultValue', 'primaryReading']) || ''));
-        setDeviceId(String(row.measurementDeviceId || row.deviceId || valueOf(row, ['measurementDeviceId', 'deviceId', 'device']) || ''));
-        setError('');
+        const message = getApiErrorMessage(loadError, 'Не удалось загрузить исходные данные');
+        const methodMissing = [404, 405].includes(getApiStatus(loadError) || 0)
+          || getApiErrorCode(loadError) === 'METHOD_TEMPLATE_NOT_FOUND'
+          || message.includes('METHOD_TEMPLATE_NOT_FOUND');
+        if (methodMissing) {
+          setData({ protocolId, resultId: row.id, variables: [], measurements: [], calculationMessage: message });
+          setManualResult(String(row.result || valueOf(row, ['result', 'resultMg', 'resultValue', 'primaryReading']) || ''));
+          setDeviceId(String(row.measurementDeviceId || row.deviceId || valueOf(row, ['measurementDeviceId', 'deviceId', 'device']) || ''));
+          setError('');
+        } else {
+          setData(null);
+          setError(message);
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -124,6 +127,29 @@ const RawMeasurementsModal = ({
     const hasMethodTemplate = Boolean(data.methodTemplate);
     if (hasMethodTemplate && missing.length) {
       setError(`Не заполнено: ${missing.join(', ')}`);
+      return;
+    }
+    if (hasMethodTemplate) {
+      for (const variable of data.variables) {
+        const rawValue = String(values[variable.variableKey] ?? '').trim();
+        if (!rawValue || String(variable.type || '').toLowerCase() !== 'number') continue;
+        const parsed = Number(rawValue.replace(',', '.'));
+        if (!Number.isFinite(parsed)) {
+          setError(`${variable.variableLabel || variable.variableKey}: введите корректное число`);
+          return;
+        }
+        if (variable.minValue !== undefined && variable.minValue !== null && parsed < variable.minValue) {
+          setError(`${variable.variableLabel || variable.variableKey}: значение не может быть меньше ${variable.minValue}`);
+          return;
+        }
+        if (variable.maxValue !== undefined && variable.maxValue !== null && parsed > variable.maxValue) {
+          setError(`${variable.variableLabel || variable.variableKey}: значение не может быть больше ${variable.maxValue}`);
+          return;
+        }
+      }
+    }
+    if (!deviceId) {
+      setError(devices.length ? 'Выберите прибор для измерения' : 'В протоколе нет доступного прибора. Сначала добавьте средство измерения.');
       return;
     }
     if (!hasMethodTemplate && !manualResult.trim()) {
@@ -201,7 +227,7 @@ const RawMeasurementsModal = ({
                   <span>{variable.variableLabel || variable.variableKey}{variable.required ? ' *' : ''}</span>
                   <div className="flex gap-2">
                     <input
-                      type={variable.type === 'number' ? 'number' : 'text'}
+                      type={String(variable.type || '').toLowerCase() === 'number' ? 'number' : 'text'}
                       value={values[variable.variableKey] || ''}
                       min={variable.minValue ?? undefined}
                       max={variable.maxValue ?? undefined}

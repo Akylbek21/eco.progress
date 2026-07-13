@@ -1,5 +1,6 @@
 import { FlaskConical, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import AuthenticatedImage from '../ui/AuthenticatedImage';
 import type { Protocol } from '../../types/protocols';
 import { getProtocolResultColumns, subtypeName, templateName } from '../../data/protocolTemplates';
 
@@ -13,6 +14,21 @@ type Props = {
 };
 
 const value = (raw: unknown) => raw === undefined || raw === null || raw === '' ? '—' : String(raw);
+const resultValue = (protocol: Protocol, row: Protocol['results'][number], key: string) => {
+  const rowValue = row.values[key];
+  if (key === 'testingMethodDocument' || key === 'testingMethod' || key === 'testingMethodNd') {
+    return row.testingMethodNd || row.testingMethodDocument || row.testingMethod
+      || row.values.testingMethodNd || row.values.testingMethodDocument || row.values.testingMethod
+      || protocol.testing.testingMethodDocument;
+  }
+  if (key === 'samplingMethodDocument' || key === 'samplingMethod' || key === 'samplingMethodNd') {
+    return row.samplingMethodNd || row.samplingMethodDocument || row.samplingMethod
+      || row.values.samplingMethodNd || row.values.samplingMethodDocument || row.values.samplingMethod
+      || protocol.testing.samplingMethodDocument;
+  }
+  const topLevel = (row as unknown as Record<string, unknown>)[key];
+  return rowValue ?? topLevel;
+};
 
 const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, draft = false, onClose }: Props) => {
   if (!open) return null;
@@ -34,7 +50,9 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
         {!loading && !previewUrl && protocol && (
           <article className={`relative mx-auto min-h-[1120px] bg-white p-8 text-[11px] leading-snug text-slate-950 shadow-2xl sm:p-12 ${landscape ? 'w-[1120px] min-w-[1120px]' : 'w-[794px] min-w-[794px]'}`}>
             <header className="relative grid grid-cols-[90px_1fr_180px] items-center border-b-2 border-slate-900 pb-4">
-              <div className="flex h-16 w-16 items-center justify-center border-2 border-emerald-800 text-emerald-800">{protocol.laboratory.logoUrl ? <img src={protocol.laboratory.logoUrl} alt="" className="h-full w-full object-contain p-1" /> : <FlaskConical className="h-9 w-9" />}</div>
+              <div className="flex h-16 w-16 items-center justify-center border-2 border-emerald-800 text-emerald-800">
+                <AuthenticatedImage src={protocol.laboratory.logoUrl} alt="" className="h-full w-full object-contain p-1" fallback={<FlaskConical className="h-9 w-9" />} />
+              </div>
               <div className="text-center">
                 <p className="text-sm font-black uppercase">{protocol.laboratory.laboratoryName}</p>
                 <p className="mt-1">{protocol.laboratory.laboratoryAddress}</p>
@@ -80,7 +98,7 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
                 </thead>
                 <tbody>
                   {protocol.results.map((row) => (
-                    <tr key={row.id}>{columns.map((column) => <td key={column.key} className="border border-slate-700 px-1.5 py-2 text-center">{value(row.values[column.key])}</td>)}</tr>
+                    <tr key={row.id}>{columns.map((column) => <td key={column.key} className="border border-slate-700 px-1.5 py-2 text-center">{value(resultValue(protocol, row, column.key))}</td>)}</tr>
                   ))}
                   {!protocol.results.length && <tr><td colSpan={columns.length || 1} className="border border-slate-700 p-8 text-center text-slate-500">Результаты не внесены</td></tr>}
                 </tbody>

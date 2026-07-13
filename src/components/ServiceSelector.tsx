@@ -47,13 +47,13 @@ const ServiceSelector = () => {
               );
             })}
           </div>
-          <div className="rounded-[24px] bg-eco-900 p-6 text-white shadow-xl shadow-eco-900/12">
-            <p className="text-sm text-white/60">Рекомендация</p>
-            <h3 className="mt-3 text-2xl font-bold">{selected.title}</h3>
-            <p className="mt-4 leading-7 text-white/76">{selected.recommendation}</p>
+          <div className="rounded-[24px] border border-eco-100 bg-[#F4FBFA] p-6 text-eco-900 shadow-lg shadow-eco-900/5">
+            <p className="text-sm font-semibold text-eco-600">Рекомендация</p>
+            <h3 className="mt-3 text-2xl font-bold text-eco-900">{selected.title}</h3>
+            <p className="mt-4 leading-7 text-slate-700">{selected.recommendation}</p>
             <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
-              <a href="#lead"><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Получить консультацию</Button></a>
-              <a href="#lead"><Button variant="secondary" className="w-full border-white/30 bg-white/10 text-white hover:bg-white/15 sm:w-auto">Оставить заявку</Button></a>
+              <a href="#lead"><Button className="w-full bg-eco-600 text-white hover:bg-eco-700 sm:w-auto">Получить консультацию</Button></a>
+              <a href="#lead"><Button variant="secondary" className="w-full border-eco-200 bg-white text-eco-800 hover:bg-eco-50 sm:w-auto">Оставить заявку</Button></a>
             </div>
           </div>
         </div>

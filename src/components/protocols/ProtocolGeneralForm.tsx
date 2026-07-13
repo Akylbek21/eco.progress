@@ -3,7 +3,7 @@ import ProtocolStatusBadge from './ProtocolStatusBadge';
 import { subtypeName, templateName } from '../../data/protocolTemplates';
 
 type Props = { protocol: Protocol; readOnly: boolean; onChange: (patch: Partial<Protocol>) => void };
-const inputClass = 'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
+const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 
 const ProtocolGeneralForm = ({ protocol, readOnly, onChange }: Props) => (
   <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
