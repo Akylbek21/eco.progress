@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import BackendFeatureUnavailable from '../components/ui/BackendFeatureUnavailable';
 import {
   AgreementResponseModal,
   ConfirmModal,
@@ -17,7 +18,7 @@ import {
 } from '../components/modals';
 import { useAuth } from '../contexts/AuthContext';
 import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, uploadSignedContract, signOrderContractWithNCALayer, payOrderOnline, uploadQuarterDocument, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications, respondOrderDocument, signDocumentForResponse } from '../services/orderService';
-import { requestCompanyProfileChange, sendAgreementResponse as sendAgreementResponseRequest } from '../services/crmWorkflowService';
+import { sendAgreementResponse as sendAgreementResponseRequest } from '../services/crmWorkflowService';
 import { getClientPayments, getClientDebts, getClientContracts } from '../services/paymentService';
 import { getServices } from '../services/serviceService';
 import {
@@ -1552,28 +1553,7 @@ export const CabinetPaymentsPage = () => {
 
 export const CabinetCompanyPage = () => {
   const { user } = useAuth();
-  const toast = useToast();
   const contracts = getContractsForClient(user);
-  const submitChangeRequest = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    try {
-      await requestCompanyProfileChange({
-        companyName: String(form.get('companyName') || user?.companyName || ''),
-        bin: String(form.get('bin') || user?.bin || ''),
-        legalAddress: String(form.get('legalAddress') || user?.legalAddress || ''),
-        contactPerson: String(form.get('contactPerson') || user?.name || ''),
-        phone: String(form.get('phone') || user?.phone || ''),
-        email: String(form.get('email') || user?.email || ''),
-        whatsapp: String(form.get('whatsapp') || ''),
-        comment: String(form.get('comment') || ''),
-      });
-      toast.success('Запрос отправлен', 'Менеджер проверит и подтвердит изменение данных.');
-      event.currentTarget.reset();
-    } catch (err) {
-      toast.error('Запрос не отправлен', (err as Error)?.message || 'Попробуйте позже.');
-    }
-  };
   return (
     <Reveal>
       <div className="space-y-6">
@@ -1583,17 +1563,7 @@ export const CabinetCompanyPage = () => {
         </div>
         <div className="rounded-[22px] bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-bold text-eco-900">Запросить изменение данных</h2>
-          <form onSubmit={submitChangeRequest} className="mt-5 grid gap-4 md:grid-cols-2">
-            <InfoInput name="companyName" label="Название компании" defaultValue={user?.companyName || ''} />
-            <InfoInput name="bin" label="БИН / ИИН" defaultValue={user?.bin || ''} />
-            <InfoInput name="legalAddress" label="Юридический адрес" defaultValue={user?.legalAddress || ''} />
-            <InfoInput name="contactPerson" label="Контактное лицо" defaultValue={user?.name || ''} />
-            <InfoInput name="phone" label="Телефон" defaultValue={user?.phone || ''} />
-            <InfoInput name="email" label="Email" defaultValue={user?.email || ''} />
-            <InfoInput name="whatsapp" label="WhatsApp" />
-            <label className="text-sm font-semibold text-slate-700 md:col-span-2">Комментарий<textarea name="comment" rows={3} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" /></label>
-            <Button>Отправить менеджеру</Button>
-          </form>
+          <div className="mt-5"><BackendFeatureUnavailable title="Изменение данных компании" description="Отправка запроса на изменение данных пока не поддерживается сервером." /></div>
         </div>
         <div className="rounded-[22px] bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-bold text-eco-900">Договоры с ecoprogress.kz</h2>

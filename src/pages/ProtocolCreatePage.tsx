@@ -13,12 +13,21 @@ import {
 } from '../data/protocolTypeConfig';
 import { getCompanies, getCompanyObjects } from '../services/companyService';
 import { getDefaultLaboratory, getLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
-import { getNormativeRecords } from '../services/normativeService';
+import { getAllNormativeRecords, type NormativeRecordsParams } from '../services/normativeService';
 import protocolService from '../services/protocolService';
 import { getApiErrorMessage } from '../services/apiHelpers';
 import { useToast } from '../hooks/useToast';
 import type { Company, CompanyObject } from '../types/companies';
 import type { LaboratoryEmployee, LaboratorySummary, NormativeRecord, Pollutant, ProtocolResultValue, ProtocolSubtype, QuickProtocolCreatePayload } from '../types/protocols';
+import {
+  canSearchProtocolNormative as canSearch,
+  filterAndRankProtocolNormatives,
+  isProtocolScopeQuery,
+  protocolNormativeConditionLabel,
+  protocolNormativeDisplayValue as normativeDisplayValue,
+  protocolNormativeIdentity,
+  type ProtocolNormativeSearchContext,
+} from '../utils/protocolNormativeSearch';
 
 type SelectedExecutor = {
   laboratoryEmployeeId: string;
@@ -67,8 +76,7 @@ type SelectedIndicator = Pollutant & {
   result: string;
 };
 
-const MIN_SEARCH_LENGTH = 3;
-const SEARCH_DEBOUNCE_MS = 120;
+const SEARCH_DEBOUNCE_MS = 450;
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const today = () => new Date().toISOString().slice(0, 10);
 const emptyToUndefined = <T,>(value: T): T | undefined => typeof value === 'string' && value.trim() === '' ? undefined : value;
@@ -95,41 +103,8 @@ const waterUseCategoryOptions = [
   { value: 'I', label: 'I категория' },
   { value: 'II', label: 'II категория' },
 ];
-const canSearch = (value: string) => {
-  const normalized = value.trim();
-  const letters = (normalized.match(/[A-Za-zА-Яа-яЁё]/g) || []).length;
-  const digits = (normalized.match(/\d/g) || []).length;
-  return letters >= MIN_SEARCH_LENGTH || digits >= MIN_SEARCH_LENGTH;
-};
-const normalizeCode = (value?: string | null) => String(value || '').toUpperCase().replace(/-/g, '_');
-const sameDocumentCode = (value?: string | null, expected?: string | null) => {
-  const current = normalizeCode(value);
-  const target = normalizeCode(expected);
-  return !target || !current || current === target;
-};
-const sameTemplateId = (value?: string | null, ...expected: Array<string | null | undefined>) => {
-  const current = String(value || '').toLowerCase();
-  const targets = expected.map((item) => String(item || '').toLowerCase()).filter(Boolean);
-  return !targets.length || !current || targets.includes(current);
-};
-const waterCategoryAllowed = (item: NormativeRecord, waterType: string) => {
-  const category = String(item.categoryCode || item.category || '').toUpperCase();
-  if (waterType === 'DRINKING_WATER') return ['DRINKING_WATER_SAFETY', 'DRINKING_WATER_CHEMICALS'].includes(category) || !category;
-  if (waterType === 'SURFACE_WATER') return ['SURFACE_WATER_SAFETY', 'SURFACE_WATER_PDK'].includes(category) || !category;
-  return true;
-};
-const normativeDisplayValue = (normative?: NormativeRecord) => {
-  if (!normative) return '';
-  const value = normative.value || normative.normativeValue || normative.pdk || normative.limitValue;
-  if (value !== undefined && value !== null && String(value).trim()) return String(value);
-  const min = normative.min || normative.minValue;
-  const max = normative.max || normative.maxValue;
-  if (min && max) return `${min}-${max}`;
-  return String(max || min || normative.maxOneTimeValue || normative.dailyAverageValue || normative.singleValue || normative.obuvValue || normative.obuv || '');
-};
-
 const normalizeNormativeIndicator = (item: NormativeRecord): SelectedIndicator => ({
-  key: item.id || `${item.factorCode || item.pollutantCode || item.code}-${item.indicator}`,
+  key: protocolNormativeIdentity(item),
   id: item.id,
   code: item.factorCode || item.pollutantCode || item.code || '',
   factorCode: item.factorCode,
@@ -170,6 +145,9 @@ const ProtocolCreatePage = () => {
   const [chemicalSuggestions, setChemicalSuggestions] = useState<SelectedIndicator[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchDone, setSearchDone] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [searchRetry, setSearchRetry] = useState(0);
+  const [manualDraft, setManualDraft] = useState<{ code: string; name: string; unit: string } | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherMessage, setWeatherMessage] = useState('');
   const [selectedIndicators, setSelectedIndicators] = useState<SelectedIndicator[]>([]);
@@ -287,6 +265,8 @@ const ProtocolCreatePage = () => {
     setChemicalQuery('');
     setChemicalSuggestions([]);
     setSearchDone(false);
+    setSearchError('');
+    setManualDraft(null);
     setForm((current) => ({
       ...current,
       sampleNumber: '',
@@ -393,6 +373,7 @@ const ProtocolCreatePage = () => {
     const requestId = ++searchRequestRef.current;
     searchAbortRef.current?.abort();
     setSearchDone(false);
+    setSearchError('');
     if (!value || !canSearch(value)) {
       setChemicalSuggestions([]);
       setSearching(false);
@@ -403,38 +384,60 @@ const ProtocolCreatePage = () => {
       searchAbortRef.current = controller;
       setSearching(true);
       try {
-        const recordsPage = await getNormativeRecords({
-          page: 0,
-          size: 20,
+        const context: ProtocolNormativeSearchContext = {
+          templateId: selectedChoice.normativeTemplateId,
+          sourceDocumentCode,
+          environmentType: selectedChoice.environmentType,
+          factorType: isPhysical ? selectedSubtype : undefined,
+          waterType: isWater ? form.waterType : undefined,
+          waterUseCategory: isWater && form.waterType === 'SURFACE_WATER' ? form.waterUseCategory : undefined,
+          season: selectedSubtype === 'MICROCLIMATE' ? form.season : undefined,
+          workCategory: selectedSubtype === 'MICROCLIMATE' ? form.workCategory : undefined,
+          workplaceType: isPhysical ? form.workplaceType : undefined,
+          normLevel: selectedSubtype === 'MICROCLIMATE' ? form.normLevel : undefined,
+          roomType: isPhysical ? form.roomType : undefined,
+          visualWorkCategory: selectedSubtype === 'LIGHTING' ? form.visualWorkCategory : undefined,
+          lightingType: selectedSubtype === 'LIGHTING' ? form.lightingType : undefined,
+          noiseType: selectedSubtype === 'NOISE' || selectedSubtype === 'NOISE_VIBRATION' ? form.noiseType : undefined,
+        };
+        const indicatorQuery = isProtocolScopeQuery(value, context.templateId) ? undefined : value;
+        const basicParams: NormativeRecordsParams = {
+          size: 100,
           status: 'ACTIVE',
           templateId: selectedChoice.normativeTemplateId,
-          query: value,
-          search: value,
+          query: indicatorQuery,
+          search: indicatorQuery,
           sourceDocumentCode: sourceDocumentCode || undefined,
           environmentType: selectedChoice.environmentType || undefined,
           waterType: isWater ? form.waterType || undefined : undefined,
           normativeType: isSoil ? 'PDK' : undefined,
-        }, controller.signal);
+        };
+        const detailedParams: NormativeRecordsParams = {
+          ...basicParams,
+          factorType: isPhysical ? selectedSubtype : undefined,
+          waterUseCategory: context.waterUseCategory,
+          season: context.season,
+          workCategory: context.workCategory,
+          workplaceType: context.workplaceType,
+          normLevel: context.normLevel,
+          roomType: context.roomType,
+          visualWorkCategory: context.visualWorkCategory,
+          lightingType: context.lightingType,
+          noiseType: context.noiseType,
+        };
+        let records = await getAllNormativeRecords(detailedParams, controller.signal);
+        let normatives = filterAndRankProtocolNormatives(records, value, context);
+        if (!normatives.length && JSON.stringify(detailedParams) !== JSON.stringify(basicParams)) {
+          records = await getAllNormativeRecords(basicParams, controller.signal);
+          normatives = filterAndRankProtocolNormatives(records, value, context);
+        }
+        if (!normatives.length && indicatorQuery) {
+          records = await getAllNormativeRecords({ ...basicParams, query: undefined, search: undefined }, controller.signal);
+          normatives = filterAndRankProtocolNormatives(records, value, context);
+        }
         if (requestId !== searchRequestRef.current) return;
-        const normatives = recordsPage.items
-          .filter((item) => item.active !== false && !item.archived)
-          .filter((item) => {
-            if (isPhysical) {
-              return sameTemplateId(item.templateId, selectedChoice.normativeTemplateId, selectedChoice.templateId)
-                && sameDocumentCode(item.sourceDocumentCode, sourceDocumentCode);
-            }
-            if (isSoil) {
-              return sameTemplateId(item.templateId, 'soil', selectedChoice.templateId)
-                && sameDocumentCode(item.sourceDocumentCode, sourceDocumentCode)
-                && item.comparisonType !== 'INFO'
-                && String(item.normativeType || '').toUpperCase() === 'PDK';
-            }
-            return sameTemplateId(item.templateId, selectedChoice.normativeTemplateId, selectedChoice.templateId)
-              && sameDocumentCode(item.sourceDocumentCode, sourceDocumentCode)
-              && (!isWater || waterCategoryAllowed(item, form.waterType));
-          });
         if (normatives.length) {
-          setChemicalSuggestions(normatives.map(normalizeNormativeIndicator).slice(0, 20));
+          setChemicalSuggestions(normatives.map(normalizeNormativeIndicator));
           setSearchDone(true);
           return;
         }
@@ -444,8 +447,10 @@ const ProtocolCreatePage = () => {
         if (controller.signal.aborted) return;
         if (requestId !== searchRequestRef.current) return;
         setChemicalSuggestions([]);
-        setSearchDone(true);
-        toast.error('Не удалось выполнить поиск норматива', error instanceof Error ? error.message : undefined);
+        setSearchDone(false);
+        const message = getApiErrorMessage(error, 'Не удалось выполнить поиск норматива');
+        setSearchError(message);
+        toast.error('Не удалось выполнить поиск норматива', message);
       } finally {
         if (requestId === searchRequestRef.current) setSearching(false);
       }
@@ -471,6 +476,8 @@ const ProtocolCreatePage = () => {
     form.visualWorkCategory,
     form.lightingType,
     form.noiseType,
+    form.waterUseCategory,
+    searchRetry,
   ]);
 
   const selectCompany = (company: Company) => {
@@ -488,19 +495,34 @@ const ProtocolCreatePage = () => {
     setSearchDone(false);
   };
 
-  const addManualIndicator = () => {
+  const openManualIndicator = () => {
     const value = chemicalQuery.trim();
-    if (!value) return;
-    const code = isPhysical ? value.toUpperCase().replace(/\s+/g, '_') : value;
+    setManualDraft({
+      code: '',
+      name: value,
+      unit: selectedChoice.defaultUnit || '',
+    });
+  };
+
+  const addManualIndicator = () => {
+    if (!manualDraft) return;
+    const code = manualDraft.code.trim();
+    const name = manualDraft.name.trim();
+    const unit = manualDraft.unit.trim();
+    if (!code || !name || !unit) {
+      toast.warning('Для ручного показателя заполните код, название и единицу измерения');
+      return;
+    }
     addChemicalIndicator({
       key: `manual-${form.templateKey}-${selectedSubtype || selectedChoice.resultMode}-${code}`,
       id: undefined,
       code,
-      name: value,
-      unit: resolveProtocolUnit(form.templateKey, { code, factorCode: code }),
+      name,
+      unit,
       manual: true,
       result: '',
     });
+    setManualDraft(null);
   };
 
   const setIndicatorResult = (key: string, result: string) => {
@@ -953,21 +975,32 @@ const ProtocolCreatePage = () => {
         <div className="mt-4">
           <label className="relative block">
             <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-            <input value={chemicalQuery} onChange={(event) => setChemicalQuery(event.target.value)} placeholder={isPhysical ? 'Введите минимум 3 символа: код или название показателя' : 'Введите минимум 3 символа: код, вещество, CAS'} className={`${inputClass} pl-10`} />
+            <input value={chemicalQuery} onChange={(event) => setChemicalQuery(event.target.value)} placeholder={isPhysical ? 'Введите минимум 2 символа: код или название показателя' : 'Введите минимум 2 символа: код, вещество, CAS'} className={`${inputClass} pl-10`} />
           </label>
-          {chemicalQuery.trim() && !canSearch(chemicalQuery) && <p className="mt-2 text-sm font-semibold text-slate-500">Введите минимум 3 символа для поиска</p>}
+          {chemicalQuery.trim() && !canSearch(chemicalQuery) && <p className="mt-2 text-sm font-semibold text-slate-500">Введите минимум 2 символа для поиска</p>}
           {searching && <p className="mt-2 text-sm font-semibold text-eco-700">Поиск...</p>}
+          {searchError && !searching && (
+            <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800">
+              <p>{searchError}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button type="button" variant="secondary" onClick={() => setSearchRetry((value) => value + 1)}>Повторить поиск</Button>
+                <Button type="button" variant="secondary" onClick={openManualIndicator}>Добавить вручную</Button>
+              </div>
+            </div>
+          )}
           {chemicalSuggestions.length > 0 && (
             <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
+              <p className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                Найдено: {chemicalSuggestions.length}. Сначала показаны наиболее подходящие условия.
+              </p>
+              <div className="max-h-[32rem] overflow-y-auto">
               {chemicalSuggestions.map((item) => (
                 <button key={item.key} type="button" onClick={() => addChemicalIndicator(item)} className="grid w-full gap-1 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-eco-50 md:grid-cols-[160px_1fr_180px] md:items-start md:gap-3">
                   <span className="font-black text-eco-800">{item.code}</span>
                   <span>
                     <span className="block font-bold text-slate-900">{item.name}</span>
                     <span className="mt-1 block text-xs font-semibold text-slate-500">
-                      {item.normative?.appendixNo ? ` · приложение ${item.normative.appendixNo}` : ''}
-                      {item.normative?.tableNo ? ` · таблица ${item.normative.tableNo}` : ''}
-                      {item.normative?.conditionJson ? ` · ${item.normative.conditionJson}` : ''}
+                      {item.normative ? protocolNormativeConditionLabel(item.normative) : ''}
                     </span>
                   </span>
                   <span className="font-semibold text-slate-700">
@@ -976,12 +1009,33 @@ const ProtocolCreatePage = () => {
                   </span>
                 </button>
               ))}
+              </div>
             </div>
           )}
-          {searchDone && chemicalQuery.trim() && canSearch(chemicalQuery) && !chemicalSuggestions.length && (
+          {searchDone && !searchError && chemicalQuery.trim() && canSearch(chemicalQuery) && !chemicalSuggestions.length && (
             <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
               <p>Норматив не найден. Можно выбрать вручную или добавить в справочник.</p>
-              <Button type="button" variant="secondary" className="mt-3" onClick={addManualIndicator}>Создать без норматива / вручную</Button>
+              <Button type="button" variant="secondary" className="mt-3" onClick={openManualIndicator}>Создать без норматива / вручную</Button>
+            </div>
+          )}
+          {manualDraft && (
+            <div className="mt-3 grid gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 md:grid-cols-3">
+              <label className="space-y-1 text-sm font-bold text-slate-700">
+                <span>Код показателя *</span>
+                <input value={manualDraft.code} onChange={(event) => setManualDraft({ ...manualDraft, code: event.target.value })} className={inputClass} placeholder="Например, TEMP_AIR" />
+              </label>
+              <label className="space-y-1 text-sm font-bold text-slate-700">
+                <span>Название *</span>
+                <input value={manualDraft.name} onChange={(event) => setManualDraft({ ...manualDraft, name: event.target.value })} className={inputClass} />
+              </label>
+              <label className="space-y-1 text-sm font-bold text-slate-700">
+                <span>Единица измерения *</span>
+                <input value={manualDraft.unit} onChange={(event) => setManualDraft({ ...manualDraft, unit: event.target.value })} className={inputClass} placeholder="мг/л, °C, дБА" />
+              </label>
+              <div className="flex flex-wrap gap-2 md:col-span-3">
+                <Button type="button" onClick={addManualIndicator}>Добавить показатель</Button>
+                <Button type="button" variant="secondary" onClick={() => setManualDraft(null)}>Отмена</Button>
+              </div>
             </div>
           )}
         </div>

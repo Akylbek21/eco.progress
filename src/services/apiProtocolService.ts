@@ -957,9 +957,18 @@ export async function getProtocolsPage(params?: Record<string, string>, signal?:
   };
 }
 
+let protocolTemplatesRequest: Promise<ProtocolTemplate[]> | null = null;
+
 export async function getProtocolTemplates(): Promise<ProtocolTemplate[]> {
-  const response = await api.get<ApiResponse<unknown> | unknown>('/protocols/templates');
-  return extractList(response, ['templates']) as ProtocolTemplate[];
+  if (!protocolTemplatesRequest) {
+    protocolTemplatesRequest = api
+      .get<ApiResponse<unknown> | unknown>('/protocols/templates')
+      .then((response) => extractList(response, ['templates']) as ProtocolTemplate[])
+      .finally(() => {
+        protocolTemplatesRequest = null;
+      });
+  }
+  return protocolTemplatesRequest;
 }
 
 export async function createProtocol(payload: CreateProtocolPayload): Promise<Protocol> {

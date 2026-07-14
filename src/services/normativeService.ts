@@ -47,6 +47,10 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
   const dailyAverageValue = stringValue(source.dailyAverageValue ?? source.daily_average_value ?? source.averageDailyValue ?? source.pdkDailyAverage);
   const singleValue = stringValue(source.singleValue ?? source.single_value ?? source.pdkValue);
   const obuvValue = stringValue(source.obuvValue ?? source.obuv_value ?? source.obuv ?? (normativeType === 'OBUV' ? source.value ?? source.normative ?? source.normativeValue : undefined));
+  const min = stringValue(source.min ?? source.minValue ?? source.normativeMin);
+  const max = stringValue(source.max ?? source.maxValue ?? source.normativeMax);
+  const comparisonType = firstString(source.comparisonType)
+    || (min && max ? 'RANGE' : min ? 'GREATER_OR_EQUAL' : 'LESS_OR_EQUAL');
   const indicator = firstString(
     source.indicator,
     source.indicatorName,
@@ -63,7 +67,18 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     pollutant.indicator,
   );
   return {
-    id: firstString(source.id, source._id, source.referenceId, `${code}-${indicator}-${source.normativeDocument || source.document}`),
+    id: firstString(source.id, source._id, source.referenceId, [
+      code,
+      indicator,
+      source.sourceDocumentCode || source.documentCode,
+      source.appendixNo || source.appendix,
+      source.tableNo || source.table,
+      source.categoryCode || source.category,
+      jsonString(source.conditionJson ?? source.condition_json ?? source.conditionsJson ?? source.conditions),
+      value,
+      min,
+      max,
+    ].map(stringValue).join('|')),
     templateId: firstString(source.templateId, source.templateCode, source.protocolTemplateCode).toLowerCase() as NormativeRecord['templateId'],
     sourceDocumentCode: firstString(source.sourceDocumentCode, source.source_document_code, source.documentCode, source.dsmCode),
     sourceDocumentName: firstString(source.sourceDocumentName, source.source_document_name, source.documentName, source.document),
@@ -134,12 +149,12 @@ const normalizeNormative = (raw: unknown): NormativeRecord => {
     singleValue,
     obuvValue,
     obuv: firstString(source.obuv, source.obuvValue, source.obuv_value, normativeType === 'OBUV' ? source.value ?? source.normative ?? source.normativeValue : undefined),
-    min: stringValue(source.min ?? source.minValue ?? source.normativeMin),
-    max: stringValue(source.max ?? source.maxValue ?? source.normativeMax),
+    min,
+    max,
     minValue: firstString(source.minValue, source.min, source.normativeMin),
     maxValue: firstString(source.maxValue, source.max, source.normativeMax),
     alternativeNormativeValue: firstString(source.alternativeNormativeValue, source.alternative_normative_value, source.altValue),
-    comparisonType: stringValue(source.comparisonType || 'LESS_OR_EQUAL') as NormativeRecord['comparisonType'],
+    comparisonType: comparisonType as NormativeRecord['comparisonType'],
     normativeDocument: firstString(source.normativeDocument, source.document, source.documentName, source.standard),
     hazardClass: firstString(source.hazardClass, source.dangerClass, source.hazard, source.hazardClassName, conditions.hazardClass),
     limitingIndicator: firstString(source.limitingIndicator, source.limitingSign, source.lpv, source.limitingFactor, conditions.limitingIndicator),
@@ -202,6 +217,15 @@ export interface NormativeRecordsParams {
   status?: string;
   formType?: string;
   subtype?: string;
+  waterUseCategory?: string;
+  roomType?: string;
+  season?: string;
+  workCategory?: string;
+  workplaceType?: string;
+  normLevel?: string;
+  noiseType?: string;
+  visualWorkCategory?: string;
+  lightingType?: string;
 }
 
 export type NormativePageState = {
@@ -343,6 +367,18 @@ export async function getNormativeRecords(params: NormativeRecordsParams = {}, s
   const requestParams = directoryParams(params);
   const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams, signal });
   return normalizeNormativeRecordsPage(response, params);
+}
+
+export async function getAllNormativeRecords(params: NormativeRecordsParams = {}, signal?: AbortSignal): Promise<NormativeRecord[]> {
+  const size = Math.max(1, Number(params.size || 100));
+  const firstPage = await getNormativeRecords({ ...params, page: 0, size }, signal);
+  const items = [...firstPage.items];
+  for (let page = 1; page < firstPage.totalPages; page += 1) {
+    if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+    const nextPage = await getNormativeRecords({ ...params, page, size }, signal);
+    items.push(...nextPage.items);
+  }
+  return items;
 }
 
 export async function getNormatives(params?: DirectoryQuery): Promise<NormativeRecord[]> {

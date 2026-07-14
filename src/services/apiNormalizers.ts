@@ -68,14 +68,16 @@ export const toBackendOrderStatus = (status: OrderStatus | string) => {
 
 export const toBackendPaymentStatus = (status: PaymentStatus | string) => {
   const map: Record<string, string> = {
-    awaiting_invoice: 'unpaid',
-    invoice_issued: 'pending',
-    invoice_sent: 'pending',
-    awaiting_payment: 'pending',
-    debt: 'overdue',
-    transferred_to_specialist: 'paid',
+    awaiting_invoice: 'UNPAID',
+    invoice_issued: 'PENDING',
+    invoice_sent: 'PENDING',
+    awaiting_payment: 'PENDING',
+    not_paid: 'UNPAID',
+    partial: 'PARTIALLY_PAID',
+    debt: 'OVERDUE',
+    transferred_to_specialist: 'PAID',
   };
-  return map[String(status)] || String(status);
+  return map[String(status)] || String(status).toUpperCase();
 };
 
 export const toBackendPrimaryDocumentStatus = (status: ClientPrimaryDocumentStatus | string) => {

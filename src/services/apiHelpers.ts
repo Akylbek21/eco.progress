@@ -57,6 +57,13 @@ export const getApiErrorCode = (error: unknown): string | undefined => {
 export const getApiErrorMessage = (error: unknown, fallback = 'Не удалось выполнить запрос.'): string => {
   if (!axios.isAxiosError(error)) return error instanceof Error && error.message ? error.message : fallback;
 
+  if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+    return 'Сервер не ответил вовремя. Проверьте подключение и повторите запрос.';
+  }
+  if (!error.response) {
+    return 'Не удалось подключиться к серверу. Проверьте подключение и повторите запрос.';
+  }
+
   const status = error.response?.status;
   const responseData = asRecord(error.response?.data);
   const nestedData = asRecord(responseData?.data);
@@ -65,7 +72,7 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Не удалос
     const message = validationErrors.map((item) => {
       const record = asRecord(item);
       return typeof item === 'string' ? item : String(record?.message || record?.defaultMessage || '');
-    }).filter(Boolean).join('\n');
+    }).filter(Boolean).join(', ');
     if (message) return message;
   }
   const backendMessage = responseData?.message
@@ -77,10 +84,29 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Не удалос
 
   if (status === 400) return 'Проверьте заполнение полей и отправленные данные.';
   if (status === 401) return 'Сессия истекла. Войдите заново.';
-  if (status === 403) return 'Нет доступа к операции.';
-  if (status === 404) return 'Запись или endpoint не найдены.';
+  if (status === 403) return 'У вас нет доступа к этому действию.';
+  if (status === 404) return 'Запрошенная функция или запись не найдена.';
+  if (status === 413) return 'Файл слишком большой для загрузки.';
   if (status === 409) return 'Операция конфликтует с текущим состоянием данных.';
   return error.message || fallback;
+};
+
+export interface ApiResponse<T> {
+  success?: boolean;
+  data: T;
+  message?: string | null;
+  errors?: string[];
+}
+
+export const unwrapApiResponse = <T>(response: ApiResponse<T> | T): T => {
+  const record = asRecord(response);
+  if (!record || !('data' in record)) return response as T;
+
+  const apiResponse = response as ApiResponse<T>;
+  if (apiResponse.success === false) {
+    throw new Error(apiResponse.message || apiResponse.errors?.join(', ') || 'Ошибка выполнения запроса');
+  }
+  return apiResponse.data;
 };
 
 export const getContentDispositionFileName = (contentDisposition?: string): string | undefined => {

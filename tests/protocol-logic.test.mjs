@@ -45,3 +45,51 @@ test('protocol permission matrix restricts destructive and signing actions', asy
   assert.equal(getProtocolPermissions('APPROVED', 'HEAD').canSign, true);
   assert.equal(getProtocolPermissions('SIGNED', 'HEAD').canCreateCorrection, true);
 });
+
+test('protocol normative search accepts short valid indicators and keeps zero values', async () => {
+  const {
+    canSearchProtocolNormative,
+    protocolNormativeDisplayValue,
+  } = await loadTypeScriptModule('src/utils/protocolNormativeSearch.ts');
+  assert.equal(canSearchProtocolNormative('pH'), true);
+  assert.equal(canSearchProtocolNormative('7.1'), true);
+  assert.equal(canSearchProtocolNormative('x'), false);
+  assert.equal(protocolNormativeDisplayValue({ value: 0 }), '0');
+  assert.equal(protocolNormativeDisplayValue({ min: 0, max: 10 }), '0-10');
+});
+
+test('protocol normative search preserves condition variants and ranks selected context first', async () => {
+  const { filterAndRankProtocolNormatives } = await loadTypeScriptModule('src/utils/protocolNormativeSearch.ts');
+  const base = {
+    templateId: 'microclimate',
+    sourceDocumentCode: 'DSM_15',
+    factorType: 'MICROCLIMATE',
+    factorCode: 'TEMP_AIR',
+    indicator: 'Air temperature',
+    active: true,
+    archived: false,
+  };
+  const warm = { ...base, id: 'warm', season: 'WARM', workCategory: 'IA', value: '25' };
+  const cold = { ...base, id: 'cold', season: 'COLD', workCategory: 'IA', value: '22' };
+  const result = filterAndRankProtocolNormatives([warm, cold], 'temperature', {
+    templateId: 'microclimate',
+    sourceDocumentCode: 'DSM_15',
+    factorType: 'MICROCLIMATE',
+    season: 'COLD',
+    workCategory: 'IA',
+  });
+  assert.deepEqual(result.map((item) => item.id), ['cold', 'warm']);
+});
+
+test('protocol normative search accepts legacy template aliases without leaking other documents', async () => {
+  const { filterAndRankProtocolNormatives } = await loadTypeScriptModule('src/utils/protocolNormativeSearch.ts');
+  const physical = {
+    id: 'physical', templateId: 'physical_factors', sourceDocumentCode: 'DSM_15',
+    factorType: 'MICROCLIMATE', factorCode: 'TEMP_AIR', indicator: 'Temperature', active: true,
+  };
+  const wrongDocument = { ...physical, id: 'wrong', sourceDocumentCode: 'DSM_70' };
+  const result = filterAndRankProtocolNormatives([physical, wrongDocument], 'temp', {
+    templateId: 'microclimate', sourceDocumentCode: 'DSM_15', factorType: 'MICROCLIMATE',
+  });
+  assert.deepEqual(result.map((item) => item.id), ['physical']);
+});

@@ -197,20 +197,39 @@ export type StaffCalendarEvent = {
   status: StaffCalendarEventStatus;
 };
 
-export type TaskStatus = 'new' | 'in_progress' | 'waiting_client' | 'done' | 'overdue' | 'cancelled';
-export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type TaskStatus = 'open' | 'in_progress' | 'done' | 'cancelled';
 
 export type Task = {
   id: string;
-  orderId: string;
+  orderId?: string;
   title: string;
-  responsibleId: string;
+  description?: string;
+  assigneeId?: string;
+  assigneeName?: string;
   status: TaskStatus;
-  priority: TaskPriority;
   dueDate?: string;
-  comment?: string;
-  createdAt: string;
+  createdAt?: string;
 };
+
+export interface CreateTaskApiRequest {
+  title: string;
+  description?: string;
+  orderId?: number;
+  assigneeId?: number;
+  dueDate?: string;
+}
+
+export interface TaskApiResponse {
+  id: number;
+  title: string;
+  description?: string;
+  orderId?: number;
+  assigneeId?: number;
+  assigneeName?: string;
+  dueDate?: string;
+  status: TaskStatus;
+  createdAt?: string;
+}
 
 export type CrmNotificationType =
   | 'document_requested'

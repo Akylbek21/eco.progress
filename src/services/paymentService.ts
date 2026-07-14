@@ -1,5 +1,6 @@
 import api from './api';
-import type { Contract, Debt, Payment, PaymentMethod, PaymentTransaction } from '../types';
+import { unwrapApiResponse } from './apiHelpers';
+import type { Contract, Debt, Payment, PaymentMethod } from '../types';
 
 export const getFinancePayments = async (): Promise<Payment[]> => {
   const { data } = await api.get<{ data: Payment[]; message: string | null }>('/staff/payments');
@@ -11,14 +12,9 @@ export const getClientPayments = async (): Promise<Payment[]> => {
   return data.data;
 };
 
-export const getFinanceTransactions = async (): Promise<PaymentTransaction[]> => {
-  const { data } = await api.get<{ data: PaymentTransaction[]; message: string | null }>('/staff/payment-transactions');
-  return data.data;
-};
-
 export const getFinanceContracts = async (): Promise<Contract[]> => {
   const { data } = await api.get<{ data: Contract[]; message: string | null }>('/staff/contracts');
-  return data.data;
+  return unwrapApiResponse(data);
 };
 
 export const getClientContracts = async (): Promise<Contract[]> => {
@@ -38,7 +34,6 @@ export const getClientDebts = async (): Promise<Debt[]> => {
 
 export type AddPartialPaymentPayload = {
   amount: number;
-  date: string;
   method: PaymentMethod;
   comment?: string;
 };
@@ -55,9 +50,23 @@ export const addPartialFinancePayment = async (paymentId: string, payload: AddPa
 
 export const updateFinancePaymentDetails = async (
   paymentId: string,
-  payload: { comment?: string; lastPaymentDate?: string; paymentMethod?: PaymentMethod },
+  payload: {
+    invoiceNumber?: string;
+    serviceName?: string;
+    totalAmount?: number;
+    paymentMethod?: PaymentMethod;
+    paymentStatus?: string;
+    invoiceDate?: string;
+    dueDate?: string;
+    comment?: string;
+  },
 ): Promise<Payment | undefined> => {
-  const { data } = await api.patch<{ data: Payment; message: string | null }>(`/staff/payments/${paymentId}`, payload);
+  if (!paymentId) throw new Error('Не найден ID платежа. Редактирование недоступно.');
+  const { data } = await api.patch<{ data: Payment; message: string | null }>(`/staff/payments/${paymentId}`, {
+    ...payload,
+    paymentMethod: payload.paymentMethod?.toUpperCase(),
+    paymentStatus: payload.paymentStatus?.toUpperCase(),
+  });
   return data.data;
 };
 
@@ -99,7 +108,8 @@ export const updateQuarterDetails = async (
 };
 
 export const closeDebt = async (debtId: string, comment?: string): Promise<Debt | undefined> => {
-  const { data } = await api.post<{ data: Debt; message: string | null }>(`/staff/debts/${debtId}/close`, { comment });
+  if (comment?.trim()) await updateDebtComment(debtId, comment.trim());
+  const { data } = await api.post<{ data: Debt; message: string | null }>(`/staff/debts/${debtId}/close`);
   return data.data;
 };
 

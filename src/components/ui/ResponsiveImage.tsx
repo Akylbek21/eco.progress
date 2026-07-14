@@ -34,7 +34,6 @@ const ResponsiveImage = ({
           width={width}
           height={height}
           loading={priority ? 'eager' : 'lazy'}
-          fetchPriority={priority ? 'high' : 'auto'}
           decoding={priority ? 'sync' : 'async'}
           onLoad={() => setLoaded(true)}
           onError={() => setFailed(true)}

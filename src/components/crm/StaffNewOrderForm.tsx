@@ -5,7 +5,7 @@ import type { StaffManualOrderPayload } from '../../types';
 
 type StaffNewOrderFormProps = {
   loading?: boolean;
-  onSubmit: (payload: StaffManualOrderPayload) => void | Promise<void>;
+  onSubmit: (payload: StaffManualOrderPayload) => boolean | Promise<boolean>;
 };
 
 const sources: Array<{ value: StaffManualOrderPayload['source']; label: string }> = [
@@ -60,8 +60,12 @@ const StaffNewOrderForm = ({ loading = false, onSubmit }: StaffNewOrderFormProps
       setError('Укажите клиента, телефон и услугу.');
       return;
     }
-    await onSubmit(payload);
-    event.currentTarget.reset();
+    if (!payload.clientId && !payload.email) {
+      setError('Для нового клиента укажите email.');
+      return;
+    }
+    const submitted = await onSubmit(payload);
+    if (submitted) event.currentTarget.reset();
   };
 
   return (
@@ -98,7 +102,7 @@ const StaffNewOrderForm = ({ loading = false, onSubmit }: StaffNewOrderFormProps
         <textarea name="comment" rows={4} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
       </label>
       <div className="flex justify-end">
-        <Button disabled={loading}>Создать заявку</Button>
+        <Button disabled={loading}>{loading ? 'Создание…' : 'Создать заявку'}</Button>
       </div>
     </form>
   );
@@ -112,4 +116,3 @@ const Field = ({ label, children }: { label: string; children: ReactNode }) => (
 );
 
 export default StaffNewOrderForm;
-

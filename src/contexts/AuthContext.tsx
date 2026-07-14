@@ -130,6 +130,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const saveSession = useCallback((newToken: string, newUser: User) => {
     localStorage.setItem(TOKEN_KEY, newToken);
     localStorage.setItem(USER_KEY, JSON.stringify(newUser));
+    sessionStorage.removeItem('eco-progress-401-redirect');
     setToken(newToken);
     setUserState(newUser);
   }, []);

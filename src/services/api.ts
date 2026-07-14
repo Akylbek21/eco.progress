@@ -1,8 +1,9 @@
 import axios from 'axios';
-import { getApiErrorMessage } from './apiHelpers';
+import { getApiErrorMessage, type ApiResponse } from './apiHelpers';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : '/api',
+  timeout: 15_000,
 });
 
 api.interceptors.request.use((config) => {
@@ -22,6 +23,13 @@ api.interceptors.request.use((config) => {
   if (token && !isPublicAuthRequest) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  if (import.meta.env.DEV) {
+    console.debug('[API]', {
+      method: String(config.method || 'GET').toUpperCase(),
+      url: config.url,
+      params: config.params,
+    });
+  }
   return config;
 });
 
@@ -38,10 +46,7 @@ api.interceptors.response.use(
         baseURL: error.config?.baseURL,
         method: String(error.config?.method || 'GET').toUpperCase(),
         params: error.config?.params,
-        data: error.config?.data instanceof FormData ? '[FormData]' : error.config?.data,
         status: error.response?.status,
-        body: error.response?.data instanceof Blob ? `[Blob ${error.response.data.size} bytes]` : error.response?.data,
-        message: error.message,
         code: error.code,
       });
     }
@@ -51,8 +56,9 @@ api.interceptors.response.use(
       localStorage.removeItem('eco-progress-user');
       const path = window.location.pathname;
       const loginPath = path.startsWith('/staff') || path.startsWith('/admin') ? '/staff/login' : '/login';
-      if (!path.includes('/login')) {
-        window.location.href = loginPath;
+      if (!path.includes('/login') && sessionStorage.getItem('eco-progress-401-redirect') !== '1') {
+        sessionStorage.setItem('eco-progress-401-redirect', '1');
+        window.location.replace(loginPath);
       }
     }
     return Promise.reject(error);
@@ -61,10 +67,7 @@ api.interceptors.response.use(
 
 export default api;
 
-export type ApiResponse<T> = {
-  data: T;
-  message: string | null;
-};
+export type { ApiResponse } from './apiHelpers';
 
 export async function fetcher<T>(url: string): Promise<T> {
   const { data } = await api.get<ApiResponse<T>>(url);

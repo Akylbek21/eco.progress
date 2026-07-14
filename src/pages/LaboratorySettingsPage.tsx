@@ -13,7 +13,6 @@ import {
   getLaboratories,
   getLaboratory,
   getLaboratoryEmployees,
-  laboratoryLogoUrl,
   saveLaboratory,
   saveLaboratoryEmployee,
   setLaboratoryActive,
@@ -181,7 +180,7 @@ const LaboratorySettingsPage = () => {
 
   useEffect(() => {
     if (!logoFile) {
-      const logoUrl = profile.logoUrl || (profile.id ? laboratoryLogoUrl(profile.id) : '');
+      const logoUrl = profile.logoUrl || '';
       setLogoPreview(logoUrl ? `${logoUrl}${logoUrl.includes('?') ? '&' : '?'}v=${encodeURIComponent(profile.updatedAt || 'current')}` : '');
       return;
     }

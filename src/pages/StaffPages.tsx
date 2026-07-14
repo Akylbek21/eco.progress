@@ -23,6 +23,7 @@ import {
 import { FaWhatsapp } from 'react-icons/fa';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import BackendFeatureUnavailable from '../components/ui/BackendFeatureUnavailable';
 import Reveal from '../components/animations/Reveal';
 import {
   CommentModal,
@@ -50,9 +51,11 @@ import {
 } from '../components/crm/StaffOrderCrmPanels';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, applyPartialPayment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getOrderById, getOrders, markPaymentPaid, requestPrimaryDocumentsBatch, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadContractDocument, uploadDocument, uploadInvoiceDocument, uploadLaboratoryResultDocument, uploadStaffDocument } from '../services/staffOrderService';
+import { getApiErrorMessage } from '../services/apiHelpers';
+import { getFinanceContracts } from '../services/paymentService';
+import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, applyPartialPayment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getClients, getOrderById, getOrders, markPaymentPaid, requestPrimaryDocumentsBatch, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadContractDocument, uploadDocument, uploadInvoiceDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
 import type { CreateClientPayload, StaffCreateOrderPayload } from '../services/staffOrderService';
-import { createCommercialOffer, createStaffManualOrder, getStaffCalendar, getTasks, saveTask, saveWasteRemoval, sendDocumentToClient, updateTaskStatus } from '../services/crmWorkflowService';
+import { createCommercialOffer, createStaffManualOrder, getCrmNotifications, getStaffCalendar, getTasks, markNotificationRead, saveTask, saveWasteRemoval, sendDocumentToClient, updateTaskStatus } from '../services/crmWorkflowService';
 import { getServices } from '../services/serviceService';
 import { getBusinessCompanyById, statusDescriptions } from '../utils/crm';
 import type { ClientPrimaryDocumentStatus, ClientContract, DocumentItem, EcologyStatus, LaboratoryMeasurementAgreementStatus, LaboratoryPrimaryDocumentStatus, LaboratoryResultDocument, LaboratoryResultDocumentStatus, LaboratoryStatus, User, Order, OrderPrimaryDocument, OrderStatus, PaymentMethod, PaymentStatus, QuarterDocument, QuarterNumber, QuarterResult, QuarterWorkStatus, RequestQuarter, StaffCalendarEvent, StaffContractStatus, UserRole } from '../types';
@@ -2244,12 +2247,10 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
             )}
 
             {currentTab === 'КП' && (
-              <CommercialOfferPanel
-                order={order}
-                canEdit={access.manager || access.all}
-                onCreate={submitCommercialOffer}
-                onStatus={changeCommercialOfferStatus}
-              />
+              <>
+                <CommercialOfferPanel order={order} canEdit={false} onCreate={submitCommercialOffer} onStatus={changeCommercialOfferStatus} />
+                <BackendFeatureUnavailable title="Коммерческие предложения" description="Просмотр доступен, но сохранение и изменение статуса пока не поддерживаются сервером." />
+              </>
             )}
 
             {currentTab === 'Счет и оплата' && (
@@ -2278,11 +2279,10 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
             )}
 
             {currentTab === 'Вывоз / Утилизация' && (
-              <WasteRemovalPanel
-                order={order}
-                canEdit={access.waste || access.all}
-                onSubmit={submitWasteRemoval}
-              />
+              <>
+                <WasteRemovalPanel order={order} canEdit={false} onSubmit={submitWasteRemoval} />
+                <BackendFeatureUnavailable title="Вывоз отходов" description="Данные доступны только для просмотра. Сохранение этапа пока не поддерживается сервером." />
+              </>
             )}
 
             {currentTab === 'Согласование' && (
@@ -3722,14 +3722,17 @@ export const StaffNewOrderPage = ({ onNotify }: { onNotify?: (message: string) =
   const [loading, setLoading] = useState(false);
   if (!canAccess(role, 'create_order')) return <PermissionDenied permission="create_order" />;
   const submit = async (payload: Parameters<typeof createStaffManualOrder>[0]) => {
+    if (loading) return false;
     setLoading(true);
     try {
       const order = await createStaffManualOrder(payload);
-      toast.success('Заявка создана', 'Статус: Новая заявка.');
+      toast.success('Заявка создана', `ID заявки: ${order.id}`);
       onNotify?.('Заявка создана');
-      navigate(order?.id ? `/staff/orders/${order.id}` : '/staff/orders');
+      navigate(`/staff/orders/${order.id}`);
+      return true;
     } catch (err) {
-      toast.error('Заявка не создана', (err as Error)?.message || 'Backend создания заявки пока может быть не подключен.');
+      toast.error('Заявка не создана', getApiErrorMessage(err));
+      return false;
     } finally {
       setLoading(false);
     }
@@ -4342,15 +4345,37 @@ export const StaffClientsPage = () => {
   const [showCreateClient, setShowCreateClient] = useState(false);
   const [createResult, setCreateResult] = useState<{ email: string; password: string } | null>(null);
   const [createError, setCreateError] = useState('');
+  const [clients, setClients] = useState<unknown[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(true);
+  const [clientsError, setClientsError] = useState('');
+  const loadClients = async () => {
+    setClientsLoading(true); setClientsError('');
+    try { setClients(await getClients()); }
+    catch (err) { setClientsError(getApiErrorMessage(err)); }
+    finally { setClientsLoading(false); }
+  };
+  useEffect(() => { void loadClients(); }, []);
   const selectedKey = selectedKeyParam ? decodeURIComponent(selectedKeyParam) : '';
-  const companies = useMemo(() => buildCompanySummaries(orders), [orders]);
+  const companies = useMemo(() => clients.map((value) => {
+    const client = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+    const id = String(client.id || client.clientId || '');
+    const name = String(client.companyName || client.name || client.fullName || `Клиент ${id}`);
+    const clientOrders = orders.filter((order) => String(order.clientId) === id);
+    return {
+      key: id,
+      name,
+      total: clientOrders.length,
+      active: clientOrders.filter((order) => !isClosedOrder(order)).length,
+      completed: clientOrders.filter(isClosedOrder).length,
+    };
+  }), [clients, orders]);
   const filteredCompanies = useMemo(() => companies.filter((company) => {
-    const companyOrders = orders.filter((order) => companyKey(getOrderCompanyName(order)) === company.key);
+    const companyOrders = orders.filter((order) => String(order.clientId) === company.key);
     const last = [...companyOrders].sort((a, b) => b.id.localeCompare(a.id))[0];
     return `${company.name} ${last?.bin || ''} ${last?.contactPerson || last?.clientName || ''} ${last?.phone || ''}`.toLowerCase().includes(q.toLowerCase());
   }), [companies, orders, q]);
   const selectedCompany = companies.find((company) => company.key === selectedKey);
-  const selectedOrders = selectedCompany ? orders.filter((order) => companyKey(getOrderCompanyName(order)) === selectedCompany.key) : [];
+  const selectedOrders = selectedCompany ? orders.filter((order) => String(order.clientId) === selectedCompany.key) : [];
   const selectedDocs = collectDocuments(selectedOrders);
   const selectedContracts: ClientContract[] = [];
   const latestOrder = [...selectedOrders].sort((a, b) => b.id.localeCompare(a.id))[0];
@@ -4436,6 +4461,7 @@ export const StaffClientsPage = () => {
     try {
       const result = await createClient(payload);
       setCreateResult({ email: result.email, password: result.tempPassword });
+      await loadClients();
       toast.success('Клиент создан', 'Теперь менеджер может оформить заявку от клиента.');
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Не удалось создать клиента';
@@ -4448,6 +4474,8 @@ export const StaffClientsPage = () => {
   return (
     <Reveal>
       <div className="rounded-[22px] bg-white p-6 shadow-sm">
+        {clientsLoading && <p className="mb-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">Загрузка клиентов…</p>}
+        {clientsError && <div className="mb-4 rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{clientsError}</p><Button type="button" variant="secondary" className="mt-3" onClick={loadClients}>Повторить</Button></div>}
         <div className="mb-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-3xl font-bold text-eco-900">Компании</h2>
@@ -4467,7 +4495,7 @@ export const StaffClientsPage = () => {
         {createError && <p className="mb-5 rounded-2xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{createError}</p>}
         <div className="grid gap-4 xl:grid-cols-2">
           {filteredCompanies.map((company) => {
-            const companyOrders = orders.filter((order) => companyKey(getOrderCompanyName(order)) === company.key);
+            const companyOrders = orders.filter((order) => String(order.clientId) === company.key);
             const last = [...companyOrders].sort((a, b) => b.id.localeCompare(a.id))[0];
             const nearestContract = undefined as ClientContract | undefined;
             return (
@@ -4580,8 +4608,7 @@ export const StaffDocumentsPage = () => {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError] = useState('');
-  const [standaloneDocs, setStandaloneDocs] = useState<StaffDocument[]>([]);
-  const docs = useMemo(() => [...collectDocuments(orders), ...standaloneDocs], [orders, standaloneDocs]);
+  const docs = useMemo(() => collectDocuments(orders), [orders]);
   const companies = useMemo(() => Array.from(new Set(docs.map((doc) => doc.company))).sort(), [docs]);
   const types = useMemo(() => Array.from(new Set(docs.map((doc) => doc.docType))).sort(), [docs]);
   const statuses = useMemo(() => Array.from(new Set(docs.map((doc) => doc.status))).sort(), [docs]);
@@ -4614,6 +4641,10 @@ export const StaffDocumentsPage = () => {
     const category = String(form.get('category') || 'other');
     const comment = String(form.get('comment') || '').trim();
     const file = form.get('file');
+    if (!targetOrderId) {
+      setUploadError('Сначала выберите заявку, к которой относится документ.');
+      return;
+    }
     if (!title) {
       setUploadError('Укажите название документа.');
       return;
@@ -4630,13 +4661,8 @@ export const StaffDocumentsPage = () => {
         type: category,
         comment,
       };
-      if (targetOrderId) {
-        await uploadDocument(targetOrderId, payload);
-      } else {
-        const uploaded = await uploadStaffDocument(payload);
-        setStandaloneDocs((items) => [standaloneStaffDocument(uploaded), ...items]);
-      }
-      toast.success('Документ загружен', targetOrderId ? 'Файл добавлен в CRM и привязан к заявке.' : 'Файл добавлен в раздел документов.');
+      await uploadDocument(targetOrderId, payload);
+      toast.success('Документ загружен', 'Файл добавлен в CRM и привязан к заявке.');
       setUploadOpen(false);
       event.currentTarget.reset();
       refresh();
@@ -4746,12 +4772,13 @@ export const StaffDocumentsPage = () => {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <p className="rounded-full bg-eco-50 px-4 py-2 text-sm font-bold text-eco-800">Найдено: {filtered.length}</p>
-              <Button type="button" onClick={() => openUpload()} className="gap-2">
+              <Button type="button" disabled title="Сначала откройте заявку" className="gap-2">
                 <Upload size={16} />
                 Добавить
               </Button>
             </div>
           </div>
+          <div className="mt-4"><BackendFeatureUnavailable title="Загрузка документа" description="Сначала откройте нужную заявку: сервер принимает документы только с привязкой к заявке." /></div>
           <div className="mt-5 grid gap-3 lg:grid-cols-5">
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
             <select value={company} onChange={(e) => setCompany(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{companies.map((item) => <option key={item}>{item}</option>)}</select>
@@ -4784,6 +4811,7 @@ export const StaffCommercialOffersPage = () => {
 
   return (
     <SimpleStaffPage title="КП">
+      <BackendFeatureUnavailable title="Коммерческие предложения" description="Список отражает данные заявок. Создание и изменение КП отключены до появления серверного endpoint." />
       <div className="grid gap-3 md:grid-cols-3">
         <InfoTile label="В работе" value={String(activeOffers)} />
         <InfoTile label="На согласовании" value={String(offers.filter((order) => ['КП отправлено', 'КП согласовано'].includes(order.status)).length)} />
@@ -4812,34 +4840,38 @@ export const StaffCommercialOffersPage = () => {
 };
 
 export const StaffContractsPage = () => {
-  const { orders } = useOrders();
-  const orderContracts = useMemo(() => orders.filter((order) => order.contractId || ['Подготовка договора', 'Договор отправлен', 'Ожидаем подпись договора', 'Договор подписан', 'Передано бухгалтеру', 'Договор', 'Счет на оплату', 'annual_active'].includes(order.status)), [orders]);
+  const [contracts, setContracts] = useState<Awaited<ReturnType<typeof getFinanceContracts>>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const loadContracts = async () => {
+    setLoading(true); setError('');
+    try { setContracts(await getFinanceContracts()); }
+    catch (err) { setError(getApiErrorMessage(err)); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void loadContracts(); }, []);
 
   return (
     <SimpleStaffPage title="Договоры">
       <div className="grid gap-3 md:grid-cols-4">
-        <InfoTile label="По заявкам" value={String(orderContracts.length)} />
+        <InfoTile label="Всего" value={String(contracts.length)} />
       </div>
-      <Section title="Договоры сопровождения" icon={<FileSignature size={20} />}>
-        <EmptyState text="Договоры сопровождения пока не созданы" />
-      </Section>
-      <Section title="Договоры по заявкам" icon={<ClipboardList size={20} />}>
+      <Section title="Договоры" icon={<FileSignature size={20} />}>
+        {loading && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">Загрузка договоров…</p>}
+        {error && <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{error}</p><Button type="button" variant="secondary" className="mt-3" onClick={loadContracts}>Повторить</Button></div>}
         <div className="space-y-3">
-          {orderContracts.map((order) => (
-            <Link key={order.id} to={`/staff/orders/${order.id}`} className="block rounded-2xl bg-slate-50 p-4 transition hover:bg-eco-50">
+          {contracts.map((contract) => (
+            <Link key={contract.id} to={`/staff/orders/${contract.requestId}`} className="block rounded-2xl bg-slate-50 p-4 transition hover:bg-eco-50">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-bold text-slate-900">{getPrimaryContractForOrder(order)?.number || order.contractId || order.id}</p>
-                  <p className="mt-1 break-words text-sm text-slate-600">{getOrderCompanyName(order)} · {order.service}</p>
+                  <p className="font-bold text-slate-900">{contract.contractNumber}</p>
+                  <p className="mt-1 break-words text-sm text-slate-600">{contract.clientCompanyName} · {contract.serviceName}</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {badge(order.status)}
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{contractLabel(order.crmContractStatus || order.contractStatus)}</span>
-                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{contract.status}</span>
               </div>
             </Link>
           ))}
-          {!orderContracts.length && <EmptyState text="Договоров по заявкам нет" />}
+          {!loading && !error && !contracts.length && <EmptyState text="Договоров нет" />}
         </div>
       </Section>
     </SimpleStaffPage>
@@ -4847,38 +4879,62 @@ export const StaffContractsPage = () => {
 };
 
 export const StaffTasksPage = () => {
-  const { orders } = useOrders();
   const role = useStaffRole();
   const toast = useToast();
   const [remoteTasks, setRemoteTasks] = useState<Awaited<ReturnType<typeof getTasks>>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const loadTasks = async () => {
+    setLoading(true);
+    setError('');
+    try { setRemoteTasks(await getTasks()); }
+    catch (err) { setError(getApiErrorMessage(err)); }
+    finally { setLoading(false); }
+  };
   useEffect(() => {
-    getTasks().then(setRemoteTasks);
+    void loadTasks();
   }, []);
-  const tasks = useMemo(() => buildMyTasks(orders, role), [orders, role]);
   const createTask = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submitting) return;
     const form = new FormData(event.currentTarget);
-    await saveTask({
-      orderId: String(form.get('orderId') || ''),
-      title: String(form.get('title') || ''),
-      responsibleId: String(form.get('responsibleId') || ''),
-      status: 'new',
-      priority: String(form.get('priority') || 'normal') as never,
-      dueDate: String(form.get('dueDate') || ''),
-      comment: String(form.get('comment') || ''),
-    });
-    toast.success('Задача сохранена', 'Если backend пока не подключен, форма уже готова к интеграции.');
-    event.currentTarget.reset();
-    getTasks().then(setRemoteTasks);
+    const orderId = Number(form.get('orderId'));
+    const assigneeId = Number(form.get('responsibleId'));
+    setSubmitting(true);
+    try {
+      await saveTask({
+        orderId: Number.isFinite(orderId) ? orderId : undefined,
+        title: String(form.get('title') || ''),
+        assigneeId: Number.isFinite(assigneeId) ? assigneeId : undefined,
+        dueDate: String(form.get('dueDate') || '') || undefined,
+        description: String(form.get('comment') || '') || undefined,
+      });
+      toast.success('Задача сохранена');
+      event.currentTarget.reset();
+      await loadTasks();
+    } catch (err) {
+      toast.error('Задача не сохранена', getApiErrorMessage(err));
+    } finally { setSubmitting(false); }
+  };
+
+  const changeTaskStatus = async (taskId: string, status: 'in_progress' | 'done' | 'cancelled') => {
+    try {
+      const updated = await updateTaskStatus(taskId, status);
+      setRemoteTasks((items) => items.map((item) => item.id === taskId ? updated : item));
+      toast.success('Статус задачи обновлен');
+    } catch (err) { toast.error('Статус не обновлен', getApiErrorMessage(err)); }
   };
 
   return (
     <SimpleStaffPage title="Задачи">
       <div className="grid gap-3 md:grid-cols-3">
-        <InfoTile label="Всего" value={String(tasks.length)} />
-        <InfoTile label="Срочно" value={String(tasks.filter((task) => task.priority === 'Срочно').length)} />
+        <InfoTile label="Всего" value={String(remoteTasks.length)} />
+        <InfoTile label="Просрочено" value={String(remoteTasks.filter((task) => task.status !== 'done' && task.status !== 'cancelled' && task.dueDate && task.dueDate < new Date().toISOString().slice(0, 10)).length)} />
         <InfoTile label="Роль" value={roleTitle(role)} />
       </div>
+      {loading && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">Загрузка задач…</p>}
+      {error && <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{error}</p><Button type="button" variant="secondary" className="mt-3" onClick={loadTasks}>Повторить</Button></div>}
       <div className="mt-5 grid gap-3 xl:grid-cols-2">
         {remoteTasks.map((task) => (
           <div key={task.id} className="rounded-2xl bg-slate-50 p-4">
@@ -4890,24 +4946,22 @@ export const StaffTasksPage = () => {
               <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{task.status}</span>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button type="button" variant="secondary" onClick={() => updateTaskStatus(task.id, 'in_progress').then(() => toast.success('Задача в работе'))}>В работу</Button>
-              <Button type="button" onClick={() => updateTaskStatus(task.id, 'done').then(() => toast.success('Задача завершена'))}>Завершить</Button>
-              <Button type="button" variant="secondary" onClick={() => updateTaskStatus(task.id, 'cancelled').then(() => toast.success('Задача отменена'))}>Отменить</Button>
+              <Button type="button" variant="secondary" onClick={() => changeTaskStatus(task.id, 'in_progress')}>В работу</Button>
+              <Button type="button" onClick={() => changeTaskStatus(task.id, 'done')}>Завершить</Button>
+              <Button type="button" variant="secondary" onClick={() => changeTaskStatus(task.id, 'cancelled')}>Отменить</Button>
             </div>
           </div>
         ))}
-        {tasks.map((task) => <WorkTaskCard key={task.id} task={task} />)}
-        {!tasks.length && !remoteTasks.length && <EmptyState text="Задач нет" />}
+        {!loading && !error && !remoteTasks.length && <EmptyState text="Задач нет" />}
       </div>
       {(role === 'ADMIN' || role === 'DIRECTOR' || role === 'HEAD' || canAccess(role, 'edit_tasks')) && (
         <form onSubmit={createTask} className="mt-5 grid gap-4 rounded-2xl bg-slate-50 p-4 md:grid-cols-2">
           <Field label="Заявка"><input name="orderId" required className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
           <Field label="Название"><input name="title" required className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
           <Field label="Ответственный"><input name="responsibleId" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-          <Field label="Приоритет"><select name="priority" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="normal">Обычный</option><option value="high">Высокий</option><option value="urgent">Срочный</option><option value="low">Низкий</option></select></Field>
           <Field label="Срок"><input name="dueDate" type="date" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
           <Field label="Комментарий"><input name="comment" className="input-focus w-full rounded-2xl border border-slate-200 px-4 py-3" /></Field>
-          <Button>Создать задачу</Button>
+          <Button disabled={submitting}>{submitting ? 'Создание…' : 'Создать задачу'}</Button>
         </form>
       )}
     </SimpleStaffPage>
@@ -4916,45 +4970,22 @@ export const StaffTasksPage = () => {
 
 export const StaffCalendarPage = () => {
   const role = useStaffRole();
-  const { orders } = useOrders();
   const [remoteEvents, setRemoteEvents] = useState<Awaited<ReturnType<typeof getStaffCalendar>>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [view, setView] = useState<'today' | 'week' | 'month' | 'all' | 'overdue' | 'rescheduled'>('today');
+  const loadCalendar = async () => {
+    setLoading(true); setError('');
+    try { setRemoteEvents(await getStaffCalendar()); }
+    catch (err) { setError(getApiErrorMessage(err)); }
+    finally { setLoading(false); }
+  };
   useEffect(() => {
-    getStaffCalendar().then(setRemoteEvents);
+    void loadCalendar();
   }, []);
   if (!canAccess(role, 'view_calendar') && role !== 'ADMIN' && role !== 'DIRECTOR' && role !== 'HEAD') return <PermissionDenied permission="view_calendar" />;
-  const generatedEvents: StaffCalendarEvent[] = orders.flatMap((order) => {
-    const items: StaffCalendarEvent[] = [];
-    if (order.laboratoryMeasurementAgreement?.measurementDate) {
-      items.push({
-        id: `${order.id}-lab`,
-        orderId: order.id,
-        type: 'laboratory' as const,
-        title: `Замер: ${order.service}`,
-        date: order.laboratoryMeasurementAgreement.measurementDate,
-        time: order.laboratoryMeasurementAgreement.measurementTime,
-        address: order.laboratoryMeasurementAgreement.address,
-        contactPerson: order.laboratoryMeasurementAgreement.contactPerson,
-        measurementType: order.laboratoryMeasurementAgreement.measurementScope,
-        status: order.laboratoryMeasurementAgreement.status === 'reschedule_requested' ? 'rescheduled' as const : 'planned' as const,
-      });
-    }
-    if (['Вывоз', 'Утилизация'].includes(order.status)) {
-      items.push({
-        id: `${order.id}-waste`,
-        orderId: order.id,
-        type: 'waste' as const,
-        title: `Вывоз / утилизация: ${order.service}`,
-        date: order.deadline || order.updatedAt || order.createdAt,
-        address: order.objectAddress || order.legalAddress,
-        executor: order.assignedEcologist || order.manager,
-        status: 'planned' as const,
-      });
-    }
-    return items;
-  });
   const today = new Date().toISOString().slice(0, 10);
-  const events = [...remoteEvents, ...generatedEvents].filter((event) => {
+  const events = remoteEvents.filter((event) => {
     if (view === 'today') return event.date === today;
     if (view === 'overdue') return event.date < today && event.status !== 'completed';
     if (view === 'rescheduled') return event.status === 'rescheduled';
@@ -4970,6 +5001,8 @@ export const StaffCalendarPage = () => {
   ] as const;
   return (
     <SimpleStaffPage title="Календарь">
+      {loading && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">Загрузка календаря…</p>}
+      {error && <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{error}</p><Button type="button" variant="secondary" className="mt-3" onClick={loadCalendar}>Повторить</Button></div>}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {views.map(([key, label]) => (
           <button key={key} type="button" onClick={() => setView(key)} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold ${view === key ? 'bg-eco-900 text-white' : 'bg-slate-100 text-slate-700'}`}>{label}</button>
@@ -4994,7 +5027,7 @@ export const StaffCalendarPage = () => {
             </div>
           </Link>
         ))}
-        {!events.length && <EmptyState text="Событий нет" />}
+        {!loading && !error && !events.length && <EmptyState text="Событий нет" />}
       </div>
     </SimpleStaffPage>
   );
@@ -5093,13 +5126,42 @@ const StaffUserRoleRow = ({ user }: { user: User }) => {
 };
 
 export const StaffNotificationsPage = () => {
-  const { orders } = useOrders();
-  const role = useStaffRole();
-  const generated = buildRoleNotifications(orders, role);
+  const toast = useToast();
+  const [notifications, setNotifications] = useState<Awaited<ReturnType<typeof getCrmNotifications>>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [updatingId, setUpdatingId] = useState('');
+  const loadNotifications = async () => {
+    setLoading(true); setError('');
+    try { setNotifications(await getCrmNotifications()); }
+    catch (err) { setError(getApiErrorMessage(err)); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void loadNotifications(); }, []);
+  const markRead = async (id: string) => {
+    if (updatingId) return;
+    setUpdatingId(id);
+    try {
+      const updated = await markNotificationRead(id);
+      setNotifications((items) => items.map((item) => item.id === id ? { ...item, ...updated, isRead: true } : item));
+    } catch (err) { toast.error('Не удалось отметить уведомление', getApiErrorMessage(err)); }
+    finally { setUpdatingId(''); }
+  };
   return (
     <SimpleStaffPage title="Уведомления">
-      {generated.map((item) => <NotificationLine key={item.id} notification={item} />)}
-      
+      {loading && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">Загрузка уведомлений…</p>}
+      {error && <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{error}</p><Button type="button" variant="secondary" className="mt-3" onClick={loadNotifications}>Повторить</Button></div>}
+      {notifications.map((item) => (
+        <div key={item.id} className={`rounded-2xl p-4 ${item.isRead ? 'bg-slate-50' : 'bg-eco-50 ring-1 ring-eco-100'}`}>
+          <Link to={item.link || (item.orderId ? `/staff/orders/${item.orderId}` : '/staff/notifications')} className="block">
+            <div className="flex items-start justify-between gap-3"><p className="font-bold text-slate-900">{item.title}</p>{!item.isRead && <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-amber-800">Непрочитано</span>}</div>
+            <p className="mt-2 text-sm text-slate-600">{item.message}</p>
+            <p className="mt-2 text-xs text-slate-500">{item.createdAt}</p>
+          </Link>
+          {!item.isRead && <Button type="button" variant="secondary" className="mt-3" disabled={updatingId === item.id} onClick={() => markRead(item.id)}>{updatingId === item.id ? 'Сохранение…' : 'Отметить прочитанным'}</Button>}
+        </div>
+      ))}
+      {!loading && !error && !notifications.length && <EmptyState text="Уведомлений нет" />}
     </SimpleStaffPage>
   );
 };

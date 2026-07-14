@@ -44,6 +44,7 @@ const NormativeDirectoryPage = lazy(() => import('./pages/NormativeDirectoryPage
 const MeasurementDevicesPage = lazy(() => import('./pages/MeasurementDevicesPage'));
 const LaboratorySettingsPage = lazy(() => import('./pages/LaboratorySettingsPage'));
 const LabJournalsPage = lazy(() => import('./pages/LabJournalsPage'));
+const StaffLeadsPage = lazy(() => import('./pages/staff/StaffLeadsPage'));
 
 const CabinetCompanyPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetCompanyPage');
 const CabinetDashboardPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetDashboardPage');
@@ -176,14 +177,14 @@ function App() {
         <Route path="/register" element={<RegisterPage onSuccess={notify} />} />
         <Route path="/staff/login" element={<LoginPage staff onSuccess={notify} />} />
 
-        <Route path="/cabinet" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetDashboardPage /></CabinetLayout></RoleAccess>} />
-        <Route path="/cabinet/orders" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetOrdersPage /></CabinetLayout></RoleAccess>} />
-        <Route path="/cabinet/orders/new" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetNewOrderPage onNotify={notify} /></CabinetLayout></RoleAccess>} />
-        <Route path="/cabinet/orders/:id" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetOrderDetailsPage onNotify={notify} /></CabinetLayout></RoleAccess>} />
-        <Route path="/cabinet/documents" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetDocumentsPage /></CabinetLayout></RoleAccess>} />
-        <Route path="/cabinet/payments" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetPaymentsPage /></CabinetLayout></RoleAccess>} />
-        <Route path="/cabinet/company" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetCompanyPage /></CabinetLayout></RoleAccess>} />
-        <Route path="/cabinet/notifications" element={<RoleAccess roles={['CLIENT', 'MANAGER', 'ADMIN']} loginPath="/login"><CabinetLayout><CabinetNotificationsPage /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetDashboardPage /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/orders" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetOrdersPage /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/orders/new" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetNewOrderPage onNotify={notify} /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/orders/:id" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetOrderDetailsPage onNotify={notify} /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/documents" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetDocumentsPage /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/payments" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetPaymentsPage /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/company" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetCompanyPage /></CabinetLayout></RoleAccess>} />
+        <Route path="/cabinet/notifications" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetNotificationsPage /></CabinetLayout></RoleAccess>} />
 
         <Route path="/staff" element={protocolMockMode ? <Navigate to="/staff/protocols" replace /> : <RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDashboardPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/orders" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffOrdersPage /></StaffLayout></RoleAccess>} />
@@ -192,6 +193,7 @@ function App() {
         <Route path="/staff/orders/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffOrderDetailsPage onNotify={notify} /></StaffLayout></RoleAccess>} />
         <Route path="/staff/clients" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/clients/:companyKey" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/leads" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffLeadsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/companies" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/companies/new" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/companies/:companyId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><CompaniesPage /></StaffAccess></StaffLayout></RoleAccess>} />
@@ -210,7 +212,7 @@ function App() {
         <Route path="/staff/normatives" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/measurement-devices" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/journals" element={<RoleAccess roles={['ADMIN', 'HEAD', 'LABORATORY']} loginPath="/staff/login" forbiddenMessage="Нет доступа к разделу журналов"><StaffLayout><StaffAccess roles={['ADMIN', 'HEAD', 'LABORATORY']}><LabJournalsPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/settings/laboratory" element={<RoleAccess roles={['ADMIN', 'HEAD', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'HEAD', 'LABORATORY']}><LaboratorySettingsPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/settings/laboratory" element={<RoleAccess roles={['ADMIN', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY']}><LaboratorySettingsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/reports" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><StaffReportsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/user-roles" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN']}><StaffUserRolesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/notifications" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffNotificationsPage /></StaffLayout></RoleAccess>} />

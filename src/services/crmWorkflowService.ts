@@ -1,31 +1,21 @@
 import api from './api';
+import { unwrapApiResponse } from './apiHelpers';
+import { createClient, createStaffOrder, uploadDocument } from './staffOrderService';
 import type {
   AgreementResponse,
-  Client,
-  CompanyProfileChangeRequest,
   CommercialOffer,
   CrmDocument,
   CrmNotification,
-  InvoicePayment,
   Order,
   SendDocumentToClientPayload,
   StaffCalendarEvent,
   StaffManualOrderPayload,
   Task,
+  CreateTaskApiRequest,
+  TaskApiResponse,
   UploadDocumentPayload,
   WasteRemoval,
 } from '../types';
-
-const dataOrFallback = async <T,>(request: Promise<{ data: { data: T } }>, fallback: T): Promise<T> => {
-  try {
-    const { data } = await request;
-    return data.data;
-  } catch (error) {
-    if (!import.meta.env.DEV) throw error;
-    console.warn('CRM endpoint fallback:', error);
-    return fallback;
-  }
-};
 
 const appendFileMetadata = (formData: FormData, file: File, title?: string) => {
   const documentName = title?.trim() || file.name || 'Документ';
@@ -36,17 +26,37 @@ const appendFileMetadata = (formData: FormData, file: File, title?: string) => {
   formData.append('fileSize', String(file.size || 0));
 };
 
-export const createStaffManualOrder = async (payload: StaffManualOrderPayload): Promise<Order | undefined> => {
-  const formData = new FormData();
-  Object.entries(payload).forEach(([key, value]) => {
-    if (key === 'files') return;
-    if (value !== undefined && value !== null) formData.append(key, String(value));
+export const createStaffManualOrder = async (payload: StaffManualOrderPayload): Promise<Order> => {
+  let clientId = Number(payload.clientId);
+  if (!Number.isFinite(clientId) || clientId <= 0) {
+    if (!payload.email?.trim()) throw new Error('Для создания нового клиента укажите email.');
+    const client = await createClient({
+      companyName: payload.companyName || payload.clientName,
+      binIin: payload.bin || undefined,
+      email: payload.email.trim(),
+      phone: payload.phone,
+      contactPerson: payload.clientName,
+      clientType: payload.companyName ? 'company' : 'individual',
+    });
+    clientId = Number(client.id);
+  }
+  if (!Number.isFinite(clientId) || clientId <= 0) throw new Error('Сервер не вернул корректный ID клиента.');
+
+  const order = await createStaffOrder({
+    clientId,
+    serviceId: payload.serviceId || undefined,
+    serviceName: payload.service,
+    businessCompanyId: undefined,
+    contractType: payload.serviceType || 'one_time',
+    urgency: payload.urgency,
+    comment: payload.comment,
+    contactPerson: payload.clientName,
+    phone: payload.phone,
+    city: payload.city,
   });
-  payload.files?.forEach((file) => formData.append('files', file));
-  return dataOrFallback(
-    api.post<{ data: Order; message: string | null }>('/staff/orders', formData),
-    undefined,
-  );
+  if (!order.id) throw new Error('Сервер создал заявку без ID. Загрузка документов отменена.');
+  for (const file of payload.files || []) await uploadDocument(String(order.id), file, 'client');
+  return order;
 };
 
 export const uploadCrmDocument = async (orderId: string, payload: UploadDocumentPayload): Promise<CrmDocument | undefined> => {
@@ -59,33 +69,28 @@ export const uploadCrmDocument = async (orderId: string, payload: UploadDocument
   formData.append('needsSignature', String(Boolean(payload.needsSignature)));
   formData.append('needsClientResponse', String(Boolean(payload.needsClientResponse)));
   if (payload.dueDate) formData.append('dueDate', payload.dueDate);
-  return dataOrFallback(
-    api.post<{ data: CrmDocument; message: string | null }>(`/staff/orders/${orderId}/documents`, formData),
-    undefined,
-  );
+  const { data } = await api.post<{ data: CrmDocument; message: string | null }>(`/staff/orders/${orderId}/documents`, formData);
+  return unwrapApiResponse(data);
 };
 
 export const sendDocumentToClient = async (orderId: string, documentId: string, payload: SendDocumentToClientPayload) =>
-  dataOrFallback(
-    api.post<{ data: CrmDocument; message: string | null }>(`/staff/orders/${orderId}/documents/${documentId}/send-to-client`, payload),
-    undefined,
-  );
+  api.post<{ data: CrmDocument; message: string | null }>(`/staff/orders/${orderId}/documents/${documentId}/send-to-client`, payload)
+    .then(({ data }) => unwrapApiResponse(data));
 
 export const sendAgreementResponse = async (
   orderId: string,
-  sourceDocumentId: string,
+  documentId: string,
   payload: { action: 'signed' | 'sent_without_signature' | 'revision_requested'; comment?: string; signedCms?: string; signerSubject?: string },
 ) => {
-  const { data } = await api.post<{ data: AgreementResponse; message: string | null }>(`/client/orders/${orderId}/agreement-responses`, {
-    sourceDocumentId,
-    ...payload,
-  });
-  return data.data;
+  const { data } = await api.post<{ data: AgreementResponse; message: string | null }>(
+    `/client/orders/${orderId}/agreements/${documentId}/responses`,
+    payload,
+  );
+  return unwrapApiResponse(data);
 };
 
 export const uploadClientPrimaryDocumentFile = async (orderId: string, documentId: string, file: File, comment = '') =>
-  dataOrFallback(
-    api.post<{ data: unknown; message: string | null }>(
+  api.post<{ data: unknown; message: string | null }>(
       `/client/orders/${orderId}/primary-documents/${documentId}/upload`,
       (() => {
         const formData = new FormData();
@@ -94,74 +99,103 @@ export const uploadClientPrimaryDocumentFile = async (orderId: string, documentI
         formData.append('documentId', documentId);
         return formData;
       })(),
-    ),
-    undefined,
-  );
+    ).then(({ data }) => unwrapApiResponse(data));
 
 export const createCommercialOffer = async (orderId: string, payload: Partial<CommercialOffer> & { file?: File | null }) => {
-  const formData = new FormData();
-  Object.entries(payload).forEach(([key, value]) => {
-    if (key === 'file') return;
-    if (value !== undefined && value !== null) formData.append(key, String(value));
-  });
-  if (payload.file) formData.append('file', payload.file);
-  return dataOrFallback(
-    api.post<{ data: CommercialOffer; message: string | null }>(`/staff/orders/${orderId}/commercial-offers`, formData),
-    undefined,
-  );
-};
-
-export const updateCommercialOfferStatus = async (orderId: string, offerId: string, status: CommercialOffer['status']) =>
-  dataOrFallback(api.patch<{ data: CommercialOffer; message: string | null }>(`/staff/orders/${orderId}/commercial-offers/${offerId}`, { status }), undefined);
-
-export const saveInvoicePayment = async (orderId: string, payload: Partial<InvoicePayment> & { invoiceFile?: File | null; paymentOrder?: File | null }) => {
-  const formData = new FormData();
-  Object.entries(payload).forEach(([key, value]) => {
-    if (key === 'invoiceFile' || key === 'paymentOrder') return;
-    if (value !== undefined && value !== null) formData.append(key, String(value));
-  });
-  if (payload.invoiceFile) formData.append('invoiceFile', payload.invoiceFile);
-  if (payload.paymentOrder) formData.append('paymentOrder', payload.paymentOrder);
-  return dataOrFallback(
-    api.post<{ data: InvoicePayment; message: string | null }>(`/staff/orders/${orderId}/invoice-payment`, formData),
-    undefined,
-  );
+  void orderId; void payload;
+  throw new Error('Функция пока не подключена к серверу.');
 };
 
 export const saveWasteRemoval = async (orderId: string, payload: Partial<WasteRemoval> & { act?: File | null; photos?: File[] }) => {
-  const formData = new FormData();
-  Object.entries(payload).forEach(([key, value]) => {
-    if (key === 'act' || key === 'photos') return;
-    if (value !== undefined && value !== null) formData.append(key, String(value));
-  });
-  if (payload.act) formData.append('act', payload.act);
-  payload.photos?.forEach((file) => formData.append('photos', file));
-  return dataOrFallback(
-    api.post<{ data: WasteRemoval; message: string | null }>(`/staff/orders/${orderId}/waste-removal`, formData),
-    undefined,
-  );
+  void orderId; void payload;
+  throw new Error('Функция пока не подключена к серверу.');
 };
 
-export const getStaffCalendar = async (): Promise<StaffCalendarEvent[]> =>
-  dataOrFallback(api.get<{ data: StaffCalendarEvent[]; message: string | null }>('/staff/calendar'), []);
+type CalendarApiEvent = {
+  id: number | string;
+  orderId?: number | string;
+  sourceId?: number | string;
+  type?: string;
+  sourceType?: string;
+  title: string;
+  date?: string;
+  startDate?: string;
+  time?: string;
+  status?: string | null;
+  address?: string;
+  contactPerson?: string;
+  assigneeName?: string;
+};
 
-export const getTasks = async (): Promise<Task[]> =>
-  dataOrFallback(api.get<{ data: Task[]; message: string | null }>('/staff/tasks'), []);
+const mapCalendarEventType = (type?: string): StaffCalendarEvent['type'] =>
+  type === 'measurement' ? 'laboratory' : type === 'waste' ? 'waste' : 'task';
 
-export const saveTask = async (payload: Partial<Task>): Promise<Task | undefined> =>
-  dataOrFallback(api.post<{ data: Task; message: string | null }>('/staff/tasks', payload), undefined);
+const mapCalendarEventStatus = (status: string | null | undefined, eventDate?: string): StaffCalendarEvent['status'] => {
+  if (status === 'done' || status === 'completed' || status === 'cancelled') return 'completed';
+  if (status === 'reschedule_requested') return 'rescheduled';
+  const date = eventDate?.slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  if (date && date < today) return 'overdue';
+  if (date === today) return 'today';
+  return 'planned';
+};
 
-export const updateTaskStatus = async (taskId: string, status: Task['status']): Promise<Task | undefined> =>
-  dataOrFallback(api.patch<{ data: Task; message: string | null }>(`/staff/tasks/${taskId}`, { status }), undefined);
+export const getStaffCalendar = async (): Promise<StaffCalendarEvent[]> => {
+  const { data } = await api.get<{ data: CalendarApiEvent[]; message: string | null }>('/staff/calendar');
+  const events = unwrapApiResponse(data);
+  const unique = new Map<string, StaffCalendarEvent>();
+  events.forEach((event) => {
+    const date = String(event.startDate || event.date || '');
+    const key = `${event.sourceType || event.type || 'event'}:${event.sourceId || event.id}:${date}`;
+    unique.set(key, {
+      id: String(event.id),
+      orderId: event.orderId == null ? undefined : String(event.orderId),
+      type: mapCalendarEventType(event.type || event.sourceType),
+      title: event.title,
+      date,
+      time: event.time,
+      address: event.address,
+      contactPerson: event.contactPerson,
+      executor: event.assigneeName,
+      status: mapCalendarEventStatus(event.status, date),
+    });
+  });
+  return [...unique.values()];
+};
 
-export const getCrmNotifications = async (): Promise<CrmNotification[]> =>
-  dataOrFallback(api.get<{ data: CrmNotification[]; message: string | null }>('/notifications'), []);
+const mapTask = (task: TaskApiResponse): Task => ({
+  id: String(task.id),
+  orderId: task.orderId == null ? undefined : String(task.orderId),
+  title: task.title,
+  description: task.description,
+  assigneeId: task.assigneeId == null ? undefined : String(task.assigneeId),
+  assigneeName: task.assigneeName,
+  dueDate: task.dueDate,
+  status: task.status,
+  createdAt: task.createdAt,
+});
 
-export const markNotificationRead = async (notificationId: string): Promise<CrmNotification | undefined> =>
-  dataOrFallback(api.patch<{ data: CrmNotification; message: string | null }>(`/notifications/${notificationId}/read`), undefined);
+export const getTasks = async (): Promise<Task[]> => {
+  const { data } = await api.get<{ data: TaskApiResponse[]; message: string | null }>('/staff/tasks');
+  return unwrapApiResponse(data).map(mapTask);
+};
 
-export const requestCompanyProfileChange = async (payload: CompanyProfileChangeRequest) =>
-  dataOrFallback(api.post<{ data: unknown; message: string | null }>('/client/company/change-requests', payload), undefined);
+export const saveTask = async (payload: CreateTaskApiRequest): Promise<Task> => {
+  const { data } = await api.post<{ data: TaskApiResponse; message: string | null }>('/staff/tasks', payload);
+  return mapTask(unwrapApiResponse(data));
+};
 
-export const updateClient = async (clientId: string, payload: Partial<Client>) =>
-  dataOrFallback(api.patch<{ data: Client; message: string | null }>(`/staff/clients/${clientId}`, payload), undefined);
+export const updateTaskStatus = async (taskId: string, status: Task['status']): Promise<Task> => {
+  const { data } = await api.patch<{ data: TaskApiResponse; message: string | null }>(`/staff/tasks/${taskId}`, { status });
+  return mapTask(unwrapApiResponse(data));
+};
+
+export const getCrmNotifications = async (): Promise<CrmNotification[]> => {
+  const { data } = await api.get<{ data: CrmNotification[]; message: string | null }>('/notifications');
+  return unwrapApiResponse(data);
+};
+
+export const markNotificationRead = async (notificationId: string): Promise<CrmNotification> => {
+  const { data } = await api.patch<{ data: CrmNotification; message: string | null }>(`/notifications/${notificationId}/read`);
+  return unwrapApiResponse(data);
+};

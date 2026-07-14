@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CreditCard, ReceiptText, WalletCards, X, type LucideIcon } from 'lucide-react';
 import Button from '../components/ui/Button';
+import BackendFeatureUnavailable from '../components/ui/BackendFeatureUnavailable';
 import Reveal from '../components/animations/Reveal';
 import { CommentModal, ConfirmModal, PaymentModal, type CommentValues, type PaymentModalValues } from '../components/modals';
 import type {
@@ -39,7 +40,6 @@ import {
   getFinanceContracts,
   getFinanceDebts,
   getFinancePayments,
-  getFinanceTransactions,
   markFinancePaymentPaid,
   markQuarterPaid,
   updateDebtComment,
@@ -188,7 +188,6 @@ const PaymentsPage = () => {
     getFinancePayments().then(setPayments);
     getFinanceContracts().then(setContracts);
     getFinanceDebts().then(setDebts);
-    getFinanceTransactions().then(setTransactions);
   };
 
   useEffect(() => { if (canView) load(); }, [canView]);
@@ -368,7 +367,6 @@ const PaymentsPage = () => {
     getFinancePayments().then(setPayments);
     getFinanceContracts().then(setContracts);
     getFinanceDebts().then(setDebts);
-    getFinanceTransactions().then(setTransactions);
   };
 
   const submitOneTimePayment = async (values: PaymentModalValues) => {
@@ -376,7 +374,6 @@ const PaymentsPage = () => {
     try {
       await addPartialFinancePayment(selectedPayment.id, {
         amount: values.amount,
-        date: values.date,
         method: values.method,
         comment: values.comment,
       });
@@ -393,7 +390,6 @@ const PaymentsPage = () => {
     try {
       await addQuarterPayment(selectedContract.requestId, quarterItem.id, {
         amount: values.amount,
-        date: values.date,
         method: values.method,
         comment: values.comment,
       });
@@ -482,7 +478,6 @@ const PaymentsPage = () => {
     try {
       await updateFinancePaymentDetails(selectedRow.payment.id, {
         comment: String(form.get('comment') || ''),
-        lastPaymentDate: String(form.get('lastPaymentDate') || ''),
         paymentMethod: String(form.get('paymentMethod') || selectedRow.payment.paymentMethod || 'bank_transfer') as PaymentMethod,
       });
       refresh();
@@ -685,18 +680,8 @@ const Info = ({ label, value }: { label: string; value: string }) => (
 const TransactionList = ({ transactions }: { transactions: PaymentTransaction[] }) => (
   <section className="mt-6">
     <h4 className="font-bold text-eco-900">История платежей</h4>
-    <div className="mt-3 space-y-2">
-      {transactions.map((transaction) => (
-        <div key={transaction.id} className="rounded-2xl bg-slate-50 p-4 text-sm">
-          <div className="flex flex-wrap justify-between gap-2">
-            <p className="font-bold text-slate-900">{formatCurrency(transaction.amount)}</p>
-            <p className="text-slate-500">{transaction.date} · {paymentMethodLabel(transaction.method)}</p>
-          </div>
-          {transaction.comment && <p className="mt-2 text-slate-600">{transaction.comment}</p>}
-        </div>
-      ))}
-      {!transactions.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Платежей пока нет</p>}
-    </div>
+    <div className="mt-3"><BackendFeatureUnavailable title="История транзакций" description="История платежных транзакций пока не подключена к серверу." /></div>
+    {transactions.length > 0 && <p className="sr-only">Получено транзакций: {transactions.length}</p>}
   </section>
 );
 
@@ -731,7 +716,7 @@ const OneTimeDetails = ({
       onSubmit={onSubmitPayment}
       onMarkPaid={onMarkPaid}
     />
-    <DetailsForm paymentMethod={row.payment?.paymentMethod} lastPaymentDate={row.lastPaymentDate} comment={row.payment?.comment} onSubmit={onSubmitDetails} />
+    <DetailsForm paymentMethod={row.payment?.paymentMethod} comment={row.payment?.comment} onSubmit={onSubmitDetails} />
     <TransactionList transactions={transactions} />
   </>
 );
@@ -865,11 +850,10 @@ const PaymentForm = ({
   );
 };
 
-const DetailsForm = ({ paymentMethod, lastPaymentDate, comment, onSubmit }: { paymentMethod?: PaymentMethod; lastPaymentDate?: string; comment?: string; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) => (
+const DetailsForm = ({ paymentMethod, comment, onSubmit }: { paymentMethod?: PaymentMethod; comment?: string; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) => (
   <form onSubmit={onSubmit} className="mt-6 rounded-[20px] border border-slate-200 p-4">
     <h4 className="font-bold text-eco-900">Комментарий бухгалтера</h4>
     <div className="mt-4 grid gap-3 sm:grid-cols-2">
-      <input name="lastPaymentDate" type="date" defaultValue={lastPaymentDate || ''} className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
       <select name="paymentMethod" defaultValue={paymentMethod || 'bank_transfer'} className="input-focus rounded-2xl border border-slate-200 px-4 py-3">
         {paymentMethods.map((method) => <option key={method} value={method}>{paymentMethodLabel(method)}</option>)}
       </select>

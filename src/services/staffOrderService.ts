@@ -19,6 +19,7 @@ import type {
   UploadDocumentPayload,
 } from '../types';
 import { mapDocument, mapOrder, mapOrders } from './backendAdapters';
+import { unwrapApiResponse } from './apiHelpers';
 import {
   toBackendLaboratoryPrimaryStatus,
   toBackendLaboratoryResultStatus,
@@ -116,28 +117,6 @@ export const uploadDocument = async (orderId: string, fileOrPayload: File | Uplo
   return mapDocument(data.data as never, orderId);
 };
 
-export const uploadStaffDocument = async (fileOrPayload: File | UploadDocumentPayload, type?: string): Promise<DocumentItem> => {
-  const isFile = fileOrPayload instanceof File;
-  const file = isFile ? fileOrPayload : fileOrPayload.file;
-  const formData = new FormData();
-  formData.append('file', file);
-  appendFileMetadata(formData, file, isFile ? file.name : fileOrPayload.title);
-  if (isFile) {
-    if (type) formData.append('type', toBackendDocumentType(type));
-  } else {
-    formData.append('type', toBackendDocumentType(fileOrPayload.type, fileOrPayload.sendToClient));
-    formData.append('category', fileOrPayload.type);
-    formData.append('documentType', fileOrPayload.type);
-    formData.append('comment', fileOrPayload.comment || '');
-    formData.append('sendToClient', String(Boolean(fileOrPayload.sendToClient)));
-    formData.append('needsSignature', String(Boolean(fileOrPayload.needsSignature)));
-    formData.append('needsClientResponse', String(Boolean(fileOrPayload.needsClientResponse)));
-    if (fileOrPayload.dueDate) formData.append('dueDate', fileOrPayload.dueDate);
-  }
-  const { data } = await api.post<{ data: DocumentItem; message: string | null }>('/staff/documents', formData);
-  return mapDocument(data.data as never);
-};
-
 export type UploadContractDocumentPayload = {
   file: File;
   comment?: string;
@@ -229,18 +208,7 @@ export const updatePaymentStatus = async (
 ) => {
   const { data } = await api.patch<{ data: unknown; message: string | null }>(`/staff/orders/${orderId}/payment`, {
     paymentStatus: toBackendPaymentStatus(status),
-    paymentMethod: payload.paymentMethod || payload.method,
-    invoiceNumber: payload.invoiceNumber,
-    totalAmount: payload.totalAmount ?? payload.amount,
-    paidAmount: payload.paidAmount,
-    paidAt: payload.paidAt,
-    invoiceDate: payload.invoiceDate,
-    dueDate: payload.dueDate,
-    comment: payload.comment,
-    actNumber: payload.actNumber,
-    invoiceFileName: payload.invoiceFileName,
-    paymentTerms: payload.paymentTerms,
-    minPrepaymentPercent: payload.minPrepaymentPercent,
+    paymentMethod: (payload.paymentMethod || payload.method)?.toUpperCase(),
   });
   return { order: mapOrder(data.data as never), message: data.message };
 };
@@ -435,7 +403,7 @@ export const completeAnnualRequest = async (orderId: string) => {
 
 export const getClients = async () => {
   const { data } = await api.get<{ data: unknown[]; message: string | null }>('/clients');
-  return data.data;
+  return unwrapApiResponse(data);
 };
 
 export type CreateClientPayload = {
@@ -459,7 +427,7 @@ export type CreateClientResult = {
 
 export const createClient = async (payload: CreateClientPayload): Promise<CreateClientResult> => {
   const { data } = await api.post<{ data: CreateClientResult; message: string | null }>('/staff/clients', payload);
-  return data.data;
+  return unwrapApiResponse(data);
 };
 
 export type StaffCreateOrderPayload = {
@@ -477,5 +445,5 @@ export type StaffCreateOrderPayload = {
 
 export const createStaffOrder = async (payload: StaffCreateOrderPayload): Promise<Order> => {
   const { data } = await api.post<{ data: unknown; message: string | null }>('/staff/orders', payload);
-  return mapOrder(data.data as never);
+  return mapOrder(unwrapApiResponse(data) as never);
 };
