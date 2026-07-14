@@ -5,6 +5,7 @@ import {
   getApiErrorMessage,
   getApiStatus,
   getContentDispositionFileName,
+  unwrapApiResponse,
 } from './apiHelpers';
 import type {
   CreateProtocolPayload,
@@ -46,9 +47,6 @@ const unwrapData = (value: unknown): unknown => {
   const body = asRecord(data);
   return body.data ?? data;
 };
-function unwrapApiResponse<T>(response: any): T {
-  return response?.data?.data ?? response?.data;
-}
 const asString = (value: unknown) => (typeof value === 'string' || typeof value === 'number' ? String(value) : '');
 const nullableDecimal = (value: unknown): string | null => {
   const normalized = asString(value).trim();
@@ -140,9 +138,11 @@ export const normalizeProtocolResult = (raw: unknown): ProtocolResultRow => {
   const samplingMethodDocument = aliases.samplingMethodDocument;
   const measurementPlace = firstString(source.measurementPlace, values.object, values.measurementPlace, values.samplingPlace);
   const sampleName = firstString(source.sampleName, values.sampleName);
-  const deviceId = firstString(source.deviceId, values.device, values.deviceId);
+  const measurementDeviceSource = asRecord(source.measurementDevice);
+  const deviceSource = asRecord(source.device);
+  const deviceId = firstString(source.deviceId, measurementDeviceSource.id, deviceSource.id, values.device, values.deviceId);
   const measurementDeviceId = aliases.measurementDeviceId;
-  const deviceName = firstString(source.deviceName, values.deviceName);
+  const deviceName = firstString(source.deviceName, measurementDeviceSource.name, deviceSource.name, values.deviceName);
   return {
     id: pick(source, ['id', '_id', 'resultId']),
     protocolId: pick(source, ['protocolId', 'protocol_id']),
@@ -172,6 +172,18 @@ export const normalizeProtocolResult = (raw: unknown): ProtocolResultRow => {
     deviceId,
     deviceName,
     measurementDeviceId,
+    measurementDevice: Object.keys(measurementDeviceSource).length ? {
+      id: firstString(measurementDeviceSource.id, measurementDeviceId),
+      name: firstString(measurementDeviceSource.name) || undefined,
+      model: firstString(measurementDeviceSource.model) || undefined,
+      serialNumber: firstString(measurementDeviceSource.serialNumber) || undefined,
+    } : undefined,
+    device: Object.keys(deviceSource).length ? {
+      id: firstString(deviceSource.id, deviceId),
+      name: firstString(deviceSource.name) || undefined,
+      model: firstString(deviceSource.model) || undefined,
+      serialNumber: firstString(deviceSource.serialNumber) || undefined,
+    } : undefined,
     comparisonType: (pick(source, ['comparisonType']) || asString(values.comparisonType)) as ProtocolResultRow['comparisonType'],
     normativeMin: pick(source, ['normativeMin', 'min']) || asString(values.normativeMin),
     normativeMax: pick(source, ['normativeMax', 'max']) || asString(values.normativeMax),
@@ -863,9 +875,19 @@ const toApiResultPayload = (payload: ProtocolResultPayload) => {
     deviceId: values.deviceId ?? measurementDeviceId,
     subtype: values.subtype ?? values.factorType ?? null,
   });
-  delete mapped.measurementDeviceId;
   delete mapped.factorType;
-  return { ...mapped, measurementDeviceId, normativeId, values: mapped };
+  const mappedWithDeviceAliases = {
+    ...mapped,
+    measurementDeviceId,
+    deviceId: measurementDeviceId,
+  };
+  return {
+    ...mappedWithDeviceAliases,
+    measurementDeviceId,
+    deviceId: measurementDeviceId,
+    normativeId,
+    values: mappedWithDeviceAliases,
+  };
 };
 
 const isProtocolLike = (value: unknown) => {
@@ -1400,19 +1422,19 @@ export async function searchPollutants(query: string, params: Record<string, str
 
 export async function getMethodTemplates(): Promise<MethodTemplateResponse[]> {
   const response = await api.get<ApiResponse<unknown> | unknown>('/protocols/method-templates');
-  const payload = unwrapApiResponse<unknown>(response);
+  const payload = unwrapApiResponse<unknown>(response.data);
   return extractList(payload, ['methodTemplates', 'method_templates', 'templates']).map(normalizeMethodTemplate);
 }
 
 export async function getMethodTemplate(id: string): Promise<MethodTemplateResponse> {
   const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/method-templates/${id}`);
-  const payload = unwrapApiResponse<unknown>(response);
+  const payload = unwrapApiResponse<unknown>(response.data);
   return normalizeMethodTemplate(extractItem(payload, ['methodTemplate', 'method_template', 'template']));
 }
 
 export async function getRawMeasurements(protocolId: string, resultId: string): Promise<RawMeasurementsResponse> {
   const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}/raw-measurements`);
-  return normalizeRawMeasurements(unwrapApiResponse<unknown>(response), protocolId, resultId);
+  return normalizeRawMeasurements(unwrapApiResponse<unknown>(response.data), protocolId, resultId);
 }
 
 export async function saveRawMeasurements(
@@ -1438,17 +1460,17 @@ export async function saveRawMeasurements(
 
 export async function calculateResult(protocolId: string, resultId: string): Promise<CalculationResultResponse> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}/calculate`);
-  return normalizeCalculationResult(unwrapApiResponse<unknown>(response), protocolId, resultId);
+  return normalizeCalculationResult(unwrapApiResponse<unknown>(response.data), protocolId, resultId);
 }
 
 export async function calculateProtocolSummary(protocolId: string): Promise<ProtocolCalculationSummaryResponse> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`);
-  return normalizeCalculationSummary(unwrapApiResponse<unknown>(response), protocolId);
+  return normalizeCalculationSummary(unwrapApiResponse<unknown>(response.data), protocolId);
 }
 
 export async function getCalculationHistory(protocolId: string, resultId: string): Promise<CalculationResultResponse[]> {
   const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}/calculation-history`);
-  const payload = unwrapApiResponse<unknown>(response);
+  const payload = unwrapApiResponse<unknown>(response.data);
   return extractList(payload, ['history', 'calculationHistory', 'calculation_history', 'rows']).map((item) =>
     normalizeCalculationResult(item, protocolId, resultId),
   );

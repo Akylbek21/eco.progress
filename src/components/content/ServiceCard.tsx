@@ -9,9 +9,7 @@ const ServiceCard = ({ service }: { service: ServiceItem }) => {
       <h3 className="mb-3 text-xl font-semibold text-slate-900">{service.title}</h3>
       <p className="mb-6 text-slate-600">{service.description}</p>
       <div className="flex flex-wrap gap-3">
-        <Link to={`/services/${service.id}`} className="inline-flex items-center">
-          <Button variant="secondary">Подробнее</Button>
-        </Link>
+        <Button asChild variant="secondary"><Link to={`/services/${service.id}`}>Подробнее</Link></Button>
         <Button variant="primary">Заказать</Button>
       </div>
     </div>

@@ -693,7 +693,7 @@ const PermissionDenied = ({ permission }: { permission: Permission }) => (
       <p className="mt-2 text-sm text-slate-600">{permission}</p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <Button type="button" variant="secondary" onClick={() => window.history.back()}>Назад</Button>
-        <Link to="/staff"><Button>Главная</Button></Link>
+        <Button asChild><Link to="/staff">Главная</Link></Button>
       </div>
     </div>
   </Reveal>
@@ -4499,7 +4499,7 @@ export const StaffClientsPage = () => {
             const last = [...companyOrders].sort((a, b) => b.id.localeCompare(a.id))[0];
             const nearestContract = undefined as ClientContract | undefined;
             return (
-              <Link key={company.key} to={`/staff/clients/${companyUrlKey(company.key)}`} className="block rounded-[20px] border border-slate-100 bg-slate-50 p-5 transition hover:border-eco-200 hover:bg-eco-50">
+              <div key={company.key} className="rounded-[20px] border border-slate-100 bg-slate-50 p-5 transition hover:border-eco-200 hover:bg-eco-50">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-bold text-eco-900">{company.name}</p>
@@ -4523,17 +4523,14 @@ export const StaffClientsPage = () => {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      navigate(newOrderUrl(last, company.name));
-                    }}
+                    onClick={() => navigate(newOrderUrl(last, company.name))}
                     className="rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white"
                   >
                     Создать заявку
                   </button>
-                  <span className="rounded-full bg-white px-4 py-2 text-xs font-bold text-eco-800">Открыть карточку</span>
+                  <Link to={`/staff/clients/${companyUrlKey(company.key)}`} className="rounded-full bg-white px-4 py-2 text-xs font-bold text-eco-800">Открыть карточку</Link>
                 </div>
-              </Link>
+              </div>
             );
           })}
           {!filteredCompanies.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Компаний нет</p>}

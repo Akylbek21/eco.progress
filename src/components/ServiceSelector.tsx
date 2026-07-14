@@ -52,8 +52,8 @@ const ServiceSelector = () => {
             <h3 className="mt-3 text-2xl font-bold text-eco-900">{selected.title}</h3>
             <p className="mt-4 leading-7 text-slate-700">{selected.recommendation}</p>
             <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
-              <a href="#lead"><Button className="w-full bg-eco-600 text-white hover:bg-eco-700 sm:w-auto">Получить консультацию</Button></a>
-              <a href="#lead"><Button variant="secondary" className="w-full border-eco-200 bg-white text-eco-800 hover:bg-eco-50 sm:w-auto">Оставить заявку</Button></a>
+              <Button asChild className="w-full bg-eco-600 text-white hover:bg-eco-700 sm:w-auto"><a href="#lead">Получить консультацию</a></Button>
+              <Button asChild variant="secondary" className="w-full border-eco-200 bg-white text-eco-800 hover:bg-eco-50 sm:w-auto"><a href="#lead">Оставить заявку</a></Button>
             </div>
           </div>
         </div>

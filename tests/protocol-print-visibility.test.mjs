@@ -60,7 +60,8 @@ test('API persists print visibility and preview filters hidden fields', async ()
   assert.match(service, /printVisibility: payload\.printVisibility \|\| \{\}/);
   assert.match(service, /normalizeProtocolPrintVisibility/);
   assert.match(preview, /isProtocolFieldVisible/);
-  assert.match(preview, /filter\(\(\[field\]\) => visible\(field\)\)/);
+  assert.match(preview, /visible\('environmentConditions'\) && environmentFields\.length > 0/);
+  assert.match(preview, /visible\(field\) && content !== undefined/);
 });
 
 test('wind speed is controlled and manual input is not overwritten by weather API', async () => {
@@ -71,7 +72,8 @@ test('wind speed is controlled and manual input is not overwritten by weather AP
   assert.match(createPage, /type="number" min="0" max="100" step="0\.1" value=\{form\.windSpeed\}/);
   assert.match(environmentForm, /value=\{value\.windSpeed \?\? ''\}/);
   assert.match(environmentForm, /onChange=\{\(event\) => updateWindSpeed\(event\.target\.value\)\}/);
-  assert.match(environmentForm, /windSpeed,\s*status: 'MANUAL'/);
+  assert.match(environmentForm, /windSpeed: windSpeed\.replace\(',', '\.'\),\s*status: 'MANUAL'/);
+  assert.match(environmentForm, /manualChangeReason/);
   const editableWindStart = environmentForm.indexOf('? <input type="number" min="0" max="100" step="0.1"');
   const editableWindEnd = environmentForm.indexOf(': <input readOnly', editableWindStart);
   const editableWindInput = editableWindStart >= 0 && editableWindEnd > editableWindStart

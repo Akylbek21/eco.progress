@@ -47,7 +47,7 @@ const ContactsPage = () => {
             <h1 className="mt-3 text-4xl font-bold text-eco-900">Напишите нам — специалист подскажет, какая услуга нужна именно вам</h1>
             <p className="mt-4 leading-7 text-slate-600">Свяжитесь с нами для консультации, расчета стоимости или быстрой проверки ситуации.</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <a href={company.phoneHref} onClick={() => trackPhoneClick({ placement: 'contacts_page' })}><Button>Позвонить</Button></a>
+              <Button asChild><a href={company.phoneHref} onClick={() => trackPhoneClick({ placement: 'contacts_page' })}>Позвонить</a></Button>
               <WhatsAppButton label="Оставить заявку через WhatsApp" />
             </div>
           </div>

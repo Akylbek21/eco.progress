@@ -35,7 +35,7 @@ const ServiceDetailsPage = () => {
           <Reveal delay={0.1}><h1 className="mt-4 max-w-4xl text-4xl font-bold sm:text-6xl">{service.title}</h1></Reveal>
           <Reveal delay={0.16}><p className="mt-5 max-w-2xl text-lg text-white/78">{service.description}</p></Reveal>
           <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
-            <button type="button" onClick={() => setOrderModal(true)} className="w-full sm:w-auto"><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Заказать услугу</Button></button>
+            <Button type="button" onClick={() => setOrderModal(true)} className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Заказать услугу</Button>
             <WhatsAppButton label="Оставить заявку через WhatsApp" message={createBlankWhatsAppRequestMessage(service.title)} className="w-full sm:w-auto" />
           </div>
         </div>

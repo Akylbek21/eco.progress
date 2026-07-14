@@ -15,9 +15,7 @@ const NewsCard = ({ item }: { item: NewsItem }) => {
         </div>
         <h3 className="mb-3 text-xl font-semibold text-slate-900">{item.title}</h3>
         <p className="mb-5 text-slate-600">{item.excerpt}</p>
-        <Link to={`/news/${item.id}`}>
-          <Button variant="ghost">Читать</Button>
-        </Link>
+        <Button asChild variant="ghost"><Link to={`/news/${item.id}`}>Читать</Link></Button>
       </div>
     </article>
   );

@@ -35,6 +35,8 @@ test('protocol context maps every physical subtype and water to the required doc
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.vibration.factorType, 'VIBRATION');
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.uv.factorType, 'UV');
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.electromagnetic_field.factorType, 'ELECTROMAGNETIC_FIELD');
+  const configSource = await read('src/data/protocolTypeConfig.ts');
+  assert.match(configSource, /factorType: subtype \|\| protocolFactorType\[normalizedType as ProtocolTypeKey\]/);
 });
 
 test('API service uses only normative search and requests one page', async () => {
@@ -67,7 +69,17 @@ test('creation page preserves server items and the complete selected normative',
   assert.match(source, /value: 'VIBRATION'/);
   assert.match(source, /value: 'ELECTROMAGNETIC_FIELD'/);
   assert.match(source, /value: 'LASER'/);
-  assert.match(source, /current\.filter\(\(item\) => !item\.selectedNormative\)/);
+  assert.match(source, /current\.map\(\(item\) => item\.selectedNormative/);
+  assert.match(source, /normative: undefined, selectedNormative: undefined/);
+  assert.doesNotMatch(source, /current\.filter\(\(item\) => !item\.selectedNormative\)/);
   assert.match(source, /retryNormativeSearch/);
   assert.match(source, /searchDone && !searchError/);
+});
+
+test('protocol editor uses the shared single-request normative search', async () => {
+  const source = await read('src/components/protocols/ProtocolResultsTable.tsx');
+  assert.match(source, /searchNormatives\(buildNormativeSearchParams\(value\), controller\.signal\)/);
+  assert.match(source, /categoryCode: searchContext\.category/);
+  assert.match(source, /canSearchNormative\(value\)/);
+  assert.doesNotMatch(source, /protocolService\.searchNormative|fallbackParams|candidateScore|matchesProtocolNormative/);
 });

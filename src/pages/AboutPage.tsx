@@ -235,7 +235,7 @@ const AboutPage = () => {
         <Reveal delay={0.16}>
           <div className="mt-9 grid gap-3 sm:flex sm:flex-wrap">
             <Button type="button" onClick={() => setOrderModalOpen(true)} className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Оставить заявку</Button>
-            <a href="#lead" className="w-full sm:w-auto"><Button variant="secondary" className="w-full border-white/35 bg-white/10 text-white hover:bg-white/18 sm:w-auto">Получить консультацию</Button></a>
+            <Button asChild variant="secondary" className="w-full border-white/35 bg-white/10 text-white hover:bg-white/18 sm:w-auto"><a href="#lead">Получить консультацию</a></Button>
             <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'about_hero' })} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white hover:bg-white/15 sm:w-auto">
               <FaWhatsapp size={18} aria-hidden="true" /> Написать в WhatsApp
             </a>
@@ -418,7 +418,7 @@ const AboutPage = () => {
             <h2 className="text-3xl font-bold sm:text-4xl">Нужна помощь с экологическими документами или отходами?</h2>
             <p className="mt-4 max-w-xl leading-7 text-slate-600">Оставьте заявку — специалист ecoprogress.kz свяжется с вами, уточнит задачу и подскажет оптимальное решение.</p>
             <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap">
-              <a href="#lead-form"><Button className="w-full sm:w-auto">Получить консультацию</Button></a>
+              <Button asChild className="w-full sm:w-auto"><a href="#lead-form">Получить консультацию</a></Button>
               <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'about_bottom' })} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-eco-200 bg-white px-5 py-3 text-sm font-semibold text-eco-900 shadow-sm hover:bg-eco-50 sm:w-auto">
                 <FaWhatsapp size={18} aria-hidden="true" /> Написать в WhatsApp
               </a>

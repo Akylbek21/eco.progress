@@ -44,7 +44,7 @@ const CaseStudies = () => (
             <p className="mt-2 text-sm leading-6 text-slate-600">{item.work}</p>
             <p className="mt-4 text-xs font-bold uppercase text-slate-500">Результат</p>
             <p className="mt-2 flex-1 text-sm leading-6 text-slate-600">{item.result}</p>
-            <a href="#lead" className="mt-5"><Button className="w-full">Хочу похожее решение</Button></a>
+            <Button asChild className="mt-5 w-full"><a href="#lead">Хочу похожее решение</a></Button>
           </div>
         ))}
       </div>

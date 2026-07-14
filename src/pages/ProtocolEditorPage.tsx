@@ -826,6 +826,11 @@ const ProtocolEditorPage = () => {
       toast.warning('Редактирование протокола закрыто для текущего статуса');
       return null;
     }
+    if (snapshot.environment?.source === 'MANUAL' && !snapshot.environment.manualChangeReason?.trim()) {
+      toast.warning('Укажите причину ручного изменения условий среды.');
+      setActiveStep('environment');
+      return null;
+    }
     if (snapshot.testing.samplingDate && snapshot.testing.testingStartDate && snapshot.testing.samplingDate > snapshot.testing.testingStartDate) {
       toast.warning('Дата отбора не может быть позже начала испытаний.');
       return null;
@@ -1211,7 +1216,7 @@ const ProtocolEditorPage = () => {
           <p className="text-sm font-semibold uppercase tracking-wide text-eco-700">{templateName(protocol.templateId, protocol.templateName)}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <ProtocolStatusBadge status={protocol.status} />
-            <NormativeStatusBadge status={protocol.complianceResult as any} />
+            <NormativeStatusBadge status={protocol.complianceResult} />
           </div>
           <h1 className="mt-1 text-2xl font-black text-slate-950 sm:text-3xl">{protocol.protocolNumber || protocol.number || 'Новый протокол'}</h1>
         </div>

@@ -85,7 +85,7 @@ const NewsDetailsPage = () => {
           <h2 className="text-2xl font-bold">Нужна консультация по экологии?</h2>
           <p className="mt-3 text-base leading-7 text-white/75">Отправьте город, объект и вопрос. Специалист подскажет документы, сроки и следующий шаг.</p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link to="/contacts"><Button className="bg-accent text-eco-900 hover:bg-accent/90">Получить консультацию</Button></Link>
+            <Button asChild className="bg-accent text-eco-900 hover:bg-accent/90"><Link to="/contacts">Получить консультацию</Link></Button>
             <a href={getWhatsAppUrl(`Здравствуйте! Хочу консультацию по статье: ${item.h1}`)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
               <MessageCircle size={18} /> WhatsApp
             </a>

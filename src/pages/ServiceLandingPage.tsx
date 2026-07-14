@@ -239,7 +239,7 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
             <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-6xl">{page.h1}</h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-white/76">{page.intro}</p>
             <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
-              <a href="#lead"><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Оставить заявку</Button></a>
+              <Button asChild className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto"><a href="#lead">Оставить заявку</a></Button>
               <WhatsAppButton label="Оставить заявку через WhatsApp" message={createBlankWhatsAppRequestMessage(page.title)} className="w-full sm:w-auto" />
             </div>
           </div>

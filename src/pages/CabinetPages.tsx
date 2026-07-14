@@ -151,7 +151,7 @@ export const CabinetDashboardPage = () => {
               <h2 className="text-2xl font-bold sm:text-3xl">{user?.name ?? 'Клиент ecoprogress.kz'}</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">Здесь видно главное: статус заявки, какие документы нужны, договор, счет и готовый результат.</p>
             </div>
-            <Link to="/cabinet/orders/new"><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Создать новую заявку</Button></Link>
+            <Button asChild className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto"><Link to="/cabinet/orders/new">Создать новую заявку</Link></Button>
           </div>
         </div>
       </Reveal>
@@ -214,7 +214,7 @@ export const CabinetOrdersPage = () => {
   return <PageList title="Заявки">{orders.map((order) => <OrderRow key={order.id} order={order} />)}</PageList>;
 };
 
-const PageList = ({ title, children }: { title: string; children: React.ReactNode }) => <Reveal><div className="rounded-[22px] bg-white p-6 shadow-sm"><div className="mb-5 flex items-center justify-between"><h2 className="text-2xl font-bold text-eco-900">{title}</h2><Link to="/cabinet/orders/new"><Button>Новая заявка</Button></Link></div><div className="space-y-3">{children}</div></div></Reveal>;
+const PageList = ({ title, children }: { title: string; children: React.ReactNode }) => <Reveal><div className="rounded-[22px] bg-white p-6 shadow-sm"><div className="mb-5 flex items-center justify-between"><h2 className="text-2xl font-bold text-eco-900">{title}</h2><Button asChild><Link to="/cabinet/orders/new">Новая заявка</Link></Button></div><div className="space-y-3">{children}</div></div></Reveal>;
 
 export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string) => void }) => {
   const navigate = useNavigate();

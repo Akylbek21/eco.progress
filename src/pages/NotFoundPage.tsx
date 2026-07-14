@@ -15,7 +15,7 @@ const NotFoundPage = () => {
         <h1 className="mt-4 text-4xl font-bold text-eco-900">Страница не найдена</h1>
         <p className="mt-4 leading-7 text-slate-600">Возможно, ссылка изменилась. Перейдите на главную или оставьте заявку, если нужна консультация.</p>
         <div className="mt-8 grid gap-3 sm:flex sm:justify-center">
-          <Link to="/"><Button>На главную</Button></Link>
+          <Button asChild><Link to="/">На главную</Link></Button>
           <Button type="button" variant="secondary" onClick={() => setOrderModalOpen(true)}>Оставить заявку</Button>
         </div>
       </div>

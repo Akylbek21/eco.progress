@@ -152,7 +152,7 @@ const ProtocolEnvironmentForm = ({
     if (readOnly) return;
     onChange({
       ...value,
-      windSpeed,
+      windSpeed: windSpeed.replace(',', '.'),
       status: 'MANUAL',
       source: 'MANUAL',
       dataSource: 'Введено сотрудником',
@@ -210,7 +210,19 @@ const ProtocolEnvironmentForm = ({
         <div className="mt-4 grid gap-3 rounded-xl bg-slate-50 p-3 text-sm sm:grid-cols-2">
           <div><p className="text-xs font-bold uppercase text-slate-400">Источник данных</p><p className="mt-1 font-semibold text-slate-700">{value.dataSource || (value.source === 'MANUAL' ? 'Введено сотрудником' : 'Погодный сервис')}</p></div>
           <div><p className="text-xs font-bold uppercase text-slate-400">Фактическое время погодной записи</p><p className="mt-1 font-semibold text-slate-700">{formatDateTime(value.observedAt)}</p></div>
-          {value.manualChangeReason && <div className="sm:col-span-2"><p className="text-xs font-bold uppercase text-slate-400">Причина ручного изменения</p><p className="mt-1 font-semibold text-amber-800">{value.manualChangeReason}</p></div>}
+          {readOnly && value.manualChangeReason && <div className="sm:col-span-2"><p className="text-xs font-bold uppercase text-slate-400">Причина ручного изменения</p><p className="mt-1 font-semibold text-amber-800">{value.manualChangeReason}</p></div>}
+          {!readOnly && value.source === 'MANUAL' && (
+            <label className="space-y-1.5 sm:col-span-2">
+              <span className="text-xs font-bold uppercase text-slate-500">Причина ручного изменения *</span>
+              <input
+                value={value.manualChangeReason || ''}
+                onChange={(event) => onChange({ ...value, manualChangeReason: event.target.value })}
+                placeholder="Укажите, почему данные изменены вручную"
+                className={inputClass}
+              />
+              {!value.manualChangeReason?.trim() && <span className="block text-xs font-semibold text-amber-700">Причина обязательна для сохранения.</span>}
+            </label>
+          )}
         </div>
       </section>
 

@@ -35,6 +35,17 @@ test('result aliases never put a display dash into the data model', async () => 
   });
 });
 
+test('result aliases resolve device ids from nested backend objects and values aliases', async () => {
+  const { canonicalProtocolResultAliases, resolveMeasurementDeviceId } = await loadTypeScriptModule('src/utils/protocolResultAliases.ts');
+  assert.equal(resolveMeasurementDeviceId({ measurementDevice: { id: 12, name: 'Gas analyzer' } }), '12');
+  assert.equal(resolveMeasurementDeviceId({ device: { id: 'device-7' } }), 'device-7');
+  assert.equal(resolveMeasurementDeviceId({ values: { measurementDeviceId: 'device-9' } }), 'device-9');
+  assert.equal(
+    canonicalProtocolResultAliases({ measurementDevice: { id: 23 } }, {}).measurementDeviceId,
+    '23',
+  );
+});
+
 test('protocol permission matrix restricts destructive and signing actions', async () => {
   const { getProtocolPermissions, normalizeProtocolStatus } = await loadTypeScriptModule('src/utils/protocolPermissions.ts');
   assert.equal(normalizeProtocolStatus(' signed '), 'SIGNED');

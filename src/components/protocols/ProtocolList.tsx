@@ -49,7 +49,7 @@ const ProtocolList = ({ protocols, loading = false, onOpen, onPreview, onCopy, o
               <td className="px-4 py-4">{templateName(protocol.templateId, protocol.templateName)}</td>
               <td className="px-4 py-4">{protocol.templateId === 'physical_factors' ? subtypeName(protocol.subtype) : '—'}</td>
               <td className="px-4 py-4"><ProtocolStatusBadge status={protocol.status} /></td>
-              <td className="px-4 py-4"><NormativeStatusBadge status={protocol.complianceResult as any} /></td>
+              <td className="px-4 py-4"><NormativeStatusBadge status={protocol.complianceResult} /></td>
               <td className="px-4 py-4">{protocol.executor || protocol.laboratory?.executor || '—'}</td>
               <td className="px-4 py-4">{protocol.createdAt || '—'}</td>
               <td className="px-4 py-4">

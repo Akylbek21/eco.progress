@@ -99,7 +99,7 @@ const ServicesPage = () => {
           <Reveal delay={0.1}><p className="mt-4 max-w-2xl text-base leading-7 text-white/78 sm:mt-5 sm:text-lg">От проектной документации и лабораторных исследований до утилизации, транспортировки и размещения отходов на полигоне.</p></Reveal>
           <Reveal delay={0.16}>
             <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
-              <button type="button" onClick={() => setOrderModal('')}><Button className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Заказать услугу</Button></button>
+              <Button type="button" onClick={() => setOrderModal('')} className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Заказать услугу</Button>
               <WhatsAppButton label="Оставить заявку через WhatsApp" className="w-full sm:w-auto" />
             </div>
           </Reveal>
@@ -165,10 +165,8 @@ const ServicesPage = () => {
                     )}
                   </div>
                   <div className="mt-5 grid gap-3 sm:mt-6 sm:flex sm:flex-wrap">
-                    <Link to={`/services/${service.id}`} className="w-full sm:w-auto"><Button variant="secondary" className="w-full sm:w-auto">Подробнее</Button></Link>
-                    <button type="button" onClick={() => setOrderModal(service.id)} className="w-full sm:w-auto">
-                      <Button className="w-full sm:w-auto">{(selectedIncludes[service.id] ?? []).length > 0 ? 'Заказать выбранные' : 'Заказать услугу'}</Button>
-                    </button>
+                    <Button asChild variant="secondary" className="w-full sm:w-auto"><Link to={`/services/${service.id}`}>Подробнее</Link></Button>
+                    <Button type="button" onClick={() => setOrderModal(service.id)} className="w-full sm:w-auto">{(selectedIncludes[service.id] ?? []).length > 0 ? 'Заказать выбранные' : 'Заказать услугу'}</Button>
                   </div>
                 </div>
               </Reveal>
@@ -260,8 +258,8 @@ const ServicesPage = () => {
                 </label>
               </div>
               <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
-                <Link to={`/cabinet/orders/new?service=${calculator.serviceId}`} className="w-full sm:w-auto"><Button className="w-full sm:w-auto">Получить точный расчет</Button></Link>
-                <Link to={`/services/${selectedService.id}`} className="w-full sm:w-auto"><Button variant="secondary" className="w-full sm:w-auto">Подробнее об услуге</Button></Link>
+                <Button asChild className="w-full sm:w-auto"><Link to={`/cabinet/orders/new?service=${calculator.serviceId}`}>Получить точный расчет</Link></Button>
+                <Button asChild variant="secondary" className="w-full sm:w-auto"><Link to={`/services/${selectedService.id}`}>Подробнее об услуге</Link></Button>
               </div>
             </div>
           </Reveal>

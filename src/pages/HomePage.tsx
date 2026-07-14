@@ -150,8 +150,8 @@ const HomePage = () => (
           </Reveal>
           <Reveal delay={0.16}>
             <div className="mt-9 grid gap-3 sm:flex sm:flex-wrap">
-              <a href="#lead" onClick={() => trackEvent('consultation_click', { placement: 'hero' })} className="w-full sm:w-auto"><Button className="w-full bg-accent px-7 py-4 text-eco-900 hover:bg-accent/90 sm:w-auto">Получить консультацию</Button></a>
-              <a href="#lead" className="w-full sm:w-auto"><Button variant="secondary" className="w-full border-white/35 bg-white/10 px-7 py-4 text-white hover:bg-white/18 sm:w-auto">Оставить заявку</Button></a>
+              <Button asChild className="w-full bg-accent px-7 py-4 text-eco-900 hover:bg-accent/90 sm:w-auto"><a href="#lead" onClick={() => trackEvent('consultation_click', { placement: 'hero' })}>Получить консультацию</a></Button>
+              <Button asChild variant="secondary" className="w-full border-white/35 bg-white/10 px-7 py-4 text-white hover:bg-white/18 sm:w-auto"><a href="#lead">Оставить заявку</a></Button>
               <WhatsAppButton label="Оставить заявку через WhatsApp" className="w-full px-7 py-4 sm:w-auto" />
             </div>
           </Reveal>
@@ -178,7 +178,7 @@ const HomePage = () => (
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
               ecoprogress.kz — группа компаний, которая помогает бизнесу решать экологические задачи: проектирование, лабораторные исследования, вывоз и утилизация отходов, полигон ТБО и сопровождение проверок.
             </p>
-            <Link to="/about" className="mt-7 inline-block"><Button>Подробнее о компании</Button></Link>
+            <Button asChild className="mt-7"><Link to="/about">Подробнее о компании</Link></Button>
           </div>
         </Reveal>
         <Reveal direction="left" className="min-w-0">
@@ -208,7 +208,7 @@ const HomePage = () => (
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Услуги</p>
               <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Что мы делаем для бизнеса</h2>
             </div>
-            <Link to="/services"><Button variant="secondary">Полный список услуг</Button></Link>
+            <Button asChild variant="secondary"><Link to="/services">Полный список услуг</Link></Button>
           </div>
         </Reveal>
         <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">

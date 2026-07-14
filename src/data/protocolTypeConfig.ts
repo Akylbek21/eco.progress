@@ -170,7 +170,7 @@ export const resolveNormativeSearchContext = (
       templateId: config.normativeTemplateId || config.templateId,
       normativeTemplateId: config.normativeTemplateId || config.templateId,
       category: config.category,
-      factorType: protocolFactorType[normalizedType as ProtocolTypeKey] || subtype || undefined,
+      factorType: subtype || protocolFactorType[normalizedType as ProtocolTypeKey] || undefined,
     };
   }
 

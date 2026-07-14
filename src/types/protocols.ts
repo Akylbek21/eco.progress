@@ -111,6 +111,18 @@ export type ProtocolResult = {
   deviceId?: string;
   deviceName?: string;
   measurementDeviceId?: string;
+  measurementDevice?: {
+    id: string;
+    name?: string;
+    model?: string;
+    serialNumber?: string;
+  };
+  device?: {
+    id: string;
+    name?: string;
+    model?: string;
+    serialNumber?: string;
+  };
   comparisonType?: NormativeComparisonType;
   normativeMin?: string;
   normativeMax?: string;

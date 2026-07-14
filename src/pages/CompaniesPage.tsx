@@ -95,9 +95,7 @@ const CompaniesList = () => {
           <p className="text-sm font-semibold uppercase tracking-wide text-eco-700">Справочник лаборатории</p>
           <h1 className="mt-1 text-2xl font-black text-slate-950 sm:text-3xl">Компании</h1>
         </div>
-        <Link to="/staff/companies/new">
-          <Button type="button"><Plus className="h-4 w-4" /> Добавить компанию</Button>
-        </Link>
+        <Button asChild><Link to="/staff/companies/new"><Plus className="h-4 w-4" /> Добавить компанию</Link></Button>
       </div>
 
       <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1fr_220px_auto]">

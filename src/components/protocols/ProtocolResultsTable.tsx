@@ -7,10 +7,18 @@ import RawMeasurementsModal from './RawMeasurementsModal';
 import protocolService from '../../services/protocolService';
 import { getApiStatus } from '../../services/apiHelpers';
 import { getMeasurementDevices } from '../../services/measurementDeviceService';
-import { filterPhysicalFactorIndicators, getPhysicalFactorIndicators } from '../../data/physicalFactors';
+import { getPhysicalFactorIndicators } from '../../data/physicalFactors';
 import { subtypeName } from '../../data/protocolTemplates';
 import { resolveNormativeSearchContext } from '../../data/protocolTypeConfig';
+import {
+  canSearchNormative,
+  isNormativeSearchCanceled,
+  normativeSearchItemToRecord,
+  searchNormatives,
+} from '../../services/normativeSearchService';
 import { useAuth } from '../../contexts/AuthContext';
+import { resolveMeasurementDeviceId } from '../../utils/protocolResultAliases';
+import type { NormativeSearchParams } from '../../types/normativeSearch';
 import type {
   CalculationDetails,
   CalculationResultResponse,
@@ -50,14 +58,8 @@ type NormativeSuggestion = Pollutant & {
   selectedNormative?: NormativeRecord;
 };
 
-type NormativeSearchOutcome = {
-  candidates: NormativeRecord[];
-  fromFallback: boolean;
-};
-
 type SearchState = 'idle' | 'minLength' | 'searching' | 'empty' | 'ready' | 'error';
 
-const MIN_SEARCH_LENGTH = 3;
 const SEARCH_DEBOUNCE_MS = 500;
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = 'rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700';
@@ -67,8 +69,6 @@ const searchUnavailableMessage = 'Поиск временно недоступе
 const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
 const notFoundSearchMessage = 'Норматив или показатель не найден. Проверьте код или добавьте норматив в справочник.';
 const physicalNormativeNotFoundMessage = 'Норматив не найден. Проверьте условия или добавьте норматив в справочник.';
-const fallbackNormativeWarning = 'Норматив найден в другом разделе. Проверьте тип протокола.';
-const canSearch = (value: string) => value.trim().length >= MIN_SEARCH_LENGTH;
 const defaultPhysicalConditions = {
   season: 'COLD',
   workCategory: 'IA',
@@ -110,7 +110,6 @@ const sourceDocumentCodeForTemplate = (templateId: string, isPhysicalFactors: bo
   if (['ambient_air', 'workplace_air', 'food_products', 'surfaces', 'udmh_special'].includes(normalized)) return 'DSM_70';
   return '';
 };
-const isNumericNormativeSearch = (value: string) => /^\d{3,10}$/.test(value.trim());
 const seasonOptions = [{ value: 'COLD', label: 'холодный' }, { value: 'WARM', label: 'тёплый' }];
 const workCategoryOptions = ['IA', 'IB', 'IIA', 'IIB', 'III'].map((value) => ({ value, label: value }));
 const workplaceTypeOptions = [{ value: 'PERMANENT', label: 'постоянное' }, { value: 'TEMPORARY', label: 'временное' }];
@@ -280,44 +279,6 @@ const statusOf = (row: ProtocolResultRow, templateId: ProtocolTemplateId) => {
 };
 const statusLabel = (status?: string) =>
   normativeStatusLabels[status as keyof typeof normativeStatusLabels] || status || '—';
-const normalizeKey = (value: unknown) => String(value || '').trim().toLowerCase().replace(/-/g, '_');
-const documentCode = (item: NormativeRecord) => normalizeKey(item.sourceDocumentCode || item.sourceDocumentName || item.normativeDocument);
-const normativeEnvironmentText = (item: NormativeRecord) => normalizeKey([
-  item.templateId,
-  item.sourceDocumentCode,
-  item.sourceDocumentName,
-  item.normativeDocument,
-  item.environment,
-  item.environmentType,
-  item.researchObject,
-].filter(Boolean).join(' '));
-const isDsm70Normative = (item: NormativeRecord) =>
-  documentCode(item).includes('dsm_70') || documentCode(item).includes('дсм_70');
-const isWorkZoneNormative = (item: NormativeRecord) => {
-  const text = normativeEnvironmentText(item);
-  return item.templateId === 'workplace_air'
-    || text.includes('workplace_air')
-    || text.includes('work_zone_air')
-    || text.includes('workplace')
-    || text.includes('work_zone')
-    || text.includes('рабоч');
-};
-const isAtmosphericNormative = (item: NormativeRecord) => {
-  const text = normativeEnvironmentText(item);
-  return item.templateId === 'ambient_air'
-    || item.templateId === 'industrial_emissions'
-    || text.includes('ambient_air')
-    || text.includes('atmospheric_air')
-    || text.includes('atmospher')
-    || text.includes('атмосфер')
-    || (isDsm70Normative(item) && !isWorkZoneNormative(item));
-};
-const isPhysicalNormative = (item: NormativeRecord) =>
-  item.templateId === 'physical_factors'
-  || physicalFactorTemplateIds.includes(item.templateId)
-  || Boolean(item.factorType || item.factorCode)
-  || documentCode(item).includes('dsm_15');
-
 const calculationStatusLabel = (status?: string) => ({
   WAITING_INPUTS: 'Ожидает исходные данные',
   CALCULATED: 'Рассчитано',
@@ -330,13 +291,14 @@ const calculationStatusLabel = (status?: string) => ({
 const uncertaintyValue = (row: ProtocolResultRow) => row.uncertaintyValue || valueOf(row, ['uncertaintyValue', 'uncertainty']);
 
 const resolveDeviceName = (row: ProtocolResultRow, devices: ProtocolMeasurementDevice[]) => {
-  const ids = [
-    row.deviceId,
-    row.measurementDeviceId,
-    valueOf(row, ['device', 'deviceId', 'measurementDeviceId']),
-  ].filter(Boolean).map(String);
+  const resolvedId = resolveMeasurementDeviceId(row);
+  const ids = resolvedId ? [resolvedId] : [];
   const device = devices.find((item) => ids.includes(String(item.deviceId)) || ids.includes(String(item.id)));
-  const name = device?.deviceSnapshot.name || row.deviceName || valueOf(row, ['deviceName']);
+  const name = device?.deviceSnapshot.name
+    || row.measurementDevice?.name
+    || row.device?.name
+    || row.deviceName
+    || valueOf(row, ['deviceName']);
   return name && name !== '—' ? name : '';
 };
 
@@ -357,7 +319,6 @@ const ProtocolResultsTable = ({
   const [suggestions, setSuggestions] = useState<NormativeSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchState, setSearchState] = useState<SearchState>('idle');
-  const [fallbackSearchWarning, setFallbackSearchWarning] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkDeviceId, setBulkDeviceId] = useState('');
   const [bulkPlace, setBulkPlace] = useState('');
@@ -377,7 +338,6 @@ const ProtocolResultsTable = ({
   const [normativeQuery, setNormativeQuery] = useState('');
   const [normativeLoading, setNormativeLoading] = useState(false);
   const [normativeSearchDone, setNormativeSearchDone] = useState(false);
-  const [normativeFallbackWarning, setNormativeFallbackWarning] = useState('');
   const [normativeResults, setNormativeResults] = useState<NormativeRecord[]>([]);
   const [selectedNormative, setSelectedNormative] = useState<NormativeRecord | null>(null);
   const [resultValue, setResultValue] = useState('');
@@ -386,6 +346,7 @@ const ProtocolResultsTable = ({
   const [availableDevices, setAvailableDevices] = useState<MeasurementDevice[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const searchRequestRef = useRef(0);
+  const searchAbortRef = useRef<AbortController | null>(null);
   const canUseAdvanced = user?.role === 'ADMIN' || user?.role === 'HEAD' || user?.role === 'DIRECTOR';
   const searchContext = resolveNormativeSearchContext({ templateId, subtype });
   const contextTemplateId = (searchContext.templateId || searchContext.normativeTemplateId || normalizeProtocolTemplate(templateId)) as ProtocolTemplateId;
@@ -398,107 +359,39 @@ const ProtocolResultsTable = ({
   const isWaterProtocol = normalizedTemplateId === 'water';
   const effectiveWaterType = waterType || valueOf(rows[0] || ({ values: {} } as ProtocolResultRow), ['waterType']) || 'DRINKING_WATER';
 
-  const matchesProtocolNormative = (item: NormativeRecord) => {
-    if (item.active === false || item.archived) return false;
-    if (isSoilProtocol) {
-      return item.templateId === 'soil'
-        && documentCode(item).includes('dsm_32')
-        && item.comparisonType !== 'INFO'
-        && String(item.normativeType || '').toUpperCase() === 'PDK';
-    }
-    if (isPhysicalFactors) return isPhysicalNormative(item);
-    if (isWaterProtocol) {
-      const category = String(item.categoryCode || item.category || '').toUpperCase();
-      const matchesWaterType = !item.waterType || item.waterType === effectiveWaterType;
-      const matchesCategory = effectiveWaterType === 'SURFACE_WATER'
-        ? ['SURFACE_WATER_SAFETY', 'SURFACE_WATER_PDK', ''].includes(category)
-        : ['DRINKING_WATER_SAFETY', 'DRINKING_WATER_CHEMICALS', ''].includes(category);
-      return documentCode(item).includes('dsm_138')
-        && (item.templateId === 'water' || !item.templateId)
-        && matchesWaterType
-        && matchesCategory;
-    }
-    if (templateId === 'workplace_air') return isWorkZoneNormative(item);
-    if (templateId === 'ambient_air' || templateId === 'industrial_emissions') return isAtmosphericNormative(item);
-    if (searchContext.category) {
-      return String(item.categoryCode || item.category || '').toUpperCase() === String(searchContext.category).toUpperCase()
-        || item.templateId === normalizedTemplateId
-        || !item.templateId;
-    }
-    return item.templateId === normalizedTemplateId || item.templateId === templateId || !item.templateId;
-  };
-
-  const candidateScore = (item: NormativeRecord) => {
-    let score = 0;
-    if (item.templateId === templateId) score += 80;
-    if ((templateId === 'industrial_emissions' || templateId === 'ambient_air') && isAtmosphericNormative(item)) score += 60;
-    if (templateId === 'workplace_air' && isWorkZoneNormative(item)) score += 60;
-    if (isPhysicalFactors && isPhysicalNormative(item)) score += 60;
-    if (isWaterProtocol && documentCode(item).includes('dsm_138')) score += 70;
-    if (sourceDocumentCode && documentCode(item).includes(sourceDocumentCode.toLowerCase())) score += 30;
-    if (item.value || item.min || item.max || item.maxOneTimeValue || item.dailyAverageValue || item.singleValue || item.obuvValue) score += 10;
-    return score;
-  };
-
-  const filterNormativeCandidates = (items: NormativeRecord[]) =>
-    items.filter(matchesProtocolNormative).sort((left, right) => candidateScore(right) - candidateScore(left));
-
-  const buildNormativeSearchParams = (value: string, pollutant?: Pollutant): Record<string, string> => {
-    const searchText = value.trim();
-    const code = pollutant?.code || searchText;
-    const isCodeSearch = /^\d{3,10}$/.test(searchText);
-    const params: Record<string, string> = {
+  const buildNormativeSearchParams = (value: string): NormativeSearchParams => ({
+      query: value.trim(),
       status: 'ACTIVE',
       templateId: normalizedTemplateId,
-      normativeTemplateId: String(searchContext.normativeTemplateId || normalizedTemplateId),
       sourceDocumentCode,
-      category: searchContext.category || '',
-      factorType: String(searchContext.factorType || (isPhysicalFactors ? physicalSubtype : '')),
-      environmentType: isWaterProtocol ? 'WATER' : '',
-      waterType: isWaterProtocol ? effectiveWaterType : '',
-      page: '0',
-      size: '20',
-    };
-    if (isCodeSearch) {
-      params.code = code;
-      params.pollutantCode = code;
-    } else {
-      params.query = searchText;
-      params.q = searchText;
-      params.search = searchText;
-      params.indicator = searchText;
-    }
-    return params;
-  };
+      categoryCode: searchContext.category || undefined,
+      factorType: searchContext.factorType || (isPhysicalFactors ? physicalSubtype : undefined),
+      environmentType: isWaterProtocol ? 'WATER' : undefined,
+      waterType: isWaterProtocol ? effectiveWaterType : undefined,
+      waterUseCategory: isWaterProtocol && effectiveWaterType === 'SURFACE_WATER'
+        ? waterUseCategory || undefined
+        : undefined,
+      season: isPhysicalFactors ? physicalConditions.season : undefined,
+      workCategory: isPhysicalFactors ? physicalConditions.workCategory : undefined,
+      workplaceType: isPhysicalFactors ? physicalConditions.workplaceType : undefined,
+      roomType: isPhysicalFactors ? physicalConditions.roomType : undefined,
+      normLevel: isPhysicalFactors ? physicalConditions.normLevel : undefined,
+      visualWorkCategory: isPhysicalFactors ? physicalConditions.visualWorkCategory || undefined : undefined,
+      lightingType: isPhysicalFactors ? physicalConditions.lightingType || undefined : undefined,
+      noiseType: isPhysicalFactors ? physicalConditions.noiseType || undefined : undefined,
+      page: 0,
+      size: 30,
+    });
 
   const searchNormativeCandidates = async (
     value: string,
-    pollutant?: Pollutant,
-  ): Promise<NormativeSearchOutcome> => {
-    const strictParams = buildNormativeSearchParams(value, pollutant);
-    const recordsFromResult = (found: Awaited<ReturnType<typeof protocolService.searchNormative>>) =>
-      found.normatives || found.items || (found.normative ? [found.normative] : []);
-    const activeRecords = (items: NormativeRecord[]) => items.filter((item) => item.active !== false && !item.archived);
-    const strict = filterNormativeCandidates(recordsFromResult(await protocolService.searchNormative(strictParams)));
-    if (strict.length) return { candidates: strict, fromFallback: false };
-
-    const searchText = value.trim();
-    const fallbackParams: Record<string, string> = {
-      status: 'ACTIVE',
-      query: searchText,
-      q: searchText,
-      search: searchText,
-    };
-    const fallbackCode = pollutant?.code || searchText;
-    if (isNumericNormativeSearch(searchText)) {
-      fallbackParams.code = fallbackCode;
-      fallbackParams.pollutantCode = fallbackCode;
-    }
-    const fallbackRecords = activeRecords(recordsFromResult(await protocolService.searchNormative(fallbackParams)))
-      .sort((left, right) => candidateScore(right) - candidateScore(left));
-    const relaxed = filterNormativeCandidates(fallbackRecords);
-    if (relaxed.length) return { candidates: relaxed, fromFallback: false };
-    return { candidates: fallbackRecords, fromFallback: fallbackRecords.length > 0 };
+    _pollutant?: Pollutant,
+  ): Promise<NormativeRecord[]> => {
+    searchAbortRef.current?.abort();
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+    const result = await searchNormatives(buildNormativeSearchParams(value), controller.signal);
+    return result.items.map(normativeSearchItemToRecord);
   };
 
   const physicalConditionValues = () => isPhysicalFactors ? {
@@ -533,7 +426,6 @@ const ProtocolResultsTable = ({
     setNormativeQuery(initialQuery);
     setNormativeResults([]);
     setNormativeSearchDone(false);
-    setNormativeFallbackWarning('');
     setSelectedNormative(null);
     setResultValue('');
     setResultDeviceId('');
@@ -542,7 +434,7 @@ const ProtocolResultsTable = ({
   const searchNormativesForDialog = async () => {
     const value = normativeQuery.trim();
     setSelectedNormative(null);
-    if (!canSearch(value)) {
+    if (!canSearchNormative(value)) {
       setNormativeResults([]);
       setNormativeSearchDone(false);
       onNotify('Введите минимум 3 символа для поиска', 'warning');
@@ -550,14 +442,13 @@ const ProtocolResultsTable = ({
     }
     setNormativeLoading(true);
     setNormativeSearchDone(false);
-    setNormativeFallbackWarning('');
     try {
-      const { candidates, fromFallback } = await searchNormativeCandidates(value);
+      const candidates = await searchNormativeCandidates(value);
       setNormativeResults(candidates);
-      setNormativeFallbackWarning(fromFallback ? fallbackNormativeWarning : '');
       setNormativeSearchDone(true);
       if (!candidates.length) onNotify('Норматив не найден. Проверьте код или добавьте норматив в справочник.', 'warning');
     } catch (error) {
+      if (isNormativeSearchCanceled(error)) return;
       onNotify(error instanceof Error ? error.message : 'Не удалось загрузить нормативы', 'error');
       setNormativeResults([]);
       setNormativeSearchDone(true);
@@ -621,56 +512,41 @@ const ProtocolResultsTable = ({
   useEffect(() => {
     const value = query.trim();
     const requestId = ++searchRequestRef.current;
+    searchAbortRef.current?.abort();
     if (!value) {
       setSuggestions([]);
       setSearching(false);
       setSearchState('idle');
-      setFallbackSearchWarning('');
       return;
     }
-    if (!canSearch(value) || value.includes(',') || value.includes(';')) {
+    if (!canSearchNormative(value) || value.includes(',') || value.includes(';')) {
       setSuggestions([]);
       setSearching(false);
       setSearchState('minLength');
-      setFallbackSearchWarning('');
       return;
     }
     setSuggestions([]);
     setSearching(false);
     setSearchState('idle');
-    setFallbackSearchWarning('');
     const timer = window.setTimeout(async () => {
       setSearching(true);
       setSearchState('searching');
       try {
         if (requestId !== searchRequestRef.current) return;
-        const { candidates, fromFallback } = await searchNormativeCandidates(value);
+        const candidates = await searchNormativeCandidates(value);
         if (requestId !== searchRequestRef.current) return;
         if (candidates.length) {
           setSuggestions(candidates.map(normativeToSuggestion).slice(0, 12));
-          setFallbackSearchWarning(fromFallback ? fallbackNormativeWarning : '');
           setSearchState('ready');
           return;
         }
-        const apiItems = (isPhysicalFactors || isSoilProtocol) ? [] : (await protocolService.searchPollutants(value, {
-          templateId,
-          subtype: subtype || '',
-          code: value,
-          pollutantCode: value,
-          objectId: objectId ? String(objectId) : '',
-          sourceDocumentCode,
-        })).slice(0, 8);
-        if (requestId !== searchRequestRef.current) return;
-        const localItems = isPhysicalFactors ? filterPhysicalFactorIndicators(value, subtype).slice(0, 8) : [];
-        const items = apiItems.length ? apiItems : localItems;
-        setSuggestions(items);
-        setFallbackSearchWarning('');
-        setSearchState(items.length ? 'ready' : 'empty');
+        setSuggestions([]);
+        setSearchState('empty');
       } catch (error) {
         if (requestId !== searchRequestRef.current) return;
+        if (isNormativeSearchCanceled(error)) return;
         if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
         setSuggestions([]);
-        setFallbackSearchWarning('');
         setSearchState('error');
       } finally {
         if (requestId === searchRequestRef.current) setSearching(false);
@@ -684,38 +560,28 @@ const ProtocolResultsTable = ({
   };
 
   const searchNow = async (value: string) => {
-    const { candidates } = await searchNormativeCandidates(value);
-    if (candidates.length) return candidates.map(normativeToSuggestion).slice(0, 12);
-    const apiItems = (isPhysicalFactors || isSoilProtocol) ? [] : (await protocolService.searchPollutants(value, {
-      templateId,
-      subtype: subtype || '',
-      code: value,
-      pollutantCode: value,
-      objectId: objectId ? String(objectId) : '',
-      sourceDocumentCode,
-    })).slice(0, 8);
-    if (isSoilProtocol) return [];
-    return apiItems.length || !isPhysicalFactors ? apiItems : filterPhysicalFactorIndicators(value, subtype).slice(0, 8);
+    const candidates = await searchNormativeCandidates(value);
+    return candidates.map(normativeToSuggestion).slice(0, 12);
   };
 
   const addPollutant = async (pollutant: Pollutant, _append = true): Promise<ProtocolResultRow | null> => {
     setSaving(true);
     try {
       const selectedNormative = (pollutant as NormativeSuggestion).selectedNormative;
-      const { candidates, fromFallback } = selectedNormative
-        ? { candidates: [selectedNormative], fromFallback: false }
+      const candidates = selectedNormative
+        ? [selectedNormative]
         : await searchNormativeCandidates(
           `${pollutant.code} ${pollutant.name}`.trim(),
           pollutant,
         ).catch((error) => {
+          if (isNormativeSearchCanceled(error)) return [];
           if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
-          return { candidates: [], fromFallback: false };
+          return [];
         });
       const normative = selectedNormative || (candidates.length === 1 ? candidates[0] : undefined);
       if (!normative) {
         onNotify(candidates.length > 1 ? 'Выберите конкретный норматив перед вводом результата' : (isPhysicalFactors ? physicalNormativeNotFoundMessage : normativeNotFoundMessage), 'warning');
         setNormativeResults(candidates);
-        setNormativeFallbackWarning(fromFallback ? fallbackNormativeWarning : '');
         setAddOpen(true);
         return null;
       }
@@ -726,7 +592,6 @@ const ProtocolResultsTable = ({
       }
       setSelectedNormative({ ...normative, unit: resolvedUnit });
       setNormativeResults(candidates.length ? candidates : [normative]);
-      setNormativeFallbackWarning(fromFallback ? fallbackNormativeWarning : '');
       setResultValue('');
       setResultDeviceId('');
       setAddOpen(true);
@@ -786,7 +651,7 @@ const ProtocolResultsTable = ({
       onNotify('Введите код или название показателя', 'warning');
       return;
     }
-    if (tokens.some((token) => !canSearch(token))) {
+    if (tokens.some((token) => !canSearchNormative(token))) {
       onNotify('Введите минимум 3 символа для поиска', 'warning');
       return;
     }
@@ -795,9 +660,10 @@ const ProtocolResultsTable = ({
     try {
       const created: ProtocolResultRow[] = [];
       for (const token of tokens) {
-        const { candidates } = await searchNormativeCandidates(token, { code: token, name: token }).catch((error) => {
+        const candidates = await searchNormativeCandidates(token, { code: token, name: token }).catch((error) => {
+          if (isNormativeSearchCanceled(error)) return [];
           if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
-          return { candidates: [], fromFallback: false };
+          return [];
         });
         const normalized = token.toLowerCase();
         const normative = candidates.find((item) => String(item.pollutantCode || item.code || item.factorCode || '').toLowerCase() === normalized)
@@ -827,7 +693,7 @@ const ProtocolResultsTable = ({
 
   const addManualIndicator = async () => {
     const value = query.trim();
-    if (!canSearch(value)) {
+    if (!canSearchNormative(value)) {
       onNotify('Введите минимум 3 символа для поиска', 'warning');
       return;
     }
@@ -971,7 +837,7 @@ const ProtocolResultsTable = ({
   const loadNormativeChoices = async (row: ProtocolResultRow) => {
     setSaving(true);
     try {
-      const { candidates, fromFallback } = await searchNormativeCandidates(
+      const candidates = await searchNormativeCandidates(
         `${pollutantCode(row)} ${indicator(row)}`.trim(),
         { code: pollutantCode(row), name: indicator(row), unit: unit(row) },
       );
@@ -979,7 +845,6 @@ const ProtocolResultsTable = ({
         onNotify(isPhysicalFactors ? physicalNormativeNotFoundMessage : normativeNotFoundMessage, 'warning');
         return;
       }
-      if (fromFallback) onNotify(fallbackNormativeWarning, 'warning');
       setNormativeChoices((current) => ({ ...current, [row.id]: candidates }));
     } catch (error) {
       onNotify(error instanceof Error ? error.message : normativeNotFoundMessage, 'error');
@@ -1236,11 +1101,6 @@ const ProtocolResultsTable = ({
           {!searching && suggestions.length > 0 && (
             <p className="mt-2 text-xs font-bold uppercase text-slate-500">Выберите норматив из списка</p>
           )}
-          {!searching && fallbackSearchWarning && (
-            <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
-              {fallbackSearchWarning}
-            </div>
-          )}
           {suggestions.length > 0 && <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
             {suggestions.map((item) => <button key={`${item.code}-${item.id || item.name}`} type="button" onClick={() => addPollutant(item)} className="flex w-full flex-wrap gap-x-3 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-eco-50">
               <span className="font-black text-eco-800">{item.code}</span>
@@ -1469,12 +1329,6 @@ const ProtocolResultsTable = ({
             <Button type="button" variant="secondary" disabled={normativeLoading} onClick={searchNormativesForDialog}>Найти</Button>
           </div>
 
-          {normativeFallbackWarning && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
-              {normativeFallbackWarning}
-            </div>
-          )}
-
           <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
             <table className="min-w-[900px] w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -1506,7 +1360,7 @@ const ProtocolResultsTable = ({
                   );
                 }) : normativeSearchDone ? (
                   <tr><td colSpan={7} className="px-3 py-8 text-center text-sm font-semibold text-amber-800">Норматив не найден. Проверьте код или добавьте норматив в справочник.</td></tr>
-                ) : normativeQuery.trim() && !canSearch(normativeQuery) ? (
+                ) : normativeQuery.trim() && !canSearchNormative(normativeQuery) ? (
                   <tr><td colSpan={7} className="px-3 py-8 text-center text-sm font-semibold text-slate-500">Введите минимум 3 символа для поиска.</td></tr>
                 ) : (
                   <tr><td colSpan={7} className="px-3 py-8 text-center text-sm font-semibold text-slate-500">Введите код, название, CAS или формулу и нажмите “Найти”.</td></tr>

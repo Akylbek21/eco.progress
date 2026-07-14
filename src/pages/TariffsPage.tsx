@@ -152,9 +152,7 @@ const TariffsPage = () => {
                       </li>
                     ))}
                   </ul>
-                  <Link to="/cabinet/orders/new" className="mt-7">
-                    <Button className="w-full">{tariff.cta}</Button>
-                  </Link>
+                  <Button asChild className="mt-7 w-full"><Link to="/cabinet/orders/new">{tariff.cta}</Link></Button>
                 </article>
               </Reveal>
             ))}

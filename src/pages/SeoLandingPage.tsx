@@ -124,12 +124,12 @@ const SeoLandingPage = ({ slug }: { slug: string }) => {
               <h1 className="mt-5 max-w-5xl text-4xl font-bold leading-tight sm:text-5xl">{page.h1}</h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-white/84">{page.intro}</p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <a href="#lead-form"><Button className="bg-accent px-6 py-4 text-eco-900 hover:bg-accent/90">Получить консультацию</Button></a>
-                <a href={whatsAppUrl} target="_blank" rel="noreferrer">
-                  <Button variant="secondary" className="gap-2 border-white/30 bg-white/10 px-6 py-4 text-white hover:bg-white/18">
+                <Button asChild className="bg-accent px-6 py-4 text-eco-900 hover:bg-accent/90"><a href="#lead-form">Получить консультацию</a></Button>
+                <Button asChild variant="secondary" className="gap-2 border-white/30 bg-white/10 px-6 py-4 text-white hover:bg-white/18">
+                  <a href={whatsAppUrl} target="_blank" rel="noreferrer">
                     <MessageCircle size={18} /> Написать в WhatsApp
-                  </Button>
-                </a>
+                  </a>
+                </Button>
               </div>
             </div>
             <div className="rounded-[8px] border border-white/15 bg-white/10 p-6 backdrop-blur">

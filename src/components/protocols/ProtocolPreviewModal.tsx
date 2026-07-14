@@ -37,6 +37,14 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
   const landscape = protocol?.templateId === 'industrial_emissions';
   const columns = protocol ? getProtocolResultColumns(protocol.templateId, protocol.subtype) : [];
   const visible = (field: ProtocolPrintField) => protocol ? isProtocolFieldVisible(protocol.printVisibility, field) : true;
+  const environmentFields = protocol ? ([
+    ['temperature', 'Температура', protocol.environment?.temperature, '°C'],
+    ['humidity', 'Влажность', protocol.environment?.humidity, '%'],
+    ['pressureKpa', 'Давление', protocol.environment?.pressureKpa, 'кПа'],
+    ['windSpeed', 'Скорость ветра', protocol.environment?.windSpeed, 'м/с'],
+  ] as Array<[ProtocolPrintField, string, unknown, string]>).filter(
+    ([field, , content]) => visible(field) && content !== undefined && content !== null && String(content).trim() !== '',
+  ) : [];
 
   return createPortal(
     <div className="fixed inset-0 z-[120] flex flex-col bg-slate-950/80">
@@ -113,12 +121,11 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
             </section>
 
             <section className="relative mt-6 grid grid-cols-2 gap-5">
-              {visible('environmentConditions') && <div className="border border-slate-700 p-3">
+              {visible('environmentConditions') && environmentFields.length > 0 && <div className="border border-slate-700 p-3">
                 <p className="font-bold">Условия окружающей среды</p>
-                {visible('temperature') && <p className="mt-2">Температура: {value(protocol.environment?.temperature)} °C</p>}
-                {visible('humidity') && <p>Влажность: {value(protocol.environment?.humidity)} %</p>}
-                {visible('pressureKpa') && <p>Давление: {value(protocol.environment?.pressureKpa)} кПа</p>}
-                {visible('windSpeed') && <p>Скорость ветра: {value(protocol.environment?.windSpeed)} м/с</p>}
+                {environmentFields.map(([, label, content, suffix], index) => (
+                  <p key={label} className={index === 0 ? 'mt-2' : undefined}>{label}: {value(content)} {suffix}</p>
+                ))}
               </div>}
               <div className="space-y-4 pt-2">
                 {visible('executor') && <div className="grid grid-cols-[130px_1fr]"><span className="font-bold">Исполнитель:</span><span className="border-b border-slate-700">{protocol.laboratory.executor}</span></div>}

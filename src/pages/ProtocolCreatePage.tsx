@@ -22,12 +22,13 @@ import { useNormativeSearch } from '../hooks/useNormativeSearch';
 import { useToast } from '../hooks/useToast';
 import type { Company, CompanyObject } from '../types/companies';
 import type { NormativeSearchItem, NormativeSearchParams } from '../types/normativeSearch';
-import type { LaboratoryEmployee, LaboratorySummary, MeasurementDevice, NormativeRecord, Pollutant, ProtocolPrintVisibility, ProtocolResultValue, ProtocolSubtype, QuickProtocolCreatePayload } from '../types/protocols';
+import type { LaboratoryEmployee, LaboratorySummary, MeasurementDevice, NormativeRecord, Pollutant, ProtocolPrintVisibility, ProtocolResultValue, ProtocolSubtype, QuickProtocolCreatePayload, WeatherConditions } from '../types/protocols';
 import {
   protocolNormativeConditionLabel,
   protocolNormativeDisplayValue as normativeDisplayValue,
   protocolNormativeIdentity,
 } from '../utils/protocolNormativeSearch';
+import { resolveMeasurementDeviceId } from '../utils/protocolResultAliases';
 
 type SelectedExecutor = {
   laboratoryEmployeeId: string;
@@ -168,6 +169,7 @@ const ProtocolCreatePage = () => {
   const [manualDraft, setManualDraft] = useState<{ code: string; name: string; unit: string } | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherMessage, setWeatherMessage] = useState('');
+  const [lastWeather, setLastWeather] = useState<WeatherConditions | null>(null);
   const [selectedIndicators, setSelectedIndicators] = useState<SelectedIndicator[]>([]);
   const [form, setForm] = useState<QuickForm>({
     templateKey: 'ambient_air',
@@ -280,7 +282,9 @@ const ProtocolCreatePage = () => {
     if (previousNormativeContextRef.current === normativeSelectionContextKey) return;
     previousNormativeContextRef.current = normativeSelectionContextKey;
     if (selectedIndicators.some((item) => item.selectedNormative)) {
-      setSelectedIndicators((current) => current.filter((item) => !item.selectedNormative));
+      setSelectedIndicators((current) => current.map((item) => item.selectedNormative
+        ? { ...item, normative: undefined, selectedNormative: undefined }
+        : item));
       toast.warning('Выбранный норматив сброшен, потому что изменился тип протокола или условия поиска.');
     }
   }, [normativeSelectionContextKey, toast]);
@@ -448,14 +452,15 @@ const ProtocolCreatePage = () => {
           signal: controller.signal,
         });
         if (requestId !== weatherRequestRef.current) return;
+        setLastWeather(weather);
         setForm((current) => ({
           ...current,
-          temperature: weather.temperature || current.temperature,
-          humidity: weather.humidity || current.humidity,
-          pressureKpa: weather.pressureKpa || weather.pressure || current.pressureKpa,
+          temperature: weather.temperature ?? current.temperature,
+          humidity: weather.humidity ?? current.humidity,
+          pressureKpa: weather.pressureKpa ?? weather.pressure ?? current.pressureKpa,
           windSpeed: manuallyEditedWeatherRef.current.has('windSpeed')
             ? current.windSpeed
-            : weather.windSpeed || current.windSpeed,
+            : weather.windSpeed ?? current.windSpeed,
         }));
         if (weather.warning) setWeatherMessage(weather.warning);
       } catch {
@@ -821,6 +826,10 @@ const ProtocolCreatePage = () => {
       if (protocol.results.length !== measurements.length) {
         toast.warning(`Backend сохранил ${protocol.results.length} из ${measurements.length} строк. Откройте протокол и проверьте результаты.`);
       }
+      const rowsWithoutDevice = protocol.results.filter((result) => !resolveMeasurementDeviceId(result));
+      if (rowsWithoutDevice.length > 0) {
+        toast.warning(`Backend не сохранил прибор для ${rowsWithoutDevice.length} строк.`);
+      }
       toast.success('Протокол создан, нормативы проверены');
       navigate(`/staff/protocols/${protocol.id}`, { replace: true });
     } catch (error) {
@@ -971,7 +980,30 @@ const ProtocolCreatePage = () => {
         <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Температура, °C</span><input type="number" step="any" value={form.temperature} onChange={(event) => setField('temperature', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="temperature" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
         <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Влажность, %</span><input type="number" step="any" value={form.humidity} onChange={(event) => setField('humidity', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="humidity" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
         <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Давление, кПа</span><input type="number" step="any" value={form.pressureKpa} onChange={(event) => setField('pressureKpa', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="pressureKpa" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Скорость ветра, м/с</span><input type="number" min="0" max="100" step="0.1" value={form.windSpeed} onChange={(event) => { manuallyEditedWeatherRef.current.add('windSpeed'); setField('windSpeed', event.target.value); }} className={inputClass} /><ProtocolPrintVisibilityToggle field="windSpeed" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <div className="space-y-1.5 text-sm font-bold text-slate-700">
+          <label className="block space-y-1.5">
+            <span>Скорость ветра, м/с</span>
+            <input type="number" min="0" max="100" step="0.1" value={form.windSpeed} onChange={(event) => {
+              manuallyEditedWeatherRef.current.add('windSpeed');
+              setField('windSpeed', event.target.value.replace(',', '.'));
+            }} className={inputClass} />
+          </label>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <ProtocolPrintVisibilityToggle field="windSpeed" visibility={form.printVisibility} onChange={setPrintVisibility} />
+            <Button
+              type="button"
+              variant="secondary"
+              className="px-3 py-1.5 text-xs"
+              disabled={weatherLoading || lastWeather?.windSpeed === undefined}
+              onClick={() => {
+                manuallyEditedWeatherRef.current.delete('windSpeed');
+                setField('windSpeed', lastWeather?.windSpeed ?? '');
+              }}
+            >
+              Взять из погоды
+            </Button>
+          </div>
+        </div>
         {(weatherLoading || weatherMessage) && <p className="text-sm font-semibold text-slate-500 md:col-span-2 xl:col-span-4">{weatherLoading ? 'Пробуем подтянуть погоду...' : weatherMessage}</p>}
       </section>
 
