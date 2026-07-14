@@ -53,7 +53,9 @@ test('API service uses only normative search and requests one page', async () =>
 
 test('hook debounces, aborts stale requests and guards responses by sequence', async () => {
   const source = await read('src/hooks/useNormativeSearch.ts');
-  assert.match(source, /SEARCH_DEBOUNCE_MS = 450/);
+  const service = await read('src/services/normativeSearchService.ts');
+  assert.match(service, /NORMATIVE_SEARCH_DEBOUNCE_MS = 450/);
+  assert.match(source, /NORMATIVE_SEARCH_DEBOUNCE_MS/);
   assert.match(source, /new AbortController\(\)/);
   assert.match(source, /abortRef\.current\?\.abort\(\)/);
   assert.match(source, /sequence !== sequenceRef\.current/);
@@ -69,17 +71,35 @@ test('creation page preserves server items and the complete selected normative',
   assert.match(source, /value: 'VIBRATION'/);
   assert.match(source, /value: 'ELECTROMAGNETIC_FIELD'/);
   assert.match(source, /value: 'LASER'/);
-  assert.match(source, /current\.map\(\(item\) => item\.selectedNormative/);
-  assert.match(source, /normative: undefined, selectedNormative: undefined/);
+  assert.match(source, /current\.map\(\(item\) => item\.selectedNormative \|\| item\.normative/);
+  assert.match(source, /normative: undefined, selectedNormative: undefined, normativeId: undefined/);
   assert.doesNotMatch(source, /current\.filter\(\(item\) => !item\.selectedNormative\)/);
+  assert.doesNotMatch(source, /setSelectedIndicators\(\[\]\)/);
   assert.match(source, /retryNormativeSearch/);
   assert.match(source, /searchDone && !searchError/);
+});
+
+test('router uses the existing protocol create and editor implementations', async () => {
+  const app = await read('src/App.tsx');
+  const quickPage = await read('src/pages/QuickProtocolCreatePage.tsx');
+  assert.match(app, /path="\/staff\/protocols\/create"[\s\S]*<QuickProtocolCreatePage/);
+  assert.match(app, /path="\/staff\/protocols\/new"[\s\S]*<ProtocolCreatePage/);
+  assert.match(app, /path="\/staff\/protocols\/:protocolId"[\s\S]*<ProtocolEditorPage/);
+  assert.match(quickPage, /export \{ default \} from '\.\/ProtocolCreatePage'/);
 });
 
 test('protocol editor uses the shared single-request normative search', async () => {
   const source = await read('src/components/protocols/ProtocolResultsTable.tsx');
   assert.match(source, /searchNormatives\(buildNormativeSearchParams\(value\), controller\.signal\)/);
-  assert.match(source, /categoryCode: searchContext\.category/);
+  assert.match(source, /categoryCode: searchContext\.categoryCode/);
+  assert.match(source, /NORMATIVE_SEARCH_DEBOUNCE_MS/);
   assert.match(source, /canSearchNormative\(value\)/);
   assert.doesNotMatch(source, /protocolService\.searchNormative|fallbackParams|candidateScore|matchesProtocolNormative/);
+});
+
+test('physical factor validation requires factor type but not a universal factor code', async () => {
+  const source = await read('src/pages/ProtocolCreatePage.tsx');
+  assert.match(source, /measurements\.find\(\(item\) => !item\.factorType\)/);
+  assert.doesNotMatch(source, /!item\.factorType \|\| !item\.factorCode/);
+  assert.match(source, /const invalidPollutant = isPhysical\s*\? undefined/);
 });

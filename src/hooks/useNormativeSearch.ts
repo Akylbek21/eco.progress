@@ -5,11 +5,10 @@ import {
   canSearchNormative,
   cleanNormativeSearchParams,
   isNormativeSearchCanceled,
+  NORMATIVE_SEARCH_DEBOUNCE_MS,
   searchNormatives,
 } from '../services/normativeSearchService';
 import type { NormativeSearchItem, NormativeSearchParams } from '../types/normativeSearch';
-
-const SEARCH_DEBOUNCE_MS = 450;
 
 export interface UseNormativeSearchOptions {
   protocolType?: string;
@@ -109,7 +108,7 @@ export const useNormativeSearch = ({
       reset();
       return;
     }
-    const timer = window.setTimeout(() => void execute(), SEARCH_DEBOUNCE_MS);
+    const timer = window.setTimeout(() => void execute(), NORMATIVE_SEARCH_DEBOUNCE_MS);
     return () => {
       window.clearTimeout(timer);
       abortRef.current?.abort();

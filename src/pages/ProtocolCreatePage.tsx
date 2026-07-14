@@ -28,7 +28,9 @@ import {
   protocolNormativeDisplayValue as normativeDisplayValue,
   protocolNormativeIdentity,
 } from '../utils/protocolNormativeSearch';
-import { resolveMeasurementDeviceId } from '../utils/protocolResultAliases';
+import { resolveMeasurementDeviceId, resolveResultMeasurementDeviceId } from '../utils/protocolResultAliases';
+import { DEFAULT_PROTOCOL_PRINT_VISIBILITY } from '../utils/protocolPrintVisibility';
+import { normalizeDecimal } from '../utils/decimalInput';
 
 type SelectedExecutor = {
   laboratoryEmployeeId: string;
@@ -63,6 +65,10 @@ type QuickForm = {
   humidity: string;
   pressureKpa: string;
   windSpeed: string;
+  weatherSource: 'API' | 'MANUAL';
+  weatherDataSource: string;
+  weatherObservedAt: string;
+  manualChangeReason: string;
   waterType: string;
   waterUseCategory: string;
 };
@@ -75,10 +81,13 @@ type SelectedIndicator = Pollutant & {
   measurementUnit?: string;
   units?: string;
   normative?: NormativeRecord;
+  normativeId?: string | number;
   selectedNormative?: NormativeSearchItem;
   manual?: boolean;
   result: string;
   measurementDeviceId: string;
+  deviceId?: string;
+  values?: Record<string, ProtocolResultValue>;
 };
 
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
@@ -138,6 +147,8 @@ const normalizeNormativeIndicator = (item: NormativeSearchItem): SelectedIndicat
     selectedNormative: item,
     result: '',
     measurementDeviceId: '',
+    deviceId: '',
+    values: {},
   };
 };
 
@@ -146,7 +157,7 @@ const ProtocolCreatePage = () => {
   const toast = useToast();
   const weatherRequestRef = useRef(0);
   const weatherAbortRef = useRef<AbortController | null>(null);
-  const manuallyEditedWeatherRef = useRef(new Set<keyof Pick<QuickForm, 'windSpeed'>>());
+  const manuallyEditedWeatherRef = useRef(new Set<keyof Pick<QuickForm, 'temperature' | 'humidity' | 'pressureKpa' | 'windSpeed'>>());
   const [isCreating, setIsCreating] = useState(false);
   const [booting, setBooting] = useState(true);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
@@ -174,7 +185,7 @@ const ProtocolCreatePage = () => {
   const [form, setForm] = useState<QuickForm>({
     templateKey: 'ambient_air',
     physicalFactorType: '',
-    printVisibility: {},
+    printVisibility: { ...DEFAULT_PROTOCOL_PRINT_VISIBILITY },
     companyId: '',
     objectId: '',
     protocolDate: today(),
@@ -197,6 +208,10 @@ const ProtocolCreatePage = () => {
     humidity: '',
     pressureKpa: '',
     windSpeed: '',
+    weatherSource: 'API',
+    weatherDataSource: '',
+    weatherObservedAt: '',
+    manualChangeReason: '',
     waterType: 'DRINKING_WATER',
     waterUseCategory: 'I',
   });
@@ -281,11 +296,11 @@ const ProtocolCreatePage = () => {
   useEffect(() => {
     if (previousNormativeContextRef.current === normativeSelectionContextKey) return;
     previousNormativeContextRef.current = normativeSelectionContextKey;
-    if (selectedIndicators.some((item) => item.selectedNormative)) {
-      setSelectedIndicators((current) => current.map((item) => item.selectedNormative
-        ? { ...item, normative: undefined, selectedNormative: undefined }
+    if (selectedIndicators.some((item) => item.selectedNormative || item.normative)) {
+      setSelectedIndicators((current) => current.map((item) => item.selectedNormative || item.normative
+        ? { ...item, normative: undefined, selectedNormative: undefined, normativeId: undefined }
         : item));
-      toast.warning('Выбранный норматив сброшен, потому что изменился тип протокола или условия поиска.');
+      toast.warning('Нормативы сброшены из-за изменения условий поиска. Введённые результаты и приборы сохранены.');
     }
   }, [normativeSelectionContextKey, toast]);
 
@@ -363,7 +378,6 @@ const ProtocolCreatePage = () => {
   }, []);
 
   useEffect(() => {
-    setSelectedIndicators([]);
     setChemicalQuery('');
     setManualDraft(null);
     setForm((current) => ({
@@ -373,18 +387,19 @@ const ProtocolCreatePage = () => {
         : form.templateKey === 'uv_emf_laser'
           ? 'UV'
           : protocolFactorType[form.templateKey] || '',
-      sampleNumber: '',
-      samplingDepth: '',
-      waterType: form.templateKey === 'water' ? 'DRINKING_WATER' : '',
-      waterUseCategory: form.templateKey === 'water' ? 'I' : '',
-      season: form.templateKey === 'microclimate' ? 'COLD' : '',
-      workCategory: form.templateKey === 'microclimate' ? 'IA' : '',
-      workplaceType: ['microclimate', 'lighting', 'noise_vibration'].includes(form.templateKey) ? 'PERMANENT' : '',
-      normLevel: form.templateKey === 'microclimate' ? 'OPTIMAL' : '',
-      roomType: ['microclimate', 'lighting', 'noise_vibration'].includes(form.templateKey) ? 'PRODUCTION_ROOM' : '',
-      visualWorkCategory: '',
-      lightingType: form.templateKey === 'lighting' ? 'GENERAL' : '',
-      noiseType: form.templateKey === 'noise_vibration' ? 'CONSTANT' : '',
+      waterType: form.templateKey === 'water' ? current.waterType || 'DRINKING_WATER' : current.waterType,
+      waterUseCategory: form.templateKey === 'water' ? current.waterUseCategory || 'I' : current.waterUseCategory,
+      season: form.templateKey === 'microclimate' ? current.season || 'COLD' : current.season,
+      workCategory: form.templateKey === 'microclimate' ? current.workCategory || 'IA' : current.workCategory,
+      workplaceType: ['microclimate', 'lighting', 'noise_vibration'].includes(form.templateKey)
+        ? current.workplaceType || 'PERMANENT'
+        : current.workplaceType,
+      normLevel: form.templateKey === 'microclimate' ? current.normLevel || 'OPTIMAL' : current.normLevel,
+      roomType: ['microclimate', 'lighting', 'noise_vibration'].includes(form.templateKey)
+        ? current.roomType || 'PRODUCTION_ROOM'
+        : current.roomType,
+      lightingType: form.templateKey === 'lighting' ? current.lightingType || 'GENERAL' : current.lightingType,
+      noiseType: form.templateKey === 'noise_vibration' ? current.noiseType || 'CONSTANT' : current.noiseType,
     }));
   }, [form.templateKey]);
 
@@ -453,15 +468,21 @@ const ProtocolCreatePage = () => {
         });
         if (requestId !== weatherRequestRef.current) return;
         setLastWeather(weather);
-        setForm((current) => ({
-          ...current,
-          temperature: weather.temperature ?? current.temperature,
-          humidity: weather.humidity ?? current.humidity,
-          pressureKpa: weather.pressureKpa ?? weather.pressure ?? current.pressureKpa,
-          windSpeed: manuallyEditedWeatherRef.current.has('windSpeed')
-            ? current.windSpeed
-            : weather.windSpeed ?? current.windSpeed,
-        }));
+        setForm((current) => {
+          const manuallyEdited = manuallyEditedWeatherRef.current;
+          const hasManualValues = manuallyEdited.size > 0;
+          return {
+            ...current,
+            temperature: manuallyEdited.has('temperature') ? current.temperature : weather.temperature ?? current.temperature,
+            humidity: manuallyEdited.has('humidity') ? current.humidity : weather.humidity ?? current.humidity,
+            pressureKpa: manuallyEdited.has('pressureKpa') ? current.pressureKpa : weather.pressureKpa ?? weather.pressure ?? current.pressureKpa,
+            windSpeed: manuallyEdited.has('windSpeed') ? current.windSpeed : weather.windSpeed ?? current.windSpeed,
+            weatherSource: hasManualValues ? 'MANUAL' : weather.source,
+            weatherDataSource: hasManualValues ? current.weatherDataSource : weather.dataSource || 'Погодный сервис',
+            weatherObservedAt: weather.weatherObservedAt || weather.observedAt || current.weatherObservedAt,
+            manualChangeReason: hasManualValues ? current.manualChangeReason : '',
+          };
+        });
         if (weather.warning) setWeatherMessage(weather.warning);
       } catch {
         if (!controller.signal.aborted && requestId === weatherRequestRef.current) setWeatherMessage('Погоду не удалось подтянуть. Заполните условия вручную.');
@@ -515,6 +536,8 @@ const ProtocolCreatePage = () => {
       manual: true,
       result: '',
       measurementDeviceId: '',
+      deviceId: '',
+      values: {},
     });
     setManualDraft(null);
   };
@@ -523,13 +546,44 @@ const ProtocolCreatePage = () => {
     setSelectedIndicators((current) => current.map((item) => item.key === key ? { ...item, result } : item));
   };
 
+  const setWeatherField = (
+    key: keyof Pick<QuickForm, 'temperature' | 'humidity' | 'pressureKpa' | 'windSpeed'>,
+    value: string,
+  ) => {
+    manuallyEditedWeatherRef.current.add(key);
+    setForm((current) => ({
+      ...current,
+      [key]: normalizeDecimal(value),
+      weatherSource: 'MANUAL',
+      weatherDataSource: 'Введено сотрудником',
+    }));
+  };
+
   const setIndicatorDevice = (key: string, measurementDeviceId: string) => {
-    setSelectedIndicators((current) => current.map((item) => item.key === key ? { ...item, measurementDeviceId } : item));
+    setSelectedIndicators((current) => current.map((item) => item.key === key ? {
+      ...item,
+      measurementDeviceId,
+      deviceId: measurementDeviceId,
+      values: {
+        ...(item.values || {}),
+        measurementDeviceId,
+        deviceId: measurementDeviceId,
+      },
+    } : item));
   };
 
   const applyDeviceToAllIndicators = () => {
     if (!bulkDeviceId) return;
-    setSelectedIndicators((current) => current.map((item) => ({ ...item, measurementDeviceId: bulkDeviceId })));
+    setSelectedIndicators((current) => current.map((item) => ({
+      ...item,
+      measurementDeviceId: bulkDeviceId,
+      deviceId: bulkDeviceId,
+      values: {
+        ...(item.values || {}),
+        measurementDeviceId: bulkDeviceId,
+        deviceId: bulkDeviceId,
+      },
+    })));
   };
 
   const physicalConditionValues = () => {
@@ -650,6 +704,9 @@ const ProtocolCreatePage = () => {
     if (!selectedIndicators.length) return 'Выберите показатели';
     if (selectedIndicators.some((item) => !item.result.trim())) return 'Введите фактические значения по всем выбранным показателям';
     if (selectedIndicators.some((item) => !item.measurementDeviceId)) return 'Выберите прибор для каждой строки измерения';
+    if (manuallyEditedWeatherRef.current.size > 0 && !form.manualChangeReason.trim()) {
+      return 'Укажите причину ручного изменения погодных условий';
+    }
     return '';
   };
 
@@ -714,7 +771,7 @@ const ProtocolCreatePage = () => {
         : isPhysical
           ? JSON.stringify(physicalConditionValues())
           : item.normative?.conditionJson || '';
-      const measurementDeviceId = item.measurementDeviceId.trim();
+      const measurementDeviceId = resolveMeasurementDeviceId(item);
 
       return {
         ...(factorType ? { factorType } : {}),
@@ -772,16 +829,18 @@ const ProtocolCreatePage = () => {
         }),
       };
     });
-    const invalidPollutant = measurements.find((item) => !item.pollutantCode || !String(item.pollutantCode).trim());
+    const invalidPollutant = isPhysical
+      ? undefined
+      : measurements.find((item) => !item.pollutantCode || !String(item.pollutantCode).trim());
     if (invalidPollutant) {
       toast.warning(`Укажите код загрязняющего вещества для: ${invalidPollutant.indicatorName}`);
       return;
     }
     const invalidPhysical = isPhysical
-      ? measurements.find((item) => !item.factorType || !item.factorCode)
+      ? measurements.find((item) => !item.factorType)
       : undefined;
     if (invalidPhysical) {
-      toast.warning(`Укажите тип и код физического фактора для: ${invalidPhysical.indicatorName}`);
+      toast.warning(`Укажите тип физического фактора для: ${invalidPhysical.indicatorName}`);
       return;
     }
     const invalidName = measurements.find((item) => !item.indicatorName || !String(item.indicatorName).trim());
@@ -815,6 +874,17 @@ const ProtocolCreatePage = () => {
       waterUseCategory: isWater && form.waterType === 'SURFACE_WATER' ? form.waterUseCategory : undefined,
       resultMode: selectedChoice.resultMode,
       conditions: compactValues(baseConditionValues()),
+      environment: {
+        temperature: form.temperature,
+        humidity: form.humidity,
+        pressureKpa: form.pressureKpa,
+        windSpeed: form.windSpeed,
+        source: form.weatherSource,
+        dataSource: form.weatherDataSource,
+        observedAt: form.weatherObservedAt,
+        weatherObservedAt: form.weatherObservedAt,
+        manualChangeReason: form.manualChangeReason,
+      },
       printVisibility: form.printVisibility,
       measurements,
     };
@@ -826,9 +896,9 @@ const ProtocolCreatePage = () => {
       if (protocol.results.length !== measurements.length) {
         toast.warning(`Backend сохранил ${protocol.results.length} из ${measurements.length} строк. Откройте протокол и проверьте результаты.`);
       }
-      const rowsWithoutDevice = protocol.results.filter((result) => !resolveMeasurementDeviceId(result));
+      const rowsWithoutDevice = protocol.results.filter((result) => !resolveResultMeasurementDeviceId(result));
       if (rowsWithoutDevice.length > 0) {
-        toast.warning(`Backend не сохранил прибор для ${rowsWithoutDevice.length} строк.`);
+        toast.warning('Backend не сохранил измерительный прибор для некоторых результатов.');
       }
       toast.success('Протокол создан, нормативы проверены');
       navigate(`/staff/protocols/${protocol.id}`, { replace: true });
@@ -954,16 +1024,16 @@ const ProtocolCreatePage = () => {
             </div>
           </>}
           {objectWarning && <p className="text-sm font-semibold text-amber-700">{objectWarning}</p>}
-          <ProtocolPrintVisibilityToggle field="objectName" visibility={form.printVisibility} onChange={setPrintVisibility} />
+          <ProtocolPrintVisibilityToggle field="testObjectName" visibility={form.printVisibility} onChange={setPrintVisibility} />
         </label>
       </section>
 
       <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 xl:grid-cols-4">
         <h2 className="text-lg font-black text-slate-900 md:col-span-2 xl:col-span-4">3. Дата и место</h2>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Дата протокола</span><input type="date" value={form.protocolDate} onChange={(event) => setField('protocolDate', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="protocolDate" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Дата отбора' : 'Дата измерения'}</span><input type="date" value={form.measurementDate} onChange={(event) => setField('measurementDate', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="measurementDate" relatedFields={['samplingDate']} visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Время</span><input type="time" value={form.measurementTime} onChange={(event) => setField('measurementTime', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="measurementTime" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Место отбора' : 'Место измерения'}</span><input value={form.measurementPlace} onChange={(event) => setField('measurementPlace', event.target.value)} placeholder={isSoil ? 'Например: участок 1, точка 3' : 'Например: рабочее место оператора'} className={inputClass} /><ProtocolPrintVisibilityToggle field="measurementPlace" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Дата протокола</span><input type="date" value={form.protocolDate} onChange={(event) => setField('protocolDate', event.target.value)} className={inputClass} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Дата отбора' : 'Дата измерения'}</span><input type="date" value={form.measurementDate} onChange={(event) => setField('measurementDate', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field={isSoil || isWater ? 'samplingDate' : 'measurementDate'} visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Время</span><input type="time" value={form.measurementTime} onChange={(event) => setField('measurementTime', event.target.value)} className={inputClass} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Место отбора' : 'Место измерения'}</span><input value={form.measurementPlace} onChange={(event) => setField('measurementPlace', event.target.value)} placeholder={isSoil ? 'Например: участок 1, точка 3' : 'Например: рабочее место оператора'} className={inputClass} /><ProtocolPrintVisibilityToggle field="samplingPlace" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
         {(isSoil || isWater) && (
           <>
             <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Номер пробы</span><input value={form.sampleNumber} onChange={(event) => setField('sampleNumber', event.target.value)} placeholder="Например: 1/24" className={inputClass} /></label>
@@ -976,17 +1046,14 @@ const ProtocolCreatePage = () => {
         <h2 className="flex items-center gap-2 text-lg font-black text-slate-900 md:col-span-2 xl:col-span-4">
           <CloudSun className="h-5 w-5 text-eco-700" /> Погодные условия
         </h2>
-        <div className="md:col-span-2 xl:col-span-4"><ProtocolPrintVisibilityToggle field="environmentConditions" visibility={form.printVisibility} onChange={setPrintVisibility} /></div>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Температура, °C</span><input type="number" step="any" value={form.temperature} onChange={(event) => setField('temperature', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="temperature" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Влажность, %</span><input type="number" step="any" value={form.humidity} onChange={(event) => setField('humidity', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="humidity" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Давление, кПа</span><input type="number" step="any" value={form.pressureKpa} onChange={(event) => setField('pressureKpa', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="pressureKpa" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <div className="md:col-span-2 xl:col-span-4"><ProtocolPrintVisibilityToggle field="environmentalConditions" visibility={form.printVisibility} onChange={setPrintVisibility} /></div>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Температура, °C</span><input inputMode="decimal" value={form.temperature} onChange={(event) => setWeatherField('temperature', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="temperature" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Влажность, %</span><input inputMode="decimal" value={form.humidity} onChange={(event) => setWeatherField('humidity', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="humidity" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Давление, кПа</span><input inputMode="decimal" value={form.pressureKpa} onChange={(event) => setWeatherField('pressureKpa', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="pressure" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
         <div className="space-y-1.5 text-sm font-bold text-slate-700">
           <label className="block space-y-1.5">
             <span>Скорость ветра, м/с</span>
-            <input type="number" min="0" max="100" step="0.1" value={form.windSpeed} onChange={(event) => {
-              manuallyEditedWeatherRef.current.add('windSpeed');
-              setField('windSpeed', event.target.value.replace(',', '.'));
-            }} className={inputClass} />
+            <input inputMode="decimal" value={form.windSpeed} onChange={(event) => setWeatherField('windSpeed', event.target.value)} className={inputClass} />
           </label>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <ProtocolPrintVisibilityToggle field="windSpeed" visibility={form.printVisibility} onChange={setPrintVisibility} />
@@ -996,14 +1063,30 @@ const ProtocolCreatePage = () => {
               className="px-3 py-1.5 text-xs"
               disabled={weatherLoading || lastWeather?.windSpeed === undefined}
               onClick={() => {
-                manuallyEditedWeatherRef.current.delete('windSpeed');
-                setField('windSpeed', lastWeather?.windSpeed ?? '');
+                manuallyEditedWeatherRef.current.clear();
+                setForm((current) => ({
+                  ...current,
+                  temperature: lastWeather?.temperature ?? current.temperature,
+                  humidity: lastWeather?.humidity ?? current.humidity,
+                  pressureKpa: lastWeather?.pressureKpa ?? lastWeather?.pressure ?? current.pressureKpa,
+                  windSpeed: lastWeather?.windSpeed ?? '',
+                  weatherSource: 'API',
+                  weatherDataSource: lastWeather?.dataSource || 'Погодный сервис',
+                  weatherObservedAt: lastWeather?.weatherObservedAt || lastWeather?.observedAt || current.weatherObservedAt,
+                  manualChangeReason: '',
+                }));
               }}
             >
               Взять из погоды
             </Button>
           </div>
         </div>
+        {manuallyEditedWeatherRef.current.size > 0 && (
+          <label className="space-y-1.5 text-sm font-bold text-slate-700 md:col-span-2 xl:col-span-4">
+            <span>Причина ручного изменения погодных условий *</span>
+            <input value={form.manualChangeReason} onChange={(event) => setField('manualChangeReason', event.target.value)} className={inputClass} />
+          </label>
+        )}
         {(weatherLoading || weatherMessage) && <p className="text-sm font-semibold text-slate-500 md:col-span-2 xl:col-span-4">{weatherLoading ? 'Пробуем подтянуть погоду...' : weatherMessage}</p>}
       </section>
 

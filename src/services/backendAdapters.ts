@@ -6,7 +6,12 @@ import type {
   RequestQuarter,
 } from '../types';
 
-type AnyRecord = Record<string, any>;
+type UnknownRecord = Record<string, unknown>;
+
+const asRecord = (value: unknown): UnknownRecord =>
+  value !== null && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : {};
+const asRecords = (value: unknown): UnknownRecord[] =>
+  Array.isArray(value) ? value.map(asRecord) : [];
 
 const asString = (value: unknown, fallback = '') => (value === undefined || value === null ? fallback : String(value));
 
@@ -27,7 +32,7 @@ const mapPaymentStatus = (status: unknown): Order['paymentStatus'] => {
   return raw as Order['paymentStatus'];
 };
 
-export const mapDocument = (doc: AnyRecord = {}, orderId?: string): DocumentItem => ({
+export const mapDocument = (doc: UnknownRecord = {}, orderId?: string): DocumentItem => ({
   id: asString(doc.id || doc.documentId),
   orderId,
   name: asString(doc.name || doc.title || doc.fileName, 'Документ'),
@@ -42,18 +47,18 @@ export const mapDocument = (doc: AnyRecord = {}, orderId?: string): DocumentItem
   clientComment: doc.clientComment,
   staffComment: doc.staffComment,
   dueDate: doc.dueDate,
-});
+} as unknown as DocumentItem);
 
-const mapComment = (comment: AnyRecord = {}, orderId: string): CommentItem => ({
+const mapComment = (comment: UnknownRecord = {}, orderId: string): CommentItem => ({
   id: asString(comment.id),
   orderId,
   author: asString(comment.author || comment.authorName, 'Пользователь'),
   text: asString(comment.text),
   visibility: comment.visibility === 'internal' ? 'internal' : 'client',
   createdAt: asString(comment.createdAt),
-});
+} as unknown as CommentItem);
 
-const mapHistory = (history: AnyRecord = {}, orderId: string): OrderHistoryItem => ({
+const mapHistory = (history: UnknownRecord = {}, orderId: string): OrderHistoryItem => ({
   id: asString(history.id),
   orderId,
   text: asString(history.text || history.action || history.actionType),
@@ -65,12 +70,12 @@ const mapHistory = (history: AnyRecord = {}, orderId: string): OrderHistoryItem 
   oldValue: history.oldValue,
   newValue: history.newValue,
   comment: history.comment,
-});
+} as unknown as OrderHistoryItem);
 
-const mapQuarter = (quarter: AnyRecord = {}, orderId: string): RequestQuarter => ({
+const mapQuarter = (quarter: UnknownRecord = {}, orderId: string): RequestQuarter => ({
   id: asString(quarter.id),
   requestId: asString(quarter.requestId || orderId),
-  contractId: asString(quarter.contractId || quarter.contractInfo?.id),
+  contractId: asString(quarter.contractId || asRecord(quarter.contractInfo).id),
   quarter: Number(quarter.quarter || 1) as RequestQuarter['quarter'],
   quarterLabel: asString(quarter.quarterLabel, `${quarter.quarter || 1} квартал`) as RequestQuarter['quarterLabel'],
   periodStart: asString(quarter.periodStart),
@@ -86,7 +91,7 @@ const mapQuarter = (quarter: AnyRecord = {}, orderId: string): RequestQuarter =>
   invoiceDate: quarter.invoiceDate,
   dueDate: quarter.dueDate,
   lastPaymentDate: quarter.lastPaymentDate,
-  documents: (quarter.documents || []).map((doc: AnyRecord) => ({
+  documents: asRecords(quarter.documents).map((doc) => ({
     id: asString(doc.id),
     quarterId: asString(doc.quarterId || quarter.id),
     requestId: asString(doc.requestId || orderId),
@@ -102,7 +107,7 @@ const mapQuarter = (quarter: AnyRecord = {}, orderId: string): RequestQuarter =>
     uploadedAt: asString(doc.uploadedAt),
   })),
   results: quarter.results || [],
-  comments: (quarter.comments || []).map((comment: AnyRecord) => ({
+  comments: asRecords(quarter.comments).map((comment) => ({
     id: asString(comment.id),
     quarterId: asString(comment.quarterId || quarter.id),
     requestId: asString(comment.requestId || orderId),
@@ -117,20 +122,24 @@ const mapQuarter = (quarter: AnyRecord = {}, orderId: string): RequestQuarter =>
   completedAt: quarter.completedAt,
   createdAt: asString(quarter.createdAt),
   updatedAt: asString(quarter.updatedAt),
-});
+} as unknown as RequestQuarter);
 
-export const mapOrder = (raw: AnyRecord): Order => {
-  if (!raw) return raw as Order;
-  if (raw.clientId || raw.service) return raw as Order;
+export const mapOrder = (raw: UnknownRecord): Order => {
+  if (!raw) return raw as unknown as Order;
+  if (raw.clientId || raw.service) return raw as unknown as Order;
 
-  const client = raw.clientInfo || {};
-  const contract = raw.contractInfo || {};
-  const totalAmount = raw.totalAmount || contract.totalAmount || contract.amounts?.totalAmount;
-  const paidAmount = raw.paidAmount || contract.paidAmount || contract.amounts?.paidAmount;
-  const remainingAmount = raw.remainingAmount || contract.remainingAmount || contract.amounts?.remainingAmount;
+  const client = asRecord(raw.clientInfo);
+  const contract = asRecord(raw.contractInfo);
+  const contractAmounts = asRecord(contract.amounts);
+  const totalAmount = raw.totalAmount || contract.totalAmount || contractAmounts.totalAmount;
+  const paidAmount = raw.paidAmount || contract.paidAmount || contractAmounts.paidAmount;
+  const remainingAmount = raw.remainingAmount || contract.remainingAmount || contractAmounts.remainingAmount;
   const orderId = asString(raw.id);
-  const agreementDocuments = raw.agreementDocuments || [];
-  const resultDocuments = raw.resultDocuments || [];
+  const agreementDocuments = asRecords(raw.agreementDocuments);
+  const resultDocuments = asRecords(raw.resultDocuments);
+  const payment = asRecord(raw.payment);
+  const paymentRecord = asRecord(raw.paymentRecord);
+  const paymentInfo = asRecord(raw.paymentInfo);
 
   return {
     id: orderId,
@@ -158,12 +167,12 @@ export const mapOrder = (raw: AnyRecord): Order => {
     contractId: asString(contract.id || raw.contractId),
     annualPeriodStart: raw.annualPeriodStart,
     annualPeriodEnd: raw.annualPeriodEnd,
-    quarters: (raw.quarters || []).map((quarter: AnyRecord) => mapQuarter(quarter, orderId)),
+    quarters: asRecords(raw.quarters).map((quarter) => mapQuarter(quarter, orderId)),
     manager: asString(raw.managerName),
     contractStatus: raw.contractStatus || contract.status,
     crmContractStatus: raw.crmContractStatus || contract.crmStatus,
     paymentStatus: mapPaymentStatus(raw.paymentStatus),
-    paymentId: asString(raw.paymentId || raw.payment?.id || raw.paymentRecord?.id || raw.paymentInfo?.id),
+    paymentId: asString(raw.paymentId || payment.id || paymentRecord.id || paymentInfo.id),
     signatureProvider: raw.signatureProvider,
     paymentMethod: raw.paymentMethod,
     paymentAmount: raw.paymentAmount ? String(raw.paymentAmount) : undefined,
@@ -175,9 +184,9 @@ export const mapOrder = (raw: AnyRecord): Order => {
     invoiceNumber: raw.invoiceNumber,
     invoiceFileName: raw.invoiceFileName,
     invoiceSentAt: raw.invoiceSentAt,
-    invoiceDate: raw.invoiceDate || raw.payment?.invoiceDate || raw.paymentRecord?.invoiceDate,
-    dueDate: raw.dueDate || raw.payment?.dueDate || raw.paymentRecord?.dueDate,
-    paymentComment: raw.paymentComment || raw.payment?.comment || raw.paymentRecord?.comment,
+    invoiceDate: raw.invoiceDate || payment.invoiceDate || paymentRecord.invoiceDate,
+    dueDate: raw.dueDate || payment.dueDate || paymentRecord.dueDate,
+    paymentComment: raw.paymentComment || payment.comment || paymentRecord.comment,
     accountantComment: raw.accountantComment,
     assignedAccountant: raw.accountantName,
     assignedEcologist: raw.ecologistName,
@@ -194,13 +203,13 @@ export const mapOrder = (raw: AnyRecord): Order => {
     signedAt: raw.signedAt,
     paidAt: raw.paidAt,
     completedAt: raw.completedAt,
-    documents: (raw.documents || []).map((doc: AnyRecord) => mapDocument(doc, orderId)),
-    agreementDocuments: agreementDocuments.map((doc: AnyRecord) => mapDocument(doc, orderId)),
+    documents: asRecords(raw.documents).map((doc) => mapDocument(doc, orderId)),
+    agreementDocuments: agreementDocuments.map((doc) => mapDocument(doc, orderId)),
     primaryDocuments: raw.primaryDocuments || [],
-    resultDocuments: [...agreementDocuments, ...resultDocuments].map((doc: AnyRecord) => mapDocument(doc, orderId)),
-    comments: (raw.comments || []).map((comment: AnyRecord) => mapComment(comment, orderId)),
-    history: (raw.history || []).map((history: AnyRecord) => mapHistory(history, orderId)),
-  } as Order;
+    resultDocuments: [...agreementDocuments, ...resultDocuments].map((doc) => mapDocument(doc, orderId)),
+    comments: asRecords(raw.comments).map((comment) => mapComment(comment, orderId)),
+    history: asRecords(raw.history).map((history) => mapHistory(history, orderId)),
+  } as unknown as Order;
 };
 
-export const mapOrders = (orders: AnyRecord[] = []) => orders.map(mapOrder);
+export const mapOrders = (orders: UnknownRecord[] = []) => orders.map(mapOrder);

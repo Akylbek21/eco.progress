@@ -27,10 +27,13 @@ const measurementDeviceId = (source: UnknownRecord, values: UnknownRecord) => {
   );
 };
 
-export const resolveMeasurementDeviceId = (raw: unknown): string => {
+export const resolveResultMeasurementDeviceId = (raw: unknown): string | null => {
   const source = asRecord(raw);
-  return measurementDeviceId(source, asRecord(source.values));
+  return measurementDeviceId(source, asRecord(source.values)) || null;
 };
+
+export const resolveMeasurementDeviceId = (raw: unknown): string =>
+  resolveResultMeasurementDeviceId(raw) || '';
 
 export const canonicalProtocolResultAliases = (source: UnknownRecord, values: UnknownRecord) => ({
   indicatorName: scalar(source.indicatorName, values.indicatorName, values.indicator),

@@ -177,12 +177,16 @@ export const normalizeProtocolResult = (raw: unknown): ProtocolResultRow => {
       name: firstString(measurementDeviceSource.name) || undefined,
       model: firstString(measurementDeviceSource.model) || undefined,
       serialNumber: firstString(measurementDeviceSource.serialNumber) || undefined,
+      verificationNumber: firstString(measurementDeviceSource.verificationNumber) || undefined,
+      verificationValidUntil: firstString(measurementDeviceSource.verificationValidUntil) || undefined,
     } : undefined,
     device: Object.keys(deviceSource).length ? {
       id: firstString(deviceSource.id, deviceId),
       name: firstString(deviceSource.name) || undefined,
       model: firstString(deviceSource.model) || undefined,
       serialNumber: firstString(deviceSource.serialNumber) || undefined,
+      verificationNumber: firstString(deviceSource.verificationNumber) || undefined,
+      verificationValidUntil: firstString(deviceSource.verificationValidUntil) || undefined,
     } : undefined,
     comparisonType: (pick(source, ['comparisonType']) || asString(values.comparisonType)) as ProtocolResultRow['comparisonType'],
     normativeMin: pick(source, ['normativeMin', 'min']) || asString(values.normativeMin),
@@ -569,7 +573,8 @@ export const normalizeWeatherConditions = (raw: unknown): WeatherConditions => {
     status: 'LOADED',
     source: 'API',
     dataSource: pick(source, ['dataSource', 'sourceName', 'provider', 'source']) || 'Погодный сервис',
-    observedAt: pick(source, ['observedAt', 'recordedAt', 'weatherTimestamp', 'observationTime']),
+    observedAt: pick(source, ['observedAt', 'weatherObservedAt', 'recordedAt', 'weatherTimestamp', 'observationTime']),
+    weatherObservedAt: pick(source, ['weatherObservedAt', 'observedAt', 'recordedAt', 'weatherTimestamp', 'observationTime']),
     loadedAt: pick(source, ['loadedAt', 'observedAt']) || new Date().toISOString(),
     warning: pick(source, ['warning']),
   };
@@ -667,7 +672,8 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
       status: pick(environment, ['status']) as ProtocolEnvironmentalConditions['status'],
       source: (pick(environment, ['source']) || 'API') as ProtocolEnvironmentalConditions['source'],
       dataSource: pick(environment, ['dataSource', 'sourceName', 'provider']),
-      observedAt: pick(environment, ['observedAt', 'recordedAt', 'weatherTimestamp']),
+      observedAt: pick(environment, ['observedAt', 'weatherObservedAt', 'recordedAt', 'weatherTimestamp']),
+      weatherObservedAt: pick(environment, ['weatherObservedAt', 'observedAt', 'recordedAt', 'weatherTimestamp']),
       loadedAt: pick(environment, ['loadedAt']),
       manualChangeReason: pick(environment, ['manualChangeReason', 'changeReason']),
     },
@@ -792,10 +798,11 @@ const toCreateProtocolApiPayload = (payload: CreateProtocolPayload) => {
       source: payload.environment?.source || null,
       dataSource: payload.environment?.dataSource || null,
       observedAt: payload.environment?.observedAt || null,
+      weatherObservedAt: payload.environment?.weatherObservedAt || payload.environment?.observedAt || null,
       loadedAt: payload.environment?.loadedAt || null,
       manualChangeReason: payload.environment?.manualChangeReason || null,
     },
-    printVisibility: payload.printVisibility || {},
+    printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
   };
 };
 
@@ -812,6 +819,7 @@ const toApiEnvironment = (environment: UpdateProtocolPayload['environment']) => 
   source: environment?.source || null,
   dataSource: environment?.dataSource || null,
   observedAt: environment?.observedAt || null,
+  weatherObservedAt: environment?.weatherObservedAt || environment?.observedAt || null,
   loadedAt: environment?.loadedAt || null,
   manualChangeReason: environment?.manualChangeReason || null,
 });
@@ -866,7 +874,7 @@ const sanitizeResultValues = (values: Record<string, ApiResultValue>) => Object.
 
 const toApiResultPayload = (payload: ProtocolResultPayload) => {
   const values = { ...payload.values };
-  const measurementDeviceId = sanitizeResultField('measurementDeviceId', payload.measurementDeviceId ?? values.measurementDeviceId ?? values.deviceId ?? null);
+  const measurementDeviceId = sanitizeResultField('measurementDeviceId', payload.measurementDeviceId ?? payload.deviceId ?? values.measurementDeviceId ?? values.deviceId ?? null);
   const normativeId = sanitizeResultField('normativeId', payload.normativeId ?? values.normativeId ?? null);
   const mapped = sanitizeResultValues({
     ...values,
@@ -875,7 +883,6 @@ const toApiResultPayload = (payload: ProtocolResultPayload) => {
     deviceId: values.deviceId ?? measurementDeviceId,
     subtype: values.subtype ?? values.factorType ?? null,
   });
-  delete mapped.factorType;
   const mappedWithDeviceAliases = {
     ...mapped,
     measurementDeviceId,
@@ -1010,31 +1017,37 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
 
   const result = response.data?.data ?? response.data;
   const protocol = requireProtocol(result, 'создание');
-  return { ...protocol, printVisibility: Object.keys(protocol.printVisibility || {}).length ? protocol.printVisibility : payload.printVisibility };
+  return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
 }
 
 export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): Promise<Protocol> {
   const measurements = payload.measurements.map((measurement) => {
-    const measurementDeviceId = String(
-      measurement.measurementDeviceId
-      || measurement.deviceId
-      || measurement.values?.measurementDeviceId
-      || measurement.values?.deviceId
-      || '',
-    ).trim();
+    const rawMeasurementDeviceId = measurement.measurementDeviceId
+      ?? measurement.deviceId
+      ?? measurement.values?.measurementDeviceId
+      ?? measurement.values?.deviceId
+      ?? null;
+    const measurementDeviceId = rawMeasurementDeviceId == null ? null : String(rawMeasurementDeviceId).trim() || null;
     return {
       ...measurement,
-      ...(measurementDeviceId ? { measurementDeviceId, deviceId: measurementDeviceId } : {}),
+      measurementDeviceId,
+      deviceId: measurementDeviceId,
       values: {
         ...(measurement.values || {}),
-        ...(measurementDeviceId ? { measurementDeviceId, deviceId: measurementDeviceId } : {}),
+        measurementDeviceId,
+        deviceId: measurementDeviceId,
       },
     };
   });
-  const response = await api.post<ApiResponse<unknown> | unknown>('/protocols/quick-create', { ...payload, measurements });
+  const response = await api.post<ApiResponse<unknown> | unknown>('/protocols/quick-create', {
+    ...payload,
+    environment: toApiEnvironment(payload.environment),
+    printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
+    measurements,
+  });
   const result = unwrapData(response);
   const protocol = requireProtocol(result, 'быстрое создание');
-  return { ...protocol, printVisibility: Object.keys(protocol.printVisibility || {}).length ? protocol.printVisibility : payload.printVisibility };
+  return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
 }
 
 export async function refreshLaboratoryData(protocolId: string): Promise<Protocol> {
@@ -1081,10 +1094,10 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
     testing: payload.testing,
     environment: toApiEnvironment(payload.environment),
     explanatoryNote: payload.explanatoryNote,
-    printVisibility: payload.printVisibility || {},
+    printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
   });
   const protocol = await protocolFromActionResponse(protocolId, response);
-  return { ...protocol, printVisibility: Object.keys(protocol.printVisibility || {}).length ? protocol.printVisibility : payload.printVisibility };
+  return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
 }
 
 export async function deleteProtocol(protocolId: string): Promise<void> {

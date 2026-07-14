@@ -21,7 +21,7 @@ export type ProtocolTypeConfig = {
   defaultUnit: string | null;
   normativeTemplateId: ProtocolTemplateId;
   environmentType?: string;
-  category?: string;
+  categoryCode?: string;
   resultMode: ProtocolResultMode;
 };
 
@@ -29,7 +29,7 @@ export type NormativeSearchContext = {
   sourceDocumentCode?: string;
   templateId?: ProtocolTemplateId;
   normativeTemplateId?: ProtocolTemplateId;
-  category?: string;
+  categoryCode?: string;
   factorType?: ProtocolSubtype | string;
 };
 
@@ -153,7 +153,7 @@ export const resolveNormativeSearchContext = (
     physicalFactorType: ProtocolSubtype | string;
     sourceDocumentCode: string;
     normativeTemplateId: ProtocolTemplateId | string;
-    category: string;
+    categoryCode: string;
   }> = {},
   protocolType?: string,
 ): NormativeSearchContext => {
@@ -169,7 +169,7 @@ export const resolveNormativeSearchContext = (
       sourceDocumentCode: config.sourceDocumentCode || undefined,
       templateId: config.normativeTemplateId || config.templateId,
       normativeTemplateId: config.normativeTemplateId || config.templateId,
-      category: config.category,
+      categoryCode: config.categoryCode,
       factorType: subtype || protocolFactorType[normalizedType as ProtocolTypeKey] || undefined,
     };
   }
@@ -185,7 +185,7 @@ export const resolveNormativeSearchContext = (
     sourceDocumentCode: protocol.sourceDocumentCode || undefined,
     templateId: protocol.templateId as ProtocolTemplateId | undefined,
     normativeTemplateId: protocol.normativeTemplateId as ProtocolTemplateId | undefined,
-    category: protocol.category || undefined,
+    categoryCode: protocol.categoryCode || undefined,
     factorType: subtype || undefined,
   };
 };

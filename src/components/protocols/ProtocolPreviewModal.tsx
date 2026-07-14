@@ -16,6 +16,7 @@ type Props = {
 };
 
 const value = (raw: unknown) => raw === undefined || raw === null || raw === '' ? '—' : String(raw);
+const hasText = (raw: unknown) => raw !== undefined && raw !== null && String(raw).trim() !== '';
 const resultValue = (protocol: Protocol, row: Protocol['results'][number], key: string) => {
   const rowValue = row.values[key];
   if (key === 'testingMethodDocument' || key === 'testingMethod' || key === 'testingMethodNd') {
@@ -40,7 +41,7 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
   const environmentFields = protocol ? ([
     ['temperature', 'Температура', protocol.environment?.temperature, '°C'],
     ['humidity', 'Влажность', protocol.environment?.humidity, '%'],
-    ['pressureKpa', 'Давление', protocol.environment?.pressureKpa, 'кПа'],
+    ['pressure', 'Давление', protocol.environment?.pressureKpa, 'кПа'],
     ['windSpeed', 'Скорость ветра', protocol.environment?.windSpeed, 'м/с'],
   ] as Array<[ProtocolPrintField, string, unknown, string]>).filter(
     ([field, , content]) => visible(field) && content !== undefined && content !== null && String(content).trim() !== '',
@@ -70,14 +71,14 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
                 <p className="mt-1 font-bold">Аттестат аккредитации № {protocol.laboratory.accreditationNumber}</p>
               </div>
               <div className="border border-slate-700 p-2 text-center">
-                {visible('formCode') && <><p className="font-bold">Форма</p><p>{templateName(protocol.templateId)}</p></>}
+                <p className="font-bold">Форма</p><p>{templateName(protocol.templateId)}</p>
                 <p className="mt-1">Редакция 01</p>
               </div>
             </header>
 
             <section className="relative mt-7 text-center">
               <h1 className="text-xl font-black uppercase tracking-wide">Протокол испытаний</h1>
-              <p className="mt-2 text-base font-bold">№ {protocol.protocolNumber}{visible('protocolDate') ? ` от ${protocol.protocolDate}` : ''}</p>
+              <p className="mt-2 text-base font-bold">№ {protocol.protocolNumber} от {protocol.protocolDate}</p>
               {protocol.subtype && <p className="mt-1 font-bold">{subtypeName(protocol.subtype)}</p>}
             </section>
 
@@ -86,19 +87,19 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
                 ['organizationName', 'Заказчик', protocol.organization.organizationName || protocol.companySnapshot.companyName],
                 ['organizationName', 'БИН', protocol.companySnapshot.bin],
                 ['organizationAddress', 'Адрес заказчика', protocol.organization.organizationAddress || protocol.companySnapshot.actualAddress || protocol.companySnapshot.legalAddress],
-                ['objectName', 'Объект испытаний', protocol.organization.objectName || protocol.companySnapshot.objectName],
-                ['objectName', 'Адрес объекта', protocol.companySnapshot.objectAddress],
+                ['testObjectName', 'Объект испытаний', protocol.organization.objectName || protocol.companySnapshot.objectName],
+                ['testObjectName', 'Адрес объекта', protocol.companySnapshot.objectAddress],
                 ['productName', 'Наименование продукции', protocol.organization.productName],
-                ['testingBasis', 'Основание испытаний', protocol.organization.testingBasis],
-                ['testingPurpose', 'Цель испытаний', protocol.testing.testingPurpose],
+                ['testBasis', 'Основание испытаний', protocol.organization.testingBasis],
+                ['testPurpose', 'Цель испытаний', protocol.testing.testingPurpose],
                 ['samplingDate', 'Дата отбора', protocol.testing.samplingDate || protocol.measurementDate],
-                ['testingStartDate', 'Начало испытаний', protocol.testing.testingStartDate],
-                ['testingEndDate', 'Окончание испытаний', protocol.testing.testingEndDate],
+                ['testStartDate', 'Начало испытаний', protocol.testing.testingStartDate],
+                ['testEndDate', 'Окончание испытаний', protocol.testing.testingEndDate],
                 ['productNormativeDocument', 'НД на продукцию', protocol.testing.productNormativeDocument],
                 ['samplingMethodDocument', 'НД на методы отбора', protocol.testing.samplingMethodDocument],
-                ['testingMethodDocument', 'НД на методы испытаний', protocol.testing.testingMethodDocument],
-                ['measurementPlace', 'Место отбора / измерения', protocol.measurementPlace],
-              ] as Array<[ProtocolPrintField, string, unknown]>).filter(([field]) => visible(field)).map(([, label, content]) => (
+                ['testMethodDocument', 'НД на методы испытаний', protocol.testing.testingMethodDocument],
+                ['samplingPlace', 'Место отбора / измерения', protocol.measurementPlace],
+              ] as Array<[ProtocolPrintField, string, unknown]>).filter(([field, , content]) => visible(field) && hasText(content)).map(([, label, content]) => (
                 <div key={label} className="grid grid-cols-[150px_1fr] border-b border-r border-slate-500 p-2">
                   <span className="font-bold">{label}</span><span>{value(content)}</span>
                 </div>
@@ -121,15 +122,15 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
             </section>
 
             <section className="relative mt-6 grid grid-cols-2 gap-5">
-              {visible('environmentConditions') && environmentFields.length > 0 && <div className="border border-slate-700 p-3">
+              {visible('environmentalConditions') && environmentFields.length > 0 && <div className="border border-slate-700 p-3">
                 <p className="font-bold">Условия окружающей среды</p>
                 {environmentFields.map(([, label, content, suffix], index) => (
                   <p key={label} className={index === 0 ? 'mt-2' : undefined}>{label}: {value(content)} {suffix}</p>
                 ))}
               </div>}
               <div className="space-y-4 pt-2">
-                {visible('executor') && <div className="grid grid-cols-[130px_1fr]"><span className="font-bold">Исполнитель:</span><span className="border-b border-slate-700">{protocol.laboratory.executor}</span></div>}
-                {visible('approver') && <div className="grid grid-cols-[130px_1fr]"><span className="font-bold">Заведующий ИЛ:</span><span className="border-b border-slate-700">{protocol.laboratory.laboratoryHead}</span></div>}
+                <div className="grid grid-cols-[130px_1fr]"><span className="font-bold">Исполнитель:</span><span className="border-b border-slate-700">{protocol.laboratory.executor}</span></div>
+                <div className="grid grid-cols-[130px_1fr]"><span className="font-bold">Заведующий ИЛ:</span><span className="border-b border-slate-700">{protocol.laboratory.laboratoryHead}</span></div>
               </div>
             </section>
 

@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import Button from '../ui/Button';
 import { accreditationState } from '../../services/laboratorySettingsService';
 import type { LaboratoryEmployee, ProtocolLaboratorySnapshot, ProtocolPrintVisibility } from '../../types/protocols';
-import ProtocolPrintVisibilityToggle from './ProtocolPrintVisibilityToggle';
 
 type Props = {
   value: ProtocolLaboratorySnapshot;
@@ -84,7 +83,6 @@ const ProtocolLaboratoryForm = ({ value, employees, readOnly, loading = false, c
             {!value.executorId && <option value="">{value.executor || 'Выберите исполнителя'}</option>}
             {employees.filter((item) => item.active).map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName} · {employee.position || 'сотрудник'}</option>)}
           </select>
-          <ProtocolPrintVisibilityToggle field="executor" visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} />
         </label>
       </div>
 

@@ -3,32 +3,46 @@ import type { ProtocolPrintField, ProtocolPrintVisibility } from '../types/proto
 export const PROTOCOL_PRINT_FIELDS: readonly ProtocolPrintField[] = [
   'organizationName',
   'organizationAddress',
-  'objectName',
+  'testObjectName',
   'productName',
-  'testingBasis',
-  'protocolDate',
-  'measurementDate',
-  'measurementTime',
-  'measurementPlace',
+  'testBasis',
   'samplingDate',
-  'testingStartDate',
-  'testingEndDate',
+  'testStartDate',
+  'testEndDate',
   'productNormativeDocument',
   'samplingMethodDocument',
-  'testingMethodDocument',
-  'testingPurpose',
-  'environmentConditions',
+  'testMethodDocument',
+  'testPurpose',
+  'samplingPlace',
+  'measurementDate',
+  'environmentalConditions',
   'temperature',
   'humidity',
-  'pressureKpa',
+  'pressure',
   'windSpeed',
-  'formCode',
-  'application',
-  'sourceNumber',
-  'executor',
-  'approver',
-  'explanatoryNote',
 ] as const;
+
+export const DEFAULT_PROTOCOL_PRINT_VISIBILITY: ProtocolPrintVisibility = {
+  organizationName: true,
+  organizationAddress: true,
+  testObjectName: true,
+  productName: true,
+  testBasis: true,
+  samplingDate: true,
+  testStartDate: true,
+  testEndDate: true,
+  productNormativeDocument: true,
+  samplingMethodDocument: true,
+  testMethodDocument: true,
+  testPurpose: true,
+  samplingPlace: true,
+  measurementDate: true,
+  environmentalConditions: true,
+  temperature: true,
+  humidity: true,
+  pressure: true,
+  windSpeed: true,
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -45,27 +59,27 @@ export const normalizeProtocolPrintVisibility = (value: unknown): ProtocolPrintV
     try {
       return normalizeProtocolPrintVisibility(JSON.parse(value));
     } catch {
-      return {};
+      return { ...DEFAULT_PROTOCOL_PRINT_VISIBILITY };
     }
   }
-  if (!isRecord(value)) return {};
+  if (!isRecord(value)) return { ...DEFAULT_PROTOCOL_PRINT_VISIBILITY };
   return PROTOCOL_PRINT_FIELDS.reduce<ProtocolPrintVisibility>((result, field) => {
     const normalized = booleanValue(value[field]);
-    if (normalized !== undefined) result[field] = normalized;
+    result[field] = normalized ?? true;
     return result;
-  }, {});
+  }, { ...DEFAULT_PROTOCOL_PRINT_VISIBILITY });
 };
 
 export const isProtocolFieldVisible = (
   visibility: ProtocolPrintVisibility | undefined,
   field: ProtocolPrintField,
-): boolean => visibility?.[field] !== false;
+): boolean => normalizeProtocolPrintVisibility(visibility)[field];
 
 export const setProtocolFieldVisibility = (
   visibility: ProtocolPrintVisibility | undefined,
   field: ProtocolPrintField,
   visible: boolean,
-): ProtocolPrintVisibility => ({ ...visibility, [field]: visible });
+): ProtocolPrintVisibility => ({ ...normalizeProtocolPrintVisibility(visibility), [field]: visible });
 
 export const setProtocolFieldsVisibility = (
   visibility: ProtocolPrintVisibility | undefined,
@@ -73,5 +87,5 @@ export const setProtocolFieldsVisibility = (
   visible: boolean,
 ): ProtocolPrintVisibility => fields.reduce(
   (result, field) => ({ ...result, [field]: visible }),
-  { ...visibility },
+  normalizeProtocolPrintVisibility(visibility),
 );

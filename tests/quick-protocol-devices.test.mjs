@@ -22,7 +22,7 @@ test('quick-create payload carries device aliases at row and values levels', asy
   assert.match(page, /measurementDeviceId,\s*deviceId: measurementDeviceId,\s*values:/s);
   assert.match(page, /conditionJson,\s*measurementDeviceId,\s*deviceId: measurementDeviceId/s);
   assert.match(service, /measurement\.values\?\.measurementDeviceId/);
-  assert.match(service, /\{ measurementDeviceId, deviceId: measurementDeviceId \}/);
-  assert.match(types, /measurementDeviceId\?: string;\s*deviceId\?: string;\s*values\?:/s);
+  assert.match(service, /measurementDeviceId,\s*deviceId: measurementDeviceId/);
+  assert.match(service, /payload\.deviceId \?\?/);
+  assert.match(types, /measurementDeviceId\?: string \| number \| null;\s*deviceId\?: string \| number \| null;\s*values\?:/s);
 });
-

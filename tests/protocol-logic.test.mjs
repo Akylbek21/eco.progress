@@ -3,8 +3,10 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import ts from 'typescript';
 
+const read = (relativePath) => readFile(new URL(`../${relativePath}`, import.meta.url), 'utf8');
+
 const loadTypeScriptModule = async (relativePath) => {
-  const source = await readFile(new URL(`../${relativePath}`, import.meta.url), 'utf8');
+  const source = await read(relativePath);
   const output = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 },
   }).outputText;
@@ -63,38 +65,7 @@ test('protocol normative display keeps zero values', async () => {
   assert.equal(protocolNormativeDisplayValue({ min: 0, max: 10 }), '0-10');
 });
 
-test('protocol normative search preserves condition variants and ranks selected context first', async () => {
-  const { filterAndRankProtocolNormatives } = await loadTypeScriptModule('src/utils/protocolNormativeSearch.ts');
-  const base = {
-    templateId: 'microclimate',
-    sourceDocumentCode: 'DSM_15',
-    factorType: 'MICROCLIMATE',
-    factorCode: 'TEMP_AIR',
-    indicator: 'Air temperature',
-    active: true,
-    archived: false,
-  };
-  const warm = { ...base, id: 'warm', season: 'WARM', workCategory: 'IA', value: '25' };
-  const cold = { ...base, id: 'cold', season: 'COLD', workCategory: 'IA', value: '22' };
-  const result = filterAndRankProtocolNormatives([warm, cold], 'temperature', {
-    templateId: 'microclimate',
-    sourceDocumentCode: 'DSM_15',
-    factorType: 'MICROCLIMATE',
-    season: 'COLD',
-    workCategory: 'IA',
-  });
-  assert.deepEqual(result.map((item) => item.id), ['cold', 'warm']);
-});
-
-test('protocol normative search accepts legacy template aliases without leaking other documents', async () => {
-  const { filterAndRankProtocolNormatives } = await loadTypeScriptModule('src/utils/protocolNormativeSearch.ts');
-  const physical = {
-    id: 'physical', templateId: 'physical_factors', sourceDocumentCode: 'DSM_15',
-    factorType: 'MICROCLIMATE', factorCode: 'TEMP_AIR', indicator: 'Temperature', active: true,
-  };
-  const wrongDocument = { ...physical, id: 'wrong', sourceDocumentCode: 'DSM_70' };
-  const result = filterAndRankProtocolNormatives([physical, wrongDocument], 'temp', {
-    templateId: 'microclimate', sourceDocumentCode: 'DSM_15', factorType: 'MICROCLIMATE',
-  });
-  assert.deepEqual(result.map((item) => item.id), ['physical']);
+test('protocol normative display helpers do not filter or rerank server search results', async () => {
+  const source = await read('src/utils/protocolNormativeSearch.ts');
+  assert.doesNotMatch(source, /tokens\.every|filterAndRankProtocolNormatives|matchesProtocolNormativeContext|queryScore/);
 });

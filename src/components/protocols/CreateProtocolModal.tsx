@@ -25,12 +25,13 @@ import type {
   WeatherConditionsStatus,
 } from '../../types/protocols';
 import { physicalFactorTypes, protocolTemplates, subtypeName, templateName } from '../../data/protocolTemplates';
-import { canSearchNormative as canSearch, normativeSearchItemToRecord, searchNormatives } from '../../services/normativeSearchService';
+import { canSearchNormative as canSearch, NORMATIVE_SEARCH_DEBOUNCE_MS, normativeSearchItemToRecord, searchNormatives } from '../../services/normativeSearchService';
 import { resolveProtocolNormativeContext } from '../../data/protocolNormativeContext';
 import {
   protocolNormativeConditionLabel,
   protocolNormativeDisplayValue,
 } from '../../utils/protocolNormativeSearch';
+import { normalizeDecimal } from '../../utils/decimalInput';
 
 type Props = {
   open: boolean;
@@ -54,7 +55,6 @@ type SearchState = 'idle' | 'minLength' | 'searching' | 'empty' | 'ready' | 'err
 
 const today = () => new Date().toISOString().slice(0, 10);
 const DEFAULT_WEATHER_TIME = '12:00';
-const SEARCH_DEBOUNCE_MS = 500;
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = `${inputClass} bg-slate-100 text-slate-600`;
 const allowedTemplateIds = new Set(protocolTemplates.map((item) => item.id));
@@ -288,7 +288,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       } finally {
         if (requestId === searchRequestRef.current) setSearching(false);
       }
-    }, SEARCH_DEBOUNCE_MS);
+    }, NORMATIVE_SEARCH_DEBOUNCE_MS);
     return () => {
       window.clearTimeout(timer);
       searchAbortRef.current?.abort();
@@ -343,7 +343,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
           testingMethod: String(row.values.testingMethod || row.testingMethod || ''),
         },
         reading: '',
-        deviceId: row.measurementDeviceId || String(row.values.measurementDeviceId || ''),
+        deviceId: String(row.measurementDeviceId ?? row.values.measurementDeviceId ?? ''),
       })));
       setStep(2);
     } catch (copyError) {
@@ -476,6 +476,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
     const results: ProtocolResultPayload[] = rows.map((row) => ({
       normativeId: row.normative?.id,
       measurementDeviceId: row.deviceId || undefined,
+      deviceId: row.deviceId || undefined,
       values: {
         pollutantCode: row.pollutant.code,
         indicator: row.pollutant.name,
@@ -485,6 +486,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         primaryReading: row.reading,
         measurementReadings: row.reading,
         measurementDeviceId: row.deviceId,
+        deviceId: row.deviceId,
         normativeId: row.normative?.id || '',
         normative: row.normative?.value || '',
         normativeValue: row.normative?.value || '',
@@ -823,7 +825,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
 
       <Modal open={weatherEditOpen} onClose={() => setWeatherEditOpen(false)} title="Изменить условия вручную" size="md">
         <div className="grid gap-4 sm:grid-cols-2">
-          {[['temperature', 'Температура, °C'], ['humidity', 'Влажность, %'], ['pressureKpa', 'Давление, кПа'], ['windSpeed', 'Скорость ветра, м/с']].map(([key, label]) => <label key={key} className="space-y-1.5 text-sm font-bold text-slate-700">{label}<input type="number" step="any" value={String(weatherEdit[key as keyof ProtocolEnvironmentalConditions] || '')} onChange={(event) => setWeatherEdit({ ...weatherEdit, [key]: event.target.value })} className={inputClass} /></label>)}
+          {[['temperature', 'Температура, °C'], ['humidity', 'Влажность, %'], ['pressureKpa', 'Давление, кПа'], ['windSpeed', 'Скорость ветра, м/с']].map(([key, label]) => <label key={key} className="space-y-1.5 text-sm font-bold text-slate-700">{label}<input inputMode="decimal" value={String(weatherEdit[key as keyof ProtocolEnvironmentalConditions] ?? '')} onChange={(event) => setWeatherEdit({ ...weatherEdit, [key]: normalizeDecimal(event.target.value) })} className={inputClass} /></label>)}
           <label className="space-y-1.5 text-sm font-bold text-slate-700 sm:col-span-2">Причина изменения *<textarea rows={3} value={weatherReason} onChange={(event) => setWeatherReason(event.target.value)} className={inputClass} />{fieldErrors.weatherReason && <span className="block text-rose-700">{fieldErrors.weatherReason}</span>}</label>
         </div>
         <div className="mt-5 flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setWeatherEditOpen(false)}>Отмена</Button><Button type="button" onClick={saveManualWeather}>Сохранить значения</Button></div>

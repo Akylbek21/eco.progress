@@ -9,6 +9,7 @@ export { canSearchNormative } from '../utils/normativeSearchRules';
 type UnknownRecord = Record<string, unknown>;
 
 const CACHE_TTL_MS = 45_000;
+export const NORMATIVE_SEARCH_DEBOUNCE_MS = 450;
 const cache = new Map<string, { expiresAt: number; value: NormativeSearchResponse['data'] }>();
 
 const asRecord = (value: unknown): UnknownRecord | null =>

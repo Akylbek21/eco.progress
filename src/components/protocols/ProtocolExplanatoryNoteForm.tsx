@@ -1,5 +1,4 @@
 import type { ProtocolPrintVisibility } from '../../types/protocols';
-import ProtocolPrintVisibilityToggle from './ProtocolPrintVisibilityToggle';
 
 type Props = {
   value: string;
@@ -30,7 +29,6 @@ const ProtocolExplanatoryNoteForm = ({ value, readOnly, onChange, onGenerate, pr
       className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm leading-6 outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500"
       placeholder="Дополнительные сведения, замечания и пояснения к результатам испытаний"
     />
-    <ProtocolPrintVisibilityToggle field="explanatoryNote" visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} />
   </section>
 );
 

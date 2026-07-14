@@ -82,6 +82,15 @@ export type ProtocolResultColumn = {
   placeholder?: string;
 };
 
+export interface MeasurementDeviceSummary {
+  id: string | number;
+  name?: string | null;
+  model?: string | null;
+  serialNumber?: string | null;
+  verificationNumber?: string | null;
+  verificationValidUntil?: string | null;
+}
+
 export type ProtocolResult = {
   id: string;
   protocolId?: string;
@@ -108,21 +117,11 @@ export type ProtocolResult = {
   comment?: string;
   measurementPlace?: string;
   sampleName?: string;
-  deviceId?: string;
+  deviceId?: string | number | null;
   deviceName?: string;
-  measurementDeviceId?: string;
-  measurementDevice?: {
-    id: string;
-    name?: string;
-    model?: string;
-    serialNumber?: string;
-  };
-  device?: {
-    id: string;
-    name?: string;
-    model?: string;
-    serialNumber?: string;
-  };
+  measurementDeviceId?: string | number | null;
+  measurementDevice?: MeasurementDeviceSummary | null;
+  device?: MeasurementDeviceSummary | null;
   comparisonType?: NormativeComparisonType;
   normativeMin?: string;
   normativeMax?: string;
@@ -208,36 +207,29 @@ export type ProtocolLaboratorySnapshot = {
 
 export type ProtocolLaboratoryData = ProtocolLaboratorySnapshot;
 
-export type ProtocolPrintField =
-  | 'organizationName'
-  | 'organizationAddress'
-  | 'objectName'
-  | 'productName'
-  | 'testingBasis'
-  | 'protocolDate'
-  | 'measurementDate'
-  | 'measurementTime'
-  | 'measurementPlace'
-  | 'samplingDate'
-  | 'testingStartDate'
-  | 'testingEndDate'
-  | 'productNormativeDocument'
-  | 'samplingMethodDocument'
-  | 'testingMethodDocument'
-  | 'testingPurpose'
-  | 'environmentConditions'
-  | 'temperature'
-  | 'humidity'
-  | 'pressureKpa'
-  | 'windSpeed'
-  | 'formCode'
-  | 'application'
-  | 'sourceNumber'
-  | 'executor'
-  | 'approver'
-  | 'explanatoryNote';
+export interface ProtocolPrintVisibility {
+  organizationName: boolean;
+  organizationAddress: boolean;
+  testObjectName: boolean;
+  productName: boolean;
+  testBasis: boolean;
+  samplingDate: boolean;
+  testStartDate: boolean;
+  testEndDate: boolean;
+  productNormativeDocument: boolean;
+  samplingMethodDocument: boolean;
+  testMethodDocument: boolean;
+  testPurpose: boolean;
+  samplingPlace: boolean;
+  measurementDate: boolean;
+  environmentalConditions: boolean;
+  temperature: boolean;
+  humidity: boolean;
+  pressure: boolean;
+  windSpeed: boolean;
+}
 
-export type ProtocolPrintVisibility = Partial<Record<ProtocolPrintField, boolean>>;
+export type ProtocolPrintField = keyof ProtocolPrintVisibility;
 
 export type ProtocolOrganizationData = {
   organizationName: string;
@@ -275,6 +267,7 @@ export type ProtocolEnvironmentalConditions = {
   source?: 'API' | 'MANUAL';
   dataSource?: string;
   observedAt?: string;
+  weatherObservedAt?: string;
   loadedAt?: string;
   manualChangeReason?: string;
 };
@@ -301,6 +294,7 @@ export type WeatherConditions = {
   source: 'API' | 'MANUAL';
   dataSource?: string;
   observedAt?: string;
+  weatherObservedAt?: string;
   loadedAt?: string;
   manualChangeReason?: string;
   warning?: string;
@@ -467,8 +461,9 @@ export type UpdateProtocolPayload = {
 
 export type ProtocolResultPayload = {
   values: Record<string, ProtocolResultValue>;
-  measurementDeviceId?: string | null;
-  normativeId?: string | null;
+  measurementDeviceId?: string | number | null;
+  deviceId?: string | number | null;
+  normativeId?: string | number | null;
 };
 
 export type QuickProtocolMeasurementPayload = {
@@ -478,7 +473,7 @@ export type QuickProtocolMeasurementPayload = {
   indicatorName: string;
   value: string | number;
   unit: string;
-  normativeId?: string;
+  normativeId?: string | number | null;
   normativeValue?: string | number | null;
   normativeMin?: string | number | null;
   normativeMax?: string | number | null;
@@ -487,8 +482,8 @@ export type QuickProtocolMeasurementPayload = {
   sourceDocumentCode?: string;
   testingMethodNd?: string;
   samplingMethodNd?: string;
-  measurementDeviceId?: string;
-  deviceId?: string;
+  measurementDeviceId?: string | number | null;
+  deviceId?: string | number | null;
   values?: Record<string, ProtocolResultValue>;
 };
 
@@ -512,6 +507,7 @@ export type QuickProtocolCreatePayload = {
   waterUseCategory?: string;
   resultMode: 'CHEMICAL' | 'PHYSICAL';
   conditions?: Record<string, ProtocolResultValue>;
+  environment?: ProtocolEnvironmentalConditions;
   printVisibility?: ProtocolPrintVisibility;
   measurements: QuickProtocolMeasurementPayload[];
 };

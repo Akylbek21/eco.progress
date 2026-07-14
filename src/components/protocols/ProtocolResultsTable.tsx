@@ -13,6 +13,7 @@ import { resolveNormativeSearchContext } from '../../data/protocolTypeConfig';
 import {
   canSearchNormative,
   isNormativeSearchCanceled,
+  NORMATIVE_SEARCH_DEBOUNCE_MS,
   normativeSearchItemToRecord,
   searchNormatives,
 } from '../../services/normativeSearchService';
@@ -60,7 +61,6 @@ type NormativeSuggestion = Pollutant & {
 
 type SearchState = 'idle' | 'minLength' | 'searching' | 'empty' | 'ready' | 'error';
 
-const SEARCH_DEBOUNCE_MS = 500;
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = 'rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700';
 const physicalFactorTemplateIds: ProtocolTemplateId[] = ['physical_factors', 'microclimate', 'lighting', 'noise_vibration', 'uv_emf_laser'];
@@ -294,9 +294,9 @@ const resolveDeviceName = (row: ProtocolResultRow, devices: ProtocolMeasurementD
   const resolvedId = resolveMeasurementDeviceId(row);
   const ids = resolvedId ? [resolvedId] : [];
   const device = devices.find((item) => ids.includes(String(item.deviceId)) || ids.includes(String(item.id)));
-  const name = device?.deviceSnapshot.name
-    || row.measurementDevice?.name
+  const name = row.measurementDevice?.name
     || row.device?.name
+    || device?.deviceSnapshot.name
     || row.deviceName
     || valueOf(row, ['deviceName']);
   return name && name !== '—' ? name : '';
@@ -364,7 +364,7 @@ const ProtocolResultsTable = ({
       status: 'ACTIVE',
       templateId: normalizedTemplateId,
       sourceDocumentCode,
-      categoryCode: searchContext.category || undefined,
+      categoryCode: searchContext.categoryCode || undefined,
       factorType: searchContext.factorType || (isPhysicalFactors ? physicalSubtype : undefined),
       environmentType: isWaterProtocol ? 'WATER' : undefined,
       waterType: isWaterProtocol ? effectiveWaterType : undefined,
@@ -551,7 +551,7 @@ const ProtocolResultsTable = ({
       } finally {
         if (requestId === searchRequestRef.current) setSearching(false);
       }
-    }, SEARCH_DEBOUNCE_MS);
+    }, NORMATIVE_SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [query, templateId, subtype, objectId, testingDate, isPhysicalFactors, isSoilProtocol, isWaterProtocol, sourceDocumentCode, effectiveWaterType, physicalSubtype, physicalConditions]);
 
@@ -636,7 +636,7 @@ const ProtocolResultsTable = ({
         waterUseCategory: isWaterProtocol ? waterUseCategory : '',
         sourceDocumentCode: normative.sourceDocumentCode || sourceDocumentCode,
         templateId: normative.templateId || normalizedTemplateId,
-        category: normative.category || normative.categoryCode || searchContext.category || '',
+        categoryCode: normative.categoryCode || normative.category || searchContext.categoryCode || '',
       },
     });
   };
@@ -736,7 +736,7 @@ const ProtocolResultsTable = ({
     setEditing(row);
     setForm({
       primaryReading: primaryReading(row),
-      measurementDeviceId: row.measurementDeviceId || valueOf(row, ['measurementDeviceId']),
+      measurementDeviceId: String(row.measurementDeviceId ?? valueOf(row, ['measurementDeviceId'])),
       measurementPlace: valueOf(row, ['measurementPlace', 'samplingPlace']),
       sourceNumber: valueOf(row, ['sourceNumber']),
       readings: valueOf(row, ['readings', 'measurementReadings']),

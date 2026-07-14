@@ -28,7 +28,7 @@ const ProtocolOrganizationForm = ({ value, readOnly, onChange, printVisibility, 
       <label className="space-y-1.5 text-sm font-semibold text-slate-700">
         <span>Объект испытаний</span>
         <input className={inputClass} disabled={readOnly} value={value.objectName || ''} onChange={(event) => onChange({ ...value, objectName: event.target.value })} />
-        <ProtocolPrintVisibilityToggle field="objectName" visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} />
+        <ProtocolPrintVisibilityToggle field="testObjectName" visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} />
       </label>
       <label className="space-y-1.5 text-sm font-semibold text-slate-700">
         <span>Наименование продукции</span>
@@ -38,7 +38,7 @@ const ProtocolOrganizationForm = ({ value, readOnly, onChange, printVisibility, 
       <label className="space-y-1.5 text-sm font-semibold text-slate-700 md:col-span-2">
         <span>Основание для испытаний</span>
         <textarea rows={2} className={inputClass} disabled={readOnly} value={value.testingBasis || ''} onChange={(event) => onChange({ ...value, testingBasis: event.target.value })} />
-        <ProtocolPrintVisibilityToggle field="testingBasis" visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} />
+        <ProtocolPrintVisibilityToggle field="testBasis" visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} />
       </label>
     </div>
   </section>

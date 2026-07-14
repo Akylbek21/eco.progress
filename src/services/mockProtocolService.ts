@@ -30,6 +30,7 @@ import { mockDevices, mockLaboratory } from '../mocks/mockDevices';
 import { mockNormatives } from '../mocks/mockNormatives';
 import { mockProtocols } from '../mocks/mockProtocols';
 import { protocolTemplates } from '../data/protocolTemplates';
+import { normalizeProtocolPrintVisibility } from '../utils/protocolPrintVisibility';
 
 const STORAGE_KEY = 'eco-progress-mock-protocols-v2';
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -285,7 +286,7 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
     executor: snapshot.executor,
     executorId: snapshot.executorId,
     approver: snapshot.laboratoryHead,
-    printVisibility: clone(payload.printVisibility || {}),
+    printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
     complianceResult: 'NEEDS_REVIEW',
     history: [history('Протокол создан')],
     createdAt,
@@ -313,7 +314,7 @@ export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): 
     executorId: String(payload.executorId),
     purpose: 'Лабораторные испытания',
     environment: { ...(payload.conditions || {}), source: 'MANUAL', dataSource: 'manual' } as ProtocolEnvironmentalConditions,
-    printVisibility: payload.printVisibility,
+    printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
   });
   for (const measurement of payload.measurements) {
     await addResult(protocol.id, {
@@ -372,7 +373,7 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
     testing: clone(payload.testing),
     environment: clone(payload.environment || {}),
     explanatoryNote: payload.explanatoryNote || '',
-    printVisibility: clone(payload.printVisibility || {}),
+    printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
     history: [...(protocol.history || []), history('Протокол сохранён')],
   }));
 }
