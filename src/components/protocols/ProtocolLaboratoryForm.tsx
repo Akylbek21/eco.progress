@@ -3,7 +3,8 @@ import { AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Button from '../ui/Button';
 import { accreditationState } from '../../services/laboratorySettingsService';
-import type { LaboratoryEmployee, ProtocolLaboratorySnapshot } from '../../types/protocols';
+import type { LaboratoryEmployee, ProtocolLaboratorySnapshot, ProtocolPrintVisibility } from '../../types/protocols';
+import ProtocolPrintVisibilityToggle from './ProtocolPrintVisibilityToggle';
 
 type Props = {
   value: ProtocolLaboratorySnapshot;
@@ -13,9 +14,11 @@ type Props = {
   canOpenSettings?: boolean;
   onExecutorChange: (employee: LaboratoryEmployee) => void;
   onRefresh?: () => void;
+  printVisibility?: ProtocolPrintVisibility;
+  onPrintVisibilityChange: (value: ProtocolPrintVisibility) => void;
 };
 
-const ProtocolLaboratoryForm = ({ value, employees, readOnly, loading = false, canOpenSettings = false, onExecutorChange, onRefresh }: Props) => {
+const ProtocolLaboratoryForm = ({ value, employees, readOnly, loading = false, canOpenSettings = false, onExecutorChange, onRefresh, printVisibility, onPrintVisibilityChange }: Props) => {
   const [details, setDetails] = useState(false);
   const certificate = accreditationState(value.accreditationValidUntil);
   const configured = Boolean(value.laboratoryName && value.accreditationNumber);
@@ -81,6 +84,7 @@ const ProtocolLaboratoryForm = ({ value, employees, readOnly, loading = false, c
             {!value.executorId && <option value="">{value.executor || 'Выберите исполнителя'}</option>}
             {employees.filter((item) => item.active).map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName} · {employee.position || 'сотрудник'}</option>)}
           </select>
+          <ProtocolPrintVisibilityToggle field="executor" visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} />
         </label>
       </div>
 

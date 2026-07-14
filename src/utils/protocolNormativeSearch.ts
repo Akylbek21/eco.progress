@@ -48,9 +48,6 @@ export const normalizeProtocolSearchText = (value: unknown) => String(value ?? '
   .replace(/\s+/g, ' ')
   .trim();
 
-export const canSearchProtocolNormative = (value: string) =>
-  normalizeProtocolSearchText(value).replace(/[^a-zа-я0-9]/gi, '').length >= 2;
-
 export const isProtocolScopeQuery = (value: string, templateId: string) => {
   const query = normalizeProtocolSearchText(value);
   return (scopeQueries[templateId] || []).some((candidate) => normalizeProtocolSearchText(candidate) === query);

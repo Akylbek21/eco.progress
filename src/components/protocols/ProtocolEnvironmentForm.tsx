@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Archive, Check, CloudSun, Copy, RefreshCw } from 'lucide-react';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
-import type { ProtocolEnvironmentalConditions, WeatherConditions, WeatherConditionsStatus } from '../../types/protocols';
+import type { ProtocolEnvironmentalConditions, ProtocolPrintField, ProtocolPrintVisibility, WeatherConditions, WeatherConditionsStatus } from '../../types/protocols';
+import ProtocolPrintVisibilityToggle from './ProtocolPrintVisibilityToggle';
 
 type ObjectOption = { id: string; name: string };
 type WeatherSelection = { objectId: string; date: string; time: string; signal?: AbortSignal };
@@ -18,6 +19,8 @@ type Props = {
   onSelectionChange: (value: { objectId: string; date: string; time: string }) => void;
   onRequestConditions: (selection: WeatherSelection) => Promise<WeatherConditions | void>;
   onChange: (value: ProtocolEnvironmentalConditions) => void;
+  printVisibility?: ProtocolPrintVisibility;
+  onPrintVisibilityChange: (value: ProtocolPrintVisibility) => void;
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -59,7 +62,7 @@ const writeClipboardText = async (text: string) => {
 
 const ProtocolEnvironmentForm = ({
   value, measurementDate, objectId, objectName, objectOptions = [], readOnly, loading = false,
-  onSelectionChange, onRequestConditions, onChange,
+  onSelectionChange, onRequestConditions, onChange, printVisibility, onPrintVisibilityChange,
 }: Props) => {
   const [selection, setSelection] = useState({ objectId, date: measurementDate, time: DEFAULT_WEATHER_TIME });
   const [editOpen, setEditOpen] = useState(false);
@@ -145,6 +148,17 @@ const ProtocolEnvironmentForm = ({
   };
   const isArchive = Boolean(selection.date && selection.date < today());
   const isLoading = loading || value.status === 'LOADING';
+  const updateWindSpeed = (windSpeed: string) => {
+    if (readOnly) return;
+    onChange({
+      ...value,
+      windSpeed,
+      status: 'MANUAL',
+      source: 'MANUAL',
+      dataSource: 'Введено сотрудником',
+      observedAt: new Date().toISOString(),
+    });
+  };
 
   return (
     <>
@@ -152,6 +166,7 @@ const ProtocolEnvironmentForm = ({
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900"><CloudSun className="h-5 w-5 text-eco-700" /> Условия среды</h2>
+            <ProtocolPrintVisibilityToggle field="environmentConditions" visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} />
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
               <span>{statusLabels[value.status || 'IDLE']}</span>
               {isArchive && <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 font-bold text-sky-800"><Archive className="h-3.5 w-3.5" /> Архивные погодные данные</span>}
@@ -169,23 +184,27 @@ const ProtocolEnvironmentForm = ({
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Дата замера</span><input type="date" max={today()} disabled={readOnly} value={selection.date} onChange={(event) => updateSelection({ date: event.target.value })} className={inputClass} /></label>
+          <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Дата замера</span><input type="date" max={today()} disabled={readOnly} value={selection.date} onChange={(event) => updateSelection({ date: event.target.value })} className={inputClass} /><ProtocolPrintVisibilityToggle field="measurementDate" relatedFields={['samplingDate']} visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} /></label>
           <label className="space-y-1.5 text-sm font-semibold text-slate-700">
             <span>Время замера</span>
             <input type="time" readOnly disabled value={DEFAULT_WEATHER_TIME} className={inputClass} />
             <span className="block text-xs font-semibold text-slate-500">Погодные данные автоматически берутся на 12:00</span>
+            <ProtocolPrintVisibilityToggle field="measurementTime" visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} />
           </label>
           <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Место / объект</span>
             {objectOptions.length > 1
               ? <select disabled={readOnly} value={selection.objectId} onChange={(event) => updateSelection({ objectId: event.target.value })} className={inputClass}>{objectOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
               : <input readOnly value={objectOptions.find((item) => item.id === selection.objectId)?.name || objectName || 'Объект не указан'} className={`${inputClass} bg-slate-100`} />}
+            <ProtocolPrintVisibilityToggle field="measurementPlace" visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} />
           </label>
         </div>
 
         {isLoading ? <div className="mt-4 grid animate-pulse grid-cols-2 gap-4 lg:grid-cols-4">
           {mainFields.map(([, label]) => <div key={label}><div className="mb-2 h-4 w-28 rounded bg-slate-100" /><div className="h-11 rounded-xl bg-slate-100" /></div>)}
         </div> : <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {mainFields.map(([key, label]) => <label key={key} className="space-y-1.5 text-sm font-semibold text-slate-700"><span>{label}</span><input readOnly value={value[key] || ''} className={`${inputClass} bg-slate-100`} /></label>)}
+          {mainFields.map(([key, label]) => <label key={key} className="space-y-1.5 text-sm font-semibold text-slate-700"><span>{label}</span>{key === 'windSpeed'
+            ? <input type="number" min="0" max="100" step="0.1" value={value.windSpeed ?? ''} onChange={(event) => updateWindSpeed(event.target.value)} className={inputClass} aria-readonly={readOnly} />
+            : <input readOnly value={value[key] || ''} className={`${inputClass} bg-slate-100`} />}<ProtocolPrintVisibilityToggle field={key as ProtocolPrintField} visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} /></label>)}
         </div>}
 
         <div className="mt-4 grid gap-3 rounded-xl bg-slate-50 p-3 text-sm sm:grid-cols-2">

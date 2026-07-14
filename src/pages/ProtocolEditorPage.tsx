@@ -102,6 +102,7 @@ const editableSignature = (protocol: Protocol) => JSON.stringify({
   measurementTime: protocol.measurementTime,
   measurementPlace: protocol.measurementPlace,
   explanatoryNote: protocol.explanatoryNote,
+  printVisibility: protocol.printVisibility,
 });
 
 const SnapshotSection = ({ snapshot }: { snapshot: ProtocolCompanySnapshot }) => {
@@ -858,6 +859,7 @@ const ProtocolEditorPage = () => {
           testing: snapshot.testing,
           environment: snapshot.environment,
           explanatoryNote: snapshot.explanatoryNote,
+          printVisibility: snapshot.printVisibility,
         });
         if (requestId === saveRequestRef.current && startedVersion === editVersionRef.current) {
           applyServerProtocol(updated);
@@ -1260,6 +1262,8 @@ const ProtocolEditorPage = () => {
           readOnly={readOnly}
           onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })}
           onChange={(testing) => patchProtocol({ testing })}
+          printVisibility={protocol.printVisibility}
+          onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })}
         />
         <ProtocolLaboratoryForm
           value={protocol.laboratory}
@@ -1277,12 +1281,14 @@ const ProtocolEditorPage = () => {
             },
           })}
           onRefresh={refreshLaboratorySnapshot}
+          printVisibility={protocol.printVisibility}
+          onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })}
         />
       </div>}
 
       {activeStep === 'organization' && <div className="space-y-6">
         <SnapshotSection snapshot={protocol.companySnapshot} />
-        <ProtocolOrganizationForm value={protocol.organization} readOnly={readOnly} onChange={(organization) => patchProtocol({ organization })} />
+        <ProtocolOrganizationForm value={protocol.organization} readOnly={readOnly} onChange={(organization) => patchProtocol({ organization })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />
       </div>}
 
       {activeStep === 'environment' && <ProtocolEnvironmentForm
@@ -1297,6 +1303,8 @@ const ProtocolEditorPage = () => {
         onSelectionChange={changeWeatherSelection}
         onRequestConditions={refreshWeather}
         onChange={(environment) => patchProtocol({ environment })}
+        printVisibility={protocol.printVisibility}
+        onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })}
       />}
 
       {activeStep === 'results' && <ProtocolResultsTable
@@ -1327,6 +1335,8 @@ const ProtocolEditorPage = () => {
           readOnly={readOnly}
           onChange={(explanatoryNote) => patchProtocol({ explanatoryNote })}
           onGenerate={() => patchProtocol({ explanatoryNote: generatedExplanation })}
+          printVisibility={protocol.printVisibility}
+          onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })}
         />
         <ReviewChecklist protocol={protocol} missingFields={missingFields} onGoToStep={setActiveStep} />
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

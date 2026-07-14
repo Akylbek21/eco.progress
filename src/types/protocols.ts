@@ -196,6 +196,37 @@ export type ProtocolLaboratorySnapshot = {
 
 export type ProtocolLaboratoryData = ProtocolLaboratorySnapshot;
 
+export type ProtocolPrintField =
+  | 'organizationName'
+  | 'organizationAddress'
+  | 'objectName'
+  | 'productName'
+  | 'testingBasis'
+  | 'protocolDate'
+  | 'measurementDate'
+  | 'measurementTime'
+  | 'measurementPlace'
+  | 'samplingDate'
+  | 'testingStartDate'
+  | 'testingEndDate'
+  | 'productNormativeDocument'
+  | 'samplingMethodDocument'
+  | 'testingMethodDocument'
+  | 'testingPurpose'
+  | 'environmentConditions'
+  | 'temperature'
+  | 'humidity'
+  | 'pressureKpa'
+  | 'windSpeed'
+  | 'formCode'
+  | 'application'
+  | 'sourceNumber'
+  | 'executor'
+  | 'approver'
+  | 'explanatoryNote';
+
+export type ProtocolPrintVisibility = Partial<Record<ProtocolPrintField, boolean>>;
+
 export type ProtocolOrganizationData = {
   organizationName: string;
   organizationAddress: string;
@@ -337,6 +368,7 @@ export interface Protocol {
   approver?: string;
   approvedAt?: string;
   signedAt?: string;
+  printVisibility?: ProtocolPrintVisibility;
   organization: ProtocolOrganizationData;
   laboratory: ProtocolLaboratorySnapshot;
   testing: ProtocolTestingData;
@@ -398,6 +430,7 @@ export interface CreateProtocolPayload {
   waterType?: string;
   waterUseCategory?: string;
   environment?: ProtocolEnvironmentalConditions;
+  printVisibility?: ProtocolPrintVisibility;
 }
 
 export type UpdateProtocolPayload = {
@@ -417,6 +450,7 @@ export type UpdateProtocolPayload = {
   testing: ProtocolTestingData;
   environment?: ProtocolEnvironmentalConditions;
   explanatoryNote?: string;
+  printVisibility?: ProtocolPrintVisibility;
 };
 
 export type ProtocolResultPayload = {
@@ -441,6 +475,8 @@ export type QuickProtocolMeasurementPayload = {
   sourceDocumentCode?: string;
   testingMethodNd?: string;
   samplingMethodNd?: string;
+  measurementDeviceId?: string;
+  deviceId?: string;
   values?: Record<string, ProtocolResultValue>;
 };
 
@@ -464,6 +500,7 @@ export type QuickProtocolCreatePayload = {
   waterUseCategory?: string;
   resultMode: 'CHEMICAL' | 'PHYSICAL';
   conditions?: Record<string, ProtocolResultValue>;
+  printVisibility?: ProtocolPrintVisibility;
   measurements: QuickProtocolMeasurementPayload[];
 };
 

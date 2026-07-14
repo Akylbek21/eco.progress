@@ -33,6 +33,9 @@ import type {
   WeatherConditions,
 } from '../types/protocols';
 import { canonicalProtocolResultAliases } from '../utils/protocolResultAliases';
+import { canSearchNormative, normativeSearchItemToRecord, searchNormatives } from './normativeSearchService';
+import type { NormativeSearchParams } from '../types/normativeSearch';
+import { normalizeProtocolPrintVisibility } from '../utils/protocolPrintVisibility';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -605,6 +608,10 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
   );
   const resultsSource = Array.isArray(source.results) ? source.results : [];
   const devicesSource = Array.isArray(source.instruments) ? source.instruments : Array.isArray(source.measurementDevices) ? source.measurementDevices : [];
+  const documentSettings = asRecord(source.documentSettings || source.document_settings);
+  const printVisibility = normalizeProtocolPrintVisibility(
+    source.printVisibility || source.print_visibility || documentSettings.printVisibility || documentSettings.print_visibility,
+  );
 
   return {
     id: pick(source, ['id', '_id', 'protocolId']),
@@ -664,6 +671,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     approver: pick(source, ['approver']),
     approvedAt: pick(source, ['approvedAt', 'approved_at']),
     signedAt: pick(source, ['signedAt', 'signed_at']),
+    printVisibility,
     organization: {
       organizationName: pick(organization, ['organizationName', 'companyName', 'name']) || snapshot.companyName,
       organizationAddress: pick(organization, ['organizationAddress', 'legalAddress', 'actualAddress', 'address']) || snapshot.legalAddress || snapshot.actualAddress || '',
@@ -775,6 +783,7 @@ const toCreateProtocolApiPayload = (payload: CreateProtocolPayload) => {
       loadedAt: payload.environment?.loadedAt || null,
       manualChangeReason: payload.environment?.manualChangeReason || null,
     },
+    printVisibility: payload.printVisibility || {},
   };
 };
 
@@ -978,13 +987,32 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   );
 
   const result = response.data?.data ?? response.data;
-  return requireProtocol(result, 'создание');
+  const protocol = requireProtocol(result, 'создание');
+  return { ...protocol, printVisibility: Object.keys(protocol.printVisibility || {}).length ? protocol.printVisibility : payload.printVisibility };
 }
 
 export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>('/protocols/quick-create', payload);
+  const measurements = payload.measurements.map((measurement) => {
+    const measurementDeviceId = String(
+      measurement.measurementDeviceId
+      || measurement.deviceId
+      || measurement.values?.measurementDeviceId
+      || measurement.values?.deviceId
+      || '',
+    ).trim();
+    return {
+      ...measurement,
+      ...(measurementDeviceId ? { measurementDeviceId, deviceId: measurementDeviceId } : {}),
+      values: {
+        ...(measurement.values || {}),
+        ...(measurementDeviceId ? { measurementDeviceId, deviceId: measurementDeviceId } : {}),
+      },
+    };
+  });
+  const response = await api.post<ApiResponse<unknown> | unknown>('/protocols/quick-create', { ...payload, measurements });
   const result = unwrapData(response);
-  return requireProtocol(result, 'быстрое создание');
+  const protocol = requireProtocol(result, 'быстрое создание');
+  return { ...protocol, printVisibility: Object.keys(protocol.printVisibility || {}).length ? protocol.printVisibility : payload.printVisibility };
 }
 
 export async function refreshLaboratoryData(protocolId: string): Promise<Protocol> {
@@ -1031,8 +1059,10 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
     testing: payload.testing,
     environment: toApiEnvironment(payload.environment),
     explanatoryNote: payload.explanatoryNote,
+    printVisibility: payload.printVisibility || {},
   });
-  return protocolFromActionResponse(protocolId, response);
+  const protocol = await protocolFromActionResponse(protocolId, response);
+  return { ...protocol, printVisibility: Object.keys(protocol.printVisibility || {}).length ? protocol.printVisibility : payload.printVisibility };
 }
 
 export async function deleteProtocol(protocolId: string): Promise<void> {
@@ -1108,6 +1138,7 @@ const duplicateProtocolFallback = async (protocolId: string): Promise<Protocol> 
     testingMethodDocument: source.testing.testingMethodDocument,
     purpose: source.testing.testingPurpose,
     environment: source.environment,
+    printVisibility: source.printVisibility,
   });
 
   await Promise.all((source.measurementDevices || []).map(async (device) => {
@@ -1273,39 +1304,27 @@ export async function removeProtocolMeasurementDevice(protocolId: string, device
   return protocolFromActionResponse(protocolId, response);
 }
 
-const MIN_NORMATIVE_SEARCH_LENGTH = 3;
 const NORMATIVE_SEARCH_LIMIT = 20;
 const SEARCH_CACHE_TTL_MS = 30_000;
-const canRunNormativeSearch = (value: string) => value.trim().length >= MIN_NORMATIVE_SEARCH_LENGTH;
-const normativeSearchCache = new Map<string, { expiresAt: number; value: NormativeSearchResult }>();
+const canRunNormativeSearch = canSearchNormative;
 const pollutantSearchCache = new Map<string, { expiresAt: number; value: Pollutant[] }>();
 const searchCacheKey = (params: Record<string, string>) => JSON.stringify(
   Object.entries(params).filter(([, value]) => value !== undefined).sort(([left], [right]) => left.localeCompare(right)),
 );
 
 export async function searchNormative(params: Record<string, string>, signal?: AbortSignal): Promise<NormativeSearchResult> {
-  const { testingDate, ...rest } = params;
-  const hasTextSearch = Boolean(params.query || params.q || params.search || params.indicator);
   const query = params.query || params.search || params.q || [params.code || params.pollutantCode, params.indicator].filter(Boolean).join(' ').trim();
   if (!canRunNormativeSearch(query)) return { found: false, normatives: [], items: [] };
-  const requestParams = {
-    ...rest,
-    search: hasTextSearch ? params.search || query : undefined,
-    query: hasTextSearch ? query : undefined,
-    q: hasTextSearch ? params.q || query : undefined,
-    limit: params.limit || undefined,
-    code: params.code || params.pollutantCode || undefined,
-    pollutantCode: params.pollutantCode || params.code || undefined,
-    indicator: params.indicator || undefined,
+  const requestParams: NormativeSearchParams = {
+    query,
     templateId: params.templateId || undefined,
-    subtype: params.subtype || undefined,
     sourceDocumentCode: params.sourceDocumentCode || undefined,
     environmentType: params.environmentType || undefined,
-    category: params.category || undefined,
     categoryCode: params.categoryCode || undefined,
     waterType: params.waterType || undefined,
-    page: params.page || undefined,
-    size: params.size || params.limit || undefined,
+    waterUseCategory: params.waterUseCategory || undefined,
+    page: params.page ? Number(params.page) : 0,
+    size: params.size || params.limit ? Number(params.size || params.limit) : 30,
     factorType: params.factorType || undefined,
     factorCode: params.factorCode || undefined,
     roomType: params.roomType || undefined,
@@ -1316,45 +1335,18 @@ export async function searchNormative(params: Record<string, string>, signal?: A
     noiseType: params.noiseType || undefined,
     visualWorkCategory: params.visualWorkCategory || undefined,
     lightingType: params.lightingType || undefined,
-    formType: params.formType || undefined,
-    normativeType: params.normativeType || undefined,
-    conditionJson: params.conditionJson || undefined,
     unit: params.unit || undefined,
-    objectId: params.objectId || undefined,
-    date: params.date || testingDate || undefined,
+    status: params.status === 'REVIEW' || params.status === 'ALL' ? params.status : 'ACTIVE',
   };
-  const cacheKey = searchCacheKey(params);
-  const cached = normativeSearchCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) return cached.value;
-  const remember = (value: NormativeSearchResult) => {
-    normativeSearchCache.set(cacheKey, { expiresAt: Date.now() + SEARCH_CACHE_TTL_MS, value });
-    return value;
+  const result = await searchNormatives(requestParams, signal);
+  const normatives = result.items.map(normativeSearchItemToRecord);
+  return {
+    found: normatives.length > 0,
+    normatives,
+    items: normatives,
+    ambiguous: normatives.length > 1,
+    normative: normatives.length === 1 ? normatives[0] : undefined,
   };
-  let response: ApiResponse<NormativeSearchResult> | NormativeSearchResult | unknown;
-  try {
-    response = await api.get<ApiResponse<NormativeSearchResult> | NormativeSearchResult>('/normatives/search', { params: requestParams, signal });
-  } catch (error) {
-    if (![400, 404, 405].includes(getApiStatus(error) || 0)) throw error;
-    response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams, signal });
-  }
-  const candidates = extractNormativeRecords(response);
-  const item = extractItem(response) as NormativeSearchResult;
-  const itemRecord = asRecord(item);
-  const normative = item.normative
-    ? normalizeNormativeRecord(item.normative)
-    : itemRecord && (itemRecord.id || itemRecord.indicator || itemRecord.indicatorName || itemRecord.pollutantName || itemRecord.name)
-      ? normalizeNormativeRecord(item)
-      : undefined;
-  if (candidates.length) {
-    return remember({
-      ...item,
-      found: true,
-      normatives: candidates,
-      ambiguous: candidates.length > 1 || item.ambiguous,
-      normative: candidates.length === 1 ? candidates[0] : normative,
-    });
-  }
-  return remember({ ...item, normative });
 }
 
 export async function searchPollutants(query: string, params: Record<string, string> = {}, signal?: AbortSignal): Promise<Pollutant[]> {

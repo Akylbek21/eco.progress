@@ -1,4 +1,3 @@
-import axios from 'axios';
 import api, { type ApiResponse } from './api';
 import { extractItem, extractList } from './apiHelpers';
 import { getAdminUsers } from './adminUserService';
@@ -103,26 +102,29 @@ const requireId = (id: string | number, label = 'лаборатории') => {
   return Number(value);
 };
 
+let laboratoriesRequest: Promise<LaboratorySummary[]> | null = null;
+
 export async function getLaboratories(): Promise<LaboratorySummary[]> {
-  const response = await api.get<ApiResponse<unknown> | unknown>('/laboratories');
-  return extractList(response, ['laboratories', 'items']).map(normalizeLaboratoryProfile);
+  if (!laboratoriesRequest) {
+    laboratoriesRequest = api
+      .get<ApiResponse<unknown> | unknown>('/laboratories')
+      .then((response) => extractList(response, ['laboratories', 'items']).map(normalizeLaboratoryProfile))
+      .finally(() => {
+        laboratoriesRequest = null;
+      });
+  }
+  return laboratoriesRequest;
 }
 
 export async function getDefaultLaboratory(): Promise<LaboratoryProfile | null> {
-  try {
-    const response = await api.get<ApiResponse<unknown> | unknown>('/settings/laboratories/default');
-    const payload = extractItem(response, ['laboratory', 'profile']);
-    return payload ? normalizeLaboratoryProfile(payload) : null;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 404) return null;
-    throw error;
-  }
+  const laboratories = (await getLaboratories()).filter((laboratory) => laboratory.active);
+  const selected = laboratories.find((laboratory) => laboratory.isDefault)
+    || (laboratories.length === 1 ? laboratories[0] : undefined);
+  return selected ? normalizeLaboratoryProfile(selected) : null;
 }
 
 export async function getLaboratory(id: string | number): Promise<LaboratoryProfile> {
-  const laboratoryId = requireId(id);
-  const response = await api.get<ApiResponse<unknown> | unknown>(`/laboratories/${laboratoryId}`);
-  return normalizeLaboratoryProfile(extractItem(response, ['laboratory', 'profile']));
+  return getLaboratorySettings(id);
 }
 
 export async function getLaboratorySettings(id: string | number): Promise<LaboratoryProfile> {

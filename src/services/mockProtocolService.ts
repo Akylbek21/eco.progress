@@ -285,6 +285,7 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
     executor: snapshot.executor,
     executorId: snapshot.executorId,
     approver: snapshot.laboratoryHead,
+    printVisibility: clone(payload.printVisibility || {}),
     complianceResult: 'NEEDS_REVIEW',
     history: [history('Протокол создан')],
     createdAt,
@@ -312,10 +313,12 @@ export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): 
     executorId: String(payload.executorId),
     purpose: 'Лабораторные испытания',
     environment: { ...(payload.conditions || {}), source: 'MANUAL', dataSource: 'manual' } as ProtocolEnvironmentalConditions,
+    printVisibility: payload.printVisibility,
   });
   for (const measurement of payload.measurements) {
     await addResult(protocol.id, {
       normativeId: measurement.normativeId,
+      measurementDeviceId: measurement.measurementDeviceId || measurement.deviceId,
       values: {
         ...(payload.conditions || {}),
         ...(measurement.values || {}),
@@ -331,6 +334,8 @@ export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): 
         measurementPlace: payload.measurementPlace || '',
         samplingPlace: payload.measurementPlace || '',
         sourceDocumentCode: payload.sourceDocumentCode || '',
+        measurementDeviceId: measurement.measurementDeviceId || measurement.deviceId || '',
+        deviceId: measurement.deviceId || measurement.measurementDeviceId || '',
       },
     });
   }
@@ -367,6 +372,7 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
     testing: clone(payload.testing),
     environment: clone(payload.environment || {}),
     explanatoryNote: payload.explanatoryNote || '',
+    printVisibility: clone(payload.printVisibility || {}),
     history: [...(protocol.history || []), history('Протокол сохранён')],
   }));
 }

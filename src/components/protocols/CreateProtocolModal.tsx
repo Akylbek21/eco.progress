@@ -25,15 +25,11 @@ import type {
   WeatherConditionsStatus,
 } from '../../types/protocols';
 import { physicalFactorTypes, protocolTemplates, subtypeName, templateName } from '../../data/protocolTemplates';
-import { filterPhysicalFactorIndicators, getPhysicalFactorIndicators } from '../../data/physicalFactors';
-import { getAllNormativeRecords, type NormativeRecordsParams } from '../../services/normativeService';
+import { canSearchNormative as canSearch, normativeSearchItemToRecord, searchNormatives } from '../../services/normativeSearchService';
+import { resolveProtocolNormativeContext } from '../../data/protocolNormativeContext';
 import {
-  canSearchProtocolNormative as canSearch,
-  filterAndRankProtocolNormatives,
-  isProtocolScopeQuery,
   protocolNormativeConditionLabel,
   protocolNormativeDisplayValue,
-  type ProtocolNormativeSearchContext,
 } from '../../utils/protocolNormativeSearch';
 
 type Props = {
@@ -66,11 +62,8 @@ const searchUnavailableMessage = 'Поиск временно недоступе
 const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
 const notFoundSearchMessage = 'Норматив или показатель не найден. Проверьте код или добавьте норматив в справочник.';
 const sourceDocumentCodeForTemplate = (templateId: ProtocolTemplateId | '', isPhysicalFactors: boolean) => {
-  if (isPhysicalFactors) return 'DSM_15';
-  if (templateId === 'water' || templateId === 'water_wastewater') return 'DSM_138';
-  if (templateId === 'soil') return 'DSM_32';
-  if (['ambient_air', 'workplace_air', 'industrial_emissions'].includes(String(templateId))) return 'DSM_70';
-  return '';
+  const context = resolveProtocolNormativeContext(String(templateId), isPhysicalFactors ? 'MICROCLIMATE' : undefined);
+  return context.sourceDocumentCode || '';
 };
 const waterTypeOptions = [
   { value: 'DRINKING_WATER', label: 'Питьевая вода' },
@@ -176,42 +169,18 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         : templateId === 'industrial_emissions'
           ? 'ambient_air'
           : String(templateId);
-    const context: ProtocolNormativeSearchContext = {
+    const result = await searchNormatives({
+      query,
+      page: 0,
+      size: 30,
+      status: 'ACTIVE',
       templateId: normativeTemplateId,
-      sourceDocumentCode: sourceDocumentCodeForTemplate(templateId, isPhysicalFactors),
-      environmentType: isWaterTemplate ? 'WATER' : undefined,
+      sourceDocumentCode: sourceDocumentCodeForTemplate(templateId, isPhysicalFactors) || undefined,
       factorType: isPhysicalFactors ? subtype || undefined : undefined,
       waterType: isWaterTemplate ? waterType : undefined,
       waterUseCategory: isWaterTemplate && waterType === 'SURFACE_WATER' ? waterUseCategory : undefined,
-    };
-    const textQuery = isProtocolScopeQuery(query, normativeTemplateId) ? undefined : query;
-    const basicParams: NormativeRecordsParams = {
-      size: 100,
-      status: 'ACTIVE',
-      templateId: normativeTemplateId,
-      sourceDocumentCode: context.sourceDocumentCode || undefined,
-      environmentType: context.environmentType,
-      waterType: context.waterType,
-      normativeType: isSoilTemplate ? 'PDK' : undefined,
-      query: textQuery,
-      search: textQuery,
-    };
-    const detailedParams: NormativeRecordsParams = {
-      ...basicParams,
-      factorType: context.factorType,
-      waterUseCategory: context.waterUseCategory,
-    };
-    let records = await getAllNormativeRecords(detailedParams, signal);
-    let found = filterAndRankProtocolNormatives(records, query, context);
-    if (!found.length && JSON.stringify(detailedParams) !== JSON.stringify(basicParams)) {
-      records = await getAllNormativeRecords(basicParams, signal);
-      found = filterAndRankProtocolNormatives(records, query, context);
-    }
-    if (!found.length && textQuery) {
-      records = await getAllNormativeRecords({ ...basicParams, query: undefined, search: undefined }, signal);
-      found = filterAndRankProtocolNormatives(records, query, context);
-    }
-    return found;
+    }, signal);
+    return result.items.map(normativeSearchItemToRecord);
   };
 
   useEffect(() => {
@@ -307,10 +276,8 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       try {
         const apiItems = (await searchNormativeItems(query, controller.signal)).map(normativeToPollutant);
         if (requestId === searchRequestRef.current) {
-          const localItems = isPhysicalFactors ? filterPhysicalFactorIndicators(query, subtype).slice(0, 10) : [];
-          const next = apiItems.length ? apiItems : localItems;
-          setSuggestions(next);
-          setSearchState(next.length ? 'ready' : 'empty');
+          setSuggestions(apiItems);
+          setSearchState(apiItems.length ? 'ready' : 'empty');
         }
       } catch (searchError) {
         if (!controller.signal.aborted && requestId === searchRequestRef.current) {
@@ -432,10 +399,9 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
           setError(getApiErrorMessage(searchError, searchUnavailableMessage));
           return [];
         })).map(normativeToPollutant);
-        const found = apiItems.length || !isPhysicalFactors ? apiItems : getPhysicalFactorIndicators(subtype);
         const normalized = token.toLowerCase();
-        const pollutant = found.find((item) => item.code.toLowerCase() === normalized)
-          || found.find((item) => `${item.code} ${item.name}`.toLowerCase().includes(normalized));
+        const pollutant = apiItems.find((item) => item.code.toLowerCase() === normalized)
+          || apiItems.find((item) => `${item.code} ${item.name}`.toLowerCase().includes(normalized));
         if (!pollutant) {
           hasMissing = true;
           setError(notFoundSearchMessage);
@@ -453,15 +419,14 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
 
   const addPhysicalMeasurement = async (pollutant?: Pollutant) => {
     if (!pollutant && !pollutantQuery.trim()) {
-      setSuggestions(getPhysicalFactorIndicators(subtype).slice(0, 10));
+      setError('Введите название или код показателя');
       return;
     }
     if (!pollutant && !canSearch(pollutantQuery)) {
       setError('Введите минимум 2 символа для поиска');
       return;
     }
-    const matches = filterPhysicalFactorIndicators(pollutantQuery, subtype);
-    const selected = pollutant || matches[0];
+    const selected = pollutant;
     if (!selected) {
       setError('Показатель не найден. Выберите показатель из справочника.');
       return;
@@ -810,9 +775,6 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
               <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
                 {notFoundSearchMessage}
               </div>
-            )}
-            {isPhysicalFactors && !pollutantQuery.trim() && (
-              <Button type="button" variant="secondary" className="mt-2" onClick={() => setSuggestions(getPhysicalFactorIndicators(subtype).slice(0, 10))}><Plus className="h-4 w-4" /> Показать список: {subtypeName(subtype)}</Button>
             )}
           </div>
 

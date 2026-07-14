@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, CheckCircle2, CloudSun, Save, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
+import ProtocolPrintVisibilityToggle from '../components/protocols/ProtocolPrintVisibilityToggle';
 import {
   PROTOCOL_TYPE_CONFIG,
   PROTOCOL_TYPE_OPTIONS,
@@ -13,20 +14,19 @@ import {
 } from '../data/protocolTypeConfig';
 import { getCompanies, getCompanyObjects } from '../services/companyService';
 import { getDefaultLaboratory, getLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
-import { getAllNormativeRecords, type NormativeRecordsParams } from '../services/normativeService';
+import { getAvailableMeasurementDevices } from '../services/measurementDeviceService';
 import protocolService from '../services/protocolService';
 import { getApiErrorMessage } from '../services/apiHelpers';
+import { normativeSearchItemToRecord, canSearchNormative as canSearch } from '../services/normativeSearchService';
+import { useNormativeSearch } from '../hooks/useNormativeSearch';
 import { useToast } from '../hooks/useToast';
 import type { Company, CompanyObject } from '../types/companies';
-import type { LaboratoryEmployee, LaboratorySummary, NormativeRecord, Pollutant, ProtocolResultValue, ProtocolSubtype, QuickProtocolCreatePayload } from '../types/protocols';
+import type { NormativeSearchItem, NormativeSearchParams } from '../types/normativeSearch';
+import type { LaboratoryEmployee, LaboratorySummary, MeasurementDevice, NormativeRecord, Pollutant, ProtocolPrintVisibility, ProtocolResultValue, ProtocolSubtype, QuickProtocolCreatePayload } from '../types/protocols';
 import {
-  canSearchProtocolNormative as canSearch,
-  filterAndRankProtocolNormatives,
-  isProtocolScopeQuery,
   protocolNormativeConditionLabel,
   protocolNormativeDisplayValue as normativeDisplayValue,
   protocolNormativeIdentity,
-  type ProtocolNormativeSearchContext,
 } from '../utils/protocolNormativeSearch';
 
 type SelectedExecutor = {
@@ -38,6 +38,8 @@ type SelectedExecutor = {
 
 type QuickForm = {
   templateKey: ProtocolTypeKey;
+  physicalFactorType: ProtocolSubtype | '';
+  printVisibility: ProtocolPrintVisibility;
   companyId: string;
   objectId: string;
   protocolDate: string;
@@ -72,11 +74,12 @@ type SelectedIndicator = Pollutant & {
   measurementUnit?: string;
   units?: string;
   normative?: NormativeRecord;
+  selectedNormative?: NormativeSearchItem;
   manual?: boolean;
   result: string;
+  measurementDeviceId: string;
 };
 
-const SEARCH_DEBOUNCE_MS = 450;
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const today = () => new Date().toISOString().slice(0, 10);
 const emptyToUndefined = <T,>(value: T): T | undefined => typeof value === 'string' && value.trim() === '' ? undefined : value;
@@ -95,6 +98,20 @@ const roomTypeOptions = [
 ];
 const lightingTypeOptions = [{ value: 'GENERAL', label: 'Общее' }, { value: 'COMBINED', label: 'Комбинированное' }, { value: 'NATURAL', label: 'Естественное' }];
 const noiseTypeOptions = [{ value: 'CONSTANT', label: 'Постоянный' }, { value: 'VARIABLE', label: 'Непостоянный' }, { value: 'IMPULSE', label: 'Импульсный' }];
+const groupedFactorOptions: Partial<Record<ProtocolTypeKey, Array<{ value: ProtocolSubtype; label: string }>>> = {
+  noise_vibration: [
+    { value: 'NOISE', label: 'Шум' },
+    { value: 'VIBRATION', label: 'Вибрация' },
+    { value: 'INFRASOUND', label: 'Инфразвук' },
+    { value: 'ULTRASOUND', label: 'Ультразвук' },
+  ],
+  uv_emf_laser: [
+    { value: 'UV', label: 'Ультрафиолет' },
+    { value: 'AEROIONS', label: 'Аэроионы' },
+    { value: 'ELECTROMAGNETIC_FIELD', label: 'Электромагнитное поле' },
+    { value: 'LASER', label: 'Лазерное излучение' },
+  ],
+};
 const waterTypeOptions = [
   { value: 'DRINKING_WATER', label: 'Питьевая вода' },
   { value: 'SURFACE_WATER', label: 'Вода водного объекта' },
@@ -103,30 +120,32 @@ const waterUseCategoryOptions = [
   { value: 'I', label: 'I категория' },
   { value: 'II', label: 'II категория' },
 ];
-const normalizeNormativeIndicator = (item: NormativeRecord): SelectedIndicator => ({
-  key: protocolNormativeIdentity(item),
-  id: item.id,
-  code: item.factorCode || item.pollutantCode || item.code || '',
-  factorCode: item.factorCode,
-  factorType: item.factorType,
-  indicatorName: item.indicator || item.indicatorName || item.pollutantName || '',
-  name: item.indicator || item.indicatorName || item.pollutantName || '',
-  cas: item.cas || item.casNumber,
-  formula: item.formula || item.chemicalFormula,
-  unit: item.unit,
-  testingMethod: item.testingMethod,
-  samplingMethod: item.samplingMethod,
-  normative: item,
-  result: '',
-});
+const normalizeNormativeIndicator = (item: NormativeSearchItem): SelectedIndicator => {
+  const normative = normativeSearchItemToRecord(item);
+  return {
+    key: protocolNormativeIdentity(normative),
+    id: String(item.id),
+    code: item.factorCode || item.pollutantCode || item.code || '',
+    factorCode: item.factorCode || undefined,
+    factorType: item.factorType || undefined,
+    indicatorName: item.indicatorName,
+    name: item.indicatorName,
+    cas: item.casNumber || undefined,
+    formula: item.formula || undefined,
+    unit: item.unit || undefined,
+    normative,
+    selectedNormative: item,
+    result: '',
+    measurementDeviceId: '',
+  };
+};
 
 const ProtocolCreatePage = () => {
   const navigate = useNavigate();
   const toast = useToast();
-  const searchRequestRef = useRef(0);
-  const searchAbortRef = useRef<AbortController | null>(null);
   const weatherRequestRef = useRef(0);
   const weatherAbortRef = useRef<AbortController | null>(null);
+  const manuallyEditedWeatherRef = useRef(new Set<keyof Pick<QuickForm, 'windSpeed'>>());
   const [isCreating, setIsCreating] = useState(false);
   const [booting, setBooting] = useState(true);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
@@ -138,21 +157,22 @@ const ProtocolCreatePage = () => {
   const [objectWarning, setObjectWarning] = useState('');
   const [laboratories, setLaboratories] = useState<LaboratorySummary[]>([]);
   const [employees, setEmployees] = useState<LaboratoryEmployee[]>([]);
+  const [measurementDevices, setMeasurementDevices] = useState<MeasurementDevice[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(true);
+  const [devicesError, setDevicesError] = useState('');
+  const [bulkDeviceId, setBulkDeviceId] = useState('');
   const [selectedExecutor, setSelectedExecutor] = useState<SelectedExecutor | null>(null);
   const [warning, setWarning] = useState('');
   const [employeeWarning, setEmployeeWarning] = useState('');
   const [chemicalQuery, setChemicalQuery] = useState('');
-  const [chemicalSuggestions, setChemicalSuggestions] = useState<SelectedIndicator[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [searchDone, setSearchDone] = useState(false);
-  const [searchError, setSearchError] = useState('');
-  const [searchRetry, setSearchRetry] = useState(0);
   const [manualDraft, setManualDraft] = useState<{ code: string; name: string; unit: string } | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherMessage, setWeatherMessage] = useState('');
   const [selectedIndicators, setSelectedIndicators] = useState<SelectedIndicator[]>([]);
   const [form, setForm] = useState<QuickForm>({
     templateKey: 'ambient_air',
+    physicalFactorType: '',
+    printVisibility: {},
     companyId: '',
     objectId: '',
     protocolDate: today(),
@@ -183,7 +203,7 @@ const ProtocolCreatePage = () => {
     () => PROTOCOL_TYPE_CONFIG[form.templateKey] || PROTOCOL_TYPE_CONFIG.ambient_air,
     [form.templateKey],
   );
-  const selectedSubtype = protocolFactorType[form.templateKey];
+  const selectedSubtype = form.physicalFactorType || protocolFactorType[form.templateKey];
   const isPhysical = isPhysicalProtocolType(selectedChoice);
   const isChemical = isChemicalProtocolType(selectedChoice);
   const isSoil = selectedChoice.templateId === 'soil';
@@ -200,8 +220,73 @@ const ProtocolCreatePage = () => {
     () => PROTOCOL_TYPE_OPTIONS.filter((option) => backendTemplateIds.has(PROTOCOL_TYPE_CONFIG[option.key].templateId)),
     [backendTemplateIds],
   );
+  const normativeFilters = useMemo<Partial<NormativeSearchParams>>(() => ({
+    templateId: selectedChoice.normativeTemplateId,
+    sourceDocumentCode: sourceDocumentCode || undefined,
+    environmentType: selectedChoice.environmentType,
+    factorType: isPhysical ? selectedSubtype : undefined,
+    waterType: isWater ? form.waterType : undefined,
+    waterUseCategory: isWater && form.waterType === 'SURFACE_WATER' ? form.waterUseCategory : undefined,
+    season: selectedSubtype === 'MICROCLIMATE' ? form.season : undefined,
+    workCategory: selectedSubtype === 'MICROCLIMATE' ? form.workCategory : undefined,
+    workplaceType: isPhysical ? form.workplaceType : undefined,
+    normLevel: selectedSubtype === 'MICROCLIMATE' ? form.normLevel : undefined,
+    roomType: isPhysical ? form.roomType : undefined,
+    visualWorkCategory: selectedSubtype === 'LIGHTING' ? form.visualWorkCategory : undefined,
+    lightingType: selectedSubtype === 'LIGHTING' ? form.lightingType : undefined,
+    noiseType: selectedSubtype === 'NOISE' || selectedSubtype === 'NOISE_VIBRATION' ? form.noiseType : undefined,
+  }), [
+    selectedChoice.normativeTemplateId,
+    selectedChoice.environmentType,
+    sourceDocumentCode,
+    isPhysical,
+    isWater,
+    selectedSubtype,
+    form.waterType,
+    form.waterUseCategory,
+    form.season,
+    form.workCategory,
+    form.workplaceType,
+    form.normLevel,
+    form.roomType,
+    form.visualWorkCategory,
+    form.lightingType,
+    form.noiseType,
+  ]);
+  const {
+    items: normativeItems,
+    loading: searching,
+    error: searchError,
+    hasSearched: searchDone,
+    totalElements: normativeTotal,
+    search: retryNormativeSearch,
+  } = useNormativeSearch({
+    protocolType: form.templateKey,
+    query: chemicalQuery,
+    filters: normativeFilters,
+  });
+  const chemicalSuggestions = useMemo(
+    () => normativeItems.map(normalizeNormativeIndicator),
+    [normativeItems],
+  );
+  const normativeSelectionContextKey = useMemo(() => JSON.stringify({
+    protocolType: form.templateKey,
+    objectId: form.objectId,
+    ...normativeFilters,
+  }), [form.templateKey, form.objectId, normativeFilters]);
+  const previousNormativeContextRef = useRef(normativeSelectionContextKey);
+
+  useEffect(() => {
+    if (previousNormativeContextRef.current === normativeSelectionContextKey) return;
+    previousNormativeContextRef.current = normativeSelectionContextKey;
+    if (selectedIndicators.some((item) => item.selectedNormative)) {
+      setSelectedIndicators((current) => current.filter((item) => !item.selectedNormative));
+      toast.warning('Выбранный норматив сброшен, потому что изменился тип протокола или условия поиска.');
+    }
+  }, [normativeSelectionContextKey, toast]);
 
   const setField = <K extends keyof QuickForm>(key: K, value: QuickForm[K]) => setForm((current) => ({ ...current, [key]: value }));
+  const setPrintVisibility = (printVisibility: ProtocolPrintVisibility) => setField('printVisibility', printVisibility);
 
   const loadTemplates = async () => {
     setIsLoadingTemplates(true);
@@ -221,6 +306,19 @@ const ProtocolCreatePage = () => {
       setTemplateError(getApiErrorMessage(error, 'Не удалось загрузить доступные типы протоколов'));
     } finally {
       setIsLoadingTemplates(false);
+    }
+  };
+
+  const loadMeasurementDevices = async () => {
+    setDevicesLoading(true);
+    setDevicesError('');
+    try {
+      setMeasurementDevices(await getAvailableMeasurementDevices());
+    } catch (error) {
+      setMeasurementDevices([]);
+      setDevicesError(getApiErrorMessage(error, 'Не удалось загрузить доступные приборы'));
+    } finally {
+      setDevicesLoading(false);
     }
   };
 
@@ -256,19 +354,21 @@ const ProtocolCreatePage = () => {
         if (mounted) setBooting(false);
       }
     };
-    void Promise.all([boot(), loadTemplates()]);
+    void Promise.all([boot(), loadTemplates(), loadMeasurementDevices()]);
     return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
     setSelectedIndicators([]);
     setChemicalQuery('');
-    setChemicalSuggestions([]);
-    setSearchDone(false);
-    setSearchError('');
     setManualDraft(null);
     setForm((current) => ({
       ...current,
+      physicalFactorType: form.templateKey === 'noise_vibration'
+        ? 'NOISE'
+        : form.templateKey === 'uv_emf_laser'
+          ? 'UV'
+          : protocolFactorType[form.templateKey] || '',
       sampleNumber: '',
       samplingDepth: '',
       waterType: form.templateKey === 'water' ? 'DRINKING_WATER' : '',
@@ -353,7 +453,9 @@ const ProtocolCreatePage = () => {
           temperature: weather.temperature || current.temperature,
           humidity: weather.humidity || current.humidity,
           pressureKpa: weather.pressureKpa || weather.pressure || current.pressureKpa,
-          windSpeed: weather.windSpeed || current.windSpeed,
+          windSpeed: manuallyEditedWeatherRef.current.has('windSpeed')
+            ? current.windSpeed
+            : weather.windSpeed || current.windSpeed,
         }));
         if (weather.warning) setWeatherMessage(weather.warning);
       } catch {
@@ -368,118 +470,6 @@ const ProtocolCreatePage = () => {
     };
   }, [form.objectId, form.measurementDate, form.measurementTime, selectedObject?.coordinates]);
 
-  useEffect(() => {
-    const value = chemicalQuery.trim();
-    const requestId = ++searchRequestRef.current;
-    searchAbortRef.current?.abort();
-    setSearchDone(false);
-    setSearchError('');
-    if (!value || !canSearch(value)) {
-      setChemicalSuggestions([]);
-      setSearching(false);
-      return;
-    }
-    const timer = window.setTimeout(async () => {
-      const controller = new AbortController();
-      searchAbortRef.current = controller;
-      setSearching(true);
-      try {
-        const context: ProtocolNormativeSearchContext = {
-          templateId: selectedChoice.normativeTemplateId,
-          sourceDocumentCode,
-          environmentType: selectedChoice.environmentType,
-          factorType: isPhysical ? selectedSubtype : undefined,
-          waterType: isWater ? form.waterType : undefined,
-          waterUseCategory: isWater && form.waterType === 'SURFACE_WATER' ? form.waterUseCategory : undefined,
-          season: selectedSubtype === 'MICROCLIMATE' ? form.season : undefined,
-          workCategory: selectedSubtype === 'MICROCLIMATE' ? form.workCategory : undefined,
-          workplaceType: isPhysical ? form.workplaceType : undefined,
-          normLevel: selectedSubtype === 'MICROCLIMATE' ? form.normLevel : undefined,
-          roomType: isPhysical ? form.roomType : undefined,
-          visualWorkCategory: selectedSubtype === 'LIGHTING' ? form.visualWorkCategory : undefined,
-          lightingType: selectedSubtype === 'LIGHTING' ? form.lightingType : undefined,
-          noiseType: selectedSubtype === 'NOISE' || selectedSubtype === 'NOISE_VIBRATION' ? form.noiseType : undefined,
-        };
-        const indicatorQuery = isProtocolScopeQuery(value, context.templateId) ? undefined : value;
-        const basicParams: NormativeRecordsParams = {
-          size: 100,
-          status: 'ACTIVE',
-          templateId: selectedChoice.normativeTemplateId,
-          query: indicatorQuery,
-          search: indicatorQuery,
-          sourceDocumentCode: sourceDocumentCode || undefined,
-          environmentType: selectedChoice.environmentType || undefined,
-          waterType: isWater ? form.waterType || undefined : undefined,
-          normativeType: isSoil ? 'PDK' : undefined,
-        };
-        const detailedParams: NormativeRecordsParams = {
-          ...basicParams,
-          factorType: isPhysical ? selectedSubtype : undefined,
-          waterUseCategory: context.waterUseCategory,
-          season: context.season,
-          workCategory: context.workCategory,
-          workplaceType: context.workplaceType,
-          normLevel: context.normLevel,
-          roomType: context.roomType,
-          visualWorkCategory: context.visualWorkCategory,
-          lightingType: context.lightingType,
-          noiseType: context.noiseType,
-        };
-        let records = await getAllNormativeRecords(detailedParams, controller.signal);
-        let normatives = filterAndRankProtocolNormatives(records, value, context);
-        if (!normatives.length && JSON.stringify(detailedParams) !== JSON.stringify(basicParams)) {
-          records = await getAllNormativeRecords(basicParams, controller.signal);
-          normatives = filterAndRankProtocolNormatives(records, value, context);
-        }
-        if (!normatives.length && indicatorQuery) {
-          records = await getAllNormativeRecords({ ...basicParams, query: undefined, search: undefined }, controller.signal);
-          normatives = filterAndRankProtocolNormatives(records, value, context);
-        }
-        if (requestId !== searchRequestRef.current) return;
-        if (normatives.length) {
-          setChemicalSuggestions(normatives.map(normalizeNormativeIndicator));
-          setSearchDone(true);
-          return;
-        }
-        setChemicalSuggestions([]);
-        setSearchDone(true);
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        if (requestId !== searchRequestRef.current) return;
-        setChemicalSuggestions([]);
-        setSearchDone(false);
-        const message = getApiErrorMessage(error, 'Не удалось выполнить поиск норматива');
-        setSearchError(message);
-        toast.error('Не удалось выполнить поиск норматива', message);
-      } finally {
-        if (requestId === searchRequestRef.current) setSearching(false);
-      }
-    }, SEARCH_DEBOUNCE_MS);
-    return () => {
-      window.clearTimeout(timer);
-      searchAbortRef.current?.abort();
-    };
-  }, [
-    chemicalQuery,
-    selectedChoice,
-    sourceDocumentCode,
-    isPhysical,
-    isSoil,
-    isWater,
-    selectedSubtype,
-    form.waterType,
-    form.season,
-    form.workCategory,
-    form.workplaceType,
-    form.normLevel,
-    form.roomType,
-    form.visualWorkCategory,
-    form.lightingType,
-    form.noiseType,
-    form.waterUseCategory,
-    searchRetry,
-  ]);
-
   const selectCompany = (company: Company) => {
     setField('companyId', company.id);
     setCompanySearch(company.name);
@@ -491,8 +481,6 @@ const ProtocolCreatePage = () => {
       return [...current, indicator];
     });
     setChemicalQuery('');
-    setChemicalSuggestions([]);
-    setSearchDone(false);
   };
 
   const openManualIndicator = () => {
@@ -521,12 +509,22 @@ const ProtocolCreatePage = () => {
       unit,
       manual: true,
       result: '',
+      measurementDeviceId: '',
     });
     setManualDraft(null);
   };
 
   const setIndicatorResult = (key: string, result: string) => {
     setSelectedIndicators((current) => current.map((item) => item.key === key ? { ...item, result } : item));
+  };
+
+  const setIndicatorDevice = (key: string, measurementDeviceId: string) => {
+    setSelectedIndicators((current) => current.map((item) => item.key === key ? { ...item, measurementDeviceId } : item));
+  };
+
+  const applyDeviceToAllIndicators = () => {
+    if (!bulkDeviceId) return;
+    setSelectedIndicators((current) => current.map((item) => ({ ...item, measurementDeviceId: bulkDeviceId })));
   };
 
   const physicalConditionValues = () => {
@@ -646,6 +644,7 @@ const ProtocolCreatePage = () => {
     if (!form.executorId) return 'Выберите исполнителя';
     if (!selectedIndicators.length) return 'Выберите показатели';
     if (selectedIndicators.some((item) => !item.result.trim())) return 'Введите фактические значения по всем выбранным показателям';
+    if (selectedIndicators.some((item) => !item.measurementDeviceId)) return 'Выберите прибор для каждой строки измерения';
     return '';
   };
 
@@ -690,21 +689,27 @@ const ProtocolCreatePage = () => {
     }
 
     const measurements: QuickProtocolCreatePayload['measurements'] = selectedIndicators.map((item) => {
-      const factorCode = isPhysical ? item.factorCode || item.normative?.factorCode || item.code : item.normative?.factorCode || item.factorCode || '';
-      const factorType = isPhysical ? item.factorType || item.normative?.factorType || selectedSubtype || '' : item.normative?.factorType || item.factorType || '';
+      const selectedNormative = item.selectedNormative;
+      const factorCode = selectedNormative?.factorCode || item.factorCode || item.normative?.factorCode || (isPhysical ? item.code : '');
+      const factorType = selectedNormative?.factorType || item.factorType || item.normative?.factorType || (isPhysical ? selectedSubtype || '' : '');
       const pollutantCode = isPhysical
         ? factorCode
-        : item.normative?.pollutantCode || item.normative?.code || item.code || item.factorCode || '';
-      const indicatorName = item.indicatorName || item.name || item.normative?.indicator || item.normative?.indicatorName || item.normative?.pollutantName || '';
-      const unit = unitForIndicator(item);
-      const normativeValue = normativeDisplayValue(item.normative);
+        : selectedNormative?.pollutantCode || selectedNormative?.code || item.normative?.pollutantCode || item.normative?.code || item.code || '';
+      const indicatorName = selectedNormative?.indicatorName || item.indicatorName || item.name || item.normative?.indicator || '';
+      const unit = selectedNormative?.unit || unitForIndicator(item);
+      const normativeValue = selectedNormative?.limitValue ?? normativeDisplayValue(item.normative);
       const testingMethodNd = item.normative?.testingMethod || item.testingMethod || '';
       const samplingMethodNd = item.normative?.samplingMethod || item.samplingMethod || '';
-      const normativeId = item.normative?.id || '';
-      const normativeDocument = item.normative?.normativeDocument || item.normative?.sourceDocumentName || '';
-      const normativeMin = item.normative?.min || '';
-      const normativeMax = item.normative?.max || item.normative?.value || item.normative?.maxOneTimeValue || item.normative?.dailyAverageValue || item.normative?.obuvValue || '';
-      const conditionJson = isPhysical ? JSON.stringify(physicalConditionValues()) : item.normative?.conditionJson || '';
+      const normativeId = selectedNormative ? String(selectedNormative.id) : item.normative?.id || '';
+      const normativeDocument = selectedNormative?.sourceDocumentName || item.normative?.normativeDocument || item.normative?.sourceDocumentName || '';
+      const normativeMin = selectedNormative?.limitMin ?? item.normative?.min ?? '';
+      const normativeMax = selectedNormative?.limitMax ?? selectedNormative?.limitValue ?? item.normative?.max ?? item.normative?.value ?? '';
+      const conditionJson = selectedNormative?.conditionJson
+        ? JSON.stringify(selectedNormative.conditionJson)
+        : isPhysical
+          ? JSON.stringify(physicalConditionValues())
+          : item.normative?.conditionJson || '';
+      const measurementDeviceId = item.measurementDeviceId.trim();
 
       return {
         ...(factorType ? { factorType } : {}),
@@ -714,23 +719,25 @@ const ProtocolCreatePage = () => {
         value: item.result,
         unit,
         normativeId: normativeId || undefined,
-        normativeValue: normativeValue || undefined,
-        normativeMin: normativeMin || undefined,
-        normativeMax: normativeMax || undefined,
-        comparisonType: item.normative?.comparisonType || undefined,
+        normativeValue: normativeValue === '' ? undefined : normativeValue,
+        normativeMin: normativeMin === '' ? undefined : normativeMin,
+        normativeMax: normativeMax === '' ? undefined : normativeMax,
+        comparisonType: selectedNormative?.comparisonType || item.normative?.comparisonType || undefined,
         normativeDocument: normativeDocument || undefined,
-        sourceDocumentCode: item.normative?.sourceDocumentCode || sourceDocumentCode,
+        sourceDocumentCode: selectedNormative?.sourceDocumentCode || item.normative?.sourceDocumentCode || sourceDocumentCode,
         testingMethodNd: testingMethodNd || undefined,
         samplingMethodNd: samplingMethodNd || undefined,
+        measurementDeviceId,
+        deviceId: measurementDeviceId,
         values: compactValues({
           ...baseConditionValues(),
           ...normativeValues(item.normative),
           code: item.code,
-          sourceDocumentCode: item.normative?.sourceDocumentCode || sourceDocumentCode || '',
+          sourceDocumentCode: selectedNormative?.sourceDocumentCode || item.normative?.sourceDocumentCode || sourceDocumentCode || '',
           normativeDocument,
           normativeId,
           normativeValue,
-          comparisonType: item.normative?.comparisonType || '',
+          comparisonType: selectedNormative?.comparisonType || item.normative?.comparisonType || '',
           normativeMin,
           normativeMax,
           minValue: normativeMin,
@@ -742,7 +749,7 @@ const ProtocolCreatePage = () => {
           indicatorName,
           unit,
           docxTemplateCode: selectedChoice.docxTemplateCode,
-          normativeTemplateId: selectedChoice.normativeTemplateId,
+          normativeTemplateId: selectedNormative?.templateId || selectedChoice.normativeTemplateId,
           resultMode: selectedChoice.resultMode,
           testingMethodNd,
           samplingMethodNd,
@@ -755,6 +762,8 @@ const ProtocolCreatePage = () => {
           cas: item.cas || item.normative?.cas || item.normative?.casNumber || '',
           formula: item.formula || item.normative?.formula || item.normative?.chemicalFormula || '',
           conditionJson,
+          measurementDeviceId,
+          deviceId: measurementDeviceId,
         }),
       };
     });
@@ -801,6 +810,7 @@ const ProtocolCreatePage = () => {
       waterUseCategory: isWater && form.waterType === 'SURFACE_WATER' ? form.waterUseCategory : undefined,
       resultMode: selectedChoice.resultMode,
       conditions: compactValues(baseConditionValues()),
+      printVisibility: form.printVisibility,
       measurements,
     };
     setIsCreating(true);
@@ -864,6 +874,23 @@ const ProtocolCreatePage = () => {
         </div>
       </section>
 
+      {groupedFactorOptions[form.templateKey] && (
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <label className="block max-w-xl space-y-1.5 text-sm font-bold text-slate-700">
+            <span>Тип физического фактора</span>
+            <select
+              value={form.physicalFactorType}
+              onChange={(event) => setField('physicalFactorType', event.target.value as ProtocolSubtype)}
+              className={inputClass}
+            >
+              {groupedFactorOptions[form.templateKey]?.map((item) => (
+                <option key={item.value} value={item.value}>{item.label}</option>
+              ))}
+            </select>
+          </label>
+        </section>
+      )}
+
       {isWater && (
         <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2">
           <h2 className="text-lg font-black text-slate-900 md:col-span-2">Параметры воды</h2>
@@ -910,17 +937,24 @@ const ProtocolCreatePage = () => {
             <option value="">Выберите объект</option>
             {objects.map((item) => <option key={item.id} value={item.id}>{item.name} {item.address ? `· ${item.address}` : ''}</option>)}
           </select>
-          {selectedCompany && <p className="text-xs font-semibold text-slate-500">Данные компании будут сохранены в snapshot протокола.</p>}
+          {selectedCompany && <>
+            <p className="text-xs font-semibold text-slate-500">Данные компании будут сохранены в snapshot протокола.</p>
+            <div className="flex flex-wrap gap-x-5">
+              <ProtocolPrintVisibilityToggle field="organizationName" visibility={form.printVisibility} onChange={setPrintVisibility} />
+              <ProtocolPrintVisibilityToggle field="organizationAddress" visibility={form.printVisibility} onChange={setPrintVisibility} />
+            </div>
+          </>}
           {objectWarning && <p className="text-sm font-semibold text-amber-700">{objectWarning}</p>}
+          <ProtocolPrintVisibilityToggle field="objectName" visibility={form.printVisibility} onChange={setPrintVisibility} />
         </label>
       </section>
 
       <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 xl:grid-cols-4">
         <h2 className="text-lg font-black text-slate-900 md:col-span-2 xl:col-span-4">3. Дата и место</h2>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Дата протокола</span><input type="date" value={form.protocolDate} onChange={(event) => setField('protocolDate', event.target.value)} className={inputClass} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Дата отбора' : 'Дата измерения'}</span><input type="date" value={form.measurementDate} onChange={(event) => setField('measurementDate', event.target.value)} className={inputClass} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Время</span><input type="time" value={form.measurementTime} onChange={(event) => setField('measurementTime', event.target.value)} className={inputClass} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Место отбора' : 'Место измерения'}</span><input value={form.measurementPlace} onChange={(event) => setField('measurementPlace', event.target.value)} placeholder={isSoil ? 'Например: участок 1, точка 3' : 'Например: рабочее место оператора'} className={inputClass} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Дата протокола</span><input type="date" value={form.protocolDate} onChange={(event) => setField('protocolDate', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="protocolDate" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Дата отбора' : 'Дата измерения'}</span><input type="date" value={form.measurementDate} onChange={(event) => setField('measurementDate', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="measurementDate" relatedFields={['samplingDate']} visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Время</span><input type="time" value={form.measurementTime} onChange={(event) => setField('measurementTime', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="measurementTime" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Место отбора' : 'Место измерения'}</span><input value={form.measurementPlace} onChange={(event) => setField('measurementPlace', event.target.value)} placeholder={isSoil ? 'Например: участок 1, точка 3' : 'Например: рабочее место оператора'} className={inputClass} /><ProtocolPrintVisibilityToggle field="measurementPlace" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
         {(isSoil || isWater) && (
           <>
             <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Номер пробы</span><input value={form.sampleNumber} onChange={(event) => setField('sampleNumber', event.target.value)} placeholder="Например: 1/24" className={inputClass} /></label>
@@ -933,10 +967,11 @@ const ProtocolCreatePage = () => {
         <h2 className="flex items-center gap-2 text-lg font-black text-slate-900 md:col-span-2 xl:col-span-4">
           <CloudSun className="h-5 w-5 text-eco-700" /> Погодные условия
         </h2>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Температура, °C</span><input type="number" step="any" value={form.temperature} onChange={(event) => setField('temperature', event.target.value)} className={inputClass} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Влажность, %</span><input type="number" step="any" value={form.humidity} onChange={(event) => setField('humidity', event.target.value)} className={inputClass} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Давление, кПа</span><input type="number" step="any" value={form.pressureKpa} onChange={(event) => setField('pressureKpa', event.target.value)} className={inputClass} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Скорость ветра, м/с</span><input type="number" step="any" value={form.windSpeed} onChange={(event) => setField('windSpeed', event.target.value)} className={inputClass} /></label>
+        <div className="md:col-span-2 xl:col-span-4"><ProtocolPrintVisibilityToggle field="environmentConditions" visibility={form.printVisibility} onChange={setPrintVisibility} /></div>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Температура, °C</span><input type="number" step="any" value={form.temperature} onChange={(event) => setField('temperature', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="temperature" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Влажность, %</span><input type="number" step="any" value={form.humidity} onChange={(event) => setField('humidity', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="humidity" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Давление, кПа</span><input type="number" step="any" value={form.pressureKpa} onChange={(event) => setField('pressureKpa', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="pressureKpa" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Скорость ветра, м/с</span><input type="number" min="0" max="100" step="0.1" value={form.windSpeed} onChange={(event) => { manuallyEditedWeatherRef.current.add('windSpeed'); setField('windSpeed', event.target.value); }} className={inputClass} /><ProtocolPrintVisibilityToggle field="windSpeed" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
         {(weatherLoading || weatherMessage) && <p className="text-sm font-semibold text-slate-500 md:col-span-2 xl:col-span-4">{weatherLoading ? 'Пробуем подтянуть погоду...' : weatherMessage}</p>}
       </section>
 
@@ -975,15 +1010,16 @@ const ProtocolCreatePage = () => {
         <div className="mt-4">
           <label className="relative block">
             <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-            <input value={chemicalQuery} onChange={(event) => setChemicalQuery(event.target.value)} placeholder={isPhysical ? 'Введите минимум 2 символа: код или название показателя' : 'Введите минимум 2 символа: код, вещество, CAS'} className={`${inputClass} pl-10`} />
+            <input value={chemicalQuery} onChange={(event) => setChemicalQuery(event.target.value)} placeholder="Название, код, CAS или формула" className={`${inputClass} pl-10`} />
           </label>
-          {chemicalQuery.trim() && !canSearch(chemicalQuery) && <p className="mt-2 text-sm font-semibold text-slate-500">Введите минимум 2 символа для поиска</p>}
-          {searching && <p className="mt-2 text-sm font-semibold text-eco-700">Поиск...</p>}
+          {!chemicalQuery.trim() && <p className="mt-2 text-sm font-semibold text-slate-500">Введите минимум 3 буквы или цифры. Формулы CO и NO2 также поддерживаются.</p>}
+          {chemicalQuery.trim() && !canSearch(chemicalQuery) && <p className="mt-2 text-sm font-semibold text-slate-500">Введите минимум 3 символа либо формулу из 2 символов</p>}
+          {searching && <p className="mt-2 text-sm font-semibold text-eco-700">Поиск нормативов...</p>}
           {searchError && !searching && (
             <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800">
               <p>{searchError}</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button type="button" variant="secondary" onClick={() => setSearchRetry((value) => value + 1)}>Повторить поиск</Button>
+                <Button type="button" variant="secondary" onClick={() => void retryNormativeSearch()}>Повторить</Button>
                 <Button type="button" variant="secondary" onClick={openManualIndicator}>Добавить вручную</Button>
               </div>
             </div>
@@ -991,7 +1027,7 @@ const ProtocolCreatePage = () => {
           {chemicalSuggestions.length > 0 && (
             <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
               <p className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-                Найдено: {chemicalSuggestions.length}. Сначала показаны наиболее подходящие условия.
+                 Найдено: {normativeTotal}. Результаты показаны в порядке, полученном от сервера.
               </p>
               <div className="max-h-[32rem] overflow-y-auto">
               {chemicalSuggestions.map((item) => (
@@ -999,8 +1035,13 @@ const ProtocolCreatePage = () => {
                   <span className="font-black text-eco-800">{item.code}</span>
                   <span>
                     <span className="block font-bold text-slate-900">{item.name}</span>
+                    {(item.selectedNormative?.formula || item.selectedNormative?.casNumber) && (
+                      <span className="mt-1 block text-xs font-semibold text-slate-600">
+                        {[item.selectedNormative.formula, item.selectedNormative.casNumber ? `CAS ${item.selectedNormative.casNumber}` : ''].filter(Boolean).join(' · ')}
+                      </span>
+                    )}
                     <span className="mt-1 block text-xs font-semibold text-slate-500">
-                      {item.normative ? protocolNormativeConditionLabel(item.normative) : ''}
+                      {[item.selectedNormative?.sourceDocumentCode, item.selectedNormative?.environmentType || item.selectedNormative?.factorType, item.normative ? protocolNormativeConditionLabel(item.normative) : ''].filter(Boolean).join(' · ')}
                     </span>
                   </span>
                   <span className="font-semibold text-slate-700">
@@ -1012,9 +1053,13 @@ const ProtocolCreatePage = () => {
               </div>
             </div>
           )}
+          {normativeTotal > chemicalSuggestions.length && chemicalSuggestions.length > 0 && (
+            <p className="mt-2 text-sm font-semibold text-amber-800">Показаны первые 30 результатов. Уточните поисковый запрос.</p>
+          )}
           {searchDone && !searchError && chemicalQuery.trim() && canSearch(chemicalQuery) && !chemicalSuggestions.length && (
             <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
-              <p>Норматив не найден. Можно выбрать вручную или добавить в справочник.</p>
+              <p>Нормативы не найдены.</p>
+              <p className="mt-1 font-medium">Проверьте тип протокола, название вещества, код или CAS.</p>
               <Button type="button" variant="secondary" className="mt-3" onClick={openManualIndicator}>Создать без норматива / вручную</Button>
             </div>
           )}
@@ -1043,10 +1088,34 @@ const ProtocolCreatePage = () => {
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-black text-slate-900">6. Замеры</h2>
+        {devicesError && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800">
+            <span>{devicesError}</span>
+            <Button type="button" variant="secondary" onClick={() => void loadMeasurementDevices()}>Повторить</Button>
+          </div>
+        )}
+        {!devicesLoading && !devicesError && measurementDevices.length === 0 && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+            <span>Нет доступных приборов с действующей поверкой.</span>
+            <Button type="button" variant="secondary" onClick={() => navigate('/staff/measurement-devices')}>Открыть справочник приборов</Button>
+          </div>
+        )}
+        {selectedIndicators.length > 1 && measurementDevices.length > 0 && (
+          <div className="mt-4 flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-end">
+            <label className="min-w-0 flex-1 space-y-1.5 text-sm font-bold text-slate-700">
+              <span>Назначить один прибор всем строкам</span>
+              <select value={bulkDeviceId} onChange={(event) => setBulkDeviceId(event.target.value)} className={inputClass}>
+                <option value="">Выберите прибор</option>
+                {measurementDevices.map((device) => <option key={device.id} value={device.id}>{device.name} · {device.model} · {device.serialNumber}</option>)}
+              </select>
+            </label>
+            <Button type="button" variant="secondary" disabled={!bulkDeviceId} onClick={applyDeviceToAllIndicators}>Применить ко всем</Button>
+          </div>
+        )}
         {selectedIndicators.length ? (
           <div className="mt-4 grid gap-3">
             {selectedIndicators.map((item) => (
-              <div key={item.key} className="grid gap-3 rounded-xl border border-slate-200 p-4 md:grid-cols-[1fr_220px_180px_auto] md:items-center">
+              <div key={item.key} className="grid gap-3 rounded-xl border border-slate-200 p-4 md:grid-cols-[minmax(180px,1fr)_200px_150px_minmax(220px,1fr)_auto] md:items-end">
                 <div>
                   <p className="font-bold text-slate-900">{item.name}</p>
                   <p className="text-xs font-semibold text-slate-500">{item.code}{unitForIndicator(item) ? ` · ${unitForIndicator(item)}` : ''}</p>
@@ -1059,7 +1128,17 @@ const ProtocolCreatePage = () => {
                       : 'Не найден'}
                   </p>
                 </div>
-                <input value={item.result} onChange={(event) => setIndicatorResult(item.key, event.target.value)} placeholder="Факт" className={inputClass} />
+                <label className="space-y-1.5 text-sm font-bold text-slate-700">
+                  <span>Фактическое значение</span>
+                  <input value={item.result} onChange={(event) => setIndicatorResult(item.key, event.target.value)} placeholder="Факт" className={inputClass} />
+                </label>
+                <label className="space-y-1.5 text-sm font-bold text-slate-700">
+                  <span>Прибор</span>
+                  <select value={item.measurementDeviceId} onChange={(event) => setIndicatorDevice(item.key, event.target.value)} className={inputClass} disabled={devicesLoading || Boolean(devicesError)}>
+                    <option value="">{devicesLoading ? 'Загрузка приборов...' : 'Не выбран'}</option>
+                    {measurementDevices.map((device) => <option key={device.id} value={device.id}>{device.name} · {device.model} · {device.serialNumber}</option>)}
+                  </select>
+                </label>
                 <Button type="button" variant="secondary" className="text-rose-700 hover:bg-rose-50" onClick={() => setSelectedIndicators((current) => current.filter((selected) => selected.key !== item.key))}>Убрать</Button>
               </div>
             ))}

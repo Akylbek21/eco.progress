@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import AuthenticatedImage from '../ui/AuthenticatedImage';
 import type { Protocol } from '../../types/protocols';
 import { getProtocolResultColumns, subtypeName, templateName } from '../../data/protocolTemplates';
+import { isProtocolFieldVisible } from '../../utils/protocolPrintVisibility';
+import type { ProtocolPrintField } from '../../types/protocols';
 
 type Props = {
   open: boolean;
@@ -34,6 +36,7 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
   if (!open) return null;
   const landscape = protocol?.templateId === 'industrial_emissions';
   const columns = protocol ? getProtocolResultColumns(protocol.templateId, protocol.subtype) : [];
+  const visible = (field: ProtocolPrintField) => protocol ? isProtocolFieldVisible(protocol.printVisibility, field) : true;
 
   return createPortal(
     <div className="fixed inset-0 z-[120] flex flex-col bg-slate-950/80">
@@ -59,31 +62,35 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
                 <p className="mt-1 font-bold">Аттестат аккредитации № {protocol.laboratory.accreditationNumber}</p>
               </div>
               <div className="border border-slate-700 p-2 text-center">
-                <p className="font-bold">Форма</p>
-                <p>{templateName(protocol.templateId)}</p>
+                {visible('formCode') && <><p className="font-bold">Форма</p><p>{templateName(protocol.templateId)}</p></>}
                 <p className="mt-1">Редакция 01</p>
               </div>
             </header>
 
             <section className="relative mt-7 text-center">
               <h1 className="text-xl font-black uppercase tracking-wide">Протокол испытаний</h1>
-              <p className="mt-2 text-base font-bold">№ {protocol.protocolNumber} от {protocol.protocolDate}</p>
+              <p className="mt-2 text-base font-bold">№ {protocol.protocolNumber}{visible('protocolDate') ? ` от ${protocol.protocolDate}` : ''}</p>
               {protocol.subtype && <p className="mt-1 font-bold">{subtypeName(protocol.subtype)}</p>}
             </section>
 
             <section className="relative mt-7 grid grid-cols-2 border border-slate-800">
-              {[
-                ['Заказчик', protocol.companySnapshot.companyName],
-                ['БИН', protocol.companySnapshot.bin],
-                ['Адрес заказчика', protocol.companySnapshot.actualAddress || protocol.companySnapshot.legalAddress],
-                ['Объект испытаний', protocol.companySnapshot.objectName],
-                ['Адрес объекта', protocol.companySnapshot.objectAddress],
-                ['Наименование продукции', protocol.organization.productName],
-                ['Основание испытаний', protocol.organization.testingBasis],
-                ['Цель испытаний', protocol.testing.testingPurpose],
-                ['Дата отбора', protocol.testing.samplingDate],
-                ['Период испытаний', `${protocol.testing.testingStartDate || '—'} — ${protocol.testing.testingEndDate || '—'}`],
-              ].map(([label, content]) => (
+              {([
+                ['organizationName', 'Заказчик', protocol.organization.organizationName || protocol.companySnapshot.companyName],
+                ['organizationName', 'БИН', protocol.companySnapshot.bin],
+                ['organizationAddress', 'Адрес заказчика', protocol.organization.organizationAddress || protocol.companySnapshot.actualAddress || protocol.companySnapshot.legalAddress],
+                ['objectName', 'Объект испытаний', protocol.organization.objectName || protocol.companySnapshot.objectName],
+                ['objectName', 'Адрес объекта', protocol.companySnapshot.objectAddress],
+                ['productName', 'Наименование продукции', protocol.organization.productName],
+                ['testingBasis', 'Основание испытаний', protocol.organization.testingBasis],
+                ['testingPurpose', 'Цель испытаний', protocol.testing.testingPurpose],
+                ['samplingDate', 'Дата отбора', protocol.testing.samplingDate || protocol.measurementDate],
+                ['testingStartDate', 'Начало испытаний', protocol.testing.testingStartDate],
+                ['testingEndDate', 'Окончание испытаний', protocol.testing.testingEndDate],
+                ['productNormativeDocument', 'НД на продукцию', protocol.testing.productNormativeDocument],
+                ['samplingMethodDocument', 'НД на методы отбора', protocol.testing.samplingMethodDocument],
+                ['testingMethodDocument', 'НД на методы испытаний', protocol.testing.testingMethodDocument],
+                ['measurementPlace', 'Место отбора / измерения', protocol.measurementPlace],
+              ] as Array<[ProtocolPrintField, string, unknown]>).filter(([field]) => visible(field)).map(([, label, content]) => (
                 <div key={label} className="grid grid-cols-[150px_1fr] border-b border-r border-slate-500 p-2">
                   <span className="font-bold">{label}</span><span>{value(content)}</span>
                 </div>
@@ -106,16 +113,16 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
             </section>
 
             <section className="relative mt-6 grid grid-cols-2 gap-5">
-              <div className="border border-slate-700 p-3">
+              {visible('environmentConditions') && <div className="border border-slate-700 p-3">
                 <p className="font-bold">Условия окружающей среды</p>
-                <p className="mt-2">Температура: {value(protocol.environment?.temperature)} °C</p>
-                <p>Влажность: {value(protocol.environment?.humidity)} %</p>
-                <p>Давление: {value(protocol.environment?.pressureKpa)} кПа</p>
-                <p>Скорость ветра: {value(protocol.environment?.windSpeed)} м/с</p>
-              </div>
+                {visible('temperature') && <p className="mt-2">Температура: {value(protocol.environment?.temperature)} °C</p>}
+                {visible('humidity') && <p>Влажность: {value(protocol.environment?.humidity)} %</p>}
+                {visible('pressureKpa') && <p>Давление: {value(protocol.environment?.pressureKpa)} кПа</p>}
+                {visible('windSpeed') && <p>Скорость ветра: {value(protocol.environment?.windSpeed)} м/с</p>}
+              </div>}
               <div className="space-y-4 pt-2">
-                <div className="grid grid-cols-[130px_1fr]"><span className="font-bold">Исполнитель:</span><span className="border-b border-slate-700">{protocol.laboratory.executor}</span></div>
-                <div className="grid grid-cols-[130px_1fr]"><span className="font-bold">Заведующий ИЛ:</span><span className="border-b border-slate-700">{protocol.laboratory.laboratoryHead}</span></div>
+                {visible('executor') && <div className="grid grid-cols-[130px_1fr]"><span className="font-bold">Исполнитель:</span><span className="border-b border-slate-700">{protocol.laboratory.executor}</span></div>}
+                {visible('approver') && <div className="grid grid-cols-[130px_1fr]"><span className="font-bold">Заведующий ИЛ:</span><span className="border-b border-slate-700">{protocol.laboratory.laboratoryHead}</span></div>}
               </div>
             </section>
 

@@ -1,4 +1,5 @@
 import { PHYSICAL_FACTOR_UNITS } from './physicalFactors';
+import { PROTOCOL_NORMATIVE_CONTEXT } from './protocolNormativeContext';
 import type { NormativeRecord, Pollutant, ProtocolSubtype, ProtocolTemplateId } from '../types/protocols';
 
 export type ProtocolResultMode = 'CHEMICAL' | 'PHYSICAL';
@@ -36,7 +37,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   ambient_air: {
     title: 'Атмосферный воздух',
     templateId: 'ambient_air',
-    sourceDocumentCode: 'DSM_70',
+    sourceDocumentCode: PROTOCOL_NORMATIVE_CONTEXT.ambient_air.sourceDocumentCode,
     docxTemplateCode: 'protocol_ambient_air',
     defaultUnit: 'мг/м³',
     normativeTemplateId: 'ambient_air',
@@ -45,7 +46,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   workplace_air: {
     title: 'Воздух рабочей зоны',
     templateId: 'workplace_air',
-    sourceDocumentCode: 'DSM_70',
+    sourceDocumentCode: PROTOCOL_NORMATIVE_CONTEXT.workplace_air.sourceDocumentCode,
     docxTemplateCode: 'protocol_workplace_air',
     defaultUnit: 'мг/м³',
     normativeTemplateId: 'workplace_air',
@@ -54,7 +55,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   soil: {
     title: 'Почва',
     templateId: 'soil',
-    sourceDocumentCode: 'DSM_32',
+    sourceDocumentCode: PROTOCOL_NORMATIVE_CONTEXT.soil.sourceDocumentCode,
     docxTemplateCode: 'protocol_soil',
     defaultUnit: 'мг/кг',
     normativeTemplateId: 'soil',
@@ -63,17 +64,16 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   water: {
     title: 'Вода',
     templateId: 'water',
-    sourceDocumentCode: 'DSM_138',
+    sourceDocumentCode: PROTOCOL_NORMATIVE_CONTEXT.water.sourceDocumentCode,
     docxTemplateCode: 'protocol_water',
     defaultUnit: 'мг/л',
     normativeTemplateId: 'water',
-    environmentType: 'WATER',
     resultMode: 'CHEMICAL',
   },
   microclimate: {
     title: 'Микроклимат',
     templateId: 'microclimate',
-    sourceDocumentCode: 'DSM_15',
+    sourceDocumentCode: PROTOCOL_NORMATIVE_CONTEXT.microclimate.sourceDocumentCode,
     docxTemplateCode: 'protocol_microclimate',
     defaultUnit: null,
     normativeTemplateId: 'microclimate',
@@ -82,7 +82,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   lighting: {
     title: 'Освещенность',
     templateId: 'lighting',
-    sourceDocumentCode: 'DSM_15',
+    sourceDocumentCode: PROTOCOL_NORMATIVE_CONTEXT.lighting.sourceDocumentCode,
     docxTemplateCode: 'protocol_lighting',
     defaultUnit: 'лк',
     normativeTemplateId: 'lighting',
@@ -91,7 +91,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   noise_vibration: {
     title: 'Шум / вибрация',
     templateId: 'noise_vibration',
-    sourceDocumentCode: 'DSM_15',
+    sourceDocumentCode: PROTOCOL_NORMATIVE_CONTEXT.noise_vibration.sourceDocumentCode,
     docxTemplateCode: 'protocol_noise_vibration',
     defaultUnit: 'дБА',
     normativeTemplateId: 'noise_vibration',
@@ -100,7 +100,7 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   uv_emf_laser: {
     title: 'УФ / ЭМП / Лазер',
     templateId: 'uv_emf_laser',
-    sourceDocumentCode: 'DSM_15',
+    sourceDocumentCode: PROTOCOL_NORMATIVE_CONTEXT.uv_emf_laser.sourceDocumentCode,
     docxTemplateCode: 'protocol_physical_factors',
     defaultUnit: null,
     normativeTemplateId: 'uv_emf_laser',
@@ -125,8 +125,8 @@ export const PROTOCOL_TYPE_OPTIONS = SUPPORTED_PROTOCOL_TYPE_KEYS.map((key) => (
 }));
 
 export const protocolFactorType: Partial<Record<ProtocolTypeKey, ProtocolSubtype>> = {
-  microclimate: 'MICROCLIMATE',
-  lighting: 'LIGHTING',
+  microclimate: PROTOCOL_NORMATIVE_CONTEXT.microclimate.factorType,
+  lighting: PROTOCOL_NORMATIVE_CONTEXT.lighting.factorType,
   noise_vibration: 'NOISE_VIBRATION',
   uv_emf_laser: 'UV',
 };
@@ -175,10 +175,10 @@ export const resolveNormativeSearchContext = (
   }
 
   if (rawType === 'industrial_emissions') {
-    return { sourceDocumentCode: 'DSM_70', templateId: 'ambient_air', normativeTemplateId: 'ambient_air' };
+    return { ...PROTOCOL_NORMATIVE_CONTEXT.ambient_air, normativeTemplateId: 'ambient_air' };
   }
   if (rawType === 'water_wastewater') {
-    return { sourceDocumentCode: 'DSM_138', templateId: 'water', normativeTemplateId: 'water' };
+    return { ...PROTOCOL_NORMATIVE_CONTEXT.water, normativeTemplateId: 'water' };
   }
 
   return {

@@ -46,14 +46,8 @@ test('protocol permission matrix restricts destructive and signing actions', asy
   assert.equal(getProtocolPermissions('SIGNED', 'HEAD').canCreateCorrection, true);
 });
 
-test('protocol normative search accepts short valid indicators and keeps zero values', async () => {
-  const {
-    canSearchProtocolNormative,
-    protocolNormativeDisplayValue,
-  } = await loadTypeScriptModule('src/utils/protocolNormativeSearch.ts');
-  assert.equal(canSearchProtocolNormative('pH'), true);
-  assert.equal(canSearchProtocolNormative('7.1'), true);
-  assert.equal(canSearchProtocolNormative('x'), false);
+test('protocol normative display keeps zero values', async () => {
+  const { protocolNormativeDisplayValue } = await loadTypeScriptModule('src/utils/protocolNormativeSearch.ts');
   assert.equal(protocolNormativeDisplayValue({ value: 0 }), '0');
   assert.equal(protocolNormativeDisplayValue({ min: 0, max: 10 }), '0-10');
 });
