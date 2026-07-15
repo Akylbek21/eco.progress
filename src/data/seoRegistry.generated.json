@@ -1,0 +1,1242 @@
+[
+  {
+    "path": "/",
+    "title": "Экологические услуги в Казахстане | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги для бизнеса в Казахстане: лабораторные замеры, ПЭК, отходы, разрешения и сопровождение.",
+    "h1": "Экологические услуги и лабораторные замеры в Казахстане",
+    "canonical": "https://ecoprogress.kz/",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/services",
+    "title": "Экологические услуги ECOPROGRESS | Казахстан",
+    "description": "Экологические документы и лабораторные услуги по Казахстану. Вывоз, утилизация отходов и полигон ТБО доступны в Шымкенте.",
+    "h1": "Экологические услуги полного цикла",
+    "canonical": "https://ecoprogress.kz/services",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/ecological-documents",
+    "title": "Экологические документы для бизнеса | ECOPROGRESS",
+    "description": "Разработка экологических документов для предприятий Казахстана: аудит исходных данных, проекты, отчетность и сопровождение согласования.",
+    "h1": "Экологические документы для предприятий",
+    "canonical": "https://ecoprogress.kz/services/ecological-documents",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/waste-transportation",
+    "title": "Вывоз отходов для бизнеса в Шымкенте | ECOPROGRESS",
+    "description": "Организация разового и регулярного вывоза отходов в Шымкенте: подбор транспорта и оформление сопроводительных документов.",
+    "h1": "Вывоз отходов в Шымкенте",
+    "canonical": "https://ecoprogress.kz/services/waste-transportation",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/waste-recycling",
+    "title": "Утилизация и переработка отходов в Шымкенте | ECOPROGRESS",
+    "description": "Передача отходов на утилизацию и переработку в Шымкенте с классификацией, актами и подтверждающими документами.",
+    "h1": "Утилизация отходов в Шымкенте",
+    "canonical": "https://ecoprogress.kz/services/waste-recycling",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/poligon-tbo",
+    "title": "Приём и размещение отходов на полигоне ТБО | ECOPROGRESS",
+    "description": "Законное размещение отходов на полигоне ТБО: проверка состава, расчет объема, прием и комплект закрывающих документов.",
+    "h1": "Приём отходов на полигоне ТБО",
+    "canonical": "https://ecoprogress.kz/services/poligon-tbo",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/environmental-audit",
+    "title": "Экологический аудит предприятия | ECOPROGRESS",
+    "description": "Проверка экологических документов, разрешений, ПЭК и обращения с отходами с планом устранения рисков перед инспекцией.",
+    "h1": "Экологический аудит предприятия",
+    "canonical": "https://ecoprogress.kz/services/environmental-audit",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/ndv",
+    "title": "Разработка проекта НДВ в Казахстане | ECOPROGRESS",
+    "description": "Разработка проекта нормативов допустимых выбросов для предприятий Казахстана: инвентаризация источников, расчеты и сопровождение.",
+    "h1": "Разработка проекта нормативов допустимых выбросов",
+    "canonical": "https://ecoprogress.kz/services/ndv",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/puo",
+    "title": "Разработка программы управления отходами | ECOPROGRESS",
+    "description": "Разработка программы управления отходами для предприятий: анализ образования отходов, мероприятия, показатели и сопровождение по РК.",
+    "h1": "Разработка программы управления отходами",
+    "canonical": "https://ecoprogress.kz/services/puo",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/ovos",
+    "title": "Разработка ОВОС для проекта в Казахстане | ECOPROGRESS",
+    "description": "Подготовка ОВОС и материалов экологической оценки для строительства, реконструкции и запуска объектов в Казахстане.",
+    "h1": "Разработка оценки воздействия на окружающую среду",
+    "canonical": "https://ecoprogress.kz/services/ovos",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/laboratory-tests",
+    "title": "Заказать лабораторные замеры в Казахстане | ECOPROGRESS",
+    "description": "Закажите лабораторные замеры воздуха, воды, почвы, шума, освещенности и микроклимата: консультация, расчет стоимости, документы и сопровождение по Казахстану.",
+    "h1": "Лабораторные замеры",
+    "canonical": "https://ecoprogress.kz/services/laboratory-tests",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/industrial-control",
+    "title": "Заказать производственный контроль сэс в Казахстане | ECOPROGRESS",
+    "description": "Закажите программу производственного контроля, лабораторные замеры и протоколы для санитарных требований: консультация, расчет стоимости, документы и сопровождение по Казахстану.",
+    "h1": "Производственный контроль СЭС",
+    "canonical": "https://ecoprogress.kz/services/industrial-control",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/waste-passport",
+    "title": "Заказать паспорт отходов в Казахстане | ECOPROGRESS",
+    "description": "Закажите классификацию отходов, паспорт отходов и документы для учета движения отходов: консультация, расчет стоимости, документы и сопровождение по Казахстану.",
+    "h1": "Паспорт отходов",
+    "canonical": "https://ecoprogress.kz/services/waste-passport",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/waste-utilization",
+    "title": "Заказать утилизацию отходов в Шымкенте | ECOPROGRESS",
+    "description": "Вывоз, передача на утилизацию, переработка и закрывающие документы по отходам для организаций Шымкента.",
+    "h1": "Утилизация отходов в Шымкенте",
+    "canonical": "https://ecoprogress.kz/services/waste-utilization",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/pek-report",
+    "title": "Заказать отчет пэк в Казахстане | ECOPROGRESS",
+    "description": "Закажите производственный экологический контроль, лабораторные данные и отчет ПЭК: консультация, расчет стоимости, документы и сопровождение по Казахстану.",
+    "h1": "Отчет ПЭК",
+    "canonical": "https://ecoprogress.kz/services/pek-report",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/environmental-design",
+    "title": "Заказать экологическое проектирование в Казахстане | ECOPROGRESS",
+    "description": "Закажите экологические проекты, ОВОС, скрининг, декларации, нормативы и разрешительные материалы: консультация, расчет стоимости, документы и сопровождение по Казахстану.",
+    "h1": "Экологическое проектирование",
+    "canonical": "https://ecoprogress.kz/services/environmental-design",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/emission-permit",
+    "title": "Заказать разрешение на эмиссии в Казахстане | ECOPROGRESS",
+    "description": "Закажите подготовку материалов для разрешения на эмиссии и сопровождение по требованиям РК: консультация, расчет стоимости, документы и сопровождение по Казахстану.",
+    "h1": "Разрешение на эмиссии",
+    "canonical": "https://ecoprogress.kz/services/emission-permit",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/eia-screening",
+    "title": "Заказать овос и скрининг воздействия в Казахстане | ECOPROGRESS",
+    "description": "Закажите ОВОС, скрининг воздействия, декларацию и экологическую оценку для проекта: консультация, расчет стоимости, документы и сопровождение по Казахстану.",
+    "h1": "ОВОС и скрининг воздействия",
+    "canonical": "https://ecoprogress.kz/services/eia-screening",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/waste-management",
+    "title": "Вывоз и утилизация отходов в Шымкенте | ECOPROGRESS",
+    "description": "Утилизация отходов для бизнеса в Шымкенте: вывоз, переработка, акты, закрывающие документы и экологическое сопровождение.",
+    "h1": "Вывоз и утилизация отходов в Шымкенте",
+    "canonical": "https://ecoprogress.kz/services/waste-management",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/environmental-permits",
+    "title": "Экологические разрешения | ECOPROGRESS",
+    "description": "Разрешение на эмиссии, декларация воздействия, ОВОС, скрининг и экологические документы для бизнеса.",
+    "h1": "Экологические разрешения",
+    "canonical": "https://ecoprogress.kz/services/environmental-permits",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/services/ecological-support",
+    "title": "Экологическое сопровождение бизнеса | ECOPROGRESS",
+    "description": "Экологическое сопровождение бизнеса: аудит, документы, ПЭК, замеры, отходы, проверки и консультации.",
+    "h1": "Экологическое сопровождение бизнеса",
+    "canonical": "https://ecoprogress.kz/services/ecological-support",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/about",
+    "title": "О компании и специалистах ECOPROGRESS",
+    "description": "ECOPROGRESS GROUP оказывает экологические услуги для бизнеса в Казахстане: документы, лаборатория, отходы и сопровождение.",
+    "h1": "ECOPROGRESS GROUP",
+    "canonical": "https://ecoprogress.kz/about",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/contacts",
+    "title": "Контакты экологической компании ECOPROGRESS",
+    "description": "Контакты ECOPROGRESS: телефон, WhatsApp, email, адрес и консультация по экологическим услугам в Казахстане.",
+    "h1": "Контакты ECOPROGRESS",
+    "canonical": "https://ecoprogress.kz/contacts",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/news",
+    "title": "Статьи об экологии для бизнеса | ECOPROGRESS",
+    "description": "Статьи ECOPROGRESS об экологических документах, ПЭК, СЭС, отходах, замерах, разрешениях и проверках бизнеса.",
+    "h1": "Статьи и новости",
+    "canonical": "https://ecoprogress.kz/news",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Article"
+  },
+  {
+    "path": "/employees",
+    "title": "Экологи и специалисты компании ECOPROGRESS",
+    "description": "Команда ECOPROGRESS: специалисты по экологическим документам, лабораторным замерам, отходам и сопровождению бизнеса.",
+    "h1": "Сотрудники ECOPROGRESS",
+    "canonical": "https://ecoprogress.kz/employees",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/partners",
+    "title": "Партнеры и направления группы ECOPROGRESS",
+    "description": "Партнеры и направления группы ECOPROGRESS: проектирование, лаборатория, отходы, утилизация и полигон.",
+    "h1": "Партнеры ECOPROGRESS",
+    "canonical": "https://ecoprogress.kz/partners",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/tariffs",
+    "title": "Цены на экологические услуги | ECOPROGRESS",
+    "description": "Форматы и ориентировочная стоимость экологических документов, лабораторных исследований, аудита и сопровождения бизнеса.",
+    "h1": "Тарифы на экологическое сопровождение",
+    "canonical": "https://ecoprogress.kz/tariffs",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/faq",
+    "title": "Частые вопросы об экологических услугах | ECOPROGRESS",
+    "description": "Ответы о стоимости, документах, сроках, договорах, личном кабинете и экологическом сопровождении бизнеса в Казахстане.",
+    "h1": "Частые вопросы",
+    "canonical": "https://ecoprogress.kz/faq",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-almaty",
+    "title": "Экологические услуги в Алматы | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Алматы: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Алматы",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-astana",
+    "title": "Экологические услуги в Астана | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Астана: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Астана",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-shymkent",
+    "title": "Экологические услуги в Шымкент | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Шымкент: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса. Доступна утилизация.",
+    "h1": "Экологические услуги в Шымкент",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-taraz",
+    "title": "Экологические услуги в Тараз | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Тараз: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Тараз",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-turkestan",
+    "title": "Экологические услуги в Туркестан | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Туркестан: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Туркестан",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-kyzylorda",
+    "title": "Экологические услуги в Кызылорда | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Кызылорда: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Кызылорда",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-aktobe",
+    "title": "Экологические услуги в Актобе | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Актобе: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Актобе",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-atyrau",
+    "title": "Экологические услуги в Атырау | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Атырау: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Атырау",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-karaganda",
+    "title": "Экологические услуги в Караганда | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Караганда: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Караганда",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-pavlodar",
+    "title": "Экологические услуги в Павлодар | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Павлодар: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Павлодар",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-ust-kamenogorsk",
+    "title": "Экологические услуги в Усть-Каменогорск | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Усть-Каменогорск: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Усть-Каменогорск",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-kostanay",
+    "title": "Экологические услуги в Костанай | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Костанай: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Костанай",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-aktau",
+    "title": "Экологические услуги в Актау | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Актау: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Актау",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-petropavlovsk",
+    "title": "Экологические услуги в Петропавловск | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Петропавловск: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Петропавловск",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-oral",
+    "title": "Экологические услуги в Уральск | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Уральск: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Уральск",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-kokshetau",
+    "title": "Экологические услуги в Кокшетау | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Кокшетау: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Кокшетау",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-taldykorgan",
+    "title": "Экологические услуги в Талдыкорган | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Талдыкорган: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Талдыкорган",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/ecologicheskie-uslugi-semey",
+    "title": "Экологические услуги в Семей | ECOPROGRESS",
+    "description": "ECOPROGRESS оказывает экологические услуги в Семей: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "h1": "Экологические услуги в Семей",
+    "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "LocalBusiness"
+  },
+  {
+    "path": "/laboratornye-zamery-almaty",
+    "title": "Лабораторные замеры для бизнеса в Алматы | ECOPROGRESS",
+    "description": "Закажите лабораторные замеры в Алматы: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Лабораторные замеры в Алматы",
+    "canonical": "https://ecoprogress.kz/laboratornye-zamery-almaty",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/edward.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/proizvodstvennyy-kontrol-ses-almaty",
+    "title": "Производственный контроль СЭС для бизнеса в Алматы | ECOPROGRESS",
+    "description": "Закажите производственный контроль сэс в Алматы: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Производственный контроль СЭС в Алматы",
+    "canonical": "https://ecoprogress.kz/proizvodstvennyy-kontrol-ses-almaty",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/passport-othodov-almaty",
+    "title": "Паспорт отходов для бизнеса в Алматы | ECOPROGRESS",
+    "description": "Закажите паспорт отходов в Алматы: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Паспорт отходов в Алматы",
+    "canonical": "https://ecoprogress.kz/passport-othodov-almaty",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/otchet-pek-almaty",
+    "title": "Отчет ПЭК для бизнеса в Алматы | ECOPROGRESS",
+    "description": "Закажите отчет пэк в Алматы: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Отчет ПЭК в Алматы",
+    "canonical": "https://ecoprogress.kz/otchet-pek-almaty",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/images (1).jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ekologicheskoe-proektirovanie-almaty",
+    "title": "Экологическое проектирование для бизнеса в Алматы | ECOPROGRESS",
+    "description": "Закажите экологическое проектирование в Алматы: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Экологическое проектирование в Алматы",
+    "canonical": "https://ecoprogress.kz/ekologicheskoe-proektirovanie-almaty",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/razreshenie-na-emissii-almaty",
+    "title": "Разрешение на эмиссии для бизнеса в Алматы | ECOPROGRESS",
+    "description": "Закажите разрешение на эмиссии в Алматы: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Разрешение на эмиссии в Алматы",
+    "canonical": "https://ecoprogress.kz/razreshenie-na-emissii-almaty",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ovos-skrining-vozdeystviya-almaty",
+    "title": "ОВОС / скрининг для бизнеса в Алматы | ECOPROGRESS",
+    "description": "Закажите овос и скрининг воздействия в Алматы: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "ОВОС и скрининг воздействия в Алматы",
+    "canonical": "https://ecoprogress.kz/ovos-skrining-vozdeystviya-almaty",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/pexels-jan-van.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/laboratornye-zamery-astana",
+    "title": "Лабораторные замеры для бизнеса в Астана | ECOPROGRESS",
+    "description": "Закажите лабораторные замеры в Астана: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Лабораторные замеры в Астана",
+    "canonical": "https://ecoprogress.kz/laboratornye-zamery-astana",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/edward.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/proizvodstvennyy-kontrol-ses-astana",
+    "title": "Производственный контроль СЭС для бизнеса в Астана | ECOPROGRESS",
+    "description": "Закажите производственный контроль сэс в Астана: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Производственный контроль СЭС в Астана",
+    "canonical": "https://ecoprogress.kz/proizvodstvennyy-kontrol-ses-astana",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/passport-othodov-astana",
+    "title": "Паспорт отходов для бизнеса в Астана | ECOPROGRESS",
+    "description": "Закажите паспорт отходов в Астана: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Паспорт отходов в Астана",
+    "canonical": "https://ecoprogress.kz/passport-othodov-astana",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/otchet-pek-astana",
+    "title": "Отчет ПЭК для бизнеса в Астана | ECOPROGRESS",
+    "description": "Закажите отчет пэк в Астана: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Отчет ПЭК в Астана",
+    "canonical": "https://ecoprogress.kz/otchet-pek-astana",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/images (1).jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ekologicheskoe-proektirovanie-astana",
+    "title": "Экологическое проектирование для бизнеса в Астана | ECOPROGRESS",
+    "description": "Закажите экологическое проектирование в Астана: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Экологическое проектирование в Астана",
+    "canonical": "https://ecoprogress.kz/ekologicheskoe-proektirovanie-astana",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/razreshenie-na-emissii-astana",
+    "title": "Разрешение на эмиссии для бизнеса в Астана | ECOPROGRESS",
+    "description": "Закажите разрешение на эмиссии в Астана: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Разрешение на эмиссии в Астана",
+    "canonical": "https://ecoprogress.kz/razreshenie-na-emissii-astana",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ovos-skrining-vozdeystviya-astana",
+    "title": "ОВОС / скрининг для бизнеса в Астана | ECOPROGRESS",
+    "description": "Закажите овос и скрининг воздействия в Астана: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "ОВОС и скрининг воздействия в Астана",
+    "canonical": "https://ecoprogress.kz/ovos-skrining-vozdeystviya-astana",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/pexels-jan-van.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/laboratornye-zamery-shymkent",
+    "title": "Лабораторные замеры для бизнеса в Шымкент | ECOPROGRESS",
+    "description": "Закажите лабораторные замеры в Шымкент: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Лабораторные замеры в Шымкент",
+    "canonical": "https://ecoprogress.kz/laboratornye-zamery-shymkent",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/edward.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/proizvodstvennyy-kontrol-ses-shymkent",
+    "title": "Производственный контроль СЭС для бизнеса в Шымкент | ECOPROGRESS",
+    "description": "Закажите производственный контроль сэс в Шымкент: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Производственный контроль СЭС в Шымкент",
+    "canonical": "https://ecoprogress.kz/proizvodstvennyy-kontrol-ses-shymkent",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/passport-othodov-shymkent",
+    "title": "Паспорт отходов для бизнеса в Шымкент | ECOPROGRESS",
+    "description": "Закажите паспорт отходов в Шымкент: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Паспорт отходов в Шымкент",
+    "canonical": "https://ecoprogress.kz/passport-othodov-shymkent",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/utilizaciya-othodov-shymkent",
+    "title": "Утилизация отходов для бизнеса в Шымкент | ECOPROGRESS",
+    "description": "Закажите утилизация отходов в Шымкент: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Утилизация отходов в Шымкент",
+    "canonical": "https://ecoprogress.kz/utilizaciya-othodov-shymkent",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/jose.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/otchet-pek-shymkent",
+    "title": "Отчет ПЭК для бизнеса в Шымкент | ECOPROGRESS",
+    "description": "Закажите отчет пэк в Шымкент: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Отчет ПЭК в Шымкент",
+    "canonical": "https://ecoprogress.kz/otchet-pek-shymkent",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/images (1).jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ekologicheskoe-proektirovanie-shymkent",
+    "title": "Экологическое проектирование для бизнеса в Шымкент | ECOPROGRESS",
+    "description": "Закажите экологическое проектирование в Шымкент: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Экологическое проектирование в Шымкент",
+    "canonical": "https://ecoprogress.kz/ekologicheskoe-proektirovanie-shymkent",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/razreshenie-na-emissii-shymkent",
+    "title": "Разрешение на эмиссии для бизнеса в Шымкент | ECOPROGRESS",
+    "description": "Закажите разрешение на эмиссии в Шымкент: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Разрешение на эмиссии в Шымкент",
+    "canonical": "https://ecoprogress.kz/razreshenie-na-emissii-shymkent",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ovos-skrining-vozdeystviya-shymkent",
+    "title": "ОВОС / скрининг для бизнеса в Шымкент | ECOPROGRESS",
+    "description": "Закажите овос и скрининг воздействия в Шымкент: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "ОВОС и скрининг воздействия в Шымкент",
+    "canonical": "https://ecoprogress.kz/ovos-skrining-vozdeystviya-shymkent",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/pexels-jan-van.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/laboratornye-zamery-taraz",
+    "title": "Лабораторные замеры для бизнеса в Тараз | ECOPROGRESS",
+    "description": "Закажите лабораторные замеры в Тараз: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Лабораторные замеры в Тараз",
+    "canonical": "https://ecoprogress.kz/laboratornye-zamery-taraz",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/edward.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/proizvodstvennyy-kontrol-ses-taraz",
+    "title": "Производственный контроль СЭС для бизнеса в Тараз | ECOPROGRESS",
+    "description": "Закажите производственный контроль сэс в Тараз: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Производственный контроль СЭС в Тараз",
+    "canonical": "https://ecoprogress.kz/proizvodstvennyy-kontrol-ses-taraz",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/passport-othodov-taraz",
+    "title": "Паспорт отходов для бизнеса в Тараз | ECOPROGRESS",
+    "description": "Закажите паспорт отходов в Тараз: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Паспорт отходов в Тараз",
+    "canonical": "https://ecoprogress.kz/passport-othodov-taraz",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/otchet-pek-taraz",
+    "title": "Отчет ПЭК для бизнеса в Тараз | ECOPROGRESS",
+    "description": "Закажите отчет пэк в Тараз: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Отчет ПЭК в Тараз",
+    "canonical": "https://ecoprogress.kz/otchet-pek-taraz",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/images (1).jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ekologicheskoe-proektirovanie-taraz",
+    "title": "Экологическое проектирование для бизнеса в Тараз | ECOPROGRESS",
+    "description": "Закажите экологическое проектирование в Тараз: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Экологическое проектирование в Тараз",
+    "canonical": "https://ecoprogress.kz/ekologicheskoe-proektirovanie-taraz",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/razreshenie-na-emissii-taraz",
+    "title": "Разрешение на эмиссии для бизнеса в Тараз | ECOPROGRESS",
+    "description": "Закажите разрешение на эмиссии в Тараз: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Разрешение на эмиссии в Тараз",
+    "canonical": "https://ecoprogress.kz/razreshenie-na-emissii-taraz",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ovos-skrining-vozdeystviya-taraz",
+    "title": "ОВОС / скрининг для бизнеса в Тараз | ECOPROGRESS",
+    "description": "Закажите овос и скрининг воздействия в Тараз: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "ОВОС и скрининг воздействия в Тараз",
+    "canonical": "https://ecoprogress.kz/ovos-skrining-vozdeystviya-taraz",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/pexels-jan-van.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/laboratornye-zamery-turkestan",
+    "title": "Лабораторные замеры для бизнеса в Туркестан | ECOPROGRESS",
+    "description": "Закажите лабораторные замеры в Туркестан: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Лабораторные замеры в Туркестан",
+    "canonical": "https://ecoprogress.kz/laboratornye-zamery-turkestan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/edward.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/proizvodstvennyy-kontrol-ses-turkestan",
+    "title": "Производственный контроль СЭС для бизнеса в Туркестан | ECOPROGRESS",
+    "description": "Закажите производственный контроль сэс в Туркестан: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Производственный контроль СЭС в Туркестан",
+    "canonical": "https://ecoprogress.kz/proizvodstvennyy-kontrol-ses-turkestan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/passport-othodov-turkestan",
+    "title": "Паспорт отходов для бизнеса в Туркестан | ECOPROGRESS",
+    "description": "Закажите паспорт отходов в Туркестан: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Паспорт отходов в Туркестан",
+    "canonical": "https://ecoprogress.kz/passport-othodov-turkestan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/otchet-pek-turkestan",
+    "title": "Отчет ПЭК для бизнеса в Туркестан | ECOPROGRESS",
+    "description": "Закажите отчет пэк в Туркестан: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Отчет ПЭК в Туркестан",
+    "canonical": "https://ecoprogress.kz/otchet-pek-turkestan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/images (1).jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ekologicheskoe-proektirovanie-turkestan",
+    "title": "Экологическое проектирование для бизнеса в Туркестан | ECOPROGRESS",
+    "description": "Закажите экологическое проектирование в Туркестан: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Экологическое проектирование в Туркестан",
+    "canonical": "https://ecoprogress.kz/ekologicheskoe-proektirovanie-turkestan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/razreshenie-na-emissii-turkestan",
+    "title": "Разрешение на эмиссии для бизнеса в Туркестан | ECOPROGRESS",
+    "description": "Закажите разрешение на эмиссии в Туркестан: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Разрешение на эмиссии в Туркестан",
+    "canonical": "https://ecoprogress.kz/razreshenie-na-emissii-turkestan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ovos-skrining-vozdeystviya-turkestan",
+    "title": "ОВОС / скрининг для бизнеса в Туркестан | ECOPROGRESS",
+    "description": "Закажите овос и скрининг воздействия в Туркестан: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "ОВОС и скрининг воздействия в Туркестан",
+    "canonical": "https://ecoprogress.kz/ovos-skrining-vozdeystviya-turkestan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/pexels-jan-van.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/laboratornye-zamery-kyzylorda",
+    "title": "Лабораторные замеры для бизнеса в Кызылорда | ECOPROGRESS",
+    "description": "Закажите лабораторные замеры в Кызылорда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Лабораторные замеры в Кызылорда",
+    "canonical": "https://ecoprogress.kz/laboratornye-zamery-kyzylorda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/edward.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/proizvodstvennyy-kontrol-ses-kyzylorda",
+    "title": "Производственный контроль СЭС для бизнеса в Кызылорда | ECOPROGRESS",
+    "description": "Закажите производственный контроль сэс в Кызылорда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Производственный контроль СЭС в Кызылорда",
+    "canonical": "https://ecoprogress.kz/proizvodstvennyy-kontrol-ses-kyzylorda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/passport-othodov-kyzylorda",
+    "title": "Паспорт отходов для бизнеса в Кызылорда | ECOPROGRESS",
+    "description": "Закажите паспорт отходов в Кызылорда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Паспорт отходов в Кызылорда",
+    "canonical": "https://ecoprogress.kz/passport-othodov-kyzylorda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/otchet-pek-kyzylorda",
+    "title": "Отчет ПЭК для бизнеса в Кызылорда | ECOPROGRESS",
+    "description": "Закажите отчет пэк в Кызылорда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Отчет ПЭК в Кызылорда",
+    "canonical": "https://ecoprogress.kz/otchet-pek-kyzylorda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/images (1).jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ekologicheskoe-proektirovanie-kyzylorda",
+    "title": "Экологическое проектирование для бизнеса в Кызылорда | ECOPROGRESS",
+    "description": "Закажите экологическое проектирование в Кызылорда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Экологическое проектирование в Кызылорда",
+    "canonical": "https://ecoprogress.kz/ekologicheskoe-proektirovanie-kyzylorda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/razreshenie-na-emissii-kyzylorda",
+    "title": "Разрешение на эмиссии для бизнеса в Кызылорда | ECOPROGRESS",
+    "description": "Закажите разрешение на эмиссии в Кызылорда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Разрешение на эмиссии в Кызылорда",
+    "canonical": "https://ecoprogress.kz/razreshenie-na-emissii-kyzylorda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ovos-skrining-vozdeystviya-kyzylorda",
+    "title": "ОВОС / скрининг для бизнеса в Кызылорда | ECOPROGRESS",
+    "description": "Закажите овос и скрининг воздействия в Кызылорда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "ОВОС и скрининг воздействия в Кызылорда",
+    "canonical": "https://ecoprogress.kz/ovos-skrining-vozdeystviya-kyzylorda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/pexels-jan-van.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/laboratornye-zamery-aktobe",
+    "title": "Лабораторные замеры для бизнеса в Актобе | ECOPROGRESS",
+    "description": "Закажите лабораторные замеры в Актобе: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Лабораторные замеры в Актобе",
+    "canonical": "https://ecoprogress.kz/laboratornye-zamery-aktobe",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/edward.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/proizvodstvennyy-kontrol-ses-aktobe",
+    "title": "Производственный контроль СЭС для бизнеса в Актобе | ECOPROGRESS",
+    "description": "Закажите производственный контроль сэс в Актобе: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Производственный контроль СЭС в Актобе",
+    "canonical": "https://ecoprogress.kz/proizvodstvennyy-kontrol-ses-aktobe",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/passport-othodov-aktobe",
+    "title": "Паспорт отходов для бизнеса в Актобе | ECOPROGRESS",
+    "description": "Закажите паспорт отходов в Актобе: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Паспорт отходов в Актобе",
+    "canonical": "https://ecoprogress.kz/passport-othodov-aktobe",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/otchet-pek-aktobe",
+    "title": "Отчет ПЭК для бизнеса в Актобе | ECOPROGRESS",
+    "description": "Закажите отчет пэк в Актобе: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Отчет ПЭК в Актобе",
+    "canonical": "https://ecoprogress.kz/otchet-pek-aktobe",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/images (1).jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ekologicheskoe-proektirovanie-aktobe",
+    "title": "Экологическое проектирование для бизнеса в Актобе | ECOPROGRESS",
+    "description": "Закажите экологическое проектирование в Актобе: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Экологическое проектирование в Актобе",
+    "canonical": "https://ecoprogress.kz/ekologicheskoe-proektirovanie-aktobe",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/razreshenie-na-emissii-aktobe",
+    "title": "Разрешение на эмиссии для бизнеса в Актобе | ECOPROGRESS",
+    "description": "Закажите разрешение на эмиссии в Актобе: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Разрешение на эмиссии в Актобе",
+    "canonical": "https://ecoprogress.kz/razreshenie-na-emissii-aktobe",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ovos-skrining-vozdeystviya-aktobe",
+    "title": "ОВОС / скрининг для бизнеса в Актобе | ECOPROGRESS",
+    "description": "Закажите овос и скрининг воздействия в Актобе: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "ОВОС и скрининг воздействия в Актобе",
+    "canonical": "https://ecoprogress.kz/ovos-skrining-vozdeystviya-aktobe",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/pexels-jan-van.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/laboratornye-zamery-atyrau",
+    "title": "Лабораторные замеры для бизнеса в Атырау | ECOPROGRESS",
+    "description": "Закажите лабораторные замеры в Атырау: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Лабораторные замеры в Атырау",
+    "canonical": "https://ecoprogress.kz/laboratornye-zamery-atyrau",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/edward.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/proizvodstvennyy-kontrol-ses-atyrau",
+    "title": "Производственный контроль СЭС для бизнеса в Атырау | ECOPROGRESS",
+    "description": "Закажите производственный контроль сэс в Атырау: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Производственный контроль СЭС в Атырау",
+    "canonical": "https://ecoprogress.kz/proizvodstvennyy-kontrol-ses-atyrau",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/passport-othodov-atyrau",
+    "title": "Паспорт отходов для бизнеса в Атырау | ECOPROGRESS",
+    "description": "Закажите паспорт отходов в Атырау: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Паспорт отходов в Атырау",
+    "canonical": "https://ecoprogress.kz/passport-othodov-atyrau",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/otchet-pek-atyrau",
+    "title": "Отчет ПЭК для бизнеса в Атырау | ECOPROGRESS",
+    "description": "Закажите отчет пэк в Атырау: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Отчет ПЭК в Атырау",
+    "canonical": "https://ecoprogress.kz/otchet-pek-atyrau",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/images (1).jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ekologicheskoe-proektirovanie-atyrau",
+    "title": "Экологическое проектирование для бизнеса в Атырау | ECOPROGRESS",
+    "description": "Закажите экологическое проектирование в Атырау: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Экологическое проектирование в Атырау",
+    "canonical": "https://ecoprogress.kz/ekologicheskoe-proektirovanie-atyrau",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/razreshenie-na-emissii-atyrau",
+    "title": "Разрешение на эмиссии для бизнеса в Атырау | ECOPROGRESS",
+    "description": "Закажите разрешение на эмиссии в Атырау: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Разрешение на эмиссии в Атырау",
+    "canonical": "https://ecoprogress.kz/razreshenie-na-emissii-atyrau",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ovos-skrining-vozdeystviya-atyrau",
+    "title": "ОВОС / скрининг для бизнеса в Атырау | ECOPROGRESS",
+    "description": "Закажите овос и скрининг воздействия в Атырау: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "ОВОС и скрининг воздействия в Атырау",
+    "canonical": "https://ecoprogress.kz/ovos-skrining-vozdeystviya-atyrau",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/pexels-jan-van.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/laboratornye-zamery-karaganda",
+    "title": "Лабораторные замеры для бизнеса в Караганда | ECOPROGRESS",
+    "description": "Закажите лабораторные замеры в Караганда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Лабораторные замеры в Караганда",
+    "canonical": "https://ecoprogress.kz/laboratornye-zamery-karaganda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/edward.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/proizvodstvennyy-kontrol-ses-karaganda",
+    "title": "Производственный контроль СЭС для бизнеса в Караганда | ECOPROGRESS",
+    "description": "Закажите производственный контроль сэс в Караганда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Производственный контроль СЭС в Караганда",
+    "canonical": "https://ecoprogress.kz/proizvodstvennyy-kontrol-ses-karaganda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/passport-othodov-karaganda",
+    "title": "Паспорт отходов для бизнеса в Караганда | ECOPROGRESS",
+    "description": "Закажите паспорт отходов в Караганда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Паспорт отходов в Караганда",
+    "canonical": "https://ecoprogress.kz/passport-othodov-karaganda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/otchet-pek-karaganda",
+    "title": "Отчет ПЭК для бизнеса в Караганда | ECOPROGRESS",
+    "description": "Закажите отчет пэк в Караганда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Отчет ПЭК в Караганда",
+    "canonical": "https://ecoprogress.kz/otchet-pek-karaganda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/images (1).jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ekologicheskoe-proektirovanie-karaganda",
+    "title": "Экологическое проектирование для бизнеса в Караганда | ECOPROGRESS",
+    "description": "Закажите экологическое проектирование в Караганда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Экологическое проектирование в Караганда",
+    "canonical": "https://ecoprogress.kz/ekologicheskoe-proektirovanie-karaganda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/razreshenie-na-emissii-karaganda",
+    "title": "Разрешение на эмиссии для бизнеса в Караганда | ECOPROGRESS",
+    "description": "Закажите разрешение на эмиссии в Караганда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "Разрешение на эмиссии в Караганда",
+    "canonical": "https://ecoprogress.kz/razreshenie-na-emissii-karaganda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/para.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/ovos-skrining-vozdeystviya-karaganda",
+    "title": "ОВОС / скрининг для бизнеса в Караганда | ECOPROGRESS",
+    "description": "Закажите овос и скрининг воздействия в Караганда: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "h1": "ОВОС и скрининг воздействия в Караганда",
+    "canonical": "https://ecoprogress.kz/ovos-skrining-vozdeystviya-karaganda",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/pexels-jan-van.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/shtrafy-za-ekologiyu-kazakhstan",
+    "title": "Штрафы за экологию в Казахстане | ECOPROGRESS",
+    "description": "Какие экологические штрафы бывают в Казахстане: документы, ПЭК, отходы, замеры, разрешения и подготовка бизнеса к проверке.",
+    "h1": "Штрафы за экологию в Казахстане",
+    "canonical": "https://ecoprogress.kz/shtrafy-za-ekologiyu-kazakhstan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/images (1).jpg",
+    "schemaType": "Article"
+  },
+  {
+    "path": "/ses-proverka-proizvodstvennyy-kontrol",
+    "title": "Проверка СЭС и производственный контроль | ECOPROGRESS",
+    "description": "Как подготовить производственный контроль СЭС: программа, лабораторные замеры, протоколы, документы и сопровождение проверки.",
+    "h1": "Проверка СЭС и производственный контроль",
+    "canonical": "https://ecoprogress.kz/ses-proverka-proizvodstvennyy-kontrol",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Article"
+  },
+  {
+    "path": "/passport-othodov-kazakhstan",
+    "title": "Паспорт отходов в Казахстане | ECOPROGRESS",
+    "description": "Подготовка паспорта отходов в Казахстане: классификация, документы, учет отходов, консультация и сопровождение бизнеса.",
+    "h1": "Паспорт отходов в Казахстане",
+    "canonical": "https://ecoprogress.kz/passport-othodov-kazakhstan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/otchet-pek-kazakhstan",
+    "title": "Отчет ПЭК в Казахстане | ECOPROGRESS",
+    "description": "Подготовка отчета ПЭК в Казахстане: производственный экологический контроль, лабораторные данные, документы и сопровождение.",
+    "h1": "Отчет ПЭК в Казахстане",
+    "canonical": "https://ecoprogress.kz/otchet-pek-kazakhstan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/images (1).jpg",
+    "schemaType": "Service"
+  },
+  {
+    "path": "/news/ekologicheskie-dokumenty-too-kazakhstan",
+    "title": "Какие экологические документы нужны ТОО в Казахстане | ECOPROGRESS",
+    "description": "Разбираем базовый комплект экологических документов для ТОО: ПЭК, отходы, разрешения, замеры, договоры и подготовка к проверке.",
+    "h1": "Какие экологические документы нужны ТОО в Казахстане",
+    "canonical": "https://ecoprogress.kz/news/ekologicheskie-dokumenty-too-kazakhstan",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Article"
+  },
+  {
+    "path": "/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol",
+    "title": "Что такое производственный экологический контроль | ECOPROGRESS",
+    "description": "ПЭК простыми словами: кому нужен контроль, какие данные собирают, зачем нужны замеры и как готовят отчетность.",
+    "h1": "Что такое производственный экологический контроль",
+    "canonical": "https://ecoprogress.kz/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/edward.jpg",
+    "schemaType": "Article"
+  },
+  {
+    "path": "/news/komu-nuzhen-proizvodstvennyy-kontrol-ses",
+    "title": "Кому нужен производственный контроль СЭС | ECOPROGRESS",
+    "description": "Производственный контроль СЭС для кафе, школ, клиник, складов и производств: замеры, протоколы и документы для проверки.",
+    "h1": "Кому нужен производственный контроль СЭС",
+    "canonical": "https://ecoprogress.kz/news/komu-nuzhen-proizvodstvennyy-kontrol-ses",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Article"
+  },
+  {
+    "path": "/news/kakie-shtrafy-za-ekologiyu-v-kazakhstane",
+    "title": "Какие штрафы за экологию в Казахстане | ECOPROGRESS",
+    "description": "Причины экологических штрафов: отсутствие ПЭК, паспортов отходов, разрешений, протоколов замеров и договоров на утилизацию.",
+    "h1": "Какие штрафы за экологию в Казахстане",
+    "canonical": "https://ecoprogress.kz/news/kakie-shtrafy-za-ekologiyu-v-kazakhstane",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Article"
+  },
+  {
+    "path": "/news/kak-poluchit-razreshenie-na-emissii",
+    "title": "Как получить разрешение на эмиссии | ECOPROGRESS",
+    "description": "Какие исходные данные нужны для разрешения на эмиссии, как готовят материалы и что важно проверить до подачи.",
+    "h1": "Как получить разрешение на эмиссии",
+    "canonical": "https://ecoprogress.kz/news/kak-poluchit-razreshenie-na-emissii",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/edward.jpg",
+    "schemaType": "Article"
+  },
+  {
+    "path": "/news/chto-takoe-pasport-othodov",
+    "title": "Что такое паспорт отходов и кому он нужен | ECOPROGRESS",
+    "description": "Паспорт отходов: когда нужен, какие данные собирают, как связан с утилизацией, учетом отходов и проверками.",
+    "h1": "Что такое паспорт отходов и кому он нужен",
+    "canonical": "https://ecoprogress.kz/news/chto-takoe-pasport-othodov",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Article"
+  },
+  {
+    "path": "/news/kak-prohodit-laboratornyy-zamer-vozduha",
+    "title": "Как проходит лабораторный замер воздуха | ECOPROGRESS",
+    "description": "Этапы лабораторного замера воздуха: заявка, точки отбора, выезд, измерения, протокол и использование результата.",
+    "h1": "Как проходит лабораторный замер воздуха",
+    "canonical": "https://ecoprogress.kz/news/kak-prohodit-laboratornyy-zamer-vozduha",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Article"
+  },
+  {
+    "path": "/news/kakie-dokumenty-proveryaet-ses",
+    "title": "Какие документы проверяет СЭС | ECOPROGRESS",
+    "description": "Что может запросить СЭС у бизнеса: производственный контроль, протоколы, санитарные документы, журналы и договоры.",
+    "h1": "Какие документы проверяет СЭС",
+    "canonical": "https://ecoprogress.kz/news/kakie-dokumenty-proveryaet-ses",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/edward.jpg",
+    "schemaType": "Article"
+  },
+  {
+    "path": "/news/chto-sdavat-po-ekologii-kazhdyy-god",
+    "title": "Что сдавать по экологии каждый год | ECOPROGRESS",
+    "description": "Ежегодная экологическая отчетность для бизнеса: ПЭК, отходы, лабораторные данные, обязательные документы и контроль сроков.",
+    "h1": "Что сдавать по экологии каждый год",
+    "canonical": "https://ecoprogress.kz/news/chto-sdavat-po-ekologii-kazhdyy-god",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
+    "schemaType": "Article"
+  },
+  {
+    "path": "/news/ekologicheskoe-soprovozhdenie-biznesa",
+    "title": "Экологическое сопровождение бизнеса: что входит в услугу | ECOPROGRESS",
+    "description": "Что включает экологическое сопровождение: аудит, документы, замеры, отходы, ПЭК, консультации и помощь при проверках.",
+    "h1": "Экологическое сопровождение бизнеса: что входит в услугу",
+    "canonical": "https://ecoprogress.kz/news/ekologicheskoe-soprovozhdenie-biznesa",
+    "robots": "index,follow",
+    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
+    "schemaType": "Article"
+  }
+]

@@ -1,5 +1,6 @@
 ﻿import { COMPANY_CONTACTS } from './contacts';
 import { createWhatsAppUrl } from '../utils/whatsapp';
+import { appConfig } from './app';
 
 export const company = {
   name: 'ECOPROGRESS GROUP',
@@ -14,7 +15,7 @@ export const company = {
   instagramUrl: 'https://www.instagram.com/ecoprogress.group',
   mapsUrl: 'https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16',
   siteLabel: 'ecoprogress.kz',
-  siteUrl: 'https://ecoprogress.kz',
+  siteUrl: appConfig.siteUrl,
 };
 
 export const whatsappConsultationText = 'Здравствуйте! Хочу получить консультацию по экологическим услугам. Город: ';

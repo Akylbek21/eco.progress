@@ -4,7 +4,7 @@ import Button from '../components/ui/Button';
 import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { company, getWhatsAppUrl } from '../config/company';
-import { seoArticleMap } from '../data/seoPages';
+import { seoArticleMap } from '../data/seoArticles';
 
 const NewsDetailsPage = () => {
   const { id } = useParams();

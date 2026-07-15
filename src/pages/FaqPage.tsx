@@ -1,5 +1,6 @@
 import Reveal from '../components/animations/Reveal';
 import { FaWhatsapp } from 'react-icons/fa';
+import SEO from '../components/SEO';
 
 const faqs = [
   ['Сколько стоит услуга?', 'Стоимость зависит от объекта, объема работ и сроков. После заявки специалист подготовит расчет.'],
@@ -12,6 +13,7 @@ const faqs = [
 
 const FaqPage = () => (
   <section className="bg-[#F7FBFD] px-4 py-16 sm:px-8 sm:py-20">
+    <SEO title="Частые вопросы об экологических услугах | ECOPROGRESS" description="Ответы о стоимости, документах, сроках, договорах, личном кабинете и экологическом сопровождении бизнеса в Казахстане." />
     <div className="mx-auto max-w-4xl">
       <Reveal>
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">FAQ</p>

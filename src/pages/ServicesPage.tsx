@@ -90,13 +90,13 @@ const ServicesPage = () => {
 
   return (
     <div>
-      <SEO title="Услуги ecoprogress.kz | Экологические документы, отходы, лаборатория" description="Полный список экологических услуг: документы, лабораторные исследования, вывоз и утилизация отходов, полигон ТБО и сопровождение проверок." />
+      <SEO title="Услуги ecoprogress.kz | Экологические документы, отходы, лаборатория" description="Экологические документы и лабораторные услуги по Казахстану. Вывоз, утилизация отходов и полигон ТБО доступны в Шымкенте." />
       <section className="relative overflow-hidden px-4 py-16 text-white sm:px-8 sm:py-24">
         <div className="absolute inset-0 bg-windmill bg-cover bg-center" />
         <div className="absolute inset-0 bg-eco-900/78" />
         <div className="relative mx-auto max-w-7xl">
           <Reveal><h1 className="max-w-3xl text-3xl font-bold leading-tight sm:text-6xl">Экологические услуги полного цикла</h1></Reveal>
-          <Reveal delay={0.1}><p className="mt-4 max-w-2xl text-base leading-7 text-white/78 sm:mt-5 sm:text-lg">От проектной документации и лабораторных исследований до утилизации, транспортировки и размещения отходов на полигоне.</p></Reveal>
+          <Reveal delay={0.1}><p className="mt-4 max-w-2xl text-base leading-7 text-white/78 sm:mt-5 sm:text-lg">Проектная документация и лабораторные исследования по Казахстану. Утилизация, транспортировка и размещение отходов — в Шымкенте.</p></Reveal>
           <Reveal delay={0.16}>
             <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
               <Button type="button" onClick={() => setOrderModal('')} className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Заказать услугу</Button>
@@ -135,6 +135,9 @@ const ServicesPage = () => {
                     )}
                   </div>
                   <h2 className="mt-3 text-xl font-bold leading-snug text-eco-900 sm:text-2xl">{service.title}</h2>
+                  {['waste-transportation', 'waste-recycling', 'waste-management'].includes(service.id) && (
+                    <p className="mt-2 text-xs font-bold uppercase tracking-wide text-eco-600">Только в Шымкенте</p>
+                  )}
                   <p className="mt-4 flex-1 text-sm leading-6 text-slate-600 sm:mt-5">{service.description}</p>
                   <div className="mt-5 overflow-hidden rounded-2xl border border-eco-100 bg-eco-50 sm:mt-6 sm:rounded-[18px]">
                     <button

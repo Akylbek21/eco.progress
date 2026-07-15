@@ -1,10 +1,11 @@
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, FileText, MessageCircle, ShieldCheck } from 'lucide-react';
 import SEO from '../components/SEO';
 import LeadForm from '../components/LeadForm';
 import Button from '../components/ui/Button';
 import { company, getWhatsAppUrl } from '../config/company';
 import { seoPageMap, type SeoFaqItem, type SeoPageConfig } from '../data/seoPages';
+import NotFoundPage from './NotFoundPage';
 
 const baseLocalBusinessSchema = {
   '@context': 'https://schema.org',
@@ -15,7 +16,7 @@ const baseLocalBusinessSchema = {
   telephone: company.phone,
   image: `${company.siteUrl}/og-cover.jpg`,
   areaServed: ['Казахстан', 'Шымкент', 'Алматы', 'Астана', 'Тараз', 'Туркестан', 'Кызылорда'],
-  serviceType: ['Экологическое проектирование', 'Лабораторные замеры', 'Производственный контроль', 'Паспорт отходов', 'Отчет ПЭК', 'Утилизация отходов'],
+  serviceType: ['Экологическое проектирование', 'Лабораторные замеры', 'Производственный контроль', 'Паспорт отходов', 'Отчет ПЭК'],
   description: 'Экологические услуги для бизнеса в Казахстане',
   address: {
     '@type': 'PostalAddress',
@@ -93,9 +94,11 @@ const FaqGrid = ({ faq }: { faq: SeoFaqItem[] }) => (
   </div>
 );
 
-const SeoLandingPage = ({ slug }: { slug: string }) => {
+const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
+  const { seoSlug } = useParams();
+  const slug = slugProp || seoSlug || '';
   const page = seoPageMap.get(slug);
-  if (!page) return null;
+  if (!page) return <NotFoundPage />;
 
   const whatsAppUrl = getWhatsAppUrl(`Здравствуйте! Хочу получить консультацию: ${page.h1}.`);
   const services = page.services ?? [];

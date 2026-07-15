@@ -2,7 +2,7 @@
 import { FaWhatsapp } from 'react-icons/fa';
 import Button from './ui/Button';
 import { createLead } from '../services/leadService';
-import { trackLeadSubmit } from '../services/analytics';
+import { getLeadAttribution, trackEvent, trackLeadSubmit } from '../services/analytics';
 import { useToast } from '../hooks/useToast';
 import { createWhatsAppLeadMessage, createWhatsAppUrl } from '../utils/whatsapp';
 
@@ -30,6 +30,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
   const [sent, setSent] = useState(false);
   const [error, setError] = useState(false);
   const [whatsAppFallbackUrl, setWhatsAppFallbackUrl] = useState('');
+  const [started, setStarted] = useState(false);
   const isBlue = variant === 'blue';
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -55,12 +56,14 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
     setError(false);
     setSent(false);
     try {
-      const lead = await createLead({ name, phone, city, serviceType, comment, source });
+      trackEvent('form_submit', { lead_source: source, service_type: serviceType });
+      await createLead({ name, phone, city, serviceType, comment, source, attribution: getLeadAttribution() });
       setSent(true);
       toast.success('Заявка создана', 'Менеджер получил вашу заявку и свяжется с вами.');
       formEl.reset();
-      try { trackLeadSubmit({ source, serviceType, leadId: lead.id }); } catch {}
+      try { trackLeadSubmit({ lead_source: source, service_type: serviceType }); } catch {}
     } catch {
+      trackEvent('form_error', { lead_source: source, service_type: serviceType });
       setError(true);
       setWhatsAppFallbackUrl(createWhatsAppUrl(createWhatsAppLeadMessage({ service: serviceType, name, phone, city, comment })));
       toast.error('Не удалось создать заявку', 'Проверьте данные и попробуйте снова.');
@@ -70,7 +73,15 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
   };
 
   return (
-    <form onSubmit={submit} className={`rounded-[24px] border p-5 shadow-xl sm:p-7 ${isBlue ? 'border-eco-700 bg-eco-900 text-white shadow-eco-900/18' : 'border-slate-200 bg-white shadow-eco-900/8'}`}>
+    <form
+      onSubmit={submit}
+      onFocus={() => {
+        if (started) return;
+        setStarted(true);
+        trackEvent('form_start', { lead_source: source });
+      }}
+      className={`rounded-[24px] border p-5 shadow-xl sm:p-7 ${isBlue ? 'border-eco-700 bg-eco-900 text-white shadow-eco-900/18' : 'border-slate-200 bg-white shadow-eco-900/8'}`}
+    >
       <h2 className={`text-2xl font-bold ${isBlue ? 'text-white' : 'text-eco-900'}`}>{title}</h2>
       {!compact && <p className={`mt-3 text-sm leading-6 ${isBlue ? 'text-white/72' : 'text-slate-600'}`}>Оставьте контакты. Специалист ecoprogress.kz свяжется с вами и подскажет следующий шаг.</p>}
       <div className="mt-6 grid gap-4 md:grid-cols-2">

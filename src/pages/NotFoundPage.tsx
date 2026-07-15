@@ -9,7 +9,7 @@ const NotFoundPage = () => {
 
   return (
     <section className="flex min-h-[70vh] items-center bg-[#F7FBFD] px-4 py-16 sm:px-8">
-      <SEO title="Страница не найдена | ecoprogress.kz" description="Страница не найдена. Перейдите на главную или оставьте заявку на экологические услуги." />
+      <SEO title="Страница не найдена | ECOPROGRESS" description="Страница не найдена. Перейдите на главную или оставьте заявку на экологические услуги." robots="noindex,follow" />
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-sm font-bold uppercase tracking-[0.2em] text-eco-500">404</p>
         <h1 className="mt-4 text-4xl font-bold text-eco-900">Страница не найдена</h1>

@@ -1,4 +1,3 @@
-import seoArticlesJson from './seoArticles.generated.json';
 import seoPagesJson from './seoPages.generated.json';
 
 export interface RelatedLink {
@@ -41,27 +40,9 @@ export interface SeoPageConfig {
   lastmod?: string;
 }
 
-export interface SeoArticleConfig {
-  id: string;
-  slug: string;
-  title: string;
-  description: string;
-  h1: string;
-  excerpt: string;
-  category: string;
-  datePublished: string;
-  dateModified: string;
-  image: string;
-  sections: SeoSection[];
-  faq: SeoFaqItem[];
-  relatedLinks: RelatedLink[];
-}
-
 export const seoPages = seoPagesJson as SeoPageConfig[];
-export const seoArticles = seoArticlesJson as SeoArticleConfig[];
 
 export const seoPageMap = new Map(seoPages.map((page) => [page.slug, page]));
-export const seoArticleMap = new Map(seoArticles.map((article) => [article.id, article]));
 
 export const citySeoPages = seoPages.filter((page) => page.type === 'city');
 export const serviceCitySeoPages = seoPages.filter((page) => page.type === 'service-city');

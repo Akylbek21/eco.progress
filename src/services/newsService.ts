@@ -1,4 +1,4 @@
-import { seoArticles } from '../data/seoPages';
+import { seoArticles } from '../data/seoArticles';
 import type { NewsItem } from '../types';
 
 export const fallbackNews: NewsItem[] = seoArticles.map((article) => ({

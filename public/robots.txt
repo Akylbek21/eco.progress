@@ -9,8 +9,10 @@ Disallow: /admin
 Disallow: /admin/
 Disallow: /login
 Disallow: /register
+Disallow: /reset-password
+Disallow: /dashboard
 Disallow: /api
 Disallow: /api/
 
 Sitemap: https://ecoprogress.kz/sitemap.xml
-Host: https://ecoprogress.kz
+Host: ecoprogress.kz

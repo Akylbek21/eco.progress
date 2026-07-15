@@ -1,21 +1,21 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'react';
 import PublicLayout from './layouts/PublicLayout';
-import CabinetLayout from './layouts/CabinetLayout';
-import StaffLayout from './layouts/StaffLayout';
-import AdminLayout from './layouts/AdminLayout';
 import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageLoader, { RouteProgressProvider } from './components/loading/PageLoader';
+import AnalyticsRouteTracker from './components/AnalyticsRouteTracker';
 import { useToast } from './hooks/useToast';
 import { useAuth } from './contexts/AuthContext';
 import type { UserRole } from './types';
-import { seoPages } from './data/seoPages';
 
 const lazyNamed = <T extends Record<string, unknown>, K extends keyof T>(loader: () => Promise<T>, key: K) =>
   lazy(() => loader().then((module) => ({ default: module[key] as unknown as ComponentType<Record<string, unknown>> })));
 
 const HomePage = lazy(() => import('./pages/HomePage'));
+const CabinetLayout = lazy(() => import('./layouts/CabinetLayout'));
+const StaffLayout = lazy(() => import('./layouts/StaffLayout'));
+const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
 const SeoLandingPage = lazy(() => import('./pages/SeoLandingPage'));
@@ -93,7 +93,7 @@ const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees'
 const RouteFallback = () => {
   const { pathname } = useLocation();
   const isPrivate = ['/cabinet', '/staff', '/admin', '/dashboard', '/login', '/register'].some((prefix) => pathname.startsWith(prefix));
-  const isPublic = !isPrivate && (publicPathPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)) || seoPages.some((page) => pathname === `/${page.slug}`));
+  const isPublic = !isPrivate && (publicPathPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)) || pathname.split('/').filter(Boolean).length === 1);
   return isPublic ? <PublicLayout><PageLoader /></PublicLayout> : <PageLoader />;
 };
 
@@ -151,6 +151,7 @@ function App() {
     <RouteProgressProvider>
       <div className="min-h-screen bg-eco-50 text-slate-900">
         <ScrollToTop />
+        <AnalyticsRouteTracker />
         <Suspense fallback={<RouteFallback />}>
         <Routes>
         <Route path="/" element={protocolMockMode ? <Navigate to="/staff/protocols" replace /> : <PublicLayout><HomePage /></PublicLayout>} />
@@ -170,9 +171,7 @@ function App() {
         <Route path="/news/:id" element={<PublicLayout><NewsDetailsPage /></PublicLayout>} />
         <Route path="/faq" element={<PublicLayout><FaqPage /></PublicLayout>} />
         <Route path="/contacts" element={<PublicLayout><ContactsPage /></PublicLayout>} />
-        {seoPages.map((page) => (
-          <Route key={page.slug} path={`/${page.slug}`} element={<PublicLayout><SeoLandingPage slug={page.slug} /></PublicLayout>} />
-        ))}
+        <Route path="/:seoSlug" element={<PublicLayout><SeoLandingPage /></PublicLayout>} />
         <Route path="/login" element={<LoginPage onSuccess={notify} />} />
         <Route path="/register" element={<RegisterPage onSuccess={notify} />} />
         <Route path="/staff/login" element={<LoginPage staff onSuccess={notify} />} />

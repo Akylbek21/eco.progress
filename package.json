@@ -8,7 +8,8 @@
     "generate:sitemap": "node scripts/generate-sitemap.js",
     "typecheck": "tsc --noEmit",
     "prerender": "node scripts/prerender.js",
-    "build": "npm run generate:sitemap && tsc && vite build && npm run prerender",
+    "seo:audit": "node scripts/seo-audit.mjs",
+    "build": "npm run generate:sitemap && tsc && vite build && npm run prerender && npm run seo:audit",
     "test": "node --test tests/*.test.mjs",
     "preview": "vite preview"
   },

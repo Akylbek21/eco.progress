@@ -1,10 +1,11 @@
 import api from './api';
 import { unwrapApiResponse } from './apiHelpers';
 import type { Lead, LeadStatus } from '../types';
+import type { LeadAttribution } from './analytics';
 
 export type { LeadStatus, Lead };
 
-export type CreateLeadPayload = Omit<Lead, 'id' | 'status' | 'createdAt'>;
+export type CreateLeadPayload = Omit<Lead, 'id' | 'status' | 'createdAt'> & { attribution?: LeadAttribution };
 
 export const createLead = async (payload: CreateLeadPayload): Promise<Lead> => {
   const { data } = await api.post<{ data: Lead; message: string | null }>('/leads', payload);

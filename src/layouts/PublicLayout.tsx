@@ -6,8 +6,13 @@ import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
 import OrderChoiceModal from '../components/OrderChoiceModal';
 import { company, getWhatsAppUrl } from '../config/company';
-import { citySeoPages } from '../data/seoPages';
-import { trackPhoneClick } from '../services/analytics';
+import { trackEmailClick, trackPhoneClick } from '../services/analytics';
+
+const footerCities = [
+  ['Алматы', 'almaty'], ['Астана', 'astana'], ['Шымкент', 'shymkent'],
+  ['Караганда', 'karaganda'], ['Тараз', 'taraz'], ['Туркестан', 'turkestan'],
+  ['Атырау', 'atyrau'], ['Актау', 'aktau'], ['Актобе', 'aktobe'],
+];
 
 const navItems = [
   { label: 'Услуги', path: '/services' },
@@ -200,7 +205,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 ecoprogress.kz
               </h3>
               <p className="mt-4 max-w-md text-sm leading-6 text-white/75">
-                Экологические документы, лаборатория, вывоз и утилизация отходов для бизнеса.
+                Экологические документы и лаборатория по Казахстану, вывоз и утилизация отходов в Шымкенте.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <WhatsAppButton label="WhatsApp" className="bg-accent px-4 py-2 text-eco-900 hover:bg-accent/90" />
@@ -213,7 +218,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 <li><Link to="/services/environmental-design" className="hover:text-white">Экологическое проектирование</Link></li>
                 <li><Link to="/services/laboratory-tests" className="hover:text-white">Лабораторные замеры</Link></li>
                 <li><Link to="/services/industrial-control" className="hover:text-white">Производственный контроль</Link></li>
-                <li><Link to="/services/waste-management" className="hover:text-white">Утилизация отходов</Link></li>
+                <li><Link to="/services/waste-management" className="hover:text-white">Утилизация отходов в Шымкенте</Link></li>
                 <li><Link to="/passport-othodov-kazakhstan" className="hover:text-white">Паспорт отходов</Link></li>
                 <li><Link to="/otchet-pek-kazakhstan" className="hover:text-white">Отчет ПЭК</Link></li>
                 <li><Link to="/services/environmental-permits" className="hover:text-white">Разрешения</Link></li>
@@ -223,15 +228,15 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
             <div>
               <h4 className="text-sm font-semibold uppercase text-eco-200">Города</h4>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-white/75">
-                {citySeoPages.slice(0, 9).map((page) => (
-                  <Link key={page.slug} to={`/${page.slug}`} className="hover:text-white">{page.city}</Link>
+                {footerCities.map(([city, slug]) => (
+                  <Link key={slug} to={`/ecologicheskie-uslugi-${slug}`} className="hover:text-white">{city}</Link>
                 ))}
               </div>
               <h4 className="mt-7 text-sm font-semibold uppercase text-eco-200">Контакты</h4>
               <ul className="mt-4 space-y-3 text-sm text-white/75">
                 <li><a href={company.phoneHref} onClick={() => trackPhoneClick({ placement: 'footer' })} className="hover:text-white">{company.phone}</a></li>
                 <li className="flex items-center gap-2"><FaWhatsapp className="shrink-0 text-[#25D366]" size={16} aria-hidden="true" /> WhatsApp: {company.whatsappDisplay}</li>
-                <li>{company.email}</li>
+                <li><a href={`mailto:${company.email}`} onClick={() => trackEmailClick({ placement: 'footer' })} className="hover:text-white">{company.email}</a></li>
                 <li><a href={company.siteUrl} target="_blank" rel="noreferrer" className="hover:text-white">{company.siteLabel}</a></li>
                 <li>{company.address}</li>
                 <li>{company.schedule}</li>

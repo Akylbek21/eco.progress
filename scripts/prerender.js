@@ -46,7 +46,7 @@ const localBusinessSchema = {
   image: OG_IMAGE,
   description: 'Экологические услуги для бизнеса в Казахстане',
   areaServed: ['Казахстан', 'Шымкент', 'Алматы', 'Астана', 'Тараз', 'Туркестан', 'Кызылорда'],
-  serviceType: ['Экологическое проектирование', 'Лабораторные замеры', 'Производственный контроль', 'Паспорт отходов', 'Отчет ПЭК', 'Утилизация отходов'],
+  serviceType: ['Экологическое проектирование', 'Лабораторные замеры', 'Производственный контроль', 'Паспорт отходов', 'Отчет ПЭК'],
   address: {
     '@type': 'PostalAddress',
     streetAddress: 'г. Шымкент, Алимбетова 199/2а',
@@ -121,7 +121,7 @@ const schemaForArticle = (article) => [
   faqSchema(article.faq),
 ];
 
-const renderHeadBlock = ({ title, description, canonical, type = 'website', schema }) => {
+const renderHeadBlock = ({ title, description, canonical, type = 'website', schema, robots = 'index,follow', ogImage = OG_IMAGE }) => {
   const verification = process.env.VITE_GOOGLE_SITE_VERIFICATION
     ? `\n<meta name="google-site-verification" content="${escapeHtml(process.env.VITE_GOOGLE_SITE_VERIFICATION)}" />`
     : '\n<!-- Google Search Console: set VITE_GOOGLE_SITE_VERIFICATION to render verification meta. -->';
@@ -129,18 +129,18 @@ const renderHeadBlock = ({ title, description, canonical, type = 'website', sche
   return [
     `<title>${escapeHtml(title)}</title>`,
     `<meta name="description" content="${escapeHtml(description)}" />`,
-    '<meta name="robots" content="index,follow" />',
+    `<meta name="robots" content="${escapeHtml(robots)}" />`,
     `<link rel="canonical" href="${escapeHtml(canonical)}" />`,
     '<meta property="og:site_name" content="ECOPROGRESS GROUP" />',
     `<meta property="og:type" content="${type}" />`,
     `<meta property="og:title" content="${escapeHtml(title)}" />`,
     `<meta property="og:description" content="${escapeHtml(description)}" />`,
     `<meta property="og:url" content="${escapeHtml(canonical)}" />`,
-    `<meta property="og:image" content="${OG_IMAGE}" />`,
+    `<meta property="og:image" content="${escapeHtml(ogImage)}" />`,
     '<meta name="twitter:card" content="summary_large_image" />',
     `<meta name="twitter:title" content="${escapeHtml(title)}" />`,
     `<meta name="twitter:description" content="${escapeHtml(description)}" />`,
-    `<meta name="twitter:image" content="${OG_IMAGE}" />`,
+    `<meta name="twitter:image" content="${escapeHtml(ogImage)}" />`,
     verification,
     `<script id="page-schema-json-ld" type="application/ld+json">${JSON.stringify(schema)}</script>`,
   ].join('\n    ');
@@ -175,7 +175,7 @@ ${content}
     <a href="/services/environmental-design">Экологическое проектирование</a>
     <a href="/services/laboratory-tests">Лабораторные замеры</a>
     <a href="/services/industrial-control">Производственный контроль</a>
-    <a href="/services/waste-management">Утилизация отходов</a>
+    <a href="/services/waste-management">Утилизация отходов в Шымкенте</a>
     <a href="/contacts">Контакты</a>
   </nav>
 </footer>`;
@@ -222,7 +222,7 @@ const renderStaticPage = (page) => {
       { label: 'Экологическое проектирование', path: '/services/environmental-design' },
       { label: 'Лабораторные замеры', path: '/services/laboratory-tests' },
       { label: 'Производственный контроль СЭС', path: '/services/industrial-control' },
-      { label: 'Утилизация отходов', path: '/services/waste-management' },
+      { label: 'Утилизация отходов в Шымкенте', path: '/services/waste-management' },
       { label: 'Паспорт отходов', path: '/passport-othodov-kazakhstan' },
       { label: 'Отчет ПЭК', path: '/otchet-pek-kazakhstan' },
     ])}</section>
@@ -258,6 +258,7 @@ for (const page of seoPages) {
     canonical: page.canonical,
     schema: schemaForSeoPage(page),
     type: page.type === 'article' ? 'article' : 'website',
+    ogImage: `${SITE_URL}${page.image || '/og-cover.jpg'}`,
   }, renderSeoPage(page)));
   count += 1;
 }
@@ -269,8 +270,22 @@ for (const article of seoArticles) {
     canonical: `${SITE_URL}${article.slug}`,
     schema: schemaForArticle(article),
     type: 'article',
+    ogImage: `${SITE_URL}${article.image}`,
   }, renderArticle(article)));
   count += 1;
 }
 
-console.log(`Prerendered ${count} public pages into dist/.`);
+const notFoundHtml = pageShell({
+  title: 'Страница не найдена | ECOPROGRESS',
+  description: 'Запрошенная страница не найдена. Перейдите на главную страницу ECOPROGRESS.',
+  canonical: `${SITE_URL}/404`,
+  robots: 'noindex,follow',
+  schema: [organizationSchema],
+}, layout(`
+  <main class="seo-static-page">
+    <section><p>Ошибка 404</p><h1>Страница не найдена</h1><p>Возможно, адрес изменился или был введен неверно.</p><p><a href="/">Перейти на главную</a> <a href="/contacts">Связаться с нами</a></p></section>
+  </main>`));
+writePage('/404', notFoundHtml);
+fs.writeFileSync(path.join(distDir, '404.html'), notFoundHtml, 'utf8');
+
+console.log(`Prerendered ${count} public pages and a noindex 404 into dist/.`);

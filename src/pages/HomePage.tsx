@@ -11,10 +11,10 @@ import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { DocumentsSection, TrustSection } from '../components/TrustBlocks';
 import { company } from '../config/company';
-import { citySeoPages, serviceCitySeoPages } from '../data/seoPages';
+import { featuredSeoLinks } from '../data/featuredSeoLinks';
 import { trackEvent } from '../services/analytics';
 
-const benefits = ['Экологическое проектирование', 'Лабораторные исследования', 'Вывоз и утилизация отходов', 'Полигон ТБО', 'Работаем по Казахстану', 'Документы и сопровождение'];
+const benefits = ['Экологическое проектирование', 'Лабораторные исследования', 'Вывоз и утилизация в Шымкенте', 'Полигон ТБО', 'Работаем по Казахстану', 'Документы и сопровождение'];
 
 const processSteps = [
   {
@@ -72,7 +72,7 @@ const services = [
   },
   {
     title: 'Вывоз и утилизация отходов',
-    text: 'Сбор, транспортировка, переработка, утилизация и документы по отходам.',
+    text: 'Сбор, транспортировка, переработка, утилизация и документы по отходам в Шымкенте.',
     Icon: Recycle,
     href: '/services/waste-transportation',
     image: '/jose.jpg',
@@ -93,7 +93,7 @@ const services = [
   },
   {
     title: 'Утилизация отходов',
-    text: 'Подбор решения для переработки, утилизации и закрывающих документов.',
+    text: 'Подбор решения для переработки, утилизации и закрывающих документов в Шымкенте.',
     Icon: Truck,
     href: '/services/waste-recycling',
     image: '/utilizacija-othodov-3.jpg',
@@ -140,7 +140,7 @@ const HomePage = () => (
           <Reveal>
             <p className="text-sm font-bold uppercase tracking-[0.22em] text-accent">{company.name}</p>
             <h1 className="mt-5 max-w-5xl text-4xl font-bold leading-tight sm:text-6xl lg:text-[66px]">
-              Экологические услуги, лабораторные замеры и утилизация отходов в Шымкенте
+              Экологические услуги и лабораторные замеры в Казахстане
             </h1>
           </Reveal>
           <Reveal delay={0.08}>
@@ -176,7 +176,7 @@ const HomePage = () => (
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">О компании</p>
             <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">ecoprogress.kz — комплексные экологические решения</h2>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
-              ecoprogress.kz — группа компаний, которая помогает бизнесу решать экологические задачи: проектирование, лабораторные исследования, вывоз и утилизация отходов, полигон ТБО и сопровождение проверок.
+              ecoprogress.kz помогает бизнесу с проектированием, лабораторными исследованиями и сопровождением по Казахстану. Вывоз и утилизация отходов доступны в Шымкенте.
             </p>
             <Button asChild className="mt-7"><Link to="/about">Подробнее о компании</Link></Button>
           </div>
@@ -246,7 +246,7 @@ const HomePage = () => (
           </div>
         </Reveal>
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {[...citySeoPages.slice(0, 9), ...serviceCitySeoPages.slice(0, 9)].map((page, index) => (
+          {featuredSeoLinks.map((page, index) => (
             <Reveal key={page.slug} delay={index * 0.03}>
               <Link to={`/${page.slug}`} className="group block h-full rounded-[8px] border border-slate-200 bg-[#F7FBFD] p-5 shadow-sm transition hover:border-eco-300 hover:bg-white">
                 <h3 className="font-bold text-eco-900 group-hover:text-eco-600">{page.h1}</h3>

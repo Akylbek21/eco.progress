@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { getAllPublicUrls, seoArticles, seoPages } from './seo-data.mjs';
+import { getAllPublicUrls, OG_IMAGE, publicStaticPages, seoArticles, seoPages, SITE_URL } from './seo-data.mjs';
 
 const root = process.cwd();
 const publicDir = path.join(root, 'public');
@@ -11,6 +11,40 @@ fs.mkdirSync(dataDir, { recursive: true });
 
 fs.writeFileSync(path.join(dataDir, 'seoPages.generated.json'), `${JSON.stringify(seoPages, null, 2)}\n`, 'utf8');
 fs.writeFileSync(path.join(dataDir, 'seoArticles.generated.json'), `${JSON.stringify(seoArticles, null, 2)}\n`, 'utf8');
+
+const seoRegistry = [
+  ...publicStaticPages.map((page) => ({
+    path: page.path,
+    title: page.title,
+    description: page.description,
+    h1: page.h1,
+    canonical: `${SITE_URL}${page.path === '/' ? '/' : page.path}`,
+    robots: 'index,follow',
+    ogImage: OG_IMAGE,
+    schemaType: page.type === 'article' ? 'Article' : page.type === 'service' ? 'Service' : 'WebPage',
+  })),
+  ...seoPages.map((page) => ({
+    path: `/${page.slug}`,
+    title: page.title,
+    description: page.description,
+    h1: page.h1,
+    canonical: page.canonical,
+    robots: 'index,follow',
+    ogImage: `${SITE_URL}${page.image || '/og-cover.jpg'}`,
+    schemaType: page.schemaType,
+  })),
+  ...seoArticles.map((article) => ({
+    path: article.slug,
+    title: `${article.title} | ECOPROGRESS`,
+    description: article.description,
+    h1: article.h1,
+    canonical: `${SITE_URL}${article.slug}`,
+    robots: 'index,follow',
+    ogImage: `${SITE_URL}${article.image}`,
+    schemaType: 'Article',
+  })),
+];
+fs.writeFileSync(path.join(dataDir, 'seoRegistry.generated.json'), `${JSON.stringify(seoRegistry, null, 2)}\n`, 'utf8');
 
 const urls = getAllPublicUrls();
 const body = urls
