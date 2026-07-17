@@ -1,0 +1,15 @@
+import { useState } from 'react';
+import { ExternalLink, Monitor, Smartphone, Tablet } from 'lucide-react';
+import { createContentPreviewToken } from '../../services/contentManagementService';
+import type { CmsContentBlock, CmsContentDetail } from '../../types/contentManagement';
+
+type Viewport = 'desktop' | 'tablet' | 'mobile';
+const widths: Record<Viewport, string> = { desktop: '100%', tablet: '768px', mobile: '390px' };
+const getBlocks = (payload: Record<string, unknown>) => Array.isArray(payload.blocks) ? payload.blocks as CmsContentBlock[] : [];
+
+export const ContentPreviewPanel = ({ item }: { item: CmsContentDetail }) => {
+  const [viewport, setViewport] = useState<Viewport>('desktop'); const [error, setError] = useState('');
+  const blocks = getBlocks(item.payload);
+  const openSecurePreview = async () => { try { const preview = await createContentPreviewToken(item.type, item.id); if (typeof window !== 'undefined') window.open(preview.url, '_blank', 'noopener,noreferrer'); } catch { setError('Backend не выдал временный preview token.'); } };
+  return <section className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4"><div className="flex gap-2">{([['desktop',Monitor],['tablet',Tablet],['mobile',Smartphone]] as const).map(([value, Icon]) => <button key={value} type="button" aria-pressed={viewport === value} onClick={() => setViewport(value)} className={`rounded-xl p-3 ${viewport === value ? 'bg-eco-900 text-white' : 'border'}`} aria-label={`Preview ${value}`}><Icon size={18} /></button>)}</div><button type="button" onClick={openSecurePreview} className="inline-flex items-center gap-2 rounded-xl bg-eco-900 px-4 py-3 font-semibold text-white"><ExternalLink size={17} /> Публичный preview</button></div>{error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}<div className="overflow-x-auto rounded-2xl bg-slate-200 p-4"><article style={{ width: widths[viewport] }} className="mx-auto min-h-[500px] max-w-full rounded-xl bg-white p-6 shadow"><p className="text-xs font-semibold uppercase text-eco-600">Предпросмотр черновика · noindex</p><h1 className="mt-3 text-3xl font-bold text-eco-900">{item.title}</h1><p className="mt-2 text-slate-600">{item.seo.description}</p><div className="mt-7 space-y-5">{blocks.length ? blocks.map((block) => <section key={block.id}>{block.title && <h2 className="text-xl font-bold">{block.title}</h2>}{block.text && <p className="mt-2 whitespace-pre-line leading-7">{block.text}</p>}{block.items?.length && <ul className="mt-2 list-disc space-y-1 pl-5">{block.items.map((entry, index) => <li key={`${block.id}-${index}`}>{entry}</li>)}</ul>}</section>) : <pre className="overflow-auto whitespace-pre-wrap text-xs">{JSON.stringify(item.payload, null, 2)}</pre>}</div></article></div><div className="rounded-2xl bg-white p-5"><p className="text-sm text-slate-500">SEO preview</p><p className="mt-2 text-xl text-blue-800">{item.seo.title || item.title}</p><p className="text-sm text-emerald-700">{item.seo.canonical}</p><p className="mt-1 text-sm text-slate-700">{item.seo.description}</p></div></section>;
+};

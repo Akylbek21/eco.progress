@@ -12,6 +12,7 @@ import { DocumentsSection, TrustSection } from '../components/TrustBlocks';
 import { company } from '../config/company';
 import { featuredSeoLinks } from '../data/featuredSeoLinks';
 import { trackEvent } from '../services/analytics';
+import { activeServices } from '../content/serviceCatalog';
 
 const benefits = ['Экологическое проектирование', 'Лабораторные исследования', 'Вывоз и утилизация в Шымкенте', 'Полигон ТБО', 'Работаем по Казахстану', 'Документы и сопровождение'];
 
@@ -54,50 +55,14 @@ const processSteps = [
   },
 ];
 
-const services = [
-  {
-    title: 'Экологические документы',
-    text: 'Проекты, разрешения, программы и отчеты для объектов и предприятий.',
-    Icon: FileText,
-    href: '/services/ecological-documents',
-    image: '/cottonbro.jpg',
-  },
-  {
-    title: 'Лабораторные исследования',
-    text: 'Анализы воды, воздуха, почвы, замеры выбросов и протоколы исследований.',
-    Icon: Beaker,
-    href: '/services/laboratory-tests',
-    image: '/edward.jpg',
-  },
-  {
-    title: 'Вывоз и утилизация отходов',
-    text: 'Сбор, транспортировка, переработка, утилизация и документы по отходам в Шымкенте.',
-    Icon: Recycle,
-    href: '/services/waste-transportation',
-    image: '/jose.jpg',
-  },
-  {
-    title: 'Полигон ТБО',
-    text: 'Приём, законное размещение отходов и документы для организаций.',
-    Icon: MapPinned,
-    href: '/services/poligon-tbo',
-    image: '/poligon-tbo-2.jpg',
-  },
-  {
-    title: 'Сопровождение проверок',
-    text: 'Проверка документов, подготовка к инспекции и план действий.',
-    Icon: ShieldCheck,
-    href: '/services/environmental-audit',
-    image: '/images (1).jpg',
-  },
-  {
-    title: 'Утилизация отходов',
-    text: 'Подбор решения для переработки, утилизации и закрывающих документов в Шымкенте.',
-    Icon: Truck,
-    href: '/services/waste-recycling',
-    image: '/utilizacija-othodov-3.jpg',
-  },
-];
+const serviceIcons = { Проектирование: FileText, Разрешения: ShieldCheck, Лаборатория: Beaker, Отходы: Recycle, Предприятия: Building2 };
+const services = activeServices.filter((service) => service.showOnHome).map((service) => ({
+  title: service.title,
+  text: service.shortDescription,
+  Icon: serviceIcons[service.category],
+  href: `/services/${service.slug}`,
+  image: service.image || '/og-cover.jpg',
+}));
 
 const visualHighlights = [
   { title: 'Лабораторный контроль', image: '/edward.jpg', className: 'col-span-2 aspect-[16/9] lg:col-span-1 lg:row-span-2 lg:aspect-auto' },

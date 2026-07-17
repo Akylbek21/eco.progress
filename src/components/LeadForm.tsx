@@ -2,9 +2,10 @@
 import { FaWhatsapp } from 'react-icons/fa';
 import Button from './ui/Button';
 import { createLead } from '../services/leadService';
-import { getLeadAttribution, trackEvent, trackLeadSubmit } from '../services/analytics';
+import { getLeadAttribution, trackContentEvent, trackEvent, trackLeadSubmit } from '../services/analytics';
 import { useToast } from '../hooks/useToast';
 import { createWhatsAppLeadMessage, createWhatsAppUrl } from '../utils/whatsapp';
+import { activeServices } from '../content/serviceCatalog';
 
 type LeadFormProps = {
   source?: string;
@@ -12,19 +13,13 @@ type LeadFormProps = {
   compact?: boolean;
   defaultService?: string;
   variant?: 'light' | 'blue';
+  formId?: string;
+  ctaId?: string;
 };
 
-const serviceOptions = [
-  'Экологические документы',
-  'Вывоз отходов',
-  'Утилизация отходов',
-  'Лабораторные анализы',
-  'Полигон ТБО',
-  'Сопровождение проверки',
-  'Не знаю, нужна консультация',
-];
+const serviceOptions = [...activeServices.map((service) => service.title), 'Не знаю, нужна консультация'];
 
-const LeadForm = ({ source = 'site_form', title = 'Получить консультацию', compact = false, defaultService = 'Не знаю, нужна консультация', variant = 'light' }: LeadFormProps) => {
+const LeadForm = ({ source = 'site_form', title = 'Получить консультацию', compact = false, defaultService = 'Не знаю, нужна консультация', variant = 'light', formId = source, ctaId }: LeadFormProps) => {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -42,6 +37,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
     const city = String(form.get('city') || '').trim();
     const serviceType = String(form.get('serviceType') || '').trim();
     const comment = String(form.get('comment') || '').trim();
+    const selectedService = activeServices.find((item) => item.title === serviceType);
     setWhatsAppFallbackUrl('');
     if (!name || !phone || !serviceType) {
       toast.error('Заполните обязательные поля', 'Укажите имя, телефон и тип услуги.');
@@ -57,13 +53,17 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
     setSent(false);
     try {
       trackEvent('form_submit', { lead_source: source, service_type: serviceType });
-      await createLead({ name, phone, city, serviceType, comment, source, attribution: getLeadAttribution() });
+      const attribution = { ...getLeadAttribution(), serviceId: selectedService?.id, serviceSlug: selectedService?.slug, formId, ctaId };
+      await createLead({ name, phone, city, serviceType, comment, source, attribution });
+      trackContentEvent({ eventName: 'form_submit', pageType: attribution.sourceType || 'UNKNOWN', contentSlug: attribution.sourceSlug, serviceId: selectedService?.id, serviceSlug: selectedService?.slug, ctaId, position: formId });
       setSent(true);
       toast.success('Заявка создана', 'Менеджер получил вашу заявку и свяжется с вами.');
       formEl.reset();
       try { trackLeadSubmit({ lead_source: source, service_type: serviceType }); } catch {}
     } catch {
       trackEvent('form_error', { lead_source: source, service_type: serviceType });
+      const attribution = getLeadAttribution();
+      trackContentEvent({ eventName: 'form_error', pageType: attribution.sourceType || 'UNKNOWN', contentSlug: attribution.sourceSlug, serviceSlug: selectedService?.slug || attribution.serviceSlug, ctaId, position: formId });
       setError(true);
       setWhatsAppFallbackUrl(createWhatsAppUrl(createWhatsAppLeadMessage({ service: serviceType, name, phone, city, comment })));
       toast.error('Не удалось создать заявку', 'Проверьте данные и попробуйте снова.');
@@ -79,6 +79,8 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
         if (started) return;
         setStarted(true);
         trackEvent('form_start', { lead_source: source });
+        const context = getLeadAttribution();
+        trackContentEvent({ eventName: 'form_start', pageType: context.sourceType || 'UNKNOWN', contentSlug: context.sourceSlug, serviceSlug: context.serviceSlug, ctaId, position: formId });
       }}
       className={`rounded-[24px] border p-5 shadow-xl sm:p-7 ${isBlue ? 'border-eco-700 bg-eco-900 text-white shadow-eco-900/18' : 'border-slate-200 bg-white shadow-eco-900/8'}`}
     >

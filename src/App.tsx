@@ -31,6 +31,8 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const FaqPage = lazy(() => import('./pages/FaqPage'));
 const ContactsPage = lazy(() => import('./pages/ContactsPage'));
+const RegionsPage = lazy(() => import('./pages/RegionsPage'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
@@ -45,6 +47,11 @@ const MeasurementDevicesPage = lazy(() => import('./pages/MeasurementDevicesPage
 const LaboratorySettingsPage = lazy(() => import('./pages/LaboratorySettingsPage'));
 const LabJournalsPage = lazy(() => import('./pages/LabJournalsPage'));
 const StaffLeadsPage = lazy(() => import('./pages/staff/StaffLeadsPage'));
+const ContentDashboardPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentDashboardPage');
+const ContentListPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentListPage');
+const ContentEditorPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentEditorPage');
+const ContentAnalyticsPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAnalyticsPage');
+const ContentAuditPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAuditPage');
 
 const CabinetCompanyPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetCompanyPage');
 const CabinetDashboardPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetDashboardPage');
@@ -172,6 +179,9 @@ function App() {
         <Route path="/news/:id" element={<PublicLayout><NewsDetailsPage /></PublicLayout>} />
         <Route path="/faq" element={<PublicLayout><FaqPage /></PublicLayout>} />
         <Route path="/contacts" element={<PublicLayout><ContactsPage /></PublicLayout>} />
+        <Route path="/regions" element={<PublicLayout><RegionsPage /></PublicLayout>} />
+        <Route path="/search" element={<PublicLayout><SearchPage /></PublicLayout>} />
+        <Route path="/shtrafy-za-ekologiyu-kazakhstan" element={<Navigate to="/news/kakie-shtrafy-za-ekologiyu-v-kazakhstane" replace />} />
         <Route path="/:seoSlug" element={<PublicLayout><SeoLandingPage /></PublicLayout>} />
         <Route path="/login" element={<LoginPage onSuccess={notify} />} />
         <Route path="/register" element={<RegisterPage onSuccess={notify} />} />
@@ -194,6 +204,27 @@ function App() {
         <Route path="/staff/clients" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/clients/:companyKey" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffClientsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/leads" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffLeadsPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentDashboardPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/services" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentListPage type="SERVICE" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/services/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentEditorPage type="SERVICE" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/articles" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentListPage type="ARTICLE" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/articles/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentEditorPage type="ARTICLE" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/regions" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentListPage type="REGION" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/regions/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentEditorPage type="REGION" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/regional-pages" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentListPage type="REGIONAL_PAGE" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/regional-pages/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentEditorPage type="REGIONAL_PAGE" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/cases" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentListPage type="CASE" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/cases/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentEditorPage type="CASE" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/experts" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentListPage type="EXPERT" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/experts/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentEditorPage type="EXPERT" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/trust-documents" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentListPage type="TRUST_DOCUMENT" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/trust-documents/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentEditorPage type="TRUST_DOCUMENT" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/legal-sources" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentListPage type="LEGAL_SOURCE" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/legal-sources/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentEditorPage type="LEGAL_SOURCE" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/redirects" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentListPage type="REDIRECT" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/redirects/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentEditorPage type="REDIRECT" /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/audit" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentAuditPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/content/analytics" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentAnalyticsPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/companies" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть компании"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/companies/new" element={<RoleAccess roles={companyManageRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={companyManageRoles}><ErrorBoundary fallbackTitle="Не удалось открыть создание компании"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/companies/:companyId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть компанию"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />

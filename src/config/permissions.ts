@@ -30,7 +30,14 @@ export type Permission =
   | 'view_action_history'
   | 'manage_employees'
   | 'manage_roles'
-  | 'manage_settings';
+  | 'manage_settings'
+  | 'view_content'
+  | 'edit_content'
+  | 'review_content_expert'
+  | 'review_content_legal'
+  | 'review_content_seo'
+  | 'publish_content'
+  | 'manage_content';
 
 const staffBase: Permission[] = [
   'view_companies',
@@ -42,6 +49,7 @@ const staffBase: Permission[] = [
   'view_internal_notes',
   'add_internal_notes',
   'view_action_history',
+  'view_content',
 ];
 
 export const rolePermissions: Record<UserRole, Permission[]> = {
@@ -69,6 +77,12 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'manage_employees',
     'manage_roles',
     'manage_settings',
+    'edit_content',
+    'review_content_expert',
+    'review_content_legal',
+    'review_content_seo',
+    'publish_content',
+    'manage_content',
   ],
   DIRECTOR: [
     ...staffBase,
@@ -80,9 +94,10 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'view_waste',
     'view_calendar',
     'view_tasks',
-    'view_messages',
-    'view_action_history',
     'manage_employees',
+    'review_content_expert',
+    'review_content_seo',
+    'publish_content',
   ],
   HEAD: [
     ...staffBase,
@@ -94,9 +109,9 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'view_waste',
     'view_calendar',
     'view_tasks',
-    'view_messages',
-    'view_action_history',
     'manage_employees',
+    'review_content_expert',
+    'publish_content',
   ],
   MANAGER: [
     ...staffBase,
@@ -110,6 +125,8 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'view_tasks',
     'edit_tasks',
     'send_messages',
+    'edit_content',
+    'review_content_seo',
   ],
   ACCOUNTANT: [
     ...staffBase,
@@ -126,6 +143,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'view_tasks',
     'edit_tasks',
     'edit_documents',
+    'review_content_expert',
   ],
   LABORATORY: [
     ...staffBase,

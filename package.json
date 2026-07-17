@@ -7,8 +7,12 @@
     "dev": "vite",
     "generate:sitemap": "node scripts/generate-sitemap.js",
     "typecheck": "tsc --noEmit",
+    "lint": "node --test tests/interactive-markup.test.mjs",
     "prerender": "node scripts/prerender.js",
     "seo:audit": "node scripts/seo-audit.mjs",
+    "content:audit": "node scripts/content-audit.mjs",
+    "content:export": "node scripts/content-export.mjs",
+    "content:migrate:dry-run": "node scripts/content-export.mjs --dry-run",
     "build": "npm run generate:sitemap && tsc && vite build && npm run prerender && npm run seo:audit",
     "test": "node --test tests/*.test.mjs",
     "preview": "vite preview"

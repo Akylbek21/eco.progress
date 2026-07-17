@@ -1,7 +1,9 @@
 export type ClientType = 'individual' | 'company';
+import type { LeadContentAttribution } from './contentManagement';
 export type UserRole = 'CLIENT' | 'MANAGER' | 'ADMIN' | 'DIRECTOR' | 'HEAD' | 'ACCOUNTANT' | 'ECOLOGIST' | 'LABORATORY' | 'WASTE_SPECIALIST';
 
-export type ServiceCategory = 'Проектирование' | 'Разрешения' | 'Лаборатория' | 'Отходы' | 'Предприятия';
+export type { ServiceCategory } from '../content/serviceCatalog';
+import type { ServiceCategory } from '../content/serviceCatalog';
 
 export type ServiceItem = {
   id: string;
@@ -606,4 +608,5 @@ export type Lead = {
   source: string;
   status: LeadStatus;
   createdAt: string;
+  attribution?: LeadContentAttribution;
 };

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Calculator as CalculatorIcon } from 'lucide-react';
+import { getCatalogService } from '../content/serviceCatalog';
 
 const Calculator = () => {
   const [formData, setFormData] = useState({
@@ -18,12 +19,12 @@ const Calculator = () => {
 
   const calculatePrice = () => {
     // Простая логика расчета цены
-    const basePrice = 150000;
+    const basePrice = getCatalogService('ecological-support')?.pricing.calculatorBasePrice;
     const employeeMultiplier = parseInt(formData.employees) || 0;
     const wasteMultiplier = parseInt(formData.wasteVolume) || 0;
     const emissionMultiplier = parseInt(formData.emissions) || 0;
 
-    return basePrice + (employeeMultiplier * 5000) + (wasteMultiplier * 2000) + (emissionMultiplier * 3000);
+    return basePrice === undefined ? undefined : basePrice + (employeeMultiplier * 5000) + (wasteMultiplier * 2000) + (emissionMultiplier * 3000);
   };
 
   return (
@@ -97,7 +98,7 @@ const Calculator = () => {
         <div className="pt-4 border-t border-white/20">
           <div className="text-center">
             <div className="text-3xl font-bold text-accent mb-2">
-              {calculatePrice().toLocaleString()} ₸
+              {calculatePrice() === undefined ? 'Индивидуальный расчёт' : `${calculatePrice()?.toLocaleString('ru-RU')} ₸`}
             </div>
             <p className="text-sm text-eco-200">Примерная стоимость услуг в месяц</p>
           </div>

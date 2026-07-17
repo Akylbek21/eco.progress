@@ -6,6 +6,7 @@ import { getApiErrorMessage } from '../../services/apiHelpers';
 import { getLeads, updateLeadStatus, type LeadStatus } from '../../services/leadService';
 
 const statuses: LeadStatus[] = ['new', 'contacted', 'in_progress', 'closed'];
+const safeInternalPath = (value?: string) => value?.startsWith('/') && !value.startsWith('//') ? value : undefined;
 
 const StaffLeadsPage = () => {
   const toast = useToast();
@@ -28,7 +29,7 @@ const StaffLeadsPage = () => {
 
   const sources = useMemo(() => [...new Set(leads.map((lead) => lead.source).filter(Boolean))], [leads]);
   const filtered = useMemo(() => leads.filter((lead) => {
-    const text = `${lead.name} ${lead.phone} ${lead.city} ${lead.serviceType} ${lead.comment}`.toLowerCase();
+    const text = `${lead.name} ${lead.phone} ${lead.city} ${lead.serviceType} ${lead.comment} ${lead.attribution?.sourceSlug || ''} ${lead.attribution?.serviceSlug || ''} ${lead.attribution?.utmCampaign || ''}`.toLowerCase();
     return (!query || text.includes(query.toLowerCase()))
       && (status === 'all' || lead.status === status)
       && (source === 'all' || lead.source === source)
@@ -60,7 +61,10 @@ const StaffLeadsPage = () => {
       {error && <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{error}</p><Button type="button" variant="secondary" className="mt-3" onClick={load}>Повторить</Button></div>}
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm"><thead><tr className="border-b border-slate-200 text-slate-500"><th className="p-3">Дата</th><th className="p-3">Контакт</th><th className="p-3">Город / услуга</th><th className="p-3">Источник</th><th className="p-3">Комментарий</th><th className="p-3">Статус</th></tr></thead>
-          <tbody>{filtered.map((lead) => <tr key={lead.id} className="border-b border-slate-100"><td className="p-3">{lead.createdAt}</td><td className="p-3"><p className="font-bold">{lead.name}</p><p>{lead.phone}</p></td><td className="p-3">{lead.city}<br />{lead.serviceType}</td><td className="p-3">{lead.source}</td><td className="max-w-xs p-3">{lead.comment}</td><td className="p-3"><select value={lead.status} disabled={updatingId === lead.id} onChange={(event) => changeStatus(lead.id, event.target.value as LeadStatus)} className="rounded-xl border border-slate-200 px-3 py-2">{statuses.map((item) => <option key={item}>{item}</option>)}</select></td></tr>)}</tbody>
+          <tbody>{filtered.map((lead) => {
+            const sourcePath = safeInternalPath(lead.attribution?.sourceUrl);
+            return <tr key={lead.id} className="border-b border-slate-100"><td className="p-3">{lead.createdAt}</td><td className="p-3"><p className="font-bold">{lead.name}</p><p>{lead.phone}</p></td><td className="p-3">{lead.city}<br />{lead.serviceType}</td><td className="p-3"><p>{lead.source}</p>{lead.attribution && <div className="mt-2 space-y-1 text-xs text-slate-500"><p>{lead.attribution.sourceType || 'PAGE'}{lead.attribution.sourceSlug ? ` · ${lead.attribution.sourceSlug}` : ''}</p>{lead.attribution.serviceSlug && <p>Услуга: {lead.attribution.serviceSlug}</p>}{lead.attribution.utmCampaign && <p>UTM: {lead.attribution.utmCampaign}</p>}{sourcePath && <a className="font-semibold text-eco-700 underline" href={sourcePath} target="_blank" rel="noreferrer">Открыть источник</a>}</div>}</td><td className="max-w-xs p-3">{lead.comment}</td><td className="p-3"><select value={lead.status} disabled={updatingId === lead.id} onChange={(event) => changeStatus(lead.id, event.target.value as LeadStatus)} className="rounded-xl border border-slate-200 px-3 py-2">{statuses.map((item) => <option key={item}>{item}</option>)}</select></td></tr>;
+          })}</tbody>
         </table>
       </div>
       {!loading && !error && !filtered.length && <BackendFeatureUnavailable title="Лидов не найдено" description="Измените фильтры или дождитесь новых обращений." />}

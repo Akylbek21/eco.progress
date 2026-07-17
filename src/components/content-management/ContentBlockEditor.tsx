@@ -1,0 +1,22 @@
+import { useState } from 'react';
+import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
+import type { CmsBlockType, CmsContentBlock } from '../../types/contentManagement';
+
+const blockLabels: Record<CmsBlockType, string> = {
+  paragraph: 'Абзац', heading: 'Заголовок', list: 'Список', table: 'Таблица', quote: 'Цитата', warning: 'Предупреждение', checklist: 'Чек-лист', steps: 'Шаги', image: 'Изображение', gallery: 'Галерея', 'legal-source': 'Нормативный источник', 'service-card': 'Карточка услуги', faq: 'FAQ', cta: 'CTA', comparison: 'Сравнение',
+};
+
+const newBlock = (type: CmsBlockType): CmsContentBlock => ({ id: globalThis.crypto?.randomUUID?.() || `block-${Date.now()}`, type, text: '', items: [] });
+
+export const ContentBlockEditor = ({ blocks, disabled, onChange }: { blocks: CmsContentBlock[]; disabled?: boolean; onChange: (blocks: CmsContentBlock[]) => void }) => {
+  const [selectedType, setSelectedType] = useState<CmsBlockType>('paragraph');
+  const update = (index: number, patch: Partial<CmsContentBlock>) => onChange(blocks.map((block, blockIndex) => blockIndex === index ? { ...block, ...patch } : block));
+  const move = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= blocks.length) return;
+    const next = [...blocks];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(next);
+  };
+  return <div className="space-y-4"><p className="text-sm text-slate-600">Контент хранится как структурированные блоки. Произвольный HTML не принимается.</p>{blocks.map((block, index) => <fieldset key={block.id} className="rounded-2xl border border-slate-200 p-4"><legend className="px-2 text-sm font-bold">{index + 1}. {blockLabels[block.type]}</legend><div className="mb-3 flex flex-wrap gap-2"><button type="button" disabled={disabled || index === 0} onClick={() => move(index, -1)} className="rounded-lg border p-2 disabled:opacity-40" aria-label="Переместить блок выше"><ArrowUp size={16} /></button><button type="button" disabled={disabled || index === blocks.length - 1} onClick={() => move(index, 1)} className="rounded-lg border p-2 disabled:opacity-40" aria-label="Переместить блок ниже"><ArrowDown size={16} /></button><button type="button" disabled={disabled} onClick={() => onChange(blocks.filter((_, blockIndex) => blockIndex !== index))} className="rounded-lg border border-rose-200 p-2 text-rose-700 disabled:opacity-40" aria-label="Удалить блок"><Trash2 size={16} /></button></div><label className="block text-sm font-semibold">Заголовок<input disabled={disabled} value={block.title || ''} onChange={(event) => update(index, { title: event.target.value })} className="mt-1 w-full rounded-xl border p-3 disabled:bg-slate-100" /></label><label className="mt-3 block text-sm font-semibold">Текст<textarea disabled={disabled} value={block.text || ''} onChange={(event) => update(index, { text: event.target.value })} rows={5} className="mt-1 w-full rounded-xl border p-3 disabled:bg-slate-100" /></label>{['list','checklist','steps','table','comparison','faq'].includes(block.type) && <label className="mt-3 block text-sm font-semibold">Элементы — по одному в строке<textarea disabled={disabled} value={(block.items || []).join('\n')} onChange={(event) => update(index, { items: event.target.value.split('\n').filter(Boolean) })} rows={4} className="mt-1 w-full rounded-xl border p-3 disabled:bg-slate-100" /></label>}{['image','gallery','legal-source','service-card'].includes(block.type) && <label className="mt-3 block text-sm font-semibold">ID файла или связанного материала<input disabled={disabled} value={block.referenceId || block.fileId || ''} onChange={(event) => update(index, block.type === 'image' || block.type === 'gallery' ? { fileId: event.target.value } : { referenceId: event.target.value })} className="mt-1 w-full rounded-xl border p-3 disabled:bg-slate-100" /></label>}</fieldset>)}<label className="flex flex-wrap items-center gap-2 text-sm font-semibold"><select disabled={disabled} value={selectedType} onChange={(event) => setSelectedType(event.target.value as CmsBlockType)} className="rounded-xl border bg-white p-3">{Object.entries(blockLabels).map(([type, label]) => <option key={type} value={type}>{label}</option>)}</select><button type="button" disabled={disabled} onClick={() => onChange([...blocks, newBlock(selectedType)])} className="inline-flex items-center gap-2 rounded-xl bg-eco-900 px-4 py-3 text-white disabled:opacity-40"><Plus size={17} /> Добавить блок</button></label></div>;
+};

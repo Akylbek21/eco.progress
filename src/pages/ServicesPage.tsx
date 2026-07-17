@@ -9,27 +9,18 @@ import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
 import { PageSkeleton } from '../components/loading/PageLoader';
 import OrderChoiceModal from '../components/OrderChoiceModal';
-import { fallbackServices, getServices } from '../services/serviceService';
+import { getServiceCatalog } from '../services/serviceService';
+import { activeServices, formatKztPrice, PRELIMINARY_PRICE_NOTICE } from '../content/serviceCatalog';
 import { getBusinessCompanyById } from '../utils/crm';
 import type { ServiceCategory } from '../types';
 
 const categories: Array<'Все' | ServiceCategory> = ['Все', 'Проектирование', 'Разрешения', 'Лаборатория', 'Отходы', 'Предприятия'];
-
-const servicePriceBase: Record<string, number> = {
-  'eco-design': 350000,
-  permits: 280000,
-  laboratory: 90000,
-  'waste-management': 120000,
-  'waste-transportation': 80000,
-  landfill: 60000,
-  'enterprise-support': 450000,
-};
-
-const formatPrice = (price: number) => `${Math.round(price).toLocaleString('ru-RU')} ₸`;
+const calculatorCatalogServices = activeServices.filter((service) => service.showInCalculator && service.pricing.calculatorBasePrice !== undefined);
 
 const ServicesPage = () => {
-  const { data: services = [], isLoading } = useQuery({ queryKey: ['services'], queryFn: getServices });
-  const usingFallbackServices = services === fallbackServices;
+  const { data, isLoading } = useQuery({ queryKey: ['services'], queryFn: getServiceCatalog });
+  const services = data?.items ?? [];
+  const calculatorServices = calculatorCatalogServices;
   const [category, setCategory] = useState<'Все' | ServiceCategory>('Все');
   const [expandedService, setExpandedService] = useState<string | null>(null);
   const [selectedIncludes, setSelectedIncludes] = useState<Record<string, string[]>>({});
@@ -41,17 +32,18 @@ const ServicesPage = () => {
     wasteVolume: '0',
     labPoints: '0',
   });
-  useEffect(() => { if (services.length && !calculator.serviceId) setCalculator((c) => ({ ...c, serviceId: services[0].id })); }, [services, calculator.serviceId]);
+  useEffect(() => { if (calculatorServices.length && !calculator.serviceId) setCalculator((c) => ({ ...c, serviceId: calculatorServices[0].slug })); }, [calculator.serviceId, calculatorServices]);
   const items = useMemo(() => (category === 'Все' ? services : services.filter((item) => item.category === category)), [category, services]);
   const selectedService = services.find((service) => service.id === calculator.serviceId) ?? services[0];
-  const basePrice = selectedService ? servicePriceBase[selectedService.id] ?? 150000 : 150000;
+  const selectedCatalogService = activeServices.find((service) => service.slug === calculator.serviceId);
+  const basePrice = selectedCatalogService?.showInCalculator ? selectedCatalogService.pricing.calculatorBasePrice : undefined;
   const scaleMultiplier = calculator.objectScale === 'small' ? 0.85 : calculator.objectScale === 'large' ? 1.45 : 1;
   const urgencyMultiplier = calculator.urgency === 'fast' ? 1.25 : calculator.urgency === 'complex' ? 1.55 : 1;
   const wasteVolume = Number(calculator.wasteVolume) || 0;
   const labPoints = Number(calculator.labPoints) || 0;
-  const estimatedPrice = basePrice * scaleMultiplier * urgencyMultiplier + wasteVolume * 9000 + labPoints * 18000;
-  const minPrice = estimatedPrice * 0.9;
-  const maxPrice = estimatedPrice * 1.15;
+  const estimatedPrice = basePrice === undefined ? undefined : basePrice * scaleMultiplier * urgencyMultiplier + wasteVolume * 9000 + labPoints * 18000;
+  const minPrice = estimatedPrice === undefined ? undefined : estimatedPrice * 0.9;
+  const maxPrice = estimatedPrice === undefined ? undefined : estimatedPrice * 1.15;
   const updateCalculator = (name: keyof typeof calculator, value: string) => {
     setCalculator((current) => ({ ...current, [name]: value }));
   };
@@ -115,11 +107,6 @@ const ServicesPage = () => {
             ))}
           </div>
           <div className="mt-8 grid gap-4 sm:mt-10 sm:gap-6 md:grid-cols-2">
-            {usingFallbackServices && (
-              <div className="rounded-[18px] border border-amber-100 bg-amber-50 p-4 text-sm font-semibold text-amber-900 md:col-span-2">
-                Сейчас показываем базовый список услуг. Данные с сервера временно недоступны.
-              </div>
-            )}
             {items.map((service, index) => (
               <Reveal key={service.id} delay={index * 0.04}>
                 <div id={`service-${service.id}`} className={`card-hover flex h-full scroll-mt-28 flex-col rounded-[18px] border bg-white p-5 sm:rounded-[22px] sm:p-6 ${(selectedIncludes[service.id] ?? []).length > 0 ? 'border-accent ring-4 ring-accent/15' : 'border-slate-200'}`}>
@@ -190,12 +177,13 @@ const ServicesPage = () => {
               <div className="mt-6 rounded-[18px] bg-eco-900 p-5 text-white sm:mt-8 sm:rounded-[22px] sm:p-6">
                 <p className="text-sm text-white/70">Ориентировочный диапазон</p>
                 <p className="mt-3 text-2xl font-bold leading-tight text-accent sm:text-4xl">
-                  <span className="block sm:inline">{formatPrice(minPrice)}</span>
+                  <span className="block sm:inline">{minPrice === undefined ? 'Стоимость рассчитывается индивидуально' : formatKztPrice({ priceFrom: Math.round(minPrice), currency: 'KZT', requiresCalculation: true })}</span>
+                  {maxPrice !== undefined && <>
                   <span className="block text-white/55 sm:inline"> - </span>
-                  <span className="block sm:inline">{formatPrice(maxPrice)}</span>
+                  <span className="block sm:inline">{new Intl.NumberFormat('ru-RU').format(Math.round(maxPrice))} ₸</span></>}
                 </p>
                 <p className="mt-3 text-sm leading-6 text-white/70">
-                  Для точного расчета специалист уточнит объект, перечень документов, лабораторные точки и условия работы с отходами.
+                  {PRELIMINARY_PRICE_NOTICE}
                 </p>
               </div>
             </div>
@@ -210,8 +198,8 @@ const ServicesPage = () => {
                     onChange={(event) => updateCalculator('serviceId', event.target.value)}
                     className="input-focus mt-2 w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900"
                   >
-                    {services.map((service) => (
-                      <option key={service.id} value={service.id}>{service.title}</option>
+                    {calculatorServices.map((service) => (
+                      <option key={service.slug} value={service.slug}>{service.title}</option>
                     ))}
                   </select>
                 </label>

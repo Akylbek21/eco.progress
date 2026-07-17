@@ -1,80 +1,87 @@
 import { fetcher } from './api';
 import type { ServiceItem } from '../types';
+import {
+  activeServices,
+  getCatalogService,
+  normalizeServiceSlug,
+  type CatalogSource,
+  type ServiceCatalogItem,
+} from '../content/serviceCatalog';
+import type { ServiceContent } from '../content/types';
+import { trackEvent } from './analytics';
 
-export const fallbackServices: ServiceItem[] = [
-  {
-    id: 'ecological-documents',
-    businessCompanyId: 'eco-docs',
-    title: 'Экологические документы',
-    category: 'Проектирование',
-    description: 'Разработка экологической документации для предприятий, объектов строительства и действующих производств.',
-    forWhom: 'Компании, которым нужны проекты, отчеты и разрешительная документация',
-    result: 'Готовый пакет экологических документов',
-    includes: ['Консультация', 'Анализ объекта', 'Подготовка документов', 'Сопровождение согласования'],
-    documents: ['Карточка компании', 'БИН / ИИН', 'Адрес объекта', 'Исходные данные'],
-    workflow: ['Заявка', 'Анализ', 'Документы', 'Согласование', 'Результат'],
-    duration: 'от 10 рабочих дней',
-    icon: 'file-text',
-  },
-  {
-    id: 'laboratory-tests',
-    businessCompanyId: 'eco-lab',
-    title: 'Лабораторные анализы',
-    category: 'Лаборатория',
-    description: 'Отбор проб, замеры, лабораторные исследования и подготовка протоколов.',
-    forWhom: 'Предприятиям с производственным экологическим контролем',
-    result: 'Протоколы лабораторных исследований',
-    includes: ['Согласование замера', 'Выезд', 'Отбор проб', 'Протокол'],
-    documents: ['Заявка на замер', 'Схема точек отбора'],
-    workflow: ['Согласование', 'Замер', 'Анализ', 'Протокол'],
-    duration: '5-10 рабочих дней',
-    icon: 'flask',
-  },
-  {
-    id: 'waste-transportation',
-    businessCompanyId: 'eco-waste',
-    title: 'Вывоз отходов',
-    category: 'Отходы',
-    description: 'Организация вывоза отходов с объекта с оформлением сопроводительных документов.',
-    forWhom: 'Бизнесу, которому нужен регулярный или разовый вывоз отходов',
-    result: 'Вывезенные отходы и закрывающие документы',
-    includes: ['Расчет объема', 'Подбор транспорта', 'Вывоз', 'Документы'],
-    documents: ['Адрес объекта', 'Тип отходов', 'Объем отходов'],
-    workflow: ['Заявка', 'Расчет', 'Вывоз', 'Закрытие'],
-    duration: '1-3 рабочих дня',
-    icon: 'truck',
-  },
-  {
-    id: 'waste-recycling',
-    businessCompanyId: 'eco-utilization',
-    title: 'Утилизация отходов',
-    category: 'Отходы',
-    description: 'Передача отходов на утилизацию и оформление подтверждающих документов.',
-    forWhom: 'Компаниям, которым важно подтвердить безопасную утилизацию',
-    result: 'Акты и документы по утилизации отходов',
-    includes: ['Классификация отходов', 'Прием', 'Утилизация', 'Акт'],
-    documents: ['Тип отходов', 'Объем', 'Данные компании'],
-    workflow: ['Заявка', 'Прием', 'Утилизация', 'Документы'],
-    duration: 'от 3 рабочих дней',
-    icon: 'recycle',
-  },
-];
+export interface ServiceCatalogResult {
+  items: ServiceItem[];
+  source: CatalogSource;
+}
 
-export const getServices = async (): Promise<ServiceItem[]> => {
-  try {
-    const services = await fetcher<ServiceItem[]>('/services');
-    if (Array.isArray(services) && services.length) return services;
-  } catch {
-    return fallbackServices;
-  }
-  return fallbackServices;
+export const catalogItemToServiceItem = (service: ServiceCatalogItem): ServiceItem => ({
+  id: service.slug,
+  businessCompanyId: String(service.apiId ?? service.id),
+  title: service.title,
+  category: service.category,
+  description: service.shortDescription,
+  forWhom: service.targetClients.join(', '),
+  result: service.deliverables.join('; '),
+  includes: service.deliverables,
+  documents: service.requiredDocuments,
+  workflow: service.workflow.sort((a, b) => a.order - b.order).map((step) => step.title),
+  duration: service.duration.text,
+  icon: service.icon,
+});
+
+export const fallbackServices: ServiceItem[] = activeServices.map(catalogItemToServiceItem);
+
+const canonicalizeApiServices = (items: ServiceContent[]): ServiceItem[] => {
+  return items.flatMap((apiItem) => {
+    const catalogItem = getCatalogService(normalizeServiceSlug(apiItem.serviceSlug));
+    if (!catalogItem || !catalogItem.isActive) return [];
+    return {
+      ...catalogItemToServiceItem(catalogItem),
+      id: catalogItem.slug,
+      title: catalogItem.title,
+      category: catalogItem.category,
+      description: apiItem.summary.shortDescription,
+      forWhom: apiItem.targetClients.map((client) => client.title).join(', '),
+      result: apiItem.summary.clientResult,
+      includes: apiItem.deliverables.map((deliverable) => deliverable.title),
+      documents: apiItem.requiredDocuments.map((document) => document.title),
+      workflow: [...apiItem.workflow].sort((left, right) => left.order - right.order).map((step) => step.title),
+      duration: apiItem.summary.durationText,
+    };
+  });
 };
 
-export const getServiceById = async (id: string): Promise<ServiceItem | undefined> => {
+const devLog = (message: string, error?: unknown) => {
+  if (import.meta.env.DEV) console.info(`[service catalog] ${message}`, error ?? '');
+};
+
+export const getServiceCatalog = async (): Promise<ServiceCatalogResult> => {
   try {
-    return await fetcher<ServiceItem>(`/services/${id}`);
-  } catch {
-    return fallbackServices.find((service) => service.id === id);
+    const services = await fetcher<ServiceContent[]>('/public/content/services');
+    if (Array.isArray(services)) {
+      return { items: canonicalizeApiServices(services), source: 'api' };
+    }
+    throw new Error('Public services API returned an invalid payload.');
+  } catch (error) {
+    devLog('API request failed; the complete local catalog is used.', error);
+    trackEvent('content_fallback_usage', { collection: 'services' });
   }
-  return fallbackServices.find((service) => service.id === id);
+  return { items: fallbackServices, source: 'fallback' };
+};
+
+export const getServices = async (): Promise<ServiceItem[]> => (await getServiceCatalog()).items;
+
+export const getServiceById = async (id: string): Promise<ServiceItem | undefined> => {
+  const slug = normalizeServiceSlug(id);
+  const catalogItem = getCatalogService(slug);
+  if (!catalogItem) return undefined;
+  try {
+    const apiItem = await fetcher<ServiceContent>(`/public/content/services/${encodeURIComponent(slug)}`);
+    return canonicalizeApiServices([apiItem])[0] ?? catalogItemToServiceItem(catalogItem);
+  } catch (error) {
+    devLog(`Service ${slug} loaded from the local catalog.`, error);
+    trackEvent('content_fallback_usage', { collection: 'service', slug });
+    return catalogItemToServiceItem(catalogItem);
+  }
 };

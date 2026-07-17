@@ -1,4 +1,5 @@
 import { appConfig } from '../config/app';
+import type { ContentAnalyticsEvent, LeadContentAttribution } from '../types/contentManagement';
 
 export type AnalyticsValue = string | number | boolean | undefined;
 export type AnalyticsPayload = Record<string, AnalyticsValue>;
@@ -7,9 +8,13 @@ export type AnalyticsEventName =
   | 'phone_click' | 'whatsapp_click' | 'email_click'
   | 'service_view' | 'city_page_view' | 'consultation_click'
   | 'calculator_start' | 'calculator_complete' | 'file_download'
-  | 'login_click' | 'cabinet_open' | 'order_create_start' | 'order_create_success';
+  | 'login_click' | 'cabinet_open' | 'order_create_start' | 'order_create_success'
+  | 'content_view' | 'article_view' | 'regional_page_view' | 'cta_click'
+  | 'related_service_click' | 'related_article_click' | 'document_view' | 'document_download'
+  | 'table_of_contents_click' | 'scroll_depth'
+  | 'content_cache_hit' | 'content_cache_miss' | 'content_fallback_usage';
 
-export interface LeadAttribution {
+export interface LeadAttribution extends LeadContentAttribution {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
@@ -29,7 +34,8 @@ declare global {
 }
 
 const ATTRIBUTION_KEY = 'ecoprogress_lead_attribution';
-const forbiddenKey = /(name|phone|email|iin|bin|token|jwt|document|client|company|comment)/i;
+const CONTENT_CONTEXT_KEY = 'ecoprogress_content_context';
+const forbiddenKey = /(name|phone|email|iin|bin|token|jwt|client|company|comment|message|full.?text)/i;
 let initialized = false;
 
 const safePayload = (payload: AnalyticsPayload): AnalyticsPayload => Object.fromEntries(
@@ -49,6 +55,7 @@ const captureAttribution = () => {
   try {
     if (sessionStorage.getItem(ATTRIBUTION_KEY)) return;
     const params = new URLSearchParams(window.location.search);
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
     const attribution: LeadAttribution = {
       utmSource: params.get('utm_source') || undefined,
       utmMedium: params.get('utm_medium') || undefined,
@@ -56,7 +63,9 @@ const captureAttribution = () => {
       utmContent: params.get('utm_content') || undefined,
       utmTerm: params.get('utm_term') || undefined,
       gclid: params.get('gclid') || undefined,
-      landingPage: `${window.location.pathname}${window.location.search}`,
+      landingPage: currentUrl,
+      firstTouchUrl: currentUrl,
+      lastTouchUrl: currentUrl,
       referrer: document.referrer || undefined,
     };
     sessionStorage.setItem(ATTRIBUTION_KEY, JSON.stringify(attribution));
@@ -72,6 +81,25 @@ export const getLeadAttribution = (): LeadAttribution => {
   } catch {
     return {};
   }
+};
+
+export const recordContentTouch = (pagePath: string) => {
+  if (typeof window === 'undefined') return;
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(ATTRIBUTION_KEY) || '{}') as LeadAttribution;
+    const withoutQuery = pagePath.split('?')[0];
+    const segments = withoutQuery.split('/').filter(Boolean);
+    const context: Partial<LeadContentAttribution> = withoutQuery.startsWith('/services/')
+      ? { sourceType: 'SERVICE', sourceSlug: segments[1], serviceSlug: segments[1] }
+      : withoutQuery.startsWith('/news/')
+        ? { sourceType: 'ARTICLE', sourceSlug: segments[1] }
+        : withoutQuery.startsWith('/ecologicheskie-uslugi-')
+          ? { sourceType: 'REGIONAL_PAGE', sourceSlug: withoutQuery.slice(1) }
+          : withoutQuery === '/tariffs' ? { sourceType: 'TARIFF' } : withoutQuery === '/' ? { sourceType: 'HOME' } : {};
+    const next = { ...saved, ...context, sourceUrl: pagePath, firstTouchUrl: saved.firstTouchUrl || saved.landingPage || pagePath, lastTouchUrl: pagePath } satisfies LeadAttribution;
+    sessionStorage.setItem(ATTRIBUTION_KEY, JSON.stringify(next));
+    sessionStorage.setItem(CONTENT_CONTEXT_KEY, JSON.stringify(context));
+  } catch { /* Attribution is optional. */ }
 };
 
 export const initializeAnalytics = () => {
@@ -107,6 +135,19 @@ export const trackEvent = (eventName: AnalyticsEventName, payload: AnalyticsPayl
   window.gtag?.('event', eventName, params);
   if (appConfig.yandexMetrikaId) window.ym?.(Number(appConfig.yandexMetrikaId), 'reachGoal', eventName, params);
 };
+
+export const trackContentEvent = (event: ContentAnalyticsEvent) => trackEvent(event.eventName, {
+  page_type: event.pageType,
+  content_id: event.contentId,
+  content_slug: event.contentSlug,
+  service_id: event.serviceId,
+  service_slug: event.serviceSlug,
+  region_id: event.regionId,
+  cta_id: event.ctaId,
+  position: event.position,
+  value: event.value,
+  currency: event.currency,
+});
 
 export const trackPageView = (pagePath: string) => {
   if (typeof window === 'undefined') return;

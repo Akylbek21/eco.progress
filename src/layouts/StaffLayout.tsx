@@ -5,16 +5,18 @@ import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
 import { canAccess } from '../config/permissions';
 import type { UserRole } from '../types';
+import type { Permission } from '../config/permissions';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'];
 const protocolMockMode = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
 
-const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[] }> = [
+const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[]; permission?: Permission }> = [
   { label: 'Обзор', path: '/staff', icon: LayoutDashboard },
   { label: 'Заявки', path: '/staff/orders', icon: ClipboardList },
   { label: 'Клиенты', path: '/staff/clients', icon: Building2, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Лиды', path: '/staff/leads', icon: UserRoundSearch, allowedRoles: ['ADMIN', 'MANAGER'] },
+  { label: 'Контент сайта', path: '/staff/content', icon: BookOpenCheck, permission: 'view_content' },
   { label: 'Компании', path: '/staff/companies', icon: Building2, allowedRoles: protocolRoles },
   { label: 'КП', path: '/staff/commercial-offers', icon: Handshake, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Договоры', path: '/staff/contracts', icon: FileSignature, allowedRoles: ['ADMIN', 'MANAGER', 'ACCOUNTANT'] },
@@ -64,6 +66,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
       ).map((item) => {
         const Icon = item.icon;
         if (item.allowedRoles && (!user?.role || !item.allowedRoles.includes(user.role))) return null;
+        if (item.permission && !canAccess(user?.role, item.permission)) return null;
         const locked = (item.paymentsOnly && !canAccessPayments(user?.role)) || (item.rolesOnly && !canAccess(user?.role, 'manage_roles') && !canAccess(user?.role, 'manage_employees'));
         if (locked) {
           const title = item.rolesOnly ? 'Доступно администратору и руководителю' : 'Доступно администратору, руководителю и бухгалтеру';

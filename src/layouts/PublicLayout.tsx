@@ -1,6 +1,6 @@
 ﻿import { ReactNode, useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { ChevronDown, HelpCircle, LogIn, Menu, UserPlus, X } from 'lucide-react';
+import { ChevronDown, HelpCircle, LogIn, Menu, Search, UserPlus, X } from 'lucide-react';
 import { FaInstagram, FaTelegramPlane, FaTiktok, FaWhatsapp } from 'react-icons/fa';
 import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
@@ -16,7 +16,7 @@ const footerCities = [
 
 const navItems = [
   { label: 'Услуги', path: '/services' },
-  { label: 'Города', path: '/ecologicheskie-uslugi-almaty' },
+  { label: 'Города', path: '/regions' },
   { label: 'Статьи', path: '/news' },
   { label: 'О компании', path: '/about' },
   { label: 'Контакты', path: '/contacts' },
@@ -25,6 +25,7 @@ const navItems = [
 ];
 
 const accountMenuItems = [
+  { label: 'Поиск по сайту', path: '/search', Icon: Search },
   { label: 'Регистрация', path: '/register', Icon: UserPlus },
   { label: 'Войти', path: '/login', Icon: LogIn },
   { label: 'Частые вопросы', path: '/faq', Icon: HelpCircle },
@@ -231,6 +232,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 {footerCities.map(([city, slug]) => (
                   <Link key={slug} to={`/ecologicheskie-uslugi-${slug}`} className="hover:text-white">{city}</Link>
                 ))}
+                <Link to="/regions" className="font-semibold text-white hover:text-accent">Все города</Link>
               </div>
               <h4 className="mt-7 text-sm font-semibold uppercase text-eco-200">Контакты</h4>
               <ul className="mt-4 space-y-3 text-sm text-white/75">

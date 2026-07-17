@@ -22,6 +22,9 @@ type SEOProps = {
   type?: 'website' | 'article';
   robots?: string;
   schema?: Record<string, unknown> | Record<string, unknown>[];
+  datePublished?: string;
+  dateModified?: string;
+  alternates?: Array<{ locale: 'ru' | 'kk' | 'x-default'; url: string }>;
 };
 
 const setMeta = (selector: string, attr: 'content' | 'href', value: string) => {
@@ -35,7 +38,7 @@ const setMeta = (selector: string, attr: 'content' | 'href', value: string) => {
   element.setAttribute(attr, value);
 };
 
-const SEO = ({ title, description, canonical, ogImage = `${company.siteUrl}/og-cover.jpg`, type = 'website', robots = 'index,follow', schema }: SEOProps) => {
+const SEO = ({ title, description, canonical, ogImage = `${company.siteUrl}/og-cover.jpg`, type = 'website', robots = 'index,follow', schema, datePublished, dateModified, alternates = [] }: SEOProps) => {
   useEffect(() => {
     const path = window.location.pathname.length > 1 ? window.location.pathname.replace(/\/+$/, '') : '/';
     const registered = seoRegistry.get(path);
@@ -53,11 +56,24 @@ const SEO = ({ title, description, canonical, ogImage = `${company.siteUrl}/og-c
     setMeta('meta[property="og:site_name"]', 'content', company.name);
     setMeta('meta[property="og:url"]', 'content', url);
     setMeta('meta[property="og:image"]', 'content', resolvedImage);
+    if (type === 'article' && datePublished) setMeta('meta[property="article:published_time"]', 'content', datePublished);
+    else document.head.querySelector('meta[property="article:published_time"]')?.remove();
+    if (type === 'article' && dateModified) setMeta('meta[property="article:modified_time"]', 'content', dateModified);
+    else document.head.querySelector('meta[property="article:modified_time"]')?.remove();
     setMeta('meta[name="twitter:card"]', 'content', 'summary_large_image');
     setMeta('meta[name="twitter:title"]', 'content', resolvedTitle);
     setMeta('meta[name="twitter:description"]', 'content', resolvedDescription);
     setMeta('meta[name="twitter:image"]', 'content', resolvedImage);
     setMeta('link[rel="canonical"]', 'href', url);
+    document.head.querySelectorAll('link[data-ecoprogress-hreflang]').forEach((element) => element.remove());
+    for (const alternate of alternates) {
+      const link = document.createElement('link');
+      link.rel = 'alternate';
+      link.hreflang = alternate.locale;
+      link.href = alternate.url;
+      link.dataset.ecoprogressHreflang = 'true';
+      document.head.appendChild(link);
+    }
 
     if (appConfig.googleSiteVerification) {
       setMeta('meta[name="google-site-verification"]', 'content', appConfig.googleSiteVerification);
@@ -74,7 +90,7 @@ const SEO = ({ title, description, canonical, ogImage = `${company.siteUrl}/og-c
       script.text = JSON.stringify(schema);
       document.head.appendChild(script);
     }
-  }, [title, description, canonical, ogImage, type, robots, schema]);
+  }, [title, description, canonical, ogImage, type, robots, schema, datePublished, dateModified, alternates]);
 
   return null;
 };

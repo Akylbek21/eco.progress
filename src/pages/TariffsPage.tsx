@@ -1,55 +1,24 @@
 ﻿import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClipboardCheck, FileText, FlaskConical, Recycle, ShieldCheck } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import Button from '../components/ui/Button';
 import SEO from '../components/SEO';
-import { PageSkeleton } from '../components/loading/PageLoader';
-import { fetcher } from '../services/api';
 import type { TariffItem } from '../types';
+import { activeServices, formatKztPrice, PRELIMINARY_PRICE_NOTICE } from '../content/serviceCatalog';
 
 const modes = ['Все', 'Разовая задача', 'Ежемесячное сопровождение'] as const;
 
-const fallbackTariffs: TariffItem[] = [
-  {
-    id: 'consultation',
-    name: 'Первичная консультация',
-    price: 'от 25 000 ₸',
-    description: 'Разбор ситуации, проверка рисков и список следующих шагов по экологическим требованиям.',
-    features: ['Анализ задачи', 'Рекомендации по документам', 'План дальнейших действий'],
-    cta: 'Получить консультацию',
-    mode: 'Разовая задача',
-  },
-  {
-    id: 'documents',
-    name: 'Экологические документы',
-    price: 'от 180 000 ₸',
-    description: 'Подготовка проектных, разрешительных и отчетных материалов для бизнеса.',
-    features: ['Сбор исходных данных', 'Подготовка пакета документов', 'Сопровождение согласования'],
-    cta: 'Заказать документы',
-    mode: 'Разовая задача',
-    popular: true,
-  },
-  {
-    id: 'laboratory',
-    name: 'Лаборатория',
-    price: 'от 90 000 ₸',
-    description: 'Замеры, отбор проб, исследования и оформление лабораторных протоколов.',
-    features: ['Согласование точек', 'Выезд специалиста', 'Протоколы исследований'],
-    cta: 'Заказать анализы',
-    mode: 'Разовая задача',
-  },
-  {
-    id: 'support',
-    name: 'Сопровождение',
-    price: 'от 350 000 ₸ / мес',
-    description: 'Регулярное экологическое сопровождение предприятия, контроль сроков и отчетности.',
-    features: ['План работ', 'Контроль отчетности', 'Консультации команды', 'Подготовка к проверкам'],
-    cta: 'Обсудить сопровождение',
-    mode: 'Ежемесячное сопровождение',
-  },
-];
+const catalogTariffs: TariffItem[] = activeServices.filter((service) => service.showInTariffs).map((service) => ({
+  id: service.slug,
+  name: service.title,
+  price: formatKztPrice(service.pricing),
+  description: service.shortDescription,
+  features: service.deliverables,
+  cta: 'Оставить заявку',
+  mode: service.slug === 'ecological-support' ? 'Ежемесячное сопровождение' : 'Разовая задача',
+  popular: service.slug === 'ecological-documents',
+}));
 
 const workflow = [
   ['Консультация', 'Клиент оставляет заявку, а специалист уточняет вид деятельности, объект и текущую задачу.'],
@@ -65,24 +34,11 @@ const workflow = [
 
 const TariffsPage = () => {
   const [mode, setMode] = useState<(typeof modes)[number]>('Все');
-  const { data: tariffs = [], isLoading } = useQuery({
-    queryKey: ['tariffs'],
-    queryFn: async () => {
-      try {
-        const response = await fetcher<TariffItem[]>('/tariffs');
-        return Array.isArray(response) && response.length ? response : fallbackTariffs;
-      } catch {
-        return fallbackTariffs;
-      }
-    },
-  });
-  const usingFallbackTariffs = tariffs === fallbackTariffs;
+  const tariffs = catalogTariffs;
   const filteredTariffs = useMemo(
     () => (mode === 'Все' ? tariffs : tariffs.filter((tariff) => tariff.mode === mode)),
     [mode, tariffs],
   );
-
-  if (isLoading) return <PageSkeleton />;
 
   return (
     <div className="bg-[#F7FBFD]">
@@ -126,12 +82,6 @@ const TariffsPage = () => {
             </div>
           </Reveal>
 
-          {usingFallbackTariffs && (
-            <p className="mt-8 rounded-[20px] border border-amber-100 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
-              Показываем базовые тарифы. Данные с сервера временно недоступны.
-            </p>
-          )}
-
           <div className="mt-10 grid gap-6 lg:grid-cols-4">
             {filteredTariffs.map((tariff, index) => (
               <Reveal key={tariff.id} delay={index * 0.04}>
@@ -152,7 +102,7 @@ const TariffsPage = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button asChild className="mt-7 w-full"><Link to="/cabinet/orders/new">{tariff.cta}</Link></Button>
+                  <Button asChild className="mt-7 w-full"><Link to={`/cabinet/orders/new?service=${tariff.id}`}>{tariff.cta}</Link></Button>
                 </article>
               </Reveal>
             ))}
@@ -160,7 +110,7 @@ const TariffsPage = () => {
 
           <Reveal>
             <p className="mt-8 rounded-[20px] border border-eco-100 bg-white p-5 text-sm leading-6 text-slate-600">
-              Стоимость зависит от категории объекта, количества документов, объема отходов, необходимости лабораторных исследований, региона и сроков выполнения. После первичного анализа мы подготовим точный расчет и план работ.
+              {PRELIMINARY_PRICE_NOTICE}
             </p>
           </Reveal>
         </div>

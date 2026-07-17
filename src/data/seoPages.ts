@@ -33,11 +33,12 @@ export interface SeoPageConfig {
   faq: SeoFaqItem[];
   relatedLinks: RelatedLink[];
   breadcrumbs: RelatedLink[];
-  schemaType: 'LocalBusiness' | 'Service' | 'Article' | 'FAQPage';
+  schemaType: 'LocalBusiness' | 'Service' | 'Article' | 'FAQPage' | 'WebPage';
   image?: string;
   priority?: number;
   changefreq?: string;
   lastmod?: string;
+  indexable?: boolean;
 }
 
 export const seoPages = seoPagesJson as SeoPageConfig[];

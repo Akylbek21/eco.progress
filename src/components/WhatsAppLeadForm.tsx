@@ -2,8 +2,9 @@ import { FormEvent, useState } from 'react';
 import { FaWhatsapp } from 'react-icons/fa';
 import Button from './ui/Button';
 import { createWhatsAppLeadMessage, createWhatsAppUrl } from '../utils/whatsapp';
-import { trackWhatsAppClick } from '../services/analytics';
+import { getLeadAttribution, trackContentEvent, trackWhatsAppClick } from '../services/analytics';
 import { useToast } from '../hooks/useToast';
+import { activeServices } from '../content/serviceCatalog';
 
 type WhatsAppLeadFormProps = {
   title?: string;
@@ -12,15 +13,7 @@ type WhatsAppLeadFormProps = {
   compact?: boolean;
 };
 
-const serviceOptions = [
-  'Экологические документы',
-  'Вывоз отходов',
-  'Утилизация отходов',
-  'Лабораторные замеры',
-  'Полигон ТБО',
-  'Сопровождение проверки',
-  'Нужна консультация',
-];
+const serviceOptions = [...activeServices.map((service) => service.title), 'Нужна консультация'];
 
 const WhatsAppLeadForm = ({
   title = 'Заявка через WhatsApp',
@@ -60,6 +53,8 @@ const WhatsAppLeadForm = ({
     if (opened) opened.opener = null;
 
     trackWhatsAppClick({ placement: source, service });
+    const attribution = getLeadAttribution();
+    trackContentEvent({ eventName: 'whatsapp_click', pageType: attribution.sourceType || 'UNKNOWN', contentSlug: attribution.sourceSlug, serviceSlug: attribution.serviceSlug, ctaId: source, position: 'whatsapp_form' });
     setManualUrl(url);
     setNotice(opened ? 'WhatsApp открыт. Отправьте сообщение менеджеру.' : 'Если WhatsApp не открылся, откройте ссылку вручную.');
     if (opened) {

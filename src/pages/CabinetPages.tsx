@@ -21,6 +21,7 @@ import { getClientOrders, getOrderById as fetchOrderById, createOrder, addCommen
 import { sendAgreementResponse as sendAgreementResponseRequest } from '../services/crmWorkflowService';
 import { getClientPayments, getClientDebts, getClientContracts } from '../services/paymentService';
 import { getServices } from '../services/serviceService';
+import { normalizeServiceSlug } from '../content/serviceCatalog';
 import {
   contractStatusClass,
   formatContractDaysLeft,
@@ -224,7 +225,7 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
   const { data: services = [] } = useQuery({ queryKey: ['services'], queryFn: getServices });
   const serviceFromUrl = useMemo(() => {
     const params = new URLSearchParams(location.search);
-    const serviceId = params.get('service') ?? '';
+    const serviceId = normalizeServiceSlug(params.get('service') ?? '');
     return services.some((service) => service.id === serviceId) ? serviceId : services[0]?.id ?? '';
   }, [location.search, services]);
   const itemsFromUrl = useMemo(() => {

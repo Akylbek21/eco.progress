@@ -6,45 +6,22 @@ import Button from '../components/ui/Button';
 import { company, getWhatsAppUrl } from '../config/company';
 import { seoPageMap, type SeoFaqItem, type SeoPageConfig } from '../data/seoPages';
 import NotFoundPage from './NotFoundPage';
+import { buildOrganizationSchema } from '../utils/schema';
+import { regionContentMap } from '../content/regions/regionContent';
+import { RelatedArticles, RelatedServices } from '../components/content/ContentBlocks';
 
-const baseLocalBusinessSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'LocalBusiness',
-  name: company.name,
-  url: company.siteUrl,
-  email: company.email,
-  telephone: company.phone,
-  image: `${company.siteUrl}/og-cover.jpg`,
-  areaServed: ['Казахстан', 'Шымкент', 'Алматы', 'Астана', 'Тараз', 'Туркестан', 'Кызылорда'],
-  serviceType: ['Экологическое проектирование', 'Лабораторные замеры', 'Производственный контроль', 'Паспорт отходов', 'Отчет ПЭК'],
-  description: 'Экологические услуги для бизнеса в Казахстане',
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: company.address,
-    addressLocality: 'Шымкент',
-    addressCountry: 'KZ',
-  },
+const buildPrimarySchema = (page: SeoPageConfig) => page.type === 'city' ? {
+  '@context': 'https://schema.org', '@type': 'WebPage', name: page.h1, description: page.description, url: page.canonical, dateModified: page.lastmod,
+} : page.type === 'article' ? {
+  '@context': 'https://schema.org', '@type': 'WebPage', name: page.h1, description: page.description, url: page.canonical, dateModified: page.lastmod,
+} : {
+  '@context': 'https://schema.org', '@type': 'Service', name: page.h1, description: page.description, url: page.canonical,
+  provider: { '@type': 'Organization', name: company.name, url: company.siteUrl }, areaServed: page.city || 'Казахстан', serviceType: page.service || 'Экологические услуги',
 };
 
 const buildSchema = (page: SeoPageConfig) => [
-  baseLocalBusinessSchema,
-  {
-    '@context': 'https://schema.org',
-    '@type': page.type === 'article' ? 'Article' : 'Service',
-    name: page.h1,
-    headline: page.h1,
-    description: page.description,
-    url: page.canonical,
-    image: `${company.siteUrl}${page.image || '/og-cover.jpg'}`,
-    provider: {
-      '@type': 'Organization',
-      name: company.name,
-      url: company.siteUrl,
-    },
-    areaServed: page.city || 'Казахстан',
-    serviceType: page.service || 'Экологические услуги',
-    dateModified: page.lastmod,
-  },
+  buildOrganizationSchema(),
+  buildPrimarySchema(page),
   {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -104,10 +81,11 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
   const services = page.services ?? [];
   const audience = page.audience ?? [];
   const outcomes = page.outcomes ?? [];
+  const regionDetails = page.type === 'city' ? regionContentMap.get(page.slug.replace('ecologicheskie-uslugi-', '')) : undefined;
 
   return (
     <div className="bg-[#F7FBFD]">
-      <SEO title={page.title} description={page.description} canonical={page.canonical} schema={buildSchema(page)} />
+      <SEO title={page.title} description={page.description} canonical={page.canonical} robots={page.indexable === false ? 'noindex,follow' : 'index,follow'} schema={buildSchema(page)} />
 
       <section className="relative isolate overflow-hidden bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-20">
         <img src={page.image || '/para.jpg'} alt={page.h1} className="absolute inset-0 -z-20 h-full w-full object-cover" width="1600" height="900" />
@@ -175,6 +153,13 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
           </div>
         </div>
       </section>
+
+      {regionDetails && <section className="px-4 py-14 sm:px-8"><div className="mx-auto max-w-7xl space-y-12">
+        <section className="rounded-[22px] border border-slate-200 bg-white p-6"><h2 className="text-3xl font-bold text-eco-900">Условия работы в регионе</h2><p className="mt-4 leading-7 text-slate-600">{regionDetails.introduction}</p><p className="mt-4 text-sm leading-6 text-slate-600"><strong>Логистика:</strong> {regionDetails.logisticsNote}</p></section>
+        <div className="grid gap-5 lg:grid-cols-2"><ListBlock title="Что делаем дистанционно" items={regionDetails.remoteConditions} /><ListBlock title="Когда нужен выезд" items={regionDetails.onSiteConditions} /><ListBlock title="Типовые задачи" items={regionDetails.commonTasks} /><ListBlock title="Отрасли региона" items={regionDetails.industries} /></div>
+        <RelatedServices slugs={regionDetails.availableServiceSlugs} title="Доступные услуги" />
+        {regionDetails.relatedArticleSlugs.length > 0 && <RelatedArticles slugs={regionDetails.relatedArticleSlugs} />}
+      </div></section>}
 
       <section className="px-4 py-14 sm:px-8">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1fr_0.85fr]">

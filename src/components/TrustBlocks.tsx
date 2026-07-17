@@ -1,4 +1,5 @@
-﻿import { Award, Beaker, Building2, ClipboardCheck, FileCheck2, FolderCheck, Recycle, ShieldCheck, Truck } from 'lucide-react';
+import { Award, Beaker, Building2, ClipboardCheck, FileCheck2, FolderCheck, Recycle, ShieldCheck, Truck } from 'lucide-react';
+import { trustDocuments } from '../content/trust-documents/trustDocuments';
 
 const reasons = [
   ['Работаем с юридическими лицами и ИП', Building2],
@@ -10,59 +11,10 @@ const reasons = [
   ['Все этапы можно контролировать в личном кабинете', ClipboardCheck],
 ] as const;
 
-const documents = ['Сертификаты специалистов', 'Разрешения на деятельность', 'Лабораторные протоколы', 'Документы по полигону', 'Документы по транспортировке отходов'];
+export const TrustSection = () => <section id="trust" className="bg-[#F7FBFD] px-4 py-16 sm:px-8 sm:py-20"><div className="mx-auto max-w-7xl"><div className="max-w-3xl"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Доверие</p><h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Почему выбирают ecoprogress.kz</h2></div><div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">{reasons.map(([title, Icon]) => <div key={title} className="rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm"><Icon className="text-eco-600" size={24} /><p className="mt-4 text-sm font-bold leading-6 text-eco-900">{title}</p></div>)}</div></div></section>;
 
-export const TrustSection = () => (
-  <section id="trust" className="bg-[#F7FBFD] px-4 py-16 sm:px-8 sm:py-20">
-    <div className="mx-auto max-w-7xl">
-      <div className="max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Доверие</p>
-        <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Почему выбирают ecoprogress.kz</h2>
-      </div>
-      <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {reasons.map(([title, Icon]) => (
-          <div key={title} className="rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm">
-            <Icon className="text-eco-600" size={24} />
-            <p className="mt-4 text-sm font-bold leading-6 text-eco-900">{title}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-);
+export const DocumentsSection = () => <section id="documents" className="bg-white px-4 py-16 sm:px-8 sm:py-20"><div className="mx-auto max-w-7xl"><div className="max-w-3xl"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Документы</p><h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Документы, сертификаты и разрешения</h2><p className="mt-4 text-sm leading-6 text-slate-600">Публикуемые реквизиты проходят отдельную проверку. Документ без подтверждённых номера, срока действия или области применения не помечается как действующий.</p></div><div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{trustDocuments.map((document) => <article key={document.id} className="rounded-[20px] border border-dashed border-eco-200 bg-eco-50 p-5"><FolderCheck className="text-eco-600" size={24} /><h3 className="mt-4 text-sm font-bold leading-6 text-eco-900">{document.title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{document.publicDescription}</p><p className={`mt-3 text-xs font-bold ${document.verificationStatus === 'verified' ? 'text-eco-700' : document.verificationStatus === 'expired' ? 'text-rose-700' : 'text-amber-700'}`}>{document.verificationStatus === 'verified' ? 'Реквизиты проверены' : document.verificationStatus === 'expired' ? 'Срок действия истёк' : 'Реквизиты требуют проверки'}</p>{document.fileUrl && <a href={document.fileUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex text-sm font-semibold text-eco-700 underline">Открыть копию документа</a>}</article>)}</div></div></section>;
 
-export const DocumentsSection = () => (
-  <section id="documents" className="bg-white px-4 py-16 sm:px-8 sm:py-20">
-    <div className="mx-auto max-w-7xl">
-      <div className="max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Документы</p>
-        <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Документы, сертификаты и разрешения</h2>
-      </div>
-      <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {documents.map((title) => (
-          <div key={title} className="rounded-[20px] border border-dashed border-eco-200 bg-eco-50 p-5">
-            <FolderCheck className="text-eco-600" size={24} />
-            <p className="mt-4 text-sm font-bold leading-6 text-eco-900">{title}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-);
+export const TrustCompact = () => <div className="grid gap-3 sm:grid-cols-2">{reasons.slice(0, 4).map(([title, Icon]) => <div key={title} className="flex items-start gap-3 rounded-2xl bg-eco-50 p-4 text-sm font-semibold text-eco-900"><Icon className="shrink-0 text-eco-600" size={19} /><span>{title}</span></div>)}</div>;
 
-export const TrustCompact = () => (
-  <div className="grid gap-3 sm:grid-cols-2">
-    {reasons.slice(0, 4).map(([title, Icon]) => (
-      <div key={title} className="flex items-start gap-3 rounded-2xl bg-eco-50 p-4 text-sm font-semibold text-eco-900">
-        <Icon className="shrink-0 text-eco-600" size={19} />
-        <span>{title}</span>
-      </div>
-    ))}
-  </div>
-);
-
-export const CertificateBadge = () => (
-  <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-eco-900 shadow-sm">
-    <Award size={17} className="text-eco-600" /> Документы доступны по запросу
-  </div>
-);
+export const CertificateBadge = () => <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-eco-900 shadow-sm"><Award size={17} className="text-eco-600" /> Документы доступны по запросу</div>;

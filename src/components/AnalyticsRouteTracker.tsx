@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { initializeAnalytics, trackPageView } from '../services/analytics';
+import { initializeAnalytics, recordContentTouch, trackPageView } from '../services/analytics';
 
 const AnalyticsRouteTracker = () => {
   const location = useLocation();
@@ -11,7 +11,9 @@ const AnalyticsRouteTracker = () => {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      trackPageView(`${location.pathname}${location.search}`);
+      const path = `${location.pathname}${location.search}`;
+      recordContentTouch(path);
+      trackPageView(path);
     });
     return () => window.cancelAnimationFrame(frame);
   }, [location.pathname, location.search]);
@@ -20,4 +22,3 @@ const AnalyticsRouteTracker = () => {
 };
 
 export default AnalyticsRouteTracker;
-
