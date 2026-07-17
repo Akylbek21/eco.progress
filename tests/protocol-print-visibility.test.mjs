@@ -85,8 +85,10 @@ test('weather values preserve zero, normalize comma and carry manual edit metada
   assert.equal(normalizeDecimal(''), '');
   assert.match(createPage, /manuallyEdited\.has\('windSpeed'\)/);
   assert.match(createPage, /manuallyEditedWeatherRef\.current\.add\(key\)/);
-  assert.match(createPage, /weather\.windSpeed \?\? current\.windSpeed/);
-  assert.match(createPage, /inputMode="decimal" value=\{form\.windSpeed\}/);
+  assert.match(createPage, /setLastWeather\(null\)/);
+  assert.match(createPage, /weather\.windSpeed \?\? ''/);
+  assert.match(createPage, /disabled=\{weatherLoading \|\| !lastWeather\}/);
+  assert.match(createPage, /inputMode="decimal"[^>]*value=\{form\.windSpeed\}/);
   assert.match(createPage, /manualChangeReason: form\.manualChangeReason/);
   assert.match(createPage, /weatherObservedAt: form\.weatherObservedAt/);
   assert.match(environmentForm, /value=\{value\.windSpeed \?\? ''\}/);

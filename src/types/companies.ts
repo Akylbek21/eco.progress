@@ -46,12 +46,21 @@ export type Company = {
   samplingLocation: string;
   customerRepresentative: string;
   objects: CompanyObject[];
+  objectCount?: number;
   status: CompanyStatus;
   createdAt?: string;
   updatedAt?: string;
 };
 
-export type CompanyPayload = Omit<Company, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'objects'> & {
+export type CompanyPage = {
+  items: Company[];
+  totalElements: number;
+  totalPages: number;
+  page: number;
+  size: number;
+};
+
+export type CompanyPayload = Omit<Company, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'objects' | 'objectCount'> & {
   objects?: CompanyObject[];
   status?: CompanyStatus;
 };

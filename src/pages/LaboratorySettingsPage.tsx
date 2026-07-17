@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Building2, CheckCircle2, ImagePlus, Pencil, Plus, RefreshCw, Save, Star, Trash2, UserCheck, UserMinus } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -64,6 +64,8 @@ const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2
 const panelClass = 'rounded-xl border border-slate-200 bg-white p-5 shadow-sm';
 const LOGO_MAX_SIZE = 2 * 1024 * 1024;
 const LOGO_TYPES = ['image/png', 'image/jpeg'];
+const EMPLOYEE_ROLES = ['LABORATORY', 'HEAD', 'DIRECTOR'];
+const employeeRole = (value?: string) => EMPLOYEE_ROLES.includes(String(value || '').toUpperCase()) ? String(value).toUpperCase() : 'LABORATORY';
 
 const toEmployeeValue = (employee: LaboratoryEmployee) => employee.id;
 const selectedEmployeeName = (employees: LaboratoryEmployee[], id?: string) =>
@@ -99,11 +101,17 @@ const LaboratorySettingsPage = () => {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
   const [isSavingEmployee, setIsSavingEmployee] = useState(false);
+  const [deactivatingEmployeeId, setDeactivatingEmployeeId] = useState('');
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [employeeError, setEmployeeError] = useState('');
   const [employeeDraft, setEmployeeDraft] = useState<EmployeeDraft | null>(null);
+  const [employeeDirty, setEmployeeDirty] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const selectionRequestRef = useRef<AbortController | null>(null);
+  const selectionSequenceRef = useRef(0);
+  const employeeRequestRef = useRef<AbortController | null>(null);
+  const employeeSequenceRef = useRef(0);
   const isAdmin = user?.role === 'ADMIN';
   const isHead = user?.role === 'HEAD';
   const canEdit = isAdmin || isHead;
@@ -114,38 +122,56 @@ const LaboratorySettingsPage = () => {
   const markDirty = () => setDirty(true);
   const update = <K extends keyof LaboratoryProfile>(key: K, value: LaboratoryProfile[K]) => {
     setProfile((current) => ({ ...current, [key]: value }));
+    setErrors((current) => {
+      if (!current[String(key)]) return current;
+      const next = { ...current };
+      delete next[String(key)];
+      return next;
+    });
     markDirty();
   };
 
   const confirmDiscard = () => !dirty || window.confirm('Есть несохраненные изменения. Продолжить без сохранения?');
 
   const loadEmployees = async (laboratoryId: string) => {
+    employeeRequestRef.current?.abort();
+    const controller = new AbortController();
+    employeeRequestRef.current = controller;
+    const sequence = ++employeeSequenceRef.current;
     setIsLoadingEmployees(true);
     try {
-      const staff = laboratoryId ? await getLaboratoryEmployees(laboratoryId, { includeInactive: true }) : [];
-      setEmployees(staff);
+      const staff = laboratoryId ? await getLaboratoryEmployees(laboratoryId, { includeInactive: true, signal: controller.signal }) : [];
+      if (sequence === employeeSequenceRef.current) setEmployees(staff);
       return staff;
     } finally {
-      setIsLoadingEmployees(false);
+      if (sequence === employeeSequenceRef.current) setIsLoadingEmployees(false);
     }
   };
 
   const load = async (preferredId?: string, options: { skipDirtyCheck?: boolean } = {}) => {
     if (!options.skipDirtyCheck && !confirmDiscard()) return;
+    selectionRequestRef.current?.abort();
+    const controller = new AbortController();
+    selectionRequestRef.current = controller;
+    const sequence = ++selectionSequenceRef.current;
     setIsLoadingLaboratories(true);
     setError('');
     try {
       const items = await getLaboratories();
+      if (sequence !== selectionSequenceRef.current) return;
       setSummaries(items);
       try {
         setEligibleEmployees(await getEligibleLaboratoryEmployees());
       } catch (usersError) {
         toast.error('Не удалось загрузить пользователей системы', usersError instanceof Error ? usersError.message : undefined);
       }
-      const id = preferredId || selectedId || items.find((item) => item.isDefault)?.id || items[0]?.id || '';
+      if (sequence !== selectionSequenceRef.current) return;
+      const requestedId = preferredId || selectedId;
+      const id = items.some((item) => item.id === requestedId) ? requestedId : items.find((item) => item.isDefault)?.id || items[0]?.id || '';
       setSelectedId(id);
       if (id) {
-        const [nextProfile, staff] = await Promise.all([getLaboratory(id), getLaboratoryEmployees(id, { includeInactive: true })]);
+        const [nextProfile, staff] = await Promise.all([getLaboratory(id, controller.signal), getLaboratoryEmployees(id, { includeInactive: true, signal: controller.signal })]);
+        if (sequence !== selectionSequenceRef.current) return;
         setProfile(nextProfile);
         setEmployees(staff);
       } else {
@@ -156,27 +182,32 @@ const LaboratorySettingsPage = () => {
       setErrors({});
       setDirty(false);
     } catch (loadError) {
+      if (controller.signal.aborted) return;
       const message = loadError instanceof Error ? loadError.message : 'API настроек лаборатории недоступен.';
       setError(message);
       toast.error('Не удалось загрузить настройки лаборатории', message);
     } finally {
-      setIsLoadingLaboratories(false);
+      if (sequence === selectionSequenceRef.current) setIsLoadingLaboratories(false);
     }
   };
 
   useEffect(() => {
     load();
+    return () => {
+      selectionRequestRef.current?.abort();
+      employeeRequestRef.current?.abort();
+    };
   }, []);
 
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty && !employeeDirty) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = '';
     };
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [dirty]);
+  }, [dirty, employeeDirty]);
 
   useEffect(() => {
     if (!logoFile) {
@@ -192,27 +223,41 @@ const LaboratorySettingsPage = () => {
   const selectLaboratory = async (id: string) => {
     if (id === selectedId) return;
     if (!confirmDiscard()) return;
+    const previousId = selectedId;
+    selectionRequestRef.current?.abort();
+    const controller = new AbortController();
+    selectionRequestRef.current = controller;
+    const sequence = ++selectionSequenceRef.current;
     setSelectedId(id);
     setIsLoadingLaboratories(true);
     setError('');
     try {
-      const [nextProfile, staff] = await Promise.all([getLaboratory(id), getLaboratoryEmployees(id, { includeInactive: true })]);
+      const [nextProfile, staff] = await Promise.all([getLaboratory(id, controller.signal), getLaboratoryEmployees(id, { includeInactive: true, signal: controller.signal })]);
+      if (sequence !== selectionSequenceRef.current) return;
       setProfile(nextProfile);
       setEmployees(staff);
       setLogoFile(null);
       setErrors({});
       setDirty(false);
     } catch (loadError) {
+      if (controller.signal.aborted) return;
+      if (sequence === selectionSequenceRef.current) setSelectedId(previousId);
       const message = loadError instanceof Error ? loadError.message : 'Не удалось загрузить карточку лаборатории.';
       setError(message);
       toast.error('Не удалось загрузить лабораторию', message);
     } finally {
-      setIsLoadingLaboratories(false);
+      if (sequence === selectionSequenceRef.current) setIsLoadingLaboratories(false);
     }
   };
 
   const createLaboratory = () => {
     if (!confirmDiscard()) return;
+    selectionRequestRef.current?.abort();
+    employeeRequestRef.current?.abort();
+    selectionSequenceRef.current += 1;
+    employeeSequenceRef.current += 1;
+    setIsLoadingLaboratories(false);
+    setIsLoadingEmployees(false);
     setSelectedId('');
     setProfile(emptyProfile());
     setEmployees([]);
@@ -243,14 +288,20 @@ const LaboratorySettingsPage = () => {
     if (profile.bin && !/^\d{12}$/.test(profile.bin.trim())) next.bin = 'БИН должен содержать 12 цифр.';
     if (!profile.address.trim()) next.address = 'Укажите адрес.';
     if (profile.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) next.email = 'Проверьте email.';
+    if (profile.phone && profile.phone.replace(/\D/g, '').length < 10) next.phone = 'Телефон должен содержать не менее 10 цифр.';
+    const hasAccreditationData = Boolean(profile.accreditationNumber || profile.accreditationIssuedAt || profile.accreditationValidUntil);
+    if (hasAccreditationData && !profile.accreditationNumber?.trim()) next.accreditationNumber = 'Укажите номер аттестата.';
+    if (hasAccreditationData && !profile.accreditationIssuedAt) next.accreditationIssuedAt = 'Укажите дату выдачи.';
+    if (hasAccreditationData && !profile.accreditationValidUntil) next.accreditationValidUntil = 'Укажите срок действия.';
     if (profile.accreditationIssuedAt && profile.accreditationValidUntil && profile.accreditationIssuedAt > profile.accreditationValidUntil) next.accreditationValidUntil = 'Срок действия не может быть раньше даты выдачи.';
+    if (profile.isDefault && !profile.active) next.active = 'Лаборатория по умолчанию должна быть активной.';
     setErrors(next);
     return Object.keys(next).length === 0;
   };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!canEdit || !validate()) return;
+    if (!canEdit || isSavingLaboratory || !validate()) return;
     setIsSavingLaboratory(true);
     try {
       let saved = await saveLaboratory({
@@ -258,6 +309,7 @@ const LaboratorySettingsPage = () => {
         directorName: selectedEmployeeName(activeEmployees, profile.directorId) || profile.directorName,
         laboratoryHeadName: selectedEmployeeName(activeEmployees, profile.laboratoryHeadId) || profile.laboratoryHeadName,
       });
+      let logoUploaded = !logoFile;
       if (logoFile) {
         setIsUploadingLogo(true);
         try {
@@ -267,6 +319,7 @@ const LaboratorySettingsPage = () => {
             logoUrl: logoProfile.logoUrl || saved.logoUrl,
             updatedAt: logoProfile.updatedAt || saved.updatedAt,
           };
+          logoUploaded = true;
         } catch (logoError) {
           toast.warning('Настройки сохранены, но логотип не удалось загрузить', logoError instanceof Error ? logoError.message : undefined);
         } finally {
@@ -282,9 +335,9 @@ const LaboratorySettingsPage = () => {
         if (index >= 0) return normalized.map((item, itemIndex) => (itemIndex === index ? summary : item));
         return [...normalized, summary];
       });
-      setLogoFile(null);
-      setDirty(false);
-      toast.success('Карточка лаборатории сохранена');
+      if (logoUploaded) setLogoFile(null);
+      setDirty(!logoUploaded);
+      toast.success(logoUploaded ? 'Карточка лаборатории сохранена' : 'Карточка сохранена без логотипа');
     } catch (saveError) {
       toast.error('Не удалось сохранить лабораторию', saveError instanceof Error ? saveError.message : undefined);
     } finally {
@@ -320,14 +373,14 @@ const LaboratorySettingsPage = () => {
 
   const removeLogo = async () => {
     if (!profile.id || isDeletingLogo || !window.confirm('Удалить логотип лаборатории?')) return;
+    const hadUnsavedChanges = dirty;
     setIsDeletingLogo(true);
     try {
       await deleteLaboratoryLogo(profile.id);
       setLogoFile(null);
       setLogoPreview('');
-      const refreshed = await getLaboratory(profile.id);
-      setProfile({ ...refreshed, logoUrl: '' });
-      setDirty(false);
+      setProfile((current) => ({ ...current, logoUrl: '' }));
+      setDirty(hadUnsavedChanges);
       toast.success('Логотип удалён');
     } catch (logoError) {
       toast.error('Не удалось удалить логотип', logoError instanceof Error ? logoError.message : undefined);
@@ -345,14 +398,29 @@ const LaboratorySettingsPage = () => {
         fullName: employee.fullName,
         position: employee.position || '',
         email: employee.email || '',
-        role: employee.role || 'LABORATORY',
+        role: employeeRole(employee.role),
         active: employee.active,
       }
       : emptyEmployee());
+    setEmployeeDirty(false);
+  };
+
+  const closeEmployeeModal = () => {
+    if (isSavingEmployee) return;
+    if (employeeDirty && !window.confirm('Закрыть форму сотрудника? Несохранённые данные будут потеряны.')) return;
+    setEmployeeDraft(null);
+    setEmployeeDirty(false);
+  };
+
+  const updateEmployeeDraft = (patch: Partial<EmployeeDraft>) => {
+    setEmployeeDraft((current) => current ? { ...current, ...patch } : current);
+    setEmployeeDirty(true);
+    setEmployeeError('');
   };
 
   const saveEmployee = async (event: FormEvent) => {
     event.preventDefault();
+    if (!canEdit || isSavingEmployee) return;
     if (!employeeDraft || !profile.id) {
       setEmployeeError('Сначала сохраните карточку лаборатории.');
       return;
@@ -365,13 +433,22 @@ const LaboratorySettingsPage = () => {
       setEmployeeError('Проверьте email сотрудника.');
       return;
     }
+    if (!EMPLOYEE_ROLES.includes(employeeDraft.role)) {
+      setEmployeeError('Выберите допустимую роль сотрудника.');
+      return;
+    }
     setIsSavingEmployee(true);
     setEmployeeError('');
     try {
       await saveLaboratoryEmployee(profile.id, employeeDraft);
-      await loadEmployees(profile.id);
       setEmployeeDraft(null);
+      setEmployeeDirty(false);
       toast.success('Сотрудник лаборатории сохранен');
+      try {
+        await loadEmployees(profile.id);
+      } catch (loadError) {
+        toast.warning('Сотрудник сохранён, но список не обновился', loadError instanceof Error ? loadError.message : undefined);
+      }
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : 'Не удалось сохранить сотрудника.';
       setEmployeeError(message);
@@ -382,10 +459,10 @@ const LaboratorySettingsPage = () => {
   };
 
   const deactivateEmployee = async (employee: LaboratoryEmployee) => {
-    if (!profile.id || !window.confirm(`Деактивировать сотрудника "${employee.fullName}"?`)) return;
+    if (!canEdit || !profile.id || deactivatingEmployeeId || !window.confirm(`Деактивировать сотрудника "${employee.fullName}"?`)) return;
+    setDeactivatingEmployeeId(employee.id);
     try {
       await deactivateLaboratoryEmployee(profile.id, employee.id);
-      await loadEmployees(profile.id);
       if (profile.directorId === employee.id) {
         update('directorId', '');
         update('directorName', '');
@@ -395,12 +472,21 @@ const LaboratorySettingsPage = () => {
         update('laboratoryHeadName', '');
       }
       toast.success('Сотрудник деактивирован');
+      try {
+        await loadEmployees(profile.id);
+      } catch (loadError) {
+        setEmployees((current) => current.map((item) => item.id === employee.id ? { ...item, active: false } : item));
+        toast.warning('Сотрудник деактивирован, но список не обновился', loadError instanceof Error ? loadError.message : undefined);
+      }
     } catch (deactivateError) {
       toast.error('Не удалось деактивировать сотрудника', deactivateError instanceof Error ? deactivateError.message : undefined);
+    } finally {
+      setDeactivatingEmployeeId('');
     }
   };
 
   const assignRole = (employee: LaboratoryEmployee, role: 'director' | 'head') => {
+    if (!canEdit || (role === 'director' && !isAdmin) || !employee.active) return;
     const value = toEmployeeValue(employee);
     if (role === 'director') {
       update('directorId', value);
@@ -502,7 +588,7 @@ const LaboratorySettingsPage = () => {
                 <Field label="Юридическое название" error={errors.legalName}><input disabled={!isAdmin} value={profile.legalName || ''} onChange={(e) => update('legalName', e.target.value)} className={inputClass} /></Field>
                 <Field label="БИН" error={errors.bin}><input disabled={!isAdmin} inputMode="numeric" value={profile.bin} onChange={(e) => update('bin', e.target.value.replace(/\D/g, '').slice(0, 12))} className={inputClass} /></Field>
                 <Field label="Адрес" error={errors.address}><input disabled={!canEdit} value={profile.address} onChange={(e) => update('address', e.target.value)} className={inputClass} /></Field>
-                <Field label="Телефон"><input disabled={!canEdit} value={profile.phone} onChange={(e) => update('phone', e.target.value)} className={inputClass} /></Field>
+                <Field label="Телефон" error={errors.phone}><input disabled={!canEdit} value={profile.phone} onChange={(e) => update('phone', e.target.value)} className={inputClass} /></Field>
                 <Field label="Email" error={errors.email}><input disabled={!canEdit} type="email" value={profile.email} onChange={(e) => update('email', e.target.value)} className={inputClass} /></Field>
                 <Field label="Номер аттестата" error={errors.accreditationNumber}><input disabled={!isAdmin} value={profile.accreditationNumber || ''} onChange={(e) => update('accreditationNumber', e.target.value)} className={inputClass} /></Field>
                 <Field label="Дата выдачи" error={errors.accreditationIssuedAt}><input disabled={!isAdmin} type="date" value={profile.accreditationIssuedAt || ''} onChange={(e) => update('accreditationIssuedAt', e.target.value)} className={inputClass} /></Field>
@@ -529,6 +615,7 @@ const LaboratorySettingsPage = () => {
                     <label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input disabled={!isAdmin} type="checkbox" checked={profile.isDefault} onChange={(e) => update('isDefault', e.target.checked)} /> Лаборатория по умолчанию</label>
                     <label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input disabled={!isAdmin} type="checkbox" checked={profile.active} onChange={(e) => changeActive(e.target.checked)} /> Активна</label>
                   </div>
+                  {errors.active && <p className="text-xs font-bold text-rose-700">{errors.active}</p>}
                 </div>
               </div>
             </section>
@@ -563,7 +650,7 @@ const LaboratorySettingsPage = () => {
                             <Button type="button" variant="secondary" className="px-3 py-2" onClick={() => openEmployeeModal(employee)} disabled={!canEdit}><Pencil className="h-4 w-4" /> Редактировать</Button>
                             <Button type="button" variant="secondary" className="px-3 py-2" onClick={() => assignRole(employee, 'head')} disabled={!canEdit || !employee.active}><UserCheck className="h-4 w-4" /> Сделать заведующим</Button>
                             <Button type="button" variant="secondary" className="px-3 py-2" onClick={() => assignRole(employee, 'director')} disabled={!isAdmin || !employee.active}><Star className="h-4 w-4" /> Сделать директором</Button>
-                            <Button type="button" variant="ghost" className="px-3 py-2 text-rose-700 hover:bg-rose-50" onClick={() => deactivateEmployee(employee)} disabled={!canEdit || !employee.active}><UserMinus className="h-4 w-4" /> Деактивировать</Button>
+                            <Button type="button" variant="ghost" className="px-3 py-2 text-rose-700 hover:bg-rose-50" onClick={() => deactivateEmployee(employee)} disabled={!canEdit || !employee.active || Boolean(deactivatingEmployeeId)}><UserMinus className="h-4 w-4" /> {deactivatingEmployeeId === employee.id ? 'Деактивация...' : 'Деактивировать'}</Button>
                           </div>
                         </td>
                       </tr>
@@ -579,28 +666,29 @@ const LaboratorySettingsPage = () => {
         )}
       </div>
 
-      <Modal open={Boolean(employeeDraft)} onClose={() => setEmployeeDraft(null)} title={employeeDraft?.id ? 'Редактировать сотрудника' : 'Добавить сотрудника'} size="lg" loading={isSavingEmployee}>
+      <Modal open={Boolean(employeeDraft)} onClose={closeEmployeeModal} title={employeeDraft?.id ? 'Редактировать сотрудника' : 'Добавить сотрудника'} size="lg" loading={isSavingEmployee}>
         {employeeDraft && (
           <form onSubmit={saveEmployee} className="space-y-4">
             {employeeError && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800">{employeeError}</div>}
             {!employeeDraft.id && eligibleEmployees.length > 0 && <label className="space-y-1.5 text-sm font-bold text-slate-700">Выбрать из пользователей системы
               <select value={employeeDraft.userId || ''} onChange={(event) => {
                 const selected = eligibleEmployees.find((item) => toEmployeeValue(item) === event.target.value);
-                setEmployeeDraft((current) => selected && current ? { ...current, userId: toEmployeeValue(selected), fullName: selected.fullName, position: selected.position || current.position, email: selected.email || current.email, role: selected.role || current.role } : current);
+                if (selected) updateEmployeeDraft({ userId: selected.userId || toEmployeeValue(selected), fullName: selected.fullName, position: selected.position || '', email: selected.email || '', role: employeeRole(selected.role) });
+                else updateEmployeeDraft({ userId: undefined });
               }} className={inputClass}>
                 <option value="">Заполнить вручную</option>
                 {eligibleEmployees.map((employee) => <option key={employee.id} value={toEmployeeValue(employee)}>{employee.fullName} · {employee.email || employee.position || 'пользователь'}</option>)}
               </select>
             </label>}
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="ФИО"><input value={employeeDraft.fullName} onChange={(event) => setEmployeeDraft({ ...employeeDraft, fullName: event.target.value })} className={inputClass} /></Field>
-              <Field label="Должность"><input value={employeeDraft.position} onChange={(event) => setEmployeeDraft({ ...employeeDraft, position: event.target.value })} className={inputClass} /></Field>
-              <Field label="Email"><input type="email" value={employeeDraft.email} onChange={(event) => setEmployeeDraft({ ...employeeDraft, email: event.target.value })} className={inputClass} /></Field>
-              <Field label="Роль"><input value={employeeDraft.role} onChange={(event) => setEmployeeDraft({ ...employeeDraft, role: event.target.value })} className={inputClass} /></Field>
+              <Field label="ФИО"><input required value={employeeDraft.fullName} onChange={(event) => updateEmployeeDraft({ fullName: event.target.value })} className={inputClass} /></Field>
+              <Field label="Должность"><input value={employeeDraft.position} onChange={(event) => updateEmployeeDraft({ position: event.target.value })} className={inputClass} /></Field>
+              <Field label="Email"><input type="email" value={employeeDraft.email} onChange={(event) => updateEmployeeDraft({ email: event.target.value })} className={inputClass} /></Field>
+              <Field label="Роль"><select value={employeeDraft.role} onChange={(event) => updateEmployeeDraft({ role: event.target.value })} className={inputClass}><option value="LABORATORY">Сотрудник лаборатории</option><option value="HEAD">Заведующий</option><option value="DIRECTOR" disabled={!isAdmin}>Директор</option></select></Field>
             </div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input type="checkbox" checked={employeeDraft.active} onChange={(event) => setEmployeeDraft({ ...employeeDraft, active: event.target.checked })} /> Активен</label>
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input type="checkbox" checked={employeeDraft.active} onChange={(event) => updateEmployeeDraft({ active: event.target.checked })} /> Активен</label>
             <div className="flex justify-end gap-3">
-              <Button type="button" variant="secondary" onClick={() => setEmployeeDraft(null)}>Отмена</Button>
+              <Button type="button" variant="secondary" disabled={isSavingEmployee} onClick={closeEmployeeModal}>Отмена</Button>
               <Button type="submit" disabled={isSavingEmployee}>Сохранить сотрудника</Button>
             </div>
           </form>

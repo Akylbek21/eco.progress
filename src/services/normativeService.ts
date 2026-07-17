@@ -1,5 +1,6 @@
 import api, { ApiResponse } from './api';
 import { extractItem, extractList, getApiStatus } from './apiHelpers';
+import { mockNormatives } from '../mocks/mockNormatives';
 import type { DirectoryQuery, NormativeRecord } from '../types/protocols';
 
 const useMocks = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
@@ -356,12 +357,25 @@ const directoryParams = (params?: NormativeRecordsParams) => {
 export async function getNormativeRecords(params: NormativeRecordsParams = {}, signal?: AbortSignal): Promise<NormativeRecordsPage> {
   if (useMocks) {
     await mockDelay();
+    if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+    const search = normalizeText(firstString(params.search, params.query));
+    const ignoredParams = new Set(['page', 'size', 'search', 'query', 'status']);
+    const filtered = mockNormatives.filter((item) => {
+      if ((params.status || 'ACTIVE') === 'ACTIVE' && (item.status === 'ARCHIVED' || item.archived || item.active === false)) return false;
+      if (search && !normalizeText(JSON.stringify(item)).includes(search)) return false;
+      return Object.entries(params).every(([key, expected]) => {
+        if (ignoredParams.has(key) || expected === undefined || expected === null || expected === '') return true;
+        return normalizeKey((item as unknown as UnknownRecord)[key]) === normalizeKey(expected);
+      });
+    });
+    const page = Math.max(0, Number(params.page ?? DEFAULT_PAGE));
+    const size = Math.max(1, Number(params.size ?? DEFAULT_SIZE));
     return {
-      items: [],
-      totalElements: 0,
-      totalPages: 1,
-      page: Number(params.page ?? DEFAULT_PAGE),
-      size: Number(params.size ?? DEFAULT_SIZE),
+      items: filtered.slice(page * size, page * size + size).map((item) => ({ ...item })),
+      totalElements: filtered.length,
+      totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+      page,
+      size,
     };
   }
   const requestParams = directoryParams(params);
@@ -387,16 +401,32 @@ export async function getNormatives(params?: DirectoryQuery): Promise<NormativeR
 }
 
 export async function createNormative(payload: Omit<NormativeRecord, 'id'>): Promise<NormativeRecord> {
+  if (useMocks) {
+    await mockDelay();
+    const created = { ...payload, id: `mock-normative-${Date.now()}` };
+    mockNormatives.unshift(created);
+    return { ...created };
+  }
   const response = await api.post<ApiResponse<unknown> | unknown>('/normatives', payload);
   return normalizeNormative(extractItem(response, ['normative']));
 }
 
 export async function updateNormative(id: string, payload: Partial<NormativeRecord>): Promise<NormativeRecord> {
+  if (useMocks) {
+    await mockDelay();
+    const index = mockNormatives.findIndex((item) => item.id === id);
+    if (index < 0) throw new Error('Норматив не найден');
+    mockNormatives[index] = { ...mockNormatives[index], ...payload };
+    return { ...mockNormatives[index] };
+  }
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/normatives/${id}`, payload);
   return normalizeNormative(extractItem(response, ['normative']));
 }
 
 export async function archiveNormative(id: string): Promise<NormativeRecord> {
+  if (useMocks) {
+    return updateNormative(id, { status: 'ARCHIVED', active: false, archived: true });
+  }
   const response = await api.post<ApiResponse<unknown> | unknown>(`/normatives/${id}/archive`);
   return normalizeNormative(extractItem(response, ['normative']));
 }
@@ -506,7 +536,7 @@ const extractImportPreviewItems = (response: unknown): NormativeRecord[] => {
 export function normalizeImportPreviewResponse(response: unknown, fileName?: string): NormativeImportPreview {
   const item = unwrapImportData(response);
   const items = extractImportPreviewItems(response);
-  const errors = normalizeImportErrors(item.errors, item.warnings, item.validationErrors);
+  const errors = normalizeImportErrors(item.errors, item.validationErrors);
   const warnings = normalizeImportErrors(item.warnings);
   const files = Array.isArray(item.files) ? item.files.map(asRecord) : [];
   const totalRecords = Number(item.totalRecords ?? item.recordsTotal ?? item.totalRows ?? item.total ?? item.rowsTotal ?? item.totalCount ?? items.length);
@@ -520,7 +550,7 @@ export function normalizeImportPreviewResponse(response: unknown, fileName?: str
     total: Number.isFinite(totalRecords) ? totalRecords : 0,
     valid: Number.isFinite(validRows) ? validRows : 0,
     invalid: Number.isFinite(errorRows) ? errorRows : 0,
-    created: Number(item.newNormatives ?? item.created ?? item.new ?? item.newRows ?? item.toCreate ?? item.totalRecords ?? 0),
+    created: Number(item.newNormatives ?? item.created ?? item.new ?? item.newRows ?? item.toCreate ?? 0),
     updated: Number(item.updatedNormatives ?? item.updated ?? item.update ?? item.updatedRows ?? item.toUpdate ?? 0),
     errors,
     importId: importId || undefined,

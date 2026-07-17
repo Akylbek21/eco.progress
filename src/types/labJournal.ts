@@ -151,4 +151,4 @@ export type SaveLabJournalEntryPayload = {
   laboratoryId?: string | number;
 };
 
-export type ExportLabJournalParams = Omit<LabJournalQuery, 'page' | 'size' | 'search'>;
+export type ExportLabJournalParams = Omit<LabJournalQuery, 'page' | 'size'>;

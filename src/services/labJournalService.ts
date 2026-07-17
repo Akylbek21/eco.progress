@@ -120,7 +120,7 @@ const normalizeEntry = (raw: unknown): LabJournalEntry => {
     laboratoryId: source.laboratoryId as string | number | null | undefined ?? laboratory.id as string | number | null | undefined,
     laboratoryName: text(source.laboratoryName || laboratory.name || laboratory.laboratoryName),
     createdBy: source.createdById as string | number | null | undefined ?? createdBy.id as string | number | null | undefined,
-    createdByName: text(source.createdByName || source.creatorName || createdBy.name || createdBy.fullName || source.createdBy),
+    createdByName: text(source.createdByName || source.creatorName || createdBy.name || createdBy.fullName || (typeof source.createdBy === 'string' ? source.createdBy : '')),
     createdAt: text(source.createdAt || source.created_at),
     updatedAt: text(source.updatedAt || source.updated_at),
   };
@@ -176,7 +176,7 @@ const inferEntryDate = (payload: SaveLabJournalEntryPayload) =>
   payload.preparationDate || payload.entryDate || firstDateFromData(payload.data) || new Date().toISOString().slice(0, 10);
 
 const isReagentPreparationJournal = (journalType: JournalType) =>
-  text(journalType).trim().toUpperCase() === 'REAGENT_PREPARATION';
+  ['SOLUTION_PREPARATION', 'REAGENT_PREPARATION'].includes(text(journalType).trim().toUpperCase());
 
 const toApiSavePayload = (payload: SaveLabJournalEntryPayload) => {
   const entryDate = inferEntryDate(payload);
@@ -201,8 +201,10 @@ const toApiSavePayload = (payload: SaveLabJournalEntryPayload) => {
   };
 };
 
-const nextRowNumber = (journalType: JournalType, items: LabJournalEntry[]) =>
-  items.filter((item) => item.journalType === journalType).reduce((max, item) => Math.max(max, item.rowNumber || 0), 0) + 1;
+const nextRowNumber = (journalType: JournalType, laboratoryId: string | number | undefined, items: LabJournalEntry[]) =>
+  items
+    .filter((item) => item.journalType === journalType && text(item.laboratoryId) === text(laboratoryId))
+    .reduce((max, item) => Math.max(max, item.rowNumber || 0), 0) + 1;
 
 const filterMockEntries = (query: LabJournalQuery) => {
   const search = text(query.search).toLowerCase().trim();
@@ -228,12 +230,13 @@ export async function getJournalTypes(signal?: AbortSignal): Promise<JournalType
   return items.length ? items : JOURNAL_TYPES;
 }
 
-export async function getEntries(params: LabJournalQuery): Promise<LabJournalPage> {
+export async function getEntries(params: LabJournalQuery, signal?: AbortSignal): Promise<LabJournalPage> {
   const page = params.page ?? 0;
   const size = params.size ?? 50;
 
   if (useMocks) {
     await delay();
+    if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
     const filtered = filterMockEntries(params);
     const start = page * size;
     return {
@@ -247,6 +250,7 @@ export async function getEntries(params: LabJournalQuery): Promise<LabJournalPag
 
   const response = await api.get<ApiResponse<unknown> | unknown>('/lab-journals/entries', {
     params: toQueryParams({ ...params, page, size }),
+    signal,
   });
   return normalizePage(response, page, size);
 }
@@ -255,7 +259,7 @@ export async function createEntry(payload: SaveLabJournalEntryPayload): Promise<
   if (useMocks) {
     await delay();
     const items = readMocks();
-    const rowNumber = nextRowNumber(payload.journalType, items);
+    const rowNumber = nextRowNumber(payload.journalType, payload.laboratoryId, items);
     const entry: LabJournalEntry = {
       id: `lab-journal-${Date.now()}`,
       journalType: payload.journalType,

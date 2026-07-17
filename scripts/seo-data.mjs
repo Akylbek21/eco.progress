@@ -21,7 +21,21 @@ const cityProfiles = [
   ['kokshetau', 'Кокшетау', 'Кокшетау и Акмолинская область', 'туристические объекты, школы, клиники, пищевые производства, склады и офисы', 'В Кокшетау часто нужны понятные инструкции по документам, лабораторным замерам и экологическому сопровождению бизнеса.', ['astana', 'petropavlovsk', 'kostanay']],
   ['taldykorgan', 'Талдыкорган', 'Талдыкорган и область Жетісу', 'производственные помещения, медцентры, школы, склады, кафе и строительные объекты', 'Для Талдыкоргана важна дистанционная подготовка документов и выездная организация замеров по согласованному графику.', ['almaty', 'semey', 'ust-kamenogorsk']],
   ['semey', 'Семей', 'Семей и область Абай', 'производства, склады, медицинские центры, школы, СТО и торговые объекты', 'В Семее экологические услуги часто начинаются с аудита документов, оценки отходов и плана лабораторного контроля.', ['ust-kamenogorsk', 'pavlodar', 'karaganda']],
-].map(([slug, name, region, objects, localNote, nearby]) => ({ slug, name, region, objects, localNote, nearby }));
+].map(([slug, name, region, objects, localNote, nearby]) => ({
+  slug,
+  name,
+  namePrepositional: ({
+    almaty: 'Алматы', astana: 'Астане', shymkent: 'Шымкенте', taraz: 'Таразе',
+    turkestan: 'Туркестане', kyzylorda: 'Кызылорде', aktobe: 'Актобе', atyrau: 'Атырау',
+    karaganda: 'Караганде', pavlodar: 'Павлодаре', 'ust-kamenogorsk': 'Усть-Каменогорске',
+    kostanay: 'Костанае', aktau: 'Актау', petropavlovsk: 'Петропавловске', oral: 'Уральске',
+    kokshetau: 'Кокшетау', taldykorgan: 'Талдыкоргане', semey: 'Семее',
+  })[slug],
+  region,
+  objects,
+  localNote,
+  nearby,
+}));
 
 const serviceProfiles = [
   {
@@ -142,7 +156,7 @@ const cityFaq = (city) => [
 ].map(([question, answer]) => ({ question, answer }));
 
 const serviceFaq = (service, city) => [
-  [`Сколько стоит ${service.name.toLowerCase()} в ${city.name}?`, `Цена зависит от объекта, количества точек, документов и срочности. Мы уточняем задачу по ${city.region}, после чего готовим расчет стоимости и перечень работ.`],
+  [`Сколько стоит ${service.name.toLowerCase()} в ${city.namePrepositional}?`, `Цена зависит от объекта, количества точек, документов и срочности. Мы уточняем задачу по ${city.region}, после чего готовим расчет стоимости и перечень работ.`],
   [`Какие данные нужны для услуги "${service.name}"?`, `Обычно нужны реквизиты компании, адрес объекта, описание деятельности, фото или схема площадки, сведения об отходах, источниках воздействия и текущих документах.`],
   ['Можно ли начать дистанционно?', 'Да. Первичный аудит, расчет и подготовку документов можно начать дистанционно. Если нужны замеры или выезд на объект, согласуем дату и состав работ отдельно.'],
   ['Что получает клиент по итогам работы?', `Клиент получает ${service.result}, рекомендации по недостающим документам и сопровождение до понятного результата.`],
@@ -157,14 +171,14 @@ const cityLinks = (city) => {
     link('Лабораторные замеры', '/services/laboratory-tests'),
     link('Экологическое проектирование', '/services/environmental-design'),
     link('Контакты', '/contacts'),
-    ...nearby.map((item) => link(`Экологические услуги в ${item.name}`, `/ecologicheskie-uslugi-${item.slug}`)),
+    ...nearby.map((item) => link(`Экологические услуги в ${item.namePrepositional}`, `/ecologicheskie-uslugi-${item.slug}`)),
   ];
 };
 
 const citySections = (city) => [
-  { title: 'Какие документы нужны', body: `Для бизнеса в ${city.name} чаще всего нужны документы по отходам, протоколы лабораторных замеров, программа и отчет ПЭК, разрешительные материалы и договоры по отходам. Точный перечень зависит от категории объекта, источников воздействия и вида деятельности.` },
+  { title: 'Какие документы нужны', body: `Для бизнеса в ${city.namePrepositional} чаще всего нужны документы по отходам, протоколы лабораторных замеров, программа и отчет ПЭК, разрешительные материалы и договоры по отходам. Точный перечень зависит от категории объекта, источников воздействия и вида деятельности.` },
   { title: 'Что входит в экологические услуги', body: `ECOPROGRESS закрывает экологическое проектирование, лабораторные замеры, производственный контроль СЭС, паспорта отходов, отчеты ПЭК, разрешение на эмиссии, декларации воздействия, ОВОС, скрининг и сопровождение проверок.${city.slug === 'shymkent' ? ' В Шымкенте также доступны вывоз и утилизация отходов.' : ''}` },
-  { title: 'Для каких объектов', body: `В ${city.name} мы работаем с такими объектами: ${city.objects}. Также помогаем компаниям, которые открывают новый объект, меняют деятельность или готовятся к проверке.` },
+  { title: 'Для каких объектов', body: `В ${city.namePrepositional} мы работаем с такими объектами: ${city.objects}. Также помогаем компаниям, которые открывают новый объект, меняют деятельность или готовятся к проверке.` },
   { title: 'Как проходит работа', body: `Сначала уточняем объект, город, деятельность и текущие документы. Затем формируем список недостающих материалов, рассчитываем стоимость, согласуем сроки, выполняем документы или замеры и передаем результат в электронном виде.` },
   { title: 'Что получает клиент', body: `Клиент получает ${clientResults.join(', ')}. Мы объясняем, что нужно хранить на объекте, какие документы показывать при проверке и какие действия лучше запланировать на следующий период.` },
   { title: 'Сроки', body: `Консультацию и первичный список документов обычно можно подготовить быстро. Лабораторные замеры, проектные документы и отчеты зависят от количества точек, исходных данных, графика выезда и сложности объекта в ${city.region}.` },
@@ -176,19 +190,19 @@ const createCityPage = (city) => ({
   slug: `ecologicheskie-uslugi-${city.slug}`,
   city: city.name,
   type: 'city',
-  title: `Экологические услуги в ${city.name} | ECOPROGRESS`,
-  description: `ECOPROGRESS оказывает экологические услуги в ${city.name}: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.${city.slug === 'shymkent' ? ' Доступна утилизация.' : ''}`,
-  h1: `Экологические услуги в ${city.name}`,
+  title: `Экологические услуги в ${city.namePrepositional} | ECOPROGRESS`,
+  description: `ECOPROGRESS оказывает экологические услуги в ${city.namePrepositional}: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.${city.slug === 'shymkent' ? ' Доступна утилизация.' : ''}`,
+  h1: `Экологические услуги в ${city.namePrepositional}`,
   canonical: canonical(`ecologicheskie-uslugi-${city.slug}`),
   keywords: ['экологические услуги Казахстан', `экологические услуги ${city.name}`, 'ПЭК', 'паспорт отходов', 'лабораторные замеры'],
-  intro: `ECOPROGRESS оказывает экологические услуги для бизнеса в ${city.name}: экологическое проектирование, производственный контроль, лабораторные замеры, паспорта отходов, отчеты ПЭК, разрешительные документы и сопровождение проверок.`,
+  intro: `ECOPROGRESS оказывает экологические услуги для бизнеса в ${city.namePrepositional}: экологическое проектирование, производственный контроль, лабораторные замеры, паспорта отходов, отчеты ПЭК, разрешительные документы и сопровождение проверок.`,
   sections: citySections(city),
   services: baseServices.filter(([key]) => city.slug === 'shymkent' || key !== 'waste-management').map(([_, label, path]) => link(label, path)),
   audience: objectList,
   outcomes: clientResults,
   faq: cityFaq(city),
   relatedLinks: cityLinks(city),
-  breadcrumbs: [link('Главная', '/'), link('Города', '/services'), link(`Экологические услуги в ${city.name}`, `/ecologicheskie-uslugi-${city.slug}`)],
+  breadcrumbs: [link('Главная', '/'), link('Города', '/services'), link(`Экологические услуги в ${city.namePrepositional}`, `/ecologicheskie-uslugi-${city.slug}`)],
   schemaType: 'LocalBusiness',
   image: '/para.jpg',
   priority: 0.8,
@@ -201,14 +215,14 @@ const createServiceCityPage = (service, city) => ({
   city: city.name,
   service: service.name,
   type: 'service-city',
-  title: `${service.titleName} для бизнеса в ${city.name} | ECOPROGRESS`,
-  description: `Закажите ${service.name.toLowerCase()} в ${city.name}: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.`,
-  h1: `${service.h1} в ${city.name}`,
+  title: `${service.titleName} для бизнеса в ${city.namePrepositional} | ECOPROGRESS`,
+  description: `Закажите ${service.name.toLowerCase()} в ${city.namePrepositional}: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.`,
+  h1: `${service.h1} в ${city.namePrepositional}`,
   canonical: canonical(`${service.slugPrefix}-${city.slug}`),
   keywords: [service.name, `${service.name} ${city.name}`, 'экологические услуги Казахстан', 'документы для проверки'],
-  intro: `Помогаем бизнесу в ${city.name} заказать ${service.descriptionNoun}. Уточняем объект, подбираем состав работ, готовим документы и сопровождаем клиента до результата.`,
+  intro: `Помогаем бизнесу в ${city.namePrepositional} заказать ${service.descriptionNoun}. Уточняем объект, подбираем состав работ, готовим документы и сопровождаем клиента до результата.`,
   sections: [
-    { title: 'Когда нужна услуга', body: `${service.name} требуется, когда бизнесу нужны подтверждающие документы, протоколы, проектные материалы или доказательная база для проверки. В ${city.name} это актуально для объектов: ${city.objects}.` },
+    { title: 'Когда нужна услуга', body: `${service.name} требуется, когда бизнесу нужны подтверждающие документы, протоколы, проектные материалы или доказательная база для проверки. В ${city.namePrepositional} это актуально для объектов: ${city.objects}.` },
     { title: 'Что входит в услугу', body: `Мы уточняем задачу, проверяем исходные данные, формируем перечень работ, выполняем ${service.descriptionNoun}, готовим результат и объясняем, как использовать документы при проверке.` },
     { title: 'Какие документы нужны', body: 'На старте обычно нужны реквизиты компании, адрес объекта, описание деятельности, текущие разрешения и отчеты, сведения об отходах, источниках воздействия, рабочих зонах и контакт ответственного лица.' },
     { title: 'Примеры объектов', body: `Услуга подходит для таких ситуаций: ${service.examples}. Для ${city.region} состав работ согласуется по фактическому объекту и требованиям проверяющих.` },
@@ -222,13 +236,13 @@ const createServiceCityPage = (service, city) => ({
   outcomes: clientResults,
   faq: serviceFaq(service, city),
   relatedLinks: [
-    link(`Экологические услуги в ${city.name}`, `/ecologicheskie-uslugi-${city.slug}`),
-    link(`Лабораторные замеры в ${city.name}`, `/laboratornye-zamery-${city.slug}`),
-    link(`Производственный контроль СЭС в ${city.name}`, `/proizvodstvennyy-kontrol-ses-${city.slug}`),
+    link(`Экологические услуги в ${city.namePrepositional}`, `/ecologicheskie-uslugi-${city.slug}`),
+    link(`Лабораторные замеры в ${city.namePrepositional}`, `/laboratornye-zamery-${city.slug}`),
+    link(`Производственный контроль СЭС в ${city.namePrepositional}`, `/proizvodstvennyy-kontrol-ses-${city.slug}`),
     link('Штрафы за экологию в Казахстане', '/shtrafy-za-ekologiyu-kazakhstan'),
     link('Контакты', '/contacts'),
   ],
-  breadcrumbs: [link('Главная', '/'), link('Услуги', '/services'), link(`${service.name} в ${city.name}`, `/${service.slugPrefix}-${city.slug}`)],
+  breadcrumbs: [link('Главная', '/'), link('Услуги', '/services'), link(`${service.name} в ${city.namePrepositional}`, `/${service.slugPrefix}-${city.slug}`)],
   schemaType: 'Service',
   image: service.image,
   priority: priorityCities.includes(city.slug) ? 0.8 : 0.7,

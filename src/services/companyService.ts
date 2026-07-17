@@ -1,6 +1,6 @@
 import api, { ApiResponse } from './api';
 import { extractItem, extractList } from './apiHelpers';
-import type { Company, CompanyObject, CompanyObjectPayload, CompanyPayload, CompanyQuery } from '../types/companies';
+import type { Company, CompanyObject, CompanyObjectPayload, CompanyPage, CompanyPayload, CompanyQuery } from '../types/companies';
 
 const useMocks = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
 const mockDelay = () => new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 301)));
@@ -8,6 +8,11 @@ const mockDelay = () => new Promise((resolve) => setTimeout(resolve, 300 + Math.
 type UnknownRecord = Record<string, unknown>;
 
 const asString = (value: unknown) => (typeof value === 'string' || typeof value === 'number' ? String(value) : '');
+const asRecord = (value: unknown): UnknownRecord => value && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : {};
+const asNumber = (value: unknown, fallback: number) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : fallback;
+};
 
 const pick = (source: UnknownRecord, keys: string[]) => {
   for (const key of keys) {
@@ -17,8 +22,9 @@ const pick = (source: UnknownRecord, keys: string[]) => {
   return '';
 };
 
-const normalizeStatus = (value: unknown): Company['status'] => String(value || '').toUpperCase() === 'ARCHIVED' ? 'ARCHIVED' : 'ACTIVE';
-const normalizeObjectStatus = (value: unknown): CompanyObject['status'] => String(value || '').toUpperCase() === 'ARCHIVED' ? 'ARCHIVED' : 'ACTIVE';
+const isArchived = (value: unknown) => ['ARCHIVED', 'INACTIVE', 'DELETED', 'DISABLED'].includes(String(value || '').toUpperCase()) || value === false;
+const normalizeStatus = (value: unknown): Company['status'] => isArchived(value) ? 'ARCHIVED' : 'ACTIVE';
+const normalizeObjectStatus = (value: unknown): CompanyObject['status'] => isArchived(value) ? 'ARCHIVED' : 'ACTIVE';
 
 export const normalizeCompanyObject = (raw: unknown, companyId = ''): CompanyObject => {
   const source = (raw || {}) as UnknownRecord;
@@ -82,6 +88,7 @@ export const normalizeCompany = (raw: unknown): Company => {
     samplingLocation: pick(source, ['samplingLocation', 'samplingPlace']) || pick(object, ['samplingLocation', 'samplingPlace']),
     customerRepresentative: pick(source, ['customerRepresentative', 'clientRepresentative']) || pick(object, ['customerRepresentative', 'representative']),
     objects: objectsSource.map((item) => normalizeCompanyObject(item, pick(source, ['id', '_id', 'companyId']))),
+    objectCount: asNumber(source.objectCount ?? source.objectsCount ?? source.facilityCount, objectsSource.filter((item) => !isArchived(asRecord(item).status)).length),
     status: normalizeStatus(source.status),
     createdAt: pick(source, ['createdAt', 'created_at']),
     updatedAt: pick(source, ['updatedAt', 'updated_at']),
@@ -118,6 +125,37 @@ const toCompanyApiPayload = (payload: CompanyPayload): UnknownRecord => ({
   status: payload.status,
 });
 
+const requireCompany = (company: Company, message = 'Backend не вернул идентификатор компании.') => {
+  if (!company.id) throw new Error(message);
+  return company;
+};
+
+const requireCompanyObject = (object: CompanyObject) => {
+  if (!object.id) throw new Error('Backend не вернул идентификатор объекта.');
+  return object;
+};
+
+const pageFromResponse = (response: unknown, requestedPage: number, requestedSize: number): CompanyPage => {
+  let data = asRecord(response);
+  for (let depth = 0; depth < 3; depth += 1) {
+    const nested = asRecord(data.data ?? data.result);
+    if (!Object.keys(nested).length) break;
+    data = nested;
+  }
+  const root = asRecord(response);
+  const pageSource = asRecord(data.page ?? data.pagination ?? root.page ?? root.pagination);
+  const items = extractList(response, ['companies', 'content', 'items', 'results']).map(normalizeCompany);
+  const totalElements = asNumber(data.totalElements ?? data.total ?? data.totalCount ?? pageSource.totalElements ?? pageSource.total, items.length);
+  const size = Math.max(1, asNumber(data.size ?? data.pageSize ?? pageSource.size, requestedSize));
+  return {
+    items,
+    totalElements,
+    totalPages: Math.max(1, asNumber(data.totalPages ?? pageSource.totalPages, Math.ceil(totalElements / size) || 1)),
+    page: asNumber(data.number ?? data.pageNumber ?? pageSource.number ?? pageSource.page, requestedPage),
+    size,
+  };
+};
+
 const toCompanyObjectApiPayload = (payload: CompanyObjectPayload): UnknownRecord => ({
   name: payload.name,
   address: payload.address,
@@ -129,15 +167,23 @@ const toCompanyObjectApiPayload = (payload: CompanyObjectPayload): UnknownRecord
   status: payload.status,
 });
 
-export async function getCompanies(params?: CompanyQuery): Promise<Company[]> {
+export async function getCompaniesPage(params: CompanyQuery = {}, signal?: AbortSignal): Promise<CompanyPage> {
+  const requestedPage = Math.max(0, params.page || 0);
+  const requestedSize = Math.max(1, params.size || 20);
   if (useMocks) {
     await mockDelay();
     const { mockCompanies } = await import('../mocks/mockCompanies');
     const query = String(params?.search || params?.name || params?.bin || '').toLowerCase();
-    return mockCompanies.filter((company) => (!params?.status || company.status === params.status) && (!query || `${company.name} ${company.bin}`.toLowerCase().includes(query)));
+    const filtered = mockCompanies.filter((company) => (!params?.status || company.status === params.status) && (!query || `${company.name} ${company.bin}`.toLowerCase().includes(query)));
+    const items = filtered.slice(requestedPage * requestedSize, (requestedPage + 1) * requestedSize);
+    return { items, totalElements: filtered.length, totalPages: Math.max(1, Math.ceil(filtered.length / requestedSize)), page: requestedPage, size: requestedSize };
   }
-  const response = await api.get<ApiResponse<unknown> | unknown>('/companies', { params });
-  return extractList(response, ['companies']).map(normalizeCompany);
+  const response = await api.get<ApiResponse<unknown> | unknown>('/companies', { params: { ...params, page: requestedPage, size: requestedSize }, signal });
+  return pageFromResponse(response, requestedPage, requestedSize);
+}
+
+export async function getCompanies(params?: CompanyQuery, signal?: AbortSignal): Promise<Company[]> {
+  return (await getCompaniesPage(params, signal)).items;
 }
 
 export async function searchCompanies(query: string): Promise<Company[]> {
@@ -150,7 +196,7 @@ export async function searchCompanies(query: string): Promise<Company[]> {
   return extractList(response, ['companies']).map(normalizeCompany);
 }
 
-export async function getCompanyById(id: string): Promise<Company> {
+export async function getCompanyById(id: string, signal?: AbortSignal): Promise<Company> {
   if (useMocks) {
     await mockDelay();
     const { mockCompanies } = await import('../mocks/mockCompanies');
@@ -158,18 +204,33 @@ export async function getCompanyById(id: string): Promise<Company> {
     if (!company) throw new Error('Компания не найдена.');
     return company;
   }
-  const response = await api.get<ApiResponse<unknown> | unknown>(`/companies/${id}`);
-  return normalizeCompany(extractItem(response, ['company']));
+  const response = await api.get<ApiResponse<unknown> | unknown>(`/companies/${id}`, { signal });
+  return requireCompany(normalizeCompany(extractItem(response, ['company'])), 'Компания не найдена или backend вернул пустой ответ.');
 }
 
 export async function createCompany(payload: CompanyPayload): Promise<Company> {
+  if (useMocks) {
+    await mockDelay();
+    const { mockCompanies } = await import('../mocks/mockCompanies');
+    const company = normalizeCompany({ ...payload, id: `company-${Date.now()}`, status: 'ACTIVE', createdAt: new Date().toISOString(), objects: payload.objects || [] });
+    mockCompanies.unshift(company);
+    return company;
+  }
   const response = await api.post<ApiResponse<unknown> | unknown>('/companies', toCompanyApiPayload(payload));
-  return normalizeCompany(extractItem(response, ['company']));
+  return requireCompany(normalizeCompany(extractItem(response, ['company'])));
 }
 
 export async function updateCompany(id: string, payload: CompanyPayload): Promise<Company> {
+  if (useMocks) {
+    await mockDelay();
+    const { mockCompanies } = await import('../mocks/mockCompanies');
+    const index = mockCompanies.findIndex((item) => item.id === id);
+    if (index < 0) throw new Error('Компания не найдена.');
+    mockCompanies[index] = normalizeCompany({ ...mockCompanies[index], ...payload, id, objects: mockCompanies[index].objects, updatedAt: new Date().toISOString() });
+    return mockCompanies[index];
+  }
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/companies/${id}`, toCompanyApiPayload(payload));
-  return normalizeCompany(extractItem(response, ['company']));
+  return requireCompany(normalizeCompany(extractItem(response, ['company'])));
 }
 
 export async function deleteCompany(id: string): Promise<Company | null> {
@@ -179,28 +240,56 @@ export async function deleteCompany(id: string): Promise<Company | null> {
 }
 
 export async function archiveCompany(id: string): Promise<Company> {
+  if (useMocks) {
+    await mockDelay();
+    const { mockCompanies } = await import('../mocks/mockCompanies');
+    const company = mockCompanies.find((item) => item.id === id);
+    if (!company) throw new Error('Компания не найдена.');
+    company.status = 'ARCHIVED';
+    company.updatedAt = new Date().toISOString();
+    return company;
+  }
   const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${id}/archive`);
-  return normalizeCompany(extractItem(response, ['company']));
+  return requireCompany(normalizeCompany(extractItem(response, ['company'])));
 }
 
-export async function getCompanyObjects(companyId: string): Promise<CompanyObject[]> {
+export async function getCompanyObjects(companyId: string, signal?: AbortSignal): Promise<CompanyObject[]> {
   if (useMocks) {
     await mockDelay();
     const { mockCompanies } = await import('../mocks/mockCompanies');
     return mockCompanies.find((company) => company.id === companyId)?.objects || [];
   }
-  const response = await api.get<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects`);
+  const response = await api.get<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects`, { signal });
   return extractList(response, ['objects', 'companyObjects', 'facilities']).map((item) => normalizeCompanyObject(item, companyId));
 }
 
 export async function createCompanyObject(companyId: string, payload: CompanyObjectPayload): Promise<CompanyObject> {
+  if (useMocks) {
+    await mockDelay();
+    const { mockCompanies } = await import('../mocks/mockCompanies');
+    const company = mockCompanies.find((item) => item.id === companyId);
+    if (!company) throw new Error('Компания не найдена.');
+    const object = normalizeCompanyObject({ ...payload, id: `object-${Date.now()}`, companyId, status: 'ACTIVE', createdAt: new Date().toISOString() }, companyId);
+    company.objects.push(object);
+    company.objectCount = company.objects.filter((item) => item.status === 'ACTIVE').length;
+    return object;
+  }
   const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects`, toCompanyObjectApiPayload(payload));
-  return normalizeCompanyObject(extractItem(response, ['object', 'companyObject']), companyId);
+  return requireCompanyObject(normalizeCompanyObject(extractItem(response, ['object', 'companyObject']), companyId));
 }
 
 export async function updateCompanyObject(companyId: string, objectId: string, payload: CompanyObjectPayload): Promise<CompanyObject> {
+  if (useMocks) {
+    await mockDelay();
+    const { mockCompanies } = await import('../mocks/mockCompanies');
+    const company = mockCompanies.find((item) => item.id === companyId);
+    const index = company?.objects.findIndex((item) => item.id === objectId) ?? -1;
+    if (!company || index < 0) throw new Error('Объект не найден.');
+    company.objects[index] = normalizeCompanyObject({ ...company.objects[index], ...payload, id: objectId, companyId, updatedAt: new Date().toISOString() }, companyId);
+    return company.objects[index];
+  }
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}`, toCompanyObjectApiPayload(payload));
-  return normalizeCompanyObject(extractItem(response, ['object', 'companyObject']), companyId);
+  return requireCompanyObject(normalizeCompanyObject(extractItem(response, ['object', 'companyObject']), companyId));
 }
 
 export async function deleteCompanyObject(companyId: string, objectId: string): Promise<CompanyObject | null> {
@@ -210,7 +299,18 @@ export async function deleteCompanyObject(companyId: string, objectId: string): 
 }
 
 export async function archiveCompanyObject(companyId: string, objectId: string): Promise<CompanyObject> {
-  const response = await api.delete<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}`);
+  if (useMocks) {
+    await mockDelay();
+    const { mockCompanies } = await import('../mocks/mockCompanies');
+    const company = mockCompanies.find((item) => item.id === companyId);
+    const object = company?.objects.find((item) => item.id === objectId);
+    if (!company || !object) throw new Error('Объект не найден.');
+    object.status = 'ARCHIVED';
+    object.updatedAt = new Date().toISOString();
+    company.objectCount = company.objects.filter((item) => item.status === 'ACTIVE').length;
+    return object;
+  }
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}/archive`);
   const item = extractItem(response, ['object', 'companyObject']);
   return item ? normalizeCompanyObject(item, companyId) : {
     id: objectId,

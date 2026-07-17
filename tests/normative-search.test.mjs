@@ -74,7 +74,9 @@ test('creation page preserves server items and the complete selected normative',
   assert.match(source, /current\.map\(\(item\) => item\.selectedNormative \|\| item\.normative/);
   assert.match(source, /normative: undefined, selectedNormative: undefined, normativeId: undefined/);
   assert.doesNotMatch(source, /current\.filter\(\(item\) => !item\.selectedNormative\)/);
-  assert.doesNotMatch(source, /setSelectedIndicators\(\[\]\)/);
+  assert.match(source, /previous\.compatibility !== indicatorCompatibilityKey/);
+  assert.match(source, /setSelectedIndicators\(\[\]\)/);
+  assert.match(source, /Выбранные показатели очищены/);
   assert.match(source, /retryNormativeSearch/);
   assert.match(source, /searchDone && !searchError/);
 });

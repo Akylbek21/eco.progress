@@ -1,17 +1,19 @@
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
-import { Archive, ArrowLeft, Edit3, Eye, Plus, Search, Trash2 } from 'lucide-react';
+import { FormEvent, ReactNode, useEffect, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Archive, ArrowLeft, Edit3, Eye, Plus, Search } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import CompanyDetailsBlock from '../components/companies/CompanyDetailsBlock';
 import CompanyForm from '../components/companies/CompanyForm';
 import Modal from '../components/ui/Modal';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import {
   archiveCompany,
   archiveCompanyObject,
   createCompany,
   createCompanyObject,
-  getCompanies,
+  getCompaniesPage,
   getCompanyById,
   getCompanyObjects,
   updateCompany,
@@ -27,6 +29,8 @@ const formatDate = (date?: string) => {
 
 const text = (value?: string | number) => value || '-';
 const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100';
+const companyManagerRoles = ['ADMIN', 'DIRECTOR', 'HEAD'];
+const canManageCompanies = (role?: string) => Boolean(role && companyManagerRoles.includes(role));
 
 const PageShell = ({ children }: { children: ReactNode }) => <div className="space-y-6 pb-10">{children}</div>;
 const LoadingBox = ({ label }: { label: string }) => <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm font-semibold text-slate-500 shadow-sm">{label}</div>;
@@ -46,42 +50,40 @@ const StatusPill = ({ status }: { status: CompanyStatus | CompanyObject['status'
 const CompaniesList = () => {
   const navigate = useNavigate();
   const toast = useToast();
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canManage = canManageCompanies(user?.role);
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<CompanyStatus | ''>('ACTIVE');
-
-  const load = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setCompanies(await getCompanies({ search: query || undefined, status: statusFilter || undefined }));
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить компании');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
 
   useEffect(() => {
-    load();
-  }, []);
+    const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 350);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
-  const filtered = useMemo(() => {
-    const value = query.trim().toLowerCase();
-    return companies.filter((company) => {
-      const matchesQuery = !value || `${company.name} ${company.bin}`.toLowerCase().includes(value);
-      const matchesStatus = !statusFilter || company.status === statusFilter;
-      return matchesQuery && matchesStatus;
-    });
-  }, [companies, query, statusFilter]);
+  useEffect(() => setPage(0), [debouncedQuery, statusFilter, size]);
+
+  const companiesQuery = useQuery({
+    queryKey: ['companies', debouncedQuery, statusFilter, page, size],
+    queryFn: ({ signal }) => getCompaniesPage({ search: debouncedQuery || undefined, status: statusFilter || undefined, page, size }, signal),
+    placeholderData: keepPreviousData,
+  });
+  const pageData = companiesQuery.data;
+  const companies = pageData?.items || [];
+
+  useEffect(() => {
+    if (pageData && page >= pageData.totalPages) setPage(Math.max(0, pageData.totalPages - 1));
+  }, [page, pageData]);
 
   const archive = async (company: Company) => {
+    if (!canManage) return;
     if (!window.confirm(`Архивировать компанию "${company.name}"?`)) return;
     try {
-      const updated = await archiveCompany(company.id);
-      setCompanies((items) => items.map((item) => item.id === updated.id ? updated : item));
+      await archiveCompany(company.id);
+      await queryClient.invalidateQueries({ queryKey: ['companies'] });
       toast.success('Компания архивирована');
     } catch (archiveError) {
       toast.error('Не удалось архивировать компанию', archiveError instanceof Error ? archiveError.message : undefined);
@@ -95,26 +97,31 @@ const CompaniesList = () => {
           <p className="text-sm font-semibold uppercase tracking-wide text-eco-700">Справочник лаборатории</p>
           <h1 className="mt-1 text-2xl font-black text-slate-950 sm:text-3xl">Компании</h1>
         </div>
-        <Button asChild><Link to="/staff/companies/new"><Plus className="h-4 w-4" /> Добавить компанию</Link></Button>
+        {canManage && <Button asChild><Link to="/staff/companies/new"><Plus className="h-4 w-4" /> Добавить компанию</Link></Button>}
       </div>
 
-      <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1fr_220px_auto]">
+      <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1fr_220px_130px_auto]">
         <label className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по названию и БИН" className={`${inputClass} pl-10`} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по названию и БИН" aria-label="Поиск компаний" className={`${inputClass} pl-10`} />
         </label>
         <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as CompanyStatus | '')} className={inputClass}>
           <option value="">Все статусы</option>
           <option value="ACTIVE">Активные</option>
           <option value="ARCHIVED">Архивные</option>
         </select>
-        <Button type="button" variant="secondary" onClick={load}>Обновить</Button>
+        <select value={size} onChange={(event) => setSize(Number(event.target.value))} aria-label="Компаний на странице" className={inputClass}>
+          <option value={10}>10 строк</option>
+          <option value={20}>20 строк</option>
+          <option value={50}>50 строк</option>
+        </select>
+        <Button type="button" variant="secondary" disabled={companiesQuery.isFetching} onClick={() => companiesQuery.refetch()}>{companiesQuery.isFetching ? 'Обновление...' : 'Обновить'}</Button>
       </section>
 
-      {loading && <LoadingBox label="Загрузка компаний..." />}
-      {error && !loading && <ErrorBox message={error} onBack={load} />}
+      {companiesQuery.isLoading && <LoadingBox label="Загрузка компаний..." />}
+      {companiesQuery.isError && !companiesQuery.isLoading && <ErrorBox message={companiesQuery.error instanceof Error ? companiesQuery.error.message : 'Не удалось загрузить компании'} onBack={() => companiesQuery.refetch()} />}
 
-      {!loading && !error && (
+      {!companiesQuery.isLoading && !companiesQuery.isError && (
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="min-w-[1480px] w-full text-left text-sm">
@@ -135,7 +142,7 @@ const CompaniesList = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map((company) => (
+                {companies.map((company) => (
                   <tr key={company.id} className="align-top hover:bg-slate-50">
                     <td className="px-4 py-3 font-bold text-slate-900">{text(company.name)}</td>
                     <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-700">{text(company.bin)}</td>
@@ -145,7 +152,7 @@ const CompaniesList = () => {
                     <td className="px-4 py-3 text-slate-600">{text(company.email)}</td>
                     <td className="px-4 py-3 text-slate-600">{text(company.director || company.directorFullName)}</td>
                     <td className="px-4 py-3 text-slate-600">{text(company.contactPerson)}</td>
-                    <td className="px-4 py-3 text-slate-600">{company.objects?.filter((object) => object.status !== 'ARCHIVED').length || 0}</td>
+                    <td className="px-4 py-3 text-slate-600">{company.objectCount ?? company.objects?.filter((object) => object.status !== 'ARCHIVED').length ?? 0}</td>
                     <td className="px-4 py-3 text-slate-600">{formatDate(company.createdAt)}</td>
                     <td className="px-4 py-3"><StatusPill status={company.status} /></td>
                     <td className="px-4 py-3">
@@ -153,7 +160,7 @@ const CompaniesList = () => {
                         <button type="button" title="Открыть" onClick={() => navigate(`/staff/companies/${company.id}`)} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-eco-800 ring-1 ring-eco-200 transition hover:bg-eco-50">
                           <Eye className="h-4 w-4" />
                         </button>
-                        {company.status !== 'ARCHIVED' && (
+                        {canManage && company.status !== 'ARCHIVED' && (
                           <>
                             <button type="button" title="Редактировать" onClick={() => navigate(`/staff/companies/${company.id}/edit`)} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-eco-800 ring-1 ring-eco-200 transition hover:bg-eco-50">
                               <Edit3 className="h-4 w-4" />
@@ -170,7 +177,17 @@ const CompaniesList = () => {
               </tbody>
             </table>
           </div>
-          {filtered.length === 0 && <div className="px-5 py-10 text-center text-sm font-semibold text-slate-500">Компании не найдены.</div>}
+          {companies.length === 0 && <div className="px-5 py-10 text-center text-sm font-semibold text-slate-500">Компании не найдены.</div>}
+          {(pageData?.totalElements || 0) > 0 && (
+            <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+              <span>Всего: {pageData?.totalElements || 0}</span>
+              <div className="flex items-center gap-3">
+                <Button type="button" variant="secondary" disabled={page <= 0 || companiesQuery.isFetching} onClick={() => setPage((current) => Math.max(0, current - 1))}>Назад</Button>
+                <span className="font-semibold">Страница {page + 1} из {pageData?.totalPages || 1}</span>
+                <Button type="button" variant="secondary" disabled={page + 1 >= (pageData?.totalPages || 1) || companiesQuery.isFetching} onClick={() => setPage((current) => current + 1)}>Далее</Button>
+              </div>
+            </div>
+          )}
         </section>
       )}
     </PageShell>
@@ -184,6 +201,13 @@ const emptyObject: CompanyObjectPayload = {
   coordinates: '',
   sanitaryZone: '',
   notes: '',
+  samplingLocation: '',
+};
+
+const validCoordinates = (value: string) => {
+  if (!value) return true;
+  const parts = value.split(/[;,]/).map((part) => Number(part.trim()));
+  return parts.length === 2 && parts.every(Number.isFinite) && parts[0] >= -90 && parts[0] <= 90 && parts[1] >= -180 && parts[1] <= 180;
 };
 
 const CompanyObjectModal = ({
@@ -197,51 +221,82 @@ const CompanyObjectModal = ({
   value?: CompanyObject | null;
   loading?: boolean;
   onClose: () => void;
-  onSubmit: (payload: CompanyObjectPayload) => void | Promise<void>;
+  onSubmit: (payload: CompanyObjectPayload) => boolean | Promise<boolean>;
 }) => {
-  const defaults = { ...emptyObject, ...value };
+  const [formValue, setFormValue] = useState<CompanyObjectPayload>(emptyObject);
+  const [dirty, setDirty] = useState(false);
+  const [formError, setFormError] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setFormValue({ ...emptyObject, ...value });
+    setDirty(false);
+    setFormError('');
+  }, [open, value]);
+
+  useEffect(() => {
+    if (!open || !dirty) return;
+    const preventUnload = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', preventUnload);
+    return () => window.removeEventListener('beforeunload', preventUnload);
+  }, [dirty, open]);
+
+  const update = (field: keyof CompanyObjectPayload, nextValue: string) => {
+    setFormValue((current) => ({ ...current, [field]: nextValue }));
+    setDirty(true);
+    setFormError('');
+  };
+
+  const close = () => {
+    if (loading) return;
+    if (dirty && !window.confirm('Закрыть форму? Несохранённые данные будут потеряны.')) return;
+    onClose();
+  };
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    await onSubmit({
-      name: String(form.get('name') || ''),
-      address: String(form.get('address') || ''),
-      activityType: String(form.get('activityType') || ''),
-      coordinates: String(form.get('coordinates') || ''),
-      sanitaryZone: String(form.get('sanitaryZone') || ''),
-      notes: String(form.get('notes') || ''),
-    });
+    if (loading) return;
+    const payload = Object.fromEntries(Object.entries(formValue).map(([key, item]) => [key, typeof item === 'string' ? item.trim() : item])) as CompanyObjectPayload;
+    if (!payload.name) return setFormError('Укажите название объекта.');
+    if (!payload.address) return setFormError('Укажите адрес объекта.');
+    if (!validCoordinates(payload.coordinates)) return setFormError('Координаты должны быть в формате «широта, долгота», например 42.32, 69.59.');
+    if (await onSubmit(payload)) setDirty(false);
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={value ? 'Редактировать объект' : 'Добавить объект'} size="xl">
+    <Modal open={open} onClose={close} loading={loading} title={value ? 'Редактировать объект' : 'Добавить объект'} size="xl">
       <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
+        {formError && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 sm:col-span-2">{formError}</div>}
         <label className="space-y-1.5 text-sm font-semibold text-slate-700">
           <span>Название <span className="text-rose-600">*</span></span>
-          <input name="name" required defaultValue={defaults.name} className={inputClass} />
+          <input required value={formValue.name} onChange={(event) => update('name', event.target.value)} className={inputClass} />
         </label>
         <label className="space-y-1.5 text-sm font-semibold text-slate-700">
-          <span>Адрес</span>
-          <input name="address" defaultValue={defaults.address} className={inputClass} />
+          <span>Адрес <span className="text-rose-600">*</span></span>
+          <input required value={formValue.address} onChange={(event) => update('address', event.target.value)} className={inputClass} />
         </label>
         <label className="space-y-1.5 text-sm font-semibold text-slate-700">
           <span>Вид деятельности</span>
-          <input name="activityType" defaultValue={defaults.activityType} className={inputClass} />
+          <input value={formValue.activityType} onChange={(event) => update('activityType', event.target.value)} className={inputClass} />
         </label>
         <label className="space-y-1.5 text-sm font-semibold text-slate-700">
           <span>Координаты</span>
-          <input name="coordinates" defaultValue={defaults.coordinates} className={inputClass} />
+          <input value={formValue.coordinates} onChange={(event) => update('coordinates', event.target.value)} placeholder="42.32, 69.59" className={inputClass} />
         </label>
         <label className="space-y-1.5 text-sm font-semibold text-slate-700">
           <span>Санитарная зона</span>
-          <input name="sanitaryZone" defaultValue={defaults.sanitaryZone} className={inputClass} />
+          <input value={formValue.sanitaryZone} onChange={(event) => update('sanitaryZone', event.target.value)} className={inputClass} />
+        </label>
+        <label className="space-y-1.5 text-sm font-semibold text-slate-700 sm:col-span-2">
+          <span>Место отбора проб</span>
+          <input value={formValue.samplingLocation || ''} onChange={(event) => update('samplingLocation', event.target.value)} className={inputClass} />
         </label>
         <label className="space-y-1.5 text-sm font-semibold text-slate-700 sm:col-span-2">
           <span>Заметки</span>
-          <textarea name="notes" rows={3} defaultValue={defaults.notes} className={inputClass} />
+          <textarea rows={3} value={formValue.notes} onChange={(event) => update('notes', event.target.value)} className={inputClass} />
         </label>
         <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 sm:col-span-2">
-          <Button type="button" variant="secondary" onClick={onClose}>Отмена</Button>
+          <Button type="button" variant="secondary" disabled={loading} onClick={close}>Отмена</Button>
           <Button type="submit" disabled={loading}>{loading ? 'Сохранение...' : 'Сохранить'}</Button>
         </div>
       </form>
@@ -249,19 +304,23 @@ const CompanyObjectModal = ({
   );
 };
 
-const CompanyObjectsSection = ({ companyId }: { companyId: string }) => {
+const CompanyObjectsSection = ({ companyId, readOnly = false }: { companyId: string; readOnly?: boolean }) => {
   const toast = useToast();
   const [objects, setObjects] = useState<CompanyObject[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<CompanyObject | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
-  const load = async () => {
+  const load = async (signal?: AbortSignal) => {
     setLoading(true);
+    setLoadError('');
     try {
-      setObjects(await getCompanyObjects(companyId));
+      setObjects(await getCompanyObjects(companyId, signal));
     } catch (error) {
+      if (signal?.aborted) return;
+      setLoadError(error instanceof Error ? error.message : 'Не удалось загрузить объекты');
       toast.error('Не удалось загрузить объекты', error instanceof Error ? error.message : undefined);
     } finally {
       setLoading(false);
@@ -269,10 +328,13 @@ const CompanyObjectsSection = ({ companyId }: { companyId: string }) => {
   };
 
   useEffect(() => {
-    load();
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
   }, [companyId]);
 
   const submit = async (payload: CompanyObjectPayload) => {
+    if (readOnly || saving) return false;
     setSaving(true);
     try {
       if (editing) await updateCompanyObject(companyId, editing.id, payload);
@@ -281,14 +343,17 @@ const CompanyObjectsSection = ({ companyId }: { companyId: string }) => {
       setModalOpen(false);
       setEditing(null);
       await load();
+      return true;
     } catch (error) {
       toast.error('Не удалось сохранить объект', error instanceof Error ? error.message : undefined);
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
   const archive = async (object: CompanyObject) => {
+    if (readOnly || saving) return;
     if (!window.confirm(`Архивировать объект "${object.name}"?`)) return;
     try {
       await archiveCompanyObject(companyId, object.id);
@@ -306,9 +371,14 @@ const CompanyObjectsSection = ({ companyId }: { companyId: string }) => {
           <h2 className="text-lg font-bold text-slate-900">Объекты</h2>
           <p className="mt-1 text-sm text-slate-500">У одной компании может быть несколько объектов для протоколов.</p>
         </div>
-        <Button type="button" onClick={() => { setEditing(null); setModalOpen(true); }}><Plus className="h-4 w-4" /> Добавить объект</Button>
+        {!readOnly && <Button type="button" disabled={saving} onClick={() => { setEditing(null); setModalOpen(true); }}><Plus className="h-4 w-4" /> Добавить объект</Button>}
       </div>
-      {loading ? <p className="text-sm font-semibold text-slate-500">Загрузка объектов...</p> : (
+      {loading ? <p className="text-sm font-semibold text-slate-500">Загрузка объектов...</p> : loadError ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+          <p className="font-semibold">{loadError}</p>
+          <Button type="button" variant="secondary" className="mt-3" onClick={() => load()}>Повторить</Button>
+        </div>
+      ) : (
         <div className="overflow-x-auto">
           <table className="min-w-[900px] w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -318,6 +388,7 @@ const CompanyObjectsSection = ({ companyId }: { companyId: string }) => {
                 <th className="px-3 py-3">Вид деятельности</th>
                 <th className="px-3 py-3">Координаты</th>
                 <th className="px-3 py-3">Санитарная зона</th>
+                <th className="px-3 py-3">Место отбора</th>
                 <th className="px-3 py-3">Статус</th>
                 <th className="px-3 py-3 text-right">Действия</th>
               </tr>
@@ -330,10 +401,11 @@ const CompanyObjectsSection = ({ companyId }: { companyId: string }) => {
                   <td className="px-3 py-3 text-slate-600">{text(object.activityType)}</td>
                   <td className="px-3 py-3 text-slate-600">{text(object.coordinates)}</td>
                   <td className="px-3 py-3 text-slate-600">{text(object.sanitaryZone)}</td>
+                  <td className="px-3 py-3 text-slate-600">{text(object.samplingLocation)}</td>
                   <td className="px-3 py-3"><StatusPill status={object.status} /></td>
                   <td className="px-3 py-3">
                     <div className="flex justify-end gap-2">
-                      {object.status !== 'ARCHIVED' && (
+                      {!readOnly && object.status !== 'ARCHIVED' && (
                         <>
                           <Button type="button" variant="secondary" className="px-3" onClick={() => { setEditing(object); setModalOpen(true); }}><Edit3 className="h-4 w-4" /></Button>
                           <Button type="button" variant="secondary" className="px-3" onClick={() => archive(object)}><Archive className="h-4 w-4" /></Button>
@@ -357,6 +429,8 @@ const CompanyFormPage = ({ edit = false }: { edit?: boolean }) => {
   const { companyId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
+  const canManage = canManageCompanies(user?.role);
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(edit);
   const [saving, setSaving] = useState(false);
@@ -364,21 +438,26 @@ const CompanyFormPage = ({ edit = false }: { edit?: boolean }) => {
 
   useEffect(() => {
     if (!edit || !companyId) return;
+    const controller = new AbortController();
     setLoading(true);
-    getCompanyById(companyId)
+    getCompanyById(companyId, controller.signal)
       .then(setCompany)
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить компанию'))
-      .finally(() => setLoading(false));
+      .catch((loadError) => { if (!controller.signal.aborted) setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить компанию'); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [companyId, edit]);
 
   const submit = async (payload: CompanyPayload) => {
+    if (!canManage || saving) return false;
     setSaving(true);
     try {
       const saved = edit && companyId ? await updateCompany(companyId, payload) : await createCompany(payload);
       toast.success(edit ? 'Компания обновлена' : 'Компания создана');
       navigate(`/staff/companies/${saved.id}`);
+      return true;
     } catch (saveError) {
       toast.error('Не удалось сохранить компанию', saveError instanceof Error ? saveError.message : undefined);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -386,6 +465,7 @@ const CompanyFormPage = ({ edit = false }: { edit?: boolean }) => {
 
   if (loading) return <LoadingBox label="Загрузка компании..." />;
   if (error) return <ErrorBox message={error} onBack={() => navigate('/staff/companies')} />;
+  if (!canManage) return <ErrorBox message="У вашей роли нет прав на изменение компаний." onBack={() => navigate('/staff/companies')} />;
 
   return (
     <PageShell>
@@ -404,21 +484,25 @@ const CompanyViewPage = () => {
   const { companyId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
+  const canManage = canManageCompanies(user?.role);
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!companyId) return;
+    const controller = new AbortController();
     setLoading(true);
-    getCompanyById(companyId)
+    getCompanyById(companyId, controller.signal)
       .then(setCompany)
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить компанию'))
-      .finally(() => setLoading(false));
+      .catch((loadError) => { if (!controller.signal.aborted) setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить компанию'); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [companyId]);
 
   const archive = async () => {
-    if (!company || !window.confirm(`Архивировать компанию "${company.name}"?`)) return;
+    if (!canManage || !company || !window.confirm(`Архивировать компанию "${company.name}"?`)) return;
     try {
       const updated = await archiveCompany(company.id);
       setCompany(updated);
@@ -444,7 +528,7 @@ const CompanyViewPage = () => {
           </div>
           <h1 className="mt-1 text-2xl font-black text-slate-950 sm:text-3xl">{company.name}</h1>
         </div>
-        {company.status !== 'ARCHIVED' && (
+        {canManage && company.status !== 'ARCHIVED' && (
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="secondary" onClick={archive}><Archive className="h-4 w-4" /> Архивировать</Button>
             <Button type="button" onClick={() => navigate(`/staff/companies/${company.id}/edit`)}><Edit3 className="h-4 w-4" /> Редактировать</Button>
@@ -452,7 +536,7 @@ const CompanyViewPage = () => {
         )}
       </div>
       <CompanyDetailsBlock company={company} />
-      <CompanyObjectsSection companyId={company.id} />
+      <CompanyObjectsSection companyId={company.id} readOnly={!canManage || company.status === 'ARCHIVED'} />
     </PageShell>
   );
 };

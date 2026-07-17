@@ -1,7 +1,9 @@
 import api, { type ApiResponse } from './api';
 import { extractItem, extractList } from './apiHelpers';
-import { getAdminUsers } from './adminUserService';
 import type { LaboratoryEmployee, LaboratoryProfile, LaboratorySummary } from '../types/protocols';
+
+const useMocks = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
+const mockDelay = () => new Promise((resolve) => setTimeout(resolve, 250));
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -105,6 +107,11 @@ const requireId = (id: string | number, label = 'лаборатории') => {
 let laboratoriesRequest: Promise<LaboratorySummary[]> | null = null;
 
 export async function getLaboratories(): Promise<LaboratorySummary[]> {
+  if (useMocks) {
+    await mockDelay();
+    const { mockLaboratories } = await import('../mocks/mockLaboratorySettings');
+    return mockLaboratories.map(normalizeLaboratoryProfile);
+  }
   if (!laboratoriesRequest) {
     laboratoriesRequest = api
       .get<ApiResponse<unknown> | unknown>('/laboratories')
@@ -123,39 +130,49 @@ export async function getDefaultLaboratory(): Promise<LaboratoryProfile | null> 
   return selected ? normalizeLaboratoryProfile(selected) : null;
 }
 
-export async function getLaboratory(id: string | number): Promise<LaboratoryProfile> {
-  return getLaboratorySettings(id);
+export async function getLaboratory(id: string | number, signal?: AbortSignal): Promise<LaboratoryProfile> {
+  return getLaboratorySettings(id, signal);
 }
 
-export async function getLaboratorySettings(id: string | number): Promise<LaboratoryProfile> {
+export async function getLaboratorySettings(id: string | number, signal?: AbortSignal): Promise<LaboratoryProfile> {
   const laboratoryId = requireId(id);
-  const response = await api.get<ApiResponse<unknown> | unknown>(`/settings/laboratories/${laboratoryId}`);
-  return normalizeLaboratoryProfile(extractItem(response, ['laboratory', 'profile']));
+  if (useMocks) {
+    await mockDelay();
+    const { mockLaboratories } = await import('../mocks/mockLaboratorySettings');
+    const laboratory = mockLaboratories.find((item) => item.id === String(laboratoryId));
+    if (!laboratory) throw new Error('Лаборатория не найдена.');
+    return normalizeLaboratoryProfile(laboratory);
+  }
+  const response = await api.get<ApiResponse<unknown> | unknown>(`/settings/laboratories/${laboratoryId}`, { signal });
+  const laboratory = normalizeLaboratoryProfile(extractItem(response, ['laboratory', 'profile']));
+  if (!laboratory.id) throw new Error('Backend вернул пустую карточку лаборатории.');
+  return laboratory;
 }
 
-export async function getLaboratoryEmployees(id: string | number, options: { includeInactive?: boolean } = {}): Promise<LaboratoryEmployee[]> {
+export async function getLaboratoryEmployees(id: string | number, options: { includeInactive?: boolean; signal?: AbortSignal } = {}): Promise<LaboratoryEmployee[]> {
   const laboratoryId = requireId(id);
+  if (useMocks) {
+    await mockDelay();
+    const { mockLaboratoryEmployees } = await import('../mocks/mockLaboratorySettings');
+    const employees = (mockLaboratoryEmployees[String(laboratoryId)] || []).map(normalizeLaboratoryEmployee);
+    return options.includeInactive ? employees : employees.filter((employee) => employee.active);
+  }
   const response = await api.get<ApiResponse<unknown> | unknown>(`/laboratories/${laboratoryId}/employees`, {
     params: options.includeInactive ? undefined : { status: 'ACTIVE' },
+    signal: options.signal,
   });
   const employees = extractList(response, ['employees', 'items']).map(normalizeLaboratoryEmployee);
   return options.includeInactive ? employees : employees.filter((employee) => employee.active);
 }
 
 export async function getEligibleLaboratoryEmployees(): Promise<LaboratoryEmployee[]> {
-  const allowedRoles = new Set(['ADMIN', 'LABORATORY', 'DIRECTOR', 'HEAD', 'LAB_HEAD', 'LABORATORY_HEAD']);
-  const users = await getAdminUsers();
-  return users
-    .filter((user) => allowedRoles.has(text(user.role).toUpperCase()) && text(user.status).toLowerCase() !== 'blocked')
-    .map((user) => ({
-      id: String(user.id),
-      userId: String(user.id),
-      fullName: text(user.fullName) || [user.lastName, user.firstName, user.middleName].map(text).filter(Boolean).join(' ') || text(user.name),
-      position: text(user.position),
-      email: text(user.email),
-      role: text(user.role),
-      active: true,
-    }));
+  if (useMocks) {
+    await mockDelay();
+    const { mockEligibleLaboratoryEmployees } = await import('../mocks/mockLaboratorySettings');
+    return mockEligibleLaboratoryEmployees.map(normalizeLaboratoryEmployee);
+  }
+  const response = await api.get<ApiResponse<unknown> | unknown>('/laboratories/eligible-employees');
+  return extractList(response, ['employees', 'users', 'items']).map(normalizeLaboratoryEmployee).filter((employee) => employee.active);
 }
 
 const laboratoryBody = (profile: LaboratoryProfile): SaveLaboratoryRequest => ({
@@ -179,6 +196,18 @@ const laboratoryBody = (profile: LaboratoryProfile): SaveLaboratoryRequest => ({
 
 export async function saveLaboratory(profile: LaboratoryProfile): Promise<LaboratoryProfile> {
   const body = laboratoryBody(profile);
+  if (useMocks) {
+    await mockDelay();
+    const { mockLaboratories, mockLaboratoryEmployees } = await import('../mocks/mockLaboratorySettings');
+    const id = profile.id || String(Math.max(0, ...mockLaboratories.map((item) => Number(item.id) || 0)) + 1);
+    if (body.isDefault) mockLaboratories.forEach((item) => { item.isDefault = item.id === id; });
+    const saved = normalizeLaboratoryProfile({ ...profile, ...body, id, updatedAt: new Date().toISOString(), createdAt: profile.createdAt || new Date().toISOString(), employees: [] });
+    const index = mockLaboratories.findIndex((item) => item.id === id);
+    if (index >= 0) mockLaboratories[index] = saved;
+    else mockLaboratories.push(saved);
+    mockLaboratoryEmployees[id] ||= [];
+    return saved;
+  }
   const response = profile.id
     ? await api.patch<ApiResponse<unknown> | unknown>(`/laboratories/${requireId(profile.id)}`, body)
     : await api.post<ApiResponse<unknown> | unknown>('/laboratories', body);
@@ -190,6 +219,10 @@ export async function saveLaboratory(profile: LaboratoryProfile): Promise<Labora
 
 export async function setLaboratoryActive(id: string | number, active: boolean): Promise<LaboratoryProfile> {
   const laboratoryId = requireId(id);
+  if (useMocks) {
+    const profile = await getLaboratory(laboratoryId);
+    return saveLaboratory({ ...profile, active });
+  }
   await api.patch<ApiResponse<unknown> | unknown>(`/laboratories/${laboratoryId}`, { active });
   return getLaboratory(laboratoryId);
 }
@@ -204,19 +237,47 @@ export async function saveLaboratoryEmployee(laboratoryId: string, payload: Part
     role: text(payload.role) || 'LABORATORY',
     active: payload.active !== false,
   };
+  if (useMocks) {
+    await mockDelay();
+    const { mockLaboratoryEmployees } = await import('../mocks/mockLaboratorySettings');
+    const items = mockLaboratoryEmployees[String(id)] ||= [];
+    const employeeId = payload.id || String(Math.max(0, ...items.map((item) => Number(item.id) || 0)) + 1);
+    const saved = normalizeLaboratoryEmployee({ ...payload, ...body, id: employeeId, laboratoryId: String(id) });
+    const index = items.findIndex((item) => item.id === employeeId);
+    if (index >= 0) items[index] = saved;
+    else items.push(saved);
+    return saved;
+  }
   const response = payload.id
     ? await api.patch<ApiResponse<unknown> | unknown>(`/laboratories/${id}/employees/${requireId(payload.id, 'сотрудника')}`, body)
     : await api.post<ApiResponse<unknown> | unknown>(`/laboratories/${id}/employees`, body);
-  return normalizeLaboratoryEmployee(extractItem(response, ['employee', 'item']));
+  const employee = normalizeLaboratoryEmployee(extractItem(response, ['employee', 'item']));
+  if (!employee.id) throw new Error('Backend не вернул ID сотрудника лаборатории.');
+  return employee;
 }
 
 export async function deactivateLaboratoryEmployee(laboratoryId: string, employeeId: string): Promise<void> {
-  await api.delete(`/laboratories/${requireId(laboratoryId)}/employees/${requireId(employeeId, 'сотрудника')}`);
+  const laboratory = requireId(laboratoryId);
+  const employee = requireId(employeeId, 'сотрудника');
+  if (useMocks) {
+    await mockDelay();
+    const { mockLaboratoryEmployees } = await import('../mocks/mockLaboratorySettings');
+    const item = (mockLaboratoryEmployees[String(laboratory)] || []).find((entry) => entry.id === String(employee));
+    if (!item) throw new Error('Сотрудник лаборатории не найден.');
+    item.active = false;
+    return;
+  }
+  await api.patch(`/laboratories/${laboratory}/employees/${employee}/deactivate`);
 }
 
 export async function uploadLaboratoryLogo(id: string, file: File): Promise<LaboratoryProfile> {
   const formData = new FormData();
   formData.append('file', file);
+  if (useMocks) {
+    await mockDelay();
+    const profile = await getLaboratory(id);
+    return { ...profile, logoUrl: URL.createObjectURL(file), updatedAt: new Date().toISOString() };
+  }
   await api.post<ApiResponse<unknown> | unknown>(`/settings/laboratories/${requireId(id)}/logo`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
@@ -224,6 +285,11 @@ export async function uploadLaboratoryLogo(id: string, file: File): Promise<Labo
 }
 
 export async function deleteLaboratoryLogo(id: string | number): Promise<void> {
+  if (useMocks) {
+    const profile = await getLaboratory(id);
+    await saveLaboratory({ ...profile, logoUrl: '' });
+    return;
+  }
   await api.delete(`/settings/laboratories/${requireId(id)}/logo`);
 }
 

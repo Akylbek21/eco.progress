@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Download, Edit3, FileDown, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import Button from '../components/ui/Button';
@@ -79,9 +79,11 @@ const kindFromDefinition = (definition?: JournalTypeDefinition): JournalKind => 
 };
 
 const fieldsForDefinition = (definition: JournalTypeDefinition): JournalColumn[] => {
+  const configured = definition.columns.filter((column) => column.key !== 'rowNumber');
+  if (configured.length) return configured;
   const fallback = JOURNAL_TYPES.find((item) => item.kind === kindFromDefinition(definition));
-  if (fallback) return fallback.columns;
-  return definition.columns.length ? definition.columns.filter((column) => column.key !== 'rowNumber') : [
+  if (fallback) return fallback.columns.filter((column) => column.key !== 'rowNumber');
+  return [
     { key: 'date', title: 'Дата', type: 'date' },
     { key: 'note', title: 'Примечание', type: 'textarea' },
   ];
@@ -95,7 +97,7 @@ const primaryDateForEntry = (entry: LabJournalEntry) =>
 const renderEntrySummary = (entry: LabJournalEntry, definition?: JournalTypeDefinition) => {
   const data = entry.data;
   const unit = firstText(data, ['unit']);
-  const valueWithUnit = (value: string) => value ? `${value}${unit ? ` ${unit}` : ''}` : '0';
+  const valueWithUnit = (value: string) => value ? `${value}${unit ? ` ${unit}` : ''}` : '—';
 
   switch (kindFromDefinition(definition)) {
     case 'chemical': {
@@ -166,20 +168,41 @@ type EntryModalProps = {
   entry: LabJournalEntry | null;
   saving: boolean;
   onClose: () => void;
-  onSubmit: (data: LabJournalEntryData, entryDate: string) => Promise<void>;
+  onSubmit: (data: LabJournalEntryData, entryDate: string) => Promise<boolean>;
 };
 
 const EntryModal = ({ open, definition, entry, saving, onClose, onSubmit }: EntryModalProps) => {
   const [formError, setFormError] = useState('');
+  const [dirty, setDirty] = useState(false);
   const fields = useMemo(() => fieldsForDefinition(definition), [definition]);
   const kind = kindFromDefinition(definition);
 
   useEffect(() => {
-    if (open) setFormError('');
+    if (open) {
+      setFormError('');
+      setDirty(false);
+    }
   }, [open, entry, definition.code]);
+
+  useEffect(() => {
+    if (!dirty || !open) return undefined;
+    const warnAboutUnsavedChanges = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnAboutUnsavedChanges);
+    return () => window.removeEventListener('beforeunload', warnAboutUnsavedChanges);
+  }, [dirty, open]);
+
+  const requestClose = () => {
+    if (saving) return;
+    if (dirty && !window.confirm('Закрыть форму без сохранения изменений?')) return;
+    onClose();
+  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (saving) return;
     setFormError('');
 
     const form = new FormData(event.currentTarget);
@@ -204,6 +227,27 @@ const EntryModal = ({ open, definition, entry, saving, onClose, onSubmit }: Entr
     const requiredError = fields.find((field) => field.required && !text(data[field.key]).trim());
     if (requiredError) {
       setFormError(`Заполните поле «${requiredError.title}».`);
+      return;
+    }
+
+    const futureDateField = fields.find((field) =>
+      field.type === 'date'
+      && field.key !== 'expiryDate'
+      && text(data[field.key]) > today(),
+    );
+    if (futureDateField) {
+      setFormError(`Поле «${futureDateField.title}» не может содержать будущую дату.`);
+      return;
+    }
+
+    const nonNegativeKeys = new Set(['income', 'expense', 'componentAmount', 'pressure']);
+    const negativeField = fields.find((field) =>
+      nonNegativeKeys.has(field.key)
+      && data[field.key] !== undefined
+      && Number(data[field.key]) < 0,
+    );
+    if (negativeField) {
+      setFormError(`Поле «${negativeField.title}» не может быть отрицательным.`);
       return;
     }
 
@@ -244,12 +288,12 @@ const EntryModal = ({ open, definition, entry, saving, onClose, onSubmit }: Entr
       }
     }
 
-    await onSubmit(data, entryDate);
+    if (await onSubmit(data, entryDate)) setDirty(false);
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={entry ? 'Редактировать запись' : 'Добавить запись'} size="xl" loading={saving}>
-      <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
+    <Modal open={open} onClose={requestClose} title={entry ? 'Редактировать запись' : 'Добавить запись'} size="xl" loading={saving}>
+      <form onSubmit={submit} onChange={() => setDirty(true)} className="grid gap-4 md:grid-cols-2">
         <div className="rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700 md:col-span-2">
           {definition.title}
         </div>
@@ -299,8 +343,8 @@ const EntryModal = ({ open, definition, entry, saving, onClose, onSubmit }: Entr
           );
         })}
         <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 md:col-span-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Отмена</Button>
-          <Button type="submit" disabled={saving}>Сохранить</Button>
+          <Button type="button" variant="secondary" onClick={requestClose} disabled={saving}>Отмена</Button>
+          <Button type="submit" disabled={saving}>{saving ? 'Сохраняем...' : 'Сохранить'}</Button>
         </div>
       </form>
     </Modal>
@@ -331,6 +375,8 @@ const LabJournalsPage = () => {
   const [editing, setEditing] = useState<LabJournalEntry | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LabJournalEntry | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const entriesRequestRef = useRef<AbortController | null>(null);
+  const entriesRequestSequence = useRef(0);
   const {
     data: backendTypes,
     error: typesError,
@@ -358,7 +404,13 @@ const LabJournalsPage = () => {
   );
 
   const searchTrimmed = debouncedSearch.trim();
-  const searchReady = searchTrimmed.length === 0 || searchTrimmed.length >= MIN_SEARCH_LENGTH;
+  const searchDraftTrimmed = searchDraft.trim();
+  const searchInputValid = searchDraftTrimmed.length === 0 || searchDraftTrimmed.length >= MIN_SEARCH_LENGTH;
+  const searchPending = searchInputValid && searchDraftTrimmed !== searchTrimmed;
+  const searchReady = searchInputValid && !searchPending;
+  const dateRangeValid = !dateFrom || !dateTo || dateFrom <= dateTo;
+  const tableLoading = loading || searchPending;
+  const laboratoryRequired = canFilterLaboratory && !laboratoryId;
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(searchDraft), 450);
@@ -388,12 +440,17 @@ const LabJournalsPage = () => {
       .finally(() => setLaboratoriesLoading(false));
   }, [canFilterLaboratory, toast]);
 
-  const loadEntries = async () => {
-    if (!selectedJournalType || !searchReady) return;
+  const loadEntries = useCallback(async () => {
+    if (!selectedJournalType || !searchReady || !dateRangeValid) return;
+    entriesRequestRef.current?.abort();
+    const controller = new AbortController();
+    const requestSequence = entriesRequestSequence.current + 1;
+    entriesRequestSequence.current = requestSequence;
+    entriesRequestRef.current = controller;
     setLoading(true);
     setError('');
     try {
-      setEntriesPage(await getEntries({
+      const nextPage = await getEntries({
         journalType: selectedJournalType,
         laboratoryId: laboratoryId || undefined,
         page,
@@ -401,23 +458,32 @@ const LabJournalsPage = () => {
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
         search: searchTrimmed || undefined,
-      }));
+      }, controller.signal);
+      if (requestSequence === entriesRequestSequence.current) setEntriesPage(nextPage);
     } catch (loadError) {
+      if (controller.signal.aborted) return;
+      if (requestSequence !== entriesRequestSequence.current) return;
       const message = loadError instanceof Error ? loadError.message : 'Не удалось загрузить журналы';
+      setEntriesPage(emptyPage);
       setError('Не удалось загрузить журналы');
       toast.error('Не удалось загрузить журналы', message);
     } finally {
-      setLoading(false);
+      if (requestSequence === entriesRequestSequence.current) setLoading(false);
     }
-  };
+  }, [selectedJournalType, searchReady, dateRangeValid, laboratoryId, page, dateFrom, dateTo, searchTrimmed, toast]);
 
   useEffect(() => {
-    if (!selectedJournalType) {
+    if (!selectedJournalType || !searchReady || !dateRangeValid) {
+      entriesRequestRef.current?.abort();
+      entriesRequestSequence.current += 1;
+      setLoading(false);
       setEntriesPage(emptyPage);
       return;
     }
-    if (searchReady) loadEntries();
-  }, [selectedJournalType, laboratoryId, page, dateFrom, dateTo, searchReady, searchTrimmed]);
+    loadEntries();
+  }, [selectedJournalType, searchReady, dateRangeValid, loadEntries]);
+
+  useEffect(() => () => entriesRequestRef.current?.abort(), []);
 
   const resetPage = () => setPage(0);
 
@@ -426,19 +492,28 @@ const LabJournalsPage = () => {
       toast.warning('Сначала выберите тип журнала');
       return;
     }
+    if (laboratoryRequired) {
+      toast.warning('Выберите лабораторию для новой записи');
+      return;
+    }
     setEditing(null);
     setModalOpen(true);
   };
 
   const submitEntry = async (data: LabJournalEntryData, entryDate: string) => {
-    if (!selectedJournalType) return;
+    if (!selectedJournalType || saving) return false;
+    const assignedLaboratoryId = editing?.laboratoryId || laboratoryId || undefined;
+    if (canFilterLaboratory && !assignedLaboratoryId) {
+      toast.warning('Выберите лабораторию для записи');
+      return false;
+    }
     setSaving(true);
     try {
       const payload = {
         journalType: selectedJournalType,
         entryDate,
         data,
-        laboratoryId: laboratoryId || undefined,
+        laboratoryId: assignedLaboratoryId,
       };
       if (editing) {
         await updateEntry(editing.id, payload);
@@ -449,9 +524,12 @@ const LabJournalsPage = () => {
       }
       setModalOpen(false);
       setEditing(null);
-      await loadEntries();
+      if (!editing && page > 0) setPage(0);
+      else await loadEntries();
+      return true;
     } catch (saveError) {
       toast.error('Не удалось сохранить запись', saveError instanceof Error ? saveError.message : undefined);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -464,7 +542,8 @@ const LabJournalsPage = () => {
       await deleteEntry(deleteTarget.id);
       setDeleteTarget(null);
       toast.success('Запись удалена');
-      await loadEntries();
+      if (page > 0 && entriesPage.content.length === 1) setPage((current) => Math.max(0, current - 1));
+      else await loadEntries();
     } catch (deleteError) {
       toast.error('Не удалось удалить запись', deleteError instanceof Error ? deleteError.message : undefined);
     } finally {
@@ -477,6 +556,10 @@ const LabJournalsPage = () => {
       toast.warning('Сначала выберите тип журнала');
       return;
     }
+    if (!dateRangeValid) {
+      toast.warning('Дата «от» не может быть позже даты «до»');
+      return;
+    }
     const state = template ? 'template' : 'excel';
     setDownloading(state);
     try {
@@ -485,6 +568,7 @@ const LabJournalsPage = () => {
         laboratoryId: laboratoryId || undefined,
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
+        search: template ? undefined : searchTrimmed || undefined,
       };
       const { blob, fileName } = template ? await downloadTemplate(params) : await downloadExcel(params);
       downloadBlob(blob, fileName);
@@ -506,13 +590,13 @@ const LabJournalsPage = () => {
           <p className="mt-2 max-w-3xl text-sm text-slate-500">Выберите тип журнала, ведите записи и скачивайте Excel по текущим фильтрам.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" onClick={() => handleDownload(false)} disabled={!selectedJournalType || downloading !== ''}>
+          <Button type="button" variant="secondary" onClick={() => handleDownload(false)} disabled={!selectedJournalType || downloading !== '' || !dateRangeValid || !searchReady}>
             <Download className="h-4 w-4" /> {downloading === 'excel' ? 'Скачивание...' : 'Скачать Excel'}
           </Button>
-          <Button type="button" variant="secondary" onClick={() => handleDownload(true)} disabled={!selectedJournalType || downloading !== ''}>
+          <Button type="button" variant="secondary" onClick={() => handleDownload(true)} disabled={!selectedJournalType || downloading !== '' || !dateRangeValid}>
             <FileDown className="h-4 w-4" /> {downloading === 'template' ? 'Скачивание...' : 'Скачать пустой шаблон Excel'}
           </Button>
-          <Button type="button" onClick={openCreate} disabled={!selectedJournalType}>
+          <Button type="button" onClick={openCreate} disabled={!selectedJournalType || laboratoryRequired} title={laboratoryRequired ? 'Сначала выберите лабораторию' : undefined}>
             <Plus className="h-4 w-4" /> Добавить запись
           </Button>
         </div>
@@ -566,14 +650,24 @@ const LabJournalsPage = () => {
             <input value={searchDraft} onChange={(event) => { setSearchDraft(event.target.value); resetPage(); }} className={`${inputClass} pl-9`} placeholder="Минимум 3 символа" />
           </div>
         </label>
-        <Button type="button" variant="secondary" onClick={loadEntries} disabled={!selectedJournalType || loading || !searchReady}>
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Обновить
+        <Button type="button" variant="secondary" onClick={loadEntries} disabled={!selectedJournalType || tableLoading || !searchReady || !dateRangeValid}>
+          <RefreshCw className={`h-4 w-4 ${tableLoading ? 'animate-spin' : ''}`} /> Обновить
         </Button>
       </section>
 
-      {!searchReady && (
+      {!searchInputValid && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
           Для поиска введите минимум {MIN_SEARCH_LENGTH} символа.
+        </div>
+      )}
+      {!dateRangeValid && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+          Дата «от» не может быть позже даты «до».
+        </div>
+      )}
+      {laboratoryRequired && selectedJournalType && (
+        <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm font-semibold text-sky-900">
+          Для добавления новой записи выберите конкретную лабораторию.
         </div>
       )}
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{error}</div>}
@@ -603,7 +697,7 @@ const LabJournalsPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {loading ? Array.from({ length: 5 }).map((_, rowIndex) => (
+                  {tableLoading ? Array.from({ length: 5 }).map((_, rowIndex) => (
                     <tr key={rowIndex} className="animate-pulse">
                       {Array.from({ length: 7 }).map((__, cellIndex) => (
                         <td key={cellIndex} className="px-3 py-4"><div className="h-4 rounded bg-slate-100" /></td>
@@ -642,7 +736,7 @@ const LabJournalsPage = () => {
                 </tbody>
               </table>
             </div>
-            {!loading && entriesPage.content.length === 0 && (
+            {!tableLoading && entriesPage.content.length === 0 && (
               <div className="px-6 py-10 text-center text-sm font-semibold text-slate-500">
                 Записей пока нет
               </div>
@@ -652,8 +746,8 @@ const LabJournalsPage = () => {
           <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-semibold text-slate-500">Показывается до {PAGE_SIZE} записей на странице.</p>
             <div className="flex gap-2">
-              <Button type="button" variant="secondary" disabled={page <= 0 || loading} onClick={() => setPage((current) => Math.max(0, current - 1))}>Назад</Button>
-              <Button type="button" variant="secondary" disabled={loading || page + 1 >= totalPages} onClick={() => setPage((current) => current + 1)}>Вперед</Button>
+              <Button type="button" variant="secondary" disabled={page <= 0 || tableLoading} onClick={() => setPage((current) => Math.max(0, current - 1))}>Назад</Button>
+              <Button type="button" variant="secondary" disabled={tableLoading || page + 1 >= totalPages} onClick={() => setPage((current) => current + 1)}>Вперед</Button>
             </div>
           </div>
 

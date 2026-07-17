@@ -13,7 +13,7 @@ import {
   resolveProtocolUnit,
 } from '../data/protocolTypeConfig';
 import { getCompanies, getCompanyObjects } from '../services/companyService';
-import { getDefaultLaboratory, getLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
+import { getLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
 import { getAvailableMeasurementDevices } from '../services/measurementDeviceService';
 import protocolService from '../services/protocolService';
 import { getApiErrorMessage } from '../services/apiHelpers';
@@ -91,8 +91,20 @@ type SelectedIndicator = Pollutant & {
 };
 
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  return now.toISOString().slice(0, 10);
+};
 const emptyToUndefined = <T,>(value: T): T | undefined => typeof value === 'string' && value.trim() === '' ? undefined : value;
+const numericMeasurementPattern = /^(?:[<>]=?\s*)?-?(?:\d+(?:[.,]\d*)?|[.,]\d+)$/;
+const isNumericMeasurement = (value: string) => numericMeasurementPattern.test(value.trim());
+const decimalValue = (value: string) => Number(normalizeDecimal(value.trim()));
+const isDecimalInRange = (value: string, min: number, max: number) => {
+  if (!value.trim()) return true;
+  const parsed = decimalValue(value);
+  return Number.isFinite(parsed) && parsed >= min && parsed <= max;
+};
 const compactValues = (values: Record<string, ProtocolResultValue>) => Object.fromEntries(
   Object.entries(values).filter(([, value]) => emptyToUndefined(value) !== undefined),
 ) as Record<string, ProtocolResultValue>;
@@ -157,8 +169,12 @@ const ProtocolCreatePage = () => {
   const toast = useToast();
   const weatherRequestRef = useRef(0);
   const weatherAbortRef = useRef<AbortController | null>(null);
+  const objectRequestRef = useRef(0);
+  const employeeRequestRef = useRef(0);
   const manuallyEditedWeatherRef = useRef(new Set<keyof Pick<QuickForm, 'temperature' | 'humidity' | 'pressureKpa' | 'windSpeed'>>());
   const [isCreating, setIsCreating] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [formError, setFormError] = useState('');
   const [booting, setBooting] = useState(true);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [templateError, setTemplateError] = useState('');
@@ -291,20 +307,40 @@ const ProtocolCreatePage = () => {
     objectId: form.objectId,
     ...normativeFilters,
   }), [form.templateKey, form.objectId, normativeFilters]);
-  const previousNormativeContextRef = useRef(normativeSelectionContextKey);
+  const indicatorCompatibilityKey = `${form.templateKey}:${selectedSubtype || ''}`;
+  const previousSelectionContextRef = useRef({
+    normative: normativeSelectionContextKey,
+    compatibility: indicatorCompatibilityKey,
+  });
 
   useEffect(() => {
-    if (previousNormativeContextRef.current === normativeSelectionContextKey) return;
-    previousNormativeContextRef.current = normativeSelectionContextKey;
+    const previous = previousSelectionContextRef.current;
+    if (previous.normative === normativeSelectionContextKey && previous.compatibility === indicatorCompatibilityKey) return;
+    previousSelectionContextRef.current = {
+      normative: normativeSelectionContextKey,
+      compatibility: indicatorCompatibilityKey,
+    };
+    if (previous.compatibility !== indicatorCompatibilityKey) {
+      if (selectedIndicators.length) {
+        setSelectedIndicators([]);
+        setBulkDeviceId('');
+        toast.warning('Выбранные показатели очищены: изменился тип протокола или физического фактора.');
+      }
+      return;
+    }
     if (selectedIndicators.some((item) => item.selectedNormative || item.normative)) {
       setSelectedIndicators((current) => current.map((item) => item.selectedNormative || item.normative
         ? { ...item, normative: undefined, selectedNormative: undefined, normativeId: undefined }
         : item));
       toast.warning('Нормативы сброшены из-за изменения условий поиска. Введённые результаты и приборы сохранены.');
     }
-  }, [normativeSelectionContextKey, toast]);
+  }, [indicatorCompatibilityKey, normativeSelectionContextKey, selectedIndicators, toast]);
 
-  const setField = <K extends keyof QuickForm>(key: K, value: QuickForm[K]) => setForm((current) => ({ ...current, [key]: value }));
+  const setField = <K extends keyof QuickForm>(key: K, value: QuickForm[K]) => {
+    setDirty(true);
+    setFormError('');
+    setForm((current) => ({ ...current, [key]: value }));
+  };
   const setPrintVisibility = (printVisibility: ProtocolPrintVisibility) => setField('printVisibility', printVisibility);
 
   const loadTemplates = async () => {
@@ -315,11 +351,13 @@ const ProtocolCreatePage = () => {
       const ids = new Set(templates.map((template) => String(template.id).trim().toLowerCase()));
       setBackendTemplateIds(ids);
       const firstAvailable = PROTOCOL_TYPE_OPTIONS.find((option) => ids.has(PROTOCOL_TYPE_CONFIG[option.key].templateId));
-      if (firstAvailable) {
-        setForm((current) => ids.has(PROTOCOL_TYPE_CONFIG[current.templateKey].templateId)
-          ? current
-          : { ...current, templateKey: firstAvailable.key });
+      if (!firstAvailable) {
+        setTemplateError('Backend не вернул ни одного поддерживаемого типа протокола. Проверьте конфигурацию шаблонов.');
+        return;
       }
+      setForm((current) => ids.has(PROTOCOL_TYPE_CONFIG[current.templateKey].templateId)
+        ? current
+        : { ...current, templateKey: firstAvailable.key });
     } catch (error) {
       setBackendTemplateIds(new Set());
       setTemplateError(getApiErrorMessage(error, 'Не удалось загрузить доступные типы протоколов'));
@@ -347,18 +385,18 @@ const ProtocolCreatePage = () => {
       setBooting(true);
       setWarning('');
       try {
-        const [companyItems, defaultLaboratory] = await Promise.all([
+        const [companyItems, laboratoryItems] = await Promise.all([
           getCompanies({ status: 'ACTIVE' }).catch((error) => {
             toast.error('Не удалось загрузить компании', error instanceof Error ? error.message : undefined);
             return [];
           }),
-          getDefaultLaboratory(),
+          getLaboratories(),
         ]);
         if (!mounted) return;
         setCompanies(companyItems);
-        const laboratoryItems = defaultLaboratory?.active ? [defaultLaboratory] : await getLaboratories();
-        if (!mounted) return;
         const activeLaboratories = laboratoryItems.filter((item) => item.active);
+        const defaultLaboratory = activeLaboratories.find((item) => item.isDefault)
+          || (activeLaboratories.length === 1 ? activeLaboratories[0] : undefined);
         setLaboratories(activeLaboratories);
         if (defaultLaboratory?.active) setForm((current) => ({ ...current, laboratoryId: defaultLaboratory.id }));
         if (!companyItems.length) setWarning('Компании не найдены. Добавьте компанию перед созданием протокола.');
@@ -376,6 +414,30 @@ const ProtocolCreatePage = () => {
     void Promise.all([boot(), loadTemplates(), loadMeasurementDevices()]);
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    const beforeLinkNavigation = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0) return;
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest('a[href]') as HTMLAnchorElement | null;
+      if (!anchor || anchor.target === '_blank' || anchor.origin !== window.location.origin) return;
+      if (!window.confirm('Есть несохранённые данные протокола. Уйти со страницы без сохранения?')) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    document.addEventListener('click', beforeLinkNavigation, true);
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload);
+      document.removeEventListener('click', beforeLinkNavigation, true);
+    };
+  }, [dirty]);
 
   useEffect(() => {
     setChemicalQuery('');
@@ -404,6 +466,7 @@ const ProtocolCreatePage = () => {
   }, [form.templateKey]);
 
   useEffect(() => {
+    const requestId = ++objectRequestRef.current;
     if (!form.companyId) {
       setObjects([]);
       setObjectWarning('');
@@ -413,18 +476,22 @@ const ProtocolCreatePage = () => {
     setObjectWarning('');
     getCompanyObjects(form.companyId)
       .then((items) => {
+        if (requestId !== objectRequestRef.current) return;
         const active = items.filter((item) => item.status === 'ACTIVE' || item.virtual === true);
         setObjects(active);
         if (!active.length) setObjectWarning('У компании не заполнен объект. Заполните объект в карточке компании.');
         setForm((current) => ({ ...current, objectId: active.find((item) => item.id === current.objectId)?.id || active[0]?.id || '' }));
       })
       .catch((error) => {
+        if (requestId !== objectRequestRef.current) return;
         setObjects([]);
+        setObjectWarning('Не удалось загрузить объекты выбранной компании. Повторно выберите компанию.');
         toast.error('Не удалось загрузить объекты компании', error instanceof Error ? error.message : undefined);
       });
   }, [form.companyId]);
 
   useEffect(() => {
+    const requestId = ++employeeRequestRef.current;
     if (!form.laboratoryId) {
       setEmployees([]);
       setEmployeeWarning('');
@@ -436,6 +503,7 @@ const ProtocolCreatePage = () => {
     setEmployeeWarning('');
     getLaboratoryEmployees(form.laboratoryId)
       .then((items) => {
+        if (requestId !== employeeRequestRef.current) return;
         const active = items.filter((item) => item.active && item.id && String(item.laboratoryId || form.laboratoryId) === String(form.laboratoryId));
         setEmployees(active);
         if (!active.length) setEmployeeWarning('Сотрудники лаборатории не найдены');
@@ -443,6 +511,7 @@ const ProtocolCreatePage = () => {
         setSelectedExecutor(null);
       })
       .catch((error) => {
+        if (requestId !== employeeRequestRef.current) return;
         setEmployees([]);
         setEmployeeWarning('Сотрудники лаборатории не найдены');
         toast.error('Не удалось загрузить исполнителей лаборатории', error instanceof Error ? error.message : undefined);
@@ -450,6 +519,20 @@ const ProtocolCreatePage = () => {
   }, [form.laboratoryId]);
 
   useEffect(() => {
+    manuallyEditedWeatherRef.current.clear();
+    setLastWeather(null);
+    setWeatherMessage('');
+    setForm((current) => ({
+      ...current,
+      temperature: '',
+      humidity: '',
+      pressureKpa: '',
+      windSpeed: '',
+      weatherSource: 'API',
+      weatherDataSource: '',
+      weatherObservedAt: '',
+      manualChangeReason: '',
+    }));
     if (!form.objectId || !form.measurementDate || !form.measurementTime) return;
     const requestId = ++weatherRequestRef.current;
     const timer = window.setTimeout(async () => {
@@ -473,10 +556,10 @@ const ProtocolCreatePage = () => {
           const hasManualValues = manuallyEdited.size > 0;
           return {
             ...current,
-            temperature: manuallyEdited.has('temperature') ? current.temperature : weather.temperature ?? current.temperature,
-            humidity: manuallyEdited.has('humidity') ? current.humidity : weather.humidity ?? current.humidity,
-            pressureKpa: manuallyEdited.has('pressureKpa') ? current.pressureKpa : weather.pressureKpa ?? weather.pressure ?? current.pressureKpa,
-            windSpeed: manuallyEdited.has('windSpeed') ? current.windSpeed : weather.windSpeed ?? current.windSpeed,
+            temperature: manuallyEdited.has('temperature') ? current.temperature : weather.temperature ?? '',
+            humidity: manuallyEdited.has('humidity') ? current.humidity : weather.humidity ?? '',
+            pressureKpa: manuallyEdited.has('pressureKpa') ? current.pressureKpa : weather.pressureKpa ?? weather.pressure ?? '',
+            windSpeed: manuallyEdited.has('windSpeed') ? current.windSpeed : weather.windSpeed ?? '',
             weatherSource: hasManualValues ? 'MANUAL' : weather.source,
             weatherDataSource: hasManualValues ? current.weatherDataSource : weather.dataSource || 'Погодный сервис',
             weatherObservedAt: weather.weatherObservedAt || weather.observedAt || current.weatherObservedAt,
@@ -485,7 +568,10 @@ const ProtocolCreatePage = () => {
         });
         if (weather.warning) setWeatherMessage(weather.warning);
       } catch {
-        if (!controller.signal.aborted && requestId === weatherRequestRef.current) setWeatherMessage('Погоду не удалось подтянуть. Заполните условия вручную.');
+        if (!controller.signal.aborted && requestId === weatherRequestRef.current) {
+          setLastWeather(null);
+          setWeatherMessage('Погоду не удалось подтянуть. Заполните условия вручную.');
+        }
       } finally {
         if (requestId === weatherRequestRef.current) setWeatherLoading(false);
       }
@@ -502,11 +588,18 @@ const ProtocolCreatePage = () => {
   };
 
   const addChemicalIndicator = (indicator: SelectedIndicator) => {
+    setDirty(true);
+    setFormError('');
     setSelectedIndicators((current) => {
       if (current.some((item) => item.key === indicator.key || (item.code === indicator.code && item.normative?.id === indicator.normative?.id))) return current;
       return [...current, indicator];
     });
     setChemicalQuery('');
+  };
+
+  const navigateBack = () => {
+    if (dirty && !window.confirm('Есть несохранённые данные протокола. Уйти со страницы без сохранения?')) return;
+    navigate('/staff/protocols');
   };
 
   const openManualIndicator = () => {
@@ -543,7 +636,15 @@ const ProtocolCreatePage = () => {
   };
 
   const setIndicatorResult = (key: string, result: string) => {
-    setSelectedIndicators((current) => current.map((item) => item.key === key ? { ...item, result } : item));
+    setDirty(true);
+    setFormError('');
+    setSelectedIndicators((current) => current.map((item) => item.key === key ? { ...item, result: normalizeDecimal(result) } : item));
+  };
+
+  const removeIndicator = (key: string) => {
+    setDirty(true);
+    setFormError('');
+    setSelectedIndicators((current) => current.filter((selected) => selected.key !== key));
   };
 
   const setWeatherField = (
@@ -551,6 +652,8 @@ const ProtocolCreatePage = () => {
     value: string,
   ) => {
     manuallyEditedWeatherRef.current.add(key);
+    setDirty(true);
+    setFormError('');
     setForm((current) => ({
       ...current,
       [key]: normalizeDecimal(value),
@@ -560,6 +663,8 @@ const ProtocolCreatePage = () => {
   };
 
   const setIndicatorDevice = (key: string, measurementDeviceId: string) => {
+    setDirty(true);
+    setFormError('');
     setSelectedIndicators((current) => current.map((item) => item.key === key ? {
       ...item,
       measurementDeviceId,
@@ -574,6 +679,8 @@ const ProtocolCreatePage = () => {
 
   const applyDeviceToAllIndicators = () => {
     if (!bulkDeviceId) return;
+    setDirty(true);
+    setFormError('');
     setSelectedIndicators((current) => current.map((item) => ({
       ...item,
       measurementDeviceId: bulkDeviceId,
@@ -693,17 +800,28 @@ const ProtocolCreatePage = () => {
 
   const validate = () => {
     if (!selectedChoice.templateId) return 'Выберите тип протокола';
+    if (!availableTypeOptions.some((option) => option.key === form.templateKey)) return 'Выбранный тип протокола недоступен';
     if (!form.companyId) return 'Выберите компанию';
     if (!form.objectId) return 'Выберите объект';
     if (!form.protocolDate) return 'Укажите дату протокола';
     if (!form.measurementDate) return 'Укажите дату измерения';
     if (!form.measurementTime) return 'Укажите время измерения';
+    if (form.protocolDate > today()) return 'Дата протокола не может быть в будущем';
+    if (form.measurementDate > today()) return 'Дата измерения не может быть в будущем';
+    if (form.measurementDate > form.protocolDate) return 'Дата измерения не может быть позже даты протокола';
     if (!form.measurementPlace.trim()) return 'Укажите место измерения';
+    if ((isSoil || isWater) && !form.sampleNumber.trim()) return 'Укажите номер пробы';
+    if (isSoil && !form.samplingDepth.trim()) return 'Укажите глубину отбора пробы';
     if (!form.laboratoryId) return 'Выберите лабораторию';
     if (!form.executorId) return 'Выберите исполнителя';
     if (!selectedIndicators.length) return 'Выберите показатели';
     if (selectedIndicators.some((item) => !item.result.trim())) return 'Введите фактические значения по всем выбранным показателям';
+    if (selectedIndicators.some((item) => !isNumericMeasurement(item.result))) return 'Фактические значения должны быть числами; допустимы префиксы <, <=, > или >=';
     if (selectedIndicators.some((item) => !item.measurementDeviceId)) return 'Выберите прибор для каждой строки измерения';
+    if (!isDecimalInRange(form.temperature, -90, 70)) return 'Температура должна быть числом от −90 до 70 °C';
+    if (!isDecimalInRange(form.humidity, 0, 100)) return 'Влажность должна быть числом от 0 до 100%';
+    if (!isDecimalInRange(form.pressureKpa, 50, 120)) return 'Давление должно быть числом от 50 до 120 кПа';
+    if (!isDecimalInRange(form.windSpeed, 0, 100)) return 'Скорость ветра должна быть числом от 0 до 100 м/с';
     if (manuallyEditedWeatherRef.current.size > 0 && !form.manualChangeReason.trim()) {
       return 'Укажите причину ручного изменения погодных условий';
     }
@@ -715,6 +833,7 @@ const ProtocolCreatePage = () => {
     if (isCreating) return;
     const message = validate();
     if (message) {
+      setFormError(message);
       toast.warning(message);
       return;
     }
@@ -889,10 +1008,20 @@ const ProtocolCreatePage = () => {
       measurements,
     };
     setIsCreating(true);
+    setFormError('');
     try {
       const created = await protocolService.quickCreateProtocol(quickPayload);
-      const protocol = await protocolService.getProtocol(created.id);
-      if (!protocol.id) throw new Error('Backend не вернул id протокола');
+      if (!created.id) throw new Error('Backend не вернул id протокола');
+      setDirty(false);
+      let protocol = created;
+      try {
+        protocol = await protocolService.getProtocol(created.id);
+      } catch (reloadError) {
+        toast.success('Протокол создан');
+        toast.warning('Не удалось сразу загрузить созданный протокол. Редактор повторит загрузку.', getApiErrorMessage(reloadError));
+        navigate(`/staff/protocols/${created.id}`, { replace: true });
+        return;
+      }
       if (protocol.results.length !== measurements.length) {
         toast.warning(`Backend сохранил ${protocol.results.length} из ${measurements.length} строк. Откройте протокол и проверьте результаты.`);
       }
@@ -913,7 +1042,7 @@ const ProtocolCreatePage = () => {
     <form onSubmit={submit} className="space-y-5">
       <header className="flex flex-col gap-3 border-b border-slate-200 bg-white pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <button type="button" onClick={() => navigate('/staff/protocols')} className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-eco-700">
+          <button type="button" onClick={navigateBack} className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-eco-700">
             <ArrowLeft className="h-4 w-4" /> Назад к протоколам
           </button>
           <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">Быстрое создание протокола</h1>
@@ -925,6 +1054,8 @@ const ProtocolCreatePage = () => {
       </header>
 
       {warning && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">{warning}</div>}
+      {formError && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{formError}</div>}
+      {dirty && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">Есть несохранённые данные протокола.</div>}
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-black text-slate-900">1. Тип протокола</h2>
@@ -1030,14 +1161,14 @@ const ProtocolCreatePage = () => {
 
       <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 xl:grid-cols-4">
         <h2 className="text-lg font-black text-slate-900 md:col-span-2 xl:col-span-4">3. Дата и место</h2>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Дата протокола</span><input type="date" value={form.protocolDate} onChange={(event) => setField('protocolDate', event.target.value)} className={inputClass} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Дата отбора' : 'Дата измерения'}</span><input type="date" value={form.measurementDate} onChange={(event) => setField('measurementDate', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field={isSoil || isWater ? 'samplingDate' : 'measurementDate'} visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Дата протокола</span><input type="date" max={today()} value={form.protocolDate} onChange={(event) => setField('protocolDate', event.target.value)} className={inputClass} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Дата отбора' : 'Дата измерения'}</span><input type="date" max={form.protocolDate || today()} value={form.measurementDate} onChange={(event) => setField('measurementDate', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field={isSoil || isWater ? 'samplingDate' : 'measurementDate'} visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
         <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Время</span><input type="time" value={form.measurementTime} onChange={(event) => setField('measurementTime', event.target.value)} className={inputClass} /></label>
         <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Место отбора' : 'Место измерения'}</span><input value={form.measurementPlace} onChange={(event) => setField('measurementPlace', event.target.value)} placeholder={isSoil ? 'Например: участок 1, точка 3' : 'Например: рабочее место оператора'} className={inputClass} /><ProtocolPrintVisibilityToggle field="samplingPlace" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
         {(isSoil || isWater) && (
           <>
-            <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Номер пробы</span><input value={form.sampleNumber} onChange={(event) => setField('sampleNumber', event.target.value)} placeholder="Например: 1/24" className={inputClass} /></label>
-            {isSoil && <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Глубина отбора</span><input value={form.samplingDepth} onChange={(event) => setField('samplingDepth', event.target.value)} placeholder="Например: 0-20 см" className={inputClass} /></label>}
+            <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Номер пробы *</span><input required value={form.sampleNumber} onChange={(event) => setField('sampleNumber', event.target.value)} placeholder="Например: 1/24" className={inputClass} /></label>
+            {isSoil && <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Глубина отбора *</span><input required value={form.samplingDepth} onChange={(event) => setField('samplingDepth', event.target.value)} placeholder="Например: 0-20 см" className={inputClass} /></label>}
           </>
         )}
       </section>
@@ -1047,13 +1178,13 @@ const ProtocolCreatePage = () => {
           <CloudSun className="h-5 w-5 text-eco-700" /> Погодные условия
         </h2>
         <div className="md:col-span-2 xl:col-span-4"><ProtocolPrintVisibilityToggle field="environmentalConditions" visibility={form.printVisibility} onChange={setPrintVisibility} /></div>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Температура, °C</span><input inputMode="decimal" value={form.temperature} onChange={(event) => setWeatherField('temperature', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="temperature" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Влажность, %</span><input inputMode="decimal" value={form.humidity} onChange={(event) => setWeatherField('humidity', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="humidity" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Давление, кПа</span><input inputMode="decimal" value={form.pressureKpa} onChange={(event) => setWeatherField('pressureKpa', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="pressure" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Температура, °C</span><input inputMode="decimal" min="-90" max="70" value={form.temperature} onChange={(event) => setWeatherField('temperature', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="temperature" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Влажность, %</span><input inputMode="decimal" min="0" max="100" value={form.humidity} onChange={(event) => setWeatherField('humidity', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="humidity" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Давление, кПа</span><input inputMode="decimal" min="50" max="120" value={form.pressureKpa} onChange={(event) => setWeatherField('pressureKpa', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="pressure" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
         <div className="space-y-1.5 text-sm font-bold text-slate-700">
           <label className="block space-y-1.5">
             <span>Скорость ветра, м/с</span>
-            <input inputMode="decimal" value={form.windSpeed} onChange={(event) => setWeatherField('windSpeed', event.target.value)} className={inputClass} />
+            <input inputMode="decimal" min="0" max="100" value={form.windSpeed} onChange={(event) => setWeatherField('windSpeed', event.target.value)} className={inputClass} />
           </label>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <ProtocolPrintVisibilityToggle field="windSpeed" visibility={form.printVisibility} onChange={setPrintVisibility} />
@@ -1061,7 +1192,7 @@ const ProtocolCreatePage = () => {
               type="button"
               variant="secondary"
               className="px-3 py-1.5 text-xs"
-              disabled={weatherLoading || lastWeather?.windSpeed === undefined}
+              disabled={weatherLoading || !lastWeather}
               onClick={() => {
                 manuallyEditedWeatherRef.current.clear();
                 setForm((current) => ({
@@ -1095,26 +1226,26 @@ const ProtocolCreatePage = () => {
           <h2 className="text-lg font-black text-slate-900 md:col-span-2 xl:col-span-4">4. Условия</h2>
           {selectedSubtype === 'MICROCLIMATE' && (
             <>
-              <select value={form.season} onChange={(event) => setField('season', event.target.value)} className={inputClass}>{seasonOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
-              <select value={form.workCategory} onChange={(event) => setField('workCategory', event.target.value)} className={inputClass}>{workCategoryOptions.map((item) => <option key={item} value={item}>Категория работ {item}</option>)}</select>
-              <select value={form.workplaceType} onChange={(event) => setField('workplaceType', event.target.value)} className={inputClass}>{workplaceTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
-              <select value={form.roomType} onChange={(event) => setField('roomType', event.target.value)} className={inputClass}>{roomTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
-              <select value={form.normLevel} onChange={(event) => setField('normLevel', event.target.value)} className={inputClass}>{normLevelOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+              <select aria-label="Период года" value={form.season} onChange={(event) => setField('season', event.target.value)} className={inputClass}>{seasonOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+              <select aria-label="Категория работ" value={form.workCategory} onChange={(event) => setField('workCategory', event.target.value)} className={inputClass}>{workCategoryOptions.map((item) => <option key={item} value={item}>Категория работ {item}</option>)}</select>
+              <select aria-label="Тип рабочего места" value={form.workplaceType} onChange={(event) => setField('workplaceType', event.target.value)} className={inputClass}>{workplaceTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+              <select aria-label="Тип помещения" value={form.roomType} onChange={(event) => setField('roomType', event.target.value)} className={inputClass}>{roomTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+              <select aria-label="Уровень норматива" value={form.normLevel} onChange={(event) => setField('normLevel', event.target.value)} className={inputClass}>{normLevelOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
             </>
           )}
           {(selectedSubtype === 'NOISE' || selectedSubtype === 'NOISE_VIBRATION') && (
             <>
-              <select value={form.roomType} onChange={(event) => setField('roomType', event.target.value)} className={inputClass}>{roomTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
-              <select value={form.workplaceType} onChange={(event) => setField('workplaceType', event.target.value)} className={inputClass}>{workplaceTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
-              <select value={form.noiseType} onChange={(event) => setField('noiseType', event.target.value)} className={inputClass}>{noiseTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+              <select aria-label="Тип помещения" value={form.roomType} onChange={(event) => setField('roomType', event.target.value)} className={inputClass}>{roomTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+              <select aria-label="Тип рабочего места" value={form.workplaceType} onChange={(event) => setField('workplaceType', event.target.value)} className={inputClass}>{workplaceTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+              <select aria-label="Характер шума" value={form.noiseType} onChange={(event) => setField('noiseType', event.target.value)} className={inputClass}>{noiseTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
             </>
           )}
           {selectedSubtype === 'LIGHTING' && (
             <>
-              <select value={form.roomType} onChange={(event) => setField('roomType', event.target.value)} className={inputClass}>{roomTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
-              <select value={form.workplaceType} onChange={(event) => setField('workplaceType', event.target.value)} className={inputClass}>{workplaceTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
-              <input value={form.visualWorkCategory} onChange={(event) => setField('visualWorkCategory', event.target.value)} placeholder="Разряд зрительной работы" className={inputClass} />
-              <select value={form.lightingType} onChange={(event) => setField('lightingType', event.target.value)} className={inputClass}>{lightingTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+              <select aria-label="Тип помещения" value={form.roomType} onChange={(event) => setField('roomType', event.target.value)} className={inputClass}>{roomTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+              <select aria-label="Тип рабочего места" value={form.workplaceType} onChange={(event) => setField('workplaceType', event.target.value)} className={inputClass}>{workplaceTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+              <input aria-label="Разряд зрительной работы" value={form.visualWorkCategory} onChange={(event) => setField('visualWorkCategory', event.target.value)} placeholder="Разряд зрительной работы" className={inputClass} />
+              <select aria-label="Тип освещения" value={form.lightingType} onChange={(event) => setField('lightingType', event.target.value)} className={inputClass}>{lightingTypeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
             </>
           )}
         </section>
@@ -1245,7 +1376,7 @@ const ProtocolCreatePage = () => {
                 </div>
                 <label className="space-y-1.5 text-sm font-bold text-slate-700">
                   <span>Фактическое значение</span>
-                  <input value={item.result} onChange={(event) => setIndicatorResult(item.key, event.target.value)} placeholder="Факт" className={inputClass} />
+                  <input inputMode="decimal" value={item.result} onChange={(event) => setIndicatorResult(item.key, event.target.value)} placeholder="Например: 0.25 или <0.01" className={inputClass} />
                 </label>
                 <label className="space-y-1.5 text-sm font-bold text-slate-700">
                   <span>Прибор</span>
@@ -1254,7 +1385,7 @@ const ProtocolCreatePage = () => {
                     {measurementDevices.map((device) => <option key={device.id} value={device.id}>{device.name} · {device.model} · {device.serialNumber}</option>)}
                   </select>
                 </label>
-                <Button type="button" variant="secondary" className="text-rose-700 hover:bg-rose-50" onClick={() => setSelectedIndicators((current) => current.filter((selected) => selected.key !== item.key))}>Убрать</Button>
+                <Button type="button" variant="secondary" className="text-rose-700 hover:bg-rose-50" onClick={() => removeIndicator(item.key)}>Убрать</Button>
               </div>
             ))}
           </div>

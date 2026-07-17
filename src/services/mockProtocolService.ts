@@ -312,8 +312,18 @@ export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): 
     measurementPlace: payload.measurementPlace,
     laboratoryId: String(payload.laboratoryId),
     executorId: String(payload.executorId),
+    sourceDocumentCode: payload.sourceDocumentCode,
+    docxTemplateCode: payload.docxTemplateCode,
+    normativeTemplateId: payload.normativeTemplateId,
+    environmentType: payload.environmentType,
+    defaultUnit: payload.defaultUnit,
+    waterType: payload.waterType,
+    waterUseCategory: payload.waterUseCategory,
     purpose: 'Лабораторные испытания',
-    environment: { ...(payload.conditions || {}), source: 'MANUAL', dataSource: 'manual' } as ProtocolEnvironmentalConditions,
+    environment: {
+      ...(payload.conditions || {}),
+      ...(payload.environment || {}),
+    } as ProtocolEnvironmentalConditions,
     printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
   });
   for (const measurement of payload.measurements) {
