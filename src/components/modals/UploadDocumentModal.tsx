@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
+import { CLIENT_FILE_RULES, validateClientFile } from '../../config/clientFiles';
 
 export type UploadDocumentValues = {
   name: string;
@@ -27,6 +28,11 @@ type UploadDocumentModalProps = {
 };
 
 const documentCategoryLabels: Record<string, string> = {
+  CLIENT_DOCUMENT: 'Документ клиента',
+  SUPPORTING_DOCUMENT: 'Подтверждающий документ',
+  OTHER_CLIENT_DOCUMENT: 'Другой документ клиента',
+  PAYMENT_RECEIPT: 'Подтверждение оплаты',
+  QUARTER_CLIENT_DATA: 'Исходные данные клиента за квартал',
   primary: 'Первичный документ',
   requisites: 'Реквизиты',
   commercial_offer: 'КП',
@@ -67,15 +73,6 @@ const defaultCategories = [
   'other',
 ];
 
-const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
-const maxFileSizeBytes = 20 * 1024 * 1024;
-const allowedAccept = '.pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-
-const isAllowedFile = (file: File) => {
-  const name = file.name.toLowerCase();
-  return allowedExtensions.some((extension) => name.endsWith(extension));
-};
-
 const UploadDocumentModal = ({
   isOpen,
   title = 'Загрузить документ',
@@ -89,22 +86,17 @@ const UploadDocumentModal = ({
   onSubmit,
 }: UploadDocumentModalProps) => {
   const [error, setError] = useState('');
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
     const form = new FormData(event.currentTarget);
-    const file = form.get('file') as File | null;
-    if (!file?.name) {
-      setError('Выберите файл документа.');
-      return;
-    }
-    if (!isAllowedFile(file)) {
-      setError('Можно загрузить только PDF, Word или Excel файл.');
-      return;
-    }
-    if (file.size > maxFileSizeBytes) {
-      setError('Файл не должен быть больше 20MB.');
+    const inputFile = form.get('file') as File | null;
+    const file = droppedFile || inputFile;
+    const validationError = validateClientFile(file);
+    if (validationError) {
+      setError(validationError);
       return;
     }
     try {
@@ -119,6 +111,7 @@ const UploadDocumentModal = ({
         dueDate: String(form.get('dueDate') || ''),
       });
       event.currentTarget.reset();
+      setDroppedFile(null);
       onClose();
     } catch {
       setError('Не удалось загрузить документ. Проверьте данные и попробуйте снова.');
@@ -139,9 +132,21 @@ const UploadDocumentModal = ({
             {categories.map((item) => <option key={item} value={item}>{documentCategoryLabel(item)}</option>)}
           </select>
         </label>
-        <label className="text-sm font-semibold text-slate-700">
+        <label
+          className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm font-semibold text-slate-700"
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault();
+            const file = event.dataTransfer.files?.[0] || null;
+            const validationError = validateClientFile(file);
+            setError(validationError || '');
+            setDroppedFile(validationError ? null : file);
+          }}
+        >
           Файл
-          <input name="file" type="file" required accept={allowedAccept} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+          <span className="mt-1 block text-xs font-normal text-slate-500">Перетащите файл сюда или выберите его. PDF, Word или Excel, до {CLIENT_FILE_RULES.maxSizeBytes / 1024 / 1024} МБ.</span>
+          {droppedFile && <span className="mt-2 block break-all text-xs text-eco-800">{droppedFile.name}</span>}
+          <input name="file" type="file" required={!droppedFile} accept={CLIENT_FILE_RULES.accept} onChange={() => setDroppedFile(null)} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
         </label>
         <label className="text-sm font-semibold text-slate-700">
           Комментарий
@@ -166,7 +171,7 @@ const UploadDocumentModal = ({
         )}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" disabled={loading} onClick={onClose}>Отмена</Button>
-          <Button type="submit" disabled={loading}>Загрузить</Button>
+          <Button type="submit" disabled={loading}>{loading ? 'Загрузка...' : 'Загрузить'}</Button>
         </div>
       </form>
     </Modal>

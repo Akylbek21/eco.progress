@@ -80,7 +80,7 @@ export const sendDocumentToClient = async (orderId: string, documentId: string, 
 export const sendAgreementResponse = async (
   orderId: string,
   documentId: string,
-  payload: { action: 'signed' | 'sent_without_signature' | 'revision_requested'; comment?: string; signedCms?: string; signerSubject?: string },
+  payload: { action: 'ACCEPTED' | 'REVISION_REQUESTED' | 'SIGNED'; comment?: string; cms?: string; certificateInfo?: Record<string, string | undefined> },
 ) => {
   const { data } = await api.post<{ data: AgreementResponse; message: string | null }>(
     `/client/orders/${orderId}/agreements/${documentId}/responses`,

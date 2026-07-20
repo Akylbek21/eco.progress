@@ -191,6 +191,7 @@ function App() {
         <Route path="/cabinet/orders" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetOrdersPage /></CabinetLayout></RoleAccess>} />
         <Route path="/cabinet/orders/new" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetNewOrderPage onNotify={notify} /></CabinetLayout></RoleAccess>} />
         <Route path="/cabinet/orders/:id" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetOrderDetailsPage onNotify={notify} /></CabinetLayout></RoleAccess>} />
+        <Route path="/client/orders/:id" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetOrderDetailsPage onNotify={notify} /></CabinetLayout></RoleAccess>} />
         <Route path="/cabinet/documents" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetDocumentsPage /></CabinetLayout></RoleAccess>} />
         <Route path="/cabinet/payments" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetPaymentsPage /></CabinetLayout></RoleAccess>} />
         <Route path="/cabinet/company" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetCompanyPage /></CabinetLayout></RoleAccess>} />

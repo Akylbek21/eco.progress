@@ -157,6 +157,15 @@ export type DocumentItem = {
   clientComment?: string;
   staffComment?: string;
   dueDate?: string;
+  category?: string;
+  visibility?: 'CLIENT' | 'STAFF' | 'INTERNAL' | string;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  sentAt?: string;
+  version?: number;
+  uploadedBy?: string;
+  revisionComment?: string;
 };
 
 export type QuarterDocument = {
@@ -292,6 +301,10 @@ export type OrderPrimaryDocument = {
   clientComment?: string;
   requestedAt?: string;
   updatedAt?: string;
+  fileSize?: number;
+  mimeType?: string;
+  version?: number;
+  revisionComment?: string;
 };
 
 export type LaboratoryMeasurementAgreement = {
@@ -330,6 +343,10 @@ export type LaboratoryResultDocument = {
   publishedAt?: string;
   publishedBy?: string;
   comment?: string;
+  version?: number;
+  protocolNumber?: string;
+  electronicallySigned?: boolean;
+  clientVisible?: boolean;
   history: OrderHistoryItem[];
 };
 

@@ -17,7 +17,9 @@ import {
   type UploadDocumentValues,
 } from '../components/modals';
 import { useAuth } from '../contexts/AuthContext';
-import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, uploadSignedContract, signOrderContractWithNCALayer, payOrderOnline, uploadQuarterDocument, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications, respondOrderDocument, signDocumentForResponse } from '../services/orderService';
+import { getClientOrders, getOrderById as fetchOrderById, createOrder, addComment, uploadDocument, uploadSignedContract, signOrderContractWithNCALayer, uploadQuarterDocument, respondLaboratoryMeasurementAgreement, sendPrimaryDocumentForReview, uploadLaboratoryPrimaryDocument, uploadPrimaryDocument, getNotifications, respondOrderDocument, signDocumentForResponse } from '../services/orderService';
+import { deleteClientPrimaryDocument, downloadClientDocument, downloadClientLaboratoryDocument, downloadClientPrimaryDocument } from '../services/clientDocumentService';
+import { uploadClientPaymentReceipt } from '../services/clientPaymentService';
 import { sendAgreementResponse as sendAgreementResponseRequest } from '../services/crmWorkflowService';
 import { getClientPayments, getClientDebts, getClientContracts } from '../services/paymentService';
 import { getServices } from '../services/serviceService';
@@ -40,10 +42,12 @@ import {
 import { getAnnualRequestDebtSummary, getAnnualRequestProgress, getAnnualRequestWarnings, getCurrentQuarterForRequest, isAnnualRequest } from '../utils/annualRequests';
 import { formatCurrency, getPaymentStatusColor, getPaymentStatusLabel } from '../utils/payments';
 import { useToast } from '../hooks/useToast';
-import type { ClientPrimaryDocumentStatus, Contract, Debt, DocumentItem, LaboratoryPrimaryDocument, Order, OrderPrimaryDocument, Payment, RequestQuarter } from '../types';
+import type { Contract, Debt, DocumentItem, LaboratoryPrimaryDocument, Order, OrderPrimaryDocument, Payment, RequestQuarter } from '../types';
+import { canDeleteDocument, canSignContract, canUploadDocument, getDocumentStatusColor, getDocumentStatusLabel, getPaymentStatusLabel as getClientPaymentStatusLabel, normalizeAgreementStatus, normalizeContractStatus, normalizeDocumentStatus } from '../utils/clientWorkflow';
+import { getApiErrorMessage, getApiStatus } from '../services/apiHelpers';
 
 type ClientSimpleStatus = 'Новая заявка' | 'На консультации' | 'Ожидаем документы' | 'Документы на проверке' | 'Договор и счет' | 'Ожидаем оплату' | 'Оплачено' | 'В работе' | 'На согласовании' | 'Завершено' | 'Отменено';
-type ClientOrderTab = 'Обзор' | 'Договор и счет' | 'Первичные документы' | 'Документы' | 'Согласование' | 'Результат';
+type ClientOrderTab = 'Обзор' | 'Договор и счет' | 'Первичные документы' | 'Документы' | 'Согласование' | 'Лаборатория' | 'Результат' | 'История';
 const clientSimpleSteps: ClientSimpleStatus[] = ['Новая заявка', 'На консультации', 'Ожидаем документы', 'Договор и счет', 'Ожидаем оплату', 'В работе', 'На согласовании', 'Завершено'];
 
 const clientSimpleStatus = (order: Order): ClientSimpleStatus => {
@@ -412,14 +416,30 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
   const queryClient = useQueryClient();
   const toast = useToast();
   const [order, setOrder] = useState<Order | undefined>();
+  const [loadError, setLoadError] = useState<{ status?: number; message: string }>();
   const [activeTab, setActiveTab] = useState<ClientOrderTab>('Обзор');
-  const load = () => id && fetchOrderById(id).then(setOrder);
-  useEffect(() => { load(); }, [id]);
+  const load = async () => {
+    if (!id) return;
+    try {
+      setLoadError(undefined);
+      const nextOrder = await fetchOrderById(id);
+      if (!nextOrder) throw Object.assign(new Error('Заявка не найдена.'), { status: 404 });
+      setOrder(nextOrder);
+    } catch (error) {
+      setLoadError({ status: getApiStatus(error) || (error as { status?: number }).status, message: getApiErrorMessage(error, 'Не удалось загрузить заявку.') });
+    }
+  };
+  useEffect(() => { void load(); }, [id]);
   if (!id) return <Navigate to="/cabinet/orders" replace />;
+  if (loadError) return <div className="rounded-[24px] bg-white p-6 shadow-sm"><h2 className="text-xl font-bold text-eco-900">{loadError.status === 403 ? 'Нет доступа к заявке' : loadError.status === 404 ? 'Заявка не найдена' : 'Не удалось открыть заявку'}</h2><p className="mt-2 text-sm text-slate-600">{loadError.status === 403 ? 'Эта заявка недоступна вашей учётной записи.' : loadError.message}</p><Button type="button" className="mt-4" onClick={() => void load()}>Повторить</Button></div>;
   if (!order) return <div className="flex min-h-[40vh] items-center justify-center"><LoadingSpinner /></div>;
   const serviceContract = getPrimaryContractForOrder(order);
-  const errorMessage = (err: unknown, fallback: string) =>
-    (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (err as Error)?.message || fallback;
+  const laboratoryOrder = Boolean(order.laboratoryStatus || order.laboratoryMeasurementAgreement || order.laboratoryPrimaryDocuments?.length || order.laboratoryResultDocuments?.length || /лаборатор/i.test(order.service));
+  const errorMessage = (err: unknown, fallback: string) => getApiErrorMessage(err, fallback);
+  const downloadDocument = async (document: Pick<DocumentItem, 'id' | 'name'>) => {
+    try { await downloadClientDocument(order.id, document.id, document.name); }
+    catch (error) { toast.error('Не удалось скачать документ', errorMessage(error, 'Повторите попытку.')); }
+  };
   const submitComment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -459,7 +479,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       return;
     }
     try {
-      await uploadQuarterDocument(order.id, quarter.id, values.file, values.category || 'client_data');
+      await uploadQuarterDocument(order.id, quarter.id, values.file, 'QUARTER_CLIENT_DATA');
       toast.success('Документ загружен', 'Документ добавлен к кварталу.');
       load();
       queryClient.invalidateQueries({ queryKey: ['client-orders'] });
@@ -470,6 +490,10 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
   const submitPrimaryFile = async (document: OrderPrimaryDocument, values: UploadDocumentValues) => {
     if (!values.file?.name) {
       toast.error('Документ не загружен', 'Выберите файл и попробуйте снова.');
+      return;
+    }
+    if (document.fileName === values.file.name && document.fileSize === values.file.size) {
+      toast.error('Этот файл уже загружен', 'Выберите исправленную версию или другой файл.');
       return;
     }
     try {
@@ -493,11 +517,20 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       toast.error('Нельзя отправить документ', errorMessage(err, 'Сначала загрузите файл.'));
     }
   };
+  const deletePrimaryDoc = async (document: OrderPrimaryDocument) => {
+    if (!canDeleteDocument(document.status)) return;
+    try { await deleteClientPrimaryDocument(order.id, document.id); toast.success('Файл удалён'); await load(); }
+    catch (error) { toast.error('Не удалось удалить файл', errorMessage(error, 'Повторите попытку.')); }
+  };
+  const downloadPrimaryDoc = async (document: OrderPrimaryDocument) => {
+    try { await downloadClientPrimaryDocument(order.id, document.id, document.fileName || document.name); }
+    catch (error) { toast.error('Не удалось скачать документ', errorMessage(error, 'Повторите попытку.')); }
+  };
   const sendAgreementResponse = async (sourceDocument: AgreementSourceDocument, values: AgreementResponseValues) => {
     const { action } = values;
-    const signed = action === 'sign';
-    const accepted = action === 'accept';
-    const rejected = action === 'reject';
+    const signed = action === 'SIGNED';
+    const accepted = action === 'ACCEPTED';
+    const rejected = action === 'REVISION_REQUESTED';
     const commentText = values.comment;
     const label = rejected
       ? `Документ "${sourceDocument.title}" отправлен на исправление`
@@ -509,7 +542,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
     try {
       let signedPayload: { signedCms?: string; signerSubject?: string } = {};
       if (signed) {
-        signedPayload = await signDocumentForResponse({
+        signedPayload = await signDocumentForResponse(order.id, {
           id: sourceDocument.id,
           fileUrl: sourceDocument.fileUrl,
         });
@@ -517,15 +550,17 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       const comment = commentText || (accepted ? 'Согласовано' : rejected ? 'Нужно исправить документ' : 'Подписано');
       if (sourceDocument.source === 'agreementDocuments') {
         await sendAgreementResponseRequest(order.id, sourceDocument.id, {
-          action: signed ? 'signed' : rejected ? 'revision_requested' : 'sent_without_signature',
+          action,
           comment,
-          ...signedPayload,
+          cms: signedPayload.signedCms,
+          certificateInfo: { fullName: signedPayload.signerSubject },
         });
       } else {
         await respondOrderDocument(order.id, sourceDocument.id, {
           action,
           comment,
-          ...signedPayload,
+          cms: signedPayload.signedCms,
+          certificateInfo: { fullName: signedPayload.signerSubject },
         });
       }
       if (rejected) toast.success('Запрос отправлен', 'Специалист увидит ваш комментарий по документу.');
@@ -587,6 +622,10 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
         toast.error('Договор не найден', 'Сначала сотрудник должен загрузить PDF договора для подписи.');
         return;
       }
+      if (!canSignContract(order.crmContractStatus || order.contractStatus)) {
+        toast.error('Подписание недоступно', normalizeContractStatus(order.crmContractStatus || order.contractStatus) === 'SIGNED' ? 'Договор уже подписан.' : 'Договор ещё не отправлен клиенту на подпись.');
+        return;
+      }
       await signOrderContractWithNCALayer(order.id, contractDoc);
       toast.success('Договор подписан', 'Менеджер получил подписанный договор.');
       load();
@@ -618,25 +657,14 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       throw err;
     }
   };
-  const handlePay = async () => {
-    try {
-      await payOrderOnline(order.id, order.paymentMethod || 'Банковская карта');
-      toast.success('Оплата подтверждена', 'Статус оплаты обновлен.');
-      load();
-      queryClient.invalidateQueries({ queryKey: ['client-orders'] });
-    } catch (err) {
-      toast.error('Ошибка', errorMessage(err, 'Не удалось выполнить оплату.'));
-    }
-  };
   const submitReceipt = async (values: PaymentModalValues) => {
     if (!values.file) {
       toast.error('Чек не загружен', 'Выберите файл чека.');
       return;
     }
     try {
-      await uploadDocument(order.id, values.file, 'client');
-      if (values.comment) await addComment(order.id, `Чек оплаты: ${values.comment}`, 'client');
-      toast.success('Чек оплаты загружен', 'Бухгалтер проверит оплату.');
+      await uploadClientPaymentReceipt(order.id, { file: values.file, amount: values.amount, paymentDate: values.date, paymentMethod: values.method, paymentOrderNumber: values.paymentOrderNumber, comment: values.comment });
+      toast.success('Подтверждение оплаты загружено', 'Статус оплаты: подтверждение на проверке. Бухгалтер проверит платёж.');
       load();
       queryClient.invalidateQueries({ queryKey: ['client-orders'] });
     } catch (err) {
@@ -656,7 +684,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
           </div>
           <ClientStatusPath order={order} />
           <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-            {(['Обзор', 'Договор и счет', 'Первичные документы', 'Документы', 'Согласование', 'Результат'] as const).map((tab) => (
+            {(['Обзор', 'Договор и счет', 'Первичные документы', 'Документы', 'Согласование', ...(laboratoryOrder ? ['Лаборатория' as const] : []), 'Результат', 'История'] as const).map((tab) => (
               <button
                 type="button"
                 key={tab}
@@ -689,7 +717,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
       )}
 
       {activeTab === 'Договор и счет' && (
-        <ClientContractInvoicePanel order={order} onSign={handleSign} onUploadSignedContract={submitSignedContract} onPay={handlePay} onUploadReceipt={submitReceipt} serviceContract={serviceContract} />
+        <ClientContractInvoicePanel order={order} onSign={handleSign} onUploadSignedContract={submitSignedContract} onUploadReceipt={submitReceipt} onDownload={downloadDocument} serviceContract={serviceContract} />
       )}
 
       {activeTab === 'Первичные документы' && (
@@ -697,11 +725,13 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
             order={order}
             onUpload={submitPrimaryFile}
             onSend={sendPrimaryDoc}
+            onDelete={deletePrimaryDoc}
+            onDownload={downloadPrimaryDoc}
         />
       )}
 
       {activeTab === 'Документы' && (
-        <ClientDocumentsPanel order={order} onUpload={submitClientDocument} />
+        <ClientDocumentsPanel order={order} onUpload={submitClientDocument} onDownload={downloadDocument} />
       )}
 
       {activeTab === 'Согласование' && (
@@ -711,19 +741,68 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
         />
       )}
 
-      {activeTab === 'Результат' && <ClientResultPanel order={order} />}
+      {activeTab === 'Лаборатория' && laboratoryOrder && (
+        <ClientLaboratoryPanel
+          order={order}
+          onUpload={submitLaboratoryPrimaryFile}
+          onAcceptMeasurement={acceptMeasurement}
+          onRescheduleMeasurement={requestMeasurementReschedule}
+        />
+      )}
+
+      {activeTab === 'Результат' && <ClientResultPanel order={order} onDownload={downloadDocument} />}
+      {activeTab === 'История' && <ClientTimeline order={order} />}
     </div>
   );
 };
 
 const Info = ({ label, value }: { label: string; value: string }) => <div className="rounded-2xl bg-eco-50 p-4"><p className="text-xs font-semibold uppercase text-slate-500">{label}</p><p className="mt-2 text-sm text-slate-800">{value || 'Не указано'}</p></div>;
 
+const ClientLaboratoryPanel = ({ order, onUpload, onAcceptMeasurement, onRescheduleMeasurement }: {
+  order: Order;
+  onUpload: (event: FormEvent<HTMLFormElement>, document: LaboratoryPrimaryDocument) => void | Promise<void>;
+  onAcceptMeasurement: () => void | Promise<void>;
+  onRescheduleMeasurement: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
+}) => {
+  const agreement = order.laboratoryMeasurementAgreement;
+  const measurementStatus = String(agreement?.status || '').toUpperCase();
+  const canRespond = ['SENT', 'SENT_TO_CLIENT'].includes(measurementStatus);
+  const results = order.laboratoryResultDocuments || [];
+  return <Reveal><div className="space-y-6">
+    <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">
+      <h3 className="text-xl font-bold text-eco-900">Первичные лабораторные документы</h3>
+      <div className="mt-4 space-y-3">
+        {(order.laboratoryPrimaryDocuments || []).map((doc) => {
+          const status = normalizeDocumentStatus(doc.status);
+          return <div key={doc.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold text-slate-900">{doc.name}</p><p className="mt-1 text-sm text-slate-600">{doc.fileName || 'Файл не загружен'} · {doc.uploadedAt || 'нет даты'}</p>{doc.employeeComment && <p className="mt-2 text-sm text-rose-700">Замечание: {doc.employeeComment}</p>}</div><span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${getDocumentStatusColor(doc.status)}`}>{getDocumentStatusLabel(doc.status)}</span></div>
+            {doc.fileName && <Button type="button" variant="secondary" className="mt-3 px-4 py-2 text-xs" onClick={() => void downloadClientLaboratoryDocument(order.id, doc.id, doc.fileName || doc.name)}>Скачать</Button>}
+            {['NEED_UPLOAD', 'UPLOADED', 'REVISION_REQUESTED'].includes(status) && <form className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]" onSubmit={(event) => onUpload(event, doc)}><input name="file" type="file" required className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" /><input name="comment" placeholder="Комментарий" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" /><Button type="submit">{doc.fileName ? 'Заменить' : 'Загрузить'}</Button></form>}
+          </div>;
+        })}
+        {!order.laboratoryPrimaryDocuments?.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Лаборатория пока не запросила документы.</p>}
+      </div>
+    </div>
+    <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">
+      <h3 className="text-xl font-bold text-eco-900">Выезд и замеры</h3>
+      {agreement ? <><div className="mt-4 grid gap-3 md:grid-cols-2"><Info label="Дата и время" value={`${agreement.measurementDate || 'Не указана'} ${agreement.measurementTime || ''}`} /><Info label="Адрес" value={agreement.address} /><Info label="Объект" value={agreement.companyName} /><Info label="Контакт" value={`${agreement.contactPerson || ''} ${agreement.phone || ''}`} /><Info label="Перечень замеров" value={agreement.measurementScope} /><Info label="Комментарий лаборатории" value={agreement.comment} /></div>
+        {canRespond && <div className="mt-4 grid gap-4 lg:grid-cols-2"><Button type="button" onClick={() => void onAcceptMeasurement()}>Подтвердить</Button><form className="grid gap-2 rounded-2xl bg-slate-50 p-4" onSubmit={onRescheduleMeasurement}><input name="rescheduleDate" type="date" required className="rounded-xl border border-slate-200 px-3 py-2" /><input name="rescheduleTime" type="time" required className="rounded-xl border border-slate-200 px-3 py-2" /><textarea name="comment" required placeholder="Причина переноса" className="rounded-xl border border-slate-200 px-3 py-2" /><Button type="submit" variant="secondary">Запросить перенос</Button></form></div>}
+      </> : <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Дата выезда пока не предложена.</p>}
+    </div>
+    <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6"><h3 className="text-xl font-bold text-eco-900">Лабораторные результаты</h3><div className="mt-4 grid gap-3 md:grid-cols-2">{results.map((result) => <div key={result.id} className="rounded-2xl bg-eco-50 p-4"><p className="font-bold text-slate-900">{result.name}</p><p className="mt-1 text-sm text-slate-600">Протокол: {result.protocolNumber || 'не указан'} · версия {result.version || 1}</p><p className="mt-1 text-xs text-slate-500">{result.readyAt || result.publishedAt || ''}{result.electronicallySigned ? ' · подписан ЭЦП' : ''}</p><Button type="button" className="mt-3 px-4 py-2 text-xs" onClick={() => void downloadClientLaboratoryDocument(order.id, result.id, result.fileName || result.name)}>Скачать</Button></div>)}{!results.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 md:col-span-2">Опубликованных результатов пока нет.</p>}</div></div>
+  </div></Reveal>;
+};
+
+const ClientTimeline = ({ order }: { order: Order }) => <Reveal><div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6"><h3 className="text-xl font-bold text-eco-900">История заявки</h3><div className="mt-5 space-y-3">{order.history.map((event) => <div key={event.id} className="border-l-2 border-eco-200 py-1 pl-4"><p className="font-semibold text-slate-900">{event.text || 'Статус заявки обновлён'}</p><p className="mt-1 text-xs text-slate-500">{event.createdAt}</p></div>)}{!order.history.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">История пока пуста.</p>}</div></div></Reveal>;
+
 const ClientDocumentsPanel = ({
   order,
   onUpload,
+  onDownload,
 }: {
   order: Order;
   onUpload: (values: UploadDocumentValues) => void | Promise<void>;
+  onDownload: (document: DocumentItem) => void | Promise<void>;
 }) => {
   const [uploadOpen, setUploadOpen] = useState(false);
   const documents = order.documents || [];
@@ -741,7 +820,7 @@ const ClientDocumentsPanel = ({
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           {documents.map((doc) => (
-            <ClientDocumentCard key={doc.id} doc={doc} />
+            <ClientDocumentCard key={doc.id} doc={doc} onDownload={onDownload} />
           ))}
           {!documents.length && (
             <div className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-500 md:col-span-2">
@@ -752,8 +831,8 @@ const ClientDocumentsPanel = ({
         <UploadDocumentModal
           isOpen={uploadOpen}
           title="Загрузить документ"
-          defaultCategory="client"
-          categories={['client', 'other']}
+          defaultCategory="CLIENT_DOCUMENT"
+          categories={['CLIENT_DOCUMENT', 'SUPPORTING_DOCUMENT', 'OTHER_CLIENT_DOCUMENT']}
           onClose={() => setUploadOpen(false)}
           onSubmit={onUpload}
         />
@@ -762,8 +841,7 @@ const ClientDocumentsPanel = ({
   );
 };
 
-const ClientDocumentCard = ({ doc }: { doc: DocumentItem }) => {
-  const href = doc.fileUrl || `/api/files/documents/${doc.id}`;
+const ClientDocumentCard = ({ doc, onDownload }: { doc: DocumentItem; onDownload: (document: DocumentItem) => void | Promise<void> }) => {
   return (
     <div className="rounded-[20px] border border-slate-100 bg-slate-50 p-4">
       <div className="flex items-start gap-3">
@@ -773,9 +851,7 @@ const ClientDocumentCard = ({ doc }: { doc: DocumentItem }) => {
           <p className="mt-1 text-xs font-semibold text-slate-500">{doc.status} · {doc.uploadedAt}</p>
         </div>
       </div>
-      <a href={href} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">
-        <FileText size={14} /> Открыть
-      </a>
+      <Button type="button" className="mt-4 px-4 py-2 text-xs" onClick={() => void onDownload(doc)}><Download size={14} /> Скачать</Button>
     </div>
   );
 };
@@ -797,11 +873,11 @@ type AgreementSourceDocument = {
 };
 
 const getAgreementSourceDocuments = (order: Order): AgreementSourceDocument[] => {
-  const completedStatuses = ['accepted', 'rejected', 'signed'];
+  const isCompleted = (status: unknown) => ['ACCEPTED', 'REVISION_REQUESTED', 'SIGNED', 'REJECTED'].includes(normalizeAgreementStatus(status));
   const agreementDocs = (order.agreementDocuments || [])
     .filter((doc) =>
       !isContractDocument(doc) &&
-      !completedStatuses.includes(String(doc.clientResponseStatus || doc.status || 'pending'))
+      !isCompleted(doc.clientResponseStatus || doc.status || 'PENDING')
     )
     .map((doc) => ({
     id: doc.id,
@@ -823,7 +899,7 @@ const getAgreementSourceDocuments = (order: Order): AgreementSourceDocument[] =>
       doc.sentToClient === true &&
       !isContractDocument(doc) &&
       (doc.needsSignature === true || doc.needsClientResponse === true) &&
-      !completedStatuses.includes(String(doc.clientResponseStatus || 'pending'))
+      !isCompleted(doc.clientResponseStatus || 'PENDING')
     )
     .map((doc) => ({
       id: doc.id,
@@ -902,6 +978,9 @@ const ClientAgreementPanel = ({
         <AgreementResponseModal
           isOpen={Boolean(selectedDocument)}
           documentName={selectedDocument?.title || ''}
+          description={selectedDocument?.comment}
+          documentDate={selectedDocument?.uploadedAt}
+          onDownload={() => selectedDocument ? downloadClientDocument(order.id, selectedDocument.id, selectedDocument.fileName) : undefined}
           onClose={() => setSelectedDocument(null)}
           onSubmit={(values) => selectedDocument ? onSend(selectedDocument, values) : undefined}
         />
@@ -910,37 +989,21 @@ const ClientAgreementPanel = ({
   );
 };
 
-const primaryDocumentStatusLabels: Record<ClientPrimaryDocumentStatus, string> = {
-  need_upload: 'Не загружен',
-  uploaded: 'Загружен',
-  sent: 'Отправлено',
-  in_review: 'На проверке',
-  under_review: 'На проверке',
-  accepted: 'Принят',
-  approved: 'Принят',
-  needs_fix: 'На исправлении',
-  rejected: 'Отклонён',
-};
-
-const primaryDocumentStatusClass = (status: ClientPrimaryDocumentStatus) => {
-  if (status === 'accepted') return 'bg-emerald-50 text-emerald-800 ring-emerald-100';
-  if (status === 'needs_fix') return 'bg-rose-50 text-rose-800 ring-rose-100';
-  if (status === 'in_review') return 'bg-indigo-50 text-indigo-800 ring-indigo-100';
-  if (status === 'sent') return 'bg-sky-50 text-sky-800 ring-sky-100';
-  return 'bg-amber-50 text-amber-800 ring-amber-100';
-};
-
 const ClientPrimaryDocumentsPanel = ({
   order,
   onUpload,
   onSend,
+  onDelete,
+  onDownload,
 }: {
   order: Order;
   onUpload: (document: OrderPrimaryDocument, values: UploadDocumentValues) => void | Promise<void>;
   onSend: (document: OrderPrimaryDocument, comment?: string) => void | Promise<void>;
+  onDelete: (document: OrderPrimaryDocument) => void | Promise<void>;
+  onDownload: (document: OrderPrimaryDocument) => void | Promise<void>;
 }) => {
   const documents = order.primaryDocuments || [];
-  const requiredLeft = documents.filter((doc) => doc.required && doc.status !== 'accepted').length;
+  const requiredLeft = documents.filter((doc) => doc.required && normalizeDocumentStatus(doc.status) !== 'APPROVED').length;
   const [uploadDoc, setUploadDoc] = useState<OrderPrimaryDocument | null>(null);
   const [sendDoc, setSendDoc] = useState<OrderPrimaryDocument | null>(null);
 
@@ -981,17 +1044,19 @@ const ClientPrimaryDocumentsPanel = ({
                   {doc.clientComment && <p className="mt-2 break-words rounded-xl bg-white px-3 py-2 text-sm text-slate-600">Ваш комментарий: {doc.clientComment}</p>}
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2 lg:min-w-[250px] lg:flex-col lg:items-end">
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${primaryDocumentStatusClass(doc.status)}`}>{primaryDocumentStatusLabels[doc.status]}</span>
-                  {doc.status !== 'accepted' && (
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${getDocumentStatusColor(doc.status)}`}>{getDocumentStatusLabel(doc.status)}</span>
+                  {normalizeDocumentStatus(doc.status) !== 'APPROVED' && (
                     <div className="flex flex-wrap justify-end gap-2">
-                      <Button type="button" className="px-4 py-2 text-xs" onClick={() => setUploadDoc(doc)}>
+                      <Button type="button" disabled={!canUploadDocument(doc.status)} className="px-4 py-2 text-xs" onClick={() => setUploadDoc(doc)}>
                         {doc.fileName ? 'Заменить' : 'Загрузить'}
                       </Button>
+                      {doc.fileName && <Button type="button" variant="secondary" className="px-4 py-2 text-xs" onClick={() => void onDownload(doc)}>Скачать</Button>}
+                      {doc.fileName && canDeleteDocument(doc.status) && <Button type="button" variant="secondary" className="px-4 py-2 text-xs" onClick={() => void onDelete(doc)}>Удалить</Button>}
                       <Button
                         type="button"
                         variant="secondary"
                         className="px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={!doc.fileName || ['accepted', 'approved', 'in_review', 'under_review'].includes(doc.status)}
+                        disabled={!doc.fileName || normalizeDocumentStatus(doc.status) !== 'UPLOADED'}
                         onClick={() => setSendDoc(doc)}
                       >
                         Отправить
@@ -1039,26 +1104,20 @@ const ClientContractInvoicePanel = ({
   order,
   onSign,
   onUploadSignedContract,
-  onPay,
   onUploadReceipt,
+  onDownload,
   serviceContract,
 }: {
   order: Order;
   onSign: () => void;
   onUploadSignedContract: (values: UploadDocumentValues) => void | Promise<void>;
-  onPay: () => void;
   onUploadReceipt: (values: PaymentModalValues) => void | Promise<void>;
+  onDownload: (document: DocumentItem) => void | Promise<void>;
   serviceContract?: ReturnType<typeof getPrimaryContractForOrder>;
 }) => {
   const contractDoc = findContractDocument(order);
   const invoiceDoc = order.resultDocuments.find((doc) => doc.type === 'invoice' || doc.name.toLowerCase().includes('счет') || doc.name.toLowerCase().includes('счёт'));
-  const paymentText = order.paymentStatus === 'paid' || order.paymentStatus === 'transferred_to_specialist'
-    ? 'Оплата получена'
-    : order.paymentStatus === 'partial'
-    ? 'Оплачено частично'
-    : ['invoice_sent', 'awaiting_payment', 'pending'].includes(order.paymentStatus || '')
-    ? 'Ожидаем оплату'
-    : 'Счет пока не выставлен';
+  const paymentText = getClientPaymentStatusLabel(order.paymentStatus);
 
   return (
     <Reveal>
@@ -1066,8 +1125,8 @@ const ClientContractInvoicePanel = ({
         <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6">
           <h3 className="text-xl font-bold text-eco-900">Договор и счет</h3>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <DocumentDownloadCard title="Договор" doc={contractDoc} fallbackLabel={serviceContract?.number || 'Договор пока не загружен'} ready={Boolean(contractDoc || serviceContract)} />
-            <DocumentDownloadCard title="Счет" doc={invoiceDoc} fallbackLabel={order.invoiceNumber || 'Счет пока не выставлен'} ready={Boolean(invoiceDoc || order.invoiceNumber)} />
+            <DocumentDownloadCard title="Договор" doc={contractDoc} fallbackLabel={serviceContract?.number || 'Договор пока не загружен'} ready={Boolean(contractDoc || serviceContract)} onDownload={onDownload} />
+            <DocumentDownloadCard title="Счет" doc={invoiceDoc} fallbackLabel={order.invoiceNumber || 'Счет пока не выставлен'} ready={Boolean(invoiceDoc || order.invoiceNumber)} onDownload={onDownload} />
           </div>
           <div className="mt-5 rounded-2xl bg-eco-50 p-4">
             <p className="text-xs font-semibold uppercase text-slate-500">Статус оплаты</p>
@@ -1075,7 +1134,7 @@ const ClientContractInvoicePanel = ({
           </div>
         </div>
         <div className="space-y-5">
-          <OnlineOrderPanel order={order} onSign={onSign} onUploadSignedContract={onUploadSignedContract} onPay={onPay} />
+          <OnlineOrderPanel order={order} onSign={onSign} onUploadSignedContract={onUploadSignedContract} />
           <ReceiptUploadCard order={order} onUploadReceipt={onUploadReceipt} />
         </div>
       </div>
@@ -1103,9 +1162,8 @@ const ReceiptUploadCard = ({ order, onUploadReceipt }: { order: Order; onUploadR
   );
 };
 
-const DocumentDownloadCard = ({ title, doc, fallbackLabel, ready }: { title: string; doc?: DocumentItem; fallbackLabel: string; ready: boolean }) => {
+const DocumentDownloadCard = ({ title, doc, fallbackLabel, ready, onDownload }: { title: string; doc?: DocumentItem; fallbackLabel: string; ready: boolean; onDownload: (document: DocumentItem) => void | Promise<void> }) => {
   const displayName = doc?.name || fallbackLabel;
-  const downloadUrl = doc?.fileUrl || (doc?.id ? `/api/files/documents/${doc.id}` : undefined);
   return (
     <div className="rounded-[20px] border border-slate-100 bg-slate-50 p-4">
       <div className="flex items-start gap-3">
@@ -1115,10 +1173,8 @@ const DocumentDownloadCard = ({ title, doc, fallbackLabel, ready }: { title: str
           <p className="mt-1 break-words text-sm text-slate-600">{displayName}</p>
         </div>
       </div>
-      {downloadUrl ? (
-        <a href={downloadUrl} download={displayName} className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold ${ready ? 'bg-eco-900 text-white' : 'pointer-events-none bg-slate-200 text-slate-500'}`}>
-          <Download size={14} /> Скачать
-        </a>
+      {doc ? (
+        <Button type="button" onClick={() => void onDownload(doc)} className="mt-4 px-4 py-2 text-xs"><Download size={14} /> Скачать</Button>
       ) : (
         <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-200 px-4 py-2 text-xs font-bold text-slate-500">
           <Download size={14} /> Скачать
@@ -1128,7 +1184,7 @@ const DocumentDownloadCard = ({ title, doc, fallbackLabel, ready }: { title: str
   );
 };
 
-const ClientResultPanel = ({ order }: { order: Order }) => {
+const ClientResultPanel = ({ order, onDownload }: { order: Order; onDownload: (document: DocumentItem) => void | Promise<void> }) => {
   const ready = ['Готово', 'Завершено'].includes(order.status);
   const results = ready ? order.resultDocuments.filter((doc) => doc.type === 'result') : [];
   return (
@@ -1142,7 +1198,7 @@ const ClientResultPanel = ({ order }: { order: Order }) => {
                 <p className="font-bold text-slate-900">{doc.name}</p>
                 <p className="mt-1 text-sm text-slate-500">Дата готовности: {doc.uploadedAt}</p>
                 <p className="mt-2 text-sm text-slate-600">{doc.status}</p>
-                <a href={doc.fileUrl || `/api/files/documents/${doc.id}`} download={doc.name} className="mt-3 inline-flex items-center gap-2 rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white"><Download size={14} /> Скачать</a>
+                <Button type="button" onClick={() => void onDownload(doc)} className="mt-3 px-4 py-2 text-xs"><Download size={14} /> Скачать</Button>
               </div>
             ))}
           </div>
@@ -1297,8 +1353,8 @@ const ClientQuarterCard = ({ quarter, isCurrent, onUpload }: { quarter: RequestQ
       <UploadDocumentModal
         isOpen={uploadOpen}
         title={`Документ: ${quarter.quarterLabel}`}
-        defaultCategory="client_data"
-        categories={['client_data', 'invoice', 'act', 'protocol', 'report', 'result', 'other']}
+        defaultCategory="QUARTER_CLIENT_DATA"
+        categories={['QUARTER_CLIENT_DATA']}
         onClose={() => setUploadOpen(false)}
         onSubmit={(values) => onUpload(quarter, values)}
       />
@@ -1310,19 +1366,17 @@ const OnlineOrderPanel = ({
   order,
   onSign,
   onUploadSignedContract,
-  onPay,
 }: {
   order: Order;
   onSign: () => void;
   onUploadSignedContract: (values: UploadDocumentValues) => void | Promise<void>;
-  onPay: () => void;
 }) => {
   const hasContractDocument = Boolean(findContractDocument(order));
   const contractReady = ['sent', 'signed'].includes(order.contractStatus || '') || ['sent_to_client', 'waiting_signature', 'signed'].includes(order.crmContractStatus || '');
   const available = hasContractDocument || contractReady || ['invoice_sent', 'awaiting_payment', 'pending', 'partial', 'paid', 'transferred_to_specialist'].includes(order.paymentStatus || '');
-  const signed = order.contractStatus === 'signed' || order.crmContractStatus === 'signed';
-  const paid = order.paymentStatus === 'paid' || order.paymentStatus === 'transferred_to_specialist';
-  const [confirm, setConfirm] = useState<'sign' | 'pay' | null>(null);
+  const signed = normalizeContractStatus(order.crmContractStatus || order.contractStatus) === 'SIGNED';
+  const signAllowed = canSignContract(order.crmContractStatus || order.contractStatus);
+  const [confirm, setConfirm] = useState<'sign' | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   if (!available) {
     return (
@@ -1352,22 +1406,13 @@ const OnlineOrderPanel = ({
               <p className="mt-1 text-sm text-slate-600">{signed ? order.signedAt : order.signatureProvider || 'NCALayer / ЭЦП'}</p>
             </div>
           </div>
-          <Button disabled={signed} onClick={() => setConfirm('sign')} className="mt-4 w-full">{signed ? 'Подписано' : 'Подписать ЭЦП'}</Button>
-          <Button disabled={signed} type="button" variant="secondary" onClick={() => setUploadOpen(true)} className="mt-3 w-full">
+          <Button disabled={!signAllowed} onClick={() => setConfirm('sign')} className="mt-4 w-full">{signed ? 'Подписано' : 'Подписать ЭЦП'}</Button>
+          <Button disabled={signed || !signAllowed} type="button" variant="secondary" onClick={() => setUploadOpen(true)} className="mt-3 w-full">
             <Upload size={16} />
             Загрузить подписанный договор
           </Button>
         </div>
-        <div className="rounded-2xl border border-slate-200 p-4">
-          <div className="flex items-start gap-3">
-            {paid ? <CheckCircle2 className="text-eco-600" size={20} /> : <CreditCard className="text-eco-700" size={20} />}
-            <div>
-              <p className="font-semibold text-slate-900">{paid ? 'Оплата получена' : 'Оплатить онлайн'}</p>
-              <p className="mt-1 text-sm text-slate-600">{paid ? order.paidAt : `${order.paymentAmount || '150 000 ₸'} · ${order.paymentMethod || 'Банковская карта'}`}</p>
-            </div>
-          </div>
-          <Button disabled={paid} onClick={() => setConfirm('pay')} className="mt-4 w-full">{paid ? 'Оплачено' : 'Перейти к оплате'}</Button>
-        </div>
+        <div className="rounded-2xl border border-slate-200 p-4 text-sm leading-6 text-slate-600">Онлайн-оплата не подключена. Оплатите счёт по банковским реквизитам и загрузите подтверждение ниже.</div>
       </div>
       <ConfirmModal
         isOpen={confirm === 'sign'}
@@ -1391,18 +1436,6 @@ const OnlineOrderPanel = ({
         onClose={() => setUploadOpen(false)}
         onSubmit={onUploadSignedContract}
       />
-      <ConfirmModal
-        isOpen={confirm === 'pay'}
-        title="Перейти к оплате?"
-        description="Система отправит запрос на онлайн-оплату по текущему счету."
-        confirmText="Оплатить"
-        variant="success"
-        onClose={() => setConfirm(null)}
-        onConfirm={async () => {
-          await onPay();
-          setConfirm(null);
-        }}
-      />
     </div>
   );
 };
@@ -1412,7 +1445,7 @@ const Section = ({ title, items }: { title: string; items: string[] }) => <div c
 export const CabinetDocumentsPage = () => {
   const { orders } = useClientOrders();
   const docs = orders.flatMap((order) => [
-    ...(order.primaryDocuments || []).map((doc) => ({ id: doc.id, orderId: order.id, name: doc.name, status: primaryDocumentStatusLabels[doc.status], file: doc.fileName || 'Файл не загружен' })),
+    ...(order.primaryDocuments || []).map((doc) => ({ id: doc.id, orderId: order.id, name: doc.name, status: getDocumentStatusLabel(doc.status), file: doc.fileName || 'Файл не загружен' })),
     ...order.documents.map((doc) => ({ id: doc.id, orderId: order.id, name: doc.name, status: doc.status, file: doc.name })),
     ...order.resultDocuments.map((doc) => ({ id: doc.id, orderId: order.id, name: doc.name, status: doc.status, file: doc.name })),
   ]);

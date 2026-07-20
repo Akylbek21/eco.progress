@@ -80,14 +80,19 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Не удалос
     || nestedData?.message
     || nestedData?.error
     || (typeof error.response?.data === 'string' ? error.response.data : undefined);
-  if (typeof backendMessage === 'string' && backendMessage.trim()) return backendMessage;
+  if (typeof backendMessage === 'string' && backendMessage.trim() && status !== 500) {
+    const sanitized = backendMessage.replace(/[<>]/g, '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 500);
+    if (!/(stack trace|nullpointer|sql(exception|state)?|syntax error|at\s+[\w.$]+\(|org\.|java\.|sequelize|typeorm)/i.test(sanitized)) return sanitized;
+  }
 
   if (status === 400) return 'Проверьте заполнение полей и отправленные данные.';
   if (status === 401) return 'Сессия истекла. Войдите заново.';
   if (status === 403) return 'У вас нет доступа к этому действию.';
   if (status === 404) return 'Запрошенная функция или запись не найдена.';
   if (status === 413) return 'Файл слишком большой для загрузки.';
+  if (status === 415) return 'Формат файла не поддерживается.';
   if (status === 409) return 'Операция конфликтует с текущим состоянием данных.';
+  if (status && status >= 500) return 'Сервис временно недоступен. Повторите попытку позже.';
   return error.message || fallback;
 };
 

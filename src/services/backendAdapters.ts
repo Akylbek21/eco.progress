@@ -47,7 +47,25 @@ export const mapDocument = (doc: UnknownRecord = {}, orderId?: string): Document
   clientComment: doc.clientComment,
   staffComment: doc.staffComment,
   dueDate: doc.dueDate,
+  category: doc.category || doc.type,
+  visibility: doc.visibility,
+  fileName: doc.fileName || doc.name,
+  fileSize: typeof doc.fileSize === 'number' ? doc.fileSize : Number(doc.fileSize || 0) || undefined,
+  mimeType: doc.mimeType || doc.fileType,
+  sentAt: doc.sentAt || doc.sentToClientAt,
+  version: Number(doc.version || 1),
+  uploadedBy: doc.uploadedByName || doc.uploadedBy,
+  revisionComment: doc.revisionComment || doc.rejectionReason,
 } as unknown as DocumentItem);
+
+const isClientDocument = (doc: DocumentItem) => doc.type !== 'internal' && String(doc.visibility || 'CLIENT').toUpperCase() !== 'INTERNAL';
+
+const clientTimelineActions = new Set([
+  'order_created', 'document_requested', 'document_uploaded', 'document_sent_for_review',
+  'document_revision_requested', 'document_approved', 'contract_sent', 'contract_signed',
+  'invoice_sent', 'payment_receipt_uploaded', 'payment_confirmed', 'measurement_agreed',
+  'result_ready', 'order_completed', 'status_changed', 'document_ready',
+]);
 
 const mapComment = (comment: UnknownRecord = {}, orderId: string): CommentItem => ({
   id: asString(comment.id),
@@ -126,7 +144,6 @@ const mapQuarter = (quarter: UnknownRecord = {}, orderId: string): RequestQuarte
 
 export const mapOrder = (raw: UnknownRecord): Order => {
   if (!raw) return raw as unknown as Order;
-  if (raw.clientId || raw.service) return raw as unknown as Order;
 
   const client = asRecord(raw.clientInfo);
   const contract = asRecord(raw.contractInfo);
@@ -145,20 +162,20 @@ export const mapOrder = (raw: UnknownRecord): Order => {
     id: orderId,
     businessCompanyId: raw.businessCompanyId,
     businessCompanyName: raw.businessCompanyName,
-    clientId: asString(client.id),
-    clientType: client.clientType || 'company',
+    clientId: asString(client.id || raw.clientId),
+    clientType: (client.clientType || raw.clientType || 'company') as Order['clientType'],
     clientName: asString(client.contactPerson || raw.contactPerson || client.companyName),
-    companyName: asString(client.companyName),
-    bin: asString(client.binIin || client.bin),
-    organizationType: asString(client.organizationType),
-    legalAddress: asString(client.legalAddress),
+    companyName: asString(client.companyName || raw.companyName),
+    bin: asString(client.binIin || client.bin || raw.bin),
+    organizationType: asString(client.organizationType || raw.organizationType),
+    legalAddress: asString(client.legalAddress || raw.legalAddress),
     objectAddress: raw.objectAddress,
     contactPerson: asString(raw.contactPerson || client.contactPerson),
     whatsapp: raw.whatsapp,
     phone: asString(raw.phone || client.phone),
     email: asString(client.email || raw.email),
     serviceId: asString(raw.serviceId),
-    service: asString(raw.serviceName || raw.service),
+    service: asString(raw.serviceName || raw.service || raw.serviceType),
     urgency: asString(raw.urgency),
     comment: asString(raw.comment),
     createdAt: asString(raw.createdAt),
@@ -168,7 +185,7 @@ export const mapOrder = (raw: UnknownRecord): Order => {
     annualPeriodStart: raw.annualPeriodStart,
     annualPeriodEnd: raw.annualPeriodEnd,
     quarters: asRecords(raw.quarters).map((quarter) => mapQuarter(quarter, orderId)),
-    manager: asString(raw.managerName),
+    manager: asString(raw.managerName || raw.manager),
     contractStatus: raw.contractStatus || contract.status,
     crmContractStatus: raw.crmContractStatus || contract.crmStatus,
     paymentStatus: mapPaymentStatus(raw.paymentStatus),
@@ -193,22 +210,24 @@ export const mapOrder = (raw: UnknownRecord): Order => {
     assignedLaboratory: raw.laboratoryUserName,
     ecologyStatus: raw.ecologyStatus,
     laboratoryStatus: raw.laboratoryStatus,
-    laboratoryPrimaryDocuments: raw.laboratoryPrimaryDocuments || [],
+    laboratoryPrimaryDocuments: Array.isArray(raw.laboratoryPrimaryDocuments) ? raw.laboratoryPrimaryDocuments : [],
     laboratoryMeasurementAgreement: raw.laboratoryMeasurementAgreement,
     laboratorySections: raw.laboratorySections,
-    laboratoryResultDocuments: raw.laboratoryResultDocuments || [],
+    laboratoryResultDocuments: asRecords(raw.laboratoryResultDocuments).filter((document) => document.clientVisible === true || String(document.status).toUpperCase() === 'PUBLISHED_TO_CLIENT') as unknown as Order['laboratoryResultDocuments'],
     notifications: raw.notifications,
     deadline: raw.deadline,
     updatedAt: raw.updatedAt,
     signedAt: raw.signedAt,
     paidAt: raw.paidAt,
     completedAt: raw.completedAt,
-    documents: asRecords(raw.documents).map((doc) => mapDocument(doc, orderId)),
-    agreementDocuments: agreementDocuments.map((doc) => mapDocument(doc, orderId)),
-    primaryDocuments: raw.primaryDocuments || [],
-    resultDocuments: [...agreementDocuments, ...resultDocuments].map((doc) => mapDocument(doc, orderId)),
+    documents: asRecords(raw.documents).map((doc) => mapDocument(doc, orderId)).filter(isClientDocument),
+    agreementDocuments: agreementDocuments.map((doc) => mapDocument(doc, orderId)).filter(isClientDocument),
+    primaryDocuments: Array.isArray(raw.primaryDocuments) ? raw.primaryDocuments : [],
+    resultDocuments: [...agreementDocuments, ...resultDocuments].map((doc) => mapDocument(doc, orderId)).filter(isClientDocument),
     comments: asRecords(raw.comments).map((comment) => mapComment(comment, orderId)),
-    history: asRecords(raw.history).map((history) => mapHistory(history, orderId)),
+    history: asRecords(raw.timeline || raw.history)
+      .filter((history) => String(history.visibility || 'CLIENT').toUpperCase() === 'CLIENT' && clientTimelineActions.has(asString(history.actionType || history.type, 'status_changed').toLowerCase()))
+      .map((history) => mapHistory(history, orderId)),
   } as unknown as Order;
 };
 
