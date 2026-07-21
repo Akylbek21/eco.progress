@@ -1,14 +1,18 @@
-import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, Copy, Edit3, FileSpreadsheet, Plus, RefreshCw, RotateCcw, Search } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import NormativeForm, { type NormativeFormValues } from '../components/normatives/NormativeForm';
 import { templateName } from '../data/protocolTemplates';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { archiveNormative, confirmDsm138Import, createNormative, getNormativeRecords, importDsm32FromResources, importNormativesExcel, importPhysicalFactorsFromResources, previewDsm138Import, rollbackDsm138Import, updateNormative, type NormativeImportPreview, type NormativeRecordsParams } from '../services/normativeService';
+import { archiveNormative, confirmNormativeImport, createNormative, getNormativeRecords, importDsm32FromResources, importPhysicalFactorsFromResources, previewNormativeImport, restoreNormative, rollbackNormativeImport, updateNormative, type NormativeImportPreview, type NormativeRecordsParams } from '../services/normativeService';
 import { getApiStatus } from '../services/apiHelpers';
-import type { NormativeRecord } from '../types/protocols';
+import type { LegacyNormativeDto as NormativeRecord, NormativeReplaceMode } from '../types/normative';
+import { getNormativePermissions } from '../utils/normativePermissions';
+import { parseNormativeApiError } from '../utils/normativeApiError';
 
 const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100';
 type NormativeDocumentCode = 'DSM_70' | 'DSM_15' | 'DSM_32' | 'DSM_138';
@@ -122,8 +126,8 @@ const comparisonTypeOptions: SelectOption[] = [
 const factorTypeOptions = ['MICROCLIMATE', 'LIGHTING', 'NOISE', 'VIBRATION', 'NOISE_VIBRATION', 'INFRASOUND', 'ULTRASOUND', 'UV', 'AEROIONS', 'ELECTROMAGNETIC_FIELD', 'LASER'];
 const MIN_SEARCH_LENGTH = 3;
 const SEARCH_DEBOUNCE_MS = 500;
-const DEFAULT_PAGE_SIZE = 50;
-const PAGE_SIZE_OPTIONS = [25, 50, 100];
+const DEFAULT_PAGE_SIZE = 25;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 const NORMATIVE_DOCUMENTS: Array<{ code: NormativeDocumentCode; title: string; description: string }> = [
   {
@@ -846,24 +850,34 @@ const NormativeDirectoryPage = () => {
   const toast = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const canManage = ['ADMIN', 'DIRECTOR', 'HEAD'].includes(user?.role || '');
-  const canImportResources = user?.role === 'ADMIN';
-  const [activeDocument, setActiveDocument] = useState<NormativeDocumentCode>('DSM_70');
-  const [activeCategory, setActiveCategory] = useState<NormativeCategoryCode>('ambient_air');
-  const [query, setQuery] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const documentInitializedRef = useRef(false);
+  const filtersInitializedRef = useRef(false);
+  const permissions = getNormativePermissions(user);
+  const canManage = permissions.canCreate;
+  const canImportResources = permissions.canReplaceDocument;
+  const initialDocument = NORMATIVE_DOCUMENTS.some((item) => item.code === searchParams.get('documentCode')) ? searchParams.get('documentCode') as NormativeDocumentCode : 'DSM_70';
+  const [activeDocument, setActiveDocument] = useState<NormativeDocumentCode>(initialDocument);
+  const [activeCategory, setActiveCategory] = useState<NormativeCategoryCode>((searchParams.get('category') || getCategories(initialDocument)[0]?.code || 'ambient_air') as NormativeCategoryCode);
+  const [query, setQuery] = useState(searchParams.get('search') || '');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [page, setPage] = useState(0);
-  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
-  const [templateFilter, setTemplateFilter] = useState('');
+  const [page, setPage] = useState(Math.max(0, Number(searchParams.get('page') || 0)));
+  const requestedSize = Number(searchParams.get('size') || DEFAULT_PAGE_SIZE);
+  const [size, setSize] = useState(PAGE_SIZE_OPTIONS.includes(requestedSize) ? requestedSize : DEFAULT_PAGE_SIZE);
+  const [templateFilter, setTemplateFilter] = useState(searchParams.get('protocolType') || '');
   const [environmentFilter, setEnvironmentFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  const [subtypeFilter, setSubtypeFilter] = useState('');
+  const [subtypeFilter, setSubtypeFilter] = useState(searchParams.get('subCategory') || '');
   const [factorTypeFilter, setFactorTypeFilter] = useState('');
   const [appendixFilter, setAppendixFilter] = useState('');
   const [tableFilter, setTableFilter] = useState('');
   const [waterTypeFilter, setWaterTypeFilter] = useState('');
   const [formTypeFilter, setFormTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'ARCHIVED' | 'ALL'>((searchParams.get('archived') === 'true' ? 'ARCHIVED' : searchParams.get('archived') === 'all' ? 'ALL' : 'ACTIVE'));
+  const [sort, setSort] = useState(searchParams.get('sort') || 'updatedAt,desc');
   const [editing, setEditing] = useState<NormativeRecord | null>(null);
+  const [viewing, setViewing] = useState<NormativeRecord | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<NormativeTableRow | null>(null);
   const [editorDirty, setEditorDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -872,22 +886,28 @@ const NormativeDirectoryPage = () => {
   const [importError, setImportError] = useState('');
   const [importing, setImporting] = useState(false);
   const [importingResources, setImportingResources] = useState(false);
+  const [replaceMode, setReplaceMode] = useState<NormativeReplaceMode>('UPSERT');
+  const [importResult, setImportResult] = useState<NormativeImportPreview | null>(null);
+  const [importStep, setImportStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [previewStatus, setPreviewStatus] = useState('ALL');
+  const [previewPage, setPreviewPage] = useState(0);
 
   const visibleCategories = useMemo(() => getCategories(activeDocument), [activeDocument]);
   const normalizedQuery = normalizeSearchInput(query);
   const normalizedDebouncedQuery = normalizeSearchInput(debouncedQuery);
   const searchAllowed = canSubmitSearch(normalizedQuery);
   const searchPending = searchAllowed && normalizedQuery !== normalizedDebouncedQuery;
-  const debouncedSearchReady = Boolean(activeDocument) && searchAllowed && normalizedQuery === normalizedDebouncedQuery;
+  const debouncedSearchReady = Boolean(activeDocument) && (!normalizedQuery || (searchAllowed && normalizedQuery === normalizedDebouncedQuery));
   const searchHintVisible = normalizedQuery.length > 0 && !searchAllowed;
   const categoryParams = useMemo(() => categoryRequestParams(activeDocument, activeCategory), [activeDocument, activeCategory]);
   const requestParams = useMemo<NormativeRecordsParams>(() => ({
     page,
     size,
     search: debouncedSearchReady && normalizedDebouncedQuery ? normalizedDebouncedQuery : undefined,
-    query: debouncedSearchReady && normalizedDebouncedQuery ? normalizedDebouncedQuery : undefined,
     sourceDocumentCode: activeDocument,
-    status: 'ACTIVE',
+    status: statusFilter,
+    archived: statusFilter === 'ALL' ? undefined : statusFilter === 'ARCHIVED',
+    sort,
     templateId: templateFilter || categoryParams.templateId,
     environmentType: environmentFilter || undefined,
     factorType: factorTypeFilter || categoryParams.factorType,
@@ -899,7 +919,7 @@ const NormativeDirectoryPage = () => {
     formType: formTypeFilter || undefined,
     normativeType: typeFilter || categoryParams.normativeType,
     normativeSubType: subtypeFilter || undefined,
-  }), [page, size, debouncedSearchReady, normalizedDebouncedQuery, activeDocument, templateFilter, categoryParams, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, formTypeFilter, typeFilter, subtypeFilter]);
+  }), [page, size, debouncedSearchReady, normalizedDebouncedQuery, activeDocument, templateFilter, categoryParams, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, formTypeFilter, typeFilter, subtypeFilter, statusFilter, sort]);
   const normativeQueryKey = useMemo(() => [
     'normatives',
     activeDocument,
@@ -914,9 +934,11 @@ const NormativeDirectoryPage = () => {
     typeFilter,
     subtypeFilter,
     formTypeFilter,
+    statusFilter,
+    sort,
     page,
     size,
-  ], [activeDocument, activeCategory, debouncedSearchReady, normalizedDebouncedQuery, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, typeFilter, subtypeFilter, formTypeFilter, page, size]);
+  ], [activeDocument, activeCategory, debouncedSearchReady, normalizedDebouncedQuery, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, typeFilter, subtypeFilter, formTypeFilter, statusFilter, sort, page, size]);
   const {
     data: recordsPage,
     error: loadError,
@@ -933,8 +955,8 @@ const NormativeDirectoryPage = () => {
   const items = debouncedSearchReady ? recordsPage?.items || [] : [];
   const loading = searchPending || (debouncedSearchReady && isLoading);
   const error = loadError ? (getApiStatus(loadError) === 401 || getApiStatus(loadError) === 403
-    ? 'Нет доступа к нормативам'
-    : loadError instanceof Error ? loadError.message : 'Не удалось загрузить нормативы') : '';
+    ? 'Недостаточно прав для просмотра нормативов'
+    : parseNormativeApiError(loadError).message || 'Не удалось загрузить нормативы') : '';
   const load = useCallback(async () => {
     if (!debouncedSearchReady) return;
     await refetch();
@@ -945,8 +967,27 @@ const NormativeDirectoryPage = () => {
   }, [query]);
 
   useEffect(() => {
+    const next = new URLSearchParams();
+    next.set('page', String(page));
+    next.set('size', String(size));
+    next.set('documentCode', activeDocument);
+    next.set('category', activeCategory);
+    if (query.trim()) next.set('search', query.trim());
+    if (templateFilter) next.set('protocolType', templateFilter);
+    if (subtypeFilter) next.set('subCategory', subtypeFilter);
+    if (statusFilter === 'ARCHIVED') next.set('archived', 'true');
+    if (statusFilter === 'ALL') next.set('archived', 'all');
+    if (sort) next.set('sort', sort);
+    setSearchParams(next, { replace: true });
+  }, [page, size, activeDocument, activeCategory, query, templateFilter, subtypeFilter, statusFilter, sort, setSearchParams]);
+
+  useEffect(() => {
+    if (!documentInitializedRef.current) {
+      documentInitializedRef.current = true;
+      return;
+    }
     setPage(0);
-    setActiveCategory(getCategories(activeDocument)[0]?.code ?? 'ambient_air');
+    setActiveCategory((current) => getCategories(activeDocument).some((item) => item.code === current) ? current : getCategories(activeDocument)[0]?.code ?? 'ambient_air');
     setTemplateFilter('');
     setEnvironmentFilter('');
     setFactorTypeFilter('');
@@ -956,13 +997,15 @@ const NormativeDirectoryPage = () => {
     setTypeFilter('');
     setSubtypeFilter('');
     setWaterTypeFilter('');
-    setQuery('');
-    setDebouncedQuery('');
   }, [activeDocument]);
 
   useEffect(() => {
+    if (!filtersInitializedRef.current) {
+      filtersInitializedRef.current = true;
+      return;
+    }
     setPage(0);
-  }, [query, activeDocument, activeCategory, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, formTypeFilter, typeFilter, subtypeFilter, size]);
+  }, [query, activeDocument, activeCategory, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, formTypeFilter, typeFilter, subtypeFilter, statusFilter, sort, size]);
 
   useEffect(() => {
     if (!editorDirty) return undefined;
@@ -1112,16 +1155,87 @@ const NormativeDirectoryPage = () => {
     }
   };
 
+  const saveNormativeForm = async (values: NormativeFormValues) => {
+    if (!editing || !permissions.canEdit || saving) return;
+    const comparisonType = ({ EXACT: 'EQUAL', LE: 'LESS_OR_EQUAL', LT: 'LESS_THAN', GE: 'GREATER_OR_EQUAL', GT: 'GREATER_THAN', RANGE: 'RANGE', TEXT: 'INFO', REFERENCE_ONLY: 'ABSENT' } as Record<string, string>)[values.valueType];
+    const payload: Partial<NormativeRecord> & { valueType: string; valueRaw?: string } = {
+      sourceDocumentCode: values.documentCode,
+      normativeDocument: values.documentCode,
+      category: values.category,
+      categoryCode: values.category,
+      normativeSubType: values.subCategory,
+      subtype: values.subCategory,
+      indicatorName: values.indicatorName,
+      indicator: values.indicatorName,
+      code: values.indicatorCode,
+      pollutantCode: values.indicatorCode,
+      cas: values.cas,
+      casNumber: values.cas,
+      formula: values.formula,
+      chemicalFormula: values.formula,
+      unit: values.unit,
+      valueType: values.valueType,
+      comparisonType: comparisonType as NormativeRecord['comparisonType'],
+      value: values.value || values.valueRaw || '',
+      normativeValue: values.value || values.valueRaw || '',
+      minValue: values.valueType === 'RANGE' ? values.minValue : undefined,
+      maxValue: values.valueType === 'RANGE' ? values.maxValue : undefined,
+      valueRaw: values.valueRaw,
+      conditionJson: values.conditions,
+      templateId: values.protocolType as NormativeRecord['templateId'],
+    };
+    setSaving(true);
+    try {
+      if (editing.id) await updateNormative(editing.id, payload);
+      else {
+        const { id: _id, ...defaults } = editing;
+        void _id;
+        await createNormative({ ...defaults, ...payload, active: true, archived: false, status: 'ACTIVE' } as Omit<NormativeRecord, 'id'>);
+      }
+      await queryClient.invalidateQueries({ queryKey: ['normatives'] });
+      setEditing(null);
+      setEditorDirty(false);
+      toast.success(editing.id ? 'Норматив обновлён' : 'Норматив создан');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const archiveGroup = async (row: NormativeTableRow) => {
-    const name = firstGroupValue(row, (item) => item.indicator || item.indicatorName || item.pollutantName);
-    if (!canManage || !window.confirm(`Архивировать нормативы "${name}"?`)) return;
+    if (!canManage) return;
+    setArchiveTarget(row);
+  };
+
+  const confirmArchive = async () => {
+    const row = archiveTarget;
+    if (!row || saving) return;
+    setSaving(true);
     try {
       await Promise.all(row.records.map((record) => archiveNormative(record.id)));
       if (currentPage > 0 && row.records.length >= visibleItems.length) setPage(currentPage - 1);
       await queryClient.invalidateQueries({ queryKey: ['normatives'] });
       toast.success(row.records.length > 1 ? 'Нормативы архивированы' : 'Норматив архивирован');
+      setArchiveTarget(null);
+      setViewing(null);
     } catch (archiveError) {
-      toast.error('Не удалось архивировать норматив', archiveError instanceof Error ? archiveError.message : undefined);
+      toast.error('Не удалось архивировать норматив', parseNormativeApiError(archiveError).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const restoreRecord = async (record: NormativeRecord) => {
+    if (!permissions.canArchive || saving) return;
+    setSaving(true);
+    try {
+      await restoreNormative(record.id);
+      await queryClient.invalidateQueries({ queryKey: ['normatives'] });
+      setViewing(null);
+      toast.success('Норматив восстановлен');
+    } catch (restoreError) {
+      toast.error('Не удалось восстановить норматив', parseNormativeApiError(restoreError).message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1143,6 +1257,11 @@ const NormativeDirectoryPage = () => {
     setImportPreview(null);
     setImportError('');
     setImporting(false);
+    setImportResult(null);
+    setImportStep(1);
+    setReplaceMode('UPSERT');
+    setPreviewStatus('ALL');
+    setPreviewPage(0);
   };
 
   const openImport = () => {
@@ -1185,27 +1304,41 @@ const NormativeDirectoryPage = () => {
     resetImportState();
   };
 
-  const previewImport = async (fileList?: FileList | null) => {
+  const selectImportFiles = (fileList?: FileList | null) => {
     const selectedFiles = Array.from(fileList || []);
     if (!selectedFiles.length) {
       setImportError('Выберите файл для импорта');
       toast.warning('Выберите файл для импорта');
       return;
     }
+    const file = selectedFiles[0];
+    if (!/\.(xlsx|xls|csv)$/i.test(file.name)) {
+      setImportError('Поддерживаются файлы .xlsx, .xls и .csv');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setImportError('Размер файла превышает 20 МБ');
+      return;
+    }
     setImportFiles(selectedFiles);
     setImportPreview(null);
     setImportError('');
+    setImportStep(2);
+  };
+
+  const previewImport = async () => {
+    const selectedFiles = importFiles;
+    if (!selectedFiles.length || importing) return;
     setImporting(true);
     try {
-      const preview = activeDocument === 'DSM_138'
-        ? await previewDsm138Import(selectedFiles)
-        : await importNormativesExcel(selectedFiles[0], true);
+      const preview = await previewNormativeImport(selectedFiles[0], activeDocument, replaceMode);
       setImportPreview(preview);
+      setImportStep(3);
       if (!preview.total || !preview.valid) {
         setImportError('Файл прочитан, но валидные строки нормативов не найдены. Проверьте формат таблицы.');
       }
     } catch (importError) {
-      const message = importError instanceof Error ? importError.message : 'Не удалось проверить файл';
+      const message = parseNormativeApiError(importError).message || 'Не удалось проверить файл';
       setImportError(message);
       toast.error('Не удалось проверить файл', message);
     } finally {
@@ -1215,26 +1348,24 @@ const NormativeDirectoryPage = () => {
 
   const commitImport = async () => {
     const stats = importPreview || emptyImportPreview;
-    if (!importFiles.length || !canManage) {
+    if (!importFiles.length || !permissions.canConfirmImport || importing) {
       setImportError('Выберите файл для импорта');
       toast.warning('Выберите файл для импорта');
       return;
     }
     if ((!stats.valid && activeDocument !== 'DSM_138') || importError) return;
     setImporting(true);
+    setImportStep(4);
     try {
-      if (activeDocument === 'DSM_138') {
-        await confirmDsm138Import(stats.importBatchId || stats.importId, importFiles);
-      } else {
-        const importBatchId = stats.importBatchId || stats.importId;
-        if (!importBatchId) return;
-        await importNormativesExcel(importFiles[0], false, importBatchId);
-      }
+      const importBatchId = stats.importId || stats.importBatchId;
+      if (!importBatchId) throw new Error('Сессия предварительного импорта завершена. Загрузите файл повторно.');
+      const result = await confirmNormativeImport(importBatchId, replaceMode);
+      setImportResult(result);
+      setImportStep(5);
       toast.success('Нормативы импортированы');
-      closeImport(true);
-      await load();
+      await queryClient.invalidateQueries({ queryKey: ['normatives'] });
     } catch (importError) {
-      const message = importError instanceof Error ? importError.message : 'Импорт не выполнен';
+      const message = parseNormativeApiError(importError).message || 'Импорт не выполнен';
       setImportError(message);
       toast.error('Импорт не выполнен', message);
     } finally {
@@ -1243,27 +1374,27 @@ const NormativeDirectoryPage = () => {
   };
 
   const importStats = importPreview || emptyImportPreview;
+  const filteredPreviewRows = (importStats.previewRows || []).filter((row) => previewStatus === 'ALL' || row.status === previewStatus);
+  const previewRowsPage = filteredPreviewRows.slice(previewPage * 25, previewPage * 25 + 25);
   const confirmImportDisabled = !importFiles.length
     || !importStats.valid
     || importing
     || Boolean(importError)
-    || (activeDocument !== 'DSM_138' && !(importStats.importBatchId || importStats.importId));
-  const activeCategoryLabel = visibleCategories.find((category) => category.code === activeCategory)?.label || 'выбранной категории';
+    || !(importStats.importBatchId || importStats.importId);
+  const hasActiveFilters = Boolean(query || templateFilter || environmentFilter || factorTypeFilter || appendixFilter || tableFilter || waterTypeFilter || formTypeFilter || typeFilter || subtypeFilter || statusFilter !== 'ACTIVE' || sort !== 'updatedAt,desc');
   const emptyMessage = searchHintVisible
     ? 'Введите минимум 3 символа для поиска'
-    : activeDocument === 'DSM_138' && (activeCategory === 'surface_water_safety' || activeCategory === 'SURFACE_WATER_SAFETY')
-    ? 'Данные по приложению 3 не загружены'
-    : normalizedQuery.length > 0 && searchAllowed
-      ? 'Нормативы не найдены'
-      : `По выбранной категории данные пока не загружены: ${activeCategoryLabel}`;
+    : hasActiveFilters || (normalizedQuery.length > 0 && searchAllowed)
+      ? 'По заданным параметрам нормативы не найдены'
+      : 'Нормативы ещё не загружены';
   const rollbackImport = async () => {
     const importBatchId = importStats.importBatchId || importStats.importId;
-    if (!importBatchId || activeDocument !== 'DSM_138' || !window.confirm('Откатить импорт DSM_138? Все изменения этой партии будут отменены.')) return;
+    if (!importBatchId || !permissions.canRollbackImport || !window.confirm('Откатить импорт? Все изменения этой партии будут отменены.')) return;
     setImporting(true);
     setImportError('');
     try {
-      await rollbackDsm138Import(importBatchId);
-      toast.success('Импорт DSM_138 откачен');
+      await rollbackNormativeImport(importBatchId);
+      toast.success('Импорт откачен');
       closeImport(true);
       await load();
     } catch (rollbackError) {
@@ -1278,8 +1409,10 @@ const NormativeDirectoryPage = () => {
   const totalElements = recordsPage?.totalElements ?? 0;
   const totalPages = Math.max(1, recordsPage?.totalPages ?? 1);
   const currentPage = Math.min(recordsPage?.page ?? page, totalPages - 1);
-  const canGoBack = currentPage > 0 && !isFetching;
-  const canGoForward = currentPage + 1 < totalPages && !isFetching;
+  const canGoBack = recordsPage?.first === false && !isFetching;
+  const canGoForward = recordsPage?.last === false && !isFetching;
+  const shownFrom = displayedCount ? currentPage * size + 1 : 0;
+  const shownTo = displayedCount ? currentPage * size + displayedCount : 0;
   const handleQueryChange = useCallback((event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value), []);
   const handlePageSizeChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
     setSize(Number(event.target.value));
@@ -1287,7 +1420,6 @@ const NormativeDirectoryPage = () => {
   }, []);
   const goToPreviousPage = useCallback(() => setPage(Math.max(0, currentPage - 1)), [currentPage]);
   const goToNextPage = useCallback(() => setPage(Math.min(totalPages - 1, currentPage + 1)), [currentPage, totalPages]);
-  const hasActiveFilters = Boolean(query || templateFilter || environmentFilter || factorTypeFilter || appendixFilter || tableFilter || waterTypeFilter || formTypeFilter || typeFilter || subtypeFilter);
   const resetFilters = () => {
     setQuery('');
     setDebouncedQuery('');
@@ -1300,6 +1432,8 @@ const NormativeDirectoryPage = () => {
     setFormTypeFilter('');
     setTypeFilter('');
     setSubtypeFilter('');
+    setStatusFilter('ACTIVE');
+    setSort('updatedAt,desc');
     setPage(0);
   };
 
@@ -1316,7 +1450,7 @@ const NormativeDirectoryPage = () => {
               <Plus className="h-4 w-4" /> Добавить норматив
             </Button>
           )}
-          {canImportResources && (
+          {permissions.canPreviewImport && (
             <Button type="button" variant="secondary" onClick={openImport}>
               <FileSpreadsheet className="h-4 w-4" /> Импорт Excel
             </Button>
@@ -1365,6 +1499,7 @@ const NormativeDirectoryPage = () => {
 
       <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-4">
         <label className="relative">
+          <span className="sr-only">Поиск нормативов</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             value={query}
@@ -1372,6 +1507,18 @@ const NormativeDirectoryPage = () => {
             placeholder="Название, код, CAS, формула"
             className={`${inputClass} pl-10`}
           />
+        </label>
+        <label className="space-y-1 text-sm font-semibold text-slate-700">
+          <span>Статус</span>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'ACTIVE' | 'ARCHIVED' | 'ALL')} className={inputClass}>
+            <option value="ACTIVE">Активные</option><option value="ARCHIVED">Архивные</option><option value="ALL">Все</option>
+          </select>
+        </label>
+        <label className="space-y-1 text-sm font-semibold text-slate-700">
+          <span>Сортировка</span>
+          <select value={sort} onChange={(event) => setSort(event.target.value)} className={inputClass}>
+            <option value="updatedAt,desc">Сначала изменённые</option><option value="indicatorName,asc">Показатель А–Я</option><option value="documentCode,asc">По документу</option>
+          </select>
         </label>
         <select value={templateFilter} onChange={(event) => setTemplateFilter(event.target.value)} className={inputClass}>
           <option value="">templateId: все</option>
@@ -1486,13 +1633,13 @@ const NormativeDirectoryPage = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {group.rows.map((row, index) => (
-                      <tr key={row.key} className="hover:bg-slate-50">
+                      <tr key={row.key} tabIndex={0} onClick={() => setViewing(row.primary)} onKeyDown={(event) => { if (event.key === 'Enter') setViewing(row.primary); }} className="cursor-pointer hover:bg-slate-50 focus:bg-eco-50 focus:outline-none">
                         {visibleColumns.map((column) => (
                           <td key={column.key} className={`px-3 py-3 ${column.className || ''}`}>
                             <div className="max-w-[320px] whitespace-normal break-words" title={column.render(row, index)}>{column.render(row, index)}</div>
                           </td>
                         ))}
-                        <td className="px-3 py-3">
+                        <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>
                           <div className="flex justify-end gap-2">
                             <Button type="button" variant="secondary" className="px-3" title="Скопировать норматив" onClick={() => copyNormative(row)}>
                               <Copy className="h-4 w-4" />
@@ -1524,7 +1671,9 @@ const NormativeDirectoryPage = () => {
 
       <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-600 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
-          Страница {currentPage + 1} из {totalPages} · всего {totalElements}
+          {recordsPage?.totalElementsExact === false
+            ? `Показано ${shownFrom}–${shownTo}, общее количество недоступно`
+            : `Показано ${shownFrom}–${shownTo} из ${totalElements}`}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-2">
@@ -1538,86 +1687,65 @@ const NormativeDirectoryPage = () => {
         </div>
       </div>
 
-      <Modal open={Boolean(editing)} onClose={closeEditor} title={editing?.id ? 'Изменить норматив' : 'Добавить норматив'} size="lg" loading={saving}>
-        {editing && (
-          <form onSubmit={submit} onChange={() => setEditorDirty(true)} className="grid gap-4 sm:grid-cols-2">
-            {[
-              ['indicatorName', 'Наименование', getRecordName(editing)],
-              ['pollutantCode', 'Код', getRecordCode(editing)],
-              ['casNumber', 'CAS', getRecordCas(editing)],
-              ['chemicalFormula', 'Формула', getRecordFormula(editing)],
-              ['value', 'Значение', extractNumericValue(textValue(editing.value, editing.normativeValue, editing.maxValue))],
-              ['minValue', 'Минимум', extractNumericValue(textValue(editing.minValue, editing.min))],
-              ['maxValue', 'Максимум', extractNumericValue(textValue(editing.maxValue, editing.max))],
-              ['unit', 'Ед. изм.', editing.unit],
-              ['sourceDocumentCode', 'Документ-код', editing.sourceDocumentCode],
-              ['templateId', 'templateId', editing.templateId],
-              ['category', 'Категория', editing.category],
-              ['categoryCode', 'categoryCode', editing.categoryCode],
-              ['hazardClass', 'Класс опасности', editing.hazardClass],
-              ['limitingIndicator', 'Лимитирующий показатель', editing.limitingIndicator],
-              ['notes', 'Примечание', conditionValue(editing, 'notes')],
-            ].map(([name, label, value]) => (
-              <label key={name} className="space-y-1.5 text-sm font-semibold text-slate-700">
-                <span>{label}</span>
-                <input
-                  name={name}
-                  defaultValue={String(value || '')}
-                  required={['indicatorName', 'sourceDocumentCode', 'templateId'].includes(String(name))}
-                  inputMode={['value', 'minValue', 'maxValue'].includes(String(name)) ? 'decimal' : undefined}
-                  className={inputClass}
-                />
-              </label>
-            ))}
-            <label className="space-y-1.5 text-sm font-semibold text-slate-700">
-              <span>Тип сравнения</span>
-              <select name="comparisonType" defaultValue={editing.comparisonType || 'LESS_OR_EQUAL'} className={inputClass}>
-                {comparisonTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </label>
-            <label className="space-y-1.5 text-sm font-semibold text-slate-700">
-              <span>Тип норматива</span>
-              <select name="normativeType" defaultValue={editing.normativeType || ''} className={inputClass}>
-                <option value="">Не указан</option>
-                {normativeTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </label>
-            <label className="space-y-1.5 text-sm font-semibold text-slate-700">
-              <span>Подтип</span>
-              <select name="normativeSubType" defaultValue={editing.normativeSubType || editing.subtype || ''} className={inputClass}>
-                <option value="">Не указан</option>
-                {normativeSubTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </label>
-            <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 sm:col-span-2">
-              <Button type="button" variant="secondary" disabled={saving} onClick={closeEditor}>Отмена</Button>
-              <Button type="submit" disabled={saving}>{saving ? 'Сохраняем...' : 'Сохранить'}</Button>
-            </div>
-          </form>
-        )}
+      <Modal open={Boolean(viewing)} onClose={() => setViewing(null)} title={viewing ? getRecordName(viewing) : 'Норматив'} size="lg">
+        {viewing && <div className="space-y-5"><dl className="grid gap-4 text-sm sm:grid-cols-2">{[
+          ['Код', getRecordCode(viewing)], ['CAS', getRecordCas(viewing)], ['Формула', getRecordFormula(viewing)], ['Документ', displayDocument(viewing)],
+          ['Редакция документа', viewing.version || '—'], ['Категория', viewing.categoryName || viewing.category || viewing.categoryCode || '—'], ['Таблица', displayTableLabel(viewing)],
+          ['Единица', getRecordUnit(viewing)], ['Норматив', displayNormative(viewing) || 'Справочная запись'], ['Исходное значение', viewing.normativeValue || viewing.value || '—'],
+          ['Условия применения', displayConditions(viewing)], ['Дата действия', [viewing.validFrom, viewing.validUntil].filter(Boolean).join(' — ') || '—'],
+          ['Источник импорта', viewing.sourceFileName || viewing.source || '—'], ['Статус', viewing.archived || viewing.status === 'ARCHIVED' ? 'Архивный' : 'Активный'],
+        ].map(([label, value]) => <div key={label}><dt className="text-slate-500">{label}</dt><dd className="mt-1 break-words font-semibold text-slate-900">{String(value)}</dd></div>)}</dl>{user?.role === 'ADMIN' && viewing.conditionJson && <details className="rounded-xl bg-slate-50 p-3 text-sm"><summary className="cursor-pointer font-semibold">Технические условия</summary><pre className="mt-2 overflow-auto whitespace-pre-wrap">{viewing.conditionJson}</pre></details>}<div className="flex justify-end gap-2">{permissions.canEdit && <Button type="button" variant="secondary" onClick={() => { setEditing(viewing); setViewing(null); }}>Изменить</Button>}{permissions.canArchive && !(viewing.archived || viewing.status === 'ARCHIVED') && <Button type="button" onClick={() => archiveGroup(singleRecordRow(viewing, 0))}>Архивировать</Button>}{permissions.canArchive && (viewing.archived || viewing.status === 'ARCHIVED') && <Button type="button" onClick={() => restoreRecord(viewing)}>Восстановить</Button>}</div></div>}
       </Modal>
 
-      {canManage && (
+      <Modal open={Boolean(archiveTarget)} onClose={() => { if (!saving) setArchiveTarget(null); }} title={`Архивировать норматив «${archiveTarget ? getRecordName(archiveTarget.primary) : ''}»?`}>
+        <p className="text-sm text-slate-600">Норматив станет недоступен для новых протоколов. Уже созданные протоколы сохранят прежние данные.</p><div className="mt-5 flex justify-end gap-3"><Button type="button" variant="secondary" disabled={saving} onClick={() => setArchiveTarget(null)}>Отменить</Button><Button type="button" disabled={saving} onClick={confirmArchive}>{saving ? 'Архивирование...' : 'Архивировать'}</Button></div>
+      </Modal>
+
+      <Modal open={Boolean(editing)} onClose={closeEditor} title={editing?.id ? 'Изменить норматив' : 'Добавить норматив'} size="lg" loading={saving}>
+        {editing && <div onChange={() => setEditorDirty(true)}><NormativeForm initial={editing} busy={saving} onCancel={closeEditor} onSave={saveNormativeForm} /></div>}
+      </Modal>
+
+      {permissions.canPreviewImport && (
         <Modal open={importOpen} onClose={() => closeImport()} title="Импорт нормативов из Excel" description="Сначала файл проверяется, затем импорт подтверждается." size="lg" loading={importing}>
           <div className="space-y-4">
-            <input
-              type="file"
-              multiple={activeDocument === 'DSM_138'}
-              accept={activeDocument === 'DSM_138' ? '.xls,.xlsx,.zip' : '.xls,.xlsx,.csv'}
-              onChange={(event) => previewImport(event.target.files)}
-              className={inputClass}
-            />
+            <ol className="grid grid-cols-2 gap-2 text-xs font-bold text-slate-500 sm:grid-cols-5">
+              {['1. Файл', '2. Настройки', '3. Preview', '4. Подтверждение', '5. Результат'].map((label, index) => <li key={label} className={`rounded-lg px-2 py-2 text-center ${importStep === index + 1 ? 'bg-eco-700 text-white' : 'bg-slate-100'}`}>{label}</li>)}
+            </ol>
+            <div
+              className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 focus-within:border-eco-500"
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => { event.preventDefault(); selectImportFiles(event.dataTransfer.files); }}
+            >
+              <p className="mb-2 text-sm font-semibold text-slate-700">Перетащите файл сюда или выберите его с устройства</p>
+              <input
+                type="file"
+                accept=".xls,.xlsx,.csv"
+                aria-label="Выберите файл нормативов"
+                onChange={(event) => selectImportFiles(event.target.files)}
+                className={inputClass}
+              />
+            </div>
             <div className="rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700">
               {importFiles.length ? (
                 <span>Файлы: <span className="font-black text-slate-950">{importFiles.map((file) => file.name).join(', ')}</span></span>
               ) : 'Выберите файл Excel для проверки'}
             </div>
+            {importFiles.length > 0 && importStep < 5 && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1 text-sm font-semibold"><span>Документ</span><input value={activeDocument} readOnly className={inputClass} /></label>
+                <label className="space-y-1 text-sm font-semibold"><span>Режим импорта</span><select value={replaceMode} onChange={(event) => setReplaceMode(event.target.value as NormativeReplaceMode)} className={inputClass}><option value="INSERT_ONLY">Только новые</option><option value="UPSERT">Добавить и обновить</option>{permissions.canReplaceDocument && <option value="REPLACE_DOCUMENT">Полностью заменить документ</option>}</select></label>
+                <div className="text-sm text-slate-600 sm:col-span-2">{importFiles[0].name} · {(importFiles[0].size / 1024).toFixed(1)} КБ</div>
+                {importStep === 2 && <Button type="button" disabled={importing} onClick={previewImport}>Проверить файл</Button>}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
               <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs font-bold text-slate-400">Всего</p><p className="text-xl font-black">{importStats.total}</p></div>
               <div className="rounded-xl bg-emerald-50 p-3"><p className="text-xs font-bold text-emerald-700">Валидных</p><p className="text-xl font-black text-emerald-800">{importStats.valid}</p></div>
               <div className="rounded-xl bg-rose-50 p-3"><p className="text-xs font-bold text-rose-700">Ошибок</p><p className="text-xl font-black text-rose-800">{importStats.invalid}</p></div>
               <div className="rounded-xl bg-sky-50 p-3"><p className="text-xs font-bold text-sky-700">Новых</p><p className="text-xl font-black text-sky-800">{importStats.created ?? 0}</p></div>
               <div className="rounded-xl bg-amber-50 p-3"><p className="text-xs font-bold text-amber-700">Обновляемых</p><p className="text-xl font-black text-amber-800">{importStats.updated ?? 0}</p></div>
+              <div className="rounded-xl bg-violet-50 p-3"><p className="text-xs font-bold text-violet-700">Дубликатов</p><p className="text-xl font-black text-violet-800">{importStats.duplicates ?? 0}</p></div>
+              <div className="rounded-xl bg-orange-50 p-3"><p className="text-xs font-bold text-orange-700">Конфликтов</p><p className="text-xl font-black text-orange-800">{importStats.conflicts ?? 0}</p></div>
             </div>
             {activeDocument === 'DSM_138' && (importStats.totalFiles || importStats.files?.length || importStats.warnings?.length) ? (
               <div className="rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700">
@@ -1635,15 +1763,17 @@ const NormativeDirectoryPage = () => {
                 <tbody>{importStats.items.slice(0, 50).map((item, index) => <tr key={`${item.id}-${index}`} className="border-t border-slate-100"><td className="p-3">{getRecordCode(item)}</td><td className="p-3">{getRecordName(item)}</td><td className="p-3">{displayNormative(item) || getRecordValue(item)}</td></tr>)}</tbody>
               </table>
             </div>}
+            {(importStats.previewRows?.length || 0) > 0 && <div className="space-y-2"><label className="flex items-center gap-2 text-sm font-semibold"><span>Статус строк</span><select value={previewStatus} onChange={(event) => { setPreviewStatus(event.target.value); setPreviewPage(0); }} className="rounded-lg border border-slate-200 px-2 py-1"><option value="ALL">Все</option><option value="NEW">Новая</option><option value="UPDATE">Обновление</option><option value="DUPLICATE">Дубликат</option><option value="CONFLICT">Конфликт</option><option value="ERROR">Ошибка</option></select></label><div className="max-h-80 overflow-auto rounded-xl border border-slate-200"><table className="min-w-[900px] w-full text-left text-sm"><thead className="bg-slate-50"><tr><th className="p-2">Строка</th><th className="p-2">Статус</th><th className="p-2">Код</th><th className="p-2">Показатель</th><th className="p-2">Единица</th><th className="p-2">Исходное</th><th className="p-2">Распознано</th><th className="p-2">Документ</th><th className="p-2">Ошибка/предупреждение</th></tr></thead><tbody>{previewRowsPage.map((row) => <tr key={`${row.rowNumber}-${row.indicatorCode || ''}`} className="border-t border-slate-100"><td className="p-2">{row.rowNumber}</td><td className="p-2">{({ NEW: 'Новая', UPDATE: 'Обновление', DUPLICATE: 'Дубликат', CONFLICT: 'Конфликт', ERROR: 'Ошибка' } as Record<string, string>)[row.status] || row.status}</td><td className="p-2">{row.indicatorCode || '—'}</td><td className="p-2">{row.indicatorName}</td><td className="p-2">{row.unit || '—'}</td><td className="p-2">{row.valueRaw || '—'}</td><td className="p-2">{row.recognizedValue || '—'}</td><td className="p-2">{row.documentCode || activeDocument}</td><td className="p-2 text-rose-700">{row.message || '—'}</td></tr>)}</tbody></table></div><div className="flex justify-end gap-2"><Button type="button" variant="secondary" disabled={previewPage === 0} onClick={() => setPreviewPage((value) => Math.max(0, value - 1))}>Назад</Button><Button type="button" variant="secondary" disabled={(previewPage + 1) * 25 >= filteredPreviewRows.length} onClick={() => setPreviewPage((value) => value + 1)}>Далее</Button></div></div>}
             {importStats.errors.length > 0 && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{importStats.errors.slice(0, 10).map((item, index) => <p key={index}>Строка {item.row || '-'}: {item.message}</p>)}</div>}
             {importStats.warnings && importStats.warnings.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{importStats.warnings.slice(0, 10).map((item, index) => <p key={index}>Предупреждение {item.row || '-'}: {item.message}</p>)}</div>}
             <div className="flex justify-end gap-3">
               <Button type="button" variant="secondary" onClick={() => closeImport()}>Отмена</Button>
-              {activeDocument === 'DSM_138' && (importStats.importBatchId || importStats.importId) && (
+              {permissions.canRollbackImport && (importStats.importBatchId || importStats.importId) && (
                 <Button type="button" variant="secondary" disabled={importing} onClick={rollbackImport}>Откатить импорт</Button>
               )}
-              <Button type="button" disabled={confirmImportDisabled} onClick={commitImport}>Подтвердить импорт</Button>
+              {importStep === 3 && <Button type="button" disabled={confirmImportDisabled} onClick={commitImport}>Подтвердить импорт</Button>}
             </div>
+            {importStep === 5 && importResult && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><h3 className="font-black text-emerald-900">Импорт завершён</h3><p className="mt-2 text-sm">Добавлено: {importResult.created ?? 0} · Обновлено: {importResult.updated ?? 0} · Пропущено: {importResult.duplicates ?? 0} · Ошибок: {importResult.invalid}</p><p className="mt-1 text-sm">Документ: {importResult.documentCode || activeDocument} · Версия: {importResult.documentVersion || '—'} · Время: {importResult.durationMs ? `${(importResult.durationMs / 1000).toFixed(1)} с` : '—'}</p><Button type="button" className="mt-3" onClick={() => closeImport(true)}>Перейти к нормативам</Button></div>}
           </div>
         </Modal>
       )}

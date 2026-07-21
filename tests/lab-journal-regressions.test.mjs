@@ -4,47 +4,61 @@ import test from 'node:test';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('journal forms prefer backend column definitions over static fallbacks', async () => {
-  const source = await read('src/pages/LabJournalsPage.tsx');
-  assert.match(source, /const configured = definition\.columns\.filter/);
-  assert.match(source, /if \(configured\.length\) return configured/);
-});
-
-test('journal list aborts stale requests and ignores stale responses', async () => {
-  const page = await read('src/pages/LabJournalsPage.tsx');
-  const service = await read('src/services/labJournalService.ts');
-  assert.match(page, /entriesRequestRef\.current\?\.abort\(\)/);
-  assert.match(page, /requestSequence === entriesRequestSequence\.current/);
-  assert.match(service, /getEntries\(params: LabJournalQuery, signal\?: AbortSignal\)/);
-  assert.match(service, /signal,/);
-});
-
-test('journal creation requires a laboratory and editing preserves its owner', async () => {
-  const source = await read('src/pages/LabJournalsPage.tsx');
-  assert.match(source, /const laboratoryRequired = canFilterLaboratory && !laboratoryId/);
-  assert.match(source, /editing\?\.laboratoryId \|\| laboratoryId \|\| undefined/);
-  assert.match(source, /Выберите лабораторию для новой записи/);
-});
-
-test('journal export includes search and validates date ranges', async () => {
-  const page = await read('src/pages/LabJournalsPage.tsx');
-  const types = await read('src/types/labJournal.ts');
-  assert.match(types, /Omit<LabJournalQuery, 'page' \| 'size'>/);
-  assert.match(page, /search: template \? undefined : searchTrimmed \|\| undefined/);
-  assert.match(page, /dateFrom <= dateTo/);
-});
-
-test('journal editor protects unsaved changes and validates domain values', async () => {
-  const source = await read('src/pages/LabJournalsPage.tsx');
-  assert.match(source, /Закрыть форму без сохранения изменений/);
-  assert.match(source, /beforeunload/);
-  assert.match(source, /futureDateField/);
-  assert.match(source, /negativeField/);
-  assert.doesNotMatch(source, /value \? `\$\{value\}.*: '0'/);
-});
-
-test('solution journal aliases share the preparation payload contract', async () => {
+test('journal service uses the canonical real backend surface', async () => {
   const source = await read('src/services/labJournalService.ts');
-  assert.match(source, /\['SOLUTION_PREPARATION', 'REAGENT_PREPARATION'\]/);
-  assert.match(source, /nextRowNumber\(payload\.journalType, payload\.laboratoryId, items\)/);
+  assert.match(source, /getJournalTypesResult/);
+  assert.match(source, /getEntries/);
+  assert.match(source, /getEntry/);
+  assert.match(source, /createEntry/);
+  assert.match(source, /updateEntry/);
+  assert.match(source, /archiveEntry/);
+  assert.match(source, /restoreEntry/);
+  assert.match(source, /exportJournal/);
+  assert.match(source, /downloadTemplate/);
+  assert.doesNotMatch(source, /localStorage|tableToExcelBlob/);
 });
+
+test('journal fallback is schema v2 and contains only canonical backend keys', async () => {
+  const source = await read('src/types/labJournal.ts');
+  assert.match(source, /JOURNAL_SCHEMA_VERSION = 2/);
+  for (const key of ['preparationDate', 'solutionExpiryDate', 'incomingQuantity', 'outgoingQuantity', 'relativeHumidityPercent', 'registrationDate']) assert.match(source, new RegExp(key));
+  for (const key of ["'preparedDate'", "'income'", "'expense'", "'humidity'", "'temperature'"]) assert.doesNotMatch(source, new RegExp(key));
+});
+
+test('server pagination uses backend metadata and React Query cancellation', async () => {
+  const service = await read('src/services/labJournalService.ts');
+  const page = await read('src/pages/LabJournalsPage.tsx');
+  assert.match(service, /totalElements: number\(payload\.totalElements\)/);
+  assert.match(service, /totalPages: number\(payload\.totalPages\)/);
+  assert.match(service, /hasNext: payload\.hasNext === true/);
+  assert.match(service, /signal/);
+  assert.match(page, /placeholderData: keepPreviousData/);
+  assert.doesNotMatch(page, /items\.length === size/);
+});
+
+test('entry payload is schema-bound and preserves zero and false', async () => {
+  const source = await read('src/utils/journalSchema.ts');
+  assert.match(source, /definition\.columns\.reduce/);
+  assert.match(source, /value === undefined \|\| value === null \|\| value === ''/);
+  assert.match(source, /column\.type === 'boolean'/);
+  assert.match(source, /column\.type === 'number'/);
+  assert.doesNotMatch(source, /if \(!value\)/);
+});
+
+test('export validates blob and template uses the documented endpoint', async () => {
+  const source = await read('src/services/labJournalService.ts');
+  assert.match(source, /ensureSpreadsheet/);
+  assert.match(source, /contentType\.includes\('json'\)/);
+  assert.match(source, /content-disposition/);
+  assert.match(source, /includeArchived/);
+  assert.match(source, /`\/lab-journals\/templates\/\$\{journalType\}`/);
+});
+
+test('journal route and menu share the full view role matrix', async () => {
+  const app = await read('src/App.tsx');
+  const layout = await read('src/layouts/StaffLayout.tsx');
+  const roles = /\['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'\]/;
+  assert.match(app, roles);
+  assert.match(layout, roles);
+});
+

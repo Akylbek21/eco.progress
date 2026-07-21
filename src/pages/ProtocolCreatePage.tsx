@@ -12,8 +12,8 @@ import {
   protocolFactorType,
   resolveProtocolUnit,
 } from '../data/protocolTypeConfig';
-import { getCompanies, getCompanyObjects } from '../services/companyService';
-import { getLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
+import { getActiveCompanies, getCompanyObjects } from '../services/companyService';
+import { getActiveLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
 import { getAvailableMeasurementDevices } from '../services/measurementDeviceService';
 import protocolService from '../services/protocolService';
 import { getApiErrorMessage } from '../services/apiHelpers';
@@ -46,6 +46,7 @@ type QuickForm = {
   companyId: string;
   objectId: string;
   protocolDate: string;
+  sampleDate: string;
   measurementDate: string;
   measurementTime: string;
   measurementPlace: string;
@@ -127,12 +128,6 @@ const groupedFactorOptions: Partial<Record<ProtocolTypeKey, Array<{ value: Proto
     { value: 'INFRASOUND', label: 'Инфразвук' },
     { value: 'ULTRASOUND', label: 'Ультразвук' },
   ],
-  uv_emf_laser: [
-    { value: 'UV', label: 'Ультрафиолет' },
-    { value: 'AEROIONS', label: 'Аэроионы' },
-    { value: 'ELECTROMAGNETIC_FIELD', label: 'Электромагнитное поле' },
-    { value: 'LASER', label: 'Лазерное излучение' },
-  ],
 };
 const waterTypeOptions = [
   { value: 'DRINKING_WATER', label: 'Питьевая вода' },
@@ -198,6 +193,7 @@ const ProtocolCreatePage = () => {
   const [weatherMessage, setWeatherMessage] = useState('');
   const [lastWeather, setLastWeather] = useState<WeatherConditions | null>(null);
   const [selectedIndicators, setSelectedIndicators] = useState<SelectedIndicator[]>([]);
+  const previousLaboratoryRef = useRef('');
   const [form, setForm] = useState<QuickForm>({
     templateKey: 'ambient_air',
     physicalFactorType: '',
@@ -205,6 +201,7 @@ const ProtocolCreatePage = () => {
     companyId: '',
     objectId: '',
     protocolDate: today(),
+    sampleDate: today(),
     measurementDate: today(),
     measurementTime: '12:00',
     measurementPlace: '',
@@ -240,7 +237,7 @@ const ProtocolCreatePage = () => {
   const isPhysical = isPhysicalProtocolType(selectedChoice);
   const isChemical = isChemicalProtocolType(selectedChoice);
   const isSoil = selectedChoice.templateId === 'soil';
-  const isWater = selectedChoice.templateId === 'water';
+  const isWater = selectedChoice.templateId === 'water_wastewater';
   const sourceDocumentCode = selectedChoice.sourceDocumentCode;
   const selectedCompany = companies.find((item) => item.id === form.companyId);
   const selectedObject = objects.find((item) => String(item.id) === String(form.objectId));
@@ -386,11 +383,11 @@ const ProtocolCreatePage = () => {
       setWarning('');
       try {
         const [companyItems, laboratoryItems] = await Promise.all([
-          getCompanies({ status: 'ACTIVE' }).catch((error) => {
+          getActiveCompanies().catch((error) => {
             toast.error('Не удалось загрузить компании', error instanceof Error ? error.message : undefined);
             return [];
           }),
-          getLaboratories(),
+          getActiveLaboratories(),
         ]);
         if (!mounted) return;
         setCompanies(companyItems);
@@ -398,9 +395,10 @@ const ProtocolCreatePage = () => {
         const defaultLaboratory = activeLaboratories.find((item) => item.isDefault)
           || (activeLaboratories.length === 1 ? activeLaboratories[0] : undefined);
         setLaboratories(activeLaboratories);
-        if (defaultLaboratory?.active) setForm((current) => ({ ...current, laboratoryId: defaultLaboratory.id }));
+        if (defaultLaboratory?.active) setForm((current) => ({ ...current, laboratoryId: String(defaultLaboratory.id) }));
         if (!companyItems.length) setWarning('Компании не найдены. Добавьте компанию перед созданием протокола.');
         if (!activeLaboratories.length) setWarning((current) => current || 'Перед созданием протокола необходимо заполнить настройки лаборатории');
+        else if (!activeLaboratories.some((item) => item.defaultLaboratory)) setWarning((current) => current || 'Лаборатория по умолчанию не настроена');
       } catch (error) {
         if (mounted) {
           const message = getApiErrorMessage(error, 'Не удалось загрузить лабораторию');
@@ -446,9 +444,7 @@ const ProtocolCreatePage = () => {
       ...current,
       physicalFactorType: form.templateKey === 'noise_vibration'
         ? 'NOISE'
-        : form.templateKey === 'uv_emf_laser'
-          ? 'UV'
-          : protocolFactorType[form.templateKey] || '',
+        : protocolFactorType[form.templateKey] || '',
       waterType: form.templateKey === 'water' ? current.waterType || 'DRINKING_WATER' : current.waterType,
       waterUseCategory: form.templateKey === 'water' ? current.waterUseCategory || 'I' : current.waterUseCategory,
       season: form.templateKey === 'microclimate' ? current.season || 'COLD' : current.season,
@@ -477,10 +473,10 @@ const ProtocolCreatePage = () => {
     getCompanyObjects(form.companyId)
       .then((items) => {
         if (requestId !== objectRequestRef.current) return;
-        const active = items.filter((item) => item.status === 'ACTIVE' || item.virtual === true);
+        const active = items.filter((item) => item.status === 'ACTIVE' && !item.virtual);
         setObjects(active);
         if (!active.length) setObjectWarning('У компании не заполнен объект. Заполните объект в карточке компании.');
-        setForm((current) => ({ ...current, objectId: active.find((item) => item.id === current.objectId)?.id || active[0]?.id || '' }));
+        setForm((current) => ({ ...current, objectId: active.find((item) => item.primary)?.id || active[0]?.id || '' }));
       })
       .catch((error) => {
         if (requestId !== objectRequestRef.current) return;
@@ -492,6 +488,11 @@ const ProtocolCreatePage = () => {
 
   useEffect(() => {
     const requestId = ++employeeRequestRef.current;
+    if (previousLaboratoryRef.current && previousLaboratoryRef.current !== form.laboratoryId) {
+      setSelectedIndicators((current) => current.map((item) => ({ ...item, measurementDeviceId: '', deviceId: '', measurementDevice: undefined, device: undefined })));
+      setBulkDeviceId('');
+    }
+    previousLaboratoryRef.current = form.laboratoryId;
     if (!form.laboratoryId) {
       setEmployees([]);
       setEmployeeWarning('');
@@ -505,9 +506,11 @@ const ProtocolCreatePage = () => {
       .then((items) => {
         if (requestId !== employeeRequestRef.current) return;
         const active = items.filter((item) => item.active && item.id && String(item.laboratoryId || form.laboratoryId) === String(form.laboratoryId));
+        const selectedLaboratory = laboratories.find((item) => String(item.id) === String(form.laboratoryId));
         setEmployees(active);
         if (!active.length) setEmployeeWarning('Сотрудники лаборатории не найдены');
-        setForm((current) => ({ ...current, executorId: active.some((item) => item.id === current.executorId) ? current.executorId : '' }));
+        else if (selectedLaboratory?.accreditationStatus === 'EXPIRED') setEmployeeWarning('Срок действия аттестата лаборатории истёк');
+        setForm((current) => ({ ...current, executorId: active.some((item) => String(item.id) === current.executorId) ? current.executorId : '' }));
         setSelectedExecutor(null);
       })
       .catch((error) => {
@@ -516,7 +519,7 @@ const ProtocolCreatePage = () => {
         setEmployeeWarning('Сотрудники лаборатории не найдены');
         toast.error('Не удалось загрузить исполнителей лаборатории', error instanceof Error ? error.message : undefined);
       });
-  }, [form.laboratoryId]);
+  }, [form.laboratoryId, laboratories]);
 
   useEffect(() => {
     manuallyEditedWeatherRef.current.clear();
@@ -583,7 +586,8 @@ const ProtocolCreatePage = () => {
   }, [form.objectId, form.measurementDate, form.measurementTime, selectedObject?.coordinates]);
 
   const selectCompany = (company: Company) => {
-    setField('companyId', company.id);
+    setForm((current) => ({ ...current, companyId: company.id, objectId: '' }));
+    setObjects([]);
     setCompanySearch(company.name);
   };
 
@@ -788,11 +792,11 @@ const ProtocolCreatePage = () => {
   };
 
   const selectExecutor = (employeeId: string) => {
-    const employee = employees.find((item) => item.id === employeeId && item.active);
-    setField('executorId', employee?.id || '');
+    const employee = employees.find((item) => String(item.id) === employeeId && item.active);
+    setField('executorId', employee?.id ? String(employee.id) : '');
     setSelectedExecutor(employee ? {
-      laboratoryEmployeeId: employee.id,
-      userId: employee.userId,
+      laboratoryEmployeeId: String(employee.id),
+      userId: String(employee.userId),
       fullName: employee.fullName,
       position: employee.position,
     } : null);
@@ -804,10 +808,13 @@ const ProtocolCreatePage = () => {
     if (!form.companyId) return 'Выберите компанию';
     if (!form.objectId) return 'Выберите объект';
     if (!form.protocolDate) return 'Укажите дату протокола';
+    if (!form.sampleDate) return 'Укажите дату отбора пробы';
     if (!form.measurementDate) return 'Укажите дату измерения';
     if (!form.measurementTime) return 'Укажите время измерения';
     if (form.protocolDate > today()) return 'Дата протокола не может быть в будущем';
+    if (form.sampleDate > today()) return 'Дата отбора пробы не может быть в будущем';
     if (form.measurementDate > today()) return 'Дата измерения не может быть в будущем';
+    if (form.sampleDate > form.measurementDate) return 'Дата отбора пробы не может быть позже даты измерения';
     if (form.measurementDate > form.protocolDate) return 'Дата измерения не может быть позже даты протокола';
     if (!form.measurementPlace.trim()) return 'Укажите место измерения';
     if ((isSoil || isWater) && !form.sampleNumber.trim()) return 'Укажите номер пробы';
@@ -845,12 +852,12 @@ const ProtocolCreatePage = () => {
       toast.warning('Выберите объект');
       return;
     }
-    const executor = employees.find((item) => item.id === form.executorId);
+    const executor = employees.find((item) => String(item.id) === form.executorId);
     if (!executor || !executor.active || !executor.id || String(executor.laboratoryId || form.laboratoryId) !== String(form.laboratoryId)) {
       toast.warning('Выберите активного сотрудника выбранной лаборатории');
       return;
     }
-    if (!selectedExecutor || selectedExecutor.laboratoryEmployeeId !== executor.id) {
+    if (!selectedExecutor || selectedExecutor.laboratoryEmployeeId !== String(executor.id)) {
       toast.warning('Повторно выберите исполнителя лаборатории');
       return;
     }
@@ -863,7 +870,6 @@ const ProtocolCreatePage = () => {
       return;
     }
     if (!selectedChoice.templateId || !sourceDocumentCode || !selectedChoice.docxTemplateCode || !selectedChoice.normativeTemplateId || !selectedChoice.resultMode
-      || selectedChoice.templateId !== form.templateKey || selectedChoice.normativeTemplateId !== form.templateKey
       || !availableTypeOptions.some((option) => option.key === form.templateKey)) {
       toast.error('Конфигурация типа протокола некорректна', 'Проверьте templateId, sourceDocumentCode, docxTemplateCode, normativeTemplateId и resultMode');
       return;
@@ -979,6 +985,7 @@ const ProtocolCreatePage = () => {
       templateId: selectedChoice.templateId,
       subtype: selectedSubtype,
       protocolDate: form.protocolDate,
+      sampleDate: form.sampleDate,
       measurementDate: form.measurementDate,
       measurementTime: form.measurementTime,
       measurementPlace: form.measurementPlace,
@@ -1161,8 +1168,9 @@ const ProtocolCreatePage = () => {
 
       <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 xl:grid-cols-4">
         <h2 className="text-lg font-black text-slate-900 md:col-span-2 xl:col-span-4">3. Дата и место</h2>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Дата протокола</span><input type="date" max={today()} value={form.protocolDate} onChange={(event) => setField('protocolDate', event.target.value)} className={inputClass} /></label>
-        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Дата отбора' : 'Дата измерения'}</span><input type="date" max={form.protocolDate || today()} value={form.measurementDate} onChange={(event) => setField('measurementDate', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field={isSoil || isWater ? 'samplingDate' : 'measurementDate'} visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Дата оформления протокола</span><input type="date" max={today()} value={form.protocolDate} onChange={(event) => setField('protocolDate', event.target.value)} className={inputClass} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Дата отбора пробы</span><input type="date" max={form.measurementDate || today()} value={form.sampleDate} onChange={(event) => setField('sampleDate', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="samplingDate" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
+        <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Дата измерения</span><input type="date" min={form.sampleDate || undefined} max={form.protocolDate || today()} value={form.measurementDate} onChange={(event) => setField('measurementDate', event.target.value)} className={inputClass} /><ProtocolPrintVisibilityToggle field="measurementDate" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
         <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>Время</span><input type="time" value={form.measurementTime} onChange={(event) => setField('measurementTime', event.target.value)} className={inputClass} /></label>
         <label className="space-y-1.5 text-sm font-bold text-slate-700"><span>{isSoil ? 'Место отбора' : 'Место измерения'}</span><input value={form.measurementPlace} onChange={(event) => setField('measurementPlace', event.target.value)} placeholder={isSoil ? 'Например: участок 1, точка 3' : 'Например: рабочее место оператора'} className={inputClass} /><ProtocolPrintVisibilityToggle field="samplingPlace" visibility={form.printVisibility} onChange={setPrintVisibility} /></label>
         {(isSoil || isWater) && (
@@ -1413,7 +1421,7 @@ const ProtocolCreatePage = () => {
       {!laboratories.length && !booting && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
           <p>Перед созданием протокола необходимо заполнить настройки лаборатории</p>
-          <Button type="button" variant="secondary" className="mt-3" onClick={() => navigate('/staff/settings/laboratory')}>Перейти в настройки лаборатории</Button>
+          <Button type="button" variant="secondary" className="mt-3" onClick={() => navigate('/staff/settings/laboratories')}>Перейти в настройки лаборатории</Button>
         </div>
       )}
 

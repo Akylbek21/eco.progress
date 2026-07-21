@@ -45,29 +45,30 @@ const laboratorySnapshot = (
   profile: LaboratoryProfile,
   executorId?: string,
 ): ProtocolLaboratorySnapshot => {
-  const executor = profile.employees.find((employee) => employee.id === executorId && employee.active)
-    || profile.employees.find((employee) => employee.active);
+  const profileEmployees = profile.employees || [];
+  const executor = profileEmployees.find((employee) => String(employee.id) === executorId && employee.active)
+    || profileEmployees.find((employee) => employee.active);
   return {
-    id: profile.id,
-    laboratoryId: profile.id,
+    id: String(profile.id),
+    laboratoryId: String(profile.id),
     name: profile.name,
     laboratoryName: profile.name,
     legalName: profile.legalName,
     bin: profile.bin,
     address: profile.address,
-    laboratoryAddress: profile.address,
+    laboratoryAddress: profile.address || '',
     phone: profile.phone,
     email: profile.email,
     accreditationNumber: profile.accreditationNumber || '',
     accreditationIssuedAt: profile.accreditationIssuedAt,
     accreditationValidUntil: profile.accreditationValidUntil || '',
-    directorId: profile.directorId,
+    directorId: profile.directorId ? String(profile.directorId) : undefined,
     directorName: profile.directorName || '',
     director: profile.directorName || '',
-    laboratoryHeadId: profile.laboratoryHeadId,
+    laboratoryHeadId: profile.laboratoryHeadId ? String(profile.laboratoryHeadId) : undefined,
     laboratoryHeadName: profile.laboratoryHeadName || '',
     laboratoryHead: profile.laboratoryHeadName || '',
-    executorId: executor?.id,
+    executorId: executor?.id ? String(executor.id) : undefined,
     executorName: executor?.fullName || '',
     executor: executor?.fullName || '',
     logoUrl: profile.logoUrl,
@@ -191,6 +192,10 @@ export async function getProtocolsPage(params?: Record<string, string>, _signal?
     size,
     totalElements: filtered.length,
     totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+    first: page === 0,
+    last: page >= Math.max(1, Math.ceil(filtered.length / size)) - 1,
+    hasNext: page < Math.max(1, Math.ceil(filtered.length / size)) - 1,
+    hasPrevious: page > 0,
   };
 }
 
@@ -217,12 +222,12 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   const protocolId = id('protocol');
   const protocolNumber = payload.protocolNumber?.trim() || numberFor(payload.templateId, items.length + 1);
   const createdAt = now();
-  const sampleDate = payload.sampleDate || payload.samplingDate || payload.measurementDate || '';
+  const sampleDate = payload.sampleDate || payload.measurementDate || '';
   let snapshot = emptyLaboratorySnapshot();
   const laboratoryService = await import('./laboratorySettingsService');
-  const laboratories = await laboratoryService.getLaboratories();
+  const laboratories = await laboratoryService.getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }).then((page) => page.items);
   const selectedLaboratory = payload.laboratoryId
-    ? laboratories.find((item) => item.id === payload.laboratoryId)
+    ? laboratories.find((item) => String(item.id) === payload.laboratoryId)
     : laboratories.find((item) => item.isDefault) || (laboratories.length === 1 ? laboratories[0] : undefined);
   const laboratoryProfile = selectedLaboratory ? await laboratoryService.getLaboratory(selectedLaboratory.id) : undefined;
   if (laboratoryProfile) snapshot = laboratorySnapshot(laboratoryProfile, payload.executorId);
@@ -303,8 +308,7 @@ export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): 
     templateId: payload.templateId,
     subtype: payload.subtype,
     protocolDate: payload.protocolDate,
-    sampleDate: payload.measurementDate,
-    samplingDate: payload.measurementDate,
+    sampleDate: payload.sampleDate,
     testingStartDate: payload.measurementDate,
     testingEndDate: payload.measurementDate,
     measurementDate: payload.measurementDate,
@@ -488,6 +492,7 @@ export async function changeStatus(protocolId: string, status: ProtocolStatus): 
 export const readyForApproval = (id: string) => changeStatus(id, 'READY_FOR_APPROVAL');
 export const approveProtocol = (id: string) => changeStatus(id, 'APPROVED');
 export const returnToDraft = (id: string) => changeStatus(id, 'DRAFT');
+export const returnForRevision = async (id: string, _reason: string) => changeStatus(id, 'NEEDS_REVISION');
 export const cancelProtocol = (id: string) => changeStatus(id, 'CANCELLED');
 export const signProtocol = (id: string) => changeStatus(id, 'SIGNED');
 

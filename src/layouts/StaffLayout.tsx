@@ -5,10 +5,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
 import { canAccess } from '../config/permissions';
 import type { UserRole } from '../types';
+import { companyRoleMatrix } from '../config/permissions';
 import type { Permission } from '../config/permissions';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'];
+const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
 const protocolMockMode = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
 
 const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[]; permission?: Permission }> = [
@@ -17,16 +19,16 @@ const links: Array<{ label: string; path: string; icon: typeof ClipboardList; pa
   { label: 'Клиенты', path: '/staff/clients', icon: Building2, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Лиды', path: '/staff/leads', icon: UserRoundSearch, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Контент сайта', path: '/staff/content', icon: BookOpenCheck, permission: 'view_content' },
-  { label: 'Компании', path: '/staff/companies', icon: Building2, allowedRoles: protocolRoles },
+  { label: 'Компании', path: '/staff/companies', icon: Building2, allowedRoles: [...companyRoleMatrix.read] },
   { label: 'КП', path: '/staff/commercial-offers', icon: Handshake, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Договоры', path: '/staff/contracts', icon: FileSignature, allowedRoles: ['ADMIN', 'MANAGER', 'ACCOUNTANT'] },
   { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Календарь', path: '/staff/calendar', icon: CalendarDays, allowedRoles: ['ADMIN', 'MANAGER', 'ECOLOGIST', 'LABORATORY'] },
   { label: 'Протоколы', path: '/staff/protocols', icon: FlaskConical, allowedRoles: protocolRoles },
-  { label: 'Журналы', path: '/staff/journals', icon: BookOpenCheck, allowedRoles: ['ADMIN', 'HEAD', 'LABORATORY'] },
-  { label: 'Нормативы', path: '/staff/normatives', icon: BookOpenCheck, allowedRoles: protocolRoles },
+  { label: 'Журналы', path: '/staff/journals', icon: BookOpenCheck, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'] },
+  { label: 'Нормативы', path: '/staff/normatives', icon: BookOpenCheck, allowedRoles: normativeRoles },
   { label: 'Средства измерений', path: '/staff/measurement-devices', icon: Gauge, allowedRoles: protocolRoles },
-  { label: 'Настройки лаборатории', path: '/staff/settings/laboratory', icon: Settings, allowedRoles: ['ADMIN', 'LABORATORY'] },
+  { label: 'Лаборатории', path: '/staff/settings/laboratories', icon: Settings, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'] },
   { label: 'Задачи', path: '/staff/tasks', icon: ClipboardCheck },
   { label: 'Документы', path: '/staff/documents', icon: FileText },
   { label: 'Уведомления', path: '/staff/notifications', icon: Bell },
@@ -61,7 +63,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
       {(user?.role === 'LABORATORY'
         ? links.filter((item) => ['/staff/protocols', '/staff/journals'].includes(item.path))
         : protocolMockMode
-        ? links.filter((item) => ['/staff', '/staff/companies', '/staff/protocols', '/staff/journals', '/staff/normatives', '/staff/measurement-devices', '/staff/settings/laboratory'].includes(item.path))
+        ? links.filter((item) => ['/staff', '/staff/companies', '/staff/protocols', '/staff/journals', '/staff/normatives', '/staff/measurement-devices', '/staff/settings/laboratories'].includes(item.path))
         : links
       ).map((item) => {
         const Icon = item.icon;

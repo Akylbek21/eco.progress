@@ -7,9 +7,8 @@ import Reveal from '../components/animations/Reveal';
 import WhatsAppButton from '../components/WhatsAppButton';
 import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
-import { PageSkeleton } from '../components/loading/PageLoader';
 import OrderChoiceModal from '../components/OrderChoiceModal';
-import { getServiceCatalog } from '../services/serviceService';
+import { fallbackServices, getServiceCatalog } from '../services/serviceService';
 import { activeServices, formatKztPrice, PRELIMINARY_PRICE_NOTICE } from '../content/serviceCatalog';
 import { getBusinessCompanyById } from '../utils/crm';
 import type { ServiceCategory } from '../types';
@@ -18,7 +17,12 @@ const categories: Array<'Все' | ServiceCategory> = ['Все', 'Проекти
 const calculatorCatalogServices = activeServices.filter((service) => service.showInCalculator && service.pricing.calculatorBasePrice !== undefined);
 
 const ServicesPage = () => {
-  const { data, isLoading } = useQuery({ queryKey: ['services'], queryFn: getServiceCatalog });
+  const { data } = useQuery({
+    queryKey: ['services'],
+    queryFn: getServiceCatalog,
+    initialData: { items: fallbackServices, source: 'fallback' },
+    initialDataUpdatedAt: 0,
+  });
   const services = data?.items ?? [];
   const calculatorServices = calculatorCatalogServices;
   const [category, setCategory] = useState<'Все' | ServiceCategory>('Все');
@@ -71,7 +75,6 @@ const ServicesPage = () => {
     return () => window.removeEventListener('hashchange', openServiceFromHash);
   }, [services]);
 
-  if (isLoading) return <PageSkeleton />;
   if (!selectedService) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-5 text-center text-sm font-semibold text-slate-600">

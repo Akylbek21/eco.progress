@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, CloudSun, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
-import { getCompanies, getCompanyById, getCompanyObjects } from '../../services/companyService';
+import { getActiveCompanies, getCompanyById, getCompanyObjects } from '../../services/companyService';
 import { getMeasurementDevices } from '../../services/measurementDeviceService';
 import { getApiErrorMessage } from '../../services/apiHelpers';
 import protocolService from '../../services/protocolService';
-import { accreditationState, getLaboratories, getLaboratory, getLaboratoryEmployees } from '../../services/laboratorySettingsService';
+import { accreditationState, getActiveLaboratories, getLaboratory, getLaboratoryEmployees } from '../../services/laboratorySettingsService';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Company, CompanyObject } from '../../types/companies';
 import type {
@@ -22,6 +22,7 @@ import type {
   ProtocolSubtype,
   ProtocolTemplate,
   ProtocolTemplateId,
+  ProtocolTemplateKey,
   WeatherConditionsStatus,
 } from '../../types/protocols';
 import { physicalFactorTypes, protocolTemplates, subtypeName, templateName } from '../../data/protocolTemplates';
@@ -61,7 +62,7 @@ const allowedTemplateIds = new Set(protocolTemplates.map((item) => item.id));
 const searchUnavailableMessage = 'Поиск временно недоступен. Проверьте подключение и повторите запрос.';
 const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
 const notFoundSearchMessage = 'Норматив или показатель не найден. Проверьте код или добавьте норматив в справочник.';
-const sourceDocumentCodeForTemplate = (templateId: ProtocolTemplateId | '', isPhysicalFactors: boolean) => {
+const sourceDocumentCodeForTemplate = (templateId: ProtocolTemplateKey | '', isPhysicalFactors: boolean) => {
   const context = resolveProtocolNormativeContext(String(templateId), isPhysicalFactors ? 'MICROCLIMATE' : undefined);
   return context.sourceDocumentCode || '';
 };
@@ -95,7 +96,7 @@ const weatherLabels: Record<WeatherConditionsStatus, string> = {
 const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCreate }: Props) => {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
-  const [templateId, setTemplateId] = useState<ProtocolTemplateId | ''>('');
+  const [templateId, setTemplateId] = useState<ProtocolTemplateKey | ''>('');
   const [subtype, setSubtype] = useState<ProtocolSubtype | ''>('');
   const [waterType, setWaterType] = useState('DRINKING_WATER');
   const [waterUseCategory, setWaterUseCategory] = useState('I');
@@ -186,16 +187,16 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   useEffect(() => {
     if (!open) return;
     Promise.all([
-      getCompanies({ status: 'ACTIVE' }).catch(() => []),
+      getActiveCompanies().catch(() => []),
       getMeasurementDevices().catch(() => []),
-      getLaboratories().catch(() => []),
+      getActiveLaboratories().catch(() => []),
     ]).then(([companyItems, deviceItems, laboratoryItems]) => {
       setCompanies(companyItems);
       setDevices(deviceItems.filter((item) => item.status === 'VALID' || item.status === 'EXPIRING'));
       const active = laboratoryItems.filter((item) => item.active);
       setLaboratories(active);
       const selected = active.length === 1 ? active[0] : active.find((item) => item.isDefault);
-      setLaboratoryId(selected?.id || '');
+      setLaboratoryId(selected?.id ? String(selected.id) : '');
       if (!selected) setLaboratory(null);
       setLaboratoryError(active.length > 1 && !selected ? 'Лаборатория по умолчанию не настроена. Выберите лабораторию.' : '');
     }).catch((loadError) => {
@@ -303,9 +304,10 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       setCompanySearch(`${fullCompany.name}${fullCompany.bin ? `, ${fullCompany.bin}` : ''}`);
       setObjectId('');
       try {
-        const items = (await getCompanyObjects(id)).filter((item) => item.status === 'ACTIVE');
+        const items = (await getCompanyObjects(id)).filter((item) => item.status === 'ACTIVE' && !item.virtual);
         setObjects(items);
-        if (items.length === 1) setObjectId(items[0].id);
+        const primary = items.find((item) => item.primary);
+        if (primary || items.length === 1) setObjectId((primary || items[0]).id);
       } catch (objectError) {
         setObjects([]);
         setError(getApiErrorMessage(objectError, 'Компания выбрана, но объекты загрузить не удалось. Повторите попытку.'));
@@ -529,14 +531,22 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
     }));
     try {
       setError('');
+      const canonicalTemplateId: ProtocolTemplateId | null = templateId === 'water'
+        ? 'water_wastewater'
+        : templateId === 'physical_factors'
+          ? subtype === 'MICROCLIMATE' ? 'microclimate' : subtype === 'LIGHTING' ? 'lighting' : ['NOISE', 'VIBRATION', 'NOISE_VIBRATION', 'INFRASOUND', 'ULTRASOUND'].includes(subtype) ? 'noise_vibration' : null
+          : ['ambient_air', 'workplace_air', 'soil', 'microclimate', 'lighting', 'noise_vibration', 'water_wastewater'].includes(templateId) ? templateId as ProtocolTemplateId : null;
+      if (!canonicalTemplateId) {
+        setError('Выбранный устаревший тип протокола больше не поддерживается. Выберите конкретный тип.');
+        return;
+      }
       await onCreate({
         companyId: company.id,
         objectId,
-        templateId,
+        templateId: canonicalTemplateId,
         subtype: templateId === 'physical_factors' ? subtype || undefined : undefined,
         protocolDate: measurementDate,
         sampleDate: measurementDate,
-        samplingDate: measurementDate,
         testingStartDate: measurementDate,
         testingEndDate: measurementDate,
         measurementDate,
@@ -548,7 +558,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         environment,
         sourceDocumentCode: sourceDocumentCodeForTemplate(templateId, isPhysicalFactors),
         docxTemplateCode: isWaterTemplate ? 'protocol_water' : undefined,
-        normativeTemplateId: isWaterTemplate ? 'water' : templateId,
+        normativeTemplateId: canonicalTemplateId,
         environmentType: isWaterTemplate ? 'WATER' : undefined,
         defaultUnit: isWaterTemplate ? 'мг/л' : undefined,
         waterType: isWaterTemplate ? waterType : undefined,
@@ -620,7 +630,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
               <label className="text-sm font-bold text-slate-700">Компания</label>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-                <input value={companySearch} onChange={(event) => { setCompanySearch(event.target.value); setCompany(null); }} placeholder="Название или БИН" className={`${inputClass} pl-10`} />
+                <input value={companySearch} onChange={(event) => { setCompanySearch(event.target.value); setCompany(null); setObjects([]); setObjectId(''); }} placeholder="Название или БИН" className={`${inputClass} pl-10`} />
               </div>
               {!company && companySearch && <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
                 {filteredCompanies.map((item) => <button key={item.id} type="button" onClick={() => selectCompany(item.id)} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-eco-50">

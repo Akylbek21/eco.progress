@@ -15,6 +15,7 @@ import ProtocolPreviewModal from '../components/protocols/ProtocolPreviewModal';
 import ProtocolResultsTable from '../components/protocols/ProtocolResultsTable';
 import ProtocolTestingForm from '../components/protocols/ProtocolTestingForm';
 import ReplaceProtocolModal from '../components/protocols/ReplaceProtocolModal';
+import ReturnForRevisionModal from '../components/protocols/ReturnForRevisionModal';
 import SignProtocolModal from '../components/protocols/SignProtocolModal';
 import { templateName } from '../data/protocolTemplates';
 import { useToast } from '../hooks/useToast';
@@ -22,12 +23,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { getMeasurementDevices } from '../services/measurementDeviceService';
 import { getCompanyObjects } from '../services/companyService';
 import { accreditationState, getLaboratoryEmployees } from '../services/laboratorySettingsService';
-import { getApiErrorMessage, getApiStatus } from '../services/apiHelpers';
+import { getApiErrorMessage, getApiStatus, parseApiError } from '../services/apiHelpers';
 import { signBase64WithNCALayer } from '../services/ncalayer';
 import protocolService, { useProtocolMocks } from '../services/protocolService';
 import type { CompanyObject } from '../types/companies';
 import type { LaboratoryEmployee, MeasurementDevice, Protocol, ProtocolCompanySnapshot, ProtocolMeasurementDevice, WeatherConditions } from '../types/protocols';
-import { getProtocolPermissions, type ProtocolPermissions } from '../utils/protocolPermissions';
+import { canEditProtocol, getProtocolPermissions, type ProtocolPermissions } from '../utils/protocolPermissions';
+import { parseLaboratoryApiError } from '../utils/laboratoryApiError';
 
 const emptyLaboratory = {
   laboratoryName: '',
@@ -504,7 +506,7 @@ const ReviewChecklist = ({
   );
 };
 
-type SaveStatus = 'saved' | 'dirty' | 'saving' | 'error';
+type SaveStatus = 'saved' | 'dirty' | 'saving' | 'error' | 'conflict';
 
 const ProtocolStepFooter = ({
   protocol,
@@ -559,12 +561,13 @@ const ProtocolStepFooter = ({
     dirty: 'Есть несохраненные изменения',
     saving: 'Сохранение...',
     error: 'Ошибка сохранения',
+    conflict: 'Конфликт версии',
   }[saveStatus];
 
   return (
     <div className="sticky bottom-0 z-20 -mx-4 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:-mx-8 sm:px-8">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className={`text-sm font-semibold ${saveStatus === 'error' ? 'text-rose-700' : saveStatus === 'dirty' ? 'text-amber-700' : 'text-slate-500'}`}>{saveText}</div>
+        <div className={`text-sm font-semibold ${saveStatus === 'error' || saveStatus === 'conflict' ? 'text-rose-700' : saveStatus === 'dirty' ? 'text-amber-700' : 'text-slate-500'}`}>{saveText}</div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {actions.canSave && (
             <>
@@ -635,6 +638,11 @@ const ProtocolEditorPage = () => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [signOpen, setSignOpen] = useState(false);
   const [replaceOpen, setReplaceOpen] = useState(false);
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [readyOpen, setReadyOpen] = useState(false);
+  const [approveOpen, setApproveOpen] = useState(false);
+  const [workflowErrors, setWorkflowErrors] = useState<string[]>([]);
+  const [conflictOpen, setConflictOpen] = useState(false);
   const [devicePickerOpen, setDevicePickerOpen] = useState(false);
   const [laboratoryEmployees, setLaboratoryEmployees] = useState<LaboratoryEmployee[]>([]);
   const [companyObjects, setCompanyObjects] = useState<CompanyObject[]>([]);
@@ -654,10 +662,7 @@ const ProtocolEditorPage = () => {
 
   const dirty = useMemo(() => Boolean(protocol && savedSignatureRef.current && editableSignature(protocol) !== savedSignatureRef.current), [protocol]);
   const protocolActions = useMemo(() => getProtocolPermissions(protocol, user?.role, useProtocolMocks), [protocol?.status, user?.role]);
-  const readOnly = useMemo(
-    () => isProtocolReadonly(protocol?.status) || (isProtocolEditable(protocol?.status) && !protocolActions.canSave),
-    [protocol?.status, protocolActions.canSave],
-  );
+  const readOnly = useMemo(() => !canEditProtocol(user, protocol), [protocol?.status, user?.role]);
   const applyServerProtocol = (item: Protocol) => {
     const normalized = {
       ...item,
@@ -726,7 +731,7 @@ const ProtocolEditorPage = () => {
       return;
     }
     getCompanyObjects(String(protocol.companyId))
-      .then((items) => setCompanyObjects(items.filter((item) => item.status === 'ACTIVE')))
+      .then((items) => setCompanyObjects(items.filter((item) => item.status === 'ACTIVE' && !item.virtual)))
       .catch((loadError) => {
         setCompanyObjects([]);
         toast.error('Не удалось загрузить объекты компании', loadError instanceof Error ? loadError.message : undefined);
@@ -848,9 +853,12 @@ const ProtocolEditorPage = () => {
       try {
         const draftProtocol = await ensureDraftProtocol(snapshot);
         const updated = await protocolService.updateProtocol(draftProtocol.id, {
+          version: Number(snapshot.version || 0),
           number: snapshot.protocolNumber || snapshot.number || '',
           protocolDate: snapshot.protocolDate || '',
           objectId: snapshot.objectId,
+          laboratoryId: snapshot.laboratory?.laboratoryId || snapshot.laboratory?.id,
+          sampleDate: snapshot.testing.samplingDate || snapshot.measurementDate || snapshot.protocolDate,
           measurementDate: snapshot.measurementDate || snapshot.testing.samplingDate || snapshot.protocolDate,
           measurementTime: snapshot.measurementTime,
           measurementPlace: snapshot.measurementPlace,
@@ -878,19 +886,8 @@ const ProtocolEditorPage = () => {
         if (getApiStatus(saveError) === 409) {
           conflictDetected = true;
           saveQueuedRef.current = false;
-          const fresh = await protocolService.getProtocol(snapshot.id).catch((reloadError) => {
-            console.error('Failed to reload protocol after save conflict.', reloadError);
-            return null;
-          });
-          const hasNewerLocalEdits = startedVersion !== editVersionRef.current;
-          if (fresh && !hasNewerLocalEdits) applyServerProtocol(fresh);
-          else setSaveStatus('dirty');
-          toast.error(
-            'Конфликт сохранения',
-            hasNewerLocalEdits
-              ? 'Протокол изменён на сервере, а у вас есть новые локальные правки. Они сохранены на экране; обновите страницу после проверки.'
-              : 'Протокол уже изменён. Загружена актуальная версия с сервера; проверьте данные и повторите изменение.',
-          );
+          setSaveStatus('conflict');
+          setConflictOpen(true);
         } else {
           setSaveStatus('error');
           toast.error('Не удалось сохранить протокол', userProtocolError(saveError));
@@ -930,7 +927,8 @@ const ProtocolEditorPage = () => {
       }
       toast.success('Данные лаборатории обновлены');
     } catch (error) {
-      toast.error('Не удалось обновить лабораторию', getApiErrorMessage(error, 'Не удалось обновить лабораторию'));
+      const parsed = parseLaboratoryApiError(error);
+      toast.error('Не удалось обновить лабораторию', parsed.code === 'DEFAULT_LABORATORY_NOT_CONFIGURED' ? 'Лаборатория по умолчанию не настроена' : parsed.message);
     } finally {
       setBusy(false);
     }
@@ -1023,12 +1021,16 @@ const ProtocolEditorPage = () => {
 
   const run = async (action: () => Promise<Protocol>, success: string) => {
     setBusy(true);
+    setWorkflowErrors([]);
     try {
       const updated = await action();
       applyServerProtocol(updated);
       toast.success(success);
     } catch (actionError) {
-      toast.error('Действие не выполнено', userProtocolError(actionError));
+      const parsed = parseApiError(actionError);
+      const details = Object.entries(parsed.fieldErrors || {}).map(([field, message]) => `${field}: ${message}`);
+      setWorkflowErrors(details.length ? details : [parsed.message]);
+      toast.error('Действие не выполнено', parsed.message || userProtocolError(actionError));
     } finally {
       setBusy(false);
     }
@@ -1256,6 +1258,13 @@ const ProtocolEditorPage = () => {
         </div>
       </section>
 
+      {workflowErrors.length > 0 && (
+        <section role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+          <h2 className="font-bold">Исправьте ошибки перед продолжением</h2>
+          <ul className="mt-2 list-disc space-y-1 pl-5">{workflowErrors.map((item) => <li key={item}>{item}</li>)}</ul>
+        </section>
+      )}
+
       <ProtocolStepWizard activeStep={activeStep} protocol={protocol} onSelect={setActiveStep} />
 
       {activeStep === 'general' && <div className="space-y-6">
@@ -1275,13 +1284,13 @@ const ProtocolEditorPage = () => {
           employees={laboratoryEmployees}
           readOnly={readOnly}
           loading={busy}
-          canOpenSettings={user?.role === 'ADMIN'}
+          canOpenSettings={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'].includes(String(user?.role || ''))}
           onExecutorChange={(employee) => patchProtocol({
-            executorId: employee.id,
+            executorId: String(employee.id),
             executor: employee.fullName,
             laboratory: {
               ...protocol.laboratory,
-              executorId: employee.id,
+              executorId: String(employee.id),
               executor: employee.fullName,
             },
           })}
@@ -1376,14 +1385,10 @@ const ProtocolEditorPage = () => {
             setActiveStep(firstMissingStep);
             return;
           }
-          return ensureSavedProtocol('Сначала сохраняю изменения, затем отправляю протокол на готовность.')
-            .then((current) => {
-              if (!current) return undefined;
-              return run(() => protocolService.readyForApproval(current.id), 'Данные сохранены');
-            });
+          setReadyOpen(true);
         }}
-        onApprove={() => run(() => protocolService.approveProtocol(protocol.id), 'Протокол готов')}
-        onReturn={() => run(() => protocolService.returnToDraft(protocol.id), 'Протокол возвращён на доработку')}
+        onApprove={() => setApproveOpen(true)}
+        onReturn={() => setReturnOpen(true)}
         onGenerateDocx={generateDocuments}
         onGeneratePdf={generateDocuments}
         onSign={() => setSignOpen(true)}
@@ -1396,7 +1401,57 @@ const ProtocolEditorPage = () => {
       </div>
 
       <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} protocol={protocol} draft={false} onClose={() => setPreviewOpen(false)} />
-      <SignProtocolModal open={signOpen} loading={busy} onClose={() => setSignOpen(false)} onConfirm={signCurrentProtocol} />
+      <Modal open={readyOpen} onClose={() => setReadyOpen(false)} title="Отправить протокол на утверждение?">
+        <p className="text-sm text-slate-600">Backend повторно проверит шапку, результаты, нормативы и средства измерений.</p>
+        <div className="mt-5 flex justify-end gap-3">
+          <Button type="button" variant="secondary" disabled={busy} onClick={() => setReadyOpen(false)}>Отменить</Button>
+          <Button type="button" disabled={busy} onClick={async () => {
+            const current = await ensureSavedProtocol('Сначала сохраняю изменения, затем отправляю протокол на утверждение.');
+            if (!current) return;
+            await run(() => protocolService.readyForApproval(current.id), 'Протокол отправлен на утверждение');
+            setReadyOpen(false);
+          }}>Отправить</Button>
+        </div>
+      </Modal>
+      <Modal open={approveOpen} onClose={() => setApproveOpen(false)} title="Утвердить протокол">
+        <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+          <div><dt className="text-slate-500">Компания</dt><dd className="font-semibold">{protocol.companySnapshot.companyName || '—'}</dd></div>
+          <div><dt className="text-slate-500">Объект</dt><dd className="font-semibold">{protocol.companySnapshot.objectName || '—'}</dd></div>
+          <div><dt className="text-slate-500">Исполнитель</dt><dd className="font-semibold">{protocol.executor || protocol.laboratory.executor || '—'}</dd></div>
+          <div><dt className="text-slate-500">Результаты</dt><dd className="font-semibold">{protocol.results.length}</dd></div>
+          <div><dt className="text-slate-500">Приборы</dt><dd className="font-semibold">{protocol.measurementDevices.length}</dd></div>
+          <div><dt className="text-slate-500">Аттестат до</dt><dd className="font-semibold">{protocol.laboratory.accreditationValidUntil || '—'}</dd></div>
+        </dl>
+        <div className="mt-5 flex justify-end gap-3">
+          <Button type="button" variant="secondary" disabled={busy} onClick={() => setApproveOpen(false)}>Отменить</Button>
+          <Button type="button" disabled={busy} onClick={async () => { await run(() => protocolService.approveProtocol(protocol.id), 'Протокол утверждён'); setApproveOpen(false); }}>Утвердить</Button>
+        </div>
+      </Modal>
+      <Modal open={conflictOpen} onClose={() => setConflictOpen(false)} title="Протокол был изменён другим сотрудником">
+        <p className="text-sm text-slate-600">Текущие локальные изменения не отправлены повторно. Обновите данные, чтобы продолжить с последней версией протокола.</p>
+        <div className="mt-5 flex justify-end gap-3">
+          <Button type="button" variant="secondary" onClick={() => setConflictOpen(false)}>Отменить</Button>
+          <Button
+            type="button"
+            disabled={busy}
+            onClick={async () => {
+              if (!protocolId) return;
+              setBusy(true);
+              try {
+                applyServerProtocol(await protocolService.getProtocol(protocolId));
+                setConflictOpen(false);
+              } catch (reloadError) {
+                toast.error('Не удалось обновить данные протокола', userProtocolError(reloadError));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Обновить данные
+          </Button>
+        </div>
+      </Modal>
+      <SignProtocolModal open={signOpen} loading={busy} protocol={protocol} onClose={() => setSignOpen(false)} onConfirm={signCurrentProtocol} />
       <ReplaceProtocolModal
         open={replaceOpen}
         loading={busy}
@@ -1413,6 +1468,15 @@ const ProtocolEditorPage = () => {
           } finally {
             setBusy(false);
           }
+        }}
+      />
+      <ReturnForRevisionModal
+        open={returnOpen}
+        loading={busy}
+        onClose={() => setReturnOpen(false)}
+        onConfirm={async (reason) => {
+          await run(() => protocolService.returnForRevision(protocol.id, reason), 'Протокол возвращён на доработку');
+          setReturnOpen(false);
         }}
       />
       <DevicePickerModal open={devicePickerOpen} loading={busy} onClose={() => setDevicePickerOpen(false)} onSelect={addDevice} />

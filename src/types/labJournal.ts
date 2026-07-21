@@ -1,154 +1,113 @@
+export const JOURNAL_SCHEMA_VERSION = 2;
+
 export const JournalType = {
-  SOLUTION_PREPARATION: 'SOLUTION_PREPARATION',
-  CHEMICAL_REAGENT_USAGE: 'CHEMICAL_REAGENT_USAGE',
-  ENVIRONMENT_CONDITIONS: 'ENVIRONMENT_CONDITIONS',
   SAMPLE_REGISTRATION: 'SAMPLE_REGISTRATION',
+  SOLUTION_PREPARATION: 'SOLUTION_PREPARATION',
+  CHEMICAL_REAGENT_MOVEMENT: 'CHEMICAL_REAGENT_MOVEMENT',
+  ENVIRONMENT_CONDITIONS: 'ENVIRONMENT_CONDITIONS',
   TEST_RESULTS_REGISTRATION: 'TEST_RESULTS_REGISTRATION',
 } as const;
 
-export type JournalType = typeof JournalType[keyof typeof JournalType] | string;
+export type LabJournalType = typeof JournalType[keyof typeof JournalType];
+/** @deprecated Use LabJournalType. */
+export type JournalType = LabJournalType;
 
-export type JournalKind = 'solution' | 'chemical' | 'environment' | 'sample' | 'results' | 'custom';
+export type JournalColumnType =
+  | 'text' | 'textarea' | 'number' | 'date' | 'time' | 'datetime' | 'select' | 'boolean'
+  | 'employee' | 'laboratory' | 'measurement_device' | 'company' | 'company_object'
+  | 'protocol' | 'calculated';
 
-export type JournalColumnType = 'text' | 'number' | 'date' | 'time' | 'textarea';
-
-export type JournalColumn = {
+export interface JournalColumn {
   key: string;
   title: string;
   type: JournalColumnType;
-  required?: boolean;
-  readOnly?: boolean;
-};
+  required: boolean;
+  readOnly: boolean;
+  searchable?: boolean;
+  sortable?: boolean;
+  width?: number;
+  options?: Array<{ value: string; label: string }>;
+  validation?: { min?: number; max?: number; pattern?: string };
+}
 
-export type JournalTypeDefinition = {
-  code: JournalType;
+export interface JournalTypeDefinition {
+  code: LabJournalType;
   title: string;
-  displayName?: string;
-  kind?: JournalKind;
+  description?: string;
+  schemaVersion?: number;
   columns: JournalColumn[];
-};
+}
+
+const column = (key: string, title: string, type: JournalColumnType = 'text', required = false, readOnly = false): JournalColumn => ({ key, title, type, required, readOnly });
 
 export const JOURNAL_TYPES: JournalTypeDefinition[] = [
-  {
-    code: JournalType.SOLUTION_PREPARATION,
-    title: 'Журнал приготовления растворов',
-    kind: 'solution',
-    columns: [
-      { key: 'solutionName', title: 'Название раствора', type: 'text', required: true },
-      { key: 'concentration', title: 'Концентрация', type: 'text' },
-      { key: 'preparedDate', title: 'Дата приготовления', type: 'date', required: true },
-      { key: 'expiryDate', title: 'Срок годности', type: 'date' },
-      { key: 'preparedBy', title: 'Приготовил', type: 'text' },
-      { key: 'componentName', title: 'Компонент', type: 'text' },
-      { key: 'componentAmount', title: 'Количество компонента', type: 'number' },
-      { key: 'unit', title: 'Ед. изм.', type: 'text' },
-      { key: 'note', title: 'Примечание', type: 'textarea' },
-    ],
-  },
-  {
-    code: JournalType.CHEMICAL_REAGENT_USAGE,
-    title: 'Журнал учета химических веществ / реактивов',
-    kind: 'chemical',
-    columns: [
-      { key: 'substanceName', title: 'Наименование вещества', type: 'text', required: true },
-      { key: 'unit', title: 'Ед. изм.', type: 'text' },
-      { key: 'income', title: 'Приход', type: 'number' },
-      { key: 'expense', title: 'Расход', type: 'number' },
-      { key: 'balance', title: 'Остаток', type: 'number', readOnly: true },
-      { key: 'supplier', title: 'Поставщик', type: 'text' },
-      { key: 'documentNumber', title: 'Номер документа', type: 'text' },
-      { key: 'note', title: 'Примечание', type: 'textarea' },
-    ],
-  },
-  {
-    code: JournalType.ENVIRONMENT_CONDITIONS,
-    title: 'Журнал контроля условий окружающей среды',
-    kind: 'environment',
-    columns: [
-      { key: 'date', title: 'Дата', type: 'date', required: true },
-      { key: 'time', title: 'Время', type: 'time' },
-      { key: 'room', title: 'Помещение', type: 'text' },
-      { key: 'temperature', title: 'Температура, °C', type: 'number' },
-      { key: 'humidity', title: 'Влажность, %', type: 'number' },
-      { key: 'pressure', title: 'Давление', type: 'number' },
-      { key: 'note', title: 'Примечание', type: 'textarea' },
-    ],
-  },
-  {
-    code: JournalType.SAMPLE_REGISTRATION,
-    title: 'Журнал регистрации проб',
-    kind: 'sample',
-    columns: [
-      { key: 'sampleNumber', title: 'Номер пробы', type: 'text', required: true },
-      { key: 'sampleName', title: 'Наименование пробы', type: 'text' },
-      { key: 'objectName', title: 'Объект', type: 'text' },
-      { key: 'samplingPlace', title: 'Место отбора', type: 'text' },
-      { key: 'samplingDate', title: 'Дата отбора', type: 'date' },
-      { key: 'samplingTime', title: 'Время отбора', type: 'time' },
-      { key: 'customerName', title: 'Заказчик', type: 'text' },
-      { key: 'responsiblePerson', title: 'Ответственный', type: 'text' },
-      { key: 'note', title: 'Примечание', type: 'textarea' },
-    ],
-  },
-  {
-    code: JournalType.TEST_RESULTS_REGISTRATION,
-    title: 'Журнал регистрации результатов / испытаний',
-    kind: 'results',
-    columns: [
-      { key: 'protocolNumber', title: 'Номер протокола', type: 'text' },
-      { key: 'sampleNumber', title: 'Номер пробы', type: 'text' },
-      { key: 'indicatorName', title: 'Показатель', type: 'text', required: true },
-      { key: 'result', title: 'Результат', type: 'text' },
-      { key: 'unit', title: 'Ед. изм.', type: 'text' },
-      { key: 'normative', title: 'Норматив', type: 'text' },
-      { key: 'conclusion', title: 'Заключение', type: 'text' },
-      { key: 'executorName', title: 'Исполнитель', type: 'text' },
-      { key: 'note', title: 'Примечание', type: 'textarea' },
-    ],
-  },
+  { code: JournalType.SAMPLE_REGISTRATION, title: 'Журнал регистрации проб', schemaVersion: JOURNAL_SCHEMA_VERSION, columns: [
+    column('registrationDate', 'Дата регистрации', 'date', true), column('sampleNumber', 'Номер пробы', 'text', true), column('sampleName', 'Наименование пробы', 'text', true), column('sampleType', 'Тип пробы'), column('companyId', 'Заказчик', 'company', true), column('companyObjectId', 'Объект', 'company_object', true), column('samplingPlace', 'Место отбора'), column('samplingDate', 'Дата отбора', 'date'), column('samplingTime', 'Время отбора', 'time'), column('receivedDate', 'Дата поступления', 'date'), column('receivedTime', 'Время поступления', 'time'), column('receivedByEmployeeId', 'Принял', 'employee'), column('sampledByEmployeeId', 'Отобрал пробу', 'employee'), column('receiptCondition', 'Состояние при поступлении', 'textarea'), column('notes', 'Примечание', 'textarea'),
+  ]},
+  { code: JournalType.SOLUTION_PREPARATION, title: 'Журнал приготовления растворов', schemaVersion: JOURNAL_SCHEMA_VERSION, columns: [
+    column('preparationDate', 'Дата приготовления', 'date', true), column('solutionName', 'Название раствора', 'text', true), column('reagentName', 'Реактив', 'text', true), column('concentration', 'Концентрация', 'number', true), column('concentrationUnit', 'Единица концентрации', 'text', true), column('preparedVolume', 'Приготовленный объём', 'number', true), column('volumeUnit', 'Единица объёма', 'text', true), column('reagentBatchNumber', 'Номер партии реактива'), column('reagentExpiryDate', 'Срок годности реактива', 'date'), column('preparationMethod', 'Метод приготовления', 'textarea'), column('preparedByEmployeeId', 'Приготовил', 'employee', true), column('checkedByEmployeeId', 'Проверил', 'employee'), column('solutionExpiryDate', 'Срок годности раствора', 'date'), column('storageConditions', 'Условия хранения'), column('notes', 'Примечание', 'textarea'),
+  ]},
+  { code: JournalType.CHEMICAL_REAGENT_MOVEMENT, title: 'Журнал движения химических реактивов', schemaVersion: JOURNAL_SCHEMA_VERSION, columns: [
+    column('operationDate', 'Дата операции', 'date', true), column('reagentName', 'Реактив', 'text', true), column('reagentCode', 'Код реактива'), column('batchNumber', 'Номер партии'), column('unit', 'Единица', 'text', true), column('incomingQuantity', 'Приход', 'number'), column('outgoingQuantity', 'Расход', 'number'), column('remainingQuantity', 'Остаток', 'calculated', false, true), column('supplier', 'Поставщик'), column('documentNumber', 'Номер документа'), column('receivedByEmployeeId', 'Принял', 'employee'), column('issuedTo', 'Выдано кому'), column('purpose', 'Назначение'), column('storageLocation', 'Место хранения'), column('expiryDate', 'Срок годности', 'date'), column('notes', 'Примечание', 'textarea'),
+  ]},
+  { code: JournalType.ENVIRONMENT_CONDITIONS, title: 'Журнал регистрации условий окружающей среды', schemaVersion: JOURNAL_SCHEMA_VERSION, columns: [
+    column('registrationDate', 'Дата', 'date', true), column('registrationTime', 'Время', 'time', true), column('room', 'Помещение', 'text', true), column('measurementPlace', 'Место измерения'), column('temperatureCelsius', 'Температура, °C', 'number', true), { ...column('relativeHumidityPercent', 'Относительная влажность, %', 'number', true), validation: { min: 0, max: 100 } }, column('pressureKpa', 'Давление, кПа', 'number'), column('windSpeedMs', 'Скорость воздуха, м/с', 'number'), column('dryBulbTemperatureCelsius', 'Сухой термометр', 'number'), column('wetBulbTemperatureCelsius', 'Влажный термометр', 'number'), column('measurementDeviceId', 'Прибор', 'measurement_device', true), column('measuredByEmployeeId', 'Измерил', 'employee', true), column('notes', 'Примечание', 'textarea'),
+  ]},
+  { code: JournalType.TEST_RESULTS_REGISTRATION, title: 'Журнал регистрации результатов испытаний', schemaVersion: JOURNAL_SCHEMA_VERSION, columns: [
+    column('registrationDate', 'Дата регистрации', 'date', true), column('protocolId', 'Номер протокола', 'protocol', true), column('companyId', 'Заказчик', 'company'), column('companyObjectId', 'Объект', 'company_object'), column('sampleNumber', 'Номер пробы'), column('testType', 'Вид испытания'), column('indicatorName', 'Показатель', 'text', true), column('resultValue', 'Результат', 'text', true), column('unit', 'Единица'), column('normativeValue', 'Норматив'), column('normativeDocument', 'Нормативный документ'), column('compliance', 'Соответствие', 'select'), column('executorEmployeeId', 'Исполнитель', 'employee'), column('approvedByEmployeeId', 'Утвердил', 'employee'), column('issueDate', 'Дата выдачи', 'date'), column('notes', 'Примечание', 'textarea'),
+  ]},
 ];
 
-export type LabJournalValue = string | number | boolean | null;
-export type LabJournalEntryData = Record<string, LabJournalValue>;
+export type JournalValue = string | number | boolean | null;
+export type JournalValues = Record<string, unknown>;
 
-export type LabJournalEntry = {
-  id: string;
-  journalType: JournalType;
-  rowNumber?: number;
-  entryDate?: string;
-  data: LabJournalEntryData;
-  laboratoryId?: string | number | null;
-  laboratoryName?: string;
-  createdBy?: string | number | null;
+export interface JournalEntry {
+  id: number;
+  journalType: LabJournalType;
+  laboratoryId: number;
+  values: JournalValues;
+  version: number;
+  archived: boolean;
+  automatic?: boolean;
+  protocolId?: number;
   createdByName?: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
+  createdAt: string;
+  updatedAt: string;
+}
 
-export type LabJournalPage = {
-  content: LabJournalEntry[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
+export interface PageResponse<T> {
+  items: T[]; page: number; size: number; totalElements: number; totalPages: number;
+  first: boolean; last: boolean; hasNext: boolean; hasPrevious: boolean;
+}
+
+export interface JournalEntriesParams {
+  journalType: LabJournalType;
+  laboratoryId?: number;
+  page: number;
   size: number;
-};
-
-export type LabJournalQuery = {
-  journalType?: JournalType;
-  laboratoryId?: string | number;
+  search?: string;
   dateFrom?: string;
   dateTo?: string;
-  search?: string;
-  page?: number;
-  size?: number;
-};
+  employeeId?: number;
+  archived?: boolean;
+  sort?: string;
+  filters?: Record<string, string | number | boolean>;
+}
 
-export type SaveLabJournalEntryPayload = {
-  journalType: JournalType;
-  entryDate?: string;
-  preparationDate?: string;
-  data: LabJournalEntryData;
-  laboratoryId?: string | number;
-};
+export interface JournalEntryPayload {
+  journalType: LabJournalType;
+  laboratoryId: number;
+  values: JournalValues;
+  version?: number;
+}
 
-export type ExportLabJournalParams = Omit<LabJournalQuery, 'page' | 'size'>;
+export type ExportJournalParams = Omit<JournalEntriesParams, 'page' | 'size'>;
+
+/** Transitional aliases for existing imports. */
+export type LabJournalEntry = JournalEntry;
+export type LabJournalEntryData = JournalValues;
+export type LabJournalValue = JournalValue;
+export type LabJournalPage = PageResponse<JournalEntry>;
+export type LabJournalQuery = JournalEntriesParams;
+export type SaveLabJournalEntryPayload = JournalEntryPayload;
+export type ExportLabJournalParams = ExportJournalParams;

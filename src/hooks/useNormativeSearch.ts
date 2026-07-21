@@ -6,8 +6,8 @@ import {
   cleanNormativeSearchParams,
   isNormativeSearchCanceled,
   NORMATIVE_SEARCH_DEBOUNCE_MS,
-  searchNormatives,
 } from '../services/normativeSearchService';
+import { getNormativesForProtocol } from '../services/normativeService';
 import type { NormativeSearchItem, NormativeSearchParams } from '../types/normativeSearch';
 
 export interface UseNormativeSearchOptions {
@@ -83,7 +83,7 @@ export const useNormativeSearch = ({
     setLoading(true);
     setError(null);
     try {
-      const result = await searchNormatives(params, controller.signal, { bypassCache });
+      const result = await getNormativesForProtocol(params, controller.signal);
       if (controller.signal.aborted || sequence !== sequenceRef.current) return;
       setItems(result.items);
       setTotalElements(result.totalElements);

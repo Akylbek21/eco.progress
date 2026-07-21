@@ -8,16 +8,18 @@ import AnalyticsRouteTracker from './components/AnalyticsRouteTracker';
 import { useToast } from './hooks/useToast';
 import { useAuth } from './contexts/AuthContext';
 import type { UserRole } from './types';
+import { companyRoleMatrix } from './config/permissions';
+import { publicRouteLoaders } from './utils/publicRoutePreload';
 
 const lazyNamed = <T extends Record<string, unknown>, K extends keyof T>(loader: () => Promise<T>, key: K) =>
   lazy(() => loader().then((module) => ({ default: module[key] as unknown as ComponentType<Record<string, unknown>> })));
 
-const HomePage = lazy(() => import('./pages/HomePage'));
+const HomePage = lazy(publicRouteLoaders.home);
 const CabinetLayout = lazy(() => import('./layouts/CabinetLayout'));
 const StaffLayout = lazy(() => import('./layouts/StaffLayout'));
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
-const AboutPage = lazy(() => import('./pages/AboutPage'));
-const ServicesPage = lazy(() => import('./pages/ServicesPage'));
+const AboutPage = lazy(publicRouteLoaders.about);
+const ServicesPage = lazy(publicRouteLoaders.services);
 const SeoLandingPage = lazy(() => import('./pages/SeoLandingPage'));
 const ServiceLandingPage = lazy(() => import('./pages/ServiceLandingPage'));
 const ServiceDetailsPage = lazy(() => import('./pages/ServiceDetailsPage'));
@@ -25,13 +27,13 @@ const ServiceRoutePage = lazy(() => import('./pages/ServiceRoutePage'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
 const PartnersPage = lazy(() => import('./pages/PartnersPage'));
 const TariffsPage = lazy(() => import('./pages/TariffsPage'));
-const NewsPage = lazy(() => import('./pages/NewsPage'));
+const NewsPage = lazy(publicRouteLoaders.news);
 const NewsDetailsPage = lazy(() => import('./pages/NewsDetailsPage'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
+const LoginPage = lazy(publicRouteLoaders.login);
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const FaqPage = lazy(() => import('./pages/FaqPage'));
-const ContactsPage = lazy(() => import('./pages/ContactsPage'));
-const RegionsPage = lazy(() => import('./pages/RegionsPage'));
+const ContactsPage = lazy(publicRouteLoaders.contacts);
+const RegionsPage = lazy(publicRouteLoaders.regions);
 const SearchPage = lazy(() => import('./pages/SearchPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
@@ -79,7 +81,9 @@ const StaffUserRolesPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffU
 
 const allStaffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
 const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'];
-const companyManageRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD'];
+const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
+const companyReadRoles: UserRole[] = [...companyRoleMatrix.read];
+const companyManageRoles: UserRole[] = [...companyRoleMatrix.write];
 
 const StaffAccess = ({ roles, children }: { roles?: UserRole[]; children: ReactNode }) => {
   const { user } = useAuth();
@@ -116,7 +120,6 @@ const RoleAccess = ({ roles, loginPath, forbiddenMessage, children }: { roles: U
 function App() {
   const toast = useToast();
   const location = useLocation();
-  const protocolMockMode = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
 
   useEffect(() => {
     const privatePrefixes = ['/cabinet', '/staff', '/admin', '/dashboard', '/login', '/register', '/api', '/crm'];
@@ -162,7 +165,7 @@ function App() {
         <AnalyticsRouteTracker />
         <Suspense fallback={<RouteFallback />}>
         <Routes>
-        <Route path="/" element={protocolMockMode ? <Navigate to="/staff/protocols" replace /> : <PublicLayout><HomePage /></PublicLayout>} />
+        <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
         <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
         <Route path="/services" element={<PublicLayout><ServicesPage /></PublicLayout>} />
         <Route path="/services/ecological-documents" element={<PublicLayout><ServiceLandingPage slug="ecological-documents" /></PublicLayout>} />
@@ -197,7 +200,7 @@ function App() {
         <Route path="/cabinet/company" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetCompanyPage /></CabinetLayout></RoleAccess>} />
         <Route path="/cabinet/notifications" element={<RoleAccess roles={['CLIENT']} loginPath="/login"><CabinetLayout><CabinetNotificationsPage /></CabinetLayout></RoleAccess>} />
 
-        <Route path="/staff" element={protocolMockMode ? <Navigate to="/staff/protocols" replace /> : <RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDashboardPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDashboardPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/orders" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffOrdersPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/orders/new" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffNewOrderPage onNotify={notify} /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/orders/company/:businessCompanyId" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffOrdersPage /></StaffLayout></RoleAccess>} />
@@ -226,9 +229,9 @@ function App() {
         <Route path="/staff/content/redirects/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentEditorPage type="REDIRECT" /></StaffLayout></RoleAccess>} />
         <Route path="/staff/content/audit" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentAuditPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/content/analytics" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentAnalyticsPage /></StaffLayout></RoleAccess>} />
-        <Route path="/staff/companies" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть компании"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies" element={<RoleAccess roles={companyReadRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={companyReadRoles}><ErrorBoundary fallbackTitle="Не удалось открыть компании"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/companies/new" element={<RoleAccess roles={companyManageRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={companyManageRoles}><ErrorBoundary fallbackTitle="Не удалось открыть создание компании"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/companies/:companyId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть компанию"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies/:companyId" element={<RoleAccess roles={companyReadRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={companyReadRoles}><ErrorBoundary fallbackTitle="Не удалось открыть компанию"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/companies/:companyId/edit" element={<RoleAccess roles={companyManageRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={companyManageRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактирование компании"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/commercial-offers" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffCommercialOffersPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/contracts" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER', 'ACCOUNTANT']}><StaffContractsPage /></StaffAccess></StaffLayout></RoleAccess>} />
@@ -241,10 +244,12 @@ function App() {
         <Route path="/staff/protocols/create" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть создание протокола"><QuickProtocolCreatePage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols/new" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ProtocolCreatePage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols/:protocolId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/normatives" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/protocols/:protocolId/edit" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/normatives" element={<RoleAccess roles={normativeRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={normativeRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/measurement-devices" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/journals" element={<RoleAccess roles={['ADMIN', 'HEAD', 'LABORATORY']} loginPath="/staff/login" forbiddenMessage="Нет доступа к разделу журналов"><StaffLayout><StaffAccess roles={['ADMIN', 'HEAD', 'LABORATORY']}><ErrorBoundary fallbackTitle="Не удалось открыть журналы"><LabJournalsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/settings/laboratory" element={<RoleAccess roles={['ADMIN', 'HEAD', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'HEAD', 'LABORATORY']}><ErrorBoundary fallbackTitle="Не удалось открыть настройки лаборатории"><LaboratorySettingsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/journals" element={<RoleAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']} loginPath="/staff/login" forbiddenMessage="Недостаточно прав для просмотра журналов"><StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']}><ErrorBoundary fallbackTitle="Не удалось открыть журналы"><LabJournalsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/settings/laboratories" element={<RoleAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']}><ErrorBoundary fallbackTitle="Не удалось открыть настройки лаборатории"><LaboratorySettingsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/settings/laboratory" element={<Navigate to="/staff/settings/laboratories" replace />} />
         <Route path="/staff/reports" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><StaffReportsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/user-roles" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN']}><StaffUserRolesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/notifications" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffNotificationsPage /></StaffLayout></RoleAccess>} />

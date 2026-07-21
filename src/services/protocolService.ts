@@ -8,6 +8,7 @@ import type {
   Protocol,
   ProtocolCalculationSummaryResponse,
   ProtocolPage,
+  ProtocolListQuery,
   QuickProtocolCreatePayload,
   ProtocolResultPayload,
   ProtocolResultRow,
@@ -25,7 +26,7 @@ export type DownloadedProtocolFile = {
 
 export interface ProtocolService {
   getProtocols(params?: Record<string, string>): Promise<Protocol[]>;
-  getProtocolsPage(params?: Record<string, string>, signal?: AbortSignal): Promise<ProtocolPage>;
+  getProtocolsPage(params: ProtocolListQuery, signal?: AbortSignal): Promise<ProtocolPage>;
   getProtocolTemplates(): Promise<ProtocolTemplate[]>;
   getMethodTemplates(): Promise<MethodTemplateResponse[]>;
   getMethodTemplate(id: string): Promise<MethodTemplateResponse>;
@@ -52,11 +53,13 @@ export interface ProtocolService {
   checkNormatives(protocolId: string): Promise<Protocol>;
   readyForApproval(protocolId: string): Promise<Protocol>;
   approveProtocol(protocolId: string): Promise<Protocol>;
+  returnForRevision(protocolId: string, reason: string): Promise<Protocol>;
   returnToDraft(protocolId: string): Promise<Protocol>;
   signProtocol(protocolId: string, cmsSignatureBase64: string): Promise<Protocol>;
   replaceProtocol(protocolId: string, reason: string): Promise<Protocol>;
   duplicateProtocol(protocolId: string): Promise<Protocol>;
   cancelProtocol(protocolId: string): Promise<Protocol>;
+  archiveProtocol(protocolId: string): Promise<Protocol>;
   previewProtocol(protocolId: string): Promise<Blob>;
   generateDocx(protocolId: string): Promise<Protocol>;
   generatePdf(protocolId: string): Promise<Protocol>;
@@ -77,14 +80,14 @@ export interface ProtocolService {
   calculateProtocol(protocolId: string): Promise<Protocol>;
 }
 
-export const useProtocolMocks = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
+// CRM protocols always use the production contract. The mock module remains only
+// as isolated test data and is never selected by the application at runtime.
+export const useProtocolMocks = false;
 
 let implementationPromise: Promise<ProtocolService> | undefined;
 const implementation = () => {
   if (!implementationPromise) {
-    implementationPromise = useProtocolMocks
-      ? import('./mockProtocolService').then((module) => module as unknown as ProtocolService)
-      : import('./apiProtocolService').then((module) => module as unknown as ProtocolService);
+    implementationPromise = import('./apiProtocolService').then((module) => module as unknown as ProtocolService);
   }
   return implementationPromise;
 };
@@ -115,11 +118,13 @@ const protocolService: ProtocolService = {
   checkNormatives: async (protocolId) => (await implementation()).checkNormatives(protocolId),
   readyForApproval: async (protocolId) => (await implementation()).readyForApproval(protocolId),
   approveProtocol: async (protocolId) => (await implementation()).approveProtocol(protocolId),
+  returnForRevision: async (protocolId, reason) => (await implementation()).returnForRevision(protocolId, reason),
   returnToDraft: async (protocolId) => (await implementation()).returnToDraft(protocolId),
   signProtocol: async (protocolId, cmsSignatureBase64) => (await implementation()).signProtocol(protocolId, cmsSignatureBase64),
   replaceProtocol: async (protocolId, reason) => (await implementation()).replaceProtocol(protocolId, reason),
   duplicateProtocol: async (protocolId) => (await implementation()).duplicateProtocol(protocolId),
   cancelProtocol: async (protocolId) => (await implementation()).cancelProtocol(protocolId),
+  archiveProtocol: async (protocolId) => (await implementation()).archiveProtocol(protocolId),
   previewProtocol: async (protocolId) => (await implementation()).previewProtocol(protocolId),
   generateDocx: async (protocolId) => (await implementation()).generateDocx(protocolId),
   generatePdf: async (protocolId) => (await implementation()).generatePdf(protocolId),

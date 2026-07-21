@@ -15,8 +15,8 @@ import {
   isNormativeSearchCanceled,
   NORMATIVE_SEARCH_DEBOUNCE_MS,
   normativeSearchItemToRecord,
-  searchNormatives,
 } from '../../services/normativeSearchService';
+import { getNormativesForProtocol } from '../../services/normativeService';
 import { useAuth } from '../../contexts/AuthContext';
 import { resolveMeasurementDeviceId } from '../../utils/protocolResultAliases';
 import type { NormativeSearchParams } from '../../types/normativeSearch';
@@ -31,12 +31,12 @@ import type {
   ProtocolResultPayload,
   ProtocolResultRow,
   ProtocolSubtype,
-  ProtocolTemplateId,
+  ProtocolTemplateKey,
 } from '../../types/protocols';
 
 type Props = {
   protocolId: string;
-  templateId: ProtocolTemplateId;
+  templateId: ProtocolTemplateKey;
   subtype?: ProtocolSubtype;
   rows: ProtocolResultRow[];
   devices?: ProtocolMeasurementDevice[];
@@ -63,8 +63,8 @@ type SearchState = 'idle' | 'minLength' | 'searching' | 'empty' | 'ready' | 'err
 
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = 'rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700';
-const physicalFactorTemplateIds: ProtocolTemplateId[] = ['physical_factors', 'microclimate', 'lighting', 'noise_vibration', 'uv_emf_laser'];
-const chemicalTemplateIds: ProtocolTemplateId[] = ['industrial_emissions', 'ambient_air', 'workplace_air', 'water', 'water_wastewater', 'soil', 'food_products', 'surfaces', 'udmh_special'];
+const physicalFactorTemplateIds: ProtocolTemplateKey[] = ['physical_factors', 'microclimate', 'lighting', 'noise_vibration', 'uv_emf_laser'];
+const chemicalTemplateIds: ProtocolTemplateKey[] = ['industrial_emissions', 'ambient_air', 'workplace_air', 'water', 'water_wastewater', 'soil', 'food_products', 'surfaces', 'udmh_special'];
 const searchUnavailableMessage = 'Поиск временно недоступен. Добавьте показатель вручную.';
 const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
 const notFoundSearchMessage = 'Норматив или показатель не найден. Проверьте код или добавьте норматив в справочник.';
@@ -79,8 +79,8 @@ const defaultPhysicalConditions = {
   lightingType: '',
   noiseType: '',
 };
-const physicalSubtypeForTemplate = (templateId: ProtocolTemplateId, subtype?: ProtocolSubtype) =>
-  subtype || ({ microclimate: 'MICROCLIMATE', lighting: 'LIGHTING', noise_vibration: 'NOISE_VIBRATION' } as Partial<Record<ProtocolTemplateId, ProtocolSubtype>>)[templateId] || 'MICROCLIMATE';
+const physicalSubtypeForTemplate = (templateId: ProtocolTemplateKey, subtype?: ProtocolSubtype) =>
+  subtype || ({ microclimate: 'MICROCLIMATE', lighting: 'LIGHTING', noise_vibration: 'NOISE_VIBRATION' } as Partial<Record<ProtocolTemplateKey, ProtocolSubtype>>)[templateId] || 'MICROCLIMATE';
 const normalizeProtocolTemplate = (value: string) => {
   const key = value.toLowerCase();
   if (['ambient_air', 'atmospheric_air', 'industrial_emissions'].includes(key)) return 'ambient_air';
@@ -148,7 +148,7 @@ const mergeProtocolResults = (currentRows: ProtocolResultRow[], importedRows: Pr
   });
   return Array.from(map.values());
 };
-const officialResult = (row: ProtocolResultRow, templateId: ProtocolTemplateId) => {
+const officialResult = (row: ProtocolResultRow, templateId: ProtocolTemplateKey) => {
   if (row.result) return row.result;
   if (templateId === 'industrial_emissions') return valueOf(row, ['resultMg', 'calculatedConcentration', 'resultValue']);
   return valueOf(row, ['result', 'resultValue', 'calculatedResult']);
@@ -181,11 +181,46 @@ const conditionSummary = (row: ProtocolResultRow) => [
   optionLabel(lightingTypeOptions, valueOf(row, ['lightingType'])),
   optionLabel(noiseTypeOptions, valueOf(row, ['noiseType'])),
 ].filter(Boolean).join(', ');
-const normativeValuesFromRecord = (normative: NormativeRecord, templateId: ProtocolTemplateId, fallbackUnit = '') => {
+const normativeConditions = (normative: NormativeRecord): Record<string, unknown> => {
+  if (normative.conditionJson) {
+    try {
+      const parsed: unknown = JSON.parse(normative.conditionJson);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+    } catch {
+      // Legacy conditionJson can contain plain text; structured aliases below remain available.
+    }
+  }
+  return Object.fromEntries(Object.entries({
+    season: normative.season,
+    workCategory: normative.workCategory,
+    workplaceType: normative.workplaceType,
+    roomType: normative.roomType,
+    normLevel: normative.normLevel,
+    lightingType: normative.lightingType,
+    noiseType: normative.noiseType,
+  }).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+};
+const canonicalValueType = (comparisonType?: string) => ({
+  EQUAL: 'EXACT',
+  LESS_OR_EQUAL: 'LE',
+  LESS_THAN: 'LT',
+  GREATER_OR_EQUAL: 'GE',
+  GREATER_THAN: 'GT',
+  RANGE: 'RANGE',
+  INFO: 'TEXT',
+  ABSENT: 'REFERENCE_ONLY',
+}[String(comparisonType || '').toUpperCase()] || 'REFERENCE_ONLY');
+const normativeValuesFromRecord = (normative: NormativeRecord, templateId: ProtocolTemplateKey, fallbackUnit = '') => {
   const value = normativeDisplayValue(normative);
   const unit = normative.unit || fallbackUnitForEnvironment(templateId, normative) || fallbackUnit;
   return {
     normativeId: normative.id,
+    normativeRecordId: normative.id,
+    valueType: canonicalValueType(normative.comparisonType),
+    value: normative.value || normative.maxOneTimeValue || normative.dailyAverageValue || normative.obuvValue || '',
+    valueRaw: normative.normativeDocument || '',
+    documentCode: normative.sourceDocumentCode || sourceDocumentCodeForTemplate(templateId, physicalFactorTemplateIds.includes(templateId)),
+    conditions: JSON.stringify(normativeConditions(normative)),
     sourceDocumentCode: normative.sourceDocumentCode || sourceDocumentCodeForTemplate(templateId, physicalFactorTemplateIds.includes(templateId)),
     sourceDocumentName: normative.sourceDocumentName || normative.normativeDocument || '',
     documentNumber: normative.documentNumber || '',
@@ -223,7 +258,7 @@ const normativeValuesFromRecord = (normative: NormativeRecord, templateId: Proto
   };
 };
 const normalizeText = (value: unknown) => String(value || '').trim().toLowerCase().replace(/ё/g, 'е');
-const fallbackUnitForEnvironment = (templateId: ProtocolTemplateId, normative?: NormativeRecord | null) => {
+const fallbackUnitForEnvironment = (templateId: ProtocolTemplateKey, normative?: NormativeRecord | null) => {
   const text = normalizeText([
     templateId,
     normative?.templateId,
@@ -261,7 +296,7 @@ const normativeToSuggestion = (normative: NormativeRecord): NormativeSuggestion 
   name: normative.indicator || normative.indicatorName || normative.pollutantName || '',
   cas: normative.cas || normative.casNumber || '',
   formula: normative.formula || normative.chemicalFormula || '',
-  unit: normative.unit || fallbackUnitForEnvironment((normative.templateId || 'ambient_air') as ProtocolTemplateId, normative),
+  unit: normative.unit || fallbackUnitForEnvironment(normative.templateId || 'ambient_air', normative),
   testingMethod: normative.testingMethod || '',
   samplingMethod: normative.samplingMethod || '',
   selectedNormative: normative,
@@ -273,7 +308,7 @@ const rawDataLabel = (row: ProtocolResultRow) =>
 const measurementPlace = (row: ProtocolResultRow) => row.measurementPlace || valueOf(row, ['measurementPlace', 'samplingPlace', 'object']);
 const testingMethod = (row: ProtocolResultRow) => row.testingMethodNd || row.testingMethodDocument || row.testingMethod || valueOf(row, ['testingMethodNd', 'testingMethodDocument', 'testingMethod']);
 const needsNormativeSelection = (row: ProtocolResultRow) => valueOf(row, ['normativeSelectionRequired']) === 'true';
-const statusOf = (row: ProtocolResultRow, templateId: ProtocolTemplateId) => {
+const statusOf = (row: ProtocolResultRow, templateId: ProtocolTemplateKey) => {
   void templateId;
   return String(row.internalStatus || row.checkStatus || '').trim().toUpperCase();
 };
@@ -302,7 +337,7 @@ const resolveDeviceName = (row: ProtocolResultRow, devices: ProtocolMeasurementD
   return name && name !== '—' ? name : '';
 };
 
-const exceededText = (row: ProtocolResultRow, templateId: ProtocolTemplateId) => {
+const exceededText = (row: ProtocolResultRow, templateId: ProtocolTemplateKey) => {
   if (statusOf(row, templateId) !== 'EXCEEDED') return '';
   const actual = Number(officialResult(row, templateId).replace(',', '.'));
   const limit = Number(normativeValue(row).replace(',', '.'));
@@ -339,6 +374,9 @@ const ProtocolResultsTable = ({
   const [normativeLoading, setNormativeLoading] = useState(false);
   const [normativeSearchDone, setNormativeSearchDone] = useState(false);
   const [normativeResults, setNormativeResults] = useState<NormativeRecord[]>([]);
+  const [normativePage, setNormativePage] = useState(0);
+  const [normativeTotalPages, setNormativeTotalPages] = useState(0);
+  const [normativeTotalElements, setNormativeTotalElements] = useState(0);
   const [selectedNormative, setSelectedNormative] = useState<NormativeRecord | null>(null);
   const [resultValue, setResultValue] = useState('');
   const [resultDeviceId, setResultDeviceId] = useState('');
@@ -349,7 +387,7 @@ const ProtocolResultsTable = ({
   const searchAbortRef = useRef<AbortController | null>(null);
   const canUseAdvanced = user?.role === 'ADMIN' || user?.role === 'HEAD' || user?.role === 'DIRECTOR';
   const searchContext = resolveNormativeSearchContext({ templateId, subtype });
-  const contextTemplateId = (searchContext.templateId || searchContext.normativeTemplateId || normalizeProtocolTemplate(templateId)) as ProtocolTemplateId;
+  const contextTemplateId = searchContext.templateId || searchContext.normativeTemplateId || normalizeProtocolTemplate(templateId);
   const isPhysicalFactors = searchContext.sourceDocumentCode === 'DSM_15' || physicalFactorTemplateIds.includes(templateId);
   const isSoilProtocol = templateId === 'soil';
   const isChemicalProtocol = chemicalTemplateIds.includes(templateId);
@@ -359,7 +397,7 @@ const ProtocolResultsTable = ({
   const isWaterProtocol = normalizedTemplateId === 'water';
   const effectiveWaterType = waterType || valueOf(rows[0] || ({ values: {} } as ProtocolResultRow), ['waterType']) || 'DRINKING_WATER';
 
-  const buildNormativeSearchParams = (value: string): NormativeSearchParams => ({
+  const buildNormativeSearchParams = (value: string, page = 0): NormativeSearchParams => ({
       query: value.trim(),
       status: 'ACTIVE',
       templateId: normalizedTemplateId,
@@ -379,18 +417,22 @@ const ProtocolResultsTable = ({
       visualWorkCategory: isPhysicalFactors ? physicalConditions.visualWorkCategory || undefined : undefined,
       lightingType: isPhysicalFactors ? physicalConditions.lightingType || undefined : undefined,
       noiseType: isPhysicalFactors ? physicalConditions.noiseType || undefined : undefined,
-      page: 0,
-      size: 30,
+      page,
+      size: 20,
     });
 
   const searchNormativeCandidates = async (
     value: string,
     _pollutant?: Pollutant,
+    page = 0,
   ): Promise<NormativeRecord[]> => {
     searchAbortRef.current?.abort();
     const controller = new AbortController();
     searchAbortRef.current = controller;
-    const result = await searchNormatives(buildNormativeSearchParams(value), controller.signal);
+    const result = await getNormativesForProtocol(buildNormativeSearchParams(value, page), controller.signal);
+    setNormativePage(result.page);
+    setNormativeTotalPages(result.totalPages);
+    setNormativeTotalElements(result.totalElements);
     return result.items.map(normativeSearchItemToRecord);
   };
 
@@ -425,13 +467,16 @@ const ProtocolResultsTable = ({
     setAddOpen(true);
     setNormativeQuery(initialQuery);
     setNormativeResults([]);
+    setNormativePage(0);
+    setNormativeTotalPages(0);
+    setNormativeTotalElements(0);
     setNormativeSearchDone(false);
     setSelectedNormative(null);
     setResultValue('');
     setResultDeviceId('');
   };
 
-  const searchNormativesForDialog = async () => {
+  const searchNormativesForDialog = async (page = 0) => {
     const value = normativeQuery.trim();
     setSelectedNormative(null);
     if (!canSearchNormative(value)) {
@@ -443,7 +488,7 @@ const ProtocolResultsTable = ({
     setNormativeLoading(true);
     setNormativeSearchDone(false);
     try {
-      const candidates = await searchNormativeCandidates(value);
+      const candidates = await searchNormativeCandidates(value, undefined, page);
       setNormativeResults(candidates);
       setNormativeSearchDone(true);
       if (!candidates.length) onNotify('Норматив не найден. Проверьте код или добавьте норматив в справочник.', 'warning');
@@ -797,6 +842,11 @@ const ProtocolResultsTable = ({
     const normative = normativeChoices[row.id]?.find((item) => item.id === normativeId);
     if (!normative) return;
     const resolvedUnit = normative.unit || fallbackUnitForEnvironment(templateId, normative) || unit(row);
+    const resultUnit = unit(row).trim();
+    if (resultUnit && normative.unit && resultUnit.toLocaleLowerCase() !== normative.unit.trim().toLocaleLowerCase()) {
+      onNotify(`Единица результата «${resultUnit}» не совпадает с нормативом «${normative.unit}». Применение возможно только после подтверждённой backend-конвертации.`, 'warning');
+      return;
+    }
     const normativeValues = normativeValuesFromRecord(normative, templateId, resolvedUnit);
     setSaving(true);
     try {
@@ -1321,12 +1371,13 @@ const ProtocolResultsTable = ({
               <input
                 value={normativeQuery}
                 onChange={(event) => setNormativeQuery(event.target.value)}
-                onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); searchNormativesForDialog(); } }}
+                onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void searchNormativesForDialog(0); } }}
+                aria-label="Поиск норматива"
                 placeholder="азот, 0301, NO2, 10102-44-0"
                 className={`${inputClass} pl-10`}
               />
             </label>
-            <Button type="button" variant="secondary" disabled={normativeLoading} onClick={searchNormativesForDialog}>Найти</Button>
+            <Button type="button" variant="secondary" disabled={normativeLoading} onClick={() => void searchNormativesForDialog(0)}>Найти</Button>
           </div>
 
           <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
@@ -1368,6 +1419,16 @@ const ProtocolResultsTable = ({
               </tbody>
             </table>
           </div>
+
+          {normativeSearchDone && normativeTotalPages > 1 && (
+            <div className="flex items-center justify-between gap-3 text-sm text-slate-600">
+              <span>Страница {normativePage + 1} из {normativeTotalPages} · найдено {normativeTotalElements}</span>
+              <div className="flex gap-2">
+                <Button type="button" variant="secondary" disabled={normativeLoading || normativePage === 0} onClick={() => void searchNormativesForDialog(normativePage - 1)}>Назад</Button>
+                <Button type="button" variant="secondary" disabled={normativeLoading || normativePage + 1 >= normativeTotalPages} onClick={() => void searchNormativesForDialog(normativePage + 1)}>Далее</Button>
+              </div>
+            </div>
+          )}
 
           {selectedNormative && (
             <div className="grid gap-3 rounded-xl border border-eco-100 bg-eco-50 p-4 sm:grid-cols-2">

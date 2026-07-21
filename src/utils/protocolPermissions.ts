@@ -1,6 +1,29 @@
+import { isProtocolStatusEditable, normalizeProtocolStatus } from '../config/protocolStatus';
 import type { Protocol, ProtocolStatus } from '../types/protocols';
 
-const editableStatuses = new Set(['DRAFT', 'CALCULATED', 'READY', 'NEEDS_REVISION', 'RETURNED', 'CORRECTION']);
+type ProtocolUser = { role?: string | null } | null | undefined;
+type ProtocolLike = Pick<Protocol, 'status'> | ProtocolStatus | string | null | undefined;
+
+const creatorRoles = new Set(['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']);
+const headRoles = new Set(['ADMIN', 'DIRECTOR', 'HEAD']);
+const roleOf = (user: ProtocolUser | string) => String(typeof user === 'string' ? user : user?.role || '').trim().toUpperCase();
+const statusOf = (protocol: ProtocolLike) => normalizeProtocolStatus(typeof protocol === 'object' && protocol ? protocol.status : protocol);
+const hasRole = (user: ProtocolUser | string, roles: Set<string>) => roles.has(roleOf(user));
+
+export { normalizeProtocolStatus };
+export const canViewProtocol = (user: ProtocolUser, _protocol?: ProtocolLike) => hasRole(user, creatorRoles);
+export const canCreateProtocol = (user: ProtocolUser) => hasRole(user, creatorRoles);
+export const canEditProtocol = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, creatorRoles) && isProtocolStatusEditable(statusOf(protocol));
+export const canEditResults = canEditProtocol;
+export const canSendForApproval = (user: ProtocolUser, protocol: ProtocolLike) =>
+  hasRole(user, creatorRoles) && ['DRAFT', 'CALCULATED', 'NEEDS_REVISION'].includes(statusOf(protocol));
+export const canReturnForRevision = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && statusOf(protocol) === 'READY_FOR_APPROVAL';
+export const canApproveProtocol = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && statusOf(protocol) === 'READY_FOR_APPROVAL';
+export const canSignProtocol = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && statusOf(protocol) === 'APPROVED';
+export const canCreateCorrection = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && statusOf(protocol) === 'SIGNED';
+export const canCancelProtocol = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && !['SIGNED', 'REPLACED', 'CANCELLED', 'ARCHIVED'].includes(statusOf(protocol));
+export const canArchiveProtocol = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && statusOf(protocol) !== 'ARCHIVED';
+export const canDownloadProtocol = (user: ProtocolUser, protocol: ProtocolLike) => canViewProtocol(user, protocol);
 
 export type ProtocolPermissions = {
   canSave: boolean;
@@ -12,66 +35,28 @@ export type ProtocolPermissions = {
   canDownload: boolean;
   canCreateCorrection: boolean;
   canDelete: boolean;
+  canArchive: boolean;
   canCancel: boolean;
   canGenerate: boolean;
   canCopy: boolean;
 };
 
-const none: ProtocolPermissions = {
-  canSave: false,
-  canCalculate: false,
-  canSendToApproval: false,
-  canApprove: false,
-  canReturn: false,
-  canSign: false,
-  canDownload: false,
-  canCreateCorrection: false,
-  canDelete: false,
-  canCancel: false,
-  canGenerate: false,
-  canCopy: false,
-};
-
-export const normalizeProtocolStatus = (status?: ProtocolStatus | string | null) => String(status || '').trim().toUpperCase();
-
-export const getProtocolPermissions = (
-  protocolOrStatus: Pick<Protocol, 'status'> | ProtocolStatus | string | null | undefined,
-  role?: string,
-  allowAll = false,
-): ProtocolPermissions => {
-  const status = normalizeProtocolStatus(typeof protocolOrStatus === 'object' && protocolOrStatus ? protocolOrStatus.status : protocolOrStatus);
-  const normalizedRole = String(role || '').trim().toUpperCase();
-  const isAdmin = allowAll || normalizedRole === 'ADMIN';
-  const isHead = allowAll || ['ADMIN', 'DIRECTOR', 'HEAD'].includes(normalizedRole);
-  const isLaboratory = allowAll || isHead || normalizedRole === 'LABORATORY';
-
-  if (editableStatuses.has(status)) return {
-    ...none,
-    canSave: isLaboratory,
-    canCalculate: isLaboratory,
-    canSendToApproval: isLaboratory,
-    canDelete: isAdmin && status === 'DRAFT',
-    canCancel: isHead,
-    canGenerate: isLaboratory,
-    canCopy: isLaboratory,
+export const getProtocolPermissions = (protocol: ProtocolLike, role?: string, allowAll = false): ProtocolPermissions => {
+  const user = { role: allowAll ? 'ADMIN' : role };
+  const editable = canEditProtocol(user, protocol);
+  return {
+    canSave: editable,
+    canCalculate: editable,
+    canSendToApproval: canSendForApproval(user, protocol),
+    canApprove: canApproveProtocol(user, protocol),
+    canReturn: canReturnForRevision(user, protocol),
+    canSign: canSignProtocol(user, protocol),
+    canDownload: canDownloadProtocol(user, protocol),
+    canCreateCorrection: canCreateCorrection(user, protocol),
+    canDelete: false,
+    canArchive: canArchiveProtocol(user, protocol),
+    canCancel: canCancelProtocol(user, protocol),
+    canGenerate: editable || canApproveProtocol(user, protocol),
+    canCopy: canCreateProtocol(user),
   };
-  if (status === 'READY_FOR_APPROVAL') return {
-    ...none,
-    canApprove: isHead,
-    canReturn: isHead,
-    canDownload: true,
-    canCancel: isHead,
-    canGenerate: isHead,
-    canCopy: isLaboratory,
-  };
-  if (status === 'APPROVED') return {
-    ...none,
-    canSign: isHead,
-    canDownload: true,
-    canCreateCorrection: isHead,
-    canCopy: isLaboratory,
-  };
-  if (status === 'SIGNED') return { ...none, canDownload: true, canCreateCorrection: isHead, canCopy: isLaboratory };
-  if (status === 'ARCHIVED' || status === 'REPLACED') return { ...none, canDownload: true, canCopy: isLaboratory };
-  return none;
 };

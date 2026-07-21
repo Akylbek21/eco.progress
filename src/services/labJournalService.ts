@@ -1,365 +1,130 @@
+import axios from 'axios';
 import api, { type ApiResponse } from './api';
 import { extractItem, extractList, getContentDispositionFileName } from './apiHelpers';
-import {
-  JOURNAL_TYPES,
-  JournalType,
-  type ExportLabJournalParams,
-  type JournalColumn,
-  type JournalKind,
-  type JournalTypeDefinition,
-  type LabJournalEntry,
-  type LabJournalEntryData,
-  type LabJournalPage,
-  type LabJournalQuery,
-  type SaveLabJournalEntryPayload,
-} from '../types/labJournal';
-
-const useMocks = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
-const STORAGE_KEY = 'eco-progress-lab-journals-v2';
+import { JOURNAL_TYPES, type ExportJournalParams, type JournalEntriesParams, type JournalEntry, type JournalEntryPayload, type JournalValues, type PageResponse, type JournalTypeDefinition, type LabJournalType } from '../types/labJournal';
+import { JournalSchemaError, normalizeJournalSchema } from '../utils/journalSchema';
 
 type UnknownRecord = Record<string, unknown>;
-type DownloadResult = { blob: Blob; fileName: string };
+export type DownloadResult = { blob: Blob; fileName: string };
+export type JournalTypesResult = { items: JournalTypeDefinition[]; fallback: boolean };
+const record = (value: unknown): UnknownRecord => value && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : {};
+const number = (value: unknown, fallback = 0) => { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : fallback; };
+const unwrap = (raw: unknown) => { const outer = record(raw); const data = outer.data; const nested = record(data); return 'data' in nested && !('items' in nested) && !('content' in nested) ? nested.data : data ?? raw; };
 
-const asRecord = (value: unknown): UnknownRecord =>
-  value && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : {};
-
-const text = (value: unknown) => value === undefined || value === null ? '' : String(value);
-
-const numberOrUndefined = (value: unknown) => {
-  if (value === undefined || value === null || value === '') return undefined;
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : undefined;
-};
-
-const normalizeText = (value: unknown) => text(value).trim().toLowerCase();
-
-const inferKind = (code: unknown, title: unknown): JournalKind => {
-  const value = `${normalizeText(code)} ${normalizeText(title)}`;
-  if (/solution|preparation|reagent_preparation|приготов/.test(value)) return 'solution';
-  if (/chemical|reagent|reactive|веществ|реактив|хим/.test(value)) return 'chemical';
-  if (/environment|condition|humidity|temperature|услов|сред|температур|влаж/.test(value)) return 'environment';
-  if (/sample|sampling|проб/.test(value)) return 'sample';
-  if (/result|test|protocol|испыт|результ|протокол/.test(value)) return 'results';
-  return 'custom';
-};
-
-const fallbackFor = (code: unknown, title: unknown) => {
-  const kind = inferKind(code, title);
-  return JOURNAL_TYPES.find((item) => item.kind === kind) || JOURNAL_TYPES.find((item) => item.code === text(code));
-};
-
-const normalizeColumn = (raw: unknown): JournalColumn => {
-  const source = asRecord(raw);
-  const type = text(source.type || source.fieldType);
+export const normalizeJournalEntryResponse = (raw: unknown): JournalEntry => {
+  const source = record(unwrap(raw));
+  const creator = record(source.createdBy || source.creator);
+  const values = record(source.values ?? source.data ?? source.fields) as JournalValues;
   return {
-    key: text(source.key || source.field || source.name),
-    title: text(source.title || source.label || source.displayName || source.name),
-    type: type === 'number' || type === 'date' || type === 'time' || type === 'textarea' ? type : 'text',
-    required: source.required === true,
-    readOnly: source.readOnly === true || source.readonly === true,
+    id: number(source.id), journalType: String(source.journalType || source.type) as LabJournalType,
+    laboratoryId: number(source.laboratoryId ?? record(source.laboratory).id), values,
+    version: number(source.version), archived: source.archived === true || source.active === false,
+    automatic: source.automatic === true || source.autoCreated === true || source.source === 'PROTOCOL',
+    protocolId: source.protocolId === undefined ? number(values.protocolId, 0) || undefined : number(source.protocolId),
+    createdByName: String(source.createdByName || creator.fullName || creator.name || ''),
+    createdAt: String(source.createdAt || ''), updatedAt: String(source.updatedAt || source.createdAt || ''),
   };
 };
 
-const normalizeType = (raw: unknown): JournalTypeDefinition | null => {
-  if (typeof raw === 'string') {
-    const fallback = fallbackFor(raw, raw);
-    return {
-      code: raw,
-      title: fallback?.title || raw,
-      displayName: fallback?.title || raw,
-      kind: fallback?.kind || inferKind(raw, raw),
-      columns: fallback?.columns || [],
-    };
-  }
-
-  const source = asRecord(raw);
-  const code = text(source.code || source.value || source.journalType || source.type || source.name).trim();
-  const title = text(source.displayName || source.title || source.label || source.name).trim();
-  if (!code && !title) return null;
-
-  const fallback = fallbackFor(code, title);
-  const columns = extractList(source, ['columns', 'fields'])
-    .map(normalizeColumn)
-    .filter((column) => column.key && column.title);
-
+const normalizePage = (raw: unknown, requestedPage: number, requestedSize: number): PageResponse<JournalEntry> => {
+  const payload = record(unwrap(raw));
+  const items = extractList(payload, ['items', 'content']).map(normalizeJournalEntryResponse);
   return {
-    code: code || fallback?.code || title,
-    title: title || fallback?.title || code,
-    displayName: title || fallback?.displayName || fallback?.title || code,
-    kind: fallback?.kind || inferKind(code, title),
-    columns: columns.length ? columns : fallback?.columns || [],
+    items, page: number(payload.page ?? payload.number, requestedPage), size: number(payload.size, requestedSize),
+    totalElements: number(payload.totalElements), totalPages: number(payload.totalPages),
+    first: payload.first === true, last: payload.last !== false,
+    hasNext: payload.hasNext === true, hasPrevious: payload.hasPrevious === true,
   };
 };
 
-const parseData = (value: unknown): LabJournalEntryData => {
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      return asRecord(parsed) as LabJournalEntryData;
-    } catch {
-      return {};
-    }
-  }
-  return asRecord(value) as LabJournalEntryData;
+const queryParams = (params: JournalEntriesParams | ExportJournalParams) => {
+  const { filters, ...base } = params;
+  return Object.fromEntries(Object.entries({ ...base, ...(filters || {}) }).filter(([, value]) => value !== undefined && value !== null && value !== ''));
 };
 
-const normalizeEntry = (raw: unknown): LabJournalEntry => {
-  const source = asRecord(raw);
-  const laboratory = asRecord(source.laboratory);
-  const createdBy = asRecord(source.createdBy || source.createdByUser || source.creator || source.user);
-  const data = parseData(source.fields ?? source.data);
-  const rowNumber = numberOrUndefined(source.rowNumber ?? source.row_number ?? data.rowNumber);
-  if (rowNumber !== undefined) data.rowNumber = rowNumber;
+const endpointUnavailable = (error: unknown) => axios.isAxiosError(error) && !axios.isCancel(error) && (!error.response || error.response.status === 404 || error.response.status === 503);
 
-  return {
-    id: text(source.id),
-    journalType: text(source.journalType || source.journal_type || source.type),
-    rowNumber,
-    entryDate: text(source.entryDate || source.entry_date || source.preparationDate || source.preparation_date || source.date || data.date || data.preparationDate || data.preparedDate || data.samplingDate),
-    data,
-    laboratoryId: source.laboratoryId as string | number | null | undefined ?? laboratory.id as string | number | null | undefined,
-    laboratoryName: text(source.laboratoryName || laboratory.name || laboratory.laboratoryName),
-    createdBy: source.createdById as string | number | null | undefined ?? createdBy.id as string | number | null | undefined,
-    createdByName: text(source.createdByName || source.creatorName || createdBy.name || createdBy.fullName || (typeof source.createdBy === 'string' ? source.createdBy : '')),
-    createdAt: text(source.createdAt || source.created_at),
-    updatedAt: text(source.updatedAt || source.updated_at),
-  };
-};
-
-const unwrapPayload = (input: unknown): unknown => {
-  const response = asRecord(input);
-  const data = response.data;
-  const nested = asRecord(data);
-  if ('content' in nested || 'items' in nested || 'entries' in nested) return data;
-  if ('data' in nested) return nested.data;
-  return data ?? input;
-};
-
-const normalizePage = (raw: unknown, fallbackPage: number, fallbackSize: number): LabJournalPage => {
-  const payload = asRecord(unwrapPayload(raw));
-  const content = extractList(payload, ['content', 'entries', 'items']).map(normalizeEntry);
-  const totalElements = numberOrUndefined(payload.totalElements ?? payload.total ?? payload.totalCount) ?? content.length;
-  const totalPages = numberOrUndefined(payload.totalPages) ?? Math.max(1, Math.ceil(totalElements / fallbackSize));
-
-  return {
-    content,
-    totalElements,
-    totalPages,
-    number: numberOrUndefined(payload.number ?? payload.page) ?? fallbackPage,
-    size: numberOrUndefined(payload.size) ?? fallbackSize,
-  };
-};
-
-const readMocks = (): LabJournalEntry[] => {
+export async function getJournalTypesResult(signal?: AbortSignal): Promise<JournalTypesResult> {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored) as LabJournalEntry[];
-  } catch {
-    localStorage.removeItem(STORAGE_KEY);
+    const response = await api.get<ApiResponse<unknown> | unknown>('/lab-journals/types', { signal });
+    const rawItems = extractList(response, ['items', 'types']);
+    if (!rawItems.length) throw new JournalSchemaError();
+    return { items: rawItems.map(normalizeJournalSchema), fallback: false };
+  } catch (error) {
+    if (endpointUnavailable(error)) return { items: JOURNAL_TYPES, fallback: true };
+    throw error;
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-  return [];
+}
+
+export const getJournalTypes = async (signal?: AbortSignal) => (await getJournalTypesResult(signal)).items;
+
+export async function getEntries(params: JournalEntriesParams, signal?: AbortSignal): Promise<PageResponse<JournalEntry>> {
+  const response = await api.get<ApiResponse<unknown> | unknown>('/lab-journals/entries', { params: queryParams(params), signal });
+  return normalizePage(response, params.page, params.size);
+}
+
+export async function getEntry(id: number, signal?: AbortSignal): Promise<JournalEntry> {
+  const response = await api.get<ApiResponse<unknown> | unknown>(`/lab-journals/entries/${id}`, { signal });
+  return normalizeJournalEntryResponse(extractItem(response, ['entry', 'item']));
+}
+
+export async function createEntry(payload: JournalEntryPayload): Promise<JournalEntry> {
+  const response = await api.post<ApiResponse<unknown> | unknown>('/lab-journals/entries', payload);
+  return normalizeJournalEntryResponse(extractItem(response, ['entry', 'item']));
+}
+
+export async function updateEntry(id: number, payload: JournalEntryPayload): Promise<JournalEntry> {
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/lab-journals/entries/${id}`, payload);
+  return normalizeJournalEntryResponse(extractItem(response, ['entry', 'item']));
+}
+
+export const archiveEntry = async (id: number) => { await api.post(`/lab-journals/entries/${id}/archive`); };
+export const restoreEntry = async (id: number) => { await api.post(`/lab-journals/entries/${id}/restore`); };
+
+const ensureSpreadsheet = async (blob: Blob) => {
+  const contentType = blob.type.toLowerCase();
+  if (contentType.includes('json') || contentType.includes('text/plain') || contentType.includes('text/html')) {
+    const body = await blob.text();
+    try { const parsed = JSON.parse(body) as { message?: string }; throw new Error(parsed.message || 'Не удалось сформировать Excel'); }
+    catch (error) { if (error instanceof SyntaxError) throw new Error('Backend вернул некорректный файл'); throw error; }
+  }
+  if (contentType && !/spreadsheet|excel|csv|octet-stream/.test(contentType)) throw new Error('Backend вернул файл неподдерживаемого формата');
 };
 
-const writeMocks = (items: LabJournalEntry[]) => localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-const delay = () => new Promise((resolve) => window.setTimeout(resolve, 250));
-
-const toQueryParams = (params: LabJournalQuery | ExportLabJournalParams) =>
-  Object.fromEntries(
-    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== ''),
-  );
-
-const firstDateFromData = (data: LabJournalEntryData) =>
-  text(data.date || data.preparationDate || data.preparedDate || data.samplingDate || data.entryDate || data.registrationDate);
-
-const inferEntryDate = (payload: SaveLabJournalEntryPayload) =>
-  payload.preparationDate || payload.entryDate || firstDateFromData(payload.data) || new Date().toISOString().slice(0, 10);
-
-const isReagentPreparationJournal = (journalType: JournalType) =>
-  ['SOLUTION_PREPARATION', 'REAGENT_PREPARATION'].includes(text(journalType).trim().toUpperCase());
-
-const toApiSavePayload = (payload: SaveLabJournalEntryPayload) => {
-  const entryDate = inferEntryDate(payload);
-  const data = { ...payload.data };
-  const base = {
-    journalType: payload.journalType,
-    data,
-    laboratoryId: payload.laboratoryId || undefined,
-  };
-
-  if (isReagentPreparationJournal(payload.journalType)) {
-    return {
-      ...base,
-      fields: data,
-      preparationDate: payload.preparationDate || entryDate,
-    };
+const rethrowBlobError = async (error: unknown): Promise<never> => {
+  if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+    const body = await error.response.data.text();
+    try { const parsed = JSON.parse(body) as { message?: string }; throw new Error(parsed.message || 'Не удалось сформировать Excel'); }
+    catch (parseError) { if (!(parseError instanceof SyntaxError)) throw parseError; }
   }
-
-  return {
-    ...base,
-    entryDate,
-  };
+  throw error;
 };
 
-const nextRowNumber = (journalType: JournalType, laboratoryId: string | number | undefined, items: LabJournalEntry[]) =>
-  items
-    .filter((item) => item.journalType === journalType && text(item.laboratoryId) === text(laboratoryId))
-    .reduce((max, item) => Math.max(max, item.rowNumber || 0), 0) + 1;
-
-const filterMockEntries = (query: LabJournalQuery) => {
-  const search = text(query.search).toLowerCase().trim();
-  return readMocks()
-    .filter((item) => !query.journalType || item.journalType === query.journalType)
-    .filter((item) => !query.laboratoryId || text(item.laboratoryId) === text(query.laboratoryId))
-    .filter((item) => !query.dateFrom || text(item.entryDate) >= query.dateFrom!)
-    .filter((item) => !query.dateTo || text(item.entryDate) <= query.dateTo!)
-    .filter((item) => !search || JSON.stringify(item.data).toLowerCase().includes(search));
-};
-
-const tableToExcelBlob = (definition: JournalTypeDefinition, rows: LabJournalEntry[], title: string) => {
-  const escape = (value: unknown) => text(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const columns = definition.columns.length ? definition.columns : JOURNAL_TYPES[0].columns;
-  const html = `<!doctype html><html><head><meta charset="utf-8" /></head><body><table border="1"><tr><th colspan="${columns.length}">${escape(title)}</th></tr><tr>${columns.map((column) => `<th>${escape(column.title)}</th>`).join('')}</tr>${rows.map((row) => `<tr>${columns.map((column) => `<td>${escape(row.data[column.key] ?? '')}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-  return new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-};
-
-export async function getJournalTypes(signal?: AbortSignal): Promise<JournalTypeDefinition[]> {
-  if (useMocks) return JOURNAL_TYPES;
-  const response = await api.get<ApiResponse<unknown> | unknown>('/lab-journals/types', { signal });
-  const items = extractList(response, ['types', 'journals', 'journalTypes']).map(normalizeType).filter(Boolean) as JournalTypeDefinition[];
-  return items.length ? items : JOURNAL_TYPES;
+export async function exportJournal(params: ExportJournalParams): Promise<DownloadResult> {
+  const { archived, ...filters } = params;
+  try {
+    const response = await api.get<Blob>('/lab-journals/entries/export', { params: queryParams({ ...filters, includeArchived: archived } as ExportJournalParams), responseType: 'blob' });
+    await ensureSpreadsheet(response.data);
+    return { blob: response.data, fileName: getContentDispositionFileName(response.headers['content-disposition']) || 'lab-journal.xlsx' };
+  } catch (error) { return rethrowBlobError(error); }
 }
 
-export async function getEntries(params: LabJournalQuery, signal?: AbortSignal): Promise<LabJournalPage> {
-  const page = params.page ?? 0;
-  const size = params.size ?? 50;
-
-  if (useMocks) {
-    await delay();
-    if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
-    const filtered = filterMockEntries(params);
-    const start = page * size;
-    return {
-      content: filtered.slice(start, start + size),
-      totalElements: filtered.length,
-      totalPages: Math.max(1, Math.ceil(filtered.length / size)),
-      number: page,
-      size,
-    };
-  }
-
-  const response = await api.get<ApiResponse<unknown> | unknown>('/lab-journals/entries', {
-    params: toQueryParams({ ...params, page, size }),
-    signal,
-  });
-  return normalizePage(response, page, size);
+export async function downloadTemplate(journalType: LabJournalType): Promise<DownloadResult> {
+  try {
+    const response = await api.get<Blob>(`/lab-journals/templates/${journalType}`, { responseType: 'blob' });
+    await ensureSpreadsheet(response.data);
+    return { blob: response.data, fileName: getContentDispositionFileName(response.headers['content-disposition']) || `${journalType.toLowerCase()}-template.xlsx` };
+  } catch (error) { return rethrowBlobError(error); }
 }
 
-export async function createEntry(payload: SaveLabJournalEntryPayload): Promise<LabJournalEntry> {
-  if (useMocks) {
-    await delay();
-    const items = readMocks();
-    const rowNumber = nextRowNumber(payload.journalType, payload.laboratoryId, items);
-    const entry: LabJournalEntry = {
-      id: `lab-journal-${Date.now()}`,
-      journalType: payload.journalType,
-      rowNumber,
-      entryDate: inferEntryDate(payload),
-      data: { ...payload.data, rowNumber },
-      laboratoryId: payload.laboratoryId,
-      createdByName: 'Лаборатория',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    writeMocks([entry, ...items]);
-    return entry;
-  }
+export const labJournalService = { getTypes: getJournalTypesResult, getEntries, getEntry, createEntry, updateEntry, archiveEntry, restoreEntry, exportJournal, downloadTemplate };
 
-  const response = await api.post<ApiResponse<unknown> | unknown>('/lab-journals/entries', toApiSavePayload(payload));
-  return normalizeEntry(extractItem(response, ['entry', 'item']));
-}
-
-export async function updateEntry(id: string | number, payload: SaveLabJournalEntryPayload): Promise<LabJournalEntry> {
-  if (useMocks) {
-    await delay();
-    const items = readMocks();
-    const index = items.findIndex((item) => text(item.id) === text(id));
-    if (index < 0) throw new Error('Запись журнала не найдена.');
-    const rowNumber = items[index].rowNumber;
-    const entry: LabJournalEntry = {
-      ...items[index],
-      ...payload,
-      rowNumber,
-      entryDate: inferEntryDate(payload),
-      data: { ...payload.data, rowNumber: rowNumber ?? payload.data.rowNumber },
-      updatedAt: new Date().toISOString(),
-    };
-    items[index] = entry;
-    writeMocks(items);
-    return entry;
-  }
-
-  const response = await api.put<ApiResponse<unknown> | unknown>(`/lab-journals/entries/${id}`, toApiSavePayload(payload));
-  return normalizeEntry(extractItem(response, ['entry', 'item']));
-}
-
-export async function deleteEntry(id: string | number): Promise<void> {
-  if (useMocks) {
-    await delay();
-    writeMocks(readMocks().filter((item) => text(item.id) !== text(id)));
-    return;
-  }
-  await api.delete(`/lab-journals/entries/${id}`);
-}
-
-export async function downloadExcel(params: ExportLabJournalParams): Promise<DownloadResult> {
-  if (useMocks) {
-    await delay();
-    const definition = JOURNAL_TYPES.find((item) => item.code === params.journalType) || JOURNAL_TYPES[0];
-    const rows = filterMockEntries({ ...params, page: 0, size: 100000 });
-    return {
-      blob: tableToExcelBlob(definition, rows, definition.title),
-      fileName: `lab-journal-${text(params.journalType || 'entries').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.xls`,
-    };
-  }
-
-  const response = await api.get('/lab-journals/entries/export', {
-    params: toQueryParams(params),
-    responseType: 'blob',
-  });
-  return {
-    blob: response.data as Blob,
-    fileName: getContentDispositionFileName(response.headers['content-disposition']) || 'lab-journal.xlsx',
-  };
-}
-
-export async function downloadTemplate(params: ExportLabJournalParams): Promise<DownloadResult> {
-  if (useMocks) {
-    await delay();
-    const definition = JOURNAL_TYPES.find((item) => item.code === params.journalType) || JOURNAL_TYPES[0];
-    return {
-      blob: tableToExcelBlob(definition, [], `${definition.title}. Шаблон`),
-      fileName: `lab-journal-${text(params.journalType || 'template').toLowerCase()}-template.xls`,
-    };
-  }
-
-  const response = await api.get('/lab-journals/entries/export-template', {
-    params: toQueryParams(params),
-    responseType: 'blob',
-  });
-  return {
-    blob: response.data as Blob,
-    fileName: getContentDispositionFileName(response.headers['content-disposition']) || 'lab-journal-template.xlsx',
-  };
-}
-
+/** Transitional names retained for callers while the old service surface is removed. */
 export const getLabJournalTypes = getJournalTypes;
 export const getLabJournalEntries = getEntries;
 export const createLabJournalEntry = createEntry;
 export const updateLabJournalEntry = updateEntry;
-export const deleteLabJournalEntry = deleteEntry;
-
-export async function exportLabJournalExcel(params: ExportLabJournalParams & { template?: boolean }): Promise<DownloadResult> {
-  const { template: _template, ...query } = params;
-  return params.template ? downloadTemplate(query) : downloadExcel(query);
-}
+export const deleteEntry = archiveEntry;
+export const deleteLabJournalEntry = archiveEntry;
+export const downloadExcel = exportJournal;
+export const exportLabJournalExcel = exportJournal;

@@ -7,6 +7,7 @@ import WhatsAppButton from '../components/WhatsAppButton';
 import OrderChoiceModal from '../components/OrderChoiceModal';
 import { company, getWhatsAppUrl } from '../config/company';
 import { trackEmailClick, trackPhoneClick } from '../services/analytics';
+import { preloadPublicRoute } from '../utils/publicRoutePreload';
 
 const footerCities = [
   ['Алматы', 'almaty'], ['Астана', 'astana'], ['Шымкент', 'shymkent'],
@@ -67,6 +68,9 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 key={item.path}
                 to={item.path}
                 end={item.path === '/'}
+                onPointerEnter={() => preloadPublicRoute(item.path)}
+                onFocus={() => preloadPublicRoute(item.path)}
+                onPointerDown={() => preloadPublicRoute(item.path)}
                 className={({ isActive }) =>
                   `relative text-sm font-medium transition after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:bg-accent after:transition-all ${
                     isActive ? 'text-eco-800 after:w-full' : 'text-slate-700 hover:text-eco-800 after:w-0 hover:after:w-full'
@@ -145,6 +149,9 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                   key={item.path}
                   to={item.path}
                   end={item.path === '/'}
+                  onPointerEnter={() => preloadPublicRoute(item.path)}
+                  onFocus={() => preloadPublicRoute(item.path)}
+                  onPointerDown={() => preloadPublicRoute(item.path)}
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) =>
                     `block rounded-2xl px-4 py-3 text-sm font-medium ${isActive ? 'bg-eco-800 text-white' : 'text-slate-700 hover:bg-eco-50'}`
@@ -155,7 +162,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               ))}
               <div className="grid gap-2 border-t border-eco-100 pt-3">
                 {accountMenuItems.map(({ label, path, Icon }) => (
-                  <Link key={path} to={path} onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-2xl border border-eco-100 px-4 py-3 text-sm font-semibold text-eco-800">
+                    <Link key={path} to={path} onPointerEnter={() => preloadPublicRoute(path)} onFocus={() => preloadPublicRoute(path)} onPointerDown={() => preloadPublicRoute(path)} onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-2xl border border-eco-100 px-4 py-3 text-sm font-semibold text-eco-800">
                     <Icon size={18} className="text-eco-600" />
                     {label}
                   </Link>

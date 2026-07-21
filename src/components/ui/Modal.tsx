@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { X } from 'lucide-react';
@@ -36,21 +36,35 @@ const Modal = ({
   onClose,
 }: ModalProps) => {
   const visible = isOpen ?? open ?? false;
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!visible) return;
 
     const originalOverflow = document.body.style.overflow;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.body.style.overflow = 'hidden';
+
+    const focusable = () => Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])') || []);
+    window.requestAnimationFrame(() => (focusable()[0] || dialogRef.current)?.focus());
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !loading) onClose();
+      if (event.key === 'Tab') {
+        const items = focusable();
+        if (!items.length) { event.preventDefault(); dialogRef.current?.focus(); return; }
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => {
       document.body.style.overflow = originalOverflow;
       window.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus();
     };
   }, [visible, loading, onClose]);
 
@@ -65,6 +79,8 @@ const Modal = ({
       role="presentation"
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}

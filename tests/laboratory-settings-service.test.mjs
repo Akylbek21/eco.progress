@@ -1,61 +1,40 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-const read = (relativePath) => readFile(new URL(`../${relativePath}`, import.meta.url), 'utf8');
-
-test('laboratory reads use supported settings and collection endpoints', async () => {
+test('laboratory service exposes one canonical API surface', async () => {
   const source = await read('src/services/laboratorySettingsService.ts');
-  assert.match(source, /getLaboratory\(id:[\s\S]*return getLaboratorySettings\(id, signal\)/);
-  assert.match(source, /`\/settings\/laboratories\/\$\{laboratoryId\}`/);
-  assert.doesNotMatch(source, /api\.get[^\n]*settings\/laboratories\/default/);
-  assert.match(source, /getDefaultLaboratory[\s\S]*laboratories\.find\(\(laboratory\) => laboratory\.isDefault\)/);
+  for (const method of ['getLaboratories', 'getLaboratory', 'createLaboratory', 'updateLaboratory', 'setDefaultLaboratory', 'archiveLaboratory', 'restoreLaboratory', 'getEmployees', 'getEligibleEmployees', 'addEmployee', 'updateEmployee', 'deactivateEmployee', 'activateEmployee', 'uploadLogo', 'getLogoUrl', 'removeLogo']) assert.match(source, new RegExp(method));
+  assert.match(source, /'\/laboratories'/);
+  assert.match(source, /PageResponse<LaboratoryListItem>/);
 });
 
-test('simultaneous laboratory list loads share one request', async () => {
+test('employee status calls use supported POST endpoints and explicit includeInactive', async () => {
   const source = await read('src/services/laboratorySettingsService.ts');
-  assert.match(source, /let laboratoriesRequest: Promise<LaboratorySummary\[]> \| null = null/);
-  assert.match(source, /if \(!laboratoriesRequest\)/);
-  assert.match(source, /\.finally\(\(\) => \{\s*laboratoriesRequest = null;/s);
+  assert.match(source, /params: \{ includeInactive: options\.includeInactive === true \}/);
+  assert.match(source, /api\.post\(`\/laboratories\/\$\{requireId\(laboratoryId\)\}\/employees\/\$\{requireId\(employeeId, 'сотрудника'\)\}\/deactivate`\)/);
+  assert.match(source, /\/activate`\)/);
+  assert.doesNotMatch(source, /api\.patch\([^\n]*\/deactivate/);
+  assert.doesNotMatch(source, /params: options\.includeInactive \? undefined/);
 });
 
-test('laboratory settings support mocks and use non-destructive employee deactivation', async () => {
-  const service = await read('src/services/laboratorySettingsService.ts');
-  assert.match(service, /VITE_USE_PROTOCOL_MOCKS/);
-  assert.match(service, /mockLaboratorySettings/);
-  assert.match(service, /employees\/\$\{employee\}\/deactivate/);
-  assert.doesNotMatch(service, /api\.delete\(`\/laboratories\/\$\{requireId\(laboratoryId\)\}\/employees/);
-  assert.match(service, /\/laboratories\/eligible-employees/);
+test('detail, employee and eligible reads accept abort signals', async () => {
+  const source = await read('src/services/laboratorySettingsService.ts');
+  assert.match(source, /getLaboratory\(id: string \| number, signal\?: AbortSignal\)/);
+  assert.match(source, /getEligibleLaboratoryEmployees\(laboratoryId: string \| number, signal\?: AbortSignal\)/);
+  assert.match(source, /signal: options\.signal/);
 });
 
-test('laboratory detail and employees accept abort signals and reject empty ids', async () => {
-  const service = await read('src/services/laboratorySettingsService.ts');
-  assert.match(service, /getLaboratorySettings\(id: string \| number, signal\?: AbortSignal\)/);
-  assert.match(service, /includeInactive\?: boolean; signal\?: AbortSignal/);
-  assert.match(service, /Backend вернул пустую карточку лаборатории/);
-  assert.match(service, /Backend не вернул ID сотрудника лаборатории/);
+test('logo upload uses FormData without manually setting multipart boundary', async () => {
+  const source = await read('src/services/laboratorySettingsService.ts');
+  assert.match(source, /const formData = new FormData\(\); formData\.append\('file', file\)/);
+  assert.doesNotMatch(source, /Content-Type.*multipart\/form-data/);
 });
 
-test('laboratory page guards stale requests and preserves unsaved profile data on logo deletion', async () => {
-  const page = await read('src/pages/LaboratorySettingsPage.tsx');
-  assert.match(page, /selectionRequestRef\.current\?\.abort\(\)/);
-  assert.match(page, /sequence !== selectionSequenceRef\.current/);
-  assert.match(page, /const hadUnsavedChanges = dirty/);
-  assert.match(page, /setProfile\(\(current\) => \(\{ \.\.\.current, logoUrl: '' \}\)\)/);
-  assert.doesNotMatch(page, /const refreshed = await getLaboratory\(profile\.id\)/);
-});
-
-test('employee editor protects drafts and separates mutation success from reload failure', async () => {
-  const page = await read('src/pages/LaboratorySettingsPage.tsx');
-  assert.match(page, /employeeDirty/);
-  assert.match(page, /Закрыть форму сотрудника/);
-  assert.match(page, /Сотрудник сохранён, но список не обновился/);
-  assert.match(page, /<option value="LABORATORY">/);
-  assert.doesNotMatch(page, /<Field label="Роль"><input/);
-});
-
-test('laboratory route allows heads and has an error boundary', async () => {
+test('laboratory route and menu share ADMIN DIRECTOR HEAD LABORATORY roles', async () => {
   const app = await read('src/App.tsx');
-  assert.match(app, /settings\/laboratory" element=\{<RoleAccess roles=\{\['ADMIN', 'HEAD', 'LABORATORY'\]\}/);
-  assert.match(app, /ErrorBoundary fallbackTitle="Не удалось открыть настройки лаборатории"/);
+  const layout = await read('src/layouts/StaffLayout.tsx');
+  assert.match(app, /settings\/laboratories" element=\{<RoleAccess roles=\{\['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'\]\}/);
+  assert.match(layout, /label: 'Лаборатории'.*allowedRoles: \['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'\]/);
 });

@@ -1,90 +1,41 @@
+import { Archive, Download, Edit3, Eye, RotateCw } from 'lucide-react';
 import ProtocolStatusBadge from './ProtocolStatusBadge';
 import NormativeStatusBadge from './NormativeStatusBadge';
 import type { Protocol } from '../../types/protocols';
-import { subtypeName, templateName } from '../../data/protocolTemplates';
+import { templateName } from '../../data/protocolTemplates';
+import { canArchiveProtocol, canCreateCorrection, canDownloadProtocol, canEditProtocol } from '../../utils/protocolPermissions';
 
 type Props = {
   protocols: Protocol[];
+  role?: string;
   loading?: boolean;
+  busyId?: string;
   onOpen: (protocol: Protocol) => void;
-  onPreview: (protocol: Protocol) => void | Promise<void>;
-  onCopy: (protocol: Protocol) => void | Promise<void>;
-  onDelete: (protocol: Protocol) => void;
-  onReplace: (protocol: Protocol) => void | Promise<void>;
-  onDownloadPdf: (protocol: Protocol) => void | Promise<void>;
-  onDownloadDocx: (protocol: Protocol) => void | Promise<void>;
-  canCopy?: boolean;
-  canDelete?: boolean;
-  canReplace?: boolean;
+  onArchive: (protocol: Protocol) => void;
+  onReplace: (protocol: Protocol) => void;
+  onDownload: (protocol: Protocol, kind: 'pdf' | 'docx') => void;
 };
 
-const ProtocolList = ({ protocols, loading = false, onOpen, onPreview, onCopy, onDelete, onReplace, onDownloadPdf, onDownloadDocx, canCopy = false, canDelete = false, canReplace = false }: Props) => (
+const formatDate = (value?: string) => value && !Number.isNaN(new Date(value).getTime()) ? new Date(value).toLocaleDateString('ru-RU') : '—';
+const iconButton = 'inline-flex h-10 w-10 items-center justify-center rounded-full bg-white ring-1 transition hover:bg-eco-50 disabled:cursor-not-allowed disabled:opacity-50';
+
+const ProtocolList = ({ protocols, role, loading = false, busyId, onOpen, onArchive, onReplace, onDownload }: Props) => (
   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div className="overflow-x-auto">
-      <table className="min-w-[1660px] w-full text-left text-sm">
-        <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-          <tr>
-            <th className="px-4 py-3">Номер</th>
-            <th className="px-4 py-3">Дата</th>
-            <th className="px-4 py-3">Компания</th>
-            <th className="px-4 py-3">Объект</th>
-            <th className="px-4 py-3">Тип</th>
-            <th className="px-4 py-3">Подтип</th>
-            <th className="px-4 py-3">Статус</th>
-            <th className="px-4 py-3">Соответствие</th>
-            <th className="px-4 py-3">Исполнитель</th>
-            <th className="px-4 py-3">Создан</th>
-            <th className="px-4 py-3 text-right">Действия</th>
-          </tr>
-        </thead>
+      <table className="w-full min-w-[1500px] table-fixed text-left text-sm">
+        <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="w-36 px-4 py-3">Номер</th><th className="w-28 px-4 py-3">Дата</th><th className="w-52 px-4 py-3">Компания</th><th className="w-52 px-4 py-3">Объект</th><th className="w-44 px-4 py-3">Тип</th><th className="w-52 px-4 py-3">Лаборатория</th><th className="w-44 px-4 py-3">Исполнитель</th><th className="w-36 px-4 py-3">Статус</th><th className="w-36 px-4 py-3">Соответствие</th><th className="w-28 px-4 py-3">Изменён</th><th className="w-56 px-4 py-3 text-right">Действия</th></tr></thead>
         <tbody className="divide-y divide-slate-100">
-          {loading ? Array.from({ length: 5 }).map((_, row) => (
-            <tr key={row} className="animate-pulse">{Array.from({ length: 11 }).map((__, cell) => <td key={cell} className="px-4 py-4"><div className="h-4 rounded bg-slate-100" /></td>)}</tr>
-          )) : protocols.map((protocol) => (
-            <tr key={protocol.id} className="hover:bg-slate-50">
-              <td className="px-4 py-4 font-bold text-slate-900">{protocol.protocolNumber || protocol.number || '—'}</td>
-              <td className="px-4 py-4">{protocol.protocolDate || '—'}</td>
-              <td className="px-4 py-4">{protocol.companySnapshot?.companyName || protocol.organization?.organizationName || '—'}</td>
-              <td className="px-4 py-4">{protocol.companySnapshot?.objectName || protocol.organization?.objectName || '—'}</td>
-              <td className="px-4 py-4">{templateName(protocol.templateId, protocol.templateName)}</td>
-              <td className="px-4 py-4">{protocol.templateId === 'physical_factors' ? subtypeName(protocol.subtype) : '—'}</td>
-              <td className="px-4 py-4"><ProtocolStatusBadge status={protocol.status} /></td>
-              <td className="px-4 py-4"><NormativeStatusBadge status={protocol.complianceResult} /></td>
-              <td className="px-4 py-4">{protocol.executor || protocol.laboratory?.executor || '—'}</td>
-              <td className="px-4 py-4">{protocol.createdAt || '—'}</td>
-              <td className="px-4 py-4">
-                <select
-                  aria-label={`Действия с протоколом ${protocol.protocolNumber || protocol.number || ''}`}
-                  defaultValue=""
-                  className="ml-auto block w-full max-w-[140px] rounded-lg border border-eco-300 bg-white px-2 py-2 text-xs font-semibold text-eco-800 outline-none hover:bg-eco-50 focus:border-eco-500 focus:ring-2 focus:ring-eco-100"
-                  onChange={(event) => {
-                    const action = event.target.value;
-                    event.target.value = '';
-                    if (action === 'open') onOpen(protocol);
-                    if (action === 'preview') void onPreview(protocol);
-                    if (action === 'copy') void onCopy(protocol);
-                    if (action === 'docx') void onDownloadDocx(protocol);
-                    if (action === 'pdf') void onDownloadPdf(protocol);
-                    if (action === 'delete') onDelete(protocol);
-                    if (action === 'replace') void onReplace(protocol);
-                  }}
-                >
-                  <option value="" disabled>Выберите…</option>
-                  <option value="open">{String(protocol.status).trim().toUpperCase() === 'DRAFT' ? 'Изменить' : 'Открыть'}</option>
-                  <option value="preview">Предпросмотр</option>
-                  {canCopy && <option value="copy">Создать копию</option>}
-                  <option value="docx">Скачать DOCX</option>
-                  <option value="pdf">Скачать PDF</option>
-                  {canDelete && String(protocol.status).trim().toUpperCase() === 'DRAFT' && <option value="delete">Удалить протокол</option>}
-                  {canReplace && ['APPROVED', 'SIGNED'].includes(String(protocol.status).trim().toUpperCase()) && <option value="replace">Исправленная версия</option>}
-                </select>
-              </td>
-            </tr>
-          ))}
+          {loading ? Array.from({ length: 8 }).map((_, row) => <tr key={row} className="h-16 animate-pulse">{Array.from({ length: 11 }).map((__, cell) => <td key={cell} className="px-4 py-3"><div className="h-4 rounded bg-slate-100" /></td>)}</tr>) : protocols.map((protocol) => {
+            const user = { role };
+            const busy = busyId === protocol.id;
+            return <tr key={protocol.id} tabIndex={0} onClick={() => onOpen(protocol)} onKeyDown={(event) => { if (event.key === 'Enter') onOpen(protocol); }} className={`cursor-pointer align-top hover:bg-slate-50 focus:bg-eco-50 focus:outline-none ${protocol.status === 'ARCHIVED' ? 'bg-slate-50/80 text-slate-600' : ''}`}>
+              <td className="truncate px-4 py-4 font-bold text-slate-900">{protocol.protocolNumber || protocol.number || '—'}</td><td className="px-4 py-4">{formatDate(protocol.protocolDate)}</td><td className="truncate px-4 py-4" title={protocol.companySnapshot?.companyName}>{protocol.companySnapshot?.companyName || '—'}</td><td className="truncate px-4 py-4" title={protocol.companySnapshot?.objectName}>{protocol.companySnapshot?.objectName || '—'}</td><td className="px-4 py-4">{templateName(protocol.templateId, protocol.templateName)}</td><td className="truncate px-4 py-4">{protocol.laboratory?.laboratoryName || '—'}</td><td className="truncate px-4 py-4">{protocol.executor || protocol.laboratory?.executor || '—'}</td><td className="px-4 py-4"><ProtocolStatusBadge status={protocol.status} /></td><td className="px-4 py-4"><NormativeStatusBadge status={protocol.complianceResult} /></td><td className="px-4 py-4">{formatDate(protocol.updatedAt)}</td>
+              <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}><div className="flex justify-end gap-2"><button type="button" className={`${iconButton} text-eco-800 ring-eco-200`} aria-label={`${canEditProtocol(user, protocol) ? 'Изменить' : 'Открыть'} протокол ${protocol.protocolNumber}`} onClick={() => onOpen(protocol)}>{canEditProtocol(user, protocol) ? <Edit3 className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>{canDownloadProtocol(user, protocol) && protocol.hasDocx && <button type="button" disabled={busy} className={`${iconButton} text-eco-800 ring-eco-200`} aria-label={`Скачать DOCX ${protocol.protocolNumber}`} onClick={() => onDownload(protocol, 'docx')}><Download className="h-4 w-4" /></button>}{canDownloadProtocol(user, protocol) && protocol.hasPdf && <button type="button" disabled={busy} className={`${iconButton} text-blue-800 ring-blue-200`} aria-label={`Скачать PDF ${protocol.protocolNumber}`} onClick={() => onDownload(protocol, 'pdf')}><Download className="h-4 w-4" /></button>}{canCreateCorrection(user, protocol) && <button type="button" className={`${iconButton} text-violet-800 ring-violet-200`} aria-label={`Создать исправленную версию ${protocol.protocolNumber}`} onClick={() => onReplace(protocol)}><RotateCw className="h-4 w-4" /></button>}{canArchiveProtocol(user, protocol) && <button type="button" className={`${iconButton} text-rose-700 ring-rose-200`} aria-label={`Архивировать протокол ${protocol.protocolNumber}`} onClick={() => onArchive(protocol)}><Archive className="h-4 w-4" /></button>}</div></td>
+            </tr>;
+          })}
         </tbody>
       </table>
     </div>
-    {!loading && protocols.length === 0 && <div className="px-6 py-12 text-center text-sm font-semibold text-slate-500">Протоколы не найдены.</div>}
   </div>
 );
 

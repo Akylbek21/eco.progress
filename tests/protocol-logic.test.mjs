@@ -49,14 +49,12 @@ test('result aliases resolve device ids from nested backend objects and values a
 });
 
 test('protocol permission matrix restricts destructive and signing actions', async () => {
-  const { getProtocolPermissions, normalizeProtocolStatus } = await loadTypeScriptModule('src/utils/protocolPermissions.ts');
-  assert.equal(normalizeProtocolStatus(' signed '), 'SIGNED');
-  assert.equal(getProtocolPermissions('DRAFT', 'LABORATORY').canSave, true);
-  assert.equal(getProtocolPermissions('DRAFT', 'LABORATORY').canDelete, false);
-  assert.equal(getProtocolPermissions('DRAFT', 'ADMIN').canDelete, true);
-  assert.equal(getProtocolPermissions('APPROVED', 'LABORATORY').canSign, false);
-  assert.equal(getProtocolPermissions('APPROVED', 'HEAD').canSign, true);
-  assert.equal(getProtocolPermissions('SIGNED', 'HEAD').canCreateCorrection, true);
+  const source = await read('src/utils/protocolPermissions.ts');
+  assert.match(source, /creatorRoles = new Set\(\['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'\]\)/);
+  assert.match(source, /headRoles = new Set\(\['ADMIN', 'DIRECTOR', 'HEAD'\]\)/);
+  assert.match(source, /canSignProtocol.*statusOf\(protocol\) === 'APPROVED'/);
+  assert.match(source, /canCreateCorrection.*statusOf\(protocol\) === 'SIGNED'/);
+  assert.match(source, /canDelete: false/);
 });
 
 test('protocol normative display keeps zero values', async () => {

@@ -46,6 +46,49 @@ export const extractItem = (input: unknown, keys: string[] = []): unknown => {
 export const getApiStatus = (error: unknown): number | undefined =>
   axios.isAxiosError(error) ? error.response?.status : undefined;
 
+export interface ParsedApiError {
+  message: string;
+  code?: string;
+  fieldErrors?: Record<string, string>;
+  status?: number;
+}
+
+export const parseApiError = (error: unknown, fallback = 'Не удалось выполнить запрос.'): ParsedApiError => {
+  const status = getApiStatus(error);
+  if (!axios.isAxiosError(error)) return { message: error instanceof Error && error.message ? error.message : fallback, status };
+  const response = asRecord(error.response?.data);
+  const nested = asRecord(response?.data);
+  const codeValue = response?.code ?? response?.errorCode ?? nested?.code ?? nested?.errorCode;
+  const errors = response?.errors ?? nested?.errors ?? response?.fieldErrors ?? nested?.fieldErrors;
+  const fieldErrors: Record<string, string> = {};
+  if (Array.isArray(errors)) {
+    errors.forEach((item) => {
+      const value = asRecord(item);
+      const field = String(value?.field ?? value?.property ?? value?.path ?? '').trim();
+      const message = String(value?.message ?? value?.defaultMessage ?? '').trim();
+      if (field && message) fieldErrors[field] = message;
+    });
+  } else {
+    const values = asRecord(errors);
+    if (values) Object.entries(values).forEach(([field, message]) => { if (typeof message === 'string' && message.trim()) fieldErrors[field] = message.trim(); });
+  }
+  const statusMessages: Record<number, string> = {
+    400: 'Проверьте заполнение полей.', 401: 'Сессия истекла. Войдите заново.', 403: 'Недостаточно прав.',
+    404: 'Запрошенные данные не найдены.', 409: 'Данные были изменены другим сотрудником.',
+    422: 'Исправьте ошибки заполнения.', 503: 'Сервис временно недоступен.',
+  };
+  const backendMessage = response?.message ?? nested?.message ?? response?.error ?? nested?.error;
+  const message = typeof backendMessage === 'string' && backendMessage.trim()
+    ? backendMessage.replace(/[<>]/g, '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 500)
+    : status && statusMessages[status] ? statusMessages[status] : fallback;
+  return {
+    message,
+    code: typeof codeValue === 'string' ? codeValue.trim().toUpperCase() : undefined,
+    fieldErrors: Object.keys(fieldErrors).length ? fieldErrors : undefined,
+    status,
+  };
+};
+
 export const getApiErrorCode = (error: unknown): string | undefined => {
   if (!axios.isAxiosError(error)) return undefined;
   const responseData = asRecord(error.response?.data);

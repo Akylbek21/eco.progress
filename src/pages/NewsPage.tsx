@@ -2,15 +2,17 @@
 import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
-import { PageSkeleton } from '../components/loading/PageLoader';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
-import { getNewsResult } from '../services/newsService';
+import { fallbackNews, getNewsResult } from '../services/newsService';
 
 const NewsPage = () => {
-  const { data, isLoading } = useQuery({ queryKey: ['news'], queryFn: getNewsResult });
+  const { data } = useQuery({
+    queryKey: ['news'],
+    queryFn: getNewsResult,
+    initialData: { items: fallbackNews, source: 'fallback', stale: false },
+    initialDataUpdatedAt: 0,
+  });
   const news = data?.items ?? [];
-
-  if (isLoading) return <PageSkeleton />;
 
   return (
     <div className="bg-eco-50">

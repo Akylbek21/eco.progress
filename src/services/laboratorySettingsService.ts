@@ -1,306 +1,234 @@
 import api, { type ApiResponse } from './api';
-import { extractItem, extractList } from './apiHelpers';
-import type { LaboratoryEmployee, LaboratoryProfile, LaboratorySummary } from '../types/protocols';
-
-const useMocks = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
-const mockDelay = () => new Promise((resolve) => setTimeout(resolve, 250));
+import { extractItem, extractList, getApiStatus } from './apiHelpers';
+import type {
+  AccreditationStatus,
+  LaboratoryDetails,
+  LaboratoryEmployee,
+  LaboratoryEmployeeFormValues,
+  LaboratoryFormValues,
+  LaboratoryListItem,
+  PageResponse,
+} from '../types/laboratories';
 
 type UnknownRecord = Record<string, unknown>;
-
-export type SaveLaboratoryRequest = {
-  name: string;
-  legalName: string | null;
-  bin: string | null;
-  address: string | null;
-  phone: string | null;
-  email: string | null;
-  accreditationNumber: string | null;
-  accreditationIssuedAt: string | null;
-  accreditationValidUntil: string | null;
-  directorId: number | null;
-  directorName: string | null;
-  laboratoryHeadId: number | null;
-  laboratoryHeadName: string | null;
-  standardNote: string | null;
-  isDefault: boolean;
-  active: boolean;
-};
-
-export type SaveLaboratoryEmployeeRequest = {
-  userId: number | null;
-  fullName: string;
-  position: string | null;
-  email: string | null;
-  role: string;
-  active: boolean;
-};
-
 const asRecord = (value: unknown): UnknownRecord => value && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : {};
 const text = (value: unknown) => value === undefined || value === null ? '' : String(value).trim();
+const number = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : 0;
 const bool = (value: unknown, fallback = false) => value === undefined || value === null ? fallback : value === true || value === 'true' || value === 1;
-const nullableText = (value: unknown) => text(value) || null;
-const nullableId = (value: unknown) => {
-  if (value === undefined || value === null || text(value) === '') return null;
+const nullable = (value: string) => value.trim() || null;
+const requireId = (value: string | number, label = 'лаборатории') => {
   const id = Number(value);
-  if (!Number.isFinite(id)) throw new Error(`Некорректный числовой ID: ${text(value)}`);
+  if (!Number.isInteger(id) || id <= 0) throw new Error(`Некорректный ID ${label}`);
   return id;
 };
-const isoDate = (value: unknown) => {
-  const raw = text(value);
-  if (!raw) return '';
-  const direct = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (direct) return `${direct[1]}-${direct[2]}-${direct[3]}`;
-  const dotted = raw.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-  return dotted ? `${dotted[3]}-${dotted[2]}-${dotted[1]}` : '';
+
+const accreditationStatus = (source: UnknownRecord): AccreditationStatus => {
+  const status = text(source.accreditationStatus).toUpperCase();
+  if (['VALID', 'EXPIRING', 'EXPIRED', 'NOT_CONFIGURED'].includes(status)) return status as AccreditationStatus;
+  const validUntil = text(source.accreditationValidUntil ?? source.certificateValidUntil);
+  if (!validUntil) return 'NOT_CONFIGURED';
+  const days = Math.ceil((new Date(`${validUntil.slice(0, 10)}T23:59:59`).getTime() - Date.now()) / 86_400_000);
+  if (!Number.isFinite(days)) return 'NOT_CONFIGURED';
+  if (days < 0) return 'EXPIRED';
+  return days < 30 ? 'EXPIRING' : 'VALID';
+};
+
+export const normalizeLaboratoryListItem = (raw: unknown): LaboratoryListItem => {
+  const source = asRecord(raw);
+  const archived = bool(source.archived) || text(source.status).toUpperCase() === 'ARCHIVED';
+  return {
+    id: number(source.id ?? source.laboratoryId),
+    name: text(source.name ?? source.laboratoryName),
+    shortName: text(source.shortName) || undefined,
+    bin: text(source.bin) || undefined,
+    address: text(source.address ?? source.laboratoryAddress) || undefined,
+    accreditationNumber: text(source.accreditationNumber ?? source.certificateNumber) || undefined,
+    accreditationValidUntil: text(source.accreditationValidUntil ?? source.certificateValidUntil).slice(0, 10) || undefined,
+    accreditationStatus: accreditationStatus(source),
+    defaultLaboratory: bool(source.defaultLaboratory ?? source.isDefault),
+    isDefault: bool(source.defaultLaboratory ?? source.isDefault),
+    active: source.active !== false && !archived,
+    archived,
+    employeesCount: number(source.employeesCount ?? source.totalEmployees),
+    activeEmployeesCount: number(source.activeEmployeesCount),
+    updatedAt: text(source.updatedAt) || undefined,
+  };
 };
 
 export const normalizeLaboratoryEmployee = (raw: unknown): LaboratoryEmployee => {
   const source = asRecord(raw);
   const user = asRecord(source.user);
   return {
-    id: text(source.id ?? source.employeeId),
-    laboratoryId: text(source.laboratoryId),
-    userId: text(source.userId ?? user.id),
+    id: number(source.id ?? source.laboratoryEmployeeId ?? source.employeeId),
+    laboratoryId: number(source.laboratoryId),
+    userId: number(source.userId ?? user.id),
     fullName: text(source.fullName ?? source.name ?? user.fullName ?? user.name),
-    position: text(source.position ?? user.position),
-    email: text(source.email ?? user.email),
-    role: text(source.role ?? user.role),
-    active: !['BLOCKED', 'INACTIVE', 'ARCHIVED'].includes(text(source.status ?? user.status).toUpperCase()) && source.active !== false,
+    position: text(source.position) || undefined,
+    phone: text(source.phone ?? user.phone) || undefined,
+    email: text(source.email ?? user.email) || undefined,
+    employeeNumber: text(source.employeeNumber) || undefined,
+    qualification: text(source.qualification) || undefined,
+    canExecuteMeasurements: bool(source.canExecuteMeasurements, true),
+    canApproveProtocols: bool(source.canApproveProtocols),
+    canSignProtocols: bool(source.canSignProtocols),
+    active: source.active !== false && !['INACTIVE', 'DEACTIVATED', 'ARCHIVED'].includes(text(source.status).toUpperCase()),
+    deactivatedAt: text(source.deactivatedAt) || undefined,
   };
 };
 
-export const normalizeLaboratoryProfile = (raw: unknown): LaboratoryProfile => {
+export const normalizeLaboratoryDetails = (raw: unknown): LaboratoryDetails => {
   const source = asRecord(raw);
-  const director = asRecord(source.director);
-  const head = asRecord(source.laboratoryHead ?? source.head);
+  const list = normalizeLaboratoryListItem(source);
   return {
-    id: text(source.id ?? source.laboratoryId),
-    name: text(source.name ?? source.laboratoryName),
-    legalName: text(source.legalName),
-    bin: text(source.bin),
-    address: text(source.address ?? source.laboratoryAddress),
-    phone: text(source.phone),
-    email: text(source.email),
-    accreditationNumber: text(source.accreditationNumber ?? source.certificateNumber),
-    accreditationIssuedAt: isoDate(source.accreditationIssuedAt ?? source.certificateIssuedAt),
-    accreditationValidUntil: isoDate(source.accreditationValidUntil ?? source.certificateValidUntil),
-    directorId: text(source.directorId ?? director.id),
-    directorName: text(source.directorName ?? director.fullName ?? director.name),
-    laboratoryHeadId: text(source.laboratoryHeadId ?? source.headId ?? head.id),
-    laboratoryHeadName: text(source.laboratoryHeadName ?? source.headName ?? head.fullName ?? head.name),
-    logoUrl: text(source.logoUrl ?? source.logo ?? source.url ?? source.fileUrl),
-    standardNote: text(source.standardNote ?? source.note),
-    isDefault: bool(source.isDefault ?? source.defaultLaboratory),
-    active: source.active !== false && text(source.status).toUpperCase() !== 'ARCHIVED',
+    ...list,
+    legalName: text(source.legalName) || undefined,
+    city: text(source.city) || undefined,
+    phone: text(source.phone) || undefined,
+    email: text(source.email) || undefined,
+    website: text(source.website ?? source.site) || undefined,
+    notes: text(source.notes ?? source.standardNote) || undefined,
+    accreditationValidFrom: text(source.accreditationValidFrom ?? source.accreditationIssuedAt).slice(0, 10) || undefined,
+    accreditationIssuedAt: text(source.accreditationValidFrom ?? source.accreditationIssuedAt).slice(0, 10) || undefined,
+    accreditationIssuedBy: text(source.accreditationIssuedBy) || undefined,
+    directorEmployeeId: number(source.directorEmployeeId ?? source.directorId) || undefined,
+    directorId: number(source.directorEmployeeId ?? source.directorId) || undefined,
+    directorName: text(source.directorName ?? asRecord(source.director).fullName) || undefined,
+    headEmployeeId: number(source.headEmployeeId ?? source.laboratoryHeadId ?? source.headId) || undefined,
+    laboratoryHeadId: number(source.headEmployeeId ?? source.laboratoryHeadId ?? source.headId) || undefined,
+    laboratoryHeadName: text(source.laboratoryHeadName ?? source.headName ?? asRecord(source.laboratoryHead).fullName) || undefined,
+    logoFileId: number(source.logoFileId) || undefined,
+    logoUrl: text(source.logoUrl) || undefined,
+    createdAt: text(source.createdAt) || undefined,
+    protocolsCount: source.protocolsCount === undefined ? undefined : number(source.protocolsCount),
+    measurementDevicesCount: source.measurementDevicesCount === undefined ? undefined : number(source.measurementDevicesCount),
+    journalsCount: source.journalsCount === undefined ? undefined : number(source.journalsCount),
+    standardNote: text(source.notes ?? source.standardNote) || undefined,
     employees: Array.isArray(source.employees) ? source.employees.map(normalizeLaboratoryEmployee) : [],
-    createdAt: text(source.createdAt),
-    updatedAt: text(source.updatedAt),
   };
 };
 
-const requireId = (id: string | number, label = 'лаборатории') => {
-  const value = text(id);
-  if (!value || !Number.isFinite(Number(value))) throw new Error(`Некорректный ID ${label}`);
-  return Number(value);
+const normalizePage = (response: unknown, requestedPage: number, requestedSize: number): PageResponse<LaboratoryListItem> => {
+  const body = asRecord(asRecord(response).data);
+  const data = asRecord(body.data);
+  const container = Object.keys(data).length ? data : body;
+  const items = Array.isArray(container.items) ? container.items.map(normalizeLaboratoryListItem) : extractList(response, ['items', 'content', 'laboratories']).map(normalizeLaboratoryListItem);
+  const page = number(container.page ?? container.number ?? requestedPage);
+  const size = number(container.size ?? requestedSize) || requestedSize;
+  const totalElements = number(container.totalElements);
+  const totalPages = number(container.totalPages);
+  const first = typeof container.first === 'boolean' ? container.first : page === 0;
+  const last = typeof container.last === 'boolean' ? container.last : totalPages > 0 ? page >= totalPages - 1 : true;
+  return {
+    items, page, size, totalElements, totalPages, first, last,
+    hasNext: typeof container.hasNext === 'boolean' ? container.hasNext : !last,
+    hasPrevious: typeof container.hasPrevious === 'boolean' ? container.hasPrevious : !first,
+  };
 };
 
-let laboratoriesRequest: Promise<LaboratorySummary[]> | null = null;
+export type LaboratoryListParams = {
+  page: number;
+  size: number;
+  search?: string;
+  status?: 'ACTIVE' | 'ARCHIVED' | 'ALL';
+  accreditationStatus?: AccreditationStatus;
+  sort?: string;
+};
 
-export async function getLaboratories(): Promise<LaboratorySummary[]> {
-  if (useMocks) {
-    await mockDelay();
-    const { mockLaboratories } = await import('../mocks/mockLaboratorySettings');
-    return mockLaboratories.map(normalizeLaboratoryProfile);
+export async function getLaboratories(params: LaboratoryListParams, signal?: AbortSignal): Promise<PageResponse<LaboratoryListItem>> {
+  const response = await api.get<ApiResponse<unknown> | unknown>('/laboratories', { params, signal });
+  return normalizePage(response, params.page, params.size);
+}
+
+export async function getActiveLaboratories(signal?: AbortSignal): Promise<LaboratoryListItem[]> {
+  const page = await getLaboratories({ page: 0, size: 100, status: 'ACTIVE', sort: 'defaultLaboratory,desc' }, signal);
+  return page.items.filter((item) => item.active && !item.archived);
+}
+
+export async function getDefaultLaboratory(signal?: AbortSignal): Promise<LaboratoryDetails | null> {
+  try {
+    const response = await api.get<ApiResponse<unknown> | unknown>('/laboratories/default', { signal });
+    const details = normalizeLaboratoryDetails(extractItem(response, ['laboratory', 'item']));
+    return details.id ? details : null;
+  } catch (error) {
+    if (getApiStatus(error) && getApiStatus(error) !== 404) throw error;
+    const active = await getActiveLaboratories(signal);
+    const selected = active.find((item) => item.defaultLaboratory);
+    return selected ? getLaboratory(selected.id, signal) : null;
   }
-  if (!laboratoriesRequest) {
-    laboratoriesRequest = api
-      .get<ApiResponse<unknown> | unknown>('/laboratories')
-      .then((response) => extractList(response, ['laboratories', 'items']).map(normalizeLaboratoryProfile))
-      .finally(() => {
-        laboratoriesRequest = null;
-      });
-  }
-  return laboratoriesRequest;
 }
 
-export async function getDefaultLaboratory(): Promise<LaboratoryProfile | null> {
-  const laboratories = (await getLaboratories()).filter((laboratory) => laboratory.active);
-  const selected = laboratories.find((laboratory) => laboratory.isDefault)
-    || (laboratories.length === 1 ? laboratories[0] : undefined);
-  return selected ? normalizeLaboratoryProfile(selected) : null;
-}
-
-export async function getLaboratory(id: string | number, signal?: AbortSignal): Promise<LaboratoryProfile> {
-  return getLaboratorySettings(id, signal);
-}
-
-export async function getLaboratorySettings(id: string | number, signal?: AbortSignal): Promise<LaboratoryProfile> {
+export async function getLaboratory(id: string | number, signal?: AbortSignal): Promise<LaboratoryDetails> {
   const laboratoryId = requireId(id);
-  if (useMocks) {
-    await mockDelay();
-    const { mockLaboratories } = await import('../mocks/mockLaboratorySettings');
-    const laboratory = mockLaboratories.find((item) => item.id === String(laboratoryId));
-    if (!laboratory) throw new Error('Лаборатория не найдена.');
-    return normalizeLaboratoryProfile(laboratory);
-  }
   const response = await api.get<ApiResponse<unknown> | unknown>(`/settings/laboratories/${laboratoryId}`, { signal });
-  const laboratory = normalizeLaboratoryProfile(extractItem(response, ['laboratory', 'profile']));
-  if (!laboratory.id) throw new Error('Backend вернул пустую карточку лаборатории.');
-  return laboratory;
+  const details = normalizeLaboratoryDetails(extractItem(response, ['laboratory', 'profile', 'item']));
+  if (!details.id) throw new Error('Backend вернул пустую карточку лаборатории');
+  return details;
 }
 
-export async function getLaboratoryEmployees(id: string | number, options: { includeInactive?: boolean; signal?: AbortSignal } = {}): Promise<LaboratoryEmployee[]> {
-  const laboratoryId = requireId(id);
-  if (useMocks) {
-    await mockDelay();
-    const { mockLaboratoryEmployees } = await import('../mocks/mockLaboratorySettings');
-    const employees = (mockLaboratoryEmployees[String(laboratoryId)] || []).map(normalizeLaboratoryEmployee);
-    return options.includeInactive ? employees : employees.filter((employee) => employee.active);
-  }
-  const response = await api.get<ApiResponse<unknown> | unknown>(`/laboratories/${laboratoryId}/employees`, {
-    params: options.includeInactive ? undefined : { status: 'ACTIVE' },
-    signal: options.signal,
-  });
-  const employees = extractList(response, ['employees', 'items']).map(normalizeLaboratoryEmployee);
-  return options.includeInactive ? employees : employees.filter((employee) => employee.active);
-}
-
-export async function getEligibleLaboratoryEmployees(): Promise<LaboratoryEmployee[]> {
-  if (useMocks) {
-    await mockDelay();
-    const { mockEligibleLaboratoryEmployees } = await import('../mocks/mockLaboratorySettings');
-    return mockEligibleLaboratoryEmployees.map(normalizeLaboratoryEmployee);
-  }
-  const response = await api.get<ApiResponse<unknown> | unknown>('/laboratories/eligible-employees');
-  return extractList(response, ['employees', 'users', 'items']).map(normalizeLaboratoryEmployee).filter((employee) => employee.active);
-}
-
-const laboratoryBody = (profile: LaboratoryProfile): SaveLaboratoryRequest => ({
-  name: profile.name.trim(),
-  legalName: nullableText(profile.legalName),
-  bin: nullableText(profile.bin),
-  address: nullableText(profile.address),
-  phone: nullableText(profile.phone),
-  email: nullableText(profile.email),
-  accreditationNumber: nullableText(profile.accreditationNumber),
-  accreditationIssuedAt: nullableText(profile.accreditationIssuedAt),
-  accreditationValidUntil: nullableText(profile.accreditationValidUntil),
-  directorId: nullableId(profile.directorId),
-  directorName: nullableText(profile.directorName),
-  laboratoryHeadId: nullableId(profile.laboratoryHeadId),
-  laboratoryHeadName: nullableText(profile.laboratoryHeadName),
-  standardNote: nullableText(profile.standardNote),
-  isDefault: Boolean(profile.isDefault),
-  active: Boolean(profile.active),
+const laboratoryPayload = (values: LaboratoryFormValues) => ({
+  name: values.name.trim(), shortName: nullable(values.shortName), bin: nullable(values.bin), address: nullable(values.address),
+  city: nullable(values.city), phone: nullable(values.phone), email: nullable(values.email), website: nullable(values.website), notes: nullable(values.notes),
+  accreditationNumber: nullable(values.accreditationNumber), accreditationValidFrom: nullable(values.accreditationValidFrom),
+  accreditationValidUntil: nullable(values.accreditationValidUntil), accreditationIssuedBy: nullable(values.accreditationIssuedBy),
+  directorEmployeeId: values.directorEmployeeId, headEmployeeId: values.headEmployeeId,
 });
 
-export async function saveLaboratory(profile: LaboratoryProfile): Promise<LaboratoryProfile> {
-  const body = laboratoryBody(profile);
-  if (useMocks) {
-    await mockDelay();
-    const { mockLaboratories, mockLaboratoryEmployees } = await import('../mocks/mockLaboratorySettings');
-    const id = profile.id || String(Math.max(0, ...mockLaboratories.map((item) => Number(item.id) || 0)) + 1);
-    if (body.isDefault) mockLaboratories.forEach((item) => { item.isDefault = item.id === id; });
-    const saved = normalizeLaboratoryProfile({ ...profile, ...body, id, updatedAt: new Date().toISOString(), createdAt: profile.createdAt || new Date().toISOString(), employees: [] });
-    const index = mockLaboratories.findIndex((item) => item.id === id);
-    if (index >= 0) mockLaboratories[index] = saved;
-    else mockLaboratories.push(saved);
-    mockLaboratoryEmployees[id] ||= [];
-    return saved;
-  }
-  const response = profile.id
-    ? await api.patch<ApiResponse<unknown> | unknown>(`/laboratories/${requireId(profile.id)}`, body)
-    : await api.post<ApiResponse<unknown> | unknown>('/laboratories', body);
-  const saved = normalizeLaboratoryProfile(extractItem(response, ['laboratory', 'profile']));
-  const savedId = saved.id || profile.id;
-  if (!savedId) throw new Error('Backend не вернул ID сохранённой лаборатории');
-  return getLaboratory(savedId);
+export async function createLaboratory(values: LaboratoryFormValues): Promise<LaboratoryDetails> {
+  const response = await api.post<ApiResponse<unknown> | unknown>('/laboratories', laboratoryPayload(values));
+  return normalizeLaboratoryDetails(extractItem(response, ['laboratory', 'item']));
 }
-
-export async function setLaboratoryActive(id: string | number, active: boolean): Promise<LaboratoryProfile> {
-  const laboratoryId = requireId(id);
-  if (useMocks) {
-    const profile = await getLaboratory(laboratoryId);
-    return saveLaboratory({ ...profile, active });
-  }
-  await api.patch<ApiResponse<unknown> | unknown>(`/laboratories/${laboratoryId}`, { active });
-  return getLaboratory(laboratoryId);
+export async function updateLaboratory(id: string | number, values: LaboratoryFormValues): Promise<LaboratoryDetails> {
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/laboratories/${requireId(id)}`, laboratoryPayload(values));
+  return normalizeLaboratoryDetails(extractItem(response, ['laboratory', 'item']));
 }
+export async function setDefaultLaboratory(id: string | number): Promise<void> { await api.post(`/laboratories/${requireId(id)}/default`); }
+export async function archiveLaboratory(id: string | number): Promise<void> { await api.post(`/laboratories/${requireId(id)}/archive`); }
+export async function restoreLaboratory(id: string | number): Promise<void> { await api.post(`/laboratories/${requireId(id)}/restore`); }
 
-export async function saveLaboratoryEmployee(laboratoryId: string, payload: Partial<LaboratoryEmployee>): Promise<LaboratoryEmployee> {
-  const id = requireId(laboratoryId);
-  const body: SaveLaboratoryEmployeeRequest = {
-    userId: nullableId(payload.userId),
-    fullName: text(payload.fullName),
-    position: nullableText(payload.position),
-    email: nullableText(payload.email),
-    role: text(payload.role) || 'LABORATORY',
-    active: payload.active !== false,
-  };
-  if (useMocks) {
-    await mockDelay();
-    const { mockLaboratoryEmployees } = await import('../mocks/mockLaboratorySettings');
-    const items = mockLaboratoryEmployees[String(id)] ||= [];
-    const employeeId = payload.id || String(Math.max(0, ...items.map((item) => Number(item.id) || 0)) + 1);
-    const saved = normalizeLaboratoryEmployee({ ...payload, ...body, id: employeeId, laboratoryId: String(id) });
-    const index = items.findIndex((item) => item.id === employeeId);
-    if (index >= 0) items[index] = saved;
-    else items.push(saved);
-    return saved;
-  }
-  const response = payload.id
-    ? await api.patch<ApiResponse<unknown> | unknown>(`/laboratories/${id}/employees/${requireId(payload.id, 'сотрудника')}`, body)
-    : await api.post<ApiResponse<unknown> | unknown>(`/laboratories/${id}/employees`, body);
-  const employee = normalizeLaboratoryEmployee(extractItem(response, ['employee', 'item']));
-  if (!employee.id) throw new Error('Backend не вернул ID сотрудника лаборатории.');
-  return employee;
-}
-
-export async function deactivateLaboratoryEmployee(laboratoryId: string, employeeId: string): Promise<void> {
-  const laboratory = requireId(laboratoryId);
-  const employee = requireId(employeeId, 'сотрудника');
-  if (useMocks) {
-    await mockDelay();
-    const { mockLaboratoryEmployees } = await import('../mocks/mockLaboratorySettings');
-    const item = (mockLaboratoryEmployees[String(laboratory)] || []).find((entry) => entry.id === String(employee));
-    if (!item) throw new Error('Сотрудник лаборатории не найден.');
-    item.active = false;
-    return;
-  }
-  await api.patch(`/laboratories/${laboratory}/employees/${employee}/deactivate`);
-}
-
-export async function uploadLaboratoryLogo(id: string, file: File): Promise<LaboratoryProfile> {
-  const formData = new FormData();
-  formData.append('file', file);
-  if (useMocks) {
-    await mockDelay();
-    const profile = await getLaboratory(id);
-    return { ...profile, logoUrl: URL.createObjectURL(file), updatedAt: new Date().toISOString() };
-  }
-  await api.post<ApiResponse<unknown> | unknown>(`/settings/laboratories/${requireId(id)}/logo`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+export async function getLaboratoryEmployees(id: string | number, options: { includeInactive?: boolean; signal?: AbortSignal } = {}): Promise<LaboratoryEmployee[]> {
+  const response = await api.get<ApiResponse<unknown> | unknown>(`/laboratories/${requireId(id)}/employees`, {
+    params: { includeInactive: options.includeInactive === true }, signal: options.signal,
   });
-  return getLaboratory(id);
+  return extractList(response, ['employees', 'items']).map(normalizeLaboratoryEmployee);
+}
+export async function getEligibleLaboratoryEmployees(laboratoryId: string | number, signal?: AbortSignal): Promise<LaboratoryEmployee[]> {
+  const response = await api.get<ApiResponse<unknown> | unknown>('/laboratories/eligible-employees', { params: { laboratoryId: requireId(laboratoryId) }, signal });
+  return extractList(response, ['employees', 'users', 'items']).map(normalizeLaboratoryEmployee).filter((item) => item.active);
+}
+export async function addLaboratoryEmployee(laboratoryId: string | number, values: LaboratoryEmployeeFormValues): Promise<LaboratoryEmployee> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/laboratories/${requireId(laboratoryId)}/employees`, values);
+  return normalizeLaboratoryEmployee(extractItem(response, ['employee', 'item']));
+}
+export async function updateLaboratoryEmployee(laboratoryId: string | number, employeeId: string | number, values: LaboratoryEmployeeFormValues): Promise<LaboratoryEmployee> {
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/laboratories/${requireId(laboratoryId)}/employees/${requireId(employeeId, 'сотрудника')}`, values);
+  return normalizeLaboratoryEmployee(extractItem(response, ['employee', 'item']));
+}
+export async function deactivateLaboratoryEmployee(laboratoryId: string | number, employeeId: string | number): Promise<void> {
+  await api.post(`/laboratories/${requireId(laboratoryId)}/employees/${requireId(employeeId, 'сотрудника')}/deactivate`);
+}
+export async function activateLaboratoryEmployee(laboratoryId: string | number, employeeId: string | number): Promise<void> {
+  await api.post(`/laboratories/${requireId(laboratoryId)}/employees/${requireId(employeeId, 'сотрудника')}/activate`);
 }
 
-export async function deleteLaboratoryLogo(id: string | number): Promise<void> {
-  if (useMocks) {
-    const profile = await getLaboratory(id);
-    await saveLaboratory({ ...profile, logoUrl: '' });
-    return;
-  }
-  await api.delete(`/settings/laboratories/${requireId(id)}/logo`);
+export async function uploadLaboratoryLogo(id: string | number, file: File): Promise<LaboratoryDetails> {
+  const formData = new FormData(); formData.append('file', file);
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/settings/laboratories/${requireId(id)}/logo`, formData);
+  const details = normalizeLaboratoryDetails(extractItem(response, ['laboratory', 'item']));
+  return details.id ? details : getLaboratory(id);
 }
+export async function removeLaboratoryLogo(id: string | number): Promise<void> { await api.delete(`/settings/laboratories/${requireId(id)}/logo`); }
+export const getLaboratoryLogoUrl = (id: string | number) => `/settings/laboratories/${requireId(id)}/logo`;
 
-export const laboratoryLogoUrl = (id: string | number) => `/settings/laboratories/${requireId(id)}/logo`;
+export const accreditationState = (validUntil?: string, backendStatus?: AccreditationStatus) => {
+  const status = backendStatus || accreditationStatus({ accreditationValidUntil: validUntil });
+  if (!validUntil) return { status, daysLeft: null };
+  const daysLeft = Math.ceil((new Date(`${validUntil}T23:59:59`).getTime() - Date.now()) / 86_400_000);
+  return { status, daysLeft: Number.isFinite(daysLeft) ? daysLeft : null };
+};
 
-export const accreditationState = (validUntil?: string) => {
-  if (!validUntil) return { status: 'MISSING' as const, daysLeft: null };
-  const end = new Date(`${validUntil}T23:59:59`);
-  if (Number.isNaN(end.getTime())) return { status: 'MISSING' as const, daysLeft: null };
-  const daysLeft = Math.ceil((end.getTime() - Date.now()) / 86_400_000);
-  if (daysLeft < 0) return { status: 'EXPIRED' as const, daysLeft };
-  if (daysLeft < 30) return { status: 'EXPIRING' as const, daysLeft };
-  return { status: 'VALID' as const, daysLeft };
+export const laboratoryService = {
+  getLaboratories, getLaboratory, createLaboratory, updateLaboratory, setDefaultLaboratory, archiveLaboratory, restoreLaboratory,
+  getEmployees: getLaboratoryEmployees, getEligibleEmployees: getEligibleLaboratoryEmployees, addEmployee: addLaboratoryEmployee,
+  updateEmployee: updateLaboratoryEmployee, deactivateEmployee: deactivateLaboratoryEmployee, activateEmployee: activateLaboratoryEmployee,
+  uploadLogo: uploadLaboratoryLogo, getLogoUrl: getLaboratoryLogoUrl, removeLogo: removeLaboratoryLogo,
 };

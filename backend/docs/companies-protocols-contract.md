@@ -8,15 +8,41 @@ Required fields: `name`, `bin`, at least one of `legalAddress` or `actualAddress
 
 `bin` and `phone` must be strings. `status` is `ACTIVE` or `ARCHIVED`.
 
-## Companies API
+## Companies API (frontend production contract)
 
-- `GET /api/companies?search=&bin=&status=&page=&size=`
-- `GET /api/companies/search?query=`
+- `GET /api/companies?page=0&size=20&search=&status=ACTIVE&sort=updatedAt,desc`
 - `POST /api/companies`
 - `GET /api/companies/{id}`
 - `PATCH /api/companies/{id}`
-- `DELETE /api/companies/{id}`
 - `POST /api/companies/{id}/archive`
+- `GET /api/companies/{id}/objects`
+- `GET /api/companies/{id}/objects/{objectId}`
+- `POST /api/companies/{id}/objects`
+- `PATCH /api/companies/{id}/objects/{objectId}`
+- `POST /api/companies/{id}/objects/{objectId}/archive`
+
+Restore actions are not shown by the frontend until the backend publishes and authorizes explicit restore endpoints. Physical `DELETE` is not used.
+
+The company list response is:
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 145,
+    "totalPages": 8,
+    "first": true,
+    "last": false,
+    "hasNext": true,
+    "hasPrevious": false
+  }
+}
+```
+
+`search` is server-side and covers name, BIN, phone, email, legal/actual address and contact person. `status` is `ACTIVE`, `ARCHIVED` or `ALL`; `sort` is a backend sort expression.
 
 Responses should use the common frontend envelope:
 
@@ -61,7 +87,7 @@ Company DTO fields:
 }
 ```
 
-If a company has been used by a protocol, `DELETE /api/companies/{id}` must archive it or return a clear validation error. It must not physically remove data needed for audit history.
+Companies and objects are archived through the explicit archive endpoints. They must not be physically removed because protocol audit history depends on them.
 
 ## Protocol creation
 

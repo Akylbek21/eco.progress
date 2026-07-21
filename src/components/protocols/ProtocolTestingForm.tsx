@@ -1,9 +1,9 @@
-import type { ProtocolPrintVisibility, ProtocolTemplateId, ProtocolTestingData } from '../../types/protocols';
+import type { ProtocolPrintVisibility, ProtocolTemplateKey, ProtocolTestingData } from '../../types/protocols';
 import { physicalFactorTypes } from '../../data/protocolTemplates';
 import ProtocolPrintVisibilityToggle from './ProtocolPrintVisibilityToggle';
 
 type Props = {
-  templateId: ProtocolTemplateId;
+  templateId: ProtocolTemplateKey;
   value: ProtocolTestingData;
   measurementDate?: string;
   readOnly: boolean;

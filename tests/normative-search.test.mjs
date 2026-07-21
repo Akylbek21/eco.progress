@@ -19,7 +19,7 @@ test('search threshold supports regular queries, formulas and CAS', async () => 
   assert.equal(canSearchNormative(''), false);
   assert.equal(canSearchNormative('во'), false);
   assert.equal(canSearchNormative('вода'), true);
-  assert.equal(canSearchNormative('12'), false);
+  assert.equal(canSearchNormative('12'), true);
   assert.equal(canSearchNormative('123'), true);
   assert.equal(canSearchNormative('CO'), true);
   assert.equal(canSearchNormative('NO2'), true);
@@ -69,8 +69,7 @@ test('creation page preserves server items and the complete selected normative',
   assert.match(source, /selectedNormative: item/);
   assert.match(source, /String\(selectedNormative\.id\)/);
   assert.match(source, /value: 'VIBRATION'/);
-  assert.match(source, /value: 'ELECTROMAGNETIC_FIELD'/);
-  assert.match(source, /value: 'LASER'/);
+  assert.doesNotMatch(source, /templateKey === 'uv_emf_laser'/);
   assert.match(source, /current\.map\(\(item\) => item\.selectedNormative \|\| item\.normative/);
   assert.match(source, /normative: undefined, selectedNormative: undefined, normativeId: undefined/);
   assert.doesNotMatch(source, /current\.filter\(\(item\) => !item\.selectedNormative\)/);
@@ -92,7 +91,10 @@ test('router uses the existing protocol create and editor implementations', asyn
 
 test('protocol editor uses the shared single-request normative search', async () => {
   const source = await read('src/components/protocols/ProtocolResultsTable.tsx');
-  assert.match(source, /searchNormatives\(buildNormativeSearchParams\(value\), controller\.signal\)/);
+  assert.match(source, /getNormativesForProtocol\(buildNormativeSearchParams\(value, page\), controller\.signal\)/);
+  assert.match(source, /size: 20/);
+  assert.match(source, /normativeRecordId: normative\.id/);
+  assert.match(source, /подтверждённой backend-конвертации/);
   assert.match(source, /categoryCode: searchContext\.categoryCode/);
   assert.match(source, /NORMATIVE_SEARCH_DEBOUNCE_MS/);
   assert.match(source, /canSearchNormative\(value\)/);

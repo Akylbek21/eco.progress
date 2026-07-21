@@ -23,16 +23,19 @@ import type {
   ProtocolEnvironmentalConditions,
   ProtocolMeasurementDevice,
   ProtocolPage,
+  ProtocolListQuery,
   QuickProtocolCreatePayload,
   ProtocolResultPayload,
   ProtocolResultRow,
   ProtocolTemplate,
+  ProtocolTemplateId,
   RawMeasurementRequest,
   RawMeasurementsResponse,
   SaveRawMeasurementsRequest,
   UpdateProtocolPayload,
   WeatherConditions,
 } from '../types/protocols';
+import { normalizeProtocolStatus } from '../config/protocolStatus';
 import { canonicalProtocolResultAliases } from '../utils/protocolResultAliases';
 import { canSearchNormative, normativeSearchItemToRecord, searchNormatives } from './normativeSearchService';
 import type { NormativeSearchParams } from '../types/normativeSearch';
@@ -643,7 +646,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     subtype: (pick(source, ['subtype', 'physicalFactorType', 'physical_factor_type'])
       || pick(testing, ['physicalFactorType'])) as Protocol['subtype'],
     templateName: pick(source, ['templateName', 'template_name']),
-    status: String(pick(source, ['status']) || 'DRAFT').trim().toUpperCase() as Protocol['status'],
+    status: normalizeProtocolStatus(pick(source, ['status'])),
     companyId: pick(source, ['companyId', 'company_id']),
     objectId: pick(source, ['objectId', 'object_id']),
     companySnapshot: snapshot,
@@ -689,6 +692,9 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     approver: pick(source, ['approver']),
     approvedAt: pick(source, ['approvedAt', 'approved_at']),
     signedAt: pick(source, ['signedAt', 'signed_at']),
+    signedBy: pick(source, ['signedBy', 'signedByName', 'signed_by']),
+    hasDocx: source.hasDocx === true || Boolean(source.docxDocumentId || source.docxFileId || source.docxUrl),
+    hasPdf: source.hasPdf === true || Boolean(source.pdfDocumentId || source.pdfFileId || source.pdfUrl),
     printVisibility,
     organization: {
       organizationName: pick(organization, ['organizationName', 'companyName', 'name']) || snapshot.companyName,
@@ -746,14 +752,14 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
         : [],
     createdAt: pick(source, ['createdAt', 'created_at']),
     updatedAt: pick(source, ['updatedAt', 'updated_at']),
-    version: source.version === undefined || source.version === null ? undefined : asString(source.version),
+    version: source.version === undefined || source.version === null ? undefined : Number(source.version),
     replacedByProtocolId: pick(source, ['replacedByProtocolId', 'replaced_by_protocol_id']),
     replacesProtocolId: pick(source, ['replacesProtocolId', 'replaces_protocol_id']),
   };
 };
 
 const toCreateProtocolApiPayload = (payload: CreateProtocolPayload) => {
-  const sampleDate = payload.sampleDate || payload.samplingDate || payload.measurementDate || null;
+  const sampleDate = payload.sampleDate || payload.measurementDate || null;
 
   return {
     companyId: Number.isNaN(Number(payload.companyId)) ? payload.companyId : Number(payload.companyId),
@@ -763,7 +769,6 @@ const toCreateProtocolApiPayload = (payload: CreateProtocolPayload) => {
     protocolNumber: payload.protocolNumber || '',
     protocolDate: payload.protocolDate,
     sampleDate,
-    samplingDate: sampleDate,
     testingStartDate: payload.testingStartDate || null,
     testingEndDate: payload.testingEndDate || null,
     productName: payload.productName || '',
@@ -969,29 +974,28 @@ export async function getProtocols(params?: Record<string, string>): Promise<Pro
   return normalizeProtocolsResponse(response);
 }
 
-export async function getProtocolsPage(params?: Record<string, string>, signal?: AbortSignal): Promise<ProtocolPage> {
+export async function getProtocolsPage(params: ProtocolListQuery, signal?: AbortSignal): Promise<ProtocolPage> {
   const response = await api.get<ApiResponse<unknown> | unknown>('/protocols', { params, signal });
   const items = normalizeProtocolsResponse(response);
   const payload = asRecord(unwrapData(response));
-  const responseBody = asRecord(asRecord(response).data);
-  const page = Number(payload.number ?? payload.page ?? responseBody.number ?? params?.page ?? 0);
-  const size = Number(payload.size ?? responseBody.size ?? params?.size ?? (items.length || 1));
-  const hasTotalElements = payload.totalElements !== undefined || payload.total_elements !== undefined || responseBody.totalElements !== undefined;
-  const hasTotalPages = payload.totalPages !== undefined || payload.total_pages !== undefined || responseBody.totalPages !== undefined;
-  const inferredTotal = Math.max(0, page) * Math.max(1, size) + items.length;
-  const totalElements = Number(payload.totalElements ?? payload.total_elements ?? responseBody.totalElements ?? inferredTotal);
-  const totalPages = Number(payload.totalPages ?? payload.total_pages ?? responseBody.totalPages
-    ?? (hasTotalElements
-      ? Math.max(1, Math.ceil(totalElements / Math.max(1, size)))
-      : Math.max(1, page + (items.length >= size ? 2 : 1))));
+  const page = Number(payload.page ?? payload.number ?? params.page);
+  const size = Number(payload.size ?? params.size);
+  const hasMetadata = payload.totalElements !== undefined && payload.totalPages !== undefined;
+  const totalElements = Number(payload.totalElements ?? items.length);
+  const totalPages = Number(payload.totalPages ?? page + 1);
+  const first = typeof payload.first === 'boolean' ? payload.first : page === 0;
+  const last = typeof payload.last === 'boolean' ? payload.last : !hasMetadata;
   return {
     items,
-    page: Number.isFinite(page) ? page : 0,
-    size: Number.isFinite(size) && size > 0 ? size : Math.max(1, items.length),
+    page,
+    size,
     totalElements: Number.isFinite(totalElements) ? totalElements : items.length,
-    totalPages: hasTotalPages || items.length < size
-      ? (Number.isFinite(totalPages) && totalPages > 0 ? totalPages : 1)
-      : Math.max(page + 2, totalPages),
+    totalPages: Number.isFinite(totalPages) ? totalPages : page + 1,
+    first,
+    last,
+    hasNext: typeof payload.hasNext === 'boolean' ? payload.hasNext : !last,
+    hasPrevious: typeof payload.hasPrevious === 'boolean' ? payload.hasPrevious : !first,
+    totalElementsExact: hasMetadata,
   };
 }
 
@@ -1068,21 +1072,24 @@ export const getProtocolById = getProtocol;
 
 export async function updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol> {
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}`, {
+    version: payload.version,
     number: payload.number,
     protocolDate: payload.protocolDate,
     objectId: payload.objectId,
+    laboratoryId: payload.laboratoryId || payload.laboratory?.laboratoryId || payload.laboratory?.id || null,
     measurementDate: payload.measurementDate || null,
     measurementTime: payload.measurementTime || null,
     measurementPlace: payload.measurementPlace || null,
     formCode: payload.formCode,
     appendixNumber: payload.application,
+    basis: payload.basis || payload.organization.testingBasis || null,
+    notes: payload.notes || payload.explanatoryNote || null,
     executor: payload.executor,
     executorId: payload.executorId || null,
     approver: payload.approver,
     productName: payload.organization.productName || '',
     testingBasis: payload.organization.testingBasis || '',
-    sampleDate: payload.testing.samplingDate || payload.measurementDate || null,
-    samplingDate: payload.testing.samplingDate || payload.measurementDate || null,
+    sampleDate: payload.sampleDate || payload.testing.samplingDate || payload.measurementDate || null,
     testingStartDate: payload.testing.testingStartDate || null,
     testingEndDate: payload.testing.testingEndDate || payload.testing.testingDate || null,
     productNormativeDocument: payload.testing.productNormativeDocument || '',
@@ -1097,6 +1104,17 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
     printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
   });
   const protocol = await protocolFromActionResponse(protocolId, response);
+  const persistedChecks: Array<[string, unknown, unknown]> = [
+    ['objectId', payload.objectId, protocol.objectId],
+    ['measurementDate', payload.measurementDate, protocol.measurementDate],
+    ['measurementTime', payload.measurementTime, protocol.measurementTime],
+    ['measurementPlace', payload.measurementPlace, protocol.measurementPlace],
+  ];
+  const ignored = persistedChecks.find(([, expected, actual]) => expected !== undefined && expected !== null && String(expected) !== String(actual ?? ''));
+  if (ignored) throw new Error(`Backend не сохранил поле «${ignored[0]}». Обновите контракт PATCH /protocols/{id}.`);
+  if (Number(protocol.version || 0) <= payload.version) {
+    throw new Error('Backend не обновил version протокола после сохранения. Изменения не подтверждены.');
+  }
   return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
 }
 
@@ -1143,6 +1161,13 @@ export async function returnToDraft(protocolId: string): Promise<Protocol> {
   return protocolFromActionResponse(protocolId, response);
 }
 
+export async function returnForRevision(protocolId: string, reason: string): Promise<Protocol> {
+  const comment = reason.trim();
+  if (!comment) throw new Error('Укажите причину возврата протокола на доработку.');
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-to-draft`, { comment, reason: comment });
+  return protocolFromActionResponse(protocolId, response);
+}
+
 export async function signProtocol(protocolId: string, cmsSignatureBase64: string): Promise<Protocol> {
   if (!cmsSignatureBase64.trim()) throw new Error('NCALayer не вернул CMS-подпись.');
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/sign`, { cmsSignatureBase64 });
@@ -1151,14 +1176,17 @@ export async function signProtocol(protocolId: string, cmsSignatureBase64: strin
 
 const duplicateProtocolFallback = async (protocolId: string): Promise<Protocol> => {
   const source = await getProtocol(protocolId);
+  const templateId = source.templateId === 'water' ? 'water_wastewater' : source.templateId;
+  if (!['ambient_air', 'workplace_air', 'soil', 'microclimate', 'lighting', 'noise_vibration', 'water_wastewater'].includes(templateId)) {
+    throw new Error('Исправленная версия для устаревшего типа протокола недоступна. Сначала преобразуйте тип на backend.');
+  }
   const created = await createProtocol({
     companyId: source.companyId || '',
     objectId: source.objectId || '',
-    templateId: source.templateId,
+    templateId: templateId as ProtocolTemplateId,
     subtype: source.subtype,
     protocolDate: source.protocolDate,
     sampleDate: source.testing.samplingDate || source.measurementDate,
-    samplingDate: source.testing.samplingDate,
     testingStartDate: source.testing.testingStartDate,
     testingEndDate: source.testing.testingEndDate,
     measurementDate: source.measurementDate,
@@ -1241,6 +1269,11 @@ export async function replaceProtocol(protocolId: string, reason: string): Promi
 
 export async function cancelProtocol(protocolId: string): Promise<Protocol> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/cancel`);
+  return protocolFromActionResponse(protocolId, response);
+}
+
+export async function archiveProtocol(protocolId: string): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/archive`);
   return protocolFromActionResponse(protocolId, response);
 }
 

@@ -43,7 +43,7 @@ const ProtocolLaboratoryForm = ({ value, employees, readOnly, loading = false, c
         <p className="font-bold text-amber-950">Данные лаборатории не заполнены. Без этих данных протокол нельзя выпустить.</p>
         <p className="mt-0.5">Реквизиты не были получены от backend.</p>
       </div>
-      {canOpenSettings && <Link to="/staff/settings/laboratory" className="inline-flex rounded-lg bg-eco-700 px-3 py-2 text-sm font-bold text-white">Заполнить в настройках</Link>}
+      {canOpenSettings && <Link to="/staff/settings/laboratories" className="inline-flex rounded-lg bg-eco-700 px-3 py-2 text-sm font-bold text-white">Заполнить в настройках</Link>}
       {!readOnly && onRefresh && <Button type="button" variant="secondary" disabled={loading} onClick={onRefresh}>Обновить из настроек</Button>}
     </section>
   );

@@ -1,222 +1,72 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, RefreshCw, Search } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, RefreshCw, Search, Zap } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
+import ReplaceProtocolModal from '../components/protocols/ReplaceProtocolModal';
 import ProtocolList from '../components/protocols/ProtocolList';
-import ProtocolPreviewModal from '../components/protocols/ProtocolPreviewModal';
-import { protocolStatusLabels } from '../components/protocols/ProtocolStatusBadge';
-import protocolService from '../services/protocolService';
-import { getApiErrorMessage } from '../services/apiHelpers';
-import { physicalFactorTypes, protocolTemplates, templateName } from '../data/protocolTemplates';
-import { useToast } from '../hooks/useToast';
+import { protocolStatusConfig } from '../config/protocolStatus';
+import { PROTOCOL_TYPE_OPTIONS } from '../data/protocolTypeConfig';
 import { useAuth } from '../contexts/AuthContext';
-import type { Protocol, ProtocolStatus, ProtocolTemplate } from '../types/protocols';
-import { getProtocolPermissions } from '../utils/protocolPermissions';
+import { useToast } from '../hooks/useToast';
+import { getActiveLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
+import { parseApiError } from '../services/apiHelpers';
+import protocolService from '../services/protocolService';
+import type { Protocol, ProtocolComplianceFilter, ProtocolListQuery, ProtocolStatus, ProtocolTemplateId } from '../types/protocols';
+import { canCreateProtocol } from '../utils/protocolPermissions';
 
-const statuses: ProtocolStatus[] = ['DRAFT', 'NEEDS_REVISION', 'RETURNED', 'CORRECTION', 'CALCULATED', 'READY', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED', 'ARCHIVED', 'CANCELLED', 'REPLACED'];
-
-const saveBlob = (blob: Blob, name: string) => {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-};
+const sizes = [10, 20, 50, 100];
+const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100';
+const integer = (value: string | null, fallback: number) => { const parsed = Number(value); return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback; };
+const saveBlob = (blob: Blob, name: string) => { const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); };
 
 const ProtocolsPage = () => {
-  const navigate = useNavigate();
-  const toast = useToast();
-  const { user } = useAuth();
-  const [protocols, setProtocols] = useState<Protocol[]>([]);
-  const [templates, setTemplates] = useState<ProtocolTemplate[]>(protocolTemplates);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [status, setStatus] = useState('');
-  const [templateId, setTemplateId] = useState('');
-  const [subtype, setSubtype] = useState('');
-  const [compliance, setCompliance] = useState('');
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewProtocol, setPreviewProtocol] = useState<Protocol | null>(null);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalElements, setTotalElements] = useState(0);
-  const requestIdRef = useRef(0);
-  const abortRef = useRef<AbortController | null>(null);
-  const pageSize = 25;
-  const draftPermissions = getProtocolPermissions('DRAFT', user?.role);
-  const signedPermissions = getProtocolPermissions('SIGNED', user?.role);
+  const navigate = useNavigate(); const toast = useToast(); const { user } = useAuth(); const queryClient = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const page = integer(params.get('page'), 0); const requestedSize = integer(params.get('size'), 20); const size = sizes.includes(requestedSize) ? requestedSize : 20;
+  const search = params.get('search') || ''; const status = params.get('status') || ''; const templateId = params.get('templateId') || ''; const subtype = params.get('subtype') || '';
+  const laboratoryId = params.get('laboratoryId') || ''; const executorId = params.get('executorId') || ''; const compliance = params.get('compliance') || '';
+  const dateFrom = params.get('dateFrom') || ''; const dateTo = params.get('dateTo') || ''; const includeArchived = params.get('includeArchived') === 'true'; const sort = params.get('sort') || 'updatedAt,desc';
+  const [searchInput, setSearchInput] = useState(search); const [busyId, setBusyId] = useState(''); const [archiveTarget, setArchiveTarget] = useState<Protocol | null>(null); const [replaceTarget, setReplaceTarget] = useState<Protocol | null>(null);
+  const update = (changes: Record<string, string | number | boolean | undefined>) => { const next = new URLSearchParams(params); Object.entries(changes).forEach(([key, value]) => { if (value === undefined || value === '' || value === false) next.delete(key); else next.set(key, String(value)); }); setParams(next, { replace: true }); };
 
-  const load = async () => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    const requestId = ++requestIdRef.current;
-    setLoading(true);
-    setError('');
-    try {
-      const params: Record<string, string> = {};
-      if (debouncedQuery.trim()) params.search = debouncedQuery.trim();
-      if (status) params.status = status;
-      if (templateId) {
-        params.templateId = templateId;
-        params.protocolType = templateId;
-      }
-      if (subtype) params.subtype = subtype;
-      if (compliance) params.compliance = compliance;
-      params.page = String(page);
-      params.size = String(pageSize);
-      const result = await protocolService.getProtocolsPage(params, controller.signal);
-      if (requestId !== requestIdRef.current || controller.signal.aborted) return;
-      setProtocols(result.items);
-      setTotalPages(result.totalPages);
-      setTotalElements(result.totalElements);
-    } catch (loadError) {
-      if (controller.signal.aborted || requestId !== requestIdRef.current) return;
-      setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить протоколы');
-    } finally {
-      if (requestId === requestIdRef.current) setLoading(false);
-    }
-  };
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 500);
-    return () => window.clearTimeout(timer);
-  }, [query]);
-  useEffect(() => {
-    protocolService.getProtocolTemplates()
-      .then((templateItems) => setTemplates(templateItems.length ? templateItems : protocolTemplates))
-      .catch(() => setTemplates(protocolTemplates));
-  }, []);
-  useEffect(() => { setPage(0); }, [debouncedQuery, status, templateId, subtype, compliance]);
-  useEffect(() => {
-    void load();
-    return () => abortRef.current?.abort();
-  }, [debouncedQuery, status, templateId, subtype, compliance, page]);
-  useEffect(() => () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-  }, [previewUrl]);
+  useEffect(() => setSearchInput(search), [search]);
+  useEffect(() => { const timer = window.setTimeout(() => { const value = searchInput.trim(); if (value !== search) update({ search: value || undefined, page: 0 }); }, 450); return () => window.clearTimeout(timer); }, [searchInput, search]);
+  const laboratoriesQuery = useQuery({ queryKey: ['laboratories', 'protocol-filter'], queryFn: ({ signal }) => getActiveLaboratories(signal) });
+  const employeesQuery = useQuery({ queryKey: ['laboratory-employees', laboratoryId], queryFn: () => getLaboratoryEmployees(laboratoryId), enabled: Boolean(laboratoryId) });
+  const query = useMemo<ProtocolListQuery>(() => ({ page, size, search: search || undefined, status: status as ProtocolStatus || undefined, templateId: templateId as ProtocolTemplateId || undefined, subtype: subtype || undefined, laboratoryId: laboratoryId ? Number(laboratoryId) : undefined, executorId: executorId ? Number(executorId) : undefined, compliance: compliance as ProtocolComplianceFilter || undefined, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, sort, includeArchived }), [page, size, search, status, templateId, subtype, laboratoryId, executorId, compliance, dateFrom, dateTo, sort, includeArchived]);
+  const protocolsQuery = useQuery({ queryKey: ['protocols', query], queryFn: ({ signal }) => protocolService.getProtocolsPage(query, signal), placeholderData: keepPreviousData });
+  const data = protocolsQuery.data; const protocols = data?.items || [];
+  useEffect(() => { if (data && data.totalPages > 0 && page >= data.totalPages) update({ page: data.totalPages - 1 }); }, [data?.totalPages, page]);
 
-  const filtered = useMemo(() => protocols.filter((protocol) => {
-    const needle = debouncedQuery.trim().toLowerCase();
-    const haystack = `${protocol.protocolNumber} ${protocol.companySnapshot.companyName} ${protocol.companySnapshot.bin || ''} ${protocol.companySnapshot.objectName || ''}`.toLowerCase();
-    return (!needle || haystack.includes(needle))
-      && (!status || String(protocol.status).trim().toUpperCase() === status)
-      && (!templateId || protocol.templateId === templateId)
-      && (!subtype || protocol.subtype === subtype)
-      && (!compliance || String(protocol.complianceResult || '').trim().toUpperCase() === compliance);
-  }), [protocols, debouncedQuery, status, templateId, subtype, compliance]);
+  const reset = () => { setSearchInput(''); setParams({ page: '0', size: String(size), sort: 'updatedAt,desc' }, { replace: true }); };
+  const download = async (protocol: Protocol, kind: 'pdf' | 'docx') => { if (busyId) return; setBusyId(protocol.id); try { const file = kind === 'pdf' ? await protocolService.downloadPdf(protocol.id) : await protocolService.downloadDocx(protocol.id); saveBlob(file.blob, file.fileName || `${protocol.protocolNumber}.${kind}`); } catch (error) { const parsed = parseApiError(error, `Не удалось скачать ${kind.toUpperCase()}`); toast.error(parsed.message); } finally { setBusyId(''); } };
+  const archive = async () => { if (!archiveTarget || busyId) return; setBusyId(archiveTarget.id); try { await protocolService.archiveProtocol(archiveTarget.id); setArchiveTarget(null); toast.success('Протокол архивирован'); await queryClient.invalidateQueries({ queryKey: ['protocols'] }); } catch (error) { toast.error(parseApiError(error, 'Не удалось архивировать протокол').message); } finally { setBusyId(''); } };
+  const replace = async (reason: string) => { if (!replaceTarget || busyId) return; setBusyId(replaceTarget.id); try { const created = await protocolService.replaceProtocol(replaceTarget.id, reason.trim()); setReplaceTarget(null); navigate(`/staff/protocols/${created.id}`); } catch (error) { toast.error(parseApiError(error, 'Не удалось создать исправленную версию').message); } finally { setBusyId(''); } };
+  const hasFilters = Boolean(search || status || templateId || subtype || laboratoryId || executorId || compliance || dateFrom || dateTo || includeArchived);
+  const from = data && protocols.length ? data.page * data.size + 1 : 0; const to = data ? data.page * data.size + protocols.length : 0;
 
-  const preview = async (protocol: Protocol) => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl('');
-    setPreviewProtocol(protocol);
-    setPreviewOpen(true);
-    setPreviewLoading(true);
-    try {
-      const blob = await protocolService.previewProtocol(protocol.id);
-      setPreviewUrl(URL.createObjectURL(blob));
-    } catch (previewError) {
-      toast.error('Не удалось открыть предпросмотр', previewError instanceof Error ? previewError.message : undefined);
-    } finally {
-      setPreviewLoading(false);
-    }
-  };
-
-  const closePreview = () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl('');
-    setPreviewProtocol(null);
-    setPreviewOpen(false);
-  };
-
-  const remove = async (protocol: Protocol) => {
-    if (!window.confirm('Удалить протокол? Данные будут скрыты из списка.')) return;
-    try {
-      await protocolService.deleteProtocol(protocol.id);
-      toast.success('Протокол удалён');
-      await load();
-    } catch (deleteError) {
-      toast.error(getApiErrorMessage(deleteError, 'Не удалось удалить протокол'));
-    }
-  };
-
-  const copy = async (protocol: Protocol) => {
-    try {
-      const duplicate = await protocolService.duplicateProtocol(protocol.id);
-      toast.success('Создана копия протокола');
-      navigate(`/staff/protocols/${duplicate.id}`);
-    } catch (copyError) {
-      toast.error('Не удалось скопировать протокол', copyError instanceof Error ? copyError.message : undefined);
-    }
-  };
-
-  const replace = async (protocol: Protocol) => {
-    const reason = window.prompt('Укажите причину создания исправленной версии:');
-    if (!reason?.trim()) return;
-    try {
-      const replacement = await protocolService.replaceProtocol(protocol.id, reason.trim());
-      navigate(`/staff/protocols/${replacement.id}`);
-    } catch (replaceError) {
-      toast.error('Не удалось создать исправленную версию', replaceError instanceof Error ? replaceError.message : undefined);
-    }
-  };
-
-  const download = async (protocol: Protocol, kind: 'pdf' | 'docx') => {
-    try {
-      const immutable = ['SIGNED', 'ARCHIVED', 'REPLACED'].includes(String(protocol.status).trim().toUpperCase());
-      if (!immutable) {
-        if (kind === 'pdf') await protocolService.generatePdf(protocol.id);
-        else await protocolService.generateDocx(protocol.id);
-      }
-      const file = kind === 'pdf' ? await protocolService.downloadPdf(protocol.id) : await protocolService.downloadDocx(protocol.id);
-      if (!file.blob.size) throw new Error('Файл пуст.');
-      saveBlob(file.blob, file.fileName || `${protocol.protocolNumber}.${kind}`);
-    } catch (downloadError) {
-      toast.error(`Не удалось скачать ${kind.toUpperCase()}`, downloadError instanceof Error ? downloadError.message : undefined);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-wide text-eco-700">Испытательная лаборатория</p>
-          <h1 className="mt-1 text-3xl font-black text-slate-950">Протоколы испытаний</h1>
-          <p className="mt-2 text-sm text-slate-500">Создание, проверка нормативов, утверждение и официальный предпросмотр.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={() => navigate('/staff/protocols/create')}><Plus className="h-4 w-4" /> Создать протокол</Button>
-          <Button type="button" variant="secondary" onClick={load} disabled={loading}><RefreshCw className="h-4 w-4" /> Обновить</Button>
-        </div>
-      </header>
-
-      <section className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-5">
-        <label className="relative xl:col-span-2"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Номер, компания, БИН или объект" className="w-full rounded-lg border border-slate-200 py-3 pl-10 pr-3 text-sm outline-none focus:border-eco-500 focus:ring-4 focus:ring-eco-100" /></label>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-3 text-sm"><option value="">Все статусы</option>{statuses.map((item) => <option key={item} value={item}>{protocolStatusLabels[item]}</option>)}</select>
-        <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-3 text-sm"><option value="">Все типы</option>{templates.map((item) => <option key={item.id} value={item.id}>{item.name || templateName(item.id)}</option>)}</select>
-        <select value={subtype} onChange={(e) => setSubtype(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-3 text-sm"><option value="">Все подтипы</option>{physicalFactorTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
-        <select value={compliance} onChange={(e) => setCompliance(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-3 text-sm"><option value="">Любое соответствие</option><option value="COMPLIES">Соответствует</option><option value="DOES_NOT_COMPLY">Не соответствует</option><option value="NEEDS_REVIEW">Требует проверки</option></select>
-      </section>
-
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{error}</div>}
-      <ProtocolList protocols={filtered} loading={loading} onOpen={(protocol) => navigate(`/staff/protocols/${protocol.id}`)} onPreview={preview} onCopy={copy} onDelete={remove} onReplace={replace} onDownloadPdf={(protocol) => download(protocol, 'pdf')} onDownloadDocx={(protocol) => download(protocol, 'docx')} canCopy={draftPermissions.canCopy} canDelete={draftPermissions.canDelete} canReplace={signedPermissions.canCreateCorrection} />
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600">
-        <span>Всего протоколов: {totalElements}</span>
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="secondary" disabled={loading || page <= 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>Назад</Button>
-          <span>Страница {page + 1} из {Math.max(1, totalPages)}</span>
-          <Button type="button" variant="secondary" disabled={loading || page + 1 >= totalPages} onClick={() => setPage((current) => current + 1)}>Далее</Button>
-        </div>
-      </div>
-      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} protocol={previewProtocol} draft={false} onClose={closePreview} />
-    </div>
-  );
+  return <div className="space-y-6 pb-10">
+    <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-wide text-eco-700">Испытательная лаборатория</p><h1 className="mt-1 text-3xl font-black text-slate-950">Протоколы</h1><p className="mt-2 text-sm text-slate-500">Создание, расчёт, утверждение, подписание и документы.</p></div>{canCreateProtocol(user) && <div className="flex flex-wrap gap-2"><Button type="button" variant="secondary" onClick={() => navigate('/staff/protocols/create')}><Zap className="h-4 w-4" /> Быстрое создание</Button><Button type="button" onClick={() => navigate('/staff/protocols/new')}><Plus className="h-4 w-4" /> Создать протокол</Button></div>}</header>
+    <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-4">
+      <label className="relative xl:col-span-2"><span className="sr-only">Поиск</span><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Номер, компания, БИН или объект" className={`${inputClass} pl-10`} /></label>
+      <select aria-label="Статус" value={status} onChange={(event) => update({ status: event.target.value, page: 0 })} className={inputClass}><option value="">Все статусы</option>{Object.entries(protocolStatusConfig).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}</select>
+      <select aria-label="Тип протокола" value={templateId} onChange={(event) => update({ templateId: event.target.value, page: 0 })} className={inputClass}><option value="">Все типы</option>{PROTOCOL_TYPE_OPTIONS.map((item) => <option key={item.key} value={item.key === 'water' ? 'water_wastewater' : item.key}>{item.title}</option>)}</select>
+      <select aria-label="Лаборатория" value={laboratoryId} onChange={(event) => update({ laboratoryId: event.target.value, executorId: undefined, page: 0 })} className={inputClass}><option value="">Все лаборатории</option>{laboratoriesQuery.data?.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+      <select aria-label="Исполнитель" value={executorId} disabled={!laboratoryId} onChange={(event) => update({ executorId: event.target.value, page: 0 })} className={inputClass}><option value="">Все исполнители</option>{employeesQuery.data?.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.fullName}</option>)}</select>
+      <select aria-label="Соответствие" value={compliance} onChange={(event) => update({ compliance: event.target.value, page: 0 })} className={inputClass}><option value="">Любое соответствие</option><option value="COMPLIANT">Соответствует</option><option value="NON_COMPLIANT">Не соответствует</option><option value="NOT_EVALUATED">Не оценено</option></select>
+      <select aria-label="Сортировка" value={sort} onChange={(event) => update({ sort: event.target.value, page: 0 })} className={inputClass}><option value="updatedAt,desc">Сначала изменённые</option><option value="protocolDate,desc">Сначала новые</option><option value="protocolDate,asc">Сначала старые</option><option value="protocolNumber,asc">По номеру</option></select>
+      <label className="text-sm font-semibold text-slate-700"><span>Период с</span><input type="date" value={dateFrom} onChange={(event) => update({ dateFrom: event.target.value, page: 0 })} className={`${inputClass} mt-1`} /></label><label className="text-sm font-semibold text-slate-700"><span>по</span><input type="date" min={dateFrom} value={dateTo} onChange={(event) => update({ dateTo: event.target.value, page: 0 })} className={`${inputClass} mt-1`} /></label>
+      <label className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700"><input type="checkbox" checked={includeArchived} onChange={(event) => update({ includeArchived: event.target.checked, page: 0 })} /> Показывать архив</label><Button type="button" variant="secondary" disabled={protocolsQuery.isFetching} onClick={() => protocolsQuery.refetch()}><RefreshCw className={`h-4 w-4 ${protocolsQuery.isFetching ? 'animate-spin' : ''}`} /> Обновить</Button>
+    </section>
+    {dateFrom && dateTo && dateFrom > dateTo && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">Дата начала периода не может быть позже даты окончания.</div>}
+    {protocolsQuery.isError && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-5"><p className="font-bold text-rose-900">{parseApiError(protocolsQuery.error, 'Не удалось загрузить протоколы').message}</p><Button type="button" variant="secondary" className="mt-3" onClick={() => protocolsQuery.refetch()}>Повторить</Button></div>}
+    {!protocolsQuery.isError && !protocolsQuery.isLoading && !protocols.length ? <section className="rounded-2xl border border-slate-200 bg-white p-10 text-center"><h2 className="text-lg font-bold text-slate-900">{hasFilters ? 'По заданным параметрам протоколы не найдены' : includeArchived ? 'Архив протоколов пуст' : 'Протоколы пока не созданы'}</h2>{hasFilters && <Button type="button" variant="secondary" className="mt-4" onClick={reset}>Сбросить фильтры</Button>}</section> : !protocolsQuery.isError && <ProtocolList protocols={protocols} role={user?.role} loading={protocolsQuery.isLoading} busyId={busyId} onOpen={(protocol) => navigate(`/staff/protocols/${protocol.id}`)} onArchive={setArchiveTarget} onReplace={setReplaceTarget} onDownload={download} />}
+    {data && protocols.length > 0 && <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-3"><span>{data.totalElementsExact === false ? `Показано ${protocols.length}; общее количество недоступно` : `Показано ${from}–${to} из ${data.totalElements}`}</span><select aria-label="Размер страницы" value={size} onChange={(event) => update({ size: Number(event.target.value), page: 0 })} className="rounded-lg border border-slate-200 px-2 py-1">{sizes.map((item) => <option key={item}>{item}</option>)}</select></div><div className="flex items-center gap-2"><Button type="button" variant="secondary" disabled={data.first || protocolsQuery.isFetching} onClick={() => update({ page: Math.max(0, page - 1) })}>Назад</Button><span>Страница {data.page + 1}{data.totalElementsExact !== false && ` из ${Math.max(1, data.totalPages)}`}</span><Button type="button" variant="secondary" disabled={data.last || protocolsQuery.isFetching} onClick={() => update({ page: Math.min(page + 1, Math.max(0, data.totalPages - 1)) })}>Далее</Button></div></div>}
+    <Modal open={Boolean(archiveTarget)} loading={busyId === archiveTarget?.id} onClose={() => !busyId && setArchiveTarget(null)} title={`Архивировать протокол «${archiveTarget?.protocolNumber || ''}»?`} size="sm" footer={<><Button type="button" variant="secondary" disabled={Boolean(busyId)} onClick={() => setArchiveTarget(null)}>Отмена</Button><Button type="button" variant="danger" disabled={Boolean(busyId)} onClick={archive}>{busyId ? 'Архивирование…' : 'Архивировать'}</Button></>}><p className="text-sm text-slate-600">Протокол останется доступен только для просмотра и скачивания существующих документов.</p></Modal>
+    <ReplaceProtocolModal open={Boolean(replaceTarget)} loading={busyId === replaceTarget?.id} onClose={() => !busyId && setReplaceTarget(null)} onConfirm={replace} />
+  </div>;
 };
 
 export default ProtocolsPage;

@@ -1,6 +1,6 @@
 import { PHYSICAL_FACTOR_UNITS } from './physicalFactors';
 import { PROTOCOL_NORMATIVE_CONTEXT } from './protocolNormativeContext';
-import type { NormativeRecord, Pollutant, ProtocolSubtype, ProtocolTemplateId } from '../types/protocols';
+import type { NormativeRecord, Pollutant, ProtocolSubtype, ProtocolTemplateId, ProtocolTemplateKey } from '../types/protocols';
 
 export type ProtocolResultMode = 'CHEMICAL' | 'PHYSICAL';
 export type ProtocolTypeKey =
@@ -10,8 +10,7 @@ export type ProtocolTypeKey =
   | 'water'
   | 'microclimate'
   | 'lighting'
-  | 'noise_vibration'
-  | 'uv_emf_laser';
+  | 'noise_vibration';
 
 export type ProtocolTypeConfig = {
   title: string;
@@ -27,8 +26,8 @@ export type ProtocolTypeConfig = {
 
 export type NormativeSearchContext = {
   sourceDocumentCode?: string;
-  templateId?: ProtocolTemplateId;
-  normativeTemplateId?: ProtocolTemplateId;
+  templateId?: ProtocolTemplateKey;
+  normativeTemplateId?: ProtocolTemplateKey;
   categoryCode?: string;
   factorType?: ProtocolSubtype | string;
 };
@@ -63,11 +62,11 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   },
   water: {
     title: 'Вода',
-    templateId: 'water',
+    templateId: 'water_wastewater',
     sourceDocumentCode: PROTOCOL_NORMATIVE_CONTEXT.water.sourceDocumentCode,
     docxTemplateCode: 'protocol_water',
     defaultUnit: 'мг/л',
-    normativeTemplateId: 'water',
+    normativeTemplateId: 'water_wastewater',
     resultMode: 'CHEMICAL',
   },
   microclimate: {
@@ -97,15 +96,6 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
     normativeTemplateId: 'noise_vibration',
     resultMode: 'PHYSICAL',
   },
-  uv_emf_laser: {
-    title: 'УФ / ЭМП / Лазер',
-    templateId: 'uv_emf_laser',
-    sourceDocumentCode: PROTOCOL_NORMATIVE_CONTEXT.uv_emf_laser.sourceDocumentCode,
-    docxTemplateCode: 'protocol_physical_factors',
-    defaultUnit: null,
-    normativeTemplateId: 'uv_emf_laser',
-    resultMode: 'PHYSICAL',
-  },
 };
 
 export const SUPPORTED_PROTOCOL_TYPE_KEYS: ProtocolTypeKey[] = [
@@ -116,7 +106,6 @@ export const SUPPORTED_PROTOCOL_TYPE_KEYS: ProtocolTypeKey[] = [
   'microclimate',
   'lighting',
   'noise_vibration',
-  'uv_emf_laser',
 ];
 
 export const PROTOCOL_TYPE_OPTIONS = SUPPORTED_PROTOCOL_TYPE_KEYS.map((key) => ({
@@ -128,7 +117,6 @@ export const protocolFactorType: Partial<Record<ProtocolTypeKey, ProtocolSubtype
   microclimate: PROTOCOL_NORMATIVE_CONTEXT.microclimate.factorType,
   lighting: PROTOCOL_NORMATIVE_CONTEXT.lighting.factorType,
   noise_vibration: 'NOISE_VIBRATION',
-  uv_emf_laser: 'UV',
 };
 
 const subtypeContextKey: Partial<Record<ProtocolSubtype, ProtocolTypeKey>> = {
@@ -139,20 +127,17 @@ const subtypeContextKey: Partial<Record<ProtocolSubtype, ProtocolTypeKey>> = {
   NOISE_VIBRATION: 'noise_vibration',
   INFRASOUND: 'noise_vibration',
   ULTRASOUND: 'noise_vibration',
-  UV: 'uv_emf_laser',
-  ELECTROMAGNETIC_FIELD: 'uv_emf_laser',
-  LASER: 'uv_emf_laser',
 };
 
 export const resolveNormativeSearchContext = (
   protocol: Partial<{
-    templateId: ProtocolTemplateId | string;
+    templateId: ProtocolTemplateKey | string;
     protocolType: string;
     type: string;
     subtype: ProtocolSubtype | string;
     physicalFactorType: ProtocolSubtype | string;
     sourceDocumentCode: string;
-    normativeTemplateId: ProtocolTemplateId | string;
+    normativeTemplateId: ProtocolTemplateKey | string;
     categoryCode: string;
   }> = {},
   protocolType?: string,
@@ -183,8 +168,8 @@ export const resolveNormativeSearchContext = (
 
   return {
     sourceDocumentCode: protocol.sourceDocumentCode || undefined,
-    templateId: protocol.templateId as ProtocolTemplateId | undefined,
-    normativeTemplateId: protocol.normativeTemplateId as ProtocolTemplateId | undefined,
+    templateId: protocol.templateId as ProtocolTemplateKey | undefined,
+    normativeTemplateId: protocol.normativeTemplateId as ProtocolTemplateKey | undefined,
     categoryCode: protocol.categoryCode || undefined,
     factorType: subtype || undefined,
   };

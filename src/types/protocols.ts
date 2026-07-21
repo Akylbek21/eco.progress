@@ -1,35 +1,40 @@
+import type { LaboratoryDetails as CanonicalLaboratoryDetails, LaboratoryEmployee as CanonicalLaboratoryEmployee, LaboratoryListItem as CanonicalLaboratoryListItem } from './laboratories';
+
 export type ProtocolStatus =
   | 'DRAFT'
   | 'CALCULATED'
-  | 'READY'
-  | 'NEEDS_REVISION'
-  | 'RETURNED'
-  | 'CORRECTION'
-  | 'SIGNED'
-  | 'ARCHIVED'
   | 'READY_FOR_APPROVAL'
+  | 'NEEDS_REVISION'
   | 'APPROVED'
+  | 'SIGNED'
+  | 'REPLACED'
   | 'CANCELLED'
-  | 'REPLACED';
+  | 'ARCHIVED';
+
+export type LegacyProtocolStatus = 'READY' | 'READY_FOR_APPROVE' | 'RETURNED' | 'CORRECTION';
 export type ProtocolResultValue = string | number | null | undefined | Array<string | number | null>;
 
 export type ProtocolTemplateId =
-  | 'industrial_emissions'
-  | 'water'
-  | 'water_wastewater'
   | 'ambient_air'
-  | 'physical_factors'
+  | 'workplace_air'
+  | 'soil'
   | 'microclimate'
   | 'lighting'
   | 'noise_vibration'
+  | 'water_wastewater';
+
+export type LegacyProtocolTemplateId =
+  | 'industrial_emissions'
+  | 'water'
+  | 'physical_factors'
   | 'uv_emf_laser'
-  | 'soil'
   | 'food_products'
   | 'surfaces'
   | 'udmh_special'
-  | 'workplace_air'
   | 'vehicle_emissions'
   | 'sanitary_hygiene';
+
+export type ProtocolTemplateKey = ProtocolTemplateId | LegacyProtocolTemplateId;
 
 export type ProtocolSubtype =
   | 'MICROCLIMATE'
@@ -68,7 +73,7 @@ export type CalculationStatus =
   | 'NORMATIVE_NOT_FOUND';
 
 export type ProtocolTemplate = {
-  id: ProtocolTemplateId;
+  id: ProtocolTemplateKey;
   name: string;
   description?: string;
 };
@@ -139,43 +144,12 @@ export type ProtocolResult = {
 
 export type ProtocolResultRow = ProtocolResult;
 
-export type LaboratoryEmployee = {
-  id: string;
-  laboratoryId?: string;
-  userId?: string;
-  fullName: string;
-  position?: string;
-  email?: string;
-  role?: string;
-  active: boolean;
-};
-
-export type LaboratorySummary = {
-  id: string;
-  name: string;
-  legalName?: string;
-  accreditationNumber?: string;
-  accreditationValidUntil?: string;
-  laboratoryHeadName?: string;
-  isDefault: boolean;
-  active: boolean;
-};
-
-export type LaboratoryProfile = LaboratorySummary & {
-  bin: string;
-  address: string;
-  phone: string;
-  email: string;
-  accreditationIssuedAt: string;
-  directorId?: string;
-  directorName?: string;
-  laboratoryHeadId?: string;
-  logoUrl?: string;
-  standardNote?: string;
-  employees: LaboratoryEmployee[];
-  createdAt?: string;
-  updatedAt?: string;
-};
+/** @deprecated Import from types/laboratories. */
+export type LaboratoryEmployee = CanonicalLaboratoryEmployee;
+/** @deprecated Import from types/laboratories. */
+export type LaboratorySummary = CanonicalLaboratoryListItem;
+/** @deprecated Import from types/laboratories. */
+export type LaboratoryProfile = CanonicalLaboratoryDetails;
 
 export type ProtocolLaboratorySnapshot = {
   id?: string;
@@ -342,7 +316,7 @@ export interface Protocol {
   id: string;
   protocolNumber: string;
   number?: string;
-  templateId: ProtocolTemplateId;
+  templateId: ProtocolTemplateKey;
   subtype?: ProtocolSubtype;
   templateName?: string;
   status: ProtocolStatus;
@@ -374,6 +348,9 @@ export interface Protocol {
   approver?: string;
   approvedAt?: string;
   signedAt?: string;
+  signedBy?: string;
+  hasDocx?: boolean;
+  hasPdf?: boolean;
   printVisibility?: ProtocolPrintVisibility;
   organization: ProtocolOrganizationData;
   laboratory: ProtocolLaboratorySnapshot;
@@ -384,7 +361,7 @@ export interface Protocol {
   history?: ProtocolHistoryItem[];
   createdAt: string;
   updatedAt: string;
-  version?: string | number;
+  version?: number;
   replacedByProtocolId?: string;
   replacesProtocolId?: string;
 }
@@ -395,7 +372,49 @@ export type ProtocolPage = {
   size: number;
   totalElements: number;
   totalPages: number;
+  first: boolean;
+  last: boolean;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  totalElementsExact?: boolean;
 };
+
+export type ProtocolComplianceFilter = 'COMPLIANT' | 'NON_COMPLIANT' | 'NOT_EVALUATED';
+
+export interface ProtocolListItem {
+  id: string;
+  protocolNumber: string;
+  protocolDate: string;
+  companyName: string;
+  objectName: string;
+  templateId: ProtocolTemplateKey;
+  templateName?: string;
+  subtype?: ProtocolSubtype;
+  laboratoryName: string;
+  executorName: string;
+  status: ProtocolStatus;
+  compliance: ProtocolComplianceFilter;
+  updatedAt: string;
+  hasDocx?: boolean;
+  hasPdf?: boolean;
+}
+
+export interface ProtocolListQuery {
+  page: number;
+  size: number;
+  search?: string;
+  status?: ProtocolStatus;
+  templateId?: ProtocolTemplateId;
+  subtype?: string;
+  companyId?: number;
+  laboratoryId?: number;
+  executorId?: number;
+  compliance?: ProtocolComplianceFilter;
+  dateFrom?: string;
+  dateTo?: string;
+  sort?: string;
+  includeArchived?: boolean;
+}
 
 export type ProtocolHistoryItem = {
   id: string;
@@ -413,7 +432,6 @@ export interface CreateProtocolPayload {
   protocolNumber?: string;
   protocolDate: string;
   sampleDate?: string;
-  samplingDate?: string;
   testingStartDate?: string;
   testingEndDate?: string;
   productName?: string;
@@ -440,12 +458,16 @@ export interface CreateProtocolPayload {
 }
 
 export type UpdateProtocolPayload = {
+  version: number;
   number: string;
   protocolDate: string;
   objectId?: string | number;
+  laboratoryId?: string | number;
   measurementDate?: string;
   measurementTime?: string;
   measurementPlace?: string;
+  sampleDate?: string;
+  basis?: string;
   formCode?: string;
   application?: string;
   executor: string;
@@ -456,6 +478,7 @@ export type UpdateProtocolPayload = {
   testing: ProtocolTestingData;
   environment?: ProtocolEnvironmentalConditions;
   explanatoryNote?: string;
+  notes?: string;
   printVisibility?: ProtocolPrintVisibility;
 };
 
@@ -465,6 +488,31 @@ export type ProtocolResultPayload = {
   deviceId?: string | number | null;
   normativeId?: string | number | null;
 };
+
+export type ComparisonType = NormativeComparisonType;
+
+export interface ProtocolResultForm {
+  id?: number;
+  indicatorId?: number;
+  indicatorName: string;
+  indicatorCode?: string;
+  cas?: string;
+  formula?: string;
+  unit: string;
+  resultValue?: number;
+  resultText?: string;
+  comparisonType?: ComparisonType;
+  normativeMin?: number;
+  normativeMax?: number;
+  normativeValue?: number;
+  normativeDocument?: string;
+  measurementDeviceId?: number;
+  samplingPlace?: string;
+  sampleNumber?: string;
+  samplingDepth?: number;
+  externalLaboratory?: boolean;
+  notes?: string;
+}
 
 export type QuickProtocolMeasurementPayload = {
   factorType?: string;
@@ -493,6 +541,7 @@ export type QuickProtocolCreatePayload = {
   companyId: number;
   objectId: number;
   protocolDate: string;
+  sampleDate: string;
   measurementDate: string;
   measurementTime: string;
   measurementPlace: string;
@@ -674,7 +723,7 @@ export type NormativeComparisonType = 'LESS_OR_EQUAL' | 'GREATER_OR_EQUAL' | 'RA
 
 export type NormativeRecord = {
   id: string;
-  templateId: ProtocolTemplateId;
+  templateId: ProtocolTemplateKey;
   sourceDocumentCode?: string;
   sourceDocumentName?: string;
   documentNumber?: string;
