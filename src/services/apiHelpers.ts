@@ -53,13 +53,22 @@ export interface ParsedApiError {
   status?: number;
 }
 
+export interface ApiError {
+  status?: number;
+  message: string;
+  errors: string[];
+  fieldErrors: Record<string, string>;
+  traceId?: string;
+}
+
 export const parseApiError = (error: unknown, fallback = 'Не удалось выполнить запрос.'): ParsedApiError => {
   const status = getApiStatus(error);
   if (!axios.isAxiosError(error)) return { message: error instanceof Error && error.message ? error.message : fallback, status };
   const response = asRecord(error.response?.data);
   const nested = asRecord(response?.data);
   const codeValue = response?.code ?? response?.errorCode ?? nested?.code ?? nested?.errorCode;
-  const errors = response?.errors ?? nested?.errors ?? response?.fieldErrors ?? nested?.fieldErrors;
+  const errors = response?.errors ?? nested?.errors;
+  const backendFieldErrors = response?.fieldErrors ?? nested?.fieldErrors;
   const fieldErrors: Record<string, string> = {};
   if (Array.isArray(errors)) {
     errors.forEach((item) => {
@@ -72,6 +81,8 @@ export const parseApiError = (error: unknown, fallback = 'Не удалось в
     const values = asRecord(errors);
     if (values) Object.entries(values).forEach(([field, message]) => { if (typeof message === 'string' && message.trim()) fieldErrors[field] = message.trim(); });
   }
+  const explicitFields = asRecord(backendFieldErrors);
+  if (explicitFields) Object.entries(explicitFields).forEach(([field, message]) => { if (typeof message === 'string' && message.trim()) fieldErrors[field] = message.trim(); });
   const statusMessages: Record<number, string> = {
     400: 'Проверьте заполнение полей.', 401: 'Сессия истекла. Войдите заново.', 403: 'Недостаточно прав.',
     404: 'Запрошенные данные не найдены.', 409: 'Данные были изменены другим сотрудником.',
@@ -86,6 +97,24 @@ export const parseApiError = (error: unknown, fallback = 'Не удалось в
     code: typeof codeValue === 'string' ? codeValue.trim().toUpperCase() : undefined,
     fieldErrors: Object.keys(fieldErrors).length ? fieldErrors : undefined,
     status,
+  };
+};
+
+export const normalizeApiError = (error: unknown, fallback = 'Не удалось выполнить запрос.'): ApiError => {
+  const parsed = parseApiError(error, fallback);
+  const response = axios.isAxiosError(error) ? asRecord(error.response?.data) : undefined;
+  const nested = asRecord(response?.data);
+  const rawErrors = response?.errors ?? nested?.errors;
+  const errors = Array.isArray(rawErrors)
+    ? rawErrors.map((item) => typeof item === 'string' ? item.trim() : String(asRecord(item)?.message || '').trim()).filter(Boolean)
+    : [];
+  const traceIdValue = response?.traceId ?? nested?.traceId;
+  return {
+    status: parsed.status,
+    message: parsed.message,
+    errors,
+    fieldErrors: parsed.fieldErrors || {},
+    traceId: typeof traceIdValue === 'string' && traceIdValue.trim() ? traceIdValue.trim() : undefined,
   };
 };
 

@@ -46,8 +46,9 @@ const QuickProtocolCreatePage = lazy(() => import('./pages/QuickProtocolCreatePa
 const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
 const NormativeDirectoryPage = lazy(() => import('./pages/NormativeDirectoryPage'));
 const MeasurementDevicesPage = lazy(() => import('./pages/MeasurementDevicesPage'));
-const LaboratorySettingsPage = lazy(() => import('./pages/LaboratorySettingsPage'));
+const LaboratorySettingsPage = lazy(() => import('./features/laboratories/pages/LaboratoriesPage'));
 const LabJournalsPage = lazy(() => import('./pages/LabJournalsPage'));
+const LabJournalEntryPage = lazy(() => import('./features/lab-journals/pages/LabJournalEntryPage'));
 const StaffLeadsPage = lazy(() => import('./pages/staff/StaffLeadsPage'));
 const ContentDashboardPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentDashboardPage');
 const ContentListPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentListPage');
@@ -248,6 +249,7 @@ function App() {
         <Route path="/staff/normatives" element={<RoleAccess roles={normativeRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={normativeRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/measurement-devices" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/journals" element={<RoleAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']} loginPath="/staff/login" forbiddenMessage="Недостаточно прав для просмотра журналов"><StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']}><ErrorBoundary fallbackTitle="Не удалось открыть журналы"><LabJournalsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/journals/:entryId" element={<RoleAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']} loginPath="/staff/login" forbiddenMessage="Недостаточно прав для просмотра журналов"><StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']}><ErrorBoundary fallbackTitle="Не удалось открыть запись журнала"><LabJournalEntryPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/settings/laboratories" element={<RoleAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']}><ErrorBoundary fallbackTitle="Не удалось открыть настройки лаборатории"><LaboratorySettingsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/settings/laboratory" element={<Navigate to="/staff/settings/laboratories" replace />} />
         <Route path="/staff/reports" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><StaffReportsPage /></StaffAccess></StaffLayout></RoleAccess>} />

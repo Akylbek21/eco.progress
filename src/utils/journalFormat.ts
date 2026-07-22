@@ -10,9 +10,8 @@ export const formatJournalValue = (column: JournalColumn, value: unknown): strin
   if (value === undefined || value === null || value === '') return '—';
   if (column.type === 'date') return dateValue(value);
   if (column.type === 'datetime') return dateValue(value, true);
-  if (column.type === 'time') return String(value).slice(0, 5);
   if (column.type === 'boolean') return value ? 'Да' : 'Нет';
-  if (column.type === 'number' || column.type === 'calculated') return new Intl.NumberFormat('ru-RU').format(Number(value));
+  if (column.type === 'number') return new Intl.NumberFormat('ru-RU').format(Number(value));
   if (column.type === 'select') return column.options?.find((item) => item.value === String(value))?.label || String(value);
   return String(value);
 };

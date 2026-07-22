@@ -45,11 +45,11 @@ test('import uses multipart preview and exact JSON confirmation contract', async
   const page = await read('src/pages/NormativeDirectoryPage.tsx');
   const service = await read('src/services/normativeService.ts');
   assert.match(page, /previewNormativeImport\(selectedFiles\[0\], activeDocument, replaceMode\)/);
-  assert.match(page, /confirmNormativeImport\(importBatchId, replaceMode\)/);
+  assert.match(page, /confirmNormativeImport\(importBatchId, importFiles\[0\], replaceMode\)/);
   assert.match(service, /formData\.append\('file', file\)/);
   assert.match(service, /formData\.append\('documentCode', documentCode\)/);
-  assert.match(service, /\{ replaceMode, confirm: true \}/);
-  assert.match(service, /\/normatives\/import\/\$\{encodeURIComponent\(importId\)\}\/confirm/);
+  assert.match(service, /params: \{ importId, replaceMode \}/);
+  assert.match(service, /'\/normatives\/import\/confirm'/);
 });
 
 test('roles and dangerous import operations are centralized', async () => {

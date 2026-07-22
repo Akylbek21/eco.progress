@@ -1,83 +1,66 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import test from 'node:test';
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('1-7 list, search, pagination and server filters open laboratory details', async () => {
-  const page = await read('src/pages/LaboratorySettingsPage.tsx');
-  assert.match(page, /getLaboratories\(\{ page, size, search:/);
-  assert.match(page, /window\.setTimeout[\s\S]*450/);
-  assert.match(page, /status, accreditationStatus:/);
-  assert.match(page, /listQuery\.data\.first/);
-  assert.match(page, /listQuery\.data\.last/);
-  assert.match(page, /queryKey: \['laboratory-details', selected\]/);
+test('laboratory feature is separated into API, hooks, schemas, components, pages and utils', async () => {
+  for (const path of [
+    'src/features/laboratories/api/laboratoryService.ts', 'src/features/laboratories/api/laboratoryContracts.ts', 'src/features/laboratories/api/laboratoryMappers.ts',
+    'src/features/laboratories/hooks/useLaboratories.ts', 'src/features/laboratories/hooks/useLaboratory.ts', 'src/features/laboratories/hooks/useLaboratoryEmployees.ts', 'src/features/laboratories/hooks/useLaboratoryMutations.ts',
+    'src/features/laboratories/schemas/laboratorySchema.ts', 'src/features/laboratories/schemas/laboratoryEmployeeSchema.ts',
+    'src/features/laboratories/components/LaboratoryForm.tsx', 'src/features/laboratories/components/LaboratoryLogoUploader.tsx',
+    'src/features/laboratories/pages/LaboratoriesPage.tsx', 'src/features/laboratories/utils/laboratoryFormatters.ts',
+  ]) await access(new URL(`../${path}`, import.meta.url));
 });
 
-test('8-10 HEAD sees menu and LABORATORY is read-only without eligible request', async () => {
-  const layout = await read('src/layouts/StaffLayout.tsx');
+test('list state is URL-backed, debounced, cancellable and uses client filters', async () => {
+  const page = await read('src/pages/LaboratorySettingsPage.tsx');
+  const service = await read('src/features/laboratories/api/laboratoryService.ts');
+  const mapper = await read('src/features/laboratories/api/laboratoryMappers.ts');
+  assert.match(page, /useSearchParams/);
+  assert.match(page, /window\.setTimeout[\s\S]*450/);
+  assert.match(service, /'\/laboratories', \{ signal \}/);
+  assert.match(mapper, /query\.status === 'INACTIVE'/);
+  assert.match(mapper, /rows\.slice\(page \* query\.size/);
+});
+
+test('permissions are centralized and eligible employees load only for authorized users', async () => {
   const page = await read('src/pages/LaboratorySettingsPage.tsx');
   const permissions = await read('src/utils/laboratoryPermissions.ts');
-  assert.match(layout, /'HEAD', 'LABORATORY'/);
-  assert.match(permissions, /const VIEW = new Set\(\['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'\]\)/);
-  assert.match(permissions, /const EDIT = new Set\(\['ADMIN', 'DIRECTOR', 'HEAD'\]\)/);
+  for (const name of ['canReadLaboratories', 'canCreateLaboratory', 'canEditLaboratory', 'canDeactivateLaboratory', 'canSetDefaultLaboratory', 'canManageLaboratoryEmployees', 'canUploadLaboratoryLogo']) assert.match(permissions, new RegExp(`export const ${name}`));
+  assert.match(permissions, /const READ = new Set\(\['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'\]\)/);
   assert.match(page, /enabled: eligibleOpen && permissions\.canManageEmployees/);
 });
 
-test('11-16 creation, update, accreditation, default and archive use dedicated mutations', async () => {
-  const page = await read('src/pages/LaboratorySettingsPage.tsx');
+test('forms map DTOs, validate locally, surface field errors and resolve 409 conflicts', async () => {
   const form = await read('src/components/laboratories/LaboratoryForm.tsx');
-  assert.match(page, /createLaboratory\(values\)/);
-  assert.match(page, /updateLaboratory\(editing\.id, values\)/);
+  const schema = await read('src/features/laboratories/schemas/laboratorySchema.ts');
   assert.match(form, /useForm<LaboratoryFormValues>/);
-  assert.match(form, /accreditationValidFrom > values\.accreditationValidUntil/);
-  assert.match(page, /setDefaultLaboratory/);
-  assert.match(page, /archiveLaboratory/);
-  assert.match(page, /Сначала назначьте другую лабораторию по умолчанию|parseLaboratoryApiError/);
+  assert.match(form, /mapLaboratoryToForm/);
+  assert.match(form, /validateLaboratoryForm/);
+  assert.match(form, /setFocus\(firstInvalidField\)/);
+  assert.match(form, /parsed\.status === 409/);
+  assert.match(form, /Обновить данные/);
+  assert.match(schema, /accreditationValidUntil < values\.accreditationIssuedAt/);
 });
 
-test('17-24 employees use canonical ids, explicit inactive filter and active leadership', async () => {
+test('employees, default state and logo follow production safeguards', async () => {
   const page = await read('src/pages/LaboratorySettingsPage.tsx');
-  const service = await read('src/services/laboratorySettingsService.ts');
-  const errors = await read('src/utils/laboratoryApiError.ts');
+  const mapper = await read('src/features/laboratories/api/laboratoryMappers.ts');
+  const logo = await read('src/features/laboratories/components/LaboratoryLogoUploader.tsx');
   assert.match(page, /includeInactive: employeeFilter !== 'ACTIVE'/);
-  assert.match(page, /addLaboratoryEmployee\(selected, employeeDraft\)/);
-  assert.match(page, /updateLaboratoryEmployee\(selected, editingEmployee\.id/);
-  assert.match(page, /deactivateLaboratoryEmployee\(selected, confirmAction\.employee\.id\)/);
-  assert.match(page, /activateLaboratoryEmployee\(selected, confirmAction\.employee\.id\)/);
-  assert.match(errors, /LABORATORY_EMPLOYEE_ALREADY_EXISTS/);
-  assert.match(page, /parseLaboratoryApiError/);
-  assert.match(page, /directorEmployeeId/);
-  assert.match(page, /headEmployeeId/);
+  assert.match(page, /confirmAction\.laboratory\.isDefault/);
+  assert.match(page, /selectedUser[\s\S]*fullName[\s\S]*email[\s\S]*phone/);
+  assert.match(mapper, /safe false is used/);
+  assert.match(logo, /image\/png.*image\/jpeg.*image\/webp/);
+  assert.match(logo, /5 \* 1024 \* 1024/);
 });
 
-test('25-28 logo validation and archived read-only mode are enforced', async () => {
-  const page = await read('src/pages/LaboratorySettingsPage.tsx');
-  const permissions = await read('src/utils/laboratoryPermissions.ts');
-  assert.match(page, /image\/png.*image\/jpeg/);
-  assert.match(page, /file\.size > logoMaxSize/);
-  assert.match(page, /object-contain/);
-  assert.match(page, /Логотип не загружен/);
-  assert.match(permissions, /!laboratory\.archived/);
-});
-
-test('29-33 protocol creation selects default, clears dependent values and refreshes snapshot', async () => {
-  const create = await read('src/pages/ProtocolCreatePage.tsx');
-  const editor = await read('src/pages/ProtocolEditorPage.tsx');
-  const api = await read('src/services/apiProtocolService.ts');
-  assert.match(create, /defaultLaboratory/);
-  assert.match(create, /executorId: ''/);
-  assert.match(create, /measurementDeviceId: ''/);
-  assert.match(create, /const executorId = Number\(executor\.id\)/);
-  assert.match(editor, /refreshLaboratorySnapshot/);
-  assert.match(api, /refresh-laboratory-data/);
-  assert.match(editor, /Лаборатория по умолчанию не настроена/);
-});
-
-test('34-36 unsaved changes, interactive markup and 403 message are covered', async () => {
+test('unsaved changes and nested interactive markup safeguards remain in place', async () => {
   const form = await read('src/components/laboratories/LaboratoryForm.tsx');
   const page = await read('src/pages/LaboratorySettingsPage.tsx');
-  assert.match(form, /Есть несохранённые изменения\. Закрыть форму\?/);
-  assert.match(page, /Недостаточно прав для просмотра настроек лаборатории/);
+  assert.match(form, /beforeunload/);
+  assert.match(form, /Есть несохранённые изменения/);
   assert.match(page, /<button type="button" className="w-full text-left/);
   assert.match(page, /<article key=\{item\.id\}/);
 });

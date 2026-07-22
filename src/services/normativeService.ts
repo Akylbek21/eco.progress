@@ -649,9 +649,13 @@ export async function previewNormativeImport(file: File, documentCode: string, r
   return normalizeImportPreviewResponse(response, file.name);
 }
 
-export async function confirmNormativeImport(importId: string, replaceMode: NormativeReplaceMode): Promise<NormativeImportPreview> {
+export async function confirmNormativeImport(importId: string, originalFile: File, replaceMode: NormativeReplaceMode): Promise<NormativeImportPreview> {
   if (!importId.trim()) throw new Error('Сессия предварительного импорта завершена. Загрузите файл повторно.');
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/normatives/import/${encodeURIComponent(importId)}/confirm`, { replaceMode, confirm: true });
+  const formData = new FormData();
+  formData.append('file', originalFile);
+  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives/import/confirm', formData, {
+    params: { importId, replaceMode },
+  });
   return normalizeImportPreviewResponse(response);
 }
 

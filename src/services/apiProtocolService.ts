@@ -1157,14 +1157,14 @@ export async function approveProtocol(protocolId: string): Promise<Protocol> {
 }
 
 export async function returnToDraft(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-to-draft`);
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-for-revision`);
   return protocolFromActionResponse(protocolId, response);
 }
 
 export async function returnForRevision(protocolId: string, reason: string): Promise<Protocol> {
   const comment = reason.trim();
   if (!comment) throw new Error('Укажите причину возврата протокола на доработку.');
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-to-draft`, { comment, reason: comment });
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-for-revision`, { comment, reason: comment });
   return protocolFromActionResponse(protocolId, response);
 }
 

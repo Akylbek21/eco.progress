@@ -49,7 +49,7 @@ test('20-28 import wizard selects, previews and confirms once with exact contrac
   assert.match(page, /importStep === 5/);
   assert.match(page, /disabled=\{confirmImportDisabled\}/);
   assert.match(service, /\/normatives\/import\/preview/);
-  assert.match(service, /\{ replaceMode, confirm: true \}/);
+  assert.match(service, /params: \{ importId, replaceMode \}/);
   for (const code of ['UNSUPPORTED_FILE_FORMAT', 'IMPORT_EXPIRED', 'IMPORT_ALREADY_CONFIRMED']) assert.match(errors, new RegExp(code));
 });
 

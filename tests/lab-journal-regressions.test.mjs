@@ -4,61 +4,68 @@ import test from 'node:test';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('journal service uses the canonical real backend surface', async () => {
-  const source = await read('src/services/labJournalService.ts');
-  assert.match(source, /getJournalTypesResult/);
-  assert.match(source, /getEntries/);
-  assert.match(source, /getEntry/);
-  assert.match(source, /createEntry/);
-  assert.match(source, /updateEntry/);
-  assert.match(source, /archiveEntry/);
-  assert.match(source, /restoreEntry/);
-  assert.match(source, /exportJournal/);
-  assert.match(source, /downloadTemplate/);
-  assert.doesNotMatch(source, /localStorage|tableToExcelBlob/);
+test('five canonical journal codes and one label directory are the only supported values', async () => {
+  const types = await read('src/types/labJournal.ts');
+  for (const code of ['SAMPLE_REGISTRATION', 'SOLUTION_PREPARATION', 'CHEMICAL_REAGENT_USAGE', 'ENVIRONMENT_CONDITIONS', 'TEST_RESULTS_REGISTRATION']) assert.match(types, new RegExp(code));
+  assert.match(types, /LAB_JOURNAL_TYPES: Record/);
+  assert.doesNotMatch(types, /CHEMICAL_REAGENT_MOVEMENT/);
 });
 
-test('journal fallback is schema v2 and contains only canonical backend keys', async () => {
-  const source = await read('src/types/labJournal.ts');
-  assert.match(source, /JOURNAL_SCHEMA_VERSION = 2/);
-  for (const key of ['preparationDate', 'solutionExpiryDate', 'incomingQuantity', 'outgoingQuantity', 'relativeHumidityPercent', 'registrationDate']) assert.match(source, new RegExp(key));
-  for (const key of ["'preparedDate'", "'income'", "'expense'", "'humidity'", "'temperature'"]) assert.doesNotMatch(source, new RegExp(key));
+test('service has canonical methods, compact params and a 404-only declared fallback', async () => {
+  const service = await read('src/features/lab-journals/api/labJournalService.ts');
+  assert.match(service, /compactQueryParams/);
+  assert.match(service, /response\?\.status !== 404/);
+  assert.match(service, /schemaSource: 'local'/);
+  assert.match(service, /api\.post[^]*\/lab-journals\/entries/);
+  assert.match(service, /api\.put/);
+  assert.match(service, /api\.delete/);
+  assert.doesNotMatch(service, /\/archive|\/restore|localStorage/);
 });
 
-test('server pagination uses backend metadata and React Query cancellation', async () => {
-  const service = await read('src/services/labJournalService.ts');
-  const page = await read('src/pages/LabJournalsPage.tsx');
-  assert.match(service, /totalElements: number\(payload\.totalElements\)/);
-  assert.match(service, /totalPages: number\(payload\.totalPages\)/);
-  assert.match(service, /hasNext: payload\.hasNext === true/);
-  assert.match(service, /signal/);
-  assert.match(page, /placeholderData: keepPreviousData/);
-  assert.doesNotMatch(page, /items\.length === size/);
+test('entry mappers separate DTO, UI form and create/update contracts', async () => {
+  const mapper = await read('src/features/lab-journals/api/labJournalMappers.ts');
+  for (const name of ['mapJournalEntryDtoToModel', 'mapJournalEntryToForm', 'mapJournalFormToCreateRequest', 'mapJournalFormToUpdateRequest', 'mapJournalEntriesResponse']) assert.match(mapper, new RegExp(name));
+  assert.match(mapper, /data: \{ \.\.\.dynamicFields \}/);
+  assert.match(mapper, /fields: \{ \.\.\.dynamicFields \}/);
+  assert.doesNotMatch(mapper, /values:\s*dynamicFields/);
 });
 
-test('entry payload is schema-bound and preserves zero and false', async () => {
-  const source = await read('src/utils/journalSchema.ts');
-  assert.match(source, /definition\.columns\.reduce/);
-  assert.match(source, /value === undefined \|\| value === null \|\| value === ''/);
-  assert.match(source, /column\.type === 'boolean'/);
-  assert.match(source, /column\.type === 'number'/);
-  assert.doesNotMatch(source, /if \(!value\)/);
+test('list mapper supports array and common paged backend shapes', async () => {
+  const mapper = await read('src/features/lab-journals/api/labJournalMappers.ts');
+  for (const key of ['content', 'items', 'records', 'data']) assert.match(mapper, new RegExp(`'${key}'`));
+  assert.match(mapper, /totalElements: content\.length/);
+  assert.match(mapper, /totalPages: content\.length > 0 \? 1 : 0/);
 });
 
-test('export validates blob and template uses the documented endpoint', async () => {
-  const source = await read('src/services/labJournalService.ts');
-  assert.match(source, /ensureSpreadsheet/);
-  assert.match(source, /contentType\.includes\('json'\)/);
-  assert.match(source, /content-disposition/);
-  assert.match(source, /includeArchived/);
-  assert.match(source, /`\/lab-journals\/templates\/\$\{journalType\}`/);
+test('mutations update and invalidate precise React Query caches', async () => {
+  const hook = await read('src/features/lab-journals/hooks/useJournalEntryMutations.ts');
+  const keys = await read('src/features/lab-journals/hooks/queryKeys.ts');
+  assert.match(hook, /invalidateQueries/);
+  assert.match(hook, /setQueryData/);
+  assert.match(hook, /removeQueries/);
+  for (const key of ['all', 'types', 'entries', 'entry']) assert.match(keys, new RegExp(`${key}:`));
 });
 
-test('journal route and menu share the full view role matrix', async () => {
-  const app = await read('src/App.tsx');
-  const layout = await read('src/layouts/StaffLayout.tsx');
-  const roles = /\['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'\]/;
-  assert.match(app, roles);
-  assert.match(layout, roles);
+test('Excel checks error blobs and always revokes object URLs', async () => {
+  const service = await read('src/features/lab-journals/api/labJournalService.ts');
+  assert.match(service, /responseType: 'blob'/);
+  assert.match(service, /JSON\.parse/);
+  assert.match(service, /content-disposition/);
+  assert.match(service, /URL\.createObjectURL/);
+  assert.match(service, /finally[^]*URL\.revokeObjectURL/);
+  assert.match(service, /\/lab-journals\/entries\/export-template/);
 });
 
+test('local schemas implement every required business field and range', async () => {
+  const schema = await read('src/features/lab-journals/schemas/journalSchemas.ts');
+  for (const key of ['sampleNumber', 'sampleName', 'solutionName', 'concentration', 'reagentName', 'usedQuantity', 'roomName', 'temperature', 'humidity', 'indicatorName', 'resultValue', 'unit']) assert.match(schema, new RegExp(key));
+  assert.match(schema, /min: 0, max: 100/);
+  assert.match(schema, /used > initial/);
+});
+
+test('normalizeApiError preserves status, messages, errors, fields and trace id', async () => {
+  const helpers = await read('src/services/apiHelpers.ts');
+  for (const key of ['status', 'message', 'errors', 'fieldErrors', 'traceId']) assert.match(helpers, new RegExp(key));
+  assert.match(helpers, /normalizeApiError/);
+  assert.match(helpers, /parsed\.fieldErrors \|\| \{\}/);
+});

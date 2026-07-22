@@ -107,7 +107,7 @@ export const normalizeCompany = (raw: unknown): CompanyDetails => {
     samplingLocation: pick(source, ['samplingLocation', 'samplingPlace']),
     customerRepresentative: pick(source, ['customerRepresentative', 'clientRepresentative']),
     objects,
-    objectCount: numberValue(source.objectCount ?? source.objectsCount ?? source.facilityCount, objects.filter((item) => item.status === 'ACTIVE').length),
+    objectCount: numberValue(source.objectCount, objects.filter((item) => item.status === 'ACTIVE').length),
     status: archived(source.status ?? source.active) ? 'ARCHIVED' : 'ACTIVE',
     createdAt: pick(source, ['createdAt', 'created_at']),
     updatedAt: pick(source, ['updatedAt', 'updated_at']),
@@ -210,8 +210,15 @@ export async function archiveCompany(id: string): Promise<CompanyDetails> {
   return company.id ? company : { ...company, id, status: 'ARCHIVED' };
 }
 
-export async function getCompanyObjects(companyId: string, signal?: AbortSignal): Promise<CompanyObject[]> {
-  const response = await api.get<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects`, { signal });
+export async function restoreCompany(companyId: string | number): Promise<CompanyDetails> {
+  const id = String(companyId);
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${id}/restore`);
+  const company = normalizeCompany(unwrap(response));
+  return company.id ? company : { ...company, id, status: 'ACTIVE' };
+}
+
+export async function getCompanyObjects(companyId: string, includeArchivedObjects = false, signal?: AbortSignal): Promise<CompanyObject[]> {
+  const response = await api.get<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects`, { params: { includeArchivedObjects }, signal });
   const payload = unwrap(response);
   const source = record(payload);
   const items = Array.isArray(payload) ? payload
@@ -246,6 +253,14 @@ export async function archiveCompanyObject(companyId: string, objectId: string):
   const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}/archive`);
   const object = normalizeCompanyObject(unwrap(response), companyId);
   return object.id ? object : { ...object, id: objectId, companyId, status: 'ARCHIVED' };
+}
+
+export async function restoreCompanyObject(companyId: string | number, objectId: string | number): Promise<CompanyObject> {
+  const companyKey = String(companyId);
+  const objectKey = String(objectId);
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${companyKey}/objects/${objectKey}/restore`);
+  const object = normalizeCompanyObject(unwrap(response), companyKey);
+  return object.id ? object : { ...object, id: objectKey, companyId: companyKey, status: 'ACTIVE' };
 }
 
 export function getCompanyFieldErrors(error: unknown): FieldErrorResponse[] {

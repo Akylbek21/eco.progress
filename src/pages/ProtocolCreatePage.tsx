@@ -398,7 +398,7 @@ const ProtocolCreatePage = () => {
         if (defaultLaboratory?.active) setForm((current) => ({ ...current, laboratoryId: String(defaultLaboratory.id) }));
         if (!companyItems.length) setWarning('Компании не найдены. Добавьте компанию перед созданием протокола.');
         if (!activeLaboratories.length) setWarning((current) => current || 'Перед созданием протокола необходимо заполнить настройки лаборатории');
-        else if (!activeLaboratories.some((item) => item.defaultLaboratory)) setWarning((current) => current || 'Лаборатория по умолчанию не настроена');
+        else if (!activeLaboratories.some((item) => item.isDefault)) setWarning((current) => current || 'Лаборатория по умолчанию не настроена');
       } catch (error) {
         if (mounted) {
           const message = getApiErrorMessage(error, 'Не удалось загрузить лабораторию');

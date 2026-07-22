@@ -1359,7 +1359,7 @@ const NormativeDirectoryPage = () => {
     try {
       const importBatchId = stats.importId || stats.importBatchId;
       if (!importBatchId) throw new Error('Сессия предварительного импорта завершена. Загрузите файл повторно.');
-      const result = await confirmNormativeImport(importBatchId, replaceMode);
+      const result = await confirmNormativeImport(importBatchId, importFiles[0], replaceMode);
       setImportResult(result);
       setImportStep(5);
       toast.success('Нормативы импортированы');

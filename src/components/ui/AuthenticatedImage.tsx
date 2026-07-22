@@ -1,5 +1,5 @@
 import { ImgHTMLAttributes, ReactNode, useEffect, useState } from 'react';
-import api from '../../services/api';
+import { getAuthenticatedBlob } from '../../services/authenticatedFileService';
 
 type AuthenticatedImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> & {
   src?: string;
@@ -38,10 +38,11 @@ const AuthenticatedImage = ({ src = '', fallback = null, ...props }: Authenticat
     let objectUrl = '';
     setResolvedSrc('');
 
-    api.get<Blob>(requestPath, { responseType: 'blob' })
-      .then((response) => {
+    const controller = new AbortController();
+    getAuthenticatedBlob(requestPath, controller.signal)
+      .then((blob) => {
         if (!active) return;
-        objectUrl = URL.createObjectURL(response.data);
+        objectUrl = URL.createObjectURL(blob);
         setResolvedSrc(objectUrl);
       })
       .catch(() => {
@@ -50,6 +51,7 @@ const AuthenticatedImage = ({ src = '', fallback = null, ...props }: Authenticat
 
     return () => {
       active = false;
+      controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [src]);

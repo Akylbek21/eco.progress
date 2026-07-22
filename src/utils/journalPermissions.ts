@@ -1,14 +1,19 @@
 import type { User } from '../types';
-import type { JournalEntry } from '../types/labJournal';
+import type { LabJournalEntry } from '../types/labJournal';
 
-const viewRoles = new Set(['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']);
-const archiveRoles = new Set(['ADMIN', 'DIRECTOR', 'HEAD']);
+const readRoles = new Set(['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']);
+const writeRoles = new Set(['ADMIN', 'LABORATORY']);
 const role = (user?: User | null) => user?.role || '';
 
-export const canViewJournals = (user?: User | null) => viewRoles.has(role(user));
-export const canCreateJournalEntry = (user?: User | null, laboratoryId?: number) => viewRoles.has(role(user)) && Boolean(laboratoryId);
-export const canEditJournalEntry = (user?: User | null, entry?: JournalEntry | null) => viewRoles.has(role(user)) && Boolean(entry) && !entry?.archived;
-export const canArchiveJournalEntry = (user?: User | null, entry?: JournalEntry | null) => archiveRoles.has(role(user)) && Boolean(entry) && !entry?.archived;
-export const canRestoreJournalEntry = (user?: User | null, entry?: JournalEntry | null) => archiveRoles.has(role(user)) && Boolean(entry?.archived);
-export const canExportJournal = (user?: User | null) => viewRoles.has(role(user));
+export const canReadLabJournals = (user?: User | null) => readRoles.has(role(user));
+export const canCreateLabJournalEntry = (user?: User | null) => writeRoles.has(role(user));
+export const canEditLabJournalEntry = (user?: User | null, entry?: LabJournalEntry | null) => writeRoles.has(role(user)) && Boolean(entry);
+export const canDeleteLabJournalEntry = (user?: User | null, entry?: LabJournalEntry | null) => writeRoles.has(role(user)) && Boolean(entry);
+export const canExportLabJournals = (user?: User | null) => readRoles.has(role(user));
 
+export const canViewJournals = canReadLabJournals;
+export const canCreateJournalEntry = (user?: User | null, laboratoryId?: number) => canCreateLabJournalEntry(user) && Boolean(laboratoryId);
+export const canEditJournalEntry = canEditLabJournalEntry;
+export const canArchiveJournalEntry = canDeleteLabJournalEntry;
+export const canRestoreJournalEntry = () => false;
+export const canExportJournal = canExportLabJournals;
