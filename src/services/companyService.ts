@@ -44,6 +44,9 @@ const archived = (value: unknown): boolean =>
 
 export const normalizeCompanyObject = (raw: unknown, companyId = ''): CompanyObject => {
   const source = record(raw);
+  const location = record(source.location ?? source.geoLocation ?? source.geolocation);
+  const latitude = pick(source, ['latitude', 'lat']) || pick(location, ['latitude', 'lat']);
+  const longitude = pick(source, ['longitude', 'lng', 'lon']) || pick(location, ['longitude', 'lng', 'lon']);
   return {
     id: pick(source, ['id', 'objectId', 'facilityId', '_id']),
     companyId: pick(source, ['companyId', 'company_id']) || companyId,
@@ -53,7 +56,7 @@ export const normalizeCompanyObject = (raw: unknown, companyId = ''): CompanyObj
     address: pick(source, ['address', 'objectAddress', 'facilityAddress']),
     region: pick(source, ['region', 'regionName']),
     cityDistrict: pick(source, ['cityDistrict', 'city', 'district']),
-    coordinates: pick(source, ['coordinates', 'coords']),
+    coordinates: pick(source, ['coordinates', 'coords']) || pick(location, ['coordinates', 'coords']) || (latitude && longitude ? `${latitude},${longitude}` : ''),
     contactPerson: pick(source, ['contactPerson', 'responsiblePerson']),
     contactPhone: pick(source, ['contactPhone', 'responsiblePersonPhone']),
     primary: source.primary === true || source.isPrimary === true,

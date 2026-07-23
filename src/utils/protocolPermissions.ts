@@ -21,8 +21,10 @@ export const canReturnForRevision = (user: ProtocolUser, protocol: ProtocolLike)
 export const canApproveProtocol = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && statusOf(protocol) === 'READY_FOR_APPROVAL';
 export const canSignProtocol = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && statusOf(protocol) === 'APPROVED';
 export const canCreateCorrection = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && statusOf(protocol) === 'SIGNED';
-export const canCancelProtocol = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && !['SIGNED', 'REPLACED', 'CANCELLED', 'ARCHIVED'].includes(statusOf(protocol));
-export const canArchiveProtocol = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && statusOf(protocol) !== 'ARCHIVED';
+export const canCancelProtocol = (user: ProtocolUser, protocol: ProtocolLike) =>
+  hasRole(user, headRoles) && ['DRAFT', 'CALCULATED', 'NEEDS_REVISION'].includes(statusOf(protocol));
+export const canArchiveProtocol = (user: ProtocolUser, protocol: ProtocolLike) =>
+  hasRole(user, headRoles) && ['REPLACED', 'CANCELLED'].includes(statusOf(protocol));
 export const canDownloadProtocol = (user: ProtocolUser, protocol: ProtocolLike) => canViewProtocol(user, protocol);
 
 export type ProtocolPermissions = {

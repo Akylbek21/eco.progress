@@ -1,6 +1,7 @@
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import type { Protocol } from '../../types/protocols';
+import { collectProtocolDevices } from '../../utils/protocolDevices';
 
 type Props = {
   open: boolean;
@@ -11,7 +12,8 @@ type Props = {
 };
 
 const SignProtocolModal = ({ open, loading = false, protocol, onClose, onConfirm }: Props) => {
-  const expiredDevices = protocol?.measurementDevices.filter((item) => {
+  const devices = protocol ? collectProtocolDevices(protocol) : [];
+  const expiredDevices = devices.filter((item) => {
     const validUntil = item.deviceSnapshot.verificationValidUntil;
     return item.deviceSnapshot.status === 'EXPIRED' || item.deviceSnapshot.status === 'ARCHIVED' || Boolean(validUntil && validUntil < new Date().toISOString().slice(0, 10));
   }).length || 0;
@@ -30,7 +32,7 @@ const SignProtocolModal = ({ open, loading = false, protocol, onClose, onConfirm
           <div><dt className="text-slate-500">Лаборатория</dt><dd className="font-semibold">{protocol.laboratory.laboratoryName || '—'}</dd></div>
           <div><dt className="text-slate-500">Подписант</dt><dd className="font-semibold">{protocol.laboratory.laboratoryHead || protocol.approver || '—'}</dd></div>
           <div><dt className="text-slate-500">Аттестат до</dt><dd className="font-semibold">{protocol.laboratory.accreditationValidUntil || '—'}</dd></div>
-          <div><dt className="text-slate-500">Приборы</dt><dd className="font-semibold">{protocol.measurementDevices.length}</dd></div>
+          <div><dt className="text-slate-500">Приборы</dt><dd className="font-semibold">{devices.length}</dd></div>
           <div><dt className="text-slate-500">Просроченные приборы</dt><dd className={expiredDevices ? 'font-semibold text-rose-700' : 'font-semibold text-emerald-700'}>{expiredDevices}</dd></div>
         </dl>
       )}

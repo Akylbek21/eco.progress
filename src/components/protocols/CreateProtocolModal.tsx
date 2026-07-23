@@ -25,7 +25,7 @@ import type {
   ProtocolTemplateKey,
   WeatherConditionsStatus,
 } from '../../types/protocols';
-import { physicalFactorTypes, protocolTemplates, subtypeName, templateName } from '../../data/protocolTemplates';
+import { templateName } from '../../data/protocolTemplates';
 import { canSearchNormative as canSearch, NORMATIVE_SEARCH_DEBOUNCE_MS, normativeSearchItemToRecord, searchNormatives } from '../../services/normativeSearchService';
 import { resolveProtocolNormativeContext } from '../../data/protocolNormativeContext';
 import {
@@ -33,6 +33,7 @@ import {
   protocolNormativeDisplayValue,
 } from '../../utils/protocolNormativeSearch';
 import { normalizeDecimal } from '../../utils/decimalInput';
+import { PROTOCOL_TEMPLATES, isProtocolTemplateId } from '../../features/protocols/utils/protocolTemplates';
 
 type Props = {
   open: boolean;
@@ -58,7 +59,12 @@ const today = () => new Date().toISOString().slice(0, 10);
 const DEFAULT_WEATHER_TIME = '12:00';
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = `${inputClass} bg-slate-100 text-slate-600`;
-const allowedTemplateIds = new Set(protocolTemplates.map((item) => item.id));
+const canonicalTemplates: ProtocolTemplate[] = Object.values(PROTOCOL_TEMPLATES).map((item) => ({
+  id: item.id,
+  name: item.label,
+  description: item.requiresSample ? 'Протокол лабораторных исследований' : 'Протокол измерений',
+}));
+const allowedTemplateIds = new Set(canonicalTemplates.map((item) => item.id));
 const searchUnavailableMessage = 'Поиск временно недоступен. Проверьте подключение и повторите запрос.';
 const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
 const notFoundSearchMessage = 'Норматив или показатель не найден. Проверьте код или добавьте норматив в справочник.';
@@ -96,7 +102,7 @@ const weatherLabels: Record<WeatherConditionsStatus, string> = {
 const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCreate }: Props) => {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
-  const [templateId, setTemplateId] = useState<ProtocolTemplateKey | ''>('');
+  const [templateId, setTemplateId] = useState<ProtocolTemplateId | ''>('');
   const [subtype, setSubtype] = useState<ProtocolSubtype | ''>('');
   const [waterType, setWaterType] = useState('DRINKING_WATER');
   const [waterUseCategory, setWaterUseCategory] = useState('I');
@@ -142,7 +148,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
 
   const visibleTemplates = useMemo(() => {
     const backendTemplates = (templates || []).filter((item) => allowedTemplateIds.has(item.id));
-    return protocolTemplates.map((fallback) => backendTemplates.find((item) => item.id === fallback.id) || fallback);
+    return canonicalTemplates.map((fallback) => backendTemplates.find((item) => item.id === fallback.id) || fallback);
   }, [templates]);
   const filteredCompanies = useMemo(() => {
     const query = companySearch.trim().toLowerCase();
@@ -152,9 +158,9 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   const selectedObject = objects.find((item) => item.id === objectId);
   const canUseAdvanced = user?.role === 'ADMIN' || user?.role === 'HEAD' || user?.role === 'DIRECTOR';
   const laboratoryAccreditation = accreditationState(laboratory?.accreditationValidUntil);
-  const isPhysicalFactors = templateId === 'physical_factors';
+  const isPhysicalFactors = ['microclimate', 'lighting', 'noise_vibration'].includes(templateId);
   const isSoilTemplate = templateId === 'soil';
-  const isWaterTemplate = templateId === 'water' || templateId === 'water_wastewater';
+  const isWaterTemplate = templateId === 'water_wastewater';
 
   const searchNormativeItems = async (query: string, signal?: AbortSignal) => {
     const normativeTemplateId = isPhysicalFactors
@@ -164,12 +170,10 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
           ? 'lighting'
           : ['NOISE', 'VIBRATION', 'NOISE_VIBRATION', 'INFRASOUND', 'ULTRASOUND'].includes(String(subtype))
             ? 'noise_vibration'
-            : 'uv_emf_laser'
+            : 'noise_vibration'
       : isWaterTemplate
         ? 'water'
-        : templateId === 'industrial_emissions'
-          ? 'ambient_air'
-          : String(templateId);
+        : String(templateId);
     const result = await searchNormatives({
       query,
       page: 0,
@@ -324,6 +328,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         .filter((item) => item.status !== 'CANCELLED')
         .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
       if (!previous) return setError('Подходящий прошлый протокол не найден.');
+      if (!isProtocolTemplateId(previous.templateId)) return setError('Прошлый протокол использует устаревший тип и не может быть скопирован.');
       setTemplateId(previous.templateId);
       setSubtype(previous.subtype || '');
       setPlace(previous.measurementPlace || String(previous.results[0]?.values.measurementPlace || previous.results[0]?.values.samplingPlace || ''));
@@ -442,7 +447,6 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   const validate = () => {
     const next: Record<string, string> = {};
     if (step === 1 && !templateId) next.templateId = 'Выберите тип протокола';
-    if (step === 1 && templateId === 'physical_factors' && !subtype) next.subtype = 'Выберите подтип';
     if (step === 2 && !company) next.company = 'Выберите компанию';
     if (step === 2 && !objectId) next.objectId = 'Выберите объект';
     if (step === 2 && !measurementDate) next.measurementDate = 'Укажите дату';
@@ -499,7 +503,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         minValue: row.normative?.min || '',
         maxValue: row.normative?.max || row.normative?.value || '',
         normativeDocument: row.normative?.normativeDocument || '',
-        sourceDocumentCode: row.normative?.sourceDocumentCode || sourceDocumentCodeForTemplate(templateId, templateId === 'physical_factors'),
+        sourceDocumentCode: row.normative?.sourceDocumentCode || sourceDocumentCodeForTemplate(templateId, isPhysicalFactors),
         sourceDocumentName: row.normative?.sourceDocumentName || '',
         documentNumber: row.normative?.documentNumber || '',
         documentDate: row.normative?.documentDate || '',
@@ -522,7 +526,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         comparisonType: row.normative?.comparisonType || '',
         measurementPlace: place,
         samplingPlace: place,
-        ...(templateId === 'physical_factors' ? { factorType: subtype || '', subtype: subtype || '' } : {}),
+        ...(isPhysicalFactors ? { factorType: subtype || '', subtype: subtype || '' } : {}),
         sourceNumber,
         measurementDate,
         measurementTime,
@@ -531,11 +535,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
     }));
     try {
       setError('');
-      const canonicalTemplateId: ProtocolTemplateId | null = templateId === 'water'
-        ? 'water_wastewater'
-        : templateId === 'physical_factors'
-          ? subtype === 'MICROCLIMATE' ? 'microclimate' : subtype === 'LIGHTING' ? 'lighting' : ['NOISE', 'VIBRATION', 'NOISE_VIBRATION', 'INFRASOUND', 'ULTRASOUND'].includes(subtype) ? 'noise_vibration' : null
-          : ['ambient_air', 'workplace_air', 'soil', 'microclimate', 'lighting', 'noise_vibration', 'water_wastewater'].includes(templateId) ? templateId as ProtocolTemplateId : null;
+      const canonicalTemplateId: ProtocolTemplateId | null = allowedTemplateIds.has(templateId) ? templateId : null;
       if (!canonicalTemplateId) {
         setError('Выбранный устаревший тип протокола больше не поддерживается. Выберите конкретный тип.');
         return;
@@ -544,7 +544,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         companyId: company.id,
         objectId,
         templateId: canonicalTemplateId,
-        subtype: templateId === 'physical_factors' ? subtype || undefined : undefined,
+        subtype: isPhysicalFactors ? subtype || undefined : undefined,
         protocolDate: measurementDate,
         sampleDate: measurementDate,
         testingStartDate: measurementDate,
@@ -591,7 +591,11 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {visibleTemplates.map((item) => (
-              <button key={item.id} type="button" onClick={() => { setTemplateId(item.id); if (item.id !== 'physical_factors') setSubtype(''); }}
+              <button key={item.id} type="button" onClick={() => {
+                const id = item.id as ProtocolTemplateId;
+                setTemplateId(id);
+                setSubtype(id === 'microclimate' ? 'MICROCLIMATE' : id === 'lighting' ? 'LIGHTING' : id === 'noise_vibration' ? 'NOISE_VIBRATION' : '');
+              }}
                 className={`min-h-24 rounded-2xl border p-4 text-left ${templateId === item.id ? 'border-eco-600 bg-eco-50 ring-2 ring-eco-100' : 'border-slate-200 hover:border-eco-300'}`}>
                 <span className="font-bold text-slate-900">{item.name}</span>
                 <span className="mt-2 block text-xs font-semibold text-slate-500">{item.description}</span>
@@ -599,14 +603,6 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
             ))}
           </div>
           {fieldErrors.templateId && <p className="text-sm font-semibold text-rose-700">{fieldErrors.templateId}</p>}
-          {templateId === 'physical_factors' && <div>
-            <p className="mb-2 text-sm font-bold text-slate-700">Подтип физического фактора</p>
-            <div className="flex flex-wrap gap-2">
-              {physicalFactorTypes.map((item) => <button key={item.value} type="button" onClick={() => setSubtype(item.value)}
-                className={`rounded-xl border px-4 py-2.5 text-sm font-bold ${subtype === item.value ? 'border-eco-600 bg-eco-50 text-eco-800' : 'border-slate-200 text-slate-600'}`}>{item.label}</button>)}
-            </div>
-            {fieldErrors.subtype && <p className="mt-2 text-sm font-semibold text-rose-700">{fieldErrors.subtype}</p>}
-          </div>}
           {isWaterTemplate && <div className="grid gap-3 rounded-2xl border border-sky-100 bg-sky-50/60 p-4 sm:grid-cols-2">
             <label className="space-y-2 text-sm font-bold text-slate-700">Тип воды
               <select value={waterType} onChange={(event) => setWaterType(event.target.value)} className={inputClass}>
@@ -649,9 +645,6 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
             <label className="space-y-2 text-sm font-bold text-slate-700">Место или источник
               <input value={place} onChange={(event) => setPlace(event.target.value)} placeholder={selectedObject?.samplingLocation || 'Например, котёл №1'} className={inputClass} />
             </label>
-            {templateId === 'industrial_emissions' && <label className="space-y-2 text-sm font-bold text-slate-700">Номер источника
-              <input value={sourceNumber} onChange={(event) => setSourceNumber(event.target.value)} placeholder="0001" className={inputClass} />
-            </label>}
             <label className="space-y-2 text-sm font-bold text-slate-700">Дата замера
               <input
                 type="date"
@@ -737,20 +730,6 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         </section>}
 
         {step === 3 && <section className="space-y-5">
-          {templateId === 'industrial_emissions' && <div className="rounded-2xl border border-eco-100 bg-eco-50/50 p-4">
-            <h3 className="font-black text-slate-900">Параметры источника</h3>
-            <p className="mt-1 text-xs text-slate-500">Вводятся один раз и применяются ко всем веществам источника {sourceNumber || '—'}.</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <label className="text-xs font-bold text-slate-600">Скорость потока, м/с<input type="number" step="any" value={sourceParameters.flowSpeed} onChange={(e) => setSourceParameters({ ...sourceParameters, flowSpeed: e.target.value })} className={`${inputClass} mt-1`} /></label>
-              <label className="text-xs font-bold text-slate-600">Форма газохода<select value={sourceParameters.ductShape} onChange={(e) => setSourceParameters({ ...sourceParameters, ductShape: e.target.value })} className={`${inputClass} mt-1`}><option value="ROUND">Круглый</option><option value="RECTANGULAR">Прямоугольный</option></select></label>
-              {sourceParameters.ductShape === 'ROUND'
-                ? <label className="text-xs font-bold text-slate-600">Диаметр, м<input type="number" step="any" value={sourceParameters.diameter} onChange={(e) => setSourceParameters({ ...sourceParameters, diameter: e.target.value })} className={`${inputClass} mt-1`} /></label>
-                : <><label className="text-xs font-bold text-slate-600">Ширина, м<input type="number" step="any" value={sourceParameters.width} onChange={(e) => setSourceParameters({ ...sourceParameters, width: e.target.value })} className={`${inputClass} mt-1`} /></label><label className="text-xs font-bold text-slate-600">Высота, м<input type="number" step="any" value={sourceParameters.height} onChange={(e) => setSourceParameters({ ...sourceParameters, height: e.target.value })} className={`${inputClass} mt-1`} /></label></>}
-              <label className="text-xs font-bold text-slate-600">Температура, °C<input type="number" step="any" value={sourceParameters.temperature} onChange={(e) => setSourceParameters({ ...sourceParameters, temperature: e.target.value })} className={`${inputClass} mt-1`} /></label>
-              <label className="text-xs font-bold text-slate-600">Давление, кПа<input type="number" step="any" value={sourceParameters.pressureKpa} onChange={(e) => setSourceParameters({ ...sourceParameters, pressureKpa: e.target.value })} className={`${inputClass} mt-1`} /></label>
-            </div>
-          </div>}
-
           <div>
             <label className="text-sm font-bold text-slate-700">{isPhysicalFactors ? 'Показатель' : 'Код или название вещества'}</label>
             <div className="relative mt-2">

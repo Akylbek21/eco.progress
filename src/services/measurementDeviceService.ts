@@ -3,8 +3,6 @@ import { extractItem, extractList } from './apiHelpers';
 import type { DirectoryQuery, MeasurementDevice } from '../types/protocols';
 import type { MeasurementDevice as CanonicalMeasurementDevice, MeasurementDeviceListParams, MeasurementDevicePage } from '../types/measurementDevices';
 
-const useMocks = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
-const mockDelay = () => new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 301)));
 type UnknownRecord = Record<string, unknown>;
 const record = (value: unknown): UnknownRecord => value && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : {};
 const text = (value: unknown) => value === undefined || value === null ? '' : String(value).trim();
@@ -41,23 +39,30 @@ export async function getMeasurementDevicesPage(params: MeasurementDeviceListPar
 }
 
 export async function getMeasurementDevices(params?: DirectoryQuery): Promise<MeasurementDevice[]> {
-  if (useMocks) {
-    await mockDelay();
-    const { mockDevices } = await import('../mocks/mockDevices');
-    const query = String(params?.search || '').toLowerCase();
-    return mockDevices.filter((item) => (!params?.status || item.status === params.status) && (!query || `${item.name} ${item.model} ${item.serialNumber}`.toLowerCase().includes(query)));
-  }
   const response = await api.get<ApiResponse<unknown> | unknown>('/measurement-devices', { params });
   return extractList(response, ['devices', 'measurementDevices']) as MeasurementDevice[];
 }
 
 export async function getAvailableMeasurementDevices(params?: DirectoryQuery): Promise<MeasurementDevice[]> {
-  if (useMocks) {
-    const devices = await getMeasurementDevices(params);
-    return devices.filter((device) => device.status === 'VALID' || device.status === 'EXPIRING');
-  }
   const response = await api.get<ApiResponse<unknown> | unknown>('/measurement-devices/available', { params });
-  return extractList(response, ['devices', 'measurementDevices']) as MeasurementDevice[];
+  return extractList(response, ['devices', 'measurementDevices'])
+    .map((raw) => {
+      const source = record(raw);
+      return {
+        ...source,
+        id: text(source.id ?? source.measurementDeviceId),
+        name: text(source.name),
+        model: text(source.model),
+        serialNumber: text(source.serialNumber),
+        verificationCertificateNumber: text(source.verificationCertificateNumber ?? source.verificationNumber),
+        verificationDate: text(source.verificationDate).slice(0, 10),
+        verificationValidUntil: text(source.verificationValidUntil).slice(0, 10),
+        units: text(source.units),
+        status: text(source.status).toUpperCase() || 'ACTIVE',
+        archived: source.archived === true,
+        laboratoryId: source.laboratoryId as string | number | undefined,
+      } as MeasurementDevice;
+    });
 }
 
 export async function createMeasurementDevice(payload: Omit<MeasurementDevice, 'id'>): Promise<MeasurementDevice> {

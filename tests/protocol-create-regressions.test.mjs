@@ -47,3 +47,13 @@ test('mock quick-create preserves production environment metadata', async () => 
   assert.doesNotMatch(source, /source: 'MANUAL', dataSource: 'manual'/);
 });
 
+test('409 creation conflict preserves form and performs no automatic lookup or retry', async () => {
+  const source = await read('src/pages/ProtocolCreatePage.tsx');
+  assert.match(source, /parsed\.status === 409/);
+  assert.doesNotMatch(source, /protocolService\.getProtocol\(parsed\.resourceId\)/);
+  assert.doesNotMatch(source, /protocolService\.getProtocolsPage\(/);
+  assert.match(source, /createInFlightRef\.current/);
+  assert.match(source, /Object\.entries\(parsed\.fieldErrors\)/);
+  assert.match(source, /parsed\.traceId/);
+  assert.match(source, /setFormError\(displayedMessage\)/);
+});

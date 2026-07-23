@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getApiErrorMessage, type ApiResponse } from './apiHelpers';
+import { getApiErrorMessage, normalizeApiError, type ApiResponse } from './apiHelpers';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : '/api',
@@ -41,6 +41,7 @@ api.interceptors.response.use(
     }
 
     if (import.meta.env.DEV) {
+      const parsed = normalizeApiError(error);
       console.error('[API error]', {
         url: error.config?.url,
         baseURL: error.config?.baseURL,
@@ -48,6 +49,11 @@ api.interceptors.response.use(
         params: error.config?.params,
         status: error.response?.status,
         code: error.code,
+        backendCode: parsed.code,
+        message: parsed.message,
+        fieldErrors: parsed.fieldErrors,
+        traceId: parsed.traceId,
+        resourceId: parsed.resourceId,
       });
     }
     error.message = getApiErrorMessage(error, error.message);

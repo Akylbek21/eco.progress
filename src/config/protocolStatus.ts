@@ -4,18 +4,18 @@ export type ProtocolStatusColor = 'neutral' | 'info' | 'warning' | 'success' | '
 
 export const protocolStatusConfig: Record<ProtocolStatus, { label: string; editable: boolean; color: ProtocolStatusColor }> = {
   DRAFT: { label: 'Черновик', editable: true, color: 'neutral' },
-  CALCULATED: { label: 'Рассчитан', editable: true, color: 'info' },
-  READY_FOR_APPROVAL: { label: 'На утверждении', editable: false, color: 'warning' },
-  NEEDS_REVISION: { label: 'На доработке', editable: true, color: 'warning' },
-  APPROVED: { label: 'Утверждён', editable: false, color: 'info' },
+  CALCULATED: { label: 'Расчёт выполнен', editable: true, color: 'info' },
+  READY: { label: 'Подготовлен', editable: false, color: 'info' },
+  READY_FOR_APPROVAL: { label: 'На проверке', editable: false, color: 'warning' },
+  NEEDS_REVISION: { label: 'Нужно исправить', editable: true, color: 'warning' },
+  APPROVED: { label: 'Утверждён', editable: false, color: 'success' },
   SIGNED: { label: 'Подписан', editable: false, color: 'success' },
-  REPLACED: { label: 'Заменён', editable: false, color: 'neutral' },
-  CANCELLED: { label: 'Аннулирован', editable: false, color: 'danger' },
-  ARCHIVED: { label: 'Архивный', editable: false, color: 'neutral' },
+  REPLACED: { label: 'Заменён новой версией', editable: false, color: 'neutral' },
+  CANCELLED: { label: 'Отменён', editable: false, color: 'danger' },
+  ARCHIVED: { label: 'В архиве', editable: false, color: 'neutral' },
 };
 
 const legacyStatusMap: Record<LegacyProtocolStatus, ProtocolStatus> = {
-  READY: 'READY_FOR_APPROVAL',
   READY_FOR_APPROVE: 'READY_FOR_APPROVAL',
   RETURNED: 'NEEDS_REVISION',
   CORRECTION: 'NEEDS_REVISION',

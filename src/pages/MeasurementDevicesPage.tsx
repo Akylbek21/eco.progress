@@ -6,12 +6,15 @@ import { useToast } from '../hooks/useToast';
 import { archiveMeasurementDevice, createMeasurementDevice, getMeasurementDevices, updateMeasurementDevice } from '../services/measurementDeviceService';
 import type { MeasurementDevice, MeasurementDeviceStatus } from '../types/protocols';
 
-const statuses: MeasurementDeviceStatus[] = ['VALID', 'EXPIRING', 'EXPIRED', 'ARCHIVED'];
+const statuses: MeasurementDeviceStatus[] = ['VALID', 'ACTIVE', 'EXPIRING', 'EXPIRED', 'INACTIVE', 'OUT_OF_SERVICE', 'ARCHIVED'];
 
 const statusLabels: Record<MeasurementDeviceStatus, string> = {
   VALID: 'Поверка действует',
+  ACTIVE: 'Активен',
   EXPIRING: 'Скоро истекает',
   EXPIRED: 'Поверка истекла',
+  INACTIVE: 'Неактивен',
+  OUT_OF_SERVICE: 'Не используется',
   ARCHIVED: 'Архивный',
 };
 
@@ -30,8 +33,11 @@ const effectiveStatus = (device: MeasurementDevice): MeasurementDeviceStatus => 
 
 const statusClass: Record<MeasurementDeviceStatus, string> = {
   VALID: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  ACTIVE: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
   EXPIRING: 'bg-amber-50 text-amber-800 ring-amber-200',
   EXPIRED: 'bg-rose-50 text-rose-800 ring-rose-200',
+  INACTIVE: 'bg-slate-100 text-slate-600 ring-slate-200',
+  OUT_OF_SERVICE: 'bg-rose-50 text-rose-800 ring-rose-200',
   ARCHIVED: 'bg-slate-100 text-slate-600 ring-slate-200',
 };
 

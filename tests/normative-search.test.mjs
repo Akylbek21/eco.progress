@@ -80,13 +80,11 @@ test('creation page preserves server items and the complete selected normative',
   assert.match(source, /searchDone && !searchError/);
 });
 
-test('router uses the existing protocol create and editor implementations', async () => {
+test('router keeps protocol creation inside the list wizard', async () => {
   const app = await read('src/App.tsx');
-  const quickPage = await read('src/pages/QuickProtocolCreatePage.tsx');
-  assert.match(app, /path="\/staff\/protocols\/create"[\s\S]*<QuickProtocolCreatePage/);
-  assert.match(app, /path="\/staff\/protocols\/new"[\s\S]*<ProtocolCreatePage/);
+  assert.match(app, /path="\/staff\/protocols\/create"[^\n]*<Navigate to="\/staff\/protocols" replace/);
+  assert.match(app, /path="\/staff\/protocols\/new"[^\n]*<Navigate to="\/staff\/protocols" replace/);
   assert.match(app, /path="\/staff\/protocols\/:protocolId"[\s\S]*<ProtocolEditorPage/);
-  assert.match(quickPage, /export \{ default \} from '\.\/ProtocolCreatePage'/);
 });
 
 test('protocol editor uses the shared single-request normative search', async () => {

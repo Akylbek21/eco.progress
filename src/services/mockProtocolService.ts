@@ -491,7 +491,6 @@ export async function changeStatus(protocolId: string, status: ProtocolStatus): 
 
 export const readyForApproval = (id: string) => changeStatus(id, 'READY_FOR_APPROVAL');
 export const approveProtocol = (id: string) => changeStatus(id, 'APPROVED');
-export const returnToDraft = (id: string) => changeStatus(id, 'DRAFT');
 export const returnForRevision = async (id: string, _reason: string) => changeStatus(id, 'NEEDS_REVISION');
 export const cancelProtocol = (id: string) => changeStatus(id, 'CANCELLED');
 export const signProtocol = (id: string) => changeStatus(id, 'SIGNED');

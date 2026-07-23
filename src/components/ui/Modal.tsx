@@ -10,9 +10,10 @@ type ModalProps = {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'wizard';
   closeOnBackdrop?: boolean;
   loading?: boolean;
+  contentClassName?: string;
   onClose: () => void;
 };
 
@@ -21,6 +22,7 @@ const sizeClass: Record<NonNullable<ModalProps['size']>, string> = {
   md: 'max-w-2xl',
   lg: 'max-w-4xl',
   xl: 'max-w-6xl',
+  wizard: 'h-dvh max-h-dvh max-w-none rounded-none sm:h-[92vh] sm:max-h-[92vh] sm:w-[94vw] sm:max-w-[1400px] sm:rounded-[24px]',
 };
 
 const Modal = ({
@@ -33,10 +35,15 @@ const Modal = ({
   size = 'md',
   closeOnBackdrop = true,
   loading = false,
+  contentClassName,
   onClose,
 }: ModalProps) => {
   const visible = isOpen ?? open ?? false;
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  const loadingRef = useRef(loading);
+  onCloseRef.current = onClose;
+  loadingRef.current = loading;
 
   useEffect(() => {
     if (!visible) return;
@@ -49,7 +56,7 @@ const Modal = ({
     window.requestAnimationFrame(() => (focusable()[0] || dialogRef.current)?.focus());
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !loading) onClose();
+      if (event.key === 'Escape' && !loadingRef.current) onCloseRef.current();
       if (event.key === 'Tab') {
         const items = focusable();
         if (!items.length) { event.preventDefault(); dialogRef.current?.focus(); return; }
@@ -66,7 +73,7 @@ const Modal = ({
       window.removeEventListener('keydown', onKeyDown);
       previouslyFocused?.focus();
     };
-  }, [visible, loading, onClose]);
+  }, [visible]);
 
   if (!visible) return null;
 
@@ -109,7 +116,7 @@ const Modal = ({
             </button>
           </div>
         )}
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+        <div className={clsx('min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6', contentClassName)}>
           {loading && (
             <div className="mb-4 rounded-2xl bg-eco-50 px-4 py-3 text-sm font-semibold text-eco-800">
               Выполняем действие...

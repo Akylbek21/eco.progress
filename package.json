@@ -14,7 +14,7 @@
     "content:export": "node --loader ./scripts/ts-loader.mjs scripts/content-export.mjs",
     "content:migrate:dry-run": "node --loader ./scripts/ts-loader.mjs scripts/content-export.mjs --dry-run",
     "build": "npm run generate:sitemap && tsc && vite build && npm run prerender && npm run seo:audit",
-    "test": "node --test tests/*.test.mjs && vitest run tests/lab-journal-api.test.ts tests/laboratory-api.test.ts tests/laboratory-components.test.tsx",
+    "test": "node --test tests/*.test.mjs && vitest run tests/lab-journal-api.test.ts tests/laboratory-api.test.ts tests/laboratory-components.test.tsx tests/protocol-domain.test.ts tests/protocol-details.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

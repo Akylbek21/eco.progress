@@ -16,7 +16,7 @@ import { getActiveCompanies, getCompanyObjects } from '../services/companyServic
 import { getActiveLaboratories, getLaboratoryEmployees } from '../services/laboratorySettingsService';
 import { getAvailableMeasurementDevices } from '../services/measurementDeviceService';
 import protocolService from '../services/protocolService';
-import { getApiErrorMessage } from '../services/apiHelpers';
+import { getApiErrorMessage, normalizeApiError } from '../services/apiHelpers';
 import { normativeSearchItemToRecord, canSearchNormative as canSearch } from '../services/normativeSearchService';
 import { useNormativeSearch } from '../hooks/useNormativeSearch';
 import { useToast } from '../hooks/useToast';
@@ -31,6 +31,8 @@ import {
 import { resolveMeasurementDeviceId, resolveResultMeasurementDeviceId } from '../utils/protocolResultAliases';
 import { DEFAULT_PROTOCOL_PRINT_VISIBILITY } from '../utils/protocolPrintVisibility';
 import { normalizeDecimal } from '../utils/decimalInput';
+import { isDeviceValidForDate } from '../utils/protocolDevices';
+import { normalizeProtocolError } from '../utils/protocolError';
 
 type SelectedExecutor = {
   laboratoryEmployeeId: string;
@@ -167,9 +169,11 @@ const ProtocolCreatePage = () => {
   const objectRequestRef = useRef(0);
   const employeeRequestRef = useRef(0);
   const manuallyEditedWeatherRef = useRef(new Set<keyof Pick<QuickForm, 'temperature' | 'humidity' | 'pressureKpa' | 'windSpeed'>>());
+  const createInFlightRef = useRef(false);
   const [isCreating, setIsCreating] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [formError, setFormError] = useState('');
+  const [errorResultIndex, setErrorResultIndex] = useState<number | null>(null);
   const [booting, setBooting] = useState(true);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [templateError, setTemplateError] = useState('');
@@ -241,6 +245,14 @@ const ProtocolCreatePage = () => {
   const sourceDocumentCode = selectedChoice.sourceDocumentCode;
   const selectedCompany = companies.find((item) => item.id === form.companyId);
   const selectedObject = objects.find((item) => String(item.id) === String(form.objectId));
+  const selectableMeasurementDevices = useMemo(
+    () => measurementDevices.filter((device) =>
+      !device.archived
+      && isDeviceValidForDate(device, form.measurementDate)
+      && (!device.laboratoryId || String(device.laboratoryId) === String(form.laboratoryId)),
+    ),
+    [measurementDevices, form.measurementDate, form.laboratoryId],
+  );
   const filteredCompanies = useMemo(() => {
     const query = companySearch.trim().toLowerCase();
     if (!query) return companies.slice(0, 8);
@@ -336,6 +348,7 @@ const ProtocolCreatePage = () => {
   const setField = <K extends keyof QuickForm>(key: K, value: QuickForm[K]) => {
     setDirty(true);
     setFormError('');
+    setErrorResultIndex(null);
     setForm((current) => ({ ...current, [key]: value }));
   };
   const setPrintVisibility = (printVisibility: ProtocolPrintVisibility) => setField('printVisibility', printVisibility);
@@ -344,7 +357,7 @@ const ProtocolCreatePage = () => {
     setIsLoadingTemplates(true);
     setTemplateError('');
     try {
-      const templates = await protocolService.getProtocolTemplates();
+      const templates = await protocolService.getProtocolTypes();
       const ids = new Set(templates.map((template) => String(template.id).trim().toLowerCase()));
       setBackendTemplateIds(ids);
       const firstAvailable = PROTOCOL_TYPE_OPTIONS.find((option) => ids.has(PROTOCOL_TYPE_CONFIG[option.key].templateId));
@@ -476,7 +489,7 @@ const ProtocolCreatePage = () => {
         const active = items.filter((item) => item.status === 'ACTIVE' && !item.virtual);
         setObjects(active);
         if (!active.length) setObjectWarning('У компании не заполнен объект. Заполните объект в карточке компании.');
-        setForm((current) => ({ ...current, objectId: active.find((item) => item.primary)?.id || active[0]?.id || '' }));
+        setForm((current) => ({ ...current, objectId: active.some((item) => item.id === current.objectId) ? current.objectId : '' }));
       })
       .catch((error) => {
         if (requestId !== objectRequestRef.current) return;
@@ -520,6 +533,20 @@ const ProtocolCreatePage = () => {
         toast.error('Не удалось загрузить исполнителей лаборатории', error instanceof Error ? error.message : undefined);
       });
   }, [form.laboratoryId, laboratories]);
+
+  useEffect(() => {
+    if (devicesLoading || !measurementDevices.length) return;
+    const selectableIds = new Set(selectableMeasurementDevices.map((device) => String(device.id)));
+    const invalidCount = selectedIndicators.filter((item) => item.measurementDeviceId && !selectableIds.has(String(item.measurementDeviceId))).length;
+    if (!invalidCount) return;
+    setSelectedIndicators((current) => current.map((item) =>
+      item.measurementDeviceId && !selectableIds.has(String(item.measurementDeviceId))
+        ? { ...item, measurementDeviceId: '', deviceId: '', measurementDevice: undefined, device: undefined }
+        : item,
+    ));
+    setBulkDeviceId('');
+    toast.warning(`Прибор очищен в ${invalidCount} строках`, 'Он недействителен на выбранную дату измерения или не относится к выбранной лаборатории.');
+  }, [devicesLoading, measurementDevices.length, selectableMeasurementDevices, selectedIndicators, toast]);
 
   useEffect(() => {
     manuallyEditedWeatherRef.current.clear();
@@ -825,6 +852,8 @@ const ProtocolCreatePage = () => {
     if (selectedIndicators.some((item) => !item.result.trim())) return 'Введите фактические значения по всем выбранным показателям';
     if (selectedIndicators.some((item) => !isNumericMeasurement(item.result))) return 'Фактические значения должны быть числами; допустимы префиксы <, <=, > или >=';
     if (selectedIndicators.some((item) => !item.measurementDeviceId)) return 'Выберите прибор для каждой строки измерения';
+    const selectableDeviceIds = new Set(selectableMeasurementDevices.map((device) => String(device.id)));
+    if (selectedIndicators.some((item) => !selectableDeviceIds.has(String(item.measurementDeviceId)))) return 'Выбран недействительный или просроченный прибор';
     if (!isDecimalInRange(form.temperature, -90, 70)) return 'Температура должна быть числом от −90 до 70 °C';
     if (!isDecimalInRange(form.humidity, 0, 100)) return 'Влажность должна быть числом от 0 до 100%';
     if (!isDecimalInRange(form.pressureKpa, 50, 120)) return 'Давление должно быть числом от 50 до 120 кПа';
@@ -837,7 +866,7 @@ const ProtocolCreatePage = () => {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (isCreating) return;
+    if (isCreating || createInFlightRef.current) return;
     const message = validate();
     if (message) {
       setFormError(message);
@@ -869,9 +898,9 @@ const ProtocolCreatePage = () => {
       toast.error('Не удалось создать протокол', 'Backend требует числовые ID компании, объекта, лаборатории и сотрудника');
       return;
     }
-    if (!selectedChoice.templateId || !sourceDocumentCode || !selectedChoice.docxTemplateCode || !selectedChoice.normativeTemplateId || !selectedChoice.resultMode
+    if (!selectedChoice.templateId || !selectedChoice.normativeTemplateId || !selectedChoice.resultMode
       || !availableTypeOptions.some((option) => option.key === form.templateKey)) {
-      toast.error('Конфигурация типа протокола некорректна', 'Проверьте templateId, sourceDocumentCode, docxTemplateCode, normativeTemplateId и resultMode');
+      toast.error('Конфигурация типа протокола некорректна', 'Проверьте templateId, normativeTemplateId и resultMode');
       return;
     }
 
@@ -1014,6 +1043,7 @@ const ProtocolCreatePage = () => {
       printVisibility: form.printVisibility,
       measurements,
     };
+    createInFlightRef.current = true;
     setIsCreating(true);
     setFormError('');
     try {
@@ -1024,23 +1054,46 @@ const ProtocolCreatePage = () => {
       try {
         protocol = await protocolService.getProtocol(created.id);
       } catch (reloadError) {
-        toast.success('Протокол создан');
-        toast.warning('Не удалось сразу загрузить созданный протокол. Редактор повторит загрузку.', getApiErrorMessage(reloadError));
+        toast.warning('Backend создал протокол, но не удалось подтвердить сохранение всех полей.', getApiErrorMessage(reloadError));
         navigate(`/staff/protocols/${created.id}`, { replace: true });
         return;
       }
-      if (protocol.results.length !== measurements.length) {
-        toast.warning(`Backend сохранил ${protocol.results.length} из ${measurements.length} строк. Откройте протокол и проверьте результаты.`);
-      }
       const rowsWithoutDevice = protocol.results.filter((result) => !resolveResultMeasurementDeviceId(result));
-      if (rowsWithoutDevice.length > 0) {
-        toast.warning('Backend не сохранил измерительный прибор для некоторых результатов.');
+      if (protocol.results.length !== measurements.length || rowsWithoutDevice.length > 0) {
+        const details = protocol.results.length !== measurements.length
+          ? `Backend сохранил ${protocol.results.length} из ${measurements.length} строк.`
+          : `Backend не сохранил прибор в ${rowsWithoutDevice.length} строках.`;
+        toast.error('Протокол создан частично', details);
+        navigate(`/staff/protocols/${protocol.id}`, { replace: true });
+        return;
       }
       toast.success('Протокол создан, нормативы проверены');
       navigate(`/staff/protocols/${protocol.id}`, { replace: true });
     } catch (error) {
-      toast.error('Не удалось создать протокол', getApiErrorMessage(error, 'Не удалось создать протокол'));
+      const parsed = normalizeApiError(error, 'Не удалось создать протокол');
+      const details = [
+        parsed.message,
+        ...parsed.errors,
+        ...Object.entries(parsed.fieldErrors).map(([field, message]) => `${field}: ${message}`),
+        parsed.traceId ? `ID ошибки: ${parsed.traceId}` : '',
+      ].filter(Boolean).join(' · ');
+      const message = parsed.status === 409
+        ? details || 'Протокол с такими параметрами уже существует или конфликтует с текущим состоянием данных.'
+        : details;
+      const protocolError = normalizeProtocolError(error);
+      const fieldPrefix = protocolError.field ? `Поле «${protocolError.field}»: ` : '';
+      const displayedMessage = `${fieldPrefix}${message || protocolError.message}`;
+      setErrorResultIndex(protocolError.resultIndex ?? null);
+      setFormError(displayedMessage);
+      window.requestAnimationFrame(() => {
+        const target = protocolError.resultIndex === undefined
+          ? document.querySelector('[role="alert"]')
+          : document.querySelector(`[data-result-index="${protocolError.resultIndex}"]`);
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      toast.error(parsed.status === 409 ? 'Конфликт при создании протокола' : 'Не удалось создать протокол', displayedMessage);
     } finally {
+      createInFlightRef.current = false;
       setIsCreating(false);
     }
   };
@@ -1156,13 +1209,15 @@ const ProtocolCreatePage = () => {
           </select>
           {selectedCompany && <>
             <p className="text-xs font-semibold text-slate-500">Данные компании будут сохранены в snapshot протокола.</p>
-            <div className="flex flex-wrap gap-x-5">
-              <ProtocolPrintVisibilityToggle field="organizationName" visibility={form.printVisibility} onChange={setPrintVisibility} />
-              <ProtocolPrintVisibilityToggle field="organizationAddress" visibility={form.printVisibility} onChange={setPrintVisibility} />
-            </div>
           </>}
           {objectWarning && <p className="text-sm font-semibold text-amber-700">{objectWarning}</p>}
-          <ProtocolPrintVisibilityToggle field="testObjectName" visibility={form.printVisibility} onChange={setPrintVisibility} />
+          {objectWarning && form.companyId && <Button type="button" variant="secondary" onClick={() => navigate(`/staff/companies/${form.companyId}`)}>Создать объект в разделе «Компании»</Button>}
+          <ProtocolPrintVisibilityToggle
+            field="testObjectName"
+            relatedFields={['organizationName', 'organizationAddress']}
+            visibility={form.printVisibility}
+            onChange={setPrintVisibility}
+          />
         </label>
       </section>
 
@@ -1348,19 +1403,19 @@ const ProtocolCreatePage = () => {
             <Button type="button" variant="secondary" onClick={() => void loadMeasurementDevices()}>Повторить</Button>
           </div>
         )}
-        {!devicesLoading && !devicesError && measurementDevices.length === 0 && (
+        {!devicesLoading && !devicesError && selectableMeasurementDevices.length === 0 && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
             <span>Нет доступных приборов с действующей поверкой.</span>
             <Button type="button" variant="secondary" onClick={() => navigate('/staff/measurement-devices')}>Открыть справочник приборов</Button>
           </div>
         )}
-        {selectedIndicators.length > 1 && measurementDevices.length > 0 && (
+        {selectedIndicators.length > 1 && selectableMeasurementDevices.length > 0 && (
           <div className="mt-4 flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-end">
             <label className="min-w-0 flex-1 space-y-1.5 text-sm font-bold text-slate-700">
               <span>Назначить один прибор всем строкам</span>
               <select value={bulkDeviceId} onChange={(event) => setBulkDeviceId(event.target.value)} className={inputClass}>
                 <option value="">Выберите прибор</option>
-                {measurementDevices.map((device) => <option key={device.id} value={device.id}>{device.name} · {device.model} · {device.serialNumber}</option>)}
+                {selectableMeasurementDevices.map((device) => <option key={device.id} value={device.id}>{device.name} · {device.model} · №{device.serialNumber} · поверка до {device.verificationValidUntil || 'не указана'} · {device.status}</option>)}
               </select>
             </label>
             <Button type="button" variant="secondary" disabled={!bulkDeviceId} onClick={applyDeviceToAllIndicators}>Применить ко всем</Button>
@@ -1368,8 +1423,8 @@ const ProtocolCreatePage = () => {
         )}
         {selectedIndicators.length ? (
           <div className="mt-4 grid gap-3">
-            {selectedIndicators.map((item) => (
-              <div key={item.key} className="grid gap-3 rounded-xl border border-slate-200 p-4 md:grid-cols-[minmax(180px,1fr)_200px_150px_minmax(220px,1fr)_auto] md:items-end">
+            {selectedIndicators.map((item, index) => (
+              <div data-result-index={index} key={item.key} className={`grid gap-3 rounded-xl border p-4 md:grid-cols-[minmax(180px,1fr)_200px_150px_minmax(220px,1fr)_auto] md:items-end ${errorResultIndex === index ? 'border-rose-400 bg-rose-50 ring-2 ring-rose-100' : 'border-slate-200'}`}>
                 <div>
                   <p className="font-bold text-slate-900">{item.name}</p>
                   <p className="text-xs font-semibold text-slate-500">{item.code}{unitForIndicator(item) ? ` · ${unitForIndicator(item)}` : ''}</p>
@@ -1390,7 +1445,7 @@ const ProtocolCreatePage = () => {
                   <span>Прибор</span>
                   <select value={item.measurementDeviceId} onChange={(event) => setIndicatorDevice(item.key, event.target.value)} className={inputClass} disabled={devicesLoading || Boolean(devicesError)}>
                     <option value="">{devicesLoading ? 'Загрузка приборов...' : 'Не выбран'}</option>
-                    {measurementDevices.map((device) => <option key={device.id} value={device.id}>{device.name} · {device.model} · {device.serialNumber}</option>)}
+                    {selectableMeasurementDevices.map((device) => <option key={device.id} value={device.id}>{device.name} · {device.model} · №{device.serialNumber} · поверка до {device.verificationValidUntil || 'не указана'} · {device.status}</option>)}
                   </select>
                 </label>
                 <Button type="button" variant="secondary" className="text-rose-700 hover:bg-rose-50" onClick={() => removeIndicator(item.key)}>Убрать</Button>
@@ -1413,7 +1468,7 @@ const ProtocolCreatePage = () => {
           <span>Исполнитель</span>
           <select value={form.executorId} onChange={(event) => selectExecutor(event.target.value)} className={inputClass} disabled={!employees.length}>
             <option value="">Выберите исполнителя</option>
-            {employees.map((item) => <option key={item.id} value={item.id}>{item.fullName} {item.position ? `· ${item.position}` : ''}</option>)}
+            {employees.map((item) => <option key={item.id} value={item.id}>{item.fullName} · {item.position || 'должность не указана'} · {laboratories.find((laboratory) => String(laboratory.id) === String(item.laboratoryId))?.name || 'лаборатория'} · Активен</option>)}
           </select>
           {employeeWarning && <p className="text-sm font-semibold text-amber-700">{employeeWarning}</p>}
         </label>

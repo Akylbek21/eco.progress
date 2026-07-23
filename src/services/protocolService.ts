@@ -28,6 +28,7 @@ export interface ProtocolService {
   getProtocols(params?: Record<string, string>): Promise<Protocol[]>;
   getProtocolsPage(params: ProtocolListQuery, signal?: AbortSignal): Promise<ProtocolPage>;
   getProtocolTemplates(): Promise<ProtocolTemplate[]>;
+  getProtocolTypes(): Promise<ProtocolTemplate[]>;
   getMethodTemplates(): Promise<MethodTemplateResponse[]>;
   getMethodTemplate(id: string): Promise<MethodTemplateResponse>;
   getProtocol(protocolId: string): Promise<Protocol>;
@@ -52,12 +53,12 @@ export interface ProtocolService {
   getCalculationHistory(protocolId: string, resultId: string): Promise<CalculationResultResponse[]>;
   checkNormatives(protocolId: string): Promise<Protocol>;
   readyForApproval(protocolId: string): Promise<Protocol>;
+  markReadyForApproval(protocolId: string): Promise<Protocol>;
   approveProtocol(protocolId: string): Promise<Protocol>;
   returnForRevision(protocolId: string, reason: string): Promise<Protocol>;
-  returnToDraft(protocolId: string): Promise<Protocol>;
   signProtocol(protocolId: string, cmsSignatureBase64: string): Promise<Protocol>;
   replaceProtocol(protocolId: string, reason: string): Promise<Protocol>;
-  duplicateProtocol(protocolId: string): Promise<Protocol>;
+  createCorrection(protocolId: string, reason: string): Promise<Protocol>;
   cancelProtocol(protocolId: string): Promise<Protocol>;
   archiveProtocol(protocolId: string): Promise<Protocol>;
   previewProtocol(protocolId: string): Promise<Blob>;
@@ -96,6 +97,7 @@ const protocolService: ProtocolService = {
   getProtocols: async (params) => (await implementation()).getProtocols(params),
   getProtocolsPage: async (params, signal) => (await implementation()).getProtocolsPage(params, signal),
   getProtocolTemplates: async () => (await import('./apiProtocolService')).getProtocolTemplates(),
+  getProtocolTypes: async () => (await implementation()).getProtocolTypes(),
   getMethodTemplates: async () => (await implementation()).getMethodTemplates(),
   getMethodTemplate: async (id) => (await implementation()).getMethodTemplate(id),
   getProtocol: async (protocolId) => (await import('./apiProtocolService')).getProtocol(protocolId),
@@ -117,12 +119,12 @@ const protocolService: ProtocolService = {
   getCalculationHistory: async (protocolId, resultId) => (await implementation()).getCalculationHistory(protocolId, resultId),
   checkNormatives: async (protocolId) => (await implementation()).checkNormatives(protocolId),
   readyForApproval: async (protocolId) => (await implementation()).readyForApproval(protocolId),
+  markReadyForApproval: async (protocolId) => (await implementation()).markReadyForApproval(protocolId),
   approveProtocol: async (protocolId) => (await implementation()).approveProtocol(protocolId),
   returnForRevision: async (protocolId, reason) => (await implementation()).returnForRevision(protocolId, reason),
-  returnToDraft: async (protocolId) => (await implementation()).returnToDraft(protocolId),
   signProtocol: async (protocolId, cmsSignatureBase64) => (await implementation()).signProtocol(protocolId, cmsSignatureBase64),
   replaceProtocol: async (protocolId, reason) => (await implementation()).replaceProtocol(protocolId, reason),
-  duplicateProtocol: async (protocolId) => (await implementation()).duplicateProtocol(protocolId),
+  createCorrection: async (protocolId, reason) => (await implementation()).createCorrection(protocolId, reason),
   cancelProtocol: async (protocolId) => (await implementation()).cancelProtocol(protocolId),
   archiveProtocol: async (protocolId) => (await implementation()).archiveProtocol(protocolId),
   previewProtocol: async (protocolId) => (await implementation()).previewProtocol(protocolId),

@@ -1,6 +1,6 @@
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, Copy, Edit3, FileSpreadsheet, Plus, RefreshCw, RotateCcw, Search } from 'lucide-react';
+import { Archive, Copy, Edit3, FileSpreadsheet, Plus, RefreshCw, Search } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -87,34 +87,6 @@ const emptyImportPreview: NormativeImportPreview = {
   totalFiles: 0,
 };
 
-const environmentOptions = [
-  'Атмосферный воздух',
-  'Воздух рабочей зоны',
-  'Вода',
-  'Почва',
-  'Физические факторы',
-  'Специальные УДМГ',
-];
-
-const normativeTypeOptions: SelectOption[] = [
-  { label: 'ПДК', value: 'PDK' },
-  { label: 'ОБУВ', value: 'OBUV' },
-  { label: 'ПДУ', value: 'PDU' },
-  { label: 'Оценочная матрица', value: 'ASSESSMENT' },
-  { label: 'Предельно допустимый уровень', value: 'EXPOSURE_LIMIT' },
-  { label: 'Допустимое суточное поступление', value: 'ADI' },
-];
-const soilFormOptions = ['подвижная форма', 'водорастворимая форма'];
-const normativeSubTypeOptions: SelectOption[] = [
-  { label: 'Максимально разовая', value: 'MAX_ONE_TIME' },
-  { label: 'Среднесуточная', value: 'DAILY_AVERAGE' },
-  { label: 'Разовая', value: 'SINGLE' },
-  { label: 'Среднесменная', value: 'SHIFT_AVERAGE' },
-  { label: 'Диапазон', value: 'RANGE' },
-  { label: 'Отсутствие', value: 'ABSENT' },
-  { label: 'Ориентировочный безопасный уровень', value: 'SAFE_APPROXIMATE_LEVEL' },
-  { label: 'Экспозиция', value: 'EXPOSURE' },
-];
 const comparisonTypeOptions: SelectOption[] = [
   { label: '≤', value: 'LESS_OR_EQUAL' },
   { label: '≥', value: 'GREATER_OR_EQUAL' },
@@ -123,7 +95,6 @@ const comparisonTypeOptions: SelectOption[] = [
   { label: 'Отсутствие', value: 'ABSENT' },
   { label: 'Информация', value: 'INFO' },
 ];
-const factorTypeOptions = ['MICROCLIMATE', 'LIGHTING', 'NOISE', 'VIBRATION', 'NOISE_VIBRATION', 'INFRASOUND', 'ULTRASOUND', 'UV', 'AEROIONS', 'ELECTROMAGNETIC_FIELD', 'LASER'];
 const MIN_SEARCH_LENGTH = 3;
 const SEARCH_DEBOUNCE_MS = 500;
 const DEFAULT_PAGE_SIZE = 25;
@@ -189,11 +160,6 @@ const DSM138_CATEGORIES: NormativeCategory[] = [
   { code: 'chemical_substances', label: 'Прил. 2. Вредные вещества в питьевой воде' },
   { code: 'surface_water_safety', label: 'Прил. 3. Показатели безопасности воды водных объектов' },
   { code: 'surface_water_chemicals', label: 'Прил. 4. Вредные вещества в воде водных объектов' },
-];
-
-const waterTypeOptions = [
-  { value: 'DRINKING_WATER', label: 'Питьевая вода' },
-  { value: 'SURFACE_WATER', label: 'Вода водного объекта' },
 ];
 
 const templateEnvironment: Record<string, string> = {
@@ -1381,10 +1347,9 @@ const NormativeDirectoryPage = () => {
     || importing
     || Boolean(importError)
     || !(importStats.importBatchId || importStats.importId);
-  const hasActiveFilters = Boolean(query || templateFilter || environmentFilter || factorTypeFilter || appendixFilter || tableFilter || waterTypeFilter || formTypeFilter || typeFilter || subtypeFilter || statusFilter !== 'ACTIVE' || sort !== 'updatedAt,desc');
   const emptyMessage = searchHintVisible
     ? 'Введите минимум 3 символа для поиска'
-    : hasActiveFilters || (normalizedQuery.length > 0 && searchAllowed)
+    : normalizedQuery.length > 0 && searchAllowed
       ? 'По заданным параметрам нормативы не найдены'
       : 'Нормативы ещё не загружены';
   const rollbackImport = async () => {
@@ -1420,23 +1385,6 @@ const NormativeDirectoryPage = () => {
   }, []);
   const goToPreviousPage = useCallback(() => setPage(Math.max(0, currentPage - 1)), [currentPage]);
   const goToNextPage = useCallback(() => setPage(Math.min(totalPages - 1, currentPage + 1)), [currentPage, totalPages]);
-  const resetFilters = () => {
-    setQuery('');
-    setDebouncedQuery('');
-    setTemplateFilter('');
-    setEnvironmentFilter('');
-    setFactorTypeFilter('');
-    setAppendixFilter('');
-    setTableFilter('');
-    setWaterTypeFilter('');
-    setFormTypeFilter('');
-    setTypeFilter('');
-    setSubtypeFilter('');
-    setStatusFilter('ACTIVE');
-    setSort('updatedAt,desc');
-    setPage(0);
-  };
-
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-4 border-b border-slate-200 bg-white pb-5 lg:flex-row lg:items-end lg:justify-between">
@@ -1497,8 +1445,8 @@ const NormativeDirectoryPage = () => {
         ))}
       </div>
 
-      <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-4">
-        <label className="relative">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <label className="relative block w-full max-w-2xl">
           <span className="sr-only">Поиск нормативов</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
@@ -1508,85 +1456,11 @@ const NormativeDirectoryPage = () => {
             className={`${inputClass} pl-10`}
           />
         </label>
-        <label className="space-y-1 text-sm font-semibold text-slate-700">
-          <span>Статус</span>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'ACTIVE' | 'ARCHIVED' | 'ALL')} className={inputClass}>
-            <option value="ACTIVE">Активные</option><option value="ARCHIVED">Архивные</option><option value="ALL">Все</option>
-          </select>
-        </label>
-        <label className="space-y-1 text-sm font-semibold text-slate-700">
-          <span>Сортировка</span>
-          <select value={sort} onChange={(event) => setSort(event.target.value)} className={inputClass}>
-            <option value="updatedAt,desc">Сначала изменённые</option><option value="indicatorName,asc">Показатель А–Я</option><option value="documentCode,asc">По документу</option>
-          </select>
-        </label>
-        <select value={templateFilter} onChange={(event) => setTemplateFilter(event.target.value)} className={inputClass}>
-          <option value="">templateId: все</option>
-          <option value="ambient_air">ambient_air</option>
-          <option value="workplace_air">workplace_air</option>
-          <option value="industrial_emissions">industrial_emissions</option>
-          <option value="water">water</option>
-          <option value="water_wastewater">water_wastewater</option>
-          <option value="soil">soil</option>
-          <option value="physical_factors">physical_factors</option>
-          <option value="microclimate">microclimate</option>
-          <option value="lighting">lighting</option>
-          <option value="noise_vibration">noise_vibration</option>
-        </select>
-        <select value={environmentFilter} onChange={(event) => setEnvironmentFilter(event.target.value)} className={inputClass}>
-          <option value="">Тип среды: все</option>
-          {environmentOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-        </select>
-        <select value={factorTypeFilter} onChange={(event) => setFactorTypeFilter(event.target.value)} className={inputClass}>
-          <option value="">factorType: все</option>
-          {factorTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-        </select>
-        {activeDocument === 'DSM_32' && (
-          <select value={formTypeFilter} onChange={(event) => setFormTypeFilter(event.target.value)} className={inputClass}>
-            <option value="">Форма: все</option>
-            {soilFormOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-          </select>
-        )}
-        {activeDocument === 'DSM_138' && (
-          <select value={waterTypeFilter} onChange={(event) => setWaterTypeFilter(event.target.value)} className={inputClass}>
-            <option value="">Тип воды: все</option>
-            {waterTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
-        )}
-        {(activeDocument === 'DSM_15' || activeDocument === 'DSM_32' || activeDocument === 'DSM_138') && (
-          <>
-            {(activeDocument === 'DSM_15' || activeDocument === 'DSM_138') && (
-              <input
-                value={appendixFilter}
-                onChange={(event) => setAppendixFilter(event.target.value)}
-                placeholder="Приложение"
-                className={inputClass}
-              />
-            )}
-            <input
-              value={tableFilter}
-              onChange={(event) => setTableFilter(event.target.value)}
-              placeholder="Таблица"
-              className={inputClass}
-            />
-          </>
-        )}
-        <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className={inputClass}>
-          <option value="">Тип норматива: все</option>
-          {normativeTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select>
-        <select value={subtypeFilter} onChange={(event) => setSubtypeFilter(event.target.value)} className={inputClass}>
-          <option value="">Подтип: все</option>
-          {normativeSubTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select>
-        <Button type="button" variant="secondary" disabled={!hasActiveFilters} onClick={resetFilters}>
-          <RotateCcw className="h-4 w-4" /> Сбросить фильтры
-        </Button>
         {isFetching && !loading && (
-          <p className="text-xs font-semibold text-slate-500 md:col-span-2 xl:col-span-4">Обновляем нормативы...</p>
+          <p className="mt-2 text-xs font-semibold text-slate-500">Обновляем нормативы...</p>
         )}
         {searchHintVisible && (
-          <p className="text-xs font-semibold text-amber-700 md:col-span-2 xl:col-span-4">Введите минимум 3 символа для поиска</p>
+          <p className="mt-2 text-xs font-semibold text-amber-700">Введите минимум 3 символа для поиска</p>
         )}
       </div>
 

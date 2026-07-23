@@ -3,6 +3,7 @@ import type { LaboratoryDetails as CanonicalLaboratoryDetails, LaboratoryEmploye
 export type ProtocolStatus =
   | 'DRAFT'
   | 'CALCULATED'
+  | 'READY'
   | 'READY_FOR_APPROVAL'
   | 'NEEDS_REVISION'
   | 'APPROVED'
@@ -11,7 +12,7 @@ export type ProtocolStatus =
   | 'CANCELLED'
   | 'ARCHIVED';
 
-export type LegacyProtocolStatus = 'READY' | 'READY_FOR_APPROVE' | 'RETURNED' | 'CORRECTION';
+export type LegacyProtocolStatus = 'READY_FOR_APPROVE' | 'RETURNED' | 'CORRECTION';
 export type ProtocolResultValue = string | number | null | undefined | Array<string | number | null>;
 
 export type ProtocolTemplateId =
@@ -21,13 +22,13 @@ export type ProtocolTemplateId =
   | 'microclimate'
   | 'lighting'
   | 'noise_vibration'
-  | 'water_wastewater';
+  | 'water_wastewater'
+  | 'uv_emf_laser';
 
 export type LegacyProtocolTemplateId =
   | 'industrial_emissions'
   | 'water'
   | 'physical_factors'
-  | 'uv_emf_laser'
   | 'food_products'
   | 'surfaces'
   | 'udmh_special'
@@ -127,6 +128,7 @@ export type ProtocolResult = {
   measurementDeviceId?: string | number | null;
   measurementDevice?: MeasurementDeviceSummary | null;
   device?: MeasurementDeviceSummary | null;
+  deviceSnapshot?: MeasurementDeviceSummary | null;
   comparisonType?: NormativeComparisonType;
   normativeMin?: string;
   normativeMax?: string;
@@ -327,6 +329,9 @@ export interface Protocol {
   measurementDate?: string;
   measurementTime?: string;
   measurementPlace?: string;
+  sampleNumber?: string;
+  samplingPlace?: string;
+  samplingDepth?: string;
   sourceNumber?: string;
   formCode?: string;
   application?: string;
@@ -341,6 +346,7 @@ export interface Protocol {
   productNormativeDocument?: string;
   samplingMethodDocument?: string;
   testingMethodDocument?: string;
+  complianceDocument?: string;
   explanatoryNote?: string;
   complianceResult?: ProtocolInternalStatus | string;
   executor?: string;
@@ -407,6 +413,7 @@ export interface ProtocolListQuery {
   templateId?: ProtocolTemplateId;
   subtype?: string;
   companyId?: number;
+  objectId?: number;
   laboratoryId?: number;
   executorId?: number;
   compliance?: ProtocolComplianceFilter;
@@ -461,12 +468,16 @@ export type UpdateProtocolPayload = {
   version: number;
   number: string;
   protocolDate: string;
+  companyId?: string | number;
   objectId?: string | number;
   laboratoryId?: string | number;
   measurementDate?: string;
   measurementTime?: string;
   measurementPlace?: string;
   sampleDate?: string;
+  sampleNumber?: string;
+  samplingPlace?: string;
+  samplingDepth?: string;
   basis?: string;
   formCode?: string;
   application?: string;
@@ -478,6 +489,8 @@ export type UpdateProtocolPayload = {
   testing: ProtocolTestingData;
   environment?: ProtocolEnvironmentalConditions;
   explanatoryNote?: string;
+  testingMethodDocument?: string;
+  complianceDocument?: string;
   notes?: string;
   printVisibility?: ProtocolPrintVisibility;
 };
@@ -527,7 +540,7 @@ export type QuickProtocolMeasurementPayload = {
   normativeMax?: string | number | null;
   comparisonType?: string;
   normativeDocument?: string;
-  sourceDocumentCode?: string;
+  sourceDocumentCode?: string | null;
   testingMethodNd?: string;
   samplingMethodNd?: string;
   measurementDeviceId?: string | number | null;
@@ -547,8 +560,8 @@ export type QuickProtocolCreatePayload = {
   measurementPlace: string;
   laboratoryId: number;
   executorId: number;
-  sourceDocumentCode: string;
-  docxTemplateCode: string;
+  sourceDocumentCode?: string | null;
+  docxTemplateCode?: string;
   normativeTemplateId: ProtocolTemplateId;
   environmentType?: string;
   defaultUnit?: string;
@@ -828,7 +841,7 @@ export type NormativeSearchResult = {
   warning?: string;
 };
 
-export type MeasurementDeviceStatus = 'VALID' | 'EXPIRING' | 'EXPIRED' | 'ARCHIVED';
+export type MeasurementDeviceStatus = 'VALID' | 'ACTIVE' | 'EXPIRING' | 'EXPIRED' | 'ARCHIVED' | 'INACTIVE' | 'OUT_OF_SERVICE';
 
 export type MeasurementDevice = {
   id: string;
@@ -841,6 +854,7 @@ export type MeasurementDevice = {
   units: string;
   status: MeasurementDeviceStatus;
   archived?: boolean;
+  laboratoryId?: string | number;
 };
 
 export type DirectoryQuery = {

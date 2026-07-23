@@ -66,6 +66,14 @@ test('checkbox changes only print visibility and does not disable the associated
   assert.doesNotMatch(organizationForm, /disabled=\{[^}]*printVisibility/);
 });
 
+test('quick create renders one visibility checkbox for company and object snapshot', async () => {
+  const source = await read('src/pages/ProtocolCreatePage.tsx');
+  const objectBlock = source.match(/<span>Объект<\/span>[\s\S]*?<\/label>/)?.[0] || '';
+  assert.equal((objectBlock.match(/<ProtocolPrintVisibilityToggle/g) || []).length, 1);
+  assert.match(objectBlock, /field="testObjectName"/);
+  assert.match(objectBlock, /relatedFields=\{\['organizationName', 'organizationAddress'\]\}/);
+});
+
 test('API persists print visibility and preview filters hidden fields', async () => {
   const service = await read('src/services/apiProtocolService.ts');
   const preview = await read('src/components/protocols/ProtocolPreviewModal.tsx');

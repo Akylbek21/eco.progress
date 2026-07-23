@@ -10,7 +10,8 @@ export type ProtocolTypeKey =
   | 'water'
   | 'microclimate'
   | 'lighting'
-  | 'noise_vibration';
+  | 'noise_vibration'
+  | 'uv_emf_laser';
 
 export type ProtocolTypeConfig = {
   title: string;
@@ -96,6 +97,15 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
     normativeTemplateId: 'noise_vibration',
     resultMode: 'PHYSICAL',
   },
+  uv_emf_laser: {
+    title: 'УФ, ЭМП и лазерное излучение',
+    templateId: 'uv_emf_laser',
+    sourceDocumentCode: null,
+    docxTemplateCode: '',
+    defaultUnit: null,
+    normativeTemplateId: 'uv_emf_laser',
+    resultMode: 'PHYSICAL',
+  },
 };
 
 export const SUPPORTED_PROTOCOL_TYPE_KEYS: ProtocolTypeKey[] = [
@@ -106,6 +116,7 @@ export const SUPPORTED_PROTOCOL_TYPE_KEYS: ProtocolTypeKey[] = [
   'microclimate',
   'lighting',
   'noise_vibration',
+  'uv_emf_laser',
 ];
 
 export const PROTOCOL_TYPE_OPTIONS = SUPPORTED_PROTOCOL_TYPE_KEYS.map((key) => ({
@@ -117,6 +128,7 @@ export const protocolFactorType: Partial<Record<ProtocolTypeKey, ProtocolSubtype
   microclimate: PROTOCOL_NORMATIVE_CONTEXT.microclimate.factorType,
   lighting: PROTOCOL_NORMATIVE_CONTEXT.lighting.factorType,
   noise_vibration: 'NOISE_VIBRATION',
+  uv_emf_laser: 'UV',
 };
 
 const subtypeContextKey: Partial<Record<ProtocolSubtype, ProtocolTypeKey>> = {

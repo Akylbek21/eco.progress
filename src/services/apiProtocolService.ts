@@ -5,6 +5,7 @@ import {
   getApiErrorMessage,
   getApiStatus,
   getContentDispositionFileName,
+  unwrapApiData,
   unwrapApiResponse,
 } from './apiHelpers';
 import type {
@@ -40,16 +41,17 @@ import { canonicalProtocolResultAliases } from '../utils/protocolResultAliases';
 import { canSearchNormative, normativeSearchItemToRecord, searchNormatives } from './normativeSearchService';
 import type { NormativeSearchParams } from '../types/normativeSearch';
 import { normalizeProtocolPrintVisibility } from '../utils/protocolPrintVisibility';
+import {
+  mapProtocolFormToUpdateRequest,
+  mapProtocolResultFormToRequest,
+  mapProtocolsQuery,
+} from '../features/protocols/api/protocolMappers';
+import { mapBackendProtocolType, mapFrontendProtocolType, tryMapBackendProtocolType } from '../features/protocols/api/protocolTypeMapper';
 
 type UnknownRecord = Record<string, unknown>;
 
 const asRecord = (value: unknown): UnknownRecord => value && typeof value === 'object' ? value as UnknownRecord : {};
-const unwrapData = (value: unknown): unknown => {
-  const response = asRecord(value);
-  const data = response.data ?? value;
-  const body = asRecord(data);
-  return body.data ?? data;
-};
+const unwrapData = (value: unknown): unknown => unwrapApiData(value);
 const asString = (value: unknown) => (typeof value === 'string' || typeof value === 'number' ? String(value) : '');
 const nullableDecimal = (value: unknown): string | null => {
   const normalized = asString(value).trim();
@@ -87,7 +89,7 @@ const normalizeCompanySnapshot = (raw: UnknownRecord): ProtocolCompanySnapshot =
   const organizationObject = asRecord(organization.object || organization.companyObject || organization.company_object);
   const object = Object.keys(companyObject).length ? companyObject : organizationObject;
   return {
-    companyName: pick(company, ['name', 'companyName']) || pick(organization, ['organizationName', 'companyName', 'name']) || pick(snapshot, ['companyName', 'name']),
+    companyName: pick(company, ['name', 'companyName']) || pick(organization, ['organizationName', 'companyName', 'name']) || pick(snapshot, ['companyName', 'name']) || pick(raw, ['companyName']),
     bin: pick(company, ['bin', 'iin']) || pick(organization, ['bin', 'iin']) || pick(snapshot, ['bin']),
     legalAddress: pick(company, ['legalAddress']) || pick(organization, ['legalAddress']) || pick(snapshot, ['legalAddress']),
     actualAddress: pick(company, ['actualAddress']) || pick(organization, ['actualAddress', 'organizationAddress']) || pick(snapshot, ['actualAddress']),
@@ -96,8 +98,8 @@ const normalizeCompanySnapshot = (raw: UnknownRecord): ProtocolCompanySnapshot =
     director: pick(company, ['director', 'directorFullName']) || pick(organization, ['director']) || pick(snapshot, ['director']),
     contactPerson: pick(company, ['contactPerson']) || pick(organization, ['contactPerson']) || pick(snapshot, ['contactPerson']),
     activityType: pick(company, ['activityType']) || pick(organization, ['activityType']) || pick(snapshot, ['activityType']),
-    objectName: pick(object, ['name', 'objectName']) || pick(company, ['objectName']) || pick(organization, ['objectName']) || pick(snapshot, ['objectName']),
-    objectAddress: pick(object, ['address', 'objectAddress']) || pick(company, ['objectAddress']) || pick(organization, ['objectAddress']) || pick(snapshot, ['objectAddress']),
+    objectName: pick(object, ['name', 'objectName']) || pick(company, ['objectName']) || pick(organization, ['objectName']) || pick(snapshot, ['objectName']) || pick(raw, ['objectName']),
+    objectAddress: pick(object, ['address', 'objectAddress']) || pick(company, ['objectAddress']) || pick(organization, ['objectAddress']) || pick(snapshot, ['objectAddress']) || pick(raw, ['objectAddress']),
     objectActivityType: pick(object, ['activityType']) || pick(company, ['objectActivityType']) || pick(organization, ['objectActivityType']) || pick(snapshot, ['objectActivityType']),
     coordinates: pick(object, ['coordinates']) || pick(company, ['coordinates']) || pick(organization, ['coordinates']) || pick(snapshot, ['coordinates']),
     sanitaryZone: pick(object, ['sanitaryZone']) || pick(company, ['sanitaryZone']) || pick(organization, ['sanitaryZone']) || pick(snapshot, ['sanitaryZone']),
@@ -141,7 +143,7 @@ export const normalizeProtocolResult = (raw: unknown): ProtocolResultRow => {
   const samplingMethodDocument = aliases.samplingMethodDocument;
   const measurementPlace = firstString(source.measurementPlace, values.object, values.measurementPlace, values.samplingPlace);
   const sampleName = firstString(source.sampleName, values.sampleName);
-  const measurementDeviceSource = asRecord(source.measurementDevice);
+  const measurementDeviceSource = asRecord(source.measurementDevice || source.deviceSnapshot || source.device_snapshot);
   const deviceSource = asRecord(source.device);
   const deviceId = firstString(source.deviceId, measurementDeviceSource.id, deviceSource.id, values.device, values.deviceId);
   const measurementDeviceId = aliases.measurementDeviceId;
@@ -627,7 +629,10 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     || (typeof source.environmentalConditions === 'object' ? source.environmentalConditions : {}),
   );
   const resultsSource = Array.isArray(source.results) ? source.results : [];
-  const devicesSource = Array.isArray(source.instruments) ? source.instruments : Array.isArray(source.measurementDevices) ? source.measurementDevices : [];
+  const devicesSource = [
+    ...(Array.isArray(source.measurementDevices) ? source.measurementDevices : []),
+    ...(Array.isArray(source.instruments) ? source.instruments : []),
+  ];
   const documentSettings = asRecord(source.documentSettings || source.document_settings);
   const printVisibility = normalizeProtocolPrintVisibility(
     source.printVisibility || source.print_visibility || documentSettings.printVisibility || documentSettings.print_visibility,
@@ -637,12 +642,12 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     id: pick(source, ['id', '_id', 'protocolId']),
     protocolNumber,
     number: protocolNumber,
-    templateId: pick(source, [
+    templateId: (tryMapBackendProtocolType(pick(source, [
       'templateId',
       'template_id',
       'templateCode',
       'template_code',
-    ]).toLowerCase() as Protocol['templateId'],
+    ])) || pick(source, ['templateId', 'template_id', 'templateCode', 'template_code']).toLowerCase()) as Protocol['templateId'],
     subtype: (pick(source, ['subtype', 'physicalFactorType', 'physical_factor_type'])
       || pick(testing, ['physicalFactorType'])) as Protocol['subtype'],
     templateName: pick(source, ['templateName', 'template_name']),
@@ -654,6 +659,9 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     measurementDate: pick(source, ['measurementDate', 'measurement_date']) || samplingDate,
     measurementTime: pick(source, ['measurementTime', 'measurement_time']),
     measurementPlace: pick(source, ['measurementPlace', 'measurement_place']),
+    sampleNumber: pick(source, ['sampleNumber', 'sample_number']) || pick(testing, ['sampleNumber']),
+    samplingPlace: pick(source, ['samplingPlace', 'sampling_place']) || pick(testing, ['samplingPlace']),
+    samplingDepth: pick(source, ['samplingDepth', 'sampling_depth']) || pick(testing, ['samplingDepth']),
     sourceNumber: pick(source, ['sourceNumber', 'source_number']),
     formCode: pick(source, ['formCode', 'form_code']),
     application: pick(source, ['appendixNumber', 'application', 'appendix_number']),
@@ -685,10 +693,11 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     productNormativeDocument: pick(source, ['productNormativeDocument']) || pick(testing, ['productNormativeDocument']),
     samplingMethodDocument: pick(source, ['samplingMethodDocument']) || pick(testing, ['samplingMethodDocument']),
     testingMethodDocument: pick(source, ['testingMethodDocument']) || pick(testing, ['testingMethodDocument']),
+    complianceDocument: pick(source, ['complianceDocument', 'compliance_document']),
     explanatoryNote: pick(source, ['explanatoryNote', 'note']),
     complianceResult: pick(source, ['complianceStatus', 'complianceResult', 'overallStatus', 'internalStatus']),
-    executor: pick(source, ['executor']) || pick(laboratory, ['executor', 'executorName']),
-    executorId: pick(source, ['executorId', 'executor_id']) || pick(laboratory, ['executorId']),
+    executor: pick(asRecord(source.executor), ['fullName', 'name']) || pick(source, ['executorName']) || pick(laboratory, ['executor', 'executorName']),
+    executorId: pick(source, ['executorId', 'laboratoryEmployeeId', 'executor_id']) || pick(asRecord(source.executor), ['laboratoryEmployeeId', 'id']) || pick(laboratory, ['executorId']),
     approver: pick(source, ['approver']),
     approvedAt: pick(source, ['approvedAt', 'approved_at']),
     signedAt: pick(source, ['signedAt', 'signed_at']),
@@ -764,7 +773,7 @@ const toCreateProtocolApiPayload = (payload: CreateProtocolPayload) => {
   return {
     companyId: Number.isNaN(Number(payload.companyId)) ? payload.companyId : Number(payload.companyId),
     objectId: Number.isNaN(Number(payload.objectId)) ? payload.objectId : Number(payload.objectId),
-    templateId: payload.templateId,
+    templateId: mapFrontendProtocolType(payload.templateId),
     subtype: payload.subtype || null,
     protocolNumber: payload.protocolNumber || '',
     protocolDate: payload.protocolDate,
@@ -828,79 +837,6 @@ const toApiEnvironment = (environment: UpdateProtocolPayload['environment']) => 
   loadedAt: environment?.loadedAt || null,
   manualChangeReason: environment?.manualChangeReason || null,
 });
-
-type ApiResultValue = string | number | null | undefined | Array<string | number | null>;
-
-const resultIdKeys = new Set(['normativeId', 'measurementDeviceId', 'deviceId', 'methodTemplateId']);
-const resultNumericKeys = new Set([
-  'primaryReading',
-  'measurementReadings',
-  'readings',
-  'result',
-  'resultMg',
-  'resultMgM3',
-  'resultValue',
-  'normative',
-  'normativeValue',
-  'normativeMin',
-  'normativeMax',
-  'minValue',
-  'maxValue',
-  'value',
-]);
-
-const decimalNumberOrNull = (value: unknown): number | null => {
-  if (value === undefined || value === null) return null;
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-  const normalized = String(value).trim().replace(',', '.');
-  if (!normalized) return null;
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-const sanitizeResultField = (key: string, value: ApiResultValue): ApiResultValue => {
-  if (Array.isArray(value)) {
-    const sanitized = value.map((item) => resultNumericKeys.has(key) ? decimalNumberOrNull(item) : item);
-    return sanitized.length ? sanitized : null;
-  }
-  if (resultIdKeys.has(key)) return String(value ?? '').trim() || null;
-  if (resultNumericKeys.has(key)) {
-    if (value === undefined || value === null || String(value).trim() === '') return null;
-    const parsed = decimalNumberOrNull(value);
-    return parsed ?? value;
-  }
-  if (typeof value === 'string' && value.trim() === '') return null;
-  return value;
-};
-
-const sanitizeResultValues = (values: Record<string, ApiResultValue>) => Object.fromEntries(
-  Object.entries(values).map(([key, value]) => [key, sanitizeResultField(key, value)])
-) as Record<string, ApiResultValue>;
-
-const toApiResultPayload = (payload: ProtocolResultPayload) => {
-  const values = { ...payload.values };
-  const measurementDeviceId = sanitizeResultField('measurementDeviceId', payload.measurementDeviceId ?? payload.deviceId ?? values.measurementDeviceId ?? values.deviceId ?? null);
-  const normativeId = sanitizeResultField('normativeId', payload.normativeId ?? values.normativeId ?? null);
-  const mapped = sanitizeResultValues({
-    ...values,
-    minValue: values.minValue ?? values.normativeMin ?? null,
-    maxValue: values.maxValue ?? values.normativeMax ?? null,
-    deviceId: values.deviceId ?? measurementDeviceId,
-    subtype: values.subtype ?? values.factorType ?? null,
-  });
-  const mappedWithDeviceAliases = {
-    ...mapped,
-    measurementDeviceId,
-    deviceId: measurementDeviceId,
-  };
-  return {
-    ...mappedWithDeviceAliases,
-    measurementDeviceId,
-    deviceId: measurementDeviceId,
-    normativeId,
-    values: mappedWithDeviceAliases,
-  };
-};
 
 const isProtocolLike = (value: unknown) => {
   const source = asRecord(value);
@@ -975,7 +911,7 @@ export async function getProtocols(params?: Record<string, string>): Promise<Pro
 }
 
 export async function getProtocolsPage(params: ProtocolListQuery, signal?: AbortSignal): Promise<ProtocolPage> {
-  const response = await api.get<ApiResponse<unknown> | unknown>('/protocols', { params, signal });
+  const response = await api.get<ApiResponse<unknown> | unknown>('/protocols', { params: mapProtocolsQuery(params), signal });
   const items = normalizeProtocolsResponse(response);
   const payload = asRecord(unwrapData(response));
   const page = Number(payload.page ?? payload.number ?? params.page);
@@ -1005,13 +941,28 @@ export async function getProtocolTemplates(): Promise<ProtocolTemplate[]> {
   if (!protocolTemplatesRequest) {
     protocolTemplatesRequest = api
       .get<ApiResponse<unknown> | unknown>('/protocols/templates')
-      .then((response) => extractList(response, ['templates']) as ProtocolTemplate[])
+      .then((response) => extractList(response, ['templates']).flatMap((raw) => {
+        const source = asRecord(raw);
+        const rawId = pick(source, ['id', 'templateId', 'code']);
+        try {
+          return [{
+            ...source,
+            id: mapBackendProtocolType(rawId),
+            name: pick(source, ['name', 'label', 'title']) || rawId,
+          } as ProtocolTemplate];
+        } catch (error) {
+          if (import.meta.env.DEV) console.warn('[Protocols] Unsupported backend protocol type', { rawId, error });
+          return [];
+        }
+      }))
       .finally(() => {
         protocolTemplatesRequest = null;
       });
   }
   return protocolTemplatesRequest;
 }
+
+export const getProtocolTypes = getProtocolTemplates;
 
 export async function createProtocol(payload: CreateProtocolPayload): Promise<Protocol> {
   const response = await api.post<ApiResponse<unknown>>(
@@ -1025,6 +976,8 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
 }
 
 export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): Promise<Protocol> {
+  const { environment: _unsupportedEnvironment, ...supportedPayload } = payload;
+  void _unsupportedEnvironment;
   const measurements = payload.measurements.map((measurement) => {
     const rawMeasurementDeviceId = measurement.measurementDeviceId
       ?? measurement.deviceId
@@ -1032,20 +985,16 @@ export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): 
       ?? measurement.values?.deviceId
       ?? null;
     const measurementDeviceId = rawMeasurementDeviceId == null ? null : String(rawMeasurementDeviceId).trim() || null;
-    return {
-      ...measurement,
-      measurementDeviceId,
-      deviceId: measurementDeviceId,
-      values: {
-        ...(measurement.values || {}),
-        measurementDeviceId,
-        deviceId: measurementDeviceId,
-      },
-    };
+    const { deviceId: _legacyDeviceId, values: rawValues, ...canonicalMeasurement } = measurement;
+    const values = Object.fromEntries(
+      Object.entries(rawValues || {}).filter(([key]) => key !== 'deviceId' && key !== 'measurementDeviceId'),
+    );
+    return { ...canonicalMeasurement, measurementDeviceId, values };
   });
   const response = await api.post<ApiResponse<unknown> | unknown>('/protocols/quick-create', {
-    ...payload,
-    environment: toApiEnvironment(payload.environment),
+    ...supportedPayload,
+    templateId: mapFrontendProtocolType(payload.templateId),
+    normativeTemplateId: mapFrontendProtocolType(payload.normativeTemplateId),
     printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
     measurements,
   });
@@ -1071,38 +1020,8 @@ export async function getProtocol(protocolId: string): Promise<Protocol> {
 export const getProtocolById = getProtocol;
 
 export async function updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol> {
-  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}`, {
-    version: payload.version,
-    number: payload.number,
-    protocolDate: payload.protocolDate,
-    objectId: payload.objectId,
-    laboratoryId: payload.laboratoryId || payload.laboratory?.laboratoryId || payload.laboratory?.id || null,
-    measurementDate: payload.measurementDate || null,
-    measurementTime: payload.measurementTime || null,
-    measurementPlace: payload.measurementPlace || null,
-    formCode: payload.formCode,
-    appendixNumber: payload.application,
-    basis: payload.basis || payload.organization.testingBasis || null,
-    notes: payload.notes || payload.explanatoryNote || null,
-    executor: payload.executor,
-    executorId: payload.executorId || null,
-    approver: payload.approver,
-    productName: payload.organization.productName || '',
-    testingBasis: payload.organization.testingBasis || '',
-    sampleDate: payload.sampleDate || payload.testing.samplingDate || payload.measurementDate || null,
-    testingStartDate: payload.testing.testingStartDate || null,
-    testingEndDate: payload.testing.testingEndDate || payload.testing.testingDate || null,
-    productNormativeDocument: payload.testing.productNormativeDocument || '',
-    samplingMethodDocument: payload.testing.samplingMethodDocument || '',
-    testingMethodDocument: payload.testing.testingMethodDocument || '',
-    purpose: payload.testing.testingPurpose || '',
-    environmentalConditions: payload.testing.environmentConditions || '',
-    organization: payload.organization,
-    testing: payload.testing,
-    environment: toApiEnvironment(payload.environment),
-    explanatoryNote: payload.explanatoryNote,
-    printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
-  });
+  const request = mapProtocolFormToUpdateRequest(payload);
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}`, request);
   const protocol = await protocolFromActionResponse(protocolId, response);
   const persistedChecks: Array<[string, unknown, unknown]> = [
     ['objectId', payload.objectId, protocol.objectId],
@@ -1123,12 +1042,12 @@ export async function deleteProtocol(protocolId: string): Promise<void> {
 }
 
 export async function addProtocolResult(protocolId: string, payload: ProtocolResultPayload): Promise<ProtocolResultRow> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results`, toApiResultPayload(payload));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results`, mapProtocolResultFormToRequest(payload));
   return requireResult(response);
 }
 
 export async function updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload): Promise<ProtocolResultRow> {
-  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}`, toApiResultPayload(payload));
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}`, mapProtocolResultFormToRequest(payload));
   // Some backend versions return 204 or a partial result after PATCH. Reload
   // the protocol so the editor always receives the actually persisted row.
   const protocol = await getProtocol(protocolId);
@@ -1151,13 +1070,10 @@ export async function readyForApproval(protocolId: string): Promise<Protocol> {
   return protocolFromActionResponse(protocolId, response);
 }
 
+export const markReadyForApproval = readyForApproval;
+
 export async function approveProtocol(protocolId: string): Promise<Protocol> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/approve`);
-  return protocolFromActionResponse(protocolId, response);
-}
-
-export async function returnToDraft(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-for-revision`);
   return protocolFromActionResponse(protocolId, response);
 }
 
@@ -1174,98 +1090,14 @@ export async function signProtocol(protocolId: string, cmsSignatureBase64: strin
   return protocolFromActionResponse(protocolId, response);
 }
 
-const duplicateProtocolFallback = async (protocolId: string): Promise<Protocol> => {
-  const source = await getProtocol(protocolId);
-  const templateId = source.templateId === 'water' ? 'water_wastewater' : source.templateId;
-  if (!['ambient_air', 'workplace_air', 'soil', 'microclimate', 'lighting', 'noise_vibration', 'water_wastewater'].includes(templateId)) {
-    throw new Error('Исправленная версия для устаревшего типа протокола недоступна. Сначала преобразуйте тип на backend.');
-  }
-  const created = await createProtocol({
-    companyId: source.companyId || '',
-    objectId: source.objectId || '',
-    templateId: templateId as ProtocolTemplateId,
-    subtype: source.subtype,
-    protocolDate: source.protocolDate,
-    sampleDate: source.testing.samplingDate || source.measurementDate,
-    testingStartDate: source.testing.testingStartDate,
-    testingEndDate: source.testing.testingEndDate,
-    measurementDate: source.measurementDate,
-    measurementTime: source.measurementTime,
-    measurementPlace: source.measurementPlace,
-    laboratoryId: source.laboratory?.laboratoryId || source.laboratory?.id,
-    executorId: source.executorId || source.laboratory?.executorId,
-    productName: source.organization.productName,
-    testingBasis: source.organization.testingBasis,
-    productNormativeDocument: source.testing.productNormativeDocument,
-    samplingMethodDocument: source.testing.samplingMethodDocument,
-    testingMethodDocument: source.testing.testingMethodDocument,
-    purpose: source.testing.testingPurpose,
-    environment: source.environment,
-    printVisibility: source.printVisibility,
-  });
-
-  await Promise.all((source.measurementDevices || []).map(async (device) => {
-    if (!device.deviceId) return;
-    try {
-      await api.post<ApiResponse<unknown> | unknown>(`/protocols/${created.id}/measurement-devices`, { deviceId: device.deviceId });
-    } catch (error) {
-      console.warn(`Measurement device ${device.deviceId} was not copied to protocol ${created.id}.`, error);
-      // Device copying is best-effort when backend has no duplicate endpoint.
-    }
-  }));
-
-  const copiedResults: Array<{ source: ProtocolResultRow; target: ProtocolResultRow }> = [];
-  for (const row of source.results || []) {
-    const rowValues = asRecord(row.values);
-    const saved = await addProtocolResult(created.id, {
-      measurementDeviceId: row.measurementDeviceId || asString(rowValues.measurementDeviceId),
-      normativeId: row.normativeReference?.id || asString(rowValues.normativeId),
-      values: {
-        ...row.values,
-        copiedFromResultId: row.id,
-      },
-    });
-    copiedResults.push({ source: row, target: saved });
-  }
-
-  for (const pair of copiedResults) {
-    try {
-      const raw = await getRawMeasurements(protocolId, pair.source.id);
-      if (raw.measurements.length) {
-        await saveRawMeasurements(created.id, pair.target.id, raw.measurements, raw.methodTemplate?.id);
-      }
-    } catch (error) {
-      console.warn(`Raw measurements for result ${pair.source.id} were not copied to protocol ${created.id}.`, error);
-      // Raw measurements are copied only when backend exposes them for the source row.
-    }
-  }
-
-  return getProtocol(created.id);
-};
-
-export async function duplicateProtocol(protocolId: string): Promise<Protocol> {
-  for (const endpoint of [`/protocols/${protocolId}/duplicate`, `/protocols/${protocolId}/copy`]) {
-    try {
-      const response = await api.post<ApiResponse<unknown> | unknown>(endpoint);
-      return requireProtocol(unwrapData(response), 'создание копии');
-    } catch (error) {
-      if (![404, 405].includes(getApiStatus(error) || 0)) throw error;
-    }
-  }
-  return duplicateProtocolFallback(protocolId);
+export async function createCorrection(protocolId: string, reason: string): Promise<Protocol> {
+  const correctionReason = reason.trim();
+  if (!correctionReason) throw new Error('Укажите причину создания исправленной версии.');
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/corrections`, { reason: correctionReason });
+  return requireProtocol(unwrapData(response), 'создание исправленной версии');
 }
 
-export async function replaceProtocol(protocolId: string, reason: string): Promise<Protocol> {
-  for (const endpoint of [`/protocols/${protocolId}/correction`, `/protocols/${protocolId}/replace`]) {
-    try {
-      const response = await api.post<ApiResponse<unknown> | unknown>(endpoint, { reason });
-      return requireProtocol(unwrapData(response), 'создание исправленной версии');
-    } catch (error) {
-      if (![404, 405].includes(getApiStatus(error) || 0)) throw error;
-    }
-  }
-  throw new Error('Backend не поддерживает создание исправленной версии протокола.');
-}
+export const replaceProtocol = createCorrection;
 
 export async function cancelProtocol(protocolId: string): Promise<Protocol> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/cancel`);

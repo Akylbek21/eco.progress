@@ -14,15 +14,16 @@ test('quick-create assigns an available device to every measurement row', async 
   assert.match(page, /value=\{item\.measurementDeviceId\}/);
 });
 
-test('quick-create payload carries device aliases at row and values levels', async () => {
+test('API mapper sends one canonical measurementDeviceId without legacy aliases', async () => {
   const page = await read('src/pages/ProtocolCreatePage.tsx');
   const service = await read('src/services/apiProtocolService.ts');
+  const mapper = await read('src/features/protocols/api/protocolMappers.ts');
   const types = await read('src/types/protocols.ts');
 
   assert.match(page, /measurementDeviceId,\s*deviceId: measurementDeviceId,\s*values:/s);
-  assert.match(page, /conditionJson,\s*measurementDeviceId,\s*deviceId: measurementDeviceId/s);
+  assert.match(service, /key !== 'deviceId' && key !== 'measurementDeviceId'/);
   assert.match(service, /measurement\.values\?\.measurementDeviceId/);
-  assert.match(service, /measurementDeviceId,\s*deviceId: measurementDeviceId/);
-  assert.match(service, /payload\.deviceId \?\?/);
+  assert.match(mapper, /payload\.measurementDeviceId \?\? payload\.deviceId/);
+  assert.match(mapper, /!legacyResultKeys\.has\(key\)/);
   assert.match(types, /measurementDeviceId\?: string \| number \| null;\s*deviceId\?: string \| number \| null;\s*values\?:/s);
 });

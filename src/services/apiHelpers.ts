@@ -25,7 +25,31 @@ export const extractList = (input: unknown, keys: string[] = []): unknown[] => {
     if (!record) continue;
     for (const key of listKeys) if (Array.isArray(record[key])) return record[key] as unknown[];
   }
+  if (import.meta.env.DEV && input !== undefined && input !== null) {
+    console.error('[API contract] Не удалось извлечь список из ответа backend.', { possibleKeys: keys });
+  }
   return [];
+};
+
+export const unwrapApiData = <T>(response: unknown): T => {
+  let current = response;
+  const axiosResponse = asRecord(current);
+  if (axiosResponse && 'status' in axiosResponse && 'data' in axiosResponse) current = axiosResponse.data;
+
+  for (let depth = 0; depth < 2; depth += 1) {
+    const envelope = asRecord(current);
+    if (!envelope || !('data' in envelope)) break;
+    if (envelope.success === false) {
+      const errors = Array.isArray(envelope.errors) ? envelope.errors.map(String).filter(Boolean) : [];
+      throw new Error(String(envelope.message || errors.join(', ') || 'Backend отклонил запрос.'));
+    }
+    current = envelope.data;
+  }
+
+  if (current === undefined || current === null) {
+    throw new Error('Backend вернул пустой ответ вместо ожидаемых данных.');
+  }
+  return current as T;
 };
 
 export const extractItem = (input: unknown, keys: string[] = []): unknown => {
@@ -55,11 +79,43 @@ export interface ParsedApiError {
 
 export interface ApiError {
   status?: number;
+  code?: string;
   message: string;
   errors: string[];
   fieldErrors: Record<string, string>;
   traceId?: string;
+  resourceId?: string;
 }
+
+const extractConflictResourceId = (response: UnknownRecord | null | undefined): string | undefined => {
+  if (!response) return undefined;
+  const nested = asRecord(response.data);
+  const details = asRecord(response.details) || asRecord(nested?.details);
+  const conflict = asRecord(response.conflict) || asRecord(nested?.conflict);
+  const existing = asRecord(response.existingProtocol)
+    || asRecord(nested?.existingProtocol)
+    || asRecord(response.protocol)
+    || asRecord(nested?.protocol);
+  const values = [
+    response.existingProtocolId,
+    response.protocolId,
+    response.existingId,
+    response.resourceId,
+    nested?.existingProtocolId,
+    nested?.protocolId,
+    nested?.existingId,
+    nested?.resourceId,
+    details?.existingProtocolId,
+    details?.protocolId,
+    conflict?.existingProtocolId,
+    conflict?.protocolId,
+    existing?.id,
+  ];
+  const value = values.find((candidate) =>
+    (typeof candidate === 'string' && candidate.trim() !== '') || typeof candidate === 'number',
+  );
+  return value === undefined ? undefined : String(value).trim();
+};
 
 export const parseApiError = (error: unknown, fallback = 'Не удалось выполнить запрос.'): ParsedApiError => {
   const status = getApiStatus(error);
@@ -111,10 +167,12 @@ export const normalizeApiError = (error: unknown, fallback = 'Не удалос�
   const traceIdValue = response?.traceId ?? nested?.traceId;
   return {
     status: parsed.status,
+    code: parsed.code,
     message: parsed.message,
     errors,
     fieldErrors: parsed.fieldErrors || {},
     traceId: typeof traceIdValue === 'string' && traceIdValue.trim() ? traceIdValue.trim() : undefined,
+    resourceId: parsed.status === 409 ? extractConflictResourceId(response) : undefined,
   };
 };
 
