@@ -67,28 +67,18 @@ test('hook debounces, aborts stale requests and guards responses by sequence', a
   assert.match(source, /isNormativeSearchCanceled/);
 });
 
-test('creation page preserves server items and the complete selected normative', async () => {
-  const source = await read('src/pages/ProtocolCreatePage.tsx');
-  assert.match(source, /normativeItems\.map\(normalizeNormativeIndicator\)/);
-  assert.doesNotMatch(source, /filterAndRankProtocolNormatives|tokens\.every|getAllNormativeRecords/);
-  assert.match(source, /selectedNormative: item/);
-  assert.match(source, /String\(selectedNormative\.id\)/);
-  assert.match(source, /value: 'VIBRATION'/);
-  assert.doesNotMatch(source, /templateKey === 'uv_emf_laser'/);
-  assert.match(source, /current\.map\(\(item\) => item\.selectedNormative \|\| item\.normative/);
-  assert.match(source, /normative: undefined, selectedNormative: undefined, normativeId: undefined/);
-  assert.doesNotMatch(source, /current\.filter\(\(item\) => !item\.selectedNormative\)/);
-  assert.match(source, /previous\.compatibility !== indicatorCompatibilityKey/);
-  assert.match(source, /setSelectedIndicators\(\[\]\)/);
-  assert.match(source, /Выбранные показатели очищены/);
-  assert.match(source, /retryNormativeSearch/);
-  assert.match(source, /searchDone && !searchError/);
+test('creation wizard preserves the selected backend normative id', async () => {
+  const source = await read('src/features/protocols/components/steps/ResultsStep.tsx');
+  const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
+  assert.match(source, /normativeId: item\.id/);
+  assert.match(mapper, /normativeId: optional\(row\.normativeId\)/);
+  assert.doesNotMatch(mapper, /normativeValue: optional\(row\.normativeValue\)/);
 });
 
 test('router keeps protocol creation inside the list wizard', async () => {
   const app = await read('src/App.tsx');
-  assert.match(app, /path="\/staff\/protocols\/create"[^\n]*<Navigate to="\/staff\/protocols" replace/);
-  assert.match(app, /path="\/staff\/protocols\/new"[^\n]*<Navigate to="\/staff\/protocols" replace/);
+  assert.match(app, /path="\/staff\/protocols\/create"[^\n]*<Navigate to="\/staff\/protocols\?create=1" replace/);
+  assert.match(app, /path="\/staff\/protocols\/new"[^\n]*<Navigate to="\/staff\/protocols\?create=1" replace/);
   assert.match(app, /path="\/staff\/protocols\/:protocolId"[\s\S]*<ProtocolEditorPage/);
 });
 
@@ -105,8 +95,7 @@ test('protocol editor uses the shared single-request normative search', async ()
 });
 
 test('physical factor validation requires factor type but not a universal factor code', async () => {
-  const source = await read('src/pages/ProtocolCreatePage.tsx');
-  assert.match(source, /measurements\.find\(\(item\) => !item\.factorType\)/);
-  assert.doesNotMatch(source, /!item\.factorType \|\| !item\.factorCode/);
-  assert.match(source, /const invalidPollutant = isPhysical\s*\? undefined/);
+  const source = await read('src/features/protocols/components/CreateProtocolWizardModal.tsx');
+  assert.match(source, /!row\.factorType\.trim\(\)/);
+  assert.doesNotMatch(source, /!row\.factorType\.trim\(\) \|\| !row\.factorCode/);
 });

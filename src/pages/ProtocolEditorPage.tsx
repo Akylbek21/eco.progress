@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, ChevronLeft, ClipboardCheck, Eye, FileCheck2, History, MoreHorizontal, Plus, RotateCw, Save, Search, SearchCheck, Trash2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import ConfirmModal from '../components/modals/ConfirmModal';
@@ -28,7 +29,7 @@ import { signBase64WithNCALayer } from '../services/ncalayer';
 import protocolService from '../services/protocolService';
 import type { CompanyObject } from '../types/companies';
 import type { LaboratoryEmployee, MeasurementDevice, Protocol, ProtocolCompanySnapshot, ProtocolMeasurementDevice, WeatherConditions } from '../types/protocols';
-import { canEditProtocol, getProtocolPermissions, type ProtocolPermissions } from '../utils/protocolPermissions';
+import { getProtocolPermissions, type ProtocolPermissions } from '../utils/protocolPermissions';
 import { parseLaboratoryApiError } from '../utils/laboratoryApiError';
 import { isProtocolStatusEditable } from '../config/protocolStatus';
 import { collectProtocolDevices, isDeviceValidForDate } from '../utils/protocolDevices';
@@ -187,6 +188,7 @@ const protocolSteps: Array<{ key: ProtocolStepKey; label: string }> = [
 
 const lifecycleSteps = ['Черновик', 'Результаты', 'Расчёт', 'Согласование', 'Утверждение', 'Подписание'];
 const lifecycleIndexByStatus: Record<Protocol['status'], number> = {
+  UNKNOWN: -1,
   DRAFT: 0,
   NEEDS_REVISION: 1,
   CALCULATED: 2,
@@ -658,6 +660,7 @@ const ProtocolStepFooter = ({
 };
 
 const ProtocolEditorPage = () => {
+  const queryClient = useQueryClient();
   const { protocolId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -696,8 +699,8 @@ const ProtocolEditorPage = () => {
   const saveQueuedRef = useRef(false);
 
   const dirty = useMemo(() => Boolean(protocol && savedSignatureRef.current && editableSignature(protocol) !== savedSignatureRef.current), [protocol]);
-  const protocolActions = useMemo(() => getProtocolPermissions(protocol, user?.role), [protocol?.status, user?.role]);
-  const readOnly = useMemo(() => !canEditProtocol(user, protocol), [protocol?.status, user?.role]);
+  const protocolActions = useMemo(() => getProtocolPermissions(protocol, user?.role), [protocol, user?.role]);
+  const readOnly = !protocolActions.canSave;
   const applyServerProtocol = (item: Protocol) => {
     const normalized = {
       ...item,
@@ -981,14 +984,6 @@ const ProtocolEditorPage = () => {
     refreshLaboratorySnapshot().catch((error) => console.error('Automatic laboratory snapshot refresh failed.', error));
   }, [protocol?.id, protocol?.laboratory?.laboratoryId, readOnly]);
 
-  useEffect(() => {
-    if (!dirty || readOnly || busy) return;
-    const timer = window.setTimeout(() => {
-      save().catch((saveError) => console.error('Protocol autosave failed.', saveError));
-    }, 1800);
-    return () => window.clearTimeout(timer);
-  }, [dirty, readOnly, busy, protocol]);
-
   const checkSavedNormatives = async () => {
     if (!protocol) return;
     if (dirty) {
@@ -997,7 +992,7 @@ const ProtocolEditorPage = () => {
       if (!saved) return;
     }
     await run(async () => {
-      await protocolService.calculateProtocolSummary(protocol.id);
+      await protocolService.checkNormatives(protocol.id);
       return protocolService.getProtocol(protocol.id);
     }, 'Расчёт выполнен backend');
   };
@@ -1066,6 +1061,9 @@ const ProtocolEditorPage = () => {
     try {
       const updated = await action();
       applyServerProtocol(updated);
+      void queryClient.invalidateQueries({ queryKey: ['protocols'] });
+      void queryClient.invalidateQueries({ queryKey: ['protocol', updated.id] });
+      if (updated.orderId) void queryClient.invalidateQueries({ queryKey: ['order', String(updated.orderId)] });
       toast.success(success);
       return true;
     } catch (actionError) {
@@ -1208,10 +1206,18 @@ const ProtocolEditorPage = () => {
         throw downloadError;
       }
       if (!document.blob.size) throw new Error('Backend вернул пустой PDF. Сформируйте документ повторно.');
+      const fileHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await document.blob.arrayBuffer())))
+        .map((byte) => byte.toString(16).padStart(2, '0'))
+        .join('');
       const dataBase64 = await blobToBase64(document.blob);
       const { signedCms } = await signBase64WithNCALayer(dataBase64);
       if (!signedCms.trim()) throw new Error('NCALayer не вернул CMS-подпись.');
-      await protocolService.signProtocol(protocol.id, signedCms);
+      await protocolService.signProtocol(protocol.id, {
+        cmsSignatureBase64: signedCms,
+        fileHash,
+        fileId: protocol.finalPdfFileId,
+        version: protocol.version,
+      });
       applyServerProtocol(await protocolService.getProtocol(protocol.id));
       setSignOpen(false);
       toast.success('Протокол подписан');
@@ -1269,6 +1275,7 @@ const ProtocolEditorPage = () => {
       onApprove={() => setApproveOpen(true)}
       onReturn={() => setReturnOpen(true)}
       onSign={() => setSignOpen(true)}
+      onPublish={() => { void run(() => protocolService.publishToClient(protocol.id, protocol.version), 'Протокол отправлен клиенту'); }}
       onGenerate={generateDocuments}
       onDocx={() => { void generateAndDownload('docx'); }}
       onPdf={() => { void generateAndDownload('pdf'); }}
@@ -1283,208 +1290,6 @@ const ProtocolEditorPage = () => {
       }}
       onReplacement={() => { if (protocol.replacedByProtocolId) navigateSafely(`/staff/protocols/${protocol.replacedByProtocolId}`); }}
     />
-    {false && ((protocol: Protocol) => <div className="space-y-6 pb-20">
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <button type="button" onClick={() => navigateSafely('/staff/protocols')} className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-eco-700 hover:text-eco-900">
-            <ArrowLeft className="h-4 w-4" /> К протоколам
-          </button>
-          <p className="text-sm font-semibold uppercase tracking-wide text-eco-700">{templateName(protocol.templateId, protocol.templateName)}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <ProtocolStatusBadge status={protocol.status} />
-            <NormativeStatusBadge status={protocol.complianceResult} />
-          </div>
-          <h1 className="mt-1 text-2xl font-black text-slate-950 sm:text-3xl">{protocol.protocolNumber || protocol.number || 'Новый протокол'}</h1>
-        </div>
-        <div className="relative flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" onClick={load}><RotateCw className="h-4 w-4" /> Обновить</Button>
-          <Button type="button" variant="secondary" onClick={() => setMoreOpen((value) => !value)}><MoreHorizontal className="h-4 w-4" /> Еще</Button>
-          {moreOpen && (
-            <div className="absolute right-0 top-full z-30 mt-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-sm shadow-xl">
-              <button type="button" className="w-full rounded-lg px-3 py-2 text-left font-semibold text-slate-700 hover:bg-slate-50" onClick={() => { setMoreOpen(false); void load(); }}>Обновить данные</button>
-              {protocolActions.canDelete && <button type="button" className="w-full rounded-lg px-3 py-2 text-left font-semibold text-rose-700 hover:bg-rose-50" onClick={() => { setMoreOpen(false); setDeleteProtocolOpen(true); }}>Удалить протокол</button>}
-              {protocolActions.canCancel && !TERMINAL_STATUSES.has(String(protocol.status).toUpperCase()) && <button type="button" className="w-full rounded-lg px-3 py-2 text-left font-semibold text-rose-700 hover:bg-rose-50" onClick={async () => {
-                setMoreOpen(false);
-                if (!window.confirm('Отменить протокол? После отмены редактирование будет недоступно.')) return;
-                await run(() => protocolService.cancelProtocol(protocol.id), 'Протокол отменен');
-              }}>Отменить протокол</button>}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <section aria-label="Этап жизненного цикла протокола" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <ol className="grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
-          {lifecycleSteps.map((label, index) => {
-            const currentIndex = lifecycleIndexByStatus[protocol.status];
-            const active = index === currentIndex;
-            const complete = index < currentIndex;
-            return <li key={label} className={`rounded-xl border px-3 py-3 text-sm font-bold ${active ? 'border-eco-500 bg-eco-50 text-eco-900' : complete ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{index + 1}. {label}</li>;
-          })}
-        </ol>
-        <p className="mt-3 text-sm text-slate-600">Версия: <strong>{protocol.version ?? '—'}</strong>{protocol.replacesProtocolId ? <> · Заменяет протокол: <button type="button" className="font-bold text-eco-700" onClick={() => navigateSafely(`/staff/protocols/${protocol.replacesProtocolId}`)}>{protocol.replacesProtocolId}</button></> : null}{protocol.replacedByProtocolId ? <> · Заменён протоколом: <button type="button" className="font-bold text-eco-700" onClick={() => navigateSafely(`/staff/protocols/${protocol.replacedByProtocolId}`)}>{protocol.replacedByProtocolId}</button></> : null}</p>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Заполните протокол по шагам</h2>
-            <p className="mt-1 max-w-3xl text-sm text-slate-600">
-              Заполните данные по шагам. Система сохранит данные, проверит нормативы и подготовит протокол.
-            </p>
-            {missingFields.length > 0 && (
-              <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
-                Нужно заполнить: {missingFields.slice(0, 4).map((item) => item.label).join(', ')}{missingFields.length > 4 ? ` и еще ${missingFields.length - 4}` : ''}.
-              </p>
-            )}
-          </div>
-          <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800">
-            Заполнено {completedSteps} из {protocolSteps.length} шагов
-          </div>
-        </div>
-      </section>
-
-      {workflowErrors.length > 0 && (
-        <section role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
-          <h2 className="font-bold">Исправьте ошибки перед продолжением</h2>
-          <ul className="mt-2 list-disc space-y-1 pl-5">{workflowErrors.map((item) => <li key={item}>{item}</li>)}</ul>
-        </section>
-      )}
-
-      <ProtocolStepWizard activeStep={activeStep} protocol={protocol} onSelect={setActiveStep} />
-
-      {activeStep === 'general' && <div className="space-y-6">
-        <ProtocolGeneralForm protocol={protocol} readOnly={readOnly} onChange={patchProtocol} />
-        <ProtocolTestingForm
-          templateId={protocol.templateId}
-          value={protocol.testing}
-          measurementDate={protocol.measurementDate || protocol.testing.samplingDate}
-          readOnly={readOnly}
-          onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })}
-          onChange={(testing) => patchProtocol({ testing })}
-          printVisibility={protocol.printVisibility}
-          onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })}
-        />
-        <ProtocolLaboratoryForm
-          value={protocol.laboratory}
-          employees={laboratoryEmployees}
-          readOnly={readOnly}
-          loading={busy}
-          canOpenSettings={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'].includes(String(user?.role || ''))}
-          onExecutorChange={(employee) => patchProtocol({
-            executorId: String(employee.id),
-            executor: employee.fullName,
-            laboratory: {
-              ...protocol.laboratory,
-              executorId: String(employee.id),
-              executor: employee.fullName,
-            },
-          })}
-          onRefresh={refreshLaboratorySnapshot}
-          printVisibility={protocol.printVisibility}
-          onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })}
-        />
-      </div>}
-
-      {activeStep === 'organization' && <div className="space-y-6">
-        <SnapshotSection snapshot={protocol.companySnapshot} />
-        <ProtocolOrganizationForm value={protocol.organization} readOnly={readOnly} onChange={(organization) => patchProtocol({ organization })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />
-      </div>}
-
-      {activeStep === 'environment' && <ProtocolEnvironmentForm
-        value={protocol.environment || {}}
-        measurementDate={protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate}
-        measurementTime={protocol.measurementTime || ''}
-        objectId={String(protocol.objectId || '')}
-        objectName={companyObjects.find((item) => item.id === String(protocol.objectId))?.name || protocol.companySnapshot.objectName || ''}
-        objectOptions={companyObjects.map((item) => ({ id: item.id, name: item.name }))}
-        readOnly={readOnly}
-        loading={busy}
-        onSelectionChange={changeWeatherSelection}
-        onRequestConditions={refreshWeather}
-        onChange={(environment) => patchProtocol({ environment })}
-        printVisibility={protocol.printVisibility}
-        onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })}
-      />}
-
-      {activeStep === 'results' && <ProtocolResultsTable
-        protocolId={protocol.id}
-        templateId={protocol.templateId}
-        subtype={protocol.subtype}
-        rows={protocol.results}
-        devices={protocol.measurementDevices}
-        readOnly={readOnly}
-        busy={busy}
-        objectId={protocol.objectId}
-        measurementPlace={protocol.measurementPlace || ''}
-        testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate}
-        waterType={String((protocol.testing as Record<string, unknown>).waterType || protocol.results[0]?.values.waterType || '')}
-        waterUseCategory={String((protocol.testing as Record<string, unknown>).waterUseCategory || protocol.results[0]?.values.waterUseCategory || '')}
-        onChange={applyServerResults}
-        onCheckNormatives={checkSavedNormatives}
-        onImported={reloadProtocolResults}
-        onNotify={notify}
-        onGoToInstruments={() => setActiveStep('instruments')}
-      />}
-
-      {activeStep === 'instruments' && <MeasurementDevicesSection devices={protocol.measurementDevices || []} readOnly={readOnly || busy} onAdd={() => setDevicePickerOpen(true)} onRemove={(deviceId) => setDeviceToRemove(deviceId)} />}
-
-      {activeStep === 'review' && <div className="space-y-6">
-        <ProtocolExplanatoryNoteForm
-          value={protocol.explanatoryNote || ''}
-          readOnly={readOnly}
-          onChange={(explanatoryNote) => patchProtocol({ explanatoryNote })}
-          onGenerate={() => patchProtocol({ explanatoryNote: generatedExplanation })}
-          printVisibility={protocol.printVisibility}
-          onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })}
-        />
-        <ReviewChecklist protocol={protocol} missingFields={missingFields} onGoToStep={setActiveStep} />
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900"><History className="h-5 w-5 text-eco-700" /> История действий</h2>
-          <div className="space-y-3">
-            {protocol.history?.length ? protocol.history?.slice(0, 5).map((item) => (
-              <div key={item.id} className="rounded-xl bg-slate-50 p-3 text-sm">
-                <p className="font-bold text-slate-900">{item.action}</p>
-                <p className="mt-1 text-slate-500">{item.createdAt} · {item.actorName || 'Система'}</p>
-                {item.comment && <p className="mt-2 text-slate-700">{item.comment}</p>}
-              </div>
-            )) : <p className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-500">История действий пока пуста.</p>}
-          </div>
-        </section>
-      </div>}
-
-      <ProtocolStepFooter
-        protocol={protocol}
-        activeStep={activeStep}
-        busy={busy}
-        readOnly={readOnly}
-        actions={protocolActions}
-        saveStatus={saveStatus}
-        missingFields={missingFields}
-        onPrevious={goPreviousStep}
-        onNext={goNextStep}
-        onSave={async () => { await save(); }}
-        onCalculate={calculateProtocolResults}
-        onPreview={preview}
-        onReady={() => {
-          if (firstMissingStep) {
-            setActiveStep(firstMissingStep);
-            return;
-          }
-          setReadyOpen(true);
-        }}
-        onApprove={() => setApproveOpen(true)}
-        onReturn={() => setReturnOpen(true)}
-        onGenerateDocx={generateDocuments}
-        onGeneratePdf={generateDocuments}
-        onSign={() => setSignOpen(true)}
-        onDownloadDocx={() => generateAndDownload('docx')}
-        onDownloadPdf={() => generateAndDownload('pdf')}
-        onReplace={() => setReplaceOpen(true)}
-        onOpenReplacement={protocol.replacedByProtocolId ? () => navigateSafely(`/staff/protocols/${protocol.replacedByProtocolId}`) : undefined}
-      />
-
-      </div>)(protocol as Protocol)}
 
       <Modal
         open={Boolean(editSection)}
@@ -1514,7 +1319,7 @@ const ProtocolEditorPage = () => {
           <Button type="button" disabled={busy} onClick={async () => {
             const current = await ensureSavedProtocol('Сохраняем изменения перед отправкой на проверку.');
             if (!current) return;
-            if (await run(() => protocolService.markReadyForApproval(current.id), 'Протокол передан на проверку')) setReadyOpen(false);
+            if (await run(() => protocolService.markReadyForApproval(current.id, current.version), 'Протокол передан на проверку')) setReadyOpen(false);
           }}>Отправить</Button>
         </div>
       </Modal>
@@ -1529,7 +1334,7 @@ const ProtocolEditorPage = () => {
         </dl>
         <div className="mt-5 flex justify-end gap-3">
           <Button type="button" variant="secondary" disabled={busy} onClick={() => setApproveOpen(false)}>Отменить</Button>
-          <Button type="button" disabled={busy} onClick={async () => { if (await run(() => protocolService.approveProtocol(protocol.id), 'Протокол утверждён')) setApproveOpen(false); }}>Утвердить</Button>
+          <Button type="button" disabled={busy} onClick={async () => { if (await run(() => protocolService.approveProtocol(protocol.id, protocol.version), 'Протокол утверждён')) setApproveOpen(false); }}>Утвердить</Button>
         </div>
       </Modal>
       <Modal open={conflictOpen} onClose={() => setConflictOpen(false)} title="Протокол был изменён другим сотрудником">
@@ -1580,7 +1385,7 @@ const ProtocolEditorPage = () => {
         loading={busy}
         onClose={() => setReturnOpen(false)}
         onConfirm={async (reason) => {
-          if (await run(() => protocolService.returnForRevision(protocol.id, reason), 'Протокол возвращён на доработку')) setReturnOpen(false);
+          if (await run(() => protocolService.returnForRevision(protocol.id, reason, protocol.version), 'Протокол возвращён на доработку')) setReturnOpen(false);
         }}
       />
       <DevicePickerModal

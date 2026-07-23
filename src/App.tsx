@@ -240,8 +240,8 @@ function App() {
         <Route path="/staff/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/calendar" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']}><StaffCalendarPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть протоколы"><ProtocolsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/protocols/create" element={<Navigate to="/staff/protocols" replace />} />
-        <Route path="/staff/protocols/new" element={<Navigate to="/staff/protocols" replace />} />
+        <Route path="/staff/protocols/create" element={<Navigate to="/staff/protocols?create=1" replace />} />
+        <Route path="/staff/protocols/new" element={<Navigate to="/staff/protocols?create=1" replace />} />
         <Route path="/staff/protocols/:protocolId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols/:protocolId/edit" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/normatives" element={<RoleAccess roles={normativeRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={normativeRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />

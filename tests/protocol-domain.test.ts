@@ -40,10 +40,10 @@ describe('protocol domain contract', () => {
     form.templateId = 'water_wastewater'; form.companyId = '15'; form.objectId = '38'; form.laboratoryId = '2'; form.executorId = '17'; form.measurementPlace = 'Точка отбора'; form.testingMethodNd = 'ГОСТ'; form.temperature = '20';
     form.results = [{ ...form.results[0], indicatorName: 'Хлориды', pollutantCode: 'CL', unit: 'мг/л', value: '12', measurementDeviceId: '5' }];
     const request = mapProtocolWizardToRequest(form);
-    expect(request).toMatchObject({ templateId: 'water', companyId: 15, objectId: 38, laboratoryId: 2, executorId: 17, conditions: { temperature: '20' } });
+    expect(request).toMatchObject({ templateId: 'water', companyId: '15', objectId: '38', laboratoryId: '2', executorId: '17', conditions: { temperature: '20' } });
     expect(request.measurements).toHaveLength(1);
     expect(request.measurements[0].testingMethodNd).toBe('ГОСТ');
-    expect(request).not.toHaveProperty('environment');
+    expect(request.environment).toMatchObject({ temperature: '20', source: 'MANUAL' });
   });
 
   it('maps PATCH to nested DTO and uses the laboratory employee id', () => {

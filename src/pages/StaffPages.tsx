@@ -2450,13 +2450,31 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
             )}
 
             {(['Протокол', '870 форма', 'База отчёт', 'Квартальный отчёт', 'Годовой отчёт', 'Полугодовой отчёт', 'Архив отчёт'] as CrmTab[]).includes(currentTab) && (
-              <LaboratoryResultSection
-                order={order}
-                tab={currentTab}
-                canEdit={access.laboratory}
-                onUpload={submitLaboratoryResult}
-                onStatus={changeLaboratoryResultStatus}
-              />
+              <div className="space-y-4">
+                {currentTab === 'Протокол' && order.linkedProtocol && (
+                  <section className="rounded-2xl border border-eco-200 bg-eco-50 p-5">
+                    <p className="text-xs font-bold uppercase tracking-wide text-eco-700">Связанный протокол</p>
+                    <p className="mt-1 font-black text-slate-950">Протокол № {order.linkedProtocol.number || order.linkedProtocol.id}</p>
+                    <p className="mt-1 text-sm text-slate-600">Статус: {order.linkedProtocol.status}</p>
+                    <Link className="mt-3 inline-flex font-bold text-eco-800" to={`/staff/protocols/${order.linkedProtocol.id}`}>Открыть протокол</Link>
+                  </section>
+                )}
+                {currentTab !== 'Протокол' && (
+                  <LaboratoryResultSection
+                    order={order}
+                    tab={currentTab}
+                    canEdit={access.laboratory}
+                    onUpload={submitLaboratoryResult}
+                    onStatus={changeLaboratoryResultStatus}
+                  />
+                )}
+                {currentTab === 'Протокол' && !order.linkedProtocol && (
+                  <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm font-semibold text-amber-900">
+                    <p>К заявке ещё не привязан протокол.</p>
+                    {access.laboratory && <Link className="mt-3 inline-flex rounded-xl bg-eco-700 px-4 py-2 font-bold text-white" to={`/staff/protocols?create=1&orderId=${encodeURIComponent(order.id)}`}>Создать протокол</Link>}
+                  </section>
+                )}
+              </div>
             )}
 
             {currentTab === 'Лаборатория' && (
@@ -2471,7 +2489,6 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                     <div className="mt-4 flex flex-wrap gap-3">
                       <Button type="button" variant="secondary" onClick={() => updateLaboratoryStatus(order.id, 'samples_received', 'Образцы получены').then(load)}>Образцы получены</Button>
                       <Button type="button" variant="secondary" onClick={() => updateLaboratoryStatus(order.id, 'analysis_in_progress', 'Анализ в работе').then(load)}>Анализ в работе</Button>
-                      <Button type="button" onClick={() => updateLaboratoryStatus(order.id, 'result_ready', 'Результат готов').then(load)}>Результат готов</Button>
                     </div>
                   )}
                 </Section>
@@ -3475,6 +3492,7 @@ const StaffCompletionPanel = ({
 }) => {
   const completed = ['Готово', 'Завершено'].includes(order.status);
   const resultDocuments = order.resultDocuments.filter((doc) => doc.type === 'result' || doc.status === 'published_to_client' || doc.sentToClient);
+  const canComplete = order.canComplete === true;
   return (
     <div className="space-y-6">
       <Section title="Завершение заявки" icon={<CheckCircle2 size={20} />}>
@@ -3494,10 +3512,15 @@ const StaffCompletionPanel = ({
             <Button type="button" variant="secondary" disabled={order.status === 'Готово'} onClick={() => onStatus('Готово')}>
               Отметить готово
             </Button>
-            <Button type="button" variant="success" disabled={order.status === 'Завершено'} onClick={() => onStatus('Завершено')}>
+            <Button type="button" variant="success" disabled={order.status === 'Завершено' || !canComplete} onClick={() => onStatus('Завершено')}>
               Завершить заявку
             </Button>
           </div>
+        )}
+        {!completed && !canComplete && Boolean(order.blockingReasons?.length) && (
+          <ul className="mt-4 list-disc space-y-1 rounded-2xl bg-amber-50 p-4 pl-9 text-sm text-amber-900">
+            {order.blockingReasons?.map((reason) => <li key={reason}>{reason}</li>)}
+          </ul>
         )}
       </Section>
       <ResultPanel order={order} />

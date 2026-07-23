@@ -4,7 +4,7 @@ import { getProtocolPermissions } from '../../../utils/protocolPermissions';
 
 export type ProtocolDetailsTab = 'results' | 'main' | 'documents' | 'history';
 export type ProtocolEditSection = 'general' | 'organization' | 'laboratory' | 'environment' | 'results' | 'methods';
-export type ProtocolPrimaryActionKey = 'edit' | 'ready' | 'approve' | 'sign' | 'pdf' | 'replacement' | 'review' | null;
+export type ProtocolPrimaryActionKey = 'edit' | 'ready' | 'approve' | 'sign' | 'publish' | 'pdf' | 'replacement' | 'review' | null;
 
 export const formatProtocolDate = (value?: string | null) => {
   if (!value) return 'Не заполнено';
@@ -89,7 +89,9 @@ export const resolveProtocolPrimaryAction = (protocol: Protocol, role?: string):
   if (status === 'READY_FOR_APPROVAL') return { key: permissions.canApprove ? 'approve' : null, label: 'Утвердить' };
   if (status === 'NEEDS_REVISION') return { key: permissions.canSave ? 'edit' : null, label: 'Исправить протокол' };
   if (status === 'APPROVED') return { key: permissions.canSign ? 'sign' : protocol.hasPdf ? 'pdf' : null, label: permissions.canSign ? 'Подписать' : 'Скачать PDF' };
-  if (status === 'SIGNED') return { key: 'pdf', label: 'Скачать PDF' };
+  if (status === 'SIGNED') return permissions.canPublish && !protocol.publishedToClientAt
+    ? { key: 'publish', label: 'Отправить клиенту' }
+    : { key: 'pdf', label: 'Скачать PDF' };
   if (status === 'REPLACED' && protocol.replacedByProtocolId) return { key: 'replacement', label: 'Открыть новую версию' };
   if (protocol.hasPdf) return { key: 'pdf', label: 'Скачать PDF' };
   return { key: null, label: '' };

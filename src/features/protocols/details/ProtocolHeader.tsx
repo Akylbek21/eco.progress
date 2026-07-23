@@ -1,4 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import ProtocolStatusBadge from '../../../components/protocols/ProtocolStatusBadge';
 import Button from '../../../components/ui/Button';
 import { templateName } from '../../../data/protocolTemplates';
@@ -34,6 +35,7 @@ const ProtocolHeader = ({ protocol, permissions, busy, primaryLabel, onBack, onP
         </div>
         <p className="mt-2 text-lg font-bold text-eco-800">{templateName(protocol.templateId, protocol.templateName)}</p>
         <p className="mt-2 text-sm text-slate-600">{protocol.companySnapshot.companyName || 'Компания не указана'} · Объект: {protocol.companySnapshot.objectName || 'не указан'} · {formatProtocolDate(protocol.protocolDate)}</p>
+        {protocol.orderId && <p className="mt-2 text-sm"><span className="text-slate-500">Заявка № {protocol.orderNumber || protocol.orderId}</span> · <Link className="font-bold text-eco-700" to={`/staff/orders/${protocol.orderId}`}>Открыть заявку</Link></p>}
       </div>
       <div className="flex flex-wrap gap-2 lg:justify-end">
         {permissions.canReturn && <Button type="button" variant="secondary" disabled={busy} onClick={onReturn}>Вернуть на исправление</Button>}

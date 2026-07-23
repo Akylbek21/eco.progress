@@ -1,5 +1,20 @@
 import { useFormContext } from 'react-hook-form';
 import type { ProtocolWizardForm } from '../wizardTypes';
+
 const input = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-eco-500 focus:outline-none focus:ring-4 focus:ring-eco-100';
-const MethodsStep = () => { const { register } = useFormContext<ProtocolWizardForm>(); return <section><h3 id="wizard-step-title" tabIndex={-1} className="text-xl font-black">Методики и реквизиты документа</h3><div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3"><label className="text-sm font-bold lg:col-span-2">НД на метод испытаний *<input {...register('testingMethodNd')} className={`${input} mt-1.5`} /></label><label className="text-sm font-bold">Код формы<input {...register('formCode')} className={`${input} mt-1.5`} /></label><label className="text-sm font-bold">Номер приложения<input {...register('appendixNumber')} className={`${input} mt-1.5`} /></label><label className="text-sm font-bold">Номер заявки<input {...register('applicationNumber')} className={`${input} mt-1.5`} /></label><label className="text-sm font-bold">Номер договора<input {...register('contractNumber')} className={`${input} mt-1.5`} /></label><label className="text-sm font-bold lg:col-span-3">Примечание<textarea {...register('note')} rows={4} className={`${input} mt-1.5`} /></label></div></section>; };
+
+const MethodsStep = () => {
+  const { register } = useFormContext<ProtocolWizardForm>();
+  return (
+    <section>
+      <h3 id="wizard-step-title" tabIndex={-1} className="text-xl font-black">Методики</h3>
+      <p className="mt-2 text-sm text-slate-500">Указываются только реквизиты, поддерживаемые backend quick-create.</p>
+      <label className="mt-5 block text-sm font-bold">
+        НД на метод испытаний *
+        <input {...register('testingMethodNd')} className={`${input} mt-1.5`} />
+      </label>
+    </section>
+  );
+};
+
 export default MethodsStep;

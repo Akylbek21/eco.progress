@@ -958,16 +958,9 @@ const ProtocolResultsTable = ({
     if (!window.confirm(`Удалить выбранные строки: ${selectedRows.length}?`)) return;
     setSaving(true);
     try {
-      const settled = await Promise.allSettled(selectedRows.map((row) => protocolService.deleteProtocolResult(protocolId, row.id)));
-      const deletedIds = new Set(selectedRows.filter((_, index) => settled[index].status === 'fulfilled').map((row) => row.id));
-      const failed = settled.length - deletedIds.size;
-      if (failed) {
-        await onImported();
-        onNotify(`Удалено ${deletedIds.size} из ${settled.length}. ${failed} строк не удалено; данные перезагружены.`, 'warning');
-      } else {
-        onChange(rows.filter((row) => !deletedIds.has(row.id)));
-        onNotify('Выбранные строки удалены', 'success');
-      }
+      const updated = await protocolService.bulkDeleteProtocolResults(protocolId, selectedRows.map((row) => row.id));
+      onChange(updated.results);
+      onNotify('Выбранные строки удалены', 'success');
       setSelected([]);
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось удалить выбранные строки', 'error');
@@ -980,20 +973,8 @@ const ProtocolResultsTable = ({
     if (!selectedRows.length) return onNotify('Выберите строки', 'warning');
     setSaving(true);
     try {
-      const settled = await Promise.allSettled(selectedRows.map((row) => protocolService.updateProtocolResult(protocolId, row.id, {
-        measurementDeviceId: patch.measurementDeviceId || row.measurementDeviceId,
-        normativeId: row.normativeReference?.id || valueOf(row, ['normativeId']),
-        values: { ...row.values, ...patch },
-      })));
-      const saved = settled.flatMap((item) => item.status === 'fulfilled' ? [item.value] : []);
-      const failed = settled.length - saved.length;
-      if (failed) {
-        await onImported();
-        onNotify(`Обновлено ${saved.length} из ${settled.length}. ${failed} строк не обновлено; данные перезагружены.`, 'warning');
-        return;
-      }
-      const map = new Map(saved.map((row) => [row.id, row]));
-      onChange(rows.map((row) => map.get(row.id) || row));
+      const updated = await protocolService.bulkUpdateProtocolResults(protocolId, selectedRows.map((row) => row.id), patch);
+      onChange(updated.results);
       onNotify('Значение применено к выбранным строкам', 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Массовое изменение не выполнено', 'error');

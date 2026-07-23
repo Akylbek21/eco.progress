@@ -64,6 +64,12 @@ const EnvironmentStep = ({ weatherLoading, weatherMessage }: Props) => {
           </>
         )}
       </div>
+      {watch('environmentSource') === 'MANUAL' && (
+        <label className="mt-4 block text-sm font-bold">
+          Причина ручного изменения
+          <input {...register('environmentManualChangeReason')} className={`${input} mt-1.5`} />
+        </label>
+      )}
       {(weatherLoading || weatherMessage) && (
         <p className={`mt-4 text-sm font-semibold ${weatherMessage.startsWith('Не удалось') || weatherMessage.startsWith('У выбранного объекта') ? 'text-amber-700' : 'text-slate-500'}`}>
           {weatherLoading ? 'Загружаем условия среды…' : weatherMessage}

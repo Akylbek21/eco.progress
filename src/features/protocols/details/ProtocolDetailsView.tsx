@@ -24,6 +24,7 @@ type Props = {
   onApprove: () => void;
   onReturn: () => void;
   onSign: () => void;
+  onPublish: () => void;
   onGenerate: () => void;
   onDocx: () => void;
   onPdf: () => void;
@@ -40,7 +41,7 @@ const tabs: Array<{ key: ProtocolDetailsTab; label: string }> = [
   { key: 'history', label: 'История' },
 ];
 
-const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErrors, busy, onBack, onEdit, onReady, onApprove, onReturn, onSign, onGenerate, onDocx, onPdf, onCorrection, onCancel, onArchive, onReplacement }: Props) => {
+const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErrors, busy, onBack, onEdit, onReady, onApprove, onReturn, onSign, onPublish, onGenerate, onDocx, onPdf, onCorrection, onCancel, onArchive, onReplacement }: Props) => {
   const [activeTab, setActiveTab] = useState<ProtocolDetailsTab>('results');
   const primary = resolveProtocolPrimaryAction(protocol, role);
   const runPrimary = () => {
@@ -48,6 +49,7 @@ const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErr
     else if (primary.key === 'ready') onReady();
     else if (primary.key === 'approve') onApprove();
     else if (primary.key === 'sign') onSign();
+    else if (primary.key === 'publish') onPublish();
     else if (primary.key === 'pdf') onPdf();
     else if (primary.key === 'replacement') onReplacement();
     else if (primary.key === 'review') setActiveTab('results');

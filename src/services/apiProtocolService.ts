@@ -36,6 +36,7 @@ import type {
   UpdateProtocolPayload,
   WeatherConditions,
 } from '../types/protocols';
+import type { ProtocolSignRequest } from './protocolService';
 import { normalizeProtocolStatus } from '../config/protocolStatus';
 import { canonicalProtocolResultAliases } from '../utils/protocolResultAliases';
 import { canSearchNormative, normativeSearchItemToRecord, searchNormatives } from './normativeSearchService';
@@ -704,6 +705,8 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     signedBy: pick(source, ['signedBy', 'signedByName', 'signed_by']),
     hasDocx: source.hasDocx === true || Boolean(source.docxDocumentId || source.docxFileId || source.docxUrl),
     hasPdf: source.hasPdf === true || Boolean(source.pdfDocumentId || source.pdfFileId || source.pdfUrl),
+    finalPdfFileId: pick(source, ['finalPdfFileId', 'pdfFileId', 'pdfDocumentId']),
+    finalPdfHash: pick(source, ['finalPdfHash', 'pdfFileHash', 'pdfHash']),
     printVisibility,
     organization: {
       organizationName: pick(organization, ['organizationName', 'companyName', 'name']) || snapshot.companyName,
@@ -764,6 +767,13 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     version: source.version === undefined || source.version === null ? undefined : Number(source.version),
     replacedByProtocolId: pick(source, ['replacedByProtocolId', 'replaced_by_protocol_id']),
     replacesProtocolId: pick(source, ['replacesProtocolId', 'replaces_protocol_id']),
+    orderId: pick(source, ['orderId', 'order_id']),
+    orderServiceItemId: pick(source, ['orderServiceItemId', 'order_service_item_id']),
+    orderNumber: pick(source, ['orderNumber', 'order_number']),
+    permissions: asRecord(source.permissions) as Record<string, boolean>,
+    canComplete: source.canComplete === true,
+    blockingReasons: Array.isArray(source.blockingReasons) ? source.blockingReasons.map(String) : [],
+    publishedToClientAt: pick(source, ['publishedToClientAt', 'published_to_client_at']),
   };
 };
 
@@ -952,7 +962,11 @@ export async function getProtocolTemplates(): Promise<ProtocolTemplate[]> {
           } as ProtocolTemplate];
         } catch (error) {
           if (import.meta.env.DEV) console.warn('[Protocols] Unsupported backend protocol type', { rawId, error });
-          return [];
+          return [{
+            ...source,
+            id: rawId as ProtocolTemplate['id'],
+            name: pick(source, ['name', 'label', 'title']) || rawId,
+          } as ProtocolTemplate];
         }
       }))
       .finally(() => {
@@ -975,9 +989,7 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
 }
 
-export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): Promise<Protocol> {
-  const { environment: _unsupportedEnvironment, ...supportedPayload } = payload;
-  void _unsupportedEnvironment;
+export async function quickCreateProtocol(payload: QuickProtocolCreatePayload, idempotencyKey?: string): Promise<Protocol> {
   const measurements = payload.measurements.map((measurement) => {
     const rawMeasurementDeviceId = measurement.measurementDeviceId
       ?? measurement.deviceId
@@ -992,15 +1004,25 @@ export async function quickCreateProtocol(payload: QuickProtocolCreatePayload): 
     return { ...canonicalMeasurement, measurementDeviceId, values };
   });
   const response = await api.post<ApiResponse<unknown> | unknown>('/protocols/quick-create', {
-    ...supportedPayload,
+    ...payload,
     templateId: mapFrontendProtocolType(payload.templateId),
     normativeTemplateId: mapFrontendProtocolType(payload.normativeTemplateId),
     printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
     measurements,
-  });
+  }, { headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined });
   const result = unwrapData(response);
   const protocol = requireProtocol(result, 'быстрое создание');
-  return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
+  const persisted = await getProtocol(protocol.id);
+  if (import.meta.env.DEV) {
+    const actualMeasurementDate = persisted.measurementDate;
+    if (actualMeasurementDate !== payload.measurementDate || persisted.protocolDate !== payload.protocolDate) {
+      console.error('[Protocol contract] Backend did not persist key quick-create dates.', {
+        expected: { protocolDate: payload.protocolDate, measurementDate: payload.measurementDate },
+        actual: { protocolDate: persisted.protocolDate, measurementDate: actualMeasurementDate },
+      });
+    }
+  }
+  return { ...persisted, printVisibility: normalizeProtocolPrintVisibility(persisted.printVisibility ?? payload.printVisibility) };
 }
 
 export async function refreshLaboratoryData(protocolId: string): Promise<Protocol> {
@@ -1060,33 +1082,51 @@ export async function deleteProtocolResult(protocolId: string, resultId: string)
   await api.delete<ApiResponse<null>>(`/protocols/${protocolId}/results/${resultId}`);
 }
 
+export async function bulkUpdateProtocolResults(protocolId: string, resultIds: string[], patch: Record<string, unknown>): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/bulk-update`, { resultIds, patch });
+  return protocolFromActionResponse(protocolId, response);
+}
+
+export async function bulkDeleteProtocolResults(protocolId: string, resultIds: string[]): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/bulk-delete`, { resultIds });
+  return protocolFromActionResponse(protocolId, response);
+}
+
 export async function checkNormatives(protocolId: string): Promise<Protocol> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/check-normatives`);
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function readyForApproval(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/ready-for-approval`);
+const versionConfig = (version?: number) => ({ headers: version === undefined ? undefined : { 'If-Match': String(version) } });
+
+export async function readyForApproval(protocolId: string, version?: number): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/ready-for-approval`, null, versionConfig(version));
   return protocolFromActionResponse(protocolId, response);
 }
 
 export const markReadyForApproval = readyForApproval;
 
-export async function approveProtocol(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/approve`);
+export async function approveProtocol(protocolId: string, version?: number): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/approve`, null, versionConfig(version));
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function returnForRevision(protocolId: string, reason: string): Promise<Protocol> {
+export async function returnForRevision(protocolId: string, reason: string, version?: number): Promise<Protocol> {
   const comment = reason.trim();
   if (!comment) throw new Error('Укажите причину возврата протокола на доработку.');
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-for-revision`, { comment, reason: comment });
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-for-revision`, { reason: comment }, versionConfig(version));
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function signProtocol(protocolId: string, cmsSignatureBase64: string): Promise<Protocol> {
-  if (!cmsSignatureBase64.trim()) throw new Error('NCALayer не вернул CMS-подпись.');
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/sign`, { cmsSignatureBase64 });
+export async function signProtocol(protocolId: string, payload: ProtocolSignRequest): Promise<Protocol> {
+  if (!payload.cmsSignatureBase64.trim()) throw new Error('NCALayer не вернул CMS-подпись.');
+  if (!payload.fileHash.trim()) throw new Error('Не удалось вычислить хеш final PDF.');
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/sign`, payload, versionConfig(payload.version));
+  return protocolFromActionResponse(protocolId, response);
+}
+
+export async function publishToClient(protocolId: string, version?: number): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/publish-to-client`, null, versionConfig(version));
   return protocolFromActionResponse(protocolId, response);
 }
 

@@ -17,7 +17,8 @@ test('wizard has nine guarded steps and one quick-create mutation', async () => 
   const wizard = await read('src/features/protocols/components/CreateProtocolWizardModal.tsx');
   assert.match(wizard, /const steps = \[[^\]]*'Создание'\]/);
   assert.match(wizard, /submittingRef\.current \|\| mutation\.isPending/);
-  assert.match(wizard, /protocolService\.quickCreateProtocol\(payload\)/);
+  assert.match(wizard, /protocolService\.quickCreateProtocol\(payload, idempotencyKeyRef\.current\)/);
+  assert.match(wizard, /crypto\.randomUUID\(\)/);
   assert.doesNotMatch(wizard, /protocolService\.createProtocol/);
   assert.match(wizard, /closeOnBackdrop=\{false\}/);
   assert.match(wizard, /document\.getElementById\('wizard-step-title'\)/);
@@ -32,15 +33,16 @@ test('wizard persists and clears the session draft', async () => {
   assert.match(wizard, /Найдена незавершённая форма протокола/);
 });
 
-test('wizard payload mapper filters empty rows, maps water and omits environment', async () => {
+test('wizard payload mapper filters empty rows, maps water and sends canonical environment', async () => {
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   const api = await read('src/services/apiProtocolService.ts');
   assert.match(mapper, /filter\(isNonEmptyResult\)/);
   assert.match(mapper, /mapFrontendProtocolType\(form\.templateId\)/);
   assert.match(mapper, /conditions: mapConditions\(form\)/);
-  assert.doesNotMatch(mapper, /environment:/);
-  assert.match(api, /environment: _unsupportedEnvironment/);
-  assert.doesNotMatch(api.match(/api\.post[^;]+\/protocols\/quick-create[\s\S]*?\}\);/)?.[0] || '', /environment: toApiEnvironment/);
+  assert.match(mapper, /environment:/);
+  assert.match(mapper, /manualChangeReason:/);
+  assert.doesNotMatch(api, /environment: _unsupportedEnvironment/);
+  assert.match(api, /'Idempotency-Key'/);
 });
 
 test('result rows validate device date and chemical or physical codes', async () => {

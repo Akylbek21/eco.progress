@@ -214,6 +214,13 @@ export const mapOrder = (raw: UnknownRecord): Order => {
     laboratoryMeasurementAgreement: raw.laboratoryMeasurementAgreement,
     laboratorySections: raw.laboratorySections,
     laboratoryResultDocuments: asRecords(raw.laboratoryResultDocuments).filter((document) => document.clientVisible === true || String(document.status).toUpperCase() === 'PUBLISHED_TO_CLIENT') as unknown as Order['laboratoryResultDocuments'],
+    linkedProtocol: (() => {
+      const protocol = asRecord(raw.linkedProtocol || raw.protocol);
+      const id = asString(protocol.id || raw.protocolId);
+      return id ? { id, number: asString(protocol.number || protocol.protocolNumber || raw.protocolNumber), status: asString(protocol.status || raw.protocolStatus) } : undefined;
+    })(),
+    canComplete: raw.canComplete === true,
+    blockingReasons: Array.isArray(raw.blockingReasons) ? raw.blockingReasons.map(String) : [],
     notifications: raw.notifications,
     deadline: raw.deadline,
     updatedAt: raw.updatedAt,

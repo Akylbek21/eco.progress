@@ -6,12 +6,20 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/ui/ToastProvider';
 import App from './App';
 import './index.css';
+import axios from 'axios';
+
+export const shouldRetry = (failureCount: number, error: unknown) => {
+  if (!axios.isAxiosError(error)) return failureCount < 2;
+  const status = error.response?.status;
+  if ([400, 401, 403, 404, 409, 422].includes(status ?? 0)) return false;
+  return failureCount < 2;
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      retry: 1,
+      retry: shouldRetry,
     },
   },
 });

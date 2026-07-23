@@ -15,11 +15,6 @@ const mapResultToBackend = (row: ProtocolWizardResult, defaultTestingMethod: str
   pollutantCode: optionalString(row.pollutantCode),
   factorType: optionalString(row.factorType),
   normativeId: optional(row.normativeId),
-  normativeValue: optional(row.normativeValue),
-  normativeMin: optional(row.normativeMin),
-  normativeMax: optional(row.normativeMax),
-  comparisonType: optional(row.comparisonType) || undefined,
-  normativeDocument: optional(row.normativeDocument) || undefined,
   sourceDocumentCode: optional(row.sourceDocumentCode),
   testingMethodNd: optionalString(row.testingMethodNd) || optionalString(defaultTestingMethod),
   measurementDeviceId: optional(row.measurementDeviceId),
@@ -38,17 +33,37 @@ export const mapConditions = (form: ProtocolWizardForm): Record<string, Protocol
   return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== null && value !== ''));
 };
 
-export function mapProtocolWizardToRequest(form: ProtocolWizardForm): QuickProtocolCreatePayload {
+export function mapProtocolWizardToQuickCreateRequest(form: ProtocolWizardForm): QuickProtocolCreatePayload {
   if (!form.templateId) throw new Error('Выберите тип протокола.');
   const config = PROTOCOL_TYPE_CONFIG[configKey(form.templateId)];
   const measurements = form.results.filter(isNonEmptyResult).map((row) => mapResultToBackend(row, form.testingMethodNd));
   return {
     templateId: mapFrontendProtocolType(form.templateId) as QuickProtocolCreatePayload['templateId'],
-    companyId: Number(form.companyId), objectId: Number(form.objectId), laboratoryId: Number(form.laboratoryId), executorId: Number(form.executorId),
+    companyId: form.companyId, objectId: form.objectId, laboratoryId: form.laboratoryId, executorId: form.executorId,
     protocolDate: form.protocolDate, sampleDate: form.sampleDate || form.measurementDate, measurementDate: form.measurementDate,
-    measurementTime: form.measurementTime || '', measurementPlace: form.measurementPlace.trim(), sourceDocumentCode: config.sourceDocumentCode,
+    measurementTime: form.measurementTime || '', measurementPlace: form.measurementPlace.trim(),
+    testingStartDate: optional(form.testingStartDate),
+    testingEndDate: optional(form.testingEndDate),
+    sourceNumber: optional(form.sourceNumber),
+    orderId: optional(form.orderId),
+    orderServiceItemId: optional(form.orderServiceItemId),
+    sourceDocumentCode: config.sourceDocumentCode,
     docxTemplateCode: config.docxTemplateCode || undefined, normativeTemplateId: mapFrontendProtocolType(config.normativeTemplateId) as QuickProtocolCreatePayload['normativeTemplateId'],
     resultMode: CHEMICAL_TYPES.has(form.templateId) ? 'CHEMICAL' : 'PHYSICAL', defaultUnit: config.defaultUnit || undefined,
-    conditions: mapConditions(form), measurements,
+    conditions: mapConditions(form),
+    environment: {
+      temperature: optional(form.temperature) ?? undefined,
+      humidity: optional(form.humidity) ?? undefined,
+      pressureKpa: optional(form.pressure) ?? undefined,
+      windSpeed: optional(form.windSpeed) ?? undefined,
+      source: form.environmentSource,
+      dataSource: optional(form.environmentDataSource) ?? undefined,
+      observedAt: optional(form.environmentObservedAt) ?? undefined,
+      manualChangeReason: optional(form.environmentManualChangeReason) ?? undefined,
+    },
+    measurements,
   };
 }
+
+/** @deprecated Use the canonical quick-create mapper. */
+export const mapProtocolWizardToRequest = mapProtocolWizardToQuickCreateRequest;

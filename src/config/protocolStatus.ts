@@ -3,6 +3,7 @@ import type { LegacyProtocolStatus, ProtocolStatus } from '../types/protocols';
 export type ProtocolStatusColor = 'neutral' | 'info' | 'warning' | 'success' | 'danger';
 
 export const protocolStatusConfig: Record<ProtocolStatus, { label: string; editable: boolean; color: ProtocolStatusColor }> = {
+  UNKNOWN: { label: 'Неизвестный статус', editable: false, color: 'warning' },
   DRAFT: { label: 'Черновик', editable: true, color: 'neutral' },
   CALCULATED: { label: 'Расчёт выполнен', editable: true, color: 'info' },
   READY: { label: 'Подготовлен', editable: false, color: 'info' },
@@ -22,9 +23,9 @@ const legacyStatusMap: Record<LegacyProtocolStatus, ProtocolStatus> = {
 };
 
 export const normalizeProtocolStatus = (status?: string | null): ProtocolStatus => {
-  const value = String(status || 'DRAFT').trim().toUpperCase();
+  const value = String(status || '').trim().toUpperCase();
   if (value in legacyStatusMap) return legacyStatusMap[value as LegacyProtocolStatus];
-  return value in protocolStatusConfig ? value as ProtocolStatus : 'DRAFT';
+  return value in protocolStatusConfig ? value as ProtocolStatus : 'UNKNOWN';
 };
 
 export const isProtocolStatusEditable = (status?: string | null) => protocolStatusConfig[normalizeProtocolStatus(status)].editable;

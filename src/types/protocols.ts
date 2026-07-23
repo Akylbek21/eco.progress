@@ -1,6 +1,7 @@
 import type { LaboratoryDetails as CanonicalLaboratoryDetails, LaboratoryEmployee as CanonicalLaboratoryEmployee, LaboratoryListItem as CanonicalLaboratoryListItem } from './laboratories';
 
 export type ProtocolStatus =
+  | 'UNKNOWN'
   | 'DRAFT'
   | 'CALCULATED'
   | 'READY'
@@ -357,6 +358,8 @@ export interface Protocol {
   signedBy?: string;
   hasDocx?: boolean;
   hasPdf?: boolean;
+  finalPdfFileId?: string;
+  finalPdfHash?: string;
   printVisibility?: ProtocolPrintVisibility;
   organization: ProtocolOrganizationData;
   laboratory: ProtocolLaboratorySnapshot;
@@ -370,6 +373,13 @@ export interface Protocol {
   version?: number;
   replacedByProtocolId?: string;
   replacesProtocolId?: string;
+  orderId?: string | number;
+  orderServiceItemId?: string | number;
+  orderNumber?: string;
+  permissions?: Record<string, boolean>;
+  canComplete?: boolean;
+  blockingReasons?: string[];
+  publishedToClientAt?: string;
 }
 
 export type ProtocolPage = {
@@ -551,15 +561,20 @@ export type QuickProtocolMeasurementPayload = {
 export type QuickProtocolCreatePayload = {
   templateId: ProtocolTemplateId;
   subtype?: ProtocolSubtype;
-  companyId: number;
-  objectId: number;
+  companyId: string | number;
+  objectId: string | number;
   protocolDate: string;
   sampleDate: string;
   measurementDate: string;
   measurementTime: string;
   measurementPlace: string;
-  laboratoryId: number;
-  executorId: number;
+  testingStartDate?: string | null;
+  testingEndDate?: string | null;
+  sourceNumber?: string | null;
+  laboratoryId: string | number;
+  executorId: string | number;
+  orderId?: string | number | null;
+  orderServiceItemId?: string | number | null;
   sourceDocumentCode?: string | null;
   docxTemplateCode?: string;
   normativeTemplateId: ProtocolTemplateId;
@@ -874,4 +889,6 @@ export type DirectoryQuery = {
   normativeType?: string;
   subtype?: string;
   status?: string;
+  laboratoryId?: string | number;
+  measurementDate?: string;
 };

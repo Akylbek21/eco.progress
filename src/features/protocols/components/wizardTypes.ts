@@ -52,6 +52,10 @@ export type ProtocolWizardForm = {
   windSpeed: string;
   windDirection: string;
   weatherConditions: string;
+  environmentSource: 'API' | 'MANUAL';
+  environmentDataSource: string;
+  environmentObservedAt: string;
+  environmentManualChangeReason: string;
   season: string;
   workCategory: string;
   testingMethodNd: string;
@@ -60,6 +64,8 @@ export type ProtocolWizardForm = {
   applicationNumber: string;
   contractNumber: string;
   note: string;
+  orderId: string;
+  orderServiceItemId: string;
   results: ProtocolWizardResult[];
 };
 
@@ -69,12 +75,16 @@ export const emptyWizardResult = (): ProtocolWizardResult => ({
 });
 
 export const createWizardDefaults = (): ProtocolWizardForm => {
-  const date = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   return {
     templateId: '', companyId: '', objectId: '', customer: '', basis: '', laboratoryId: '', executorId: '', protocolDate: date,
     sampleDate: date, measurementDate: date, testingStartDate: date, testingEndDate: date, measurementTime: '12:00', measurementPlace: '', sourceNumber: '',
-    temperature: '', humidity: '', pressure: '', windSpeed: '', windDirection: '', weatherConditions: '', season: '', workCategory: '',
-    testingMethodNd: '', formCode: '', appendixNumber: '', applicationNumber: '', contractNumber: '', note: '', results: [emptyWizardResult()],
+    temperature: '', humidity: '', pressure: '', windSpeed: '', windDirection: '', weatherConditions: '',
+    environmentSource: 'MANUAL', environmentDataSource: '', environmentObservedAt: '', environmentManualChangeReason: '',
+    season: '', workCategory: '',
+    testingMethodNd: '', formCode: '', appendixNumber: '', applicationNumber: '', contractNumber: '', note: '',
+    orderId: '', orderServiceItemId: '', results: [emptyWizardResult()],
   };
 };
 

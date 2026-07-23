@@ -436,6 +436,13 @@ export type Order = {
   resultDocuments: DocumentItem[];
   comments: CommentItem[];
   history: OrderHistoryItem[];
+  linkedProtocol?: {
+    id: string;
+    number?: string;
+    status: string;
+  };
+  canComplete?: boolean;
+  blockingReasons?: string[];
 };
 
 export type PaymentItem = {
