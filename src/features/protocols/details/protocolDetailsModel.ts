@@ -85,7 +85,7 @@ export const resolveProtocolPrimaryAction = (protocol: Protocol, role?: string):
   const permissions = getProtocolPermissions(protocol, role);
   if (status === 'DRAFT') return { key: permissions.canSave ? 'edit' : null, label: 'Продолжить заполнение' };
   if (status === 'CALCULATED') return { key: permissions.canSendToApproval ? 'ready' : 'review', label: permissions.canSendToApproval ? 'Передать на проверку' : 'Проверить данные' };
-  if (status === 'READY') return { key: 'review', label: 'Проверить данные' };
+  if (status === 'READY') return { key: permissions.canSendToApproval ? 'ready' : 'review', label: permissions.canSendToApproval ? 'Передать на проверку' : 'Проверить данные' };
   if (status === 'READY_FOR_APPROVAL') return { key: permissions.canApprove ? 'approve' : null, label: 'Утвердить' };
   if (status === 'NEEDS_REVISION') return { key: permissions.canSave ? 'edit' : null, label: 'Исправить протокол' };
   if (status === 'APPROVED') return { key: permissions.canSign ? 'sign' : protocol.hasPdf ? 'pdf' : null, label: permissions.canSign ? 'Подписать' : 'Скачать PDF' };

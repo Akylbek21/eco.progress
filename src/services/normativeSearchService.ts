@@ -161,8 +161,32 @@ export const searchNormatives = async (
   if (!options.bypassCache && cached && cached.expiresAt > Date.now()) return cached.value;
   if (cached) cache.delete(key);
 
-  const response = await api.get<unknown>('/normatives/search', { params: cleaned, signal });
-  const normalized = normalizeResponse(response.data, Number(cleaned.page ?? 0), Number(cleaned.size ?? 30));
+  const response = await api.get<unknown>('/normatives/search', {
+    params: {
+      ...cleaned,
+      search: query,
+      q: query,
+      code: query,
+      pollutantCode: query,
+    },
+    signal,
+  });
+  let normalized = normalizeResponse(response.data, Number(cleaned.page ?? 0), Number(cleaned.size ?? 30));
+  if (!normalized.items.length) {
+    const directoryResponse = await api.get<unknown>('/normatives/records', {
+      params: {
+        page: requestedPage,
+        size: requestedSize,
+        status: params.status || 'ACTIVE',
+        search: query,
+        query,
+        code: query,
+        pollutantCode: query,
+      },
+      signal,
+    });
+    normalized = normalizeResponse(directoryResponse.data, requestedPage, requestedSize);
+  }
   if (normalized.items.length) cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, value: normalized });
   return normalized;
 };

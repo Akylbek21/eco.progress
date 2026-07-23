@@ -16,7 +16,7 @@ export const canCreateProtocol = (user: ProtocolUser) => hasRole(user, creatorRo
 export const canEditProtocol = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, creatorRoles) && isProtocolStatusEditable(statusOf(protocol));
 export const canEditResults = canEditProtocol;
 export const canSendForApproval = (user: ProtocolUser, protocol: ProtocolLike) =>
-  hasRole(user, creatorRoles) && ['DRAFT', 'CALCULATED', 'NEEDS_REVISION'].includes(statusOf(protocol));
+  hasRole(user, creatorRoles) && ['DRAFT', 'CALCULATED', 'READY', 'NEEDS_REVISION'].includes(statusOf(protocol));
 export const canReturnForRevision = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && statusOf(protocol) === 'READY_FOR_APPROVAL';
 export const canApproveProtocol = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && statusOf(protocol) === 'READY_FOR_APPROVAL';
 export const canSignProtocol = (user: ProtocolUser, protocol: ProtocolLike) => hasRole(user, headRoles) && statusOf(protocol) === 'APPROVED';

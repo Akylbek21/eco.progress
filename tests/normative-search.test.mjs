@@ -39,10 +39,15 @@ test('protocol context maps every physical subtype and water to the required doc
   assert.match(configSource, /factorType: subtype \|\| protocolFactorType\[normalizedType as ProtocolTypeKey\]/);
 });
 
-test('API service uses only normative search and requests one page', async () => {
+test('API service falls back to the normative directory when search returns no rows', async () => {
   const source = await read('src/services/normativeSearchService.ts');
   assert.match(source, /api\.get<unknown>\('\/normatives\/search'/);
-  assert.doesNotMatch(source, /\/normatives\/records/);
+  assert.match(source, /if \(!normalized\.items\.length\)/);
+  assert.match(source, /api\.get<unknown>\('\/normatives\/records'/);
+  assert.match(source, /search: query/);
+  assert.match(source, /q: query/);
+  assert.match(source, /code: query/);
+  assert.match(source, /pollutantCode: query/);
   assert.match(source, /requestedPage = params\.page \?\? 0/);
   assert.match(source, /requestedSize = params\.size \?\? 30/);
   assert.match(source, /\['items', 'content', 'normatives', 'records', 'results', 'rows'\]/);
