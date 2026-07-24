@@ -1,5 +1,6 @@
 import type { Protocol } from '../../../types/protocols';
 import { formatProtocolDate, type ProtocolEditSection } from './protocolDetailsModel';
+import { getWaterTypeLabel, getWaterUseCategoryLabel, isWaterProtocolType } from '../../../config/protocolWater';
 
 type Props = { protocol: Protocol; editable: boolean; onEdit: (section: ProtocolEditSection) => void };
 const value = (item?: string | number | null) => item === undefined || item === null || String(item).trim() === '' ? 'Не заполнено' : String(item);
@@ -27,6 +28,7 @@ const ProtocolMainDataTab = ({ protocol, editable, onEdit }: Props) => {
         <Item label="Лаборатория">{value(protocol.laboratory.laboratoryName || protocol.laboratory.name)}</Item><Item label="Исполнитель">{value(executor)}</Item><Item label="Аккредитация">{protocol.laboratory.accreditationValidUntil ? `действительна до ${formatProtocolDate(protocol.laboratory.accreditationValidUntil)}` : 'Не заполнено'}</Item>
       </Card>
       <Card title="Условия измерения" editable={editable} onEdit={() => onEdit('environment')}>
+        {isWaterProtocolType(protocol.templateId) && <><Item label="Тип воды">{getWaterTypeLabel(protocol.waterType || String(protocol.conditions?.waterType || ''))}</Item><Item label="Категория водопользования">{getWaterUseCategoryLabel(protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || ''))}</Item></>}
         {!environment.temperature && !environment.humidity && !environment.pressureKpa && !environment.pressure && !environment.windSpeed ? <Item label="Состояние">Условия измерения не заполнены</Item> : <><Item label="Температура">{value(environment.temperature)} °C</Item><Item label="Влажность">{value(environment.humidity)} %</Item><Item label="Давление">{value(environment.pressureKpa || environment.pressure)} кПа</Item><Item label="Ветер">{value(environment.windSpeed)} м/с</Item></>}
       </Card>
       <div className="lg:col-span-2"><Card title="Методика" editable={editable} onEdit={() => onEdit('methods')}><Item label="Метод испытаний">{value(protocol.testing.testingMethodDocument || protocol.testingMethodDocument)}</Item><Item label="Метод отбора">{value(protocol.testing.samplingMethodDocument || protocol.samplingMethodDocument)}</Item><Item label="Основание">{value(protocol.organization.testingBasis || protocol.testingBasis)}</Item></Card></div>

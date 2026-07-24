@@ -37,12 +37,12 @@ describe('protocol domain contract', () => {
 
   it('maps a water wizard draft to one compact quick-create request', () => {
     const form = createWizardDefaults();
-    form.templateId = 'water_wastewater'; form.companyId = '15'; form.objectId = '38'; form.laboratoryId = '2'; form.executorId = '17'; form.measurementPlace = 'Точка отбора'; form.testingMethodNd = 'ГОСТ'; form.temperature = '20';
+    form.templateId = 'water_wastewater'; form.companyId = '15'; form.objectId = '38'; form.laboratoryId = '2'; form.executorId = '17'; form.measurementPlace = 'Точка отбора'; form.testingMethodNd = 'ГОСТ'; form.temperature = '20'; form.waterType = 'DRINKING_WATER'; form.waterUseCategory = 'I';
     form.results = [{ ...form.results[0], indicatorName: 'Хлориды', pollutantCode: 'CL', unit: 'мг/л', value: '12', measurementDeviceId: '5' }];
     const request = mapProtocolWizardToRequest(form);
-    expect(request).toMatchObject({ templateId: 'water', companyId: '15', objectId: '38', laboratoryId: '2', executorId: '17', conditions: { temperature: '20' } });
+    expect(request).toMatchObject({ templateId: 'water', companyId: 15, objectId: 38, laboratoryId: 2, executorId: 17, conditions: { temperature: '20', waterType: 'DRINKING_WATER', waterUseCategory: 'I' } });
     expect(request.measurements).toHaveLength(1);
-    expect(request.measurements[0].testingMethodNd).toBe('ГОСТ');
+    expect(request.measurements[0].methodDocument).toBe('ГОСТ');
     expect(request.environment).toMatchObject({ temperature: '20', source: 'MANUAL' });
   });
 

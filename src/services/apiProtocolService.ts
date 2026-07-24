@@ -27,6 +27,7 @@ import type {
   ProtocolListQuery,
   QuickProtocolCreatePayload,
   ProtocolResultPayload,
+  ProtocolResultValue,
   ProtocolResultRow,
   ProtocolTemplate,
   ProtocolTemplateId,
@@ -630,6 +631,19 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     || (typeof source.environmentalConditions === 'object' ? source.environmentalConditions : {}),
   );
   const resultsSource = Array.isArray(source.results) ? source.results : [];
+  const header = asRecord(source.header);
+  const conditions = asRecord(source.conditions || header.conditions);
+  const firstResultValues = asRecord(asRecord(resultsSource[0]).values);
+  const waterType = pick(conditions, ['waterType', 'water_type'])
+    || pick(environment, ['waterType', 'water_type'])
+    || pick(source, ['waterType', 'water_type'])
+    || pick(testing, ['waterType', 'water_type'])
+    || pick(firstResultValues, ['waterType', 'water_type']);
+  const waterUseCategory = pick(conditions, ['waterUseCategory', 'water_use_category'])
+    || pick(environment, ['waterUseCategory', 'water_use_category'])
+    || pick(source, ['waterUseCategory', 'water_use_category'])
+    || pick(testing, ['waterUseCategory', 'water_use_category'])
+    || pick(firstResultValues, ['waterUseCategory', 'water_use_category']);
   const devicesSource = [
     ...(Array.isArray(source.measurementDevices) ? source.measurementDevices : []),
     ...(Array.isArray(source.instruments) ? source.instruments : []),
@@ -671,6 +685,13 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     testingEndDate,
     purpose,
     environmentalConditions,
+    waterType,
+    waterUseCategory,
+    conditions: {
+      ...conditions,
+      ...(waterType ? { waterType } : {}),
+      ...(waterUseCategory ? { waterUseCategory } : {}),
+    } as Record<string, ProtocolResultValue>,
     environment: {
       temperature: pick(environment, ['temperatureC', 'temperature']),
       minTemperature: pick(environment, ['temperatureMinC', 'minTemperature', 'temperatureMin']),
@@ -989,27 +1010,31 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
 }
 
-export async function quickCreateProtocol(payload: QuickProtocolCreatePayload, idempotencyKey?: string): Promise<Protocol> {
-  const measurements = payload.measurements.map((measurement) => {
-    const rawMeasurementDeviceId = measurement.measurementDeviceId
-      ?? measurement.deviceId
-      ?? measurement.values?.measurementDeviceId
-      ?? measurement.values?.deviceId
-      ?? null;
-    const measurementDeviceId = rawMeasurementDeviceId == null ? null : String(rawMeasurementDeviceId).trim() || null;
-    const { deviceId: _legacyDeviceId, values: rawValues, ...canonicalMeasurement } = measurement;
-    const values = Object.fromEntries(
-      Object.entries(rawValues || {}).filter(([key]) => key !== 'deviceId' && key !== 'measurementDeviceId'),
-    );
-    return { ...canonicalMeasurement, measurementDeviceId, values };
-  });
-  const response = await api.post<ApiResponse<unknown> | unknown>('/protocols/quick-create', {
-    ...payload,
-    templateId: mapFrontendProtocolType(payload.templateId),
-    normativeTemplateId: mapFrontendProtocolType(payload.normativeTemplateId),
-    printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
-    measurements,
-  }, { headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined });
+export async function quickCreateProtocol(payload: QuickProtocolCreatePayload, idempotencyKey: string): Promise<Protocol> {
+  if (!idempotencyKey) {
+    throw new Error('Не удалось сформировать ключ безопасной отправки запроса');
+  }
+  if (import.meta.env.DEV) {
+    console.groupCollapsed('[Protocol quick-create]');
+    console.log('payload', {
+      templateId: payload.templateId,
+      companyId: payload.companyId,
+      objectId: payload.objectId,
+      laboratoryId: payload.laboratoryId,
+      executorId: payload.executorId,
+      protocolDate: payload.protocolDate,
+      measurementDate: payload.measurementDate,
+      measurementsCount: payload.measurements.length,
+      sourceNumberSpecified: Boolean(payload.sourceNumber),
+    });
+    console.log('idempotencyKey', idempotencyKey);
+    console.groupEnd();
+  }
+  const response = await api.post<ApiResponse<unknown> | unknown>(
+    '/protocols/quick-create',
+    payload,
+    { headers: { 'Idempotency-Key': idempotencyKey } },
+  );
   const result = unwrapData(response);
   const protocol = requireProtocol(result, 'быстрое создание');
   const persisted = await getProtocol(protocol.id);

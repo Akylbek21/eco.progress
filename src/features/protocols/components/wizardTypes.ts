@@ -1,4 +1,5 @@
-import type { ProtocolTemplateId } from '../../../types/protocols';
+import type { ProtocolPrintVisibility, ProtocolTemplateId } from '../../../types/protocols';
+import { DEFAULT_PROTOCOL_PRINT_VISIBILITY } from '../../../utils/protocolPrintVisibility';
 
 export type ProtocolWizardResult = {
   indicatorName: string;
@@ -8,6 +9,7 @@ export type ProtocolWizardResult = {
   formula: string;
   unit: string;
   value: string;
+  textValue: string;
   samplingPlace: string;
   sampleNumber: string;
   samplingDepth: string;
@@ -21,14 +23,29 @@ export type ProtocolWizardResult = {
   duration: string;
   measurementDeviceId: string;
   normativeId: string;
+  normativeRecordId: string;
   normativeValue: string;
+  normativeValueRaw: string;
   normativeMin: string;
   normativeMax: string;
   comparisonType: string;
   normativeDocument: string;
   sourceDocumentCode: string;
   testingMethodNd: string;
+  methodName: string;
+  methodDocument: string;
+  note: string;
 };
+
+export type MeasurementFormRow = ProtocolWizardResult;
+
+export interface LaboratoryExecutorOption {
+  laboratoryEmployeeId: number;
+  userId?: number;
+  employeeId?: number;
+  fullName: string;
+  laboratoryId: number;
+}
 
 export type ProtocolWizardForm = {
   templateId: ProtocolTemplateId | '';
@@ -58,6 +75,8 @@ export type ProtocolWizardForm = {
   environmentManualChangeReason: string;
   season: string;
   workCategory: string;
+  waterType: string;
+  waterUseCategory: string;
   testingMethodNd: string;
   formCode: string;
   appendixNumber: string;
@@ -66,12 +85,14 @@ export type ProtocolWizardForm = {
   note: string;
   orderId: string;
   orderServiceItemId: string;
+  printVisibility: ProtocolPrintVisibility;
   results: ProtocolWizardResult[];
 };
 
 export const emptyWizardResult = (): ProtocolWizardResult => ({
-  indicatorName: '', pollutantCode: '', factorType: '', cas: '', formula: '', unit: '', value: '', samplingPlace: '', sampleNumber: '', samplingDepth: '', samplingSpeed: '', sampleVolume: '', waterType: '', direction: '', minimumValue: '', maximumValue: '', averageValue: '', duration: '',
-  measurementDeviceId: '', normativeId: '', normativeValue: '', normativeMin: '', normativeMax: '', comparisonType: 'LESS_OR_EQUAL', normativeDocument: '', sourceDocumentCode: '', testingMethodNd: '',
+  indicatorName: '', pollutantCode: '', factorType: '', cas: '', formula: '', unit: '', value: '', textValue: '', samplingPlace: '', sampleNumber: '', samplingDepth: '', samplingSpeed: '', sampleVolume: '', waterType: '', direction: '', minimumValue: '', maximumValue: '', averageValue: '', duration: '',
+  measurementDeviceId: '', normativeId: '', normativeRecordId: '', normativeValue: '', normativeValueRaw: '', normativeMin: '', normativeMax: '', comparisonType: 'LESS_OR_EQUAL', normativeDocument: '', sourceDocumentCode: '', testingMethodNd: '',
+  methodName: '', methodDocument: '', note: '',
 });
 
 export const createWizardDefaults = (): ProtocolWizardForm => {
@@ -82,9 +103,9 @@ export const createWizardDefaults = (): ProtocolWizardForm => {
     sampleDate: date, measurementDate: date, testingStartDate: date, testingEndDate: date, measurementTime: '12:00', measurementPlace: '', sourceNumber: '',
     temperature: '', humidity: '', pressure: '', windSpeed: '', windDirection: '', weatherConditions: '',
     environmentSource: 'MANUAL', environmentDataSource: '', environmentObservedAt: '', environmentManualChangeReason: '',
-    season: '', workCategory: '',
+    season: '', workCategory: '', waterType: '', waterUseCategory: '',
     testingMethodNd: '', formCode: '', appendixNumber: '', applicationNumber: '', contractNumber: '', note: '',
-    orderId: '', orderServiceItemId: '', results: [emptyWizardResult()],
+    orderId: '', orderServiceItemId: '', printVisibility: { ...DEFAULT_PROTOCOL_PRINT_VISIBILITY }, results: [emptyWizardResult()],
   };
 };
 

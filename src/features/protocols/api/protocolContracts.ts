@@ -55,6 +55,7 @@ export interface UpdateProtocolRequest {
   executor: ProtocolExecutorRequest;
   testing: ProtocolTestingRequest;
   environment: ProtocolEnvironmentRequest;
+  conditions?: Record<string, ProtocolResultValue>;
   testingMethodDocument: string | null;
   complianceDocument: string | null;
   explanatoryNote: string | null;

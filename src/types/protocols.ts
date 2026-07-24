@@ -341,6 +341,9 @@ export interface Protocol {
   testingEndDate?: string;
   purpose?: string;
   environmentalConditions?: string;
+  waterType?: string;
+  waterUseCategory?: string;
+  conditions?: Record<string, ProtocolResultValue>;
   environment?: ProtocolEnvironmentalConditions;
   productName?: string;
   testingBasis?: string;
@@ -498,6 +501,7 @@ export type UpdateProtocolPayload = {
   organization: ProtocolOrganizationData;
   testing: ProtocolTestingData;
   environment?: ProtocolEnvironmentalConditions;
+  conditions?: Record<string, ProtocolResultValue>;
   explanatoryNote?: string;
   testingMethodDocument?: string;
   complianceDocument?: string;
@@ -537,13 +541,94 @@ export interface ProtocolResultForm {
   notes?: string;
 }
 
-export type QuickProtocolMeasurementPayload = {
+export type EntityId = number;
+
+export type QuickCreateComparisonType = 'LE' | 'LT' | 'GE' | 'GT' | 'EQ' | 'RANGE';
+
+export interface QuickCreateConditions {
+  temperature?: string | null;
+  humidity?: string | null;
+  pressure?: string | null;
+  windSpeed?: string | null;
+  windDirection?: string | null;
+  weatherConditions?: string | null;
+  season?: string | null;
+  workCategory?: string | null;
+  waterType?: string | null;
+  waterUseCategory?: string | null;
+}
+
+export interface ProtocolEnvironment {
+  temperature: string | null;
+  humidity: string | null;
+  pressureKpa: string | null;
+  windSpeed: string | null;
+  source: 'API' | 'MANUAL';
+  dataSource?: string | null;
+  observedAt?: string | null;
+  manualChangeReason?: string | null;
+}
+
+export interface QuickCreateMeasurement {
+  indicatorName: string;
+  value: string | null;
+  textValue?: string | null;
+  unit: string | null;
+  normativeValue?: string | null;
+  normativeValueRaw?: string | null;
+  comparisonType?: QuickCreateComparisonType | null;
+  normativeRecordId?: EntityId | null;
+  measurementDeviceId?: EntityId | null;
+  methodName?: string | null;
+  methodDocument?: string | null;
+  note?: string | null;
+  factorType?: string | null;
+  factorCode?: string | null;
+  pollutantCode?: string | null;
+  normativeMin?: string | null;
+  normativeMax?: string | null;
+  normativeDocument?: string | null;
+  sourceDocumentCode?: string | null;
+  samplingMethodNd?: string | null;
+  values?: Record<string, ProtocolResultValue>;
+}
+
+export interface QuickCreateProtocolRequest {
+  /** Backend uses `water`; the wizard uses `water_wastewater`. */
+  templateId: ProtocolTemplateKey;
+  normativeTemplateId?: string | null;
+  docxTemplateCode?: string | null;
+  sourceDocumentCode?: string | null;
+  sourceNumber?: string | null;
+  resultMode?: 'CHEMICAL' | 'PHYSICAL' | null;
+  defaultUnit?: string | null;
+  companyId: EntityId;
+  objectId: EntityId;
+  laboratoryId: EntityId;
+  executorId: EntityId;
+  orderId?: EntityId | null;
+  orderServiceItemId?: EntityId | null;
+  protocolDate: string;
+  sampleDate: string;
+  measurementDate: string;
+  testingStartDate: string;
+  testingEndDate: string;
+  measurementTime: string;
+  measurementPlace: string;
+  conditions: QuickCreateConditions;
+  environment: ProtocolEnvironment;
+  measurements: QuickCreateMeasurement[];
+  printVisibility: ProtocolPrintVisibility;
+}
+
+/** @deprecated Use QuickCreateMeasurement. */
+export type QuickProtocolMeasurementPayload = QuickCreateMeasurement & {
   factorType?: string;
   factorCode?: string;
   pollutantCode?: string;
   indicatorName: string;
-  value: string | number;
-  unit: string;
+  value: string | null;
+  unit: string | null;
   normativeId?: string | number | null;
   normativeValue?: string | number | null;
   normativeMin?: string | number | null;
@@ -553,41 +638,13 @@ export type QuickProtocolMeasurementPayload = {
   sourceDocumentCode?: string | null;
   testingMethodNd?: string;
   samplingMethodNd?: string;
-  measurementDeviceId?: string | number | null;
+  measurementDeviceId?: number | null;
   deviceId?: string | number | null;
   values?: Record<string, ProtocolResultValue>;
 };
 
-export type QuickProtocolCreatePayload = {
-  templateId: ProtocolTemplateId;
-  subtype?: ProtocolSubtype;
-  companyId: string | number;
-  objectId: string | number;
-  protocolDate: string;
-  sampleDate: string;
-  measurementDate: string;
-  measurementTime: string;
-  measurementPlace: string;
-  testingStartDate?: string | null;
-  testingEndDate?: string | null;
-  sourceNumber?: string | null;
-  laboratoryId: string | number;
-  executorId: string | number;
-  orderId?: string | number | null;
-  orderServiceItemId?: string | number | null;
-  sourceDocumentCode?: string | null;
-  docxTemplateCode?: string;
-  normativeTemplateId: ProtocolTemplateId;
-  environmentType?: string;
-  defaultUnit?: string;
-  waterType?: string;
-  waterUseCategory?: string;
-  resultMode: 'CHEMICAL' | 'PHYSICAL';
-  conditions?: Record<string, ProtocolResultValue>;
-  environment?: ProtocolEnvironmentalConditions;
-  printVisibility?: ProtocolPrintVisibility;
-  measurements: QuickProtocolMeasurementPayload[];
-};
+/** @deprecated Use QuickCreateProtocolRequest. */
+export type QuickProtocolCreatePayload = QuickCreateProtocolRequest;
 
 export type MethodVariableResponse = {
   id: string | number;

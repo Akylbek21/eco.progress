@@ -49,6 +49,7 @@ export interface CompanyObject {
   id: string;
   companyId?: string;
   virtual?: boolean;
+  isVirtual?: boolean;
   name: string;
   objectType?: string;
   address: string;

@@ -92,6 +92,11 @@ export const mapProtocolFormToUpdateRequest = (
     environmentConditions: optionalText(payload.testing.environmentConditions),
   },
   environment: mapProtocolEnvironmentToRequest(payload.environment),
+  ...(payload.conditions ? {
+    conditions: Object.fromEntries(
+      Object.entries(payload.conditions).filter(([, value]) => value !== undefined && value !== ''),
+    ),
+  } : {}),
   testingMethodDocument: optionalText(payload.testingMethodDocument ?? payload.testing.testingMethodDocument),
   complianceDocument: optionalText(payload.complianceDocument),
   explanatoryNote: optionalText(payload.explanatoryNote ?? payload.notes),

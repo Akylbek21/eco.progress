@@ -41,7 +41,7 @@ export interface ProtocolService {
   getProtocol(protocolId: string): Promise<Protocol>;
   getProtocolById(protocolId: string): Promise<Protocol>;
   createProtocol(payload: CreateProtocolPayload): Promise<Protocol>;
-  quickCreateProtocol(payload: QuickProtocolCreatePayload, idempotencyKey?: string): Promise<Protocol>;
+  quickCreateProtocol(payload: QuickProtocolCreatePayload, idempotencyKey: string): Promise<Protocol>;
   refreshLaboratoryData(protocolId: string): Promise<Protocol>;
   updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol>;
   deleteProtocol(protocolId: string): Promise<void>;

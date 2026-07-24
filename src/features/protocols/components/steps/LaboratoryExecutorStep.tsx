@@ -1,9 +1,9 @@
 import { useFormContext } from 'react-hook-form';
-import type { LaboratoryEmployee, LaboratoryListItem } from '../../../../types/laboratories';
-import type { ProtocolWizardForm } from '../wizardTypes';
+import type { LaboratoryListItem } from '../../../../types/laboratories';
+import type { LaboratoryExecutorOption, ProtocolWizardForm } from '../wizardTypes';
 
 const input = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-eco-500 focus:outline-none focus:ring-4 focus:ring-eco-100';
-type Props = { laboratories: LaboratoryListItem[]; employees: LaboratoryEmployee[]; loading: boolean; error?: boolean; onLaboratoryChange: (id: string) => void };
+type Props = { laboratories: LaboratoryListItem[]; employees: LaboratoryExecutorOption[]; loading: boolean; error?: boolean; onLaboratoryChange: (id: string) => void };
 
 const LaboratoryExecutorStep = ({ laboratories, employees, loading, error, onLaboratoryChange }: Props) => {
   const { register, watch } = useFormContext<ProtocolWizardForm>();
@@ -22,7 +22,7 @@ const LaboratoryExecutorStep = ({ laboratories, employees, loading, error, onLab
         <label className="text-sm font-bold">Исполнитель *
           <select {...register('executorId')} disabled={!laboratoryId || loading || error} className={`${input} mt-1.5`}>
             <option value="">{loading ? 'Загрузка…' : 'Выберите сотрудника'}</option>
-            {employees.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.fullName} · {item.position}</option>)}
+            {employees.map((item) => <option key={item.laboratoryEmployeeId} value={item.laboratoryEmployeeId}>{item.fullName}</option>)}
           </select>
         </label>
         {error && <div role="alert" className="md:col-span-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900">Не удалось загрузить сотрудников лаборатории.</div>}

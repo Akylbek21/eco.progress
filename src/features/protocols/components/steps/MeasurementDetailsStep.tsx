@@ -4,10 +4,11 @@ import type { ProtocolWizardForm } from '../wizardTypes';
 const input = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-eco-500 focus:outline-none focus:ring-4 focus:ring-eco-100';
 const fields: Array<[keyof ProtocolWizardForm, string, string]> = [
   ['protocolDate', 'Дата протокола *', 'date'],
+  ['sampleDate', 'Дата отбора пробы *', 'date'],
   ['measurementDate', 'Дата измерения *', 'date'],
-  ['testingStartDate', 'Дата начала испытаний', 'date'],
-  ['testingEndDate', 'Дата завершения испытаний', 'date'],
-  ['measurementTime', 'Время измерения', 'time'],
+  ['testingStartDate', 'Дата начала испытаний *', 'date'],
+  ['testingEndDate', 'Дата завершения испытаний *', 'date'],
+  ['measurementTime', 'Время измерения *', 'time'],
   ['measurementPlace', 'Место измерения *', 'text'],
   ['sourceNumber', 'Номер источника', 'text'],
 ];
@@ -21,7 +22,7 @@ const MeasurementDetailsStep = () => {
         {fields.map(([name, label, type]) => (
           <label key={name} className="text-sm font-bold">
             {label}
-            <input type={type} {...register(name)} className={`${input} mt-1.5`} />
+            <input type={type} maxLength={name === 'sourceNumber' ? 100 : undefined} {...register(name)} className={`${input} mt-1.5`} />
           </label>
         ))}
       </div>

@@ -6,13 +6,14 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('quick-create is idempotent, reloads persisted data and keeps canonical ids', async () => {
   const wizard = await read('src/features/protocols/components/CreateProtocolWizardModal.tsx');
+  const submission = await read('src/features/protocols/utils/quickCreateSubmission.ts');
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   const api = await read('src/services/apiProtocolService.ts');
-  assert.match(wizard, /crypto\.randomUUID\(\)/);
-  assert.match(wizard, /submittingRef\.current \|\| mutation\.isPending/);
+  assert.match(submission, /crypto\.randomUUID\(\)/);
+  assert.match(wizard, /acquireQuickCreateLock\(submittingRef\)/);
   assert.match(api, /'Idempotency-Key'/);
   assert.match(api, /const persisted = await getProtocol\(protocol\.id\)/);
-  assert.doesNotMatch(mapper, /companyId: Number\(/);
+  assert.match(mapper, /normalizeRequiredId\(form\.companyId/);
   assert.doesNotMatch(mapper, /deviceId:/);
   assert.match(mapper, /measurementDeviceId:/);
 });

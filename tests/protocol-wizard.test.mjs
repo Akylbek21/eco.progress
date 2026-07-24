@@ -15,10 +15,11 @@ test('protocol list opens the wizard without navigating to a creation page', asy
 
 test('wizard has nine guarded steps and one quick-create mutation', async () => {
   const wizard = await read('src/features/protocols/components/CreateProtocolWizardModal.tsx');
+  const submission = await read('src/features/protocols/utils/quickCreateSubmission.ts');
   assert.match(wizard, /const steps = \[[^\]]*'Создание'\]/);
-  assert.match(wizard, /submittingRef\.current \|\| mutation\.isPending/);
-  assert.match(wizard, /protocolService\.quickCreateProtocol\(payload, idempotencyKeyRef\.current\)/);
-  assert.match(wizard, /crypto\.randomUUID\(\)/);
+  assert.match(wizard, /acquireQuickCreateLock\(submittingRef\)/);
+  assert.match(wizard, /protocolService\.quickCreateProtocol\(payload, idempotencyKey\)/);
+  assert.match(submission, /crypto\.randomUUID\(\)/);
   assert.doesNotMatch(wizard, /protocolService\.createProtocol/);
   assert.match(wizard, /closeOnBackdrop=\{false\}/);
   assert.match(wizard, /document\.getElementById\('wizard-step-title'\)/);
@@ -38,7 +39,7 @@ test('wizard payload mapper filters empty rows, maps water and sends canonical e
   const api = await read('src/services/apiProtocolService.ts');
   assert.match(mapper, /filter\(isNonEmptyResult\)/);
   assert.match(mapper, /mapFrontendProtocolType\(form\.templateId\)/);
-  assert.match(mapper, /conditions: mapConditions\(form\)/);
+  assert.match(mapper, /conditions: mapConditions\(form, environment\)/);
   assert.match(mapper, /environment:/);
   assert.match(mapper, /manualChangeReason:/);
   assert.doesNotMatch(api, /environment: _unsupportedEnvironment/);

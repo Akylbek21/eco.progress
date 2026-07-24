@@ -8,6 +8,8 @@ export type NormalizedProtocolError = {
 };
 
 const fieldRules: Array<{ pattern: RegExp; field: string }> = [
+  { pattern: /waterType|тип воды/i, field: 'waterType' },
+  { pattern: /waterUseCategory|категори.*водопольз/i, field: 'waterUseCategory' },
   { pattern: /sample\s*date|дата отбора/i, field: 'sampleDate' },
   { pattern: /объект.*(не найден|не принадлежит)|object.*(not found|belong)/i, field: 'objectId' },
   { pattern: /лаборатор.*не найден|laboratory.*not found/i, field: 'laboratoryId' },
@@ -20,6 +22,8 @@ const fieldRules: Array<{ pattern: RegExp; field: string }> = [
 ];
 
 const friendlyRules: Array<{ pattern: RegExp; message: string }> = [
+  { pattern: /waterType|тип воды/i, message: 'Выберите тип воды' },
+  { pattern: /waterUseCategory|категори.*водопольз/i, message: 'Выберите категорию водопользования' },
   { pattern: /measurementDeviceId|укажите.*прибор|device.*required/i, message: 'Выберите прибор.' },
   { pattern: /verification.*expired|срок.*поверк.*ист[её]к/i, message: 'Срок поверки выбранного прибора истёк.' },
   { pattern: /executor.*does not belong.*laboratory|исполнитель.*не относится.*лаборатор/i, message: 'Выбранный сотрудник не относится к этой лаборатории.' },
@@ -37,9 +41,10 @@ export const normalizeProtocolError = (error: unknown): NormalizedProtocolError 
   const parsed = normalizeApiError(error, 'Не удалось выполнить действие с протоколом.');
   const firstFieldError = Object.entries(parsed.fieldErrors)[0];
   const source = [parsed.message, ...parsed.errors, firstFieldError?.[1] || ''].filter(Boolean).join(' ');
-  const explicitField = firstFieldError?.[0];
-  const indexedField = explicitField?.match(/(?:measurements|results)\[(\d+)\]\.?(.+)?/i)
-    || explicitField?.match(/(?:measurements|results)\.(\d+)\.?(.+)?/i);
+  const explicitPath = firstFieldError?.[0];
+  const explicitField = explicitPath?.split('.').pop() || explicitPath;
+  const indexedField = explicitPath?.match(/(?:measurements|results)\[(\d+)\]\.?(.+)?/i)
+    || explicitPath?.match(/(?:measurements|results)\.(\d+)\.?(.+)?/i);
   const messageIndex = source.match(/(?:строк|result|measurement)\D*(\d+)/i);
   const fieldRule = fieldRules.find((item) => item.pattern.test(source));
   const friendlyRule = friendlyRules.find((item) => item.pattern.test(source));

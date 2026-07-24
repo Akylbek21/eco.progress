@@ -77,6 +77,15 @@ export interface ParsedApiError {
   status?: number;
 }
 
+export interface ApiErrorResponse {
+  success?: false;
+  code?: string;
+  message?: string;
+  fieldErrors?: Record<string, string>;
+  resourceId?: number | string;
+  traceId?: string;
+}
+
 export interface ApiError {
   status?: number;
   code?: string;
@@ -141,7 +150,7 @@ export const parseApiError = (error: unknown, fallback = 'Не удалось в
   if (explicitFields) Object.entries(explicitFields).forEach(([field, message]) => { if (typeof message === 'string' && message.trim()) fieldErrors[field] = message.trim(); });
   const statusMessages: Record<number, string> = {
     400: 'Проверьте заполнение полей.', 401: 'Сессия истекла. Войдите заново.', 403: 'Недостаточно прав.',
-    404: 'Запрошенные данные не найдены.', 409: 'Данные были изменены другим сотрудником.',
+    404: 'Запрошенные данные не найдены.', 409: 'Конфликт данных: запись уже существует или связана с другими записями.',
     422: 'Исправьте ошибки заполнения.', 503: 'Сервис временно недоступен.',
   };
   const backendMessage = response?.message ?? nested?.message ?? response?.error ?? nested?.error;
