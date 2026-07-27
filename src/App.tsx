@@ -48,6 +48,13 @@ const LaboratorySettingsPage = lazy(() => import('./features/laboratories/pages/
 const LabJournalsPage = lazy(() => import('./pages/LabJournalsPage'));
 const LabJournalEntryPage = lazy(() => import('./features/lab-journals/pages/LabJournalEntryPage'));
 const StaffLeadsPage = lazy(() => import('./pages/staff/StaffLeadsPage'));
+const PekDashboardPage = lazy(() => import('./features/pek/pages/PekDashboardPage'));
+const PekProgramsPage = lazy(() => import('./features/pek/pages/PekProgramsPage'));
+const PekProgramCreatePage = lazy(() => import('./features/pek/pages/PekProgramCreatePage'));
+const PekProgramDetailsPage = lazy(() => import('./features/pek/pages/PekProgramDetailsPage'));
+const PekReportsPage = lazy(() => import('./features/pek/pages/PekReportsPage'));
+const PekReportCreatePage = lazy(() => import('./features/pek/pages/PekReportCreatePage'));
+const PekReportWorkspacePage = lazy(() => import('./features/pek/pages/PekReportWorkspacePage'));
 const ContentDashboardPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentDashboardPage');
 const ContentListPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentListPage');
 const ContentEditorPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentEditorPage');
@@ -83,6 +90,7 @@ const protocolRoles: UserRole[] = allStaffRoles;
 const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
 const companyReadRoles: UserRole[] = [...companyRoleMatrix.read];
 const companyManageRoles: UserRole[] = [...companyRoleMatrix.write];
+const pekRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
 
 const StaffAccess = ({ roles, children }: { roles?: UserRole[]; children: ReactNode }) => {
   const { user } = useAuth();
@@ -244,6 +252,14 @@ function App() {
         <Route path="/staff/protocols/new" element={<Navigate to="/staff/protocols?create=1" replace />} />
         <Route path="/staff/protocols/:protocolId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols/:protocolId/edit" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/pek" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><ErrorBoundary fallbackTitle="Не удалось открыть ПЭК"><PekDashboardPage /></ErrorBoundary></StaffLayout></RoleAccess>} />
+        <Route path="/staff/pek/programs" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><ErrorBoundary fallbackTitle="Не удалось открыть программы ПЭК"><PekProgramsPage /></ErrorBoundary></StaffLayout></RoleAccess>} />
+        <Route path="/staff/pek/programs/new" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><ErrorBoundary fallbackTitle="Не удалось создать программу ПЭК"><PekProgramCreatePage /></ErrorBoundary></StaffLayout></RoleAccess>} />
+        <Route path="/staff/pek/programs/:programId" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><ErrorBoundary fallbackTitle="Не удалось открыть программу ПЭК"><PekProgramDetailsPage /></ErrorBoundary></StaffLayout></RoleAccess>} />
+        <Route path="/staff/pek/programs/:programId/edit" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><ErrorBoundary fallbackTitle="Не удалось изменить программу ПЭК"><PekProgramCreatePage /></ErrorBoundary></StaffLayout></RoleAccess>} />
+        <Route path="/staff/pek/reports" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><ErrorBoundary fallbackTitle="Не удалось открыть отчёты ПЭК"><PekReportsPage /></ErrorBoundary></StaffLayout></RoleAccess>} />
+        <Route path="/staff/pek/reports/new" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><ErrorBoundary fallbackTitle="Не удалось создать отчёт ПЭК"><PekReportCreatePage /></ErrorBoundary></StaffLayout></RoleAccess>} />
+        <Route path="/staff/pek/reports/:reportId" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><ErrorBoundary fallbackTitle="Не удалось открыть отчёт ПЭК"><PekReportWorkspacePage /></ErrorBoundary></StaffLayout></RoleAccess>} />
         <Route path="/staff/normatives" element={<RoleAccess roles={normativeRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={normativeRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/measurement-devices" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/journals" element={<RoleAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']} loginPath="/staff/login" forbiddenMessage="Недостаточно прав для просмотра журналов"><StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']}><ErrorBoundary fallbackTitle="Не удалось открыть журналы"><LabJournalsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />

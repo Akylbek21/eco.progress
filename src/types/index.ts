@@ -616,6 +616,7 @@ export type User = {
   organizationType?: string;
   legalAddress?: string;
   position?: string;
+  permissions?: string[];
 };
 
 export * from './crmFull';

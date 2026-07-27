@@ -126,4 +126,11 @@ export interface QuickCreateProtocolApiRequest {
   measurements: QuickCreateMeasurement[];
   printVisibility: ProtocolPrintVisibility;
   orderId?: string | null;
+  pekProgramId?: number | null;
+  pekControlItemId?: number | null;
+  pekControlEventId?: number | null;
+  pekReportId?: number | null;
+  monitoringPointId?: number | null;
+  emissionSourceId?: number | null;
+  waterOutletId?: number | null;
 }

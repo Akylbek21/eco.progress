@@ -47,7 +47,8 @@ const DRAFT_KEY = 'protocol-create-wizard-draft';
 const steps = ['Тип протокола','Компания и объект','Лаборатория','Даты и место','Условия среды','Результаты','Методики','Проверка','Создание'];
 export const WATER_CONDITIONS_STEP_INDEX = 4;
 type StoredDraft = { step: number; form: ProtocolWizardForm };
-export type CreateProtocolWizardModalProps = { open: boolean; onClose: () => void; onCreated: (protocol: Protocol) => void; orderId?: string; orderServiceItemId?: string };
+export type ProtocolPekPrefill = Partial<Pick<ProtocolWizardForm, 'companyId' | 'objectId' | 'pekProgramId' | 'pekControlItemId' | 'pekControlEventId' | 'pekReportId' | 'monitoringPointId' | 'emissionSourceId' | 'waterOutletId' | 'measurementDate' | 'measurementPlace'>>;
+export type CreateProtocolWizardModalProps = { open: boolean; onClose: () => void; onCreated: (protocol: Protocol) => void; orderId?: string; orderServiceItemId?: string; pekPrefill?: ProtocolPekPrefill };
 
 export const getFieldName = (path: string) => {
   const parts = path.split('.');
@@ -89,7 +90,7 @@ export const backendWizardIssues = (fieldErrors: Record<string, string>): Wizard
     };
   });
 
-const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', orderServiceItemId = '' }: CreateProtocolWizardModalProps) => {
+const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', orderServiceItemId = '', pekPrefill }: CreateProtocolWizardModalProps) => {
   const form = useForm<ProtocolWizardForm>({ defaultValues: createWizardDefaults(), mode: 'onChange' });
   const { watch, getValues, setValue, reset, formState } = form;
   const values = watch();
@@ -145,7 +146,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     retry: false,
   });
 
-  useEffect(() => { if (!open) { idempotencyKeyRef.current = null; submittedFingerprintRef.current = null; return; } const stored = sessionStorage.getItem(DRAFT_KEY); setDraftPrompt(Boolean(stored)); if (!stored) { setValue('orderId', orderId); setValue('orderServiceItemId', orderServiceItemId); } setError(''); setTraceId(''); setRequestId(''); setServerFailure(false); setSuccess(null); }, [open, orderId, orderServiceItemId, setValue]);
+  useEffect(() => { if (!open) { idempotencyKeyRef.current = null; submittedFingerprintRef.current = null; return; } const stored = sessionStorage.getItem(DRAFT_KEY); setDraftPrompt(Boolean(stored)); if (!stored) { setValue('orderId', orderId); setValue('orderServiceItemId', orderServiceItemId); if (pekPrefill) Object.entries(pekPrefill).forEach(([key,value]) => { if (value !== undefined) setValue(key as FieldPath<ProtocolWizardForm>, value); }); } setError(''); setTraceId(''); setRequestId(''); setServerFailure(false); setSuccess(null); }, [open, orderId, orderServiceItemId, pekPrefill, setValue]);
   useEffect(() => { if (!open || draftPrompt || success) return; const subscription = watch((formValue) => { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, form: formValue })); }); return () => subscription.unsubscribe(); }, [draftPrompt,open,step,success,watch]);
   useEffect(() => { if (!open) return; window.requestAnimationFrame(() => { titleRef.current = document.getElementById('wizard-step-title'); titleRef.current?.focus(); }); }, [open,step]);
   useEffect(() => {

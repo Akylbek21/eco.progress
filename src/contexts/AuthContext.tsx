@@ -110,12 +110,19 @@ const readAuthPayload = (payload: AuthResponsePayload, email: string, staff = fa
       organizationType: rawUser.organizationType,
       legalAddress: rawUser.legalAddress,
       position: rawUser.position,
+      permissions: Array.isArray(rawUser.permissions)
+        ? rawUser.permissions.map(String).filter(Boolean)
+        : undefined,
     },
   };
 };
 
 const AuthContext = createContext<AuthState | null>(null);
-const normalizeStoredUser = (value: User): User => ({ ...value, role: normalizeRole(value.role, value.role === 'CLIENT' ? 'CLIENT' : 'MANAGER') });
+const normalizeStoredUser = (value: User): User => ({
+  ...value,
+  role: normalizeRole(value.role, value.role === 'CLIENT' ? 'CLIENT' : 'MANAGER'),
+  permissions: Array.isArray(value.permissions) ? value.permissions.map(String).filter(Boolean) : undefined,
+});
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUserState] = useState<User | null>(() => {

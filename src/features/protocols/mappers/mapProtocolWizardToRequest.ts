@@ -460,6 +460,13 @@ export function buildQuickCreatePayload(
     measurements,
     printVisibility: mapPrintVisibilityToApi(form.printVisibility),
     orderId: normalizeNullableText(form.orderId),
+    ...(form.pekProgramId ? { pekProgramId: normalizeOptionalId(form.pekProgramId, 'pekProgramId') } : {}),
+    ...(form.pekControlItemId ? { pekControlItemId: normalizeOptionalId(form.pekControlItemId, 'pekControlItemId') } : {}),
+    ...(form.pekControlEventId ? { pekControlEventId: normalizeOptionalId(form.pekControlEventId, 'pekControlEventId') } : {}),
+    ...(form.pekReportId ? { pekReportId: normalizeOptionalId(form.pekReportId, 'pekReportId') } : {}),
+    ...(form.monitoringPointId ? { monitoringPointId: normalizeOptionalId(form.monitoringPointId, 'monitoringPointId') } : {}),
+    ...(form.emissionSourceId ? { emissionSourceId: normalizeOptionalId(form.emissionSourceId, 'emissionSourceId') } : {}),
+    ...(form.waterOutletId ? { waterOutletId: normalizeOptionalId(form.waterOutletId, 'waterOutletId') } : {}),
   };
 }
 

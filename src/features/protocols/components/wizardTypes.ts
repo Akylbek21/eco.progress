@@ -94,6 +94,13 @@ export type ProtocolWizardForm = {
   note: string;
   orderId: string;
   orderServiceItemId: string;
+  pekProgramId: string;
+  pekControlItemId: string;
+  pekControlEventId: string;
+  pekReportId: string;
+  monitoringPointId: string;
+  emissionSourceId: string;
+  waterOutletId: string;
   printVisibility: ProtocolPrintVisibility;
   results: ProtocolWizardResult[];
 };
@@ -114,7 +121,8 @@ export const createWizardDefaults = (): ProtocolWizardForm => {
     environmentSource: 'MANUAL', environmentDataSource: '', environmentObservedAt: '', environmentManualChangeReason: '',
     season: '', workCategory: '', workplaceType: '', roomType: '', normLevel: '', lightingType: '', noiseType: '', visualWorkCategory: '', waterType: '', waterUseCategory: '',
     testingMethodNd: '', samplingMethodNd: '', formCode: '', appendixNumber: '', applicationNumber: '', contractNumber: '', note: '',
-    orderId: '', orderServiceItemId: '', printVisibility: { ...DEFAULT_PROTOCOL_PRINT_VISIBILITY }, results: [],
+    orderId: '', orderServiceItemId: '', pekProgramId: '', pekControlItemId: '', pekControlEventId: '', pekReportId: '',
+    monitoringPointId: '', emissionSourceId: '', waterOutletId: '', printVisibility: { ...DEFAULT_PROTOCOL_PRINT_VISIBILITY }, results: [],
   };
 };
 

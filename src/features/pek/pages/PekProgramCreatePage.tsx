@@ -1,0 +1,42 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useNavigate, useParams } from 'react-router-dom';
+import Button from '../../../components/ui/Button';
+import { getCompanies, getCompanyObjects } from '../../../services/companyService';
+import { useToast } from '../../../hooks/useToast';
+import type { PekProgramRequest } from '../api/pekContracts';
+import { pekService } from '../api/pekService';
+import { PekPageHeader, PekState } from '../components/common/PekUi';
+import { validatePekProgram } from '../schemas/pekProgramSchema';
+import { mapPekError } from '../utils/pekErrorMapper';
+
+const steps = ['Компания и объект','Основная информация','Экологическое разрешение','Позиции контроля','Показатели и нормативы','Природоохранные мероприятия','Документ и ответственные','Проверка и создание'];
+const defaults: PekProgramRequest = { companyId: 0, objectId: 0, number: '', name: '', version: 1, validFrom: '', validUntil: '', controlItems: [], indicators: [], measures: [] };
+const input = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2';
+const PekProgramCreatePage = () => {
+  const { programId } = useParams(); const edit = Boolean(programId); const navigate = useNavigate(); const toast = useToast();
+  const [step,setStep]=useState(0); const [fieldErrors,setFieldErrors]=useState<Record<string,string>>({});
+  const { register,watch,setValue,getValues,reset }=useForm<PekProgramRequest>({defaultValues:defaults});
+  const companyId=watch('companyId'); const objects=useQuery({queryKey:['company-objects',String(companyId)],queryFn:({signal})=>getCompanyObjects(String(companyId),false,signal),enabled:Boolean(companyId)});
+  const companies=useQuery({queryKey:['pek-company-search'],queryFn:({signal})=>getCompanies({page:0,size:50,status:'ACTIVE'},signal)});
+  const programQuery=useQuery({queryKey:['pek','program-edit',programId],queryFn:({signal})=>pekService.getProgram(Number(programId),signal),enabled:edit});
+  useEffect(()=>{if(programQuery.data)reset({...defaults,...programQuery.data,companyId:programQuery.data.company.id,objectId:programQuery.data.object.id});},[programQuery.data,reset]);
+  const addRow=(key:'controlItems'|'indicators'|'measures',row:Record<string,unknown>)=>setValue(key,[...getValues(key),row],{shouldDirty:true});
+  const mutation=useMutation({mutationFn:(body:PekProgramRequest)=>edit?pekService.updateProgram(Number(programId),{...body,version:body.version}):pekService.createProgram(body),retry:false,onSuccess:(saved)=>{toast.success(edit?'Программа обновлена':'Программа ПЭК создана');navigate(`/staff/pek/programs/${saved.id}`);},onError:(error)=>{const parsed=mapPekError(error);setFieldErrors(parsed.fieldErrors);toast.error(parsed.message,parsed.traceId?`Код обращения: ${parsed.traceId}`:undefined);}});
+  const summary=useMemo(()=>validatePekProgram(getValues()),[step,getValues]);
+  const submit=()=>{const body=getValues();const errors=validatePekProgram(body);setFieldErrors(errors);if(Object.keys(errors).length){const key=Object.keys(errors)[0];setStep(['companyId','objectId'].includes(key)?0:['number','name','validFrom','validUntil'].includes(key)?1:key==='controlItems'?3:7);return;}mutation.mutate(body);};
+  const remove=(key:'controlItems'|'indicators'|'measures',index:number)=>setValue(key,getValues(key).filter((_,i)=>i!==index),{shouldDirty:true});
+  return <div className="space-y-5"><PekPageHeader title={edit?'Редактирование программы ПЭК':'Создание программы ПЭК'} description={`Шаг ${step+1} из 8 · ${steps[step]}`}/><ol className="grid gap-2 sm:grid-cols-4 lg:grid-cols-8">{steps.map((name,index)=><li key={name}><button type="button" onClick={()=>setStep(index)} className={`w-full rounded-xl px-2 py-3 text-xs font-bold ${index===step?'bg-eco-700 text-white':'bg-white text-slate-600'}`}>{index+1}. {name}</button></li>)}</ol><section className="rounded-2xl border bg-white p-5">
+  {step===0&&<div className="grid gap-4 md:grid-cols-2"><label>Компания *<select {...register('companyId',{valueAsNumber:true})} onChange={(e)=>{setValue('companyId',Number(e.target.value));setValue('objectId',0);}} className={input}><option value={0}>Выберите компанию</option>{companies.data?.items.map(c=><option key={c.id} value={c.id}>{c.name} · БИН {c.bin}</option>)}</select><small className="text-rose-600">{fieldErrors.companyId}</small></label><label>Объект *<select {...register('objectId',{valueAsNumber:true})} disabled={!companyId||objects.isLoading} className={input}><option value={0}>Выберите объект</option>{objects.data?.filter(x=>x.status!=='ARCHIVED').map(x=><option key={x.id} value={x.id}>{x.name} · {x.address}</option>)}</select><small className="text-rose-600">{fieldErrors.objectId}</small></label></div>}
+  {step===1&&<div className="grid gap-4 md:grid-cols-2">{[['number','Номер'],['name','Название'],['version','Версия'],['validFrom','Действует с'],['validUntil','Действует до'],['responsibleUserId','Ответственный']].map(([key,label])=><label key={key}>{label}<input {...register(key as keyof PekProgramRequest,{valueAsNumber:['version','responsibleUserId'].includes(key)})} type={key.includes('valid')?'date':key==='version'?'number':'text'} className={input}/><small className="text-rose-600">{fieldErrors[key]}</small></label>)}</div>}
+  {step===2&&<div><label>Экологическое разрешение<select {...register('permitId',{valueAsNumber:true})} className={input}><option value="">Выберите разрешение объекта</option></select></label><p className="mt-3 text-sm text-amber-700">Список разрешений загружается backend для выбранного объекта. Истёкшие разрешения не блокируют черновик, но требуют проверки.</p></div>}
+  {step===3&&<Rows title="Позиции контроля" rows={watch('controlItems')} onRemove={i=>remove('controlItems',i)} onAdd={()=>addRow('controlItems',{sectionType:'EMISSIONS',controlType:'INSTRUMENTAL',frequencyType:'QUARTERLY',requiredCount:1,mandatory:true})}/>}
+  {step===4&&<Rows title="Показатели и нормативы" rows={watch('indicators')} onRemove={i=>remove('indicators',i)} onAdd={()=>addRow('indicators',{indicator:'Новый показатель',unit:'',normativeRecordId:null,comparison:'LTE',method:'',mandatory:true})} hint="Норматив выбирается из production-справочника; локальные копии не сохраняются."/>}
+  {step===5&&<Rows title="Природоохранные мероприятия" rows={watch('measures')} onRemove={i=>remove('measures',i)} onAdd={()=>addRow('measures',{name:'Новое мероприятие',deadline:'',amount:null,repeatControlRequired:false})}/>}
+  {step===6&&<div className="grid gap-4 md:grid-cols-3"><label>Проверяющий<input {...register('reviewerId',{valueAsNumber:true})} type="number" className={input}/></label><label>Утверждающий<input {...register('approverId',{valueAsNumber:true})} type="number" className={input}/></label><label>Документ программы<input type="file" className={input}/></label></div>}
+  {step===7&&<div><h2 className="text-lg font-black">Проверка</h2>{Object.keys(summary).length?<PekState title="Исправьте данные программы" message={Object.values(summary).join(' · ')}/>:<p className="mt-3 rounded-xl bg-eco-50 p-4 font-semibold text-eco-800">Программа готова к созданию одним запросом.</p>}</div>}
+  </section><footer className="flex justify-between"><Button variant="secondary" disabled={step===0||mutation.isPending} onClick={()=>setStep(x=>x-1)}>Назад</Button>{step<7?<Button onClick={()=>setStep(x=>x+1)}>Продолжить</Button>:<Button disabled={mutation.isPending} aria-busy={mutation.isPending} onClick={submit}>{mutation.isPending?'Создание…':'Создать программу'}</Button>}</footer></div>;
+};
+const Rows=({title,rows,onAdd,onRemove,hint}:{title:string;rows:Record<string,unknown>[];onAdd:()=>void;onRemove:(i:number)=>void;hint?:string})=><div><div className="flex justify-between"><div><h2 className="font-black">{title}</h2>{hint&&<p className="text-sm text-slate-500">{hint}</p>}</div><Button type="button" onClick={onAdd}>Добавить</Button></div><div className="mt-4 space-y-2">{rows.map((row,index)=><div key={`${title}-${index}`} className="flex items-center justify-between rounded-xl bg-slate-50 p-3"><span className="text-sm">{String(row.name||row.indicator||row.controlType||`Строка ${index+1}`)}</span><button type="button" onClick={()=>onRemove(index)} className="text-sm font-bold text-rose-700">Удалить</button></div>)}{!rows.length&&<p className="text-sm text-slate-500">Записи не добавлены</p>}</div></div>;
+export default PekProgramCreatePage;

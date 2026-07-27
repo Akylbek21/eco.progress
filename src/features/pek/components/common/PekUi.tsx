@@ -1,0 +1,50 @@
+import { AlertTriangle, CheckCircle2, LoaderCircle } from 'lucide-react';
+import type { ReactNode } from 'react';
+import Button from '../../../../components/ui/Button';
+import type { PekAvailableAction, PekProgramStatus, PekReportStatus } from '../../api/pekContracts';
+
+const labels: Record<string, string> = {
+  DRAFT: 'Черновик', COLLECTING: 'Сбор данных', REQUIRES_CORRECTION: 'Требует исправления',
+  READY_FOR_REVIEW: 'Готов к проверке', UNDER_REVIEW: 'На проверке', RETURNED: 'Возвращён',
+  READY_FOR_APPROVAL: 'Готов к утверждению', APPROVED: 'Утверждён',
+  READY_FOR_SIGNING: 'Готов к подписанию', SIGNED: 'Подписан', SUBMITTED: 'Отправлен',
+  ACCEPTED: 'Принят', REJECTED: 'Отклонён', ACTIVE: 'Действует', ARCHIVED: 'Архив',
+};
+export const PekStatusBadge = ({ status }: { status: PekReportStatus | PekProgramStatus }) => (
+  <span className="inline-flex rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">
+    {labels[status] || status}
+  </span>
+);
+export const PekPageHeader = ({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) => (
+  <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+    <div><h1 className="text-2xl font-black text-slate-950 sm:text-3xl">{title}</h1>{description && <p className="mt-2 text-sm text-slate-600">{description}</p>}</div>
+    {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+  </header>
+);
+export const PekLoading = () => <div aria-busy="true" className="grid gap-3">{[0, 1, 2].map((item) => <div key={item} className="h-20 animate-pulse rounded-2xl bg-slate-200" />)}</div>;
+export const PekState = ({ title, message, retry }: { title: string; message?: string; retry?: () => void }) => (
+  <section className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
+    <AlertTriangle className="mx-auto h-8 w-8 text-amber-600" />
+    <h2 className="mt-3 text-lg font-bold">{title}</h2>
+    {message && <p className="mt-2 text-sm text-slate-600">{message}</p>}
+    {retry && <Button className="mt-4" type="button" onClick={retry}>Повторить</Button>}
+  </section>
+);
+export const PekReadiness = ({ value, valid }: { value: number; valid?: boolean }) => (
+  <div className="min-w-28">
+    <div className="flex justify-between text-xs font-semibold"><span>{value}%</span><span>{valid === false ? 'Есть ошибки' : 'Готовность'}</span></div>
+    <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-200"><div className={`h-full ${valid === false ? 'bg-amber-500' : 'bg-eco-600'}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} /></div>
+  </div>
+);
+export const PekPrimaryAction = ({ action, pending, onClick }: { action?: PekAvailableAction; pending?: boolean; onClick: (action: PekAvailableAction) => void }) => {
+  if (!action) return null;
+  return (
+    <div>
+      <Button type="button" disabled={!action.enabled || pending} aria-busy={pending} onClick={() => onClick(action)}>
+        {pending ? <><LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Выполнение…</> : action.label}
+      </Button>
+      {!action.enabled && action.disabledReason && <p className="mt-1 max-w-xs text-xs text-amber-700">{action.disabledReason}</p>}
+    </div>
+  );
+};
+export const PekSuccessState = ({ children }: { children: ReactNode }) => <span className="inline-flex items-center gap-2 text-sm font-semibold text-eco-700"><CheckCircle2 className="h-4 w-4" />{children}</span>;

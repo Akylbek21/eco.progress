@@ -1,6 +1,6 @@
 ﻿import { ReactNode, useState } from 'react';
 import { NavLink, Link, Navigate } from 'react-router-dom';
-import { BarChart3, Bell, BookOpenCheck, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, FlaskConical, Gauge, Handshake, LayoutDashboard, LockKeyhole, LogOut, Menu, Settings, ShieldCheck, UserRoundSearch, X } from 'lucide-react';
+import { BarChart3, Bell, BookOpenCheck, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, FlaskConical, Gauge, Handshake, LayoutDashboard, Leaf, LockKeyhole, LogOut, Menu, Settings, ShieldCheck, UserRoundSearch, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
 import { canAccess } from '../config/permissions';
@@ -25,6 +25,7 @@ const links: Array<{ label: string; path: string; icon: typeof ClipboardList; pa
   { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Календарь', path: '/staff/calendar', icon: CalendarDays, allowedRoles: ['ADMIN', 'MANAGER', 'ECOLOGIST', 'LABORATORY'] },
   { label: 'Протоколы', path: '/staff/protocols', icon: FlaskConical, allowedRoles: protocolRoles },
+  { label: 'ПЭК', path: '/staff/pek', icon: Leaf, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'] },
   { label: 'Журналы', path: '/staff/journals', icon: BookOpenCheck, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'] },
   { label: 'Нормативы', path: '/staff/normatives', icon: BookOpenCheck, allowedRoles: normativeRoles },
   { label: 'Средства измерений', path: '/staff/measurement-devices', icon: Gauge, allowedRoles: protocolRoles },
@@ -62,7 +63,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
       {(user?.role === 'LABORATORY'
-        ? links.filter((item) => ['/staff/protocols', '/staff/journals'].includes(item.path))
+        ? links.filter((item) => ['/staff/protocols', '/staff/journals', '/staff/pek'].includes(item.path))
         : protocolMockMode
         ? links.filter((item) => ['/staff', '/staff/companies', '/staff/protocols', '/staff/journals', '/staff/normatives', '/staff/measurement-devices', '/staff/settings/laboratories'].includes(item.path))
         : links

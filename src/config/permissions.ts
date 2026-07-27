@@ -37,7 +37,9 @@ export type Permission =
   | 'review_content_legal'
   | 'review_content_seo'
   | 'publish_content'
-  | 'manage_content';
+  | 'manage_content'
+  | 'view_pek'
+  | 'edit_pek';
 
 const staffBase: Permission[] = [
   'view_companies',
@@ -168,6 +170,20 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
 export const canAccess = (role: UserRole | undefined, permission: Permission) => {
   if (!role) return false;
   return rolePermissions[role]?.includes(permission) ?? false;
+};
+
+const pekViewRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
+const pekEditRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'WASTE_SPECIALIST'];
+
+export const hasPermission = (
+  user: { role?: UserRole; permissions?: string[] } | null | undefined,
+  permission: Permission | string,
+) => {
+  if (!user?.role) return false;
+  if (Array.isArray(user.permissions)) return user.permissions.includes(permission);
+  if (permission === 'view_pek') return pekViewRoles.includes(user.role);
+  if (permission === 'edit_pek') return pekEditRoles.includes(user.role);
+  return canAccess(user.role, permission as Permission);
 };
 
 export const permissionsForRole = (role: UserRole | undefined) => (role ? rolePermissions[role] ?? [] : []);
