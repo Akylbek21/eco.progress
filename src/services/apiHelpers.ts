@@ -75,6 +75,7 @@ export interface ParsedApiError {
   code?: string;
   fieldErrors?: Record<string, string>;
   status?: number;
+  currentVersion?: number;
 }
 
 export interface ApiErrorResponse {
@@ -96,6 +97,7 @@ export interface ApiError {
   traceId?: string;
   requestId?: string;
   resourceId?: string;
+  currentVersion?: number;
 }
 
 const responseRequestId = (error: unknown): string | undefined => {
@@ -176,6 +178,7 @@ export const parseApiError = (error: unknown, fallback = 'Не удалось в
     code: typeof codeValue === 'string' ? codeValue.trim().toUpperCase() : undefined,
     fieldErrors: Object.keys(fieldErrors).length ? fieldErrors : undefined,
     status,
+    currentVersion: Number(response?.currentVersion ?? nested?.currentVersion) || undefined,
   };
 };
 
@@ -197,6 +200,7 @@ export const normalizeApiError = (error: unknown, fallback = 'Не удалос�
     traceId: typeof traceIdValue === 'string' && traceIdValue.trim() ? traceIdValue.trim() : undefined,
     requestId: responseRequestId(error),
     resourceId: parsed.status === 409 ? extractConflictResourceId(response) : undefined,
+    currentVersion: parsed.currentVersion,
   };
 };
 

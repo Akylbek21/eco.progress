@@ -14,7 +14,7 @@ const protocol = (status: ProtocolStatus, extra: Partial<Protocol> = {}): Protoc
 describe('simplified protocol details', () => {
   it('uses human-readable status and compliance labels', () => {
     expect(protocolStatusLabel('READY_FOR_APPROVAL')).toBe('На проверке');
-    expect(protocolStatusLabel('NEEDS_REVISION')).toBe('Нужно исправить');
+    expect(protocolStatusLabel('NEEDS_REVISION')).toBe('Возвращён на доработку');
     expect(complianceLabel('NORMATIVE_NOT_FOUND')).toBe('Норматив не найден');
     expect(complianceLabel('EXCEEDED')).toBe('Есть превышение');
   });

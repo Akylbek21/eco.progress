@@ -103,6 +103,7 @@ const FormHarness = ({ step }: { step: 'details' | 'environment' }) => {
           <EnvironmentStep
             weatherLoading={false}
             weatherMessage=""
+            onRefresh={vi.fn()}
             waterTypeOptions={WATER_TYPE_OPTIONS}
             waterUseCategoryOptions={WATER_USE_CATEGORY_OPTIONS}
           />

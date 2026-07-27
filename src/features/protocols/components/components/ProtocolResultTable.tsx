@@ -3,15 +3,16 @@ import { useFieldArray, useFormContext } from 'react-hook-form';
 import type { MeasurementDevice } from '../../../../types/protocols';
 import { isDeviceValidForDate } from '../../../../utils/protocolDevices';
 import ProtocolResultRow from './ProtocolResultRow';
-import { CHEMICAL_TYPES, emptyWizardResult, type ProtocolWizardForm } from '../wizardTypes';
+import { CHEMICAL_TYPES, type ProtocolWizardForm } from '../wizardTypes';
 
 type Props = {
   devices: MeasurementDevice[];
+  onSelectNormatives: () => void;
 };
 
-const ProtocolResultTable = ({ devices }: Props) => {
+const ProtocolResultTable = ({ devices, onSelectNormatives }: Props) => {
   const { control, watch } = useFormContext<ProtocolWizardForm>();
-  const { fields, append, remove, insert } = useFieldArray({
+  const { fields, remove } = useFieldArray({
     control,
     name: 'results',
   });
@@ -43,20 +44,29 @@ const ProtocolResultTable = ({ devices }: Props) => {
               measurementDate={values.measurementDate}
               laboratoryId={values.laboratoryId}
               invalidDevice={invalidDevice}
-              onDuplicate={() => insert(index + 1, { ...row })}
               onRemove={() => remove(index)}
             />
           );
         })}
       </div>
 
+      {!fields.length && (
+        <div className="rounded-2xl border border-dashed border-eco-300 bg-eco-50/50 px-5 py-8 text-center">
+          <p className="font-bold text-slate-900">Показатели ещё не выбраны</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Найдите и выберите норматив — показатель, единица измерения и
+            нормативное значение заполнятся автоматически.
+          </p>
+        </div>
+      )}
+
       <button
         type="button"
-        onClick={() => append(emptyWizardResult())}
+        onClick={onSelectNormatives}
         className="mt-4 inline-flex items-center gap-2 rounded-xl border border-eco-300 bg-white px-4 py-2.5 text-sm font-bold text-eco-800 transition hover:border-eco-500 hover:bg-eco-50"
       >
         <Plus className="h-4 w-4" />
-        Добавить показатель
+        Выбрать норматив
       </button>
     </div>
   );

@@ -18,15 +18,13 @@ import ProtocolResultsTable from '../components/protocols/ProtocolResultsTable';
 import ProtocolTestingForm from '../components/protocols/ProtocolTestingForm';
 import ReplaceProtocolModal from '../components/protocols/ReplaceProtocolModal';
 import ReturnForRevisionModal from '../components/protocols/ReturnForRevisionModal';
-import SignProtocolModal from '../components/protocols/SignProtocolModal';
 import { templateName } from '../data/protocolTemplates';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../contexts/AuthContext';
 import { getAvailableMeasurementDevices } from '../services/measurementDeviceService';
 import { getCompanyObjects } from '../services/companyService';
-import { accreditationState, getLaboratoryEmployees } from '../services/laboratorySettingsService';
-import { getApiErrorMessage, getApiStatus, parseApiError } from '../services/apiHelpers';
-import { signBase64WithNCALayer } from '../services/ncalayer';
+import { getLaboratoryEmployees } from '../services/laboratorySettingsService';
+import { getApiErrorMessage, getApiStatus, normalizeApiError, parseApiError } from '../services/apiHelpers';
 import protocolService from '../services/protocolService';
 import type { CompanyObject } from '../types/companies';
 import type { LaboratoryEmployee, MeasurementDevice, Protocol, ProtocolCompanySnapshot, ProtocolMeasurementDevice, WeatherConditions } from '../types/protocols';
@@ -38,6 +36,7 @@ import { collectProtocolDevices, isDeviceValidForDate } from '../utils/protocolD
 import { normalizeProtocolError } from '../utils/protocolError';
 import ProtocolDetailsView from '../features/protocols/details/ProtocolDetailsView';
 import type { ProtocolEditSection } from '../features/protocols/details/protocolDetailsModel';
+import { useSignProtocolMutation } from '../features/protocols/hooks/useSignProtocolMutation';
 
 const emptyLaboratory = {
   laboratoryName: '',
@@ -83,16 +82,6 @@ const saveBlob = (blob: Blob, name: string) => {
   link.remove();
   URL.revokeObjectURL(url);
 };
-
-const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onerror = () => reject(new Error('Не удалось прочитать документ для подписи.'));
-  reader.onload = () => {
-    const result = String(reader.result || '');
-    resolve(result.includes(',') ? result.slice(result.indexOf(',') + 1) : result);
-  };
-  reader.readAsDataURL(blob);
-});
 
 const editableSignature = (protocol: Protocol) => JSON.stringify({
   number: protocol.protocolNumber || protocol.number || '',
@@ -192,12 +181,13 @@ const lifecycleSteps = ['Черновик', 'Результаты', 'Расчё�
 const lifecycleIndexByStatus: Record<Protocol['status'], number> = {
   UNKNOWN: -1,
   DRAFT: 0,
-  NEEDS_REVISION: 1,
+  RETURNED_FOR_REVISION: 1,
   CALCULATED: 2,
   READY: 2,
   READY_FOR_APPROVAL: 3,
   APPROVED: 4,
   SIGNED: 5,
+  PUBLISHED: 5,
   REPLACED: 5,
   CANCELLED: 0,
   ARCHIVED: 5,
@@ -293,6 +283,9 @@ const getMissingFields = (protocol: Protocol): MissingField[] => {
   if (!hasText(protocol.organization?.organizationAddress)) items.push({ label: 'адрес организации', stepKey: 'organization' });
   if (!hasText(protocol.organization?.objectName || protocol.companySnapshot?.objectName)) items.push({ label: 'данные объекта', stepKey: 'organization' });
   if (!hasEnvironment(protocol)) items.push({ label: 'условия среды', stepKey: 'environment' });
+  if (protocol.environment?.source === 'MANUAL' && !protocol.environment.manualChangeReason?.trim()) {
+    items.push({ label: 'причина ручного изменения условий среды', stepKey: 'environment' });
+  }
   if (isWaterProtocolType(protocol.templateId) && !hasText(protocol.waterType || protocol.conditions?.waterType)) items.push({ label: 'тип воды', stepKey: 'environment' });
   if (isWaterProtocolType(protocol.templateId) && !hasText(protocol.waterUseCategory || protocol.conditions?.waterUseCategory)) items.push({ label: 'категория водопользования', stepKey: 'environment' });
   if (!protocol.results.length) items.push({ label: 'результаты испытаний', stepKey: 'results' });
@@ -677,13 +670,14 @@ const ProtocolEditorPage = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [signOpen, setSignOpen] = useState(false);
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
   const [readyOpen, setReadyOpen] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
   const [workflowErrors, setWorkflowErrors] = useState<string[]>([]);
   const [conflictOpen, setConflictOpen] = useState(false);
+  const [conflictLatest, setConflictLatest] = useState<Protocol | null>(null);
+  const [conflictCompareOpen, setConflictCompareOpen] = useState(false);
   const [devicePickerOpen, setDevicePickerOpen] = useState(false);
   const [laboratoryEmployees, setLaboratoryEmployees] = useState<LaboratoryEmployee[]>([]);
   const [companyObjects, setCompanyObjects] = useState<CompanyObject[]>([]);
@@ -722,6 +716,55 @@ const ProtocolEditorPage = () => {
     setSaveStatus('saved');
     setProtocol(normalized);
     return normalized;
+  };
+
+  const signMutation = useSignProtocolMutation(protocol?.id, {
+    onSigned: async (response) => {
+      const signed = response.data;
+      setEditSection(null);
+      setProtocol((current) => {
+        if (!current) return current;
+        const signatures = current.signatures.some((item) => item.id === signed.signature.id)
+          ? current.signatures
+          : [...current.signatures, signed.signature];
+        const updated: Protocol = {
+          ...current,
+          status: signed.status,
+          version: signed.version,
+          signatureCount: signed.signatureCount,
+          maxSignatures: signed.maxSignatures,
+          signedByCurrentUser: signed.signedByCurrentUser,
+          signatures,
+        };
+        protocolRef.current = updated;
+        return updated;
+      });
+      toast.success('Протокол успешно подписан');
+      try {
+        applyServerProtocol(await protocolService.getProtocol(String(signed.protocolId)));
+      } catch {
+        // The successful response already contains enough data to update the card.
+      }
+    },
+    onError: async (message, signError) => {
+      toast.error('Не удалось подписать протокол', message);
+      if (normalizeApiError(signError).code === 'PROTOCOL_VERSION_CONFLICT' && protocol?.id) {
+        try {
+          applyServerProtocol(await protocolService.getProtocol(protocol.id));
+        } catch {
+          // Query invalidation will refresh the active detail query when available.
+        }
+      }
+    },
+  });
+
+  const signCurrentProtocol = () => {
+    if (!protocol || signMutation.isPending || !protocolActions.canSign) return;
+    if (protocol.version === undefined || !Number.isFinite(protocol.version)) {
+      toast.error('Не удалось подписать протокол', 'Версия протокола не определена. Обновите данные');
+      return;
+    }
+    signMutation.sign({ protocolId: protocol.id, version: protocol.version });
   };
 
   const ensureDraftProtocol = async (item: Protocol) => {
@@ -817,6 +860,10 @@ const ProtocolEditorPage = () => {
   }, [protocol, location.search]);
 
   const patchProtocol = (patch: Partial<Protocol>) => {
+    if (protocolRef.current && protocolRef.current.signatureCount > 0) {
+      toast.warning('Протокол уже подписан. Для изменения создайте исправленную версию');
+      return;
+    }
     editVersionRef.current += 1;
     setProtocol((current) => {
       if (!current) return current;
@@ -873,27 +920,6 @@ const ProtocolEditorPage = () => {
       toast.warning('Редактирование протокола закрыто для текущего статуса');
       return null;
     }
-    if (isWaterProtocolType(snapshot.templateId) && (!snapshot.waterType || !snapshot.waterUseCategory)) {
-      toast.warning(!snapshot.waterType ? 'Выберите тип воды.' : 'Выберите категорию водопользования.');
-      setEditSection('environment');
-      window.requestAnimationFrame(() => {
-        document.getElementById(!snapshot.waterType ? 'protocol-waterType' : 'protocol-waterUseCategory')?.focus();
-      });
-      return null;
-    }
-    if (snapshot.environment?.source === 'MANUAL' && !snapshot.environment.manualChangeReason?.trim()) {
-      toast.warning('Укажите причину ручного изменения условий среды.');
-      setActiveStep('environment');
-      return null;
-    }
-    if (snapshot.testing.samplingDate && snapshot.testing.testingStartDate && snapshot.testing.samplingDate > snapshot.testing.testingStartDate) {
-      toast.warning('Дата отбора не может быть позже начала испытаний.');
-      return null;
-    }
-    if (snapshot.testing.testingStartDate && snapshot.testing.testingEndDate && snapshot.testing.testingStartDate > snapshot.testing.testingEndDate) {
-      toast.warning('Дата начала испытаний не может быть позже окончания.');
-      return null;
-    }
     const startedVersion = editVersionRef.current;
     const requestId = ++saveRequestRef.current;
     setSaveStatus('saving');
@@ -939,6 +965,7 @@ const ProtocolEditorPage = () => {
         });
         if (requestId === saveRequestRef.current && startedVersion === editVersionRef.current) {
           applyServerProtocol(updated);
+          localStorage.removeItem(`protocol-offline-draft:${updated.id}`);
           toast.success('Протокол сохранен');
           return updated;
         }
@@ -951,6 +978,11 @@ const ProtocolEditorPage = () => {
           saveQueuedRef.current = false;
           setSaveStatus('conflict');
           setConflictOpen(true);
+          try {
+            setConflictLatest(await protocolService.getProtocol(snapshot.id));
+          } catch {
+            setConflictLatest(null);
+          }
         } else {
           setSaveStatus('error');
           toast.error('Не удалось сохранить протокол', userProtocolError(saveError));
@@ -968,6 +1000,31 @@ const ProtocolEditorPage = () => {
     saveInFlightRef.current = operation;
     return operation;
   };
+
+  useEffect(() => {
+    if (!dirty || !protocol || !isEditableProtocol(protocol) || saveStatus === 'conflict') return;
+    if (!navigator.onLine) {
+      localStorage.setItem(`protocol-offline-draft:${protocol.id}`, JSON.stringify(protocol));
+      setSaveStatus('error');
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      if (!saveInFlightRef.current) void save();
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [dirty, protocol, saveStatus]);
+
+  useEffect(() => {
+    const retryOfflineDraft = () => {
+      const current = protocolRef.current;
+      if (!current || !localStorage.getItem(`protocol-offline-draft:${current.id}`)) return;
+      if (window.confirm('Соединение восстановлено. Повторить сохранение изменений протокола?')) {
+        void save();
+      }
+    };
+    window.addEventListener('online', retryOfflineDraft);
+    return () => window.removeEventListener('online', retryOfflineDraft);
+  }, []);
 
   const ensureSavedProtocol = async (message: string): Promise<Protocol | null> => {
     if (!protocol) return null;
@@ -1005,19 +1062,27 @@ const ProtocolEditorPage = () => {
 
   const checkSavedNormatives = async () => {
     if (!protocol) return;
+    if (protocol.signatureCount > 0) {
+      toast.warning('Протокол уже подписан. Для изменения создайте исправленную версию');
+      return;
+    }
     if (dirty) {
       toast.info('Сначала сохраняю локальные изменения, затем проверяю нормативы.');
       const saved = await save();
       if (!saved) return;
     }
     await run(async () => {
-      await protocolService.checkNormatives(protocol.id);
+      await protocolService.checkNormatives(protocol.id, protocol.version);
       return protocolService.getProtocol(protocol.id);
     }, 'Расчёт выполнен backend');
   };
 
   const calculateProtocolResults = async () => {
     if (!protocol) return;
+    if (protocol.signatureCount > 0) {
+      toast.warning('Протокол уже подписан. Для изменения создайте исправленную версию');
+      return;
+    }
     if (dirty) {
       toast.info('Сначала сохраняю данные, затем запускаю расчет.');
       const saved = await save();
@@ -1025,7 +1090,7 @@ const ProtocolEditorPage = () => {
     }
     setBusy(true);
     try {
-      const summary = await protocolService.calculateProtocolSummary(protocol.id);
+      const summary = await protocolService.calculateProtocolSummary(protocol.id, protocol.version);
       const updated = await protocolService.getProtocol(protocol.id);
       applyServerProtocol(updated);
       toast.success(
@@ -1050,12 +1115,19 @@ const ProtocolEditorPage = () => {
         time: selection.time || protocol.measurementTime || DEFAULT_WEATHER_TIME,
         signal: selection.signal,
       });
-      patchProtocol({ environment: weather });
-      return weather;
+      const coordinates = companyObjects.find((item) => String(item.id) === String(selection.objectId))?.coordinates || protocol.companySnapshot.coordinates;
+      const normalizedWeather = !coordinates
+        ? { ...weather, warning: weather.warning || 'У объекта не указаны координаты. Используются координаты города по умолчанию' }
+        : weather;
+      patchProtocol({ environment: normalizedWeather });
+      if (!normalizedWeather.available) {
+        toast.warning('Автоматические погодные данные не получены. Заполните условия среды вручную');
+      }
+      return normalizedWeather;
     } catch (weatherError) {
       if (selection.signal?.aborted) return;
-      patchProtocol({ environment: { ...protocol.environment, status: 'API_UNAVAILABLE', source: 'API' } });
-      toast.error('Погодный API недоступен', weatherError instanceof Error ? weatherError.message : undefined);
+      patchProtocol({ environment: { ...protocol.environment, available: false, status: 'API_UNAVAILABLE', source: 'API', warning: 'Автоматические погодные данные не получены. Заполните условия среды вручную' } });
+      toast.warning('Автоматические погодные данные не получены. Заполните условия среды вручную', weatherError instanceof Error ? weatherError.message : undefined);
     }
   };
 
@@ -1141,6 +1213,10 @@ const ProtocolEditorPage = () => {
   const generateDocuments = async () => {
     const current = await ensureSavedProtocol('Сначала сохраняю изменения, затем формирую документы.');
     if (!current) return;
+    if (current.signatureCount > 0) {
+      toast.warning('Протокол уже подписан. Для изменения создайте исправленную версию');
+      return;
+    }
     setBusy(true);
     try {
       const docx = await protocolService.generateDocx(current.id);
@@ -1189,7 +1265,7 @@ const ProtocolEditorPage = () => {
     if (!protocol) return;
     setBusy(true);
     try {
-      await protocolService.deleteProtocol(protocol.id);
+      await protocolService.deleteProtocol(protocol.id, protocol.version);
       savedSignatureRef.current = '';
       setMoreOpen(false);
       setDeleteProtocolOpen(false);
@@ -1197,62 +1273,6 @@ const ProtocolEditorPage = () => {
       navigate('/staff/protocols');
     } catch (deleteError) {
       toast.error(getApiErrorMessage(deleteError, 'Не удалось удалить протокол'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const signCurrentProtocol = async () => {
-    if (!protocol || busy) return;
-    if (accreditationState(protocol.laboratory.accreditationValidUntil).status === 'EXPIRED') {
-      toast.error('Подписание заблокировано', 'Срок действия аттестата лаборатории истёк.');
-      return;
-    }
-    if (!protocol.laboratory.laboratoryHead) {
-      toast.error('Подписание заблокировано', 'В snapshot протокола не выбран заведующий лабораторией.');
-      return;
-    }
-    setBusy(true);
-    try {
-      let document;
-      try {
-        const latest = await protocolService.getProtocol(protocol.id);
-        const localVersion = String(protocol.version ?? protocol.updatedAt ?? '');
-        const latestVersion = String(latest.version ?? latest.updatedAt ?? '');
-        if (localVersion && latestVersion && localVersion !== latestVersion) {
-          applyServerProtocol(latest);
-          throw new Error('Протокол изменён после открытия страницы. Проверьте актуальные данные и повторите подписание.');
-        }
-        document = await protocolService.downloadPdf(protocol.id);
-      } catch (downloadError) {
-        if ([404, 409].includes(getApiStatus(downloadError) || 0)) {
-          throw new Error('PDF ещё не сформирован. Сначала нажмите «PDF», затем повторите подписание.');
-        }
-        throw downloadError;
-      }
-      if (!document.blob.size) throw new Error('Backend вернул пустой PDF. Сформируйте документ повторно.');
-      const fileHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await document.blob.arrayBuffer())))
-        .map((byte) => byte.toString(16).padStart(2, '0'))
-        .join('');
-      const dataBase64 = await blobToBase64(document.blob);
-      const { signedCms } = await signBase64WithNCALayer(dataBase64);
-      if (!signedCms.trim()) throw new Error('NCALayer не вернул CMS-подпись.');
-      await protocolService.signProtocol(protocol.id, {
-        cmsSignatureBase64: signedCms,
-        fileHash,
-        fileId: protocol.finalPdfFileId,
-        version: protocol.version,
-      });
-      applyServerProtocol(await protocolService.getProtocol(protocol.id));
-      setSignOpen(false);
-      toast.success('Протокол подписан');
-    } catch (signError) {
-      const message = signError instanceof Error ? signError.message : '';
-      if (/отменен|отменён|cancel/i.test(message)) {
-        setSignOpen(false);
-        return;
-      }
-      toast.error('Не удалось подписать протокол', message || undefined);
     } finally {
       setBusy(false);
     }
@@ -1286,7 +1306,8 @@ const ProtocolEditorPage = () => {
       permissions={protocolActions}
       missing={missingFields}
       workflowErrors={workflowErrors}
-      busy={busy}
+      busy={busy || signMutation.isPending}
+      signing={signMutation.isPending}
       onBack={() => navigateSafely('/staff/protocols')}
       onEdit={setEditSection}
       onReady={() => {
@@ -1299,7 +1320,7 @@ const ProtocolEditorPage = () => {
       }}
       onApprove={() => setApproveOpen(true)}
       onReturn={() => setReturnOpen(true)}
-      onSign={() => setSignOpen(true)}
+      onSign={signCurrentProtocol}
       onPublish={() => { void run(() => protocolService.publishToClient(protocol.id, protocol.version), 'Протокол отправлен клиенту'); }}
       onGenerate={generateDocuments}
       onDocx={() => { void generateAndDownload('docx'); }}
@@ -1307,11 +1328,11 @@ const ProtocolEditorPage = () => {
       onCorrection={() => setReplaceOpen(true)}
       onCancel={() => {
         if (!window.confirm('Отменить протокол? После отмены редактирование будет недоступно.')) return;
-        void run(() => protocolService.cancelProtocol(protocol.id), 'Протокол отменён');
+        void run(() => protocolService.cancelProtocol(protocol.id, protocol.version), 'Протокол отменён');
       }}
       onArchive={() => {
         if (!window.confirm('Архивировать протокол?')) return;
-        void run(() => protocolService.archiveProtocol(protocol.id), 'Протокол перемещён в архив');
+        void run(() => protocolService.archiveProtocol(protocol.id, protocol.version), 'Протокол перемещён в архив');
       }}
       onReplacement={() => { if (protocol.replacedByProtocolId) navigateSafely(`/staff/protocols/${protocol.replacedByProtocolId}`); }}
     />
@@ -1333,7 +1354,7 @@ const ProtocolEditorPage = () => {
         {editSection === 'laboratory' && <ProtocolLaboratoryForm value={protocol.laboratory} employees={laboratoryEmployees} readOnly={false} loading={busy} canOpenSettings={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'].includes(String(user?.role || ''))} onExecutorChange={(employee) => patchProtocol({ executorId: String(employee.id), executor: employee.fullName, laboratory: { ...protocol.laboratory, executorId: String(employee.id), executor: employee.fullName } })} onRefresh={refreshLaboratorySnapshot} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
         {editSection === 'environment' && <div className="space-y-5">{isWaterProtocolType(protocol.templateId) && <ProtocolWaterCharacteristicsForm waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={(water) => patchProtocol({ ...water, conditions: { ...(protocol.conditions || {}), ...water } })} />}<ProtocolEnvironmentForm value={protocol.environment || {}} measurementDate={protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate} measurementTime={protocol.measurementTime || ''} objectId={String(protocol.objectId || '')} objectName={companyObjects.find((item) => item.id === String(protocol.objectId))?.name || protocol.companySnapshot.objectName || ''} objectOptions={companyObjects.map((item) => ({ id: item.id, name: item.name }))} readOnly={false} loading={busy} onSelectionChange={changeWeatherSelection} onRequestConditions={refreshWeather} onChange={(environment) => patchProtocol({ environment })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'methods' && <ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} measurementDate={protocol.measurementDate || protocol.testing.samplingDate} readOnly={false} onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })} onChange={(testing) => patchProtocol({ testing })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
-        {editSection === 'results' && <ProtocolResultsTable protocolId={protocol.id} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} devices={protocol.measurementDevices} readOnly={false} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />}
+        {editSection === 'results' && <ProtocolResultsTable protocolId={protocol.id} version={protocol.version} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} devices={protocol.measurementDevices} readOnly={false} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />}
       </Modal>
 
       <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} protocol={protocol} draft={false} onClose={() => setPreviewOpen(false)} />
@@ -1365,7 +1386,20 @@ const ProtocolEditorPage = () => {
       <Modal open={conflictOpen} onClose={() => setConflictOpen(false)} title="Протокол был изменён другим сотрудником">
         <p className="text-sm text-slate-600">Текущие локальные изменения не отправлены повторно. Обновите данные, чтобы продолжить с последней версией протокола.</p>
         <div className="mt-5 flex justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={() => setConflictOpen(false)}>Отменить</Button>
+          <Button type="button" variant="secondary" onClick={() => setConflictOpen(false)}>Закрыть</Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              const local = protocolRef.current;
+              if (local) void navigator.clipboard?.writeText(JSON.stringify(local, null, 2));
+            }}
+          >
+            Скопировать мои изменения
+          </Button>
+          <Button type="button" variant="secondary" disabled={!conflictLatest} onClick={() => setConflictCompareOpen(true)}>
+            Сравнить изменения
+          </Button>
           <Button
             type="button"
             disabled={busy}
@@ -1373,7 +1407,7 @@ const ProtocolEditorPage = () => {
               if (!protocolId) return;
               setBusy(true);
               try {
-                applyServerProtocol(await protocolService.getProtocol(protocolId));
+                applyServerProtocol(conflictLatest || await protocolService.getProtocol(protocolId));
                 setConflictOpen(false);
               } catch (reloadError) {
                 toast.error('Не удалось обновить данные протокола', userProtocolError(reloadError));
@@ -1386,7 +1420,18 @@ const ProtocolEditorPage = () => {
           </Button>
         </div>
       </Modal>
-      <SignProtocolModal open={signOpen} loading={busy} protocol={protocol} onClose={() => setSignOpen(false)} onConfirm={signCurrentProtocol} />
+      <Modal open={conflictCompareOpen} onClose={() => setConflictCompareOpen(false)} title="Сравнение версий протокола" size="xl">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div>
+            <h3 className="mb-2 font-bold">Мои изменения · версия {protocolRef.current?.version ?? '—'}</h3>
+            <pre className="max-h-[55vh] overflow-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-100">{JSON.stringify(protocolRef.current, null, 2)}</pre>
+          </div>
+          <div>
+            <h3 className="mb-2 font-bold">Версия сервера · {conflictLatest?.version ?? '—'}</h3>
+            <pre className="max-h-[55vh] overflow-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-100">{JSON.stringify(conflictLatest, null, 2)}</pre>
+          </div>
+        </div>
+      </Modal>
       <ReplaceProtocolModal
         open={replaceOpen}
         loading={busy}
@@ -1394,7 +1439,7 @@ const ProtocolEditorPage = () => {
         onConfirm={async (reason) => {
           setBusy(true);
           try {
-            const replacement = await protocolService.createCorrection(protocol.id, reason);
+            const replacement = await protocolService.createCorrection(protocol.id, reason, protocol.version);
             toast.success('Создана исправленная версия');
             savedSignatureRef.current = '';
             navigate(`/staff/protocols/${replacement.id}`);

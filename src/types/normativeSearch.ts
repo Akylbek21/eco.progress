@@ -6,6 +6,8 @@ export interface NormativeSearchItem {
   shortName?: string | null;
   casNumber?: string | null;
   formula?: string | null;
+  alternativeName?: string | null;
+  testingMethodNd?: string | null;
 
   unit?: string | null;
   limitValue?: number | null;
@@ -53,6 +55,7 @@ export interface NormativeSearchResponse {
     size: number;
     totalElements: number;
     totalPages: number;
+    relaxed?: boolean;
   };
   message?: string | null;
   errors?: string[];

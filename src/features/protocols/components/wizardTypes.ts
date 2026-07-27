@@ -114,7 +114,7 @@ export const createWizardDefaults = (): ProtocolWizardForm => {
     environmentSource: 'MANUAL', environmentDataSource: '', environmentObservedAt: '', environmentManualChangeReason: '',
     season: '', workCategory: '', workplaceType: '', roomType: '', normLevel: '', lightingType: '', noiseType: '', visualWorkCategory: '', waterType: '', waterUseCategory: '',
     testingMethodNd: '', samplingMethodNd: '', formCode: '', appendixNumber: '', applicationNumber: '', contractNumber: '', note: '',
-    orderId: '', orderServiceItemId: '', printVisibility: { ...DEFAULT_PROTOCOL_PRINT_VISIBILITY }, results: [emptyWizardResult()],
+    orderId: '', orderServiceItemId: '', printVisibility: { ...DEFAULT_PROTOCOL_PRINT_VISIBILITY }, results: [],
   };
 };
 

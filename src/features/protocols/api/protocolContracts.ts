@@ -9,8 +9,6 @@ import type {
 
 /** DTOs in this file are the only shapes allowed to cross the protocols API boundary. */
 export interface ProtocolOrganizationRequest {
-  companyId: string | number | null;
-  objectId: string | number | null;
   organizationName: string | null;
   organizationAddress: string | null;
   objectName: string | null;
@@ -33,28 +31,31 @@ export interface ProtocolExecutorRequest {
 }
 
 export interface ProtocolTestingRequest {
-  measurementDate: string | null;
-  measurementTime: string | null;
-  measurementPlace: string | null;
-  sampleDate: string | null;
+  samplingDate: string | null;
   sampleNumber: string | null;
   samplingPlace: string | null;
   samplingDepth: string | null;
-  testingStartDate: string | null;
-  testingEndDate: string | null;
   productNormativeDocument: string | null;
   samplingMethodDocument: string | null;
   testingMethodDocument: string | null;
-  purpose: string | null;
+  testingPurpose: string | null;
   environmentConditions: string | null;
 }
 
 export interface UpdateProtocolRequest {
   version: number;
   protocolDate: string;
+  companyId: string | number | null;
+  objectId: string | number | null;
+  laboratoryId: string | number | null;
+  executorId: string | number | null;
+  measurementDate: string | null;
+  measurementTime: string | null;
+  measurementPlace: string | null;
+  testingStartDate: string | null;
+  testingEndDate: string | null;
   organization: ProtocolOrganizationRequest;
   laboratory: ProtocolLaboratoryRequest;
-  executor: ProtocolExecutorRequest;
   testing: ProtocolTestingRequest;
   environment: ProtocolEnvironmentRequest;
   conditions?: Record<string, ProtocolResultValue>;
@@ -110,12 +111,12 @@ export interface QuickCreateProtocolApiRequest {
   docxTemplateCode?: string | null;
   subtype?: string | null;
   companyId: number;
-  objectId: number;
-  laboratoryId: number;
-  executorId: number;
-  protocolDate: string;
+  objectId?: number | null;
+  laboratoryId?: number | null;
+  executorId?: number | null;
+  protocolDate?: string | null;
   sampleDate?: string | null;
-  measurementDate: string;
+  measurementDate?: string | null;
   measurementTime?: string | null;
   measurementPlace?: string | null;
   testingStartDate?: string | null;

@@ -88,7 +88,8 @@ test('wizard loads environment conditions automatically', async () => {
   assert.match(wizard, /protocolService\.getWeatherConditions/);
   assert.match(wizard, /values\.sampleDate \|\| values\.measurementDate/);
   assert.match(wizard, /weather\.pressureKpa \|\| weather\.pressure/);
-  assert.match(wizard, /enabled: open && Boolean\(values\.objectId && weatherCoordinates/);
+  assert.match(wizard, /enabled: Boolean\(open && values\.objectId && weatherDate/);
+  assert.match(wizard, /coordinates: weatherCoordinates \|\| undefined/);
   assert.match(wizard, /getCompanyObject\(values\.companyId, values\.objectId, signal\)/);
   assert.match(environment, /Загружаем условия среды/);
 });

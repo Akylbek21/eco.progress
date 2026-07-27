@@ -48,7 +48,7 @@ describe('protocol domain contract', () => {
     expect(request).not.toHaveProperty('environment');
   });
 
-  it('maps PATCH to nested DTO and uses the laboratory employee id', () => {
+  it('maps editable fields to the canonical top-level PATCH DTO', () => {
     const request = mapProtocolFormToUpdateRequest({
       version: 4,
       number: 'P-1',
@@ -64,11 +64,12 @@ describe('protocol domain contract', () => {
       testing: { productNormativeDocument: '', samplingMethodDocument: '', testingMethodDocument: 'ГОСТ', samplingDate: '2026-07-21', testingStartDate: '', testingEndDate: '', testingDate: '', testingPurpose: '', environmentConditions: '' },
       environment: { humidity: '50' },
     });
-    expect(request.executor).toEqual({ laboratoryEmployeeId: 21, fullName: 'Иванов И.И.' });
-    expect(request.organization.objectId).toBe(11);
-    expect(request.testing.sampleDate).toBe('2026-07-21');
-    expect(request).not.toHaveProperty('objectId');
-    expect(request).not.toHaveProperty('executorId');
+    expect(request.objectId).toBe(11);
+    expect(request.executorId).toBe(21);
+    expect(request.testing.samplingDate).toBe('2026-07-21');
+    expect(request.organization).not.toHaveProperty('objectId');
+    expect(request).not.toHaveProperty('executor');
+    expect(request.testing).not.toHaveProperty('measurementDate');
   });
 
   it('removes result aliases from values and keeps a single device id', () => {

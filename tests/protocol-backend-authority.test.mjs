@@ -28,11 +28,11 @@ test('available devices are scoped and invalid statuses are filtered', async () 
   for (const status of ['EXPIRED', 'ARCHIVED', 'INACTIVE', 'OUT_OF_SERVICE']) assert.match(wizard, new RegExp(status));
 });
 
-test('workflow uses version headers, one revision reason and backend permissions', async () => {
+test('workflow uses body versions, one revision reason and backend permissions', async () => {
   const api = await read('src/services/apiProtocolService.ts');
   const permissions = await read('src/utils/protocolPermissions.ts');
-  assert.match(api, /'If-Match'/);
-  assert.match(api, /\{ reason: comment \}/);
+  assert.doesNotMatch(api, /'If-Match'/);
+  assert.match(api, /\{ reason: comment, version \}/);
   assert.doesNotMatch(api, /\{ comment, reason:/);
   assert.match(permissions, /protocol\.permissions/);
   assert.match(permissions, /canPublishToClient/);
@@ -42,8 +42,11 @@ test('bulk result operations use atomic backend endpoints', async () => {
   const table = await read('src/components/protocols/ProtocolResultsTable.tsx');
   const api = await read('src/services/apiProtocolService.ts');
   assert.doesNotMatch(table, /Promise\.allSettled/);
-  assert.match(api, /results\/bulk-update/);
-  assert.match(api, /results\/bulk-delete/);
+  assert.match(api, /results\/bulk-device/);
+  assert.match(api, /results\/bulk-place/);
+  assert.match(api, /results\/bulk`/);
+  assert.doesNotMatch(api, /results\/bulk-update/);
+  assert.doesNotMatch(api, /results\/bulk-delete/);
 });
 
 test('orders use linked protocols and backend completion decision', async () => {

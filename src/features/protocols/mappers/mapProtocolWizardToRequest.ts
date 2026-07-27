@@ -22,6 +22,7 @@ export interface ProtocolCreateContext {
   selectedObject?: CompanyObject;
   selectedExecutor?: LaboratoryExecutorOption;
   validateSelections?: boolean;
+  validationMode?: 'draft' | 'submit';
 }
 
 export class QuickCreateValidationError extends Error {
@@ -101,6 +102,11 @@ export function toApiDate(value: unknown, field: string): string {
   return normalized;
 }
 
+const optionalApiDate = (value: unknown, field: string): string | null => {
+  if (!normalizeNullableText(value)) return null;
+  return toApiDate(value, field);
+};
+
 const comparisonMap: Record<string, QuickCreateComparisonType | null> = {
   LE: 'LE',
   LESS_OR_EQUAL: 'LE',
@@ -159,7 +165,7 @@ export function mapMeasurementToRequest(
   if (isNumericOnlyUnit(unit)) {
     throw new QuickCreateValidationError(
       `results.${index}.unit`,
-      'Единица измерения не может быть нормативным значением',
+      'В поле единицы измерения указано числовое значение',
     );
   }
 
@@ -297,14 +303,21 @@ export function buildQuickCreatePayload(
   }
 
   const companyId = normalizeRequiredId(form.companyId, 'companyId', 'Выберите компанию');
-  const objectId = normalizeRequiredId(form.objectId, 'objectId', 'Выберите объект');
-  const laboratoryId = normalizeRequiredId(form.laboratoryId, 'laboratoryId', 'Выберите лабораторию');
-  const executorId = normalizeRequiredId(form.executorId, 'executorId', 'Выберите исполнителя');
+  const strict = context.validationMode !== 'draft';
+  const objectId = strict
+    ? normalizeRequiredId(form.objectId, 'objectId', 'Выберите объект')
+    : normalizeOptionalId(form.objectId, 'objectId');
+  const laboratoryId = strict
+    ? normalizeRequiredId(form.laboratoryId, 'laboratoryId', 'Выберите лабораторию')
+    : normalizeOptionalId(form.laboratoryId, 'laboratoryId');
+  const executorId = strict
+    ? normalizeRequiredId(form.executorId, 'executorId', 'Выберите исполнителя')
+    : normalizeOptionalId(form.executorId, 'executorId');
 
-  if (context.validateSelections && !context.selectedObject) {
+  if (strict && context.validateSelections && !context.selectedObject) {
     throw new QuickCreateValidationError('objectId', 'Выберите сохранённый объект компании');
   }
-  if (context.selectedObject) {
+  if (objectId !== null && context.selectedObject) {
     if (context.selectedObject.virtual || context.selectedObject.isVirtual) {
       throw new QuickCreateValidationError('objectId', 'Выберите сохранённый объект компании');
     }
@@ -316,11 +329,13 @@ export function buildQuickCreatePayload(
     }
   }
 
-  if (context.validateSelections && !context.selectedExecutor) {
+  if (strict && context.validateSelections && !context.selectedExecutor) {
     throw new QuickCreateValidationError('executorId', 'Выберите исполнителя выбранной лаборатории');
   }
   if (
-    context.selectedExecutor
+    executorId !== null
+    && laboratoryId !== null
+    && context.selectedExecutor
     && (
       context.selectedExecutor.laboratoryEmployeeId !== executorId
       || context.selectedExecutor.laboratoryId !== laboratoryId
@@ -329,12 +344,12 @@ export function buildQuickCreatePayload(
     throw new QuickCreateValidationError('executorId', 'Выберите исполнителя выбранной лаборатории');
   }
 
-  const protocolDate = toApiDate(form.protocolDate, 'protocolDate');
-  const sampleDate = toApiDate(form.sampleDate, 'sampleDate');
-  const measurementDate = toApiDate(form.measurementDate, 'measurementDate');
-  const testingStartDate = toApiDate(form.testingStartDate, 'testingStartDate');
-  const testingEndDate = toApiDate(form.testingEndDate, 'testingEndDate');
-  if (testingStartDate > testingEndDate) {
+  const protocolDate = optionalApiDate(form.protocolDate, 'protocolDate');
+  const sampleDate = optionalApiDate(form.sampleDate, 'sampleDate');
+  const measurementDate = optionalApiDate(form.measurementDate, 'measurementDate');
+  const testingStartDate = optionalApiDate(form.testingStartDate, 'testingStartDate');
+  const testingEndDate = optionalApiDate(form.testingEndDate, 'testingEndDate');
+  if (testingStartDate && testingEndDate && testingStartDate > testingEndDate) {
     throw new QuickCreateValidationError(
       'testingEndDate',
       'Дата окончания не может быть раньше даты начала',
@@ -342,26 +357,59 @@ export function buildQuickCreatePayload(
   }
 
   const measurementTime = normalizeNullableText(form.measurementTime);
-  if (!measurementTime || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(measurementTime)) {
+  if (strict && (!measurementTime || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(measurementTime))) {
     throw new QuickCreateValidationError('measurementTime', 'Укажите время измерения');
   }
   const measurementPlace = normalizeNullableText(form.measurementPlace);
-  if (!measurementPlace) {
+  if (strict && !measurementPlace) {
     throw new QuickCreateValidationError('measurementPlace', 'Укажите место измерения');
   }
 
   const config = PROTOCOL_TYPE_CONFIG[configKey(form.templateId)];
   const rows = form.results.filter(isNonEmptyResult);
-  if (!rows.length) {
+  if (strict && !rows.length) {
     throw new QuickCreateValidationError('results', 'Добавьте хотя бы один результат');
   }
-  const measurements = rows.map((row, index) =>
-    mapMeasurementToRequest(row, config.defaultUnit, index, {
-      testingMethodNd: form.testingMethodNd,
-      samplingMethodNd: form.samplingMethodNd,
-    }));
+  const measurements = rows.map((row, index) => {
+    if (strict) {
+      return mapMeasurementToRequest(row, config.defaultUnit, index, {
+        testingMethodNd: form.testingMethodNd,
+        samplingMethodNd: form.samplingMethodNd,
+      });
+    }
+    const unit = normalizeProtocolUnit(row.unit);
+    if (unit && isNumericOnlyUnit(unit)) {
+      throw new QuickCreateValidationError(
+        `results.${index}.unit`,
+        'В поле единицы измерения указано числовое значение',
+      );
+    }
+    return {
+      factorType: normalizeNullableText(row.factorType),
+      factorCode: normalizeNullableText(row.factorCode),
+      pollutantCode: normalizeNullableText(row.pollutantCode),
+      indicatorName: normalizeNullableText(row.indicatorName) || '',
+      value: normalizeDecimal(row.value) ?? normalizeNullableText(row.textValue),
+      unit: unit || '',
+      normativeId: normalizeNullableText(row.normativeRecordId || row.normativeId),
+      normativeValue: normalizeDecimal(row.normativeValue),
+      testingMethodNd: normalizeNullableText(row.testingMethodNd || row.methodDocument || form.testingMethodNd),
+      samplingMethodNd: normalizeNullableText(row.samplingMethodNd || form.samplingMethodNd),
+      measurementDeviceId: normalizeOptionalId(row.measurementDeviceId, `results.${index}.measurementDeviceId`),
+      deviceId: null,
+      values: compactValues({
+        cas: normalizeNullableText(row.cas),
+        formula: normalizeNullableText(row.formula),
+        samplingPlace: normalizeNullableText(row.samplingPlace),
+        comparisonType: normalizeComparisonType(row.comparisonType),
+        normativeMin: normalizeDecimal(row.normativeMin),
+        normativeMax: normalizeDecimal(row.normativeMax),
+        normativeDocument: normalizeNullableText(row.normativeDocument),
+      }),
+    };
+  });
 
-  if (PROTOCOL_TEMPLATES[form.templateId].requiresDevice) {
+  if (strict && PROTOCOL_TEMPLATES[form.templateId].requiresDevice) {
     const missingDeviceIndex = measurements.findIndex((item) => item.measurementDeviceId === null);
     if (missingDeviceIndex >= 0) {
       throw new QuickCreateValidationError(
@@ -373,7 +421,8 @@ export function buildQuickCreatePayload(
 
   const conditions = mapConditions(form, rows);
   if (
-    isWaterProtocolType(form.templateId)
+    strict
+    && isWaterProtocolType(form.templateId)
     && (!conditions.waterType || !conditions.waterUseCategory)
   ) {
     if (import.meta.env.DEV) {

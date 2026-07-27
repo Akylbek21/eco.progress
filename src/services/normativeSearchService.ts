@@ -37,7 +37,7 @@ export interface NormativeSearchRequest {
 }
 
 const CACHE_TTL_MS = 45_000;
-export const NORMATIVE_SEARCH_DEBOUNCE_MS = 450;
+export const NORMATIVE_SEARCH_DEBOUNCE_MS = 400;
 const cache = new Map<string, { expiresAt: number; value: NormativeSearchResponse['data'] }>();
 export const clearNormativeSearchCache = (): void => cache.clear();
 
@@ -96,6 +96,8 @@ const normalizeItem = (value: unknown, index: number): NormativeSearchItem | nul
     shortName: optionalString(record.shortName),
     casNumber: optionalString(firstValue(record, ['casNumber', 'cas']) ?? firstValue(pollutant, ['casNumber', 'cas'])),
     formula: optionalString(firstValue(record, ['formula', 'chemicalFormula']) ?? firstValue(pollutant, ['formula', 'chemicalFormula'])),
+    alternativeName: optionalString(firstValue(record, ['alternativeName', 'alternativeNameRu', 'synonyms', 'alias'])),
+    testingMethodNd: optionalString(firstValue(record, ['testingMethodNd', 'testingMethod', 'testingMethodDocument', 'methodDocument'])),
     unit: optionalString(firstValue(record, ['unit', 'measurementUnit', 'resultUnit', 'units'])),
     limitValue: optionalNumber(firstValue(record, ['limitValue', 'normativeValue', 'normative', 'value', 'pdk', 'obuv', 'obuvValue'])),
     limitMin: optionalNumber(firstValue(record, ['limitMin', 'normativeMin', 'minValue', 'min'])),
@@ -223,11 +225,23 @@ export const searchNormatives = async (
   });
   let normalized = normalizeResponse(response.data, Number(cleaned.page ?? 0), Number(cleaned.size ?? 30));
   if (!normalized.items.length) {
-    const directoryResponse = await api.get<unknown>('/normatives/records', {
-      params: cleaned,
+    const relaxedParams = cleanNormativeSearchParams({
+      query: cleaned.query,
+      templateId: cleaned.templateId,
+      waterType: cleaned.waterType,
+      waterUseCategory: cleaned.waterUseCategory,
+      page: cleaned.page,
+      size: cleaned.size,
+      status: cleaned.status,
+    });
+    const relaxedResponse = await api.get<unknown>('/normatives/search', {
+      params: relaxedParams,
       signal,
     });
-    normalized = normalizeResponse(directoryResponse.data, requestedPage, requestedSize);
+    normalized = {
+      ...normalizeResponse(relaxedResponse.data, requestedPage, requestedSize),
+      relaxed: true,
+    };
   }
   if (normalized.items.length) cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, value: normalized });
   return normalized;
@@ -275,7 +289,7 @@ export const normativeSearchItemToRecord = (item: NormativeSearchItem): Normativ
   maxValue: item.limitMax ?? undefined,
   comparisonType: (item.comparisonType || 'LESS_OR_EQUAL') as NormativeComparisonType,
   normativeDocument: item.sourceDocumentName || item.sourceDocumentCode || '',
-  testingMethod: '',
+  testingMethod: item.testingMethodNd || '',
   samplingMethod: '',
   validFrom: '',
   status: item.status === 'ACTIVE' ? 'ACTIVE' : undefined,

@@ -96,6 +96,7 @@ const weatherLabels: Record<WeatherConditionsStatus, string> = {
   LOADING: 'Загрузка условий…',
   LOADED: 'Условия загружены автоматически',
   API_UNAVAILABLE: 'Погодный API недоступен',
+  ERROR: 'Ошибка получения погодных данных',
   COORDINATES_MISSING: 'У объекта отсутствуют координаты',
   MANUAL: 'Значения введены вручную',
 };

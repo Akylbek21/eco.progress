@@ -280,6 +280,7 @@ const roleTitle = (role: UserRole) => {
     ECOLOGIST: 'Эколог',
     LABORATORY: 'Лаборатория',
     WASTE_SPECIALIST: 'Специалист по отходам',
+    STAFF: 'Сотрудник',
   };
   return labels[role];
 };

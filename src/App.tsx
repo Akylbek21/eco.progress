@@ -78,8 +78,8 @@ const StaffReportsPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffRep
 const StaffTasksPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffTasksPage');
 const StaffUserRolesPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffUserRolesPage');
 
-const allStaffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
-const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'];
+const allStaffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST', 'STAFF'];
+const protocolRoles: UserRole[] = allStaffRoles;
 const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
 const companyReadRoles: UserRole[] = [...companyRoleMatrix.read];
 const companyManageRoles: UserRole[] = [...companyRoleMatrix.write];

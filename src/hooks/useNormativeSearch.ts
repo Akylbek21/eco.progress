@@ -90,8 +90,6 @@ export const useNormativeSearch = ({
       setHasSearched(true);
     } catch (requestError) {
       if (controller.signal.aborted || sequence !== sequenceRef.current || isNormativeSearchCanceled(requestError)) return;
-      setItems([]);
-      setTotalElements(0);
       setHasSearched(true);
       setError(getApiErrorMessage(requestError, 'Не удалось загрузить нормативы'));
     } finally {

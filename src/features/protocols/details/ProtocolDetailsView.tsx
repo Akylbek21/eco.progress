@@ -8,6 +8,7 @@ import ProtocolMainDataTab from './ProtocolMainDataTab';
 import ProtocolNextStepCard from './ProtocolNextStepCard';
 import ProtocolProgress from './ProtocolProgress';
 import ProtocolResultsTab from './ProtocolResultsTab';
+import ProtocolSignaturesCard from './ProtocolSignaturesCard';
 import { resolveProtocolPrimaryAction, type ProtocolDetailsTab, type ProtocolEditSection } from './protocolDetailsModel';
 
 type MissingItem = { label: string };
@@ -18,6 +19,7 @@ type Props = {
   missing: MissingItem[];
   workflowErrors: string[];
   busy: boolean;
+  signing: boolean;
   onBack: () => void;
   onEdit: (section: ProtocolEditSection) => void;
   onReady: () => void;
@@ -41,7 +43,7 @@ const tabs: Array<{ key: ProtocolDetailsTab; label: string }> = [
   { key: 'history', label: 'История' },
 ];
 
-const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErrors, busy, onBack, onEdit, onReady, onApprove, onReturn, onSign, onPublish, onGenerate, onDocx, onPdf, onCorrection, onCancel, onArchive, onReplacement }: Props) => {
+const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErrors, busy, signing, onBack, onEdit, onReady, onApprove, onReturn, onSign, onPublish, onGenerate, onDocx, onPdf, onCorrection, onCancel, onArchive, onReplacement }: Props) => {
   const [activeTab, setActiveTab] = useState<ProtocolDetailsTab>('results');
   const primary = resolveProtocolPrimaryAction(protocol, role);
   const runPrimary = () => {
@@ -59,6 +61,19 @@ const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErr
       <ProtocolHeader protocol={protocol} permissions={permissions} busy={busy} primaryLabel={primary.label} onBack={onBack} onPrimary={runPrimary} onReturn={onReturn} onDocx={onDocx} onGenerate={onGenerate} onCorrection={onCorrection} onCancel={onCancel} onArchive={onArchive} onHistory={() => setActiveTab('history')} />
       <ProtocolProgress status={protocol.status} />
       <ProtocolNextStepCard protocol={protocol} missing={missing} />
+      <ProtocolSignaturesCard protocol={protocol} permissions={permissions} signing={signing} onSign={onSign} />
+      {protocol.status === 'SIGNED' && permissions.canPublish && !protocol.publishedToClientAt && (
+        <div className="flex justify-end">
+          <button type="button" disabled={busy} onClick={onPublish} className="min-h-11 rounded-xl bg-eco-600 px-4 text-sm font-bold text-white disabled:opacity-50">
+            Опубликовать для клиента
+          </button>
+        </div>
+      )}
+      {protocol.signatureCount > 0 && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+          Протокол уже подписан. Для изменения создайте исправленную версию.
+        </section>
+      )}
       {workflowErrors.length > 0 && <section role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4"><h2 className="font-black text-rose-900">Не удалось выполнить действие</h2><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-rose-800">{workflowErrors.map((item) => <li key={item}>{item}</li>)}</ul></section>}
       <nav aria-label="Разделы протокола" className="overflow-x-auto border-b border-slate-200">
         <div className="flex min-w-max gap-1">{tabs.map((tab) => <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)} className={`border-b-2 px-4 py-3 text-sm font-bold ${activeTab === tab.key ? 'border-eco-600 text-eco-800' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{tab.label}</button>)}</div>

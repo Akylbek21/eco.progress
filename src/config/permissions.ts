@@ -162,6 +162,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'edit_tasks',
     'edit_documents',
   ],
+  STAFF: [...staffBase],
 };
 
 export const canAccess = (role: UserRole | undefined, permission: Permission) => {

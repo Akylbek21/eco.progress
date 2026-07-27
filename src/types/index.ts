@@ -1,6 +1,6 @@
 export type ClientType = 'individual' | 'company';
 import type { LeadContentAttribution } from './contentManagement';
-export type UserRole = 'CLIENT' | 'MANAGER' | 'ADMIN' | 'DIRECTOR' | 'HEAD' | 'ACCOUNTANT' | 'ECOLOGIST' | 'LABORATORY' | 'WASTE_SPECIALIST';
+export type UserRole = 'CLIENT' | 'MANAGER' | 'ADMIN' | 'DIRECTOR' | 'HEAD' | 'ACCOUNTANT' | 'ECOLOGIST' | 'LABORATORY' | 'WASTE_SPECIALIST' | 'STAFF';
 
 export type { ServiceCategory } from '../content/serviceCatalog';
 import type { ServiceCategory } from '../content/serviceCatalog';

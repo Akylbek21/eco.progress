@@ -17,7 +17,8 @@ test('search threshold supports regular queries, formulas and CAS', async () => 
   assert.equal(canSearchNormative(undefined), false);
   assert.equal(canSearchNormative(null), false);
   assert.equal(canSearchNormative(''), false);
-  assert.equal(canSearchNormative('во'), false);
+  assert.equal(canSearchNormative('в'), false);
+  assert.equal(canSearchNormative('во'), true);
   assert.equal(canSearchNormative('вода'), true);
   assert.equal(canSearchNormative('12'), true);
   assert.equal(canSearchNormative('123'), true);
@@ -43,13 +44,15 @@ test('protocol context maps every physical subtype and water to the required doc
   assert.match(configSource, /factorType: subtype \|\| protocolFactorType\[normalizedType as ProtocolTypeKey\]/);
 });
 
-test('API service falls back to the normative directory when search returns no rows', async () => {
+test('API service retries the canonical endpoint with relaxed filters when search returns no rows', async () => {
   const source = await read('src/services/normativeSearchService.ts');
   assert.match(source, /api\.get<unknown>\('\/normatives\/search'/);
   assert.match(source, /params: cleaned/);
   assert.match(source, /if \(!normalized\.items\.length\)/);
-  assert.match(source, /api\.get<unknown>\('\/normatives\/records'/);
-  assert.match(source, /params: cleaned/);
+  assert.match(source, /const relaxedParams = cleanNormativeSearchParams/);
+  assert.match(source, /params: relaxedParams/);
+  assert.match(source, /relaxed: true/);
+  assert.doesNotMatch(source, /api\.get<unknown>\('\/normatives\/records'/);
   assert.doesNotMatch(source, /q: query/);
   assert.doesNotMatch(source, /code: query/);
   assert.doesNotMatch(source, /pollutantCode: query/);
@@ -66,7 +69,7 @@ test('quick-create normative picker uses the shared debounced search', async () 
   const source = await read('src/features/protocols/components/components/NormativeSelectorModal.tsx');
   assert.match(source, /protocol-normative-search-v2/);
   assert.match(source, /setDebouncedSearch\(normalizedSearch\)/);
-  assert.match(source, /SEARCH_DEBOUNCE_MS = 450/);
+  assert.match(source, /SEARCH_DEBOUNCE_MS = 400/);
   assert.match(source, /queryFn: \(\{ signal \}\) => searchNormatives\(request, signal\)/);
   assert.match(source, /queryClient\.cancelQueries/);
   assert.match(source, /new Map/);
@@ -81,7 +84,7 @@ test('quick-create normative picker uses the shared debounced search', async () 
 test('hook debounces, aborts stale requests and guards responses by sequence', async () => {
   const source = await read('src/hooks/useNormativeSearch.ts');
   const service = await read('src/services/normativeSearchService.ts');
-  assert.match(service, /NORMATIVE_SEARCH_DEBOUNCE_MS = 450/);
+  assert.match(service, /NORMATIVE_SEARCH_DEBOUNCE_MS = 400/);
   assert.match(source, /NORMATIVE_SEARCH_DEBOUNCE_MS/);
   assert.match(source, /new AbortController\(\)/);
   assert.match(source, /abortRef\.current\?\.abort\(\)/);
@@ -92,7 +95,7 @@ test('hook debounces, aborts stale requests and guards responses by sequence', a
 test('creation wizard preserves the selected backend normative id', async () => {
   const source = await read('src/features/protocols/components/steps/ResultsStep.tsx');
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
-  assert.match(source, /normativeId: item\.id/);
+  assert.match(source, /normativeId: String\(item\.id\)/);
   assert.match(mapper, /normativeId = normalizeNullableText/);
   assert.match(mapper, /row\.normativeRecordId \|\| row\.normativeId/);
   assert.match(mapper, /normativeValue: normalizeDecimal\(row\.normativeValue\)/);

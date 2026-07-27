@@ -8,7 +8,7 @@ const ProtocolWizardFooter = ({ step, total, submitting, canContinue, onBack, on
     <span className="hidden text-xs font-semibold text-slate-500 sm:block">Черновик сохраняется в текущей сессии</span>
     {step < total - 1
       ? <Button type="button" disabled={!canContinue || submitting} onClick={onNext}>Продолжить <ArrowRight className="h-4 w-4" /></Button>
-      : <Button type="button" disabled={!canContinue || submitting} onClick={onCreate}>{submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}{submitting ? 'Создание…' : 'Создать протокол'}</Button>}
+      : <Button type="button" disabled={!canContinue || submitting} onClick={onCreate}>{submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}{submitting ? 'Сохранение…' : 'Сохранить черновик'}</Button>}
   </footer>
 );
 export default ProtocolWizardFooter;

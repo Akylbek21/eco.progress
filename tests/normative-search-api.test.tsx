@@ -111,13 +111,15 @@ describe('normative search HTTP contract', () => {
     expect(actualUrl?.searchParams.has('query')).toBe(false);
   });
 
-  it('reads data.records and keeps fallback filters canonical', async () => {
+  it('retries the canonical search with relaxed optional filters', async () => {
     let fallbackUrl: URL | undefined;
+    let requestCount = 0;
     server.use(
-      http.get('*/api/normatives/search', () =>
-        HttpResponse.json({ data: { items: [], totalElements: 0 } }),
-      ),
-      http.get('*/api/normatives/records', ({ request }) => {
+      http.get('*/api/normatives/search', ({ request }) => {
+        requestCount += 1;
+        if (requestCount === 1) {
+          return HttpResponse.json({ data: { items: [], totalElements: 0 } });
+        }
         fallbackUrl = new URL(request.url);
         return HttpResponse.json({
           data: {
@@ -145,10 +147,12 @@ describe('normative search HTTP contract', () => {
 
     expect(fallbackUrl?.searchParams.get('query')).toBe('нике');
     expect(fallbackUrl?.searchParams.get('templateId')).toBe('water');
-    expect(fallbackUrl?.searchParams.get('sourceDocumentCode')).toBe('DSM_138');
+    expect(fallbackUrl?.searchParams.has('sourceDocumentCode')).toBe(false);
     for (const forbidden of ['search', 'q', 'code', 'pollutantCode']) {
       expect(fallbackUrl?.searchParams.has(forbidden)).toBe(false);
     }
+    expect(requestCount).toBe(2);
+    expect(result.relaxed).toBe(true);
     expect(result.items[0]?.indicatorName).toBe('Никель');
     expect(extractNormativeItems({ data: { data: { records: [nickel] } } })).toEqual([
       nickel,
@@ -190,9 +194,9 @@ describe('normative selector modal', () => {
     renderSelector();
     const input = screen.getByLabelText('Поиск нормативных показателей');
 
-    fireEvent.change(input, { target: { value: 'ни' } });
+    fireEvent.change(input, { target: { value: 'н' } });
     expect(
-      await screen.findByText(/Введите не менее 3 символов/, {}, { timeout: 1_500 }),
+      await screen.findByText(/Введите не менее 2 символов/, {}, { timeout: 1_500 }),
     ).toBeTruthy();
     expect(requestCount).toBe(0);
 

@@ -1,4 +1,4 @@
-import { Copy, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { Controller, useFormContext } from 'react-hook-form';
 import type { MeasurementDevice } from '../../../../types/protocols';
 import DeviceSelector from './DeviceSelector';
@@ -12,7 +12,6 @@ type Props = {
   measurementDate: string;
   laboratoryId: string;
   invalidDevice: boolean;
-  onDuplicate: () => void;
   onRemove: () => void;
 };
 
@@ -27,7 +26,6 @@ const ProtocolResultRow = ({
   measurementDate,
   laboratoryId,
   invalidDevice,
-  onDuplicate,
   onRemove,
 }: Props) => {
   const { register, control, watch } = useFormContext<ProtocolWizardForm>();
@@ -54,15 +52,6 @@ const ProtocolResultRow = ({
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={onDuplicate}
-            className="rounded-lg p-2 text-eco-700 transition hover:bg-eco-100"
-            aria-label={`Дублировать строку ${index + 1}`}
-            title="Дублировать"
-          >
-            <Copy className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
             onClick={onRemove}
             className="rounded-lg p-2 text-rose-700 transition hover:bg-rose-100"
             aria-label={`Удалить строку ${index + 1}`}
@@ -77,26 +66,28 @@ const ProtocolResultRow = ({
         <label className={`${labelClass} sm:col-span-2 lg:col-span-5`}>
           Наименование показателя
           <input
+            readOnly
             aria-label={`Показатель строки ${index + 1}`}
-            placeholder="Например, массовая концентрация вещества"
+            placeholder="Выберите норматив через поиск"
             {...register(`results.${index}.indicatorName`)}
-            className={inputClass}
+            className={`${inputClass} cursor-default bg-slate-50 font-semibold text-slate-700`}
           />
         </label>
 
         <label className={`${labelClass} lg:col-span-3`}>
           {chemical ? 'Код загрязняющего вещества' : 'Тип фактора'}
           <input
+            readOnly
             aria-label={
               chemical ? 'Код загрязняющего вещества' : 'Тип фактора'
             }
-            placeholder={chemical ? 'Код из справочника' : 'Выберите или укажите тип'}
+            placeholder={chemical ? 'Код из норматива' : 'Тип из норматива'}
             {...register(
               chemical
                 ? `results.${index}.pollutantCode`
                 : `results.${index}.factorType`,
             )}
-            className={inputClass}
+            className={`${inputClass} cursor-default bg-slate-50 text-slate-700`}
           />
         </label>
 
@@ -114,10 +105,11 @@ const ProtocolResultRow = ({
         <label className={`${labelClass} lg:col-span-2`}>
           Единица измерения
           <input
+            readOnly
             aria-label="Единица измерения"
-            placeholder="мг/дм³"
+            placeholder="Из норматива"
             {...register(`results.${index}.unit`)}
-            className={inputClass}
+            className={`${inputClass} cursor-default bg-slate-50 text-slate-700`}
           />
         </label>
 
@@ -161,9 +153,19 @@ const ProtocolResultRow = ({
           <input
             readOnly
             aria-label="Норматив"
-            value={String(row?.normativeValue || '')}
+            value={
+              row?.comparisonType === 'RANGE'
+                ? [row.normativeMin, row.normativeMax].filter(Boolean).join(' — ')
+                : row?.comparisonType === 'GREATER_OR_EQUAL'
+                  ? `≥ ${row.normativeMin || row.normativeValue || ''}`.trim()
+                  : row?.normativeMax
+                    ? `≤ ${row.normativeMax}`
+                    : row?.normativeValue
+                      ? `≤ ${row.normativeValue}`
+                      : ''
+            }
             placeholder="Не выбран"
-            className={`${inputClass} cursor-default bg-slate-50 text-slate-600`}
+            className={`${inputClass} cursor-default bg-eco-50 font-bold text-eco-900`}
           />
         </label>
 

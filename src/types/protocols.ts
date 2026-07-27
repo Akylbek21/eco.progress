@@ -6,14 +6,15 @@ export type ProtocolStatus =
   | 'CALCULATED'
   | 'READY'
   | 'READY_FOR_APPROVAL'
-  | 'NEEDS_REVISION'
+  | 'RETURNED_FOR_REVISION'
   | 'APPROVED'
   | 'SIGNED'
+  | 'PUBLISHED'
   | 'REPLACED'
   | 'CANCELLED'
   | 'ARCHIVED';
 
-export type LegacyProtocolStatus = 'READY_FOR_APPROVE' | 'RETURNED' | 'CORRECTION';
+export type LegacyProtocolStatus = 'READY_FOR_APPROVE' | 'RETURNED' | 'CORRECTION' | 'NEEDS_REVISION';
 export type ProtocolResultValue = string | number | null | undefined | Array<string | number | null>;
 
 export type ProtocolTemplateId =
@@ -247,6 +248,8 @@ export type ProtocolEnvironmentalConditions = {
   weatherObservedAt?: string;
   loadedAt?: string;
   manualChangeReason?: string;
+  available?: boolean;
+  warning?: string;
 };
 
 export type WeatherConditionsStatus =
@@ -254,6 +257,7 @@ export type WeatherConditionsStatus =
   | 'LOADING'
   | 'LOADED'
   | 'API_UNAVAILABLE'
+  | 'ERROR'
   | 'COORDINATES_MISSING'
   | 'MANUAL';
 
@@ -267,6 +271,7 @@ export type WeatherConditions = {
   pressureKpa?: string;
   pressure?: string;
   windSpeed?: string;
+  available: boolean;
   status: WeatherConditionsStatus;
   source: 'API' | 'MANUAL';
   dataSource?: string;
@@ -315,6 +320,28 @@ export type ProtocolMeasurementDevice = {
   };
 };
 
+export type ProtocolSignature = {
+  id: number;
+  userId: number;
+  signerFullName: string;
+  signerPosition?: string | null;
+  signedAt: string;
+};
+
+export type SignProtocolResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    protocolId: number;
+    status: ProtocolStatus;
+    version: number;
+    signatureCount: number;
+    maxSignatures: number;
+    signedByCurrentUser: boolean;
+    signature: ProtocolSignature;
+  };
+};
+
 export interface Protocol {
   id: string;
   protocolNumber: string;
@@ -359,6 +386,10 @@ export interface Protocol {
   approvedAt?: string;
   signedAt?: string;
   signedBy?: string;
+  signatureCount: number;
+  maxSignatures: number;
+  signedByCurrentUser: boolean;
+  signatures: ProtocolSignature[];
   hasDocx?: boolean;
   hasPdf?: boolean;
   finalPdfFileId?: string;
@@ -634,6 +665,7 @@ export type RawMeasurementRequest = {
 };
 
 export type SaveRawMeasurementsRequest = {
+  version?: number;
   methodTemplateId?: string | number | null;
   measurements: RawMeasurementRequest[];
 };

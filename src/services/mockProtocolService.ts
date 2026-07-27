@@ -239,6 +239,10 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
     templateId: payload.templateId,
     subtype: payload.subtype,
     status: 'DRAFT',
+    signatureCount: 0,
+    maxSignatures: 5,
+    signedByCurrentUser: false,
+    signatures: [],
     companyId: company.id,
     objectId: companyObject.id,
     companySnapshot: {
@@ -307,11 +311,11 @@ export async function quickCreateProtocol(payload: QuickCreateProtocolApiRequest
     companyId: payload.companyId,
     objectId: payload.objectId || '',
     templateId: (payload.templateId === 'water' ? 'water_wastewater' : payload.templateId) as ProtocolTemplateId,
-    protocolDate: payload.protocolDate,
-    sampleDate: payload.sampleDate ?? payload.measurementDate,
-    testingStartDate: payload.testingStartDate ?? payload.measurementDate,
-    testingEndDate: payload.testingEndDate ?? payload.measurementDate,
-    measurementDate: payload.measurementDate,
+    protocolDate: payload.protocolDate || '',
+    sampleDate: payload.sampleDate ?? payload.measurementDate ?? undefined,
+    testingStartDate: payload.testingStartDate ?? payload.measurementDate ?? undefined,
+    testingEndDate: payload.testingEndDate ?? payload.measurementDate ?? undefined,
+    measurementDate: payload.measurementDate ?? undefined,
     measurementTime: payload.measurementTime ?? undefined,
     measurementPlace: payload.measurementPlace ?? undefined,
     laboratoryId: String(payload.laboratoryId),
@@ -490,7 +494,7 @@ export async function changeStatus(protocolId: string, status: ProtocolStatus): 
 
 export const readyForApproval = (id: string) => changeStatus(id, 'READY_FOR_APPROVAL');
 export const approveProtocol = (id: string) => changeStatus(id, 'APPROVED');
-export const returnForRevision = async (id: string, _reason: string) => changeStatus(id, 'NEEDS_REVISION');
+export const returnForRevision = async (id: string, _reason: string) => changeStatus(id, 'RETURNED_FOR_REVISION');
 export const cancelProtocol = (id: string) => changeStatus(id, 'CANCELLED');
 export const signProtocol = (id: string) => changeStatus(id, 'SIGNED');
 
@@ -791,6 +795,7 @@ export async function getWeatherConditions(): Promise<WeatherConditions> {
     maxHumidity: '43',
     pressureKpa: '96.8',
     windSpeed: '2.4',
+    available: true,
     status: 'LOADED',
     source: 'API',
     dataSource: 'Демонстрационный погодный архив',

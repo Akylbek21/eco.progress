@@ -50,11 +50,14 @@ test('result aliases resolve device ids from nested backend objects and values a
 
 test('protocol permission matrix restricts destructive and signing actions', async () => {
   const source = await read('src/utils/protocolPermissions.ts');
-  assert.match(source, /creatorRoles = new Set\(\['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'\]\)/);
-  assert.match(source, /headRoles = new Set\(\['ADMIN', 'DIRECTOR', 'HEAD'\]\)/);
-  assert.match(source, /canSignProtocol.*statusOf\(protocol\) === 'APPROVED'/);
-  assert.match(source, /canCreateCorrection.*statusOf\(protocol\) === 'SIGNED'/);
-  assert.match(source, /canDelete: false/);
+  assert.match(source, /role !== 'CLIENT'/);
+  assert.match(source, /EDITABLE_STATUSES/);
+  assert.match(source, /canSignCurrentVersion[\s\S]*\['APPROVED', 'SIGNED'\]\.includes\(status\)/);
+  assert.match(source, /signedByCurrentUser/);
+  assert.match(source, /signatureCountOf\(protocol\) < maxSignaturesOf\(protocol\)/);
+  assert.match(source, /CORRECTION_STATUSES/);
+  assert.match(source, /canApprove: false/);
+  assert.match(source, /canSign: internal && canSignCurrentVersion/);
 });
 
 test('protocol normative display keeps zero values', async () => {

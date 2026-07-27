@@ -9,7 +9,7 @@ import { companyRoleMatrix } from '../config/permissions';
 import type { Permission } from '../config/permissions';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
-const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'];
+const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER', 'ACCOUNTANT', 'ECOLOGIST', 'WASTE_SPECIALIST', 'STAFF'];
 const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
 const protocolMockMode = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
 
@@ -46,6 +46,7 @@ const roleLabel = (role?: string) => {
     ECOLOGIST: 'Эколог',
     LABORATORY: 'Лаборатория',
     WASTE_SPECIALIST: 'Специалист по отходам',
+    STAFF: 'Сотрудник',
   };
   return labels[role || ''] || 'Сотрудник';
 };

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Calculator, Copy, FileSpreadsheet, History, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
@@ -36,6 +37,7 @@ import type {
 
 type Props = {
   protocolId: string;
+  version?: number;
   templateId: ProtocolTemplateKey;
   subtype?: ProtocolSubtype;
   rows: ProtocolResultRow[];
@@ -346,10 +348,18 @@ const exceededText = (row: ProtocolResultRow, templateId: ProtocolTemplateKey) =
 };
 
 const ProtocolResultsTable = ({
-  protocolId, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '', objectId, measurementPlace: defaultMeasurementPlace = '', waterType = '', waterUseCategory = '',
+  protocolId, version, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '', objectId, measurementPlace: defaultMeasurementPlace = '', waterType = '', waterUseCategory = '',
   onChange, onCheckNormatives, onImported, onNotify, onGoToInstruments,
 }: Props) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const invalidateProtocolQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['protocol', protocolId] }),
+      queryClient.invalidateQueries({ queryKey: ['protocol-results', protocolId] }),
+      queryClient.invalidateQueries({ queryKey: ['protocols'] }),
+    ]);
+  };
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<NormativeSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
@@ -543,7 +553,7 @@ const ProtocolResultsTable = ({
           waterType: isWaterProtocol ? selectedNormative.waterType || effectiveWaterType : '',
           waterUseCategory: isWaterProtocol ? waterUseCategory : '',
         },
-      });
+      }, version);
       onChange([...rows, saved]);
       setAddOpen(false);
       onNotify('Результат сохранён', 'success');
@@ -683,7 +693,7 @@ const ProtocolResultsTable = ({
         templateId: normative.templateId || normalizedTemplateId,
         categoryCode: normative.categoryCode || normative.category || searchContext.categoryCode || '',
       },
-    });
+    }, version);
   };
 
   const addBulk = async () => {
@@ -764,7 +774,7 @@ const ProtocolResultsTable = ({
           subtype: subtype || null,
           factorType: isPhysicalFactors ? physicalSubtype : null,
         },
-      });
+      }, version);
       onChange([...rows, saved]);
       setQuery('');
       setSuggestions([]);
@@ -814,11 +824,11 @@ const ProtocolResultsTable = ({
           externalLaboratory: form.externalLaboratory,
           externalLaboratoryDocument: form.externalLaboratoryDocument,
         },
-      });
+      }, version);
       let latestRow = saved;
       let recalculated = true;
       try {
-        const calculation = await protocolService.calculateResult(protocolId, editing.id);
+        const calculation = await protocolService.calculateResult(protocolId, editing.id, version);
         if (calculation.row) latestRow = calculation.row;
       } catch (calculationError) {
         recalculated = false;
@@ -869,7 +879,7 @@ const ProtocolResultsTable = ({
           normativeSelectionRequired: '',
           normativeSearchWarning: '',
         },
-      });
+      }, version);
       setNormativeChoices((current) => {
         const next = { ...current };
         delete next[row.id];
@@ -928,7 +938,7 @@ const ProtocolResultsTable = ({
         measurementDeviceId: row.measurementDeviceId,
         normativeId: row.normativeReference?.id || valueOf(row, ['normativeId']),
         values: { ...row.values },
-      });
+      }, version);
       onChange([...rows, saved]);
       onNotify('Строка дублирована', 'success');
     } catch (error) {
@@ -942,7 +952,7 @@ const ProtocolResultsTable = ({
     if (!deleteRow) return;
     setSaving(true);
     try {
-      await protocolService.deleteProtocolResult(protocolId, deleteRow.id);
+      await protocolService.deleteProtocolResult(protocolId, deleteRow.id, version);
       onChange(rows.filter((item) => item.id !== deleteRow.id));
       setDeleteRow(null);
       onNotify('Строка удалена', 'success');
@@ -958,8 +968,9 @@ const ProtocolResultsTable = ({
     if (!window.confirm(`Удалить выбранные строки: ${selectedRows.length}?`)) return;
     setSaving(true);
     try {
-      const updated = await protocolService.bulkDeleteProtocolResults(protocolId, selectedRows.map((row) => row.id));
+      const updated = await protocolService.bulkDeleteResults(protocolId, selectedRows.map((row) => row.id), version);
       onChange(updated.results);
+      await invalidateProtocolQueries();
       onNotify('Выбранные строки удалены', 'success');
       setSelected([]);
     } catch (error) {
@@ -969,12 +980,16 @@ const ProtocolResultsTable = ({
     }
   };
 
-  const applyToSelected = async (patch: Record<string, string>) => {
+  const applyToSelected = async (patch: { measurementDeviceId?: string; measurementPlace?: string }) => {
     if (!selectedRows.length) return onNotify('Выберите строки', 'warning');
     setSaving(true);
     try {
-      const updated = await protocolService.bulkUpdateProtocolResults(protocolId, selectedRows.map((row) => row.id), patch);
+      const resultIds = selectedRows.map((row) => row.id);
+      const updated = patch.measurementDeviceId
+        ? await protocolService.bulkAssignDevice(protocolId, resultIds, patch.measurementDeviceId, version)
+        : await protocolService.bulkUpdatePlace(protocolId, resultIds, patch.measurementPlace || '', version);
       onChange(updated.results);
+      await invalidateProtocolQueries();
       onNotify('Значение применено к выбранным строкам', 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Массовое изменение не выполнено', 'error');
@@ -1012,7 +1027,7 @@ const ProtocolResultsTable = ({
   const calculateRow = async (row: ProtocolResultRow) => {
     setSaving(true);
     try {
-      const calculated = await protocolService.calculateResult(protocolId, row.id);
+      const calculated = await protocolService.calculateResult(protocolId, row.id, version);
       if (calculated.row?.id) onChange(rows.map((item) => item.id === calculated.row!.id ? calculated.row! : item));
       else await onImported();
       onNotify('Результат рассчитан', 'success');
@@ -1040,7 +1055,7 @@ const ProtocolResultsTable = ({
   const calculateAll = async () => {
     setSaving(true);
     try {
-      const summary = await protocolService.calculateProtocolSummary(protocolId);
+      const summary = await protocolService.calculateProtocolSummary(protocolId, version);
       setCalculationSummary(summary);
       const rowMap = new Map(summary.rows.filter((item) => item.row?.id).map((item) => [item.row!.id, item.row!]));
       if (rowMap.size) onChange(rows.map((row) => rowMap.get(row.id) || row));
@@ -1163,7 +1178,7 @@ const ProtocolResultsTable = ({
           <select value={bulkDeviceId} onChange={(event) => setBulkDeviceId(event.target.value)} className={inputClass}><option value="">Прибор для выбранных строк</option>{devices.map((item) => <option key={item.deviceId} value={item.deviceId}>{item.deviceSnapshot.name} · {item.deviceSnapshot.serialNumber}</option>)}</select>
           <Button type="button" variant="secondary" disabled={!bulkDeviceId || saving} onClick={() => applyToSelected({ measurementDeviceId: bulkDeviceId })}>Применить прибор</Button>
           <input value={bulkPlace} onChange={(event) => setBulkPlace(event.target.value)} placeholder="Одно место замера" className={inputClass} />
-          <Button type="button" variant="secondary" disabled={!bulkPlace || saving} onClick={() => applyToSelected({ measurementPlace: bulkPlace, samplingPlace: bulkPlace })}>Применить место</Button>
+          <Button type="button" variant="secondary" disabled={!bulkPlace || saving} onClick={() => applyToSelected({ measurementPlace: bulkPlace })}>Применить место</Button>
           <Button type="button" variant="secondary" className="text-rose-700 hover:bg-rose-50" disabled={saving} onClick={removeSelected}>Удалить выбранные</Button>
         </div>}
       </div>}
@@ -1445,6 +1460,7 @@ const ProtocolResultsTable = ({
       <RawMeasurementsModal
         open={Boolean(rawRow)}
         protocolId={protocolId}
+        version={version}
         row={rawRow}
         devices={devices}
         readOnly={readOnly}

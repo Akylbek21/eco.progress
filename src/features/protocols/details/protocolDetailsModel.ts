@@ -25,7 +25,7 @@ export const lifecycleStage = (status?: string | null) => {
   if (normalized === 'SIGNED' || normalized === 'REPLACED' || normalized === 'ARCHIVED') return 4;
   if (normalized === 'APPROVED') return 3;
   if (normalized === 'READY_FOR_APPROVAL') return 2;
-  if (['CALCULATED', 'READY', 'NEEDS_REVISION'].includes(normalized)) return 1;
+  if (['CALCULATED', 'READY', 'RETURNED_FOR_REVISION'].includes(normalized)) return 1;
   return 0;
 };
 
@@ -87,8 +87,9 @@ export const resolveProtocolPrimaryAction = (protocol: Protocol, role?: string):
   if (status === 'CALCULATED') return { key: permissions.canSendToApproval ? 'ready' : 'review', label: permissions.canSendToApproval ? 'Передать на проверку' : 'Проверить данные' };
   if (status === 'READY') return { key: permissions.canSendToApproval ? 'ready' : 'review', label: permissions.canSendToApproval ? 'Передать на проверку' : 'Проверить данные' };
   if (status === 'READY_FOR_APPROVAL') return { key: permissions.canApprove ? 'approve' : null, label: 'Утвердить' };
-  if (status === 'NEEDS_REVISION') return { key: permissions.canSave ? 'edit' : null, label: 'Исправить протокол' };
+  if (status === 'RETURNED_FOR_REVISION') return { key: permissions.canSave ? 'edit' : null, label: 'Исправить протокол' };
   if (status === 'APPROVED') return { key: permissions.canSign ? 'sign' : protocol.hasPdf ? 'pdf' : null, label: permissions.canSign ? 'Подписать' : 'Скачать PDF' };
+  if (status === 'SIGNED' && permissions.canSign) return { key: 'sign', label: 'Подписать' };
   if (status === 'SIGNED') return permissions.canPublish && !protocol.publishedToClientAt
     ? { key: 'publish', label: 'Отправить клиенту' }
     : { key: 'pdf', label: 'Скачать PDF' };

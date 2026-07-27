@@ -50,14 +50,22 @@ export const mapProtocolEnvironmentToRequest = (
   manualChangeReason: optionalText(environment?.manualChangeReason),
 });
 
-export const mapProtocolFormToUpdateRequest = (
+export const mapProtocolFormToPatchRequest = (
   payload: UpdateProtocolPayload,
+  version = payload.version,
 ): UpdateProtocolRequest => ({
-  version: payload.version,
+  version,
   protocolDate: payload.protocolDate,
+  companyId: idOrNull(payload.companyId),
+  objectId: idOrNull(payload.objectId),
+  laboratoryId: idOrNull(payload.laboratoryId ?? payload.laboratory?.laboratoryId ?? payload.laboratory?.id),
+  executorId: idOrNull(payload.executorId),
+  measurementDate: optionalText(payload.measurementDate),
+  measurementTime: optionalText(payload.measurementTime),
+  measurementPlace: optionalText(payload.measurementPlace),
+  testingStartDate: optionalText(payload.testing.testingStartDate),
+  testingEndDate: optionalText(payload.testing.testingEndDate ?? payload.testing.testingDate),
   organization: {
-    companyId: idOrNull(payload.companyId),
-    objectId: idOrNull(payload.objectId),
     organizationName: optionalText(payload.organization.organizationName),
     organizationAddress: optionalText(payload.organization.organizationAddress),
     objectName: optionalText(payload.organization.objectName),
@@ -71,24 +79,15 @@ export const mapProtocolFormToUpdateRequest = (
     accreditationNumber: optionalText(payload.laboratory?.accreditationNumber),
     accreditationValidUntil: optionalText(payload.laboratory?.accreditationValidUntil),
   },
-  executor: {
-    laboratoryEmployeeId: idOrNull(payload.executorId),
-    fullName: optionalText(payload.executor),
-  },
   testing: {
-    measurementDate: optionalText(payload.measurementDate),
-    measurementTime: optionalText(payload.measurementTime),
-    measurementPlace: optionalText(payload.measurementPlace),
-    sampleDate: optionalText(payload.sampleDate ?? payload.testing.samplingDate),
+    samplingDate: optionalText(payload.sampleDate ?? payload.testing.samplingDate),
     sampleNumber: optionalText(payload.sampleNumber),
     samplingPlace: optionalText(payload.samplingPlace ?? payload.measurementPlace),
     samplingDepth: optionalText(payload.samplingDepth),
-    testingStartDate: optionalText(payload.testing.testingStartDate),
-    testingEndDate: optionalText(payload.testing.testingEndDate ?? payload.testing.testingDate),
     productNormativeDocument: optionalText(payload.testing.productNormativeDocument),
     samplingMethodDocument: optionalText(payload.testing.samplingMethodDocument),
     testingMethodDocument: optionalText(payload.testing.testingMethodDocument),
-    purpose: optionalText(payload.testing.testingPurpose),
+    testingPurpose: optionalText(payload.testing.testingPurpose),
     environmentConditions: optionalText(payload.testing.environmentConditions),
   },
   environment: mapProtocolEnvironmentToRequest(payload.environment),
@@ -102,6 +101,9 @@ export const mapProtocolFormToUpdateRequest = (
   explanatoryNote: optionalText(payload.explanatoryNote ?? payload.notes),
   printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
 });
+
+/** @deprecated Use mapProtocolFormToPatchRequest(form, version). */
+export const mapProtocolFormToUpdateRequest = mapProtocolFormToPatchRequest;
 
 const legacyResultKeys = new Set(['deviceId', 'measurementDeviceId', 'normativeId']);
 

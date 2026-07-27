@@ -13,6 +13,7 @@ import type {
 type Props = {
   open: boolean;
   protocolId: string;
+  version?: number;
   row: ProtocolResultRow | null;
   devices?: ProtocolMeasurementDevice[];
   readOnly?: boolean;
@@ -42,6 +43,7 @@ const testingMethod = (row: ProtocolResultRow | null) =>
 const RawMeasurementsModal = ({
   open,
   protocolId,
+  version,
   row,
   devices = [],
   readOnly = false,
@@ -161,7 +163,7 @@ const RawMeasurementsModal = ({
     try {
       let savedRow: ProtocolResultRow | undefined;
       if (hasMethodTemplate) {
-        savedRow = await protocolService.saveRawMeasurements(protocolId, row.id, payload(), data.methodTemplate?.id);
+        savedRow = await protocolService.saveRawMeasurements(protocolId, row.id, payload(), data.methodTemplate?.id, version);
       } else {
         savedRow = await protocolService.updateProtocolResult(protocolId, row.id, {
           measurementDeviceId: deviceId || row.measurementDeviceId || valueOf(row, ['measurementDeviceId']) || undefined,
@@ -173,7 +175,7 @@ const RawMeasurementsModal = ({
             measurementReadings: manualResult,
             measurementDeviceId: deviceId,
           },
-        });
+        }, version);
       }
       if (!calculate) {
         if (savedRow) await onCalculated(savedRow);
@@ -182,7 +184,7 @@ const RawMeasurementsModal = ({
         onClose();
         return;
       }
-      const calculated = await protocolService.calculateResult(protocolId, row.id);
+      const calculated = await protocolService.calculateResult(protocolId, row.id, version);
       onClose();
       if (calculated.row) await onCalculated(calculated.row);
       else await onReload?.();

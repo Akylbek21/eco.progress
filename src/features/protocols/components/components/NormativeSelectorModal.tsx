@@ -20,7 +20,7 @@ type Props = {
   onAdd: (items: NormativeRecord[]) => void;
 };
 
-const SEARCH_DEBOUNCE_MS = 450;
+const SEARCH_DEBOUNCE_MS = 400;
 const SEARCH_PAGE_SIZE = 50;
 
 const NormativeSelectorModal = ({
@@ -97,6 +97,7 @@ const NormativeSelectorModal = ({
       !waitingForDebounce,
     queryFn: ({ signal }) => searchNormatives(request, signal),
     retry: false,
+    placeholderData: (previousData) => previousData,
     staleTime: (cachedQuery) =>
       cachedQuery.state.data?.items.length ? 30_000 : 2_000,
     gcTime: 5 * 60_000,
@@ -181,7 +182,8 @@ const NormativeSelectorModal = ({
           !canSearchNormative(normalizedSearch) &&
           !waitingForDebounce && (
             <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-              Введите не менее 3 символов для поиска по названию, коду, CAS или
+              Введите не менее 2 символов для текстового поиска. Код можно искать
+              с первого символа; также поддерживаются название, CAS или
               формуле.
             </p>
           )}
@@ -202,6 +204,12 @@ const NormativeSelectorModal = ({
           <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
             По запросу «{debouncedSearch}» ничего не найдено в выбранном типе
             протокола.
+          </p>
+        )}
+
+        {currentQueryFinished && Boolean(query.data?.relaxed) && rows.length > 0 && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+            Показатель найден, но применимый норматив необходимо проверить.
           </p>
         )}
 

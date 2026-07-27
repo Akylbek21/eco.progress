@@ -1,4 +1,6 @@
 import { useFormContext } from 'react-hook-form';
+import { RefreshCw } from 'lucide-react';
+import Button from '../../../../components/ui/Button';
 import type { ProtocolSelectOption } from '../../../../config/protocolWater';
 import { isWaterProtocolType } from '../../../../config/protocolWater';
 import type { ProtocolWizardForm } from '../wizardTypes';
@@ -8,6 +10,7 @@ const input = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm foc
 type Props = {
   weatherLoading: boolean;
   weatherMessage: string;
+  onRefresh: () => void;
   waterTypeOptions: ProtocolSelectOption[];
   waterUseCategoryOptions: ProtocolSelectOption[];
 };
@@ -15,10 +18,15 @@ type Props = {
 const EnvironmentStep = ({
   weatherLoading,
   weatherMessage,
+  onRefresh,
   waterTypeOptions,
   waterUseCategoryOptions,
 }: Props) => {
-  const { register, watch, formState: { errors } } = useFormContext<ProtocolWizardForm>();
+  const { register, watch, setValue, formState: { errors } } = useFormContext<ProtocolWizardForm>();
+  const manualWeather = (field: 'temperature' | 'humidity' | 'pressure' | 'windSpeed') =>
+    register(field, {
+      onChange: () => setValue('environmentSource', 'MANUAL', { shouldDirty: true }),
+    });
   const type = watch('templateId');
   const ambient = type === 'ambient_air';
   const micro = type === 'microclimate';
@@ -82,19 +90,19 @@ const EnvironmentStep = ({
         </label>
         <label className="text-sm font-bold">
           Температура, °C
-          <input {...register('temperature')} inputMode="decimal" className={`${input} mt-1.5`} />
+          <input {...manualWeather('temperature')} inputMode="decimal" className={`${input} mt-1.5`} />
         </label>
         <label className="text-sm font-bold">
           Влажность, %
-          <input {...register('humidity')} inputMode="decimal" className={`${input} mt-1.5`} />
+          <input {...manualWeather('humidity')} inputMode="decimal" className={`${input} mt-1.5`} />
         </label>
         <label className="text-sm font-bold">
           Давление, кПа
-          <input {...register('pressure')} inputMode="decimal" className={`${input} mt-1.5`} />
+          <input {...manualWeather('pressure')} inputMode="decimal" className={`${input} mt-1.5`} />
         </label>
         <label className="text-sm font-bold">
           Скорость воздуха/ветра, м/с
-          <input {...register('windSpeed')} inputMode="decimal" className={`${input} mt-1.5`} />
+          <input {...manualWeather('windSpeed')} inputMode="decimal" className={`${input} mt-1.5`} />
         </label>
         {ambient && (
           <>
@@ -150,6 +158,10 @@ const EnvironmentStep = ({
           {weatherLoading ? 'Загружаем условия среды…' : weatherMessage}
         </p>
       )}
+      <Button type="button" variant="secondary" className="mt-4" disabled={weatherLoading} onClick={onRefresh}>
+        <RefreshCw className={`h-4 w-4 ${weatherLoading ? 'animate-spin' : ''}`} />
+        Обновить условия
+      </Button>
     </section>
   );
 };

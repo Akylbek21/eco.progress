@@ -33,18 +33,19 @@ import type {
   RawMeasurementRequest,
   RawMeasurementsResponse,
   SaveRawMeasurementsRequest,
+  SignProtocolResponse,
   UpdateProtocolPayload,
   WeatherConditions,
 } from '../types/protocols';
 import type { QuickCreateProtocolApiRequest } from '../features/protocols/api/protocolContracts';
-import type { ProtocolSignRequest } from './protocolService';
 import { normalizeProtocolStatus } from '../config/protocolStatus';
 import { canonicalProtocolResultAliases } from '../utils/protocolResultAliases';
 import { canSearchNormative, normativeSearchItemToRecord, searchNormatives } from './normativeSearchService';
+import { debugProtocolPayload } from '../utils/protocolDebug';
 import type { NormativeSearchRequest } from './normativeSearchService';
 import { normalizeProtocolPrintVisibility } from '../utils/protocolPrintVisibility';
 import {
-  mapProtocolFormToUpdateRequest,
+  mapProtocolFormToPatchRequest,
   mapProtocolResultFormToRequest,
   mapProtocolsQuery,
 } from '../features/protocols/api/protocolMappers';
@@ -567,23 +568,34 @@ export const normalizeWeatherConditions = (raw: unknown): WeatherConditions => {
   const convertedPressureKpa = pressureHpa && Number.isFinite(Number(pressureHpa))
     ? String(Number(pressureHpa) / 10)
     : '';
+  const temperature = pick(source, ['temperature', 'temperatureC']);
+  const humidity = pick(source, ['humidity', 'humidityPercent']);
+  const pressure = pressureKpa || convertedPressureKpa || pick(source, ['pressure']);
+  const windSpeed = pick(source, ['windSpeed', 'windSpeedMs']);
+  const rawSource = pick(source, ['source']);
+  const explicitlyUnavailable = source.available === false || rawSource.toUpperCase() === 'UNAVAILABLE';
+  const hasValues = [temperature, humidity, pressure, windSpeed].some((value) => String(value || '').trim());
+  const available = !explicitlyUnavailable && hasValues;
   return {
-    temperature: pick(source, ['temperature', 'temperatureC']),
+    temperature,
     minTemperature: pick(source, ['minTemperature', 'temperatureMinC']),
     maxTemperature: pick(source, ['maxTemperature', 'temperatureMaxC']),
-    humidity: pick(source, ['humidity', 'humidityPercent']),
+    humidity,
     minHumidity: pick(source, ['minHumidity', 'humidityMinPercent']),
     maxHumidity: pick(source, ['maxHumidity', 'humidityMaxPercent']),
-    pressureKpa: pressureKpa || convertedPressureKpa || pick(source, ['pressure']),
-    pressure: pressureKpa || convertedPressureKpa || pick(source, ['pressure']),
-    windSpeed: pick(source, ['windSpeed', 'windSpeedMs']),
-    status: 'LOADED',
+    pressureKpa: pressure,
+    pressure,
+    windSpeed,
+    available,
+    status: available ? 'LOADED' : 'API_UNAVAILABLE',
     source: 'API',
     dataSource: pick(source, ['dataSource', 'sourceName', 'provider', 'source']) || 'Погодный сервис',
     observedAt: pick(source, ['observedAt', 'weatherObservedAt', 'recordedAt', 'weatherTimestamp', 'observationTime']),
     weatherObservedAt: pick(source, ['weatherObservedAt', 'observedAt', 'recordedAt', 'weatherTimestamp', 'observationTime']),
     loadedAt: pick(source, ['loadedAt', 'observedAt']) || new Date().toISOString(),
-    warning: pick(source, ['warning']),
+    warning: pick(source, ['warning']) || (!available
+      ? 'Автоматические погодные данные не получены. Заполните условия среды вручную'
+      : ''),
   };
 };
 
@@ -631,6 +643,23 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     || (typeof source.environmentalConditions === 'object' ? source.environmentalConditions : {}),
   );
   const resultsSource = Array.isArray(source.results) ? source.results : [];
+  const signaturesSource = Array.isArray(source.signatures)
+    ? source.signatures
+    : Array.isArray(source.protocolSignatures)
+      ? source.protocolSignatures
+      : [];
+  const signatures = signaturesSource.map((item, index) => {
+    const signature = asRecord(item);
+    return {
+      id: Number(signature.id ?? index + 1),
+      userId: Number(signature.userId ?? signature.signerId ?? signature.employeeId ?? 0),
+      signerFullName: pick(signature, ['signerFullName', 'fullName', 'signerName', 'userName']),
+      signerPosition: pick(signature, ['signerPosition', 'position', 'jobTitle']) || null,
+      signedAt: pick(signature, ['signedAt', 'createdAt', 'signed_at']),
+    };
+  }).sort((left, right) => new Date(left.signedAt).getTime() - new Date(right.signedAt).getTime());
+  const signatureCount = Number(source.signatureCount ?? source.signaturesCount ?? signatures.length) || 0;
+  const maxSignatures = Number(source.maxSignatures ?? source.signatureLimit ?? 5) || 5;
   const header = asRecord(source.header);
   const conditions = asRecord(source.conditions || header.conditions);
   const firstResultValues = asRecord(asRecord(resultsSource[0]).values);
@@ -724,6 +753,10 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     approvedAt: pick(source, ['approvedAt', 'approved_at']),
     signedAt: pick(source, ['signedAt', 'signed_at']),
     signedBy: pick(source, ['signedBy', 'signedByName', 'signed_by']),
+    signatureCount,
+    maxSignatures,
+    signedByCurrentUser: source.signedByCurrentUser === true,
+    signatures,
     hasDocx: source.hasDocx === true || Boolean(source.docxDocumentId || source.docxFileId || source.docxUrl),
     hasPdf: source.hasPdf === true || Boolean(source.pdfDocumentId || source.pdfFileId || source.pdfUrl),
     finalPdfFileId: pick(source, ['finalPdfFileId', 'pdfFileId', 'pdfDocumentId']),
@@ -1105,23 +1138,8 @@ export async function quickCreateProtocol(payload: QuickCreateProtocolApiRequest
   if (!idempotencyKey) {
     throw new Error('Не удалось сформировать ключ безопасной отправки запроса');
   }
-  if (import.meta.env.DEV) {
-    console.groupCollapsed('[Protocol quick-create]');
-    console.log('payload', {
-      templateId: payload.templateId,
-      companyId: payload.companyId,
-      objectId: payload.objectId,
-      laboratoryId: payload.laboratoryId,
-      executorId: payload.executorId,
-      protocolDate: payload.protocolDate,
-      measurementDate: payload.measurementDate,
-      measurementsCount: payload.measurements.length,
-      hasOrderId: Boolean(payload.orderId),
-    });
-    console.log('idempotencyKey', idempotencyKey);
-    console.groupEnd();
-  }
   const apiPayload = toQuickCreateProtocolApiPayload(payload);
+  debugProtocolPayload('quick-create', apiPayload, { idempotencyKey });
   const response = await api.post<ApiResponse<unknown> | unknown>(
     '/protocols/quick-create',
     apiPayload,
@@ -1159,7 +1177,7 @@ export async function getProtocol(protocolId: string): Promise<Protocol> {
 export const getProtocolById = getProtocol;
 
 export async function updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol> {
-  const request = mapProtocolFormToUpdateRequest(payload);
+  const request = mapProtocolFormToPatchRequest(payload, payload.version);
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}`, request);
   const protocol = await protocolFromActionResponse(protocolId, response);
   const persistedChecks: Array<[string, unknown, unknown]> = [
@@ -1176,17 +1194,23 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
   return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
 }
 
-export async function deleteProtocol(protocolId: string): Promise<void> {
-  await api.delete<ApiResponse<null>>(`/protocols/${protocolId}`);
+export async function deleteProtocol(protocolId: string, version?: number): Promise<void> {
+  await api.delete<ApiResponse<null>>(`/protocols/${protocolId}`, { data: { version } });
 }
 
-export async function addProtocolResult(protocolId: string, payload: ProtocolResultPayload): Promise<ProtocolResultRow> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results`, mapProtocolResultFormToRequest(payload));
+export async function addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version?: number): Promise<ProtocolResultRow> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results`, {
+    ...mapProtocolResultFormToRequest(payload),
+    version,
+  });
   return requireResult(response);
 }
 
-export async function updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload): Promise<ProtocolResultRow> {
-  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}`, mapProtocolResultFormToRequest(payload));
+export async function updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload, version?: number): Promise<ProtocolResultRow> {
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}`, {
+    ...mapProtocolResultFormToRequest(payload),
+    version,
+  });
   // Some backend versions return 204 or a partial result after PATCH. Reload
   // the protocol so the editor always receives the actually persisted row.
   const protocol = await getProtocol(protocolId);
@@ -1195,74 +1219,98 @@ export async function updateProtocolResult(protocolId: string, resultId: string,
   return requireResult(response);
 }
 
-export async function deleteProtocolResult(protocolId: string, resultId: string): Promise<void> {
-  await api.delete<ApiResponse<null>>(`/protocols/${protocolId}/results/${resultId}`);
+export async function deleteProtocolResult(protocolId: string, resultId: string, version?: number): Promise<void> {
+  await api.delete<ApiResponse<null>>(`/protocols/${protocolId}/results/${resultId}`, { data: { version } });
 }
 
-export async function bulkUpdateProtocolResults(protocolId: string, resultIds: string[], patch: Record<string, unknown>): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/bulk-update`, { resultIds, patch });
+export async function bulkAssignDevice(
+  protocolId: string,
+  resultIds: string[],
+  measurementDeviceId: string | number,
+  version?: number,
+): Promise<Protocol> {
+  const response = await api.patch<ApiResponse<unknown> | unknown>(
+    `/protocols/${protocolId}/results/bulk-device`,
+    { resultIds, measurementDeviceId, version },
+  );
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function bulkDeleteProtocolResults(protocolId: string, resultIds: string[]): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/bulk-delete`, { resultIds });
+export async function bulkUpdatePlace(
+  protocolId: string,
+  resultIds: string[],
+  measurementPlace: string,
+  version?: number,
+): Promise<Protocol> {
+  const response = await api.patch<ApiResponse<unknown> | unknown>(
+    `/protocols/${protocolId}/results/bulk-place`,
+    { resultIds, measurementPlace, version },
+  );
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function checkNormatives(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/check-normatives`);
+export async function bulkDeleteResults(
+  protocolId: string,
+  resultIds: string[],
+  version?: number,
+): Promise<Protocol> {
+  const response = await api.delete<ApiResponse<unknown> | unknown>(
+    `/protocols/${protocolId}/results/bulk`,
+    { data: { resultIds, version } },
+  );
   return protocolFromActionResponse(protocolId, response);
 }
 
-const versionConfig = (version?: number) => ({ headers: version === undefined ? undefined : { 'If-Match': String(version) } });
+export async function checkNormatives(protocolId: string, version?: number): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/check-normatives`, { version });
+  return protocolFromActionResponse(protocolId, response);
+}
 
 export async function readyForApproval(protocolId: string, version?: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/ready-for-approval`, null, versionConfig(version));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/ready-for-approval`, { version });
   return protocolFromActionResponse(protocolId, response);
 }
 
 export const markReadyForApproval = readyForApproval;
 
 export async function approveProtocol(protocolId: string, version?: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/approve`, null, versionConfig(version));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/approve`, { version });
   return protocolFromActionResponse(protocolId, response);
 }
 
 export async function returnForRevision(protocolId: string, reason: string, version?: number): Promise<Protocol> {
   const comment = reason.trim();
   if (!comment) throw new Error('Укажите причину возврата протокола на доработку.');
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-for-revision`, { reason: comment }, versionConfig(version));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-for-revision`, { reason: comment, version });
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function signProtocol(protocolId: string, payload: ProtocolSignRequest): Promise<Protocol> {
-  if (!payload.cmsSignatureBase64.trim()) throw new Error('NCALayer не вернул CMS-подпись.');
-  if (!payload.fileHash.trim()) throw new Error('Не удалось вычислить хеш final PDF.');
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/sign`, payload, versionConfig(payload.version));
-  return protocolFromActionResponse(protocolId, response);
+export async function signProtocol(protocolId: string | number, version: number): Promise<SignProtocolResponse> {
+  const response = await api.post<SignProtocolResponse>(`/protocols/${protocolId}/sign`, { version });
+  return response.data;
 }
 
 export async function publishToClient(protocolId: string, version?: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/publish-to-client`, null, versionConfig(version));
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/publish-to-client`, { version });
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function createCorrection(protocolId: string, reason: string): Promise<Protocol> {
+export async function createCorrection(protocolId: string, reason: string, version?: number): Promise<Protocol> {
   const correctionReason = reason.trim();
   if (!correctionReason) throw new Error('Укажите причину создания исправленной версии.');
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/corrections`, { reason: correctionReason });
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/corrections`, { reason: correctionReason, version });
   return requireProtocol(unwrapData(response), 'создание исправленной версии');
 }
 
 export const replaceProtocol = createCorrection;
 
-export async function cancelProtocol(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/cancel`);
+export async function cancelProtocol(protocolId: string, version?: number): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/cancel`, { version });
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function archiveProtocol(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/archive`);
+export async function archiveProtocol(protocolId: string, version?: number): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/archive`, { version });
   return protocolFromActionResponse(protocolId, response);
 }
 
@@ -1481,8 +1529,10 @@ export async function saveRawMeasurements(
   resultId: string,
   payload: RawMeasurementRequest[],
   methodTemplateId?: string | number | null,
+  version?: number,
 ): Promise<ProtocolResultRow | undefined> {
   const request: SaveRawMeasurementsRequest = {
+    version,
     methodTemplateId: methodTemplateId || null,
     measurements: payload,
   };
@@ -1497,13 +1547,16 @@ export async function saveRawMeasurements(
   return row.id ? row : undefined;
 }
 
-export async function calculateResult(protocolId: string, resultId: string): Promise<CalculationResultResponse> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}/calculate`);
+export async function calculateResult(protocolId: string, resultId: string, version?: number): Promise<CalculationResultResponse> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(
+    `/protocols/${protocolId}/results/${resultId}/calculate`,
+    { version },
+  );
   return normalizeCalculationResult(unwrapApiResponse<unknown>(response.data), protocolId, resultId);
 }
 
-export async function calculateProtocolSummary(protocolId: string): Promise<ProtocolCalculationSummaryResponse> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`);
+export async function calculateProtocolSummary(protocolId: string, version?: number): Promise<ProtocolCalculationSummaryResponse> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`, { version });
   return normalizeCalculationSummary(unwrapApiResponse<unknown>(response.data), protocolId);
 }
 

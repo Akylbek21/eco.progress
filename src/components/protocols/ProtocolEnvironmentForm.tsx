@@ -32,6 +32,7 @@ const statusLabels: Record<WeatherConditionsStatus, string> = {
   LOADING: 'Загрузка условий…',
   LOADED: 'Условия загружены',
   API_UNAVAILABLE: 'Погодный API недоступен',
+  ERROR: 'Ошибка получения погодных данных',
   COORDINATES_MISSING: 'У объекта отсутствуют координаты',
   MANUAL: 'Введено вручную',
 };
@@ -62,10 +63,10 @@ const writeClipboardText = async (text: string) => {
 };
 
 const ProtocolEnvironmentForm = ({
-  value, measurementDate, objectId, objectName, objectOptions = [], readOnly, loading = false,
+  value, measurementDate, measurementTime, objectId, objectName, objectOptions = [], readOnly, loading = false,
   onSelectionChange, onRequestConditions, onChange, printVisibility, onPrintVisibilityChange,
 }: Props) => {
-  const [selection, setSelection] = useState({ objectId, date: measurementDate, time: DEFAULT_WEATHER_TIME });
+  const [selection, setSelection] = useState({ objectId, date: measurementDate, time: measurementTime || DEFAULT_WEATHER_TIME });
   const [editOpen, setEditOpen] = useState(false);
   const [draft, setDraft] = useState(value);
   const [reason, setReason] = useState('');
@@ -73,13 +74,13 @@ const ProtocolEnvironmentForm = ({
   const [copied, setCopied] = useState(false);
   const initialRender = useRef(true);
   const abortRef = useRef<AbortController | null>(null);
-  const mainFields: Array<[keyof ProtocolEnvironmentalConditions, string]> = [
+  const mainFields: Array<['temperature' | 'humidity' | 'pressureKpa' | 'windSpeed', string]> = [
     ['temperature', 'Температура, °C'], ['humidity', 'Влажность, %'], ['pressureKpa', 'Давление, кПа'], ['windSpeed', 'Скорость ветра, м/с'],
   ];
 
   useEffect(() => {
-    setSelection({ objectId, date: measurementDate, time: DEFAULT_WEATHER_TIME });
-  }, [objectId, measurementDate]);
+    setSelection({ objectId, date: measurementDate, time: measurementTime || DEFAULT_WEATHER_TIME });
+  }, [objectId, measurementDate, measurementTime]);
 
   useEffect(() => {
     if (initialRender.current) {
@@ -99,7 +100,7 @@ const ProtocolEnvironmentForm = ({
   useEffect(() => () => abortRef.current?.abort(), []);
 
   const updateSelection = (patch: Partial<typeof selection>) => {
-    const next = { ...selection, ...patch, time: DEFAULT_WEATHER_TIME };
+    const next = { ...selection, ...patch };
     setSelection(next);
     onSelectionChange(next);
   };
@@ -117,7 +118,6 @@ const ProtocolEnvironmentForm = ({
     setEditOpen(true);
   };
   const save = () => {
-    if (!reason.trim()) return setError('Укажите причину ручного изменения.');
     onChange({
       ...value,
       ...draft,
@@ -178,7 +178,7 @@ const ProtocolEnvironmentForm = ({
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? 'Скопировано' : 'Копировать'}
             </Button>
             {!readOnly && <>
-              <Button type="button" variant="secondary" disabled={isLoading || !selection.objectId || !selection.date || !selection.time} onClick={refresh}><RefreshCw className="h-4 w-4" /> Получить погоду</Button>
+              <Button type="button" variant="secondary" disabled={isLoading} onClick={refresh}><RefreshCw className="h-4 w-4" /> Обновить условия</Button>
               <Button type="button" variant="secondary" disabled={isLoading} onClick={openEdit}>Ввести вручную</Button>
             </>}
           </div>
@@ -188,8 +188,7 @@ const ProtocolEnvironmentForm = ({
           <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Дата замера</span><input type="date" max={today()} disabled={readOnly} value={selection.date} onChange={(event) => updateSelection({ date: event.target.value })} className={inputClass} /><ProtocolPrintVisibilityToggle field="measurementDate" visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} /></label>
           <label className="space-y-1.5 text-sm font-semibold text-slate-700">
             <span>Время замера</span>
-            <input type="time" readOnly disabled value={DEFAULT_WEATHER_TIME} className={inputClass} />
-            <span className="block text-xs font-semibold text-slate-500">Погодные данные автоматически берутся на 12:00</span>
+            <input type="time" disabled={readOnly} value={selection.time} onChange={(event) => updateSelection({ time: event.target.value || DEFAULT_WEATHER_TIME })} className={inputClass} />
           </label>
           <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Место / объект</span>
             {objectOptions.length > 1
@@ -198,6 +197,12 @@ const ProtocolEnvironmentForm = ({
             <ProtocolPrintVisibilityToggle field="samplingPlace" visibility={printVisibility} readOnly={readOnly} onChange={onPrintVisibilityChange} />
           </label>
         </div>
+
+        {(value.status === 'API_UNAVAILABLE' || value.status === 'ERROR' || value.available === false) && (
+          <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+            {value.warning || 'Автоматические погодные данные не получены. Заполните условия среды вручную'}
+          </p>
+        )}
 
         {isLoading ? <div className="mt-4 grid animate-pulse grid-cols-2 gap-4 lg:grid-cols-4">
           {mainFields.map(([, label]) => <div key={label}><div className="mb-2 h-4 w-28 rounded bg-slate-100" /><div className="h-11 rounded-xl bg-slate-100" /></div>)}
@@ -220,7 +225,7 @@ const ProtocolEnvironmentForm = ({
                 placeholder="Укажите, почему данные изменены вручную"
                 className={inputClass}
               />
-              {!value.manualChangeReason?.trim() && <span className="block text-xs font-semibold text-amber-700">Причина обязательна для сохранения.</span>}
+              {!value.manualChangeReason?.trim() && <span className="block text-xs font-semibold text-amber-700">Причина потребуется перед отправкой на согласование.</span>}
             </label>
           )}
         </div>
@@ -229,7 +234,7 @@ const ProtocolEnvironmentForm = ({
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Ручное изменение условий" size="md">
         <div className="grid gap-4 sm:grid-cols-2">
           {mainFields.map(([key, label]) => <label key={key} className="space-y-1.5 text-sm font-semibold text-slate-700"><span>{label}</span><input inputMode="decimal" value={draft[key] ?? ''} onChange={(event) => setDraft({ ...draft, [key]: normalizeDecimal(event.target.value) })} className={inputClass} /></label>)}
-          <label className="space-y-1.5 text-sm font-semibold text-slate-700 sm:col-span-2"><span>Причина изменения *</span><textarea rows={3} value={reason} onChange={(event) => setReason(event.target.value)} className={inputClass} />{error && <span className="block text-rose-700">{error}</span>}</label>
+          <label className="space-y-1.5 text-sm font-semibold text-slate-700 sm:col-span-2"><span>Причина изменения</span><textarea rows={3} value={reason} onChange={(event) => setReason(event.target.value)} className={inputClass} />{error && <span className="block text-rose-700">{error}</span>}</label>
         </div>
         <div className="mt-5 flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>Отмена</Button><Button type="button" onClick={save}>Сохранить</Button></div>
       </Modal>
