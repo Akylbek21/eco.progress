@@ -34,13 +34,14 @@ test('wizard persists and clears the session draft', async () => {
   assert.match(wizard, /Найдена незавершённая форма протокола/);
 });
 
-test('wizard payload mapper filters empty rows, maps water and sends canonical environment', async () => {
+test('wizard payload mapper filters empty rows, maps water and sends environment through conditions', async () => {
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   const api = await read('src/services/apiProtocolService.ts');
   assert.match(mapper, /filter\(isNonEmptyResult\)/);
   assert.match(mapper, /mapFrontendProtocolType\(form\.templateId\)/);
-  assert.match(mapper, /conditions: mapConditions\(form, environment\)/);
-  assert.match(mapper, /environment:/);
+  assert.match(mapper, /const conditions = mapConditions\(form, rows\)/);
+  assert.match(mapper, /weatherSource:/);
+  assert.doesNotMatch(mapper, /^\s+environment:/m);
   assert.match(mapper, /manualChangeReason:/);
   assert.doesNotMatch(api, /environment: _unsupportedEnvironment/);
   assert.match(api, /'Idempotency-Key'/);
@@ -54,6 +55,23 @@ test('result rows validate device date and chemical or physical codes', async ()
   assert.match(wizard, /укажите тип физического фактора/);
   assert.match(wizard, /isDeviceValidForDate\(device,values\.measurementDate\)/);
   assert.match(devices, /VALID|isDeviceValidForDate/);
+});
+
+test('quick-create result editor uses responsive cards instead of an oversized table', async () => {
+  const table = await read('src/features/protocols/components/components/ProtocolResultTable.tsx');
+  const row = await read('src/features/protocols/components/components/ProtocolResultRow.tsx');
+  const details = await read('src/features/protocols/components/components/ProtocolResultDetails.tsx');
+  const devices = await read('src/features/protocols/components/components/DeviceSelector.tsx');
+
+  assert.doesNotMatch(table, /min-w-\[1450px\]|overflow-x-auto|<table/);
+  assert.match(row, /sm:grid-cols-2/);
+  assert.match(row, /lg:grid-cols-12/);
+  assert.match(row, /Наименование показателя/);
+  assert.match(row, /Соответствие/);
+  assert.match(details, /Дополнительные сведения/);
+  assert.match(details, /CAS-номер/);
+  assert.match(details, /Номер пробы/);
+  assert.match(devices, /w-full min-w-0/);
 });
 
 test('modal does not reset input focus when its callback changes during typing', async () => {

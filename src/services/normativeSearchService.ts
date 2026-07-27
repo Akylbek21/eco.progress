@@ -1,6 +1,6 @@
 import axios from 'axios';
 import api from './api';
-import type { NormativeSearchItem, NormativeSearchParams, NormativeSearchResponse } from '../types/normativeSearch';
+import type { NormativeSearchItem, NormativeSearchResponse } from '../types/normativeSearch';
 import type { NormativeComparisonType, NormativeRecord, ProtocolTemplateId } from '../types/protocols';
 import { canSearchNormative } from '../utils/normativeSearchRules';
 
@@ -8,9 +8,38 @@ export { canSearchNormative } from '../utils/normativeSearchRules';
 
 type UnknownRecord = Record<string, unknown>;
 
+export interface NormativeSearchRequest {
+  query?: string;
+  pollutantCode?: string;
+  code?: string;
+  casNumber?: string;
+  formula?: string;
+  templateId?: string;
+  sourceDocumentCode?: string;
+  environmentType?: string;
+  categoryCode?: string;
+  factorType?: string;
+  factorCode?: string;
+  waterType?: string;
+  waterUseCategory?: string;
+  lightingType?: string;
+  noiseType?: string;
+  roomType?: string;
+  season?: string;
+  workCategory?: string;
+  workplaceType?: string;
+  normLevel?: string;
+  visualWorkCategory?: string;
+  unit?: string;
+  page?: number;
+  size?: number;
+  status?: 'ACTIVE' | 'REVIEW' | 'ALL' | string;
+}
+
 const CACHE_TTL_MS = 45_000;
 export const NORMATIVE_SEARCH_DEBOUNCE_MS = 450;
 const cache = new Map<string, { expiresAt: number; value: NormativeSearchResponse['data'] }>();
+export const clearNormativeSearchCache = (): void => cache.clear();
 
 const asRecord = (value: unknown): UnknownRecord | null =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : null;
@@ -110,11 +139,22 @@ const findItemsContainer = (payload: unknown, depth = 0): { container: UnknownRe
   return null;
 };
 
+const unwrapSearchResponse = (response: unknown): unknown => {
+  const outer = asRecord(response);
+  const responseData = outer?.data;
+  const dataRecord = asRecord(responseData);
+  return dataRecord?.data ?? responseData ?? response;
+};
+
+export const extractNormativeItems = (response: unknown): unknown[] =>
+  findItemsContainer(unwrapSearchResponse(response))?.items ?? [];
+
 const normalizeResponse = (
-  payload: unknown,
+  response: unknown,
   requestedPage: number,
   requestedSize: number,
 ): NormativeSearchResponse['data'] => {
+  const payload = unwrapSearchResponse(response);
   const root = asRecord(payload);
   if (root?.success === false) {
     const errors = Array.isArray(root.errors) ? root.errors.filter((item): item is string => typeof item === 'string') : [];
@@ -122,8 +162,11 @@ const normalizeResponse = (
   }
   const found = findItemsContainer(payload);
   const container = found?.container || {};
-  const rawItems = found?.items || [];
-  const items = rawItems.map(normalizeItem).filter((item): item is NormativeSearchItem => item !== null);
+  const rawItems = extractNormativeItems(response);
+  const normalizedItems = rawItems.map(normalizeItem).filter((item): item is NormativeSearchItem => item !== null);
+  const items = Array.from(
+    new Map(normalizedItems.map((item) => [String(item.id), item])).values(),
+  );
   const page = optionalNumber(firstValue(container, ['page', 'number'])) ?? requestedPage;
   const size = optionalNumber(container.size) ?? requestedSize;
   const totalElements = optionalNumber(firstValue(container, ['totalElements', 'total', 'count'])) ?? items.length;
@@ -132,12 +175,12 @@ const normalizeResponse = (
 };
 
 export const cleanNormativeSearchParams = (
-  params: Partial<NormativeSearchParams>,
-): Partial<NormativeSearchParams> => Object.fromEntries(
+  params: NormativeSearchRequest,
+): NormativeSearchRequest => Object.fromEntries(
   Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== ''),
-) as Partial<NormativeSearchParams>;
+) as NormativeSearchRequest;
 
-const cacheKey = (params: Partial<NormativeSearchParams>): string => JSON.stringify(
+const cacheKey = (params: NormativeSearchRequest): string => JSON.stringify(
   Object.entries(params).sort(([left], [right]) => left.localeCompare(right)),
 );
 
@@ -145,44 +188,43 @@ export const isNormativeSearchCanceled = (error: unknown): boolean =>
   axios.isCancel(error) || (axios.isAxiosError(error) && error.code === 'ERR_CANCELED') || (error instanceof DOMException && error.name === 'AbortError');
 
 export const searchNormatives = async (
-  params: NormativeSearchParams,
+  params: NormativeSearchRequest,
   signal?: AbortSignal,
   options: { bypassCache?: boolean } = {},
 ): Promise<NormativeSearchResponse['data']> => {
   const query = typeof params.query === 'string' ? params.query.trim() : '';
   const requestedPage = params.page ?? 0;
   const requestedSize = params.size ?? 30;
-  if (!canSearchNormative(query)) {
+  const hasExactFilter = Boolean(
+    params.pollutantCode ||
+      params.code ||
+      params.casNumber ||
+      params.formula ||
+      params.factorCode,
+  );
+  if ((!query || !canSearchNormative(query)) && !hasExactFilter) {
     return { items: [], page: requestedPage, size: requestedSize, totalElements: 0, totalPages: 0 };
   }
-  const cleaned = cleanNormativeSearchParams({ ...params, query, page: requestedPage, size: requestedSize });
+  const cleaned = cleanNormativeSearchParams({
+    ...params,
+    query: query || undefined,
+    page: requestedPage,
+    size: requestedSize,
+    status: params.status || 'ACTIVE',
+  });
   const key = cacheKey(cleaned);
   const cached = cache.get(key);
   if (!options.bypassCache && cached && cached.expiresAt > Date.now()) return cached.value;
   if (cached) cache.delete(key);
 
   const response = await api.get<unknown>('/normatives/search', {
-    params: {
-      ...cleaned,
-      search: query,
-      q: query,
-      code: query,
-      pollutantCode: query,
-    },
+    params: cleaned,
     signal,
   });
   let normalized = normalizeResponse(response.data, Number(cleaned.page ?? 0), Number(cleaned.size ?? 30));
   if (!normalized.items.length) {
     const directoryResponse = await api.get<unknown>('/normatives/records', {
-      params: {
-        page: requestedPage,
-        size: requestedSize,
-        status: params.status || 'ACTIVE',
-        search: query,
-        query,
-        code: query,
-        pollutantCode: query,
-      },
+      params: cleaned,
       signal,
     });
     normalized = normalizeResponse(directoryResponse.data, requestedPage, requestedSize);

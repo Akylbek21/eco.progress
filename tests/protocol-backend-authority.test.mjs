@@ -14,8 +14,10 @@ test('quick-create is idempotent, reloads persisted data and keeps canonical ids
   assert.match(api, /'Idempotency-Key'/);
   assert.match(api, /const persisted = await getProtocol\(protocol\.id\)/);
   assert.match(mapper, /normalizeRequiredId\(form\.companyId/);
-  assert.doesNotMatch(mapper, /deviceId:/);
+  assert.match(mapper, /deviceId: null/);
   assert.match(mapper, /measurementDeviceId:/);
+  assert.match(wizard, /retry: false/);
+  assert.match(submission, /stableStringify/);
 });
 
 test('available devices are scoped and invalid statuses are filtered', async () => {

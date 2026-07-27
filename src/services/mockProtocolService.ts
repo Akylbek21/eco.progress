@@ -14,7 +14,6 @@ import type {
   ProtocolLaboratorySnapshot,
   ProtocolMeasurementDevice,
   ProtocolPage,
-  QuickProtocolCreatePayload,
   ProtocolResultPayload,
   ProtocolResultRow,
   ProtocolStatus,
@@ -26,6 +25,7 @@ import type {
   UpdateProtocolPayload,
   WeatherConditions,
 } from '../types/protocols';
+import type { QuickCreateProtocolApiRequest } from '../features/protocols/api/protocolContracts';
 import { mockCompanies } from '../mocks/mockCompanies';
 import { mockDevices, mockLaboratory } from '../mocks/mockDevices';
 import { mockNormatives } from '../mocks/mockNormatives';
@@ -302,38 +302,36 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   return clone(protocol);
 }
 
-export async function quickCreateProtocol(payload: QuickProtocolCreatePayload, _idempotencyKey: string): Promise<Protocol> {
+export async function quickCreateProtocol(payload: QuickCreateProtocolApiRequest, _idempotencyKey: string): Promise<Protocol> {
   const protocol = await createProtocol({
     companyId: payload.companyId,
     objectId: payload.objectId || '',
     templateId: (payload.templateId === 'water' ? 'water_wastewater' : payload.templateId) as ProtocolTemplateId,
     protocolDate: payload.protocolDate,
-    sampleDate: payload.sampleDate,
-    testingStartDate: payload.testingStartDate,
-    testingEndDate: payload.testingEndDate,
+    sampleDate: payload.sampleDate ?? payload.measurementDate,
+    testingStartDate: payload.testingStartDate ?? payload.measurementDate,
+    testingEndDate: payload.testingEndDate ?? payload.measurementDate,
     measurementDate: payload.measurementDate,
-    measurementTime: payload.measurementTime,
-    measurementPlace: payload.measurementPlace,
+    measurementTime: payload.measurementTime ?? undefined,
+    measurementPlace: payload.measurementPlace ?? undefined,
     laboratoryId: String(payload.laboratoryId),
     executorId: String(payload.executorId),
     sourceDocumentCode: payload.sourceDocumentCode ?? undefined,
     docxTemplateCode: payload.docxTemplateCode ?? undefined,
-    normativeTemplateId: (payload.normativeTemplateId === 'water'
+    normativeTemplateId: (payload.templateId === 'water'
       ? 'water_wastewater'
-      : payload.normativeTemplateId) as ProtocolTemplateId | undefined,
-    defaultUnit: payload.defaultUnit ?? undefined,
-    waterType: payload.conditions.waterType ?? undefined,
-    waterUseCategory: payload.conditions.waterUseCategory ?? undefined,
+      : payload.templateId) as ProtocolTemplateId,
+    waterType: payload.conditions?.waterType ?? undefined,
+    waterUseCategory: payload.conditions?.waterUseCategory ?? undefined,
     purpose: 'Лабораторные испытания',
     environment: {
-      ...payload.conditions,
-      ...payload.environment,
+      ...(payload.conditions || {}),
     } as ProtocolEnvironmentalConditions,
     printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
   });
   for (const measurement of payload.measurements) {
     await addResult(protocol.id, {
-      normativeId: measurement.normativeRecordId,
+      normativeId: measurement.normativeId,
       measurementDeviceId: measurement.measurementDeviceId,
       values: {
         ...payload.conditions,
@@ -343,10 +341,10 @@ export async function quickCreateProtocol(payload: QuickProtocolCreatePayload, _
         indicator: measurement.indicatorName,
         indicatorName: measurement.indicatorName,
         unit: measurement.unit || '',
-        primaryReading: measurement.value,
-        measurementReadings: measurement.value,
-        result: measurement.value,
-        resultValue: measurement.value,
+        primaryReading: String(measurement.value ?? ''),
+        measurementReadings: String(measurement.value ?? ''),
+        result: String(measurement.value ?? ''),
+        resultValue: String(measurement.value ?? ''),
         measurementPlace: payload.measurementPlace || '',
         samplingPlace: payload.measurementPlace || '',
         sourceDocumentCode: payload.sourceDocumentCode || '',

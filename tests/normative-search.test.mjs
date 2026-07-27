@@ -27,7 +27,7 @@ test('search threshold supports regular queries, formulas and CAS', async () => 
 });
 
 test('protocol context maps every physical subtype and water to the required document', async () => {
-  const { PROTOCOL_NORMATIVE_CONTEXT } = await loadTypeScriptModule('src/data/protocolNormativeContext.ts');
+  const { PROTOCOL_NORMATIVE_CONTEXT, resolveProtocolNormativeContext } = await loadTypeScriptModule('src/data/protocolNormativeContext.ts');
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.ambient_air.templateId, 'ambient_air');
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.ambient_air.sourceDocumentCode, 'DSM_70');
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.water.sourceDocumentCode, 'DSM_138');
@@ -35,6 +35,10 @@ test('protocol context maps every physical subtype and water to the required doc
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.vibration.factorType, 'VIBRATION');
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.uv.factorType, 'UV');
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.electromagnetic_field.factorType, 'ELECTROMAGNETIC_FIELD');
+  assert.deepEqual(
+    resolveProtocolNormativeContext('water_wastewater'),
+    PROTOCOL_NORMATIVE_CONTEXT.water,
+  );
   const configSource = await read('src/data/protocolTypeConfig.ts');
   assert.match(configSource, /factorType: subtype \|\| protocolFactorType\[normalizedType as ProtocolTypeKey\]/);
 });
@@ -42,18 +46,36 @@ test('protocol context maps every physical subtype and water to the required doc
 test('API service falls back to the normative directory when search returns no rows', async () => {
   const source = await read('src/services/normativeSearchService.ts');
   assert.match(source, /api\.get<unknown>\('\/normatives\/search'/);
+  assert.match(source, /params: cleaned/);
   assert.match(source, /if \(!normalized\.items\.length\)/);
   assert.match(source, /api\.get<unknown>\('\/normatives\/records'/);
-  assert.match(source, /search: query/);
-  assert.match(source, /q: query/);
-  assert.match(source, /code: query/);
-  assert.match(source, /pollutantCode: query/);
+  assert.match(source, /params: cleaned/);
+  assert.doesNotMatch(source, /q: query/);
+  assert.doesNotMatch(source, /code: query/);
+  assert.doesNotMatch(source, /pollutantCode: query/);
+  assert.doesNotMatch(source, /search: query/);
   assert.match(source, /requestedPage = params\.page \?\? 0/);
   assert.match(source, /requestedSize = params\.size \?\? 30/);
   assert.match(source, /\['items', 'content', 'normatives', 'records', 'results', 'rows'\]/);
   assert.match(source, /indicatorNameRu/);
   assert.match(source, /record\.pollutant \|\| record\.substance/);
   assert.match(source, /if \(normalized\.items\.length\) cache\.set/);
+});
+
+test('quick-create normative picker uses the shared debounced search', async () => {
+  const source = await read('src/features/protocols/components/components/NormativeSelectorModal.tsx');
+  assert.match(source, /protocol-normative-search-v2/);
+  assert.match(source, /setDebouncedSearch\(normalizedSearch\)/);
+  assert.match(source, /SEARCH_DEBOUNCE_MS = 450/);
+  assert.match(source, /queryFn: \(\{ signal \}\) => searchNormatives\(request, signal\)/);
+  assert.match(source, /queryClient\.cancelQueries/);
+  assert.match(source, /new Map/);
+  assert.match(source, /Array\.from\(selectedRecords\.values\(\)\)/);
+  assert.match(source, /Поиск нормативных показателей/);
+  assert.match(source, /ничего не найдено/);
+  assert.match(source, /Повторить поиск/);
+  assert.match(source, /useQuery\(/);
+  assert.doesNotMatch(source, /protocolService\.searchNormative/);
 });
 
 test('hook debounces, aborts stale requests and guards responses by sequence', async () => {
@@ -71,7 +93,7 @@ test('creation wizard preserves the selected backend normative id', async () => 
   const source = await read('src/features/protocols/components/steps/ResultsStep.tsx');
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   assert.match(source, /normativeId: item\.id/);
-  assert.match(mapper, /normativeRecordId: normalizeOptionalId\(/);
+  assert.match(mapper, /normativeId = normalizeNullableText/);
   assert.match(mapper, /row\.normativeRecordId \|\| row\.normativeId/);
   assert.match(mapper, /normativeValue: normalizeDecimal\(row\.normativeValue\)/);
 });

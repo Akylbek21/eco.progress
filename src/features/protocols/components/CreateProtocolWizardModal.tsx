@@ -8,7 +8,8 @@ import { getActiveLaboratories, getLaboratoryEmployees } from '../../../services
 import { getAvailableMeasurementDevices } from '../../../services/measurementDeviceService';
 import { normalizeApiError } from '../../../services/apiHelpers';
 import protocolService from '../../../services/protocolService';
-import type { Protocol, ProtocolTemplateId, QuickCreateProtocolRequest } from '../../../types/protocols';
+import type { Protocol, ProtocolTemplateId } from '../../../types/protocols';
+import type { QuickCreateProtocolApiRequest } from '../api/protocolContracts';
 import { isDeviceValidForDate } from '../../../utils/protocolDevices';
 import { normalizeProtocolError } from '../../../utils/protocolError';
 import { getWaterProtocolOptions, isWaterProtocolType } from '../../../config/protocolWater';
@@ -92,7 +93,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
   const form = useForm<ProtocolWizardForm>({ defaultValues: createWizardDefaults(), mode: 'onChange' });
   const { watch, getValues, setValue, reset, formState } = form;
   const values = watch();
-  const [step,setStep] = useState(0); const [maxVisited,setMaxVisited] = useState(0); const [error,setError] = useState(''); const [traceId,setTraceId] = useState(''); const [serverIssues,setServerIssues] = useState<WizardIssue[]>([]);
+  const [step,setStep] = useState(0); const [maxVisited,setMaxVisited] = useState(0); const [error,setError] = useState(''); const [traceId,setTraceId] = useState(''); const [requestId,setRequestId] = useState(''); const [serverFailure,setServerFailure] = useState(false); const [serverIssues,setServerIssues] = useState<WizardIssue[]>([]);
   const [closePrompt,setClosePrompt] = useState(false); const [draftPrompt,setDraftPrompt] = useState(false); const [pendingType,setPendingType] = useState<ProtocolTemplateId | null>(null); const [success,setSuccess] = useState<Protocol | null>(null);
   const submittingRef = useRef(false); const titleRef = useRef<HTMLElement | null>(null); const idempotencyKeyRef = useRef<string | null>(null); const submittedFingerprintRef = useRef<string | null>(null);
   const automaticWeatherRef = useRef<Partial<Record<'temperature' | 'humidity' | 'pressure' | 'windSpeed', string>>>({});
@@ -144,7 +145,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     retry: false,
   });
 
-  useEffect(() => { if (!open) { idempotencyKeyRef.current = null; submittedFingerprintRef.current = null; return; } const stored = sessionStorage.getItem(DRAFT_KEY); setDraftPrompt(Boolean(stored)); if (!stored) { setValue('orderId', orderId); setValue('orderServiceItemId', orderServiceItemId); } setError(''); setTraceId(''); setSuccess(null); }, [open, orderId, orderServiceItemId, setValue]);
+  useEffect(() => { if (!open) { idempotencyKeyRef.current = null; submittedFingerprintRef.current = null; return; } const stored = sessionStorage.getItem(DRAFT_KEY); setDraftPrompt(Boolean(stored)); if (!stored) { setValue('orderId', orderId); setValue('orderServiceItemId', orderServiceItemId); } setError(''); setTraceId(''); setRequestId(''); setServerFailure(false); setSuccess(null); }, [open, orderId, orderServiceItemId, setValue]);
   useEffect(() => { if (!open || draftPrompt || success) return; const subscription = watch((formValue) => { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, form: formValue })); }); return () => subscription.unsubscribe(); }, [draftPrompt,open,step,success,watch]);
   useEffect(() => { if (!open) return; window.requestAnimationFrame(() => { titleRef.current = document.getElementById('wizard-step-title'); titleRef.current?.focus(); }); }, [open,step]);
   useEffect(() => {
@@ -192,6 +193,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     if (!values.testingEndDate) result.push({ message:'Укажите дату завершения испытаний.',step:3 });
     if (!values.measurementTime) result.push({ message:'Укажите время измерения.',step:3 });
     if (!values.measurementPlace.trim()) result.push({ message:'Укажите место измерения.',step:3 });
+    if (values.sourceNumber.trim().replace(/[\u0000-\u001F\u007F]/g, '').length > 80) result.push({ message:'Номер источника должен содержать не более 80 символов',step:3,field:'sourceNumber' });
     if (values.testingStartDate && values.testingEndDate && values.testingEndDate < values.testingStartDate) result.push({ message:'Дата завершения испытаний не может быть раньше даты начала.',step:3 });
     if (values.sampleDate && values.measurementDate && values.measurementDate < values.sampleDate) result.push({ message:'Дата измерения не может быть раньше даты отбора.',step:4 });
     if (isWaterProtocolType(values.templateId) && !values.waterType) result.push({ message:'Выберите тип воды',step:WATER_CONDITIONS_STEP_INDEX,field:'waterType' });
@@ -202,13 +204,27 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     if (!values.testingMethodNd.trim()) result.push({ message:'Укажите НД на метод испытаний.',step:6 });
     return result;
   }, [devices,selectedExecutor,selectedObject,values]);
-  const stepHasIssue = issues.some((item) => item.step === step); const canContinue = step >= 7 ? issues.length === 0 : !stepHasIssue;
+  const apiPayloadValid = useMemo(() => {
+    if (issues.length) return false;
+    try {
+      buildQuickCreatePayload(values, {
+        selectedObject,
+        selectedExecutor,
+        validateSelections: true,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }, [issues.length, selectedExecutor, selectedObject, values]);
+  const stepHasIssue = issues.some((item) => item.step === step); const canContinue = step >= 7 ? apiPayloadValid : !stepHasIssue;
 
   const mutation = useMutation({
     mutationFn: ({ payload, idempotencyKey }: {
-      payload: QuickCreateProtocolRequest;
+      payload: QuickCreateProtocolApiRequest;
       idempotencyKey: string;
     }) => protocolService.quickCreateProtocol(payload, idempotencyKey),
+    retry: false,
   });
   const applyWaterTypeTransition = (current: ProtocolWizardForm['templateId'], next: ProtocolTemplateId) => {
     if (isWaterProtocolType(current) && !isWaterProtocolType(next)) {
@@ -238,6 +254,8 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     if (!acquireQuickCreateLock(submittingRef)) return;
     setError('');
     setTraceId('');
+    setRequestId('');
+    setServerFailure(false);
     setServerIssues([]);
     try {
       const payload = buildQuickCreatePayload(getValues(), {
@@ -245,6 +263,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
         selectedExecutor,
         validateSelections: true,
       });
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, form: getValues() }));
       const attempt = prepareQuickCreateAttempt(payload, {
         idempotencyKey: idempotencyKeyRef.current,
         payloadFingerprint: submittedFingerprintRef.current,
@@ -268,13 +287,21 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
           message: requestError.message,
         });
         setError(requestError.message);
-        setStep(resolveWizardStepByField(requestError.field));
+        const targetStep = resolveWizardStepByField(requestError.field);
+        setStep(targetStep);
+        window.requestAnimationFrame(() => {
+          form.setFocus(requestError.field as FieldPath<ProtocolWizardForm>);
+          document.querySelector<HTMLElement>(`[name="${requestError.field}"]`)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
         return;
       }
       const normalized = normalizeProtocolError(requestError);
       const apiError = normalizeApiError(requestError,'Не удалось создать протокол.');
       const errorResolution = resolveQuickCreateApiError(apiError);
       setTraceId(apiError.traceId || '');
+      setRequestId(apiError.requestId || '');
+      setServerFailure(Boolean(errorResolution.serverFailure));
       if (errorResolution.existingProtocolId) {
         try {
           const existingProtocol = await protocolService.getProtocol(errorResolution.existingProtocolId);
@@ -306,6 +333,11 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
       releaseQuickCreateLock(submittingRef);
     }
   };
+  const copyErrorCode = async () => {
+    const code = traceId || requestId;
+    if (!code || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(code);
+  };
   const weatherMessage = values.objectId && !objectDetailsQuery.isFetching && !weatherCoordinates
     ? 'У выбранного объекта не указаны координаты. Добавьте координаты в разделе «Компании» или заполните условия вручную.'
     : weatherQuery.isError
@@ -320,9 +352,9 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
       form.setFocus(field);
     });
   };
-  const content = step === 0 ? <ProtocolTypeStep templates={templates} onSelect={chooseType} /> : step === 1 ? <CompanyObjectStep companies={companies} objects={objects} loading={objectsQuery.isFetching} onCompanyChange={changeCompany} /> : step === 2 ? <LaboratoryExecutorStep laboratories={laboratories} employees={executorOptions} loading={employeesQuery.isFetching} error={employeesQuery.isError} onLaboratoryChange={changeLaboratory} /> : step === 3 ? <MeasurementDetailsStep /> : step === 4 ? <EnvironmentStep weatherLoading={weatherQuery.isFetching} weatherMessage={weatherMessage} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} /> : step === 5 ? <ResultsStep devices={devices} /> : step === 6 ? <MethodsStep /> : <ReviewStep final={step === 8} companies={companies} objects={objects} laboratories={laboratories} employees={employees} issues={issues} onGoTo={goToIssue} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} />;
+  const content = step === 0 ? <ProtocolTypeStep templates={templates} onSelect={chooseType} /> : step === 1 ? <CompanyObjectStep companies={companies} objects={objects} loading={objectsQuery.isFetching} onCompanyChange={changeCompany} /> : step === 2 ? <LaboratoryExecutorStep laboratories={laboratories} employees={executorOptions} loading={employeesQuery.isFetching} error={employeesQuery.isError} onLaboratoryChange={changeLaboratory} /> : step === 3 ? <MeasurementDetailsStep /> : step === 4 ? <EnvironmentStep weatherLoading={weatherQuery.isFetching} weatherMessage={weatherMessage} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} /> : step === 5 ? <ResultsStep devices={devices} /> : step === 6 ? <MethodsStep /> : <ReviewStep final={step === 8} apiPayloadValid={apiPayloadValid} companies={companies} objects={objects} laboratories={laboratories} employees={employees} issues={issues} onGoTo={goToIssue} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} />;
 
-  return <FormProvider {...form}><Modal open={open} onClose={requestClose} size="wizard" closeOnBackdrop={false} loading={mutation.isPending} contentClassName="!overflow-hidden !p-0 sm:!p-0"><div className="flex h-full min-h-0 flex-col"><ProtocolWizardHeader step={step} total={steps.length} title={steps[step]} submitting={mutation.isPending} onClose={requestClose} /><ProtocolWizardSteps steps={steps} current={step} maxVisited={maxVisited} onSelect={setStep} /><main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{error && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-900"><p>{error}</p>{traceId && <p className="mt-2 text-xs font-semibold">Код обращения: {traceId}</p>}</div>}{serverIssues.length > 0 && <div className="mb-4"><WizardValidationSummary issues={serverIssues} onGoTo={goToIssue} />{traceId && <p className="mt-2 text-xs text-slate-600">Код обращения: {traceId}</p>}</div>}{success ? <div className="grid min-h-72 place-items-center text-center"><div><h3 className="text-2xl font-black text-emerald-800">Протокол успешно создан</h3><p className="mt-3">Номер: {success.protocolNumber || success.number || success.id}</p><p>Статус: {success.status}</p></div></div> : content}</main>{!success && <ProtocolWizardFooter step={step} total={steps.length} submitting={mutation.isPending} canContinue={canContinue} onBack={() => { setError(''); setStep((current) => Math.max(0,current - 1)); }} onNext={goNext} onCreate={createProtocol} />}</div></Modal>
+  return <FormProvider {...form}><Modal open={open} onClose={requestClose} size="wizard" closeOnBackdrop={false} loading={mutation.isPending} contentClassName="!overflow-hidden !p-0 sm:!p-0"><div className="flex h-full min-h-0 flex-col"><ProtocolWizardHeader step={step} total={steps.length} title={steps[step]} submitting={mutation.isPending} onClose={requestClose} /><ProtocolWizardSteps steps={steps} current={step} maxVisited={maxVisited} onSelect={setStep} /><main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{error && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><h3 className="font-black">{serverFailure ? 'Не удалось создать протокол' : 'Ошибка создания протокола'}</h3><p className="mt-1 font-semibold">{error}</p>{serverFailure && <p className="mt-2 text-xs">HTTP-статус: 500</p>}{(traceId || requestId) && <p className="mt-1 text-xs font-semibold">Код обращения: {traceId || requestId}</p>}{serverFailure && <div className="mt-3 flex flex-wrap gap-2"><Button type="button" onClick={createProtocol}>Повторить</Button><Button type="button" variant="secondary" onClick={() => setStep(7)}>Вернуться к проверке</Button>{(traceId || requestId) && <Button type="button" variant="secondary" onClick={copyErrorCode}>Скопировать код ошибки</Button>}</div>}</div>}{serverIssues.length > 0 && <div className="mb-4"><WizardValidationSummary issues={serverIssues} onGoTo={goToIssue} />{(traceId || requestId) && <p className="mt-2 text-xs text-slate-600">Код обращения: {traceId || requestId}</p>}</div>}{success ? <div className="grid min-h-72 place-items-center text-center"><div><h3 className="text-2xl font-black text-emerald-800">Протокол успешно создан</h3><p className="mt-3">Номер: {success.protocolNumber || success.number || success.id}</p><p>Статус: {success.status}</p></div></div> : content}</main>{!success && <ProtocolWizardFooter step={step} total={steps.length} submitting={mutation.isPending} canContinue={canContinue} onBack={() => { setError(''); setStep((current) => Math.max(0,current - 1)); }} onNext={goNext} onCreate={createProtocol} />}</div></Modal>
     <Modal open={draftPrompt && open} onClose={() => {}} closeOnBackdrop={false} size="sm" title="Найдена незавершённая форма протокола" footer={<><Button type="button" variant="secondary" onClick={newDraft}>Начать заново</Button><Button type="button" onClick={restoreDraft}>Продолжить</Button></>}><p className="text-sm text-slate-600">Продолжить заполнение временного черновика из текущей сессии?</p></Modal>
     <Modal open={closePrompt} onClose={() => setClosePrompt(false)} closeOnBackdrop={false} size="sm" title="Закрыть создание протокола?" footer={<><Button type="button" variant="secondary" onClick={() => setClosePrompt(false)}>Продолжить заполнение</Button><Button type="button" onClick={() => { setClosePrompt(false); onClose(); }}>Закрыть</Button><Button type="button" variant="danger" onClick={() => { sessionStorage.removeItem(DRAFT_KEY); reset(createWizardDefaults()); setClosePrompt(false); onClose(); }}>Очистить и закрыть</Button></>}><p className="text-sm text-slate-600">Введённые данные сохранены как временный черновик и будут доступны до завершения текущей сессии.</p></Modal>
     <Modal open={Boolean(pendingType)} onClose={() => setPendingType(null)} closeOnBackdrop={false} size="sm" title="Изменить тип протокола?" footer={<><Button type="button" variant="secondary" onClick={() => setPendingType(null)}>Отмена</Button><Button type="button" variant="danger" onClick={applyTypeChange}>Изменить тип</Button></>}><p className="text-sm text-slate-600">При изменении типа результаты, приборы и нормативы будут очищены.</p></Modal>

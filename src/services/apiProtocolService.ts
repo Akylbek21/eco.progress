@@ -25,7 +25,6 @@ import type {
   ProtocolMeasurementDevice,
   ProtocolPage,
   ProtocolListQuery,
-  QuickProtocolCreatePayload,
   ProtocolResultPayload,
   ProtocolResultValue,
   ProtocolResultRow,
@@ -37,11 +36,12 @@ import type {
   UpdateProtocolPayload,
   WeatherConditions,
 } from '../types/protocols';
+import type { QuickCreateProtocolApiRequest } from '../features/protocols/api/protocolContracts';
 import type { ProtocolSignRequest } from './protocolService';
 import { normalizeProtocolStatus } from '../config/protocolStatus';
 import { canonicalProtocolResultAliases } from '../utils/protocolResultAliases';
 import { canSearchNormative, normativeSearchItemToRecord, searchNormatives } from './normativeSearchService';
-import type { NormativeSearchParams } from '../types/normativeSearch';
+import type { NormativeSearchRequest } from './normativeSearchService';
 import { normalizeProtocolPrintVisibility } from '../utils/protocolPrintVisibility';
 import {
   mapProtocolFormToUpdateRequest,
@@ -999,6 +999,97 @@ export async function getProtocolTemplates(): Promise<ProtocolTemplate[]> {
 
 export const getProtocolTypes = getProtocolTemplates;
 
+/**
+ * Runtime API boundary for POST /protocols/quick-create.
+ *
+ * TypeScript's structural typing permits an object with additional form-only
+ * properties to be passed as a QuickCreateProtocolApiRequest. Pick every DTO
+ * field explicitly so aliases used by the wizard or legacy protocol editor can
+ * never leak into the JSON request.
+ */
+export const toQuickCreateProtocolApiPayload = (
+  payload: QuickCreateProtocolApiRequest,
+): QuickCreateProtocolApiRequest => ({
+  templateId: payload.templateId,
+  sourceDocumentCode: payload.sourceDocumentCode,
+  docxTemplateCode: payload.docxTemplateCode,
+  subtype: payload.subtype,
+  companyId: payload.companyId,
+  objectId: payload.objectId,
+  laboratoryId: payload.laboratoryId,
+  executorId: payload.executorId,
+  protocolDate: payload.protocolDate,
+  sampleDate: payload.sampleDate,
+  measurementDate: payload.measurementDate,
+  measurementTime: payload.measurementTime,
+  measurementPlace: payload.measurementPlace,
+  testingStartDate: payload.testingStartDate,
+  testingEndDate: payload.testingEndDate,
+  sourceNumber: payload.sourceNumber,
+  conditions: payload.conditions
+    ? {
+        season: payload.conditions.season,
+        workCategory: payload.conditions.workCategory,
+        workplaceType: payload.conditions.workplaceType,
+        roomType: payload.conditions.roomType,
+        normLevel: payload.conditions.normLevel,
+        temperature: payload.conditions.temperature,
+        humidity: payload.conditions.humidity,
+        pressure: payload.conditions.pressure,
+        windSpeed: payload.conditions.windSpeed,
+        sampleNumber: payload.conditions.sampleNumber,
+        samplingDepth: payload.conditions.samplingDepth,
+        samplingPlace: payload.conditions.samplingPlace,
+        lightingType: payload.conditions.lightingType,
+        noiseType: payload.conditions.noiseType,
+        visualWorkCategory: payload.conditions.visualWorkCategory,
+        waterType: payload.conditions.waterType,
+        waterUseCategory: payload.conditions.waterUseCategory,
+        weatherSource: payload.conditions.weatherSource,
+        weatherDataSource: payload.conditions.weatherDataSource,
+        manualChangeReason: payload.conditions.manualChangeReason,
+        weatherObservedAt: payload.conditions.weatherObservedAt,
+      }
+    : payload.conditions,
+  measurements: payload.measurements.map((measurement) => ({
+    factorType: measurement.factorType,
+    factorCode: measurement.factorCode,
+    pollutantCode: measurement.pollutantCode,
+    indicatorName: measurement.indicatorName,
+    value: measurement.value,
+    unit: measurement.unit,
+    normativeId: measurement.normativeId,
+    normativeValue: measurement.normativeValue,
+    testingMethodNd: measurement.testingMethodNd,
+    samplingMethodNd: measurement.samplingMethodNd,
+    measurementDeviceId: measurement.measurementDeviceId,
+    deviceId: measurement.deviceId,
+    values: measurement.values,
+  })),
+  printVisibility: {
+    organizationName: payload.printVisibility.organizationName,
+    organizationAddress: payload.printVisibility.organizationAddress,
+    testObjectName: payload.printVisibility.testObjectName,
+    productName: payload.printVisibility.productName,
+    testBasis: payload.printVisibility.testBasis,
+    samplingDate: payload.printVisibility.samplingDate,
+    testStartDate: payload.printVisibility.testStartDate,
+    testEndDate: payload.printVisibility.testEndDate,
+    productNormativeDocument: payload.printVisibility.productNormativeDocument,
+    samplingMethodDocument: payload.printVisibility.samplingMethodDocument,
+    testMethodDocument: payload.printVisibility.testMethodDocument,
+    testPurpose: payload.printVisibility.testPurpose,
+    samplingPlace: payload.printVisibility.samplingPlace,
+    measurementDate: payload.printVisibility.measurementDate,
+    environmentalConditions: payload.printVisibility.environmentalConditions,
+    temperature: payload.printVisibility.temperature,
+    humidity: payload.printVisibility.humidity,
+    pressure: payload.printVisibility.pressure,
+    windSpeed: payload.printVisibility.windSpeed,
+  },
+  orderId: payload.orderId,
+});
+
 export async function createProtocol(payload: CreateProtocolPayload): Promise<Protocol> {
   const response = await api.post<ApiResponse<unknown>>(
     '/protocols',
@@ -1010,7 +1101,7 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
 }
 
-export async function quickCreateProtocol(payload: QuickProtocolCreatePayload, idempotencyKey: string): Promise<Protocol> {
+export async function quickCreateProtocol(payload: QuickCreateProtocolApiRequest, idempotencyKey: string): Promise<Protocol> {
   if (!idempotencyKey) {
     throw new Error('Не удалось сформировать ключ безопасной отправки запроса');
   }
@@ -1025,14 +1116,15 @@ export async function quickCreateProtocol(payload: QuickProtocolCreatePayload, i
       protocolDate: payload.protocolDate,
       measurementDate: payload.measurementDate,
       measurementsCount: payload.measurements.length,
-      sourceNumberSpecified: Boolean(payload.sourceNumber),
+      hasOrderId: Boolean(payload.orderId),
     });
     console.log('idempotencyKey', idempotencyKey);
     console.groupEnd();
   }
+  const apiPayload = toQuickCreateProtocolApiPayload(payload);
   const response = await api.post<ApiResponse<unknown> | unknown>(
     '/protocols/quick-create',
-    payload,
+    apiPayload,
     { headers: { 'Idempotency-Key': idempotencyKey } },
   );
   const result = unwrapData(response);
@@ -1278,10 +1370,18 @@ const searchCacheKey = (params: Record<string, string>) => JSON.stringify(
 );
 
 export async function searchNormative(params: Record<string, string>, signal?: AbortSignal): Promise<NormativeSearchResult> {
-  const query = params.query || params.search || params.q || [params.code || params.pollutantCode, params.indicator].filter(Boolean).join(' ').trim();
-  if (!canRunNormativeSearch(query)) return { found: false, normatives: [], items: [] };
-  const requestParams: NormativeSearchParams = {
-    query,
+  const query = params.query ?? params.search ?? params.q ?? '';
+  const pollutantCode = params.pollutantCode || undefined;
+  const code = params.code || undefined;
+  if (!canRunNormativeSearch(query) && !pollutantCode && !code && !params.casNumber && !params.formula) {
+    return { found: false, normatives: [], items: [] };
+  }
+  const requestParams: NormativeSearchRequest = {
+    query: query || undefined,
+    pollutantCode,
+    code,
+    casNumber: params.casNumber || undefined,
+    formula: params.formula || undefined,
     templateId: params.templateId || undefined,
     sourceDocumentCode: params.sourceDocumentCode || undefined,
     environmentType: params.environmentType || undefined,
@@ -1328,10 +1428,6 @@ export async function searchPollutants(query: string, params: Record<string, str
       params: {
         ...params,
         query,
-        q: query,
-        code: params.code || query,
-        pollutantCode: params.pollutantCode || query,
-        search: params.search || query,
         limit: params.limit || NORMATIVE_SEARCH_LIMIT,
       },
       signal,

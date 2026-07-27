@@ -9,7 +9,6 @@ import type {
   ProtocolCalculationSummaryResponse,
   ProtocolPage,
   ProtocolListQuery,
-  QuickProtocolCreatePayload,
   ProtocolResultPayload,
   ProtocolResultRow,
   ProtocolTemplate,
@@ -18,6 +17,7 @@ import type {
   UpdateProtocolPayload,
   WeatherConditions,
 } from '../types/protocols';
+import type { QuickCreateProtocolApiRequest } from '../features/protocols/api/protocolContracts';
 
 export type ProtocolSignRequest = {
   cmsSignatureBase64: string;
@@ -41,7 +41,7 @@ export interface ProtocolService {
   getProtocol(protocolId: string): Promise<Protocol>;
   getProtocolById(protocolId: string): Promise<Protocol>;
   createProtocol(payload: CreateProtocolPayload): Promise<Protocol>;
-  quickCreateProtocol(payload: QuickProtocolCreatePayload, idempotencyKey: string): Promise<Protocol>;
+  quickCreateProtocol(payload: QuickCreateProtocolApiRequest, idempotencyKey: string): Promise<Protocol>;
   refreshLaboratoryData(protocolId: string): Promise<Protocol>;
   updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol>;
   deleteProtocol(protocolId: string): Promise<void>;

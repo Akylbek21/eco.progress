@@ -21,6 +21,7 @@ type Props = {
   waterTypeOptions: ProtocolSelectOption[];
   waterUseCategoryOptions: ProtocolSelectOption[];
   final?: boolean;
+  apiPayloadValid: boolean;
 };
 const ReviewStep = ({
   companies,
@@ -32,6 +33,7 @@ const ReviewStep = ({
   waterTypeOptions,
   waterUseCategoryOptions,
   final,
+  apiPayloadValid,
 }: Props) => {
   const { watch } = useFormContext<ProtocolWizardForm>();
   const form = watch();
@@ -44,10 +46,35 @@ const ReviewStep = ({
     ['Результаты, приборы и нормативы', `${form.results.filter((item) => item.indicatorName || item.value).length} строк`, 5],
     ['Методики', form.testingMethodNd || 'Не заполнено', 6],
   ];
+  const technicalChecks = [
+    'Компания выбрана',
+    'Выбран реальный сохранённый объект',
+    'Лаборатория и исполнитель проверены',
+    'Даты и место измерения корректны',
+    'Строки результатов заполнены',
+    'Единицы измерения и приборы проверены',
+    'Коды показателей или физических факторов заполнены',
+    'Характеристики воды проверены, если применимо',
+    'Методика испытаний заполнена',
+  ];
   return (
     <section>
       <h3 id="wizard-step-title" tabIndex={-1} className="text-xl font-black">{final ? 'Создание протокола' : 'Проверка данных'}</h3>
       <p className="mt-2 text-sm text-slate-500">{final ? 'После нажатия будет отправлен один запрос POST /api/protocols/quick-create.' : 'Проверьте сводку перед созданием.'}</p>
+      {final && apiPayloadValid && (
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
+          Все обязательные данные заполнены. Можно переходить к созданию.
+        </div>
+      )}
+      {final && (
+        <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          {technicalChecks.map((label) => (
+            <li key={label} className={`rounded-lg border px-3 py-2 font-semibold ${apiPayloadValid ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+              {apiPayloadValid ? '✓' : '•'} {label}
+            </li>
+          ))}
+        </ul>
+      )}
       {isWaterProtocolType(form.templateId) && (
         <article className="mt-5 rounded-2xl border border-sky-200 bg-sky-50/60 p-4">
           <div className="flex items-start justify-between gap-3">

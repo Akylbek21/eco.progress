@@ -5,6 +5,7 @@ export type QuickCreateErrorResolution = {
   field?: 'objectId' | 'executorId';
   resetIdempotencyKey: boolean;
   existingProtocolId?: string;
+  serverFailure?: boolean;
 };
 
 export const resolveQuickCreateApiError = (error: ApiError): QuickCreateErrorResolution => {
@@ -13,6 +14,14 @@ export const resolveQuickCreateApiError = (error: ApiError): QuickCreateErrorRes
       message: error.message,
       resetIdempotencyKey: false,
       existingProtocolId: error.resourceId,
+    };
+  }
+
+  if (error.status === 500) {
+    return {
+      message: 'Сервер не завершил создание протокола. Данные формы сохранены во временном черновике. Повторите операцию после устранения ошибки на сервере.',
+      resetIdempotencyKey: false,
+      serverFailure: true,
     };
   }
 

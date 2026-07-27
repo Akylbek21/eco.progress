@@ -3,6 +3,8 @@ import type {
   ProtocolPrintVisibility,
   ProtocolResultValue,
   ProtocolTemplateId,
+  QuickCreateConditions,
+  QuickCreateMeasurement,
 } from '../../../types/protocols';
 
 /** DTOs in this file are the only shapes allowed to cross the protocols API boundary. */
@@ -100,4 +102,27 @@ export interface ProtocolsQueryRequest {
   dateTo?: string;
   sort?: string;
   includeArchived?: boolean;
+}
+
+export interface QuickCreateProtocolApiRequest {
+  templateId: string;
+  sourceDocumentCode?: string | null;
+  docxTemplateCode?: string | null;
+  subtype?: string | null;
+  companyId: number;
+  objectId: number;
+  laboratoryId: number;
+  executorId: number;
+  protocolDate: string;
+  sampleDate?: string | null;
+  measurementDate: string;
+  measurementTime?: string | null;
+  measurementPlace?: string | null;
+  testingStartDate?: string | null;
+  testingEndDate?: string | null;
+  sourceNumber?: string | null;
+  conditions?: QuickCreateConditions | null;
+  measurements: QuickCreateMeasurement[];
+  printVisibility: ProtocolPrintVisibility;
+  orderId?: string | null;
 }

@@ -42,8 +42,10 @@ describe('protocol domain contract', () => {
     const request = mapProtocolWizardToRequest(form);
     expect(request).toMatchObject({ templateId: 'water', companyId: 15, objectId: 38, laboratoryId: 2, executorId: 17, conditions: { temperature: '20', waterType: 'DRINKING_WATER', waterUseCategory: 'I' } });
     expect(request.measurements).toHaveLength(1);
-    expect(request.measurements[0].methodDocument).toBe('ГОСТ');
-    expect(request.environment).toMatchObject({ temperature: '20', source: 'MANUAL' });
+    expect(request.measurements[0].testingMethodNd).toBe('ГОСТ');
+    expect(request.measurements[0].unit).toBe('мг/дм³');
+    expect(request.conditions).toMatchObject({ temperature: '20', weatherSource: 'MANUAL' });
+    expect(request).not.toHaveProperty('environment');
   });
 
   it('maps PATCH to nested DTO and uses the laboratory employee id', () => {

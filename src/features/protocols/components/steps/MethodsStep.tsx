@@ -13,6 +13,10 @@ const MethodsStep = () => {
         НД на метод испытаний *
         <input {...register('testingMethodNd')} className={`${input} mt-1.5`} />
       </label>
+      <label className="mt-4 block text-sm font-bold">
+        НД на метод отбора
+        <input {...register('samplingMethodNd')} className={`${input} mt-1.5`} />
+      </label>
     </section>
   );
 };

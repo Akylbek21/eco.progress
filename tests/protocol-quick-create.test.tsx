@@ -17,6 +17,7 @@ import {
   acquireQuickCreateLock,
   prepareQuickCreateAttempt,
   releaseQuickCreateLock,
+  stableStringify,
 } from '../src/features/protocols/utils/quickCreateSubmission';
 import type { CompanyObject } from '../src/types/companies';
 import type { LaboratoryExecutorOption } from '../src/features/protocols/components/wizardTypes';
@@ -24,6 +25,7 @@ import MeasurementDetailsStep from '../src/features/protocols/components/steps/M
 import EnvironmentStep from '../src/features/protocols/components/steps/EnvironmentStep';
 import { WATER_TYPE_OPTIONS, WATER_USE_CATEGORY_OPTIONS } from '../src/config/protocolWater';
 import { resolveQuickCreateApiError } from '../src/features/protocols/utils/quickCreateError';
+import { normalizeApiError } from '../src/services/apiHelpers';
 
 afterEach(cleanup);
 
@@ -50,6 +52,12 @@ const validForm = () => {
     waterType: 'DRINKING_WATER',
     waterUseCategory: 'I',
     testingMethodNd: 'ГОСТ 1',
+    samplingMethodNd: 'ГОСТ отбора',
+    environmentSource: 'API',
+    environmentDataSource: 'weather-api',
+    environmentObservedAt: '2026-07-22T12:00:00',
+    environmentManualChangeReason: 'проверено вручную',
+    orderId: 'order-uuid-1',
   });
   form.results = [{
     ...form.results[0],
@@ -59,6 +67,8 @@ const validForm = () => {
     unit: 'мг/л',
     normativeValue: '0,2',
     comparisonType: 'LESS_OR_EQUAL',
+    normativeRecordId: 'norm-123',
+    methodDocument: 'Методика строки',
     measurementDeviceId: '8',
   }];
   return form;
@@ -102,14 +112,14 @@ const FormHarness = ({ step }: { step: 'details' | 'environment' }) => {
 };
 
 describe('quick-create form components', () => {
-  it('renders separate required date inputs and limits sourceNumber to 100 characters', () => {
+  it('renders separate required date inputs and limits sourceNumber to 80 characters', () => {
     render(<FormHarness step="details" />);
     expect((screen.getByLabelText(/Дата протокола/) as HTMLInputElement).type).toBe('date');
     expect((screen.getByLabelText(/Дата отбора пробы/) as HTMLInputElement).type).toBe('date');
     expect((screen.getByLabelText(/Дата измерения/) as HTMLInputElement).type).toBe('date');
     expect((screen.getByLabelText(/Дата начала испытаний/) as HTMLInputElement).type).toBe('date');
     expect((screen.getByLabelText(/Дата завершения испытаний/) as HTMLInputElement).type).toBe('date');
-    expect((screen.getByLabelText(/Номер источника/) as HTMLInputElement).maxLength).toBe(100);
+    expect((screen.getByLabelText(/Номер источника/) as HTMLInputElement).maxLength).toBe(80);
   });
 
   it('renders both required water selectors with backend enum values', () => {
@@ -140,17 +150,34 @@ describe('quick-create payload contract', () => {
       testingEndDate: '2026-07-24',
       measurementPlace: 'цук',
       sourceNumber: 'Ә-№1',
-      conditions: { pressure: '94.91' },
-      environment: { pressureKpa: '94.91' },
+      orderId: 'order-uuid-1',
+      conditions: {
+        pressure: '94.91',
+        weatherSource: 'API',
+        weatherDataSource: 'weather-api',
+        weatherObservedAt: '2026-07-22T12:00:00',
+        manualChangeReason: 'проверено вручную',
+        waterType: 'DRINKING_WATER',
+        waterUseCategory: 'I',
+      },
     });
     expect(payload.measurements[0]).toMatchObject({
       indicatorName: 'Кремний тетрахлорид',
       value: '0.2',
-      unit: 'мг/л',
+      unit: 'мг/дм³',
       normativeValue: '0.2',
-      comparisonType: 'LE',
+      normativeId: 'norm-123',
+      testingMethodNd: 'Методика строки',
+      samplingMethodNd: 'ГОСТ отбора',
       measurementDeviceId: 8,
+      values: { comparisonType: 'LE' },
     });
+    for (const forbidden of ['normativeTemplateId', 'resultMode', 'defaultUnit', 'environment', 'orderServiceItemId']) {
+      expect(payload).not.toHaveProperty(forbidden);
+    }
+    for (const forbidden of ['normativeRecordId', 'methodDocument', 'textValue']) {
+      expect(payload.measurements[0]).not.toHaveProperty(forbidden);
+    }
   });
 
   it('turns an empty source number into null and preserves Kazakh text', () => {
@@ -191,6 +218,64 @@ describe('quick-create payload contract', () => {
     );
   });
 
+  it('maps a text-only result into value without crossing textValue into the API', () => {
+    const form = validForm();
+    form.results[0].value = '';
+    form.results[0].textValue = 'не обнаружено';
+    const measurement = buildQuickCreatePayload(form).measurements[0];
+    expect(measurement.value).toBe('не обнаружено');
+    expect(measurement).not.toHaveProperty('textValue');
+  });
+
+  it('maps soil sample fields and physical-factor conditions', () => {
+    const soil = validForm();
+    soil.templateId = 'soil';
+    soil.waterType = '';
+    soil.waterUseCategory = '';
+    soil.results[0].sampleNumber = 'S-1';
+    soil.results[0].samplingDepth = '0,5';
+    soil.results[0].samplingPlace = 'скважина';
+    expect(buildQuickCreatePayload(soil).conditions).toMatchObject({
+      sampleNumber: 'S-1',
+      samplingDepth: '0.5',
+      samplingPlace: 'скважина',
+    });
+
+    const physical = validForm();
+    physical.templateId = 'lighting';
+    physical.waterType = '';
+    physical.waterUseCategory = '';
+    physical.results[0].pollutantCode = '';
+    physical.results[0].factorType = 'LIGHTING';
+    Object.assign(physical, {
+      season: 'SUMMER',
+      workCategory: 'II',
+      workplaceType: 'PERMANENT',
+      roomType: 'OFFICE',
+      normLevel: 'ALLOWABLE',
+      lightingType: 'GENERAL',
+      visualWorkCategory: 'A',
+    });
+    expect(buildQuickCreatePayload(physical).conditions).toMatchObject({
+      season: 'SUMMER',
+      workCategory: 'II',
+      workplaceType: 'PERMANENT',
+      roomType: 'OFFICE',
+      normLevel: 'ALLOWABLE',
+      lightingType: 'GENERAL',
+      visualWorkCategory: 'A',
+    });
+  });
+
+  it('keeps orderId as a string and rejects sourceNumber longer than 80 characters', () => {
+    const form = validForm();
+    expect(buildQuickCreatePayload(form).orderId).toBe('order-uuid-1');
+    form.sourceNumber = 'я'.repeat(81);
+    expect(() => buildQuickCreatePayload(form)).toThrowError(
+      expect.objectContaining<Partial<QuickCreateValidationError>>({ field: 'sourceNumber' }),
+    );
+  });
+
   it('reuses a key after timeout, creates a new key after payload change, and locks double click', () => {
     const payload = buildQuickCreatePayload(validForm());
     const first = prepareQuickCreateAttempt(payload, {
@@ -199,6 +284,7 @@ describe('quick-create payload contract', () => {
     }, () => 'attempt-1');
     const retry = prepareQuickCreateAttempt(payload, first, () => 'must-not-be-used');
     expect(retry.idempotencyKey).toBe('attempt-1');
+    expect(stableStringify({ b: 2, a: 1 })).toBe(stableStringify({ a: 1, b: 2 }));
 
     const changed = { ...payload, measurementPlace: 'другая точка' };
     const next = prepareQuickCreateAttempt(changed, retry, () => 'attempt-2');
@@ -238,6 +324,37 @@ describe('quick-create backend errors', () => {
     })).toMatchObject({
       message: 'Запрос уже был отправлен с другими данными. Повторите операцию.',
       resetIdempotencyKey: true,
+    });
+  });
+
+  it('provides the safe 500 message and preserves the idempotency key', () => {
+    expect(resolveQuickCreateApiError({
+      status: 500,
+      message: 'Internal Server Error',
+      errors: [],
+      fieldErrors: {},
+      traceId: 'trace-500',
+    })).toMatchObject({
+      serverFailure: true,
+      resetIdempotencyKey: false,
+      message: expect.stringContaining('Данные формы сохранены во временном черновике'),
+    });
+  });
+
+  it('reads traceId from JSON and requestId from response headers', () => {
+    const error = {
+      isAxiosError: true,
+      response: {
+        status: 500,
+        data: { data: { message: 'failed', traceId: 'trace-json' } },
+        headers: { 'x-request-id': 'request-header' },
+      },
+    };
+    expect(normalizeApiError(error)).toMatchObject({
+      status: 500,
+      message: 'failed',
+      traceId: 'trace-json',
+      requestId: 'request-header',
     });
   });
 });
@@ -280,5 +397,61 @@ describe('quick-create API request', () => {
     expect(requestCount).toBe(1);
     expect(idempotencyKey).toBe('same-attempt-key');
     expect(requestBody).toEqual(payload);
+  });
+
+  it('strips form-only aliases at the HTTP boundary', async () => {
+    const payload = buildQuickCreatePayload(validForm());
+    const expandedPayload = {
+      ...payload,
+      normativeTemplateId: 'frontend-only',
+      resultMode: 'CHEMICAL',
+      defaultUnit: 'мг/л',
+      environment: { temperature: '20' },
+      orderServiceItemId: 99,
+      measurements: payload.measurements.map((measurement) => ({
+        ...measurement,
+        normativeRecordId: 'legacy-normative-id',
+        methodDocument: 'legacy-method',
+        textValue: 'legacy-text-result',
+      })),
+    } as typeof payload;
+
+    await quickCreateProtocol(expandedPayload, 'strict-boundary-key');
+
+    const sent = requestBody as Record<string, unknown>;
+    for (const forbidden of [
+      'normativeTemplateId',
+      'resultMode',
+      'defaultUnit',
+      'environment',
+      'orderServiceItemId',
+    ]) {
+      expect(sent).not.toHaveProperty(forbidden);
+    }
+
+    const [measurement] = sent.measurements as Array<Record<string, unknown>>;
+    expect(measurement).toMatchObject({
+      normativeId: payload.measurements[0].normativeId,
+      testingMethodNd: payload.measurements[0].testingMethodNd,
+      value: payload.measurements[0].value,
+    });
+    for (const forbidden of ['normativeRecordId', 'methodDocument', 'textValue']) {
+      expect(measurement).not.toHaveProperty(forbidden);
+    }
+  });
+
+  it('does not retry a failed 500 POST automatically', async () => {
+    server.use(
+      http.post('http://localhost/api/protocols/quick-create', () => {
+        requestCount += 1;
+        return HttpResponse.json(
+          { message: 'failed', traceId: 'trace-500' },
+          { status: 500, headers: { 'X-Request-ID': 'request-500' } },
+        );
+      }),
+    );
+    await expect(quickCreateProtocol(buildQuickCreatePayload(validForm()), 'failed-attempt'))
+      .rejects.toBeDefined();
+    expect(requestCount).toBe(1);
   });
 });

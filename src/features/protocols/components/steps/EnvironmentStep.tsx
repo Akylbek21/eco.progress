@@ -22,6 +22,8 @@ const EnvironmentStep = ({
   const type = watch('templateId');
   const ambient = type === 'ambient_air';
   const micro = type === 'microclimate';
+  const lighting = type === 'lighting';
+  const noise = type === 'noise_vibration';
   const water = isWaterProtocolType(type);
 
   return (
@@ -116,6 +118,24 @@ const EnvironmentStep = ({
               Категория работ
               <input {...register('workCategory')} className={`${input} mt-1.5`} />
             </label>
+            <label className="text-sm font-bold">Тип рабочего места<input {...register('workplaceType')} className={`${input} mt-1.5`} /></label>
+            <label className="text-sm font-bold">Тип помещения<input {...register('roomType')} className={`${input} mt-1.5`} /></label>
+            <label className="text-sm font-bold">Уровень нормирования<input {...register('normLevel')} className={`${input} mt-1.5`} /></label>
+          </>
+        )}
+        {lighting && (
+          <>
+            <label className="text-sm font-bold">Тип помещения<input {...register('roomType')} className={`${input} mt-1.5`} /></label>
+            <label className="text-sm font-bold">Уровень нормирования<input {...register('normLevel')} className={`${input} mt-1.5`} /></label>
+            <label className="text-sm font-bold">Тип освещения<input {...register('lightingType')} className={`${input} mt-1.5`} /></label>
+            <label className="text-sm font-bold">Разряд зрительной работы<input {...register('visualWorkCategory')} className={`${input} mt-1.5`} /></label>
+          </>
+        )}
+        {noise && (
+          <>
+            <label className="text-sm font-bold">Тип рабочего места<input {...register('workplaceType')} className={`${input} mt-1.5`} /></label>
+            <label className="text-sm font-bold">Тип помещения<input {...register('roomType')} className={`${input} mt-1.5`} /></label>
+            <label className="text-sm font-bold">Тип шума<input {...register('noiseType')} className={`${input} mt-1.5`} /></label>
           </>
         )}
       </div>

@@ -1,16 +1,24 @@
-import type { QuickCreateProtocolRequest } from '../../../types/protocols';
+import type { QuickCreateProtocolApiRequest } from '../api/protocolContracts';
 
 export type QuickCreateAttemptState = {
   idempotencyKey: string | null;
   payloadFingerprint: string | null;
 };
 
+export const stableStringify = (value: unknown): string => {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record).sort().map((key) =>
+    `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(',')}}`;
+};
+
 export const prepareQuickCreateAttempt = (
-  payload: QuickCreateProtocolRequest,
+  payload: QuickCreateProtocolApiRequest,
   previous: QuickCreateAttemptState,
   createId = () => crypto.randomUUID(),
 ): { idempotencyKey: string; payloadFingerprint: string } => {
-  const payloadFingerprint = JSON.stringify(payload);
+  const payloadFingerprint = stableStringify(payload);
   const canReuse = Boolean(
     previous.idempotencyKey && previous.payloadFingerprint === payloadFingerprint,
   );

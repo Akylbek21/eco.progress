@@ -84,6 +84,7 @@ export interface ApiErrorResponse {
   fieldErrors?: Record<string, string>;
   resourceId?: number | string;
   traceId?: string;
+  requestId?: string;
 }
 
 export interface ApiError {
@@ -93,8 +94,21 @@ export interface ApiError {
   errors: string[];
   fieldErrors: Record<string, string>;
   traceId?: string;
+  requestId?: string;
   resourceId?: string;
 }
+
+const responseRequestId = (error: unknown): string | undefined => {
+  if (!axios.isAxiosError(error)) return undefined;
+  const headers = error.response?.headers;
+  const values = ['x-request-id', 'x-trace-id', 'trace-id'].map((name) => {
+    if (headers && typeof headers.get === 'function') return headers.get(name);
+    const record = asRecord(headers);
+    return record?.[name] ?? record?.[name.toUpperCase()];
+  });
+  const value = values.find((item) => typeof item === 'string' && item.trim());
+  return typeof value === 'string' ? value.trim() : undefined;
+};
 
 const extractConflictResourceId = (response: UnknownRecord | null | undefined): string | undefined => {
   if (!response) return undefined;
@@ -151,7 +165,7 @@ export const parseApiError = (error: unknown, fallback = 'Не удалось в
   const statusMessages: Record<number, string> = {
     400: 'Проверьте заполнение полей.', 401: 'Сессия истекла. Войдите заново.', 403: 'Недостаточно прав.',
     404: 'Запрошенные данные не найдены.', 409: 'Конфликт данных: запись уже существует или связана с другими записями.',
-    422: 'Исправьте ошибки заполнения.', 503: 'Сервис временно недоступен.',
+    422: 'Исправьте ошибки заполнения.', 500: 'Не удалось создать протокол.', 503: 'Сервис временно недоступен.',
   };
   const backendMessage = response?.message ?? nested?.message ?? response?.error ?? nested?.error;
   const message = typeof backendMessage === 'string' && backendMessage.trim()
@@ -181,6 +195,7 @@ export const normalizeApiError = (error: unknown, fallback = 'Не удалос�
     errors,
     fieldErrors: parsed.fieldErrors || {},
     traceId: typeof traceIdValue === 'string' && traceIdValue.trim() ? traceIdValue.trim() : undefined,
+    requestId: responseRequestId(error),
     resourceId: parsed.status === 409 ? extractConflictResourceId(response) : undefined,
   };
 };
