@@ -129,7 +129,7 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
-    const privatePrefixes = ['/cabinet', '/staff', '/admin', '/dashboard', '/login', '/register', '/api', '/crm'];
+    const privatePrefixes = ['/cabinet', '/client', '/staff', '/admin', '/dashboard', '/login', '/register', '/reset-password', '/api', '/internal', '/crm'];
     const isPrivate = privatePrefixes.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
     let meta = document.head.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
     if (!meta) {
@@ -191,7 +191,8 @@ function App() {
         <Route path="/contacts" element={<PublicLayout><ContactsPage /></PublicLayout>} />
         <Route path="/regions" element={<PublicLayout><RegionsPage /></PublicLayout>} />
         <Route path="/search" element={<PublicLayout><SearchPage /></PublicLayout>} />
-        <Route path="/shtrafy-za-ekologiyu-kazakhstan" element={<Navigate to="/news/kakie-shtrafy-za-ekologiyu-v-kazakhstane" replace />} />
+        <Route path="/shtrafy-za-ekologiyu-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
+        <Route path="/shtrafy-za-ekologicheskie-narusheniya-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
         <Route path="/:seoSlug" element={<PublicLayout><SeoLandingPage /></PublicLayout>} />
         <Route path="/login" element={<LoginPage onSuccess={notify} />} />
         <Route path="/register" element={<RegisterPage onSuccess={notify} />} />

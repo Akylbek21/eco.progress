@@ -7,6 +7,17 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            react: ['react', 'react-dom', 'react-router-dom'],
+            query: ['@tanstack/react-query', 'axios'],
+            icons: ['lucide-react', 'react-icons'],
+          },
+        },
+      },
+    },
     server: {
       port: 4173,
       proxy: {

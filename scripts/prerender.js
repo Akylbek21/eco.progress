@@ -1,8 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { LASTMOD, OG_IMAGE, SITE_URL, publicStaticPages, seoArticles, seoPages } from './seo-data.mjs';
-import { serviceSlugAliases } from '../src/content/serviceCatalog.ts';
-import { articleSlugAliases } from '../src/content/articles/articleContent.ts';
+import { COMPANY } from '../src/config/companyData.ts';
 
 const root = process.cwd();
 const distDir = path.join(root, 'dist');
@@ -13,7 +12,14 @@ if (!fs.existsSync(templatePath)) {
   throw new Error('dist/index.html not found. Run vite build before prerender.');
 }
 
-const template = fs.readFileSync(templatePath, 'utf8');
+const rawTemplate = fs.readFileSync(templatePath, 'utf8');
+const rootStart = rawTemplate.indexOf('<div id="root"');
+const bodyEnd = rawTemplate.lastIndexOf('</body>');
+const rootEnd = rawTemplate.lastIndexOf('</div>', bodyEnd);
+if (rootStart < 0 || rootEnd < rootStart) throw new Error('dist/index.html does not contain the expected root markers');
+const template = `${rawTemplate.slice(0, rootStart)}<div id="root"></div>${rawTemplate.slice(rootEnd + '</div>'.length)}`;
+const seoRegistry = JSON.parse(fs.readFileSync(path.join(root, 'src', 'data', 'seoRegistry.generated.json'), 'utf8'));
+const registryByPath = new Map(seoRegistry.map((entry) => [entry.path, entry]));
 
 const escapeHtml = (value = '') => String(value)
   .replaceAll('&', '&amp;')
@@ -125,7 +131,7 @@ const schemaForArticle = (article) => [
   buildFaqSchema(article.faq),
 ];
 
-const renderHeadBlock = ({ title, description, canonical, type = 'website', schema, robots = 'index,follow', ogImage = OG_IMAGE, datePublished, dateModified }) => {
+const renderHeadBlock = ({ title, description, canonical, type = 'website', schema, robots = 'index,follow', ogImage = OG_IMAGE, ogImageWidth = 1200, ogImageHeight = 630, datePublished, dateModified }) => {
   const verification = process.env.VITE_GOOGLE_SITE_VERIFICATION
     ? `\n<meta name="google-site-verification" content="${escapeHtml(process.env.VITE_GOOGLE_SITE_VERIFICATION)}" />`
     : '\n<!-- Google Search Console: set VITE_GOOGLE_SITE_VERIFICATION to render verification meta. -->';
@@ -141,6 +147,9 @@ const renderHeadBlock = ({ title, description, canonical, type = 'website', sche
     `<meta property="og:description" content="${escapeHtml(description)}" />`,
     `<meta property="og:url" content="${escapeHtml(canonical)}" />`,
     `<meta property="og:image" content="${escapeHtml(ogImage)}" />`,
+    `<meta property="og:image:width" content="${ogImageWidth}" />`,
+    `<meta property="og:image:height" content="${ogImageHeight}" />`,
+    '<meta property="og:locale" content="ru_KZ" />',
     ...(type === 'article' && datePublished ? [`<meta property="article:published_time" content="${escapeHtml(datePublished)}" />`, `<meta property="article:modified_time" content="${escapeHtml(dateModified || datePublished)}" />`] : []),
     '<meta name="twitter:card" content="summary_large_image" />',
     `<meta name="twitter:title" content="${escapeHtml(title)}" />`,
@@ -156,7 +165,7 @@ const pageShell = (meta, body) => {
   const headBlock = renderHeadBlock(meta);
   return clean
     .replace('</head>', `    ${headBlock}\n  </head>`)
-    .replace('<div id="root"></div>', `<div id="root">${body}</div>`);
+    .replace('<div id="root"></div>', `<div id="root" data-prerendered="true">${body}</div>`);
 };
 
 const renderLinks = (links = []) => links.map((item) => `<a href="${escapeHtml(item.path)}">${escapeHtml(item.label)}</a>`).join('');
@@ -223,21 +232,25 @@ const renderStaticPage = (page) => {
   const cityLinks = seoPages.filter((item) => item.type === 'city' && item.indexable !== false).slice(0, 18).map((item) => ({ label: item.h1, path: `/${item.slug}` }));
   const serviceLinks = seoPages.filter((item) => item.type === 'service-city').slice(0, 18).map((item) => ({ label: item.h1, path: `/${item.slug}` }));
   const articleLinks = seoArticles.map((item) => ({ label: item.h1, path: item.slug }));
+  const hero = `<section><h1>${escapeHtml(page.h1)}</h1><p>${escapeHtml(page.description)}</p><p><a href="/contacts">Получить консультацию</a> <a href="${whatsappUrl}">WhatsApp</a></p></section>`;
+  const contentByPath = {
+    '/contacts': `${hero}<section><h2>Контактные данные</h2><address><p>${escapeHtml(COMPANY.name)}</p><p>${escapeHtml(`г. ${COMPANY.address.city}, ${COMPANY.address.street}`)}</p><p><a href="tel:+${COMPANY.phone.value}">${escapeHtml(COMPANY.phone.display)}</a></p><p><a href="mailto:${escapeHtml(COMPANY.email)}">${escapeHtml(COMPANY.email)}</a></p><p>${escapeHtml(COMPANY.workingHours)}</p></address></section>`,
+    '/about': `${hero}<section><h2>Чем занимается компания</h2><p>ECOPROGRESS GROUP сопровождает предприятия по экологическим документам, лабораторным исследованиям, обращению с отходами и производственному контролю.</p></section><section><h2>Подход к работе</h2><p>Специалисты проверяют исходные данные и применимость требований, согласуют состав работ и фиксируют результат для клиента.</p></section>`,
+    '/employees': `${hero}<section><h2>Компетенции команды</h2><p>В проектах участвуют специалисты по экологическому проектированию, лабораторным исследованиям, отходам и сопровождению предприятий. Персональные данные публикуются только после подтверждения сотрудником.</p></section>`,
+    '/partners': `${hero}<section><h2>Направления сотрудничества</h2><p>Компания взаимодействует с лабораториями, проектными организациями, перевозчиками и площадками обращения с отходами в рамках конкретных договоров и задач.</p></section>`,
+    '/tariffs': `${hero}<section><h2>Как формируется стоимость</h2><p>Стоимость зависит от категории объекта, полноты исходных данных, числа источников воздействия, состава измерений, выезда и требуемого результата.</p><p>Точный расчёт предоставляется после проверки задачи.</p></section>`,
+    '/faq': `${hero}<section><h2>Как начать работу?</h2><p>Передайте описание объекта, город и имеющиеся документы. Специалист уточнит обязательный состав работ.</p></section><section><h2>Можно ли работать дистанционно?</h2><p>Документальные этапы доступны дистанционно; обследование и измерения требуют отдельно согласованного выезда.</p></section>`,
+    '/services': `${hero}<section><h2>Каталог экологических услуг</h2>${renderLinks(serviceLinks)}</section>`,
+    '/news': `${hero}<section><h2>Опубликованные материалы</h2>${renderLinks(articleLinks)}</section>`,
+    '/regions': `${hero}<section><h2>Регионы обслуживания</h2>${renderLinks(cityLinks)}</section>`,
+  };
+  const specificContent = contentByPath[page.path] || (page.path.startsWith('/services/')
+    ? `${hero}<section><h2>Что входит в услугу «${escapeHtml(page.h1)}»</h2><p>${escapeHtml(page.description)} Состав работ уточняется по объекту и подтверждённым исходным данным клиента.</p></section><section><h2>Связанные материалы</h2>${renderLinks(articleLinks.slice(0, 4))}</section>`
+    : `${hero}<section><h2>Основные направления</h2>${renderLinks(serviceLinks.slice(0, 8))}</section>`);
   return layout(`
   <main class="seo-static-page">
     <nav class="seo-breadcrumbs"><a href="/">Главная</a></nav>
-    <section><h1>${escapeHtml(page.h1)}</h1><p>${escapeHtml(page.description)}</p><p><a href="/contacts">Получить консультацию</a> <a href="${whatsappUrl}">WhatsApp</a></p></section>
-    <section><h2>Основные услуги</h2>${renderLinks([
-      { label: 'Экологическое проектирование', path: '/services/environmental-design' },
-      { label: 'Лабораторные замеры', path: '/services/laboratory-tests' },
-      { label: 'Производственный контроль СЭС', path: '/services/industrial-control' },
-      { label: 'Утилизация отходов в Шымкенте', path: '/services/waste-management' },
-      { label: 'Паспорт отходов', path: '/passport-othodov-kazakhstan' },
-      { label: 'Отчет ПЭК', path: '/otchet-pek-kazakhstan' },
-    ])}</section>
-    <section><h2>Города Казахстана</h2>${renderLinks(cityLinks)}</section>
-    <section><h2>Популярные страницы</h2>${renderLinks(serviceLinks)}</section>
-    <section><h2>Статьи</h2>${renderLinks(articleLinks)}</section>
+    ${specificContent}
   </main>`);
 };
 
@@ -251,62 +264,32 @@ const writePage = (urlPath, html) => {
 let count = 0;
 
 for (const page of publicStaticPages) {
-  const staticSchema = [buildOrganizationSchema()];
-  if (page.path === '/') staticSchema.push(localBusinessSchema, webSiteSchema);
-  else if (page.path === '/contacts') staticSchema.push(localBusinessSchema);
-  else if (page.path.startsWith('/services/')) staticSchema.push(buildServiceSchema({ ...page, canonical: `${SITE_URL}${page.path}`, image: '/og-cover.jpg', city: undefined, service: page.h1, type: 'service' }), buildBreadcrumbSchema([{ label: 'Главная', path: '/' }, { label: 'Услуги', path: '/services' }, { label: page.h1, path: page.path }]));
-  writePage(page.path, pageShell({
-    title: page.title,
-    description: page.description,
-    canonical: `${SITE_URL}${page.path === '/' ? '/' : page.path}`,
-    schema: staticSchema,
-  }, renderStaticPage(page)));
+  const meta = registryByPath.get(page.path);
+  if (!meta) throw new Error(`SEO registry entry missing for ${page.path}`);
+  writePage(page.path, pageShell({ ...meta, type: meta.ogType }, renderStaticPage(page)));
   count += 1;
 }
 
 for (const page of seoPages) {
-  writePage(`/${page.slug}`, pageShell({
-    title: page.title,
-    description: page.description,
-    canonical: page.canonical,
-    robots: page.indexable === false ? 'noindex,follow' : 'index,follow',
-    schema: schemaForSeoPage(page),
-    type: page.type === 'article' ? 'article' : 'website',
-    ogImage: `${SITE_URL}${page.image || '/og-cover.jpg'}`,
-  }, renderSeoPage(page)));
+  const meta = registryByPath.get(`/${page.slug}`);
+  if (!meta) throw new Error(`SEO registry entry missing for /${page.slug}`);
+  writePage(`/${page.slug}`, pageShell({ ...meta, type: meta.ogType }, renderSeoPage(page)));
   count += 1;
 }
 
 for (const article of seoArticles) {
+  const meta = registryByPath.get(article.slug);
+  if (!meta) throw new Error(`SEO registry entry missing for ${article.slug}`);
   writePage(article.slug, pageShell({
-    title: `${article.title} | ECOPROGRESS`,
-    description: article.description,
-    canonical: `${SITE_URL}${article.slug}`,
-    schema: schemaForArticle(article),
-    type: 'article',
-    ogImage: `${SITE_URL}${article.image}`,
+    ...meta,
+    type: meta.ogType,
     datePublished: article.datePublished,
     dateModified: article.dateModified,
   }, renderArticle(article)));
   count += 1;
 }
 
-const writeCompatibilityRedirect = (from, to) => {
-  const target = `${SITE_URL}${to}`;
-  const html = pageShell({
-    title: 'Страница перемещена | ECOPROGRESS',
-    description: 'Материал доступен по новому каноническому адресу.',
-    canonical: target,
-    robots: 'noindex,follow',
-    schema: [buildOrganizationSchema()],
-  }, layout(`<main class="seo-static-page"><section><h1>Страница перемещена</h1><p><a href="${escapeHtml(to)}">Перейти к актуальной версии</a></p></section></main>`))
-    .replace('</head>', `<meta http-equiv="refresh" content="0;url=${escapeHtml(to)}"><script>location.replace(${JSON.stringify(to)})</script></head>`);
-  writePage(from, html);
-  count += 1;
-};
-
-for (const [alias, canonical] of Object.entries(serviceSlugAliases)) writeCompatibilityRedirect(`/services/${alias}`, `/services/${canonical}`);
-for (const [alias, canonical] of Object.entries(articleSlugAliases)) writeCompatibilityRedirect(`/news/${alias}`, `/news/${canonical}`);
+// Permanent aliases are intentionally not emitted as HTML. Nginx returns HTTP 301.
 
 const notFoundHtml = pageShell({
   title: 'Страница не найдена | ECOPROGRESS',

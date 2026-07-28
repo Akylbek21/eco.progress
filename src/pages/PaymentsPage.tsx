@@ -5,11 +5,9 @@ import BackendFeatureUnavailable from '../components/ui/BackendFeatureUnavailabl
 import Reveal from '../components/animations/Reveal';
 import { CommentModal, ConfirmModal, PaymentModal, type CommentValues, type PaymentModalValues } from '../components/modals';
 import type {
-  ClientPaymentCompany,
   Contract,
   ContractType,
   Debt,
-  OurPaymentCompany,
   Payment,
   PaymentMethod,
   PaymentRecordStatus,
@@ -21,18 +19,6 @@ import type {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 
-const ourPaymentCompanies: OurPaymentCompany[] = [
-  { id: 'ecoprogress-group', name: 'ТОО "ECOPROGRESS GROUP"' },
-  { id: 'ecoprogress-lab', name: 'ТОО "ECOPROGRESS LAB"' },
-  { id: 'ecoprogress-utilization', name: 'ТОО "ECOPROGRESS UTILIZATION"' },
-];
-
-const clientPaymentCompanies: ClientPaymentCompany[] = [
-  { id: 'shymkent-plast', name: 'ТОО "Shymkent Plast"', bin: '120540018765' },
-  { id: 'green-market', name: 'ТОО "Green Market"', bin: '160740011223' },
-  { id: 'asylbek-ip', name: 'ИП "Асылбек"', bin: '880512350987' },
-  { id: 'eco-build-kz', name: 'ТОО "Eco Build KZ"', bin: '190340025114' },
-];
 import {
   addPartialFinancePayment,
   addQuarterPayment,
@@ -317,6 +303,19 @@ const PaymentsPage = () => {
         ].join(' ').toLowerCase().includes(normalizedQuery);
       });
   }, [rows, paymentType, contractType, quarter, status, debtFilter, ourCompany, clientCompany, period, customFrom, customTo, query]);
+
+  const ourPaymentCompanies = useMemo(
+    () => Array.from(new Map(rows.filter((row) => row.ourCompanyId).map((row) => [row.ourCompanyId, row.ourCompanyName])).entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+    [rows],
+  );
+  const clientPaymentCompanies = useMemo(
+    () => Array.from(new Map(rows.filter((row) => row.clientCompanyId).map((row) => [row.clientCompanyId, row.clientCompanyName])).entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+    [rows],
+  );
 
   const stats = useMemo(() => {
     const uniqueContracts = Array.from(new Map(filteredRows.filter((row) => row.contract).map((row) => [row.contract?.id, row.contract])).values()).filter(Boolean) as Contract[];

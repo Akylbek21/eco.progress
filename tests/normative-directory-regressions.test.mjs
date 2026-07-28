@@ -65,7 +65,7 @@ test('roles and dangerous import operations are centralized', async () => {
 
 test('production directory is connected to the real records endpoint', async () => {
   const service = await read('src/services/normativeService.ts');
-  assert.match(service, /const useMocks = false/);
+  assert.doesNotMatch(service, /mockNormatives|useMocks|mockDelay/);
   assert.match(service, /'\/normatives\/records'/);
   assert.match(service, /getNormativesForProtocol/);
 });

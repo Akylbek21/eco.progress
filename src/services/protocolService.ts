@@ -87,10 +87,6 @@ export interface ProtocolService {
   calculateProtocol(protocolId: string): Promise<Protocol>;
 }
 
-// CRM protocols always use the production contract. The mock module remains only
-// as isolated test data and is never selected by the application at runtime.
-export const useProtocolMocks = false;
-
 let implementationPromise: Promise<ProtocolService> | undefined;
 const implementation = () => {
   if (!implementationPromise) {

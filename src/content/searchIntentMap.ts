@@ -11,7 +11,7 @@ export const searchIntentMap = {
     regional: '/utilizaciya-othodov-shymkent',
   },
   penalties: {
-    canonicalArticle: '/news/kakie-shtrafy-za-ekologiyu-v-kazakhstane',
+    canonicalArticle: '/news/shtrafy-za-ekologicheskie-narusheniya',
     supportingLanding: '/shtrafy-za-ekologiyu-kazakhstan',
   },
 } as const;

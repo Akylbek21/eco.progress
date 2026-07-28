@@ -3,8 +3,6 @@ import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { regions } from '../content/regions';
 import { activeServices } from '../content/serviceCatalog';
-import { company } from '../config/company';
-import { buildBreadcrumbSchema } from '../utils/schema';
 import { regionContentMap } from '../content/regions/regionContent';
 
 const RegionsPage = () => {
@@ -17,7 +15,7 @@ const RegionsPage = () => {
     ['Доступны в отдельных регионах', activeServices.filter((item) => item.areaServed.type === 'SELECTED_REGIONS')],
   ] as const;
   return <div className="bg-[#F7FBFD]">
-    <SEO title="Города и регионы обслуживания | ECOPROGRESS" description="Условия оказания экологических услуг ECOPROGRESS по городам Казахстана: дистанционная работа, выезд специалистов и услуги в Шымкенте." canonical={`${company.siteUrl}/regions`} schema={buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Города и регионы', url: `${company.siteUrl}/regions` }])} />
+    <SEO />
     <section className="bg-eco-900 px-5 py-20 text-white sm:px-8"><div className="mx-auto max-w-7xl"><h1 className="text-4xl font-bold sm:text-6xl">Города и регионы обслуживания</h1><p className="mt-5 max-w-3xl text-lg leading-8 text-white/75">Мы не заявляем офис в каждом городе. Документы готовим дистанционно, а выездные работы выполняем только там, где это указано и согласовано со специалистом.</p></div></section>
     <section className="mx-auto max-w-7xl px-5 py-14 sm:px-8">
       <label className="block max-w-xl text-sm font-semibold text-eco-900">Поиск по городу или области<input value={query} onChange={(event) => setQuery(event.target.value)} type="search" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" placeholder="Например, Караганда" /></label>

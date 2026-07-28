@@ -47,6 +47,7 @@ mkdir -p /etc/nginx/snippets
 log "Копирование snippets..."
 cp "$NGINX_HOST_DIR/snippets/ssl-params.conf"   /etc/nginx/snippets/ssl-params.conf
 cp "$NGINX_HOST_DIR/snippets/proxy-params.conf" /etc/nginx/snippets/proxy-params.conf
+cp "$NGINX_HOST_DIR/snippets/legacy-redirects.conf" /etc/nginx/snippets/legacy-redirects.conf
 
 # ─── 4. Email для Let's Encrypt ───────────────────────────────
 read -rp "$(echo -e "${YELLOW}Email для Let's Encrypt: ${NC}")" LE_EMAIL

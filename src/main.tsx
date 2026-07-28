@@ -24,7 +24,14 @@ const queryClient = new QueryClient({
   },
 });
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root');
+if (!root) throw new Error('Root element not found');
+
+// The build-time snapshot is crawler content, not React server markup.
+// Remove it before mounting so React never attempts to hydrate incompatible HTML.
+if (root.dataset.prerendered === 'true') root.replaceChildren();
+
+ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>

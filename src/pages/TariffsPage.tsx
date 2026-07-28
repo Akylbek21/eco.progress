@@ -42,7 +42,7 @@ const TariffsPage = () => {
 
   return (
     <div className="bg-[#F7FBFD]">
-      <SEO title="Тарифы на экологическое сопровождение | ecoprogress.kz" description="Тарифы ecoprogress.kz на консультации, экологические документы, лабораторные исследования, отходы и сопровождение бизнеса." />
+      <SEO />
       <section className="relative isolate overflow-hidden px-5 py-24 text-white sm:px-8">
         <div className="absolute inset-0 -z-30 bg-windmill bg-cover bg-center" />
         <div className="absolute inset-0 -z-20 bg-eco-900/80" />

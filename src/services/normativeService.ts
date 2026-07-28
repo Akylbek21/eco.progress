@@ -1,11 +1,8 @@
 import api, { ApiResponse } from './api';
 import { extractItem, extractList } from './apiHelpers';
-import { mockNormatives } from '../mocks/mockNormatives';
 import type { LegacyNormativeDto as NormativeRecord, NormativeRecord as CanonicalNormativeRecord, NormativeReplaceMode, NormativeValueType } from '../types/normative';
 import type { NormativeSearchParams, NormativeSearchResponse } from '../types/normativeSearch';
 
-const useMocks = false;
-const mockDelay = () => new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 301)));
 type UnknownRecord = Record<string, unknown>;
 const stringValue = (value: unknown) => value === undefined || value === null ? '' : String(value);
 const asRecord = (value: unknown): UnknownRecord =>
@@ -433,34 +430,6 @@ const directoryParams = (params?: NormativeRecordsParams) => {
 };
 
 export async function getNormativeRecords(params: NormativeRecordsParams = {}, signal?: AbortSignal): Promise<NormativeRecordsPage> {
-  if (useMocks) {
-    await mockDelay();
-    if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
-    const search = normalizeText(firstString(params.search, params.query));
-    const ignoredParams = new Set(['page', 'size', 'search', 'query', 'status']);
-    const filtered = mockNormatives.filter((item) => {
-      if ((params.status || 'ACTIVE') === 'ACTIVE' && (item.status === 'ARCHIVED' || item.archived || item.active === false)) return false;
-      if (search && !normalizeText(JSON.stringify(item)).includes(search)) return false;
-      return Object.entries(params).every(([key, expected]) => {
-        if (ignoredParams.has(key) || expected === undefined || expected === null || expected === '') return true;
-        return normalizeKey((item as unknown as UnknownRecord)[key]) === normalizeKey(expected);
-      });
-    });
-    const page = Math.max(0, Number(params.page ?? DEFAULT_PAGE));
-    const size = Math.max(1, Number(params.size ?? DEFAULT_SIZE));
-    return {
-      items: filtered.slice(page * size, page * size + size).map((item) => ({ ...item })),
-      totalElements: filtered.length,
-      totalPages: Math.max(1, Math.ceil(filtered.length / size)),
-      page,
-      size,
-      first: page === 0,
-      last: page >= Math.max(1, Math.ceil(filtered.length / size)) - 1,
-      hasNext: page < Math.max(1, Math.ceil(filtered.length / size)) - 1,
-      hasPrevious: page > 0,
-      totalElementsExact: true,
-    };
-  }
   const requestParams = directoryParams(params);
   const response = await api.get<ApiResponse<unknown> | unknown>('/normatives/records', { params: requestParams, signal });
   return normalizeNormativeRecordsPage(response, params);
@@ -472,32 +441,16 @@ export async function getNormativeRecord(id: string | number, signal?: AbortSign
 }
 
 export async function createNormative(payload: Omit<NormativeRecord, 'id'>): Promise<NormativeRecord> {
-  if (useMocks) {
-    await mockDelay();
-    const created = { ...payload, id: `mock-normative-${Date.now()}` };
-    mockNormatives.unshift(created);
-    return { ...created };
-  }
   const response = await api.post<ApiResponse<unknown> | unknown>('/normatives', payload);
   return normalizeNormative(extractItem(response, ['normative']));
 }
 
 export async function updateNormative(id: string, payload: Partial<NormativeRecord>): Promise<NormativeRecord> {
-  if (useMocks) {
-    await mockDelay();
-    const index = mockNormatives.findIndex((item) => item.id === id);
-    if (index < 0) throw new Error('Норматив не найден');
-    mockNormatives[index] = { ...mockNormatives[index], ...payload };
-    return { ...mockNormatives[index] };
-  }
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/normatives/${id}`, payload);
   return normalizeNormative(extractItem(response, ['normative']));
 }
 
 export async function archiveNormative(id: string): Promise<NormativeRecord> {
-  if (useMocks) {
-    return updateNormative(id, { status: 'ARCHIVED', active: false, archived: true });
-  }
   const response = await api.post<ApiResponse<unknown> | unknown>(`/normatives/${id}/archive`);
   return normalizeNormative(extractItem(response, ['normative']));
 }

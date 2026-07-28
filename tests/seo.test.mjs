@@ -1,14 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { getAllPublicUrls, publicStaticPages, seoArticles, seoPages, SITE_URL } from '../scripts/seo-data.mjs';
+import { seoPages } from '../scripts/seo-data.mjs';
+
+const registry = JSON.parse(await readFile(new URL('../src/data/seoRegistry.generated.json', import.meta.url), 'utf8'));
 
 test('SEO registry has unique canonical URLs, titles and descriptions', () => {
-  const records = [
-    ...publicStaticPages.map((page) => ({ ...page, canonical: `${SITE_URL}${page.path === '/' ? '/' : page.path}` })),
-    ...seoPages,
-    ...seoArticles.map((article) => ({ ...article, canonical: `${SITE_URL}${article.slug}`, title: `${article.title} | ECOPROGRESS` })),
-  ];
+  const records = registry.filter((record) => record.robots === 'index,follow');
   assert.equal(new Set(records.map((record) => record.canonical)).size, records.length);
   assert.equal(new Set(records.map((record) => record.title)).size, records.length);
   assert.equal(new Set(records.map((record) => record.description)).size, records.length);
@@ -16,14 +14,36 @@ test('SEO registry has unique canonical URLs, titles and descriptions', () => {
     assert.ok(record.title.trim());
     assert.ok(record.description.trim());
     assert.ok(record.h1.trim());
-    assert.match(record.canonical, /^https:\/\/ecoprogress\.kz\/(?!.*\/$)/);
+    assert.match(record.canonical, /^https:\/\/ecoprogress\.kz(?:\/(?!.*\/$))?/);
   }
 });
 
 test('sitemap excludes private, auth and 404 routes', () => {
-  const urls = getAllPublicUrls().map((item) => item.loc);
+  const urls = registry.filter((item) => item.includeInSitemap).map((item) => item.canonical);
   assert.equal(new Set(urls).size, urls.length);
-  for (const url of urls) assert.doesNotMatch(url, /\/(?:staff|cabinet|admin|login|register|reset-password|404)(?:\/|$)/);
+  for (const url of urls) assert.doesNotMatch(url, /\/(?:staff|cabinet|client|admin|dashboard|internal|login|register|reset-password|api|404)(?:\/|$)/);
+});
+
+test('core routes, schema and private indexing rules are registered', async () => {
+  assert.equal(registry.find((item) => item.path === '/')?.canonical, 'https://ecoprogress.kz');
+  const contacts = registry.find((item) => item.path === '/contacts');
+  assert.ok(contacts?.title && contacts?.h1);
+  assert.ok(registry.some((item) => item.path.startsWith('/services/') && item.schema.some((schema) => schema['@type'] === 'Service')));
+  assert.ok(registry.some((item) => item.path.startsWith('/news/') && item.schema.some((schema) => schema['@type'] === 'Article')));
+  assert.equal(registry.find((item) => item.path === '/employees')?.robots, 'noindex,follow');
+
+  const robots = await readFile(new URL('../public/robots.txt', import.meta.url), 'utf8');
+  for (const route of ['/staff', '/admin', '/cabinet', '/client', '/login', '/register', '/reset-password', '/api', '/internal']) {
+    assert.match(robots, new RegExp(`Disallow: ${route.replace('/', '\\/')}`));
+  }
+});
+
+test('nginx normalizes www, slash and legacy penalty URLs with 301', async () => {
+  const hostNginx = await readFile(new URL('../deploy/nginx-host/ecoprogress.conf', import.meta.url), 'utf8');
+  const redirects = await readFile(new URL('../deploy/nginx-host/snippets/legacy-redirects.conf', import.meta.url), 'utf8');
+  assert.match(hostNginx, /server_name www\.ecoprogress\.kz[\s\S]*return 301 https:\/\/ecoprogress\.kz\$request_uri/);
+  assert.match(hostNginx, /location ~ \^\(\.\+\)\/\+\$/);
+  assert.match(redirects, /shtrafy-za-ekologicheskie-narusheniya-kazakhstan \{ return 301 \/news\/shtrafy-za-ekologicheskie-narusheniya;/);
 });
 
 test('waste utilization SEO is limited to Shymkent', () => {

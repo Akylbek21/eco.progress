@@ -46,9 +46,15 @@ export const articleContent: ArticleContent[] = [
   }),
 ];
 
-export const articleContentMap = new Map(articleContent.map((item) => [item.slug, item]));
+const penaltiesArticle = articleContent.find((item) => item.slug === 'kakie-shtrafy-za-ekologiyu-v-kazakhstane');
+
+export const articleContentMap = new Map([
+  ...articleContent.map((item) => [item.slug, item] as const),
+  ...(penaltiesArticle ? [['shtrafy-za-ekologicheskie-narusheniya', { ...penaltiesArticle, slug: 'shtrafy-za-ekologicheskie-narusheniya' }] as const] : []),
+]);
 
 export const articleSlugAliases: Record<string, string> = {
+  'kakie-shtrafy-za-ekologiyu-v-kazakhstane': 'shtrafy-za-ekologicheskie-narusheniya',
   'komu-nuzhen-proizvodstvennyy-kontrol-ses': 'chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol',
   'kak-poluchit-razreshenie-na-emissii': 'ekologicheskie-dokumenty-too-kazakhstan',
   'chto-takoe-pasport-othodov': 'dokumenty-peredachi-othodov',

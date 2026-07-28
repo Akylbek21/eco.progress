@@ -77,6 +77,18 @@ export interface ArticleContent {
   reviewStatus: ReviewStatus;
 }
 
+export interface ArticleAuthor {
+  name: string;
+  role: string;
+  profileUrl?: string;
+}
+
+export interface ArticleReviewer {
+  name: string;
+  role: string;
+  reviewedAt: string;
+}
+
 export interface RegionContent {
   regionSlug: string;
   status: ContentStatus;

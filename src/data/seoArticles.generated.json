@@ -1029,7 +1029,7 @@
       },
       {
         "label": "Какие риски и штрафы возможны за экологические нарушения",
-        "path": "/news/kakie-shtrafy-za-ekologiyu-v-kazakhstane"
+        "path": "/news/shtrafy-za-ekologicheskie-narusheniya"
       },
       {
         "label": "Получить консультацию EcoProgress",
@@ -1672,7 +1672,7 @@
   },
   {
     "id": "kakie-shtrafy-za-ekologiyu-v-kazakhstane",
-    "slug": "/news/kakie-shtrafy-za-ekologiyu-v-kazakhstane",
+    "slug": "/news/shtrafy-za-ekologicheskie-narusheniya",
     "title": "Какие риски и штрафы возможны за экологические нарушения",
     "description": "Как проводить проверку экологических рисков без публикации устаревших сумм штрафов и универсальных выводов.",
     "h1": "Какие риски и штрафы возможны за экологические нарушения",

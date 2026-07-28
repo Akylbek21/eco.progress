@@ -4,7 +4,7 @@ import { regionContentMap } from '../src/content/regions/regionContent.ts';
 
 const SITE_URL = 'https://ecoprogress.kz';
 const LASTMOD = '2026-07-17';
-const OG_IMAGE = `${SITE_URL}/og-cover.jpg`;
+const OG_IMAGE = `${SITE_URL}/media/social/ecoprogress-og-1200x630.jpg`;
 
 const cityProfiles = [
   ['almaty', 'Алматы', 'Алматы и Алматинская область', 'офисы, клиники, рестораны, склады, торговые центры и пищевые производства', 'Высокая плотность объектов и частые проверки требуют аккуратного ведения экологических документов и лабораторных протоколов.', ['astana', 'shymkent', 'taldykorgan']],
@@ -260,7 +260,7 @@ const createServiceCityPage = (service, city) => ({
     link(`Экологические услуги в ${city.namePrepositional}`, `/ecologicheskie-uslugi-${city.slug}`),
     link('Лабораторные исследования', '/services/laboratory-tests'),
     link('Производственный контроль', '/services/industrial-control'),
-    link('Штрафы за экологию в Казахстане', '/news/kakie-shtrafy-za-ekologiyu-v-kazakhstane'),
+    link('Штрафы за экологические нарушения', '/news/shtrafy-za-ekologicheskie-narusheniya'),
     link('Контакты', '/contacts'),
   ],
   breadcrumbs: [link('Главная', '/'), link('Услуги', '/services'), link(`${service.name} в ${city.namePrepositional}`, `/${service.slugPrefix}-${city.slug}`)],
@@ -413,13 +413,17 @@ const createArticle = ([slug, title, description, category], index) => ({
     link('Получить консультацию', '/contacts'),
     link('Экологические услуги в Шымкенте', '/ecologicheskie-uslugi-shymkent'),
     link('Лабораторные замеры в Алматы', '/laboratornye-zamery-almaty'),
-    link('Штрафы за экологию', '/news/kakie-shtrafy-za-ekologiyu-v-kazakhstane'),
+    link('Штрафы за экологические нарушения', '/news/shtrafy-za-ekologicheskie-narusheniya'),
   ],
 });
 
+const canonicalArticleSlug = (slug) => slug === 'kakie-shtrafy-za-ekologiyu-v-kazakhstane'
+  ? 'shtrafy-za-ekologicheskie-narusheniya'
+  : slug;
+
 export const seoArticles = articleContent.filter((article) => article.status === 'published').map((article) => ({
   id: article.slug,
-  slug: `/news/${article.slug}`,
+  slug: `/news/${canonicalArticleSlug(article.slug)}`,
   title: article.title,
   description: article.description,
   h1: article.title,
@@ -443,7 +447,7 @@ export const seoArticles = articleContent.filter((article) => article.status ===
   faq: article.faq,
   relatedLinks: [
     ...article.relatedServiceSlugs.map((slug) => link(frontendServices.find((service) => service.slug === slug)?.title || slug, `/services/${slug}`)),
-    ...article.relatedArticleSlugs.map((slug) => link(articleContent.find((item) => item.slug === slug)?.title || slug, `/news/${slug}`)),
+    ...article.relatedArticleSlugs.map((slug) => link(articleContent.find((item) => item.slug === slug)?.title || slug, `/news/${canonicalArticleSlug(slug)}`)),
     link('Получить консультацию EcoProgress', '/contacts'),
   ],
 }));

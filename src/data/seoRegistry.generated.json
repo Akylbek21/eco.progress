@@ -4,10 +4,63 @@
     "title": "Экологические услуги в Казахстане | ECOPROGRESS",
     "description": "ECOPROGRESS оказывает экологические услуги для бизнеса в Казахстане: лабораторные замеры, ПЭК, отходы, разрешения и сопровождение.",
     "h1": "Экологические услуги и лабораторные замеры в Казахстане",
-    "canonical": "https://ecoprogress.kz/",
+    "canonical": "https://ecoprogress.kz",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Казахстане | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги для бизнеса в Казахстане: лабораторные замеры, ПЭК, отходы, разрешения и сопровождение.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": [
+          "Organization",
+          "LocalBusiness",
+          "ProfessionalService"
+        ],
+        "@id": "https://ecoprogress.kz/#organization",
+        "name": "ECOPROGRESS GROUP",
+        "alternateName": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/икон.png"
+        },
+        "telephone": "+7 778 121 11 58",
+        "email": "eco.progresss@gmail.com",
+        "address": {
+          "@type": "PostalAddress",
+          "addressCountry": "KZ",
+          "addressLocality": "Шымкент",
+          "streetAddress": "Алимбетова 199/2а"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        },
+        "openingHours": "Mo-Fr 09:00-18:00",
+        "sameAs": [
+          "https://www.instagram.com/ecoprogress.group"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "@id": "https://ecoprogress.kz/#website",
+        "url": "https://ecoprogress.kz",
+        "name": "EcoProgress",
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        }
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 1,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services",
@@ -16,8 +69,52 @@
     "h1": "Экологические услуги полного цикла",
     "canonical": "https://ecoprogress.kz/services",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги ECOPROGRESS | Казахстан",
+    "ogDescription": "Экологические документы и лабораторные услуги по Казахстану. Вывоз, утилизация отходов и полигон ТБО доступны в Шымкенте.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Экологические услуги полного цикла",
+        "serviceType": "Экологические услуги полного цикла",
+        "description": "Экологические документы и лабораторные услуги по Казахстану. Вывоз, утилизация отходов и полигон ТБО доступны в Шымкенте.",
+        "url": "https://ecoprogress.kz/services",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги полного цикла",
+            "item": "https://ecoprogress.kz/services"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-21"
   },
   {
     "path": "/regions",
@@ -26,8 +123,37 @@
     "h1": "Города и регионы обслуживания",
     "canonical": "https://ecoprogress.kz/regions",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Города и регионы обслуживания | ECOPROGRESS",
+    "ogDescription": "Условия оказания экологических услуг ECOPROGRESS по городам Казахстана: дистанционная подготовка документов, выезд специалистов и услуги в Шымкенте.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Города и регионы обслуживания",
+            "item": "https://ecoprogress.kz/regions"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/about",
@@ -36,8 +162,37 @@
     "h1": "ECOPROGRESS GROUP",
     "canonical": "https://ecoprogress.kz/about",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "О компании и специалистах ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS GROUP оказывает экологические услуги для бизнеса в Казахстане: документы, лаборатория, отходы и сопровождение.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "ECOPROGRESS GROUP",
+            "item": "https://ecoprogress.kz/about"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.7,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-07-15"
   },
   {
     "path": "/contacts",
@@ -46,8 +201,69 @@
     "h1": "Контакты ECOPROGRESS",
     "canonical": "https://ecoprogress.kz/contacts",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Контакты экологической компании ECOPROGRESS",
+    "ogDescription": "Контакты ECOPROGRESS: телефон, WhatsApp, email, адрес и консультация по экологическим услугам в Казахстане.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": [
+          "Organization",
+          "LocalBusiness",
+          "ProfessionalService"
+        ],
+        "@id": "https://ecoprogress.kz/#organization",
+        "name": "ECOPROGRESS GROUP",
+        "alternateName": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/икон.png"
+        },
+        "telephone": "+7 778 121 11 58",
+        "email": "eco.progresss@gmail.com",
+        "address": {
+          "@type": "PostalAddress",
+          "addressCountry": "KZ",
+          "addressLocality": "Шымкент",
+          "streetAddress": "Алимбетова 199/2а"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        },
+        "openingHours": "Mo-Fr 09:00-18:00",
+        "sameAs": [
+          "https://www.instagram.com/ecoprogress.group"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Контакты ECOPROGRESS",
+            "item": "https://ecoprogress.kz/contacts"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-07-14"
   },
   {
     "path": "/news",
@@ -56,8 +272,37 @@
     "h1": "Статьи и новости",
     "canonical": "https://ecoprogress.kz/news",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "ogType": "website",
+    "ogTitle": "Статьи об экологии для бизнеса | ECOPROGRESS",
+    "ogDescription": "Статьи ECOPROGRESS об экологических документах, ПЭК, СЭС, отходах, замерах, разрешениях и проверках бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Статьи и новости",
+            "item": "https://ecoprogress.kz/news"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-21"
   },
   {
     "path": "/employees",
@@ -65,9 +310,38 @@
     "description": "Команда ECOPROGRESS: специалисты по экологическим документам, лабораторным замерам, отходам и сопровождению бизнеса.",
     "h1": "Сотрудники ECOPROGRESS",
     "canonical": "https://ecoprogress.kz/employees",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "WebPage"
+    "robots": "noindex,follow",
+    "ogType": "website",
+    "ogTitle": "Экологи и специалисты компании ECOPROGRESS",
+    "ogDescription": "Команда ECOPROGRESS: специалисты по экологическим документам, лабораторным замерам, отходам и сопровождению бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Сотрудники ECOPROGRESS",
+            "item": "https://ecoprogress.kz/employees"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.6,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-06-23"
   },
   {
     "path": "/partners",
@@ -76,8 +350,37 @@
     "h1": "Партнеры ECOPROGRESS",
     "canonical": "https://ecoprogress.kz/partners",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Партнеры и направления группы ECOPROGRESS",
+    "ogDescription": "Партнеры и направления группы ECOPROGRESS: проектирование, лаборатория, отходы, утилизация и полигон.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Партнеры ECOPROGRESS",
+            "item": "https://ecoprogress.kz/partners"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.6,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-06-23"
   },
   {
     "path": "/tariffs",
@@ -86,8 +389,52 @@
     "h1": "Тарифы на экологическое сопровождение",
     "canonical": "https://ecoprogress.kz/tariffs",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Цены на экологические услуги | ECOPROGRESS",
+    "ogDescription": "Форматы и ориентировочная стоимость экологических документов, лабораторных исследований, аудита и сопровождения бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Тарифы на экологическое сопровождение",
+        "serviceType": "Тарифы на экологическое сопровождение",
+        "description": "Форматы и ориентировочная стоимость экологических документов, лабораторных исследований, аудита и сопровождения бизнеса.",
+        "url": "https://ecoprogress.kz/tariffs",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Тарифы на экологическое сопровождение",
+            "item": "https://ecoprogress.kz/tariffs"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.7,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/faq",
@@ -96,8 +443,37 @@
     "h1": "Частые вопросы",
     "canonical": "https://ecoprogress.kz/faq",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Частые вопросы об экологических услугах | ECOPROGRESS",
+    "ogDescription": "Ответы о стоимости, документах, сроках, договорах, личном кабинете и экологическом сопровождении бизнеса в Казахстане.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Частые вопросы",
+            "item": "https://ecoprogress.kz/faq"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.6,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-07-15"
   },
   {
     "path": "/services/ecological-documents",
@@ -106,8 +482,52 @@
     "h1": "Экологические документы",
     "canonical": "https://ecoprogress.kz/services/ecological-documents",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Экологические документы | ECOPROGRESS",
+    "ogDescription": "Подготовка экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Экологические документы",
+        "serviceType": "Экологические документы",
+        "description": "Подготовка экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/ecological-documents",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические документы",
+            "item": "https://ecoprogress.kz/services/ecological-documents"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/environmental-design",
@@ -116,8 +536,52 @@
     "h1": "Экологическое проектирование",
     "canonical": "https://ecoprogress.kz/services/environmental-design",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Экологическое проектирование | ECOPROGRESS",
+    "ogDescription": "Основная коммерческая услуга по разработке экологических проектов для строительства и действующих объектов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Экологическое проектирование",
+        "serviceType": "Экологическое проектирование",
+        "description": "Основная коммерческая услуга по разработке экологических проектов для строительства и действующих объектов.",
+        "url": "https://ecoprogress.kz/services/environmental-design",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологическое проектирование",
+            "item": "https://ecoprogress.kz/services/environmental-design"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/ndv",
@@ -126,8 +590,52 @@
     "h1": "Проект нормативов допустимых выбросов",
     "canonical": "https://ecoprogress.kz/services/ndv",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Проект нормативов допустимых выбросов | ECOPROGRESS",
+    "ogDescription": "Инвентаризация источников, расчёты выбросов и подготовка проекта НДВ. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Проект нормативов допустимых выбросов",
+        "serviceType": "Проект нормативов допустимых выбросов",
+        "description": "Инвентаризация источников, расчёты выбросов и подготовка проекта НДВ. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/ndv",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Проект нормативов допустимых выбросов",
+            "item": "https://ecoprogress.kz/services/ndv"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/puo",
@@ -136,8 +644,52 @@
     "h1": "Программа управления отходами",
     "canonical": "https://ecoprogress.kz/services/puo",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Программа управления отходами | ECOPROGRESS",
+    "ogDescription": "Анализ потоков отходов, целевые показатели и программа управления отходами. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Программа управления отходами",
+        "serviceType": "Программа управления отходами",
+        "description": "Анализ потоков отходов, целевые показатели и программа управления отходами. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/puo",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Программа управления отходами",
+            "item": "https://ecoprogress.kz/services/puo"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/ovos",
@@ -146,8 +698,52 @@
     "h1": "Оценка воздействия на окружающую среду",
     "canonical": "https://ecoprogress.kz/services/ovos",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Оценка воздействия на окружающую среду | ECOPROGRESS",
+    "ogDescription": "Подготовка ОВОС и материалов экологической оценки для проектов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Оценка воздействия на окружающую среду",
+        "serviceType": "Оценка воздействия на окружающую среду",
+        "description": "Подготовка ОВОС и материалов экологической оценки для проектов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/ovos",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Оценка воздействия на окружающую среду",
+            "item": "https://ecoprogress.kz/services/ovos"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/environmental-permits",
@@ -156,8 +752,52 @@
     "h1": "Экологические разрешения и декларации",
     "canonical": "https://ecoprogress.kz/services/environmental-permits",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Экологические разрешения и декларации | ECOPROGRESS",
+    "ogDescription": "Подготовка разрешительных материалов и сопровождение процедур по требованиям РК. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Экологические разрешения и декларации",
+        "serviceType": "Экологические разрешения и декларации",
+        "description": "Подготовка разрешительных материалов и сопровождение процедур по требованиям РК. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/environmental-permits",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические разрешения и декларации",
+            "item": "https://ecoprogress.kz/services/environmental-permits"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/laboratory-tests",
@@ -166,8 +806,52 @@
     "h1": "Лабораторные исследования",
     "canonical": "https://ecoprogress.kz/services/laboratory-tests",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Лабораторные исследования | ECOPROGRESS",
+    "ogDescription": "Анализы воды, воздуха и почвы, замеры выбросов и протоколы исследований. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Лабораторные исследования",
+        "serviceType": "Лабораторные исследования",
+        "description": "Анализы воды, воздуха и почвы, замеры выбросов и протоколы исследований. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/laboratory-tests",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Лабораторные исследования",
+            "item": "https://ecoprogress.kz/services/laboratory-tests"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/industrial-control",
@@ -176,8 +860,52 @@
     "h1": "Производственный контроль СЭС",
     "canonical": "https://ecoprogress.kz/services/industrial-control",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Производственный контроль СЭС | ECOPROGRESS",
+    "ogDescription": "Программа производственного контроля, замеры и протоколы для санитарных требований. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Производственный контроль СЭС",
+        "serviceType": "Производственный контроль СЭС",
+        "description": "Программа производственного контроля, замеры и протоколы для санитарных требований. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/industrial-control",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Производственный контроль СЭС",
+            "item": "https://ecoprogress.kz/services/industrial-control"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/program-pek",
@@ -186,8 +914,52 @@
     "h1": "Программа производственного экологического контроля",
     "canonical": "https://ecoprogress.kz/services/program-pek",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Программа производственного экологического контроля | ECOPROGRESS",
+    "ogDescription": "Программа контроля по фактическим источникам, показателям и процессам предприятия. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Программа производственного экологического контроля",
+        "serviceType": "Программа производственного экологического контроля",
+        "description": "Программа контроля по фактическим источникам, показателям и процессам предприятия. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/program-pek",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Программа производственного экологического контроля",
+            "item": "https://ecoprogress.kz/services/program-pek"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/report-pek",
@@ -196,8 +968,52 @@
     "h1": "Отчёт производственного экологического контроля",
     "canonical": "https://ecoprogress.kz/services/report-pek",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Отчёт производственного экологического контроля | ECOPROGRESS",
+    "ogDescription": "Проверка первичных данных и подготовка отчёта ПЭК за согласованный период. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Отчёт производственного экологического контроля",
+        "serviceType": "Отчёт производственного экологического контроля",
+        "description": "Проверка первичных данных и подготовка отчёта ПЭК за согласованный период. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/report-pek",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Отчёт производственного экологического контроля",
+            "item": "https://ecoprogress.kz/services/report-pek"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/waste-transportation",
@@ -206,8 +1022,52 @@
     "h1": "Вывоз отходов",
     "canonical": "https://ecoprogress.kz/services/waste-transportation",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Вывоз отходов для бизнеса | ECOPROGRESS",
+    "ogDescription": "Сбор и транспортировка отходов с объекта с оформлением сопроводительных документов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Вывоз отходов",
+        "serviceType": "Вывоз отходов",
+        "description": "Сбор и транспортировка отходов с объекта с оформлением сопроводительных документов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/waste-transportation",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Вывоз отходов",
+            "item": "https://ecoprogress.kz/services/waste-transportation"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/waste-recycling",
@@ -216,8 +1076,52 @@
     "h1": "Утилизация отходов",
     "canonical": "https://ecoprogress.kz/services/waste-recycling",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Утилизация отходов для бизнеса | ECOPROGRESS",
+    "ogDescription": "Передача отходов на утилизацию или переработку и оформление подтверждающих документов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Утилизация отходов",
+        "serviceType": "Утилизация отходов",
+        "description": "Передача отходов на утилизацию или переработку и оформление подтверждающих документов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/waste-recycling",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Утилизация отходов",
+            "item": "https://ecoprogress.kz/services/waste-recycling"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/waste-management",
@@ -226,8 +1130,52 @@
     "h1": "Комплексное обращение с отходами",
     "canonical": "https://ecoprogress.kz/services/waste-management",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Комплексное обращение с отходами | ECOPROGRESS",
+    "ogDescription": "Коммерческая страница комплексного вывоза, утилизации и документального сопровождения отходов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Комплексное обращение с отходами",
+        "serviceType": "Комплексное обращение с отходами",
+        "description": "Коммерческая страница комплексного вывоза, утилизации и документального сопровождения отходов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/waste-management",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Комплексное обращение с отходами",
+            "item": "https://ecoprogress.kz/services/waste-management"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/poligon-tbo",
@@ -236,8 +1184,52 @@
     "h1": "Полигон ТБО",
     "canonical": "https://ecoprogress.kz/services/poligon-tbo",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Полигон ТБО для бизнеса | ECOPROGRESS",
+    "ogDescription": "Приём и законное размещение ТБО с документами для организаций. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Полигон ТБО",
+        "serviceType": "Полигон ТБО",
+        "description": "Приём и законное размещение ТБО с документами для организаций. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/poligon-tbo",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Полигон ТБО",
+            "item": "https://ecoprogress.kz/services/poligon-tbo"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/environmental-audit",
@@ -246,8 +1238,52 @@
     "h1": "Сопровождение экологических проверок",
     "canonical": "https://ecoprogress.kz/services/environmental-audit",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Сопровождение экологических проверок | ECOPROGRESS",
+    "ogDescription": "Аудит документов, оценка рисков и подготовка предприятия к экологической проверке. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Сопровождение экологических проверок",
+        "serviceType": "Сопровождение экологических проверок",
+        "description": "Аудит документов, оценка рисков и подготовка предприятия к экологической проверке. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/environmental-audit",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Сопровождение экологических проверок",
+            "item": "https://ecoprogress.kz/services/environmental-audit"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/services/ecological-support",
@@ -256,8 +1292,52 @@
     "h1": "Экологическое сопровождение предприятия",
     "canonical": "https://ecoprogress.kz/services/ecological-support",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Экологическое сопровождение предприятия | ECOPROGRESS",
+    "ogDescription": "Регулярный контроль отчётности, документов, сроков и экологических рисков предприятия. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Экологическое сопровождение предприятия",
+        "serviceType": "Экологическое сопровождение предприятия",
+        "description": "Регулярный контроль отчётности, документов, сроков и экологических рисков предприятия. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "url": "https://ecoprogress.kz/services/ecological-support",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологическое сопровождение предприятия",
+            "item": "https://ecoprogress.kz/services/ecological-support"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-almaty",
@@ -266,8 +1346,107 @@
     "h1": "Экологические услуги в Алматы",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Алматы | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Алматы: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Алматы",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Алматы?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Алматы перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Алматы и Алматинской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Алматы стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Алматы и Алматинской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Алматы и Алматинской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Алматы риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно работать полностью дистанционно?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да, если задача не требует обследования или измерений."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Есть офис в Алматы?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Нет, сайт не заявляет офис EcoProgress в Алматы."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-astana",
@@ -276,8 +1455,107 @@
     "h1": "Экологические услуги в Астане",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Астане | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Астане: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Астане",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-astana"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Астана?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Астане перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Астаны и Акмолинской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Астане стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Астаны и Акмолинской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Астаны и Акмолинской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Астане риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно начать до готовности проекта?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Можно провести маршрутизацию и составить перечень недостающих решений."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Выезд включён в цену?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Нет, если это отдельно не указано в предложении."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-shymkent",
@@ -286,8 +1564,107 @@
     "h1": "Экологические услуги в Шымкенте",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Шымкенте | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Шымкенте: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса. Доступна утилизация.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Шымкенте",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Шымкент?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Шымкенте перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Шымкента и Туркестанской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Шымкенте стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Шымкента и Туркестанской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Шымкента и Туркестанской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Шымкенте риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Есть ли офис EcoProgress в Шымкенте?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "На сайте указан фактический адрес компании в Шымкенте."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно заказать вывоз?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да, после проверки вида, объёма, адреса и доступности транспорта."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-taraz",
@@ -296,8 +1673,107 @@
     "h1": "Экологические услуги в Таразе",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Таразе | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Таразе: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Таразе",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Тараз?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Таразе перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Тараза и Жамбылской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Таразе стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Тараза и Жамбылской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Тараза и Жамбылской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Таразе риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Когда подтверждается выезд?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "После согласования задания и доступности специалистов."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно заказать только отчёт?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да, если есть программа и подтверждённые данные периода."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-turkestan",
@@ -306,8 +1782,107 @@
     "h1": "Экологические услуги в Туркестане",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Туркестане | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Туркестане: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Туркестане",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Туркестан?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Туркестане перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Туркестана и Туркестанской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Туркестане стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Туркестана и Туркестанской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Туркестана и Туркестанской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Туркестане риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Доступны ли замеры?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Возможность подтверждается после проверки программы и адреса."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Документы можно получить онлайн?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да, электронная передача предусмотрена текущей архитектурой сайта."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-kyzylorda",
@@ -316,8 +1891,107 @@
     "h1": "Экологические услуги в Кызылорде",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Кызылорде | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Кызылорде: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Кызылорде",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Кызылорда?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Кызылорде перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Кызылорды и Кызылординской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Кызылорде стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Кызылорды и Кызылординской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Кызылорды и Кызылординской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Кызылорде риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно начать без выезда?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да, если исходных материалов достаточно для первичного анализа."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Есть офис в Кызылорде?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Нет, постоянный офис не заявляется."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-aktobe",
@@ -326,8 +2000,107 @@
     "h1": "Экологические услуги в Актобе",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Актобе | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Актобе: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Актобе",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Актобе?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Актобе перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Актобе и Актюбинской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Актобе стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Актобе и Актюбинской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Актобе и Актюбинской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Актобе риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Вывоз отходов доступен?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "EcoProgress не заявляет операционный вывоз в Актобе."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие работы дистанционные?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Аудит, расчёты и подготовка документов при достаточных исходных данных."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-atyrau",
@@ -336,8 +2109,107 @@
     "h1": "Экологические услуги в Атырау",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Атырау | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Атырау: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Атырау",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Атырау?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Атырау перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Атырау и Атырауской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Атырау стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Атырау и Атырауской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Атырау и Атырауской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Атырау риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Учитываете пропускной режим?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да, требования доступа включаются в план выезда."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно сопровождать подрядчика?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да, после определения объекта, полномочий и состава задач."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-karaganda",
@@ -346,8 +2218,107 @@
     "h1": "Экологические услуги в Караганде",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Караганде | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Караганде: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Караганде",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Караганда?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Караганде перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Караганды и Карагандинской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Караганде стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Караганды и Карагандинской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Караганды и Карагандинской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Караганде риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Работаете в области?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Документальные работы — да; выезд проверяется по конкретному адресу."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно использовать старую инвентаризацию?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Только после сверки с фактическим оборудованием."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-pavlodar",
@@ -356,8 +2327,107 @@
     "h1": "Экологические услуги в Павлодаре",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Павлодаре | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Павлодаре: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Павлодаре",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Павлодар?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Павлодаре перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Павлодара и Павлодарской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Павлодаре стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Павлодара и Павлодарской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Павлодара и Павлодарской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Павлодаре риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно подготовить отчёт удалённо?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да, при наличии программы и полного комплекта данных."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Замеры доступны?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Только после подтверждения программы, сроков и исполнителя."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-ust-kamenogorsk",
@@ -366,8 +2436,91 @@
     "h1": "Экологические услуги в Усть-Каменогорске",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
     "robots": "noindex,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Усть-Каменогорске | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Усть-Каменогорске: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Усть-Каменогорске",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Усть-Каменогорск?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Усть-Каменогорске перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Усть-Каменогорска и Восточно-Казахстанской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Усть-Каменогорске стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Усть-Каменогорска и Восточно-Казахстанской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Усть-Каменогорска и Восточно-Казахстанской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Усть-Каменогорске риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-kostanay",
@@ -376,8 +2529,91 @@
     "h1": "Экологические услуги в Костанае",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
     "robots": "noindex,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Костанае | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Костанае: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Костанае",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Костанай?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Костанае перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Костаная и Костанайской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Костанае стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Костаная и Костанайской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Костаная и Костанайской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Костанае риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-aktau",
@@ -386,8 +2622,91 @@
     "h1": "Экологические услуги в Актау",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
     "robots": "noindex,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Актау | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Актау: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Актау",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Актау?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Актау перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Актау и Мангистауской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Актау стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Актау и Мангистауской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Актау и Мангистауской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Актау риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-petropavlovsk",
@@ -396,8 +2715,91 @@
     "h1": "Экологические услуги в Петропавловске",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
     "robots": "noindex,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Петропавловске | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Петропавловске: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Петропавловске",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Петропавловск?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Петропавловске перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Петропавловска и Северо-Казахстанской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Петропавловске стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Петропавловска и Северо-Казахстанской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Петропавловска и Северо-Казахстанской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Петропавловске риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-oral",
@@ -406,8 +2808,91 @@
     "h1": "Экологические услуги в Уральске",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
     "robots": "noindex,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Уральске | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Уральске: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Уральске",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-oral"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Уральск?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Уральске перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Уральска и Западно-Казахстанской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Уральске стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Уральска и Западно-Казахстанской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Уральска и Западно-Казахстанской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Уральске риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-kokshetau",
@@ -416,8 +2901,91 @@
     "h1": "Экологические услуги в Кокшетау",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
     "robots": "noindex,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Кокшетау | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Кокшетау: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Кокшетау",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Кокшетау?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Кокшетау перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Кокшетау и Акмолинской области перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Кокшетау стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Кокшетау и Акмолинской области перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Кокшетау и Акмолинской области можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Кокшетау риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-taldykorgan",
@@ -426,8 +2994,91 @@
     "h1": "Экологические услуги в Талдыкоргане",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
     "robots": "noindex,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Талдыкоргане | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Талдыкоргане: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Талдыкоргане",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Талдыкорган?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Талдыкоргане перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Талдыкоргана и области Жетісу перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Талдыкоргане стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Талдыкоргана и области Жетісу перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Талдыкоргана и области Жетісу можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Талдыкоргане риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ecologicheskie-uslugi-semey",
@@ -436,8 +3087,91 @@
     "h1": "Экологические услуги в Семее",
     "canonical": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
     "robots": "noindex,follow",
-    "ogImage": "https://ecoprogress.kz/para.jpg",
-    "schemaType": "WebPage"
+    "ogType": "website",
+    "ogTitle": "Экологические услуги в Семее | ECOPROGRESS",
+    "ogDescription": "ECOPROGRESS оказывает экологические услуги в Семее: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/ecoprogress-og-cover-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические услуги в Семее",
+            "item": "https://ecoprogress.kz/ecologicheskie-uslugi-semey"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Какие экологические документы нужны бизнесу в Семей?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Семее перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кому нужен производственный контроль?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий Семея и области Абай перечень замеров подбирается по фактическому объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит экологическое сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для объекта в Семее стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие лабораторные замеры можно заказать?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для предприятий Семея и области Абай перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли работать дистанционно по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации для Семея и области Абай можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие штрафы бывают за отсутствие экологических документов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для бизнеса в Семее риски оценивают по фактическим разрешениям, отчетам ПЭК, документам по отходам и протоколам. Конкретную ответственность должен проверять юрист."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/utilizaciya-othodov-shymkent",
@@ -446,8 +3180,91 @@
     "h1": "Утилизация отходов в Шымкенте",
     "canonical": "https://ecoprogress.kz/utilizaciya-othodov-shymkent",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/jose.jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Утилизация отходов для бизнеса в Шымкенте | ECOPROGRESS",
+    "ogDescription": "Закажите утилизация отходов в Шымкенте: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/vyvoz-othodov-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Утилизация отходов в Шымкенте",
+            "item": "https://ecoprogress.kz/utilizaciya-othodov-shymkent"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Сколько стоит утилизация отходов в Шымкенте?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Цена зависит от объекта, количества точек, документов и срочности. Мы уточняем задачу по объекту в Шымкенте, после чего готовим расчет стоимости и перечень работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие данные нужны для услуги \"Утилизация отходов\"?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Обычно нужны реквизиты компании, адрес объекта, описание деятельности, фото или схема площадки, сведения об отходах, источниках воздействия и текущих документах."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли начать дистанционно?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Первичный аудит, расчет и подготовку документов можно начать дистанционно. Если нужны замеры или выезд на объект, согласуем дату и состав работ отдельно."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Что получает клиент по итогам работы?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Клиент получает организованную передачу отходов и подтверждающие документы, рекомендации по недостающим документам и сопровождение до понятного результата."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Подходит ли услуга для проверки СЭС или экологии?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да, если перечень работ подобран под фактическую проверку. Мы заранее уточняем, какие документы и протоколы могут запросить контролирующие органы."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли заказать комплексное сопровождение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. К услуге можно подключить экологическое проектирование, лабораторные замеры, ПЭК, паспорта отходов и сопровождение проверок. Утилизация доступна только в Шымкенте."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/ses-proverka-proizvodstvennyy-kontrol",
@@ -456,8 +3273,104 @@
     "h1": "Проверка СЭС и производственный контроль",
     "canonical": "https://ecoprogress.kz/ses-proverka-proizvodstvennyy-kontrol",
     "robots": "noindex,follow",
-    "ogImage": "https://ecoprogress.kz/cottonbro.jpg",
-    "schemaType": "WebPage"
+    "ogType": "article",
+    "ogTitle": "Проверка СЭС и производственный контроль | ECOPROGRESS",
+    "ogDescription": "Как подготовить производственный контроль СЭС: программа, лабораторные замеры, протоколы, документы и сопровождение проверки.",
+    "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Проверка СЭС и производственный контроль",
+        "description": "Как подготовить производственный контроль СЭС: программа, лабораторные замеры, протоколы, документы и сопровождение проверки.",
+        "url": "https://ecoprogress.kz/ses-proverka-proizvodstvennyy-kontrol",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg"
+        },
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/ses-proverka-proizvodstvennyy-kontrol"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Проверка СЭС и производственный контроль",
+            "item": "https://ecoprogress.kz/ses-proverka-proizvodstvennyy-kontrol"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Можно ли начать с консультации?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Мы уточним объект, город, деятельность и текущие документы, после чего предложим перечень работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие документы нужны для расчета?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Обычно нужны реквизиты, адрес объекта, описание деятельности, текущие документы, сведения об отходах и источниках воздействия."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Работаете ли вы по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации можно вести дистанционно, а выезды и замеры согласуются по городу и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли получить документы в PDF или Word?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Готовые материалы передаются в электронном виде, а при необходимости дополняются пояснениями."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Помогаете ли при проверках?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Мы помогаем собрать документы, объясняем порядок действий и сопровождаем клиента по экологическим вопросам."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/passport-othodov-kazakhstan",
@@ -466,8 +3379,98 @@
     "h1": "Паспорт отходов в Казахстане",
     "canonical": "https://ecoprogress.kz/passport-othodov-kazakhstan",
     "robots": "index,follow",
+    "ogType": "website",
+    "ogTitle": "Паспорт отходов в Казахстане | ECOPROGRESS",
+    "ogDescription": "Подготовка паспорта отходов в Казахстане: классификация, документы, учет отходов, консультация и сопровождение бизнеса.",
     "ogImage": "https://ecoprogress.kz/utilizacija-othodov-3.jpg",
-    "schemaType": "Service"
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Паспорт отходов в Казахстане",
+        "serviceType": "Паспорт отходов в Казахстане",
+        "description": "Подготовка паспорта отходов в Казахстане: классификация, документы, учет отходов, консультация и сопровождение бизнеса.",
+        "url": "https://ecoprogress.kz/passport-othodov-kazakhstan",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Паспорт отходов в Казахстане",
+            "item": "https://ecoprogress.kz/passport-othodov-kazakhstan"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Можно ли начать с консультации?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Мы уточним объект, город, деятельность и текущие документы, после чего предложим перечень работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие документы нужны для расчета?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Обычно нужны реквизиты, адрес объекта, описание деятельности, текущие документы, сведения об отходах и источниках воздействия."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Работаете ли вы по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации можно вести дистанционно, а выезды и замеры согласуются по городу и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли получить документы в PDF или Word?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Готовые материалы передаются в электронном виде, а при необходимости дополняются пояснениями."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Помогаете ли при проверках?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Мы помогаем собрать документы, объясняем порядок действий и сопровождаем клиента по экологическим вопросам."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.85,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/otchet-pek-kazakhstan",
@@ -476,8 +3479,98 @@
     "h1": "Отчет ПЭК в Казахстане",
     "canonical": "https://ecoprogress.kz/otchet-pek-kazakhstan",
     "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/images (1).jpg",
-    "schemaType": "Service"
+    "ogType": "website",
+    "ogTitle": "Отчет ПЭК в Казахстане | ECOPROGRESS",
+    "ogDescription": "Подготовка отчета ПЭК в Казахстане: производственный экологический контроль, лабораторные данные, документы и сопровождение.",
+    "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-soprovozhdenie-1280.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "Отчет ПЭК в Казахстане",
+        "serviceType": "Отчет ПЭК в Казахстане",
+        "description": "Подготовка отчета ПЭК в Казахстане: производственный экологический контроль, лабораторные данные, документы и сопровождение.",
+        "url": "https://ecoprogress.kz/otchet-pek-kazakhstan",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Казахстан"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Отчет ПЭК в Казахстане",
+            "item": "https://ecoprogress.kz/otchet-pek-kazakhstan"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Можно ли начать с консультации?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Мы уточним объект, город, деятельность и текущие документы, после чего предложим перечень работ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Какие документы нужны для расчета?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Обычно нужны реквизиты, адрес объекта, описание деятельности, текущие документы, сведения об отходах и источниках воздействия."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Работаете ли вы по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Документы и консультации можно вести дистанционно, а выезды и замеры согласуются по городу и графику."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно ли получить документы в PDF или Word?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Готовые материалы передаются в электронном виде, а при необходимости дополняются пояснениями."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Помогаете ли при проверках?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да. Мы помогаем собрать документы, объясняем порядок действий и сопровождаем клиента по экологическим вопросам."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.85,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/ekologicheskie-dokumenty-too-kazakhstan",
@@ -485,9 +3578,90 @@
     "description": "Практический порядок проверки экологических документов предприятия без универсального списка, который не учитывает объект.",
     "h1": "Какие экологические документы должны быть у предприятия",
     "canonical": "https://ecoprogress.kz/news/ekologicheskie-dokumenty-too-kazakhstan",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Какие экологические документы должны быть у предприятия | ECOPROGRESS",
+    "ogDescription": "Практический порядок проверки экологических документов предприятия без универсального списка, который не учитывает объект.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Какие экологические документы должны быть у предприятия",
+        "description": "Практический порядок проверки экологических документов предприятия без универсального списка, который не учитывает объект.",
+        "url": "https://ecoprogress.kz/news/ekologicheskie-dokumenty-too-kazakhstan",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/ekologicheskie-dokumenty-too-kazakhstan"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Какие экологические документы должны быть у предприятия",
+            "item": "https://ecoprogress.kz/news/ekologicheskie-dokumenty-too-kazakhstan"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Можно провести аудит дистанционно?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да, если документы оцифрованы. Необходимость выезда определяется после проверки пробелов."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Что делать, если документа нет?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Сначала подтвердить его применимость, затем определить исходные данные и отдельный объём разработки."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Как часто обновлять реестр?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "После изменений объекта и по внутреннему графику; конкретные нормативные сроки требуют проверки."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/chto-sdavat-po-ekologii-kazhdyy-god",
@@ -495,9 +3669,90 @@
     "description": "Как составить календарь экологической отчётности предприятия и не переносить чужие сроки на свой объект.",
     "h1": "Что предприятие сдаёт по экологии каждый год",
     "canonical": "https://ecoprogress.kz/news/chto-sdavat-po-ekologii-kazhdyy-god",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Что предприятие сдаёт по экологии каждый год | ECOPROGRESS",
+    "ogDescription": "Как составить календарь экологической отчётности предприятия и не переносить чужие сроки на свой объект.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Что предприятие сдаёт по экологии каждый год",
+        "description": "Как составить календарь экологической отчётности предприятия и не переносить чужие сроки на свой объект.",
+        "url": "https://ecoprogress.kz/news/chto-sdavat-po-ekologii-kazhdyy-god",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/chto-sdavat-po-ekologii-kazhdyy-god"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Что предприятие сдаёт по экологии каждый год",
+            "item": "https://ecoprogress.kz/news/chto-sdavat-po-ekologii-kazhdyy-god"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Есть единая дата для всей отчётности?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Нет. Периоды и сроки зависят от формы и объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно поручить календарь подрядчику?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Можно организовать сопровождение, но исходные данные и полномочия остаются зависимостями клиента."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Что делать при изменении объекта?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Пересмотреть календарь, программу контроля и связанные документы."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/kak-opredelit-kategoriyu-obekta",
@@ -505,9 +3760,90 @@
     "description": "Какие исходные данные собрать для определения категории объекта и почему нельзя делать вывод только по названию бизнеса.",
     "h1": "Как определить категорию объекта экологического воздействия",
     "canonical": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Как определить категорию объекта экологического воздействия | ECOPROGRESS",
+    "ogDescription": "Какие исходные данные собрать для определения категории объекта и почему нельзя делать вывод только по названию бизнеса.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Как определить категорию объекта экологического воздействия",
+        "description": "Какие исходные данные собрать для определения категории объекта и почему нельзя делать вывод только по названию бизнеса.",
+        "url": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Как определить категорию объекта экологического воздействия",
+            "item": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Категория определяется по БИН?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Нет, БИН не описывает фактические характеристики объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно определить категорию до завершения проекта?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Можно сделать предварительную оценку с перечнем допущений."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Когда пересматривать вывод?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "При изменении технологии, мощности, источников или границ объекта."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol",
@@ -515,9 +3851,90 @@
     "description": "Как программа ПЭК связывает источники воздействия, показатели, точки контроля и результаты предприятия.",
     "h1": "Что такое программа производственного экологического контроля",
     "canonical": "https://ecoprogress.kz/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Что такое программа производственного экологического контроля | ECOPROGRESS",
+    "ogDescription": "Как программа ПЭК связывает источники воздействия, показатели, точки контроля и результаты предприятия.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Что такое программа производственного экологического контроля",
+        "description": "Как программа ПЭК связывает источники воздействия, показатели, точки контроля и результаты предприятия.",
+        "url": "https://ecoprogress.kz/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Что такое программа производственного экологического контроля",
+            "item": "https://ecoprogress.kz/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Можно использовать шаблон?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Шаблон подходит только для структуры; содержание формируют по объекту."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Программа и отчёт — одно и то же?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Нет. Программа планирует контроль, отчёт отражает подтверждённые результаты периода."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Все показатели требуют выезда?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Нет, способ получения данных зависит от конкретной позиции."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/kak-formiruetsya-otchet-pek",
@@ -525,9 +3942,90 @@
     "description": "Пошаговая сверка программы ПЭК, первичных данных, лабораторных протоколов и итогового отчёта производственного экологического контроля.",
     "h1": "Как подготовить отчёт ПЭК по данным контроля",
     "canonical": "https://ecoprogress.kz/news/kak-formiruetsya-otchet-pek",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Как подготовить отчёт ПЭК по данным контроля | ECOPROGRESS",
+    "ogDescription": "Пошаговая сверка программы ПЭК, первичных данных, лабораторных протоколов и итогового отчёта производственного экологического контроля.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Как подготовить отчёт ПЭК по данным контроля",
+        "description": "Пошаговая сверка программы ПЭК, первичных данных, лабораторных протоколов и итогового отчёта производственного экологического контроля.",
+        "url": "https://ecoprogress.kz/news/kak-formiruetsya-otchet-pek",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/kak-formiruetsya-otchet-pek"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Как подготовить отчёт ПЭК по данным контроля",
+            "item": "https://ecoprogress.kz/news/kak-formiruetsya-otchet-pek"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Что делать без одного протокола?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Зафиксировать пробел и определить отдельное действие; не придумывать значение."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно взять данные прошлого периода?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Только если их применимость подтверждена для конкретной позиции."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кто предоставляет производственные данные?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Ответственные подразделения клиента."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu",
@@ -535,9 +4033,90 @@
     "description": "Как определить цель, точки и показатели лабораторной программы без заказа универсального набора исследований.",
     "h1": "Какие лабораторные замеры нужны предприятию",
     "canonical": "https://ecoprogress.kz/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Какие лабораторные замеры нужны предприятию | ECOPROGRESS",
+    "ogDescription": "Как определить цель, точки и показатели лабораторной программы без заказа универсального набора исследований.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Какие лабораторные замеры нужны предприятию",
+        "description": "Как определить цель, точки и показатели лабораторной программы без заказа универсального набора исследований.",
+        "url": "https://ecoprogress.kz/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Какие лабораторные замеры нужны предприятию",
+            "item": "https://ecoprogress.kz/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Есть стандартный набор?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Нет универсального набора для всех объектов."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно заказать только один показатель?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да, если это технически возможно и соответствует цели."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Нужен ли выезд?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Для отбора и инструментальных измерений обычно нужен."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/kak-prohodit-laboratornyy-zamer-vozduha",
@@ -545,9 +4124,90 @@
     "description": "Подготовка объекта, согласование точек, режим оборудования, выезд и проверка протокола лабораторного замера воздуха.",
     "h1": "Как проходит лабораторный замер воздуха",
     "canonical": "https://ecoprogress.kz/news/kak-prohodit-laboratornyy-zamer-vozduha",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Как проходит лабораторный замер воздуха | ECOPROGRESS",
+    "ogDescription": "Подготовка объекта, согласование точек, режим оборудования, выезд и проверка протокола лабораторного замера воздуха.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Как проходит лабораторный замер воздуха",
+        "description": "Подготовка объекта, согласование точек, режим оборудования, выезд и проверка протокола лабораторного замера воздуха.",
+        "url": "https://ecoprogress.kz/news/kak-prohodit-laboratornyy-zamer-vozduha",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/kak-prohodit-laboratornyy-zamer-vozduha"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Как проходит лабораторный замер воздуха",
+            "item": "https://ecoprogress.kz/news/kak-prohodit-laboratornyy-zamer-vozduha"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Сколько длится выезд?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Зависит от числа точек, показателей и доступа."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно изменить программу на месте?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Только после подтверждения технической возможности и условий."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Когда будет протокол?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Срок зависит от методик и согласованного задания."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/podgotovka-k-ekologicheskoy-proverke",
@@ -555,9 +4215,90 @@
     "description": "Практический аудит документов, объектов и ответственных перед экологической проверкой без обещания её результата.",
     "h1": "Как подготовиться к экологической проверке",
     "canonical": "https://ecoprogress.kz/news/podgotovka-k-ekologicheskoy-proverke",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Как подготовиться к экологической проверке | ECOPROGRESS",
+    "ogDescription": "Практический аудит документов, объектов и ответственных перед экологической проверкой без обещания её результата.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Как подготовиться к экологической проверке",
+        "description": "Практический аудит документов, объектов и ответственных перед экологической проверкой без обещания её результата.",
+        "url": "https://ecoprogress.kz/news/podgotovka-k-ekologicheskoy-proverke",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/podgotovka-k-ekologicheskoy-proverke"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Как подготовиться к экологической проверке",
+            "item": "https://ecoprogress.kz/news/podgotovka-k-ekologicheskoy-proverke"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Можно гарантировать отсутствие замечаний?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Нет. Аудит снижает риск несогласованности, но результат проверки определяет уполномоченный орган."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Что делать с отсутствующим документом?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Проверить применимость, зафиксировать пробел и план законного устранения."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Нужен ли выезд консультанта?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Зависит от состояния документов и площадки."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/kak-razrabotat-programmu-upravleniya-othodami",
@@ -565,9 +4306,90 @@
     "description": "От реестра процессов и отходов до мероприятий, показателей и проверяемой программы управления отходами.",
     "h1": "Как разработать программу управления отходами",
     "canonical": "https://ecoprogress.kz/news/kak-razrabotat-programmu-upravleniya-othodami",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Как разработать программу управления отходами | ECOPROGRESS",
+    "ogDescription": "От реестра процессов и отходов до мероприятий, показателей и проверяемой программы управления отходами.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Как разработать программу управления отходами",
+        "description": "От реестра процессов и отходов до мероприятий, показателей и проверяемой программы управления отходами.",
+        "url": "https://ecoprogress.kz/news/kak-razrabotat-programmu-upravleniya-othodami",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/kak-razrabotat-programmu-upravleniya-othodami"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Как разработать программу управления отходами",
+            "item": "https://ecoprogress.kz/news/kak-razrabotat-programmu-upravleniya-othodami"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Можно использовать прошлую программу?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Как исходный материал после проверки процессов и объёмов."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Вывоз входит в разработку?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Нет, операционная услуга оформляется отдельно."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Что делать без точных объёмов?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Определить источник данных и статус оценки, не выдавая её за факт."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/dokumenty-peredachi-othodov",
@@ -575,9 +4397,90 @@
     "description": "Как связать договор, заявку, фактическую партию и закрывающие документы без универсального обещания одного акта.",
     "h1": "Какие документы подтверждают передачу отходов",
     "canonical": "https://ecoprogress.kz/news/dokumenty-peredachi-othodov",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Какие документы подтверждают передачу отходов | ECOPROGRESS",
+    "ogDescription": "Как связать договор, заявку, фактическую партию и закрывающие документы без универсального обещания одного акта.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Какие документы подтверждают передачу отходов",
+        "description": "Как связать договор, заявку, фактическую партию и закрывающие документы без универсального обещания одного акта.",
+        "url": "https://ecoprogress.kz/news/dokumenty-peredachi-othodov",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/dokumenty-peredachi-othodov"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Какие документы подтверждают передачу отходов",
+            "item": "https://ecoprogress.kz/news/dokumenty-peredachi-othodov"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Достаточно одного акта?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Зависит от операции и договорной схемы; универсального ответа нет."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кто хранит документы?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Стороны хранят свои экземпляры по установленному у них порядку."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно получить перечень заранее?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Да, его следует зафиксировать до заключения договора."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/vyvoz-i-utilizaciya-othodov",
@@ -585,9 +4488,90 @@
     "description": "Путь от описания партии и проверки оператора до вывоза, фактической операции и закрывающего комплекта.",
     "h1": "Как организовать вывоз и утилизацию отходов",
     "canonical": "https://ecoprogress.kz/news/vyvoz-i-utilizaciya-othodov",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Как организовать вывоз и утилизацию отходов | ECOPROGRESS",
+    "ogDescription": "Путь от описания партии и проверки оператора до вывоза, фактической операции и закрывающего комплекта.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Как организовать вывоз и утилизацию отходов",
+        "description": "Путь от описания партии и проверки оператора до вывоза, фактической операции и закрывающего комплекта.",
+        "url": "https://ecoprogress.kz/news/vyvoz-i-utilizaciya-othodov",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/vyvoz-i-utilizaciya-othodov"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Как организовать вывоз и утилизацию отходов",
+            "item": "https://ecoprogress.kz/news/vyvoz-i-utilizaciya-othodov"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Можно заказать всё одной услугой?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Можно согласовать комплекс, но этапы и документы всё равно фиксируются отдельно."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Почему нужна фотография?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Она помогает предварительно проверить соответствие описания и транспорт."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Работаете по Казахстану?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Документы доступны дистанционно; операционные услуги по отходам ограничены Шымкентом и согласованной зоной."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/kogda-nuzhen-proekt-ndv",
@@ -595,9 +4579,90 @@
     "description": "Какие изменения объекта служат поводом проверить актуальность инвентаризации и необходимость проекта НДВ.",
     "h1": "Когда требуется проект нормативов допустимых выбросов",
     "canonical": "https://ecoprogress.kz/news/kogda-nuzhen-proekt-ndv",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Когда требуется проект нормативов допустимых выбросов | ECOPROGRESS",
+    "ogDescription": "Какие изменения объекта служат поводом проверить актуальность инвентаризации и необходимость проекта НДВ.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Когда требуется проект нормативов допустимых выбросов",
+        "description": "Какие изменения объекта служат поводом проверить актуальность инвентаризации и необходимость проекта НДВ.",
+        "url": "https://ecoprogress.kz/news/kogda-nuzhen-proekt-ndv",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/kogda-nuzhen-proekt-ndv"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Когда требуется проект нормативов допустимых выбросов",
+            "item": "https://ecoprogress.kz/news/kogda-nuzhen-proekt-ndv"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Можно актуализировать старый проект?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "После проверки его исходных данных и текущего объекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Обязателен ли выезд?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Зависит от качества схем и необходимости обследования."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько длится разработка?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Срок зависит от числа источников и полноты данных."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
     "path": "/news/otlichiya-ovos-oovv-roos",
@@ -605,18 +4670,180 @@
     "description": "Как различать экологические материалы по задаче и стадии проекта, не подменяя юридическую маршрутизацию похожими названиями.",
     "h1": "Чем отличаются ОВОС, отчёт о возможных воздействиях и РООС",
     "canonical": "https://ecoprogress.kz/news/otlichiya-ovos-oovv-roos",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Чем отличаются ОВОС, отчёт о возможных воздействиях и РООС | ECOPROGRESS",
+    "ogDescription": "Как различать экологические материалы по задаче и стадии проекта, не подменяя юридическую маршрутизацию похожими названиями.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Чем отличаются ОВОС, отчёт о возможных воздействиях и РООС",
+        "description": "Как различать экологические материалы по задаче и стадии проекта, не подменяя юридическую маршрутизацию похожими названиями.",
+        "url": "https://ecoprogress.kz/news/otlichiya-ovos-oovv-roos",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/otlichiya-ovos-oovv-roos"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Чем отличаются ОВОС, отчёт о возможных воздействиях и РООС",
+            "item": "https://ecoprogress.kz/news/otlichiya-ovos-oovv-roos"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Можно объединить материалы?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Только если это соответствует процедуре и согласованному составу проекта."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Что нужно для консультации?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Описание деятельности, стадия, генплан и технологические решения."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Кто принимает итоговое решение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Соответствующий уполномоченный орган в рамках применимой процедуры."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   },
   {
-    "path": "/news/kakie-shtrafy-za-ekologiyu-v-kazakhstane",
+    "path": "/news/shtrafy-za-ekologicheskie-narusheniya",
     "title": "Какие риски и штрафы возможны за экологические нарушения | ECOPROGRESS",
     "description": "Как проводить проверку экологических рисков без публикации устаревших сумм штрафов и универсальных выводов.",
     "h1": "Какие риски и штрафы возможны за экологические нарушения",
-    "canonical": "https://ecoprogress.kz/news/kakie-shtrafy-za-ekologiyu-v-kazakhstane",
-    "robots": "index,follow",
-    "ogImage": "https://ecoprogress.kz/og-cover.jpg",
-    "schemaType": "Article"
+    "canonical": "https://ecoprogress.kz/news/shtrafy-za-ekologicheskie-narusheniya",
+    "robots": "noindex,follow",
+    "ogType": "article",
+    "ogTitle": "Какие риски и штрафы возможны за экологические нарушения | ECOPROGRESS",
+    "ogDescription": "Как проводить проверку экологических рисков без публикации устаревших сумм штрафов и универсальных выводов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Какие риски и штрафы возможны за экологические нарушения",
+        "description": "Как проводить проверку экологических рисков без публикации устаревших сумм штрафов и универсальных выводов.",
+        "url": "https://ecoprogress.kz/news/shtrafy-za-ekologicheskie-narusheniya",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+        },
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-17",
+        "author": {
+          "@type": "Organization",
+          "name": "ECOPROGRESS GROUP",
+          "url": "https://ecoprogress.kz"
+        },
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "mainEntityOfPage": "https://ecoprogress.kz/news/shtrafy-za-ekologicheskie-narusheniya"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Какие риски и штрафы возможны за экологические нарушения",
+            "item": "https://ecoprogress.kz/news/shtrafy-za-ekologicheskie-narusheniya"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Почему не указаны суммы?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Без актуальной нормы и квалификации они могут ввести в заблуждение."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Эколог может дать юридическое заключение?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Техническую часть оценивает эколог, юридическую квалификацию — юрист."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Можно сначала устранить проблему?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Безопасные меры важны, но порядок действий и фиксацию следует согласовать со специалистами."
+            }
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": false,
+    "priority": 0.7,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-07-17"
   }
 ]

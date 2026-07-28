@@ -212,13 +212,10 @@ const AboutPage = () => {
 
   return (
   <div className="bg-white">
-    <SEO
-      title="О компании | ecoprogress.kz"
-      description="ecoprogress.kz оказывает проектирование, лабораторные исследования и сопровождение по Казахстану. Вывоз и утилизация отходов доступны в Шымкенте."
-    />
+    <SEO />
 
     <section className="relative isolate overflow-hidden px-4 py-20 text-white sm:px-8 sm:py-28">
-      <img src="/para.jpg" alt="" width="1600" height="900" loading="eager" fetchPriority="high" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="absolute inset-0 -z-30 h-full w-full bg-eco-900 object-cover" />
+      <img src="/media/ecoprogress-og-cover-1280.jpg" alt="" width="1280" height="720" loading="eager" fetchPriority="high" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="absolute inset-0 -z-30 h-full w-full bg-eco-900 object-cover" />
       <div className="absolute inset-0 -z-20 bg-eco-900/78" />
       <div className="mx-auto max-w-7xl">
         <Reveal>
@@ -271,7 +268,7 @@ const AboutPage = () => {
       <div className="mx-auto max-w-7xl">
         <Reveal>
           <div className="relative isolate overflow-hidden rounded-[28px] bg-eco-900 p-6 text-white shadow-2xl shadow-eco-900/15 sm:p-10">
-            <img src="/para.jpg" alt="" width="1600" height="900" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="absolute inset-0 -z-20 h-full w-full bg-eco-900 object-cover" />
+            <img src="/media/ecoprogress-og-cover-1280.jpg" alt="" width="1280" height="720" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="absolute inset-0 -z-20 h-full w-full bg-eco-900 object-cover" />
             <div className="absolute inset-0 -z-10 bg-eco-900/80" />
             <div className="grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-center">
               <div className="flex h-20 w-20 items-center justify-center rounded-[24px] bg-white/10 text-accent">

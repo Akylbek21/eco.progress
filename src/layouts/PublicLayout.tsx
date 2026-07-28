@@ -194,10 +194,10 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
       <OrderChoiceModal open={orderModal} onClose={() => setOrderModal(false)} />
       <footer className="relative isolate overflow-hidden bg-eco-900 text-white">
         <img
-          src="/para.jpg"
+          src="/media/ecoprogress-og-cover-1280.jpg"
           alt=""
-          width="1600"
-          height="900"
+          width="1280"
+          height="720"
           loading="lazy"
           decoding="async"
           onError={(event) => { event.currentTarget.style.display = 'none'; }}

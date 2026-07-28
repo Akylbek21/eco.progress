@@ -16,7 +16,7 @@ const NewsPage = () => {
 
   return (
     <div className="bg-eco-50">
-      <SEO title="Статьи и полезные материалы | ecoprogress.kz" description="Статьи и полезные материалы ecoprogress.kz об экологических документах, отчетности, проверках и сопровождении бизнеса." />
+      <SEO />
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
         <Reveal><h1 className="text-4xl font-bold text-eco-900 sm:text-5xl">Статьи и полезные материалы</h1></Reveal>
         {data?.stale && (

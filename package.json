@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "generate:sitemap": "node --loader ./scripts/ts-loader.mjs scripts/generate-sitemap.js",
+    "images:optimize": "node scripts/optimize-images.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "node --test tests/interactive-markup.test.mjs",
     "prerender": "node --loader ./scripts/ts-loader.mjs scripts/prerender.js",
@@ -13,6 +14,9 @@
     "content:audit": "node --loader ./scripts/ts-loader.mjs scripts/content-audit.mjs",
     "content:export": "node --loader ./scripts/ts-loader.mjs scripts/content-export.mjs",
     "content:migrate:dry-run": "node --loader ./scripts/ts-loader.mjs scripts/content-export.mjs --dry-run",
+    "seo:generate": "npm run generate:sitemap",
+    "seo:validate": "npm run seo:audit",
+    "build:seo": "npm run build && npm run seo:audit",
     "build": "npm run generate:sitemap && tsc && vite build && npm run prerender && npm run seo:audit",
     "test": "node --test tests/*.test.mjs && vitest run tests/lab-journal-api.test.ts tests/laboratory-api.test.ts tests/laboratory-components.test.tsx tests/normative-search-api.test.tsx tests/protocol-domain.test.ts tests/protocol-details.test.ts tests/protocol-water.test.tsx tests/protocol-quick-create.test.tsx tests/protocol-overhaul.test.ts tests/protocol-signatures.test.tsx tests/pek-module.test.tsx",
     "preview": "vite preview"
@@ -39,6 +43,7 @@
     "jsdom": "^29.1.1",
     "msw": "^2.15.0",
     "postcss": "^8.4.39",
+    "sharp": "^0.35.3",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.6.0",
     "vite": "^5.4.0",

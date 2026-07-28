@@ -10,22 +10,6 @@ import TwoGisMap from '../components/TwoGisMap';
 import { company } from '../config/company';
 import { trackPhoneClick } from '../services/analytics';
 
-const contactSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'LocalBusiness',
-  name: company.name,
-  url: company.siteUrl,
-  email: company.email,
-  telephone: company.phone,
-  areaServed: 'Шымкент, Казахстан',
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: company.address,
-    addressLocality: 'Шымкент',
-    addressCountry: 'KZ',
-  },
-};
-
 const ContactsPage = () => {
   const items = [
     ['Телефон', company.phone, Phone],
@@ -39,12 +23,12 @@ const ContactsPage = () => {
 
   return (
     <section className="bg-[#F7FBFD] px-4 py-16 sm:px-8 sm:py-20">
-      <SEO title="Контакты ECOPROGRESS GROUP | Экологические услуги Шымкент" description="Контакты ECOPROGRESS GROUP: телефон, WhatsApp, email, адрес и форма консультации по экологическим услугам в Шымкенте." schema={contactSchema} />
+      <SEO />
       <div className="mx-auto max-w-7xl">
         <Reveal>
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Контакты</p>
-            <h1 className="mt-3 text-4xl font-bold text-eco-900">Напишите нам — специалист подскажет, какая услуга нужна именно вам</h1>
+            <h1 className="mt-3 text-4xl font-bold text-eco-900">Контакты ECOPROGRESS</h1>
             <p className="mt-4 leading-7 text-slate-600">Свяжитесь с нами для консультации, расчета стоимости или быстрой проверки ситуации.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild><a href={company.phoneHref} onClick={() => trackPhoneClick({ placement: 'contacts_page' })}>Позвонить</a></Button>

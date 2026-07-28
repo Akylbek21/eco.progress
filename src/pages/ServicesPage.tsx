@@ -85,7 +85,7 @@ const ServicesPage = () => {
 
   return (
     <div>
-      <SEO title="Услуги ecoprogress.kz | Экологические документы, отходы, лаборатория" description="Экологические документы и лабораторные услуги по Казахстану. Вывоз, утилизация отходов и полигон ТБО доступны в Шымкенте." />
+      <SEO />
       <section className="relative overflow-hidden px-4 py-16 text-white sm:px-8 sm:py-24">
         <div className="absolute inset-0 bg-windmill bg-cover bg-center" />
         <div className="absolute inset-0 bg-eco-900/78" />

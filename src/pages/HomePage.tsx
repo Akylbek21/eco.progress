@@ -70,30 +70,9 @@ const visualHighlights = [
   { title: 'Вывоз и утилизация', image: '/jose.jpg', className: 'aspect-[4/3] lg:aspect-auto' },
 ];
 
-const organizationSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'LocalBusiness',
-  name: company.name,
-  url: company.siteUrl,
-  email: company.email,
-  telephone: company.phone,
-  areaServed: 'Шымкент, Казахстан',
-  description: 'Экологические и лабораторные услуги для бизнеса в Шымкенте и Казахстане',
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: company.address,
-    addressLocality: 'Шымкент',
-    addressCountry: 'KZ',
-  },
-};
-
 const HomePage = () => (
   <div className="min-h-screen bg-white">
-    <SEO
-      title="Экологические услуги в Шымкенте — лаборатория, СЭС, отходы | ECOPROGRESS"
-      description="ECOPROGRESS GROUP оказывает экологические и лабораторные услуги для бизнеса в Шымкенте: производственный контроль СЭС, замеры, ПЭК, паспорта отходов и утилизация."
-      schema={organizationSchema}
-    />
+    <SEO />
     <section id="lead" className="relative isolate overflow-hidden px-4 py-20 text-white sm:px-8 sm:py-28 lg:min-h-[760px]">
       <div className="hero-zoom absolute inset-0 -z-30 bg-windmill bg-cover bg-center" />
       <div className="absolute inset-0 -z-20 bg-eco-900/88" />

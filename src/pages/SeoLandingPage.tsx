@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, FileText, MessageCircle, ShieldCheck } from 'lucide-react';
 import SEO from '../components/SEO';
+import ResponsiveImage from '../components/ui/ResponsiveImage';
 import LeadForm from '../components/LeadForm';
 import Button from '../components/ui/Button';
 import { company, getWhatsAppUrl } from '../config/company';
@@ -88,7 +89,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
       <SEO title={page.title} description={page.description} canonical={page.canonical} robots={page.indexable === false ? 'noindex,follow' : 'index,follow'} schema={buildSchema(page)} />
 
       <section className="relative isolate overflow-hidden bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-20">
-        <img src={page.image || '/para.jpg'} alt={page.h1} className="absolute inset-0 -z-20 h-full w-full object-cover" width="1600" height="900" />
+        <ResponsiveImage fill src={page.image || '/para.jpg'} alt={page.h1} width={1600} height={900} wrapperClassName="-z-20" className="object-cover" />
         <div className="absolute inset-0 -z-10 bg-eco-900/84" />
         <div className="mx-auto max-w-7xl">
           <nav className="flex flex-wrap gap-2 text-sm text-white/72" aria-label="Хлебные крошки">

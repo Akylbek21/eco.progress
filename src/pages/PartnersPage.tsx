@@ -50,13 +50,10 @@ const strengths: Array<{ title: string; text: string; Icon: LucideIcon }> = [
 
 const PartnersPage = () => (
   <div className="bg-white">
-    <SEO
-      title="Наши партнеры | ecoprogress.kz"
-      description="Партнеры ecoprogress.kz: компании и направления, которые помогают закрывать экологические задачи бизнеса в Казахстане."
-    />
+    <SEO />
 
     <section className="relative isolate overflow-hidden bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-20">
-      <img src="/para.jpg" alt="" width="1600" height="900" loading="eager" fetchPriority="high" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="absolute inset-0 -z-30 h-full w-full bg-eco-900 object-cover" />
+      <img src="/media/ecoprogress-og-cover-1280.jpg" alt="" width="1280" height="720" loading="eager" fetchPriority="high" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="absolute inset-0 -z-30 h-full w-full bg-eco-900 object-cover" />
       <div className="absolute inset-0 -z-20 bg-eco-900/82" />
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
         <Reveal>

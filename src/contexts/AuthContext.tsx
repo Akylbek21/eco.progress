@@ -40,15 +40,6 @@ export type RegisterPayload =
 
 const TOKEN_KEY = 'eco-progress-token';
 const USER_KEY = 'eco-progress-user';
-const protocolMockMode = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
-const mockStaffUser: User = {
-  id: 'mock-laboratory-user',
-  role: 'LABORATORY',
-  type: 'staff',
-  email: 'laboratory@ecoprogress.local',
-  name: 'Маханова К.М.',
-  position: 'Инженер-лаборант',
-};
 
 const staffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
 
@@ -126,13 +117,12 @@ const normalizeStoredUser = (value: User): User => ({
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUserState] = useState<User | null>(() => {
-    if (protocolMockMode) return mockStaffUser;
     const raw = localStorage.getItem(USER_KEY);
     if (!raw) return null;
     try { return normalizeStoredUser(JSON.parse(raw) as User); } catch { return null; }
   });
-  const [token, setToken] = useState<string | null>(() => protocolMockMode ? 'mock-protocol-token' : localStorage.getItem(TOKEN_KEY));
-  const [loading, setLoading] = useState(protocolMockMode ? false : !!localStorage.getItem(TOKEN_KEY));
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+  const [loading, setLoading] = useState(!!localStorage.getItem(TOKEN_KEY));
 
   const saveSession = useCallback((newToken: string, newUser: User) => {
     localStorage.setItem(TOKEN_KEY, newToken);
@@ -150,12 +140,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (protocolMockMode) {
-      setUserState(mockStaffUser);
-      setToken('mock-protocol-token');
-      setLoading(false);
-      return;
-    }
     const storedToken = localStorage.getItem(TOKEN_KEY);
     if (!storedToken) { setLoading(false); return; }
     api.get<{ data: User; message: string | null }>('/auth/me')
@@ -200,7 +184,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [saveSession]);
 
   const logout = useCallback(() => {
-    if (protocolMockMode) return;
     api.post('/auth/logout').catch(() => {});
     clearSession();
   }, [clearSession]);

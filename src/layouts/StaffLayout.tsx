@@ -11,7 +11,6 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER', 'ACCOUNTANT', 'ECOLOGIST', 'WASTE_SPECIALIST', 'STAFF'];
 const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
-const protocolMockMode = String(import.meta.env.VITE_USE_PROTOCOL_MOCKS || '').toLowerCase() === 'true';
 
 const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[]; permission?: Permission }> = [
   { label: 'Обзор', path: '/staff', icon: LayoutDashboard },
@@ -64,8 +63,6 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
       {(user?.role === 'LABORATORY'
         ? links.filter((item) => ['/staff/protocols', '/staff/journals', '/staff/pek'].includes(item.path))
-        : protocolMockMode
-        ? links.filter((item) => ['/staff', '/staff/companies', '/staff/protocols', '/staff/journals', '/staff/normatives', '/staff/measurement-devices', '/staff/settings/laboratories'].includes(item.path))
         : links
       ).map((item) => {
         const Icon = item.icon;
@@ -136,7 +133,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
               <h1 className="truncate text-base font-semibold text-eco-900 sm:text-lg">{user?.name || 'Сотрудник ecoprogress.kz'}</h1>
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              {!protocolMockMode && <Link to="/" className="hidden text-sm font-semibold text-eco-700 hover:text-eco-900 sm:block">На сайт</Link>}
+              <Link to="/" className="hidden text-sm font-semibold text-eco-700 hover:text-eco-900 sm:block">На сайт</Link>
               <Link to="/staff/login" onClick={logout} className="inline-flex items-center gap-2 rounded-full bg-eco-900 px-3 py-2 text-sm font-semibold text-white sm:px-4">
                 <LogOut size={16} />
                 <span className="hidden sm:inline">Выйти</span>

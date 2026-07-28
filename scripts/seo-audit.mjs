@@ -19,6 +19,11 @@ const pageFile = (pathname) => pathname === '/'
 if (!fs.existsSync(sitemapPath)) throw new Error('SEO audit: dist/sitemap.xml not found');
 const sitemap = read(sitemapPath);
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+if (!/^<\?xml[^>]+>\s*<urlset[\s\S]*<\/urlset>\s*$/i.test(sitemap)) errors.push('Invalid sitemap XML document');
+if (new Set(urls).size !== urls.length) errors.push('Duplicate URLs in sitemap');
+const registry = JSON.parse(read(path.join(root, 'src', 'data', 'seoRegistry.generated.json')));
+const registryByCanonical = new Map(registry.map((entry) => [entry.canonical, entry]));
+const registryPaths = new Set(registry.map((entry) => entry.path));
 const titles = new Map();
 const descriptions = new Map();
 const headings = new Map();
@@ -37,7 +42,12 @@ for (const url of urls) {
   let parsed;
   try { parsed = new URL(url); } catch { errors.push(`Invalid sitemap URL: ${url}`); continue; }
   if (parsed.origin !== SITE_URL) errors.push(`Wrong sitemap origin: ${url}`);
-  if (/^\/(?:staff|cabinet|admin|login|register|reset-password)(?:\/|$)/.test(parsed.pathname)) errors.push(`Private URL in sitemap: ${url}`);
+  if (parsed.search || parsed.hash) errors.push(`Query or fragment in sitemap: ${url}`);
+  if (parsed.hostname.startsWith('www.')) errors.push(`WWW URL in sitemap: ${url}`);
+  if (/^\/(?:staff|cabinet|client|admin|dashboard|internal|login|register|reset-password|api)(?:\/|$)/.test(parsed.pathname)) errors.push(`Private URL in sitemap: ${url}`);
+  const registryEntry = registryByCanonical.get(url);
+  if (!registryEntry) errors.push(`Sitemap URL missing from SEO registry: ${url}`);
+  else if (registryEntry.robots !== 'index,follow' || !registryEntry.includeInSitemap) errors.push(`Noindex/excluded registry URL in sitemap: ${url}`);
   if (parsed.pathname === '/404') errors.push('404 must not be in sitemap');
   if (parsed.pathname !== '/' && parsed.pathname.endsWith('/')) errors.push(`Trailing slash in sitemap: ${url}`);
 
@@ -50,6 +60,7 @@ for (const url of urls) {
   const robots = one(html, /<meta\s+name=["']robots["']\s+content=["']([^"']+)["']/i);
   const ogUrl = one(html, /<meta\s+property=["']og:url["']\s+content=["']([^"']+)["']/i);
   const ogImage = one(html, /<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
+  const twitterCard = one(html, /<meta\s+name=["']twitter:card["']\s+content=["']([^"']+)["']/i);
   const h1Count = count(html, /<h1(?:\s[^>]*)?>[\s\S]*?<\/h1>/gi);
   const h1 = normalizeText(one(html, /<h1(?:\s[^>]*)?>([\s\S]*?)<\/h1>/i));
   const pageSchemas = schemas(html);
@@ -59,6 +70,10 @@ for (const url of urls) {
   if (h1Count !== 1) errors.push(`Expected one H1, found ${h1Count}: ${parsed.pathname}`);
   if (canonical !== url) errors.push(`Canonical mismatch at ${parsed.pathname}: ${canonical || 'missing'}`);
   if (ogUrl !== url) errors.push(`OG URL mismatch at ${parsed.pathname}: ${ogUrl || 'missing'}`);
+  for (const property of ['og:type', 'og:title', 'og:description', 'og:image:width', 'og:image:height', 'og:locale', 'og:site_name']) {
+    if (!new RegExp(`<meta\\s+property=["']${property}["']`, 'i').test(html)) errors.push(`Missing ${property}: ${parsed.pathname}`);
+  }
+  if (!twitterCard) errors.push(`Missing Twitter Card: ${parsed.pathname}`);
   if (robots !== 'index,follow') errors.push(`Unexpected robots at ${parsed.pathname}: ${robots || 'missing'}`);
   if (!/application\/ld\+json/i.test(html)) errors.push(`Missing JSON-LD: ${parsed.pathname}`);
   if (h1 && headings.has(h1)) errors.push(`Duplicate H1: ${parsed.pathname} and ${headings.get(h1)}`);
@@ -67,6 +82,14 @@ for (const url of urls) {
   else if (!fs.existsSync(path.join(dist, decodeURIComponent(new URL(ogImage).pathname).replace(/^\//, '')))) errors.push(`Missing OG image file: ${ogImage}`);
   if (title.length < 35 || title.length > 75) warnings.push(`Title length ${title.length}: ${parsed.pathname}`);
   if (description.length < 100 || description.length > 180) warnings.push(`Description length ${description.length}: ${parsed.pathname}`);
+  if (/(?:localhost|127\.0\.0\.1|example\.(?:com|org)|test\.)/i.test(html)) errors.push(`Development/test host found: ${parsed.pathname}`);
+  if (/\/(?:shtrafy-za-ekologiyu-kazakhstan|news\/kakie-shtrafy-za-ekologiyu-v-kazakhstane)(?:["'#?])/i.test(html)) errors.push(`Legacy URL used internally: ${parsed.pathname}`);
+
+  for (const image of html.matchAll(/<img\b([^>]*)>/gi)) {
+    const attrs = image[1];
+    if (!/\balt=["'][^"']*["']/i.test(attrs)) errors.push(`Image without alt: ${parsed.pathname}`);
+    if (!/\bwidth=["'][^"']+["']/i.test(attrs) || !/\bheight=["'][^"']+["']/i.test(attrs)) errors.push(`Image without width/height: ${parsed.pathname}`);
+  }
 
   if (titles.has(title)) errors.push(`Duplicate title: ${title} (${titles.get(title)}, ${parsed.pathname})`);
   else titles.set(title, parsed.pathname);
@@ -93,7 +116,7 @@ for (const url of urls) {
     const href = match[1];
     if (!href.startsWith('/') || /^\/(?:cabinet|staff|login|register)/.test(href)) continue;
     const target = href.replace(/\?.*$/, '').replace(/\/$/, '') || '/';
-    if (!sitemapPaths.has(target)) warnings.push(`Internal link target is not indexable: ${parsed.pathname} -> ${target}`);
+    if (!registryPaths.has(target) && !fs.existsSync(pageFile(target))) warnings.push(`Broken internal link: ${parsed.pathname} -> ${target}`);
   }
   for (const match of html.matchAll(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/gi)) {
     const paragraph = normalizeText(match[1]);
@@ -103,6 +126,20 @@ for (const url of urls) {
 }
 
 for (const [paragraph, paths] of paragraphs) if (paths.size > 5) warnings.push(`Repeated paragraph on ${paths.size} pages: ${paragraph.slice(0, 100)}…`);
+
+const seoPageContent = JSON.parse(read(path.join(root, 'src', 'data', 'seoPages.generated.json')));
+const regionEntries = seoPageContent.filter((entry) => entry.type === 'city' && entry.indexable !== false);
+const tokens = (value) => new Set(normalizeText(value).split(' ').filter((token) => token.length > 3));
+for (let index = 0; index < regionEntries.length; index += 1) {
+  for (let other = index + 1; other < regionEntries.length; other += 1) {
+    const regionText = (entry) => [entry.intro, ...entry.sections.map((section) => `${section.title} ${section.body}`), ...entry.faq.map((faq) => `${faq.question} ${faq.answer}`)].join(' ');
+    const left = tokens(regionText(regionEntries[index]));
+    const right = tokens(regionText(regionEntries[other]));
+    const intersection = [...left].filter((token) => right.has(token)).length;
+    const similarity = intersection / Math.max(1, Math.min(left.size, right.size));
+    if (similarity > 0.90) warnings.push(`Regional text similarity ${(similarity * 100).toFixed(0)}%: /${regionEntries[index].slug} and /${regionEntries[other].slug}`);
+  }
+}
 
 const serviceCatalogSource = read(path.join(root, 'src', 'content', 'serviceCatalog.ts'));
 if (/\b150000\b/.test(serviceCatalogSource) || /\?\?\s*150000/.test(read(path.join(root, 'src', 'pages', 'ServicesPage.tsx')))) errors.push('Invented default price 150000 is still present');
@@ -115,9 +152,19 @@ else {
   if (count(notFound, /<h1(?:\s[^>]*)?>[\s\S]*?<\/h1>/gi) !== 1) errors.push('404 must contain exactly one H1');
 }
 
-for (const warning of warnings) console.warn(`SEO warning: ${warning}`);
+const contactsHtml = read(pageFile('/contacts'));
+const contactOrganization = registry.find((entry) => entry.path === '/contacts')?.schema.find((item) => {
+  const type = item['@type'];
+  return type === 'Organization' || (Array.isArray(type) && type.includes('Organization'));
+});
+for (const expected of [contactOrganization?.telephone, contactOrganization?.email, contactOrganization?.address?.streetAddress, 'Пн-Пт, 09:00-18:00'].filter(Boolean)) {
+  if (!contactsHtml.includes(expected)) errors.push(`Contacts prerender missing real contact field: ${expected}`);
+}
+if (/Основные услуги[\s\S]*Города Казахстана/.test(contactsHtml)) errors.push('Contacts prerender still contains the generic static-page template');
+
+for (const warning of warnings) console.warn(`WARNING ${warning}`);
 if (errors.length) {
-  console.error(errors.map((error) => `SEO error: ${error}`).join('\n'));
+  console.error(errors.map((error) => `ERROR ${error}`).join('\n'));
   process.exit(1);
 }
-console.log(`SEO audit passed: ${urls.length} indexable pages, ${warnings.length} non-blocking warnings.`);
+console.log(`PASS SEO audit: ${urls.length} indexable pages, ${warnings.length} non-blocking warnings.`);

@@ -11,6 +11,7 @@ FROM nginx:alpine
 RUN apk add --no-cache gettext
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf.template
+COPY deploy/nginx-host/snippets/legacy-redirects.conf /etc/nginx/snippets/legacy-redirects.conf
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 EXPOSE 80
