@@ -23,8 +23,8 @@ describe('simplified protocol details', () => {
     expect(resolveProtocolPrimaryAction(protocol('DRAFT', { permissions: { canEdit: true } }), 'LABORATORY')).toEqual({ key: 'edit', label: 'Продолжить заполнение' });
     expect(resolveProtocolPrimaryAction(protocol('READY_FOR_APPROVAL'), 'LABORATORY').key).toBeNull();
     expect(resolveProtocolPrimaryAction(protocol('READY_FOR_APPROVAL', { permissions: { canApprove: true } }), 'HEAD')).toEqual({ key: 'approve', label: 'Утвердить' });
-    expect(resolveProtocolPrimaryAction(protocol('APPROVED', { permissions: { canSign: true } }), 'HEAD')).toEqual({ key: 'sign', label: 'Подписать' });
-    expect(resolveProtocolPrimaryAction(protocol('READY', { permissions: { canSendToApproval: true } }), 'HEAD')).toEqual({ key: 'ready', label: 'Передать на проверку' });
+    expect(resolveProtocolPrimaryAction(protocol('APPROVED', { signatureCount: 0, maxSignatures: 2, permissions: { canSign: true } }), 'HEAD')).toEqual({ key: 'sign', label: 'Подписать' });
+    expect(resolveProtocolPrimaryAction(protocol('READY', { permissions: { canReadyForApproval: true } }), 'HEAD')).toEqual({ key: 'ready', label: 'Передать на проверку' });
   });
 
   it('maps the lifecycle to five employee-facing stages', () => {

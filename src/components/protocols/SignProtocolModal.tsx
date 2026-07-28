@@ -2,16 +2,21 @@ import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import type { Protocol } from '../../types/protocols';
 import { collectProtocolDevices } from '../../utils/protocolDevices';
+import {
+  protocolSigningPhaseLabel,
+  type ProtocolSigningPhase,
+} from '../../features/protocols/utils/protocolSigning';
 
 type Props = {
   open: boolean;
   loading?: boolean;
+  phase?: ProtocolSigningPhase;
   protocol?: Protocol;
   onClose: () => void;
   onConfirm: () => void | Promise<void>;
 };
 
-const SignProtocolModal = ({ open, loading = false, protocol, onClose, onConfirm }: Props) => {
+const SignProtocolModal = ({ open, loading = false, phase = 'IDLE', protocol, onClose, onConfirm }: Props) => {
   const devices = protocol ? collectProtocolDevices(protocol) : [];
   const expiredDevices = devices.filter((item) => {
     const validUntil = item.deviceSnapshot.verificationValidUntil;
@@ -30,15 +35,15 @@ const SignProtocolModal = ({ open, loading = false, protocol, onClose, onConfirm
         <dl className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 p-4 text-sm sm:grid-cols-2">
           <div><dt className="text-slate-500">Номер</dt><dd className="font-semibold">{protocol.protocolNumber || protocol.number}</dd></div>
           <div><dt className="text-slate-500">Лаборатория</dt><dd className="font-semibold">{protocol.laboratory.laboratoryName || '—'}</dd></div>
-          <div><dt className="text-slate-500">Подписант</dt><dd className="font-semibold">{protocol.laboratory.laboratoryHead || protocol.approver || '—'}</dd></div>
+          <div><dt className="text-slate-500">Версия</dt><dd className="font-semibold">{protocol.version}</dd></div>
           <div><dt className="text-slate-500">Аттестат до</dt><dd className="font-semibold">{protocol.laboratory.accreditationValidUntil || '—'}</dd></div>
           <div><dt className="text-slate-500">Приборы</dt><dd className="font-semibold">{devices.length}</dd></div>
           <div><dt className="text-slate-500">Просроченные приборы</dt><dd className={expiredDevices ? 'font-semibold text-rose-700' : 'font-semibold text-emerald-700'}>{expiredDevices}</dd></div>
         </dl>
       )}
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <Button type="button" variant="secondary" onClick={onClose}>Отмена</Button>
-        <Button type="button" disabled={loading || expiredDevices > 0} onClick={onConfirm}>{loading ? 'Подписание...' : 'Подписать протокол'}</Button>
+        <Button type="button" variant="secondary" disabled={loading} onClick={onClose}>Отмена</Button>
+        <Button type="button" disabled={loading || expiredDevices > 0} onClick={onConfirm}>{loading ? protocolSigningPhaseLabel[phase] : 'Подписать протокол'}</Button>
       </div>
     </div>
   </Modal>

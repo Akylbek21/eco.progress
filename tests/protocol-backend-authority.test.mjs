@@ -13,8 +13,8 @@ test('quick-create is idempotent, reloads persisted data and keeps canonical ids
   assert.match(wizard, /acquireQuickCreateLock\(submittingRef\)/);
   assert.match(api, /'Idempotency-Key'/);
   assert.match(api, /const persisted = await getProtocol\(protocol\.id\)/);
-  assert.match(mapper, /normalizeRequiredId\(form\.companyId/);
-  assert.match(mapper, /deviceId: null/);
+  assert.match(mapper, /requirePositiveIntegerId\(form\.companyId/);
+  assert.doesNotMatch(mapper, /deviceId:/);
   assert.match(mapper, /measurementDeviceId:/);
   assert.match(wizard, /retry: false/);
   assert.match(submission, /stableStringify/);
@@ -32,10 +32,11 @@ test('workflow uses body versions, one revision reason and backend permissions',
   const api = await read('src/services/apiProtocolService.ts');
   const permissions = await read('src/utils/protocolPermissions.ts');
   assert.doesNotMatch(api, /'If-Match'/);
-  assert.match(api, /\{ reason: comment, version \}/);
+  assert.match(api, /\{ version: request\.version, reason \}/);
   assert.doesNotMatch(api, /\{ comment, reason:/);
   assert.match(permissions, /protocol\.permissions/);
-  assert.match(permissions, /canPublishToClient/);
+  assert.match(api, /cmsSignatureBase64/);
+  assert.match(permissions, /backendFlag\('canPublish'\)/);
 });
 
 test('bulk result operations use atomic backend endpoints', async () => {

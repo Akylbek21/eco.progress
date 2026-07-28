@@ -233,6 +233,28 @@ export async function signBase64WithNCALayer(
   }
 }
 
+export type NCALayerSigningPhase =
+  | 'CONNECTING'
+  | 'SELECTING_CERTIFICATE'
+  | 'CREATING_SIGNATURE';
+
+export async function createCmsSignatureWithNCALayer(
+  dataBase64: string,
+  onPhase?: (phase: NCALayerSigningPhase) => void,
+): Promise<string> {
+  onPhase?.('CONNECTING');
+  await ncaLayer.connect();
+  try {
+    onPhase?.('SELECTING_CERTIFICATE');
+    const cmsSignatureBase64 = await ncaLayer.sign(dataBase64);
+    onPhase?.('CREATING_SIGNATURE');
+    if (!cmsSignatureBase64.trim()) throw new Error('NCALayer не вернул CMS-подпись.');
+    return cmsSignatureBase64;
+  } finally {
+    ncaLayer.disconnect();
+  }
+}
+
 export async function signContractWithNCALayer(
   contractData: string,
 ): Promise<{ signedCms: string; signerSubject: string }> {

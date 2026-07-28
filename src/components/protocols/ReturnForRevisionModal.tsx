@@ -4,18 +4,19 @@ import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 
 type FormValues = { reason: string };
-type Props = { open: boolean; loading?: boolean; onClose: () => void; onConfirm: (reason: string) => void | Promise<void> };
+type Props = { open: boolean; loading?: boolean; title?: string; description?: string; confirmText?: string; onClose: () => void; onConfirm: (reason: string) => void | Promise<void> };
 
-const ReturnForRevisionModal = ({ open, loading = false, onClose, onConfirm }: Props) => {
+const ReturnForRevisionModal = ({ open, loading = false, title = 'Вернуть протокол на доработку', description, confirmText = 'Вернуть на доработку', onClose, onConfirm }: Props) => {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({ defaultValues: { reason: '' } });
   useEffect(() => { if (open) reset({ reason: '' }); }, [open, reset]);
   return (
-    <Modal open={open} onClose={onClose} title="Вернуть протокол на доработку">
+    <Modal open={open} onClose={onClose} title={title}>
       <form className="space-y-5" onSubmit={handleSubmit(({ reason }) => onConfirm(reason.trim()))}>
+        {description && <p className="text-sm text-slate-600">{description}</p>}
         <label className="block text-sm font-semibold text-slate-700">
           Причина возврата <span aria-hidden="true" className="text-rose-600">*</span>
           <textarea
-            {...register('reason', { required: 'Укажите причину возврата', validate: (value) => value.trim().length >= 3 || 'Причина должна содержать не менее 3 символов' })}
+            {...register('reason', { required: 'Укажите причину', maxLength: { value: 1000, message: 'Причина должна содержать не более 1000 символов' }, validate: (value) => value.trim().length >= 3 || 'Причина должна содержать не менее 3 символов' })}
             rows={4}
             disabled={loading}
             aria-invalid={Boolean(errors.reason)}
@@ -25,7 +26,7 @@ const ReturnForRevisionModal = ({ open, loading = false, onClose, onConfirm }: P
         {errors.reason && <p role="alert" className="text-sm text-rose-700">{errors.reason.message}</p>}
         <div className="flex justify-end gap-3">
           <Button type="button" variant="secondary" disabled={loading} onClick={onClose}>Отменить</Button>
-          <Button type="submit" disabled={loading}>{loading ? 'Возврат...' : 'Вернуть на доработку'}</Button>
+          <Button type="submit" disabled={loading}>{loading ? 'Отправка…' : confirmText}</Button>
         </div>
       </form>
     </Modal>

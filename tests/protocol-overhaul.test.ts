@@ -55,15 +55,15 @@ describe('protocol access and draft compatibility', () => {
     expect(getProtocolPermissions({ status: 'DRAFT' }, client.role).canEdit).toBe(false);
   });
 
-  it('uses an editable fallback when a draft has no backend permissions', () => {
+  it('fails closed when a draft has no backend permissions', () => {
     const permissions = getProtocolPermissions({ status: 'DRAFT' }, 'STAFF');
     expect(permissions).toMatchObject({
-      canView: true,
-      canEdit: true,
-      canSave: true,
-      canCalculate: true,
-      canCheckNormatives: true,
-      canSendToApproval: true,
+      canView: false,
+      canEdit: false,
+      canSave: false,
+      canCalculate: false,
+      canCheckNormatives: false,
+      canSendToApproval: false,
     });
   });
 
@@ -82,16 +82,16 @@ describe('protocol access and draft compatibility', () => {
     expect(payload).toMatchObject({
       templateId: 'ambient_air',
       companyId: 77,
-      objectId: null,
-      executorId: null,
       measurements: [],
     });
+    expect(payload).not.toHaveProperty('objectId');
+    expect(payload).not.toHaveProperty('executorId');
   });
 
-  it('does not make a signed protocol editable and enables a correction fallback', () => {
+  it('does not synthesize correction permission for a signed protocol', () => {
     const permissions = getProtocolPermissions({ status: 'SIGNED' }, 'MANAGER');
     expect(permissions.canEdit).toBe(false);
-    expect(permissions.canCreateCorrection).toBe(true);
+    expect(permissions.canCreateCorrection).toBe(false);
   });
 });
 
@@ -139,7 +139,7 @@ describe('normative search behavior', () => {
 describe('protocol mutation HTTP contracts', () => {
   it('uses the three backend bulk endpoints and includes the current version', async () => {
     const calls: Array<{ method: string; path: string; body: unknown }> = [];
-    const response = { data: { id: '42', templateId: 'ambient_air', status: 'DRAFT', results: [] } };
+    const response = { data: { id: '42', templateId: 'ambient_air', status: 'DRAFT', version: 15, results: [] } };
     server.use(
       http.patch('http://localhost/api/protocols/42/results/bulk-device', async ({ request }) => {
         calls.push({ method: request.method, path: new URL(request.url).pathname, body: await request.json() });

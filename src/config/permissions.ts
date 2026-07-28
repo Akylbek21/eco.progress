@@ -39,7 +39,9 @@ export type Permission =
   | 'publish_content'
   | 'manage_content'
   | 'view_pek'
-  | 'edit_pek';
+  | 'edit_pek'
+  | 'view_protocols'
+  | 'create_protocols';
 
 const staffBase: Permission[] = [
   'view_companies',
@@ -51,6 +53,7 @@ const staffBase: Permission[] = [
   'view_internal_notes',
   'add_internal_notes',
   'view_action_history',
+  'view_protocols',
   'view_content',
 ];
 
@@ -79,6 +82,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'manage_employees',
     'manage_roles',
     'manage_settings',
+    'create_protocols',
     'edit_content',
     'review_content_expert',
     'review_content_legal',
@@ -100,6 +104,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'review_content_expert',
     'review_content_seo',
     'publish_content',
+    'create_protocols',
   ],
   HEAD: [
     ...staffBase,
@@ -163,6 +168,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'view_tasks',
     'edit_tasks',
     'edit_documents',
+    'create_protocols',
   ],
   STAFF: [...staffBase],
 };

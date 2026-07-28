@@ -7,6 +7,7 @@ const priority: PekAvailableActionCode[] = [
 ];
 export const primaryPekAction = (actions: PekAvailableAction[]) =>
   [...actions].sort((a, b) => {
+    if (a.enabled !== b.enabled) return a.enabled ? -1 : 1;
     const left = priority.indexOf(a.code);
     const right = priority.indexOf(b.code);
     return (left < 0 ? Number.MAX_SAFE_INTEGER : left) - (right < 0 ? Number.MAX_SAFE_INTEGER : right);

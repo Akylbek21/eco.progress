@@ -88,12 +88,14 @@ export const resolveProtocolPrimaryAction = (protocol: Protocol, role?: string):
   if (status === 'READY') return { key: permissions.canSendToApproval ? 'ready' : 'review', label: permissions.canSendToApproval ? 'Передать на проверку' : 'Проверить данные' };
   if (status === 'READY_FOR_APPROVAL') return { key: permissions.canApprove ? 'approve' : null, label: 'Утвердить' };
   if (status === 'RETURNED_FOR_REVISION') return { key: permissions.canSave ? 'edit' : null, label: 'Исправить протокол' };
+  if (status === 'APPROVED' && !permissions.canSign && !permissions.canDownload) return { key: null, label: '' };
   if (status === 'APPROVED') return { key: permissions.canSign ? 'sign' : protocol.hasPdf ? 'pdf' : null, label: permissions.canSign ? 'Подписать' : 'Скачать PDF' };
   if (status === 'SIGNED' && permissions.canSign) return { key: 'sign', label: 'Подписать' };
-  if (status === 'SIGNED') return permissions.canPublish && !protocol.publishedToClientAt
+  if (status === 'SIGNED' && !permissions.canSign && !(permissions.canPublish && !(protocol.publishedAt || protocol.publishedToClientAt)) && !permissions.canDownload) return { key: null, label: '' };
+  if (status === 'SIGNED') return permissions.canPublish && !(protocol.publishedAt || protocol.publishedToClientAt)
     ? { key: 'publish', label: 'Отправить клиенту' }
     : { key: 'pdf', label: 'Скачать PDF' };
   if (status === 'REPLACED' && protocol.replacedByProtocolId) return { key: 'replacement', label: 'Открыть новую версию' };
-  if (protocol.hasPdf) return { key: 'pdf', label: 'Скачать PDF' };
+  if (permissions.canDownload && protocol.hasPdf) return { key: 'pdf', label: 'Скачать PDF' };
   return { key: null, label: '' };
 };

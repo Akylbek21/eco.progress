@@ -53,6 +53,7 @@ api.interceptors.response.use(
         message: parsed.message,
         fieldErrors: parsed.fieldErrors,
         traceId: parsed.traceId,
+        requestCode: parsed.requestCode,
         resourceId: parsed.resourceId,
       });
     }

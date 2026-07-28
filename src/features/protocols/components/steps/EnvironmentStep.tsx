@@ -90,19 +90,23 @@ const EnvironmentStep = ({
         </label>
         <label className="text-sm font-bold">
           Температура, °C
-          <input {...manualWeather('temperature')} inputMode="decimal" className={`${input} mt-1.5`} />
+          <input {...manualWeather('temperature')} inputMode="decimal" className={`${input} mt-1.5 ${errors.temperature ? 'border-rose-400' : ''}`} />
+          {errors.temperature?.message && <span className="mt-1 block text-xs text-rose-700">{errors.temperature.message}</span>}
         </label>
         <label className="text-sm font-bold">
           Влажность, %
-          <input {...manualWeather('humidity')} inputMode="decimal" className={`${input} mt-1.5`} />
+          <input {...manualWeather('humidity')} inputMode="decimal" className={`${input} mt-1.5 ${errors.humidity ? 'border-rose-400' : ''}`} />
+          {errors.humidity?.message && <span className="mt-1 block text-xs text-rose-700">{errors.humidity.message}</span>}
         </label>
         <label className="text-sm font-bold">
           Давление, кПа
-          <input {...manualWeather('pressure')} inputMode="decimal" className={`${input} mt-1.5`} />
+          <input {...manualWeather('pressure')} inputMode="decimal" className={`${input} mt-1.5 ${errors.pressure ? 'border-rose-400' : ''}`} />
+          {errors.pressure?.message && <span className="mt-1 block text-xs text-rose-700">{errors.pressure.message}</span>}
         </label>
         <label className="text-sm font-bold">
           Скорость воздуха/ветра, м/с
-          <input {...manualWeather('windSpeed')} inputMode="decimal" className={`${input} mt-1.5`} />
+          <input {...manualWeather('windSpeed')} inputMode="decimal" className={`${input} mt-1.5 ${errors.windSpeed ? 'border-rose-400' : ''}`} />
+          {errors.windSpeed?.message && <span className="mt-1 block text-xs text-rose-700">{errors.windSpeed.message}</span>}
         </label>
         {ambient && (
           <>

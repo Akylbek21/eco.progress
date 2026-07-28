@@ -50,6 +50,7 @@ export interface CompanyObject {
   companyId?: string;
   virtual?: boolean;
   isVirtual?: boolean;
+  persisted?: boolean;
   name: string;
   objectType?: string;
   address: string;

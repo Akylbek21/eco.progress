@@ -5,16 +5,22 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { delay, http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import ProtocolSignaturesCard from '../src/features/protocols/details/ProtocolSignaturesCard';
 import {
   protocolSignErrorMessage,
   useSignProtocolMutation,
 } from '../src/features/protocols/hooks/useSignProtocolMutation';
 import api from '../src/services/api';
+import protocolService from '../src/services/protocolService';
 import { signProtocol } from '../src/services/apiProtocolService';
 import type { Protocol, SignProtocolResponse } from '../src/types/protocols';
 import { getProtocolPermissions } from '../src/utils/protocolPermissions';
+
+vi.mock('../src/features/protocols/utils/protocolSigning', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/features/protocols/utils/protocolSigning')>();
+  return { ...actual, createProtocolCmsSignature: vi.fn().mockResolvedValue('cms-base64') };
+});
 
 const server = setupServer();
 const originalBaseUrl = api.defaults.baseURL;
@@ -27,6 +33,13 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+  vi.restoreAllMocks();
+});
+beforeEach(() => {
+  vi.spyOn(protocolService, 'downloadPdf').mockResolvedValue({
+    blob: new Blob(['pdf-bytes'], { type: 'application/pdf' }),
+    fileName: 'protocol.pdf',
+  });
 });
 afterAll(() => {
   api.defaults.baseURL = originalBaseUrl;
@@ -44,7 +57,9 @@ const protocol = (extra: Partial<Protocol> = {}): Protocol => ({
   maxSignatures: 5,
   signedByCurrentUser: false,
   signatures: [],
-  permissions: { canSign: true, canEdit: true, canSave: true, canGenerate: true },
+  hasPdf: true,
+  pdfFileId: 'pdf-42',
+  permissions: { canSign: true, canEdit: true, canManageResults: true, canManageDevices: true, canGenerateDocuments: true },
   companySnapshot: { companyName: 'Eco', objectName: 'Object' },
   protocolDate: '2026-07-27',
   organization: { organizationName: '', organizationAddress: '', objectName: '', productName: '', testingBasis: '' },
@@ -99,7 +114,7 @@ const SigningHarness = () => {
         protocol={item}
         permissions={getProtocolPermissions(item, 'STAFF')}
         signing={mutation.isPending}
-        onSign={() => mutation.sign({ protocolId: item.id, version: item.version || 0 })}
+        onSign={() => mutation.sign({ protocol: item })}
       />
       <output aria-label="Статус протокола">{item.status}</output>
     </>
@@ -107,7 +122,7 @@ const SigningHarness = () => {
 };
 
 describe('collective protocol signing API and mutation', () => {
-  it('posts only the current version and never sends a user identity', async () => {
+  it('posts version and CMS but never sends a user identity', async () => {
     let body: Record<string, unknown> = {};
     server.use(
       http.post('http://localhost/api/protocols/42/sign', async ({ request }) => {
@@ -116,9 +131,9 @@ describe('collective protocol signing API and mutation', () => {
       }),
     );
 
-    const response = await signProtocol(42, 12);
+    const response = await signProtocol(42, { version: 12, cmsSignatureBase64: 'cms-base64' });
 
-    expect(body).toEqual({ version: 12 });
+    expect(body).toEqual({ version: 12, cmsSignatureBase64: 'cms-base64' });
     expect(body).not.toHaveProperty('userId');
     expect(body).not.toHaveProperty('signerFullName');
     expect(response.data.status).toBe('SIGNED');
@@ -212,10 +227,9 @@ describe('signature card states and locking', () => {
       signatureCount: 1,
       permissions: {
         canEdit: true,
-        canSave: true,
         canCalculate: true,
-        canGenerate: true,
-        canCreateCorrection: true,
+        canGenerateDocuments: true,
+        canReplace: true,
         canSign: true,
       },
     });

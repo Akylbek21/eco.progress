@@ -7,9 +7,10 @@ const inputClass =
 const labelClass = 'block text-xs font-bold text-slate-600';
 
 const ProtocolResultDetails = ({ index }: { index: number }) => {
-  const { register, watch } = useFormContext<ProtocolWizardForm>();
+  const { register, watch, formState: { errors } } = useFormContext<ProtocolWizardForm>();
   const type = watch('templateId');
   const chemical = Boolean(type && CHEMICAL_TYPES.has(type));
+  const rowErrors = errors.results?.[index];
 
   return (
     <details className="group border-t border-slate-100">
@@ -24,6 +25,23 @@ const ProtocolResultDetails = ({ index }: { index: number }) => {
       </summary>
 
       <div className="grid gap-4 border-t border-slate-100 bg-slate-50/40 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-4">
+        <label className={labelClass}>
+          Код методики
+          <input
+            placeholder="НД или код методики"
+            {...register(`results.${index}.testingMethodNd`)}
+            className={`${inputClass} ${rowErrors?.testingMethodNd ? 'border-rose-400' : ''}`}
+          />
+          {rowErrors?.testingMethodNd?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.testingMethodNd.message}</span>}
+        </label>
+        <label className={labelClass}>
+          Наименование методики
+          <input
+            placeholder="Наименование методики"
+            {...register(`results.${index}.methodName`)}
+            className={inputClass}
+          />
+        </label>
         {chemical && (
           <>
             <label className={labelClass}>

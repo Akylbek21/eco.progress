@@ -86,6 +86,7 @@ export interface ApiErrorResponse {
   resourceId?: number | string;
   traceId?: string;
   requestId?: string;
+  requestCode?: string;
 }
 
 export interface ApiError {
@@ -96,6 +97,7 @@ export interface ApiError {
   fieldErrors: Record<string, string>;
   traceId?: string;
   requestId?: string;
+  requestCode?: string;
   resourceId?: string;
   currentVersion?: number;
 }
@@ -110,6 +112,18 @@ const responseRequestId = (error: unknown): string | undefined => {
   });
   const value = values.find((item) => typeof item === 'string' && item.trim());
   return typeof value === 'string' ? value.trim() : undefined;
+};
+
+const safeBackendMessage = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const raw = value.trim();
+  if (
+    !raw
+    || /<!doctype|<html|<body|nginx|stack trace|nullpointer|sql(exception|state)?|org\.|java\./i.test(raw)
+  ) {
+    return undefined;
+  }
+  return raw.replace(/<[^>]*>/g, '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 500) || undefined;
 };
 
 const extractConflictResourceId = (response: UnknownRecord | null | undefined): string | undefined => {
@@ -145,6 +159,12 @@ const extractConflictResourceId = (response: UnknownRecord | null | undefined): 
 export const parseApiError = (error: unknown, fallback = 'Не удалось выполнить запрос.'): ParsedApiError => {
   const status = getApiStatus(error);
   if (!axios.isAxiosError(error)) return { message: error instanceof Error && error.message ? error.message : fallback, status };
+  if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+    return { message: 'Сервер не ответил вовремя. Данные формы сохранены, повторите запрос.', status };
+  }
+  if (!error.response) {
+    return { message: 'Нет соединения с сервером. Проверьте подключение и повторите запрос.', status };
+  }
   const response = asRecord(error.response?.data);
   const nested = asRecord(response?.data);
   const codeValue = response?.code ?? response?.errorCode ?? nested?.code ?? nested?.errorCode;
@@ -167,12 +187,12 @@ export const parseApiError = (error: unknown, fallback = 'Не удалось в
   const statusMessages: Record<number, string> = {
     400: 'Проверьте заполнение полей.', 401: 'Сессия истекла. Войдите заново.', 403: 'Недостаточно прав.',
     404: 'Запрошенные данные не найдены.', 409: 'Конфликт данных: запись уже существует или связана с другими записями.',
-    422: 'Исправьте ошибки заполнения.', 500: 'Не удалось создать протокол.', 503: 'Сервис временно недоступен.',
+    422: 'Исправьте ошибки заполнения.', 500: 'Не удалось создать протокол.', 502: 'Сервер временно недоступен.',
+    503: 'Сервис временно недоступен.', 504: 'Сервер не ответил вовремя.',
   };
   const backendMessage = response?.message ?? nested?.message ?? response?.error ?? nested?.error;
-  const message = typeof backendMessage === 'string' && backendMessage.trim()
-    ? backendMessage.replace(/[<>]/g, '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 500)
-    : status && statusMessages[status] ? statusMessages[status] : fallback;
+  const message = safeBackendMessage(backendMessage)
+    || (status && statusMessages[status] ? statusMessages[status] : fallback);
   return {
     message,
     code: typeof codeValue === 'string' ? codeValue.trim().toUpperCase() : undefined,
@@ -191,6 +211,7 @@ export const normalizeApiError = (error: unknown, fallback = 'Не удалос�
     ? rawErrors.map((item) => typeof item === 'string' ? item.trim() : String(asRecord(item)?.message || '').trim()).filter(Boolean)
     : [];
   const traceIdValue = response?.traceId ?? nested?.traceId;
+  const requestCodeValue = response?.requestCode ?? nested?.requestCode;
   return {
     status: parsed.status,
     code: parsed.code,
@@ -199,6 +220,9 @@ export const normalizeApiError = (error: unknown, fallback = 'Не удалос�
     fieldErrors: parsed.fieldErrors || {},
     traceId: typeof traceIdValue === 'string' && traceIdValue.trim() ? traceIdValue.trim() : undefined,
     requestId: responseRequestId(error),
+    requestCode: typeof requestCodeValue === 'string' && requestCodeValue.trim()
+      ? requestCodeValue.trim()
+      : undefined,
     resourceId: parsed.status === 409 ? extractConflictResourceId(response) : undefined,
     currentVersion: parsed.currentVersion,
   };

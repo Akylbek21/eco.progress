@@ -6,7 +6,7 @@ import { PROTOCOL_TEMPLATES, isProtocolTemplateId } from '../src/features/protoc
 import { mapBackendProtocolType, mapFrontendProtocolType } from '../src/features/protocols/api/protocolTypeMapper';
 import { unwrapApiData } from '../src/services/apiHelpers';
 import { isDeviceValidForDate } from '../src/utils/protocolDevices';
-import { createWizardDefaults } from '../src/features/protocols/components/wizardTypes';
+import { createWizardDefaults, emptyWizardResult } from '../src/features/protocols/components/wizardTypes';
 import { mapProtocolWizardToRequest } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
 
 describe('protocol domain contract', () => {
@@ -38,14 +38,13 @@ describe('protocol domain contract', () => {
   it('maps a water wizard draft to one compact quick-create request', () => {
     const form = createWizardDefaults();
     form.templateId = 'water_wastewater'; form.companyId = '15'; form.objectId = '38'; form.laboratoryId = '2'; form.executorId = '17'; form.measurementPlace = 'Точка отбора'; form.testingMethodNd = 'ГОСТ'; form.temperature = '20'; form.waterType = 'DRINKING_WATER'; form.waterUseCategory = 'I';
-    form.results = [{ ...form.results[0], indicatorName: 'Хлориды', pollutantCode: 'CL', unit: 'мг/л', value: '12', measurementDeviceId: '5' }];
+    form.results = [{ ...emptyWizardResult(), indicatorName: 'Хлориды', pollutantCode: 'CL', unit: 'мг/л', value: '12', measurementDeviceId: '5' }];
     const request = mapProtocolWizardToRequest(form);
-    expect(request).toMatchObject({ templateId: 'water', companyId: 15, objectId: 38, laboratoryId: 2, executorId: 17, conditions: { temperature: '20', waterType: 'DRINKING_WATER', waterUseCategory: 'I' } });
+    expect(request).toMatchObject({ templateId: 'water', companyId: 15, objectId: 38, laboratoryId: 2, executorId: 17, conditions: { waterType: 'DRINKING_WATER', waterUseCategory: 'I' }, environment: { temperature: 20, source: 'MANUAL' } });
     expect(request.measurements).toHaveLength(1);
-    expect(request.measurements[0].testingMethodNd).toBe('ГОСТ');
+    expect(request.measurements[0].methodology).toMatchObject({ methodologyCode: 'ГОСТ' });
     expect(request.measurements[0].unit).toBe('мг/дм³');
-    expect(request.conditions).toMatchObject({ temperature: '20', weatherSource: 'MANUAL' });
-    expect(request).not.toHaveProperty('environment');
+    expect(request.environment).toMatchObject({ temperature: 20, source: 'MANUAL' });
   });
 
   it('maps editable fields to the canonical top-level PATCH DTO', () => {

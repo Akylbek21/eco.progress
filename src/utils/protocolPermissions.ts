@@ -3,7 +3,7 @@ import type { Protocol, ProtocolStatus } from '../types/protocols';
 
 type ProtocolUser = { id?: string | number | null; role?: string | null } | null | undefined;
 type ProtocolLike =
-  | (Pick<Protocol, 'status'> & Partial<Pick<Protocol, 'permissions' | 'signatureCount' | 'maxSignatures' | 'signedByCurrentUser' | 'signatures'>>)
+  | (Pick<Protocol, 'status'> & Partial<Pick<Protocol, 'permissions' | 'signatureCount' | 'maxSignatures' | 'signedByCurrentUser' | 'signatures' | 'publishedAt' | 'publishedToClientAt'>>)
   | ProtocolStatus
   | string
   | null
@@ -25,8 +25,8 @@ const signatureCountOf = (protocol: ProtocolLike) => typeof protocol === 'object
   ? Number(protocol.signatureCount ?? protocol.signatures?.length ?? 0)
   : 0;
 const maxSignaturesOf = (protocol: ProtocolLike) => typeof protocol === 'object' && protocol
-  ? Number(protocol.maxSignatures || 5)
-  : 5;
+  ? Number(protocol.maxSignatures)
+  : 0;
 const signedByCurrentUser = (protocol: ProtocolLike) => typeof protocol === 'object'
   && protocol?.signedByCurrentUser === true;
 const canSignCurrentVersion = (protocol: ProtocolLike) => {
@@ -84,6 +84,13 @@ export type ProtocolPermissions = {
   canGeneratePreview: boolean;
   canCopy: boolean;
   canPublish: boolean;
+  canManageResults: boolean;
+  canManageDevices: boolean;
+  canReadyForApproval: boolean;
+  canReturnForRevision: boolean;
+  canReplace: boolean;
+  canViewAudit: boolean;
+  canGenerateDocuments: boolean;
 };
 
 export const getProtocolPermissions = (
@@ -93,60 +100,77 @@ export const getProtocolPermissions = (
 ): ProtocolPermissions => {
   const backend = typeof protocol === 'object' && protocol ? protocol.permissions : undefined;
   const backendFlag = (...keys: string[]) => keys.some((key) => backend?.[key] === true);
-  const internal = allowAll || isInternalProtocolUser(role || '');
+  const internal = isInternalProtocolUser(role || '');
+  const immutable = typeof protocol === 'object' && protocol
+    ? ['SIGNED', 'REPLACED', 'CANCELLED', 'ARCHIVED'].includes(statusOf(protocol))
+      || Boolean(protocol.publishedAt || protocol.publishedToClientAt)
+    : true;
   if (backend && Object.keys(backend).length) {
     const contentLocked = signatureCountOf(protocol) > 0;
-    const canEdit = backendFlag('canEdit', 'canSave') && !contentLocked;
-    const canGenerate = backendFlag('canGenerate', 'canGenerateDocuments', 'canGeneratePreview') && !contentLocked;
+    const canEdit = backendFlag('canEdit') && !contentLocked && !immutable;
+    const canManageResults = backendFlag('canManageResults') && !contentLocked && !immutable;
+    const canManageDevices = backendFlag('canManageDevices') && !contentLocked && !immutable;
+    const canGenerate = backendFlag('canGenerateDocuments') && !contentLocked && !immutable;
     return {
       canView: backendFlag('canView'),
       canCreate: backendFlag('canCreate'),
       canEdit,
       canSave: canEdit,
-      canCalculate: backendFlag('canCalculate') && !contentLocked,
-      canCheckNormatives: backendFlag('canCheckNormatives', 'canCalculate') && !contentLocked,
-      canSendToApproval: backendFlag('canSendToApproval', 'canSubmitForApproval'),
+      canCalculate: backendFlag('canCalculate') && !contentLocked && !immutable,
+      canCheckNormatives: backendFlag('canCheckNormatives') && !contentLocked && !immutable,
+      canSendToApproval: backendFlag('canReadyForApproval'),
       canApprove: backendFlag('canApprove'),
-      canReturn: backendFlag('canReturn', 'canReturnForRevision'),
+      canReturn: backendFlag('canReturnForRevision'),
       canSign: internal && backendFlag('canSign') && canSignCurrentVersion(protocol),
       canDownload: backendFlag('canDownload'),
-      canCreateCorrection: backendFlag('canCreateCorrection'),
+      canCreateCorrection: backendFlag('canReplace'),
       canDelete: backendFlag('canDelete'),
       canArchive: backendFlag('canArchive'),
       canCancel: backendFlag('canCancel'),
       canGenerate,
-      canGeneratePreview: backendFlag('canGeneratePreview') || canGenerate,
-      canCopy: backendFlag('canCopy', 'canCreateCorrection'),
-      canPublish: backendFlag('canPublish', 'canPublishToClient'),
+      canGeneratePreview: canGenerate,
+      canCopy: backendFlag('canReplace'),
+      canPublish: backendFlag('canPublish'),
+      canManageResults,
+      canManageDevices,
+      canReadyForApproval: backendFlag('canReadyForApproval'),
+      canReturnForRevision: backendFlag('canReturnForRevision'),
+      canReplace: backendFlag('canReplace'),
+      canViewAudit: backendFlag('canViewAudit'),
+      canGenerateDocuments: backendFlag('canGenerateDocuments'),
     };
   }
 
-  const status = statusOf(protocol);
-  const editable = internal && EDITABLE_STATUSES.has(status);
-  const contentLocked = signatureCountOf(protocol) > 0;
-  const effectiveEditable = editable && !contentLocked;
-  const generate = internal && !TERMINAL_STATUSES.has(status) && !contentLocked;
-  const correction = internal && CORRECTION_STATUSES.has(status);
+  // A protocol DTO without server permissions is intentionally fail-closed.
+  // Role/status helpers remain exported for non-entity navigation only.
+  const denied = allowAll && isInternalProtocolUser(role || '');
   return {
-    canView: internal,
-    canCreate: internal,
-    canEdit: effectiveEditable,
-    canSave: effectiveEditable,
-    canCalculate: effectiveEditable,
-    canCheckNormatives: effectiveEditable,
-    canSendToApproval: effectiveEditable,
+    canView: denied,
+    canCreate: denied,
+    canEdit: false,
+    canSave: false,
+    canCalculate: false,
+    canCheckNormatives: false,
+    canSendToApproval: false,
     canApprove: false,
-    canReturn: internal && status === 'READY_FOR_APPROVAL',
-    canSign: internal && canSignCurrentVersion(protocol),
-    canDownload: internal,
-    canCreateCorrection: correction,
-    canDelete: internal && status === 'DRAFT' && !contentLocked,
-    canArchive: internal && ['REPLACED', 'CANCELLED'].includes(status),
-    canCancel: effectiveEditable,
-    canGenerate: generate,
-    canGeneratePreview: generate,
-    canCopy: correction,
+    canReturn: false,
+    canSign: false,
+    canDownload: false,
+    canCreateCorrection: false,
+    canDelete: false,
+    canArchive: false,
+    canCancel: false,
+    canGenerate: false,
+    canGeneratePreview: false,
+    canCopy: false,
     canPublish: false,
+    canManageResults: false,
+    canManageDevices: false,
+    canReadyForApproval: false,
+    canReturnForRevision: false,
+    canReplace: false,
+    canViewAudit: false,
+    canGenerateDocuments: false,
   };
 };
 

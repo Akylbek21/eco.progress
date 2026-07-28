@@ -8,29 +8,30 @@ test('protocol quick-create boundary matches the backend DTO exactly', async () 
   const contracts = await read('src/features/protocols/api/protocolContracts.ts');
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   const service = await read('src/services/apiProtocolService.ts');
-  assert.match(contracts, /interface QuickCreateProtocolApiRequest/);
-  for (const field of ['templateId', 'sourceDocumentCode', 'docxTemplateCode', 'companyId', 'objectId', 'laboratoryId', 'executorId', 'conditions', 'measurements', 'printVisibility', 'orderId']) {
+  assert.match(contracts, /interface QuickCreateProtocolRequest/);
+  for (const field of ['templateId', 'companyId', 'objectId', 'laboratoryId', 'executorId', 'measurementDate', 'measurementPlace', 'environment', 'conditions', 'measurements', 'printVisibility', 'orderId']) {
     assert.match(contracts, new RegExp(`\\b${field}\\b`));
   }
-  for (const field of ['normativeTemplateId', 'resultMode', 'defaultUnit', 'environment', 'orderServiceItemId']) {
-    assert.doesNotMatch(contracts.match(/interface QuickCreateProtocolApiRequest[\s\S]*?\n}/)?.[0] || '', new RegExp(`\\b${field}\\b`));
+  for (const field of ['sampleDate', 'samplingDate', 'deviceId', 'sourceDocumentCode', 'docxTemplateCode']) {
+    assert.doesNotMatch(contracts.match(/interface QuickCreateProtocolRequest[\s\S]*?\n}/)?.[0] || '', new RegExp(`\\b${field}\\b`));
   }
-  assert.match(mapper, /normativeId,/);
-  assert.match(mapper, /testingMethodNd,/);
-  assert.match(mapper, /value: apiValue/);
-  assert.match(mapper, /orderId: normalizeNullableText\(form\.orderId\)/);
+  assert.match(mapper, /requirePositiveIntegerId/);
+  assert.match(mapper, /resultValue:/);
+  assert.match(mapper, /measurementDeviceId:/);
+  assert.match(mapper, /validationMode: 'submit'|validationMode !== 'draft'/);
   assert.match(service, /'\/protocols\/quick-create'/);
 });
 
 test('protocol quick-create 500 keeps the wizard recoverable and exposes safe diagnostics', async () => {
   const wizard = await read('src/features/protocols/components/CreateProtocolWizardModal.tsx');
+  const panel = await read('src/features/protocols/components/components/QuickCreateErrorPanel.tsx');
   const errors = await read('src/features/protocols/utils/quickCreateError.ts');
   const helpers = await read('src/services/apiHelpers.ts');
   assert.match(wizard, /retry: false/);
-  assert.match(wizard, /Повторить/);
-  assert.match(wizard, /Вернуться к проверке/);
-  assert.match(wizard, /Скопировать код ошибки/);
-  assert.match(wizard, /HTTP-статус: 500/);
+  assert.match(panel, /Повторить/);
+  assert.match(panel, /Вернуться к проверке/);
+  assert.match(panel, /Скопировать код ошибки/);
+  assert.match(panel, /HTTP-статус:/);
   assert.match(errors, /Данные формы сохранены во временном черновике/);
   assert.match(errors, /resetIdempotencyKey: false/);
   for (const header of ['x-request-id', 'x-trace-id', 'trace-id']) assert.match(helpers, new RegExp(header));

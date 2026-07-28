@@ -47,11 +47,14 @@ export const normalizeCompanyObject = (raw: unknown, companyId = ''): CompanyObj
   const location = record(source.location ?? source.geoLocation ?? source.geolocation);
   const latitude = pick(source, ['latitude', 'lat']) || pick(location, ['latitude', 'lat']);
   const longitude = pick(source, ['longitude', 'lng', 'lon']) || pick(location, ['longitude', 'lng', 'lon']);
+  const id = pick(source, ['id', 'objectId', 'facilityId', '_id']);
+  const isVirtual = source.virtual === true || source.isVirtual === true;
   return {
-    id: pick(source, ['id', 'objectId', 'facilityId', '_id']),
+    id,
     companyId: pick(source, ['companyId', 'company_id']) || companyId,
-    virtual: source.virtual === true || source.isVirtual === true,
-    isVirtual: source.virtual === true || source.isVirtual === true,
+    virtual: isVirtual,
+    isVirtual,
+    persisted: source.persisted === false ? false : !isVirtual && Number.isInteger(Number(id)) && Number(id) > 0,
     name: pick(source, ['name', 'objectName', 'facilityName', 'title']),
     objectType: pick(source, ['objectType', 'type', 'facilityType']),
     address: pick(source, ['address', 'objectAddress', 'facilityAddress']),

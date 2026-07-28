@@ -392,6 +392,8 @@ export interface Protocol {
   signatures: ProtocolSignature[];
   hasDocx?: boolean;
   hasPdf?: boolean;
+  docxFileId?: string;
+  pdfFileId?: string;
   finalPdfFileId?: string;
   finalPdfHash?: string;
   printVisibility?: ProtocolPrintVisibility;
@@ -404,16 +406,26 @@ export interface Protocol {
   history?: ProtocolHistoryItem[];
   createdAt: string;
   updatedAt: string;
-  version?: number;
+  version: number;
   replacedByProtocolId?: string;
   replacesProtocolId?: string;
   orderId?: string | number;
   orderServiceItemId?: string | number;
   orderNumber?: string;
+  pekProgramId?: string | number;
+  pekReportId?: string | number;
+  pekControlItemId?: string | number;
+  pekControlEventId?: string | number;
+  monitoringPointId?: string | number;
+  emissionSourceId?: string | number;
+  waterOutletId?: string | number;
   permissions?: Record<string, boolean>;
   canComplete?: boolean;
   blockingReasons?: string[];
   publishedToClientAt?: string;
+  publishedAt?: string;
+  publishedBy?: string;
+  publishedDocumentId?: string | number;
 }
 
 export type ProtocolPage = {
@@ -445,8 +457,21 @@ export interface ProtocolListItem {
   status: ProtocolStatus;
   compliance: ProtocolComplianceFilter;
   updatedAt: string;
-  hasDocx?: boolean;
-  hasPdf?: boolean;
+  version: number;
+  signatureCount: number;
+  maxSignatures: number;
+  hasDocx: boolean;
+  hasPdf: boolean;
+  docxFileId?: string;
+  pdfFileId?: string;
+  publishedAt?: string;
+  publishedBy?: string;
+  replacesProtocolId?: string;
+  replacedByProtocolId?: string;
+  orderId?: string | number;
+  pekProgramId?: string | number;
+  pekReportId?: string | number;
+  permissions: Record<string, boolean>;
 }
 
 export interface ProtocolListQuery {
@@ -473,6 +498,7 @@ export type ProtocolHistoryItem = {
   actorName?: string;
   createdAt: string;
   comment?: string;
+  reason?: string;
 };
 
 export interface CreateProtocolPayload {
@@ -576,57 +602,6 @@ export type EntityId = number;
 
 export type QuickCreateComparisonType = 'LE' | 'LT' | 'GE' | 'GT' | 'EQ' | 'RANGE';
 
-export interface QuickCreateConditions {
-  season?: string | null;
-  workCategory?: string | null;
-  workplaceType?: string | null;
-  roomType?: string | null;
-  normLevel?: string | null;
-  temperature?: string | null;
-  humidity?: string | null;
-  pressure?: string | null;
-  windSpeed?: string | null;
-  sampleNumber?: string | null;
-  samplingDepth?: string | null;
-  samplingPlace?: string | null;
-  lightingType?: string | null;
-  noiseType?: string | null;
-  visualWorkCategory?: string | null;
-  waterType?: string | null;
-  waterUseCategory?: string | null;
-  weatherSource?: string | null;
-  weatherDataSource?: string | null;
-  manualChangeReason?: string | null;
-  weatherObservedAt?: string | null;
-}
-
-export interface ProtocolEnvironment {
-  temperature: string | null;
-  humidity: string | null;
-  pressureKpa: string | null;
-  windSpeed: string | null;
-  source: 'API' | 'MANUAL';
-  dataSource?: string | null;
-  observedAt?: string | null;
-  manualChangeReason?: string | null;
-}
-
-export interface QuickCreateMeasurement {
-  factorType?: string | null;
-  factorCode?: string | null;
-  pollutantCode?: string | null;
-  indicatorName: string;
-  value: unknown;
-  unit: string;
-  normativeId?: string | null;
-  normativeValue?: string | null;
-  testingMethodNd?: string | null;
-  samplingMethodNd?: string | null;
-  measurementDeviceId?: EntityId | null;
-  deviceId?: EntityId | null;
-  values?: Record<string, unknown>;
-}
-
 export type MethodVariableResponse = {
   id: string | number;
   variableKey: string;
@@ -665,7 +640,7 @@ export type RawMeasurementRequest = {
 };
 
 export type SaveRawMeasurementsRequest = {
-  version?: number;
+  version: number;
   methodTemplateId?: string | number | null;
   measurements: RawMeasurementRequest[];
 };

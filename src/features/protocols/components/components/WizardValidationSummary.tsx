@@ -1,7 +1,15 @@
 import type { FieldPath } from 'react-hook-form';
 import type { ProtocolWizardForm } from '../wizardTypes';
 
-export type WizardIssue = { message: string; step: number; field?: FieldPath<ProtocolWizardForm> };
+export type WizardIssueSeverity = 'ERROR' | 'WARNING';
+export type WizardIssue = {
+  code: string;
+  message: string;
+  step: number;
+  fieldPath: string;
+  severity: WizardIssueSeverity;
+  field?: FieldPath<ProtocolWizardForm>;
+};
 type Props = { issues: WizardIssue[]; onGoTo: (step: number, field?: WizardIssue['field']) => void };
 const WizardValidationSummary = ({ issues, onGoTo }: Props) => {
   if (!issues.length) return <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-bold text-emerald-900">Все обязательные данные заполнены. Можно переходить к созданию.</div>;

@@ -17,4 +17,8 @@ export const pekKeys = {
   exceedances: (id: string | number) => ['pek', 'exceedances', String(id)] as const,
   comments: (id: string | number) => ['pek', 'comments', String(id)] as const,
   history: (id: string | number) => ['pek', 'history', String(id)] as const,
+  settings: () => ['pek', 'settings'] as const,
+  assignees: (roles: string[] = []) => ['pek', 'lookups', 'assignees', roles] as const,
+  permits: (objectId: string | number) => ['pek', 'lookups', 'permits', String(objectId)] as const,
+  linkOptions: (reportId: string | number, sourceId: string | number) => ['pek', 'lookups', 'link-options', String(reportId), String(sourceId)] as const,
 };

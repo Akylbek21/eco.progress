@@ -2,9 +2,6 @@ import type {
   ProtocolEnvironmentalConditions,
   ProtocolPrintVisibility,
   ProtocolResultValue,
-  ProtocolTemplateId,
-  QuickCreateConditions,
-  QuickCreateMeasurement,
 } from '../../../types/protocols';
 
 /** DTOs in this file are the only shapes allowed to cross the protocols API boundary. */
@@ -105,32 +102,108 @@ export interface ProtocolsQueryRequest {
   includeArchived?: boolean;
 }
 
-export interface QuickCreateProtocolApiRequest {
-  templateId: string;
-  sourceDocumentCode?: string | null;
-  docxTemplateCode?: string | null;
-  subtype?: string | null;
+export type QuickCreateProtocolTemplateId =
+  | 'ambient_air'
+  | 'workplace_air'
+  | 'soil'
+  | 'microclimate'
+  | 'lighting'
+  | 'noise_vibration'
+  | 'water';
+
+export interface QuickCreateProtocolEnvironment {
+  temperature: number | null;
+  humidity: number | null;
+  pressureKpa: number | null;
+  windSpeed: number | null;
+  source: 'API' | 'MANUAL';
+}
+
+export interface QuickCreateProtocolMethodology {
+  methodologyId?: number;
+  methodologyCode?: string;
+  methodologyName?: string;
+}
+
+export interface QuickCreateProtocolConditions {
+  waterType?: string;
+  waterUseCategory?: string;
+  sampleNumber?: string;
+  samplingPlace?: string;
+  samplingDepth?: number;
+  samplingDate?: string;
+  preparationDate?: string;
+  season?: string;
+  workCategory?: string;
+  workplaceType?: string;
+  roomType?: string;
+  normLevel?: string;
+  lightingType?: string;
+  noiseType?: string;
+  visualWorkCategory?: string;
+}
+
+export interface QuickCreateProtocolMeasurement {
+  clientRowId: string;
+  indicatorName: string;
+  indicatorCode?: string;
+  physicalFactorCode?: string;
+  resultValue: number | string;
+  unit: string;
+  measurementDeviceId: number;
+  normativeId?: string;
+  normValue?: number;
+  samplingPlace?: string;
+  sampleNumber?: string;
+  samplingDepth?: number;
+  samplingDate?: string;
+  methodology?: QuickCreateProtocolMethodology;
+}
+
+export interface QuickCreateProtocolRequest {
+  templateId: QuickCreateProtocolTemplateId;
   companyId: number;
-  objectId?: number | null;
-  laboratoryId?: number | null;
-  executorId?: number | null;
-  protocolDate?: string | null;
-  sampleDate?: string | null;
-  measurementDate?: string | null;
-  measurementTime?: string | null;
-  measurementPlace?: string | null;
-  testingStartDate?: string | null;
-  testingEndDate?: string | null;
-  sourceNumber?: string | null;
-  conditions?: QuickCreateConditions | null;
-  measurements: QuickCreateMeasurement[];
+  objectId: number;
+  laboratoryId: number;
+  executorId: number;
+  measurementDate: string;
+  measurementTime?: string;
+  measurementPlace: string;
+  defaultUnit?: string;
+  measurements: QuickCreateProtocolMeasurement[];
+  environment?: QuickCreateProtocolEnvironment;
+  conditions?: QuickCreateProtocolConditions;
+  methodology?: QuickCreateProtocolMethodology;
   printVisibility: ProtocolPrintVisibility;
-  orderId?: string | null;
-  pekProgramId?: number | null;
-  pekControlItemId?: number | null;
-  pekControlEventId?: number | null;
-  pekReportId?: number | null;
-  monitoringPointId?: number | null;
-  emissionSourceId?: number | null;
-  waterOutletId?: number | null;
+  orderId?: string;
+  orderServiceItemId?: string;
+  pekProgramId?: number;
+  pekControlItemId?: number;
+  pekControlEventId?: number;
+  pekReportId?: number;
+  monitoringPointId?: number;
+  emissionSourceId?: number;
+  waterOutletId?: number;
+}
+
+export interface ProtocolVersionRequest {
+  version: number;
+}
+
+export interface ReturnForRevisionRequest extends ProtocolVersionRequest {
+  reason: string;
+}
+
+export type ReplaceProtocolRequest = ReturnForRevisionRequest;
+export type CancelProtocolRequest = ReturnForRevisionRequest;
+
+export interface SignProtocolRequest extends ProtocolVersionRequest {
+  cmsSignatureBase64: string;
+}
+
+/** @deprecated Prefer the canonical QuickCreateProtocolRequest name. */
+export type QuickCreateProtocolApiRequest = QuickCreateProtocolRequest;
+
+export interface QuickCreateProtocolResponse {
+  id: string;
 }

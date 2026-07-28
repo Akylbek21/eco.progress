@@ -28,8 +28,9 @@ const ProtocolResultRow = ({
   invalidDevice,
   onRemove,
 }: Props) => {
-  const { register, control, watch } = useFormContext<ProtocolWizardForm>();
+  const { register, control, watch, formState: { errors } } = useFormContext<ProtocolWizardForm>();
   const row = watch(`results.${index}`);
+  const rowErrors = errors.results?.[index];
 
   return (
     <article
@@ -70,8 +71,9 @@ const ProtocolResultRow = ({
             aria-label={`Показатель строки ${index + 1}`}
             placeholder="Выберите норматив через поиск"
             {...register(`results.${index}.indicatorName`)}
-            className={`${inputClass} cursor-default bg-slate-50 font-semibold text-slate-700`}
+            className={`${inputClass} cursor-default bg-slate-50 font-semibold text-slate-700 ${rowErrors?.indicatorName ? 'border-rose-400' : ''}`}
           />
+          {rowErrors?.indicatorName?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.indicatorName.message}</span>}
         </label>
 
         <label className={`${labelClass} lg:col-span-3`}>
@@ -98,8 +100,9 @@ const ProtocolResultRow = ({
             inputMode="decimal"
             placeholder="0,00"
             {...register(`results.${index}.value`)}
-            className={inputClass}
+            className={`${inputClass} ${rowErrors?.value ? 'border-rose-400' : ''}`}
           />
+          {rowErrors?.value?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.value.message}</span>}
         </label>
 
         <label className={`${labelClass} lg:col-span-2`}>
@@ -109,8 +112,9 @@ const ProtocolResultRow = ({
             aria-label="Единица измерения"
             placeholder="Из норматива"
             {...register(`results.${index}.unit`)}
-            className={`${inputClass} cursor-default bg-slate-50 text-slate-700`}
+            className={`${inputClass} cursor-default bg-slate-50 text-slate-700 ${rowErrors?.unit ? 'border-rose-400' : ''}`}
           />
+          {rowErrors?.unit?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.unit.message}</span>}
         </label>
 
         <label className={`${labelClass} lg:col-span-4`}>
@@ -141,9 +145,9 @@ const ProtocolResultRow = ({
               )}
             />
           </div>
-          {invalidDevice && (
+          {(invalidDevice || rowErrors?.measurementDeviceId) && (
             <p className="mt-1.5 text-xs font-bold text-rose-700">
-              Прибор недействителен на дату измерения.
+              {rowErrors?.measurementDeviceId?.message || 'Прибор недействителен на дату измерения.'}
             </p>
           )}
         </div>

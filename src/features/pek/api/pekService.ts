@@ -8,10 +8,12 @@ import type {
   PageResponse,
   PekBlobResult,
   PekCollectionRun,
+  PekControlItemLinkOption,
   PekCreationContext,
   PekDashboard,
   PekExceedance,
   PekHistoryItem,
+  PekLookupOption,
   PekMutationBody,
   PekPlanFactRow,
   PekProgram,
@@ -22,6 +24,7 @@ import type {
   PekReportIssue,
   PekReviewComment,
   PekSectionCode,
+  PekSettings,
   PekUnmatchedSource,
 } from './pekContracts';
 
@@ -59,6 +62,10 @@ export const pekService = {
   getProgram: (id: number, signal?: AbortSignal) => get<PekProgram>(`/pek/programs/${id}`, {}, signal),
   createProgram: (body: PekProgramRequest) => post<PekProgram>('/pek/programs', body),
   updateProgram: (id: number, body: PekProgramRequest & { version: number }) => patch<PekProgram>(`/pek/programs/${id}`, body),
+  saveProgramDraft: (id: number, body: Partial<PekProgramRequest> & { version: number }) =>
+    patch<PekProgram>(`/pek/programs/${id}/draft`, body),
+  uploadProgramDocument: (id: number, body: FormData) =>
+    post<Record<string, unknown>>(`/pek/programs/${id}/documents`, body),
   submitProgramReview: (id: number, body: PekMutationBody) => programAction(id, 'submit-review', body),
   returnProgram: (id: number, body: PekMutationBody) => programAction(id, 'return', body),
   approveProgram: (id: number, body: PekMutationBody) => programAction(id, 'approve', body),
@@ -66,6 +73,10 @@ export const pekService = {
   archiveProgram: (id: number, body: PekMutationBody) => programAction(id, 'archive', body),
   cloneProgram: (id: number, body: PekMutationBody) => programAction(id, 'clone', body),
   getProgramHistory: (id: number, signal?: AbortSignal) => get<PekHistoryItem[]>(`/pek/programs/${id}/history`, {}, signal),
+  getAssignees: (roles: string[] = [], signal?: AbortSignal) =>
+    get<PekLookupOption[]>('/pek/lookups/assignees', { roles: roles.join(',') }, signal),
+  getObjectPermits: (objectId: number, signal?: AbortSignal) =>
+    get<PekLookupOption[]>(`/pek/lookups/objects/${objectId}/permits`, {}, signal),
 
   async getReports(filters: PekReportFilters, signal?: AbortSignal): Promise<PageResponse<PekReport>> {
     return mapPekPage<PekReport>((await api.get('/pek/reports', { params: cleanParams(filters), signal })).data);
@@ -81,14 +92,18 @@ export const pekService = {
   getReportIssues: (id: number, signal?: AbortSignal) => get<PekReportIssue[]>(`/pek/reports/${id}/issues`, {}, signal),
   getReportSection: (id: number, code: PekSectionCode, signal?: AbortSignal) =>
     get<Record<string, unknown>>(`/pek/reports/${id}/sections/${code}`, {}, signal),
+  uploadReportDocument: (id: number, body: FormData) =>
+    post<Record<string, unknown>>(`/pek/reports/${id}/documents`, body),
   getPlanFact: (id: number, signal?: AbortSignal) => get<PekPlanFactRow[]>(`/pek/reports/${id}/plan-fact`, {}, signal),
   getUnmatchedSources: (id: number, signal?: AbortSignal) => get<PekUnmatchedSource[]>(`/pek/reports/${id}/unmatched-sources`, {}, signal),
+  getUnmatchedLinkOptions: (id: number, sourceId: number, signal?: AbortSignal) =>
+    get<PekControlItemLinkOption[]>(`/pek/reports/${id}/unmatched-sources/${sourceId}/link-options`, {}, signal),
   linkUnmatchedSource: (id: number, sourceId: number, body: PekMutationBody) =>
     post<PekReport>(`/pek/reports/${id}/unmatched-sources/${sourceId}/link`, body),
   excludeUnmatchedSource: (id: number, sourceId: number, body: PekMutationBody) =>
     post<PekReport>(`/pek/reports/${id}/unmatched-sources/${sourceId}/exclude`, body),
   getExceedances: (id: number, signal?: AbortSignal) => get<PekExceedance[]>(`/pek/reports/${id}/exceedances`, {}, signal),
-  updateExceedance: (id: number, exceedanceId: number, body: PekMutationBody) =>
+  updateExceedance: (id: number, exceedanceId: number, body: PekMutationBody | FormData) =>
     patch<PekExceedance>(`/pek/reports/${id}/exceedances/${exceedanceId}`, body),
   createRepeatControl: (id: number, exceedanceId: number, body: PekMutationBody) =>
     post<Record<string, unknown>>(`/pek/reports/${id}/exceedances/${exceedanceId}/repeat-control`, body),
@@ -115,6 +130,8 @@ export const pekService = {
   archiveReport: (id: number, body: PekMutationBody) => reportAction(id, 'archive', body),
   getHistory: (id: number, signal?: AbortSignal) => get<PekHistoryItem[]>(`/pek/reports/${id}/history`, {}, signal),
   getDashboard: (params: Record<string, unknown>, signal?: AbortSignal) => get<PekDashboard>('/pek/dashboard', params, signal),
+  getSettings: (signal?: AbortSignal) => get<PekSettings>('/pek/settings', {}, signal),
+  updateSettings: (body: PekSettings) => patch<PekSettings>('/pek/settings', body),
   downloadPreviewPdf: (id: number) => download(`/pek/reports/${id}/exports/preview.pdf`, `pek-report-${id}-preview.pdf`),
   downloadPdf: (id: number) => download(`/pek/reports/${id}/exports/report.pdf`, `pek-report-${id}.pdf`),
   downloadXlsx: (id: number) => download(`/pek/reports/${id}/exports/report.xlsx`, `pek-report-${id}.xlsx`),

@@ -13,7 +13,7 @@ import type {
 type Props = {
   open: boolean;
   protocolId: string;
-  version?: number;
+  version: number;
   row: ProtocolResultRow | null;
   devices?: ProtocolMeasurementDevice[];
   readOnly?: boolean;

@@ -13,6 +13,7 @@ type AuthState = {
   register: (data: RegisterPayload) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
+  refreshUser: () => Promise<User | null>;
 };
 
 export type RegisterPayload =
@@ -139,15 +140,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUserState(null);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    if (!localStorage.getItem(TOKEN_KEY)) return null;
+    const { data } = await api.get<{ data: User; message: string | null }>('/auth/me');
+    const nextUser = normalizeStoredUser(data.data);
+    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    setUserState(nextUser);
+    return nextUser;
+  }, []);
+
   useEffect(() => {
     const storedToken = localStorage.getItem(TOKEN_KEY);
     if (!storedToken) { setLoading(false); return; }
-    api.get<{ data: User; message: string | null }>('/auth/me')
-      .then(({ data }) => {
-        const u = normalizeStoredUser(data.data);
-        localStorage.setItem(USER_KEY, JSON.stringify(u));
-        setUserState(u);
-      })
+    refreshUser()
       .catch(() => {
         clearSession();
       })
@@ -186,7 +191,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = useCallback(() => {
     api.post('/auth/logout').catch(() => {});
     clearSession();
-  }, [clearSession]);
+  }, [clearSession, refreshUser]);
 
   const setUser = useCallback((u: User) => {
     localStorage.setItem(USER_KEY, JSON.stringify(u));
@@ -197,7 +202,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isStaff = !!user && staffRoles.includes(user.role);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, isAuthenticated, isStaff, login, staffLogin, register, logout, setUser }}>
+    <AuthContext.Provider value={{ user, token, loading, isAuthenticated, isStaff, login, staffLogin, register, logout, setUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

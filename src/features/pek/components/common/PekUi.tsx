@@ -2,17 +2,11 @@ import { AlertTriangle, CheckCircle2, LoaderCircle } from 'lucide-react';
 import type { ReactNode } from 'react';
 import Button from '../../../../components/ui/Button';
 import type { PekAvailableAction, PekProgramStatus, PekReportStatus } from '../../api/pekContracts';
+import { pekStatusLabels } from '../../utils/pekLabels';
 
-const labels: Record<string, string> = {
-  DRAFT: 'Черновик', COLLECTING: 'Сбор данных', REQUIRES_CORRECTION: 'Требует исправления',
-  READY_FOR_REVIEW: 'Готов к проверке', UNDER_REVIEW: 'На проверке', RETURNED: 'Возвращён',
-  READY_FOR_APPROVAL: 'Готов к утверждению', APPROVED: 'Утверждён',
-  READY_FOR_SIGNING: 'Готов к подписанию', SIGNED: 'Подписан', SUBMITTED: 'Отправлен',
-  ACCEPTED: 'Принят', REJECTED: 'Отклонён', ACTIVE: 'Действует', ARCHIVED: 'Архив',
-};
 export const PekStatusBadge = ({ status }: { status: PekReportStatus | PekProgramStatus }) => (
   <span className="inline-flex rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">
-    {labels[status] || status}
+    {pekStatusLabels[status]}
   </span>
 );
 export const PekPageHeader = ({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) => (

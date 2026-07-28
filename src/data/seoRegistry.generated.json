@@ -60,7 +60,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-07-28"
   },
   {
     "path": "/services",
@@ -114,7 +114,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-21"
+    "lastModified": "2026-07-28"
   },
   {
     "path": "/regions",
@@ -153,7 +153,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "monthly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-07-28"
   },
   {
     "path": "/about",
@@ -192,7 +192,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "monthly",
-    "lastModified": "2026-07-15"
+    "lastModified": "2026-07-28"
   },
   {
     "path": "/contacts",
@@ -263,7 +263,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "monthly",
-    "lastModified": "2026-07-14"
+    "lastModified": "2026-07-28"
   },
   {
     "path": "/news",
@@ -302,7 +302,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-21"
+    "lastModified": "2026-07-28"
   },
   {
     "path": "/employees",
@@ -341,7 +341,7 @@
     "includeInSitemap": false,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-06-23"
+    "lastModified": "2026-07-28"
   },
   {
     "path": "/partners",
@@ -380,7 +380,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-06-23"
+    "lastModified": "2026-07-28"
   },
   {
     "path": "/tariffs",
@@ -434,7 +434,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "monthly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-07-28"
   },
   {
     "path": "/faq",
@@ -473,7 +473,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-07-15"
+    "lastModified": "2026-07-28"
   },
   {
     "path": "/services/ecological-documents",

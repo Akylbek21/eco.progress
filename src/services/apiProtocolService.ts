@@ -37,7 +37,14 @@ import type {
   UpdateProtocolPayload,
   WeatherConditions,
 } from '../types/protocols';
-import type { QuickCreateProtocolApiRequest } from '../features/protocols/api/protocolContracts';
+import type {
+  CancelProtocolRequest,
+  QuickCreateProtocolApiRequest,
+  ReplaceProtocolRequest,
+  ReturnForRevisionRequest,
+  SignProtocolRequest,
+  ProtocolVersionRequest,
+} from '../features/protocols/api/protocolContracts';
 import { normalizeProtocolStatus } from '../config/protocolStatus';
 import { canonicalProtocolResultAliases } from '../utils/protocolResultAliases';
 import { canSearchNormative, normativeSearchItemToRecord, searchNormatives } from './normativeSearchService';
@@ -82,6 +89,13 @@ const numberOrNull = (value: unknown): number | null => {
   if (value === undefined || value === null || value === '') return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+};
+const requireProtocolVersion = (value: unknown): number => {
+  const version = Number(value);
+  if (!Number.isInteger(version) || version < 1) {
+    throw new Error('Backend contract error: protocol.version must be a positive integer.');
+  }
+  return version;
 };
 
 const normalizeCompanySnapshot = (raw: UnknownRecord): ProtocolCompanySnapshot => {
@@ -658,8 +672,8 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
       signedAt: pick(signature, ['signedAt', 'createdAt', 'signed_at']),
     };
   }).sort((left, right) => new Date(left.signedAt).getTime() - new Date(right.signedAt).getTime());
-  const signatureCount = Number(source.signatureCount ?? source.signaturesCount ?? signatures.length) || 0;
-  const maxSignatures = Number(source.maxSignatures ?? source.signatureLimit ?? 5) || 5;
+  const signatureCount = Number(source.signatureCount);
+  const maxSignatures = Number(source.maxSignatures);
   const header = asRecord(source.header);
   const conditions = asRecord(source.conditions || header.conditions);
   const firstResultValues = asRecord(asRecord(resultsSource[0]).values);
@@ -759,6 +773,8 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     signatures,
     hasDocx: source.hasDocx === true || Boolean(source.docxDocumentId || source.docxFileId || source.docxUrl),
     hasPdf: source.hasPdf === true || Boolean(source.pdfDocumentId || source.pdfFileId || source.pdfUrl),
+    docxFileId: pick(source, ['docxFileId', 'docxDocumentId']),
+    pdfFileId: pick(source, ['pdfFileId', 'pdfDocumentId']),
     finalPdfFileId: pick(source, ['finalPdfFileId', 'pdfFileId', 'pdfDocumentId']),
     finalPdfHash: pick(source, ['finalPdfHash', 'pdfFileHash', 'pdfHash']),
     printVisibility,
@@ -818,16 +834,26 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
         : [],
     createdAt: pick(source, ['createdAt', 'created_at']),
     updatedAt: pick(source, ['updatedAt', 'updated_at']),
-    version: source.version === undefined || source.version === null ? undefined : Number(source.version),
+    version: requireProtocolVersion(source.version),
     replacedByProtocolId: pick(source, ['replacedByProtocolId', 'replaced_by_protocol_id']),
     replacesProtocolId: pick(source, ['replacesProtocolId', 'replaces_protocol_id']),
     orderId: pick(source, ['orderId', 'order_id']),
     orderServiceItemId: pick(source, ['orderServiceItemId', 'order_service_item_id']),
     orderNumber: pick(source, ['orderNumber', 'order_number']),
+    pekProgramId: pick(source, ['pekProgramId', 'pek_program_id']),
+    pekReportId: pick(source, ['pekReportId', 'pek_report_id']),
+    pekControlItemId: pick(source, ['pekControlItemId', 'pek_control_item_id']),
+    pekControlEventId: pick(source, ['pekControlEventId', 'pek_control_event_id']),
+    monitoringPointId: pick(source, ['monitoringPointId', 'monitoring_point_id']),
+    emissionSourceId: pick(source, ['emissionSourceId', 'emission_source_id']),
+    waterOutletId: pick(source, ['waterOutletId', 'water_outlet_id']),
     permissions: asRecord(source.permissions) as Record<string, boolean>,
     canComplete: source.canComplete === true,
     blockingReasons: Array.isArray(source.blockingReasons) ? source.blockingReasons.map(String) : [],
-    publishedToClientAt: pick(source, ['publishedToClientAt', 'published_to_client_at']),
+    publishedToClientAt: pick(source, ['publishedAt', 'publishedToClientAt', 'published_to_client_at']),
+    publishedAt: pick(source, ['publishedAt', 'published_at', 'publishedToClientAt']),
+    publishedBy: pick(source, ['publishedBy', 'published_by', 'publishedByName']),
+    publishedDocumentId: pick(source, ['publishedDocumentId', 'published_document_id']),
   };
 };
 
@@ -1044,61 +1070,59 @@ export const toQuickCreateProtocolApiPayload = (
   payload: QuickCreateProtocolApiRequest,
 ): QuickCreateProtocolApiRequest => ({
   templateId: payload.templateId,
-  sourceDocumentCode: payload.sourceDocumentCode,
-  docxTemplateCode: payload.docxTemplateCode,
-  subtype: payload.subtype,
   companyId: payload.companyId,
   objectId: payload.objectId,
   laboratoryId: payload.laboratoryId,
   executorId: payload.executorId,
-  protocolDate: payload.protocolDate,
-  sampleDate: payload.sampleDate,
   measurementDate: payload.measurementDate,
   measurementTime: payload.measurementTime,
   measurementPlace: payload.measurementPlace,
-  testingStartDate: payload.testingStartDate,
-  testingEndDate: payload.testingEndDate,
-  sourceNumber: payload.sourceNumber,
+  defaultUnit: payload.defaultUnit,
+  environment: payload.environment
+    ? {
+        temperature: payload.environment.temperature,
+        humidity: payload.environment.humidity,
+        pressureKpa: payload.environment.pressureKpa,
+        windSpeed: payload.environment.windSpeed,
+        source: payload.environment.source,
+      }
+    : undefined,
   conditions: payload.conditions
     ? {
+        sampleNumber: payload.conditions.sampleNumber,
+        samplingDepth: payload.conditions.samplingDepth,
+        samplingPlace: payload.conditions.samplingPlace,
+        samplingDate: payload.conditions.samplingDate,
+        preparationDate: payload.conditions.preparationDate,
         season: payload.conditions.season,
         workCategory: payload.conditions.workCategory,
         workplaceType: payload.conditions.workplaceType,
         roomType: payload.conditions.roomType,
         normLevel: payload.conditions.normLevel,
-        temperature: payload.conditions.temperature,
-        humidity: payload.conditions.humidity,
-        pressure: payload.conditions.pressure,
-        windSpeed: payload.conditions.windSpeed,
-        sampleNumber: payload.conditions.sampleNumber,
-        samplingDepth: payload.conditions.samplingDepth,
-        samplingPlace: payload.conditions.samplingPlace,
         lightingType: payload.conditions.lightingType,
         noiseType: payload.conditions.noiseType,
         visualWorkCategory: payload.conditions.visualWorkCategory,
         waterType: payload.conditions.waterType,
         waterUseCategory: payload.conditions.waterUseCategory,
-        weatherSource: payload.conditions.weatherSource,
-        weatherDataSource: payload.conditions.weatherDataSource,
-        manualChangeReason: payload.conditions.manualChangeReason,
-        weatherObservedAt: payload.conditions.weatherObservedAt,
       }
     : payload.conditions,
   measurements: payload.measurements.map((measurement) => ({
-    factorType: measurement.factorType,
-    factorCode: measurement.factorCode,
-    pollutantCode: measurement.pollutantCode,
+    clientRowId: measurement.clientRowId,
     indicatorName: measurement.indicatorName,
-    value: measurement.value,
+    indicatorCode: measurement.indicatorCode,
+    physicalFactorCode: measurement.physicalFactorCode,
+    resultValue: measurement.resultValue,
     unit: measurement.unit,
-    normativeId: measurement.normativeId,
-    normativeValue: measurement.normativeValue,
-    testingMethodNd: measurement.testingMethodNd,
-    samplingMethodNd: measurement.samplingMethodNd,
     measurementDeviceId: measurement.measurementDeviceId,
-    deviceId: measurement.deviceId,
-    values: measurement.values,
+    normativeId: measurement.normativeId,
+    normValue: measurement.normValue,
+    samplingPlace: measurement.samplingPlace,
+    sampleNumber: measurement.sampleNumber,
+    samplingDepth: measurement.samplingDepth,
+    samplingDate: measurement.samplingDate,
+    methodology: measurement.methodology,
   })),
+  methodology: payload.methodology,
   printVisibility: {
     organizationName: payload.printVisibility.organizationName,
     organizationAddress: payload.printVisibility.organizationAddress,
@@ -1121,6 +1145,14 @@ export const toQuickCreateProtocolApiPayload = (
     windSpeed: payload.printVisibility.windSpeed,
   },
   orderId: payload.orderId,
+  orderServiceItemId: payload.orderServiceItemId,
+  pekProgramId: payload.pekProgramId,
+  pekControlItemId: payload.pekControlItemId,
+  pekControlEventId: payload.pekControlEventId,
+  pekReportId: payload.pekReportId,
+  monitoringPointId: payload.monitoringPointId,
+  emissionSourceId: payload.emissionSourceId,
+  waterOutletId: payload.waterOutletId,
 });
 
 export async function createProtocol(payload: CreateProtocolPayload): Promise<Protocol> {
@@ -1134,7 +1166,11 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
   return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
 }
 
-export async function quickCreateProtocol(payload: QuickCreateProtocolApiRequest, idempotencyKey: string): Promise<Protocol> {
+export async function quickCreateProtocol(params: {
+  payload: QuickCreateProtocolApiRequest;
+  idempotencyKey: string;
+}): Promise<Protocol> {
+  const { payload, idempotencyKey } = params;
   if (!idempotencyKey) {
     throw new Error('Не удалось сформировать ключ безопасной отправки запроса');
   }
@@ -1143,25 +1179,30 @@ export async function quickCreateProtocol(payload: QuickCreateProtocolApiRequest
   const response = await api.post<ApiResponse<unknown> | unknown>(
     '/protocols/quick-create',
     apiPayload,
-    { headers: { 'Idempotency-Key': idempotencyKey } },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+      },
+    },
   );
   const result = unwrapData(response);
   const protocol = requireProtocol(result, 'быстрое создание');
   const persisted = await getProtocol(protocol.id);
   if (import.meta.env.DEV) {
     const actualMeasurementDate = persisted.measurementDate;
-    if (actualMeasurementDate !== payload.measurementDate || persisted.protocolDate !== payload.protocolDate) {
+    if (actualMeasurementDate !== payload.measurementDate) {
       console.error('[Protocol contract] Backend did not persist key quick-create dates.', {
-        expected: { protocolDate: payload.protocolDate, measurementDate: payload.measurementDate },
-        actual: { protocolDate: persisted.protocolDate, measurementDate: actualMeasurementDate },
+        expected: { measurementDate: payload.measurementDate },
+        actual: { measurementDate: actualMeasurementDate },
       });
     }
   }
   return { ...persisted, printVisibility: normalizeProtocolPrintVisibility(persisted.printVisibility ?? payload.printVisibility) };
 }
 
-export async function refreshLaboratoryData(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/refresh-laboratory-data`);
+export async function refreshLaboratoryData(protocolId: string, version: number): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/refresh-laboratory-data`, { version });
   return requireProtocol(unwrapData(response), 'refresh laboratory data');
 }
 
@@ -1194,11 +1235,11 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
   return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
 }
 
-export async function deleteProtocol(protocolId: string, version?: number): Promise<void> {
+export async function deleteProtocol(protocolId: string, version: number): Promise<void> {
   await api.delete<ApiResponse<null>>(`/protocols/${protocolId}`, { data: { version } });
 }
 
-export async function addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version?: number): Promise<ProtocolResultRow> {
+export async function addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results`, {
     ...mapProtocolResultFormToRequest(payload),
     version,
@@ -1206,7 +1247,7 @@ export async function addProtocolResult(protocolId: string, payload: ProtocolRes
   return requireResult(response);
 }
 
-export async function updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload, version?: number): Promise<ProtocolResultRow> {
+export async function updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow> {
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}`, {
     ...mapProtocolResultFormToRequest(payload),
     version,
@@ -1219,7 +1260,7 @@ export async function updateProtocolResult(protocolId: string, resultId: string,
   return requireResult(response);
 }
 
-export async function deleteProtocolResult(protocolId: string, resultId: string, version?: number): Promise<void> {
+export async function deleteProtocolResult(protocolId: string, resultId: string, version: number): Promise<void> {
   await api.delete<ApiResponse<null>>(`/protocols/${protocolId}/results/${resultId}`, { data: { version } });
 }
 
@@ -1227,7 +1268,7 @@ export async function bulkAssignDevice(
   protocolId: string,
   resultIds: string[],
   measurementDeviceId: string | number,
-  version?: number,
+  version: number,
 ): Promise<Protocol> {
   const response = await api.patch<ApiResponse<unknown> | unknown>(
     `/protocols/${protocolId}/results/bulk-device`,
@@ -1240,7 +1281,7 @@ export async function bulkUpdatePlace(
   protocolId: string,
   resultIds: string[],
   measurementPlace: string,
-  version?: number,
+  version: number,
 ): Promise<Protocol> {
   const response = await api.patch<ApiResponse<unknown> | unknown>(
     `/protocols/${protocolId}/results/bulk-place`,
@@ -1252,7 +1293,7 @@ export async function bulkUpdatePlace(
 export async function bulkDeleteResults(
   protocolId: string,
   resultIds: string[],
-  version?: number,
+  version: number,
 ): Promise<Protocol> {
   const response = await api.delete<ApiResponse<unknown> | unknown>(
     `/protocols/${protocolId}/results/bulk`,
@@ -1261,56 +1302,59 @@ export async function bulkDeleteResults(
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function checkNormatives(protocolId: string, version?: number): Promise<Protocol> {
+export async function checkNormatives(protocolId: string, version: number): Promise<Protocol> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/check-normatives`, { version });
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function readyForApproval(protocolId: string, version?: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/ready-for-approval`, { version });
+export async function readyForApproval(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/ready-for-approval`, request);
   return protocolFromActionResponse(protocolId, response);
 }
 
 export const markReadyForApproval = readyForApproval;
 
-export async function approveProtocol(protocolId: string, version?: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/approve`, { version });
+export async function approveProtocol(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/approve`, request);
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function returnForRevision(protocolId: string, reason: string, version?: number): Promise<Protocol> {
-  const comment = reason.trim();
-  if (!comment) throw new Error('Укажите причину возврата протокола на доработку.');
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-for-revision`, { reason: comment, version });
+export async function returnForRevision(protocolId: string, request: ReturnForRevisionRequest): Promise<Protocol> {
+  const reason = request.reason.trim();
+  if (reason.length < 3 || reason.length > 1000) throw new Error('Причина должна содержать от 3 до 1000 символов.');
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-for-revision`, { version: request.version, reason });
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function signProtocol(protocolId: string | number, version: number): Promise<SignProtocolResponse> {
-  const response = await api.post<SignProtocolResponse>(`/protocols/${protocolId}/sign`, { version });
+export async function signProtocol(protocolId: string | number, request: SignProtocolRequest): Promise<SignProtocolResponse> {
+  if (!request.cmsSignatureBase64.trim()) throw new Error('CMS-подпись не сформирована.');
+  const response = await api.post<SignProtocolResponse>(`/protocols/${protocolId}/sign`, request);
   return response.data;
 }
 
-export async function publishToClient(protocolId: string, version?: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/publish-to-client`, { version });
+export async function publishToClient(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/publish-to-client`, request);
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function createCorrection(protocolId: string, reason: string, version?: number): Promise<Protocol> {
-  const correctionReason = reason.trim();
+export async function createCorrection(protocolId: string, request: ReplaceProtocolRequest): Promise<Protocol> {
+  const correctionReason = request.reason.trim();
   if (!correctionReason) throw new Error('Укажите причину создания исправленной версии.');
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/corrections`, { reason: correctionReason, version });
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/corrections`, { version: request.version, reason: correctionReason });
   return requireProtocol(unwrapData(response), 'создание исправленной версии');
 }
 
 export const replaceProtocol = createCorrection;
 
-export async function cancelProtocol(protocolId: string, version?: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/cancel`, { version });
+export async function cancelProtocol(protocolId: string, request: CancelProtocolRequest): Promise<Protocol> {
+  const reason = request.reason.trim();
+  if (reason.length < 3 || reason.length > 1000) throw new Error('Причина должна содержать от 3 до 1000 символов.');
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/cancel`, { version: request.version, reason });
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function archiveProtocol(protocolId: string, version?: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/archive`, { version });
+export async function archiveProtocol(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/archive`, request);
   return protocolFromActionResponse(protocolId, response);
 }
 
@@ -1324,13 +1368,13 @@ export async function previewProtocol(protocolId: string): Promise<Blob> {
   }
 }
 
-export async function generateDocx(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-docx`);
+export async function generateDocx(protocolId: string, version: number): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-docx`, { version });
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function generatePdf(protocolId: string): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-pdf`);
+export async function generatePdf(protocolId: string, version: number): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-pdf`, { version });
   return protocolFromActionResponse(protocolId, response);
 }
 
@@ -1388,9 +1432,10 @@ const normalizeBlobError = async (error: unknown): Promise<Error> => {
   return error instanceof Error ? error : new Error(getApiErrorMessage(error));
 };
 
-export async function importExcel(protocolId: string, file: File): Promise<Protocol> {
+export async function importExcel(protocolId: string, file: File, version: number): Promise<Protocol> {
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('version', String(version));
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/import-excel`, formData);
   return protocolFromActionResponse(protocolId, response);
 }
@@ -1398,14 +1443,15 @@ export async function importExcel(protocolId: string, file: File): Promise<Proto
 export async function addProtocolMeasurementDevice(
   protocolId: string,
   device: MeasurementDevice,
+  version: number,
 ): Promise<Protocol> {
   if (device.status !== 'VALID' && device.status !== 'EXPIRING') throw new Error('Этот прибор недоступен для выбора.');
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/measurement-devices`, { deviceId: device.id });
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/measurement-devices`, { deviceId: device.id, version });
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function removeProtocolMeasurementDevice(protocolId: string, deviceId: string): Promise<Protocol> {
-  const response = await api.delete<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/measurement-devices/${deviceId}`);
+export async function removeProtocolMeasurementDevice(protocolId: string, deviceId: string, version: number): Promise<Protocol> {
+  const response = await api.delete<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/measurement-devices/${deviceId}`, { data: { version } });
   return protocolFromActionResponse(protocolId, response);
 }
 
@@ -1528,8 +1574,8 @@ export async function saveRawMeasurements(
   protocolId: string,
   resultId: string,
   payload: RawMeasurementRequest[],
-  methodTemplateId?: string | number | null,
-  version?: number,
+  methodTemplateId: string | number | null | undefined,
+  version: number,
 ): Promise<ProtocolResultRow | undefined> {
   const request: SaveRawMeasurementsRequest = {
     version,
@@ -1547,7 +1593,7 @@ export async function saveRawMeasurements(
   return row.id ? row : undefined;
 }
 
-export async function calculateResult(protocolId: string, resultId: string, version?: number): Promise<CalculationResultResponse> {
+export async function calculateResult(protocolId: string, resultId: string, version: number): Promise<CalculationResultResponse> {
   const response = await api.post<ApiResponse<unknown> | unknown>(
     `/protocols/${protocolId}/results/${resultId}/calculate`,
     { version },
@@ -1555,7 +1601,7 @@ export async function calculateResult(protocolId: string, resultId: string, vers
   return normalizeCalculationResult(unwrapApiResponse<unknown>(response.data), protocolId, resultId);
 }
 
-export async function calculateProtocolSummary(protocolId: string, version?: number): Promise<ProtocolCalculationSummaryResponse> {
+export async function calculateProtocolSummary(protocolId: string, version: number): Promise<ProtocolCalculationSummaryResponse> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`, { version });
   return normalizeCalculationSummary(unwrapApiResponse<unknown>(response.data), protocolId);
 }
@@ -1587,7 +1633,7 @@ export async function getWeatherConditions(params: {
   return normalizeWeatherConditions(response);
 }
 
-export async function calculateProtocol(protocolId: string): Promise<Protocol> {
-  await calculateProtocolSummary(protocolId);
+export async function calculateProtocol(protocolId: string, version: number): Promise<Protocol> {
+  await calculateProtocolSummary(protocolId, version);
   return getProtocol(protocolId);
 }

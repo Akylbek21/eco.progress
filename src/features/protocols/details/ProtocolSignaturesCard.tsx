@@ -19,8 +19,8 @@ export const protocolSignUnavailableReason = (
   permissions: ProtocolPermissions,
 ): string => {
   if (protocol.signedByCurrentUser) return '✓ Вы подписали этот протокол';
-  const signatureCount = protocol.signatureCount ?? protocol.signatures?.length ?? 0;
-  const maxSignatures = protocol.maxSignatures || 5;
+  const signatureCount = protocol.signatureCount;
+  const maxSignatures = protocol.maxSignatures;
   if (signatureCount >= maxSignatures) {
     return `Достигнуто максимальное количество подписей: ${maxSignatures}`;
   }
@@ -49,8 +49,8 @@ const ProtocolSignaturesCard = ({
   onSign,
 }: Props) => {
   const signatures = sortedProtocolSignatures(protocol.signatures || []);
-  const signatureCount = protocol.signatureCount ?? signatures.length;
-  const maxSignatures = protocol.maxSignatures || 5;
+  const signatureCount = protocol.signatureCount;
+  const maxSignatures = protocol.maxSignatures;
   const reason = protocolSignUnavailableReason(protocol, permissions);
   const canSign = permissions.canSign && !reason;
 

@@ -1,22 +1,21 @@
 import { isWaterProtocolType } from '../../../config/protocolWater';
 import { PROTOCOL_TYPE_CONFIG, type ProtocolTypeKey } from '../../../data/protocolTypeConfig';
 import type { CompanyObject } from '../../../types/companies';
+import type { ProtocolPrintVisibility, ProtocolTemplateId } from '../../../types/protocols';
 import type {
-  EntityId,
-  ProtocolPrintVisibility,
-  QuickCreateComparisonType,
-  QuickCreateConditions,
-  QuickCreateMeasurement,
-} from '../../../types/protocols';
-import type { QuickCreateProtocolApiRequest } from '../api/protocolContracts';
-import { mapFrontendProtocolType } from '../api/protocolTypeMapper';
+  QuickCreateProtocolConditions,
+  QuickCreateProtocolEnvironment,
+  QuickCreateProtocolMeasurement,
+  QuickCreateProtocolMethodology,
+  QuickCreateProtocolRequest,
+  QuickCreateProtocolTemplateId,
+} from '../api/protocolContracts';
 import type {
   LaboratoryExecutorOption,
   MeasurementFormRow,
   ProtocolWizardForm,
   ProtocolWizardResult,
 } from '../components/wizardTypes';
-import { PROTOCOL_TEMPLATES } from '../utils/protocolTemplates';
 
 export interface ProtocolCreateContext {
   selectedObject?: CompanyObject;
@@ -25,29 +24,96 @@ export interface ProtocolCreateContext {
   validationMode?: 'draft' | 'submit';
 }
 
-export class QuickCreateValidationError extends Error {
+export class PayloadValidationError extends Error {
   constructor(
     public readonly field: string,
     message: string,
   ) {
     super(message);
+    this.name = 'PayloadValidationError';
+  }
+}
+
+/** Backward-compatible name used by the current wizard error boundary. */
+export class QuickCreateValidationError extends PayloadValidationError {
+  constructor(field: string, message: string) {
+    super(field, message);
     this.name = 'QuickCreateValidationError';
   }
 }
 
+export type QuickCreateProtocolDraftRequest = Omit<
+  QuickCreateProtocolRequest,
+  'objectId' | 'laboratoryId' | 'executorId' | 'measurementDate' | 'measurementPlace' | 'measurements'
+> & {
+  objectId: number | null;
+  laboratoryId: number | null;
+  executorId: number | null;
+  measurementDate: string;
+  measurementPlace: string;
+  measurements: Array<Partial<QuickCreateProtocolMeasurement>>;
+};
+
 export function normalizeNullableText(value: unknown): string | null {
-  if (typeof value !== 'string') {
-    return value == null ? null : String(value).trim() || null;
-  }
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : null;
+  if (value === null || value === undefined) return null;
+  const normalized = String(value).trim();
+  return normalized || null;
 }
 
-export function normalizeDecimal(value: string | number | null | undefined): string | null {
+export function normalizeDecimal(
+  value: string | number | null | undefined,
+  fieldName = 'value',
+): number | null {
   if (value === null || value === undefined) return null;
   const normalized = String(value).trim().replace(/\s+/g, '').replace(',', '.');
-  return normalized === '' ? null : normalized;
+  if (!normalized) return null;
+  const result = Number(normalized);
+  if (!Number.isFinite(result)) {
+    throw new QuickCreateValidationError(fieldName, 'Укажите корректное числовое значение');
+  }
+  return result;
 }
+
+export function requirePositiveIntegerId(value: unknown, fieldName: string): number {
+  if (
+    value === null
+    || value === undefined
+    || value === ''
+    || (typeof value === 'string' && !/^\d+$/.test(value.trim()))
+  ) {
+    throw new QuickCreateValidationError(fieldName, 'Выберите значение из справочника');
+  }
+  const id = typeof value === 'number' ? value : Number(value);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new QuickCreateValidationError(fieldName, 'Выберите значение из справочника');
+  }
+  return id;
+}
+
+export function normalizeOptionalId(value: unknown, fieldName = 'id'): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  return requirePositiveIntegerId(value, fieldName);
+}
+
+export function toApiDate(value: unknown, field: string): string {
+  const normalized = normalizeNullableText(value);
+  if (!normalized || !/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    throw new QuickCreateValidationError(field, 'Укажите дату в формате ГГГГ-ММ-ДД');
+  }
+  const [year, month, day] = normalized.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year
+    || date.getUTCMonth() !== month - 1
+    || date.getUTCDate() !== day
+  ) {
+    throw new QuickCreateValidationError(field, 'Укажите корректную дату');
+  }
+  return normalized;
+}
+
+const optionalApiDate = (value: unknown, field: string): string | undefined =>
+  normalizeNullableText(value) ? toApiDate(value, field) : undefined;
 
 const PROTOCOL_UNIT_ALIASES: Readonly<Record<string, string>> = {
   'мг/л': 'мг/дм³',
@@ -70,191 +136,232 @@ export function normalizeProtocolUnit(value: unknown): string | null {
   return PROTOCOL_UNIT_ALIASES[unit.toLowerCase()] ?? unit;
 }
 
-export function normalizeOptionalId(value: unknown, field = 'id'): EntityId | null {
-  if (value === null || value === undefined || value === '') return null;
-  const id = Number(value);
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new QuickCreateValidationError(field, 'Выберите значение из справочника');
-  }
-  return id;
-}
-
-const normalizeRequiredId = (value: unknown, field: string, message: string): EntityId => {
-  const id = normalizeOptionalId(value, field);
-  if (id === null) throw new QuickCreateValidationError(field, message);
-  return id;
-};
-
-export function toApiDate(value: unknown, field: string): string {
-  const normalized = normalizeNullableText(value);
-  if (!normalized || !/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
-    throw new QuickCreateValidationError(field, 'Укажите дату в формате ГГГГ-ММ-ДД');
-  }
-  const [year, month, day] = normalized.split('-').map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  if (
-    date.getUTCFullYear() !== year
-    || date.getUTCMonth() !== month - 1
-    || date.getUTCDate() !== day
-  ) {
-    throw new QuickCreateValidationError(field, 'Укажите корректную дату');
-  }
-  return normalized;
-}
-
-const optionalApiDate = (value: unknown, field: string): string | null => {
-  if (!normalizeNullableText(value)) return null;
-  return toApiDate(value, field);
-};
-
-const comparisonMap: Record<string, QuickCreateComparisonType | null> = {
-  LE: 'LE',
-  LESS_OR_EQUAL: 'LE',
-  LT: 'LT',
-  LESS_THAN: 'LT',
-  GE: 'GE',
-  GREATER_OR_EQUAL: 'GE',
-  GT: 'GT',
-  GREATER_THAN: 'GT',
-  EQ: 'EQ',
-  EQUAL: 'EQ',
-  RANGE: 'RANGE',
-  ABSENT: null,
-  INFO: null,
-};
-
-const normalizeComparisonType = (value: unknown): QuickCreateComparisonType | null => {
-  const key = normalizeNullableText(value)?.toUpperCase();
-  return key ? comparisonMap[key] ?? null : null;
-};
-
 const isNumericOnlyUnit = (value: string): boolean =>
   /^[-+]?\d+(?:[.,]\d+)?$/.test(value.replace(/\s+/g, ''));
 
-const compactValues = (values: Record<string, unknown>): Record<string, unknown> =>
+const compactValues = <T extends Record<string, unknown>>(values: T): Partial<T> =>
   Object.fromEntries(
     Object.entries(values).filter(([, value]) =>
       value !== null && value !== undefined && value !== ''),
-  );
-
-type MeasurementDefaults = {
-  testingMethodNd?: string | null;
-  samplingMethodNd?: string | null;
-};
-
-export function mapMeasurementToRequest(
-  row: MeasurementFormRow,
-  defaultUnit?: string | null,
-  index = 0,
-  defaults: MeasurementDefaults = {},
-): QuickCreateMeasurement {
-  const indicatorName = normalizeNullableText(row.indicatorName);
-  if (!indicatorName) {
-    throw new QuickCreateValidationError(`results.${index}.indicatorName`, 'Укажите показатель');
-  }
-
-  const apiValue = normalizeDecimal(row.value) ?? normalizeNullableText(row.textValue);
-  if (apiValue === null) {
-    throw new QuickCreateValidationError(`results.${index}.value`, 'Укажите числовой или текстовый результат');
-  }
-
-  const unit = normalizeProtocolUnit(row.unit) ?? normalizeProtocolUnit(defaultUnit);
-  if (!unit) {
-    throw new QuickCreateValidationError(`results.${index}.unit`, 'Укажите единицу измерения');
-  }
-  if (isNumericOnlyUnit(unit)) {
-    throw new QuickCreateValidationError(
-      `results.${index}.unit`,
-      'В поле единицы измерения указано числовое значение',
-    );
-  }
-
-  const normativeId = normalizeNullableText(row.normativeRecordId || row.normativeId);
-  const testingMethodNd = normalizeNullableText(
-    row.testingMethodNd || row.methodDocument || defaults.testingMethodNd,
-  );
-  const samplingMethodNd = normalizeNullableText(
-    row.samplingMethodNd || defaults.samplingMethodNd,
-  );
-
-  return {
-    factorType: normalizeNullableText(row.factorType),
-    factorCode: normalizeNullableText(row.factorCode),
-    pollutantCode: normalizeNullableText(row.pollutantCode),
-    indicatorName,
-    value: apiValue,
-    unit,
-    normativeId,
-    normativeValue: normalizeDecimal(row.normativeValue),
-    testingMethodNd,
-    samplingMethodNd,
-    measurementDeviceId: normalizeOptionalId(
-      row.measurementDeviceId,
-      `results.${index}.measurementDeviceId`,
-    ),
-    deviceId: null,
-    values: compactValues({
-      cas: normalizeNullableText(row.cas),
-      formula: normalizeNullableText(row.formula),
-      samplingPlace: normalizeNullableText(row.samplingPlace),
-      sampleNumber: normalizeNullableText(row.sampleNumber),
-      samplingDepth: normalizeDecimal(row.samplingDepth),
-      samplingSpeed: normalizeDecimal(row.samplingSpeed),
-      sampleVolume: normalizeDecimal(row.sampleVolume),
-      waterType: normalizeNullableText(row.waterType),
-      direction: normalizeNullableText(row.direction),
-      minimumValue: normalizeDecimal(row.minimumValue),
-      maximumValue: normalizeDecimal(row.maximumValue),
-      averageValue: normalizeDecimal(row.averageValue),
-      duration: normalizeDecimal(row.duration),
-      normativeValueRaw: normalizeNullableText(row.normativeValueRaw),
-      comparisonType: normalizeComparisonType(row.comparisonType),
-      normativeMin: normalizeDecimal(row.normativeMin),
-      normativeMax: normalizeDecimal(row.normativeMax),
-      normativeDocument: normalizeNullableText(row.normativeDocument),
-      sourceDocumentCode: normalizeNullableText(row.sourceDocumentCode),
-      note: normalizeNullableText(row.note),
-    }),
-  };
-}
+  ) as Partial<T>;
 
 const configKey = (templateId: string): ProtocolTypeKey =>
   templateId === 'water_wastewater' ? 'water' : templateId as ProtocolTypeKey;
 
-export const isNonEmptyResult = (row: ProtocolWizardResult): boolean =>
-  Boolean(row.indicatorName.trim() || row.value.trim() || row.textValue.trim());
+export const mapQuickCreateTemplateId = (
+  templateId: ProtocolTemplateId | string,
+): QuickCreateProtocolTemplateId => {
+  const normalized = templateId === 'water_wastewater' ? 'water' : templateId;
+  const supported: QuickCreateProtocolTemplateId[] = [
+    'ambient_air',
+    'workplace_air',
+    'soil',
+    'microclimate',
+    'lighting',
+    'noise_vibration',
+    'water',
+  ];
+  if (!supported.includes(normalized as QuickCreateProtocolTemplateId)) {
+    throw new QuickCreateValidationError(
+      'templateId',
+      normalized === 'physical_factors'
+        ? 'Выберите конкретный тип физического фактора'
+        : 'Выбранный тип протокола не поддерживается быстрым созданием',
+    );
+  }
+  return normalized as QuickCreateProtocolTemplateId;
+};
+
+export const isNonEmptyResult = (row: ProtocolWizardResult): boolean => {
+  const value = row.value as unknown;
+  const hasValue = value !== null && value !== undefined && String(value).trim() !== '';
+  return Boolean(
+    row.indicatorName.trim()
+    || hasValue
+    || row.textValue.trim()
+    || row.pollutantCode.trim()
+    || row.factorCode.trim()
+    || row.factorType.trim(),
+  );
+};
+
+const mapMethodology = (
+  row: MeasurementFormRow,
+  form: ProtocolWizardForm,
+  strict: boolean,
+  index: number,
+): QuickCreateProtocolMethodology | undefined => {
+  const methodologyCode = normalizeNullableText(
+    row.testingMethodNd || row.methodDocument || form.testingMethodNd,
+  );
+  const methodologyName = normalizeNullableText(row.methodName || row.methodDocument);
+  if (strict && !methodologyCode && !methodologyName) {
+    throw new QuickCreateValidationError(
+      `results.${index}.testingMethodNd`,
+      'Укажите методику испытаний',
+    );
+  }
+  if (!methodologyCode && !methodologyName) return undefined;
+  return compactValues({
+    methodologyCode: methodologyCode ?? undefined,
+    methodologyName: methodologyName ?? undefined,
+  }) as QuickCreateProtocolMethodology;
+};
+
+export function mapMeasurementToRequest(
+  row: MeasurementFormRow,
+  form: ProtocolWizardForm,
+  index: number,
+  strict: boolean,
+): QuickCreateProtocolMeasurement | Partial<QuickCreateProtocolMeasurement> {
+  const indicatorName = normalizeNullableText(row.indicatorName);
+  if (strict && !indicatorName) {
+    throw new QuickCreateValidationError(`results.${index}.indicatorName`, 'Укажите показатель');
+  }
+
+  const numericValue = normalizeDecimal(row.value, `results.${index}.value`);
+  const textValue = normalizeNullableText(row.textValue);
+  const resultValue = numericValue ?? textValue;
+  if (strict && resultValue === null) {
+    throw new QuickCreateValidationError(
+      `results.${index}.value`,
+      'Укажите числовой или текстовый результат',
+    );
+  }
+
+  const unit = normalizeProtocolUnit(row.unit);
+  if (strict && !unit) {
+    throw new QuickCreateValidationError(`results.${index}.unit`, 'Укажите единицу измерения');
+  }
+  if (unit && isNumericOnlyUnit(unit)) {
+    throw new QuickCreateValidationError(
+      `results.${index}.unit`,
+      'В поле единицы измерения указано нормативное значение',
+    );
+  }
+
+  const chemical = ['ambient_air', 'workplace_air', 'soil', 'water_wastewater'].includes(form.templateId);
+  const indicatorCode = chemical ? normalizeNullableText(row.pollutantCode) : null;
+  const physicalFactorCode = chemical
+    ? null
+    : normalizeNullableText(row.factorCode || row.factorType);
+  if (strict && chemical && !indicatorCode) {
+    throw new QuickCreateValidationError(
+      `results.${index}.pollutantCode`,
+      'Укажите код показателя',
+    );
+  }
+  if (strict && !chemical && !physicalFactorCode) {
+    throw new QuickCreateValidationError(
+      `results.${index}.factorCode`,
+      'Укажите код физического фактора',
+    );
+  }
+
+  const measurementDeviceId = strict
+    ? requirePositiveIntegerId(
+        row.measurementDeviceId,
+        `results.${index}.measurementDeviceId`,
+      )
+    : normalizeOptionalId(row.measurementDeviceId, `results.${index}.measurementDeviceId`);
+  const clientRowId = normalizeNullableText(row.clientRowId);
+  if (strict && !clientRowId) {
+    throw new QuickCreateValidationError(
+      `results.${index}.clientRowId`,
+      'Не удалось определить строку результата. Добавьте её заново',
+    );
+  }
+
+  const samplingPlace = normalizeNullableText(row.samplingPlace)
+    || normalizeNullableText(form.measurementPlace);
+  if (strict && (form.templateId === 'soil' || isWaterProtocolType(form.templateId)) && !samplingPlace) {
+    throw new QuickCreateValidationError(
+      `results.${index}.samplingPlace`,
+      'Укажите место отбора пробы',
+    );
+  }
+
+  return compactValues({
+    clientRowId: clientRowId ?? undefined,
+    indicatorName: indicatorName ?? undefined,
+    indicatorCode: indicatorCode ?? undefined,
+    physicalFactorCode: physicalFactorCode ?? undefined,
+    resultValue: resultValue ?? undefined,
+    unit: unit ?? undefined,
+    measurementDeviceId: measurementDeviceId ?? undefined,
+    normativeId: normalizeNullableText(row.normativeRecordId || row.normativeId) ?? undefined,
+    normValue: normalizeDecimal(row.normativeValue, `results.${index}.normativeValue`) ?? undefined,
+    samplingPlace: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
+      ? samplingPlace ?? undefined
+      : undefined,
+    sampleNumber: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
+      ? normalizeNullableText(row.sampleNumber) ?? undefined
+      : undefined,
+    samplingDepth: form.templateId === 'soil'
+      ? normalizeDecimal(row.samplingDepth, `results.${index}.samplingDepth`) ?? undefined
+      : undefined,
+    samplingDate: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
+      ? optionalApiDate(form.sampleDate, 'sampleDate')
+      : undefined,
+    methodology: mapMethodology(row, form, strict, index),
+  }) as QuickCreateProtocolMeasurement | Partial<QuickCreateProtocolMeasurement>;
+}
+
+const normalizeEnvironmentValue = (
+  value: string,
+  field: string,
+  minimum: number,
+  maximum: number,
+): number | null => {
+  const normalized = normalizeDecimal(value, field);
+  if (normalized !== null && (normalized < minimum || normalized > maximum)) {
+    throw new QuickCreateValidationError(
+      field,
+      `Значение должно быть от ${minimum} до ${maximum}`,
+    );
+  }
+  return normalized;
+};
+
+export const mapEnvironment = (form: ProtocolWizardForm): QuickCreateProtocolEnvironment => ({
+  temperature: normalizeEnvironmentValue(form.temperature, 'environment.temperature', -100, 100),
+  humidity: normalizeEnvironmentValue(form.humidity, 'environment.humidity', 0, 100),
+  pressureKpa: normalizeEnvironmentValue(form.pressure, 'environment.pressureKpa', 20, 120),
+  windSpeed: normalizeEnvironmentValue(form.windSpeed, 'environment.windSpeed', 0, 150),
+  source: form.environmentSource === 'API' ? 'API' : 'MANUAL',
+});
 
 export const mapConditions = (
   form: ProtocolWizardForm,
   rows = form.results.filter(isNonEmptyResult),
-): QuickCreateConditions => {
+): QuickCreateProtocolConditions => {
   const sample = rows[0];
-  const values: QuickCreateConditions = {
-    season: normalizeNullableText(form.season),
-    workCategory: normalizeNullableText(form.workCategory),
-    workplaceType: normalizeNullableText(form.workplaceType),
-    roomType: normalizeNullableText(form.roomType),
-    normLevel: normalizeNullableText(form.normLevel),
-    temperature: normalizeDecimal(form.temperature),
-    humidity: normalizeDecimal(form.humidity),
-    pressure: normalizeDecimal(form.pressure),
-    windSpeed: normalizeDecimal(form.windSpeed),
-    sampleNumber: form.templateId === 'soil' ? normalizeNullableText(sample?.sampleNumber) : null,
-    samplingDepth: form.templateId === 'soil' ? normalizeDecimal(sample?.samplingDepth) : null,
-    samplingPlace: form.templateId === 'soil' ? normalizeNullableText(sample?.samplingPlace) : null,
-    lightingType: normalizeNullableText(form.lightingType),
-    noiseType: normalizeNullableText(form.noiseType),
-    visualWorkCategory: normalizeNullableText(form.visualWorkCategory),
-    waterType: isWaterProtocolType(form.templateId) ? normalizeNullableText(form.waterType) : null,
-    waterUseCategory: isWaterProtocolType(form.templateId)
-      ? normalizeNullableText(form.waterUseCategory)
-      : null,
-    weatherSource: normalizeNullableText(form.environmentSource),
-    weatherDataSource: normalizeNullableText(form.environmentDataSource),
-    manualChangeReason: normalizeNullableText(form.environmentManualChangeReason),
-    weatherObservedAt: normalizeNullableText(form.environmentObservedAt),
-  };
-  return compactValues(values as unknown as Record<string, unknown>) as QuickCreateConditions;
+  const water = isWaterProtocolType(form.templateId);
+  const soil = form.templateId === 'soil';
+  return compactValues({
+    waterType: water ? normalizeNullableText(form.waterType) ?? undefined : undefined,
+    waterUseCategory: water
+      ? normalizeNullableText(form.waterUseCategory) ?? undefined
+      : undefined,
+    sampleNumber: soil || water
+      ? normalizeNullableText(sample?.sampleNumber) ?? undefined
+      : undefined,
+    samplingPlace: soil || water
+      ? normalizeNullableText(sample?.samplingPlace || form.measurementPlace) ?? undefined
+      : undefined,
+    samplingDepth: soil
+      ? normalizeDecimal(sample?.samplingDepth, 'results.0.samplingDepth') ?? undefined
+      : undefined,
+    samplingDate: soil || water ? optionalApiDate(form.sampleDate, 'sampleDate') : undefined,
+    season: normalizeNullableText(form.season) ?? undefined,
+    workCategory: normalizeNullableText(form.workCategory) ?? undefined,
+    workplaceType: normalizeNullableText(form.workplaceType) ?? undefined,
+    roomType: normalizeNullableText(form.roomType) ?? undefined,
+    normLevel: normalizeNullableText(form.normLevel) ?? undefined,
+    lightingType: normalizeNullableText(form.lightingType) ?? undefined,
+    noiseType: normalizeNullableText(form.noiseType) ?? undefined,
+    visualWorkCategory: normalizeNullableText(form.visualWorkCategory) ?? undefined,
+  }) as QuickCreateProtocolConditions;
 };
 
 export const mapPrintVisibilityToApi = (
@@ -281,193 +388,199 @@ export const mapPrintVisibilityToApi = (
   windSpeed: Boolean(visibility.windSpeed),
 });
 
-const normalizeSourceNumber = (value: unknown): string | null => {
-  const normalized = normalizeNullableText(
-    normalizeNullableText(value)?.replace(/[\u0000-\u001F\u007F]/g, ''),
-  );
-  if (normalized && normalized.length > 80) {
+const validatePersistedObject = (
+  selectedObject: CompanyObject | undefined,
+  objectId: number,
+  companyId: number,
+): void => {
+  if (!selectedObject) {
     throw new QuickCreateValidationError(
-      'sourceNumber',
-      'Номер источника должен содержать не более 80 символов',
+      'objectId',
+      'Перед созданием протокола сохраните объект компании',
     );
   }
-  return normalized;
+  if (
+    selectedObject.virtual === true
+    || selectedObject.isVirtual === true
+    || selectedObject.persisted === false
+  ) {
+    throw new QuickCreateValidationError(
+      'objectId',
+      'Перед созданием протокола сохраните объект компании',
+    );
+  }
+  if (
+    requirePositiveIntegerId(selectedObject.id, 'objectId') !== objectId
+    || (
+      selectedObject.companyId
+      && requirePositiveIntegerId(selectedObject.companyId, 'companyId') !== companyId
+    )
+  ) {
+    throw new QuickCreateValidationError(
+      'objectId',
+      'Выберите объект выбранной компании',
+    );
+  }
+};
+
+const validateExecutor = (
+  selectedExecutor: LaboratoryExecutorOption | undefined,
+  executorId: number,
+  laboratoryId: number,
+): void => {
+  if (!selectedExecutor) {
+    throw new QuickCreateValidationError(
+      'executorId',
+      'Выберите исполнителя выбранной лаборатории',
+    );
+  }
+  if (selectedExecutor.active === false) {
+    throw new QuickCreateValidationError('executorId', 'Выбранный исполнитель неактивен');
+  }
+  if (
+    selectedExecutor.executorId !== executorId
+    || selectedExecutor.laboratoryId !== laboratoryId
+  ) {
+    throw new QuickCreateValidationError(
+      'executorId',
+      'Выберите исполнителя выбранной лаборатории',
+    );
+  }
 };
 
 export function buildQuickCreatePayload(
   form: ProtocolWizardForm,
+  context: ProtocolCreateContext & { validationMode: 'draft' },
+): QuickCreateProtocolDraftRequest;
+export function buildQuickCreatePayload(
+  form: ProtocolWizardForm,
+  context?: ProtocolCreateContext,
+): QuickCreateProtocolRequest;
+export function buildQuickCreatePayload(
+  form: ProtocolWizardForm,
   context: ProtocolCreateContext = {},
-): QuickCreateProtocolApiRequest {
+): QuickCreateProtocolRequest | QuickCreateProtocolDraftRequest {
   if (!form.templateId) {
     throw new QuickCreateValidationError('templateId', 'Выберите тип протокола');
   }
-
-  const companyId = normalizeRequiredId(form.companyId, 'companyId', 'Выберите компанию');
+  const templateId = mapQuickCreateTemplateId(form.templateId);
+  const companyId = requirePositiveIntegerId(form.companyId, 'companyId');
   const strict = context.validationMode !== 'draft';
   const objectId = strict
-    ? normalizeRequiredId(form.objectId, 'objectId', 'Выберите объект')
+    ? requirePositiveIntegerId(form.objectId, 'objectId')
     : normalizeOptionalId(form.objectId, 'objectId');
   const laboratoryId = strict
-    ? normalizeRequiredId(form.laboratoryId, 'laboratoryId', 'Выберите лабораторию')
+    ? requirePositiveIntegerId(form.laboratoryId, 'laboratoryId')
     : normalizeOptionalId(form.laboratoryId, 'laboratoryId');
   const executorId = strict
-    ? normalizeRequiredId(form.executorId, 'executorId', 'Выберите исполнителя')
+    ? requirePositiveIntegerId(form.executorId, 'executorId')
     : normalizeOptionalId(form.executorId, 'executorId');
 
-  if (strict && context.validateSelections && !context.selectedObject) {
-    throw new QuickCreateValidationError('objectId', 'Выберите сохранённый объект компании');
-  }
-  if (objectId !== null && context.selectedObject) {
-    if (context.selectedObject.virtual || context.selectedObject.isVirtual) {
-      throw new QuickCreateValidationError('objectId', 'Выберите сохранённый объект компании');
-    }
-    if (
-      Number(context.selectedObject.id) !== objectId
-      || (context.selectedObject.companyId && Number(context.selectedObject.companyId) !== companyId)
-    ) {
-      throw new QuickCreateValidationError('objectId', 'Выберите объект выбранной компании');
-    }
-  }
-
-  if (strict && context.validateSelections && !context.selectedExecutor) {
-    throw new QuickCreateValidationError('executorId', 'Выберите исполнителя выбранной лаборатории');
+  if (
+    strict
+    && context.validateSelections
+    && objectId !== null
+  ) {
+    validatePersistedObject(context.selectedObject, objectId, companyId);
   }
   if (
-    executorId !== null
+    strict
+    && context.validateSelections
+    && executorId !== null
     && laboratoryId !== null
-    && context.selectedExecutor
-    && (
-      context.selectedExecutor.laboratoryEmployeeId !== executorId
-      || context.selectedExecutor.laboratoryId !== laboratoryId
-    )
   ) {
-    throw new QuickCreateValidationError('executorId', 'Выберите исполнителя выбранной лаборатории');
+    validateExecutor(context.selectedExecutor, executorId, laboratoryId);
   }
 
-  const protocolDate = optionalApiDate(form.protocolDate, 'protocolDate');
+  const measurementDate = strict
+    ? toApiDate(form.measurementDate, 'measurementDate')
+    : optionalApiDate(form.measurementDate, 'measurementDate') || '';
   const sampleDate = optionalApiDate(form.sampleDate, 'sampleDate');
-  const measurementDate = optionalApiDate(form.measurementDate, 'measurementDate');
   const testingStartDate = optionalApiDate(form.testingStartDate, 'testingStartDate');
   const testingEndDate = optionalApiDate(form.testingEndDate, 'testingEndDate');
-  if (testingStartDate && testingEndDate && testingStartDate > testingEndDate) {
+  if (testingStartDate && testingEndDate && testingEndDate < testingStartDate) {
     throw new QuickCreateValidationError(
       'testingEndDate',
-      'Дата окончания не может быть раньше даты начала',
+      'Дата завершения испытаний не может быть раньше даты начала',
     );
   }
-
+  if (sampleDate && measurementDate && measurementDate < sampleDate) {
+    throw new QuickCreateValidationError(
+      'measurementDate',
+      'Дата измерения не может быть раньше даты отбора',
+    );
+  }
   const measurementTime = normalizeNullableText(form.measurementTime);
-  if (strict && (!measurementTime || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(measurementTime))) {
-    throw new QuickCreateValidationError('measurementTime', 'Укажите время измерения');
+  if (
+    strict
+    && measurementTime
+    && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(measurementTime)
+  ) {
+    throw new QuickCreateValidationError('measurementTime', 'Укажите корректное время измерения');
   }
   const measurementPlace = normalizeNullableText(form.measurementPlace);
   if (strict && !measurementPlace) {
     throw new QuickCreateValidationError('measurementPlace', 'Укажите место измерения');
   }
 
-  const config = PROTOCOL_TYPE_CONFIG[configKey(form.templateId)];
   const rows = form.results.filter(isNonEmptyResult);
-  if (strict && !rows.length) {
+  if (strict && rows.length === 0) {
     throw new QuickCreateValidationError('results', 'Добавьте хотя бы один результат');
   }
-  const measurements = rows.map((row, index) => {
-    if (strict) {
-      return mapMeasurementToRequest(row, config.defaultUnit, index, {
-        testingMethodNd: form.testingMethodNd,
-        samplingMethodNd: form.samplingMethodNd,
-      });
-    }
-    const unit = normalizeProtocolUnit(row.unit);
-    if (unit && isNumericOnlyUnit(unit)) {
-      throw new QuickCreateValidationError(
-        `results.${index}.unit`,
-        'В поле единицы измерения указано числовое значение',
-      );
-    }
-    return {
-      factorType: normalizeNullableText(row.factorType),
-      factorCode: normalizeNullableText(row.factorCode),
-      pollutantCode: normalizeNullableText(row.pollutantCode),
-      indicatorName: normalizeNullableText(row.indicatorName) || '',
-      value: normalizeDecimal(row.value) ?? normalizeNullableText(row.textValue),
-      unit: unit || '',
-      normativeId: normalizeNullableText(row.normativeRecordId || row.normativeId),
-      normativeValue: normalizeDecimal(row.normativeValue),
-      testingMethodNd: normalizeNullableText(row.testingMethodNd || row.methodDocument || form.testingMethodNd),
-      samplingMethodNd: normalizeNullableText(row.samplingMethodNd || form.samplingMethodNd),
-      measurementDeviceId: normalizeOptionalId(row.measurementDeviceId, `results.${index}.measurementDeviceId`),
-      deviceId: null,
-      values: compactValues({
-        cas: normalizeNullableText(row.cas),
-        formula: normalizeNullableText(row.formula),
-        samplingPlace: normalizeNullableText(row.samplingPlace),
-        comparisonType: normalizeComparisonType(row.comparisonType),
-        normativeMin: normalizeDecimal(row.normativeMin),
-        normativeMax: normalizeDecimal(row.normativeMax),
-        normativeDocument: normalizeNullableText(row.normativeDocument),
-      }),
-    };
-  });
-
-  if (strict && PROTOCOL_TEMPLATES[form.templateId].requiresDevice) {
-    const missingDeviceIndex = measurements.findIndex((item) => item.measurementDeviceId === null);
-    if (missingDeviceIndex >= 0) {
-      throw new QuickCreateValidationError(
-        `results.${missingDeviceIndex}.measurementDeviceId`,
-        'Выберите средство измерения',
-      );
-    }
-  }
+  const measurements = rows.map((row, index) =>
+    mapMeasurementToRequest(row, form, index, strict),
+  );
 
   const conditions = mapConditions(form, rows);
-  if (
-    strict
-    && isWaterProtocolType(form.templateId)
-    && (!conditions.waterType || !conditions.waterUseCategory)
-  ) {
-    if (import.meta.env.DEV) {
-      console.error('[protocol wizard] Water conditions are missing', {
-        templateId: mapFrontendProtocolType(form.templateId),
-        conditions,
-      });
+  if (strict && templateId === 'water') {
+    if (!conditions.waterType) {
+      throw new QuickCreateValidationError('waterType', 'Выберите тип воды');
     }
-    throw new QuickCreateValidationError(
-      !conditions.waterType ? 'waterType' : 'waterUseCategory',
-      !conditions.waterType
-        ? 'Выберите тип воды'
-        : 'Выберите категорию водопользования',
-    );
+    if (!conditions.waterUseCategory) {
+      throw new QuickCreateValidationError(
+        'waterUseCategory',
+        'Выберите категорию водопользования',
+      );
+    }
+    if (!conditions.samplingPlace) {
+      throw new QuickCreateValidationError(
+        'results.0.samplingPlace',
+        'Укажите место отбора воды',
+      );
+    }
   }
 
-  return {
-    templateId: mapFrontendProtocolType(form.templateId),
-    sourceDocumentCode: normalizeNullableText(config.sourceDocumentCode),
-    docxTemplateCode: normalizeNullableText(config.docxTemplateCode),
-    subtype: null,
+  const config = PROTOCOL_TYPE_CONFIG[configKey(form.templateId)];
+  const methodology = mapMethodology(rows[0] || ({} as MeasurementFormRow), form, strict, 0);
+  const orderId = normalizeNullableText(form.orderId);
+
+  const payload = compactValues({
+    templateId,
     companyId,
     objectId,
     laboratoryId,
     executorId,
-    protocolDate,
-    sampleDate,
     measurementDate,
-    measurementTime,
-    measurementPlace,
-    testingStartDate,
-    testingEndDate,
-    sourceNumber: normalizeSourceNumber(form.sourceNumber),
-    conditions,
+    measurementTime: measurementTime ?? undefined,
+    measurementPlace: measurementPlace ?? '',
+    defaultUnit: normalizeProtocolUnit(config?.defaultUnit) ?? undefined,
     measurements,
+    environment: mapEnvironment(form),
+    conditions: Object.keys(conditions).length ? conditions : undefined,
+    methodology,
     printVisibility: mapPrintVisibilityToApi(form.printVisibility),
-    orderId: normalizeNullableText(form.orderId),
-    ...(form.pekProgramId ? { pekProgramId: normalizeOptionalId(form.pekProgramId, 'pekProgramId') } : {}),
-    ...(form.pekControlItemId ? { pekControlItemId: normalizeOptionalId(form.pekControlItemId, 'pekControlItemId') } : {}),
-    ...(form.pekControlEventId ? { pekControlEventId: normalizeOptionalId(form.pekControlEventId, 'pekControlEventId') } : {}),
-    ...(form.pekReportId ? { pekReportId: normalizeOptionalId(form.pekReportId, 'pekReportId') } : {}),
-    ...(form.monitoringPointId ? { monitoringPointId: normalizeOptionalId(form.monitoringPointId, 'monitoringPointId') } : {}),
-    ...(form.emissionSourceId ? { emissionSourceId: normalizeOptionalId(form.emissionSourceId, 'emissionSourceId') } : {}),
-    ...(form.waterOutletId ? { waterOutletId: normalizeOptionalId(form.waterOutletId, 'waterOutletId') } : {}),
-  };
+    orderId: orderId ?? undefined,
+    orderServiceItemId: normalizeNullableText(form.orderServiceItemId) ?? undefined,
+    pekProgramId: normalizeOptionalId(form.pekProgramId, 'pekProgramId') ?? undefined,
+    pekControlItemId: normalizeOptionalId(form.pekControlItemId, 'pekControlItemId') ?? undefined,
+    pekControlEventId: normalizeOptionalId(form.pekControlEventId, 'pekControlEventId') ?? undefined,
+    pekReportId: normalizeOptionalId(form.pekReportId, 'pekReportId') ?? undefined,
+    monitoringPointId: normalizeOptionalId(form.monitoringPointId, 'monitoringPointId') ?? undefined,
+    emissionSourceId: normalizeOptionalId(form.emissionSourceId, 'emissionSourceId') ?? undefined,
+    waterOutletId: normalizeOptionalId(form.waterOutletId, 'waterOutletId') ?? undefined,
+  });
+
+  return payload as QuickCreateProtocolRequest | QuickCreateProtocolDraftRequest;
 }
 
 export const mapProtocolWizardToQuickCreateRequest = buildQuickCreatePayload;

@@ -18,7 +18,7 @@ test('wizard has nine guarded steps and one quick-create mutation', async () => 
   const submission = await read('src/features/protocols/utils/quickCreateSubmission.ts');
   assert.match(wizard, /const steps = \[[^\]]*'Создание'\]/);
   assert.match(wizard, /acquireQuickCreateLock\(submittingRef\)/);
-  assert.match(wizard, /protocolService\.quickCreateProtocol\(payload, idempotencyKey\)/);
+  assert.match(wizard, /protocolService\.quickCreateProtocol\(\{ payload, idempotencyKey \}\)/);
   assert.match(submission, /crypto\.randomUUID\(\)/);
   assert.doesNotMatch(wizard, /protocolService\.createProtocol/);
   assert.match(wizard, /closeOnBackdrop=\{false\}/);
@@ -34,15 +34,14 @@ test('wizard persists and clears the session draft', async () => {
   assert.match(wizard, /Найдена незавершённая форма протокола/);
 });
 
-test('wizard payload mapper filters empty rows, maps water and sends environment through conditions', async () => {
+test('wizard payload mapper filters empty rows and sends canonical environment', async () => {
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   const api = await read('src/services/apiProtocolService.ts');
   assert.match(mapper, /filter\(isNonEmptyResult\)/);
-  assert.match(mapper, /mapFrontendProtocolType\(form\.templateId\)/);
+  assert.match(mapper, /mapQuickCreateTemplateId\(form\.templateId\)/);
   assert.match(mapper, /const conditions = mapConditions\(form, rows\)/);
-  assert.match(mapper, /weatherSource:/);
-  assert.doesNotMatch(mapper, /^\s+environment:/m);
-  assert.match(mapper, /manualChangeReason:/);
+  assert.match(mapper, /environment: mapEnvironment\(form\)/);
+  assert.match(mapper, /pressureKpa:/);
   assert.doesNotMatch(api, /environment: _unsupportedEnvironment/);
   assert.match(api, /'Idempotency-Key'/);
 });
@@ -87,7 +86,7 @@ test('wizard loads environment conditions automatically', async () => {
   const environment = await read('src/features/protocols/components/steps/EnvironmentStep.tsx');
   assert.match(wizard, /protocolService\.getWeatherConditions/);
   assert.match(wizard, /values\.sampleDate \|\| values\.measurementDate/);
-  assert.match(wizard, /weather\.pressureKpa \|\| weather\.pressure/);
+  assert.match(wizard, /weather\.pressureKpa \?\? weather\.pressure/);
   assert.match(wizard, /enabled: Boolean\(open && values\.objectId && weatherDate/);
   assert.match(wizard, /coordinates: weatherCoordinates \|\| undefined/);
   assert.match(wizard, /getCompanyObject\(values\.companyId, values\.objectId, signal\)/);

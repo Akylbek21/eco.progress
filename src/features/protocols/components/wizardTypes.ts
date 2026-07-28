@@ -2,6 +2,7 @@ import type { ProtocolPrintVisibility, ProtocolTemplateId } from '../../../types
 import { DEFAULT_PROTOCOL_PRINT_VISIBILITY } from '../../../utils/protocolPrintVisibility';
 
 export type ProtocolWizardResult = {
+  clientRowId: string;
   indicatorName: string;
   pollutantCode: string;
   factorType: string;
@@ -42,11 +43,13 @@ export type ProtocolWizardResult = {
 export type MeasurementFormRow = ProtocolWizardResult;
 
 export interface LaboratoryExecutorOption {
+  executorId: number;
   laboratoryEmployeeId: number;
   userId?: number;
   employeeId?: number;
   fullName: string;
   laboratoryId: number;
+  active?: boolean;
 }
 
 export type ProtocolWizardForm = {
@@ -105,7 +108,11 @@ export type ProtocolWizardForm = {
   results: ProtocolWizardResult[];
 };
 
+const createClientRowId = () =>
+  globalThis.crypto?.randomUUID?.() || `row-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 export const emptyWizardResult = (): ProtocolWizardResult => ({
+  clientRowId: createClientRowId(),
   indicatorName: '', pollutantCode: '', factorType: '', factorCode: '', cas: '', formula: '', unit: '', value: '', textValue: '', samplingPlace: '', sampleNumber: '', samplingDepth: '', samplingSpeed: '', sampleVolume: '', waterType: '', direction: '', minimumValue: '', maximumValue: '', averageValue: '', duration: '',
   measurementDeviceId: '', normativeId: '', normativeRecordId: '', normativeValue: '', normativeValueRaw: '', normativeMin: '', normativeMax: '', comparisonType: 'LESS_OR_EQUAL', normativeDocument: '', sourceDocumentCode: '', testingMethodNd: '', samplingMethodNd: '',
   methodName: '', methodDocument: '', note: '',

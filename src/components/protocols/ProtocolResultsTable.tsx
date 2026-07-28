@@ -37,7 +37,7 @@ import type {
 
 type Props = {
   protocolId: string;
-  version?: number;
+  version: number;
   templateId: ProtocolTemplateKey;
   subtype?: ProtocolSubtype;
   rows: ProtocolResultRow[];
@@ -1002,7 +1002,7 @@ const ProtocolResultsTable = ({
     if (!file) return;
     setSaving(true);
     try {
-      const imported = await protocolService.importExcel(protocolId, file);
+      const imported = await protocolService.importExcel(protocolId, file, Number(version));
       const importedRows = imported.results || [];
       if (importedRows.length) {
         onChange(mergeProtocolResults(rows, importedRows));

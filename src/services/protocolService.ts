@@ -18,7 +18,14 @@ import type {
   UpdateProtocolPayload,
   WeatherConditions,
 } from '../types/protocols';
-import type { QuickCreateProtocolApiRequest } from '../features/protocols/api/protocolContracts';
+import type {
+  CancelProtocolRequest,
+  QuickCreateProtocolApiRequest,
+  ReplaceProtocolRequest,
+  ReturnForRevisionRequest,
+  SignProtocolRequest,
+  ProtocolVersionRequest,
+} from '../features/protocols/api/protocolContracts';
 
 export type DownloadedProtocolFile = {
   blob: Blob;
@@ -35,46 +42,46 @@ export interface ProtocolService {
   getProtocol(protocolId: string): Promise<Protocol>;
   getProtocolById(protocolId: string): Promise<Protocol>;
   createProtocol(payload: CreateProtocolPayload): Promise<Protocol>;
-  quickCreateProtocol(payload: QuickCreateProtocolApiRequest, idempotencyKey: string): Promise<Protocol>;
-  refreshLaboratoryData(protocolId: string): Promise<Protocol>;
+  quickCreateProtocol(params: { payload: QuickCreateProtocolApiRequest; idempotencyKey: string }): Promise<Protocol>;
+  refreshLaboratoryData(protocolId: string, version: number): Promise<Protocol>;
   updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol>;
-  deleteProtocol(protocolId: string, version?: number): Promise<void>;
-  addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version?: number): Promise<ProtocolResultRow>;
-  updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload, version?: number): Promise<ProtocolResultRow>;
-  deleteProtocolResult(protocolId: string, resultId: string, version?: number): Promise<void>;
-  bulkAssignDevice(protocolId: string, resultIds: string[], measurementDeviceId: string | number, version?: number): Promise<Protocol>;
-  bulkUpdatePlace(protocolId: string, resultIds: string[], measurementPlace: string, version?: number): Promise<Protocol>;
-  bulkDeleteResults(protocolId: string, resultIds: string[], version?: number): Promise<Protocol>;
+  deleteProtocol(protocolId: string, version: number): Promise<void>;
+  addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow>;
+  updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow>;
+  deleteProtocolResult(protocolId: string, resultId: string, version: number): Promise<void>;
+  bulkAssignDevice(protocolId: string, resultIds: string[], measurementDeviceId: string | number, version: number): Promise<Protocol>;
+  bulkUpdatePlace(protocolId: string, resultIds: string[], measurementPlace: string, version: number): Promise<Protocol>;
+  bulkDeleteResults(protocolId: string, resultIds: string[], version: number): Promise<Protocol>;
   getRawMeasurements(protocolId: string, resultId: string): Promise<RawMeasurementsResponse>;
   saveRawMeasurements(
     protocolId: string,
     resultId: string,
     payload: RawMeasurementRequest[],
-    methodTemplateId?: string | number | null,
-    version?: number,
+    methodTemplateId: string | number | null | undefined,
+    version: number,
   ): Promise<ProtocolResultRow | undefined>;
-  calculateResult(protocolId: string, resultId: string, version?: number): Promise<CalculationResultResponse>;
-  calculateProtocolSummary(protocolId: string, version?: number): Promise<ProtocolCalculationSummaryResponse>;
+  calculateResult(protocolId: string, resultId: string, version: number): Promise<CalculationResultResponse>;
+  calculateProtocolSummary(protocolId: string, version: number): Promise<ProtocolCalculationSummaryResponse>;
   getCalculationHistory(protocolId: string, resultId: string): Promise<CalculationResultResponse[]>;
-  checkNormatives(protocolId: string, version?: number): Promise<Protocol>;
-  readyForApproval(protocolId: string, version?: number): Promise<Protocol>;
-  markReadyForApproval(protocolId: string, version?: number): Promise<Protocol>;
-  approveProtocol(protocolId: string, version?: number): Promise<Protocol>;
-  returnForRevision(protocolId: string, reason: string, version?: number): Promise<Protocol>;
-  signProtocol(protocolId: string | number, version: number): Promise<SignProtocolResponse>;
-  publishToClient(protocolId: string, version?: number): Promise<Protocol>;
-  replaceProtocol(protocolId: string, reason: string): Promise<Protocol>;
-  createCorrection(protocolId: string, reason: string, version?: number): Promise<Protocol>;
-  cancelProtocol(protocolId: string, version?: number): Promise<Protocol>;
-  archiveProtocol(protocolId: string, version?: number): Promise<Protocol>;
+  checkNormatives(protocolId: string, version: number): Promise<Protocol>;
+  readyForApproval(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
+  markReadyForApproval(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
+  approveProtocol(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
+  returnForRevision(protocolId: string, request: ReturnForRevisionRequest): Promise<Protocol>;
+  signProtocol(protocolId: string | number, request: SignProtocolRequest): Promise<SignProtocolResponse>;
+  publishToClient(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
+  replaceProtocol(protocolId: string, request: ReplaceProtocolRequest): Promise<Protocol>;
+  createCorrection(protocolId: string, request: ReplaceProtocolRequest): Promise<Protocol>;
+  cancelProtocol(protocolId: string, request: CancelProtocolRequest): Promise<Protocol>;
+  archiveProtocol(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
   previewProtocol(protocolId: string): Promise<Blob>;
-  generateDocx(protocolId: string): Promise<Protocol>;
-  generatePdf(protocolId: string): Promise<Protocol>;
+  generateDocx(protocolId: string, version: number): Promise<Protocol>;
+  generatePdf(protocolId: string, version: number): Promise<Protocol>;
   downloadDocx(protocolId: string): Promise<DownloadedProtocolFile>;
   downloadPdf(protocolId: string): Promise<DownloadedProtocolFile>;
-  importExcel(protocolId: string, file: File): Promise<Protocol>;
-  addProtocolMeasurementDevice(protocolId: string, device: MeasurementDevice): Promise<Protocol>;
-  removeProtocolMeasurementDevice(protocolId: string, deviceId: string): Promise<Protocol>;
+  importExcel(protocolId: string, file: File, version: number): Promise<Protocol>;
+  addProtocolMeasurementDevice(protocolId: string, device: MeasurementDevice, version: number): Promise<Protocol>;
+  removeProtocolMeasurementDevice(protocolId: string, deviceId: string, version: number): Promise<Protocol>;
   searchNormative(params: Record<string, string>, signal?: AbortSignal): Promise<NormativeSearchResult>;
   searchPollutants(query: string, params?: Record<string, string>, signal?: AbortSignal): Promise<Pollutant[]>;
   getWeatherConditions(params: {
@@ -84,7 +91,7 @@ export interface ProtocolService {
     time: string;
     signal?: AbortSignal;
   }): Promise<WeatherConditions>;
-  calculateProtocol(protocolId: string): Promise<Protocol>;
+  calculateProtocol(protocolId: string, version: number): Promise<Protocol>;
 }
 
 let implementationPromise: Promise<ProtocolService> | undefined;
@@ -105,9 +112,9 @@ const protocolService: ProtocolService = {
   getProtocol: async (protocolId) => (await import('./apiProtocolService')).getProtocol(protocolId),
   getProtocolById: async (protocolId) => (await implementation()).getProtocolById(protocolId),
   createProtocol: async (payload) => (await implementation()).createProtocol(payload),
-  quickCreateProtocol: async (payload, idempotencyKey) => (await import('./apiProtocolService')).quickCreateProtocol(payload, idempotencyKey),
+  quickCreateProtocol: async (params) => (await import('./apiProtocolService')).quickCreateProtocol(params),
   // Snapshot refresh must always use the real transactional backend endpoint.
-  refreshLaboratoryData: async (protocolId) => (await import('./apiProtocolService')).refreshLaboratoryData(protocolId),
+  refreshLaboratoryData: async (protocolId, version) => (await import('./apiProtocolService')).refreshLaboratoryData(protocolId, version),
   updateProtocol: async (protocolId, payload) => (await implementation()).updateProtocol(protocolId, payload),
   deleteProtocol: async (protocolId, version) => (await implementation()).deleteProtocol(protocolId, version),
   addProtocolResult: async (protocolId, payload, version) => (await implementation()).addProtocolResult(protocolId, payload, version),
@@ -123,28 +130,28 @@ const protocolService: ProtocolService = {
   calculateProtocolSummary: async (protocolId, version) => (await implementation()).calculateProtocolSummary(protocolId, version),
   getCalculationHistory: async (protocolId, resultId) => (await implementation()).getCalculationHistory(protocolId, resultId),
   checkNormatives: async (protocolId, version) => (await implementation()).checkNormatives(protocolId, version),
-  readyForApproval: async (protocolId, version) => (await implementation()).readyForApproval(protocolId, version),
-  markReadyForApproval: async (protocolId, version) => (await implementation()).markReadyForApproval(protocolId, version),
-  approveProtocol: async (protocolId, version) => (await implementation()).approveProtocol(protocolId, version),
-  returnForRevision: async (protocolId, reason, version) => (await implementation()).returnForRevision(protocolId, reason, version),
-  signProtocol: async (protocolId, version) => (await implementation()).signProtocol(protocolId, version),
-  publishToClient: async (protocolId, version) => (await implementation()).publishToClient(protocolId, version),
-  replaceProtocol: async (protocolId, reason) => (await implementation()).replaceProtocol(protocolId, reason),
-  createCorrection: async (protocolId, reason, version) => (await implementation()).createCorrection(protocolId, reason, version),
-  cancelProtocol: async (protocolId, version) => (await implementation()).cancelProtocol(protocolId, version),
-  archiveProtocol: async (protocolId, version) => (await implementation()).archiveProtocol(protocolId, version),
+  readyForApproval: async (protocolId, request) => (await implementation()).readyForApproval(protocolId, request),
+  markReadyForApproval: async (protocolId, request) => (await implementation()).markReadyForApproval(protocolId, request),
+  approveProtocol: async (protocolId, request) => (await implementation()).approveProtocol(protocolId, request),
+  returnForRevision: async (protocolId, request) => (await implementation()).returnForRevision(protocolId, request),
+  signProtocol: async (protocolId, request) => (await implementation()).signProtocol(protocolId, request),
+  publishToClient: async (protocolId, request) => (await implementation()).publishToClient(protocolId, request),
+  replaceProtocol: async (protocolId, request) => (await implementation()).replaceProtocol(protocolId, request),
+  createCorrection: async (protocolId, request) => (await implementation()).createCorrection(protocolId, request),
+  cancelProtocol: async (protocolId, request) => (await implementation()).cancelProtocol(protocolId, request),
+  archiveProtocol: async (protocolId, request) => (await implementation()).archiveProtocol(protocolId, request),
   previewProtocol: async (protocolId) => (await implementation()).previewProtocol(protocolId),
-  generateDocx: async (protocolId) => (await implementation()).generateDocx(protocolId),
-  generatePdf: async (protocolId) => (await implementation()).generatePdf(protocolId),
+  generateDocx: async (protocolId, version) => (await implementation()).generateDocx(protocolId, version),
+  generatePdf: async (protocolId, version) => (await implementation()).generatePdf(protocolId, version),
   downloadDocx: async (protocolId) => (await implementation()).downloadDocx(protocolId),
   downloadPdf: async (protocolId) => (await implementation()).downloadPdf(protocolId),
-  importExcel: async (protocolId, file) => (await implementation()).importExcel(protocolId, file),
-  addProtocolMeasurementDevice: async (protocolId, device) => (await implementation()).addProtocolMeasurementDevice(protocolId, device),
-  removeProtocolMeasurementDevice: async (protocolId, deviceId) => (await implementation()).removeProtocolMeasurementDevice(protocolId, deviceId),
+  importExcel: async (protocolId, file, version) => (await implementation()).importExcel(protocolId, file, version),
+  addProtocolMeasurementDevice: async (protocolId, device, version) => (await implementation()).addProtocolMeasurementDevice(protocolId, device, version),
+  removeProtocolMeasurementDevice: async (protocolId, deviceId, version) => (await implementation()).removeProtocolMeasurementDevice(protocolId, deviceId, version),
   searchNormative: async (params, signal) => (await implementation()).searchNormative(params, signal),
   searchPollutants: async (query, params, signal) => (await implementation()).searchPollutants(query, params, signal),
   getWeatherConditions: async (params) => (await implementation()).getWeatherConditions(params),
-  calculateProtocol: async (protocolId) => (await implementation()).calculateProtocol(protocolId),
+  calculateProtocol: async (protocolId, version) => (await implementation()).calculateProtocol(protocolId, version),
 };
 
 export default protocolService;

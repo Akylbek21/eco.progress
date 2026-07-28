@@ -1,4 +1,6 @@
+import axios from 'axios';
 import { normalizeApiError } from '../../../services/apiHelpers';
+import type { PekApiErrorDetails, PekAvailableActionCode, PekSectionCode } from '../api/pekContracts';
 
 const messages: Record<string, string> = {
   PEK_REPORT_DUPLICATE: 'Отчёт за этот период уже существует',
@@ -16,9 +18,18 @@ export type PekUiError = {
   fieldErrors: Record<string, string>;
   traceId?: string;
   resourceId?: string;
+  field?: string;
+  section?: PekSectionCode;
+  entityId?: string | number;
+  action?: PekAvailableActionCode | string;
+  details?: unknown;
 };
 export const mapPekError = (error: unknown): PekUiError => {
   const parsed = normalizeApiError(error, 'Не удалось выполнить действие. Повторите попытку.');
+  const raw = axios.isAxiosError(error) && error.response?.data && typeof error.response.data === 'object'
+    ? error.response.data as PekApiErrorDetails & { data?: PekApiErrorDetails }
+    : {};
+  const details = raw.data && typeof raw.data === 'object' ? { ...raw, ...raw.data } : raw;
   const serverFailure = (parsed.status || 0) >= 500;
   return {
     message: parsed.code && messages[parsed.code]
@@ -29,8 +40,13 @@ export const mapPekError = (error: unknown): PekUiError => {
     code: parsed.code,
     status: parsed.status,
     fieldErrors: parsed.fieldErrors,
-    traceId: parsed.traceId || parsed.requestId,
+    traceId: parsed.requestCode || parsed.traceId || parsed.requestId || details.correlationId,
     resourceId: parsed.resourceId,
+    field: details.field,
+    section: details.section,
+    entityId: details.entityId,
+    action: details.action,
+    details: import.meta.env.DEV ? details.details : undefined,
   };
 };
 export const pekIssueMessage = (issue: { code: string; message: string }) => ({

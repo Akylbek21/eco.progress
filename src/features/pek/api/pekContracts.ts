@@ -20,7 +20,19 @@ export type PekAvailableActionCode =
   | 'ACCEPT_REVIEW' | 'APPROVE' | 'RECALL_APPROVAL' | 'PREPARE_SIGNING' | 'SIGN'
   | 'REGISTER_SUBMISSION' | 'REGISTER_RESULT' | 'CREATE_REVISION' | 'ARCHIVE'
   | 'CLONE' | 'ACTIVATE' | 'DOWNLOAD_PREVIEW' | 'DOWNLOAD_PDF' | 'DOWNLOAD_XLSX'
-  | 'DOWNLOAD_JSON' | 'DOWNLOAD_ZIP' | 'CREATE_PROTOCOL' | 'OPEN_PROTOCOL';
+  | 'DOWNLOAD_JSON' | 'DOWNLOAD_ZIP' | 'CREATE_PROTOCOL' | 'OPEN_PROTOCOL'
+  | 'ADD_REVIEW_COMMENT' | 'RESOLVE_REVIEW_COMMENT';
+
+export type PekApiErrorDetails = {
+  code?: string;
+  message?: string;
+  field?: string;
+  section?: PekSectionCode;
+  entityId?: number | string;
+  action?: PekAvailableActionCode | string;
+  details?: unknown;
+  correlationId?: string;
+};
 
 export type ApiResponse<T> = { success?: boolean; message?: string | null; data: T };
 export type PageResponse<T> = {
@@ -32,6 +44,14 @@ export type PageResponse<T> = {
 };
 export type PekId = number;
 export type PekNamedRef = { id: PekId; name: string; code?: string; address?: string; bin?: string };
+export type PekLookupOption = PekNamedRef & {
+  description?: string;
+  status?: string;
+  role?: string;
+  validFrom?: string;
+  validUntil?: string;
+};
+export type PekControlItemLinkOption = PekLookupOption & { indicators: PekLookupOption[] };
 export type PekAvailableAction = {
   code: PekAvailableActionCode;
   label: string;
@@ -80,6 +100,7 @@ export type PekProgram = {
   readinessPercent?: number;
   updatedAt?: string;
   availableActions: PekAvailableAction[];
+  readOnly: boolean;
   controlItems?: Record<string, unknown>[];
   indicators?: Record<string, unknown>[];
   measures?: Record<string, unknown>[];
@@ -125,6 +146,13 @@ export type PekReport = {
   exceedanceCount: number;
   sections: PekSectionSummary[];
   availableActions: PekAvailableAction[];
+  readOnly: boolean;
+  validationActual: boolean;
+  blockingReasons: string[];
+  nextAction?: string | null;
+  nextResponsible?: PekNamedRef | null;
+  lastValidatedAt?: string | null;
+  lastSynchronizedAt?: string | null;
   snapshot?: { id?: number; createdAt?: string; hash?: string } | null;
   signature?: Record<string, unknown> | null;
   originalReportId?: number | null;
@@ -133,7 +161,8 @@ export type PekReport = {
 export type PekReportFilters = {
   search?: string; companyId?: number; objectId?: number; periodType?: PekPeriodType;
   year?: number; quarter?: number; status?: PekReportStatus; responsibleId?: number;
-  onlyWithErrors?: boolean; onlyOverdue?: boolean; page?: number; size?: number; sort?: string;
+  valid?: boolean; onlyWithErrors?: boolean; onlyWithExceedances?: boolean;
+  onlyOverdue?: boolean; page?: number; size?: number; sort?: string;
 };
 export type PekProgramFilters = {
   search?: string; companyId?: number; objectId?: number; status?: PekProgramStatus;
@@ -162,6 +191,7 @@ export type PekCollectionRun = {
   collectors?: Array<{ code: string; label: string; status: string; message?: string }>;
 };
 export type PekDashboard = {
+  totalReportCount: number;
   readinessPercent: number;
   criticalIssueCount: number;
   overdueRiskCount: number;
@@ -171,6 +201,14 @@ export type PekDashboard = {
   missingProtocolCount: number;
   deadlines: Array<{ reportId: number; reportNumber: string; dueDate: string; label: string }>;
   reports: Array<{ reportId: number; reportNumber: string; nextAction?: string; responsible?: string }>;
+};
+export type PekSettings = {
+  collectionPollingIntervalMs: number;
+  autosaveDebounceMs: number;
+  defaultReportPeriodType?: PekPeriodType;
+  notificationDaysBeforeDeadline?: number;
+  updatedAt?: string;
+  version: number;
 };
 export type PekPlanFactRow = {
   id: string;

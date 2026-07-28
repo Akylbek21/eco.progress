@@ -73,6 +73,7 @@ describe('water protocol wizard and editor contract', () => {
     const normalized = normalizeProtocol({
       id: 1,
       templateId: 'water',
+      version: 1,
       conditions: { waterType: 'SURFACE_WATER', waterUseCategory: 'II' },
       testing: {},
       results: [],

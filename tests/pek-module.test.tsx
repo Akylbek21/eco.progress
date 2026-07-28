@@ -8,6 +8,8 @@ import { pekService } from '../src/features/pek/api/pekService';
 import { mapPekPage } from '../src/features/pek/api/pekMappers';
 import { mapPekError, pekIssueMessage } from '../src/features/pek/utils/pekErrorMapper';
 import { primaryPekAction } from '../src/features/pek/utils/pekActions';
+import { pekStatusLabels } from '../src/features/pek/utils/pekLabels';
+import { retryPekQuery } from '../src/features/pek/utils/pekQueryPolicy';
 import PekPlanFact from '../src/features/pek/components/sections/PekPlanFact';
 import PekIssuesPanel from '../src/features/pek/components/issues/PekIssuesPanel';
 import { PekPrimaryAction } from '../src/features/pek/components/common/PekUi';
@@ -19,6 +21,10 @@ const server=setupServer(
   http.get('*/api/pek/programs',({request})=>HttpResponse.json({data:{content:[{id:1,number:'ПЭК-1'}],number:0,size:20,totalElements:1,totalPages:1},query:new URL(request.url).searchParams.get('search')})),
   http.post('*/api/pek/programs',async({request})=>{captured=await request.json();return HttpResponse.json({data:{id:7,...captured}});}),
   http.post('*/api/pek/reports/:id/collect',async({request})=>{captured=await request.json();return HttpResponse.json({data:{id:3,status:'RUNNING',progressPercent:10,processedRows:2,foundIssues:0}});}),
+  http.post('*/api/pek/reports',async({request})=>{captured=await request.json();return HttpResponse.json({data:{id:18,version:1,status:'COLLECTING'}});}),
+  http.get('*/api/pek/settings',()=>HttpResponse.json({data:{collectionPollingIntervalMs:1500,autosaveDebounceMs:1200,version:4}})),
+  http.patch('*/api/pek/settings',async({request})=>{captured=await request.json();return HttpResponse.json({data:captured});}),
+  http.get('*/api/pek/reports/:reportId/unmatched-sources/:sourceId/link-options',()=>HttpResponse.json({data:[{id:31,name:'СЗЗ-1',indicators:[{id:71,name:'Пыль'}]}]})),
 );
 beforeAll(()=>server.listen({onUnhandledRequest:'error'}));
 afterEach(()=>{cleanup();captured=undefined;server.resetHandlers();});
@@ -39,6 +45,11 @@ describe('production PEK module',()=>{
     expect(captured).toEqual({version:12});
     expect(run.status).toBe('RUNNING');
   });
+  it('creates a report with backend-managed collection in one command',async()=>{
+    const report=await pekService.createReport({companyId:1,objectId:15,periodType:'QUARTER',year:2026,quarter:2,programId:7,collect:true});
+    expect(report).toMatchObject({id:18,status:'COLLECTING'});
+    expect(captured).toEqual({companyId:1,objectId:15,periodType:'QUARTER',year:2026,quarter:2,programId:7,collect:true});
+  });
   it('normalizes array and paged response shapes',()=>{
     expect(mapPekPage<number>([1,2]).totalElements).toBe(2);
     expect(mapPekPage<number>({data:{items:[3],page:2,size:10,total:21}})).toMatchObject({content:[3],page:2,totalElements:21,totalPages:3});
@@ -51,7 +62,7 @@ describe('production PEK module',()=>{
   });
   it('uses backend availableActions and shows disabled reason',()=>{
     const actions=[{code:'SIGN' as const,label:'Подписать',enabled:false,disabledReason:'Нет права подписи'},{code:'DOWNLOAD_PDF' as const,label:'PDF',enabled:true}];
-    const action=primaryPekAction(actions);
+    const action=actions[0];
     const click=vi.fn();
     render(<PekPrimaryAction action={action} onClick={click}/>);
     expect((screen.getByRole('button',{name:'Подписать'}) as HTMLButtonElement).disabled).toBe(true);
@@ -77,5 +88,32 @@ describe('production PEK module',()=>{
     const form={...createWizardDefaults(),templateId:'ambient_air' as const,companyId:'1',objectId:'15',laboratoryId:'3',executorId:'8',pekProgramId:'22',pekControlItemId:'31',pekControlEventId:'80',pekReportId:'45',monitoringPointId:'7'};
     const payload=buildQuickCreatePayload(form,{validationMode:'draft'});
     expect(payload).toMatchObject({companyId:1,objectId:15,executorId:8,pekProgramId:22,pekControlItemId:31,pekControlEventId:80,pekReportId:45,monitoringPointId:7});
+  });
+  it('prefers an enabled backend action over a disabled action',()=>{
+    const action=primaryPekAction([
+      {code:'COLLECT',label:'Собрать',enabled:false,disabledReason:'Сбор уже идёт'},
+      {code:'VALIDATE',label:'Проверить',enabled:true},
+    ]);
+    expect(action?.code).toBe('VALIDATE');
+  });
+  it('centralizes user-facing status labels',()=>{
+    expect(pekStatusLabels.READY_FOR_APPROVAL).toBe('Готов к утверждению');
+    expect(pekStatusLabels.REQUIRES_CORRECTION).toBe('Требует исправления');
+  });
+  it('retries only transient query failures',()=>{
+    expect(retryPekQuery(0,{response:{status:503}})).toBe(true);
+    expect(retryPekQuery(0,{response:{status:404}})).toBe(false);
+    expect(retryPekQuery(2,{response:{status:503}})).toBe(false);
+  });
+  it('loads and saves PEK settings through backend',async()=>{
+    const settings=await pekService.getSettings();
+    expect(settings.version).toBe(4);
+    await pekService.updateSettings({...settings,autosaveDebounceMs:900});
+    expect(captured).toMatchObject({autosaveDebounceMs:900,version:4});
+  });
+  it('loads backend link options instead of accepting internal ids from a text field',async()=>{
+    const options=await pekService.getUnmatchedLinkOptions(12,44);
+    expect(options[0]).toMatchObject({id:31,name:'СЗЗ-1'});
+    expect(options[0].indicators[0]).toMatchObject({id:71,name:'Пыль'});
   });
 });

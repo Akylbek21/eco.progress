@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FormProvider, useForm, type FieldPath } from 'react-hook-form';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import { getActiveCompanies, getCompanyObject, getCompanyObjects } from '../../../services/companyService';
-import { getActiveLaboratories, getLaboratoryEmployees } from '../../../services/laboratorySettingsService';
+import { getActiveLaboratories, getDefaultLaboratory, getLaboratoryEmployees } from '../../../services/laboratorySettingsService';
 import { getAvailableMeasurementDevices } from '../../../services/measurementDeviceService';
 import { normalizeApiError } from '../../../services/apiHelpers';
 import protocolService from '../../../services/protocolService';
 import type { Protocol, ProtocolTemplateId } from '../../../types/protocols';
-import type { QuickCreateProtocolApiRequest } from '../api/protocolContracts';
+import type { QuickCreateProtocolRequest } from '../api/protocolContracts';
 import { isDeviceValidForDate } from '../../../utils/protocolDevices';
 import { normalizeProtocolError } from '../../../utils/protocolError';
 import { getWaterProtocolOptions, isWaterProtocolType } from '../../../config/protocolWater';
@@ -42,17 +42,40 @@ import {
   type ProtocolWizardForm,
 } from './wizardTypes';
 import WizardValidationSummary, { type WizardIssue } from './components/WizardValidationSummary';
+import QuickCreateErrorPanel from './components/QuickCreateErrorPanel';
 
 const DRAFT_KEY = 'protocol-create-wizard-draft';
+const DRAFT_VERSION = 2;
 const steps = ['Тип протокола','Компания и объект','Лаборатория','Даты и место','Условия среды','Результаты','Методики','Проверка','Создание'];
 export const WATER_CONDITIONS_STEP_INDEX = 4;
-type StoredDraft = { step: number; form: ProtocolWizardForm };
+type StoredDraft = {
+  version: number;
+  timestamp: string;
+  step: number;
+  form: ProtocolWizardForm;
+  idempotencyKey: string | null;
+  payloadFingerprint: string | null;
+};
 export type ProtocolPekPrefill = Partial<Pick<ProtocolWizardForm, 'companyId' | 'objectId' | 'pekProgramId' | 'pekControlItemId' | 'pekControlEventId' | 'pekReportId' | 'monitoringPointId' | 'emissionSourceId' | 'waterOutletId' | 'measurementDate' | 'measurementPlace'>>;
 export type CreateProtocolWizardModalProps = { open: boolean; onClose: () => void; onCreated: (protocol: Protocol) => void; orderId?: string; orderServiceItemId?: string; pekPrefill?: ProtocolPekPrefill };
 
 export const getFieldName = (path: string) => {
   const parts = path.split('.');
   return parts[parts.length - 1] ?? path;
+};
+
+export const normalizeQuickCreateFieldPath = (path: string): string => {
+  const normalized = path
+    .replace(/^header\./, '')
+    .replace(/\[(\d+)\]/g, '.$1')
+    .replace(/^measurements\./, 'results.')
+    .replace(/^conditions\.waterType$/, 'waterType')
+    .replace(/^conditions\.waterUseCategory$/, 'waterUseCategory')
+    .replace(/^environment\.temperature$/, 'temperature')
+    .replace(/^environment\.humidity$/, 'humidity')
+    .replace(/^environment\.pressureKpa$/, 'pressure')
+    .replace(/^environment\.windSpeed$/, 'windSpeed');
+  return normalized;
 };
 
 const protocolFieldErrorMessages: Record<string, string> = {
@@ -75,7 +98,8 @@ export const resolveWizardStepByField = (field: string) => {
 };
 
 export const backendWizardIssues = (fieldErrors: Record<string, string>): WizardIssue[] =>
-  Object.entries(fieldErrors).map(([field, message]) => {
+  Object.entries(fieldErrors).map(([rawField, message]) => {
+    const field = normalizeQuickCreateFieldPath(rawField);
     const match = field.match(/(?:measurements|results)(?:\.|\[)(\d+)/i);
     const prefix = match ? `Строка ${Number(match[1]) + 1}: ` : '';
     const fieldName = getFieldName(field);
@@ -84,8 +108,11 @@ export const backendWizardIssues = (fieldErrors: Record<string, string>): Wizard
       console.warn('[protocol wizard] Backend field error', { field, message });
     }
     return {
+      code: `BACKEND_${rawField.replace(/[^a-z0-9]+/gi, '_').toUpperCase()}`,
       step: resolveWizardStepByField(field),
-      field: (fieldName === 'waterType' || fieldName === 'waterUseCategory' ? fieldName : undefined) as FieldPath<ProtocolWizardForm> | undefined,
+      field: field as FieldPath<ProtocolWizardForm>,
+      fieldPath: field,
+      severity: 'ERROR' as const,
       message: `${prefix}${friendlyMessage}`,
     };
   });
@@ -93,14 +120,17 @@ export const backendWizardIssues = (fieldErrors: Record<string, string>): Wizard
 const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', orderServiceItemId = '', pekPrefill }: CreateProtocolWizardModalProps) => {
   const form = useForm<ProtocolWizardForm>({ defaultValues: createWizardDefaults(), mode: 'onChange' });
   const { watch, getValues, setValue, reset, formState } = form;
+  const queryClient = useQueryClient();
   const values = watch();
-  const [step,setStep] = useState(0); const [maxVisited,setMaxVisited] = useState(0); const [error,setError] = useState(''); const [traceId,setTraceId] = useState(''); const [requestId,setRequestId] = useState(''); const [serverFailure,setServerFailure] = useState(false); const [serverIssues,setServerIssues] = useState<WizardIssue[]>([]);
+  const [step,setStep] = useState(0); const [maxVisited,setMaxVisited] = useState(0); const [error,setError] = useState(''); const [apiFailure,setApiFailure] = useState<ReturnType<typeof normalizeApiError> | null>(null); const [serverIssues,setServerIssues] = useState<WizardIssue[]>([]);
   const [closePrompt,setClosePrompt] = useState(false); const [draftPrompt,setDraftPrompt] = useState(false); const [pendingType,setPendingType] = useState<ProtocolTemplateId | null>(null); const [success,setSuccess] = useState<Protocol | null>(null);
   const submittingRef = useRef(false); const titleRef = useRef<HTMLElement | null>(null); const idempotencyKeyRef = useRef<string | null>(null); const submittedFingerprintRef = useRef<string | null>(null);
+  const lockedPekCompanyId = pekPrefill?.companyId ? String(pekPrefill.companyId) : undefined;
   const automaticWeatherRef = useRef<Partial<Record<'temperature' | 'humidity' | 'pressure' | 'windSpeed', string>>>({});
   const typesQuery = useQuery({ queryKey: ['protocol-types'], queryFn: () => protocolService.getProtocolTypes(), enabled: open });
   const companiesQuery = useQuery({ queryKey: ['companies','protocol-wizard'], queryFn: ({ signal }) => getActiveCompanies(signal), enabled: open });
   const laboratoriesQuery = useQuery({ queryKey: ['laboratories','protocol-wizard'], queryFn: ({ signal }) => getActiveLaboratories(signal), enabled: open });
+  const defaultLaboratoryQuery = useQuery({ queryKey: ['laboratories','default'], queryFn: ({ signal }) => getDefaultLaboratory(signal), enabled: open, retry: false });
   const devicesQuery = useQuery({
     queryKey: ['measurement-devices','available',values.laboratoryId,values.measurementDate,values.templateId],
     queryFn: () => getAvailableMeasurementDevices({
@@ -123,14 +153,16 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
   const objects = allObjects.filter((item) => item.status === 'ACTIVE' && !item.virtual && !item.isVirtual);
   const employees = (employeesQuery.data || []).filter((item) => item.active);
   const executorOptions = useMemo<LaboratoryExecutorOption[]>(() => employees.map((item) => ({
+    executorId: item.id,
     laboratoryEmployeeId: item.id,
     userId: item.userId ?? undefined,
     fullName: item.fullName,
     laboratoryId: item.laboratoryId,
+    active: item.active,
   })), [employees]);
   const devices = (devicesQuery.data || []).filter((item) => !['EXPIRED','ARCHIVED','INACTIVE','OUT_OF_SERVICE'].includes(String(item.status || '').toUpperCase()));
   const selectedObject = allObjects.find((item) => String(item.id) === String(values.objectId));
-  const selectedExecutor = executorOptions.find((item) => String(item.laboratoryEmployeeId) === String(values.executorId));
+  const selectedExecutor = executorOptions.find((item) => String(item.executorId) === String(values.executorId));
   const weatherCoordinates = objectDetailsQuery.data?.coordinates || selectedObject?.coordinates || '';
   const weatherDate = values.sampleDate || values.measurementDate;
   const weatherQuery = useQuery({
@@ -146,8 +178,27 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     retry: false,
   });
 
-  useEffect(() => { if (!open) { idempotencyKeyRef.current = null; submittedFingerprintRef.current = null; return; } const stored = sessionStorage.getItem(DRAFT_KEY); setDraftPrompt(Boolean(stored)); if (!stored) { setValue('orderId', orderId); setValue('orderServiceItemId', orderServiceItemId); if (pekPrefill) Object.entries(pekPrefill).forEach(([key,value]) => { if (value !== undefined) setValue(key as FieldPath<ProtocolWizardForm>, value); }); } setError(''); setTraceId(''); setRequestId(''); setServerFailure(false); setSuccess(null); }, [open, orderId, orderServiceItemId, pekPrefill, setValue]);
-  useEffect(() => { if (!open || draftPrompt || success) return; const subscription = watch((formValue) => { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, form: formValue })); }); return () => subscription.unsubscribe(); }, [draftPrompt,open,step,success,watch]);
+  useEffect(() => { if (!open) { idempotencyKeyRef.current = null; submittedFingerprintRef.current = null; return; } const stored = sessionStorage.getItem(DRAFT_KEY); setDraftPrompt(Boolean(stored)); if (!stored) { setValue('orderId', orderId); setValue('orderServiceItemId', orderServiceItemId); if (pekPrefill) Object.entries(pekPrefill).forEach(([key,value]) => { if (value !== undefined) setValue(key as FieldPath<ProtocolWizardForm>, value); }); } setError(''); setApiFailure(null); setSuccess(null); }, [open, orderId, orderServiceItemId, pekPrefill, setValue]);
+  useEffect(() => {
+    if (!open || draftPrompt || success) return;
+    const subscription = watch((formValue) => {
+      const stored: StoredDraft = {
+        version: DRAFT_VERSION,
+        timestamp: new Date().toISOString(),
+        step,
+        form: formValue as ProtocolWizardForm,
+        idempotencyKey: idempotencyKeyRef.current,
+        payloadFingerprint: submittedFingerprintRef.current,
+      };
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(stored));
+    });
+    return () => subscription.unsubscribe();
+  }, [draftPrompt,open,step,success,watch]);
+  useEffect(() => {
+    const defaultLaboratory = defaultLaboratoryQuery.data;
+    if (!open || !defaultLaboratory?.active || getValues('laboratoryId')) return;
+    setValue('laboratoryId', String(defaultLaboratory.id), { shouldDirty: false });
+  }, [defaultLaboratoryQuery.data, getValues, open, setValue]);
   useEffect(() => { if (!open) return; window.requestAnimationFrame(() => { titleRef.current = document.getElementById('wizard-step-title'); titleRef.current?.focus(); }); }, [open,step]);
   useEffect(() => {
     if (step !== WATER_CONDITIONS_STEP_INDEX || !isWaterProtocolType(values.templateId)) return;
@@ -165,10 +216,10 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
       return;
     }
     const nextValues = {
-      temperature: weather.temperature || '',
-      humidity: weather.humidity || '',
-      pressure: weather.pressureKpa || weather.pressure || '',
-      windSpeed: weather.windSpeed || '',
+      temperature: weather.temperature == null ? '' : String(weather.temperature),
+      humidity: weather.humidity == null ? '' : String(weather.humidity),
+      pressure: weather.pressureKpa == null && weather.pressure == null ? '' : String(weather.pressureKpa ?? weather.pressure),
+      windSpeed: weather.windSpeed == null ? '' : String(weather.windSpeed),
     };
     setValue('environmentSource', weather.source || 'API', { shouldDirty: false });
     setValue('environmentDataSource', weather.dataSource || '', { shouldDirty: false });
@@ -183,14 +234,14 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
   }, [getValues, setValue, weatherQuery.data]);
 
   const issues = useMemo<WizardIssue[]>(() => {
-    const result: WizardIssue[] = [];
+    const result: Array<{ message: string; step: number; field?: FieldPath<ProtocolWizardForm> }> = [];
     if (!values.templateId) result.push({ message:'Выберите тип протокола.',step:0 });
     if (!values.companyId) result.push({ message:'Выберите компанию.',step:1 });
     if (!values.objectId) result.push({ message:'Выберите зарегистрированный объект компании.',step:1 });
-    else if (!selectedObject || selectedObject.virtual || selectedObject.isVirtual) result.push({ message:'Выберите сохранённый объект компании.',step:1 });
+    else if (!selectedObject || selectedObject.virtual || selectedObject.isVirtual || selectedObject.persisted === false) result.push({ message:'Перед созданием протокола сохраните объект компании.',step:1,field:'objectId' });
     if (!values.laboratoryId) result.push({ message:'Выберите лабораторию.',step:2 });
     if (!values.executorId) result.push({ message:'Выберите исполнителя лаборатории.',step:2 });
-    else if (!selectedExecutor || String(selectedExecutor.laboratoryId) !== String(values.laboratoryId)) result.push({ message:'Выберите исполнителя выбранной лаборатории.',step:2 });
+    else if (!selectedExecutor || selectedExecutor.active === false || String(selectedExecutor.laboratoryId) !== String(values.laboratoryId)) result.push({ message:'Выберите исполнителя выбранной лаборатории.',step:2 });
     if (!values.protocolDate) result.push({ message:'Укажите дату протокола.',step:3 });
     if (!values.sampleDate) result.push({ message:'Укажите дату отбора пробы.',step:3 });
     if (!values.measurementDate) result.push({ message:'Укажите дату измерения.',step:3 });
@@ -213,32 +264,53 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
         });
       }
     });
-    rows.forEach((row,index) => { if (!row.indicatorName.trim()) result.push({ message:`Строка ${index + 1}: укажите показатель.`,step:5 }); if (!row.value.trim() && !row.textValue.trim()) result.push({ message:`Строка ${index + 1}: укажите результат.`,step:5 }); if (row.value.trim() && !row.unit.trim()) result.push({ message:`Строка ${index + 1}: укажите единицу измерения.`,step:5 }); if (row.unit.trim() && /^[-+]?\d+(?:[.,]\d+)?$/.test(row.unit.trim())) result.push({ message:`Строка ${index + 1}: единица измерения не может быть нормативным значением.`,step:5 }); if (values.templateId && CHEMICAL_TYPES.has(values.templateId) && !row.pollutantCode.trim()) result.push({ message:`Строка ${index + 1}: укажите код загрязняющего вещества.`,step:5 }); if (values.templateId && !CHEMICAL_TYPES.has(values.templateId) && !row.factorType.trim()) result.push({ message:`Строка ${index + 1}: укажите тип физического фактора.`,step:5 }); const device = devices.find((item) => String(item.id) === row.measurementDeviceId); if (!row.measurementDeviceId) result.push({ message:`Строка ${index + 1}: выберите прибор.`,step:5 }); else if (!device || !isDeviceValidForDate(device,values.measurementDate)) result.push({ message:`Строка ${index + 1}: срок поверки прибора истёк или прибор неактивен.`,step:5 }); });
+    rows.forEach((row,index) => { if (!row.indicatorName.trim()) result.push({ message:`Строка ${index + 1}: укажите показатель.`,step:5 }); if (!row.value.trim() && !row.textValue.trim()) result.push({ message:`Строка ${index + 1}: укажите результат.`,step:5 }); if ((row.value.trim() || row.textValue.trim()) && !row.unit.trim()) result.push({ message:`Строка ${index + 1}: укажите единицу измерения.`,step:5 }); if (row.unit.trim() && /^[-+]?\d+(?:[.,]\d+)?$/.test(row.unit.trim())) result.push({ message:`Строка ${index + 1}: единица измерения не может быть нормативным значением.`,step:5 }); if (values.templateId && CHEMICAL_TYPES.has(values.templateId) && !row.pollutantCode.trim()) result.push({ message:`Строка ${index + 1}: укажите код загрязняющего вещества.`,step:5 }); if (values.templateId && !CHEMICAL_TYPES.has(values.templateId) && !(row.factorCode || row.factorType).trim()) result.push({ message:`Строка ${index + 1}: укажите тип физического фактора.`,step:5 }); const device = devices.find((item) => String(item.id) === row.measurementDeviceId); if (!row.measurementDeviceId) result.push({ message:`Строка ${index + 1}: выберите прибор.`,step:5 }); else if (!device || !isDeviceValidForDate(device,values.measurementDate)) result.push({ message:`Строка ${index + 1}: срок поверки прибора истёк или прибор неактивен.`,step:5 }); if (!(row.testingMethodNd || row.methodDocument || values.testingMethodNd).trim()) result.push({ message:`Строка ${index + 1}: укажите методику испытаний.`,step:6,field:`results.${index}.testingMethodNd` as FieldPath<ProtocolWizardForm> }); });
     if (!values.testingMethodNd.trim()) result.push({ message:'Укажите НД на метод испытаний.',step:6 });
-    return result;
+    return result.map((item, index) => ({
+      ...item,
+      code: `WIZARD_${item.field ? String(item.field).replace(/[^a-z0-9]+/gi, '_').toUpperCase() : `${item.step}_${index}`}`,
+      fieldPath: item.field ? String(item.field) : '',
+      severity: 'ERROR',
+    }));
   }, [devices,selectedExecutor,selectedObject,values]);
-  const apiPayloadValid = useMemo(() => {
+  const submitPayloadResult = useMemo(() => {
     try {
-      buildQuickCreatePayload(values, {
+      const payload = buildQuickCreatePayload(values, {
         selectedObject,
         selectedExecutor,
-        validateSelections: false,
-        validationMode: 'draft',
+        validateSelections: true,
+        validationMode: 'submit',
       });
-      return true;
-    } catch {
-      return false;
+      return { valid: true as const, payload, error: null };
+    } catch (payloadError) {
+      return {
+        valid: false as const,
+        payload: null,
+        error: payloadError instanceof Error ? payloadError.message : 'Проверьте обязательные поля',
+      };
     }
   }, [selectedExecutor, selectedObject, values]);
-  const canContinue = step === 0 ? Boolean(values.templateId) : step === 1 ? Boolean(values.companyId) : step === steps.length - 1 ? apiPayloadValid : true;
 
   const mutation = useMutation({
     mutationFn: ({ payload, idempotencyKey }: {
-      payload: QuickCreateProtocolApiRequest;
+      payload: QuickCreateProtocolRequest;
       idempotencyKey: string;
-    }) => protocolService.quickCreateProtocol(payload, idempotencyKey),
+    }) => protocolService.quickCreateProtocol({ payload, idempotencyKey }),
     retry: false,
   });
+  const requiredLookupsLoading = companiesQuery.isFetching
+    || objectsQuery.isFetching
+    || laboratoriesQuery.isFetching
+    || defaultLaboratoryQuery.isFetching
+    || employeesQuery.isFetching
+    || devicesQuery.isFetching;
+  const canCreate = submitPayloadResult.valid
+    && issues.length === 0
+    && formState.isValid
+    && Object.keys(formState.errors).length === 0
+    && !requiredLookupsLoading
+    && !mutation.isPending;
+  const canContinue = step === 0 ? Boolean(values.templateId) : step === 1 ? Boolean(values.companyId) : step === steps.length - 1 ? canCreate : true;
   const applyWaterTypeTransition = (current: ProtocolWizardForm['templateId'], next: ProtocolTemplateId) => {
     if (isWaterProtocolType(current) && !isWaterProtocolType(next)) {
       setValue('waterType', '', { shouldDirty: true });
@@ -255,39 +327,96 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     setValue('templateId',next,{ shouldDirty:true });
   };
   const applyTypeChange = () => { if (!pendingType) return; const current = getValues('templateId'); applyWaterTypeTransition(current,pendingType); setValue('templateId',pendingType,{ shouldDirty:true }); setValue('results',[],{ shouldDirty:true }); setValue('formCode',''); setValue('appendixNumber',''); setValue('temperature',''); setValue('humidity',''); setValue('pressure',''); setValue('windSpeed',''); setValue('windDirection',''); setValue('weatherConditions',''); setPendingType(null); };
-  const changeCompany = (id: string) => { setValue('companyId',id,{ shouldDirty:true }); setValue('objectId','',{ shouldDirty:true }); setValue('customer','',{ shouldDirty:true }); setValue('basis','',{ shouldDirty:true }); };
+  const changeCompany = (id: string) => { if (lockedPekCompanyId && id !== lockedPekCompanyId) return; setValue('companyId',id,{ shouldDirty:true }); setValue('objectId','',{ shouldDirty:true }); setValue('customer','',{ shouldDirty:true }); setValue('basis','',{ shouldDirty:true }); };
   const changeLaboratory = (id: string) => { setValue('laboratoryId',id,{ shouldDirty:true }); setValue('executorId','',{ shouldDirty:true }); getValues('results').forEach((_,index) => setValue(`results.${index}.measurementDeviceId`,'',{ shouldDirty:true })); };
   const goNext = () => { if (!canContinue) { setError(issues.find((item) => item.step === step)?.message || 'Исправьте ошибки текущего шага.'); return; } setError(''); setStep((current) => { const next = Math.min(steps.length - 1,current + 1); setMaxVisited((visited) => Math.max(visited,next)); return next; }); };
   const requestClose = () => { if (mutation.isPending) return; if (formState.isDirty || sessionStorage.getItem(DRAFT_KEY)) setClosePrompt(true); else onClose(); };
-  const restoreDraft = () => { try { const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || '') as StoredDraft; const defaults = createWizardDefaults(); reset({ ...defaults, ...stored.form, printVisibility: { ...defaults.printVisibility, ...stored.form.printVisibility }, results: (stored.form.results || []).map((row) => ({ ...emptyWizardResult(), ...row })) }); setStep(Math.min(stored.step,steps.length - 1)); setMaxVisited(Math.min(stored.step,steps.length - 1)); } catch { sessionStorage.removeItem(DRAFT_KEY); reset(createWizardDefaults()); } setDraftPrompt(false); };
-  const newDraft = () => { sessionStorage.removeItem(DRAFT_KEY); reset(createWizardDefaults()); setStep(0); setMaxVisited(0); setDraftPrompt(false); };
+  const restoreDraft = () => {
+    try {
+      const raw = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || '') as Partial<StoredDraft> & { form?: ProtocolWizardForm };
+      if (!raw.form) throw new Error('Некорректный черновик');
+      const defaults = createWizardDefaults();
+      const migratedForm = {
+        ...defaults,
+        ...raw.form,
+        ...(pekPrefill || {}),
+        orderId: orderId || raw.form.orderId || '',
+        orderServiceItemId: orderServiceItemId || raw.form.orderServiceItemId || '',
+        printVisibility: { ...defaults.printVisibility, ...raw.form.printVisibility },
+        results: (raw.form.results || []).map((row) => ({ ...emptyWizardResult(), ...row })),
+      };
+      reset(migratedForm);
+      const restoredStep = Math.min(Number(raw.step) || 0, steps.length - 1);
+      setStep(restoredStep);
+      setMaxVisited(restoredStep);
+      idempotencyKeyRef.current = typeof raw.idempotencyKey === 'string' ? raw.idempotencyKey : null;
+      submittedFingerprintRef.current = typeof raw.payloadFingerprint === 'string' ? raw.payloadFingerprint : null;
+      if (raw.version !== DRAFT_VERSION) {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+          version: DRAFT_VERSION,
+          timestamp: new Date().toISOString(),
+          step: restoredStep,
+          form: migratedForm,
+          idempotencyKey: idempotencyKeyRef.current,
+          payloadFingerprint: submittedFingerprintRef.current,
+        } satisfies StoredDraft));
+      }
+    } catch {
+      sessionStorage.removeItem(DRAFT_KEY);
+      reset(createWizardDefaults());
+      idempotencyKeyRef.current = null;
+      submittedFingerprintRef.current = null;
+    }
+    setDraftPrompt(false);
+  };
+  const newDraft = () => { sessionStorage.removeItem(DRAFT_KEY); idempotencyKeyRef.current = null; submittedFingerprintRef.current = null; reset({ ...createWizardDefaults(), ...(pekPrefill || {}), orderId, orderServiceItemId }); setStep(0); setMaxVisited(0); setDraftPrompt(false); };
+  const saveDraft = () => {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+      version: DRAFT_VERSION,
+      timestamp: new Date().toISOString(),
+      step,
+      form: getValues(),
+      idempotencyKey: idempotencyKeyRef.current,
+      payloadFingerprint: submittedFingerprintRef.current,
+    } satisfies StoredDraft));
+  };
   const createProtocol = async () => {
     if (mutation.isPending) return;
     if (!acquireQuickCreateLock(submittingRef)) return;
     setError('');
-    setTraceId('');
-    setRequestId('');
-    setServerFailure(false);
+    setApiFailure(null);
     setServerIssues([]);
+    form.clearErrors();
     try {
       const payload = buildQuickCreatePayload(getValues(), {
         selectedObject,
         selectedExecutor,
-        validateSelections: false,
-        validationMode: 'draft',
+        validateSelections: true,
+        validationMode: 'submit',
       });
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, form: getValues() }));
       const attempt = prepareQuickCreateAttempt(payload, {
         idempotencyKey: idempotencyKeyRef.current,
         payloadFingerprint: submittedFingerprintRef.current,
       });
       idempotencyKeyRef.current = attempt.idempotencyKey;
       submittedFingerprintRef.current = attempt.payloadFingerprint;
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+        version: DRAFT_VERSION,
+        timestamp: new Date().toISOString(),
+        step,
+        form: getValues(),
+        idempotencyKey: attempt.idempotencyKey,
+        payloadFingerprint: attempt.payloadFingerprint,
+      } satisfies StoredDraft));
       const created = await mutation.mutateAsync({
         payload,
-        idempotencyKey: idempotencyKeyRef.current,
+        idempotencyKey: attempt.idempotencyKey,
       });
       if (!created.id) throw new Error('Backend не вернул идентификатор созданного протокола.');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['protocols'] }),
+        queryClient.invalidateQueries({ queryKey: ['protocol-statistics'] }),
+      ]);
       sessionStorage.removeItem(DRAFT_KEY);
       idempotencyKeyRef.current = null;
       submittedFingerprintRef.current = null;
@@ -312,9 +441,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
       const normalized = normalizeProtocolError(requestError);
       const apiError = normalizeApiError(requestError,'Не удалось создать протокол.');
       const errorResolution = resolveQuickCreateApiError(apiError);
-      setTraceId(apiError.traceId || '');
-      setRequestId(apiError.requestId || '');
-      setServerFailure(Boolean(errorResolution.serverFailure));
+      setApiFailure(apiError);
       if (errorResolution.existingProtocolId) {
         try {
           const existingProtocol = await protocolService.getProtocol(errorResolution.existingProtocolId);
@@ -326,11 +453,18 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
         }
       }
       const mappedIssues = backendWizardIssues(apiError.fieldErrors);
+      Object.entries(apiError.fieldErrors).forEach(([rawPath, message]) => {
+        const path = normalizeQuickCreateFieldPath(rawPath) as FieldPath<ProtocolWizardForm>;
+        form.setError(path, { type: 'server', message });
+      });
       if (errorResolution.field) {
         form.setError(errorResolution.field, { type: 'server', message: errorResolution.message });
         mappedIssues.unshift({
+          code: `API_${errorResolution.field.toUpperCase()}`,
           step: resolveWizardStepByField(errorResolution.field),
           field: errorResolution.field,
+          fieldPath: errorResolution.field,
+          severity: 'ERROR',
           message: errorResolution.message,
         });
       }
@@ -340,16 +474,38 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
         submittedFingerprintRef.current = null;
       }
       setError(mappedIssues.length ? '' : normalized.resultIndex === undefined ? errorResolution.message : `Строка ${normalized.resultIndex + 1}: ${errorResolution.message}`);
-      if (mappedIssues.length) setStep(mappedIssues[0].step);
+      if (mappedIssues.length) {
+        const firstIssue = mappedIssues[0];
+        setStep(firstIssue.step);
+        if (firstIssue.field) {
+          window.requestAnimationFrame(() => {
+            form.setFocus(firstIssue.field as FieldPath<ProtocolWizardForm>);
+            document.querySelector<HTMLElement>(`[name="${firstIssue.field}"]`)
+              ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+        }
+      }
       else if (normalized.resultIndex !== undefined) setStep(5);
     } finally {
       releaseQuickCreateLock(submittingRef);
     }
   };
   const copyErrorCode = async () => {
-    const code = traceId || requestId;
+    const code = apiFailure?.requestCode || apiFailure?.traceId || apiFailure?.requestId;
     if (!code || !navigator.clipboard) return;
     await navigator.clipboard.writeText(code);
+  };
+  const copyTechnicalInfo = async () => {
+    if (!apiFailure || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(JSON.stringify({
+      endpoint: 'POST /api/protocols/quick-create',
+      status: apiFailure.status,
+      code: apiFailure.code,
+      requestCode: apiFailure.requestCode || apiFailure.traceId || apiFailure.requestId,
+      idempotencyKey: idempotencyKeyRef.current
+        ? `${idempotencyKeyRef.current.slice(0, 8)}…`
+        : undefined,
+    }, null, 2));
   };
   const weatherMessage = weatherQuery.isError
     ? 'Автоматические погодные данные не получены. Заполните условия среды вручную'
@@ -363,13 +519,33 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     setMaxVisited((visited) => Math.max(visited, targetStep));
     if (!field) return;
     window.requestAnimationFrame(() => {
-      document.getElementById(field)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const escapedField = typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+        ? CSS.escape(field)
+        : field.replace(/["\\]/g, '\\$&');
+      const element = document.getElementById(field)
+        || document.querySelector<HTMLElement>(`[name="${escapedField}"]`);
+      element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element?.focus();
       form.setFocus(field);
     });
   };
-  const content = step === 0 ? <ProtocolTypeStep templates={templates} onSelect={chooseType} /> : step === 1 ? <CompanyObjectStep companies={companies} objects={objects} loading={objectsQuery.isFetching} onCompanyChange={changeCompany} /> : step === 2 ? <LaboratoryExecutorStep laboratories={laboratories} employees={executorOptions} loading={employeesQuery.isFetching} error={employeesQuery.isError} onLaboratoryChange={changeLaboratory} /> : step === 3 ? <MeasurementDetailsStep /> : step === 4 ? <EnvironmentStep weatherLoading={weatherQuery.isFetching} weatherMessage={weatherMessage} onRefresh={() => void weatherQuery.refetch()} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} /> : step === 5 ? <ResultsStep devices={devices} /> : step === 6 ? <MethodsStep /> : <ReviewStep final={step === 8} apiPayloadValid={apiPayloadValid} companies={companies} objects={objects} laboratories={laboratories} employees={employees} issues={issues} onGoTo={goToIssue} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} />;
+  const content = step === 0 ? <ProtocolTypeStep templates={templates} onSelect={chooseType} /> : step === 1 ? <CompanyObjectStep companies={companies} objects={objects} loading={objectsQuery.isFetching} lockedCompanyId={lockedPekCompanyId} onCompanyChange={changeCompany} /> : step === 2 ? <LaboratoryExecutorStep laboratories={laboratories} employees={executorOptions} loading={employeesQuery.isFetching} error={employeesQuery.isError} onLaboratoryChange={changeLaboratory} /> : step === 3 ? <MeasurementDetailsStep /> : step === 4 ? <EnvironmentStep weatherLoading={weatherQuery.isFetching} weatherMessage={weatherMessage} onRefresh={() => void weatherQuery.refetch()} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} /> : step === 5 ? <ResultsStep devices={devices} /> : step === 6 ? <MethodsStep /> : <ReviewStep final={step === 8} apiPayloadValid={submitPayloadResult.valid} companies={companies} objects={objects} laboratories={laboratories} employees={employees} issues={issues} onGoTo={goToIssue} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} />;
+  const requestCode = apiFailure?.requestCode || apiFailure?.traceId || apiFailure?.requestId;
+  const debugPanel = import.meta.env.DEV && step === 8 ? (
+    <details className="mb-4 rounded-xl border border-slate-300 bg-slate-950 p-4 text-xs text-slate-100">
+      <summary className="cursor-pointer font-bold">Debug: нормализованный quick-create payload</summary>
+      <pre className="mt-3 overflow-auto whitespace-pre-wrap">{JSON.stringify({
+        valid: submitPayloadResult.valid,
+        missingRequiredFields: issues.map((issue) => issue.message),
+        idempotencyKey: idempotencyKeyRef.current
+          ? `${idempotencyKeyRef.current.slice(0, 8)}…`
+          : null,
+        payload: submitPayloadResult.payload,
+      }, null, 2)}</pre>
+    </details>
+  ) : null;
 
-  return <FormProvider {...form}><Modal open={open} onClose={requestClose} size="wizard" closeOnBackdrop={false} loading={mutation.isPending} contentClassName="!overflow-hidden !p-0 sm:!p-0"><div className="flex h-full min-h-0 flex-col"><ProtocolWizardHeader step={step} total={steps.length} title={steps[step]} submitting={mutation.isPending} onClose={requestClose} /><ProtocolWizardSteps steps={steps} current={step} maxVisited={maxVisited} onSelect={setStep} /><main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{error && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><h3 className="font-black">{serverFailure ? 'Не удалось создать протокол' : 'Ошибка создания протокола'}</h3><p className="mt-1 font-semibold">{error}</p>{serverFailure && <p className="mt-2 text-xs">HTTP-статус: 500</p>}{(traceId || requestId) && <p className="mt-1 text-xs font-semibold">Код обращения: {traceId || requestId}</p>}{serverFailure && <div className="mt-3 flex flex-wrap gap-2"><Button type="button" onClick={createProtocol}>Повторить</Button><Button type="button" variant="secondary" onClick={() => setStep(7)}>Вернуться к проверке</Button>{(traceId || requestId) && <Button type="button" variant="secondary" onClick={copyErrorCode}>Скопировать код ошибки</Button>}</div>}</div>}{serverIssues.length > 0 && <div className="mb-4"><WizardValidationSummary issues={serverIssues} onGoTo={goToIssue} />{(traceId || requestId) && <p className="mt-2 text-xs text-slate-600">Код обращения: {traceId || requestId}</p>}</div>}{success ? <div className="grid min-h-72 place-items-center text-center"><div><h3 className="text-2xl font-black text-emerald-800">Протокол успешно создан</h3><p className="mt-3">Номер: {success.protocolNumber || success.number || success.id}</p><p>Статус: {success.status}</p></div></div> : content}</main>{!success && <ProtocolWizardFooter step={step} total={steps.length} submitting={mutation.isPending} canContinue={canContinue} onBack={() => { setError(''); setStep((current) => Math.max(0,current - 1)); }} onNext={goNext} onCreate={createProtocol} />}</div></Modal>
+  return <FormProvider {...form}><Modal open={open} onClose={requestClose} size="wizard" closeOnBackdrop={false} loading={mutation.isPending} contentClassName="!overflow-hidden !p-0 sm:!p-0"><div className="flex h-full min-h-0 flex-col"><ProtocolWizardHeader step={step} total={steps.length} title={steps[step]} submitting={mutation.isPending} onClose={requestClose} /><ProtocolWizardSteps steps={steps} current={step} maxVisited={maxVisited} onSelect={setStep} /><main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{apiFailure && <QuickCreateErrorPanel error={apiFailure} message={error || apiFailure.message} pending={mutation.isPending} onRetry={createProtocol} onReview={() => setStep(7)} onCopyCode={copyErrorCode} onCopyTechnicalInfo={copyTechnicalInfo} />}{!apiFailure && error && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><h3 className="font-black">Ошибка проверки данных</h3><p className="mt-1 font-semibold">{error}</p></div>}{serverIssues.length > 0 && <div className="mb-4"><WizardValidationSummary issues={serverIssues} onGoTo={goToIssue} />{requestCode && <p className="mt-2 text-xs text-slate-600">Код обращения: {requestCode}</p>}</div>}{debugPanel}{success ? <div className="grid min-h-72 place-items-center text-center"><div><h3 className="text-2xl font-black text-emerald-800">Протокол успешно создан</h3><p className="mt-3">Номер: {success.protocolNumber || success.number || success.id}</p><p>Статус: {success.status}</p></div></div> : content}</main>{!success && <ProtocolWizardFooter step={step} total={steps.length} submitting={mutation.isPending} retrying={Boolean(apiFailure)} canContinue={canContinue} onBack={() => { setError(''); setStep((current) => Math.max(0,current - 1)); }} onNext={goNext} onCreate={createProtocol} onSaveDraft={saveDraft} />}</div></Modal>
     <Modal open={draftPrompt && open} onClose={() => {}} closeOnBackdrop={false} size="sm" title="Найдена незавершённая форма протокола" footer={<><Button type="button" variant="secondary" onClick={newDraft}>Начать заново</Button><Button type="button" onClick={restoreDraft}>Продолжить</Button></>}><p className="text-sm text-slate-600">Продолжить заполнение временного черновика из текущей сессии?</p></Modal>
     <Modal open={closePrompt} onClose={() => setClosePrompt(false)} closeOnBackdrop={false} size="sm" title="Закрыть создание протокола?" footer={<><Button type="button" variant="secondary" onClick={() => setClosePrompt(false)}>Продолжить заполнение</Button><Button type="button" onClick={() => { setClosePrompt(false); onClose(); }}>Закрыть</Button><Button type="button" variant="danger" onClick={() => { sessionStorage.removeItem(DRAFT_KEY); reset(createWizardDefaults()); setClosePrompt(false); onClose(); }}>Очистить и закрыть</Button></>}><p className="text-sm text-slate-600">Введённые данные сохранены как временный черновик и будут доступны до завершения текущей сессии.</p></Modal>
     <Modal open={Boolean(pendingType)} onClose={() => setPendingType(null)} closeOnBackdrop={false} size="sm" title="Изменить тип протокола?" footer={<><Button type="button" variant="secondary" onClick={() => setPendingType(null)}>Отмена</Button><Button type="button" variant="danger" onClick={applyTypeChange}>Изменить тип</Button></>}><p className="text-sm text-slate-600">При изменении типа результаты, приборы и нормативы будут очищены.</p></Modal>
