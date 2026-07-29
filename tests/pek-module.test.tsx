@@ -15,19 +15,21 @@ import PekIssuesPanel from '../src/features/pek/components/issues/PekIssuesPanel
 import { PekPrimaryAction } from '../src/features/pek/components/common/PekUi';
 import { createWizardDefaults } from '../src/features/protocols/components/wizardTypes';
 import { buildQuickCreatePayload } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
+import { formatPekResult } from '../src/features/pek/utils/pekFormatters';
 
 let captured: unknown;
+let capturedIfMatch: string | null;
 const server=setupServer(
   http.get('*/api/pek/programs',({request})=>HttpResponse.json({data:{content:[{id:1,number:'ПЭК-1'}],number:0,size:20,totalElements:1,totalPages:1},query:new URL(request.url).searchParams.get('search')})),
   http.post('*/api/pek/programs',async({request})=>{captured=await request.json();return HttpResponse.json({data:{id:7,...captured}});}),
-  http.post('*/api/pek/reports/:id/collect',async({request})=>{captured=await request.json();return HttpResponse.json({data:{id:3,status:'RUNNING',progressPercent:10,processedRows:2,foundIssues:0}});}),
+  http.post('*/api/pek/reports/:id/collect',async({request})=>{captured=await request.json();capturedIfMatch=request.headers.get('If-Match');return HttpResponse.json({data:{id:3,status:'RUNNING',progressPercent:10,processedRows:2,foundIssues:0}});}),
   http.post('*/api/pek/reports',async({request})=>{captured=await request.json();return HttpResponse.json({data:{id:18,version:1,status:'COLLECTING'}});}),
   http.get('*/api/pek/settings',()=>HttpResponse.json({data:{collectionPollingIntervalMs:1500,autosaveDebounceMs:1200,version:4}})),
-  http.patch('*/api/pek/settings',async({request})=>{captured=await request.json();return HttpResponse.json({data:captured});}),
+  http.patch('*/api/pek/settings',async({request})=>{captured=await request.json();capturedIfMatch=request.headers.get('If-Match');return HttpResponse.json({data:{...captured,version:5}});}),
   http.get('*/api/pek/reports/:reportId/unmatched-sources/:sourceId/link-options',()=>HttpResponse.json({data:[{id:31,name:'СЗЗ-1',indicators:[{id:71,name:'Пыль'}]}]})),
 );
 beforeAll(()=>server.listen({onUnhandledRequest:'error'}));
-afterEach(()=>{cleanup();captured=undefined;server.resetHandlers();});
+afterEach(()=>{cleanup();captured=undefined;capturedIfMatch=null;server.resetHandlers();});
 afterAll(()=>server.close());
 
 describe('production PEK module',()=>{
@@ -42,7 +44,8 @@ describe('production PEK module',()=>{
   });
   it('collect sends current version and returns polling status',async()=>{
     const run=await pekService.collectReport(9,{version:12});
-    expect(captured).toEqual({version:12});
+    expect(captured).toEqual({});
+    expect(capturedIfMatch).toBe('12');
     expect(run.status).toBe('RUNNING');
   });
   it('creates a report with backend-managed collection in one command',async()=>{
@@ -109,11 +112,21 @@ describe('production PEK module',()=>{
     const settings=await pekService.getSettings();
     expect(settings.version).toBe(4);
     await pekService.updateSettings({...settings,autosaveDebounceMs:900});
-    expect(captured).toMatchObject({autosaveDebounceMs:900,version:4});
+    expect(captured).toMatchObject({autosaveDebounceMs:900});
+    expect(captured).not.toHaveProperty('version');
+    expect(capturedIfMatch).toBe('4');
   });
   it('loads backend link options instead of accepting internal ids from a text field',async()=>{
     const options=await pekService.getUnmatchedLinkOptions(12,44);
     expect(options[0]).toMatchObject({id:31,name:'СЗЗ-1'});
     expect(options[0].indicators[0]).toMatchObject({id:71,name:'Пыль'});
+  });
+  it('formats zero, negative, ranges and less-than-detection results without losing values',()=>{
+    expect(formatPekResult(0)).toBe('0');
+    expect(formatPekResult(-0.5)).toBe('-0.5');
+    expect(formatPekResult({numericValue:0})).toBe('0');
+    expect(formatPekResult({rangeFrom:0,rangeTo:2})).toBe('0–2');
+    expect(formatPekResult({belowDetectionLimit:true,detectionLimit:0.01})).toBe('< 0.01');
+    expect(formatPekResult(null)).toBe('—');
   });
 });

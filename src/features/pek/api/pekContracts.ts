@@ -60,6 +60,7 @@ export type PekAvailableAction = {
   confirmationRequired?: boolean;
   requiresComment?: boolean;
 };
+export type PekAvailableActions = readonly PekAvailableAction[];
 export type PekSectionSummary = {
   code: PekSectionCode;
   label: string;
@@ -92,8 +93,8 @@ export type PekProgram = {
   name: string;
   version: number;
   status: PekProgramStatus;
-  company: PekNamedRef;
-  object: PekNamedRef;
+  company?: PekNamedRef | null;
+  object?: PekNamedRef | null;
   validFrom: string;
   validUntil: string;
   responsible?: PekNamedRef | null;
@@ -134,8 +135,8 @@ export type PekReport = {
   periodStart: string;
   periodEnd: string;
   dueDate?: string | null;
-  company: PekNamedRef;
-  object: PekNamedRef;
+  company?: PekNamedRef | null;
+  object?: PekNamedRef | null;
   program?: PekNamedRef & { version?: number } | null;
   responsible?: PekNamedRef | null;
   readinessPercent: number;
@@ -169,8 +170,8 @@ export type PekProgramFilters = {
   activeOn?: string; page?: number; size?: number; sort?: string;
 };
 export type PekCreationContext = {
-  company: PekNamedRef;
-  object: PekNamedRef;
+  company?: PekNamedRef | null;
+  object?: PekNamedRef | null;
   periodStart: string;
   periodEnd: string;
   programs: PekProgram[];
@@ -189,6 +190,13 @@ export type PekCollectionRun = {
   message?: string;
   traceId?: string;
   collectors?: Array<{ code: string; label: string; status: string; message?: string }>;
+  processedProtocols?: number;
+  addedResults?: number;
+  skippedResults?: number;
+  warnings?: string[];
+  errors?: string[];
+  startedAt?: string | null;
+  finishedAt?: string | null;
 };
 export type PekDashboard = {
   totalReportCount: number;
@@ -243,5 +251,47 @@ export type PekHistoryItem = {
   id: number; occurredAt: string; user?: string; role?: string; action: string;
   comment?: string; oldStatus?: string; newStatus?: string; changedFields?: string[];
 };
+export type PekReportValidation = {
+  readinessPercent: number;
+  blockingIssues: PekReportIssue[];
+  warnings: PekReportIssue[];
+  statistics?: Record<string, number | null>;
+  validatedAt?: string;
+  validatedVersion?: number;
+};
+export type PekResultValue = {
+  numericValue?: number | null;
+  textValue?: string | null;
+  rangeFrom?: number | null;
+  rangeTo?: number | null;
+  belowDetectionLimit?: boolean;
+  detectionLimit?: number | null;
+};
+export type PekSignature = {
+  id: PekId;
+  signer?: PekNamedRef | null;
+  role: string;
+  order: number;
+  required: boolean;
+  status: string;
+  signedAt?: string | null;
+  certificateSubject?: string | null;
+  certificateSerialNumber?: string | null;
+};
+export type PekSubmission = {
+  id: PekId;
+  recipient: string;
+  method: string;
+  submittedAt: string;
+  number?: string | null;
+  externalId?: string | null;
+  status: string;
+  receiptDocumentId?: PekId | null;
+};
+export type PekProgramListItem = PekProgram;
+export type PekProgramDetails = PekProgram;
+export type PekReportListItem = PekReport;
+export type PekReportDetails = PekReport;
+export type PekReportCreationContext = PekCreationContext;
 export type PekMutationBody = Record<string, unknown> & { version?: number };
 export type PekBlobResult = { blob: Blob; filename: string };

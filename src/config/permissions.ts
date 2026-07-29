@@ -40,6 +40,19 @@ export type Permission =
   | 'manage_content'
   | 'view_pek'
   | 'edit_pek'
+  | 'PEK_VIEW'
+  | 'PEK_PROGRAM_CREATE'
+  | 'PEK_PROGRAM_EDIT'
+  | 'PEK_PROGRAM_ACTIVATE'
+  | 'PEK_REPORT_CREATE'
+  | 'PEK_REPORT_EDIT'
+  | 'PEK_REPORT_COLLECT'
+  | 'PEK_REPORT_REVIEW'
+  | 'PEK_REPORT_APPROVE'
+  | 'PEK_REPORT_SIGN'
+  | 'PEK_REPORT_SUBMIT'
+  | 'PEK_REPORT_EXPORT'
+  | 'PEK_ADMIN'
   | 'view_protocols'
   | 'create_protocols';
 
@@ -180,6 +193,21 @@ export const canAccess = (role: UserRole | undefined, permission: Permission) =>
 
 const pekViewRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
 const pekEditRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'WASTE_SPECIALIST'];
+const pekPermissionRoles: Partial<Record<Permission, UserRole[]>> = {
+  PEK_VIEW: pekViewRoles,
+  PEK_PROGRAM_CREATE: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'],
+  PEK_PROGRAM_EDIT: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'],
+  PEK_PROGRAM_ACTIVATE: ['ADMIN', 'DIRECTOR', 'HEAD'],
+  PEK_REPORT_CREATE: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'],
+  PEK_REPORT_EDIT: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'],
+  PEK_REPORT_COLLECT: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY'],
+  PEK_REPORT_REVIEW: ['ADMIN', 'DIRECTOR', 'HEAD'],
+  PEK_REPORT_APPROVE: ['ADMIN', 'DIRECTOR'],
+  PEK_REPORT_SIGN: ['ADMIN', 'DIRECTOR'],
+  PEK_REPORT_SUBMIT: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'],
+  PEK_REPORT_EXPORT: pekViewRoles,
+  PEK_ADMIN: ['ADMIN'],
+};
 
 export const hasPermission = (
   user: { role?: UserRole; permissions?: string[] } | null | undefined,
@@ -189,6 +217,8 @@ export const hasPermission = (
   if (Array.isArray(user.permissions)) return user.permissions.includes(permission);
   if (permission === 'view_pek') return pekViewRoles.includes(user.role);
   if (permission === 'edit_pek') return pekEditRoles.includes(user.role);
+  const pekRoles = pekPermissionRoles[permission as Permission];
+  if (pekRoles) return pekRoles.includes(user.role);
   return canAccess(user.role, permission as Permission);
 };
 

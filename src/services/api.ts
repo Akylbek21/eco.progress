@@ -23,6 +23,11 @@ api.interceptors.request.use((config) => {
   if (token && !isPublicAuthRequest) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  if (!config.headers['X-Correlation-ID']) {
+    config.headers['X-Correlation-ID'] = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `web-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
   if (import.meta.env.DEV) {
     console.debug('[API]', {
       method: String(config.method || 'GET').toUpperCase(),

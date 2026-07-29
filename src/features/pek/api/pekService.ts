@@ -35,8 +35,33 @@ const get = async <T>(url: string, params: Record<string, unknown> = {}, signal?
   unwrapPekData<T>((await api.get(url, { params: cleanParams(params), signal })).data);
 const post = async <T>(url: string, body?: unknown) =>
   unwrapPekData<T>((await api.post(url, body)).data);
-const patch = async <T>(url: string, body: unknown) =>
-  unwrapPekData<T>((await api.patch(url, body)).data);
+const optimisticRequest = (body: unknown) => {
+  if (typeof FormData !== 'undefined' && body instanceof FormData) {
+    const version = body.get('version');
+    const payload = new FormData();
+    body.forEach((value, key) => { if (key !== 'version') payload.append(key, value); });
+    return {
+      body: payload,
+      headers: version === null ? undefined : { 'If-Match': String(version) },
+    };
+  }
+  if (body && typeof body === 'object' && !Array.isArray(body)) {
+    const { version, ...payload } = body as Record<string, unknown>;
+    return {
+      body: payload,
+      headers: version === undefined || version === null ? undefined : { 'If-Match': String(version) },
+    };
+  }
+  return { body, headers: undefined };
+};
+const versionedPost = async <T>(url: string, body: unknown = {}) => {
+  const request = optimisticRequest(body);
+  return unwrapPekData<T>((await api.post(url, request.body, { headers: request.headers })).data);
+};
+const versionedPatch = async <T>(url: string, body: unknown) => {
+  const request = optimisticRequest(body);
+  return unwrapPekData<T>((await api.patch(url, request.body, { headers: request.headers })).data);
+};
 const download = async (url: string, fallback: string): Promise<PekBlobResult> => {
   const response = await api.get<Blob>(url, { responseType: 'blob' });
   const contentType = String(response.headers['content-type'] || '');
@@ -51,9 +76,9 @@ const download = async (url: string, fallback: string): Promise<PekBlobResult> =
   };
 };
 const programAction = (id: number, action: string, body: PekMutationBody = {}) =>
-  post<PekProgram>(`/pek/programs/${id}/${action}`, body);
+  versionedPost<PekProgram>(`/pek/programs/${id}/${action}`, body);
 const reportAction = (id: number, action: string, body: PekMutationBody = {}) =>
-  post<PekReport>(`/pek/reports/${id}/${action}`, body);
+  versionedPost<PekReport>(`/pek/reports/${id}/${action}`, body);
 
 export const pekService = {
   async getPrograms(filters: PekProgramFilters, signal?: AbortSignal): Promise<PageResponse<PekProgram>> {
@@ -61,11 +86,11 @@ export const pekService = {
   },
   getProgram: (id: number, signal?: AbortSignal) => get<PekProgram>(`/pek/programs/${id}`, {}, signal),
   createProgram: (body: PekProgramRequest) => post<PekProgram>('/pek/programs', body),
-  updateProgram: (id: number, body: PekProgramRequest & { version: number }) => patch<PekProgram>(`/pek/programs/${id}`, body),
+  updateProgram: (id: number, body: PekProgramRequest & { version: number }) => versionedPatch<PekProgram>(`/pek/programs/${id}`, body),
   saveProgramDraft: (id: number, body: Partial<PekProgramRequest> & { version: number }) =>
-    patch<PekProgram>(`/pek/programs/${id}/draft`, body),
+    versionedPatch<PekProgram>(`/pek/programs/${id}/draft`, body),
   uploadProgramDocument: (id: number, body: FormData) =>
-    post<Record<string, unknown>>(`/pek/programs/${id}/documents`, body),
+    versionedPost<Record<string, unknown>>(`/pek/programs/${id}/documents`, body),
   submitProgramReview: (id: number, body: PekMutationBody) => programAction(id, 'submit-review', body),
   returnProgram: (id: number, body: PekMutationBody) => programAction(id, 'return', body),
   approveProgram: (id: number, body: PekMutationBody) => programAction(id, 'approve', body),
@@ -85,53 +110,53 @@ export const pekService = {
   getReportCreationContext: (params: Record<string, unknown>, signal?: AbortSignal) =>
     get<PekCreationContext>('/pek/reports/creation-context', params, signal),
   createReport: (body: PekMutationBody) => post<PekReport>('/pek/reports', body),
-  updateReport: (id: number, body: PekMutationBody) => patch<PekReport>(`/pek/reports/${id}`, body),
-  collectReport: (id: number, body: PekMutationBody) => post<PekCollectionRun>(`/pek/reports/${id}/collect`, body),
+  updateReport: (id: number, body: PekMutationBody) => versionedPatch<PekReport>(`/pek/reports/${id}`, body),
+  collectReport: (id: number, body: PekMutationBody) => versionedPost<PekCollectionRun>(`/pek/reports/${id}/collect`, body),
   getLatestCollectionRun: (id: number, signal?: AbortSignal) => get<PekCollectionRun>(`/pek/reports/${id}/collection-runs/latest`, {}, signal),
   validateReport: (id: number, body: PekMutationBody) => reportAction(id, 'validate', body),
   getReportIssues: (id: number, signal?: AbortSignal) => get<PekReportIssue[]>(`/pek/reports/${id}/issues`, {}, signal),
   getReportSection: (id: number, code: PekSectionCode, signal?: AbortSignal) =>
     get<Record<string, unknown>>(`/pek/reports/${id}/sections/${code}`, {}, signal),
   uploadReportDocument: (id: number, body: FormData) =>
-    post<Record<string, unknown>>(`/pek/reports/${id}/documents`, body),
+    versionedPost<Record<string, unknown>>(`/pek/reports/${id}/documents`, body),
   getPlanFact: (id: number, signal?: AbortSignal) => get<PekPlanFactRow[]>(`/pek/reports/${id}/plan-fact`, {}, signal),
   getUnmatchedSources: (id: number, signal?: AbortSignal) => get<PekUnmatchedSource[]>(`/pek/reports/${id}/unmatched-sources`, {}, signal),
   getUnmatchedLinkOptions: (id: number, sourceId: number, signal?: AbortSignal) =>
     get<PekControlItemLinkOption[]>(`/pek/reports/${id}/unmatched-sources/${sourceId}/link-options`, {}, signal),
   linkUnmatchedSource: (id: number, sourceId: number, body: PekMutationBody) =>
-    post<PekReport>(`/pek/reports/${id}/unmatched-sources/${sourceId}/link`, body),
+    versionedPost<PekReport>(`/pek/reports/${id}/unmatched-sources/${sourceId}/link`, body),
   excludeUnmatchedSource: (id: number, sourceId: number, body: PekMutationBody) =>
-    post<PekReport>(`/pek/reports/${id}/unmatched-sources/${sourceId}/exclude`, body),
+    versionedPost<PekReport>(`/pek/reports/${id}/unmatched-sources/${sourceId}/exclude`, body),
   getExceedances: (id: number, signal?: AbortSignal) => get<PekExceedance[]>(`/pek/reports/${id}/exceedances`, {}, signal),
   updateExceedance: (id: number, exceedanceId: number, body: PekMutationBody | FormData) =>
-    patch<PekExceedance>(`/pek/reports/${id}/exceedances/${exceedanceId}`, body),
+    versionedPatch<PekExceedance>(`/pek/reports/${id}/exceedances/${exceedanceId}`, body),
   createRepeatControl: (id: number, exceedanceId: number, body: PekMutationBody) =>
-    post<Record<string, unknown>>(`/pek/reports/${id}/exceedances/${exceedanceId}/repeat-control`, body),
-  createManualOverride: (id: number, body: PekMutationBody | FormData) => post<PekReport>(`/pek/reports/${id}/manual-overrides`, body),
+    versionedPost<Record<string, unknown>>(`/pek/reports/${id}/exceedances/${exceedanceId}/repeat-control`, body),
+  createManualOverride: (id: number, body: PekMutationBody | FormData) => versionedPost<PekReport>(`/pek/reports/${id}/manual-overrides`, body),
   keepManualOverride: (id: number, overrideId: number, body: PekMutationBody) =>
-    post<PekReport>(`/pek/reports/${id}/manual-overrides/${overrideId}/keep`, body),
+    versionedPost<PekReport>(`/pek/reports/${id}/manual-overrides/${overrideId}/keep`, body),
   restoreSourceValue: (id: number, overrideId: number, body: PekMutationBody) =>
-    post<PekReport>(`/pek/reports/${id}/manual-overrides/${overrideId}/restore`, body),
+    versionedPost<PekReport>(`/pek/reports/${id}/manual-overrides/${overrideId}/restore`, body),
   getReviewComments: (id: number, signal?: AbortSignal) => get<PekReviewComment[]>(`/pek/reports/${id}/review-comments`, {}, signal),
-  createReviewComment: (id: number, body: PekMutationBody) => post<PekReviewComment>(`/pek/reports/${id}/review-comments`, body),
+  createReviewComment: (id: number, body: PekMutationBody) => versionedPost<PekReviewComment>(`/pek/reports/${id}/review-comments`, body),
   resolveReviewComment: (id: number, commentId: number, body: PekMutationBody) =>
-    post<PekReviewComment>(`/pek/reports/${id}/review-comments/${commentId}/resolve`, body),
+    versionedPost<PekReviewComment>(`/pek/reports/${id}/review-comments/${commentId}/resolve`, body),
   submitReportReview: (id: number, body: PekMutationBody) => reportAction(id, 'submit-review', body),
   startReview: (id: number, body: PekMutationBody) => reportAction(id, 'start-review', body),
   returnReport: (id: number, body: PekMutationBody) => reportAction(id, 'return', body),
   acceptReview: (id: number, body: PekMutationBody) => reportAction(id, 'accept-review', body),
   approveReport: (id: number, body: PekMutationBody) => reportAction(id, 'approve', body),
   recallApproval: (id: number, body: PekMutationBody) => reportAction(id, 'recall-approval', body),
-  prepareSigning: (id: number, body: PekMutationBody) => post<Record<string, unknown>>(`/pek/reports/${id}/prepare-signing`, body),
-  signReport: (id: number, body: PekMutationBody | FormData) => post<PekReport>(`/pek/reports/${id}/sign`, body),
-  registerSubmission: (id: number, body: PekMutationBody | FormData) => post<PekReport>(`/pek/reports/${id}/submission`, body),
-  registerResult: (id: number, body: PekMutationBody | FormData) => post<PekReport>(`/pek/reports/${id}/result`, body),
+  prepareSigning: (id: number, body: PekMutationBody) => versionedPost<Record<string, unknown>>(`/pek/reports/${id}/prepare-signing`, body),
+  signReport: (id: number, body: PekMutationBody | FormData) => versionedPost<PekReport>(`/pek/reports/${id}/sign`, body),
+  registerSubmission: (id: number, body: PekMutationBody | FormData) => versionedPost<PekReport>(`/pek/reports/${id}/submission`, body),
+  registerResult: (id: number, body: PekMutationBody | FormData) => versionedPost<PekReport>(`/pek/reports/${id}/result`, body),
   createRevision: (id: number, body: PekMutationBody) => reportAction(id, 'revision', body),
   archiveReport: (id: number, body: PekMutationBody) => reportAction(id, 'archive', body),
   getHistory: (id: number, signal?: AbortSignal) => get<PekHistoryItem[]>(`/pek/reports/${id}/history`, {}, signal),
   getDashboard: (params: Record<string, unknown>, signal?: AbortSignal) => get<PekDashboard>('/pek/dashboard', params, signal),
   getSettings: (signal?: AbortSignal) => get<PekSettings>('/pek/settings', {}, signal),
-  updateSettings: (body: PekSettings) => patch<PekSettings>('/pek/settings', body),
+  updateSettings: (body: PekSettings) => versionedPatch<PekSettings>('/pek/settings', body),
   downloadPreviewPdf: (id: number) => download(`/pek/reports/${id}/exports/preview.pdf`, `pek-report-${id}-preview.pdf`),
   downloadPdf: (id: number) => download(`/pek/reports/${id}/exports/report.pdf`, `pek-report-${id}.pdf`),
   downloadXlsx: (id: number) => download(`/pek/reports/${id}/exports/report.xlsx`, `pek-report-${id}.xlsx`),

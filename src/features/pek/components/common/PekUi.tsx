@@ -24,10 +24,10 @@ export const PekState = ({ title, message, retry }: { title: string; message?: s
     {retry && <Button className="mt-4" type="button" onClick={retry}>Повторить</Button>}
   </section>
 );
-export const PekReadiness = ({ value, valid }: { value: number; valid?: boolean }) => (
+export const PekReadiness = ({ value, valid }: { value?: number | null; valid?: boolean }) => (
   <div className="min-w-28">
-    <div className="flex justify-between text-xs font-semibold"><span>{value}%</span><span>{valid === false ? 'Есть ошибки' : 'Готовность'}</span></div>
-    <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-200"><div className={`h-full ${valid === false ? 'bg-amber-500' : 'bg-eco-600'}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} /></div>
+    <div className="flex justify-between text-xs font-semibold"><span>{value === undefined || value === null ? '—' : `${value}%`}</span><span>{valid === false ? 'Есть ошибки' : 'Готовность'}</span></div>
+    <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-200"><div className={`h-full ${valid === false ? 'bg-amber-500' : 'bg-eco-600'}`} style={{ width: `${value === undefined || value === null ? 0 : Math.max(0, Math.min(100, value))}%` }} /></div>
   </div>
 );
 export const PekPrimaryAction = ({ action, pending, onClick }: { action?: PekAvailableAction; pending?: boolean; onClick: (action: PekAvailableAction) => void }) => {

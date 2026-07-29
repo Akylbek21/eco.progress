@@ -11,6 +11,9 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { primaryPekAction } from '../utils/pekActions';
 import { pekStatusLabels } from '../utils/pekLabels';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
+import EntityName from '../components/common/EntityName';
+import { useAuth } from '../../../contexts/AuthContext';
+import { hasPermission } from '../../../config/permissions';
 
 const statuses: PekReportStatus[] = [
   'DRAFT', 'COLLECTING', 'REQUIRES_CORRECTION', 'READY_FOR_REVIEW', 'UNDER_REVIEW',
@@ -19,6 +22,7 @@ const statuses: PekReportStatus[] = [
 ];
 
 const PekReportsPage = () => {
+  const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const rawSearch = params.get('search') || '';
   const search = useDebouncedValue(rawSearch);
@@ -63,7 +67,7 @@ const PekReportsPage = () => {
     <PekPageHeader
       title="Отчёты ПЭК"
       description="Сбор, проверка, согласование и отправка отчётов"
-      actions={<Link to="/staff/pek/reports/new" className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white">Создать отчёт ПЭК</Link>}
+      actions={hasPermission(user, 'PEK_REPORT_CREATE') ? <Link to="/staff/pek/reports/new" className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white">Создать отчёт ПЭК</Link> : undefined}
     />
     <section className="grid gap-3 rounded-2xl border bg-white p-4 md:grid-cols-4 xl:grid-cols-8">
       <label className="text-xs font-bold text-slate-600">Поиск
@@ -110,8 +114,8 @@ const PekReportsPage = () => {
                     const action = primaryPekAction(item.availableActions || []);
                     return <tr key={item.id} className="border-t">
                       <td className="px-4 py-3 font-bold">{item.number}<br /><span className="font-normal text-slate-500">{item.periodStart} — {item.periodEnd}</span></td>
-                      <td className="px-4 py-3">{item.company.name}</td>
-                      <td className="px-4 py-3">{item.object.name}</td>
+                      <td className="px-4 py-3"><EntityName value={item.company} fallback="Компания не указана" /></td>
+                      <td className="px-4 py-3"><EntityName value={item.object} fallback="Объект не указан" /></td>
                       <td className="px-4 py-3">{item.program?.name || '—'}</td>
                       <td className="px-4 py-3">{item.revision}</td>
                       <td className="px-4 py-3"><PekStatusBadge status={item.status} /></td>
