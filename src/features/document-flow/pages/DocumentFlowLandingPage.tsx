@@ -1,14 +1,14 @@
-import { useState, type ComponentType } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, CheckCircle2, FileCheck2, History, Network, ShieldCheck, Users } from 'lucide-react';
+import { ArrowRight, CheckCircle2, FileCheck2, History, Network, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { documentFlowAccessApi, documentFlowPlansApi } from '../api/documentFlowApi';
 import { documentFlowKeys } from '../api/documentFlowKeys';
 import { accessDestination } from '../utils/access';
 import { AccessRequestDialog } from '../components/AccessRequestDialog';
 
-const benefits: Array<[string, string, ComponentType<{ className?: string; size?: number }>]> = [
+const benefits: Array<[string, string, LucideIcon]> = [
   ['Несколько подписантов', 'Сотрудники, контрагенты и внешние подписанты в одном документе.', Users],
   ['Гибкие маршруты', 'Последовательные, параллельные и смешанные этапы согласования.', Network],
   ['ЭЦП через NCALayer', 'Detached CMS отправляется backend для обязательной проверки.', ShieldCheck],
