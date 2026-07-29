@@ -1,10 +1,11 @@
 ﻿import { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Settings, Users } from 'lucide-react';
+import { FileSignature, Settings, Users } from 'lucide-react';
 
 const nav = [
   { to: '/admin', label: 'Контент', hash: '#услуги' },
   { to: '/admin/users', label: 'Пользователи' },
+  { to: '/admin/document-flow/subscriptions', label: 'Документооборот' },
 ];
 
 const AdminLayout = ({ children }: { children: ReactNode }) => (
@@ -25,7 +26,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => (
               }`
             }
           >
-            {item.label === 'Пользователи' ? <Users size={16} /> : <Settings size={16} />}
+            {item.label === 'Пользователи' ? <Users size={16} /> : item.label === 'Документооборот' ? <FileSignature size={16} /> : <Settings size={16} />}
             {item.label}
           </NavLink>
         ))}

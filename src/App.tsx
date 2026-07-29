@@ -63,6 +63,8 @@ const ContentListPage = lazyNamed(() => import('./pages/content/ContentManagemen
 const ContentEditorPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentEditorPage');
 const ContentAnalyticsPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAnalyticsPage');
 const ContentAuditPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAuditPage');
+const DocumentFlowRoutes = lazy(() => import('./features/document-flow/DocumentFlowRoutes'));
+const DocumentFlowAdminPage = lazy(() => import('./features/document-flow/admin/DocumentFlowAdminPage'));
 
 const CabinetCompanyPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetCompanyPage');
 const CabinetDashboardPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetDashboardPage');
@@ -129,7 +131,7 @@ const ForbiddenPage = ({ message = 'У вашей роли нет прав дл�
   </div>
 );
 
-const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/partners', '/news', '/faq', '/contacts'];
+const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/partners', '/news', '/faq', '/contacts', '/document-flow'];
 
 const RouteFallback = () => {
   const { pathname } = useLocation();
@@ -151,7 +153,7 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
-    const privatePrefixes = ['/cabinet', '/client', '/staff', '/admin', '/dashboard', '/login', '/register', '/reset-password', '/api', '/internal', '/crm'];
+    const privatePrefixes = ['/cabinet', '/client', '/staff', '/admin', '/dashboard', '/document-flow/app', '/login', '/register', '/reset-password', '/api', '/internal', '/crm'];
     const isPrivate = privatePrefixes.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
     let meta = document.head.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
     if (!meta) {
@@ -213,6 +215,7 @@ function App() {
         <Route path="/contacts" element={<PublicLayout><ContactsPage /></PublicLayout>} />
         <Route path="/regions" element={<PublicLayout><RegionsPage /></PublicLayout>} />
         <Route path="/search" element={<PublicLayout><SearchPage /></PublicLayout>} />
+        <Route path="/document-flow/*" element={<DocumentFlowRoutes />} />
         <Route path="/shtrafy-za-ekologiyu-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
         <Route path="/shtrafy-za-ekologicheskie-narusheniya-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
         <Route path="/:seoSlug" element={<PublicLayout><SeoLandingPage /></PublicLayout>} />
@@ -302,6 +305,9 @@ function App() {
 
         <Route path="/admin" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminPage /></AdminLayout></RoleAccess>} />
         <Route path="/admin/users" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminUsersPage /></AdminLayout></RoleAccess>} />
+        <Route path="/admin/document-flow/subscriptions" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><DocumentFlowAdminPage /></AdminLayout></RoleAccess>} />
+        <Route path="/admin/document-flow/subscriptions/:organizationId" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><DocumentFlowAdminPage /></AdminLayout></RoleAccess>} />
+        <Route path="/admin/document-flow/plans" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><DocumentFlowAdminPage plansOnly /></AdminLayout></RoleAccess>} />
         <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
         </Routes>
         </Suspense>

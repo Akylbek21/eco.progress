@@ -21,6 +21,7 @@ const navItems = [
   { label: 'Статьи', path: '/news' },
   { label: 'О компании', path: '/about' },
   { label: 'Контакты', path: '/contacts' },
+  { label: 'Документооборот', path: '/document-flow' },
   { label: 'WhatsApp', path: getWhatsAppUrl() },
   { label: 'Войти', path: '/login' },
 ];
@@ -58,7 +59,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
           <Link to="/" className="inline-flex items-center text-xl font-bold text-eco-900">
             <span className="leading-none">ecoprogress.kz</span>
           </Link>
-          <nav className="hidden items-center gap-5 xl:gap-6 lg:flex">
+          <nav className="hidden items-center gap-4 xl:gap-5 lg:flex">
             {navItems.map((item) => item.path.startsWith('http') ? (
               <a key={item.path} href={item.path} target="_blank" rel="noreferrer" className="relative text-sm font-medium text-slate-700 transition after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:bg-accent after:transition-all hover:text-eco-800 hover:after:w-full">
                 {item.label}
