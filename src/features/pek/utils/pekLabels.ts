@@ -17,6 +17,7 @@ export const pekStatusLabels: Record<PekProgramStatus | PekReportStatus, string>
   READY_FOR_APPROVAL: 'Готов к утверждению',
   APPROVED: 'Утверждён',
   READY_FOR_SIGNING: 'Готов к подписанию',
+  PARTIALLY_SIGNED: 'Подписан частично',
   SIGNED: 'Подписан',
   SUBMITTED: 'Отправлен',
   ACCEPTED: 'Принят',
@@ -26,11 +27,15 @@ export const pekStatusLabels: Record<PekProgramStatus | PekReportStatus, string>
 };
 
 export const pekCollectionLabels: Record<PekCollectionRunStatus, string> = {
+  CREATED: 'Создан',
   PENDING: 'Ожидает запуска',
   RUNNING: 'Выполняется',
+  COMPLETED: 'Завершён',
+  COMPLETED_WITH_WARNINGS: 'Завершён с предупреждениями',
   SUCCESS: 'Завершён',
   PARTIAL_SUCCESS: 'Завершён частично',
   FAILED: 'Ошибка',
+  CANCELLED: 'Отменён',
 };
 
 export const pekControlEventLabels: Record<PekControlEventStatus, string> = {
@@ -69,4 +74,4 @@ export const pekActionLabels: Partial<Record<PekAvailableActionCode, string>> = 
 export const labelPekStatus = (value?: string | null) =>
   value && value in pekStatusLabels
     ? pekStatusLabels[value as keyof typeof pekStatusLabels]
-    : value || '—';
+    : value ?? '—';

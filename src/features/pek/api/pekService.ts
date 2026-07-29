@@ -1,4 +1,4 @@
-import api from '../../../services/api';
+import { pekApiClient as api } from './pekApiClient';
 import {
   filenameFromDisposition,
   mapPekPage,
@@ -27,6 +27,13 @@ import type {
   PekSettings,
   PekUnmatchedSource,
 } from './pekContracts';
+import {
+  pekCollectionRunSchema,
+  pekCreationContextSchema,
+  pekProgramSchema,
+  pekReportSchema,
+  validatePekResponse,
+} from '../schemas/pekResponseSchemas';
 
 const cleanParams = (input: Record<string, unknown>) => Object.fromEntries(
   Object.entries(input).filter(([, value]) => value !== '' && value !== undefined && value !== null),
@@ -84,7 +91,8 @@ export const pekService = {
   async getPrograms(filters: PekProgramFilters, signal?: AbortSignal): Promise<PageResponse<PekProgram>> {
     return mapPekPage<PekProgram>((await api.get('/pek/programs', { params: cleanParams(filters), signal })).data);
   },
-  getProgram: (id: number, signal?: AbortSignal) => get<PekProgram>(`/pek/programs/${id}`, {}, signal),
+  getProgram: async (id: number, signal?: AbortSignal) =>
+    validatePekResponse(pekProgramSchema, await get<PekProgram>(`/pek/programs/${id}`, {}, signal), 'program details'),
   createProgram: (body: PekProgramRequest) => post<PekProgram>('/pek/programs', body),
   updateProgram: (id: number, body: PekProgramRequest & { version: number }) => versionedPatch<PekProgram>(`/pek/programs/${id}`, body),
   saveProgramDraft: (id: number, body: Partial<PekProgramRequest> & { version: number }) =>
@@ -106,13 +114,15 @@ export const pekService = {
   async getReports(filters: PekReportFilters, signal?: AbortSignal): Promise<PageResponse<PekReport>> {
     return mapPekPage<PekReport>((await api.get('/pek/reports', { params: cleanParams(filters), signal })).data);
   },
-  getReport: (id: number, signal?: AbortSignal) => get<PekReport>(`/pek/reports/${id}`, {}, signal),
-  getReportCreationContext: (params: Record<string, unknown>, signal?: AbortSignal) =>
-    get<PekCreationContext>('/pek/reports/creation-context', params, signal),
+  getReport: async (id: number, signal?: AbortSignal) =>
+    validatePekResponse(pekReportSchema, await get<PekReport>(`/pek/reports/${id}`, {}, signal), 'report details'),
+  getReportCreationContext: async (params: Record<string, unknown>, signal?: AbortSignal) =>
+    validatePekResponse(pekCreationContextSchema, await get<PekCreationContext>('/pek/reports/creation-context', params, signal), 'report creation context'),
   createReport: (body: PekMutationBody) => post<PekReport>('/pek/reports', body),
   updateReport: (id: number, body: PekMutationBody) => versionedPatch<PekReport>(`/pek/reports/${id}`, body),
   collectReport: (id: number, body: PekMutationBody) => versionedPost<PekCollectionRun>(`/pek/reports/${id}/collect`, body),
-  getLatestCollectionRun: (id: number, signal?: AbortSignal) => get<PekCollectionRun>(`/pek/reports/${id}/collection-runs/latest`, {}, signal),
+  getLatestCollectionRun: async (id: number, signal?: AbortSignal) =>
+    validatePekResponse(pekCollectionRunSchema, await get<PekCollectionRun>(`/pek/reports/${id}/collection-runs/latest`, {}, signal), 'collection run'),
   validateReport: (id: number, body: PekMutationBody) => reportAction(id, 'validate', body),
   getReportIssues: (id: number, signal?: AbortSignal) => get<PekReportIssue[]>(`/pek/reports/${id}/issues`, {}, signal),
   getReportSection: (id: number, code: PekSectionCode, signal?: AbortSignal) =>

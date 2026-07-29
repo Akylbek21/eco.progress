@@ -12,11 +12,11 @@ export const usePekCollection = (reportId: number, enabled: boolean) => {
     queryFn: ({ signal }) => pekService.getLatestCollectionRun(reportId, signal),
     enabled,
     retry: retryPekQuery,
-    refetchInterval: (state) => ['PENDING', 'RUNNING'].includes(state.state.data?.status || '') ? 1500 : false,
+    refetchInterval: (state) => ['CREATED', 'PENDING', 'RUNNING'].includes(state.state.data?.status || '') ? 1500 : false,
   });
   useEffect(() => {
     const run = query.data;
-    if (!run || ['PENDING', 'RUNNING'].includes(run.status) || terminalRunRef.current === run.id) return;
+    if (!run || ['CREATED', 'PENDING', 'RUNNING'].includes(run.status) || terminalRunRef.current === run.id) return;
     terminalRunRef.current = run.id;
     void Promise.all([
       client.invalidateQueries({ queryKey: pekKeys.report(reportId) }),

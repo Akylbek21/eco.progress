@@ -5,7 +5,8 @@
 ## Итог
 
 Существующий модуль `src/features/pek` сохранён и укреплён; параллельная
-реализация не создавалась. Frontend не подменяет ответы ПЭК mock-данными.
+реализация не создавалась. В development/test доступен изолированный MSW
+backend; компоненты получают его данные только через Axios и обычный API-слой.
 
 Полную production-готовность пока нельзя подтвердить: в репозитории нет
 OpenAPI-схемы/сгенерированного PEK-клиента и нет доступного Spring Boot
@@ -18,6 +19,10 @@ OpenAPI-схемы/сгенерированного PEK-клиента и нет
   options, error exports, optimistic locking через `If-Match`.
 - `src/features/pek/types`: семантические PEK-типы.
 - `src/features/pek/utils`: безопасные форматтеры и user/entity-scoped drafts.
+- `src/features/pek/mocks`: MSW handlers, стабильные fixtures и сценарии.
+- `src/features/pek/schemas`: runtime Zod validation критических ответов.
+- `src/features/pek/routes`, `permissions`, `signatures`: layout, guards и
+  provider boundary для подписания.
 - `src/features/pek/pages`: nullable company/object, permission-aware create
   actions, deep-link workspace, creation context, conflict recovery.
 - `src/features/pek/components`: `EntityName`, отсутствие подмены `null` числом
@@ -26,6 +31,8 @@ OpenAPI-схемы/сгенерированного PEK-клиента и нет
 - `src/config/permissions.ts`, `src/App.tsx`: PEK permissions и route guards.
 - `tests/pek-module.test.tsx`: `If-Match`, отсутствие `version` в mutation body,
   результат `0`, отрицательные числа, диапазоны и detection limit.
+- `tests/pek-msw-contract.test.ts`: реальный Axios→MSW boundary, polling,
+  response validation, scoped draft keys и отсутствие fake CMS в production.
 
 Legacy-компоненты не удалялись: ни один не был доказанно неиспользуемым без
 backend contract и полного E2E.
@@ -46,7 +53,27 @@ backend contract и полного E2E.
 - `/staff/pek/reports/:reportId/preview` — реальный PDF preview.
 - `/staff/pek/settings` — настройки.
 
-Фильтры и активная секция workspace хранятся в query parameters.
+Фильтры и активная вкладка workspace хранятся в query parameters; canonical
+пример: `/staff/pek/reports/2001/workspace?tab=results`.
+
+## MSW
+
+MSW запускается только при одновременном выполнении условий:
+
+```text
+import.meta.env.DEV
+VITE_ENABLE_MSW=true
+```
+
+Production build не содержит MSW runtime chunk. Реализованы сценарии:
+списки/empty/403/404/500, создание и изменение программы, `409`,
+activation/archive, creation context/duplicate report, collection
+running/completed/warning/failed, validation failed, review/return/approve,
+pending/partial/signed, Blob export и accepted/rejected submission.
+
+Fixtures имеют стабильные ID и покрывают draft/active/expired/archived
+программы и основные состояния отчёта. Сценарий выбирается только в mock
+среде через `VITE_PEK_MSW_SCENARIO` или тестовый header.
 
 ## Используемые endpoint-группы
 
@@ -80,7 +107,9 @@ backend должно быть подтверждено предоставлен�
   route guards являются только UX-ограничением.
 - сообщение о запуске сбора не показывается до подтверждённого backend-ответа.
 - offline drafts привязаны к `userId` и `entityId`, содержат `savedAt`,
-  удаляются после сохранения и не содержат CMS.
+  хранят форму в IndexedDB, удаляются после сохранения и не содержат CMS.
+- program/report/creation-context/collection-run и available actions проходят
+  runtime Zod validation.
 
 ## Матрица fallback-ролей
 
@@ -91,10 +120,11 @@ Fallback ниже нужен для старых ответов без permissio
 |---|---:|---:|---:|---:|---:|---:|
 | PEK_VIEW | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | PEK_PROGRAM_CREATE/EDIT | ✓ | ✓ | ✓ | ✓ | — | — |
-| PEK_PROGRAM_ACTIVATE | ✓ | ✓ | ✓ | — | — | — |
+| PEK_PROGRAM_ACTIVATE/ARCHIVE | ✓ | ✓ | ✓ | — | — | — |
 | PEK_REPORT_CREATE/EDIT | ✓ | ✓ | ✓ | ✓ | — | — |
 | PEK_REPORT_COLLECT | ✓ | ✓ | ✓ | ✓ | ✓ | — |
-| PEK_REPORT_REVIEW | ✓ | ✓ | ✓ | — | — | — |
+| PEK_REPORT_VALIDATE | ✓ | ✓ | ✓ | ✓ | — | — |
+| PEK_REPORT_REVIEW/RETURN | ✓ | ✓ | ✓ | — | — | — |
 | PEK_REPORT_APPROVE/SIGN | ✓ | ✓ | — | — | — | — |
 | PEK_REPORT_SUBMIT | ✓ | ✓ | ✓ | ✓ | — | — |
 | PEK_REPORT_EXPORT | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -128,18 +158,20 @@ blocking reasons и дубликат до POST. Workspace загружает с�
 
 Без этих данных нельзя честно заявить отсутствие несуществующих endpoint,
 полную типизацию generated contract, несколько подписей и успешный сквозной
-E2E. Mock-success для закрытия этих пробелов не добавлялся.
+E2E. MSW подтверждает frontend-контракт, но не доказывает поведение Spring
+Boot, юридическую силу подписи или интеграцию с внешней системой.
 
 ## Проверки
 
 - `npm run typecheck` — PASS.
 - `npm run lint` — PASS, включая запрет explicit `any`.
-- `npx vitest run tests/pek-module.test.tsx` — PASS, 16/16.
+- PEK tests — PASS, 21/21.
 - `npm run build` — PASS; Vite build, prerender и SEO audit завершены.
-- `npm test` — PEK и 259 остальных проверок проходят; один существующий
-  тест вне ПЭК падает в `tests/protocol-signatures.test.tsx`: ожидает текст с
-  лимитом `5`, mapper возвращает общий текст ошибки лимита подписи.
+- `npm test` — PASS: 155/155 Node tests и 110/110 Vitest tests.
+- `npm ci` был запущен, но завис без вывода; процесс остановлен. Дерево
+  восстановлено `npm install --prefer-offline --no-audit --no-fund`, после
+  чего повторные typecheck и профильные 31/31 тестов прошли.
 
-Скриншоты не приложены: без реального API и авторизованных тестовых данных они
-показывали бы только error/permission states и не подтверждали бы основной
-процесс.
+Скриншоты не приложены: требуемый Node REPL browser runtime недоступен в
+текущей среде. Генерировать изображения, не полученные из работающего
+localhost-интерфейса, не стали.

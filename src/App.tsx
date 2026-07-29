@@ -10,6 +10,7 @@ import { useAuth } from './contexts/AuthContext';
 import type { UserRole } from './types';
 import { companyRoleMatrix, hasPermission } from './config/permissions';
 import { publicRouteLoaders } from './utils/publicRoutePreload';
+import PekLayout from './features/pek/routes/PekLayout';
 
 const lazyNamed = <T extends Record<string, unknown>, K extends keyof T>(loader: () => Promise<T>, key: K) =>
   lazy(() => loader().then((module) => ({ default: module[key] as unknown as ComponentType<Record<string, unknown>> })));
@@ -100,7 +101,7 @@ const pekRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORAT
 const PekAccess = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   return hasPermission(user, 'view_pek')
-    ? <>{children}</>
+    ? <PekLayout>{children}</PekLayout>
     : <ForbiddenPage message="Недостаточно прав для просмотра производственного экологического контроля." />;
 };
 const PekSettingsAccess = ({ children }: { children: ReactNode }) => {

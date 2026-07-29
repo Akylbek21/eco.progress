@@ -10,7 +10,7 @@ import {
 
 const SIGN_ERROR_MESSAGES: Record<string, string> = {
   PROTOCOL_ALREADY_SIGNED: 'Вы уже подписали эту версию протокола',
-  SIGNATURE_LIMIT_REACHED: 'Достигнуто максимальное количество подписей для этой версии протокола',
+  SIGNATURE_LIMIT_REACHED: 'Достигнуто максимальное количество подписей: 5',
   PROTOCOL_NOT_READY_FOR_SIGNING: 'Протокол ещё не готов к подписанию',
   PROTOCOL_VERSION_CONFLICT: 'Протокол был изменён другим сотрудником. Обновите данные',
   FINAL_DOCUMENT_NOT_FOUND: 'Финальный документ не сформирован',
