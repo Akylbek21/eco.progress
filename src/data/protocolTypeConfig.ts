@@ -63,11 +63,11 @@ export const PROTOCOL_TYPE_CONFIG: Record<ProtocolTypeKey, ProtocolTypeConfig> =
   },
   water: {
     title: 'Вода',
-    templateId: 'water_wastewater',
+    templateId: 'water',
     sourceDocumentCode: PROTOCOL_NORMATIVE_CONTEXT.water.sourceDocumentCode,
     docxTemplateCode: 'protocol_water',
     defaultUnit: 'мг/л',
-    normativeTemplateId: 'water_wastewater',
+    normativeTemplateId: 'water',
     resultMode: 'CHEMICAL',
   },
   microclimate: {

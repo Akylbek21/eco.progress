@@ -20,4 +20,28 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
+  {
+    files: [
+      'src/**/*Page.{ts,tsx}',
+      'src/**/pages/**/*.{ts,tsx}',
+      'src/**/components/**/*.{ts,tsx}',
+      'src/layouts/**/*.{ts,tsx}',
+    ],
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [{
+          name: 'axios',
+          message: 'Pages and components must use feature hooks or API adapters.',
+        }],
+        patterns: [{
+          group: ['**/shared/api/edoApiClient', '**/shared/api/publicEdoApiClient', '**/api/generated/**'],
+          message: 'Raw HTTP/generated clients are restricted to feature API adapters.',
+        }],
+      }],
+      'no-restricted-globals': ['error', {
+        name: 'fetch',
+        message: 'Pages and components must use feature hooks or API adapters.',
+      }],
+    },
+  },
 );

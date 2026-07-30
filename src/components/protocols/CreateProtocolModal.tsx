@@ -161,7 +161,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   const laboratoryAccreditation = accreditationState(laboratory?.accreditationValidUntil);
   const isPhysicalFactors = ['microclimate', 'lighting', 'noise_vibration'].includes(templateId);
   const isSoilTemplate = templateId === 'soil';
-  const isWaterTemplate = templateId === 'water_wastewater';
+  const isWaterTemplate = templateId === 'water';
 
   const searchNormativeItems = async (query: string, signal?: AbortSignal) => {
     const normativeTemplateId = isPhysicalFactors

@@ -13,7 +13,7 @@ export const QueryError = ({ error, retry }: { error: unknown; retry: () => void
   return (
     <Alert
       severity="error"
-      action={<Button color="inherit" startIcon={<ReplayIcon />} onClick={retry}>Повторить</Button>}
+      action={mapped.status === 429 ? undefined : <Button color="inherit" startIcon={<ReplayIcon />} onClick={retry}>Повторить</Button>}
       sx={{ alignItems: 'center' }}
     >
       <Typography fontWeight={800}>Не удалось загрузить данные</Typography>

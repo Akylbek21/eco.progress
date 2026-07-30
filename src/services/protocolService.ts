@@ -11,7 +11,6 @@ import type {
   ProtocolListQuery,
   ProtocolResultPayload,
   ProtocolResultRow,
-  SignProtocolResponse,
   ProtocolTemplate,
   RawMeasurementRequest,
   RawMeasurementsResponse,
@@ -20,7 +19,7 @@ import type {
 } from '../types/protocols';
 import type {
   CancelProtocolRequest,
-  QuickCreateProtocolApiRequest,
+  QuickCreateProtocolRequest,
   ReplaceProtocolRequest,
   ReturnForRevisionRequest,
   SignProtocolRequest,
@@ -42,7 +41,7 @@ export interface ProtocolService {
   getProtocol(protocolId: string): Promise<Protocol>;
   getProtocolById(protocolId: string): Promise<Protocol>;
   createProtocol(payload: CreateProtocolPayload): Promise<Protocol>;
-  quickCreateProtocol(params: { payload: QuickCreateProtocolApiRequest; idempotencyKey: string }): Promise<Protocol>;
+  quickCreateProtocol(params: { payload: QuickCreateProtocolRequest; idempotencyKey: string }): Promise<Protocol>;
   refreshLaboratoryData(protocolId: string, version: number): Promise<Protocol>;
   updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol>;
   deleteProtocol(protocolId: string, version: number): Promise<void>;
@@ -68,7 +67,7 @@ export interface ProtocolService {
   markReadyForApproval(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
   approveProtocol(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
   returnForRevision(protocolId: string, request: ReturnForRevisionRequest): Promise<Protocol>;
-  signProtocol(protocolId: string | number, request: SignProtocolRequest): Promise<SignProtocolResponse>;
+  signProtocol(protocolId: string | number, request: SignProtocolRequest): Promise<Protocol>;
   publishToClient(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
   replaceProtocol(protocolId: string, request: ReplaceProtocolRequest): Promise<Protocol>;
   createCorrection(protocolId: string, request: ReplaceProtocolRequest): Promise<Protocol>;

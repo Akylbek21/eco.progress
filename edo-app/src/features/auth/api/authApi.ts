@@ -45,8 +45,11 @@ export const authApi = {
     await edoApiClient.post('/auth/register', payload, { headers: { 'Idempotency-Key': crypto.randomUUID() } });
   },
   async logout(allDevices = false) {
-    await edoApiClient.post(allDevices ? '/auth/logout-all' : '/auth/logout');
-    setAccessToken();
+    try {
+      await edoApiClient.post(allDevices ? '/auth/logout-all' : '/auth/logout');
+    } finally {
+      setAccessToken();
+    }
   },
   async verifyEmail(payload: { code?: string; token?: string }) {
     await edoApiClient.post('/auth/verify-email', payload);

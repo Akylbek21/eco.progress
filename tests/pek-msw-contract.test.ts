@@ -37,8 +37,9 @@ describe('PEK MSW contract boundary', () => {
   });
 
   it('keeps draft keys scoped by user and entity', () => {
-    expect(pekDraftKey('program', 'user-7', 1001)).toBe('pek-program-draft:user-7:1001');
-    expect(pekDraftKey('program', 'user-8', 1001)).not.toBe(pekDraftKey('program', 'user-7', 1001));
+    expect(pekDraftKey('program', 'user-7', 1001, 4)).toBe('pek-program-draft:user-7:1001:4');
+    expect(pekDraftKey('program', 'user-7', 1001, 4)).not.toBe(pekDraftKey('program', 'user-7', 1001, 5));
+    expect(pekDraftKey('program', 'user-8', 1001, 4)).not.toBe(pekDraftKey('program', 'user-7', 1001, 4));
   });
 
   it('never returns fake CMS from the production signature provider', async () => {

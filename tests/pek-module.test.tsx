@@ -13,9 +13,11 @@ import { retryPekQuery } from '../src/features/pek/utils/pekQueryPolicy';
 import PekPlanFact from '../src/features/pek/components/sections/PekPlanFact';
 import PekIssuesPanel from '../src/features/pek/components/issues/PekIssuesPanel';
 import { PekPrimaryAction } from '../src/features/pek/components/common/PekUi';
+import PekQueryError from '../src/features/pek/components/common/PekQueryError';
 import { createWizardDefaults } from '../src/features/protocols/components/wizardTypes';
 import { buildQuickCreatePayload } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
 import { formatPekResult } from '../src/features/pek/utils/pekFormatters';
+import { pekReportSchema, validatePekResponse } from '../src/features/pek/schemas/pekResponseSchemas';
 
 let captured: unknown;
 let capturedIfMatch: string | null;
@@ -49,9 +51,10 @@ describe('production PEK module',()=>{
     expect(run.status).toBe('RUNNING');
   });
   it('creates a report with backend-managed collection in one command',async()=>{
-    const report=await pekService.createReport({companyId:1,objectId:15,periodType:'QUARTER',year:2026,quarter:2,programId:7,collect:true});
+    const report=await pekService.createReport({companyId:1,objectId:15,periodType:'QUARTER',year:2026,quarter:2,programId:7,collectImmediately:true});
     expect(report).toMatchObject({id:18,status:'COLLECTING'});
-    expect(captured).toEqual({companyId:1,objectId:15,periodType:'QUARTER',year:2026,quarter:2,programId:7,collect:true});
+    expect(captured).toEqual({companyId:1,objectId:15,periodType:'QUARTER',year:2026,quarter:2,programId:7,collectImmediately:true});
+    expect(captured).not.toHaveProperty('collect');
   });
   it('normalizes array and paged response shapes',()=>{
     expect(mapPekPage<number>([1,2]).totalElements).toBe(2);
@@ -86,6 +89,18 @@ describe('production PEK module',()=>{
     expect(mapped.message).toBe('Отчёт изменён другим сотрудником');
     expect(mapped.fieldErrors['environment.temperature']).toBe('Обязательное поле');
     expect(mapped.traceId).toBe('trace-7');
+  });
+  it('shows a specific backend capability message for HTTP 404',()=>{
+    render(<PekQueryError error={{isAxiosError:true,response:{status:404,data:{message:'Not found'}},message:'Not found'}} resource="Показатели ПЭК" retry={()=>{}}/>);
+    expect(screen.getByText('Функция ПЭК отсутствует на backend')).toBeTruthy();
+    expect(screen.getByText(/Показатели ПЭК/)).toBeTruthy();
+  });
+  it('does not hide missing required report fields with Zod defaults',()=>{
+    expect(() => validatePekResponse(pekReportSchema, {
+      id:1,number:'R-1',revision:1,version:1,status:'DRAFT',periodType:'YEAR',year:2026,
+      periodStart:'2026-01-01',periodEnd:'2026-12-31',readinessPercent:0,valid:false,
+      blockingIssueCount:0,warningCount:0,exceedanceCount:0,readOnly:false,validationActual:false,
+    }, 'report details')).toThrow(/sections|availableActions|blockingReasons/);
   });
   it('passes PEK links to protocol quick-create and keeps executor as laboratory employee',()=>{
     const form={...createWizardDefaults(),templateId:'ambient_air' as const,companyId:'1',objectId:'15',laboratoryId:'3',executorId:'8',pekProgramId:'22',pekControlItemId:'31',pekControlEventId:'80',pekReportId:'45',monitoringPointId:'7'};

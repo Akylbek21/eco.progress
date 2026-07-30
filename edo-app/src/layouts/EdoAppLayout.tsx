@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import {
   AppBar,
   Avatar,
-  Badge,
   Box,
   Button,
   Chip,
@@ -11,7 +10,6 @@ import {
   Drawer,
   FormControl,
   IconButton,
-  InputAdornment,
   List,
   ListItemButton,
   ListItemIcon,
@@ -19,7 +17,6 @@ import {
   MenuItem,
   Select,
   Stack,
-  TextField,
   Toolbar,
   Tooltip,
   Typography,
@@ -38,30 +35,31 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import HistoryIcon from '@mui/icons-material/History';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MenuIcon from '@mui/icons-material/Menu';
-import SearchIcon from '@mui/icons-material/Search';
-import NotificationsIcon from '@mui/icons-material/Notifications';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthSession } from '../features/auth/hooks/useAuthSession';
 import { useDashboard, useDocumentTypes } from '../features/documents/hooks/useDocuments';
 import { organizationsApi } from '../features/organizations/api/organizationsApi';
 import { useAuthStore } from '../shared/auth/authStore';
 import { useQueryClient } from '@tanstack/react-query';
+import { authApi } from '../features/auth/api/authApi';
+import { clearSensitiveSigningState } from '../shared/security/sensitiveSigningState';
 
 const drawerWidth = 300;
 
 const staticItems = [
-  { label: 'Главная', path: '/app/dashboard', icon: <DashboardIcon /> },
-  { label: 'Ожидают моей подписи', path: '/app/requires-my-signature', icon: <DrawIcon /> },
-  { label: 'Черновики', path: '/app/drafts', icon: <DraftsIcon /> },
-  { label: 'Архив', path: '/app/archive', icon: <ArchiveIcon /> },
-  { label: 'Контрагенты', path: '/app/counterparties', icon: <BusinessIcon /> },
-  { label: 'Шаблоны', path: '/app/templates', icon: <DescriptionIcon />, permission: 'TEMPLATE_MANAGE' },
-  { label: 'Сотрудники', path: '/app/members', icon: <PeopleIcon />, permission: 'MEMBER_VIEW' },
-  { label: 'Журнал действий', path: '/app/audit', icon: <HistoryIcon />, permission: 'AUDIT_VIEW' },
-  { label: 'Настройки', path: '/app/settings/profile', icon: <SettingsIcon /> },
+  { label: 'Главная', path: '/dashboard', icon: <DashboardIcon /> },
+  { label: 'Ожидают моей подписи', path: '/documents/waiting-for-me', icon: <DrawIcon /> },
+  { label: 'Черновики', path: '/documents/drafts', icon: <DraftsIcon /> },
+  { label: 'Архив', path: '/documents/archive', icon: <ArchiveIcon /> },
+  { label: 'Контрагенты', path: '/counterparties', icon: <BusinessIcon /> },
+  { label: 'Шаблоны', path: '/templates', icon: <DescriptionIcon />, permission: 'TEMPLATE_MANAGE' },
+  { label: 'Сотрудники', path: '/members', icon: <PeopleIcon />, permission: 'MEMBER_VIEW' },
+  { label: 'Журнал действий', path: '/audit', icon: <HistoryIcon />, permission: 'AUDIT_VIEW' },
+  { label: 'Настройки', path: '/settings', icon: <SettingsIcon /> },
 ];
 
 export const EdoAppLayout = () => {
@@ -77,6 +75,7 @@ export const EdoAppLayout = () => {
   const setDrawerOpen = useAuthStore((state) => state.setDrawerOpen);
   const activeOrganizationId = useAuthStore((state) => state.activeOrganizationId);
   const setActiveOrganization = useAuthStore((state) => state.setActiveOrganization);
+  const resetAuth = useAuthStore((state) => state.reset);
   const [expanded, setExpanded] = useState({ INCOMING: true, OUTGOING: true });
   const membership = session.data?.organizations.find((item) => item.organizationId === activeOrganizationId);
   const permissions = new Set(membership?.permissions || []);
@@ -86,10 +85,21 @@ export const EdoAppLayout = () => {
   }), [types.data]);
 
   const activate = async (organizationId: string) => {
+    clearSensitiveSigningState();
+    await client.cancelQueries();
     await organizationsApi.activate(organizationId);
     setActiveOrganization(organizationId);
     client.removeQueries({ predicate: (query) => query.queryKey[0] !== 'auth' });
-    navigate('/app/dashboard');
+    navigate('/dashboard');
+  };
+
+  const logout = async () => {
+    clearSensitiveSigningState();
+    await client.cancelQueries();
+    await authApi.logout().catch(() => undefined);
+    client.clear();
+    resetAuth();
+    navigate('/login', { replace: true });
   };
 
   const navButton = (path: string, label: string, icon: React.ReactNode, badge?: number) => (
@@ -108,12 +118,12 @@ export const EdoAppLayout = () => {
 
   const drawer = (
     <Stack sx={{ width: drawerWidth, height: '100%', bgcolor: 'background.paper' }}>
-      <Toolbar><Typography variant="h6" fontWeight={900} color="primary.dark">EcoProgress <Box component="span" color="primary.main">EDO</Box></Typography></Toolbar>
+      <Toolbar><Typography component={NavLink} to="/dashboard" variant="h6" fontWeight={900} color="primary.dark" sx={{ textDecoration: 'none' }}>EcoProgress <Box component="span" color="primary.main">EDO</Box></Typography></Toolbar>
       <Box sx={{ px: 2, pb: 2 }}>
-        {permissions.has('DOCUMENT_CREATE') && <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/app/documents/create')}>Создать документ</Button>}
+        {permissions.has('DOCUMENT_CREATE') && <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/documents/create')}>Создать документ</Button>}
       </Box>
       <List sx={{ overflowY: 'auto', flex: 1 }}>
-        {navButton('/app/dashboard', 'Главная', <DashboardIcon />)}
+        {navButton('/dashboard', 'Главная', <DashboardIcon />)}
         {(['INCOMING', 'OUTGOING'] as const).map((direction) => {
           const incoming = direction === 'INCOMING';
           return (
@@ -126,8 +136,8 @@ export const EdoAppLayout = () => {
               </ListItemButton>
               <Collapse in={expanded[direction]}>
                 <List disablePadding>
-                  {navButton(`/app/${incoming ? 'incoming' : 'outgoing'}`, 'Все документы', incoming ? <InboxIcon fontSize="small" /> : <OutboxIcon fontSize="small" />)}
-                  {grouped[direction].map((type) => navButton(`/app/${incoming ? 'incoming' : 'outgoing'}/${type.code}`, type.name, <DescriptionIcon fontSize="small" />, type.total))}
+                  {navButton(`/documents/${incoming ? 'incoming' : 'outgoing'}`, 'Все документы', incoming ? <InboxIcon fontSize="small" /> : <OutboxIcon fontSize="small" />)}
+                  {grouped[direction].map((type) => navButton(`/documents/${incoming ? 'incoming' : 'outgoing'}/${type.code}`, type.name, <DescriptionIcon fontSize="small" />, type.total))}
                 </List>
               </Collapse>
             </Box>
@@ -151,11 +161,10 @@ export const EdoAppLayout = () => {
               {session.data?.organizations.map((organization) => <MenuItem key={organization.organizationId} value={organization.organizationId}>{organization.organizationName}</MenuItem>)}
             </Select>
           </FormControl>
-          <TextField placeholder="Глобальный поиск" sx={{ display: { xs: 'none', md: 'block' }, maxWidth: 420 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }} />
           <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 'auto' }}>
-            <Tooltip title="NCALayer"><Chip size="small" color="success" variant="outlined" label="NCALayer" /></Tooltip>
-            <Tooltip title="Уведомления"><IconButton><Badge color="secondary" variant="dot"><NotificationsIcon /></Badge></IconButton></Tooltip>
+            <Tooltip title="Соединение проверяется при подписании"><Chip size="small" variant="outlined" label="NCALayer: не проверен" /></Tooltip>
             <Avatar sx={{ width: 36, height: 36 }}>{session.data?.user.firstName?.[0] || '?'}</Avatar>
+            <Button size="small" startIcon={<LogoutIcon />} onClick={() => void logout()}>Выйти</Button>
           </Stack>
         </Toolbar>
       </AppBar>

@@ -75,7 +75,7 @@ type ApiError = {
 |---|---|---|---|---|
 | GET | `/pek/reports` | filters + `page,size,sort` | `PageResponse<PekReportListItem>` | baseline |
 | GET | `/pek/reports/creation-context` | `companyId,objectId,periodType,year,quarter` | `PekReportCreationContext` | baseline |
-| POST | `/pek/reports` | period, program, responsible, `collect` | `PekReportDetails` | baseline |
+| POST | `/pek/reports` | period, program, responsible, `collectImmediately` | `PekReportDetails` | baseline |
 | GET | `/pek/reports/{id}` | — | `PekReportDetails` | baseline |
 | PATCH | `/pek/reports/{id}` | `If-Match`, editable fields | report | CONTRACT_PENDING |
 | POST | `/pek/reports/{id}/collect` | `If-Match` | `PekCollectionRun` (`202`) | baseline |
@@ -136,8 +136,7 @@ REJECTED | ARCHIVED`.
 
 Collection:
 `CREATED | RUNNING | COMPLETED | COMPLETED_WITH_WARNINGS | FAILED |
-CANCELLED`. `PENDING/SUCCESS/PARTIAL_SUCCESS` временно принимаются для
-совместимости и должны быть удалены после OpenAPI migration.
+CANCELLED`.
 
 ## Permissions
 

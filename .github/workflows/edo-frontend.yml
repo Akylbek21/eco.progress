@@ -1,0 +1,36 @@
+name: EDO frontend
+
+on:
+  pull_request:
+    paths:
+      - 'edo-app/**'
+      - '.github/workflows/edo-frontend.yml'
+  push:
+    paths:
+      - 'edo-app/**'
+      - '.github/workflows/edo-frontend.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: edo-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: edo-app/package-lock.json
+      - run: npm ci
+      - name: Verify generated OpenAPI client
+        run: npm run api:check
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run security:audit
+      - name: Playwright system E2E
+        if: ${{ vars.EDO_E2E_ENABLED == 'true' }}
+        run: npm run test:e2e

@@ -133,4 +133,51 @@ export const createWizardDefaults = (): ProtocolWizardForm => {
   };
 };
 
-export const CHEMICAL_TYPES = new Set<ProtocolTemplateId>(['ambient_air', 'workplace_air', 'soil', 'water_wastewater']);
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+
+const normalizeStringDefaults = <T extends Record<string, unknown>>(
+  defaults: T,
+  source: Record<string, unknown>,
+) => Object.fromEntries(
+  Object.entries(defaults)
+    .filter(([, defaultValue]) => typeof defaultValue === 'string')
+    .map(([key, defaultValue]) => [
+      key,
+      typeof source[key] === 'string' ? source[key] : defaultValue,
+    ]),
+);
+
+/**
+ * Migrates incomplete session drafts and route prefills to the current form shape.
+ * Missing/null scalar fields must never reach inputs or validation as undefined.
+ */
+export const normalizeProtocolWizardForm = (value?: unknown): ProtocolWizardForm => {
+  const defaults = createWizardDefaults();
+  const source = asRecord(value);
+  const sourceRows = Array.isArray(source.results) ? source.results : [];
+  const results = sourceRows.map((row) => {
+    const rowDefaults = emptyWizardResult();
+    const rowSource = asRecord(row);
+    return {
+      ...rowDefaults,
+      ...rowSource,
+      ...normalizeStringDefaults(rowDefaults, rowSource),
+    };
+  }) as ProtocolWizardResult[];
+
+  return {
+    ...defaults,
+    ...source,
+    ...normalizeStringDefaults(defaults, source),
+    printVisibility: {
+      ...defaults.printVisibility,
+      ...asRecord(source.printVisibility),
+    },
+    results,
+  } as ProtocolWizardForm;
+};
+
+export const CHEMICAL_TYPES = new Set<ProtocolTemplateId>(['ambient_air', 'workplace_air', 'soil', 'water']);

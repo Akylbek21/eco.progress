@@ -47,10 +47,14 @@ export interface UpdateProtocolRequest {
   laboratoryId: string | number | null;
   executorId: string | number | null;
   measurementDate: string | null;
+  sampleDate: string | null;
   measurementTime: string | null;
   measurementPlace: string | null;
   testingStartDate: string | null;
   testingEndDate: string | null;
+  sourceNumber: string | null;
+  formCode: string | null;
+  application: string | null;
   organization: ProtocolOrganizationRequest;
   laboratory: ProtocolLaboratoryRequest;
   testing: ProtocolTestingRequest;
@@ -109,6 +113,7 @@ export type QuickCreateProtocolTemplateId =
   | 'microclimate'
   | 'lighting'
   | 'noise_vibration'
+  | 'uv_emf_laser'
   | 'water';
 
 export interface QuickCreateProtocolEnvironment {
@@ -146,34 +151,40 @@ export interface QuickCreateProtocolConditions {
 export interface QuickCreateProtocolMeasurement {
   clientRowId: string;
   indicatorName: string;
-  indicatorCode?: string;
-  physicalFactorCode?: string;
-  resultValue: number | string;
+  pollutantCode?: string;
+  factorType?: string;
+  factorCode?: string;
+  value: number | string;
   unit: string;
   measurementDeviceId: number;
-  normativeId?: string;
-  normValue?: number;
+  normativeId?: number;
+  normativeValue?: number;
+  testingMethodNd?: string;
+  samplingMethodNd?: string;
   samplingPlace?: string;
   sampleNumber?: string;
   samplingDepth?: number;
   samplingDate?: string;
-  methodology?: QuickCreateProtocolMethodology;
 }
 
 export interface QuickCreateProtocolRequest {
   templateId: QuickCreateProtocolTemplateId;
+  protocolDate: string;
+  sampleDate: string;
+  measurementDate: string;
+  testingStartDate: string;
+  testingEndDate: string;
   companyId: number;
   objectId: number;
   laboratoryId: number;
   executorId: number;
-  measurementDate: string;
   measurementTime?: string;
   measurementPlace: string;
+  sourceNumber: string;
   defaultUnit?: string;
   measurements: QuickCreateProtocolMeasurement[];
   environment?: QuickCreateProtocolEnvironment;
   conditions?: QuickCreateProtocolConditions;
-  methodology?: QuickCreateProtocolMethodology;
   printVisibility: ProtocolPrintVisibility;
   orderId?: string;
   orderServiceItemId?: string;
@@ -200,9 +211,6 @@ export type CancelProtocolRequest = ReturnForRevisionRequest;
 export interface SignProtocolRequest extends ProtocolVersionRequest {
   cmsSignatureBase64: string;
 }
-
-/** @deprecated Prefer the canonical QuickCreateProtocolRequest name. */
-export type QuickCreateProtocolApiRequest = QuickCreateProtocolRequest;
 
 export interface QuickCreateProtocolResponse {
   id: string;

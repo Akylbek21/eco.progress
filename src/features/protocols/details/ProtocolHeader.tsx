@@ -38,7 +38,7 @@ const ProtocolHeader = ({ protocol, permissions, busy, primaryLabel, onBack, onP
         {protocol.orderId && <p className="mt-2 text-sm"><span className="text-slate-500">Заявка № {protocol.orderNumber || protocol.orderId}</span> · <Link className="font-bold text-eco-700" to={`/staff/orders/${protocol.orderId}`}>Открыть заявку</Link></p>}
       </div>
       <div className="flex flex-wrap gap-2 lg:justify-end">
-        {String(protocol.status) === 'READY_FOR_APPROVAL' && <Button type="button" variant="secondary" disabled={busy || !permissions.canReturn} title={!permissions.canReturn ? 'Возврат недоступен: backend не разрешил действие' : undefined} onClick={onReturn}>Вернуть на исправление</Button>}
+        {String(protocol.status) === 'READY_FOR_APPROVAL' && <Button type="button" variant="secondary" disabled={busy || !permissions.canReturnForRevision} title={!permissions.canReturnForRevision ? 'Возврат недоступен: backend не разрешил действие' : undefined} onClick={onReturn}>Вернуть на исправление</Button>}
         {primaryLabel && <Button type="button" className="hidden md:inline-flex" disabled={busy} onClick={onPrimary}>{primaryLabel}</Button>}
         <ProtocolActionsMenu protocol={protocol} permissions={permissions} busy={busy} {...menuActions} />
       </div>

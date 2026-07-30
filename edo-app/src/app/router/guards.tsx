@@ -22,12 +22,16 @@ export const AppGuard = () => {
   const query = useAuthSession();
   const activeOrganizationId = useAuthStore((state) => state.activeOrganizationId);
   const setActive = useAuthStore((state) => state.setActiveOrganization);
+  const defaultOrganizationId = query.data?.activeOrganizationId
+    || (query.data?.organizations.length === 1 ? query.data.organizations[0]?.organizationId : undefined);
+  useEffect(() => {
+    if (!activeOrganizationId && defaultOrganizationId) setActive(defaultOrganizationId);
+  }, [activeOrganizationId, defaultOrganizationId, setActive]);
   if (query.isLoading) return <FullScreenLoader />;
   if (!query.data) return <Navigate to="/login" replace />;
   if (!query.data.organizations.length) return <Navigate to="/onboarding" replace />;
-  const active = activeOrganizationId || query.data.activeOrganizationId || (query.data.organizations.length === 1 ? query.data.organizations[0]?.organizationId : undefined);
+  const active = activeOrganizationId || defaultOrganizationId;
   if (!active) return <Navigate to="/select-organization" replace />;
-  if (!activeOrganizationId) setActive(active);
   if (!query.data.onboardingComplete) return <Navigate to="/onboarding" replace />;
   return <Outlet />;
 };

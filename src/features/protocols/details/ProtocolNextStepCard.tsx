@@ -11,7 +11,6 @@ const ProtocolNextStepCard = ({ protocol, missing }: Props) => {
   let text = 'Можно переходить к следующему этапу.';
   if (status === 'DRAFT') { title = missing.length ? `Нужно заполнить: ${missing.length}` : 'Черновик заполнен'; text = missing.length ? 'Исправьте недостающие данные перед проверкой.' : 'Проверьте результаты и выполните расчёт.'; }
   if (status === 'CALCULATED') { title = 'Расчёт выполнен'; text = 'Следующий этап — передать протокол руководителю на проверку.'; }
-  if (status === 'READY') { title = 'Протокол подготовлен'; text = 'Проверьте данные перед дальнейшей передачей.'; }
   if (status === 'READY_FOR_APPROVAL') { title = 'Протокол отправлен руководителю'; text = 'Исполнителю ничего делать не нужно.'; }
   if (status === 'RETURNED_FOR_REVISION') { title = 'Нужно исправить'; text = revisionComment ? `Руководитель указал: «${revisionComment}»` : 'Исправьте замечания и повторно передайте протокол на проверку.'; }
   if (status === 'APPROVED') { title = 'Протокол утверждён'; text = 'Следующий этап — подписание.'; }

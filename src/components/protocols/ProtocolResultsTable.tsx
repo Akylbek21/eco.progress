@@ -66,7 +66,7 @@ type SearchState = 'idle' | 'minLength' | 'searching' | 'empty' | 'ready' | 'err
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = 'rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700';
 const physicalFactorTemplateIds: ProtocolTemplateKey[] = ['physical_factors', 'microclimate', 'lighting', 'noise_vibration', 'uv_emf_laser'];
-const chemicalTemplateIds: ProtocolTemplateKey[] = ['industrial_emissions', 'ambient_air', 'workplace_air', 'water', 'water_wastewater', 'soil', 'food_products', 'surfaces', 'udmh_special'];
+const chemicalTemplateIds: ProtocolTemplateKey[] = ['industrial_emissions', 'ambient_air', 'workplace_air', 'water', 'soil', 'food_products', 'surfaces', 'udmh_special'];
 const searchUnavailableMessage = 'Поиск временно недоступен. Добавьте показатель вручную.';
 const normativeNotFoundMessage = 'Норматив не найден. Можно выбрать вручную или добавить в справочник.';
 const notFoundSearchMessage = 'Норматив или показатель не найден. Проверьте код или добавьте норматив в справочник.';
@@ -91,7 +91,7 @@ const normalizeProtocolTemplate = (value: string) => {
   if (['food_products', 'food'].includes(key)) return 'food_products';
   if (['surfaces', 'surface'].includes(key)) return 'surfaces';
   if (['udmh_special', 'rocket_fuel'].includes(key)) return 'udmh_special';
-  if (['water', 'water_wastewater'].includes(key)) return 'water';
+  if (key === 'water') return 'water';
   if ([
     'physical_factors',
     'microclimate',
@@ -1477,7 +1477,7 @@ const ProtocolResultsTable = ({
           <label className="space-y-1.5 text-sm font-bold text-slate-700">Прибор<select value={form.measurementDeviceId || ''} onChange={(event) => setForm({ ...form, measurementDeviceId: event.target.value })} className={inputClass}><option value="">Не выбран</option>{devices.map((item) => <option key={item.deviceId} value={item.deviceId}>{item.deviceSnapshot.name} · {item.deviceSnapshot.serialNumber}</option>)}</select></label>
           <label className="space-y-1.5 text-sm font-bold text-slate-700">Место замера<input value={form.measurementPlace || ''} onChange={(event) => setForm({ ...form, measurementPlace: event.target.value })} className={inputClass} /></label>
           {templateId === 'industrial_emissions' && <label className="space-y-1.5 text-sm font-bold text-slate-700">Источник<input value={form.sourceNumber || ''} onChange={(event) => setForm({ ...form, sourceNumber: event.target.value })} className={inputClass} /></label>}
-          {(templateId === 'water_wastewater' || templateId === 'soil') && <>
+          {(templateId === 'water' || templateId === 'soil') && <>
             <label className="space-y-1.5 text-sm font-bold text-slate-700">Внешняя лаборатория<input value={form.externalLaboratory || ''} onChange={(event) => setForm({ ...form, externalLaboratory: event.target.value })} className={inputClass} /></label>
             <label className="space-y-1.5 text-sm font-bold text-slate-700">Документ внешней лаборатории<input value={form.externalLaboratoryDocument || ''} onChange={(event) => setForm({ ...form, externalLaboratoryDocument: event.target.value })} className={inputClass} /></label>
           </>}

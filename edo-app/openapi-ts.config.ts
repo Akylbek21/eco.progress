@@ -1,10 +1,9 @@
 import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
-  input: process.env.EDO_OPENAPI_URL || 'https://api-edo.ecoprogress.kz/v3/api-docs',
+  input: process.env.EDO_OPENAPI_URL || 'https://api-edo.ecoprogress.kz/openapi/edo-api.yaml',
   output: {
     path: 'src/shared/api/generated',
-    format: 'prettier',
   },
   plugins: [
     '@hey-api/typescript',

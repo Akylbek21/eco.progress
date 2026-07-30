@@ -28,10 +28,14 @@ test('available devices are scoped and invalid statuses are filtered', async () 
   for (const status of ['EXPIRED', 'ARCHIVED', 'INACTIVE', 'OUT_OF_SERVICE']) assert.match(wizard, new RegExp(status));
 });
 
-test('workflow uses body versions, one revision reason and backend permissions', async () => {
+test('workflow centralizes If-Match, one revision reason and backend permissions', async () => {
   const api = await read('src/services/apiProtocolService.ts');
+  const client = await read('src/services/api.ts');
   const permissions = await read('src/utils/protocolPermissions.ts');
   assert.doesNotMatch(api, /'If-Match'/);
+  assert.match(client, /'If-Match'/);
+  assert.match(client, /version: bodyVersion, \.\.\.body/);
+  assert.match(client, /version: queryVersion, \.\.\.params/);
   assert.match(api, /\{ version: request\.version, reason \}/);
   assert.doesNotMatch(api, /\{ comment, reason:/);
   assert.match(permissions, /protocol\.permissions/);

@@ -180,11 +180,9 @@ const protocolSteps: Array<{ key: ProtocolStepKey; label: string }> = [
 
 const lifecycleSteps = ['Черновик', 'Результаты', 'Расчёт', 'Согласование', 'Утверждение', 'Подписание'];
 const lifecycleIndexByStatus: Record<Protocol['status'], number> = {
-  UNKNOWN: -1,
   DRAFT: 0,
   RETURNED_FOR_REVISION: 1,
   CALCULATED: 2,
-  READY: 2,
   READY_FOR_APPROVAL: 3,
   APPROVED: 4,
   SIGNED: 5,
@@ -230,7 +228,7 @@ const requiredEnvironmentFields = (protocol: Protocol) => {
   if (['industrial_emissions', 'ambient_air', 'workplace_air', 'vehicle_emissions'].includes(protocol.templateId)) {
     return ['temperature', 'humidity', 'pressureKpa', 'windSpeed'] as const;
   }
-  if (['water', 'water_wastewater', 'soil'].includes(protocol.templateId)) return ['temperature'] as const;
+  if (['water', 'soil'].includes(protocol.templateId)) return ['temperature'] as const;
   return ['temperature', 'humidity'] as const;
 };
 const hasEnvironment = (protocol: Protocol) => requiredEnvironmentFields(protocol)
@@ -603,7 +601,7 @@ const ProtocolStepFooter = ({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className={`text-sm font-semibold ${saveStatus === 'error' || saveStatus === 'conflict' ? 'text-rose-700' : saveStatus === 'dirty' ? 'text-amber-700' : 'text-slate-500'}`}>{saveText}</div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {actions.canSave && (
+          {actions.canEdit && (
             <>
               {activeIndex > 0 && <Button type="button" variant="secondary" disabled={busy} onClick={onPrevious}><ChevronLeft className="h-4 w-4" /> Назад</Button>}
               {activeStep !== 'review' && <Button type="button" variant="secondary" disabled={busy || readOnly} onClick={onSave}><Save className="h-4 w-4" /> Сохранить</Button>}
@@ -612,8 +610,8 @@ const ProtocolStepFooter = ({
               {activeStep === 'review' && (
                 <>
                   <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
-                  {actions.canGenerate && <Button type="button" variant="secondary" disabled={busy} onClick={onGenerateDocx}><FileCheck2 className="h-4 w-4" /> Сформировать документ</Button>}
-                  {actions.canSendToApproval && <Button type="button" disabled={busy || missingFields.length > 0} onClick={onReady}><CheckCircle2 className="h-4 w-4" /> Готово</Button>}
+                  {actions.canGenerateDocuments && <Button type="button" variant="secondary" disabled={busy} onClick={onGenerateDocx}><FileCheck2 className="h-4 w-4" /> Сформировать документ</Button>}
+                  {actions.canReadyForApproval && <Button type="button" disabled={busy || missingFields.length > 0} onClick={onReady}><CheckCircle2 className="h-4 w-4" /> Готово</Button>}
                 </>
               )}
             </>
@@ -623,7 +621,7 @@ const ProtocolStepFooter = ({
               <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
               {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadDocx}>DOCX</Button>}
               {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadPdf}>PDF</Button>}
-              {actions.canReturn && <Button type="button" variant="secondary" disabled={busy} onClick={onReturn}>Вернуть</Button>}
+              {actions.canReturnForRevision && <Button type="button" variant="secondary" disabled={busy} onClick={onReturn}>Вернуть</Button>}
               {actions.canApprove && <Button type="button" disabled={busy} onClick={onApprove}><CheckCircle2 className="h-4 w-4" /> Утвердить</Button>}
             </>
           )}
@@ -632,7 +630,7 @@ const ProtocolStepFooter = ({
               <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
               {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadDocx}>DOCX</Button>}
               {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadPdf}>PDF</Button>}
-              {actions.canCreateCorrection && <Button type="button" variant="secondary" disabled={busy} onClick={onReplace}>Создать исправленную версию</Button>}
+              {actions.canReplace && <Button type="button" variant="secondary" disabled={busy} onClick={onReplace}>Создать исправленную версию</Button>}
               {actions.canSign && <Button type="button" disabled={busy} onClick={onSign}>Подписать</Button>}
             </>
           )}
@@ -641,7 +639,7 @@ const ProtocolStepFooter = ({
               <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
               {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadDocx}>Скачать DOCX</Button>}
               {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadPdf}>Скачать PDF</Button>}
-              {actions.canCreateCorrection && <Button type="button" disabled={busy} onClick={onReplace}>Создать исправленную версию</Button>}
+              {actions.canReplace && <Button type="button" disabled={busy} onClick={onReplace}>Создать исправленную версию</Button>}
             </>
           )}
           {String(protocol.status).trim().toUpperCase() === 'REPLACED' && (
@@ -701,7 +699,7 @@ const ProtocolEditorPage = () => {
 
   const dirty = useMemo(() => Boolean(protocol && savedSignatureRef.current && editableSignature(protocol) !== savedSignatureRef.current), [protocol]);
   const protocolActions = useMemo(() => getProtocolPermissions(protocol, user?.role), [protocol, user?.role]);
-  const readOnly = !protocolActions.canSave;
+  const readOnly = !protocolActions.canEdit;
   const applyServerProtocol = (item: Protocol) => {
     const normalized = {
       ...item,
@@ -722,33 +720,11 @@ const ProtocolEditorPage = () => {
   };
 
   const signMutation = useSignProtocolMutation(protocol?.id, {
-    onSigned: async (response) => {
-      const signed = response.data;
+    onSigned: async (updatedProtocol) => {
       setSignOpen(false);
       setEditSection(null);
-      setProtocol((current) => {
-        if (!current) return current;
-        const signatures = current.signatures.some((item) => item.id === signed.signature.id)
-          ? current.signatures
-          : [...current.signatures, signed.signature];
-        const updated: Protocol = {
-          ...current,
-          status: signed.status,
-          version: signed.version,
-          signatureCount: signed.signatureCount,
-          maxSignatures: signed.maxSignatures,
-          signedByCurrentUser: signed.signedByCurrentUser,
-          signatures,
-        };
-        protocolRef.current = updated;
-        return updated;
-      });
+      applyServerProtocol(updatedProtocol);
       toast.success('Протокол успешно подписан');
-      try {
-        applyServerProtocol(await protocolService.getProtocol(String(signed.protocolId)));
-      } catch {
-        // The successful response already contains enough data to update the card.
-      }
     },
     onError: async (message, signError) => {
       toast.error('Не удалось подписать протокол', message);
@@ -1224,16 +1200,11 @@ const ProtocolEditorPage = () => {
     }
   };
 
-  const generateAndDownload = async (kind: 'pdf' | 'docx') => {
-    const current = await ensureSavedProtocol('Сначала сохраняю изменения, затем формирую файл.');
+  const downloadGeneratedFile = async (kind: 'pdf' | 'docx') => {
+    const current = protocolRef.current;
     if (!current) return;
     setBusy(true);
     try {
-      const immutable = ['SIGNED', 'ARCHIVED', 'REPLACED'].includes(String(current.status).trim().toUpperCase());
-      if (!immutable) {
-        const generated = kind === 'pdf' ? await protocolService.generatePdf(current.id, Number(current.version)) : await protocolService.generateDocx(current.id, Number(current.version));
-        applyServerProtocol(generated);
-      }
       const downloaded = kind === 'pdf' ? await protocolService.downloadPdf(current.id) : await protocolService.downloadDocx(current.id);
       if (!downloaded?.blob.size) throw new Error('Backend вернул пустой файл.');
       saveBlob(downloaded.blob, downloaded.fileName || fileName(current, kind));
@@ -1247,7 +1218,7 @@ const ProtocolEditorPage = () => {
   const generateDocuments = async () => {
     const current = await ensureSavedProtocol('Сначала сохраняю изменения, затем формирую документы.');
     if (!current) return;
-    if (current.signatureCount > 0) {
+    if (current.signatureCount > 0 || ['SIGNED', 'PUBLISHED', 'REPLACED', 'CANCELLED', 'ARCHIVED'].includes(String(current.status).toUpperCase())) {
       toast.warning('Протокол уже подписан. Для изменения создайте исправленную версию');
       return;
     }
@@ -1357,8 +1328,8 @@ const ProtocolEditorPage = () => {
       onSign={signCurrentProtocol}
       onPublish={() => { void run(() => protocolService.publishToClient(protocol.id, { version: Number(protocol.version) }), 'Протокол отправлен клиенту'); }}
       onGenerate={generateDocuments}
-      onDocx={() => { void generateAndDownload('docx'); }}
-      onPdf={() => { void generateAndDownload('pdf'); }}
+      onDocx={() => { void downloadGeneratedFile('docx'); }}
+      onPdf={() => { void downloadGeneratedFile('pdf'); }}
       onCorrection={() => setReplaceOpen(true)}
       onCancel={() => setCancelOpen(true)}
       onArchive={() => {

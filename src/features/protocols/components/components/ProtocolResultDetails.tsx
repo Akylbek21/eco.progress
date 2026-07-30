@@ -103,7 +103,7 @@ const ProtocolResultDetails = ({ index }: { index: number }) => {
           </>
         )}
 
-        {type === 'water_wastewater' && (
+        {type === 'water' && (
           <>
             <label className={labelClass}>
               Тип воды для этой пробы

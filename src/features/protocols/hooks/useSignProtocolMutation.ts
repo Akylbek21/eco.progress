@@ -2,7 +2,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { normalizeApiError } from '../../../services/apiHelpers';
 import protocolService from '../../../services/protocolService';
-import type { Protocol, SignProtocolResponse } from '../../../types/protocols';
+import type { Protocol } from '../../../types/protocols';
+import { protocolQueryKeys } from './queryKeys';
 import {
   createProtocolCmsSignature,
   type ProtocolSigningPhase,
@@ -27,7 +28,7 @@ export const protocolSignErrorMessage = (error: unknown): string => {
 
 type SignVariables = { protocol: Protocol };
 type Options = {
-  onSigned?: (response: SignProtocolResponse) => void | Promise<void>;
+  onSigned?: (response: Protocol) => void | Promise<void>;
   onError?: (message: string, error: unknown) => void | Promise<void>;
 };
 
@@ -42,24 +43,33 @@ export const useSignProtocolMutation = (
     mutationKey: ['sign-protocol', String(protocolId ?? '')],
     mutationFn: async ({ protocol }: SignVariables) => {
       if (!protocol.permissions?.canSign) throw new Error('Backend не разрешил подписание протокола.');
-      if (!['APPROVED', 'SIGNED'].includes(protocol.status)) throw new Error('Протокол не готов к подписанию.');
       if (!protocol.hasPdf) {
         throw new Error('Финальный PDF протокола не сформирован.');
       }
       const file = await protocolService.downloadPdf(protocol.id);
       const cmsSignatureBase64 = await createProtocolCmsSignature(file.blob, setPhase);
       setPhase('VERIFYING_SIGNATURE');
-      return protocolService.signProtocol(protocol.id, {
-        version: Number(protocol.version),
-        cmsSignatureBase64,
-      });
+      try {
+        return await protocolService.signProtocol(protocol.id, {
+          version: Number(protocol.version),
+          cmsSignatureBase64,
+        });
+      } catch (error) {
+        const actual = await protocolService.getProtocol(String(protocol.id)).catch(() => null);
+        if (actual && (
+          actual.version > protocol.version
+          || actual.signatureCount > protocol.signatureCount
+          || actual.signedByCurrentUser
+        )) return actual;
+        throw error;
+      }
     },
     retry: false,
-    onSuccess: async (response, variables) => {
-      await options.onSigned?.(response);
+    onSuccess: async (updatedProtocol, variables) => {
+      queryClient.setQueryData(protocolQueryKeys.detail(variables.protocol.id), updatedProtocol);
+      queryClient.setQueryData(['protocol', String(variables.protocol.id)], updatedProtocol);
+      await options.onSigned?.(updatedProtocol);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['protocol', String(variables.protocol.id)] }),
-        queryClient.invalidateQueries({ queryKey: ['protocol', variables.protocol.id] }),
         queryClient.invalidateQueries({ queryKey: ['protocols'] }),
         queryClient.invalidateQueries({ queryKey: ['protocol-signatures', String(variables.protocol.id)] }),
       ]);
@@ -67,8 +77,12 @@ export const useSignProtocolMutation = (
     },
     onError: async (error, variables) => {
       const normalized = normalizeApiError(error);
-      if (normalized.code === 'PROTOCOL_VERSION_CONFLICT') {
-        await queryClient.invalidateQueries({ queryKey: ['protocol', String(variables.protocol.id)] });
+      if (normalized.code === 'PROTOCOL_VERSION_CONFLICT' || normalized.code === 'VERSION_CONFLICT') {
+        const actual = await protocolService.getProtocol(String(variables.protocol.id)).catch(() => null);
+        if (actual) {
+          queryClient.setQueryData(protocolQueryKeys.detail(variables.protocol.id), actual);
+          queryClient.setQueryData(['protocol', String(variables.protocol.id)], actual);
+        }
       }
       await options.onError?.(protocolSignErrorMessage(error), error);
     },

@@ -23,16 +23,18 @@ const ProtocolDocumentsTab = ({
   onDocx,
   onPdf,
   onSign,
-}: Props) => (
+}: Props) => {
+  const generationLocked = ['SIGNED', 'PUBLISHED', 'REPLACED', 'CANCELLED', 'ARCHIVED'].includes(protocol.status);
+  return (
   <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 className="text-lg font-black">Документы протокола</h2>
         <p className="mt-1 text-sm text-slate-500">Версия документа: {protocol.version}</p>
       </div>
-      {canGenerate && (!protocol.hasDocx || !protocol.hasPdf) && (
+      {canGenerate && !generationLocked && (!protocol.hasDocx || !protocol.hasPdf) && (
         <button type="button" disabled={busy} onClick={onGenerate} className="rounded-xl bg-eco-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
-          Сформировать предпросмотр
+          Сформировать DOCX и PDF
         </button>
       )}
     </div>
@@ -64,6 +66,7 @@ const ProtocolDocumentsTab = ({
       </div>
     </div>
   </section>
-);
+  );
+};
 
 export default ProtocolDocumentsTab;

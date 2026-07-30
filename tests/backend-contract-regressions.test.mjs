@@ -9,14 +9,16 @@ test('protocol quick-create boundary matches the backend DTO exactly', async () 
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   const service = await read('src/services/apiProtocolService.ts');
   assert.match(contracts, /interface QuickCreateProtocolRequest/);
-  for (const field of ['templateId', 'companyId', 'objectId', 'laboratoryId', 'executorId', 'measurementDate', 'measurementPlace', 'environment', 'conditions', 'measurements', 'printVisibility', 'orderId']) {
+  for (const field of ['templateId', 'protocolDate', 'sampleDate', 'measurementDate', 'testingStartDate', 'testingEndDate', 'sourceNumber', 'companyId', 'objectId', 'laboratoryId', 'executorId', 'measurementPlace', 'environment', 'conditions', 'measurements', 'printVisibility', 'orderId']) {
     assert.match(contracts, new RegExp(`\\b${field}\\b`));
   }
-  for (const field of ['sampleDate', 'samplingDate', 'deviceId', 'sourceDocumentCode', 'docxTemplateCode']) {
+  for (const field of ['samplingDate', 'deviceId', 'sourceDocumentCode', 'docxTemplateCode']) {
     assert.doesNotMatch(contracts.match(/interface QuickCreateProtocolRequest[\s\S]*?\n}/)?.[0] || '', new RegExp(`\\b${field}\\b`));
   }
   assert.match(mapper, /requirePositiveIntegerId/);
-  assert.match(mapper, /resultValue:/);
+  for (const field of ['value:', 'pollutantCode:', 'factorType:', 'factorCode:', 'normativeValue:', 'testingMethodNd:', 'samplingMethodNd:']) {
+    assert.match(mapper, new RegExp(field));
+  }
   assert.match(mapper, /measurementDeviceId:/);
   assert.match(mapper, /validationMode: 'submit'|validationMode !== 'draft'/);
   assert.match(service, /'\/protocols\/quick-create'/);

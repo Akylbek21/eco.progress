@@ -1,10 +1,8 @@
 import type { LaboratoryDetails as CanonicalLaboratoryDetails, LaboratoryEmployee as CanonicalLaboratoryEmployee, LaboratoryListItem as CanonicalLaboratoryListItem } from './laboratories';
 
 export type ProtocolStatus =
-  | 'UNKNOWN'
   | 'DRAFT'
   | 'CALCULATED'
-  | 'READY'
   | 'READY_FOR_APPROVAL'
   | 'RETURNED_FOR_REVISION'
   | 'APPROVED'
@@ -14,7 +12,7 @@ export type ProtocolStatus =
   | 'CANCELLED'
   | 'ARCHIVED';
 
-export type LegacyProtocolStatus = 'READY_FOR_APPROVE' | 'RETURNED' | 'CORRECTION' | 'NEEDS_REVISION';
+export type LegacyProtocolStatus = 'READY' | 'NEEDS_REVISION';
 export type ProtocolResultValue = string | number | null | undefined | Array<string | number | null>;
 
 export type ProtocolTemplateId =
@@ -24,12 +22,12 @@ export type ProtocolTemplateId =
   | 'microclimate'
   | 'lighting'
   | 'noise_vibration'
-  | 'water_wastewater'
+  | 'water'
   | 'uv_emf_laser';
 
 export type LegacyProtocolTemplateId =
   | 'industrial_emissions'
-  | 'water'
+  | 'water_wastewater'
   | 'physical_factors'
   | 'food_products'
   | 'surfaces'
@@ -328,20 +326,6 @@ export type ProtocolSignature = {
   signedAt: string;
 };
 
-export type SignProtocolResponse = {
-  success: boolean;
-  message: string;
-  data: {
-    protocolId: number;
-    status: ProtocolStatus;
-    version: number;
-    signatureCount: number;
-    maxSignatures: number;
-    signedByCurrentUser: boolean;
-    signature: ProtocolSignature;
-  };
-};
-
 export interface Protocol {
   id: string;
   protocolNumber: string;
@@ -548,6 +532,7 @@ export type UpdateProtocolPayload = {
   sampleNumber?: string;
   samplingPlace?: string;
   samplingDepth?: string;
+  sourceNumber?: string;
   basis?: string;
   formCode?: string;
   application?: string;

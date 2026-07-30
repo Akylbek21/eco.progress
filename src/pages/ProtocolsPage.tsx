@@ -12,12 +12,15 @@ import { useToast } from '../hooks/useToast';
 import { getActiveCompanies } from '../services/companyService';
 import { parseApiError } from '../services/apiHelpers';
 import protocolService from '../services/protocolService';
-import type { Protocol, ProtocolListQuery } from '../types/protocols';
+import type { Protocol, ProtocolListQuery, ProtocolStatus, ProtocolTemplateId } from '../types/protocols';
 import { hasPermission } from '../config/permissions';
 
 const sizes = [10, 20, 50, 100];
 const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100';
 const integer = (value: string | null, fallback: number) => { const parsed = Number(value); return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback; };
+const positiveInteger = (value: string | null) => { const parsed = Number(value); return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined; };
+const protocolStatuses = new Set<ProtocolStatus>(['DRAFT', 'CALCULATED', 'READY_FOR_APPROVAL', 'RETURNED_FOR_REVISION', 'APPROVED', 'SIGNED', 'PUBLISHED', 'REPLACED', 'CANCELLED', 'ARCHIVED']);
+const protocolTemplates = new Set<ProtocolTemplateId>(['ambient_air', 'workplace_air', 'soil', 'water', 'microclimate', 'lighting', 'noise_vibration', 'uv_emf_laser']);
 const saveBlob = (blob: Blob, name: string) => { const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); };
 
 const ProtocolsPage = () => {
@@ -26,10 +29,30 @@ const ProtocolsPage = () => {
   const page = integer(params.get('page'), 0); const requestedSize = integer(params.get('size'), 20); const size = sizes.includes(requestedSize) ? requestedSize : 20;
   const companyId = params.get('companyId') || '';
   const [busyId, setBusyId] = useState(''); const [archiveTarget, setArchiveTarget] = useState<Protocol | null>(null); const [replaceTarget, setReplaceTarget] = useState<Protocol | null>(null); const [createModalOpen, setCreateModalOpen] = useState(params.get('create') === '1');
-  const update = (changes: Record<string, string | number | undefined>) => { const next = new URLSearchParams(); const values = { page, size, companyId, ...changes }; Object.entries(values).forEach(([key, value]) => { if (value !== undefined && value !== '') next.set(key, String(value)); }); setParams(next, { replace: true }); };
+  const update = (changes: Record<string, string | number | boolean | undefined>) => { const next = new URLSearchParams(params); Object.entries(changes).forEach(([key, value]) => { if (value === undefined || value === '') next.delete(key); else next.set(key, String(value)); }); setParams(next, { replace: true }); };
 
   const companiesQuery = useQuery({ queryKey: ['companies', 'protocol-filter'], queryFn: () => getActiveCompanies() });
-  const query = useMemo<ProtocolListQuery>(() => ({ page, size, companyId: companyId ? Number(companyId) : undefined }), [page, size, companyId]);
+  const query = useMemo<ProtocolListQuery>(() => {
+    const status = params.get('status');
+    const templateId = params.get('templateId');
+    return {
+      page,
+      size,
+      search: params.get('search') || undefined,
+      status: status && protocolStatuses.has(status as ProtocolStatus) ? status as ProtocolStatus : undefined,
+      templateId: templateId && protocolTemplates.has(templateId as ProtocolTemplateId) ? templateId as ProtocolTemplateId : undefined,
+      subtype: params.get('subtype') || undefined,
+      companyId: positiveInteger(params.get('companyId')),
+      objectId: positiveInteger(params.get('objectId')),
+      laboratoryId: positiveInteger(params.get('laboratoryId')),
+      executorId: positiveInteger(params.get('executorId')),
+      compliance: (params.get('compliance') || undefined) as ProtocolListQuery['compliance'],
+      dateFrom: params.get('dateFrom') || undefined,
+      dateTo: params.get('dateTo') || undefined,
+      includeArchived: params.get('includeArchived') === 'true' || undefined,
+      sort: params.get('sort') || undefined,
+    };
+  }, [params, page, size]);
   const protocolsQuery = useQuery({ queryKey: ['protocols', query], queryFn: ({ signal }) => protocolService.getProtocolsPage(query, signal), placeholderData: keepPreviousData });
   const data = protocolsQuery.data; const protocols = data?.items || [];
   useEffect(() => { if (data && data.totalPages > 0 && page >= data.totalPages) update({ page: data.totalPages - 1 }); }, [data?.totalPages, page]);

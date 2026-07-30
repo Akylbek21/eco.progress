@@ -14,7 +14,7 @@ import {
 import api from '../src/services/api';
 import protocolService from '../src/services/protocolService';
 import { signProtocol } from '../src/services/apiProtocolService';
-import type { Protocol, SignProtocolResponse } from '../src/types/protocols';
+import type { Protocol } from '../src/types/protocols';
 import { getProtocolPermissions } from '../src/utils/protocolPermissions';
 
 vi.mock('../src/features/protocols/utils/protocolSigning', async (importOriginal) => {
@@ -73,40 +73,27 @@ const protocol = (extra: Partial<Protocol> = {}): Protocol => ({
   ...extra,
 });
 
-const successResponse: SignProtocolResponse = {
-  success: true,
-  message: 'signed',
-  data: {
-    protocolId: 42,
+const signedProtocol = protocol({
     status: 'SIGNED',
     version: 13,
     signatureCount: 1,
     maxSignatures: 5,
     signedByCurrentUser: true,
-    signature: {
+    signatures: [{
       id: 101,
       userId: 7,
       signerFullName: 'Ажибек Акылбек Бауыржанулы',
       signerPosition: 'Лаборант',
       signedAt: '2026-07-27T13:20:00+05:00',
-    },
-  },
-};
+    }],
+});
+
+const successResponse = { data: signedProtocol };
 
 const SigningHarness = () => {
   const [item, setItem] = useState(protocol());
   const mutation = useSignProtocolMutation(item.id, {
-    onSigned: (response) => {
-      setItem((current) => ({
-        ...current,
-        status: response.data.status,
-        version: response.data.version,
-        signatureCount: response.data.signatureCount,
-        maxSignatures: response.data.maxSignatures,
-        signedByCurrentUser: response.data.signedByCurrentUser,
-        signatures: [...current.signatures, response.data.signature],
-      }));
-    },
+    onSigned: setItem,
   });
   return (
     <>
@@ -124,19 +111,22 @@ const SigningHarness = () => {
 describe('collective protocol signing API and mutation', () => {
   it('posts version and CMS but never sends a user identity', async () => {
     let body: Record<string, unknown> = {};
+    let ifMatch = '';
     server.use(
       http.post('http://localhost/api/protocols/42/sign', async ({ request }) => {
         body = await request.json() as Record<string, unknown>;
+        ifMatch = request.headers.get('If-Match') || '';
         return HttpResponse.json(successResponse);
       }),
     );
 
     const response = await signProtocol(42, { version: 12, cmsSignatureBase64: 'cms-base64' });
 
-    expect(body).toEqual({ version: 12, cmsSignatureBase64: 'cms-base64' });
+    expect(body).toEqual({ cmsSignatureBase64: 'cms-base64' });
+    expect(ifMatch).toBe('"12"');
     expect(body).not.toHaveProperty('userId');
     expect(body).not.toHaveProperty('signerFullName');
-    expect(response.data.status).toBe('SIGNED');
+    expect(response.status).toBe('SIGNED');
   });
 
   it('blocks double click, updates the signature UI and invalidates protocol queries', async () => {
@@ -174,7 +164,7 @@ describe('signature card states and locking', () => {
     const item = protocol({
       status: 'SIGNED',
       signatureCount: 1,
-      signatures: [successResponse.data.signature],
+      signatures: [signedProtocol.signatures[0]],
       signedByCurrentUser: false,
     });
     render(
@@ -212,8 +202,8 @@ describe('signature card states and locking', () => {
 
     rerender(
       <ProtocolSignaturesCard
-        protocol={protocol()}
-        permissions={getProtocolPermissions(protocol(), 'CLIENT')}
+        protocol={protocol({ permissions: {} })}
+        permissions={getProtocolPermissions(protocol({ permissions: {} }), 'CLIENT')}
         onSign={vi.fn()}
       />,
     );
@@ -221,7 +211,7 @@ describe('signature card states and locking', () => {
     expect(screen.getByText('У вас нет доступа к подписанию протокола')).toBeTruthy();
   });
 
-  it('locks all content mutations after the first signature but preserves correction permission', () => {
+  it('uses backend permissions without local status or role aliases', () => {
     const item = protocol({
       status: 'SIGNED',
       signatureCount: 1,
@@ -234,11 +224,10 @@ describe('signature card states and locking', () => {
       },
     });
     expect(getProtocolPermissions(item, 'MANAGER')).toMatchObject({
-      canEdit: false,
-      canSave: false,
-      canCalculate: false,
-      canGenerate: false,
-      canCreateCorrection: true,
+      canEdit: true,
+      canCalculate: true,
+      canGenerateDocuments: true,
+      canReplace: true,
       canSign: true,
     });
   });
@@ -255,7 +244,7 @@ describe('signature card states and locking', () => {
           signerPosition: null,
           signedAt: '2026-07-27T13:32:00+05:00',
         },
-        successResponse.data.signature,
+        signedProtocol.signatures[0],
       ],
     });
     render(

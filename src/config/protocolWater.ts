@@ -18,7 +18,7 @@ export const WATER_USE_CATEGORY_OPTIONS: ProtocolSelectOption[] = [
 ];
 
 export const isWaterProtocolType = (templateId?: ProtocolTemplateKey | '' | null) =>
-  templateId === 'water' || templateId === 'water_wastewater';
+  templateId === 'water';
 
 const getTemplateFields = (template?: ProtocolTemplate): Array<{
   key?: string;
@@ -71,4 +71,3 @@ export const getWaterUseCategoryLabel = (
   value: string,
   options: ProtocolSelectOption[] = WATER_USE_CATEGORY_OPTIONS,
 ) => labelFor(value, options, 'Неизвестная категория водопользования', 'waterUseCategory');
-

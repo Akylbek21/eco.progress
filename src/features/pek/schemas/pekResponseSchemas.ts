@@ -33,7 +33,7 @@ export const pekProgramSchema = z.object({
   validUntil: z.string(),
   responsible: namedRef.nullish(),
   readinessPercent: z.number().nullish(),
-  availableActions: z.array(pekAvailableActionSchema).default([]),
+  availableActions: z.array(pekAvailableActionSchema),
   readOnly: z.boolean(),
 }).passthrough();
 
@@ -65,11 +65,11 @@ export const pekReportSchema = z.object({
   blockingIssueCount: z.number(),
   warningCount: z.number(),
   exceedanceCount: z.number(),
-  sections: z.array(sectionSchema).default([]),
-  availableActions: z.array(pekAvailableActionSchema).default([]),
+  sections: z.array(sectionSchema),
+  availableActions: z.array(pekAvailableActionSchema),
   readOnly: z.boolean(),
   validationActual: z.boolean(),
-  blockingReasons: z.array(z.string()).default([]),
+  blockingReasons: z.array(z.string()),
 }).passthrough();
 
 export const pekCreationContextSchema = z.object({
@@ -77,18 +77,17 @@ export const pekCreationContextSchema = z.object({
   object: namedRef.nullish(),
   periodStart: z.string(),
   periodEnd: z.string(),
-  programs: z.array(pekProgramSchema).default([]),
+  programs: z.array(pekProgramSchema),
   selectedProgramId: z.number().nullish(),
   duplicateReportId: z.number().nullish(),
-  warnings: z.array(z.string()).default([]),
-  blockingReasons: z.array(z.string()).default([]),
+  warnings: z.array(z.string()),
+  blockingReasons: z.array(z.string()),
 }).passthrough();
 
 export const pekCollectionRunSchema = z.object({
   id: z.number(),
   status: z.enum([
-    'CREATED', 'PENDING', 'RUNNING', 'COMPLETED', 'COMPLETED_WITH_WARNINGS',
-    'SUCCESS', 'PARTIAL_SUCCESS', 'FAILED', 'CANCELLED',
+    'CREATED', 'RUNNING', 'COMPLETED', 'COMPLETED_WITH_WARNINGS', 'FAILED', 'CANCELLED',
   ]),
   progressPercent: z.number().min(0).max(100),
   processedRows: z.number(),

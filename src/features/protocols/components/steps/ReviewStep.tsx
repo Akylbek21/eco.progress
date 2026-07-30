@@ -23,6 +23,8 @@ type Props = {
   final?: boolean;
   apiPayloadValid: boolean;
 };
+const trimmed = (value: unknown) => String(value ?? '').trim();
+
 const ReviewStep = ({
   companies,
   objects,
@@ -62,12 +64,12 @@ const ReviewStep = ({
       && selectedEmployee?.active
       && String(selectedEmployee.laboratoryId) === form.laboratoryId
     )],
-    ['Даты и место измерения корректны', Boolean(form.measurementDate && form.measurementPlace.trim())],
-    ['Строки результатов заполнены', form.results.some((row) => String(row.value).trim() !== '' || row.textValue.trim() !== '')],
-    ['Единицы измерения и приборы проверены', form.results.length > 0 && form.results.every((row) => row.unit.trim() && Number(row.measurementDeviceId) > 0)],
-    ['Коды показателей или физических факторов заполнены', form.results.length > 0 && form.results.every((row) => (row.pollutantCode || row.factorCode || row.factorType).trim())],
+    ['Даты и место измерения корректны', Boolean(form.measurementDate && trimmed(form.measurementPlace))],
+    ['Строки результатов заполнены', form.results.some((row) => trimmed(row.value) !== '' || trimmed(row.textValue) !== '')],
+    ['Единицы измерения и приборы проверены', form.results.length > 0 && form.results.every((row) => trimmed(row.unit) && Number(row.measurementDeviceId) > 0)],
+    ['Коды показателей или физических факторов заполнены', form.results.length > 0 && form.results.every((row) => trimmed(row.pollutantCode || row.factorCode || row.factorType))],
     ['Характеристики воды проверены, если применимо', !isWaterProtocolType(form.templateId) || Boolean(form.waterType && form.waterUseCategory)],
-    ['Методика испытаний заполнена', Boolean(form.testingMethodNd.trim())],
+    ['Методика испытаний заполнена', Boolean(trimmed(form.testingMethodNd))],
   ];
   const contextLinks = [
     ['Заявка', form.orderId],

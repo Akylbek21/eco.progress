@@ -39,6 +39,23 @@ afterAll(() => {
 });
 
 describe('protocol access and draft compatibility', () => {
+  it('moves initial version zero to If-Match and removes it from the JSON body', async () => {
+    let ifMatch = '';
+    let requestBody: unknown;
+    server.use(
+      http.patch('http://localhost/api/protocols/48', async ({ request }) => {
+        ifMatch = request.headers.get('If-Match') || '';
+        requestBody = await request.json();
+        return HttpResponse.json({ data: { id: '48', version: 1 } });
+      }),
+    );
+
+    await api.patch('/protocols/48', { version: 0, protocolDate: '2026-07-13' });
+
+    expect(ifMatch).toBe('"0"');
+    expect(requestBody).toEqual({ protocolDate: '2026-07-13' });
+  });
+
   it.each(['ADMIN', 'HEAD', 'MANAGER', 'LABORATORY', 'ACCOUNTANT', 'STAFF', 'AUDITOR'])(
     'allows an authenticated internal %s to open and create protocols',
     (role) => {
@@ -60,10 +77,9 @@ describe('protocol access and draft compatibility', () => {
     expect(permissions).toMatchObject({
       canView: false,
       canEdit: false,
-      canSave: false,
       canCalculate: false,
       canCheckNormatives: false,
-      canSendToApproval: false,
+      canReadyForApproval: false,
     });
   });
 
@@ -91,7 +107,7 @@ describe('protocol access and draft compatibility', () => {
   it('does not synthesize correction permission for a signed protocol', () => {
     const permissions = getProtocolPermissions({ status: 'SIGNED' }, 'MANAGER');
     expect(permissions.canEdit).toBe(false);
-    expect(permissions.canCreateCorrection).toBe(false);
+    expect(permissions.canReplace).toBe(false);
   });
 });
 
@@ -164,17 +180,17 @@ describe('protocol mutation HTTP contracts', () => {
       {
         method: 'PATCH',
         path: '/api/protocols/42/results/bulk-device',
-        body: { resultIds: ['1', '2'], measurementDeviceId: 9, version: 14 },
+        body: { resultIds: ['1', '2'], measurementDeviceId: 9 },
       },
       {
         method: 'PATCH',
         path: '/api/protocols/42/results/bulk-place',
-        body: { resultIds: ['1'], measurementPlace: 'Точка №1', version: 14 },
+        body: { resultIds: ['1'], measurementPlace: 'Точка №1' },
       },
       {
         method: 'DELETE',
         path: '/api/protocols/42/results/bulk',
-        body: { resultIds: ['2'], version: 14 },
+        body: { resultIds: ['2'] },
       },
     ]);
   });

@@ -6,7 +6,6 @@ import type {
   QuickCreateProtocolConditions,
   QuickCreateProtocolEnvironment,
   QuickCreateProtocolMeasurement,
-  QuickCreateProtocolMethodology,
   QuickCreateProtocolRequest,
   QuickCreateProtocolTemplateId,
 } from '../api/protocolContracts';
@@ -145,13 +144,12 @@ const compactValues = <T extends Record<string, unknown>>(values: T): Partial<T>
       value !== null && value !== undefined && value !== ''),
   ) as Partial<T>;
 
-const configKey = (templateId: string): ProtocolTypeKey =>
-  templateId === 'water_wastewater' ? 'water' : templateId as ProtocolTypeKey;
+const configKey = (templateId: string): ProtocolTypeKey => templateId as ProtocolTypeKey;
 
 export const mapQuickCreateTemplateId = (
   templateId: ProtocolTemplateId | string,
 ): QuickCreateProtocolTemplateId => {
-  const normalized = templateId === 'water_wastewater' ? 'water' : templateId;
+  const normalized = templateId;
   const supported: QuickCreateProtocolTemplateId[] = [
     'ambient_air',
     'workplace_air',
@@ -159,6 +157,7 @@ export const mapQuickCreateTemplateId = (
     'microclimate',
     'lighting',
     'noise_vibration',
+    'uv_emf_laser',
     'water',
   ];
   if (!supported.includes(normalized as QuickCreateProtocolTemplateId)) {
@@ -176,36 +175,13 @@ export const isNonEmptyResult = (row: ProtocolWizardResult): boolean => {
   const value = row.value as unknown;
   const hasValue = value !== null && value !== undefined && String(value).trim() !== '';
   return Boolean(
-    row.indicatorName.trim()
+    normalizeNullableText(row.indicatorName)
     || hasValue
-    || row.textValue.trim()
-    || row.pollutantCode.trim()
-    || row.factorCode.trim()
-    || row.factorType.trim(),
+    || normalizeNullableText(row.textValue)
+    || normalizeNullableText(row.pollutantCode)
+    || normalizeNullableText(row.factorCode)
+    || normalizeNullableText(row.factorType),
   );
-};
-
-const mapMethodology = (
-  row: MeasurementFormRow,
-  form: ProtocolWizardForm,
-  strict: boolean,
-  index: number,
-): QuickCreateProtocolMethodology | undefined => {
-  const methodologyCode = normalizeNullableText(
-    row.testingMethodNd || row.methodDocument || form.testingMethodNd,
-  );
-  const methodologyName = normalizeNullableText(row.methodName || row.methodDocument);
-  if (strict && !methodologyCode && !methodologyName) {
-    throw new QuickCreateValidationError(
-      `results.${index}.testingMethodNd`,
-      'Укажите методику испытаний',
-    );
-  }
-  if (!methodologyCode && !methodologyName) return undefined;
-  return compactValues({
-    methodologyCode: methodologyCode ?? undefined,
-    methodologyName: methodologyName ?? undefined,
-  }) as QuickCreateProtocolMethodology;
 };
 
 export function mapMeasurementToRequest(
@@ -221,8 +197,8 @@ export function mapMeasurementToRequest(
 
   const numericValue = normalizeDecimal(row.value, `results.${index}.value`);
   const textValue = normalizeNullableText(row.textValue);
-  const resultValue = numericValue ?? textValue;
-  if (strict && resultValue === null) {
+  const value = numericValue ?? textValue;
+  if (strict && value === null) {
     throw new QuickCreateValidationError(
       `results.${index}.value`,
       'Укажите числовой или текстовый результат',
@@ -240,18 +216,17 @@ export function mapMeasurementToRequest(
     );
   }
 
-  const chemical = ['ambient_air', 'workplace_air', 'soil', 'water_wastewater'].includes(form.templateId);
-  const indicatorCode = chemical ? normalizeNullableText(row.pollutantCode) : null;
-  const physicalFactorCode = chemical
-    ? null
-    : normalizeNullableText(row.factorCode || row.factorType);
-  if (strict && chemical && !indicatorCode) {
+  const chemical = ['ambient_air', 'workplace_air', 'soil', 'water'].includes(form.templateId);
+  const pollutantCode = chemical ? normalizeNullableText(row.pollutantCode) : null;
+  const factorType = chemical ? null : normalizeNullableText(row.factorType);
+  const factorCode = chemical ? null : normalizeNullableText(row.factorCode);
+  if (strict && chemical && !pollutantCode) {
     throw new QuickCreateValidationError(
       `results.${index}.pollutantCode`,
       'Укажите код показателя',
     );
   }
-  if (strict && !chemical && !physicalFactorCode) {
+  if (strict && !chemical && !factorType && !factorCode) {
     throw new QuickCreateValidationError(
       `results.${index}.factorCode`,
       'Укажите код физического фактора',
@@ -284,13 +259,16 @@ export function mapMeasurementToRequest(
   return compactValues({
     clientRowId: clientRowId ?? undefined,
     indicatorName: indicatorName ?? undefined,
-    indicatorCode: indicatorCode ?? undefined,
-    physicalFactorCode: physicalFactorCode ?? undefined,
-    resultValue: resultValue ?? undefined,
+    pollutantCode: pollutantCode ?? undefined,
+    factorType: factorType ?? undefined,
+    factorCode: factorCode ?? undefined,
+    value: value ?? undefined,
     unit: unit ?? undefined,
     measurementDeviceId: measurementDeviceId ?? undefined,
-    normativeId: normalizeNullableText(row.normativeRecordId || row.normativeId) ?? undefined,
-    normValue: normalizeDecimal(row.normativeValue, `results.${index}.normativeValue`) ?? undefined,
+    normativeId: normalizeOptionalId(row.normativeRecordId || row.normativeId, `results.${index}.normativeId`) ?? undefined,
+    normativeValue: normalizeDecimal(row.normativeValue, `results.${index}.normativeValue`) ?? undefined,
+    testingMethodNd: normalizeNullableText(row.testingMethodNd || row.methodDocument || form.testingMethodNd) ?? undefined,
+    samplingMethodNd: normalizeNullableText(row.samplingMethodNd || form.samplingMethodNd) ?? undefined,
     samplingPlace: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
       ? samplingPlace ?? undefined
       : undefined,
@@ -303,7 +281,6 @@ export function mapMeasurementToRequest(
     samplingDate: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
       ? optionalApiDate(form.sampleDate, 'sampleDate')
       : undefined,
-    methodology: mapMethodology(row, form, strict, index),
   }) as QuickCreateProtocolMeasurement | Partial<QuickCreateProtocolMeasurement>;
 }
 
@@ -492,12 +469,21 @@ export function buildQuickCreatePayload(
     validateExecutor(context.selectedExecutor, executorId, laboratoryId);
   }
 
+  const protocolDate = strict
+    ? toApiDate(form.protocolDate, 'protocolDate')
+    : optionalApiDate(form.protocolDate, 'protocolDate') || '';
   const measurementDate = strict
     ? toApiDate(form.measurementDate, 'measurementDate')
     : optionalApiDate(form.measurementDate, 'measurementDate') || '';
-  const sampleDate = optionalApiDate(form.sampleDate, 'sampleDate');
-  const testingStartDate = optionalApiDate(form.testingStartDate, 'testingStartDate');
-  const testingEndDate = optionalApiDate(form.testingEndDate, 'testingEndDate');
+  const sampleDate = strict
+    ? toApiDate(form.sampleDate, 'sampleDate')
+    : optionalApiDate(form.sampleDate, 'sampleDate') || '';
+  const testingStartDate = strict
+    ? toApiDate(form.testingStartDate, 'testingStartDate')
+    : optionalApiDate(form.testingStartDate, 'testingStartDate') || '';
+  const testingEndDate = strict
+    ? toApiDate(form.testingEndDate, 'testingEndDate')
+    : optionalApiDate(form.testingEndDate, 'testingEndDate') || '';
   if (testingStartDate && testingEndDate && testingEndDate < testingStartDate) {
     throw new QuickCreateValidationError(
       'testingEndDate',
@@ -521,6 +507,10 @@ export function buildQuickCreatePayload(
   const measurementPlace = normalizeNullableText(form.measurementPlace);
   if (strict && !measurementPlace) {
     throw new QuickCreateValidationError('measurementPlace', 'Укажите место измерения');
+  }
+  const sourceNumber = normalizeNullableText(form.sourceNumber);
+  if (strict && !sourceNumber) {
+    throw new QuickCreateValidationError('sourceNumber', 'Укажите номер источника');
   }
 
   const rows = form.results.filter(isNonEmptyResult);
@@ -551,23 +541,26 @@ export function buildQuickCreatePayload(
   }
 
   const config = PROTOCOL_TYPE_CONFIG[configKey(form.templateId)];
-  const methodology = mapMethodology(rows[0] || ({} as MeasurementFormRow), form, strict, 0);
   const orderId = normalizeNullableText(form.orderId);
 
   const payload = compactValues({
     templateId,
+    protocolDate,
+    sampleDate,
+    measurementDate,
+    testingStartDate,
+    testingEndDate,
     companyId,
     objectId,
     laboratoryId,
     executorId,
-    measurementDate,
     measurementTime: measurementTime ?? undefined,
     measurementPlace: measurementPlace ?? '',
+    sourceNumber: sourceNumber ?? '',
     defaultUnit: normalizeProtocolUnit(config?.defaultUnit) ?? undefined,
     measurements,
     environment: mapEnvironment(form),
     conditions: Object.keys(conditions).length ? conditions : undefined,
-    methodology,
     printVisibility: mapPrintVisibilityToApi(form.printVisibility),
     orderId: orderId ?? undefined,
     orderServiceItemId: normalizeNullableText(form.orderServiceItemId) ?? undefined,

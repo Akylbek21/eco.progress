@@ -28,6 +28,59 @@ afterEach(() => server.resetHandlers());
 afterAll(() => { server.close(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('lab journal HTTP contracts', () => {
+  it('accepts the production types payload with title and optional required', async () => {
+    const productionTypes = [
+      {
+        code: 'ENVIRONMENT_CONDITIONS',
+        title: 'Журнал регистрации условий окружающей среды',
+        columns: [
+          { key: 'rowNumber', title: '№', type: 'number' },
+          { key: 'registrationDate', title: 'Дата регистрации', type: 'date' },
+          { key: 'relativeHumidity', title: 'Относительная влажность', type: 'text' },
+        ],
+      },
+      {
+        code: 'CHEMICAL_REAGENT_USAGE',
+        title: 'Журнал учета поступления и расхода химических веществ',
+        columns: [{ key: 'incomingQuantity', title: 'Приход кол-во', type: 'number' }],
+      },
+      {
+        code: 'TEST_RESULTS_REGISTRATION',
+        title: 'Журнал регистрации результатов испытаний',
+        columns: [{ key: 'protocolRegistrationDate', title: 'Дата регистрации протокола', type: 'date' }],
+      },
+      {
+        code: 'SAMPLE_REGISTRATION',
+        title: 'Журнал регистрации проб',
+        columns: [
+          { key: 'rowNumber', title: '№', type: 'number' },
+          { key: 'date', title: 'Дата', type: 'date' },
+          { key: 'fullName', title: 'Ф.И.О. инструктируемого', type: 'text' },
+        ],
+      },
+      {
+        code: 'SOLUTION_PREPARATION',
+        title: 'Журнал приготовления растворов',
+        columns: [{ key: 'preparationDate', title: 'Дата приготовления', type: 'date' }],
+      },
+    ];
+    server.use(http.get(`${origin}/api/lab-journals/types`, () =>
+      HttpResponse.json({ data: productionTypes, success: true })));
+
+    const result = await service.getJournalTypesResult();
+    expect(result).toMatchObject({ schemaSource: 'backend' });
+    expect(result.content).toHaveLength(5);
+    expect(result.content.find((item) => item.code === 'SAMPLE_REGISTRATION')).toMatchObject({
+      name: 'Журнал регистрации проб',
+      schemaSource: 'backend',
+      columns: [
+        { key: 'rowNumber', title: '№', type: 'number', required: false },
+        { key: 'date', title: 'Дата', type: 'date', required: false },
+        { key: 'fullName', title: 'Ф.И.О. инструктируемого', type: 'text', required: false },
+      ],
+    });
+  });
+
   it('normalizes GET list arrays and paged responses', async () => {
     server.use(http.get(`${origin}/api/lab-journals/entries`, () => HttpResponse.json([entry])));
     const arrayPage = await service.getEntries({ journalType: 'SAMPLE_REGISTRATION', page: 0, size: 25 });

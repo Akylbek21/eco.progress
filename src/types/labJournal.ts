@@ -52,9 +52,9 @@ export interface JournalColumnDefinition {
 
 export interface LabJournalTypeDto {
   code: LabJournalType;
-  name: string;
+  title: string;
   description?: string;
-  columns?: JournalColumnDefinition[];
+  columns: Array<Omit<JournalColumnDefinition, 'required'> & { required?: boolean }>;
 }
 
 export interface JournalTypeDefinition {

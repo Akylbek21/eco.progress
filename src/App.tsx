@@ -65,7 +65,6 @@ const ContentEditorPage = lazyNamed(() => import('./pages/content/ContentManagem
 const ContentAnalyticsPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAnalyticsPage');
 const ContentAuditPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAuditPage');
 const DocumentFlowRoutes = lazy(() => import('./features/document-flow/DocumentFlowRoutes'));
-const DocumentFlowAdminPage = lazy(() => import('./features/document-flow/admin/DocumentFlowAdminPage'));
 
 const CabinetCompanyPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetCompanyPage');
 const CabinetDashboardPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetDashboardPage');
@@ -313,9 +312,6 @@ function App() {
 
         <Route path="/admin" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminPage /></AdminLayout></RoleAccess>} />
         <Route path="/admin/users" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminUsersPage /></AdminLayout></RoleAccess>} />
-        <Route path="/admin/document-flow/subscriptions" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><DocumentFlowAdminPage /></AdminLayout></RoleAccess>} />
-        <Route path="/admin/document-flow/subscriptions/:organizationId" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><DocumentFlowAdminPage /></AdminLayout></RoleAccess>} />
-        <Route path="/admin/document-flow/plans" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><DocumentFlowAdminPage plansOnly /></AdminLayout></RoleAccess>} />
         <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
         </Routes>
         </Suspense>

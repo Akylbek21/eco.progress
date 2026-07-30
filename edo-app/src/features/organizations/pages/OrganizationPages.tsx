@@ -20,7 +20,7 @@ export const OrganizationSelectorPage = () => {
       setActive(id);
       client.removeQueries({ predicate: (item) => item.queryKey[0] !== 'auth' });
       await client.invalidateQueries({ queryKey: authKeys.session });
-      navigate('/app/dashboard');
+      navigate('/dashboard');
     } finally { setPending(undefined); }
   };
   if (query.isLoading) return <PageSkeleton />;
@@ -33,5 +33,5 @@ export const OnboardingPage = () => {
   const session = useAuthSession();
   const progress = session.data?.onboardingComplete ? 100 : 17;
   const steps = ['Заполнить профиль организации', 'Пригласить сотрудников', 'Добавить контрагента', 'Создать первый документ', 'Проверить NCALayer', 'Настроить уведомления'];
-  return <Stack spacing={3} sx={{ maxWidth: 900, mx: 'auto', py: 6, px: 2 }}><div><Typography variant="h4" fontWeight={900}>Настройка EcoProgress EDO</Typography><Typography color="text.secondary">Прогресс приходит с backend и не рассчитывается по фиктивным данным.</Typography></div><LinearProgress variant="determinate" value={progress} /><Stepper orientation="vertical" activeStep={session.data?.onboardingComplete ? steps.length : 0}>{steps.map((label) => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}</Stepper><Alert severity="info">Пропуск шага разрешается только если backend вернёт соответствующее действие.</Alert><Button variant="contained" onClick={() => navigate('/app/dashboard')}>Перейти в кабинет</Button></Stack>;
+  return <Stack spacing={3} sx={{ maxWidth: 900, mx: 'auto', py: 6, px: 2 }}><div><Typography variant="h4" fontWeight={900}>Настройка EcoProgress EDO</Typography><Typography color="text.secondary">Прогресс приходит с backend и не рассчитывается по фиктивным данным.</Typography></div><LinearProgress variant="determinate" value={progress} /><Stepper orientation="vertical" activeStep={session.data?.onboardingComplete ? steps.length : 0}>{steps.map((label) => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}</Stepper><Alert severity="info">Пропуск шага разрешается только если backend вернёт соответствующее действие.</Alert><Button variant="contained" onClick={() => navigate('/dashboard')}>Перейти в кабинет</Button></Stack>;
 };

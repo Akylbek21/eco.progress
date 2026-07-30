@@ -28,12 +28,9 @@ export const pekStatusLabels: Record<PekProgramStatus | PekReportStatus, string>
 
 export const pekCollectionLabels: Record<PekCollectionRunStatus, string> = {
   CREATED: 'Создан',
-  PENDING: 'Ожидает запуска',
   RUNNING: 'Выполняется',
   COMPLETED: 'Завершён',
   COMPLETED_WITH_WARNINGS: 'Завершён с предупреждениями',
-  SUCCESS: 'Завершён',
-  PARTIAL_SUCCESS: 'Завершён частично',
   FAILED: 'Ошибка',
   CANCELLED: 'Отменён',
 };

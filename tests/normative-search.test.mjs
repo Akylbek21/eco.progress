@@ -97,7 +97,7 @@ test('creation wizard preserves the selected backend normative id', async () => 
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   assert.match(source, /normativeId: String\(item\.id\)/);
   assert.match(mapper, /row\.normativeRecordId \|\| row\.normativeId/);
-  assert.match(mapper, /normValue: normalizeDecimal\(row\.normativeValue/);
+  assert.match(mapper, /normativeValue: normalizeDecimal\(row\.normativeValue/);
 });
 
 test('router keeps protocol creation inside the list wizard', async () => {
@@ -121,5 +121,5 @@ test('protocol editor uses the shared single-request normative search', async ()
 
 test('physical factor validation requires factor type but not a universal factor code', async () => {
   const source = await read('src/features/protocols/components/CreateProtocolWizardModal.tsx');
-  assert.match(source, /\(row\.factorCode \|\| row\.factorType\)\.trim\(\)/);
+  assert.match(source, /trimmed\(row\.factorCode \|\| row\.factorType\)/);
 });

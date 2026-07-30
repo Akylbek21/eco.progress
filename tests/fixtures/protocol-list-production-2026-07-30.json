@@ -1,0 +1,80 @@
+{
+  "data": {
+    "items": [
+      {
+        "id": "49",
+        "protocolNumber": "VRW-2026-0005",
+        "templateId": "workplace_air",
+        "templateName": "Воздух рабочей зоны",
+        "subtype": null,
+        "status": "READY",
+        "protocolDate": "2026-07-13",
+        "companyId": 1,
+        "companyName": "Тестовая компания",
+        "companyBin": "000000000000",
+        "objectId": 1,
+        "objectName": "Тестовый объект",
+        "laboratoryId": null,
+        "laboratoryName": "Тестовая лаборатория",
+        "executorId": null,
+        "executorName": "Тестовый исполнитель",
+        "complianceStatus": "COMPLIES",
+        "createdAt": "2026-07-13T11:18:55.157997",
+        "updatedAt": "2026-07-23T04:56:45.549014",
+        "version": 1,
+        "permissions": {
+          "canView": true,
+          "canEdit": true,
+          "canGeneratePreview": true,
+          "canSendToApproval": true,
+          "canCreateCorrection": false
+        },
+        "signatureCount": 0,
+        "maxSignatures": 5,
+        "hasDocx": true,
+        "hasPdf": false,
+        "docxFileId": "test-docx-id",
+        "pdfFileId": null
+      },
+      {
+        "id": "48",
+        "protocolNumber": "VRZ-2026-0002",
+        "templateId": "ambient_air_szz",
+        "templateName": "Атмосферный воздух / СЗЗ",
+        "subtype": null,
+        "status": "READY",
+        "protocolDate": "2026-07-13",
+        "companyId": 1,
+        "companyName": "Тестовая компания",
+        "objectId": 1,
+        "objectName": "Тестовый объект",
+        "laboratoryName": "Тестовая лаборатория",
+        "executorName": "Тестовый исполнитель",
+        "complianceStatus": "DOES_NOT_COMPLY",
+        "createdAt": "2026-07-13T07:42:41.464079",
+        "updatedAt": "2026-07-13T11:00:02.421155",
+        "version": 0,
+        "permissions": {
+          "canView": true,
+          "canEdit": true,
+          "canGeneratePreview": true,
+          "canSendToApproval": true,
+          "canCreateCorrection": false
+        },
+        "signatureCount": 0,
+        "maxSignatures": 5,
+        "hasDocx": false,
+        "hasPdf": false
+      }
+    ],
+    "page": 0,
+    "size": 20,
+    "totalElements": 2,
+    "totalPages": 1,
+    "first": true,
+    "last": true,
+    "hasNext": false,
+    "hasPrevious": false
+  },
+  "success": true
+}

@@ -25,7 +25,7 @@ const EnvironmentHarness = ({ templateId }: { templateId: ProtocolWizardForm['te
 
 describe('water protocol wizard and editor contract', () => {
   it('shows two required water selectors only for a water protocol', () => {
-    const water = renderToStaticMarkup(<EnvironmentHarness templateId="water_wastewater" />);
+    const water = renderToStaticMarkup(<EnvironmentHarness templateId="water" />);
     expect(water).toContain('Характеристики воды');
     expect(water).toContain('Выберите тип воды');
     expect(water).toContain('Выберите категорию водопользования');
@@ -47,7 +47,7 @@ describe('water protocol wizard and editor contract', () => {
 
   it('puts water characteristics in quick-create conditions and omits them for air', () => {
     const water = createWizardDefaults();
-    water.templateId = 'water_wastewater';
+    water.templateId = 'water';
     water.waterType = 'DRINKING_WATER';
     water.waterUseCategory = 'I';
     expect(mapConditions(water)).toMatchObject({ waterType: 'DRINKING_WATER', waterUseCategory: 'I' });
@@ -73,13 +73,14 @@ describe('water protocol wizard and editor contract', () => {
     const normalized = normalizeProtocol({
       id: 1,
       templateId: 'water',
+      status: 'DRAFT',
       version: 1,
       conditions: { waterType: 'SURFACE_WATER', waterUseCategory: 'II' },
       testing: {},
       results: [],
     });
     expect(normalized).toMatchObject({
-      templateId: 'water_wastewater',
+      templateId: 'water',
       waterType: 'SURFACE_WATER',
       waterUseCategory: 'II',
       conditions: { waterType: 'SURFACE_WATER', waterUseCategory: 'II' },

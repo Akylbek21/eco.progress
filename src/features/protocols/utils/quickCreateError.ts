@@ -1,4 +1,5 @@
 import type { ApiError } from '../../../services/apiHelpers';
+import type { QuickCreateProtocolRequest } from '../api/protocolContracts';
 
 export type QuickCreateErrorResolution = {
   message: string;
@@ -8,12 +9,71 @@ export type QuickCreateErrorResolution = {
   serverFailure?: boolean;
 };
 
+const sortedKeys = (value: object | null | undefined): string[] =>
+  value ? Object.keys(value).sort() : [];
+
+export const buildQuickCreateTechnicalReport = (
+  error: ApiError,
+  payload?: QuickCreateProtocolRequest | null,
+  idempotencyKey?: string | null,
+) => ({
+  endpoint: 'POST /api/protocols/quick-create',
+  status: error.status,
+  code: error.code,
+  traceId: error.requestCode || error.traceId || error.requestId,
+  clientContract: 'quick-create-canonical-2026-07-30',
+  idempotencyKeyPrefix: idempotencyKey ? `${idempotencyKey.slice(0, 8)}…` : undefined,
+  payloadShape: payload
+    ? {
+        templateId: payload.templateId,
+        requiredDatesPresent: {
+          protocolDate: Boolean(payload.protocolDate),
+          sampleDate: Boolean(payload.sampleDate),
+          measurementDate: Boolean(payload.measurementDate),
+          testingStartDate: Boolean(payload.testingStartDate),
+          testingEndDate: Boolean(payload.testingEndDate),
+        },
+        requiredIdsPresent: {
+          companyId: Number.isFinite(payload.companyId),
+          objectId: Number.isFinite(payload.objectId),
+          laboratoryId: Number.isFinite(payload.laboratoryId),
+          executorId: Number.isFinite(payload.executorId),
+        },
+        sourceNumberPresent: Boolean(payload.sourceNumber),
+        measurementCount: payload.measurements.length,
+        measurementKeys: [...new Set(payload.measurements.flatMap(sortedKeys))].sort(),
+        environmentKeys: sortedKeys(payload.environment),
+        conditionsKeys: sortedKeys(payload.conditions),
+        printVisibilityKeys: sortedKeys(payload.printVisibility),
+        linkageKeys: [
+          'orderId',
+          'orderServiceItemId',
+          'pekProgramId',
+          'pekControlItemId',
+          'pekControlEventId',
+          'pekReportId',
+          'monitoringPointId',
+          'emissionSourceId',
+          'waterOutletId',
+        ].filter((key) => payload[key as keyof QuickCreateProtocolRequest] !== undefined),
+      }
+    : undefined,
+});
+
 export const resolveQuickCreateApiError = (error: ApiError): QuickCreateErrorResolution => {
   if (error.resourceId) {
     return {
       message: error.message,
       resetIdempotencyKey: false,
       existingProtocolId: error.resourceId,
+    };
+  }
+
+  if (error.code === 'INTERNAL_SCHEMA_ERROR') {
+    return {
+      message: 'Backend не смог записать протокол из-за несогласованной схемы данных. Форма сохранена во временном черновике. Повторите отправку с тем же запросом после исправления backend и передайте разработчикам код обращения.',
+      resetIdempotencyKey: false,
+      serverFailure: true,
     };
   }
 

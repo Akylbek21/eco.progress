@@ -6,7 +6,7 @@ const supportedTypes = new Set<FrontendProtocolType>([
   'ambient_air',
   'workplace_air',
   'soil',
-  'water_wastewater',
+  'water',
   'microclimate',
   'lighting',
   'noise_vibration',
@@ -15,20 +15,10 @@ const supportedTypes = new Set<FrontendProtocolType>([
 
 export const mapBackendProtocolType = (value: string): FrontendProtocolType => {
   const normalized = String(value || '').trim().toLowerCase();
-  const frontendValue = normalized === 'water' ? 'water_wastewater' : normalized;
-  if (!supportedTypes.has(frontendValue as FrontendProtocolType)) {
+  if (!supportedTypes.has(normalized as FrontendProtocolType)) {
     throw new Error(`Backend вернул неизвестный тип протокола: ${value || 'пустое значение'}`);
   }
-  return frontendValue as FrontendProtocolType;
+  return normalized as FrontendProtocolType;
 };
 
-export const mapFrontendProtocolType = (value: FrontendProtocolType): string =>
-  value === 'water_wastewater' ? 'water' : value;
-
-export const tryMapBackendProtocolType = (value: unknown): FrontendProtocolType | undefined => {
-  try {
-    return mapBackendProtocolType(String(value || ''));
-  } catch {
-    return undefined;
-  }
-};
+export const mapFrontendProtocolType = (value: FrontendProtocolType): string => value;

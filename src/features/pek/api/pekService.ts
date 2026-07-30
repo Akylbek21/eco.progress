@@ -1,4 +1,5 @@
 import { pekApiClient as api } from './pekApiClient';
+import axios from 'axios';
 import {
   filenameFromDisposition,
   mapPekPage,
@@ -69,13 +70,42 @@ const versionedPatch = async <T>(url: string, body: unknown) => {
   const request = optimisticRequest(body);
   return unwrapPekData<T>((await api.patch(url, request.body, { headers: request.headers })).data);
 };
-const download = async (url: string, fallback: string): Promise<PekBlobResult> => {
-  const response = await api.get<Blob>(url, { responseType: 'blob' });
+type PekFileErrorPayload = { code?: string; message?: string; traceId?: string; correlationId?: string };
+class PekFileResponseError extends Error {
+  readonly status?: number;
+  readonly code?: string;
+  readonly traceId?: string;
+
+  constructor(payload: PekFileErrorPayload, status?: number) {
+    super(payload.message || 'Не удалось скачать файл.');
+    this.name = 'PekFileResponseError';
+    this.status = status;
+    this.code = payload.code;
+    this.traceId = payload.traceId || payload.correlationId;
+  }
+}
+const parseErrorBlob = async (blob: Blob, status?: number) => {
+  try {
+    return new PekFileResponseError(JSON.parse(await blob.text()) as PekFileErrorPayload, status);
+  } catch {
+    return new PekFileResponseError({ message: 'Backend вернул JSON вместо файла.' }, status);
+  }
+};
+const download = async (url: string, fallback: string, acceptedTypes: string[]): Promise<PekBlobResult> => {
+  let response;
+  try {
+    response = await api.get<Blob>(url, { responseType: 'blob' });
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+      const contentType = String(error.response.headers['content-type'] || error.response.data.type || '');
+      if (contentType.includes('json')) throw await parseErrorBlob(error.response.data, error.response.status);
+    }
+    throw error;
+  }
   const contentType = String(response.headers['content-type'] || '');
-  if (contentType.includes('json')) {
-    const text = await response.data.text();
-    const parsed = JSON.parse(text) as { message?: string };
-    throw new Error(parsed.message || 'Не удалось скачать файл.');
+  if (!acceptedTypes.some((type) => contentType.toLowerCase().includes(type))) {
+    if (contentType.includes('json')) throw await parseErrorBlob(response.data, response.status);
+    throw new PekFileResponseError({ message: `Backend вернул неподдерживаемый Content-Type: ${contentType || 'не указан'}.` }, response.status);
   }
   return {
     blob: response.data,
@@ -167,11 +197,11 @@ export const pekService = {
   getDashboard: (params: Record<string, unknown>, signal?: AbortSignal) => get<PekDashboard>('/pek/dashboard', params, signal),
   getSettings: (signal?: AbortSignal) => get<PekSettings>('/pek/settings', {}, signal),
   updateSettings: (body: PekSettings) => versionedPatch<PekSettings>('/pek/settings', body),
-  downloadPreviewPdf: (id: number) => download(`/pek/reports/${id}/exports/preview.pdf`, `pek-report-${id}-preview.pdf`),
-  downloadPdf: (id: number) => download(`/pek/reports/${id}/exports/report.pdf`, `pek-report-${id}.pdf`),
-  downloadXlsx: (id: number) => download(`/pek/reports/${id}/exports/report.xlsx`, `pek-report-${id}.xlsx`),
-  downloadJson: (id: number) => download(`/pek/reports/${id}/exports/report.json`, `pek-report-${id}.json`),
-  downloadZip: (id: number) => download(`/pek/reports/${id}/exports/archive.zip`, `pek-report-${id}.zip`),
+  downloadPreviewPdf: (id: number) => download(`/pek/reports/${id}/exports/preview.pdf`, `pek-report-${id}-preview.pdf`, ['application/pdf']),
+  downloadPdf: (id: number) => download(`/pek/reports/${id}/exports/report.pdf`, `pek-report-${id}.pdf`, ['application/pdf']),
+  downloadXlsx: (id: number) => download(`/pek/reports/${id}/exports/report.xlsx`, `pek-report-${id}.xlsx`, ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']),
+  downloadJson: (id: number) => download(`/pek/reports/${id}/exports/report.json`, `pek-report-${id}.json`, ['application/json']),
+  downloadZip: (id: number) => download(`/pek/reports/${id}/exports/archive.zip`, `pek-report-${id}.zip`, ['application/zip', 'application/x-zip-compressed']),
 };
 
 export type PekService = typeof pekService;

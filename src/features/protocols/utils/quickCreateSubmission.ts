@@ -1,4 +1,4 @@
-import type { QuickCreateProtocolApiRequest } from '../api/protocolContracts';
+import type { QuickCreateProtocolRequest } from '../api/protocolContracts';
 
 export type QuickCreateAttemptState = {
   idempotencyKey: string | null;
@@ -14,7 +14,7 @@ export const stableStringify = (value: unknown): string => {
 };
 
 export const prepareQuickCreateAttempt = (
-  payload: QuickCreateProtocolApiRequest,
+  payload: QuickCreateProtocolRequest,
   previous: QuickCreateAttemptState,
   createId = () => crypto.randomUUID(),
 ): { idempotencyKey: string; payloadFingerprint: string } => {

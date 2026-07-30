@@ -14,6 +14,7 @@ import QuickCreateErrorPanel from '../src/features/protocols/components/componen
 import {
   createWizardDefaults,
   emptyWizardResult,
+  normalizeProtocolWizardForm,
   type LaboratoryExecutorOption,
 } from '../src/features/protocols/components/wizardTypes';
 import {
@@ -29,7 +30,10 @@ import {
   releaseQuickCreateLock,
   stableStringify,
 } from '../src/features/protocols/utils/quickCreateSubmission';
-import { resolveQuickCreateApiError } from '../src/features/protocols/utils/quickCreateError';
+import {
+  buildQuickCreateTechnicalReport,
+  resolveQuickCreateApiError,
+} from '../src/features/protocols/utils/quickCreateError';
 import {
   normalizeQuickCreateFieldPath,
 } from '../src/features/protocols/components/CreateProtocolWizardModal';
@@ -43,7 +47,7 @@ afterEach(cleanup);
 const validForm = () => {
   const form = createWizardDefaults();
   Object.assign(form, {
-    templateId: 'water_wastewater' as const,
+    templateId: 'water' as const,
     companyId: '1',
     objectId: '2',
     laboratoryId: '4',
@@ -53,6 +57,7 @@ const validForm = () => {
     measurementDate: '2026-07-22',
     testingStartDate: '2026-07-23',
     testingEndDate: '2026-07-24',
+    sourceNumber: 'W-1',
     measurementTime: '12:00',
     measurementPlace: ' Цех ',
     temperature: ' 30,9 ',
@@ -73,7 +78,7 @@ const validForm = () => {
     value: ' 0,2 ',
     unit: 'мг/л',
     normativeValue: '0,2',
-    normativeRecordId: 'norm-123',
+    normativeRecordId: '123',
     testingMethodNd: 'Методика строки',
     measurementDeviceId: '8',
     samplingPlace: 'Скважина № 1',
@@ -124,6 +129,24 @@ const FormHarness = ({ step }: { step: 'details' | 'environment' }) => {
 };
 
 describe('quick-create form components', () => {
+  it('migrates incomplete drafts without leaving undefined values for wizard validation', () => {
+    const form = normalizeProtocolWizardForm({
+      measurementPlace: undefined,
+      sourceNumber: null,
+      testingMethodNd: undefined,
+      results: [{ indicatorName: undefined, value: null, unit: undefined }],
+    });
+
+    expect(form.measurementPlace).toBe('');
+    expect(form.sourceNumber).toBe('');
+    expect(form.testingMethodNd).toBe('');
+    expect(form.results[0]).toMatchObject({
+      indicatorName: '',
+      value: '',
+      unit: '',
+    });
+  });
+
   it('renders the current date fields and water characteristics without losing form state', () => {
     const { rerender } = render(<FormHarness step="details" />);
     expect((screen.getByLabelText(/Дата измерения/) as HTMLInputElement).type).toBe('date');
@@ -174,7 +197,7 @@ describe('quick-create payload contract', () => {
     expect(() => normalizeDecimal('abc', 'environment.temperature')).toThrow(PayloadValidationError);
   });
 
-  it('builds one canonical DTO without legacy date and device aliases', () => {
+  it('builds the canonical OpenAPI DTO with all required dates', () => {
     const payload = buildQuickCreatePayload(validForm(), strictContext);
     expect(payload).toMatchObject({
       templateId: 'water',
@@ -182,8 +205,13 @@ describe('quick-create payload contract', () => {
       objectId: 2,
       laboratoryId: 4,
       executorId: 10,
+      protocolDate: '2026-07-20',
+      sampleDate: '2026-07-21',
       measurementDate: '2026-07-22',
       measurementTime: '12:00',
+      testingStartDate: '2026-07-23',
+      testingEndDate: '2026-07-24',
+      sourceNumber: 'W-1',
       measurementPlace: 'Цех',
       environment: {
         temperature: 30.9,
@@ -202,25 +230,26 @@ describe('quick-create payload contract', () => {
     });
     expect(payload.measurements[0]).toMatchObject({
       indicatorName: 'Кремний тетрахлорид',
-      indicatorCode: 'SI',
-      resultValue: 0.2,
+      pollutantCode: 'SI',
+      value: 0.2,
       unit: 'мг/дм³',
-      normValue: 0.2,
-      normativeId: 'norm-123',
+      normativeValue: 0.2,
+      normativeId: 123,
       measurementDeviceId: 8,
-      methodology: { methodologyCode: 'Методика строки' },
+      testingMethodNd: 'Методика строки',
+      samplingMethodNd: 'ГОСТ отбора',
     });
-    for (const forbidden of ['sampleDate', 'samplingDate', 'protocolDate', 'testingStartDate', 'testingEndDate', 'sourceNumber']) {
-      expect(payload).not.toHaveProperty(forbidden);
-    }
     expect(payload.measurements[0]).not.toHaveProperty('deviceId');
-    expect(payload.measurements[0]).not.toHaveProperty('value');
+    expect(payload.measurements[0]).not.toHaveProperty('resultValue');
+    expect(payload.measurements[0]).not.toHaveProperty('indicatorCode');
+    expect(payload.measurements[0]).not.toHaveProperty('normValue');
+    expect(payload.measurements[0]).not.toHaveProperty('methodology');
   });
 
   it('accepts result 0 but blocks a missing or numeric unit before POST', () => {
     const zero = validForm();
     zero.results[0].value = '0';
-    expect(buildQuickCreatePayload(zero, strictContext).measurements[0].resultValue).toBe(0);
+    expect(buildQuickCreatePayload(zero, strictContext).measurements[0].value).toBe(0);
     const missing = validForm();
     missing.results[0].unit = '';
     expect(() => buildQuickCreatePayload(missing, strictContext))
@@ -288,13 +317,12 @@ describe('quick-create payload contract', () => {
     expect(mapQuickCreateTemplateId('noise_vibration')).toBe('noise_vibration');
   });
 
-  it('rejects missing methodology and reversed local dates', () => {
+  it('preserves optional methodology and rejects reversed local dates', () => {
     const method = validForm();
     method.testingMethodNd = '';
     method.results[0].testingMethodNd = '';
     method.results[0].methodDocument = '';
-    expect(() => buildQuickCreatePayload(method, strictContext))
-      .toThrow(expect.objectContaining({ field: 'results.0.testingMethodNd' }));
+    expect(buildQuickCreatePayload(method, strictContext).measurements[0].testingMethodNd).toBeUndefined();
     const dates = validForm();
     dates.testingStartDate = '2026-07-25';
     expect(() => buildQuickCreatePayload(dates, strictContext))
@@ -340,6 +368,64 @@ describe('quick-create backend errors', () => {
     });
   });
 
+  it('identifies backend schema failure and keeps the same idempotency attempt', () => {
+    const apiError = normalizeApiError({
+      isAxiosError: true,
+      response: {
+        status: 500,
+        data: {
+          message: 'Сервис временно недоступен из-за внутренней ошибки схемы данных',
+          code: 'INTERNAL_SCHEMA_ERROR',
+          traceId: 'd9a512f2',
+        },
+        headers: {},
+      },
+    });
+
+    expect(resolveQuickCreateApiError(apiError)).toMatchObject({
+      serverFailure: true,
+      resetIdempotencyKey: false,
+    });
+    expect(resolveQuickCreateApiError(apiError).message).toContain('схемы данных');
+  });
+
+  it('builds a safe technical report without measurement values or personal text', () => {
+    const payload = buildQuickCreatePayload(validForm(), strictContext);
+    const report = buildQuickCreateTechnicalReport(
+      {
+        message: 'schema failure',
+        status: 500,
+        code: 'INTERNAL_SCHEMA_ERROR',
+        traceId: 'd9a512f2',
+        fieldErrors: {},
+      },
+      payload,
+      'same-attempt-key',
+    );
+    const serialized = JSON.stringify(report);
+
+    expect(report).toMatchObject({
+      status: 500,
+      code: 'INTERNAL_SCHEMA_ERROR',
+      traceId: 'd9a512f2',
+      idempotencyKeyPrefix: 'same-att…',
+      payloadShape: {
+        templateId: 'water',
+        measurementCount: 1,
+        requiredDatesPresent: {
+          protocolDate: true,
+          sampleDate: true,
+          measurementDate: true,
+          testingStartDate: true,
+          testingEndDate: true,
+        },
+      },
+    });
+    expect(serialized).not.toContain(payload.measurements[0].indicatorName);
+    expect(serialized).not.toContain(String(payload.measurements[0].value));
+    expect(serialized).not.toContain(payload.measurementPlace);
+  });
+
   it('normalizes timeout and network errors without exposing Axios config', () => {
     expect(normalizeApiError({ isAxiosError: true, code: 'ETIMEDOUT' }).message).toContain('не ответил вовремя');
     expect(normalizeApiError({ isAxiosError: true }).message).toContain('Нет соединения');
@@ -357,8 +443,22 @@ describe('quick-create API request', () => {
       idempotencyKey = request.headers.get('Idempotency-Key') || '';
       return HttpResponse.json({ data: { id: '77', templateId: 'water', status: 'DRAFT', version: 1, results: [] } });
     }),
-    http.get('http://localhost/api/protocols/77', () =>
-      HttpResponse.json({ data: { id: '77', templateId: 'water', status: 'DRAFT', version: 1, results: [], testing: {}, conditions: {} } })),
+    http.get('http://localhost/api/protocols/77', () => {
+      const payload = requestBody as Record<string, unknown>;
+      return HttpResponse.json({ data: {
+        id: '77',
+        ...payload,
+        templateId: 'water',
+        status: 'DRAFT',
+        version: 1,
+        results: [],
+        testing: {
+          samplingDate: payload.sampleDate,
+          testingStartDate: payload.testingStartDate,
+          testingEndDate: payload.testingEndDate,
+        },
+      } });
+    }),
   );
 
   beforeAll(() => {
@@ -386,25 +486,31 @@ describe('quick-create API request', () => {
     expect(requestBody).toEqual(payload);
   });
 
-  it('strips legacy aliases at the HTTP boundary', async () => {
+  it('preserves canonical fields and strips only legacy aliases at the HTTP boundary', async () => {
     const payload = buildQuickCreatePayload(validForm(), strictContext);
     const expanded = {
       ...payload,
-      sampleDate: 'legacy',
       deviceId: 9,
       measurements: payload.measurements.map((measurement) => ({
         ...measurement,
-        value: 'legacy',
+        resultValue: 999,
+        indicatorCode: 'legacy',
         deviceId: 8,
       })),
     } as typeof payload;
     await quickCreateProtocol({ payload: expanded, idempotencyKey: 'strict-boundary-key' });
     const sent = requestBody as Record<string, unknown>;
-    expect(sent).not.toHaveProperty('sampleDate');
+    expect(sent).toHaveProperty('sampleDate', payload.sampleDate);
+    expect(sent).toHaveProperty('protocolDate', payload.protocolDate);
+    expect(sent).toHaveProperty('testingStartDate', payload.testingStartDate);
+    expect(sent).toHaveProperty('testingEndDate', payload.testingEndDate);
+    expect(sent).toHaveProperty('sourceNumber', payload.sourceNumber);
     expect(sent).not.toHaveProperty('deviceId');
     const [measurement] = sent.measurements as Array<Record<string, unknown>>;
-    expect(measurement).not.toHaveProperty('value');
+    expect(measurement).toHaveProperty('value', 0.2);
     expect(measurement).not.toHaveProperty('deviceId');
+    expect(measurement).not.toHaveProperty('resultValue');
+    expect(measurement).not.toHaveProperty('indicatorCode');
   });
 
   it('does not retry a failed POST automatically', async () => {

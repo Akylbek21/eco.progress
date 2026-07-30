@@ -25,6 +25,16 @@ export type PekUiError = {
   details?: unknown;
 };
 export const mapPekError = (error: unknown): PekUiError => {
+  if (error instanceof Error && error.name === 'PekFileResponseError') {
+    const fileError = error as Error & { status?: number; code?: string; traceId?: string };
+    return {
+      message: fileError.message,
+      code: fileError.code,
+      status: fileError.status,
+      fieldErrors: {},
+      traceId: fileError.traceId,
+    };
+  }
   const parsed = normalizeApiError(error, 'Не удалось выполнить действие. Повторите попытку.');
   const raw = axios.isAxiosError(error) && error.response?.data && typeof error.response.data === 'object'
     ? error.response.data as PekApiErrorDetails & { data?: PekApiErrorDetails }

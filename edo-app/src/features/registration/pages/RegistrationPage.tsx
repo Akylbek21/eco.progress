@@ -76,7 +76,7 @@ export const RegistrationPage = () => {
       <div><Typography variant="h4" fontWeight={900}>Новая организация</Typography><Typography color="text.secondary">Создайте отдельный tenant EcoProgress EDO.</Typography></div>
       <Stepper activeStep={step} alternativeLabel>{['Пользователь', 'Организация', 'Проверка', 'Email'].map((label) => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}</Stepper>
       {requestError && <Alert severity="error">{requestError}</Alert>}
-      {step <= 1 && <Grid container spacing={2}>{fieldGroups[step].map((name) => (
+      {step <= 1 && <Grid container spacing={2}>{(fieldGroups[step] ?? []).map((name) => (
         <Grid key={name} size={{ xs: 12, sm: ['legalAddress', 'actualAddress', 'fullName'].includes(name) ? 12 : 6 }}>
           <Controller name={name} control={control} render={({ field }) => <TextField {...field} value={typeof field.value === 'string' ? field.value : ''} label={labels[name]} type={name.includes('password') ? 'password' : 'text'} error={Boolean(errors[name])} helperText={errors[name]?.message} />} />
         </Grid>

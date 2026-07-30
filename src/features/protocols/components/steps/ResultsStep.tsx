@@ -18,13 +18,13 @@ const ResultsStep = ({ devices }: Props) => {
 
   useEffect(() => {
     const methods = form.results
-      .map((row) => row.testingMethodNd.trim())
+      .map((row) => text(row.testingMethodNd).trim())
       .filter(Boolean);
     const commonMethod =
       methods.length === form.results.length && new Set(methods).size === 1
         ? methods[0]
         : '';
-    const current = form.testingMethodNd.trim();
+    const current = text(form.testingMethodNd).trim();
     if (!current || current === automaticCommonMethodRef.current) {
       setValue('testingMethodNd', commonMethod, { shouldDirty: false });
       automaticCommonMethodRef.current = commonMethod;

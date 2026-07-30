@@ -95,13 +95,19 @@ export function validateJournalSchema(value: unknown): JournalColumnDefinition[]
     const key = typeof raw.key === 'string' ? raw.key.trim() : '';
     const title = typeof raw.title === 'string' ? raw.title.trim() : '';
     const type = raw.type as JournalFieldType;
-    if (!key || !title || !supportedTypes.has(type) || typeof raw.required !== 'boolean' || keys.has(key)) throw new JournalSchemaError();
+    if (
+      !key
+      || !title
+      || !supportedTypes.has(type)
+      || (raw.required !== undefined && typeof raw.required !== 'boolean')
+      || keys.has(key)
+    ) throw new JournalSchemaError();
     keys.add(key);
     const options = raw.options;
     if (type === 'select' && (!Array.isArray(options) || options.some((option) => !isRecord(option) || typeof option.value !== 'string' || typeof option.label !== 'string'))) throw new JournalSchemaError();
     for (const constraint of ['min', 'max', 'step'] as const) if (raw[constraint] !== undefined && typeof raw[constraint] !== 'number') throw new JournalSchemaError();
     return {
-      key, title, type, required: raw.required,
+      key, title, type, required: raw.required === true,
       placeholder: typeof raw.placeholder === 'string' ? raw.placeholder : undefined,
       helperText: typeof raw.helperText === 'string' ? raw.helperText : undefined,
       options: Array.isArray(options) ? options.map((option) => ({ value: String((option as Record<string, unknown>).value), label: String((option as Record<string, unknown>).label) })) : undefined,

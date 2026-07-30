@@ -32,9 +32,9 @@ const ProtocolActionsMenu = ({ protocol, permissions, busy, onDocx, onGenerate, 
       </button>
       {open && (
         <div className="absolute right-0 top-full z-30 mt-2 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-sm shadow-xl">
-          {permissions.canGenerate && (!protocol.hasDocx || !protocol.hasPdf) && <button type="button" onClick={() => run(onGenerate)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Сформировать документы</button>}
+          {permissions.canGenerateDocuments && (!protocol.hasDocx || !protocol.hasPdf) && <button type="button" onClick={() => run(onGenerate)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Сформировать документы</button>}
           {permissions.canDownload && protocol.hasDocx && <button type="button" onClick={() => run(onDocx)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Скачать DOCX</button>}
-          {permissions.canCreateCorrection && <button type="button" onClick={() => run(onCorrection)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Создать исправленную версию</button>}
+          {permissions.canReplace && <button type="button" onClick={() => run(onCorrection)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Создать исправленную версию</button>}
           {permissions.canViewAudit && <button type="button" onClick={() => run(onHistory)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Посмотреть историю</button>}
           {permissions.canCancel && <button type="button" onClick={() => run(onCancel)} className="w-full rounded-lg px-3 py-2 text-left font-semibold text-rose-700 hover:bg-rose-50">Отменить протокол</button>}
           {permissions.canArchive && <button type="button" onClick={() => run(onArchive)} className="w-full rounded-lg px-3 py-2 text-left font-semibold text-rose-700 hover:bg-rose-50">Архивировать</button>}

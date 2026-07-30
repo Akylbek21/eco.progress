@@ -1,25 +1,38 @@
 # EcoProgress EDO
 
-Самостоятельное frontend-приложение для `https://edo.ecoprogress.kz`.
+Отдельное frontend-приложение для `https://edo.ecoprogress.kz`. Оно не импортирует авторизацию, роли, токены или API client основного сайта.
 
-Приложение не импортирует auth, роли, токены или API client основной CRM. Все запросы идут только в `VITE_EDO_API_URL`, refresh token ожидается в `HttpOnly Secure` cookie, access token хранится только в памяти процесса страницы.
+## Конфигурация
 
-## Запуск
+Скопируйте `.env.example` в `.env.local` и задайте:
 
-1. Скопировать `.env.example` в `.env.local`.
-2. Указать адрес отдельного backend ЭДО.
-3. Запустить `npm install`.
-4. Запустить `npm run dev`.
+- `VITE_EDO_API_URL` — полный API prefix, например `https://api-edo.ecoprogress.kz/api`;
+- `VITE_EDO_APP_URL`;
+- `VITE_MAIN_SITE_URL`;
+- `VITE_CRM_URL`;
+- `VITE_NCALAYER_WS_URL`.
 
-Команды:
+Refresh token ожидается только в `HttpOnly Secure` cookie. Access token хранится только в памяти страницы.
 
-- `npm run typecheck`
-- `npm test`
-- `npm run build`
-- `npm run e2e`
+## OpenAPI
 
-## Backend
+Единственный источник backend-контракта — `/openapi/edo-api.yaml`.
 
-Без backend `api-edo.ecoprogress.kz` приложение показывает loading/error/empty состояния и не подменяет документы, пользователей или права mock-данными.
+```bash
+npm run api:generate
+npm run api:check
+```
 
-Backend должен выдавать OpenAPI schema, после чего generated client размещается в `src/shared/api/generated`. Ручные API-модули в текущем репозитории являются типизированной boundary-реализацией до появления схемы.
+Для альтернативного расположения схемы задайте `EDO_OPENAPI_URL`. `api:check` повторно генерирует client и завершает CI с ошибкой при расхождении `src/shared/api/generated`.
+
+## Проверки
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run test:e2e
+npm run build
+```
+
+E2E полного workflow должен запускаться против Spring Boot test environment без MSW. Публичные route-тесты могут выполняться без backend.

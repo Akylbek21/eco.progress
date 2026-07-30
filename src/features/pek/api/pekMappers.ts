@@ -1,5 +1,13 @@
 import type { PageResponse } from './pekContracts';
 
+/**
+ * Temporary response-envelope migration adapter.
+ *
+ * Removal deadline: 2026-08-31, or earlier when the Spring Boot OpenAPI
+ * client is generated. Do not add DTO field aliases here.
+ */
+export const PEK_MAPPER_REMOVAL_DATE = '2026-08-31';
+
 type Row = Record<string, unknown>;
 export const asPekRecord = (value: unknown): Row =>
   value && typeof value === 'object' && !Array.isArray(value) ? value as Row : {};

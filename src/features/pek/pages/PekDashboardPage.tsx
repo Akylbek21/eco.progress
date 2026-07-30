@@ -27,6 +27,7 @@ const metricReportFilters: Record<(typeof metrics)[number][0], string> = {
   overdueActionCount: 'onlyOverdue=true',
   missingProtocolCount: 'onlyWithErrors=true',
 };
+const reportFilterNames = ['companyId', 'objectId', 'year', 'quarter', 'status', 'responsibleId'] as const;
 const PekDashboardPage = () => {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
@@ -38,6 +39,16 @@ const PekDashboardPage = () => {
   };
   const query = useQuery({ queryKey: pekKeys.dashboard(filters), queryFn: ({ signal }) => pekService.getDashboard(filters, signal), retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS });
   const assignees = useQuery({ queryKey: pekKeys.assignees(['PEK_RESPONSIBLE']), queryFn: ({ signal }) => pekService.getAssignees(['PEK_RESPONSIBLE'], signal), retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS });
+  const openMetricReports = (metric: (typeof metrics)[number][0]) => {
+    const reportParams = new URLSearchParams();
+    reportFilterNames.forEach((name) => {
+      const value = params.get(name);
+      if (value) reportParams.set(name, value);
+    });
+    const metricParams = new URLSearchParams(metricReportFilters[metric]);
+    metricParams.forEach((value, name) => reportParams.set(name, value));
+    navigate(`/staff/pek/reports${reportParams.size ? `?${reportParams.toString()}` : ''}`);
+  };
   return <div className="space-y-5">
     <PekPageHeader title="Производственный экологический контроль" description="Готовность программ и отчётов ПЭК" actions={<><Link className="rounded-full border border-eco-300 px-5 py-2.5 text-sm font-bold text-eco-800" to="/staff/pek/programs">Программы</Link><Link className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white" to="/staff/pek/reports">Отчёты</Link></>} />
     <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-6">
@@ -48,7 +59,7 @@ const PekDashboardPage = () => {
       <PekLookupSelect label="Ответственный" value={Number(params.get('responsibleId')) || undefined} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => update('responsibleId', value ? String(value) : '')} />
     </section>
     {query.isLoading ? <PekLoading /> : query.isError ? <PekQueryError error={query.error} resource="Показатели ПЭК" retry={() => void query.refetch()} /> : query.data && <>
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(([key, label, suffix]) => <button key={key} type="button" onClick={() => navigate(`/staff/pek/reports${metricReportFilters[key] ? `?${metricReportFilters[key]}` : ''}`)} className="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-eco-300"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-3xl font-black text-eco-900">{query.data[key]}{suffix}</p></button>)}</section>
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(([key, label, suffix]) => <button key={key} type="button" onClick={() => openMetricReports(key)} className="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-eco-300"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-3xl font-black text-eco-900">{query.data[key]}{suffix}</p></button>)}</section>
       <section className="grid gap-4 lg:grid-cols-2"><div className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="font-black">Ближайшие сроки</h2><div className="mt-3 space-y-2">{query.data.deadlines?.map((item) => <Link key={`${item.reportId}-${item.dueDate}`} to={`/staff/pek/reports/${item.reportId}`} className="flex justify-between rounded-xl bg-slate-50 p-3 text-sm"><span>{item.reportNumber} · {item.label}</span><strong>{item.dueDate}</strong></Link>)}{!query.data.deadlines?.length && <p className="text-sm text-slate-500">Ближайших сроков нет</p>}</div></div><div className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="font-black">Следующие действия</h2><div className="mt-3 space-y-2">{query.data.reports?.map((item) => <Link key={item.reportId} to={`/staff/pek/reports/${item.reportId}`} className="block rounded-xl bg-slate-50 p-3 text-sm"><strong>{item.reportNumber}</strong><span className="ml-2">{item.nextAction || 'Открыть отчёт'} · {item.responsible || 'Ответственный не указан'}</span></Link>)}</div></div></section>
     </>}
   </div>;

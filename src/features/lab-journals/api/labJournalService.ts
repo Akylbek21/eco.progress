@@ -44,7 +44,7 @@ const mapBackendTypes = (response: unknown): JournalTypesResult => {
     const fallback = LAB_JOURNAL_TYPES[code];
     return {
       code,
-      name: typeof source.name === 'string' && source.name.trim() ? source.name.trim() : fallback.label,
+      name: typeof source.title === 'string' && source.title.trim() ? source.title.trim() : fallback.label,
       description: typeof source.description === 'string' ? source.description : fallback.description,
       columns: hasColumns.every(Boolean) ? validateJournalSchema(source.columns) : LOCAL_JOURNAL_SCHEMAS[code],
       schemaSource: hasColumns.every(Boolean) ? 'backend' : 'local',

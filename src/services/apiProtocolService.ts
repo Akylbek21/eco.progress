@@ -33,13 +33,12 @@ import type {
   RawMeasurementRequest,
   RawMeasurementsResponse,
   SaveRawMeasurementsRequest,
-  SignProtocolResponse,
   UpdateProtocolPayload,
   WeatherConditions,
 } from '../types/protocols';
 import type {
   CancelProtocolRequest,
-  QuickCreateProtocolApiRequest,
+  QuickCreateProtocolRequest,
   ReplaceProtocolRequest,
   ReturnForRevisionRequest,
   SignProtocolRequest,
@@ -56,7 +55,11 @@ import {
   mapProtocolResultFormToRequest,
   mapProtocolsQuery,
 } from '../features/protocols/api/protocolMappers';
-import { mapBackendProtocolType, mapFrontendProtocolType, tryMapBackendProtocolType } from '../features/protocols/api/protocolTypeMapper';
+import { mapBackendProtocolType, mapFrontendProtocolType } from '../features/protocols/api/protocolTypeMapper';
+import {
+  adaptLegacyProtocolReadPayload,
+  adaptLegacyProtocolTemplateId,
+} from '../features/protocols/api/protocolLegacyReadAdapter';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -92,8 +95,8 @@ const numberOrNull = (value: unknown): number | null => {
 };
 const requireProtocolVersion = (value: unknown): number => {
   const version = Number(value);
-  if (!Number.isInteger(version) || version < 1) {
-    throw new Error('Backend contract error: protocol.version must be a positive integer.');
+  if (!Number.isInteger(version) || version < 0) {
+    throw new Error('Backend contract error: protocol.version must be a non-negative integer.');
   }
   return version;
 };
@@ -635,7 +638,7 @@ const normalizeMeasurementDevice = (raw: unknown): ProtocolMeasurementDevice => 
 };
 
 export const normalizeProtocol = (raw: unknown): Protocol => {
-  const source = asRecord(raw);
+  const source = asRecord(adaptLegacyProtocolReadPayload(raw));
   const snapshot = normalizeCompanySnapshot(source);
   const organization = asRecord(source.organization);
   const laboratory = asRecord(source.laboratorySnapshot || source.laboratory_snapshot || source.laboratory);
@@ -700,12 +703,12 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     id: pick(source, ['id', '_id', 'protocolId']),
     protocolNumber,
     number: protocolNumber,
-    templateId: (tryMapBackendProtocolType(pick(source, [
+    templateId: mapBackendProtocolType(pick(source, [
       'templateId',
       'template_id',
       'templateCode',
       'template_code',
-    ])) || pick(source, ['templateId', 'template_id', 'templateCode', 'template_code']).toLowerCase()) as Protocol['templateId'],
+    ])),
     subtype: (pick(source, ['subtype', 'physicalFactorType', 'physical_factor_type'])
       || pick(testing, ['physicalFactorType'])) as Protocol['subtype'],
     templateName: pick(source, ['templateName', 'template_name']),
@@ -1033,7 +1036,10 @@ export async function getProtocolTemplates(): Promise<ProtocolTemplate[]> {
       .get<ApiResponse<unknown> | unknown>('/protocols/templates')
       .then((response) => extractList(response, ['templates']).flatMap((raw) => {
         const source = asRecord(raw);
-        const rawId = pick(source, ['id', 'templateId', 'code']);
+        const rawId = adaptLegacyProtocolTemplateId(
+          pick(source, ['id', 'templateId', 'code']),
+          source.subtype,
+        );
         try {
           return [{
             ...source,
@@ -1062,21 +1068,26 @@ export const getProtocolTypes = getProtocolTemplates;
  * Runtime API boundary for POST /protocols/quick-create.
  *
  * TypeScript's structural typing permits an object with additional form-only
- * properties to be passed as a QuickCreateProtocolApiRequest. Pick every DTO
+ * properties to be passed as a QuickCreateProtocolRequest. Pick every DTO
  * field explicitly so aliases used by the wizard or legacy protocol editor can
  * never leak into the JSON request.
  */
 export const toQuickCreateProtocolApiPayload = (
-  payload: QuickCreateProtocolApiRequest,
-): QuickCreateProtocolApiRequest => ({
+  payload: QuickCreateProtocolRequest,
+): QuickCreateProtocolRequest => ({
   templateId: payload.templateId,
+  protocolDate: payload.protocolDate,
+  sampleDate: payload.sampleDate,
+  measurementDate: payload.measurementDate,
+  testingStartDate: payload.testingStartDate,
+  testingEndDate: payload.testingEndDate,
   companyId: payload.companyId,
   objectId: payload.objectId,
   laboratoryId: payload.laboratoryId,
   executorId: payload.executorId,
-  measurementDate: payload.measurementDate,
   measurementTime: payload.measurementTime,
   measurementPlace: payload.measurementPlace,
+  sourceNumber: payload.sourceNumber,
   defaultUnit: payload.defaultUnit,
   environment: payload.environment
     ? {
@@ -1109,20 +1120,21 @@ export const toQuickCreateProtocolApiPayload = (
   measurements: payload.measurements.map((measurement) => ({
     clientRowId: measurement.clientRowId,
     indicatorName: measurement.indicatorName,
-    indicatorCode: measurement.indicatorCode,
-    physicalFactorCode: measurement.physicalFactorCode,
-    resultValue: measurement.resultValue,
+    pollutantCode: measurement.pollutantCode,
+    factorType: measurement.factorType,
+    factorCode: measurement.factorCode,
+    value: measurement.value,
     unit: measurement.unit,
     measurementDeviceId: measurement.measurementDeviceId,
     normativeId: measurement.normativeId,
-    normValue: measurement.normValue,
+    normativeValue: measurement.normativeValue,
+    testingMethodNd: measurement.testingMethodNd,
+    samplingMethodNd: measurement.samplingMethodNd,
     samplingPlace: measurement.samplingPlace,
     sampleNumber: measurement.sampleNumber,
     samplingDepth: measurement.samplingDepth,
     samplingDate: measurement.samplingDate,
-    methodology: measurement.methodology,
   })),
-  methodology: payload.methodology,
   printVisibility: {
     organizationName: payload.printVisibility.organizationName,
     organizationAddress: payload.printVisibility.organizationAddress,
@@ -1167,7 +1179,7 @@ export async function createProtocol(payload: CreateProtocolPayload): Promise<Pr
 }
 
 export async function quickCreateProtocol(params: {
-  payload: QuickCreateProtocolApiRequest;
+  payload: QuickCreateProtocolRequest;
   idempotencyKey: string;
 }): Promise<Protocol> {
   const { payload, idempotencyKey } = params;
@@ -1175,7 +1187,14 @@ export async function quickCreateProtocol(params: {
     throw new Error('Не удалось сформировать ключ безопасной отправки запроса');
   }
   const apiPayload = toQuickCreateProtocolApiPayload(payload);
-  debugProtocolPayload('quick-create', apiPayload, { idempotencyKey });
+  debugProtocolPayload('quick-create', {
+    templateId: apiPayload.templateId,
+    measurementCount: apiPayload.measurements.length,
+    payloadKeys: Object.keys(apiPayload).sort(),
+    measurementKeys: [...new Set(apiPayload.measurements.flatMap((item) => Object.keys(item)))].sort(),
+  }, {
+    idempotencyKeyPrefix: `${idempotencyKey.slice(0, 8)}…`,
+  });
   const response = await api.post<ApiResponse<unknown> | unknown>(
     '/protocols/quick-create',
     apiPayload,
@@ -1189,14 +1208,20 @@ export async function quickCreateProtocol(params: {
   const result = unwrapData(response);
   const protocol = requireProtocol(result, 'быстрое создание');
   const persisted = await getProtocol(protocol.id);
-  if (import.meta.env.DEV) {
-    const actualMeasurementDate = persisted.measurementDate;
-    if (actualMeasurementDate !== payload.measurementDate) {
-      console.error('[Protocol contract] Backend did not persist key quick-create dates.', {
-        expected: { measurementDate: payload.measurementDate },
-        actual: { measurementDate: actualMeasurementDate },
-      });
-    }
+  const persistedChecks: Array<[string, unknown, unknown]> = [
+    ['protocolDate', payload.protocolDate, persisted.protocolDate],
+    ['sampleDate', payload.sampleDate, persisted.samplingDate || persisted.testing?.samplingDate],
+    ['measurementDate', payload.measurementDate, persisted.measurementDate],
+    ['testingStartDate', payload.testingStartDate, persisted.testingStartDate || persisted.testing?.testingStartDate],
+    ['testingEndDate', payload.testingEndDate, persisted.testingEndDate || persisted.testing?.testingEndDate],
+    ['sourceNumber', payload.sourceNumber, persisted.sourceNumber],
+    ['conditions.waterType', payload.conditions?.waterType, persisted.conditions?.waterType || persisted.waterType],
+    ['conditions.waterUseCategory', payload.conditions?.waterUseCategory, persisted.conditions?.waterUseCategory || persisted.waterUseCategory],
+  ];
+  const ignored = persistedChecks.find(([, expected, actual]) =>
+    expected !== undefined && expected !== null && String(expected) !== String(actual ?? ''));
+  if (ignored) {
+    throw new Error(`PROTOCOL_API_CONTRACT_MISMATCH: backend не сохранил поле «${ignored[0]}» после quick-create.`);
   }
   return { ...persisted, printVisibility: normalizeProtocolPrintVisibility(persisted.printVisibility ?? payload.printVisibility) };
 }
@@ -1222,10 +1247,23 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}`, request);
   const protocol = await protocolFromActionResponse(protocolId, response);
   const persistedChecks: Array<[string, unknown, unknown]> = [
+    ['companyId', payload.companyId, protocol.companyId],
     ['objectId', payload.objectId, protocol.objectId],
+    ['laboratoryId', payload.laboratoryId, protocol.laboratory?.laboratoryId],
+    ['executorId', payload.executorId, protocol.executorId],
+    ['protocolDate', payload.protocolDate, protocol.protocolDate],
+    ['sampleDate', payload.sampleDate ?? payload.testing.samplingDate, protocol.samplingDate ?? protocol.testing?.samplingDate],
     ['measurementDate', payload.measurementDate, protocol.measurementDate],
     ['measurementTime', payload.measurementTime, protocol.measurementTime],
     ['measurementPlace', payload.measurementPlace, protocol.measurementPlace],
+    ['testingStartDate', payload.testing.testingStartDate, protocol.testingStartDate ?? protocol.testing?.testingStartDate],
+    ['testingEndDate', payload.testing.testingEndDate, protocol.testingEndDate ?? protocol.testing?.testingEndDate],
+    ['sourceNumber', payload.sourceNumber, protocol.sourceNumber],
+    ['conditions.waterType', payload.conditions?.waterType, protocol.conditions?.waterType ?? protocol.waterType],
+    ['conditions.waterUseCategory', payload.conditions?.waterUseCategory, protocol.conditions?.waterUseCategory ?? protocol.waterUseCategory],
+    ['conditions.sampleNumber', payload.conditions?.sampleNumber ?? payload.sampleNumber, protocol.conditions?.sampleNumber ?? protocol.sampleNumber],
+    ['conditions.samplingPlace', payload.conditions?.samplingPlace ?? payload.samplingPlace, protocol.conditions?.samplingPlace ?? protocol.samplingPlace],
+    ['conditions.samplingDepth', payload.conditions?.samplingDepth ?? payload.samplingDepth, protocol.conditions?.samplingDepth ?? protocol.samplingDepth],
   ];
   const ignored = persistedChecks.find(([, expected, actual]) => expected !== undefined && expected !== null && String(expected) !== String(actual ?? ''));
   if (ignored) throw new Error(`Backend не сохранил поле «${ignored[0]}». Обновите контракт PATCH /protocols/{id}.`);
@@ -1326,10 +1364,10 @@ export async function returnForRevision(protocolId: string, request: ReturnForRe
   return protocolFromActionResponse(protocolId, response);
 }
 
-export async function signProtocol(protocolId: string | number, request: SignProtocolRequest): Promise<SignProtocolResponse> {
+export async function signProtocol(protocolId: string | number, request: SignProtocolRequest): Promise<Protocol> {
   if (!request.cmsSignatureBase64.trim()) throw new Error('CMS-подпись не сформирована.');
-  const response = await api.post<SignProtocolResponse>(`/protocols/${protocolId}/sign`, request);
-  return response.data;
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/sign`, request);
+  return requireProtocol(unwrapData(response), 'подписание');
 }
 
 export async function publishToClient(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol> {

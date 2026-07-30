@@ -4,6 +4,7 @@ import { validateProtocol } from '../src/features/protocols/schemas/protocolSche
 import { calculateCompliance } from '../src/features/protocols/utils/protocolCalculations';
 import { PROTOCOL_TEMPLATES, isProtocolTemplateId } from '../src/features/protocols/utils/protocolTemplates';
 import { mapBackendProtocolType, mapFrontendProtocolType } from '../src/features/protocols/api/protocolTypeMapper';
+import { adaptLegacyProtocolTemplateId } from '../src/features/protocols/api/protocolLegacyReadAdapter';
 import { unwrapApiData } from '../src/services/apiHelpers';
 import { isDeviceValidForDate } from '../src/utils/protocolDevices';
 import { createWizardDefaults, emptyWizardResult } from '../src/features/protocols/components/wizardTypes';
@@ -12,14 +13,17 @@ import { mapProtocolWizardToRequest } from '../src/features/protocols/mappers/ma
 describe('protocol domain contract', () => {
   it('exposes all backend-supported templates including uv/emf/laser', () => {
     expect(Object.keys(PROTOCOL_TEMPLATES)).toEqual([
-      'ambient_air', 'workplace_air', 'soil', 'microclimate', 'lighting', 'noise_vibration', 'water_wastewater', 'uv_emf_laser',
+      'ambient_air', 'workplace_air', 'soil', 'microclimate', 'lighting', 'noise_vibration', 'water', 'uv_emf_laser',
     ]);
     expect(isProtocolTemplateId('physical_factors')).toBe(false);
   });
 
-  it('maps the water type only at the API boundary', () => {
-    expect(mapBackendProtocolType('water')).toBe('water_wastewater');
-    expect(mapFrontendProtocolType('water_wastewater')).toBe('water');
+  it('keeps the canonical mapper strict and isolates legacy types in the read adapter', () => {
+    expect(mapBackendProtocolType('water')).toBe('water');
+    expect(() => mapBackendProtocolType('water_wastewater')).toThrow(/неизвестный тип/i);
+    expect(adaptLegacyProtocolTemplateId('water_wastewater')).toBe('water');
+    expect(adaptLegacyProtocolTemplateId('ambient_air_szz')).toBe('ambient_air');
+    expect(mapFrontendProtocolType('water')).toBe('water');
     expect(mapFrontendProtocolType('uv_emf_laser')).toBe('uv_emf_laser');
   });
 
@@ -37,12 +41,12 @@ describe('protocol domain contract', () => {
 
   it('maps a water wizard draft to one compact quick-create request', () => {
     const form = createWizardDefaults();
-    form.templateId = 'water_wastewater'; form.companyId = '15'; form.objectId = '38'; form.laboratoryId = '2'; form.executorId = '17'; form.measurementPlace = 'Точка отбора'; form.testingMethodNd = 'ГОСТ'; form.temperature = '20'; form.waterType = 'DRINKING_WATER'; form.waterUseCategory = 'I';
+    form.templateId = 'water'; form.companyId = '15'; form.objectId = '38'; form.laboratoryId = '2'; form.executorId = '17'; form.measurementPlace = 'Точка отбора'; form.sourceNumber = 'W-1'; form.testingMethodNd = 'ГОСТ'; form.temperature = '20'; form.waterType = 'DRINKING_WATER'; form.waterUseCategory = 'I';
     form.results = [{ ...emptyWizardResult(), indicatorName: 'Хлориды', pollutantCode: 'CL', unit: 'мг/л', value: '12', measurementDeviceId: '5' }];
     const request = mapProtocolWizardToRequest(form);
     expect(request).toMatchObject({ templateId: 'water', companyId: 15, objectId: 38, laboratoryId: 2, executorId: 17, conditions: { waterType: 'DRINKING_WATER', waterUseCategory: 'I' }, environment: { temperature: 20, source: 'MANUAL' } });
     expect(request.measurements).toHaveLength(1);
-    expect(request.measurements[0].methodology).toMatchObject({ methodologyCode: 'ГОСТ' });
+    expect(request.measurements[0].testingMethodNd).toBe('ГОСТ');
     expect(request.measurements[0].unit).toBe('мг/дм³');
     expect(request.environment).toMatchObject({ temperature: 20, source: 'MANUAL' });
   });
@@ -82,7 +86,7 @@ describe('protocol domain contract', () => {
 
   it('omits empty query values', () => {
     expect(mapProtocolsQuery({ page: 0, size: 20, search: '', sort: undefined })).toEqual({ page: 0, size: 20 });
-    expect(mapProtocolsQuery({ page: 0, size: 20, templateId: 'water_wastewater' })).toMatchObject({ templateId: 'water' });
+    expect(mapProtocolsQuery({ page: 0, size: 20, templateId: 'water' })).toMatchObject({ templateId: 'water' });
   });
 
   it('validates identity, soil sample, unit, normative, device and humidity', () => {

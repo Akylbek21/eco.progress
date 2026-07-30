@@ -55,14 +55,6 @@ export interface AuthSession {
   onboardingComplete: boolean;
 }
 
-export interface ApiErrorShape {
-  code?: string;
-  message?: string;
-  fieldErrors?: Record<string, string>;
-  requestId?: string;
-  status?: number;
-}
-
 export interface PageResult<T> {
   items: T[];
   page: number;

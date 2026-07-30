@@ -78,6 +78,7 @@ test('mapJournalEntriesResponse normalizes arrays and nested paged responses', a
 test('validateJournalSchema is strict and does not partially accept invalid columns', async () => {
   const { validateJournalSchema } = await loadModule();
   assert.deepEqual(validateJournalSchema([{ key: 'sampleNumber', title: 'Номер', type: 'text', required: true }])[0], { key: 'sampleNumber', title: 'Номер', type: 'text', required: true, placeholder: undefined, helperText: undefined, options: undefined, min: undefined, max: undefined, step: undefined });
+  assert.equal(validateJournalSchema([{ key: 'rowNumber', title: '№', type: 'number' }])[0].required, false);
   assert.throws(() => validateJournalSchema([{ key: 'employee', title: 'Сотрудник', type: 'employee', required: false }]));
   assert.throws(() => validateJournalSchema([{ key: 'x', title: 'X', type: 'text', required: false }, { key: 'x', title: 'X2', type: 'text', required: false }]));
 });

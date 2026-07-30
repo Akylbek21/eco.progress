@@ -1,0 +1,44 @@
+{
+  "templateId": "water",
+  "protocolDate": "2026-07-30",
+  "sampleDate": "2026-07-30",
+  "measurementDate": "2026-07-30",
+  "measurementTime": "12:00",
+  "measurementPlace": "Скважина №1",
+  "testingStartDate": "2026-07-30",
+  "testingEndDate": "2026-07-30",
+  "sourceNumber": "W-1",
+  "companyId": 1,
+  "objectId": 2,
+  "laboratoryId": 4,
+  "executorId": 10,
+  "environment": {
+    "temperature": 30.9,
+    "humidity": 29,
+    "pressureKpa": 94.91,
+    "windSpeed": 7.5,
+    "source": "API"
+  },
+  "conditions": {
+    "waterType": "DRINKING_WATER",
+    "waterUseCategory": "I",
+    "sampleNumber": "W-1",
+    "samplingPlace": "Скважина №1",
+    "samplingDate": "2026-07-30"
+  },
+  "measurements": [
+    {
+      "clientRowId": "uuid",
+      "indicatorName": "Кремний тетрахлорид",
+      "pollutantCode": "SI",
+      "value": 0.2,
+      "unit": "мг/дм³",
+      "measurementDeviceId": 8,
+      "normativeId": 123,
+      "normativeValue": 0.2,
+      "testingMethodNd": "Методика испытаний",
+      "samplingMethodNd": "Методика отбора"
+    }
+  ],
+  "printVisibility": {}
+}

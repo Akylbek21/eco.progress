@@ -12,14 +12,14 @@ import { PageSkeleton, QueryError } from '../../../shared/components/QueryState'
 import { useDashboard } from '../hooks/useDocuments';
 
 const definitions = [
-  ['incoming', 'Входящие', <InboxIcon />, '/app/incoming'],
-  ['outgoing', 'Исходящие', <OutboxIcon />, '/app/outgoing'],
-  ['requiresMySignature', 'Ожидают моей подписи', <DrawIcon />, '/app/requires-my-signature'],
-  ['partiallySigned', 'Частично подписаны', <RuleIcon />, '/app/outgoing?status=PARTIALLY_SIGNED'],
-  ['signed', 'Подписаны всеми', <CheckCircleIcon />, '/app/archive?status=SIGNED'],
-  ['rejected', 'Отклонены', <BlockIcon />, '/app/outgoing?status=REJECTED'],
-  ['overdue', 'Просрочены', <ScheduleIcon />, '/app/incoming?overdue=true'],
-  ['drafts', 'Черновики', <DraftsIcon />, '/app/drafts'],
+  ['incoming', 'Входящие', <InboxIcon />, '/documents/incoming'],
+  ['outgoing', 'Исходящие', <OutboxIcon />, '/documents/outgoing'],
+  ['requiresMySignature', 'Ожидают моей подписи', <DrawIcon />, '/documents/waiting-for-me'],
+  ['partiallySigned', 'Частично подписаны', <RuleIcon />, '/documents/outgoing?status=PARTIALLY_SIGNED'],
+  ['signed', 'Подписаны всеми', <CheckCircleIcon />, '/documents/archive?status=SIGNED'],
+  ['rejected', 'Отклонены', <BlockIcon />, '/documents/outgoing?status=REJECTED'],
+  ['overdue', 'Просрочены', <ScheduleIcon />, '/documents/incoming?overdue=true'],
+  ['drafts', 'Черновики', <DraftsIcon />, '/documents/drafts'],
 ] as const;
 
 export const DashboardPage = () => {
@@ -41,7 +41,7 @@ export const DashboardPage = () => {
         <Typography variant="h5" fontWeight={900}>Типы документов</Typography>
         <Typography color="text.secondary" sx={{ mt: .5, mb: 2 }}>Категории и счётчики загружены из активной организации.</Typography>
         <Grid container spacing={2}>
-          {query.data.documentTypes.map((type) => <Grid key={type.id} size={{ xs: 12, md: 6, xl: 4 }}><Card variant="outlined"><CardActionArea onClick={() => navigate(`/app/${type.direction === 'INCOMING' ? 'incoming' : 'outgoing'}/${type.code}`)}><CardContent><Typography fontWeight={800}>{type.name}</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{type.total ?? '—'} документов · {type.awaitingSignature ?? '—'} ожидают подписи</Typography></CardContent></CardActionArea></Card></Grid>)}
+          {query.data.documentTypes.map((type) => <Grid key={type.id} size={{ xs: 12, md: 6, xl: 4 }}><Card variant="outlined"><CardActionArea onClick={() => navigate(`/documents/${type.direction === 'INCOMING' ? 'incoming' : 'outgoing'}/${type.code}`)}><CardContent><Typography fontWeight={800}>{type.name}</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{type.total ?? '—'} документов · {type.awaitingSignature ?? '—'} ожидают подписи</Typography></CardContent></CardActionArea></Card></Grid>)}
         </Grid>
       </Box>
     </Stack>
@@ -51,6 +51,6 @@ export const DashboardPage = () => {
 const Heading = () => (
   <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={2}>
     <div><Typography variant="overline" color="primary" fontWeight={800}>Электронный документооборот</Typography><Typography variant="h4" fontWeight={900}>Рабочий стол</Typography><Typography color="text.secondary">Состояние документов активной организации.</Typography></div>
-    <Button href="/app/documents/create" variant="contained">Создать документ</Button>
+    <Button href="/documents/create" variant="contained">Создать документ</Button>
   </Stack>
 );

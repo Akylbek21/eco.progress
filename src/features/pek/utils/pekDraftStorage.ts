@@ -5,6 +5,7 @@ const CONTRACT_VERSION = 1;
 export type PekStoredDraft<T> = {
   key: string;
   contractVersion: number;
+  backendVersion: string;
   savedAt: string;
   form: T;
 };
@@ -16,7 +17,8 @@ export const pekDraftKey = (
   kind: 'program' | 'report',
   userId: string | number | undefined,
   entityId?: string | number,
-) => `pek-${kind}-draft:${normalizePart(userId)}:${normalizePart(entityId)}`;
+  backendVersion: string | number = 'new',
+) => `pek-${kind}-draft:${normalizePart(userId)}:${normalizePart(entityId)}:${normalizePart(backendVersion)}`;
 
 const openDatabase = () => new Promise<IDBDatabase>((resolve, reject) => {
   if (typeof indexedDB === 'undefined') {
@@ -46,24 +48,26 @@ const transaction = async <T>(
   });
 };
 
-export const savePekDraft = async <T>(key: string, form: T) => {
+export const savePekDraft = async <T>(key: string, form: T, backendVersion: string | number = 'new') => {
   const draft: PekStoredDraft<T> = {
     key,
     contractVersion: CONTRACT_VERSION,
+    backendVersion: String(backendVersion),
     savedAt: new Date().toISOString(),
     form,
   };
   await transaction('readwrite', (store) => store.put(draft));
   localStorage.setItem(`${key}:metadata`, JSON.stringify({
     contractVersion: draft.contractVersion,
+    backendVersion: draft.backendVersion,
     savedAt: draft.savedAt,
   }));
   return draft;
 };
 
-export const loadPekDraft = async <T>(key: string) => {
+export const loadPekDraft = async <T>(key: string, backendVersion: string | number = 'new') => {
   const draft = await transaction<PekStoredDraft<T> | undefined>('readonly', (store) => store.get(key));
-  return draft?.contractVersion === CONTRACT_VERSION ? draft : undefined;
+  return draft?.contractVersion === CONTRACT_VERSION && draft.backendVersion === String(backendVersion) ? draft : undefined;
 };
 
 export const removePekDraft = async (key: string) => {

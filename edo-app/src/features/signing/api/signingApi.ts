@@ -21,7 +21,7 @@ export const signingApi = {
       hash: challenge.hash,
       cmsSignatureBase64,
       detached: true,
-    });
+    }, { headers: { 'If-Match': `"${challenge.version}"` } });
     return data;
   },
 };
