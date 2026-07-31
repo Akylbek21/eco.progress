@@ -63,6 +63,8 @@ const ContentEditorPage = lazyNamed(() => import('./pages/content/ContentManagem
 const ContentAnalyticsPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAnalyticsPage');
 const ContentAuditPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAuditPage');
 const DocumentFlowRoutes = lazy(() => import('./features/document-flow/DocumentFlowRoutes'));
+const AdminDocumentFlowRoutes = lazy(() => import('./features/document-flow/AdminDocumentFlowRoutes'));
+const ExternalDocumentSigningPage = lazy(() => import('./features/document-flow/pages/ExternalSigningPage'));
 
 const CabinetCompanyPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetCompanyPage');
 const CabinetDashboardPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetDashboardPage');
@@ -135,7 +137,7 @@ const ForbiddenPage = ({ message = 'У вашей роли нет прав дл�
   </div>
 );
 
-const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/partners', '/news', '/faq', '/contacts', '/document-flow'];
+const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/partners', '/news', '/faq', '/contacts', '/document-flow/plans', '/public/document-flow/sign'];
 
 const RouteFallback = () => {
   const { pathname } = useLocation();
@@ -157,8 +159,9 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
-    const privatePrefixes = ['/cabinet', '/client', '/staff', '/admin', '/dashboard', '/document-flow/app', '/login', '/register', '/reset-password', '/api', '/internal', '/crm'];
-    const isPrivate = privatePrefixes.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
+    const publicDocumentFlow = location.pathname === '/document-flow/plans' || location.pathname.startsWith('/public/document-flow/sign/');
+    const privatePrefixes = ['/cabinet', '/client', '/staff', '/admin', '/dashboard', '/document-flow', '/login', '/register', '/reset-password', '/api', '/internal', '/crm'];
+    const isPrivate = !publicDocumentFlow && privatePrefixes.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
     let meta = document.head.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
     if (!meta) {
       meta = document.createElement('meta');
@@ -220,6 +223,7 @@ function App() {
         <Route path="/regions" element={<PublicLayout><RegionsPage /></PublicLayout>} />
         <Route path="/search" element={<PublicLayout><SearchPage /></PublicLayout>} />
         <Route path="/document-flow/*" element={<DocumentFlowRoutes />} />
+        <Route path="/public/document-flow/sign/:token" element={<ExternalDocumentSigningPage />} />
         <Route path="/shtrafy-za-ekologiyu-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
         <Route path="/shtrafy-za-ekologicheskie-narusheniya-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
         <Route path="/:seoSlug" element={<PublicLayout><SeoLandingPage /></PublicLayout>} />
@@ -306,6 +310,7 @@ function App() {
 
         <Route path="/admin" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminPage /></AdminLayout></RoleAccess>} />
         <Route path="/admin/users" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminUsersPage /></AdminLayout></RoleAccess>} />
+        <Route path="/admin/document-flow/*" element={<AdminDocumentFlowRoutes />} />
         <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
         </Routes>
         </Suspense>
