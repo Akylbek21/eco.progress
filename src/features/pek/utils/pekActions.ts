@@ -1,16 +1,14 @@
 import type { PekAvailableAction, PekAvailableActionCode } from '../api/pekContracts';
 
 const priority: PekAvailableActionCode[] = [
-  'COLLECT', 'VALIDATE', 'SUBMIT_REVIEW', 'START_REVIEW', 'ACCEPT_REVIEW',
-  'APPROVE', 'PREPARE_SIGNING', 'SIGN', 'REGISTER_SUBMISSION',
-  'REGISTER_RESULT', 'CREATE_REVISION', 'ARCHIVE',
+  'SUBMIT_REVIEW', 'RETURN', 'APPROVE', 'ACTIVATE', 'ARCHIVE', 'CLONE', 'EDIT',
 ];
+
 export const primaryPekAction = (actions: PekAvailableAction[]) =>
-  [...actions].sort((a, b) => {
-    if (a.enabled !== b.enabled) return a.enabled ? -1 : 1;
-    const left = priority.indexOf(a.code);
-    const right = priority.indexOf(b.code);
-    return (left < 0 ? Number.MAX_SAFE_INTEGER : left) - (right < 0 ? Number.MAX_SAFE_INTEGER : right);
+  [...actions].sort((left, right) => {
+    if (left.enabled !== right.enabled) return left.enabled ? -1 : 1;
+    return priority.indexOf(left.code) - priority.indexOf(right.code);
   })[0];
+
 export const pekAction = (actions: PekAvailableAction[], code: PekAvailableActionCode) =>
   actions.find((item) => item.code === code);

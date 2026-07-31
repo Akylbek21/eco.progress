@@ -24,31 +24,6 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   const method = String(config.method || 'GET').toUpperCase();
-  const isProtocolMutation = /^\/protocols(?:\/|$)/.test(requestPath)
-    && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
-  if (isProtocolMutation) {
-    let version: unknown;
-    if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
-      version = config.data.get('version');
-      config.data.delete('version');
-    } else if (config.data && typeof config.data === 'object' && !Array.isArray(config.data)) {
-      const { version: bodyVersion, ...body } = config.data as Record<string, unknown>;
-      version = bodyVersion;
-      config.data = body;
-    }
-    if ((version === undefined || version === null || version === '') && config.params && typeof config.params === 'object') {
-      const { version: queryVersion, ...params } = config.params as Record<string, unknown>;
-      version = queryVersion;
-      config.params = params;
-    }
-    if (version !== undefined && version !== null && version !== '') {
-      const parsedVersion = Number(version);
-      if (!Number.isInteger(parsedVersion) || parsedVersion < 0) {
-        throw new Error('Protocol mutation requires a non-negative integer version.');
-      }
-      config.headers['If-Match'] = `"${parsedVersion}"`;
-    }
-  }
   if (!config.headers['X-Correlation-ID']) {
     config.headers['X-Correlation-ID'] = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
       ? crypto.randomUUID()

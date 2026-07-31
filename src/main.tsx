@@ -31,24 +31,16 @@ if (!root) throw new Error('Root element not found');
 // Remove it before mounting so React never attempts to hydrate incompatible HTML.
 if (root.dataset.prerendered === 'true') root.replaceChildren();
 
-const enablePekMocks = async () => {
-  if (!import.meta.env.DEV || import.meta.env.VITE_ENABLE_MSW !== 'true') return;
-  const { pekMockWorker } = await import('./features/pek/mocks/browser');
-  await pekMockWorker.start({ onUnhandledRequest: 'bypass' });
-};
-
-void enablePekMocks().then(() => {
-  ReactDOM.createRoot(root).render(
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthProvider>
-            <ToastProvider>
-              <App />
-            </ToastProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </React.StrictMode>,
-  );
-});
+ReactDOM.createRoot(root).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <ToastProvider>
+            <App />
+          </ToastProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  </React.StrictMode>,
+);

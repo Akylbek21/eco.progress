@@ -1,30 +1,23 @@
-import type { PekProgramFilters, PekReportFilters, PekSectionCode } from './pekContracts';
+import type {
+  PekDashboardFilters,
+  PekProgramFilters,
+  PekReportCreationParams,
+  PekReportFilters,
+} from './pekContracts';
 
 export const pekKeys = {
+  all: ['pek'] as const,
   root: ['pek'] as const,
-  dashboard: (filters: Record<string, unknown> = {}) => ['pek', 'dashboard', filters] as const,
+  dashboard: (filters: PekDashboardFilters = {}) => ['pek', 'dashboard', filters] as const,
   programs: (filters: PekProgramFilters = {}) => ['pek', 'programs', filters] as const,
   program: (id: string | number) => ['pek', 'program', String(id)] as const,
   programHistory: (id: string | number) => ['pek', 'program-history', String(id)] as const,
-  reports: (filters: PekReportFilters = {}) => ['pek', 'reports', filters] as const,
+  programDocuments: (id: string | number) => ['pek', 'program-documents', String(id)] as const,
+  reports: (filters?: Partial<PekReportFilters>) => ['pek', 'reports', filters || {}] as const,
   report: (id: string | number) => ['pek', 'report', String(id)] as const,
-  creationContext: (params: Record<string, unknown>) => ['pek', 'creation-context', params] as const,
-  section: (id: string | number, code: PekSectionCode) => ['pek', 'section', String(id), code] as const,
-  issues: (id: string | number) => ['pek', 'issues', String(id)] as const,
-  collection: (id: string | number) => ['pek', 'collection', String(id)] as const,
-  collectionRuns: (id: string | number) => ['pek', 'collection-runs', String(id)] as const,
-  planFact: (id: string | number) => ['pek', 'plan-fact', String(id)] as const,
-  unmatched: (id: string | number) => ['pek', 'unmatched', String(id)] as const,
-  exceedances: (id: string | number) => ['pek', 'exceedances', String(id)] as const,
-  comments: (id: string | number) => ['pek', 'comments', String(id)] as const,
-  history: (id: string | number) => ['pek', 'history', String(id)] as const,
-  signatures: (id: string | number) => ['pek', 'signatures', String(id)] as const,
-  documents: (id: string | number) => ['pek', 'documents', String(id)] as const,
-  submissions: (id: string | number) => ['pek', 'submissions', String(id)] as const,
-  settings: () => ['pek', 'settings'] as const,
+  creationContext: (params: PekReportCreationParams) => ['pek', 'creation-context', params] as const,
   assignees: (roles: string[] = []) => ['pek', 'lookups', 'assignees', roles] as const,
   permits: (objectId: string | number) => ['pek', 'lookups', 'permits', String(objectId)] as const,
-  linkOptions: (reportId: string | number, sourceId: string | number) => ['pek', 'lookups', 'link-options', String(reportId), String(sourceId)] as const,
 };
 
 export const pekQueryKeys = pekKeys;

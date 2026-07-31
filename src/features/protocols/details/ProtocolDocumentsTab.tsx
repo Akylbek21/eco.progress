@@ -7,7 +7,9 @@ type Props = {
   canGenerate: boolean;
   canDownload: boolean;
   canSign: boolean;
-  onGenerate: () => void;
+  onPreview: () => void;
+  onGenerateDocx: () => void;
+  onGeneratePdf: () => void;
   onDocx: () => void;
   onPdf: () => void;
   onSign: () => void;
@@ -19,12 +21,14 @@ const ProtocolDocumentsTab = ({
   canGenerate,
   canDownload,
   canSign,
-  onGenerate,
+  onPreview,
+  onGenerateDocx,
+  onGeneratePdf,
   onDocx,
   onPdf,
   onSign,
 }: Props) => {
-  const generationLocked = ['SIGNED', 'PUBLISHED', 'REPLACED', 'CANCELLED', 'ARCHIVED'].includes(protocol.status);
+  const generationLocked = ['SIGNED', 'REPLACED', 'CANCELLED', 'ARCHIVED', 'UNKNOWN'].includes(protocol.status);
   return (
   <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -32,11 +36,11 @@ const ProtocolDocumentsTab = ({
         <h2 className="text-lg font-black">Документы протокола</h2>
         <p className="mt-1 text-sm text-slate-500">Версия документа: {protocol.version}</p>
       </div>
-      {canGenerate && !generationLocked && (!protocol.hasDocx || !protocol.hasPdf) && (
-        <button type="button" disabled={busy} onClick={onGenerate} className="rounded-xl bg-eco-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
-          Сформировать DOCX и PDF
-        </button>
-      )}
+      <div className="flex flex-wrap gap-2">
+        {canGenerate && <button type="button" disabled={busy} onClick={onPreview} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold disabled:opacity-50">Предварительный просмотр</button>}
+        {canGenerate && !generationLocked && <button type="button" disabled={busy} onClick={onGenerateDocx} className="rounded-xl bg-eco-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Сформировать DOCX</button>}
+        {canGenerate && !generationLocked && <button type="button" disabled={busy} onClick={onGeneratePdf} className="rounded-xl bg-eco-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Сформировать PDF</button>}
+      </div>
     </div>
     <div className="mt-5 divide-y divide-slate-100">
       <div className="flex items-center justify-between gap-4 py-4">

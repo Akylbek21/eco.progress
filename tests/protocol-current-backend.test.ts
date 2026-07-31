@@ -1,0 +1,128 @@
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { setupServer } from 'msw/node';
+import api from '../src/services/api';
+import { mapProtocolPermissions } from '../src/features/protocols/mappers/protocolPermissionMapper';
+import { mapFormToCreateProtocolRequest } from '../src/features/protocols/mappers/mapFormToCreateProtocolRequest';
+import { createWizardDefaults, emptyWizardResult } from '../src/features/protocols/components/wizardTypes';
+import { buildQuickCreatePayload } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
+import { normalizeProtocolStatus } from '../src/config/protocolStatus';
+import { getProtocolPermissions } from '../src/utils/protocolPermissions';
+import { readyForApproval, removeProtocolMeasurementDevice } from '../src/services/apiProtocolService';
+
+const server = setupServer();
+const originalBaseUrl = api.defaults.baseURL;
+const protocol = {
+  id: '42',
+  protocolNumber: 'P-42',
+  templateId: 'water',
+  status: 'DRAFT',
+  version: 8,
+  testing: {},
+  results: [],
+  permissions: { canView: true, canEdit: true, canSendToApproval: true },
+};
+
+beforeAll(() => {
+  vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => undefined, removeItem: () => undefined });
+  api.defaults.baseURL = 'http://localhost/api';
+  server.listen({ onUnhandledRequest: 'error' });
+});
+afterEach(() => server.resetHandlers());
+afterAll(() => {
+  server.close();
+  api.defaults.baseURL = originalBaseUrl;
+  vi.unstubAllGlobals();
+});
+
+describe('current protocol backend contract', () => {
+  it('maps only real backend permissions and the two canonical UI aliases', () => {
+    const mapped = mapProtocolPermissions({
+      canView: true,
+      canEdit: false,
+      canSendToApproval: true,
+      canCreateCorrection: false,
+      canDownload: true,
+    });
+    expect(mapped.canReadyForApproval).toBe(true);
+    expect(mapped.canReplace).toBe(false);
+    expect(mapped.canEdit).toBe(false);
+    expect(mapped).not.toHaveProperty('canDownloadFromBackend');
+  });
+
+  it('keeps unknown status read-only', () => {
+    expect(normalizeProtocolStatus('FUTURE_STATUS')).toBe('UNKNOWN');
+    expect(getProtocolPermissions({
+      status: 'UNKNOWN',
+      permissions: { canView: true, canEdit: true, canSendToApproval: true },
+    }, 'ADMIN')).toMatchObject({ canView: true, canEdit: false, canReadyForApproval: false });
+  });
+
+  it('preserves zero as a string in quick-create conditions and never sends clientRowId', () => {
+    const form = createWizardDefaults();
+    Object.assign(form, {
+      templateId: 'water',
+      companyId: '1',
+      objectId: '2',
+      laboratoryId: '3',
+      executorId: '4',
+      measurementPlace: 'Точка',
+      sourceNumber: 'W-1',
+      temperature: '0',
+      humidity: '0',
+      pressure: '100',
+      windSpeed: '0',
+      waterType: 'DRINKING_WATER',
+      waterUseCategory: 'I',
+    });
+    form.results = [{ ...emptyWizardResult(), indicatorName: 'pH', pollutantCode: 'PH', value: '0', unit: 'ед.', measurementDeviceId: '5', samplingPlace: 'Точка' }];
+    const request = buildQuickCreatePayload(form);
+    expect(request.conditions).toMatchObject({ temperature: '0', humidity: '0', windSpeed: '0' });
+    expect(request.measurements[0].value).toBe(0);
+    expect(request.measurements[0]).not.toHaveProperty('clientRowId');
+  });
+
+  it('keeps full-create environment separate from quick-create conditions', () => {
+    const request = mapFormToCreateProtocolRequest({
+      companyId: 1,
+      objectId: 2,
+      templateId: 'water',
+      protocolDate: '2026-07-31',
+      environment: { temperature: '0', pressureHpa: '1013', source: 'MANUAL' },
+    });
+    expect(request.environment).toMatchObject({ temperatureC: '0', pressureHpa: '1013', source: 'MANUAL' });
+    expect(request).not.toHaveProperty('conditions');
+  });
+
+  it('sends workflow version in JSON body without If-Match', async () => {
+    let body: unknown;
+    let ifMatch: string | null = null;
+    server.use(
+      http.post('http://localhost/api/protocols/42/ready-for-approval', async ({ request }) => {
+        body = await request.json();
+        ifMatch = request.headers.get('If-Match');
+        return HttpResponse.json({ data: { ...protocol, status: 'READY_FOR_APPROVAL', version: 9 } });
+      }),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: { ...protocol, status: 'READY_FOR_APPROVAL', version: 9 } })),
+    );
+    await readyForApproval('42', { version: 8 });
+    expect(body).toEqual({ version: 8 });
+    expect(ifMatch).toBeNull();
+  });
+
+  it('sends detach version as a query parameter and not a DELETE body', async () => {
+    let version = '';
+    let body = '';
+    server.use(
+      http.delete('http://localhost/api/protocols/42/measurement-devices/7', async ({ request }) => {
+        version = new URL(request.url).searchParams.get('version') || '';
+        body = await request.text();
+        return HttpResponse.json({ data: { ...protocol, version: 9 } });
+      }),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: { ...protocol, version: 9 } })),
+    );
+    await removeProtocolMeasurementDevice('42', '7', 8);
+    expect(version).toBe('8');
+    expect(body).toBe('');
+  });
+});

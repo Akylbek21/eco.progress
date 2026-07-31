@@ -1,21 +1,28 @@
+import dayjs from 'dayjs';
 import type { PekHistoryItem } from '../../api/pekContracts';
-import { labelPekStatus } from '../../utils/pekLabels';
 
-const formatter = new Intl.DateTimeFormat('ru-RU', {
-  timeZone: 'Asia/Almaty',
-  dateStyle: 'medium',
-  timeStyle: 'short',
-});
+const displayValue = (value: unknown) => {
+  if (value === null || value === undefined || value === '') return '—';
+  return typeof value === 'string' ? value : JSON.stringify(value);
+};
 
-const PekHistoryTimeline = ({ items }: { items: PekHistoryItem[] }) => <div className="space-y-3">
-  {items.map((item) => <article key={item.id} className="rounded-xl border-l-4 border-eco-500 bg-slate-50 p-4">
-    <div className="flex flex-wrap justify-between gap-2"><strong>{item.action}</strong><time dateTime={item.occurredAt}>{formatter.format(new Date(item.occurredAt))}</time></div>
-    <p className="mt-1 text-sm">{item.user || 'Система'}{item.role ? ` · ${item.role}` : ''}</p>
-    {item.comment && <p className="mt-2 text-sm text-slate-600">{item.comment}</p>}
-    {(item.oldStatus || item.newStatus) && <p className="mt-2 text-xs text-slate-500">{labelPekStatus(item.oldStatus)} → {labelPekStatus(item.newStatus)}</p>}
-    {item.changedFields?.length ? <p className="mt-1 text-xs text-slate-500">Изменено: {item.changedFields.join(', ')}</p> : null}
-  </article>)}
-  {!items.length && <p className="text-slate-500">История пока пуста</p>}
-</div>;
+const PekHistoryTimeline = ({ items }: { items: PekHistoryItem[] }) => (
+  <ol className="space-y-3">
+    {items.map((item, index) => (
+      <li key={item.id ?? `${item.createdAt}-${index}`} className="border-l-2 border-eco-300 pl-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <strong>{item.actionType}</strong>
+          <time className="text-xs text-slate-500">{dayjs(item.createdAt).format('DD.MM.YYYY HH:mm')}</time>
+        </div>
+        <p className="text-sm text-slate-600">{item.actorName || 'Пользователь не указан'}</p>
+        {item.comment && <p className="mt-1 text-sm">{item.comment}</p>}
+        {(item.oldValue !== undefined || item.newValue !== undefined) && (
+          <p className="mt-1 text-xs text-slate-500">{displayValue(item.oldValue)} → {displayValue(item.newValue)}</p>
+        )}
+      </li>
+    ))}
+    {!items.length && <li className="text-sm text-slate-500">История пока пуста</li>}
+  </ol>
+);
 
 export default PekHistoryTimeline;

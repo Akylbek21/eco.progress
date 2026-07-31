@@ -1,10 +1,8 @@
 import { isWaterProtocolType } from '../../../config/protocolWater';
-import { PROTOCOL_TYPE_CONFIG, type ProtocolTypeKey } from '../../../data/protocolTypeConfig';
 import type { CompanyObject } from '../../../types/companies';
 import type { ProtocolPrintVisibility, ProtocolTemplateId } from '../../../types/protocols';
 import type {
   QuickCreateProtocolConditions,
-  QuickCreateProtocolEnvironment,
   QuickCreateProtocolMeasurement,
   QuickCreateProtocolRequest,
   QuickCreateProtocolTemplateId,
@@ -144,7 +142,6 @@ const compactValues = <T extends Record<string, unknown>>(values: T): Partial<T>
       value !== null && value !== undefined && value !== ''),
   ) as Partial<T>;
 
-const configKey = (templateId: string): ProtocolTypeKey => templateId as ProtocolTypeKey;
 
 export const mapQuickCreateTemplateId = (
   templateId: ProtocolTemplateId | string,
@@ -239,8 +236,7 @@ export function mapMeasurementToRequest(
         `results.${index}.measurementDeviceId`,
       )
     : normalizeOptionalId(row.measurementDeviceId, `results.${index}.measurementDeviceId`);
-  const clientRowId = normalizeNullableText(row.clientRowId);
-  if (strict && !clientRowId) {
+  if (strict && !normalizeNullableText(row.clientRowId)) {
     throw new QuickCreateValidationError(
       `results.${index}.clientRowId`,
       'Не удалось определить строку результата. Добавьте её заново',
@@ -257,7 +253,6 @@ export function mapMeasurementToRequest(
   }
 
   return compactValues({
-    clientRowId: clientRowId ?? undefined,
     indicatorName: indicatorName ?? undefined,
     pollutantCode: pollutantCode ?? undefined,
     factorType: factorType ?? undefined,
@@ -266,21 +261,28 @@ export function mapMeasurementToRequest(
     unit: unit ?? undefined,
     measurementDeviceId: measurementDeviceId ?? undefined,
     normativeId: normalizeOptionalId(row.normativeRecordId || row.normativeId, `results.${index}.normativeId`) ?? undefined,
-    normativeValue: normalizeDecimal(row.normativeValue, `results.${index}.normativeValue`) ?? undefined,
+    normativeValue: row.normativeRecordId || row.normativeId
+      ? undefined
+      : normalizeDecimal(row.normativeValue, `results.${index}.normativeValue`) ?? undefined,
     testingMethodNd: normalizeNullableText(row.testingMethodNd || row.methodDocument || form.testingMethodNd) ?? undefined,
     samplingMethodNd: normalizeNullableText(row.samplingMethodNd || form.samplingMethodNd) ?? undefined,
-    samplingPlace: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
-      ? samplingPlace ?? undefined
-      : undefined,
-    sampleNumber: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
-      ? normalizeNullableText(row.sampleNumber) ?? undefined
-      : undefined,
-    samplingDepth: form.templateId === 'soil'
-      ? normalizeDecimal(row.samplingDepth, `results.${index}.samplingDepth`) ?? undefined
-      : undefined,
-    samplingDate: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
-      ? optionalApiDate(form.sampleDate, 'sampleDate')
-      : undefined,
+    values: compactValues({
+      samplingDate: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
+        ? optionalApiDate(form.sampleDate, 'sampleDate')
+        : undefined,
+      samplingPlace: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
+        ? samplingPlace ?? undefined
+        : undefined,
+      sampleName: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
+        ? normalizeNullableText(row.sampleNumber) ?? undefined
+        : undefined,
+      samplingDepth: form.templateId === 'soil'
+        ? normalizeNullableText(row.samplingDepth) ?? undefined
+        : undefined,
+      cas: normalizeNullableText(row.cas) ?? undefined,
+      formula: normalizeNullableText(row.formula) ?? undefined,
+      note: normalizeNullableText(row.note) ?? undefined,
+    }),
   }) as QuickCreateProtocolMeasurement | Partial<QuickCreateProtocolMeasurement>;
 }
 
@@ -299,14 +301,6 @@ const normalizeEnvironmentValue = (
   }
   return normalized;
 };
-
-export const mapEnvironment = (form: ProtocolWizardForm): QuickCreateProtocolEnvironment => ({
-  temperature: normalizeEnvironmentValue(form.temperature, 'environment.temperature', -100, 100),
-  humidity: normalizeEnvironmentValue(form.humidity, 'environment.humidity', 0, 100),
-  pressureKpa: normalizeEnvironmentValue(form.pressure, 'environment.pressureKpa', 20, 120),
-  windSpeed: normalizeEnvironmentValue(form.windSpeed, 'environment.windSpeed', 0, 150),
-  source: form.environmentSource === 'API' ? 'API' : 'MANUAL',
-});
 
 export const mapConditions = (
   form: ProtocolWizardForm,
@@ -327,9 +321,8 @@ export const mapConditions = (
       ? normalizeNullableText(sample?.samplingPlace || form.measurementPlace) ?? undefined
       : undefined,
     samplingDepth: soil
-      ? normalizeDecimal(sample?.samplingDepth, 'results.0.samplingDepth') ?? undefined
+      ? normalizeNullableText(sample?.samplingDepth) ?? undefined
       : undefined,
-    samplingDate: soil || water ? optionalApiDate(form.sampleDate, 'sampleDate') : undefined,
     season: normalizeNullableText(form.season) ?? undefined,
     workCategory: normalizeNullableText(form.workCategory) ?? undefined,
     workplaceType: normalizeNullableText(form.workplaceType) ?? undefined,
@@ -338,6 +331,14 @@ export const mapConditions = (
     lightingType: normalizeNullableText(form.lightingType) ?? undefined,
     noiseType: normalizeNullableText(form.noiseType) ?? undefined,
     visualWorkCategory: normalizeNullableText(form.visualWorkCategory) ?? undefined,
+    temperature: normalizeEnvironmentValue(form.temperature, 'conditions.temperature', -100, 100)?.toString(),
+    humidity: normalizeEnvironmentValue(form.humidity, 'conditions.humidity', 0, 100)?.toString(),
+    pressure: normalizeEnvironmentValue(form.pressure, 'conditions.pressure', 20, 120)?.toString(),
+    windSpeed: normalizeEnvironmentValue(form.windSpeed, 'conditions.windSpeed', 0, 150)?.toString(),
+    weatherSource: form.environmentSource || undefined,
+    weatherDataSource: normalizeNullableText(form.environmentDataSource) ?? undefined,
+    manualChangeReason: normalizeNullableText(form.environmentManualChangeReason) ?? undefined,
+    weatherObservedAt: normalizeNullableText(form.environmentObservedAt) ?? undefined,
   }) as QuickCreateProtocolConditions;
 };
 
@@ -540,7 +541,6 @@ export function buildQuickCreatePayload(
     }
   }
 
-  const config = PROTOCOL_TYPE_CONFIG[configKey(form.templateId)];
   const orderId = normalizeNullableText(form.orderId);
 
   const payload = compactValues({
@@ -557,20 +557,10 @@ export function buildQuickCreatePayload(
     measurementTime: measurementTime ?? undefined,
     measurementPlace: measurementPlace ?? '',
     sourceNumber: sourceNumber ?? '',
-    defaultUnit: normalizeProtocolUnit(config?.defaultUnit) ?? undefined,
     measurements,
-    environment: mapEnvironment(form),
     conditions: Object.keys(conditions).length ? conditions : undefined,
     printVisibility: mapPrintVisibilityToApi(form.printVisibility),
     orderId: orderId ?? undefined,
-    orderServiceItemId: normalizeNullableText(form.orderServiceItemId) ?? undefined,
-    pekProgramId: normalizeOptionalId(form.pekProgramId, 'pekProgramId') ?? undefined,
-    pekControlItemId: normalizeOptionalId(form.pekControlItemId, 'pekControlItemId') ?? undefined,
-    pekControlEventId: normalizeOptionalId(form.pekControlEventId, 'pekControlEventId') ?? undefined,
-    pekReportId: normalizeOptionalId(form.pekReportId, 'pekReportId') ?? undefined,
-    monitoringPointId: normalizeOptionalId(form.monitoringPointId, 'monitoringPointId') ?? undefined,
-    emissionSourceId: normalizeOptionalId(form.emissionSourceId, 'emissionSourceId') ?? undefined,
-    waterOutletId: normalizeOptionalId(form.waterOutletId, 'waterOutletId') ?? undefined,
   });
 
   return payload as QuickCreateProtocolRequest | QuickCreateProtocolDraftRequest;

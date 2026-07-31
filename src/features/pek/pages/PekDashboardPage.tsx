@@ -1,67 +1,144 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import type { PekDashboardFilters, PekReportStatus } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
-import { pekService } from '../api/pekService';
-import { PekLoading, PekPageHeader } from '../components/common/PekUi';
+import { pekApi } from '../api/pekService';
 import PekCompanyObjectFilters from '../components/common/PekCompanyObjectFilters';
 import PekLookupSelect from '../components/common/PekLookupSelect';
 import PekQueryError from '../components/common/PekQueryError';
-import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
-import type { PekReportStatus } from '../api/pekContracts';
+import { PekLoading, PekPageHeader, PekState, PekStatusBadge } from '../components/common/PekUi';
 import { pekStatusLabels } from '../utils/pekLabels';
+import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 
-const metrics = [
-  ['totalReportCount', 'Всего отчётов', ''], ['readinessPercent', 'Общая готовность', '%'], ['criticalIssueCount', 'Критические ошибки', ''],
-  ['overdueRiskCount', 'Риск просрочки', ''], ['programExecutionPercent', 'Выполнение программы', '%'],
-  ['openExceedanceCount', 'Открытые превышения', ''], ['overdueActionCount', 'Просроченные меры', ''],
-  ['missingProtocolCount', 'Отсутствующие протоколы', ''],
+const statuses: PekReportStatus[] = ['DRAFT', 'COLLECTING', 'READY_FOR_REVIEW', 'APPROVED', 'ARCHIVED'];
+const metricDefinitions = [
+  ['totalReportCount', 'Количество отчётов', '', false],
+  ['readinessPercent', 'Готовность', '%', false],
+  ['overdueRiskCount', 'Риск просрочки', '', false],
+  ['programExecutionPercent', 'Выполнение программ', '%', false],
+  ['criticalIssueCount', 'Критические проблемы', '', true],
+  ['openExceedanceCount', 'Превышения', '', true],
+  ['overdueActionCount', 'Просроченные действия', '', true],
+  ['missingProtocolCount', 'Отсутствующие протоколы', '', true],
 ] as const;
-const dashboardStatuses: PekReportStatus[] = ['DRAFT','COLLECTING','REQUIRES_CORRECTION','READY_FOR_REVIEW','UNDER_REVIEW','RETURNED','READY_FOR_APPROVAL','APPROVED','READY_FOR_SIGNING','SIGNED','SUBMITTED','ACCEPTED','REJECTED','ARCHIVED'];
-const metricReportFilters: Record<(typeof metrics)[number][0], string> = {
-  totalReportCount: '',
-  readinessPercent: '',
-  criticalIssueCount: 'onlyWithErrors=true',
-  overdueRiskCount: 'onlyOverdue=true',
-  programExecutionPercent: '',
-  openExceedanceCount: 'onlyWithExceedances=true',
-  overdueActionCount: 'onlyOverdue=true',
-  missingProtocolCount: 'onlyWithErrors=true',
-};
-const reportFilterNames = ['companyId', 'objectId', 'year', 'quarter', 'status', 'responsibleId'] as const;
+
 const PekDashboardPage = () => {
   const [params, setParams] = useSearchParams();
-  const navigate = useNavigate();
-  const filters = Object.fromEntries(params.entries());
+  const filters: PekDashboardFilters = {
+    companyId: Number(params.get('companyId')) || undefined,
+    objectId: Number(params.get('objectId')) || undefined,
+    year: Number(params.get('year')) || undefined,
+    quarter: Number(params.get('quarter')) || undefined,
+    status: (params.get('status') || undefined) as PekReportStatus | undefined,
+    responsibleId: Number(params.get('responsibleId')) || undefined,
+  };
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     value ? next.set(key, value) : next.delete(key);
     setParams(next, { replace: true });
   };
-  const query = useQuery({ queryKey: pekKeys.dashboard(filters), queryFn: ({ signal }) => pekService.getDashboard(filters, signal), retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS });
-  const assignees = useQuery({ queryKey: pekKeys.assignees(['PEK_RESPONSIBLE']), queryFn: ({ signal }) => pekService.getAssignees(['PEK_RESPONSIBLE'], signal), retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS });
-  const openMetricReports = (metric: (typeof metrics)[number][0]) => {
-    const reportParams = new URLSearchParams();
-    reportFilterNames.forEach((name) => {
-      const value = params.get(name);
-      if (value) reportParams.set(name, value);
-    });
-    const metricParams = new URLSearchParams(metricReportFilters[metric]);
-    metricParams.forEach((value, name) => reportParams.set(name, value));
-    navigate(`/staff/pek/reports${reportParams.size ? `?${reportParams.toString()}` : ''}`);
-  };
+  const dashboard = useQuery({
+    queryKey: pekKeys.dashboard(filters),
+    queryFn: ({ signal }) => pekApi.getDashboard(filters, signal),
+    retry: retryPekQuery,
+    staleTime: PEK_STALE_TIME_MS,
+  });
+  const assignees = useQuery({
+    queryKey: pekKeys.assignees(['PEK_RESPONSIBLE', 'PEK_REVIEWER', 'PEK_APPROVER']),
+    queryFn: ({ signal }) => pekApi.getAssignees(
+      ['PEK_RESPONSIBLE', 'PEK_REVIEWER', 'PEK_APPROVER'],
+      signal,
+    ),
+    retry: retryPekQuery,
+    staleTime: PEK_STALE_TIME_MS,
+  });
+
   return <div className="space-y-5">
-    <PekPageHeader title="Производственный экологический контроль" description="Готовность программ и отчётов ПЭК" actions={<><Link className="rounded-full border border-eco-300 px-5 py-2.5 text-sm font-bold text-eco-800" to="/staff/pek/programs">Программы</Link><Link className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white" to="/staff/pek/reports">Отчёты</Link></>} />
-    <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-6">
-      <PekCompanyObjectFilters companyId={Number(params.get('companyId'))||undefined} objectId={Number(params.get('objectId'))||undefined} onCompanyChange={(value)=>update('companyId',value)} onObjectChange={(value)=>update('objectId',value)}/>
-      <label className="text-xs font-bold text-slate-600">Год<input type="number" min={2000} max={2100} value={params.get('year')||''} onChange={(event)=>update('year',event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"/></label>
-      <label className="text-xs font-bold text-slate-600">Квартал<select value={params.get('quarter')||''} onChange={(event)=>update('quarter',event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"><option value="">Все</option>{[1,2,3,4].map(value=><option key={value} value={value}>{value}</option>)}</select></label>
-      <label className="text-xs font-bold text-slate-600">Статус<select value={params.get('status')||''} onChange={(event)=>update('status',event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"><option value="">Все статусы</option>{dashboardStatuses.map(status=><option key={status} value={status}>{pekStatusLabels[status]}</option>)}</select></label>
-      <PekLookupSelect label="Ответственный" value={Number(params.get('responsibleId')) || undefined} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => update('responsibleId', value ? String(value) : '')} />
+    <PekPageHeader
+      title="Производственный экологический контроль"
+      description="Фактические показатели программ и отчётов ПЭК"
+      actions={<>
+        <Link className="rounded-full border px-5 py-2.5 text-sm font-bold" to="/staff/pek/programs">Программы</Link>
+        <Link className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white" to="/staff/pek/reports">Отчёты</Link>
+      </>}
+    />
+    <section className="grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-7">
+      <PekCompanyObjectFilters
+        companyId={filters.companyId}
+        objectId={filters.objectId}
+        onCompanyChange={(value) => update('companyId', value)}
+        onObjectChange={(value) => update('objectId', value)}
+      />
+      <label className="text-xs font-bold text-slate-600">Год
+        <input type="number" value={filters.year || ''} onChange={(event) => update('year', event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2" />
+      </label>
+      <label className="text-xs font-bold text-slate-600">Квартал
+        <select value={filters.quarter || ''} onChange={(event) => update('quarter', event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
+          <option value="">Все</option>{[1, 2, 3, 4].map((value) => <option key={value}>{value}</option>)}
+        </select>
+      </label>
+      <label className="text-xs font-bold text-slate-600">Статус
+        <select value={filters.status || ''} onChange={(event) => update('status', event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
+          <option value="">Все</option>
+          {statuses.map((status) => <option key={status} value={status}>{pekStatusLabels[status]}</option>)}
+        </select>
+      </label>
+      <PekLookupSelect
+        label="Ответственный"
+        value={filters.responsibleId}
+        options={assignees.data || []}
+        loading={assignees.isLoading}
+        error={assignees.isError}
+        onRetry={() => void assignees.refetch()}
+        onChange={(value) => update('responsibleId', value ? String(value) : '')}
+      />
+      <button type="button" onClick={() => setParams({}, { replace: true })} className="self-end rounded-xl border px-3 py-2 text-sm font-bold">
+        Сбросить
+      </button>
     </section>
-    {query.isLoading ? <PekLoading /> : query.isError ? <PekQueryError error={query.error} resource="Показатели ПЭК" retry={() => void query.refetch()} /> : query.data && <>
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(([key, label, suffix]) => <button key={key} type="button" onClick={() => openMetricReports(key)} className="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-eco-300"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-3xl font-black text-eco-900">{query.data[key]}{suffix}</p></button>)}</section>
-      <section className="grid gap-4 lg:grid-cols-2"><div className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="font-black">Ближайшие сроки</h2><div className="mt-3 space-y-2">{query.data.deadlines?.map((item) => <Link key={`${item.reportId}-${item.dueDate}`} to={`/staff/pek/reports/${item.reportId}`} className="flex justify-between rounded-xl bg-slate-50 p-3 text-sm"><span>{item.reportNumber} · {item.label}</span><strong>{item.dueDate}</strong></Link>)}{!query.data.deadlines?.length && <p className="text-sm text-slate-500">Ближайших сроков нет</p>}</div></div><div className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="font-black">Следующие действия</h2><div className="mt-3 space-y-2">{query.data.reports?.map((item) => <Link key={item.reportId} to={`/staff/pek/reports/${item.reportId}`} className="block rounded-xl bg-slate-50 p-3 text-sm"><strong>{item.reportNumber}</strong><span className="ml-2">{item.nextAction || 'Открыть отчёт'} · {item.responsible || 'Ответственный не указан'}</span></Link>)}</div></div></section>
-    </>}
+    {dashboard.isLoading
+      ? <PekLoading />
+      : dashboard.isError
+        ? <PekQueryError error={dashboard.error} resource="Dashboard ПЭК" retry={() => void dashboard.refetch()} />
+        : !dashboard.data
+          ? <PekState title="Нет данных dashboard" />
+          : <>
+            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {metricDefinitions.map(([key, label, suffix, pendingEngine]) => (
+                <article key={key} className="rounded-2xl border bg-white p-5" title={pendingEngine ? 'Расчёт показателя будет доступен после подключения validation engine' : undefined}>
+                  <p className="text-sm text-slate-500">{label}</p>
+                  <p className="mt-2 text-3xl font-black text-eco-900">{dashboard.data[key]}{suffix}</p>
+                  {pendingEngine && <p className="mt-2 text-xs text-slate-400">Показатель возвращён backend</p>}
+                </article>
+              ))}
+            </section>
+            <section className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl border bg-white p-5">
+                <h2 className="font-black">Ближайшие сроки</h2>
+                <div className="mt-3 space-y-2">
+                  {dashboard.data.deadlines.map((item) => (
+                    <Link key={`${item.type}-${item.id}-${item.date}`} to={item.type.includes('PROGRAM') ? `/staff/pek/programs/${item.id}` : `/staff/pek/reports/${item.id}`} className="flex justify-between rounded-xl bg-slate-50 p-3 text-sm">
+                      <span>{item.description}</span><strong>{item.date}</strong>
+                    </Link>
+                  ))}
+                  {!dashboard.data.deadlines.length && <p className="text-sm text-slate-500">Ближайших сроков нет</p>}
+                </div>
+              </div>
+              <div className="rounded-2xl border bg-white p-5">
+                <h2 className="font-black">Последние отчёты</h2>
+                <div className="mt-3 space-y-2">
+                  {dashboard.data.reports.map((report) => (
+                    <Link key={report.id} to={`/staff/pek/reports/${report.id}`} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-sm">
+                      <span>{report.number || `Отчёт №${report.id}`} · {report.periodStart}—{report.periodEnd}</span>
+                      <PekStatusBadge status={report.status} />
+                    </Link>
+                  ))}
+                  {!dashboard.data.reports.length && <p className="text-sm text-slate-500">Отчётов пока нет</p>}
+                </div>
+              </div>
+            </section>
+          </>}
   </div>;
 };
+
 export default PekDashboardPage;

@@ -39,7 +39,7 @@ afterAll(() => {
 });
 
 describe('protocol access and draft compatibility', () => {
-  it('moves initial version zero to If-Match and removes it from the JSON body', async () => {
+  it('keeps protocol version zero in the JSON body and does not invent If-Match', async () => {
     let ifMatch = '';
     let requestBody: unknown;
     server.use(
@@ -52,8 +52,8 @@ describe('protocol access and draft compatibility', () => {
 
     await api.patch('/protocols/48', { version: 0, protocolDate: '2026-07-13' });
 
-    expect(ifMatch).toBe('"0"');
-    expect(requestBody).toEqual({ protocolDate: '2026-07-13' });
+    expect(ifMatch).toBe('');
+    expect(requestBody).toEqual({ version: 0, protocolDate: '2026-07-13' });
   });
 
   it.each(['ADMIN', 'HEAD', 'MANAGER', 'LABORATORY', 'ACCOUNTANT', 'STAFF', 'AUDITOR'])(
@@ -180,17 +180,17 @@ describe('protocol mutation HTTP contracts', () => {
       {
         method: 'PATCH',
         path: '/api/protocols/42/results/bulk-device',
-        body: { resultIds: ['1', '2'], measurementDeviceId: 9 },
+        body: { resultIds: ['1', '2'], measurementDeviceId: 9, version: 14 },
       },
       {
         method: 'PATCH',
         path: '/api/protocols/42/results/bulk-place',
-        body: { resultIds: ['1'], measurementPlace: 'Точка №1' },
+        body: { resultIds: ['1'], measurementPlace: 'Точка №1', version: 14 },
       },
       {
         method: 'DELETE',
         path: '/api/protocols/42/results/bulk',
-        body: { resultIds: ['2'] },
+        body: { resultIds: ['2'], version: 14 },
       },
     ]);
   });

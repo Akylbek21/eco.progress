@@ -44,8 +44,10 @@ export async function getMeasurementDevices(params?: DirectoryQuery): Promise<Me
 }
 
 export async function getAvailableMeasurementDevices(params?: DirectoryQuery): Promise<MeasurementDevice[]> {
-  const response = await api.get<ApiResponse<unknown> | unknown>('/measurement-devices/available', { params });
-  return extractList(response, ['devices', 'measurementDevices'])
+  // The current controller accepts no query parameters. Scope the returned DTOs only by
+  // fields the backend actually supplies; absence of laboratory/type metadata is not invented.
+  const response = await api.get<ApiResponse<unknown> | unknown>('/measurement-devices/available');
+  const devices = extractList(response, ['devices', 'measurementDevices'])
     .map((raw) => {
       const source = record(raw);
       return {
@@ -63,6 +65,14 @@ export async function getAvailableMeasurementDevices(params?: DirectoryQuery): P
         laboratoryId: source.laboratoryId as string | number | undefined,
       } as MeasurementDevice;
     });
+  return devices.filter((device) => {
+    const status = String(device.status || '').toUpperCase();
+    if (device.archived || ['ARCHIVED', 'EXPIRED', 'INACTIVE', 'OUT_OF_SERVICE'].includes(status)) return false;
+    if (params?.laboratoryId && device.laboratoryId && String(device.laboratoryId) !== String(params.laboratoryId)) return false;
+    const validUntil = String(device.verificationValidUntil || '').slice(0, 10);
+    if (params?.measurementDate && validUntil && validUntil < params.measurementDate.slice(0, 10)) return false;
+    return true;
+  });
 }
 
 export async function createMeasurementDevice(payload: Omit<MeasurementDevice, 'id'>): Promise<MeasurementDevice> {

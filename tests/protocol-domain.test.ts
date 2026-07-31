@@ -4,7 +4,6 @@ import { validateProtocol } from '../src/features/protocols/schemas/protocolSche
 import { calculateCompliance } from '../src/features/protocols/utils/protocolCalculations';
 import { PROTOCOL_TEMPLATES, isProtocolTemplateId } from '../src/features/protocols/utils/protocolTemplates';
 import { mapBackendProtocolType, mapFrontendProtocolType } from '../src/features/protocols/api/protocolTypeMapper';
-import { adaptLegacyProtocolTemplateId } from '../src/features/protocols/api/protocolLegacyReadAdapter';
 import { unwrapApiData } from '../src/services/apiHelpers';
 import { isDeviceValidForDate } from '../src/utils/protocolDevices';
 import { createWizardDefaults, emptyWizardResult } from '../src/features/protocols/components/wizardTypes';
@@ -18,11 +17,9 @@ describe('protocol domain contract', () => {
     expect(isProtocolTemplateId('physical_factors')).toBe(false);
   });
 
-  it('keeps the canonical mapper strict and isolates legacy types in the read adapter', () => {
+  it('keeps the canonical mapper strict without a legacy request adapter', () => {
     expect(mapBackendProtocolType('water')).toBe('water');
     expect(() => mapBackendProtocolType('water_wastewater')).toThrow(/неизвестный тип/i);
-    expect(adaptLegacyProtocolTemplateId('water_wastewater')).toBe('water');
-    expect(adaptLegacyProtocolTemplateId('ambient_air_szz')).toBe('ambient_air');
     expect(mapFrontendProtocolType('water')).toBe('water');
     expect(mapFrontendProtocolType('uv_emf_laser')).toBe('uv_emf_laser');
   });
@@ -44,11 +41,11 @@ describe('protocol domain contract', () => {
     form.templateId = 'water'; form.companyId = '15'; form.objectId = '38'; form.laboratoryId = '2'; form.executorId = '17'; form.measurementPlace = 'Точка отбора'; form.sourceNumber = 'W-1'; form.testingMethodNd = 'ГОСТ'; form.temperature = '20'; form.waterType = 'DRINKING_WATER'; form.waterUseCategory = 'I';
     form.results = [{ ...emptyWizardResult(), indicatorName: 'Хлориды', pollutantCode: 'CL', unit: 'мг/л', value: '12', measurementDeviceId: '5' }];
     const request = mapProtocolWizardToRequest(form);
-    expect(request).toMatchObject({ templateId: 'water', companyId: 15, objectId: 38, laboratoryId: 2, executorId: 17, conditions: { waterType: 'DRINKING_WATER', waterUseCategory: 'I' }, environment: { temperature: 20, source: 'MANUAL' } });
+    expect(request).toMatchObject({ templateId: 'water', companyId: 15, objectId: 38, laboratoryId: 2, executorId: 17, conditions: { waterType: 'DRINKING_WATER', waterUseCategory: 'I', temperature: '20', weatherSource: 'MANUAL' } });
     expect(request.measurements).toHaveLength(1);
     expect(request.measurements[0].testingMethodNd).toBe('ГОСТ');
     expect(request.measurements[0].unit).toBe('мг/дм³');
-    expect(request.environment).toMatchObject({ temperature: 20, source: 'MANUAL' });
+    expect(request).not.toHaveProperty('environment');
   });
 
   it('maps editable fields to the canonical top-level PATCH DTO', () => {
@@ -71,7 +68,7 @@ describe('protocol domain contract', () => {
     expect(request.executorId).toBe(21);
     expect(request.testing.samplingDate).toBe('2026-07-21');
     expect(request.organization).not.toHaveProperty('objectId');
-    expect(request).not.toHaveProperty('executor');
+    expect(request.executor).toBe('Иванов И.И.');
     expect(request.testing).not.toHaveProperty('measurementDate');
   });
 

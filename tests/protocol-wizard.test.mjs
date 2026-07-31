@@ -34,14 +34,14 @@ test('wizard persists and clears the session draft', async () => {
   assert.match(wizard, /Найдена незавершённая форма протокола/);
 });
 
-test('wizard payload mapper filters empty rows and sends canonical environment', async () => {
+test('wizard payload mapper filters empty rows and sends weather as quick-create conditions', async () => {
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   const api = await read('src/services/apiProtocolService.ts');
   assert.match(mapper, /filter\(isNonEmptyResult\)/);
   assert.match(mapper, /mapQuickCreateTemplateId\(form\.templateId\)/);
   assert.match(mapper, /const conditions = mapConditions\(form, rows\)/);
-  assert.match(mapper, /environment: mapEnvironment\(form\)/);
-  assert.match(mapper, /pressureKpa:/);
+  assert.doesNotMatch(mapper, /environment: mapEnvironment\(form\)/);
+  assert.match(mapper, /pressure: normalizeEnvironmentValue/);
   assert.doesNotMatch(api, /environment: _unsupportedEnvironment/);
   assert.match(api, /'Idempotency-Key'/);
 });

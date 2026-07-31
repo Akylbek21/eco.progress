@@ -1,0 +1,16 @@
+target/
+data/
+uploads/
+logs/
+.idea/
+.vscode/
+.git/
+.gitignore
+.mvn/wrapper/maven-wrapper.jar
+*.iml
+*.log
+node_modules/
+.env
+.env.*
+README*.md
+HELP.md

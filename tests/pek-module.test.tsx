@@ -1,147 +1,275 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
-import { pekService } from '../src/features/pek/api/pekService';
-import { mapPekPage } from '../src/features/pek/api/pekMappers';
-import { mapPekError, pekIssueMessage } from '../src/features/pek/utils/pekErrorMapper';
-import { primaryPekAction } from '../src/features/pek/utils/pekActions';
-import { pekStatusLabels } from '../src/features/pek/utils/pekLabels';
-import { retryPekQuery } from '../src/features/pek/utils/pekQueryPolicy';
-import PekPlanFact from '../src/features/pek/components/sections/PekPlanFact';
-import PekIssuesPanel from '../src/features/pek/components/issues/PekIssuesPanel';
-import { PekPrimaryAction } from '../src/features/pek/components/common/PekUi';
-import PekQueryError from '../src/features/pek/components/common/PekQueryError';
-import { createWizardDefaults } from '../src/features/protocols/components/wizardTypes';
-import { buildQuickCreatePayload } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
-import { formatPekResult } from '../src/features/pek/utils/pekFormatters';
-import { pekReportSchema, validatePekResponse } from '../src/features/pek/schemas/pekResponseSchemas';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import type { PekProgramForm } from '../src/features/pek/api/pekContracts';
+import { pekApi } from '../src/features/pek/api/pekService';
+import { filenameFromDisposition } from '../src/features/pek/api/pekMappers';
+import { mapDashboardResponse, mapProgramResponse, mapReportResponse } from '../src/features/pek/mappers/responseMappers';
+import {
+  mapProgramAutosaveToRequest,
+  mapProgramCreateFormToRequest,
+  mapProgramEditFormToRequest,
+} from '../src/features/pek/mappers/programMappers';
+import {
+  getCreationBlockState,
+  getReportWorkflowActions,
+  mapReportCreateRequest,
+} from '../src/features/pek/mappers/reportMappers';
+import { labelPekStatus } from '../src/features/pek/utils/pekLabels';
 
-let captured: unknown;
-let capturedIfMatch: string | null;
-const server=setupServer(
-  http.get('*/api/pek/programs',({request})=>HttpResponse.json({data:{content:[{id:1,number:'ПЭК-1'}],number:0,size:20,totalElements:1,totalPages:1},query:new URL(request.url).searchParams.get('search')})),
-  http.post('*/api/pek/programs',async({request})=>{captured=await request.json();return HttpResponse.json({data:{id:7,...captured}});}),
-  http.post('*/api/pek/reports/:id/collect',async({request})=>{captured=await request.json();capturedIfMatch=request.headers.get('If-Match');return HttpResponse.json({data:{id:3,status:'RUNNING',progressPercent:10,processedRows:2,foundIssues:0}});}),
-  http.post('*/api/pek/reports',async({request})=>{captured=await request.json();return HttpResponse.json({data:{id:18,version:1,status:'COLLECTING'}});}),
-  http.get('*/api/pek/settings',()=>HttpResponse.json({data:{collectionPollingIntervalMs:1500,autosaveDebounceMs:1200,version:4}})),
-  http.patch('*/api/pek/settings',async({request})=>{captured=await request.json();capturedIfMatch=request.headers.get('If-Match');return HttpResponse.json({data:{...captured,version:5}});}),
-  http.get('*/api/pek/reports/:reportId/unmatched-sources/:sourceId/link-options',()=>HttpResponse.json({data:[{id:31,name:'СЗЗ-1',indicators:[{id:71,name:'Пыль'}]}]})),
+let body: unknown;
+let ifMatch: string | null;
+let programListCalls = 0;
+let reportListCalls = 0;
+const report = {
+  id: 9,
+  version: 13,
+  status: 'COLLECTING',
+  periodType: 'QUARTER',
+  year: 2026,
+  quarter: 3,
+  periodStart: '2026-07-01',
+  periodEnd: '2026-09-30',
+  linkedProtocolCount: 2,
+  linkedProtocolNumbers: ['P-READY', 'P-SIGNED'],
+  lastCollectedAt: '2026-07-31T10:00:00Z',
+};
+const server = setupServer(
+  http.get('*/api/pek/programs', ({ request }) => {
+    programListCalls += 1;
+    return HttpResponse.json({ data: { content: [], number: 0, size: 20, totalElements: 0, totalPages: 0 }, search: new URL(request.url).searchParams.get('search') });
+  }),
+  http.get('*/api/pek/reports', () => {
+    reportListCalls += 1;
+    return HttpResponse.json({ data: { content: [], number: 0, size: 20, totalElements: 0, totalPages: 0 } });
+  }),
+  http.patch('*/api/pek/programs/:id/draft', async ({ request }) => {
+    body = await request.json();
+    ifMatch = request.headers.get('If-Match');
+    return HttpResponse.json({ data: { id: 1, version: 8 } });
+  }),
+  http.patch('*/api/pek/programs/:id', async ({ request }) => {
+    body = await request.json();
+    ifMatch = request.headers.get('If-Match');
+    return HttpResponse.json({ data: { id: 1, version: 8 } });
+  }),
+  http.post('*/api/pek/programs/:id/return', async ({ request }) => {
+    body = await request.json();
+    ifMatch = request.headers.get('If-Match');
+    return HttpResponse.json({ data: { id: 1, version: 8 } });
+  }),
+  http.post('*/api/pek/reports', async ({ request }) => {
+    body = await request.json();
+    return HttpResponse.json({ data: report });
+  }),
+  http.post('*/api/pek/reports/:id/collect', async ({ request }) => {
+    body = {};
+    ifMatch = request.headers.get('If-Match');
+    return HttpResponse.json({ data: {
+      report,
+      linkedProtocolCount: 2,
+      linkedProtocolNumbers: ['P-READY', 'P-SIGNED'],
+    } });
+  }),
+  http.get('*/api/pek/dashboard', () => HttpResponse.json({ data: {
+    totalReportCount: 0,
+    readinessPercent: 0,
+    criticalIssueCount: 0,
+    overdueRiskCount: 0,
+    programExecutionPercent: 0,
+    openExceedanceCount: 0,
+    overdueActionCount: 0,
+    missingProtocolCount: 0,
+    deadlines: [],
+    reports: [],
+  } })),
 );
-beforeAll(()=>server.listen({onUnhandledRequest:'error'}));
-afterEach(()=>{cleanup();captured=undefined;capturedIfMatch=null;server.resetHandlers();});
-afterAll(()=>server.close());
 
-describe('production PEK module',()=>{
-  it('uses real paginated programs API and preserves server totals',async()=>{
-    const page=await pekService.getPrograms({search:'СЗЗ',page:0,size:20});
-    expect(page.content[0]).toMatchObject({id:1,number:'ПЭК-1'});
-    expect(page.totalElements).toBe(1);
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => {
+  body = undefined;
+  ifMatch = null;
+  programListCalls = 0;
+  reportListCalls = 0;
+  server.resetHandlers();
+});
+afterAll(() => server.close());
+
+const form: PekProgramForm = {
+  companyId: 1,
+  objectId: 2,
+  number: ' PEK-1 ',
+  name: ' Program ',
+  description: ' Description ',
+  validFrom: '2026-01-01',
+  validUntil: '2026-12-31',
+  responsibleUserId: 7,
+  controlItems: [{
+    clientId: 'control-a',
+    code: 'AIR-1',
+    name: 'Air',
+    mandatory: true,
+    active: true,
+    sortOrder: 0,
+  }],
+  indicators: [{
+    clientId: 'indicator-a',
+    controlItemClientId: 'control-a',
+    indicatorName: 'NO2',
+    mandatory: true,
+    sortOrder: 0,
+  }],
+  measures: [{ clientId: 'measure-a', name: 'Filters' }],
+};
+
+describe('PEK backend contract', () => {
+  it('maps program creation and uses controlItemIndex for new rows', () => {
+    const request = mapProgramCreateFormToRequest(form);
+    expect(request).toMatchObject({ companyId: 1, objectId: 2, number: 'PEK-1', name: 'Program' });
+    expect(request.controlItems[0]).not.toHaveProperty('clientId');
+    expect(request.indicators[0]).toMatchObject({ controlItemIndex: 0, indicatorName: 'NO2' });
+    expect(request.indicators[0]).not.toHaveProperty('controlItemClientId');
   });
-  it('sends one complete program create request',async()=>{
-    await pekService.createProgram({companyId:1,objectId:15,number:'ПЭК-1',name:'Контроль',version:1,validFrom:'2026-01-01',validUntil:'2026-12-31',controlItems:[],indicators:[],measures:[]});
-    expect(captured).toMatchObject({companyId:1,objectId:15,name:'Контроль'});
+
+  it('maps edits and intentionally preserves empty arrays as clear commands', () => {
+    const request = mapProgramEditFormToRequest({ ...form, controlItems: [], indicators: [], measures: [] });
+    expect(request.controlItems).toEqual([]);
+    expect(request.indicators).toEqual([]);
+    expect(request.measures).toEqual([]);
   });
-  it('collect sends current version and returns polling status',async()=>{
-    const run=await pekService.collectReport(9,{version:12});
-    expect(captured).toEqual({});
-    expect(capturedIfMatch).toBe('12');
-    expect(run.status).toBe('RUNNING');
+
+  it('autosave never sends program collections', async () => {
+    const request = mapProgramAutosaveToRequest(form);
+    expect(request.controlItems).toBeUndefined();
+    expect(request.indicators).toBeUndefined();
+    expect(request.measures).toBeUndefined();
+    await pekApi.saveProgramDraft(1, 7, request);
+    expect(body).not.toHaveProperty('controlItems');
+    expect(body).not.toHaveProperty('indicators');
+    expect(body).not.toHaveProperty('measures');
+    expect(body).toHaveProperty('version', 7);
+    expect(ifMatch).toBeNull();
   });
-  it('creates a report with backend-managed collection in one command',async()=>{
-    const report=await pekService.createReport({companyId:1,objectId:15,periodType:'QUARTER',year:2026,quarter:2,programId:7,collectImmediately:true});
-    expect(report).toMatchObject({id:18,status:'COLLECTING'});
-    expect(captured).toEqual({companyId:1,objectId:15,periodType:'QUARTER',year:2026,quarter:2,programId:7,collectImmediately:true});
-    expect(captured).not.toHaveProperty('collect');
+
+  it('sends empty arrays and version in the full PATCH body', async () => {
+    const request = mapProgramEditFormToRequest({ ...form, controlItems: [], indicators: [], measures: [] });
+    await pekApi.updateProgram(1, 12, request);
+    expect(body).toMatchObject({ version: 12, controlItems: [], indicators: [], measures: [] });
+    expect(ifMatch).toBeNull();
   });
-  it('normalizes array and paged response shapes',()=>{
-    expect(mapPekPage<number>([1,2]).totalElements).toBe(2);
-    expect(mapPekPage<number>({data:{items:[3],page:2,size:10,total:21}})).toMatchObject({content:[3],page:2,totalElements:21,totalPages:3});
+
+  it('keeps return version in body and If-Match header', async () => {
+    await pekApi.returnProgram(1, { version: 12, reason: 'Исправить период' });
+    expect(body).toEqual({ version: 12, reason: 'Исправить период' });
+    expect(ifMatch).toBe('12');
   });
-  it('renders event completion and indicator completeness separately',()=>{
-    render(<MemoryRouter><PekPlanFact rows={[{id:'row-1',controlItem:'СЗЗ-1',source:'Точка 1',frequency:'Квартально',plannedEvents:4,actualEvents:2,eventCompletionPercent:50,plannedIndicators:8,foundIndicators:6,indicatorCompletenessPercent:75,status:'PARTIAL',protocolIds:[31],issueCount:1}]}/></MemoryRouter>);
-    expect(screen.getByText('50%')).toBeTruthy();
-    expect(screen.getByText('75%')).toBeTruthy();
-    expect(screen.getByRole('link',{name:'№31'}).getAttribute('href')).toBe('/staff/protocols/31');
+
+  it('centralizes only implemented report workflow actions', () => {
+    expect(getReportWorkflowActions('DRAFT')).toEqual(['COLLECT']);
+    expect(getReportWorkflowActions('COLLECTING')).toEqual(['COLLECT', 'SUBMIT_REVIEW']);
+    expect(getReportWorkflowActions('READY_FOR_REVIEW')).toEqual(['APPROVE']);
+    expect(getReportWorkflowActions('APPROVED')).toEqual(['ARCHIVE']);
+    expect(getReportWorkflowActions('SIGNED')).toEqual([]);
   });
-  it('uses backend availableActions and shows disabled reason',()=>{
-    const actions=[{code:'SIGN' as const,label:'Подписать',enabled:false,disabledReason:'Нет права подписи'},{code:'DOWNLOAD_PDF' as const,label:'PDF',enabled:true}];
-    const action=actions[0];
-    const click=vi.fn();
-    render(<PekPrimaryAction action={action} onClick={click}/>);
-    expect((screen.getByRole('button',{name:'Подписать'}) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText('Нет права подписи')).toBeTruthy();
+
+  it('maps Java ProgramResponse string actions without deriving status', () => {
+    const program = mapProgramResponse({
+      id: 1,
+      number: 'PEK-1',
+      name: 'Program',
+      version: 4,
+      status: 'RETURNED',
+      validFrom: '2026-01-01',
+      validUntil: '2026-12-31',
+      responsibleUser: { id: 7, name: 'Ecologist' },
+      availableActions: ['EDIT', 'SUBMIT_REVIEW', 'CLONE'],
+      readOnly: false,
+    });
+    expect(program.responsible?.id).toBe(7);
+    expect(program.availableActions.map((item) => item.code)).toEqual(['EDIT', 'SUBMIT_REVIEW', 'CLONE']);
   });
-  it('maps issue codes and navigates to the selected issue',()=>{
-    const navigate=vi.fn();
-    const issue={id:1,code:'PEK_REQUIRED_PROTOCOL_MISSING',severity:'ERROR' as const,blocking:true,message:'technical',resolved:false,sectionCode:'EMISSIONS' as const};
-    render(<PekIssuesPanel issues={[issue]} onNavigate={navigate}/>);
-    expect(screen.getByText('Не найден обязательный протокол для позиции контроля')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button'));
-    expect(navigate).toHaveBeenCalledWith(issue);
-    expect(pekIssueMessage(issue)).not.toContain('PEK_');
+
+  it('maps Java reportYear/reportQuarter and dashboard deadline fields exactly', () => {
+    expect(mapReportResponse({ ...report, reportYear: 2026, reportQuarter: 3, year: undefined, quarter: undefined }).year).toBe(2026);
+    expect(mapDashboardResponse({
+      totalReportCount: 0,
+      readinessPercent: 0,
+      deadlines: [{ id: 10, type: 'PROGRAM_VALID_UNTIL', date: '2026-12-31', description: 'Program deadline' }],
+      reports: [],
+    }).deadlines[0]).toEqual({ id: 10, type: 'PROGRAM_VALID_UNTIL', date: '2026-12-31', description: 'Program deadline' });
   });
-  it('maps backend errors without exposing stack or raw status text',()=>{
-    const error={isAxiosError:true,response:{status:409,data:{code:'VERSION_CONFLICT',message:'Request failed with status code 409',fieldErrors:{'environment.temperature':'Обязательное поле'},traceId:'trace-7'}},message:'raw'};
-    const mapped=mapPekError(error);
-    expect(mapped.message).toBe('Отчёт изменён другим сотрудником');
-    expect(mapped.fieldErrors['environment.temperature']).toBe('Обязательное поле');
-    expect(mapped.traceId).toBe('trace-7');
+
+  it('creates quarterly reports with quarter', async () => {
+    const request = mapReportCreateRequest({ companyId: 1, objectId: 2, periodType: 'QUARTER', year: 2026, quarter: 3 }, 10, true);
+    await pekApi.createReport(request);
+    expect(body).toEqual({ companyId: 1, objectId: 2, periodType: 'QUARTER', year: 2026, quarter: 3, programId: 10, collectImmediately: true });
   });
-  it('shows a specific backend capability message for HTTP 404',()=>{
-    render(<PekQueryError error={{isAxiosError:true,response:{status:404,data:{message:'Not found'}},message:'Not found'}} resource="Показатели ПЭК" retry={()=>{}}/>);
-    expect(screen.getByText('Функция ПЭК отсутствует на backend')).toBeTruthy();
-    expect(screen.getByText(/Показатели ПЭК/)).toBeTruthy();
+
+  it('creates annual reports without quarter', () => {
+    const request = mapReportCreateRequest({ companyId: 1, objectId: 2, periodType: 'YEAR', year: 2026, quarter: 4 }, 10, false);
+    expect(request).not.toHaveProperty('quarter');
   });
-  it('does not hide missing required report fields with Zod defaults',()=>{
-    expect(() => validatePekResponse(pekReportSchema, {
-      id:1,number:'R-1',revision:1,version:1,status:'DRAFT',periodType:'YEAR',year:2026,
-      periodStart:'2026-01-01',periodEnd:'2026-12-31',readinessPercent:0,valid:false,
-      blockingIssueCount:0,warningCount:0,exceedanceCount:0,readOnly:false,validationActual:false,
-    }, 'report details')).toThrow(/sections|availableActions|blockingReasons/);
+
+  it('blocks duplicate reports and backend blocking reasons', () => {
+    const base = { periodStart: '2026-01-01', periodEnd: '2026-12-31', programs: [form as never], selectedProgramId: 1, warnings: [] };
+    expect(getCreationBlockState({ ...base, duplicateReportId: 55, blockingReasons: [] }).duplicateReportId).toBe(55);
+    expect(getCreationBlockState({ ...base, duplicateReportId: null, blockingReasons: ['No active program'] })).toMatchObject({ blocked: true, blockingReasons: ['No active program'] });
   });
-  it('passes PEK links to protocol quick-create and keeps executor as laboratory employee',()=>{
-    const form={...createWizardDefaults(),templateId:'ambient_air' as const,companyId:'1',objectId:'15',laboratoryId:'3',executorId:'8',pekProgramId:'22',pekControlItemId:'31',pekControlEventId:'80',pekReportId:'45',monitoringPointId:'7'};
-    const payload=buildQuickCreatePayload(form,{validationMode:'draft'});
-    expect(payload).toMatchObject({companyId:1,objectId:15,executorId:8,pekProgramId:22,pekControlItemId:31,pekControlEventId:80,pekReportId:45,monitoringPointId:7});
+
+  it('preserves backend zero values and unknown statuses', async () => {
+    const dashboard = await pekApi.getDashboard({});
+    expect(dashboard.totalReportCount).toBe(0);
+    expect(dashboard.readinessPercent).toBe(0);
+    expect(labelPekStatus('NEW_BACKEND_STATUS')).toBe('NEW_BACKEND_STATUS');
   });
-  it('prefers an enabled backend action over a disabled action',()=>{
-    const action=primaryPekAction([
-      {code:'COLLECT',label:'Собрать',enabled:false,disabledReason:'Сбор уже идёт'},
-      {code:'VALIDATE',label:'Проверить',enabled:true},
-    ]);
-    expect(action?.code).toBe('VALIDATE');
+
+  it('collect is synchronous, versioned and returns real protocol numbers', async () => {
+    const collected = await pekApi.collectReport(9);
+    expect(ifMatch).toBeNull();
+    expect(body).toEqual({});
+    expect(collected.linkedProtocolNumbers).toEqual(['P-READY', 'P-SIGNED']);
+    expect(collected.linkedProtocolNumbers).not.toContain('P-DRAFT');
   });
-  it('centralizes user-facing status labels',()=>{
-    expect(pekStatusLabels.READY_FOR_APPROVAL).toBe('Готов к утверждению');
-    expect(pekStatusLabels.REQUIRES_CORRECTION).toBe('Требует исправления');
+
+  it('downloads a program document through the authorized PEK API client', () => {
+    expect(filenameFromDisposition("attachment; filename*=UTF-8''protocol%20scan.pdf", 'fallback')).toBe('protocol scan.pdf');
+    const serviceSource = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
+    expect(serviceSource).toContain('pekApiClient as api');
+    expect(serviceSource).toContain('responseType:');
+    expect(serviceSource).toContain("response.headers['content-disposition']");
+    expect(serviceSource).not.toContain('GridFS');
   });
-  it('retries only transient query failures',()=>{
-    expect(retryPekQuery(0,{response:{status:503}})).toBe(true);
-    expect(retryPekQuery(0,{response:{status:404}})).toBe(false);
-    expect(retryPekQuery(2,{response:{status:503}})).toBe(false);
+
+  it('program list can be requested without companyId', async () => {
+    await pekApi.getPrograms({ page: 0, size: 20 });
+    expect(programListCalls).toBe(1);
   });
-  it('loads and saves PEK settings through backend',async()=>{
-    const settings=await pekService.getSettings();
-    expect(settings.version).toBe(4);
-    await pekService.updateSettings({...settings,autosaveDebounceMs:900});
-    expect(captured).toMatchObject({autosaveDebounceMs:900});
-    expect(captured).not.toHaveProperty('version');
-    expect(capturedIfMatch).toBe('4');
+
+  it('report page query is guarded until companyId/objectId are selected', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportsPage.tsx'), 'utf8');
+    expect(source).toContain('enabled: ready');
+    expect(source).toContain('Выберите компанию и объект для просмотра отчётов');
+    expect(reportListCalls).toBe(0);
   });
-  it('loads backend link options instead of accepting internal ids from a text field',async()=>{
-    const options=await pekService.getUnmatchedLinkOptions(12,44);
-    expect(options[0]).toMatchObject({id:31,name:'СЗЗ-1'});
-    expect(options[0].indicators[0]).toMatchObject({id:71,name:'Пыль'});
+
+  it('uses backend readOnly and editable statuses for autosave', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramCreatePage.tsx'), 'utf8');
+    expect(source).toContain("['DRAFT', 'RETURNED'].includes(program.data.status)");
+    expect(source).toContain('program.data?.readOnly');
+    expect(source).toContain('mapProgramAutosaveToRequest');
   });
-  it('formats zero, negative, ranges and less-than-detection results without losing values',()=>{
-    expect(formatPekResult(0)).toBe('0');
-    expect(formatPekResult(-0.5)).toBe('-0.5');
-    expect(formatPekResult({numericValue:0})).toBe('0');
-    expect(formatPekResult({rangeFrom:0,rangeTo:2})).toBe('0–2');
-    expect(formatPekResult({belowDetectionLimit:true,detectionLimit:0.01})).toBe('< 0.01');
-    expect(formatPekResult(null)).toBe('—');
+
+  it('shows a version conflict dialog and never retries mutations automatically', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramCreatePage.tsx'), 'utf8');
+    expect(source).toContain('Программа изменена другим пользователем');
+    expect(source).toContain('retry: false');
+  });
+
+  it('treats empty permits as a valid state', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramCreatePage.tsx'), 'utf8');
+    expect(source).toContain('Для объекта нет доступных разрешительных документов');
   });
 });

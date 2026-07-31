@@ -1,0 +1,55 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table><tbody><tr><td><p>
+Длительность облучения t, с</p>
+</td><td><p>
+Поправочный коэффициент <font face="Symbol">b</font></p>
+</td><td><p>
+Предельный угол <font face="Symbol">a</font> пред, рад</p>
+</td></tr><tr><td><p>
+1</p>
+</td><td><p>
+2</p>
+</td><td><p>
+3</p>
+</td></tr><tr><td><p>
+t&nbsp;≤ 10-9</p>
+</td><td><p>
+103 × <font face="Symbol">a</font>2 + 1</p>
+</td><td><p>
+10-2</p>
+</td></tr><tr><td><p>
+10-9 &lt; t&nbsp;≤ 10-7</p>
+</td><td><p>
+2,8 × 103 × <font face="Symbol">a</font>2 + 1</p>
+</td><td><p>
+6,0 × 10-3</p>
+</td></tr><tr><td><p>
+10-7 &lt; t&nbsp;≤ 10-5</p>
+</td><td><p>
+8,2 × 103 × <font face="Symbol">a</font>2 + 1</p>
+</td><td><p>
+3,5 × 10-3</p>
+</td></tr><tr><td><p>
+10-5 &lt; t&nbsp;≤ 10-4</p>
+</td><td><p>
+2,5 × 104 × <font face="Symbol">a</font>2 + 1</p>
+</td><td><p>
+2,0 × 10-3</p>
+</td></tr><tr><td><p>
+10-4 &lt; t&nbsp;≤ 10-2</p>
+</td><td><p>
+8,2 × 103 × <font face="Symbol">a</font>2 + 1</p>
+</td><td><p>
+3,5 × 10-3</p>
+</td></tr><tr><td><p>
+10-2 &lt; t&nbsp;≤ 1</p>
+</td><td><p>
+2,8 × 103 × <font face="Symbol">a</font>2 + 1</p>
+</td><td><p>
+6,0 × 10-3</p>
+</td></tr><tr><td><p>
+t &gt; 1</p>
+</td><td><p>
+103 × <font face="Symbol">a</font>2 + 1</p>
+</td><td><p>
+10-2</p>
+</td></tr></tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>

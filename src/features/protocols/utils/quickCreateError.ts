@@ -42,20 +42,9 @@ export const buildQuickCreateTechnicalReport = (
         sourceNumberPresent: Boolean(payload.sourceNumber),
         measurementCount: payload.measurements.length,
         measurementKeys: [...new Set(payload.measurements.flatMap(sortedKeys))].sort(),
-        environmentKeys: sortedKeys(payload.environment),
         conditionsKeys: sortedKeys(payload.conditions),
         printVisibilityKeys: sortedKeys(payload.printVisibility),
-        linkageKeys: [
-          'orderId',
-          'orderServiceItemId',
-          'pekProgramId',
-          'pekControlItemId',
-          'pekControlEventId',
-          'pekReportId',
-          'monitoringPointId',
-          'emissionSourceId',
-          'waterOutletId',
-        ].filter((key) => payload[key as keyof QuickCreateProtocolRequest] !== undefined),
+        linkageKeys: payload.orderId === undefined ? [] : ['orderId'],
       }
     : undefined,
 });

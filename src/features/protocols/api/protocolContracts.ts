@@ -41,25 +41,22 @@ export interface ProtocolTestingRequest {
 
 export interface UpdateProtocolRequest {
   version: number;
+  number: string | null;
   protocolDate: string;
-  companyId: string | number | null;
   objectId: string | number | null;
-  laboratoryId: string | number | null;
+  executor: string | null;
   executorId: string | number | null;
   measurementDate: string | null;
-  sampleDate: string | null;
   measurementTime: string | null;
   measurementPlace: string | null;
   testingStartDate: string | null;
   testingEndDate: string | null;
-  sourceNumber: string | null;
   formCode: string | null;
-  application: string | null;
+  appendixNumber: string | null;
   organization: ProtocolOrganizationRequest;
   laboratory: ProtocolLaboratoryRequest;
   testing: ProtocolTestingRequest;
   environment: ProtocolEnvironmentRequest;
-  conditions?: Record<string, ProtocolResultValue>;
   testingMethodDocument: string | null;
   complianceDocument: string | null;
   explanatoryNote: string | null;
@@ -74,12 +71,12 @@ export interface ProtocolEnvironmentRequest {
   humidityMinPercent: string | null;
   humidityMaxPercent: string | null;
   pressureKpa: string | null;
+  pressureHpa: string | null;
   windSpeedMs: string | null;
   conditionsComment: string | null;
   source: ProtocolEnvironmentalConditions['source'] | null;
   dataSource: string | null;
   observedAt: string | null;
-  weatherObservedAt: string | null;
   loadedAt: string | null;
   manualChangeReason: string | null;
 }
@@ -100,6 +97,7 @@ export interface ProtocolsQueryRequest {
   objectId?: number;
   laboratoryId?: number;
   executorId?: number;
+  compliance?: string;
   dateFrom?: string;
   dateTo?: string;
   sort?: string;
@@ -116,28 +114,12 @@ export type QuickCreateProtocolTemplateId =
   | 'uv_emf_laser'
   | 'water';
 
-export interface QuickCreateProtocolEnvironment {
-  temperature: number | null;
-  humidity: number | null;
-  pressureKpa: number | null;
-  windSpeed: number | null;
-  source: 'API' | 'MANUAL';
-}
-
-export interface QuickCreateProtocolMethodology {
-  methodologyId?: number;
-  methodologyCode?: string;
-  methodologyName?: string;
-}
-
 export interface QuickCreateProtocolConditions {
   waterType?: string;
   waterUseCategory?: string;
   sampleNumber?: string;
   samplingPlace?: string;
-  samplingDepth?: number;
-  samplingDate?: string;
-  preparationDate?: string;
+  samplingDepth?: string;
   season?: string;
   workCategory?: string;
   workplaceType?: string;
@@ -146,17 +128,25 @@ export interface QuickCreateProtocolConditions {
   lightingType?: string;
   noiseType?: string;
   visualWorkCategory?: string;
+  temperature?: string;
+  humidity?: string;
+  pressure?: string;
+  windSpeed?: string;
+  weatherSource?: string;
+  weatherDataSource?: string;
+  manualChangeReason?: string;
+  weatherObservedAt?: string;
 }
 
 export interface QuickCreateProtocolMeasurement {
-  clientRowId: string;
   indicatorName: string;
   pollutantCode?: string;
   factorType?: string;
   factorCode?: string;
   value: number | string;
   unit: string;
-  measurementDeviceId: number;
+  measurementDeviceId?: number;
+  deviceId?: number;
   normativeId?: number;
   normativeValue?: number;
   testingMethodNd?: string;
@@ -165,10 +155,14 @@ export interface QuickCreateProtocolMeasurement {
   sampleNumber?: string;
   samplingDepth?: number;
   samplingDate?: string;
+  values?: Record<string, ProtocolResultValue>;
 }
 
 export interface QuickCreateProtocolRequest {
-  templateId: QuickCreateProtocolTemplateId;
+  templateId?: QuickCreateProtocolTemplateId;
+  sourceDocumentCode?: string;
+  docxTemplateCode?: string;
+  subtype?: string;
   protocolDate: string;
   sampleDate: string;
   measurementDate: string;
@@ -181,20 +175,10 @@ export interface QuickCreateProtocolRequest {
   measurementTime?: string;
   measurementPlace: string;
   sourceNumber: string;
-  defaultUnit?: string;
   measurements: QuickCreateProtocolMeasurement[];
-  environment?: QuickCreateProtocolEnvironment;
   conditions?: QuickCreateProtocolConditions;
   printVisibility: ProtocolPrintVisibility;
   orderId?: string;
-  orderServiceItemId?: string;
-  pekProgramId?: number;
-  pekControlItemId?: number;
-  pekControlEventId?: number;
-  pekReportId?: number;
-  monitoringPointId?: number;
-  emissionSourceId?: number;
-  waterOutletId?: number;
 }
 
 export interface ProtocolVersionRequest {
@@ -208,7 +192,7 @@ export interface ReturnForRevisionRequest extends ProtocolVersionRequest {
 export type ReplaceProtocolRequest = ReturnForRevisionRequest;
 export type CancelProtocolRequest = ReturnForRevisionRequest;
 
-export interface SignProtocolRequest extends ProtocolVersionRequest {
+export interface SignProtocolRequest {
   cmsSignatureBase64: string;
 }
 

@@ -38,6 +38,7 @@ import { normalizeProtocolError } from '../utils/protocolError';
 import ProtocolDetailsView from '../features/protocols/details/ProtocolDetailsView';
 import type { ProtocolEditSection } from '../features/protocols/details/protocolDetailsModel';
 import { useSignProtocolMutation } from '../features/protocols/hooks/useSignProtocolMutation';
+import { pekApi } from '../features/pek/api/pekApi';
 
 const emptyLaboratory = {
   laboratoryName: '',
@@ -88,7 +89,7 @@ const editableSignature = (protocol: Protocol) => JSON.stringify({
   number: protocol.protocolNumber || protocol.number || '',
   protocolDate: protocol.protocolDate || '',
   formCode: protocol.formCode || '',
-  application: protocol.application || '',
+  appendixNumber: protocol.appendixNumber || '',
   sourceNumber: protocol.sourceNumber || '',
   executor: protocol.executor || '',
   executorId: protocol.executorId || '',
@@ -181,12 +182,13 @@ const protocolSteps: Array<{ key: ProtocolStepKey; label: string }> = [
 const lifecycleSteps = ['Черновик', 'Результаты', 'Расчёт', 'Согласование', 'Утверждение', 'Подписание'];
 const lifecycleIndexByStatus: Record<Protocol['status'], number> = {
   DRAFT: 0,
-  RETURNED_FOR_REVISION: 1,
+  NEEDS_REVISION: 1,
   CALCULATED: 2,
+  READY: 2,
   READY_FOR_APPROVAL: 3,
   APPROVED: 4,
   SIGNED: 5,
-  PUBLISHED: 5,
+  UNKNOWN: 0,
   REPLACED: 5,
   CANCELLED: 0,
   ARCHIVED: 5,
@@ -757,8 +759,11 @@ const ProtocolEditorPage = () => {
     setLoading(true);
     setError('');
     try {
-      const item = await protocolService.getProtocol(protocolId);
-      applyServerProtocol(item);
+      const [item, history] = await Promise.all([
+        protocolService.getProtocol(protocolId),
+        protocolService.getProtocolAudit(protocolId).catch(() => []),
+      ]);
+      applyServerProtocol({ ...item, history });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить протокол');
     } finally {
@@ -923,7 +928,7 @@ const ProtocolEditorPage = () => {
           measurementTime: snapshot.measurementTime,
           measurementPlace: snapshot.measurementPlace,
           formCode: snapshot.formCode,
-          application: snapshot.application,
+          appendixNumber: snapshot.appendixNumber,
           executor: snapshot.executor || '',
           executorId: snapshot.executorId,
           approver: snapshot.approver || '',
@@ -1215,22 +1220,22 @@ const ProtocolEditorPage = () => {
     }
   };
 
-  const generateDocuments = async () => {
-    const current = await ensureSavedProtocol('Сначала сохраняю изменения, затем формирую документы.');
+  const generateDocument = async (kind: 'docx' | 'pdf') => {
+    const current = await ensureSavedProtocol(`Сначала сохраняю изменения, затем формирую ${kind.toUpperCase()}.`);
     if (!current) return;
-    if (current.signatureCount > 0 || ['SIGNED', 'PUBLISHED', 'REPLACED', 'CANCELLED', 'ARCHIVED'].includes(String(current.status).toUpperCase())) {
+    if (current.signatureCount > 0 || ['SIGNED', 'REPLACED', 'CANCELLED', 'ARCHIVED'].includes(String(current.status).toUpperCase())) {
       toast.warning('Протокол уже подписан. Для изменения создайте исправленную версию');
       return;
     }
     setBusy(true);
     try {
-      const docx = await protocolService.generateDocx(current.id, Number(current.version));
-      applyServerProtocol(docx);
-      const pdf = await protocolService.generatePdf(current.id, Number(docx.version));
-      applyServerProtocol(pdf);
-      toast.success('Документы сформированы');
+      const updated = kind === 'docx'
+        ? await protocolService.generateDocx(current.id, Number(current.version))
+        : await protocolService.generatePdf(current.id, Number(current.version));
+      applyServerProtocol(updated);
+      toast.success(`${kind.toUpperCase()} сформирован`);
     } catch (generateError) {
-      toast.error('Не удалось сформировать документы', userProtocolError(generateError));
+      toast.error(`Не удалось сформировать ${kind.toUpperCase()}`, userProtocolError(generateError));
     } finally {
       setBusy(false);
     }
@@ -1283,6 +1288,22 @@ const ProtocolEditorPage = () => {
     }
   };
 
+  const pekReportContext = Number(new URLSearchParams(location.search).get('pekReportId'));
+  const recollectPekReport = async () => {
+    if (!Number.isInteger(pekReportContext) || pekReportContext <= 0) return;
+    setBusy(true);
+    try {
+      await pekApi.collectReport(pekReportContext);
+      await queryClient.invalidateQueries({ queryKey: ['pek', 'report', pekReportContext] });
+      toast.success('Отчёт ПЭК повторно собран с учётом финализированных протоколов');
+      navigate(`/staff/pek/reports/${pekReportContext}`);
+    } catch (collectError) {
+      toast.error(getApiErrorMessage(collectError, 'Не удалось повторно собрать отчёт ПЭК'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) return <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm font-semibold text-slate-500 shadow-sm">Загрузка протокола...</div>;
   if (error || !protocol) {
     return (
@@ -1305,6 +1326,8 @@ const ProtocolEditorPage = () => {
 
   return (
     <>
+    {protocol.status === 'UNKNOWN' && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900">Backend вернул неподдерживаемый статус «{protocol.apiStatus || 'пусто'}». Протокол открыт только для чтения; изменяющие действия отключены.</div>}
+    {pekReportContext > 0 && ['READY', 'APPROVED', 'SIGNED'].includes(protocol.status) && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><span>Протокол финализирован. Можно повторно собрать связанный отчёт ПЭК по канонической backend-связи.</span><Button type="button" disabled={busy} onClick={() => { void recollectPekReport(); }}>Повторно собрать отчёт ПЭК</Button></div>}
     <ProtocolDetailsView
       protocol={protocol}
       role={user?.role}
@@ -1327,7 +1350,9 @@ const ProtocolEditorPage = () => {
       onReturn={() => setReturnOpen(true)}
       onSign={signCurrentProtocol}
       onPublish={() => { void run(() => protocolService.publishToClient(protocol.id, { version: Number(protocol.version) }), 'Протокол отправлен клиенту'); }}
-      onGenerate={generateDocuments}
+      onPreview={() => { void preview(); }}
+      onGenerateDocx={() => { void generateDocument('docx'); }}
+      onGeneratePdf={() => { void generateDocument('pdf'); }}
       onDocx={() => { void downloadGeneratedFile('docx'); }}
       onPdf={() => { void downloadGeneratedFile('pdf'); }}
       onCorrection={() => setReplaceOpen(true)}
@@ -1354,7 +1379,7 @@ const ProtocolEditorPage = () => {
         {editSection === 'general' && <div className="space-y-5"><ProtocolGeneralForm protocol={protocol} readOnly={!protocolActions.canEdit} onChange={patchProtocol} /><ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} measurementDate={protocol.measurementDate || protocol.testing.samplingDate} readOnly={!protocolActions.canEdit} onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })} onChange={(testing) => patchProtocol({ testing })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'organization' && <div className="space-y-5"><ProtocolOrganizationForm value={protocol.organization} readOnly={!protocolActions.canEdit} onChange={(organization) => patchProtocol({ organization })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'laboratory' && <ProtocolLaboratoryForm value={protocol.laboratory} employees={laboratoryEmployees} readOnly={!protocolActions.canManageDevices} loading={busy} canOpenSettings={protocolActions.canManageDevices} onExecutorChange={(employee) => patchProtocol({ executorId: String(employee.id), executor: employee.fullName, laboratory: { ...protocol.laboratory, executorId: String(employee.id), executor: employee.fullName } })} onRefresh={refreshLaboratorySnapshot} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
-        {editSection === 'environment' && <div className="space-y-5">{isWaterProtocolType(protocol.templateId) && <ProtocolWaterCharacteristicsForm waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={(water) => patchProtocol({ ...water, conditions: { ...(protocol.conditions || {}), ...water } })} />}<ProtocolEnvironmentForm value={protocol.environment || {}} measurementDate={protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate} measurementTime={protocol.measurementTime || ''} objectId={String(protocol.objectId || '')} objectName={companyObjects.find((item) => item.id === String(protocol.objectId))?.name || protocol.companySnapshot.objectName || ''} objectOptions={companyObjects.map((item) => ({ id: item.id, name: item.name }))} readOnly={!protocolActions.canEdit} loading={busy} onSelectionChange={changeWeatherSelection} onRequestConditions={refreshWeather} onChange={(environment) => patchProtocol({ environment })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
+        {editSection === 'environment' && <div className="space-y-5">{isWaterProtocolType(protocol.templateId) && <div><ProtocolWaterCharacteristicsForm waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} readOnly onChange={() => undefined} /><p className="mt-2 text-xs text-slate-500">Характеристики воды задаются при создании: текущий PATCH API их не редактирует.</p></div>}<ProtocolEnvironmentForm value={protocol.environment || {}} measurementDate={protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate} measurementTime={protocol.measurementTime || ''} objectId={String(protocol.objectId || '')} objectName={companyObjects.find((item) => item.id === String(protocol.objectId))?.name || protocol.companySnapshot.objectName || ''} objectOptions={companyObjects.map((item) => ({ id: item.id, name: item.name }))} readOnly={!protocolActions.canEdit} loading={busy} onSelectionChange={changeWeatherSelection} onRequestConditions={refreshWeather} onChange={(environment) => patchProtocol({ environment })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'methods' && <ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} measurementDate={protocol.measurementDate || protocol.testing.samplingDate} readOnly={!protocolActions.canEdit} onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })} onChange={(testing) => patchProtocol({ testing })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
         {editSection === 'results' && <ProtocolResultsTable protocolId={protocol.id} version={protocol.version} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} devices={protocol.measurementDevices} readOnly={!protocolActions.canManageResults} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />}
       </Modal>

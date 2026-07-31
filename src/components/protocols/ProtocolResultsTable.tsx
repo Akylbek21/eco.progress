@@ -555,6 +555,7 @@ const ProtocolResultsTable = ({
         },
       }, version);
       onChange([...rows, saved]);
+      await onImported();
       setAddOpen(false);
       onNotify('Результат сохранён', 'success');
     } catch (error) {
@@ -736,6 +737,7 @@ const ProtocolResultsTable = ({
       }
       if (created.length) {
         onChange([...rows, ...created]);
+        await onImported();
         setQuery('');
         setSuggestions([]);
         onNotify(`Добавлено показателей: ${created.length}`, 'success');
@@ -776,6 +778,7 @@ const ProtocolResultsTable = ({
         },
       }, version);
       onChange([...rows, saved]);
+      await onImported();
       setQuery('');
       setSuggestions([]);
       setSearchState('idle');
@@ -886,6 +889,7 @@ const ProtocolResultsTable = ({
         return next;
       });
       onChange(rows.map((item) => item.id === row.id ? saved : item));
+      await onImported();
       onNotify('Норматив выбран', 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось сохранить норматив', 'error');
@@ -940,6 +944,7 @@ const ProtocolResultsTable = ({
         values: { ...row.values },
       }, version);
       onChange([...rows, saved]);
+      await onImported();
       onNotify('Строка дублирована', 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось дублировать строку', 'error');
@@ -954,6 +959,7 @@ const ProtocolResultsTable = ({
     try {
       await protocolService.deleteProtocolResult(protocolId, deleteRow.id, version);
       onChange(rows.filter((item) => item.id !== deleteRow.id));
+      await onImported();
       setDeleteRow(null);
       onNotify('Строка удалена', 'success');
     } catch (error) {

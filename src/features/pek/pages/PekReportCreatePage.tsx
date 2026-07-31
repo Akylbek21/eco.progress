@@ -1,36 +1,118 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/ui/Button';
 import { useToast } from '../../../hooks/useToast';
-import { getCompanies, getCompanyObjects } from '../../../services/companyService';
-import type { PekPeriodType } from '../api/pekContracts';
+import type { PekPeriodType, PekReportCreationParams } from '../api/pekContracts';
+import type { PekReportCreateRequest } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
-import { pekService } from '../api/pekService';
-import { PekPageHeader, PekState } from '../components/common/PekUi';
+import { pekApi } from '../api/pekService';
+import PekCompanyObjectFilters from '../components/common/PekCompanyObjectFilters';
 import PekQueryError from '../components/common/PekQueryError';
+import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
+import { mapReportCreateRequest } from '../mappers/reportMappers';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
-import { useAuth } from '../../../contexts/AuthContext';
-import { loadPekDraft, pekDraftKey, removePekDraft, savePekDraft } from '../utils/pekDraftStorage';
 
-const steps=['Компания','Объект','Период','Подтверждение'];const input='mt-1 w-full rounded-xl border border-slate-300 px-3 py-2';
-const PekReportCreatePage=()=>{const navigate=useNavigate();const [initialParams]=useSearchParams();const toast=useToast();const {user}=useAuth();const draftKey=pekDraftKey('report',user?.id,undefined,'new');const [step,setStep]=useState(0);const [search,setSearch]=useState('');const [companyId,setCompanyId]=useState(Number(initialParams.get('companyId'))||0);const [objectId,setObjectId]=useState(Number(initialParams.get('objectId'))||0);const [periodType,setPeriodType]=useState<PekPeriodType>(initialParams.get('periodType')==='YEAR'?'YEAR':'QUARTER');const [year,setYear]=useState(Number(initialParams.get('year'))||new Date().getFullYear());const [quarter,setQuarter]=useState(Number(initialParams.get('quarter'))||1);const [programId,setProgramId]=useState(0);const [collectImmediately,setCollectImmediately]=useState(true);
- useEffect(()=>{if(initialParams.size)return;let active=true;void loadPekDraft<{step?:number;companyId?:number;objectId?:number;periodType?:PekPeriodType;year?:number;quarter?:number;programId?:number;collectImmediately?:boolean}>(draftKey,'new').then(draft=>{if(!active||!draft?.form)return;const form=draft.form;setStep(Math.max(0,Math.min(3,form.step||0)));setCompanyId(form.companyId||0);setObjectId(form.objectId||0);setPeriodType(form.periodType||'QUARTER');setYear(form.year||new Date().getFullYear());setQuarter(form.quarter||1);setProgramId(form.programId||0);setCollectImmediately(form.collectImmediately??true);});return()=>{active=false;};},[draftKey,initialParams]);
- useEffect(()=>{void savePekDraft(draftKey,{step,companyId,objectId,periodType,year,quarter,programId,collectImmediately},'new');},[collectImmediately,companyId,draftKey,objectId,periodType,programId,quarter,step,year]);
- const companies=useQuery({queryKey:['pek','companies',search],queryFn:({signal})=>getCompanies({page:0,size:20,search:search||undefined,status:'ACTIVE'},signal),retry:retryPekQuery,staleTime:PEK_STALE_TIME_MS});
- const objects=useQuery({queryKey:['company-objects',String(companyId)],queryFn:({signal})=>getCompanyObjects(String(companyId),false,signal),enabled:Boolean(companyId),retry:retryPekQuery,staleTime:PEK_STALE_TIME_MS});
- const contextParams={companyId,objectId,periodType,year,quarter:periodType==='QUARTER'?quarter:undefined};
- const context=useQuery({queryKey:pekKeys.creationContext(contextParams),queryFn:({signal})=>pekService.getReportCreationContext(contextParams,signal),enabled:step===3&&Boolean(companyId&&objectId),retry:retryPekQuery,staleTime:PEK_STALE_TIME_MS});
- const availablePrograms=context.data?.programs??[];
- const create=useMutation({mutationFn:()=>pekService.createReport({...contextParams,programId:programId||context.data?.selectedProgramId,collectImmediately}),retry:false,onSuccess:(report)=>{void removePekDraft(draftKey);toast.success('Отчёт ПЭК создан');navigate(`/staff/pek/reports/${report.id}`);},onError:error=>{const parsed=mapPekError(error);toast.error(parsed.message,parsed.traceId?`Код обращения: ${parsed.traceId}`:undefined);if(parsed.resourceId)navigate(`/staff/pek/reports/${parsed.resourceId}`);}});
- const canNext=step===0?Boolean(companyId):step===1?Boolean(objectId):true;
- return <div className="space-y-5"><PekPageHeader title="Создание отчёта ПЭК" description={`Шаг ${step+1} из 4 · ${steps[step]}`}/><ol className="grid grid-cols-4 gap-2">{steps.map((x,i)=><li key={x} className={`rounded-xl p-3 text-center text-sm font-bold ${i===step?'bg-eco-700 text-white':'bg-white'}`}>{i+1}. {x}</li>)}</ol><section className="rounded-2xl border bg-white p-5">
- {step===0&&<div><label className="font-bold">Поиск компании<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Название или БИН" className={input}/></label>{companies.isError?<div className="mt-4"><PekQueryError error={companies.error} resource="Компании" retry={()=>void companies.refetch()}/></div>:<div className="mt-4 grid gap-2">{companies.isLoading?<p>Загрузка компаний…</p>:companies.data?.items.map(c=><button type="button" key={c.id} onClick={()=>{setCompanyId(Number(c.id));setObjectId(0);}} className={`rounded-xl border p-3 text-left ${companyId===Number(c.id)?'border-eco-600 bg-eco-50':''}`}><strong>{c.name}</strong><span className="ml-2 text-sm text-slate-500">БИН {c.bin}</span></button>)}</div>}</div>}
- {step===1&&<div className="grid gap-2">{objects.isLoading?<p>Загрузка объектов…</p>:objects.isError?<PekQueryError error={objects.error} resource="Объекты компании" retry={()=>void objects.refetch()}/>:objects.data?.filter(x=>x.status!=='ARCHIVED'&&x.persisted!==false&&x.isVirtual!==true&&Number(x.id)>0).map(o=><button type="button" key={o.id} onClick={()=>setObjectId(Number(o.id))} className={`rounded-xl border p-4 text-left ${objectId===Number(o.id)?'border-eco-600 bg-eco-50':''}`}><strong>{o.name}</strong><p className="text-sm text-slate-500">{o.address||'Адрес не указан'} · {o.activityType||'Деятельность не указана'}</p></button>)}{!objects.isLoading&&!objects.isError&&!objects.data?.some(x=>x.status!=='ARCHIVED'&&x.persisted!==false&&x.isVirtual!==true&&Number(x.id)>0)&&<PekState title="У компании нет сохранённых активных объектов"/>}</div>}
- {step===2&&<div className="grid gap-4 md:grid-cols-3"><label>Период<select value={periodType} onChange={e=>setPeriodType(e.target.value as PekPeriodType)} className={input}><option value="QUARTER">Квартал</option><option value="YEAR">Год</option></select></label><label>Год<input type="number" value={year} onChange={e=>setYear(Number(e.target.value))} className={input}/></label>{periodType==='QUARTER'&&<label>Квартал<select value={quarter} onChange={e=>setQuarter(Number(e.target.value))} className={input}>{[1,2,3,4].map(x=><option key={x} value={x}>{x}</option>)}</select></label>}<label className="flex items-center gap-2 md:col-span-3"><input type="checkbox" checked={collectImmediately} onChange={event=>setCollectImmediately(event.target.checked)}/>Сразу выполнить сбор данных</label></div>}
- {step===3&&(context.isLoading?<p>Проверяем программу и период…</p>:context.isError?<PekState title="Не удалось проверить возможность создания" retry={()=>void context.refetch()}/>:context.data&&<div className="space-y-3"><Summary label="Компания" value={context.data.company?.name||'Компания не указана'}/><Summary label="Объект" value={context.data.object?.name||'Объект не указан'}/><Summary label="Период" value={`${context.data.periodStart} — ${context.data.periodEnd}`}/>{availablePrograms.length===1?<Summary label="Программа" value={`${availablePrograms[0].name}, версия ${availablePrograms[0].version}`}/>:availablePrograms.length>1?<label>Программа<select value={programId} onChange={e=>setProgramId(Number(e.target.value))} className={input}><option value={0}>Выберите программу</option>{availablePrograms.map(p=><option key={p.id} value={p.id}>{p.name} · версия {p.version} · {p.validFrom}—{p.validUntil}</option>)}</select></label>:<PekState title="Для выбранного объекта нет действующей программы ПЭК" message="Сначала создайте программу ПЭК."/>}{context.data.duplicateReportId&&<PekState title="Отчёт за этот период уже существует" retry={()=>navigate(`/staff/pek/reports/${context.data?.duplicateReportId}`)}/>} {(context.data.warnings??[]).map(x=><p key={x} className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{x}</p>)}{(context.data.blockingReasons??[]).map(x=><p key={x} className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{x}</p>)}</div>)}
- </section><footer className="flex justify-between"><Button variant="secondary" disabled={step===0||create.isPending} onClick={()=>setStep(x=>x-1)}>Назад</Button>{step<3?<Button disabled={!canNext} onClick={()=>setStep(x=>x+1)}>Продолжить</Button>:<Button disabled={create.isPending||!context.data||Boolean(context.data.duplicateReportId||(context.data.blockingReasons??[]).length||!availablePrograms.length)||(availablePrograms.length>1&&!programId)} aria-busy={create.isPending} onClick={()=>create.mutate()}>{create.isPending?'Создание…':collectImmediately?'Создать и собрать данные':'Создать отчёт'}</Button>}</footer></div>;
+const inputClass = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2';
+
+const PekReportCreatePage = () => {
+  const [initial] = useSearchParams();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const client = useQueryClient();
+  const [companyId, setCompanyId] = useState(Number(initial.get('companyId')) || 0);
+  const [objectId, setObjectId] = useState(Number(initial.get('objectId')) || 0);
+  const [periodType, setPeriodType] = useState<PekPeriodType>(initial.get('periodType') === 'YEAR' ? 'YEAR' : 'QUARTER');
+  const [year, setYear] = useState(Number(initial.get('year')) || new Date().getFullYear());
+  const [quarter, setQuarter] = useState(Number(initial.get('quarter')) || 1);
+  const [programId, setProgramId] = useState(0);
+  const [collectImmediately, setCollectImmediately] = useState(true);
+  const params: PekReportCreationParams = {
+    companyId,
+    objectId,
+    periodType,
+    year,
+    ...(periodType === 'QUARTER' ? { quarter } : {}),
+  };
+  const ready = companyId > 0 && objectId > 0 && year > 0 && (periodType === 'YEAR' || quarter >= 1 && quarter <= 4);
+  const context = useQuery({
+    queryKey: pekKeys.creationContext(params),
+    queryFn: ({ signal }) => pekApi.getReportCreationContext(params, signal),
+    enabled: ready,
+    retry: retryPekQuery,
+    staleTime: PEK_STALE_TIME_MS,
+  });
+  useEffect(() => {
+    if (context.data?.selectedProgramId) setProgramId(context.data.selectedProgramId);
+  }, [context.data?.selectedProgramId]);
+  const create = useMutation({
+    mutationFn: (request: PekReportCreateRequest) => pekApi.createReport(request),
+    retry: false,
+    onSuccess: async (report) => {
+      client.setQueryData(pekKeys.report(report.id), report);
+      await Promise.all([
+        client.invalidateQueries({ queryKey: pekKeys.reports({ companyId, objectId }) }),
+        client.invalidateQueries({ queryKey: pekKeys.dashboard() }),
+      ]);
+      toast.success('Отчёт ПЭК создан');
+      navigate(`/staff/pek/reports/${report.id}`);
+    },
+    onError: (error) => {
+      const mapped = mapPekError(error);
+      toast.error(mapped.message);
+      if (mapped.resourceId) navigate(`/staff/pek/reports/${mapped.resourceId}`);
+    },
+  });
+  const availablePrograms = context.data?.programs || [];
+  const selectedProgramId = programId || context.data?.selectedProgramId || (availablePrograms.length === 1 ? availablePrograms[0].id : 0);
+  const blocked = Boolean(
+    !context.data
+    || context.data.blockingReasons.length
+    || context.data.duplicateReportId
+    || !selectedProgramId,
+  );
+
+  return <div className="space-y-5">
+    <PekPageHeader title="Создание отчёта ПЭК" description="Период вычисляет backend; даты нельзя редактировать вручную" />
+    <section className="grid gap-4 rounded-2xl border bg-white p-5 md:grid-cols-3">
+      <PekCompanyObjectFilters
+        companyId={companyId || undefined}
+        objectId={objectId || undefined}
+        onCompanyChange={(value) => setCompanyId(Number(value) || 0)}
+        onObjectChange={(value) => setObjectId(Number(value) || 0)}
+        required
+      />
+      <label>Тип периода<select value={periodType} onChange={(event) => setPeriodType(event.target.value as PekPeriodType)} className={inputClass}><option value="QUARTER">Квартал</option><option value="YEAR">Год</option></select></label>
+      <label>Год<input type="number" min={2000} max={2100} value={year} onChange={(event) => setYear(Number(event.target.value))} className={inputClass} /></label>
+      {periodType === 'QUARTER' && <label>Квартал<select value={quarter} onChange={(event) => setQuarter(Number(event.target.value))} className={inputClass}>{[1, 2, 3, 4].map((value) => <option key={value}>{value}</option>)}</select></label>}
+    </section>
+    {!ready
+      ? <PekState title="Выберите компанию, объект и период" />
+      : context.isLoading
+        ? <PekLoading />
+        : context.isError
+          ? <PekQueryError error={context.error} resource="Контекст создания отчёта" retry={() => void context.refetch()} />
+          : context.data && <section className="space-y-4 rounded-2xl border bg-white p-5">
+            <div className="grid gap-3 md:grid-cols-2">
+              <Summary label="Компания" value={context.data.company?.name || '—'} />
+              <Summary label="Объект" value={context.data.object?.name || '—'} />
+              <Summary label="Начало периода" value={context.data.periodStart} />
+              <Summary label="Окончание периода" value={context.data.periodEnd} />
+            </div>
+            {availablePrograms.length > 0 && <label>Программа<select value={selectedProgramId} onChange={(event) => setProgramId(Number(event.target.value))} className={inputClass}><option value={0}>Выберите программу</option>{availablePrograms.map((program) => <option key={program.id} value={program.id}>{program.number} · {program.name}</option>)}</select></label>}
+            {!availablePrograms.length && <PekState title="Подходящих программ нет" />}
+            {context.data.warnings.map((warning) => <p key={warning} className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{warning}</p>)}
+            {context.data.blockingReasons.map((reason) => <p key={reason} className="rounded-xl bg-rose-50 p-3 text-sm text-rose-900">{reason}</p>)}
+            {context.data.duplicateReportId && <p className="rounded-xl bg-amber-50 p-3 text-sm">Отчёт за период уже существует. <Link className="font-bold underline" to={`/staff/pek/reports/${context.data.duplicateReportId}`}>Открыть отчёт №{context.data.duplicateReportId}</Link></p>}
+            <label className="flex items-center gap-2"><input type="checkbox" checked={collectImmediately} onChange={(event) => setCollectImmediately(event.target.checked)} />Сразу собрать подходящие протоколы</label>
+            <Button disabled={blocked || create.isPending} aria-busy={create.isPending} onClick={() => create.mutate(mapReportCreateRequest(params, selectedProgramId, collectImmediately))}>
+              {create.isPending ? 'Создание…' : 'Создать отчёт'}
+            </Button>
+          </section>}
+  </div>;
 };
-const Summary=({label,value}:{label:string;value:string})=><div className="flex justify-between rounded-xl bg-slate-50 p-3"><span className="text-slate-500">{label}</span><strong>{value}</strong></div>;
+
+const Summary = ({ label, value }: { label: string; value: string }) => <div className="rounded-xl bg-slate-50 p-3"><span className="text-sm text-slate-500">{label}</span><p className="font-bold">{value}</p></div>;
+
 export default PekReportCreatePage;

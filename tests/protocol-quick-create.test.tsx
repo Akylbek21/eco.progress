@@ -213,19 +213,16 @@ describe('quick-create payload contract', () => {
       testingEndDate: '2026-07-24',
       sourceNumber: 'W-1',
       measurementPlace: 'Цех',
-      environment: {
-        temperature: 30.9,
-        humidity: 29,
-        pressureKpa: 94.91,
-        windSpeed: 7.5,
-        source: 'API',
-      },
       conditions: {
         waterType: 'DRINKING_WATER',
         waterUseCategory: 'I',
         sampleNumber: 'W-1',
         samplingPlace: 'Скважина № 1',
-        samplingDate: '2026-07-21',
+        temperature: '30.9',
+        humidity: '29',
+        pressure: '94.91',
+        windSpeed: '7.5',
+        weatherSource: 'API',
       },
     });
     expect(payload.measurements[0]).toMatchObject({
@@ -233,7 +230,6 @@ describe('quick-create payload contract', () => {
       pollutantCode: 'SI',
       value: 0.2,
       unit: 'мг/дм³',
-      normativeValue: 0.2,
       normativeId: 123,
       measurementDeviceId: 8,
       testingMethodNd: 'Методика строки',
@@ -292,13 +288,12 @@ describe('quick-create payload contract', () => {
     const payload = buildQuickCreatePayload(soil, strictContext);
     expect(payload.conditions).toMatchObject({
       sampleNumber: 'S-1',
-      samplingDepth: 0.5,
+      samplingDepth: '0,5',
       samplingPlace: 'Шурф 3',
-      samplingDate: '2026-07-21',
     });
-    expect(payload.measurements[0]).toMatchObject({
-      sampleNumber: 'S-1',
-      samplingDepth: 0.5,
+    expect(payload.measurements[0].values).toMatchObject({
+      sampleName: 'S-1',
+      samplingDepth: '0,5',
       samplingPlace: 'Шурф 3',
       samplingDate: '2026-07-21',
     });

@@ -97,7 +97,7 @@ test('creation wizard preserves the selected backend normative id', async () => 
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   assert.match(source, /normativeId: String\(item\.id\)/);
   assert.match(mapper, /row\.normativeRecordId \|\| row\.normativeId/);
-  assert.match(mapper, /normativeValue: normalizeDecimal\(row\.normativeValue/);
+  assert.match(mapper, /normativeValue: row\.normativeRecordId \|\| row\.normativeId[\s\S]*?\? undefined[\s\S]*?: normalizeDecimal\(row\.normativeValue/);
 });
 
 test('router keeps protocol creation inside the list wizard', async () => {

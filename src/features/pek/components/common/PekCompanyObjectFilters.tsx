@@ -7,9 +7,16 @@ type Props = {
   objectId?: number;
   onCompanyChange: (value: string) => void;
   onObjectChange: (value: string) => void;
+  required?: boolean;
 };
 
-const PekCompanyObjectFilters = ({ companyId, objectId, onCompanyChange, onObjectChange }: Props) => {
+const PekCompanyObjectFilters = ({
+  companyId,
+  objectId,
+  onCompanyChange,
+  onObjectChange,
+  required,
+}: Props) => {
   const companies = useQuery({
     queryKey: ['pek', 'filters', 'companies'],
     queryFn: ({ signal }) => getCompanies({ page: 0, size: 100, status: 'ACTIVE' }, signal),
@@ -30,8 +37,10 @@ const PekCompanyObjectFilters = ({ companyId, objectId, onCompanyChange, onObjec
     && Number(item.id) > 0);
 
   return <>
-    <label className="text-xs font-bold text-slate-600">Компания
+    <label className="text-xs font-bold text-slate-600">
+      Компания{required ? ' *' : ''}
       <select
+        aria-label="Компания"
         value={companyId || ''}
         disabled={companies.isLoading || companies.isError}
         onChange={(event) => {
@@ -40,22 +49,36 @@ const PekCompanyObjectFilters = ({ companyId, objectId, onCompanyChange, onObjec
         }}
         className="mt-1 w-full rounded-xl border px-3 py-2 text-sm disabled:bg-slate-100"
       >
-        <option value="">{companies.isLoading ? 'Загрузка…' : 'Все компании'}</option>
-        {companies.data?.items.map((item) => <option key={item.id} value={item.id}>{item.name} · БИН {item.bin}</option>)}
+        <option value="">{companies.isLoading ? 'Загрузка…' : 'Выберите компанию'}</option>
+        {companies.data?.items.map((item) => (
+          <option key={item.id} value={item.id}>{item.name} · БИН {item.bin}</option>
+        ))}
       </select>
-      {companies.isError && <button type="button" onClick={() => void companies.refetch()} className="mt-1 block text-xs text-rose-700 underline">Повторить загрузку</button>}
+      {companies.isError && (
+        <button type="button" onClick={() => void companies.refetch()} className="mt-1 text-xs text-rose-700 underline">
+          Повторить загрузку
+        </button>
+      )}
     </label>
-    <label className="text-xs font-bold text-slate-600">Объект
+    <label className="text-xs font-bold text-slate-600">
+      Объект{required ? ' *' : ''}
       <select
+        aria-label="Объект"
         value={objectId || ''}
         disabled={!companyId || objects.isLoading || objects.isError}
         onChange={(event) => onObjectChange(event.target.value)}
         className="mt-1 w-full rounded-xl border px-3 py-2 text-sm disabled:bg-slate-100"
       >
-        <option value="">{objects.isLoading ? 'Загрузка…' : 'Все объекты'}</option>
-        {realObjects.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.address}</option>)}
+        <option value="">{objects.isLoading ? 'Загрузка…' : 'Выберите объект'}</option>
+        {realObjects.map((item) => (
+          <option key={item.id} value={item.id}>{item.name}{item.address ? ` · ${item.address}` : ''}</option>
+        ))}
       </select>
-      {objects.isError && <button type="button" onClick={() => void objects.refetch()} className="mt-1 block text-xs text-rose-700 underline">Повторить загрузку</button>}
+      {objects.isError && (
+        <button type="button" onClick={() => void objects.refetch()} className="mt-1 text-xs text-rose-700 underline">
+          Повторить загрузку
+        </button>
+      )}
     </label>
   </>;
 };

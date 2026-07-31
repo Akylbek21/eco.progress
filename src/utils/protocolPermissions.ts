@@ -12,10 +12,11 @@ type ProtocolLike =
 const EDITABLE_STATUSES = new Set<ProtocolStatus>([
   'DRAFT',
   'CALCULATED',
-  'RETURNED_FOR_REVISION',
+  'READY',
+  'NEEDS_REVISION',
 ]);
 const TERMINAL_STATUSES = new Set<ProtocolStatus>(['ARCHIVED', 'CANCELLED']);
-const CORRECTION_STATUSES = new Set<ProtocolStatus>(['SIGNED', 'PUBLISHED']);
+const CORRECTION_STATUSES = new Set<ProtocolStatus>(['SIGNED', 'REPLACED']);
 
 const roleOf = (user: ProtocolUser | string) =>
   String(typeof user === 'string' ? user : user?.role || '').trim().toUpperCase();
@@ -94,6 +95,29 @@ export const getProtocolPermissions = (
   const backend = typeof protocol === 'object' && protocol ? protocol.permissions : undefined;
   const backendFlag = (key: keyof ProtocolPermissions) => backend?.[key] === true;
   if (backend && Object.keys(backend).length) {
+    if (statusOf(protocol) === 'UNKNOWN') {
+      return {
+        canView: backendFlag('canView'),
+        canEdit: false,
+        canDelete: false,
+        canCalculate: false,
+        canCheckNormatives: false,
+        canGeneratePreview: false,
+        canGenerateDocuments: false,
+        canReadyForApproval: false,
+        canReturnForRevision: false,
+        canApprove: false,
+        canSign: false,
+        canReplace: false,
+        canCancel: false,
+        canArchive: false,
+        canPublish: false,
+        canDownload: backendFlag('canDownload'),
+        canManageResults: false,
+        canManageDevices: false,
+        canViewAudit: backendFlag('canViewAudit'),
+      };
+    }
     return {
       canView: backendFlag('canView'),
       canEdit: backendFlag('canEdit'),

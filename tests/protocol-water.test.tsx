@@ -69,7 +69,7 @@ describe('water protocol wizard and editor contract', () => {
     expect(issues.map((issue) => issue.field)).toEqual(['waterType', 'waterUseCategory']);
   });
 
-  it('hydrates canonical GET conditions and maps the same PATCH path', () => {
+  it('hydrates quick-create conditions but does not send unsupported conditions in PATCH', () => {
     const normalized = normalizeProtocol({
       id: 1,
       templateId: 'water',
@@ -95,7 +95,7 @@ describe('water protocol wizard and editor contract', () => {
       testing: { productNormativeDocument: '', samplingMethodDocument: '', testingMethodDocument: '', samplingDate: '', testingStartDate: '', testingEndDate: '', testingDate: '', testingPurpose: '', environmentConditions: '' },
       conditions: { waterType: 'SURFACE_WATER', waterUseCategory: 'II' },
     });
-    expect(request.conditions).toEqual({ waterType: 'SURFACE_WATER', waterUseCategory: 'II' });
+    expect(request).not.toHaveProperty('conditions');
   });
 
   it('does not replace an unknown enum with the first option', () => {

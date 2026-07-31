@@ -1,40 +1,18 @@
-export type PekProgramStatus = 'DRAFT' | 'UNDER_REVIEW' | 'RETURNED' | 'APPROVED' | 'ACTIVE' | 'ARCHIVED';
+export type PekId = number;
+export type PekProgramStatus =
+  | 'DRAFT'
+  | 'UNDER_REVIEW'
+  | 'RETURNED'
+  | 'APPROVED'
+  | 'ACTIVE'
+  | 'ARCHIVED';
 export type PekReportStatus =
-  | 'DRAFT' | 'COLLECTING' | 'REQUIRES_CORRECTION' | 'READY_FOR_REVIEW'
-  | 'UNDER_REVIEW' | 'RETURNED' | 'READY_FOR_APPROVAL' | 'APPROVED'
-  | 'READY_FOR_SIGNING' | 'PARTIALLY_SIGNED' | 'SIGNED' | 'SUBMITTED' | 'ACCEPTED' | 'REJECTED' | 'ARCHIVED';
-export type PekCollectionRunStatus =
-  | 'CREATED' | 'RUNNING' | 'COMPLETED' | 'COMPLETED_WITH_WARNINGS'
-  | 'FAILED' | 'CANCELLED';
-export type PekSectionCode =
-  | 'GENERAL' | 'PROGRAM_EXECUTION' | 'EMISSIONS' | 'CALCULATED_CONTROL'
-  | 'WATER' | 'WASTE' | 'IMPACT_MONITORING' | 'ENVIRONMENTAL_ACTIONS'
-  | 'EXCEEDANCES' | 'DOCUMENTS' | 'REVIEW';
-export type PekIssueSeverity = 'ERROR' | 'WARNING' | 'INFO';
-export type PekExceedanceStatus = 'OPEN' | 'ACTION_REQUIRED' | 'IN_PROGRESS' | 'AWAITING_REPEAT_CONTROL' | 'RESOLVED' | 'CANCELLED';
-export type PekReviewCommentStatus = 'OPEN' | 'RESOLVED' | 'REOPENED';
+  | 'DRAFT'
+  | 'COLLECTING'
+  | 'READY_FOR_REVIEW'
+  | 'APPROVED'
+  | 'ARCHIVED';
 export type PekPeriodType = 'QUARTER' | 'YEAR';
-export type PekControlEventStatus = 'NOT_STARTED' | 'PARTIAL' | 'COMPLETED' | 'OVERFULFILLED';
-export type PekFrequencyType = 'ONCE' | 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL' | 'CUSTOM';
-export type PekControlType = 'INSTRUMENTAL' | 'CALCULATED' | 'MONITORING' | 'LABORATORY' | 'WASTE';
-export type PekAvailableActionCode =
-  | 'EDIT' | 'COLLECT' | 'VALIDATE' | 'SUBMIT_REVIEW' | 'START_REVIEW' | 'RETURN'
-  | 'ACCEPT_REVIEW' | 'APPROVE' | 'RECALL_APPROVAL' | 'PREPARE_SIGNING' | 'SIGN'
-  | 'REGISTER_SUBMISSION' | 'REGISTER_RESULT' | 'CREATE_REVISION' | 'ARCHIVE'
-  | 'CLONE' | 'ACTIVATE' | 'DOWNLOAD_PREVIEW' | 'DOWNLOAD_PDF' | 'DOWNLOAD_XLSX'
-  | 'DOWNLOAD_JSON' | 'DOWNLOAD_ZIP' | 'CREATE_PROTOCOL' | 'OPEN_PROTOCOL'
-  | 'ADD_REVIEW_COMMENT' | 'RESOLVE_REVIEW_COMMENT';
-
-export type PekApiErrorDetails = {
-  code?: string;
-  message?: string;
-  field?: string;
-  section?: PekSectionCode;
-  entityId?: number | string;
-  action?: PekAvailableActionCode | string;
-  details?: unknown;
-  correlationId?: string;
-};
 
 export type ApiResponse<T> = { success?: boolean; message?: string | null; data: T };
 export type PageResponse<T> = {
@@ -44,8 +22,13 @@ export type PageResponse<T> = {
   totalElements: number;
   totalPages: number;
 };
-export type PekId = number;
-export type PekNamedRef = { id: PekId; name: string; code?: string; address?: string; bin?: string };
+export type PekNamedRef = {
+  id: PekId;
+  name: string;
+  code?: string;
+  address?: string;
+  bin?: string;
+};
 export type PekLookupOption = PekNamedRef & {
   description?: string;
   status?: string;
@@ -53,7 +36,15 @@ export type PekLookupOption = PekNamedRef & {
   validFrom?: string;
   validUntil?: string;
 };
-export type PekControlItemLinkOption = PekLookupOption & { indicators: PekLookupOption[] };
+
+export type PekAvailableActionCode =
+  | 'EDIT'
+  | 'SUBMIT_REVIEW'
+  | 'RETURN'
+  | 'APPROVE'
+  | 'ACTIVATE'
+  | 'ARCHIVE'
+  | 'CLONE';
 export type PekAvailableAction = {
   code: PekAvailableActionCode;
   label: string;
@@ -63,115 +54,191 @@ export type PekAvailableAction = {
   requiresComment?: boolean;
 };
 export type PekAvailableActions = readonly PekAvailableAction[];
-export type PekSectionSummary = {
-  code: PekSectionCode;
-  label: string;
-  applicable: boolean;
-  notApplicableReason?: string | null;
-  readinessPercent: number;
-  errorCount: number;
-  warningCount: number;
-  completed: boolean;
-};
-export type PekReportIssue = {
-  id: number;
+
+export interface PekControlItem {
+  id?: PekId;
+  clientId?: string;
   code: string;
-  severity: PekIssueSeverity;
-  blocking: boolean;
-  sectionCode?: PekSectionCode;
-  sectionLabel?: string;
-  rowKey?: string;
-  fieldPath?: string;
-  message: string;
-  details?: string;
-  source?: string;
-  actionCode?: string;
-  actionPayload?: Record<string, unknown>;
-  resolved: boolean;
-};
-export type PekProgram = {
+  name: string;
+  sectionCode?: string | null;
+  controlType?: string | null;
+  environmentComponent?: string | null;
+  monitoringPointId?: PekId | null;
+  emissionSourceId?: PekId | null;
+  waterOutletId?: PekId | null;
+  wasteSourceId?: PekId | null;
+  laboratoryId?: PekId | null;
+  frequencyType?: string | null;
+  frequencyValue?: number | null;
+  plannedCount?: number | null;
+  measurementMethod?: string | null;
+  samplingMethod?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  responsibleUserId?: PekId | null;
+  mandatory: boolean;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface PekIndicator {
+  id?: PekId;
+  clientId?: string;
+  controlItemIndex?: number;
+  controlItemId?: PekId;
+  controlItemClientId?: string;
+  indicatorId?: PekId | null;
+  indicatorCode?: string | null;
+  indicatorName: string;
+  unit?: string | null;
+  normativeId?: PekId | null;
+  normativeValue?: number | null;
+  comparisonType?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  methodologyId?: PekId | null;
+  measurementDeviceType?: string | null;
+  mandatory: boolean;
+  sortOrder: number;
+}
+
+export interface PekMeasure {
+  id?: PekId;
+  clientId?: string;
+  code?: string | null;
+  name: string;
+  description?: string | null;
+  plannedStartDate?: string | null;
+  plannedEndDate?: string | null;
+  responsibleUserId?: PekId | null;
+  plannedBudget?: number | null;
+  currency?: string | null;
+  status?: string | null;
+  completionPercent?: number | null;
+  resultDescription?: string | null;
+}
+
+export interface PekProgramDocument {
+  id: PekId;
+  fileName?: string;
+  originalFileName?: string;
+  documentType?: string;
+  contentType?: string;
+  size?: number;
+  uploadedAt?: string;
+}
+
+export interface PekProgram {
   id: PekId;
   number: string;
   name: string;
+  description?: string | null;
   version: number;
-  status: PekProgramStatus;
+  status: PekProgramStatus | string;
   company?: PekNamedRef | null;
   object?: PekNamedRef | null;
   validFrom: string;
   validUntil: string;
   responsible?: PekNamedRef | null;
+  responsibleUser?: PekNamedRef | null;
+  responsibleUserId?: PekId | null;
   readinessPercent?: number;
   updatedAt?: string;
   availableActions: PekAvailableAction[];
   readOnly: boolean;
-  controlItems?: Record<string, unknown>[];
-  indicators?: Record<string, unknown>[];
-  measures?: Record<string, unknown>[];
-  documents?: Record<string, unknown>[];
-};
-export type PekProgramRequest = {
+  controlItems?: PekControlItem[];
+  indicators?: PekIndicator[];
+  measures?: PekMeasure[];
+  documents?: PekProgramDocument[];
+}
+
+export type PekProgramHeaderFields = {
   companyId: number;
   objectId: number;
   number: string;
   name: string;
-  version: number;
+  description?: string | null;
   validFrom: string;
   validUntil: string;
   responsibleUserId?: number | null;
-  permitId?: number | null;
-  controlItems: Record<string, unknown>[];
-  indicators: Record<string, unknown>[];
-  measures: Record<string, unknown>[];
-  reviewerId?: number | null;
-  approverId?: number | null;
 };
-export type PekReport = {
-  id: PekId;
+export type PekProgramCreateRequest = PekProgramHeaderFields & {
+  controlItems: Omit<PekControlItem, 'clientId'>[];
+  indicators: Omit<PekIndicator, 'clientId' | 'controlItemClientId'>[];
+  measures: Omit<PekMeasure, 'clientId'>[];
+};
+export type PekProgramCloneRequest = {
   number: string;
-  revision: number;
+  name?: string;
+  validFrom?: string;
+  validUntil?: string;
+};
+export type PekProgramUpdateRequest = Partial<PekProgramHeaderFields> & {
+  version?: number;
+  controlItems?: Omit<PekControlItem, 'clientId'>[] | null;
+  indicators?: Omit<PekIndicator, 'clientId' | 'controlItemClientId'>[] | null;
+  measures?: Omit<PekMeasure, 'clientId'>[] | null;
+};
+/** @deprecated use PekProgramCreateRequest/PekProgramUpdateRequest */
+export type PekProgramRequest = PekProgramCreateRequest & { version?: number };
+
+export type PekProgramForm = PekProgramHeaderFields & {
+  version?: number;
+  controlItems: PekControlItem[];
+  indicators: PekIndicator[];
+  measures: PekMeasure[];
+};
+export type PekProgramFilters = {
+  search?: string;
+  companyId?: number;
+  objectId?: number;
+  status?: PekProgramStatus;
+  activeOn?: string;
+  responsibleUserId?: number;
+  page?: number;
+  size?: number;
+  sort?: string;
+};
+
+export interface PekReport {
+  id: PekId;
+  number?: string;
   version: number;
-  status: PekReportStatus;
+  status: PekReportStatus | string;
   periodType: PekPeriodType;
   year: number;
   quarter?: number | null;
   periodStart: string;
   periodEnd: string;
-  dueDate?: string | null;
   company?: PekNamedRef | null;
   object?: PekNamedRef | null;
-  program?: PekNamedRef & { version?: number } | null;
-  responsible?: PekNamedRef | null;
-  readinessPercent: number;
-  valid: boolean;
-  latestValidatedVersion?: number | null;
-  blockingIssueCount: number;
-  warningCount: number;
-  exceedanceCount: number;
-  sections: PekSectionSummary[];
-  availableActions: PekAvailableAction[];
-  readOnly: boolean;
-  validationActual: boolean;
-  blockingReasons: string[];
-  nextAction?: string | null;
-  nextResponsible?: PekNamedRef | null;
-  lastValidatedAt?: string | null;
-  lastSynchronizedAt?: string | null;
-  snapshot?: { id?: number; createdAt?: string; hash?: string } | null;
-  signature?: Record<string, unknown> | null;
-  originalReportId?: number | null;
-  rejectionReason?: string | null;
-};
+  program?: (PekNamedRef & { version?: number }) | null;
+  companyId?: number;
+  objectId?: number;
+  programId?: number;
+  responsibleUser?: PekNamedRef | null;
+  linkedProtocolCount: number;
+  linkedProtocolNumbers: string[];
+  lastCollectedAt?: string | null;
+}
 export type PekReportFilters = {
-  search?: string; companyId?: number; objectId?: number; periodType?: PekPeriodType;
-  year?: number; quarter?: number; status?: PekReportStatus; responsibleId?: number;
-  valid?: boolean; onlyWithErrors?: boolean; onlyWithExceedances?: boolean;
-  onlyOverdue?: boolean; page?: number; size?: number; sort?: string;
+  companyId: number;
+  objectId: number;
+  page?: number;
+  size?: number;
 };
-export type PekProgramFilters = {
-  search?: string; companyId?: number; objectId?: number; status?: PekProgramStatus;
-  activeOn?: string; page?: number; size?: number; sort?: string;
+export type PekReportCreationParams = {
+  companyId: number;
+  objectId: number;
+  periodType: PekPeriodType;
+  year: number;
+  quarter?: number;
 };
-export type PekCreationContext = {
+export type PekReportCreateRequest = PekReportCreationParams & {
+  programId: number;
+  collectImmediately: boolean;
+};
+export interface PekCreationContext {
   company?: PekNamedRef | null;
   object?: PekNamedRef | null;
   periodStart: string;
@@ -181,26 +248,15 @@ export type PekCreationContext = {
   duplicateReportId?: number | null;
   warnings: string[];
   blockingReasons: string[];
-};
-export type PekCollectionRun = {
+}
+
+export interface PekDashboardDeadline {
   id: number;
-  status: PekCollectionRunStatus;
-  currentCollector?: string;
-  progressPercent: number;
-  processedRows: number;
-  foundIssues: number;
-  message?: string;
-  traceId?: string;
-  collectors?: Array<{ code: string; label: string; status: string; message?: string }>;
-  processedProtocols?: number;
-  addedResults?: number;
-  skippedResults?: number;
-  warnings?: string[];
-  errors?: string[];
-  startedAt?: string | null;
-  finishedAt?: string | null;
-};
-export type PekDashboard = {
+  type: string;
+  date: string;
+  description: string;
+}
+export interface PekDashboard {
   totalReportCount: number;
   readinessPercent: number;
   criticalIssueCount: number;
@@ -209,58 +265,29 @@ export type PekDashboard = {
   openExceedanceCount: number;
   overdueActionCount: number;
   missingProtocolCount: number;
-  deadlines: Array<{ reportId: number; reportNumber: string; dueDate: string; label: string }>;
-  reports: Array<{ reportId: number; reportNumber: string; nextAction?: string; responsible?: string }>;
+  deadlines: PekDashboardDeadline[];
+  reports: PekReport[];
+}
+export type PekDashboardFilters = {
+  companyId?: number;
+  objectId?: number;
+  year?: number;
+  quarter?: number;
+  status?: PekReportStatus;
+  responsibleId?: number;
 };
-export type PekSettings = {
-  collectionPollingIntervalMs: number;
-  autosaveDebounceMs: number;
-  defaultReportPeriodType?: PekPeriodType;
-  notificationDaysBeforeDeadline?: number;
-  updatedAt?: string;
-  version: number;
-};
-export type PekPlanFactRow = {
-  id: string;
-  controlItem: string;
-  source: string;
-  frequency: string;
-  plannedEvents: number;
-  actualEvents: number;
-  eventCompletionPercent: number;
-  plannedIndicators: number;
-  foundIndicators: number;
-  indicatorCompletenessPercent: number;
-  status: PekControlEventStatus;
-  protocolIds: number[];
-  issueCount: number;
-};
-export type PekUnmatchedSource = {
-  id: number; protocolId: number; protocolNumber: string; date: string; indicator: string;
-  point: string; result: string; reason: string; suggestedControlItem?: string; confidenceLabel?: string;
-};
-export type PekExceedance = {
-  id: number; indicator: string; protocolId?: number; result: string; unit: string;
-  normative: string; multiplicity: number; status: PekExceedanceStatus; possibleCause?: string;
-  actionDescription?: string; responsible?: string; actionDeadline?: string; repeatControlId?: number;
-};
-export type PekReviewComment = {
-  id: number; status: PekReviewCommentStatus; text: string; mandatory: boolean;
-  sectionCode?: PekSectionCode; rowKey?: string; fieldPath?: string; assignee?: PekNamedRef | null;
-  author?: PekNamedRef | null; createdAt: string; resolutionComment?: string;
-};
-export type PekHistoryItem = {
-  id: number; occurredAt: string; user?: string; role?: string; action: string;
-  comment?: string; oldStatus?: string; newStatus?: string; changedFields?: string[];
-};
-export type PekReportValidation = {
-  readinessPercent: number;
-  blockingIssues: PekReportIssue[];
-  warnings: PekReportIssue[];
-  statistics?: Record<string, number | null>;
-  validatedAt?: string;
-  validatedVersion?: number;
-};
+
+export interface PekHistoryItem {
+  id?: number;
+  actionType: string;
+  actorName?: string | null;
+  comment?: string | null;
+  oldValue?: unknown;
+  newValue?: unknown;
+  createdAt: string;
+}
+export type PekMutationBody = Record<string, unknown> & { version?: number };
+export type PekBlobResult = { blob: Blob; filename: string };
 export type PekResultValue = {
   numericValue?: number | null;
   textValue?: string | null;
@@ -269,31 +296,11 @@ export type PekResultValue = {
   belowDetectionLimit?: boolean;
   detectionLimit?: number | null;
 };
-export type PekSignature = {
-  id: PekId;
-  signer?: PekNamedRef | null;
-  role: string;
-  order: number;
-  required: boolean;
-  status: string;
-  signedAt?: string | null;
-  certificateSubject?: string | null;
-  certificateSerialNumber?: string | null;
+
+export type PekApiErrorDetails = {
+  code?: string;
+  message?: string;
+  field?: string;
+  details?: unknown;
+  correlationId?: string;
 };
-export type PekSubmission = {
-  id: PekId;
-  recipient: string;
-  method: string;
-  submittedAt: string;
-  number?: string | null;
-  externalId?: string | null;
-  status: string;
-  receiptDocumentId?: PekId | null;
-};
-export type PekProgramListItem = PekProgram;
-export type PekProgramDetails = PekProgram;
-export type PekReportListItem = PekReport;
-export type PekReportDetails = PekReport;
-export type PekReportCreationContext = PekCreationContext;
-export type PekMutationBody = Record<string, unknown> & { version?: number };
-export type PekBlobResult = { blob: Blob; filename: string };

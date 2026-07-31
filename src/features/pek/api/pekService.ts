@@ -1,207 +1,165 @@
+import type { AxiosProgressEvent } from 'axios';
 import { pekApiClient as api } from './pekApiClient';
-import axios from 'axios';
-import {
-  filenameFromDisposition,
-  mapPekPage,
-  unwrapPekData,
-} from './pekMappers';
+import { filenameFromDisposition, mapPekPage, unwrapPekData } from './pekMappers';
 import type {
   PageResponse,
   PekBlobResult,
-  PekCollectionRun,
-  PekControlItemLinkOption,
   PekCreationContext,
   PekDashboard,
-  PekExceedance,
+  PekDashboardFilters,
   PekHistoryItem,
   PekLookupOption,
   PekMutationBody,
-  PekPlanFactRow,
   PekProgram,
+  PekProgramCreateRequest,
+  PekProgramCloneRequest,
   PekProgramFilters,
-  PekProgramRequest,
+  PekProgramUpdateRequest,
   PekReport,
+  PekReportCreateRequest,
+  PekReportCreationParams,
   PekReportFilters,
-  PekReportIssue,
-  PekReviewComment,
-  PekSectionCode,
-  PekSettings,
-  PekUnmatchedSource,
 } from './pekContracts';
 import {
-  pekCollectionRunSchema,
-  pekCreationContextSchema,
-  pekProgramSchema,
-  pekReportSchema,
-  validatePekResponse,
-} from '../schemas/pekResponseSchemas';
+  mapCollectionResult,
+  mapDashboardResponse,
+  mapProgramResponse,
+  mapReportResponse,
+} from '../mappers/responseMappers';
 
 const cleanParams = (input: Record<string, unknown>) => Object.fromEntries(
   Object.entries(input).filter(([, value]) => value !== '' && value !== undefined && value !== null),
 );
+
 const get = async <T>(url: string, params: Record<string, unknown> = {}, signal?: AbortSignal) =>
   unwrapPekData<T>((await api.get(url, { params: cleanParams(params), signal })).data);
-const post = async <T>(url: string, body?: unknown) =>
-  unwrapPekData<T>((await api.post(url, body)).data);
-const optimisticRequest = (body: unknown) => {
-  if (typeof FormData !== 'undefined' && body instanceof FormData) {
-    const version = body.get('version');
-    const payload = new FormData();
-    body.forEach((value, key) => { if (key !== 'version') payload.append(key, value); });
-    return {
-      body: payload,
-      headers: version === null ? undefined : { 'If-Match': String(version) },
-    };
-  }
-  if (body && typeof body === 'object' && !Array.isArray(body)) {
-    const { version, ...payload } = body as Record<string, unknown>;
-    return {
-      body: payload,
-      headers: version === undefined || version === null ? undefined : { 'If-Match': String(version) },
-    };
-  }
-  return { body, headers: undefined };
-};
-const versionedPost = async <T>(url: string, body: unknown = {}) => {
-  const request = optimisticRequest(body);
-  return unwrapPekData<T>((await api.post(url, request.body, { headers: request.headers })).data);
-};
-const versionedPatch = async <T>(url: string, body: unknown) => {
-  const request = optimisticRequest(body);
-  return unwrapPekData<T>((await api.patch(url, request.body, { headers: request.headers })).data);
-};
-type PekFileErrorPayload = { code?: string; message?: string; traceId?: string; correlationId?: string };
-class PekFileResponseError extends Error {
-  readonly status?: number;
-  readonly code?: string;
-  readonly traceId?: string;
 
-  constructor(payload: PekFileErrorPayload, status?: number) {
-    super(payload.message || 'Не удалось скачать файл.');
-    this.name = 'PekFileResponseError';
-    this.status = status;
-    this.code = payload.code;
-    this.traceId = payload.traceId || payload.correlationId;
-  }
-}
-const parseErrorBlob = async (blob: Blob, status?: number) => {
-  try {
-    return new PekFileResponseError(JSON.parse(await blob.text()) as PekFileErrorPayload, status);
-  } catch {
-    return new PekFileResponseError({ message: 'Backend вернул JSON вместо файла.' }, status);
-  }
-};
-const download = async (url: string, fallback: string, acceptedTypes: string[]): Promise<PekBlobResult> => {
-  let response;
-  try {
-    response = await api.get<Blob>(url, { responseType: 'blob' });
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
-      const contentType = String(error.response.headers['content-type'] || error.response.data.type || '');
-      if (contentType.includes('json')) throw await parseErrorBlob(error.response.data, error.response.status);
-    }
-    throw error;
-  }
-  const contentType = String(response.headers['content-type'] || '');
-  if (!acceptedTypes.some((type) => contentType.toLowerCase().includes(type))) {
-    if (contentType.includes('json')) throw await parseErrorBlob(response.data, response.status);
-    throw new PekFileResponseError({ message: `Backend вернул неподдерживаемый Content-Type: ${contentType || 'не указан'}.` }, response.status);
-  }
+const ifMatch = (version: number) => ({ 'If-Match': String(version) });
+
+const workflowBody = (body: PekMutationBody, keepVersionInBody = false) => {
+  const { version, ...command } = body;
+  if (version === undefined) throw new Error('Для workflow ПЭК требуется актуальная версия.');
   return {
-    blob: response.data,
-    filename: filenameFromDisposition(response.headers['content-disposition'], fallback),
+    command: keepVersionInBody ? { ...command, version } : command,
+    headers: ifMatch(version),
   };
 };
-const programAction = (id: number, action: string, body: PekMutationBody = {}) =>
-  versionedPost<PekProgram>(`/pek/programs/${id}/${action}`, body);
-const reportAction = (id: number, action: string, body: PekMutationBody = {}) =>
-  versionedPost<PekReport>(`/pek/reports/${id}/${action}`, body);
 
-export const pekService = {
+const programAction = async (
+  id: number,
+  action: 'submit-review' | 'return' | 'approve' | 'activate' | 'archive',
+  body: PekMutationBody,
+) => {
+  const request = workflowBody(body, action === 'return');
+  return mapProgramResponse(unwrapPekData<unknown>(
+    (await api.post(`/pek/programs/${id}/${action}`, request.command, { headers: request.headers })).data,
+  ));
+};
+
+const reportAction = async (
+  id: number,
+  action: 'submit-review' | 'approve' | 'archive',
+  version: number,
+) => mapReportResponse(unwrapPekData<unknown>(
+  (await api.post(`/pek/reports/${id}/${action}`, {}, { headers: ifMatch(version) })).data,
+));
+
+export type PekUploadOptions = {
+  signal?: AbortSignal;
+  onUploadProgress?: (event: AxiosProgressEvent) => void;
+};
+
+export const pekApi = {
+  async getDashboard(filters: PekDashboardFilters, signal?: AbortSignal) {
+    return mapDashboardResponse(await get<unknown>('/pek/dashboard', filters, signal));
+  },
+
   async getPrograms(filters: PekProgramFilters, signal?: AbortSignal): Promise<PageResponse<PekProgram>> {
-    return mapPekPage<PekProgram>((await api.get('/pek/programs', { params: cleanParams(filters), signal })).data);
+    const page = mapPekPage<unknown>(
+      (await api.get('/pek/programs', { params: cleanParams(filters), signal })).data,
+    );
+    return { ...page, content: page.content.map(mapProgramResponse) };
   },
   getProgram: async (id: number, signal?: AbortSignal) =>
-    validatePekResponse(pekProgramSchema, await get<PekProgram>(`/pek/programs/${id}`, {}, signal), 'program details'),
-  createProgram: (body: PekProgramRequest) => post<PekProgram>('/pek/programs', body),
-  updateProgram: (id: number, body: PekProgramRequest & { version: number }) => versionedPatch<PekProgram>(`/pek/programs/${id}`, body),
-  saveProgramDraft: (id: number, body: Partial<PekProgramRequest> & { version: number }) =>
-    versionedPatch<PekProgram>(`/pek/programs/${id}/draft`, body),
-  uploadProgramDocument: (id: number, body: FormData) =>
-    versionedPost<Record<string, unknown>>(`/pek/programs/${id}/documents`, body),
+    mapProgramResponse(await get<unknown>(`/pek/programs/${id}`, {}, signal)),
+  createProgram: async (body: PekProgramCreateRequest) =>
+    mapProgramResponse(unwrapPekData<unknown>((await api.post('/pek/programs', body)).data)),
+  updateProgram: async (id: number, version: number, body: PekProgramUpdateRequest) =>
+    mapProgramResponse(unwrapPekData<unknown>(
+      (await api.patch(`/pek/programs/${id}`, { ...body, version })).data,
+    )),
+  saveProgramDraft: async (id: number, version: number, body: PekProgramUpdateRequest) =>
+    mapProgramResponse(unwrapPekData<unknown>(
+      (await api.patch(`/pek/programs/${id}/draft`, { ...body, version })).data,
+    )),
   submitProgramReview: (id: number, body: PekMutationBody) => programAction(id, 'submit-review', body),
   returnProgram: (id: number, body: PekMutationBody) => programAction(id, 'return', body),
   approveProgram: (id: number, body: PekMutationBody) => programAction(id, 'approve', body),
   activateProgram: (id: number, body: PekMutationBody) => programAction(id, 'activate', body),
   archiveProgram: (id: number, body: PekMutationBody) => programAction(id, 'archive', body),
-  cloneProgram: (id: number, body: PekMutationBody) => programAction(id, 'clone', body),
-  getProgramHistory: (id: number, signal?: AbortSignal) => get<PekHistoryItem[]>(`/pek/programs/${id}/history`, {}, signal),
-  getAssignees: (roles: string[] = [], signal?: AbortSignal) =>
+  cloneProgram: async (id: number, body: PekProgramCloneRequest) =>
+    mapProgramResponse(unwrapPekData<unknown>((await api.post(`/pek/programs/${id}/clone`, body)).data)),
+  getProgramHistory: (id: number, signal?: AbortSignal) =>
+    get<PekHistoryItem[]>(`/pek/programs/${id}/history`, {}, signal),
+  uploadProgramDocument: async (
+    id: number,
+    file: File,
+    documentType: string,
+    options: PekUploadOptions = {},
+  ) => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('documentType', documentType);
+    return unwrapPekData<Record<string, unknown>>((await api.post(
+      `/pek/programs/${id}/documents`,
+      form,
+      {
+        signal: options.signal,
+        onUploadProgress: options.onUploadProgress,
+        headers: { 'Content-Type': 'multipart/form-data' },
+      },
+    )).data);
+  },
+  downloadProgramDocument: async (programId: number, documentId: number): Promise<PekBlobResult> => {
+    const response = await api.get<Blob>(`/pek/programs/${programId}/documents/${documentId}`, {
+      responseType: 'blob',
+    });
+    return {
+      blob: response.data,
+      filename: filenameFromDisposition(
+        response.headers['content-disposition'],
+        `pek-program-${programId}-document-${documentId}`,
+      ),
+    };
+  },
+
+  getAssignees: (roles: string[], signal?: AbortSignal) =>
     get<PekLookupOption[]>('/pek/lookups/assignees', { roles: roles.join(',') }, signal),
   getObjectPermits: (objectId: number, signal?: AbortSignal) =>
     get<PekLookupOption[]>(`/pek/lookups/objects/${objectId}/permits`, {}, signal),
 
   async getReports(filters: PekReportFilters, signal?: AbortSignal): Promise<PageResponse<PekReport>> {
-    return mapPekPage<PekReport>((await api.get('/pek/reports', { params: cleanParams(filters), signal })).data);
+    const page = mapPekPage<unknown>(
+      (await api.get('/pek/reports', { params: cleanParams(filters), signal })).data,
+    );
+    return { ...page, content: page.content.map((item) => mapReportResponse(item)) };
   },
   getReport: async (id: number, signal?: AbortSignal) =>
-    validatePekResponse(pekReportSchema, await get<PekReport>(`/pek/reports/${id}`, {}, signal), 'report details'),
-  getReportCreationContext: async (params: Record<string, unknown>, signal?: AbortSignal) =>
-    validatePekResponse(pekCreationContextSchema, await get<PekCreationContext>('/pek/reports/creation-context', params, signal), 'report creation context'),
-  createReport: (body: PekMutationBody) => post<PekReport>('/pek/reports', body),
-  updateReport: (id: number, body: PekMutationBody) => versionedPatch<PekReport>(`/pek/reports/${id}`, body),
-  collectReport: (id: number, body: PekMutationBody) => versionedPost<PekCollectionRun>(`/pek/reports/${id}/collect`, body),
-  getLatestCollectionRun: async (id: number, signal?: AbortSignal) =>
-    validatePekResponse(pekCollectionRunSchema, await get<PekCollectionRun>(`/pek/reports/${id}/collection-runs/latest`, {}, signal), 'collection run'),
-  validateReport: (id: number, body: PekMutationBody) => reportAction(id, 'validate', body),
-  getReportIssues: (id: number, signal?: AbortSignal) => get<PekReportIssue[]>(`/pek/reports/${id}/issues`, {}, signal),
-  getReportSection: (id: number, code: PekSectionCode, signal?: AbortSignal) =>
-    get<Record<string, unknown>>(`/pek/reports/${id}/sections/${code}`, {}, signal),
-  uploadReportDocument: (id: number, body: FormData) =>
-    versionedPost<Record<string, unknown>>(`/pek/reports/${id}/documents`, body),
-  getPlanFact: (id: number, signal?: AbortSignal) => get<PekPlanFactRow[]>(`/pek/reports/${id}/plan-fact`, {}, signal),
-  getUnmatchedSources: (id: number, signal?: AbortSignal) => get<PekUnmatchedSource[]>(`/pek/reports/${id}/unmatched-sources`, {}, signal),
-  getUnmatchedLinkOptions: (id: number, sourceId: number, signal?: AbortSignal) =>
-    get<PekControlItemLinkOption[]>(`/pek/reports/${id}/unmatched-sources/${sourceId}/link-options`, {}, signal),
-  linkUnmatchedSource: (id: number, sourceId: number, body: PekMutationBody) =>
-    versionedPost<PekReport>(`/pek/reports/${id}/unmatched-sources/${sourceId}/link`, body),
-  excludeUnmatchedSource: (id: number, sourceId: number, body: PekMutationBody) =>
-    versionedPost<PekReport>(`/pek/reports/${id}/unmatched-sources/${sourceId}/exclude`, body),
-  getExceedances: (id: number, signal?: AbortSignal) => get<PekExceedance[]>(`/pek/reports/${id}/exceedances`, {}, signal),
-  updateExceedance: (id: number, exceedanceId: number, body: PekMutationBody | FormData) =>
-    versionedPatch<PekExceedance>(`/pek/reports/${id}/exceedances/${exceedanceId}`, body),
-  createRepeatControl: (id: number, exceedanceId: number, body: PekMutationBody) =>
-    versionedPost<Record<string, unknown>>(`/pek/reports/${id}/exceedances/${exceedanceId}/repeat-control`, body),
-  createManualOverride: (id: number, body: PekMutationBody | FormData) => versionedPost<PekReport>(`/pek/reports/${id}/manual-overrides`, body),
-  keepManualOverride: (id: number, overrideId: number, body: PekMutationBody) =>
-    versionedPost<PekReport>(`/pek/reports/${id}/manual-overrides/${overrideId}/keep`, body),
-  restoreSourceValue: (id: number, overrideId: number, body: PekMutationBody) =>
-    versionedPost<PekReport>(`/pek/reports/${id}/manual-overrides/${overrideId}/restore`, body),
-  getReviewComments: (id: number, signal?: AbortSignal) => get<PekReviewComment[]>(`/pek/reports/${id}/review-comments`, {}, signal),
-  createReviewComment: (id: number, body: PekMutationBody) => versionedPost<PekReviewComment>(`/pek/reports/${id}/review-comments`, body),
-  resolveReviewComment: (id: number, commentId: number, body: PekMutationBody) =>
-    versionedPost<PekReviewComment>(`/pek/reports/${id}/review-comments/${commentId}/resolve`, body),
-  submitReportReview: (id: number, body: PekMutationBody) => reportAction(id, 'submit-review', body),
-  startReview: (id: number, body: PekMutationBody) => reportAction(id, 'start-review', body),
-  returnReport: (id: number, body: PekMutationBody) => reportAction(id, 'return', body),
-  acceptReview: (id: number, body: PekMutationBody) => reportAction(id, 'accept-review', body),
-  approveReport: (id: number, body: PekMutationBody) => reportAction(id, 'approve', body),
-  recallApproval: (id: number, body: PekMutationBody) => reportAction(id, 'recall-approval', body),
-  prepareSigning: (id: number, body: PekMutationBody) => versionedPost<Record<string, unknown>>(`/pek/reports/${id}/prepare-signing`, body),
-  signReport: (id: number, body: PekMutationBody | FormData) => versionedPost<PekReport>(`/pek/reports/${id}/sign`, body),
-  registerSubmission: (id: number, body: PekMutationBody | FormData) => versionedPost<PekReport>(`/pek/reports/${id}/submission`, body),
-  registerResult: (id: number, body: PekMutationBody | FormData) => versionedPost<PekReport>(`/pek/reports/${id}/result`, body),
-  createRevision: (id: number, body: PekMutationBody) => reportAction(id, 'revision', body),
-  archiveReport: (id: number, body: PekMutationBody) => reportAction(id, 'archive', body),
-  getHistory: (id: number, signal?: AbortSignal) => get<PekHistoryItem[]>(`/pek/reports/${id}/history`, {}, signal),
-  getDashboard: (params: Record<string, unknown>, signal?: AbortSignal) => get<PekDashboard>('/pek/dashboard', params, signal),
-  getSettings: (signal?: AbortSignal) => get<PekSettings>('/pek/settings', {}, signal),
-  updateSettings: (body: PekSettings) => versionedPatch<PekSettings>('/pek/settings', body),
-  downloadPreviewPdf: (id: number) => download(`/pek/reports/${id}/exports/preview.pdf`, `pek-report-${id}-preview.pdf`, ['application/pdf']),
-  downloadPdf: (id: number) => download(`/pek/reports/${id}/exports/report.pdf`, `pek-report-${id}.pdf`, ['application/pdf']),
-  downloadXlsx: (id: number) => download(`/pek/reports/${id}/exports/report.xlsx`, `pek-report-${id}.xlsx`, ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']),
-  downloadJson: (id: number) => download(`/pek/reports/${id}/exports/report.json`, `pek-report-${id}.json`, ['application/json']),
-  downloadZip: (id: number) => download(`/pek/reports/${id}/exports/archive.zip`, `pek-report-${id}.zip`, ['application/zip', 'application/x-zip-compressed']),
+    mapReportResponse(await get<unknown>(`/pek/reports/${id}`, {}, signal)),
+  getReportCreationContext: async (params: PekReportCreationParams, signal?: AbortSignal) => {
+    const context = await get<PekCreationContext>('/pek/reports/creation-context', params, signal);
+    return { ...context, programs: (context.programs || []).map(mapProgramResponse) };
+  },
+  createReport: async (body: PekReportCreateRequest) =>
+    mapReportResponse(unwrapPekData<unknown>((await api.post('/pek/reports', body)).data)),
+  collectReport: async (id: number) =>
+    mapCollectionResult(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/collect`)).data)),
+  submitReportReview: (id: number, version: number) => reportAction(id, 'submit-review', version),
+  approveReport: (id: number, version: number) => reportAction(id, 'approve', version),
+  archiveReport: (id: number, version: number) => reportAction(id, 'archive', version),
 };
 
-export type PekService = typeof pekService;
+// Compatibility alias: there is still only one PEK transport implementation.
+export const pekService = pekApi;
+export type PekService = typeof pekApi;
+export { cleanParams, ifMatch };

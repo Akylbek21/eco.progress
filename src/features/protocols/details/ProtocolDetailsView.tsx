@@ -29,7 +29,9 @@ type Props = {
   onReturn: () => void;
   onSign: () => void;
   onPublish: () => void;
-  onGenerate: () => void;
+  onPreview: () => void;
+  onGenerateDocx: () => void;
+  onGeneratePdf: () => void;
   onDocx: () => void;
   onPdf: () => void;
   onCorrection: () => void;
@@ -45,7 +47,7 @@ const baseTabs: Array<{ key: ProtocolDetailsTab; label: string }> = [
   { key: 'history', label: 'История' },
 ];
 
-const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErrors, busy, signing, onBack, onEdit, onReady, onApprove, onReturn, onSign, onPublish, onGenerate, onDocx, onPdf, onCorrection, onCancel, onArchive, onReplacement }: Props) => {
+const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErrors, busy, signing, onBack, onEdit, onReady, onApprove, onReturn, onSign, onPublish, onPreview, onGenerateDocx, onGeneratePdf, onDocx, onPdf, onCorrection, onCancel, onArchive, onReplacement }: Props) => {
   const [activeTab, setActiveTab] = useState<ProtocolDetailsTab>('results');
   const tabs = permissions.canViewAudit ? baseTabs : baseTabs.filter((tab) => tab.key !== 'history');
   const primary = resolveProtocolPrimaryAction(protocol, role);
@@ -61,7 +63,7 @@ const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErr
   };
   return (
     <div className="space-y-4 pb-24">
-      <ProtocolHeader protocol={protocol} permissions={permissions} busy={busy} primaryLabel={primary.label} onBack={onBack} onPrimary={runPrimary} onReturn={onReturn} onDocx={onDocx} onGenerate={onGenerate} onCorrection={onCorrection} onCancel={onCancel} onArchive={onArchive} onHistory={() => setActiveTab('history')} />
+      <ProtocolHeader protocol={protocol} permissions={permissions} busy={busy} primaryLabel={primary.label} onBack={onBack} onPrimary={runPrimary} onReturn={onReturn} onDocx={onDocx} onGenerateDocx={onGenerateDocx} onGeneratePdf={onGeneratePdf} onCorrection={onCorrection} onCancel={onCancel} onArchive={onArchive} onHistory={() => setActiveTab('history')} />
       <ProtocolProgress status={protocol.status} />
       <ProtocolNextStepCard protocol={protocol} missing={missing} />
       <ProtocolContextLinks protocol={protocol} />
@@ -80,7 +82,7 @@ const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErr
       </nav>
       {activeTab === 'results' && <ProtocolResultsTab protocol={protocol} editable={permissions.canManageResults} onEdit={() => onEdit('results')} />}
       {activeTab === 'main' && <ProtocolMainDataTab protocol={protocol} editable={permissions.canEdit} onEdit={onEdit} />}
-      {activeTab === 'documents' && <ProtocolDocumentsTab protocol={protocol} busy={busy} canGenerate={permissions.canGenerateDocuments} canDownload={permissions.canDownload} canSign={permissions.canSign} onGenerate={onGenerate} onDocx={onDocx} onPdf={onPdf} onSign={onSign} />}
+      {activeTab === 'documents' && <ProtocolDocumentsTab protocol={protocol} busy={busy} canGenerate={permissions.canGenerateDocuments} canDownload={permissions.canDownload} canSign={permissions.canSign} onPreview={onPreview} onGenerateDocx={onGenerateDocx} onGeneratePdf={onGeneratePdf} onDocx={onDocx} onPdf={onPdf} onSign={onSign} />}
       {activeTab === 'history' && permissions.canViewAudit && <ProtocolHistoryTab protocol={protocol} />}
       {primary.label && <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:hidden"><button type="button" disabled={busy} onClick={runPrimary} className="min-h-12 w-full rounded-xl bg-eco-600 px-4 font-bold text-white disabled:opacity-50">{primary.label}</button></div>}
     </div>

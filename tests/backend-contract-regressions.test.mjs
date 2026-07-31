@@ -9,10 +9,10 @@ test('protocol quick-create boundary matches the backend DTO exactly', async () 
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   const service = await read('src/services/apiProtocolService.ts');
   assert.match(contracts, /interface QuickCreateProtocolRequest/);
-  for (const field of ['templateId', 'protocolDate', 'sampleDate', 'measurementDate', 'testingStartDate', 'testingEndDate', 'sourceNumber', 'companyId', 'objectId', 'laboratoryId', 'executorId', 'measurementPlace', 'environment', 'conditions', 'measurements', 'printVisibility', 'orderId']) {
+  for (const field of ['templateId', 'sourceDocumentCode', 'docxTemplateCode', 'protocolDate', 'sampleDate', 'measurementDate', 'testingStartDate', 'testingEndDate', 'sourceNumber', 'companyId', 'objectId', 'laboratoryId', 'executorId', 'measurementPlace', 'conditions', 'measurements', 'printVisibility', 'orderId']) {
     assert.match(contracts, new RegExp(`\\b${field}\\b`));
   }
-  for (const field of ['samplingDate', 'deviceId', 'sourceDocumentCode', 'docxTemplateCode']) {
+  for (const field of ['samplingDate', 'deviceId', 'environment', 'orderServiceItemId', 'pekReportId']) {
     assert.doesNotMatch(contracts.match(/interface QuickCreateProtocolRequest[\s\S]*?\n}/)?.[0] || '', new RegExp(`\\b${field}\\b`));
   }
   assert.match(mapper, /requirePositiveIntegerId/);

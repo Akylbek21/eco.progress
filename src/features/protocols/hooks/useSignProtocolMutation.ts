@@ -42,23 +42,21 @@ export const useSignProtocolMutation = (
   const mutation = useMutation({
     mutationKey: ['sign-protocol', String(protocolId ?? '')],
     mutationFn: async ({ protocol }: SignVariables) => {
-      if (!protocol.permissions?.canSign) throw new Error('Backend не разрешил подписание протокола.');
-      if (!protocol.hasPdf) {
+      const fresh = await protocolService.getProtocol(String(protocol.id));
+      if (!fresh.permissions?.canSign) throw new Error('Backend не разрешил подписание протокола.');
+      if (!fresh.hasPdf) {
         throw new Error('Финальный PDF протокола не сформирован.');
       }
-      const file = await protocolService.downloadPdf(protocol.id);
+      const file = await protocolService.downloadPdf(fresh.id);
       const cmsSignatureBase64 = await createProtocolCmsSignature(file.blob, setPhase);
       setPhase('VERIFYING_SIGNATURE');
       try {
-        return await protocolService.signProtocol(protocol.id, {
-          version: Number(protocol.version),
-          cmsSignatureBase64,
-        });
+        return await protocolService.signProtocol(fresh.id, { cmsSignatureBase64 });
       } catch (error) {
-        const actual = await protocolService.getProtocol(String(protocol.id)).catch(() => null);
+        const actual = await protocolService.getProtocol(String(fresh.id)).catch(() => null);
         if (actual && (
-          actual.version > protocol.version
-          || actual.signatureCount > protocol.signatureCount
+          actual.version > fresh.version
+          || actual.signatureCount > fresh.signatureCount
           || actual.signedByCurrentUser
         )) return actual;
         throw error;

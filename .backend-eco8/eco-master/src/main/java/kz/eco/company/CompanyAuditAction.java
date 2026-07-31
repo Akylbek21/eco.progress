@@ -1,0 +1,13 @@
+package kz.eco.company;
+
+public enum CompanyAuditAction {
+    COMPANY_CREATED,
+    COMPANY_UPDATED,
+    COMPANY_ARCHIVED,
+    COMPANY_RESTORED,
+    OBJECT_CREATED,
+    OBJECT_UPDATED,
+    OBJECT_ARCHIVED,
+    OBJECT_RESTORED,
+    PRIMARY_OBJECT_CHANGED
+}

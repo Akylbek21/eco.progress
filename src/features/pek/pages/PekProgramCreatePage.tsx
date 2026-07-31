@@ -1,72 +1,383 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../../../components/ui/Button';
-import { getCompanies, getCompanyObjects } from '../../../services/companyService';
-import { useToast } from '../../../hooks/useToast';
-import type { PekProgramRequest } from '../api/pekContracts';
-import { pekService } from '../api/pekService';
-import { PekPageHeader, PekState } from '../components/common/PekUi';
-import PekLookupSelect from '../components/common/PekLookupSelect';
-import { pekKeys } from '../api/pekQueryKeys';
-import { validatePekProgram } from '../schemas/pekProgramSchema';
-import { mapPekError } from '../utils/pekErrorMapper';
+import Modal from '../../../components/ui/Modal';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useToast } from '../../../hooks/useToast';
+import { getCompanies, getCompanyObjects } from '../../../services/companyService';
+import type { PekControlItem, PekIndicator, PekMeasure, PekProgramForm } from '../api/pekContracts';
+import { pekKeys } from '../api/pekQueryKeys';
+import { pekApi } from '../api/pekService';
+import PekLookupSelect from '../components/common/PekLookupSelect';
+import PekQueryError from '../components/common/PekQueryError';
+import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
+import { pekProgramDefaults } from '../forms/programDefaults';
+import {
+  mapProgramAutosaveToRequest,
+  mapProgramCreateFormToRequest,
+  mapProgramEditFormToRequest,
+  mapProgramToForm,
+} from '../mappers/programMappers';
 import { loadPekDraft, pekDraftKey, removePekDraft, savePekDraft } from '../utils/pekDraftStorage';
+import { mapPekError } from '../utils/pekErrorMapper';
+import { pekProgramFormSchema } from '../validation/programSchema';
 
-const steps = ['Компания и объект','Основная информация','Экологическое разрешение','Позиции контроля','Показатели и нормативы','Природоохранные мероприятия','Документ и ответственные','Проверка и создание'];
-const defaults: PekProgramRequest = { companyId: 0, objectId: 0, number: '', name: '', version: 1, validFrom: '', validUntil: '', controlItems: [], indicators: [], measures: [] };
-const input = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2';
+const steps = ['Основные данные', 'Позиции контроля', 'Показатели', 'Мероприятия', 'Документы', 'Проверка и сохранение'];
+const inputClass = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2';
+const clientId = (prefix: string) =>
+  `${prefix}-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`}`;
+
+const newControl = (sortOrder: number): PekControlItem => ({
+  clientId: clientId('control'),
+  code: '',
+  name: '',
+  mandatory: true,
+  sortOrder,
+  active: true,
+});
+const newIndicator = (sortOrder: number, controlItemClientId?: string): PekIndicator => ({
+  clientId: clientId('indicator'),
+  controlItemClientId,
+  indicatorName: '',
+  mandatory: true,
+  sortOrder,
+});
+const newMeasure = (): PekMeasure => ({
+  clientId: clientId('measure'),
+  name: '',
+  status: 'PLANNED',
+  completionPercent: 0,
+  currency: 'KZT',
+});
+
 const PekProgramCreatePage = () => {
-  const { programId } = useParams(); const edit = Boolean(programId); const navigate = useNavigate(); const toast = useToast();
+  const { programId } = useParams();
+  const edit = Boolean(programId);
+  const id = Number(programId);
+  const navigate = useNavigate();
+  const toast = useToast();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [step,setStep]=useState(0); const [fieldErrors,setFieldErrors]=useState<Record<string,string>>({}); const [documentFile,setDocumentFile]=useState<File|null>(null);
-  const [showConflictComparison,setShowConflictComparison]=useState(false);
-  const { register,watch,setValue,getValues,reset }=useForm<PekProgramRequest>({defaultValues:defaults});
-  const companyId=watch('companyId'); const objectId=watch('objectId'); const objects=useQuery({queryKey:['company-objects',String(companyId)],queryFn:({signal})=>getCompanyObjects(String(companyId),false,signal),enabled:Boolean(companyId)});
-  const companies=useQuery({queryKey:['pek-company-search'],queryFn:({signal})=>getCompanies({page:0,size:50,status:'ACTIVE'},signal)});
-  const assignees=useQuery({queryKey:pekKeys.assignees(['ECOLOGIST','REVIEWER','APPROVER']),queryFn:({signal})=>pekService.getAssignees(['ECOLOGIST','REVIEWER','APPROVER'],signal)});
-  const permits=useQuery({queryKey:pekKeys.permits(objectId),queryFn:({signal})=>pekService.getObjectPermits(objectId,signal),enabled:objectId>0});
-  const programQuery=useQuery({queryKey:['pek','program-edit',programId],queryFn:({signal})=>pekService.getProgram(Number(programId),signal),enabled:edit});
-  const backendVersion=programQuery.data?.version??(edit?'loading':'new'); const draftKey = pekDraftKey('program', user?.id, programId, backendVersion);
-  useEffect(()=>{if(programQuery.data)reset({...defaults,...programQuery.data,companyId:programQuery.data.company?.id||0,objectId:programQuery.data.object?.id||0});},[programQuery.data,reset]);
-  const [autosaveState,setAutosaveState]=useState<'idle'|'saving'|'saved'|'error'|'conflict'>('idle');
-  const autosaveTimer=useRef<number|null>(null);
-  const autosave=useMutation({mutationFn:(body:PekProgramRequest)=>pekService.saveProgramDraft(Number(programId),{...body,version:programQuery.data?.version||body.version}),retry:false,onMutate:()=>setAutosaveState('saving'),onSuccess:()=>setAutosaveState('saved'),onError:(failure)=>setAutosaveState(mapPekError(failure).status===409?'conflict':'error')});
-  useEffect(()=>{if(edit)return;let active=true;void loadPekDraft<PekProgramRequest>(draftKey,backendVersion).then(draft=>{if(active&&draft?.form)reset({...defaults,...draft.form});}).catch(()=>setAutosaveState('error'));return()=>{active=false;};},[backendVersion,draftKey,edit,reset]);
-  useEffect(()=>{const subscription=watch((value)=>{if(autosaveTimer.current)window.clearTimeout(autosaveTimer.current);autosaveTimer.current=window.setTimeout(()=>{const form={...defaults,...value} as PekProgramRequest;void savePekDraft(draftKey,form,backendVersion).then(()=>setAutosaveState('saved')).catch(()=>setAutosaveState('error'));if(edit&&programQuery.data&&['DRAFT','RETURNED'].includes(programQuery.data.status)&&!autosave.isPending)autosave.mutate(form);},1200);});return()=>{subscription.unsubscribe();if(autosaveTimer.current)window.clearTimeout(autosaveTimer.current);};},[autosave,backendVersion,draftKey,edit,programQuery.data,watch]);
-  useEffect(()=>{const warn=(event:BeforeUnloadEvent)=>{if(!['saving','error','conflict'].includes(autosaveState))return;event.preventDefault();event.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[autosaveState]);
-  const addRow=(key:'controlItems'|'indicators'|'measures',row:Record<string,unknown>)=>setValue(key,[...getValues(key),row],{shouldDirty:true});
-  const mutation=useMutation({mutationFn:(body:PekProgramRequest)=>edit?pekService.updateProgram(Number(programId),{...body,version:programQuery.data?.version||body.version}):pekService.createProgram(body),retry:false,onSuccess:(saved)=>{void removePekDraft(draftKey);toast.success(edit?'Программа обновлена':'Программа ПЭК создана');navigate(`/staff/pek/programs/${saved.id}`);},onError:(error)=>{const parsed=mapPekError(error);setFieldErrors(parsed.fieldErrors);setAutosaveState(parsed.status===409?'conflict':'error');toast.error(parsed.message,parsed.traceId?`Код обращения: ${parsed.traceId}`:undefined);}});
-  const uploadDocument=useMutation({mutationFn:async()=>{if(!documentFile||!programId)throw new Error('Сначала сохраните программу');const formData=new FormData();formData.append('file',documentFile);formData.append('category','PROGRAM');formData.append('version',String(programQuery.data?.version||1));return pekService.uploadProgramDocument(Number(programId),formData);},retry:false,onSuccess:()=>{setDocumentFile(null);toast.success('Документ программы загружен');},onError:failure=>toast.error(mapPekError(failure).message)});
-  const summary=useMemo(()=>validatePekProgram(getValues()),[step,getValues]);
-  const submit=()=>{const body=getValues();const errors=validatePekProgram(body);setFieldErrors(errors);if(Object.keys(errors).length){const key=Object.keys(errors)[0];setStep(['companyId','objectId'].includes(key)?0:['number','name','validFrom','validUntil'].includes(key)?1:key.startsWith('controlItems')?3:key.startsWith('indicators')?4:key.startsWith('measures')?5:7);return;}mutation.mutate(body);};
-  const remove=(key:'controlItems'|'indicators'|'measures',index:number)=>setValue(key,getValues(key).filter((_,i)=>i!==index),{shouldDirty:true});
-  const downloadLocalCopy=()=>{const blob=new Blob([JSON.stringify({savedAt:new Date().toISOString(),form:getValues()},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=`pek-program-${programId||'new'}-local-draft.json`;anchor.click();URL.revokeObjectURL(url);};
-  return <div className="space-y-5"><PekPageHeader title={edit?'Редактирование программы ПЭК':'Создание программы ПЭК'} description={`Шаг ${step+1} из 8 · ${steps[step]}`}/><ol className="grid gap-2 sm:grid-cols-4 lg:grid-cols-8">{steps.map((name,index)=><li key={name}><button type="button" onClick={()=>setStep(index)} className={`w-full rounded-xl px-2 py-3 text-xs font-bold ${index===step?'bg-eco-700 text-white':'bg-white text-slate-600'}`}>{index+1}. {name}</button></li>)}</ol><section className="rounded-2xl border bg-white p-5">
-  {step===0&&<div className="grid gap-4 md:grid-cols-2"><label>Компания *<select {...register('companyId',{valueAsNumber:true})} onChange={(e)=>{setValue('companyId',Number(e.target.value));setValue('objectId',0);}} className={input}><option value={0}>Выберите компанию</option>{companies.data?.items.map(c=><option key={c.id} value={c.id}>{c.name} · БИН {c.bin}</option>)}</select><small className="text-rose-600">{fieldErrors.companyId}</small></label><label>Объект *<select {...register('objectId',{valueAsNumber:true})} disabled={!companyId||objects.isLoading} className={input}><option value={0}>Выберите объект</option>{objects.data?.filter(x=>x.status!=='ARCHIVED'&&x.persisted!==false&&x.isVirtual!==true&&Number(x.id)>0).map(x=><option key={x.id} value={x.id}>{x.name} · {x.address}</option>)}</select><small className="text-rose-600">{fieldErrors.objectId}</small></label></div>}
-  {step===1&&<div className="grid gap-4 md:grid-cols-2">{[['number','Номер'],['name','Название'],['version','Версия'],['validFrom','Действует с'],['validUntil','Действует до']].map(([key,label])=><label key={key}>{label}<input {...register(key as keyof PekProgramRequest,{valueAsNumber:key==='version'})} type={key.includes('valid')?'date':key==='version'?'number':'text'} className={input}/><small className="text-rose-600">{fieldErrors[key]}</small></label>)}<PekLookupSelect label="Ответственный эколог" required value={watch('responsibleUserId')} options={assignees.data||[]} loading={assignees.isLoading} error={assignees.isError} onRetry={()=>void assignees.refetch()} onChange={id=>setValue('responsibleUserId',id,{shouldDirty:true})}/></div>}
-  {step===2&&<div><PekLookupSelect label="Экологическое разрешение" value={watch('permitId')} options={permits.data||[]} loading={permits.isLoading} error={permits.isError} disabled={!objectId} onRetry={()=>void permits.refetch()} onChange={id=>setValue('permitId',id,{shouldDirty:true})}/><p className="mt-3 text-sm text-amber-700">Список разрешений загружается backend для выбранного объекта. Истёкшие разрешения не блокируют черновик, но требуют проверки.</p></div>}
-  {step===3&&<Rows kind="control" title="Позиции контроля" rows={watch('controlItems')} onChange={rows=>setValue('controlItems',rows,{shouldDirty:true})} onRemove={i=>remove('controlItems',i)} onAdd={()=>addRow('controlItems',{clientRowId:crypto.randomUUID(),sectionType:'',controlType:'',sourceName:'',frequencyType:'',requiredCount:1,mandatory:true,laboratoryControl:false})}/>}
-  {step===4&&<Rows kind="indicator" title="Показатели и нормативы" rows={watch('indicators')} onChange={rows=>setValue('indicators',rows,{shouldDirty:true})} onRemove={i=>remove('indicators',i)} onAdd={()=>addRow('indicators',{clientRowId:crypto.randomUUID(),indicatorName:'',unit:'',comparisonType:'LTE',methodologyName:'',mandatory:true})} hint="Показатель и норматив должны быть выбраны из backend-справочника. Внутренний ID вручную не вводится."/>}
-  {step===5&&<Rows kind="measure" title="Природоохранные мероприятия" rows={watch('measures')} onChange={rows=>setValue('measures',rows,{shouldDirty:true})} onRemove={i=>remove('measures',i)} onAdd={()=>addRow('measures',{clientRowId:crypto.randomUUID(),name:'',deadline:'',plannedAmount:null,repeatControlRequired:false})}/>}
-  {step===6&&<div className="grid gap-4 md:grid-cols-3"><PekLookupSelect label="Проверяющий" value={watch('reviewerId')} options={assignees.data||[]} loading={assignees.isLoading} error={assignees.isError} onRetry={()=>void assignees.refetch()} onChange={id=>setValue('reviewerId',id,{shouldDirty:true})}/><PekLookupSelect label="Утверждающий" value={watch('approverId')} options={assignees.data||[]} loading={assignees.isLoading} error={assignees.isError} onRetry={()=>void assignees.refetch()} onChange={id=>setValue('approverId',id,{shouldDirty:true})}/><div><label>Документ программы<input type="file" disabled={!edit} onChange={event=>setDocumentFile(event.target.files?.[0]||null)} className={input}/></label>{edit?<Button type="button" className="mt-2" disabled={!documentFile||uploadDocument.isPending} onClick={()=>uploadDocument.mutate()}>{uploadDocument.isPending?'Загрузка…':'Загрузить документ'}</Button>:<p className="mt-2 text-xs text-slate-500">Документ можно загрузить после первого сохранения программы.</p>}</div></div>}
-  {step===7&&<div><h2 className="text-lg font-black">Проверка</h2>{Object.keys(summary).length?<PekState title="Исправьте данные программы" message={Object.values(summary).join(' · ')}/>:<p className="mt-3 rounded-xl bg-eco-50 p-4 font-semibold text-eco-800">Программа готова к созданию одним запросом.</p>}</div>}
-  </section>
-  <div aria-live="polite" className={`text-sm font-semibold ${autosaveState==='error'||autosaveState==='conflict'?'text-rose-700':'text-slate-500'}`}>
-    {autosaveState==='saving'?'Сохранение черновика…':autosaveState==='saved'?'Черновик сохранён':autosaveState==='conflict'?'Конфликт версии: данные изменены другим сотрудником. Обновите страницу и сравните изменения.':autosaveState==='error'?'Не удалось сохранить черновик. Локальная копия сохранена в этой сессии.':''}
-  </div>
-  {autosaveState==='conflict'&&<section role="alertdialog" aria-modal="true" aria-label="Конфликт версии" className="rounded-2xl border border-amber-300 bg-amber-50 p-5"><h2 className="font-black">Данные были изменены другим пользователем</h2><p className="mt-2 text-sm">Локальный черновик сохранён под ключом {draftKey}. Выберите безопасное действие.</p><div className="mt-4 flex flex-wrap gap-2"><Button type="button" onClick={()=>void programQuery.refetch().then(()=>setAutosaveState('idle'))}>Загрузить актуальную версию</Button><Button type="button" variant="secondary" onClick={()=>setShowConflictComparison(value=>!value)}>Сравнить изменения</Button><Button type="button" variant="secondary" onClick={downloadLocalCopy}>Сохранить локальную копию</Button></div>{showConflictComparison&&<div className="mt-4 grid gap-3 lg:grid-cols-2"><pre className="max-h-72 overflow-auto rounded-xl bg-white p-3 text-xs">{JSON.stringify(programQuery.data,null,2)}</pre><pre className="max-h-72 overflow-auto rounded-xl bg-white p-3 text-xs">{JSON.stringify(getValues(),null,2)}</pre></div>}</section>}
-  <footer className="sticky bottom-3 flex justify-between rounded-2xl border bg-white/95 p-3 shadow-lg backdrop-blur"><Button variant="secondary" disabled={step===0||mutation.isPending} onClick={()=>setStep(x=>x-1)}>Назад</Button>{step<7?<Button onClick={()=>setStep(x=>x+1)}>Продолжить</Button>:<Button disabled={mutation.isPending||autosaveState==='conflict'} aria-busy={mutation.isPending} onClick={submit}>{mutation.isPending?'Создание…':'Создать программу'}</Button>}</footer></div>;
+  const [step, setStep] = useState(0);
+  const [autosaveState, setAutosaveState] = useState<'idle' | 'saving' | 'saved' | 'error' | 'conflict'>('idle');
+  const [conflictOpen, setConflictOpen] = useState(false);
+  const versionRef = useRef<number>(0);
+  const hydratedProgramId = useRef<number>();
+  const autosaveTimer = useRef<number>();
+
+  const form = useForm<PekProgramForm>({
+    defaultValues: pekProgramDefaults,
+    mode: 'onBlur',
+  });
+  const { register, watch, setValue, getValues, reset, formState } = form;
+  const companyId = watch('companyId');
+  const objectId = watch('objectId');
+  const controlItems = watch('controlItems');
+  const indicators = watch('indicators');
+  const measures = watch('measures');
+
+  const program = useQuery({
+    queryKey: pekKeys.program(id),
+    queryFn: ({ signal }) => pekApi.getProgram(id, signal),
+    enabled: edit && Number.isFinite(id),
+  });
+  const companies = useQuery({
+    queryKey: ['pek', 'program-form', 'companies'],
+    queryFn: ({ signal }) => getCompanies({ page: 0, size: 100, status: 'ACTIVE' }, signal),
+  });
+  const objects = useQuery({
+    queryKey: ['pek', 'program-form', 'objects', companyId],
+    queryFn: ({ signal }) => getCompanyObjects(String(companyId), false, signal),
+    enabled: companyId > 0,
+  });
+  const assignees = useQuery({
+    queryKey: pekKeys.assignees(['PEK_RESPONSIBLE']),
+    queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal),
+  });
+  const permits = useQuery({
+    queryKey: pekKeys.permits(objectId),
+    queryFn: ({ signal }) => pekApi.getObjectPermits(objectId, signal),
+    enabled: objectId > 0,
+  });
+  const draftKey = useMemo(
+    () => pekDraftKey('program', user?.id, programId, edit ? program.data?.version ?? 'loading' : 'new'),
+    [edit, program.data?.version, programId, user?.id],
+  );
+
+  useEffect(() => {
+    if (!program.data) return;
+    versionRef.current = program.data.version;
+    if (hydratedProgramId.current === program.data.id) return;
+    hydratedProgramId.current = program.data.id;
+    reset(mapProgramToForm(program.data));
+  }, [program.data, reset]);
+
+  useEffect(() => {
+    if (edit) return;
+    let active = true;
+    void loadPekDraft<PekProgramForm>(draftKey, 'new').then((draft) => {
+      if (active && draft?.form) reset({ ...pekProgramDefaults, ...draft.form });
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [draftKey, edit, reset]);
+
+  const autosave = useMutation({
+    mutationFn: (value: PekProgramForm) =>
+      pekApi.saveProgramDraft(id, versionRef.current, mapProgramAutosaveToRequest(value)),
+    retry: false,
+    onMutate: () => setAutosaveState('saving'),
+    onSuccess: (saved) => {
+      versionRef.current = saved.version;
+      queryClient.setQueryData(pekKeys.program(id), saved);
+      setAutosaveState('saved');
+      void removePekDraft(draftKey);
+    },
+    onError: (error) => {
+      if (mapPekError(error).status === 409) {
+        setAutosaveState('conflict');
+        setConflictOpen(true);
+      } else {
+        setAutosaveState('error');
+      }
+    },
+  });
+
+  useEffect(() => {
+    const subscription = watch((partial) => {
+      if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
+      autosaveTimer.current = window.setTimeout(() => {
+        const value = { ...pekProgramDefaults, ...partial } as PekProgramForm;
+        void savePekDraft(draftKey, value, edit ? versionRef.current : 'new');
+        if (
+          edit
+          && program.data
+          && ['DRAFT', 'RETURNED'].includes(program.data.status)
+          && !autosave.isPending
+        ) {
+          autosave.mutate(value);
+        }
+      }, 1500);
+    });
+    return () => {
+      subscription.unsubscribe();
+      if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
+    };
+  }, [autosave, draftKey, edit, program.data, watch]);
+
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!['saving', 'error', 'conflict'].includes(autosaveState)) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [autosaveState]);
+
+  const save = useMutation({
+    mutationFn: (value: PekProgramForm) => edit
+      ? pekApi.updateProgram(id, versionRef.current, mapProgramEditFormToRequest(value))
+      : pekApi.createProgram(mapProgramCreateFormToRequest(value)),
+    retry: false,
+    onSuccess: async (saved) => {
+      versionRef.current = saved.version;
+      await removePekDraft(draftKey).catch(() => undefined);
+      queryClient.setQueryData(pekKeys.program(saved.id), saved);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: pekKeys.programs() }),
+        queryClient.invalidateQueries({ queryKey: pekKeys.dashboard() }),
+      ]);
+      toast.success(edit ? 'Программа обновлена' : 'Программа создана');
+      navigate(`/staff/pek/programs/${saved.id}`);
+    },
+    onError: (error) => {
+      const mapped = mapPekError(error);
+      if (mapped.status === 409) {
+        setAutosaveState('conflict');
+        setConflictOpen(true);
+      }
+      toast.error(mapped.message);
+    },
+  });
+
+  if (program.isLoading) return <PekLoading />;
+  if (program.isError) return <PekQueryError error={program.error} resource="Программа ПЭК" retry={() => void program.refetch()} />;
+  if (edit && program.data?.readOnly) {
+    return <PekState title="Программа доступна только для просмотра" message="Backend вернул readOnly=true. Редактирование отключено." />;
+  }
+
+  const submit = form.handleSubmit((value) => {
+    const parsed = pekProgramFormSchema.safeParse(value);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || 'Проверьте поля программы');
+      setStep(0);
+      return;
+    }
+    save.mutate(value);
+  });
+  const updateControl = (index: number, patch: Partial<PekControlItem>) =>
+    setValue('controlItems', controlItems.map((row, rowIndex) => rowIndex === index ? { ...row, ...patch } : row), { shouldDirty: true });
+  const updateIndicator = (index: number, patch: Partial<PekIndicator>) =>
+    setValue('indicators', indicators.map((row, rowIndex) => rowIndex === index ? { ...row, ...patch } : row), { shouldDirty: true });
+  const updateMeasure = (index: number, patch: Partial<PekMeasure>) =>
+    setValue('measures', measures.map((row, rowIndex) => rowIndex === index ? { ...row, ...patch } : row), { shouldDirty: true });
+
+  return <div className="space-y-5">
+    <PekPageHeader
+      title={edit ? 'Редактирование программы ПЭК' : 'Создание программы ПЭК'}
+      description={`Шаг ${step + 1} из ${steps.length} · ${steps[step]}`}
+      actions={<span className="text-sm font-semibold text-slate-600" role="status">
+        {autosaveState === 'saving' && 'Сохранение…'}
+        {autosaveState === 'saved' && 'Сохранено'}
+        {autosaveState === 'error' && <><span className="text-rose-700">Ошибка autosave</span> <button type="button" className="underline" onClick={() => autosave.mutate(getValues())}>Повторить</button></>}
+        {autosaveState === 'conflict' && <span className="text-rose-700">Конфликт версии</span>}
+      </span>}
+    />
+    <ol className="grid gap-2 md:grid-cols-6">
+      {steps.map((label, index) => <li key={label} className={`rounded-xl p-3 text-center text-xs font-bold ${index === step ? 'bg-eco-700 text-white' : 'bg-white'}`}>{index + 1}. {label}</li>)}
+    </ol>
+    <form onSubmit={submit}>
+      <section className="rounded-2xl border bg-white p-5">
+        {step === 0 && <div className="grid gap-4 md:grid-cols-2">
+          <label>Компания *<select {...register('companyId', { valueAsNumber: true })} disabled={edit} onChange={(event) => { setValue('companyId', Number(event.target.value), { shouldDirty: true }); setValue('objectId', 0); }} className={inputClass}><option value={0}>Выберите компанию</option>{companies.data?.items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label>Объект *<select {...register('objectId', { valueAsNumber: true })} className={inputClass} disabled={edit || !companyId}><option value={0}>Выберите объект</option>{objects.data?.filter((item) => item.status !== 'ARCHIVED' && item.persisted !== false && item.isVirtual !== true).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label>Номер *<input {...register('number')} disabled={edit} className={inputClass} /></label>
+          <label>Название *<input {...register('name')} className={inputClass} /></label>
+          <label className="md:col-span-2">Описание<textarea {...register('description')} rows={3} className={inputClass} /></label>
+          <label>Действует с *<input type="date" {...register('validFrom')} className={inputClass} /></label>
+          <label>Действует до *<input type="date" {...register('validUntil')} className={inputClass} /></label>
+          <PekLookupSelect label="Ответственный" value={watch('responsibleUserId')} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => setValue('responsibleUserId', value, { shouldDirty: true })} />
+          {edit && <p className="text-xs text-slate-500 md:col-span-2">Текущий backend не разрешает менять компанию, объект и номер через EditProgramRequest.</p>}
+          <div className="text-sm text-slate-600"><strong>Разрешительные документы</strong><p className="mt-2">{permits.isLoading ? 'Загрузка…' : permits.data?.length ? permits.data.map((item) => item.name).join(', ') : 'Для объекта нет доступных разрешительных документов'}</p></div>
+          {Object.values(formState.errors).length > 0 && <p role="alert" className="md:col-span-2 text-sm text-rose-700">Проверьте обязательные поля программы.</p>}
+        </div>}
+        {step === 1 && <div className="space-y-4">
+          <Button type="button" onClick={() => setValue('controlItems', [...controlItems, newControl(controlItems.length)], { shouldDirty: true })}>Добавить позицию</Button>
+          {controlItems.map((row, index) => <article key={row.clientId} className="rounded-xl border p-4">
+            <div className="mb-3 flex justify-between"><strong>Позиция {index + 1}</strong><button type="button" className="text-rose-700" onClick={() => setValue('controlItems', controlItems.filter((_, i) => i !== index), { shouldDirty: true })}>Удалить</button></div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <TextField label="Код" value={row.code} onChange={(value) => updateControl(index, { code: value })} />
+              <TextField label="Название" value={row.name} onChange={(value) => updateControl(index, { name: value })} />
+              <TextField label="Раздел" value={row.sectionCode} onChange={(value) => updateControl(index, { sectionCode: value })} />
+              <TextField label="Тип контроля" value={row.controlType} onChange={(value) => updateControl(index, { controlType: value })} />
+              <TextField label="Компонент среды" value={row.environmentComponent} onChange={(value) => updateControl(index, { environmentComponent: value })} />
+              <NumberField label="Точка мониторинга ID" value={row.monitoringPointId} onChange={(value) => updateControl(index, { monitoringPointId: value })} />
+              <NumberField label="Источник выбросов ID" value={row.emissionSourceId} onChange={(value) => updateControl(index, { emissionSourceId: value })} />
+              <NumberField label="Выпуск воды ID" value={row.waterOutletId} onChange={(value) => updateControl(index, { waterOutletId: value })} />
+              <NumberField label="Источник отходов ID" value={row.wasteSourceId} onChange={(value) => updateControl(index, { wasteSourceId: value })} />
+              <NumberField label="Лаборатория ID" value={row.laboratoryId} onChange={(value) => updateControl(index, { laboratoryId: value })} />
+              <TextField label="Периодичность" value={row.frequencyType} onChange={(value) => updateControl(index, { frequencyType: value })} />
+              <NumberField label="Значение периодичности" value={row.frequencyValue} onChange={(value) => updateControl(index, { frequencyValue: value })} />
+              <NumberField label="Плановое количество" value={row.plannedCount} onChange={(value) => updateControl(index, { plannedCount: value })} />
+              <TextField label="Метод измерения" value={row.measurementMethod} onChange={(value) => updateControl(index, { measurementMethod: value })} />
+              <TextField label="Метод отбора" value={row.samplingMethod} onChange={(value) => updateControl(index, { samplingMethod: value })} />
+              <TextField label="Дата начала" type="date" value={row.startDate} onChange={(value) => updateControl(index, { startDate: value })} />
+              <TextField label="Дата окончания" type="date" value={row.endDate} onChange={(value) => updateControl(index, { endDate: value })} />
+              <NumberField label="Ответственный ID" value={row.responsibleUserId} onChange={(value) => updateControl(index, { responsibleUserId: value })} />
+              <label className="flex items-center gap-2"><input type="checkbox" checked={row.mandatory} onChange={(event) => updateControl(index, { mandatory: event.target.checked })} />Обязательная</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={row.active} onChange={(event) => updateControl(index, { active: event.target.checked })} />Активна</label>
+            </div>
+          </article>)}
+          {!controlItems.length && <PekState title="Позиции контроля не добавлены" />}
+        </div>}
+        {step === 2 && <div className="space-y-4">
+          <Button type="button" disabled={!controlItems.length} onClick={() => setValue('indicators', [...indicators, newIndicator(indicators.length, controlItems[0]?.clientId)], { shouldDirty: true })}>Добавить показатель</Button>
+          {indicators.map((row, index) => <article key={row.clientId} className="rounded-xl border p-4">
+            <div className="mb-3 flex justify-between"><strong>Показатель {index + 1}</strong><button type="button" className="text-rose-700" onClick={() => setValue('indicators', indicators.filter((_, i) => i !== index), { shouldDirty: true })}>Удалить</button></div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <label>Позиция контроля<select value={row.controlItemClientId || ''} onChange={(event) => updateIndicator(index, { controlItemClientId: event.target.value, controlItemId: undefined })} className={inputClass}>{controlItems.map((item) => <option key={item.clientId} value={item.clientId}>{item.code || item.name || 'Без названия'}</option>)}</select></label>
+              <NumberField label="Показатель ID" value={row.indicatorId} onChange={(value) => updateIndicator(index, { indicatorId: value })} />
+              <TextField label="Код показателя" value={row.indicatorCode} onChange={(value) => updateIndicator(index, { indicatorCode: value })} />
+              <TextField label="Название" value={row.indicatorName} onChange={(value) => updateIndicator(index, { indicatorName: value })} />
+              <TextField label="Единица" value={row.unit} onChange={(value) => updateIndicator(index, { unit: value })} />
+              <NumberField label="Норматив ID" value={row.normativeId} onChange={(value) => updateIndicator(index, { normativeId: value })} />
+              <NumberField label="Норматив" value={row.normativeValue} onChange={(value) => updateIndicator(index, { normativeValue: value })} />
+              <TextField label="Тип сравнения" value={row.comparisonType} onChange={(value) => updateIndicator(index, { comparisonType: value })} />
+              <NumberField label="Минимум" value={row.minValue} onChange={(value) => updateIndicator(index, { minValue: value })} />
+              <NumberField label="Максимум" value={row.maxValue} onChange={(value) => updateIndicator(index, { maxValue: value })} />
+              <NumberField label="Методология ID" value={row.methodologyId} onChange={(value) => updateIndicator(index, { methodologyId: value })} />
+              <TextField label="Тип прибора" value={row.measurementDeviceType} onChange={(value) => updateIndicator(index, { measurementDeviceType: value })} />
+              <label className="flex items-center gap-2"><input type="checkbox" checked={row.mandatory} onChange={(event) => updateIndicator(index, { mandatory: event.target.checked })} />Обязательный</label>
+            </div>
+          </article>)}
+          {!indicators.length && <PekState title="Показатели не добавлены" />}
+        </div>}
+        {step === 3 && <div className="space-y-4">
+          <Button type="button" onClick={() => setValue('measures', [...measures, newMeasure()], { shouldDirty: true })}>Добавить мероприятие</Button>
+          {measures.map((row, index) => <article key={row.clientId} className="rounded-xl border p-4">
+            <div className="mb-3 flex justify-between"><strong>Мероприятие {index + 1}</strong><button type="button" className="text-rose-700" onClick={() => setValue('measures', measures.filter((_, i) => i !== index), { shouldDirty: true })}>Удалить</button></div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <TextField label="Код" value={row.code} onChange={(value) => updateMeasure(index, { code: value })} />
+              <TextField label="Название" value={row.name} onChange={(value) => updateMeasure(index, { name: value })} />
+              <TextField label="Описание" value={row.description} onChange={(value) => updateMeasure(index, { description: value })} />
+              <TextField label="Начало" type="date" value={row.plannedStartDate} onChange={(value) => updateMeasure(index, { plannedStartDate: value })} />
+              <TextField label="Окончание" type="date" value={row.plannedEndDate} onChange={(value) => updateMeasure(index, { plannedEndDate: value })} />
+              <NumberField label="Ответственный ID" value={row.responsibleUserId} onChange={(value) => updateMeasure(index, { responsibleUserId: value })} />
+              <NumberField label="Бюджет" value={row.plannedBudget} onChange={(value) => updateMeasure(index, { plannedBudget: value })} />
+              <TextField label="Валюта" value={row.currency} onChange={(value) => updateMeasure(index, { currency: value })} />
+              <TextField label="Статус" value={row.status} onChange={(value) => updateMeasure(index, { status: value })} />
+              <NumberField label="Выполнение, %" value={row.completionPercent} onChange={(value) => updateMeasure(index, { completionPercent: value })} />
+              <TextField label="Результат" value={row.resultDescription} onChange={(value) => updateMeasure(index, { resultDescription: value })} />
+            </div>
+          </article>)}
+          {!measures.length && <PekState title="Мероприятия не добавлены" />}
+        </div>}
+        {step === 4 && <PekState title={edit ? 'Документы загружаются в карточке программы' : 'Сначала сохраните программу'} message="Backend требует ID программы для загрузки документа. После сохранения откроется карточка с drag-and-drop загрузкой." />}
+        {step === 5 && <div className="space-y-3">
+          <h2 className="text-lg font-black">Проверка</h2>
+          <p>Программа: <strong>{watch('number')} · {watch('name')}</strong></p>
+          <p>Позиции контроля: <strong>{controlItems.length}</strong></p>
+          <p>Показатели: <strong>{indicators.length}</strong></p>
+          <p>Мероприятия: <strong>{measures.length}</strong></p>
+          <p className="text-sm text-slate-500">Пустые коллекции будут переданы как `[]` и очищены на backend. Autosave коллекции не отправляет.</p>
+        </div>}
+      </section>
+      <footer className="mt-4 flex justify-between">
+        <Button type="button" variant="secondary" disabled={step === 0 || save.isPending} onClick={() => setStep((value) => value - 1)}>Назад</Button>
+        {step < steps.length - 1
+          ? <Button type="button" onClick={() => setStep((value) => value + 1)}>Продолжить</Button>
+          : <Button type="submit" disabled={save.isPending} aria-busy={save.isPending}>{save.isPending ? 'Сохранение…' : 'Сохранить программу'}</Button>}
+      </footer>
+    </form>
+    <Modal
+      open={conflictOpen}
+      title="Программа изменена другим пользователем"
+      description="Локальные изменения сохранены в аварийном черновике. Загрузите актуальную версию и сравните данные перед повторным сохранением."
+      onClose={() => setConflictOpen(false)}
+      footer={<>
+        <Button variant="secondary" onClick={() => setConflictOpen(false)}>Оставить мои данные</Button>
+        <Button onClick={() => {
+          void program.refetch().then((result) => {
+            if (result.data) {
+              versionRef.current = result.data.version;
+              reset(mapProgramToForm(result.data));
+            }
+            setConflictOpen(false);
+          });
+        }}>Загрузить актуальную версию</Button>
+      </>}
+    >
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-xl bg-amber-50 p-3"><strong>Локально</strong><p>Версия {versionRef.current}; изменения сохранены в local draft.</p></div>
+        <div className="rounded-xl bg-slate-50 p-3"><strong>Backend</strong><p>Будет загружена свежая версия сущности.</p></div>
+      </div>
+    </Modal>
+  </div>;
 };
-type RowsProps={kind:'control'|'indicator'|'measure';title:string;rows:Record<string,unknown>[];onAdd:()=>void;onRemove:(i:number)=>void;onChange:(rows:Record<string,unknown>[])=>void;hint?:string};
-const Rows=({kind,title,rows,onAdd,onRemove,onChange,hint}:RowsProps)=>{
- const update=(index:number,key:string,value:unknown)=>onChange(rows.map((row,rowIndex)=>rowIndex===index?{...row,[key]:value}:row));
- return <div><div className="flex justify-between gap-3"><div><h2 className="font-black">{title}</h2>{hint&&<p className="text-sm text-slate-500">{hint}</p>}</div><Button type="button" onClick={onAdd}>Добавить</Button></div><div className="mt-4 space-y-3">{rows.map((row,index)=><article key={String(row.clientRowId||`${title}-${index}`)} className="rounded-xl border bg-slate-50 p-4"><div className="mb-3 flex items-center justify-between"><strong>Строка {index+1}</strong><button type="button" onClick={()=>onRemove(index)} className="text-sm font-bold text-rose-700">Удалить</button></div>
- {kind==='control'&&<div className="grid gap-3 md:grid-cols-3"><label>Раздел<select value={String(row.sectionType||'')} onChange={event=>update(index,'sectionType',event.target.value)} className={input}><option value="">Выберите раздел</option><option value="EMISSIONS">Выбросы</option><option value="WATER">Сбросы и вода</option><option value="WASTE">Отходы</option><option value="IMPACT_MONITORING">Мониторинг воздействия</option></select></label><label>Тип контроля<select value={String(row.controlType||'')} onChange={event=>update(index,'controlType',event.target.value)} className={input}><option value="">Выберите тип</option><option value="INSTRUMENTAL">Инструментальный</option><option value="CALCULATED">Расчётный</option><option value="LABORATORY">Лабораторный</option><option value="MONITORING">Мониторинг</option><option value="WASTE">Отходы</option></select></label><label>Точка или источник<input value={String(row.sourceName||'')} onChange={event=>update(index,'sourceName',event.target.value)} className={input}/></label><label>Периодичность<select value={String(row.frequencyType||'')} onChange={event=>update(index,'frequencyType',event.target.value)} className={input}><option value="">Выберите периодичность</option><option value="ONCE">Однократно</option><option value="MONTHLY">Ежемесячно</option><option value="QUARTERLY">Ежеквартально</option><option value="SEMI_ANNUAL">Раз в полугодие</option><option value="ANNUAL">Ежегодно</option></select></label><label>Требуемое количество<input type="number" min={1} value={Number(row.requiredCount)||1} onChange={event=>update(index,'requiredCount',Number(event.target.value))} className={input}/></label><div className="flex flex-col justify-end gap-2"><label className="flex gap-2"><input type="checkbox" checked={row.mandatory===true} onChange={event=>update(index,'mandatory',event.target.checked)}/>Обязательная позиция</label><label className="flex gap-2"><input type="checkbox" checked={row.laboratoryControl===true} onChange={event=>update(index,'laboratoryControl',event.target.checked)}/>Лабораторный контроль</label></div></div>}
- {kind==='indicator'&&<div className="grid gap-3 md:grid-cols-2"><label>Показатель<input value={String(row.indicatorName||'')} onChange={event=>update(index,'indicatorName',event.target.value)} className={input}/></label><label>Единица<input value={String(row.unit||'')} onChange={event=>update(index,'unit',event.target.value)} className={input}/></label><label>Сравнение<select value={String(row.comparisonType||'LTE')} onChange={event=>update(index,'comparisonType',event.target.value)} className={input}><option value="LTE">Не более</option><option value="GTE">Не менее</option><option value="RANGE">Диапазон</option></select></label><label>Методика<input value={String(row.methodologyName||'')} onChange={event=>update(index,'methodologyName',event.target.value)} className={input}/></label></div>}
- {kind==='measure'&&<div className="grid gap-3 md:grid-cols-3"><label>Мероприятие<input value={String(row.name||'')} onChange={event=>update(index,'name',event.target.value)} className={input}/></label><label>Срок<input type="date" value={String(row.deadline||'')} onChange={event=>update(index,'deadline',event.target.value)} className={input}/></label><label>Плановая сумма<input type="number" min={0} step="0.01" value={String(row.plannedAmount??'')} onChange={event=>update(index,'plannedAmount',event.target.value===''?null:Number(event.target.value))} className={input}/></label></div>}
- </article>)}{!rows.length&&<p className="text-sm text-slate-500">Записи не добавлены</p>}</div></div>;
-};
+
+const TextField = ({ label, value, type = 'text', onChange }: {
+  label: string;
+  value?: string | null;
+  type?: string;
+  onChange: (value: string) => void;
+}) => <label>{label}<input type={type} value={value || ''} onChange={(event) => onChange(event.target.value)} className={inputClass} /></label>;
+
+const NumberField = ({ label, value, onChange }: {
+  label: string;
+  value?: number | null;
+  onChange: (value: number | null) => void;
+}) => <label>{label}<input type="number" value={value ?? ''} onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value))} className={inputClass} /></label>;
+
 export default PekProgramCreatePage;

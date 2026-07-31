@@ -56,20 +56,14 @@ import {
   mapProtocolsQuery,
 } from '../features/protocols/api/protocolMappers';
 import { mapBackendProtocolType, mapFrontendProtocolType } from '../features/protocols/api/protocolTypeMapper';
-import {
-  adaptLegacyProtocolReadPayload,
-  adaptLegacyProtocolTemplateId,
-} from '../features/protocols/api/protocolLegacyReadAdapter';
+import { mapFormToCreateProtocolRequest } from '../features/protocols/mappers/mapFormToCreateProtocolRequest';
+import { mapProtocolPermissions } from '../features/protocols/mappers/protocolPermissionMapper';
 
 type UnknownRecord = Record<string, unknown>;
 
 const asRecord = (value: unknown): UnknownRecord => value && typeof value === 'object' ? value as UnknownRecord : {};
 const unwrapData = (value: unknown): unknown => unwrapApiData(value);
 const asString = (value: unknown) => (typeof value === 'string' || typeof value === 'number' ? String(value) : '');
-const nullableDecimal = (value: unknown): string | null => {
-  const normalized = asString(value).trim();
-  return normalized === '' ? null : normalized;
-};
 
 const pick = (source: UnknownRecord, keys: string[]) => {
   for (const key of keys) {
@@ -638,7 +632,7 @@ const normalizeMeasurementDevice = (raw: unknown): ProtocolMeasurementDevice => 
 };
 
 export const normalizeProtocol = (raw: unknown): Protocol => {
-  const source = asRecord(adaptLegacyProtocolReadPayload(raw));
+  const source = asRecord(raw);
   const snapshot = normalizeCompanySnapshot(source);
   const organization = asRecord(source.organization);
   const laboratory = asRecord(source.laboratorySnapshot || source.laboratory_snapshot || source.laboratory);
@@ -698,6 +692,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
   const printVisibility = normalizeProtocolPrintVisibility(
     source.printVisibility || source.print_visibility || documentSettings.printVisibility || documentSettings.print_visibility,
   );
+  const apiStatus = pick(source, ['status']);
 
   return {
     id: pick(source, ['id', '_id', 'protocolId']),
@@ -712,7 +707,8 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     subtype: (pick(source, ['subtype', 'physicalFactorType', 'physical_factor_type'])
       || pick(testing, ['physicalFactorType'])) as Protocol['subtype'],
     templateName: pick(source, ['templateName', 'template_name']),
-    status: normalizeProtocolStatus(pick(source, ['status'])),
+    status: normalizeProtocolStatus(apiStatus),
+    apiStatus,
     companyId: pick(source, ['companyId', 'company_id']),
     objectId: pick(source, ['objectId', 'object_id']),
     companySnapshot: snapshot,
@@ -725,7 +721,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     samplingDepth: pick(source, ['samplingDepth', 'sampling_depth']) || pick(testing, ['samplingDepth']),
     sourceNumber: pick(source, ['sourceNumber', 'source_number']),
     formCode: pick(source, ['formCode', 'form_code']),
-    application: pick(source, ['appendixNumber', 'application', 'appendix_number']),
+    appendixNumber: pick(source, ['appendixNumber', 'appendix_number']),
     samplingDate,
     testingStartDate,
     testingEndDate,
@@ -746,6 +742,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
       minHumidity: pick(environment, ['humidityMinPercent', 'minHumidity', 'humidityMin']),
       maxHumidity: pick(environment, ['humidityMaxPercent', 'maxHumidity', 'humidityMax']),
       pressureKpa: pick(environment, ['pressureKpa', 'pressure']),
+      pressureHpa: pick(environment, ['pressureHpa']),
       windSpeed: pick(environment, ['windSpeedMs', 'windSpeed']),
       comment: pick(environment, ['conditionsComment', 'comment']) || environmentalConditions,
       status: pick(environment, ['status']) as ProtocolEnvironmentalConditions['status'],
@@ -850,7 +847,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     monitoringPointId: pick(source, ['monitoringPointId', 'monitoring_point_id']),
     emissionSourceId: pick(source, ['emissionSourceId', 'emission_source_id']),
     waterOutletId: pick(source, ['waterOutletId', 'water_outlet_id']),
-    permissions: asRecord(source.permissions) as Record<string, boolean>,
+    permissions: mapProtocolPermissions(source.permissions),
     canComplete: source.canComplete === true,
     blockingReasons: Array.isArray(source.blockingReasons) ? source.blockingReasons.map(String) : [],
     publishedToClientAt: pick(source, ['publishedAt', 'publishedToClientAt', 'published_to_client_at']),
@@ -859,77 +856,6 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     publishedDocumentId: pick(source, ['publishedDocumentId', 'published_document_id']),
   };
 };
-
-const toCreateProtocolApiPayload = (payload: CreateProtocolPayload) => {
-  const sampleDate = payload.sampleDate || payload.measurementDate || null;
-
-  return {
-    companyId: Number.isNaN(Number(payload.companyId)) ? payload.companyId : Number(payload.companyId),
-    objectId: Number.isNaN(Number(payload.objectId)) ? payload.objectId : Number(payload.objectId),
-    templateId: mapFrontendProtocolType(payload.templateId),
-    subtype: payload.subtype || null,
-    protocolNumber: payload.protocolNumber || '',
-    protocolDate: payload.protocolDate,
-    sampleDate,
-    testingStartDate: payload.testingStartDate || null,
-    testingEndDate: payload.testingEndDate || null,
-    productName: payload.productName || '',
-    testingBasis: payload.testingBasis || '',
-    productNormativeDocument: payload.productNormativeDocument || '',
-    samplingMethodDocument: payload.samplingMethodDocument || '',
-    testingMethodDocument: payload.testingMethodDocument || '',
-    purpose: payload.purpose || '',
-    measurementDate: payload.measurementDate || sampleDate,
-    measurementTime: payload.measurementTime || null,
-    measurementPlace: payload.measurementPlace || null,
-    sourceNumber: payload.sourceNumber || null,
-    laboratoryId: payload.laboratoryId || null,
-    executorId: payload.executorId || null,
-    sourceDocumentCode: payload.sourceDocumentCode || null,
-    docxTemplateCode: payload.docxTemplateCode || '',
-    normativeTemplateId: payload.normativeTemplateId || '',
-    environmentType: payload.environmentType || '',
-    defaultUnit: payload.defaultUnit || '',
-    waterType: payload.waterType || '',
-    waterUseCategory: payload.waterUseCategory || '',
-    environment: {
-      temperatureC: nullableDecimal(payload.environment?.temperature),
-      temperatureMinC: nullableDecimal(payload.environment?.minTemperature),
-      temperatureMaxC: nullableDecimal(payload.environment?.maxTemperature),
-      humidityPercent: nullableDecimal(payload.environment?.humidity),
-      humidityMinPercent: nullableDecimal(payload.environment?.minHumidity),
-      humidityMaxPercent: nullableDecimal(payload.environment?.maxHumidity),
-      pressureKpa: nullableDecimal(payload.environment?.pressureKpa),
-      windSpeedMs: nullableDecimal(payload.environment?.windSpeed),
-      conditionsComment: payload.environment?.comment || '',
-      source: payload.environment?.source || null,
-      dataSource: payload.environment?.dataSource || null,
-      observedAt: payload.environment?.observedAt || null,
-      weatherObservedAt: payload.environment?.weatherObservedAt || payload.environment?.observedAt || null,
-      loadedAt: payload.environment?.loadedAt || null,
-      manualChangeReason: payload.environment?.manualChangeReason || null,
-    },
-    printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
-  };
-};
-
-const toApiEnvironment = (environment: UpdateProtocolPayload['environment']) => ({
-  temperatureC: nullableDecimal(environment?.temperature),
-  temperatureMinC: nullableDecimal(environment?.minTemperature),
-  temperatureMaxC: nullableDecimal(environment?.maxTemperature),
-  humidityPercent: nullableDecimal(environment?.humidity),
-  humidityMinPercent: nullableDecimal(environment?.minHumidity),
-  humidityMaxPercent: nullableDecimal(environment?.maxHumidity),
-  pressureKpa: nullableDecimal(environment?.pressureKpa),
-  windSpeedMs: nullableDecimal(environment?.windSpeed),
-  conditionsComment: environment?.comment || '',
-  source: environment?.source || null,
-  dataSource: environment?.dataSource || null,
-  observedAt: environment?.observedAt || null,
-  weatherObservedAt: environment?.weatherObservedAt || environment?.observedAt || null,
-  loadedAt: environment?.loadedAt || null,
-  manualChangeReason: environment?.manualChangeReason || null,
-});
 
 const isProtocolLike = (value: unknown) => {
   const source = asRecord(value);
@@ -953,10 +879,12 @@ const isProtocolLike = (value: unknown) => {
 };
 
 const protocolFromActionResponse = async (protocolId: string, response: unknown): Promise<Protocol> => {
-  // Action and PATCH endpoints may return only changed fields. Always reload
-  // the aggregate so absent collections cannot erase data in the editor.
-  void response;
-  return getProtocol(protocolId);
+  try {
+    return requireProtocol(unwrapData(response), 'обновление');
+  } catch {
+    // Compatibility fallback only for older partial/204 responses.
+    return getProtocol(protocolId);
+  }
 };
 
 const requireProtocol = (input: unknown, action: string): Protocol => {
@@ -1036,15 +964,19 @@ export async function getProtocolTemplates(): Promise<ProtocolTemplate[]> {
       .get<ApiResponse<unknown> | unknown>('/protocols/templates')
       .then((response) => extractList(response, ['templates']).flatMap((raw) => {
         const source = asRecord(raw);
-        const rawId = adaptLegacyProtocolTemplateId(
-          pick(source, ['id', 'templateId', 'code']),
-          source.subtype,
-        );
+        const rawId = pick(source, ['id', 'templateId', 'code']);
         try {
           return [{
             ...source,
             id: mapBackendProtocolType(rawId),
             name: pick(source, ['name', 'label', 'title']) || rawId,
+            description: pick(source, ['description']) || undefined,
+            sourceDocumentCode: pick(source, ['sourceDocumentCode']) || undefined,
+            docxTemplateCode: pick(source, ['docxTemplateCode']) || undefined,
+            normativeTemplateId: pick(source, ['normativeTemplateId']) || undefined,
+            resultMode: pick(source, ['resultMode']) || undefined,
+            defaultUnit: pick(source, ['defaultUnit']) || undefined,
+            active: source.active !== false,
           } as ProtocolTemplate];
         } catch (error) {
           if (import.meta.env.DEV) console.warn('[Protocols] Unsupported backend protocol type', { rawId, error });
@@ -1062,7 +994,10 @@ export async function getProtocolTemplates(): Promise<ProtocolTemplate[]> {
   return protocolTemplatesRequest;
 }
 
-export const getProtocolTypes = getProtocolTemplates;
+export async function getProtocolTypes(): Promise<ProtocolTemplate[]> {
+  const templates = await getProtocolTemplates();
+  return templates.filter((template) => template.active !== false);
+}
 
 /**
  * Runtime API boundary for POST /protocols/quick-create.
@@ -1076,6 +1011,9 @@ export const toQuickCreateProtocolApiPayload = (
   payload: QuickCreateProtocolRequest,
 ): QuickCreateProtocolRequest => ({
   templateId: payload.templateId,
+  sourceDocumentCode: payload.sourceDocumentCode,
+  docxTemplateCode: payload.docxTemplateCode,
+  subtype: payload.subtype,
   protocolDate: payload.protocolDate,
   sampleDate: payload.sampleDate,
   measurementDate: payload.measurementDate,
@@ -1088,23 +1026,11 @@ export const toQuickCreateProtocolApiPayload = (
   measurementTime: payload.measurementTime,
   measurementPlace: payload.measurementPlace,
   sourceNumber: payload.sourceNumber,
-  defaultUnit: payload.defaultUnit,
-  environment: payload.environment
-    ? {
-        temperature: payload.environment.temperature,
-        humidity: payload.environment.humidity,
-        pressureKpa: payload.environment.pressureKpa,
-        windSpeed: payload.environment.windSpeed,
-        source: payload.environment.source,
-      }
-    : undefined,
   conditions: payload.conditions
     ? {
         sampleNumber: payload.conditions.sampleNumber,
         samplingDepth: payload.conditions.samplingDepth,
         samplingPlace: payload.conditions.samplingPlace,
-        samplingDate: payload.conditions.samplingDate,
-        preparationDate: payload.conditions.preparationDate,
         season: payload.conditions.season,
         workCategory: payload.conditions.workCategory,
         workplaceType: payload.conditions.workplaceType,
@@ -1115,10 +1041,17 @@ export const toQuickCreateProtocolApiPayload = (
         visualWorkCategory: payload.conditions.visualWorkCategory,
         waterType: payload.conditions.waterType,
         waterUseCategory: payload.conditions.waterUseCategory,
+        temperature: payload.conditions.temperature,
+        humidity: payload.conditions.humidity,
+        pressure: payload.conditions.pressure,
+        windSpeed: payload.conditions.windSpeed,
+        weatherSource: payload.conditions.weatherSource,
+        weatherDataSource: payload.conditions.weatherDataSource,
+        manualChangeReason: payload.conditions.manualChangeReason,
+        weatherObservedAt: payload.conditions.weatherObservedAt,
       }
     : payload.conditions,
   measurements: payload.measurements.map((measurement) => ({
-    clientRowId: measurement.clientRowId,
     indicatorName: measurement.indicatorName,
     pollutantCode: measurement.pollutantCode,
     factorType: measurement.factorType,
@@ -1126,14 +1059,12 @@ export const toQuickCreateProtocolApiPayload = (
     value: measurement.value,
     unit: measurement.unit,
     measurementDeviceId: measurement.measurementDeviceId,
+    deviceId: measurement.measurementDeviceId === undefined ? measurement.deviceId : undefined,
     normativeId: measurement.normativeId,
     normativeValue: measurement.normativeValue,
     testingMethodNd: measurement.testingMethodNd,
     samplingMethodNd: measurement.samplingMethodNd,
-    samplingPlace: measurement.samplingPlace,
-    sampleNumber: measurement.sampleNumber,
-    samplingDepth: measurement.samplingDepth,
-    samplingDate: measurement.samplingDate,
+    values: measurement.values,
   })),
   printVisibility: {
     organizationName: payload.printVisibility.organizationName,
@@ -1157,20 +1088,12 @@ export const toQuickCreateProtocolApiPayload = (
     windSpeed: payload.printVisibility.windSpeed,
   },
   orderId: payload.orderId,
-  orderServiceItemId: payload.orderServiceItemId,
-  pekProgramId: payload.pekProgramId,
-  pekControlItemId: payload.pekControlItemId,
-  pekControlEventId: payload.pekControlEventId,
-  pekReportId: payload.pekReportId,
-  monitoringPointId: payload.monitoringPointId,
-  emissionSourceId: payload.emissionSourceId,
-  waterOutletId: payload.waterOutletId,
 });
 
 export async function createProtocol(payload: CreateProtocolPayload): Promise<Protocol> {
   const response = await api.post<ApiResponse<unknown>>(
     '/protocols',
-    toCreateProtocolApiPayload(payload)
+    mapFormToCreateProtocolRequest(payload)
   );
 
   const result = response.data?.data ?? response.data;
@@ -1227,7 +1150,8 @@ export async function quickCreateProtocol(params: {
 }
 
 export async function refreshLaboratoryData(protocolId: string, version: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/refresh-laboratory-data`, { version });
+  void version;
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/refresh-laboratory-data`);
   return requireProtocol(unwrapData(response), 'refresh laboratory data');
 }
 
@@ -1274,7 +1198,8 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
 }
 
 export async function deleteProtocol(protocolId: string, version: number): Promise<void> {
-  await api.delete<ApiResponse<null>>(`/protocols/${protocolId}`, { data: { version } });
+  void version;
+  await api.delete<ApiResponse<null>>(`/protocols/${protocolId}`);
 }
 
 export async function addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow> {
@@ -1299,7 +1224,21 @@ export async function updateProtocolResult(protocolId: string, resultId: string,
 }
 
 export async function deleteProtocolResult(protocolId: string, resultId: string, version: number): Promise<void> {
-  await api.delete<ApiResponse<null>>(`/protocols/${protocolId}/results/${resultId}`, { data: { version } });
+  await api.delete<ApiResponse<null>>(`/protocols/${protocolId}/results/${resultId}`, { params: { version } });
+}
+
+export async function getProtocolAudit(protocolId: string): Promise<Protocol['history']> {
+  const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/audit`);
+  return extractList(response, ['history', 'audit', 'items']).map((item) => {
+    const source = asRecord(item);
+    return {
+      id: pick(source, ['id']),
+      action: pick(source, ['action']),
+      actorName: pick(source, ['actorName']),
+      createdAt: pick(source, ['createdAt']),
+      comment: pick(source, ['comment']),
+    };
+  });
 }
 
 export async function bulkAssignDevice(
@@ -1366,7 +1305,10 @@ export async function returnForRevision(protocolId: string, request: ReturnForRe
 
 export async function signProtocol(protocolId: string | number, request: SignProtocolRequest): Promise<Protocol> {
   if (!request.cmsSignatureBase64.trim()) throw new Error('CMS-подпись не сформирована.');
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/sign`, request);
+  const response = await api.post<ApiResponse<unknown> | unknown>(
+    `/protocols/${protocolId}/sign`,
+    { cmsSignatureBase64: request.cmsSignatureBase64 },
+  );
   return requireProtocol(unwrapData(response), 'подписание');
 }
 
@@ -1407,12 +1349,14 @@ export async function previewProtocol(protocolId: string): Promise<Blob> {
 }
 
 export async function generateDocx(protocolId: string, version: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-docx`, { version });
+  void version;
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-docx`);
   return protocolFromActionResponse(protocolId, response);
 }
 
 export async function generatePdf(protocolId: string, version: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-pdf`, { version });
+  void version;
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-pdf`);
   return protocolFromActionResponse(protocolId, response);
 }
 
@@ -1471,9 +1415,9 @@ const normalizeBlobError = async (error: unknown): Promise<Error> => {
 };
 
 export async function importExcel(protocolId: string, file: File, version: number): Promise<Protocol> {
+  void version;
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('version', String(version));
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/import-excel`, formData);
   return protocolFromActionResponse(protocolId, response);
 }
@@ -1489,7 +1433,10 @@ export async function addProtocolMeasurementDevice(
 }
 
 export async function removeProtocolMeasurementDevice(protocolId: string, deviceId: string, version: number): Promise<Protocol> {
-  const response = await api.delete<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/measurement-devices/${deviceId}`, { data: { version } });
+  const response = await api.delete<ApiResponse<unknown> | unknown>(
+    `/protocols/${protocolId}/measurement-devices/${deviceId}`,
+    { params: { version } },
+  );
   return protocolFromActionResponse(protocolId, response);
 }
 
@@ -1616,10 +1563,10 @@ export async function saveRawMeasurements(
   version: number,
 ): Promise<ProtocolResultRow | undefined> {
   const request: SaveRawMeasurementsRequest = {
-    version,
     methodTemplateId: methodTemplateId || null,
     measurements: payload,
   };
+  void version;
   const response = await api.post<ApiResponse<unknown> | unknown>(
     `/protocols/${protocolId}/results/${resultId}/raw-measurements`,
     request,
@@ -1632,15 +1579,16 @@ export async function saveRawMeasurements(
 }
 
 export async function calculateResult(protocolId: string, resultId: string, version: number): Promise<CalculationResultResponse> {
+  void version;
   const response = await api.post<ApiResponse<unknown> | unknown>(
     `/protocols/${protocolId}/results/${resultId}/calculate`,
-    { version },
   );
   return normalizeCalculationResult(unwrapApiResponse<unknown>(response.data), protocolId, resultId);
 }
 
 export async function calculateProtocolSummary(protocolId: string, version: number): Promise<ProtocolCalculationSummaryResponse> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`, { version });
+  void version;
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`);
   return normalizeCalculationSummary(unwrapApiResponse<unknown>(response.data), protocolId);
 }
 

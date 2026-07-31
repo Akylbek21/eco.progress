@@ -39,6 +39,7 @@ export interface ProtocolService {
   getMethodTemplates(): Promise<MethodTemplateResponse[]>;
   getMethodTemplate(id: string): Promise<MethodTemplateResponse>;
   getProtocol(protocolId: string): Promise<Protocol>;
+  getProtocolAudit(protocolId: string): Promise<Protocol['history']>;
   getProtocolById(protocolId: string): Promise<Protocol>;
   createProtocol(payload: CreateProtocolPayload): Promise<Protocol>;
   quickCreateProtocol(params: { payload: QuickCreateProtocolRequest; idempotencyKey: string }): Promise<Protocol>;
@@ -109,6 +110,7 @@ const protocolService: ProtocolService = {
   getMethodTemplates: async () => (await implementation()).getMethodTemplates(),
   getMethodTemplate: async (id) => (await implementation()).getMethodTemplate(id),
   getProtocol: async (protocolId) => (await import('./apiProtocolService')).getProtocol(protocolId),
+  getProtocolAudit: async (protocolId) => (await import('../features/protocols/api/protocolQueries')).getProtocolAudit(protocolId),
   getProtocolById: async (protocolId) => (await implementation()).getProtocolById(protocolId),
   createProtocol: async (payload) => (await implementation()).createProtocol(payload),
   quickCreateProtocol: async (params) => (await import('./apiProtocolService')).quickCreateProtocol(params),

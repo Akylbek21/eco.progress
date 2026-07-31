@@ -3,16 +3,16 @@ import type { LaboratoryDetails as CanonicalLaboratoryDetails, LaboratoryEmploye
 export type ProtocolStatus =
   | 'DRAFT'
   | 'CALCULATED'
+  | 'READY'
   | 'READY_FOR_APPROVAL'
-  | 'RETURNED_FOR_REVISION'
+  | 'NEEDS_REVISION'
   | 'APPROVED'
   | 'SIGNED'
-  | 'PUBLISHED'
   | 'REPLACED'
   | 'CANCELLED'
-  | 'ARCHIVED';
+  | 'ARCHIVED'
+  | 'UNKNOWN';
 
-export type LegacyProtocolStatus = 'READY' | 'NEEDS_REVISION';
 export type ProtocolResultValue = string | number | null | undefined | Array<string | number | null>;
 
 export type ProtocolTemplateId =
@@ -77,6 +77,12 @@ export type ProtocolTemplate = {
   id: ProtocolTemplateKey;
   name: string;
   description?: string;
+  sourceDocumentCode?: string;
+  docxTemplateCode?: string;
+  normativeTemplateId?: string;
+  resultMode?: string;
+  defaultUnit?: string;
+  active?: boolean;
 };
 
 export type ProtocolResultColumn = {
@@ -236,6 +242,7 @@ export type ProtocolEnvironmentalConditions = {
   minHumidity?: string;
   maxHumidity?: string;
   pressureKpa?: string;
+  pressureHpa?: string;
   pressure?: string;
   windSpeed?: string;
   comment?: string;
@@ -334,6 +341,7 @@ export interface Protocol {
   subtype?: ProtocolSubtype;
   templateName?: string;
   status: ProtocolStatus;
+  apiStatus?: string;
   companyId?: string | number;
   objectId?: string | number;
   companySnapshot: ProtocolCompanySnapshot;
@@ -346,7 +354,7 @@ export interface Protocol {
   samplingDepth?: string;
   sourceNumber?: string;
   formCode?: string;
-  application?: string;
+  appendixNumber?: string;
   samplingDate?: string;
   testingStartDate?: string;
   testingEndDate?: string;
@@ -505,6 +513,8 @@ export interface CreateProtocolPayload {
   measurementTime?: string;
   measurementPlace?: string;
   sourceNumber?: string;
+  formCode?: string;
+  appendixNumber?: string;
   laboratoryId?: string;
   executorId?: string;
   sourceDocumentCode?: string | null;
@@ -535,7 +545,7 @@ export type UpdateProtocolPayload = {
   sourceNumber?: string;
   basis?: string;
   formCode?: string;
-  application?: string;
+  appendixNumber?: string;
   executor: string;
   executorId?: string;
   approver: string;
@@ -625,7 +635,6 @@ export type RawMeasurementRequest = {
 };
 
 export type SaveRawMeasurementsRequest = {
-  version: number;
   methodTemplateId?: string | number | null;
   measurements: RawMeasurementRequest[];
 };

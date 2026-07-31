@@ -109,7 +109,7 @@ const SigningHarness = () => {
 };
 
 describe('collective protocol signing API and mutation', () => {
-  it('posts version and CMS but never sends a user identity', async () => {
+  it('posts only CMS and never sends version or a user identity', async () => {
     let body: Record<string, unknown> = {};
     let ifMatch = '';
     server.use(
@@ -120,10 +120,10 @@ describe('collective protocol signing API and mutation', () => {
       }),
     );
 
-    const response = await signProtocol(42, { version: 12, cmsSignatureBase64: 'cms-base64' });
+    const response = await signProtocol(42, { cmsSignatureBase64: 'cms-base64' });
 
     expect(body).toEqual({ cmsSignatureBase64: 'cms-base64' });
-    expect(ifMatch).toBe('"12"');
+    expect(ifMatch).toBe('');
     expect(body).not.toHaveProperty('userId');
     expect(body).not.toHaveProperty('signerFullName');
     expect(response.status).toBe('SIGNED');
@@ -132,6 +132,7 @@ describe('collective protocol signing API and mutation', () => {
   it('blocks double click, updates the signature UI and invalidates protocol queries', async () => {
     let requestCount = 0;
     server.use(
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: protocol() })),
       http.post('http://localhost/api/protocols/42/sign', async () => {
         requestCount += 1;
         await delay(100);

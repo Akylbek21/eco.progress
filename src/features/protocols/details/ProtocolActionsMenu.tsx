@@ -8,14 +8,15 @@ type Props = {
   permissions: ProtocolPermissions;
   busy: boolean;
   onDocx: () => void;
-  onGenerate: () => void;
+  onGenerateDocx: () => void;
+  onGeneratePdf: () => void;
   onCorrection: () => void;
   onCancel: () => void;
   onArchive: () => void;
   onHistory: () => void;
 };
 
-const ProtocolActionsMenu = ({ protocol, permissions, busy, onDocx, onGenerate, onCorrection, onCancel, onArchive, onHistory }: Props) => {
+const ProtocolActionsMenu = ({ protocol, permissions, busy, onDocx, onGenerateDocx, onGeneratePdf, onCorrection, onCancel, onArchive, onHistory }: Props) => {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -32,7 +33,8 @@ const ProtocolActionsMenu = ({ protocol, permissions, busy, onDocx, onGenerate, 
       </button>
       {open && (
         <div className="absolute right-0 top-full z-30 mt-2 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-sm shadow-xl">
-          {permissions.canGenerateDocuments && (!protocol.hasDocx || !protocol.hasPdf) && <button type="button" onClick={() => run(onGenerate)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Сформировать документы</button>}
+          {permissions.canGenerateDocuments && <button type="button" onClick={() => run(onGenerateDocx)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Сформировать DOCX</button>}
+          {permissions.canGenerateDocuments && <button type="button" onClick={() => run(onGeneratePdf)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Сформировать PDF</button>}
           {permissions.canDownload && protocol.hasDocx && <button type="button" onClick={() => run(onDocx)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Скачать DOCX</button>}
           {permissions.canReplace && <button type="button" onClick={() => run(onCorrection)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Создать исправленную версию</button>}
           {permissions.canViewAudit && <button type="button" onClick={() => run(onHistory)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Посмотреть историю</button>}

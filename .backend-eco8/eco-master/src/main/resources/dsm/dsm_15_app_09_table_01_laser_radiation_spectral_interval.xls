@@ -1,0 +1,40 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table><tbody><tr><td><p>
+Спектральный интервал <font face="Symbol">l</font>, нм</p>
+</td><td><br><p><img height="32" src="/files/1549/38/10.jpg" width="189"></p><br>
+</td></tr><tr><td><p>
+1</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+180 &lt; <font face="Symbol">l</font> ≤ 302,5</p>
+</td><td><p>
+25</p>
+</td></tr><tr><td><p>
+302,5 &lt; <font face="Symbol">l</font> ≤ 315</p>
+</td><td><p>
+0,8 × 100,2(ламбда – 295)</p>
+</td></tr><tr><td><p>
+305</p>
+</td><td><p>
+80</p>
+</td></tr><tr><td><p>
+307,5</p>
+</td><td><p>
+250</p>
+</td></tr><tr><td><p>
+310</p>
+</td><td><p>
+8 × 102</p>
+</td></tr><tr><td><p>
+312,5</p>
+</td><td><p>
+2,5 × 103</p>
+</td></tr><tr><td><p>
+315</p>
+</td><td><p>
+8 × 103</p>
+</td></tr><tr><td><p>
+315 &lt; <font face="Symbol">l</font> ≤ 380</p>
+</td><td><p>
+8 × 103</p>
+</td></tr></tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>

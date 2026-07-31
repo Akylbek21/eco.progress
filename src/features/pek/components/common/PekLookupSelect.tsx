@@ -41,13 +41,15 @@ const PekLookupSelect = ({
         </option>
       ))}
     </select>
-    {!loading && !error && options.length === 0 && <span className="mt-1 block text-xs font-medium text-slate-500">
-      Доступные значения отсутствуют.
-    </span>}
-    {error && <span className="mt-1 block text-xs font-medium text-rose-700">
-      Не удалось загрузить справочник.
-      {onRetry && <button type="button" onClick={onRetry} className="ml-1 underline">Повторить</button>}
-    </span>}
+    {!loading && !error && options.length === 0 && (
+      <span className="mt-1 block text-xs font-medium text-slate-500">Доступные значения отсутствуют.</span>
+    )}
+    {error && (
+      <span className="mt-1 block text-xs font-medium text-rose-700">
+        Не удалось загрузить справочник.
+        {onRetry && <button type="button" onClick={onRetry} className="ml-1 underline">Повторить</button>}
+      </span>
+    )}
   </label>
 );
 

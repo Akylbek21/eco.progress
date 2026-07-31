@@ -1,0 +1,101 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table><tbody><tr><td rowspan="2"><p>
+Категория работ</p>
+</td><td rowspan="2"><p>
+Энерготраты, Вт/м<sup>2</sup> </p>
+</td><td colspan="5"><p>
+Период непрерывного пребывания, ч</p>
+</td></tr><tr><td><p>
+8</p>
+</td><td><p>
+6</p>
+</td><td><p>
+4</p>
+</td><td><p>
+2</p>
+</td><td><p>
+1</p>
+</td></tr><tr><td><p>
+1</p>
+</td><td><p>
+2</p>
+</td><td><p>
+3</p>
+</td><td><p>
+4</p>
+</td><td><p>
+5</p>
+</td><td><p>
+6</p>
+</td><td><p>
+7</p>
+</td></tr><tr><td><p>
+I а</p>
+</td><td><p>
+58-77</p>
+</td><td><p>
+21,0-18,9</p>
+</td><td><p>
+19,0-17,0</p>
+</td><td><p>
+16,7-15,0</p>
+</td><td><p>
+15,0-13,0</p>
+</td><td><p>
+14,0-12,0</p>
+</td></tr><tr><td><p>
+I б</p>
+</td><td><p>
+78-97</p>
+</td><td><p>
+19,8-18,0</p>
+</td><td><p>
+17,9-16,0</p>
+</td><td><p>
+16,0-14,0</p>
+</td><td><p>
+14,0-12,0</p>
+</td><td><p>
+13,0-11,0</p>
+</td></tr><tr><td><p>
+II а</p>
+</td><td><p>
+98-129</p>
+</td><td><p>
+17,0-15,0</p>
+</td><td><p>
+15,0-13,0</p>
+</td><td><p>
+13,0-11,0</p>
+</td><td><p>
+11,0-9,0</p>
+</td><td><p>
+10,0-8,0</p>
+</td></tr><tr><td><p>
+II б</p>
+</td><td><p>
+130-160</p>
+</td><td><p>
+16,0-14,0</p>
+</td><td><p>
+14,0-12,0</p>
+</td><td><p>
+12,0-10,0</p>
+</td><td><p>
+10,0-8,0</p>
+</td><td><p>
+9,0-7,0</p>
+</td></tr><tr><td><p>
+III</p>
+</td><td><p>
+161-193</p>
+</td><td><p>
+15,0-13,0</p>
+</td><td><p>
+13,0-11,0</p>
+</td><td><p>
+11,0-9,0</p>
+</td><td><p>
+9,0-7,0</p>
+</td><td><p>
+8,0-6,0</p>
+</td></tr></tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>
