@@ -70,19 +70,32 @@ export const downloadAuthorizedBlob = async (endpoint: string, fallbackName = 'd
   }
 };
 
-export const getClientDocumentBlob = async (orderId: string, documentId: string): Promise<Blob> => {
-  const response = await api.get<Blob>(`/client/orders/${orderId}/documents/${documentId}/download`, { responseType: 'blob' });
+// NOTE: there is no per-order/per-document download route on the backend - every stored file
+// (client documents, primary documents, laboratory results, quarter documents alike) is served
+// through a single generic, ownership-checked FileController endpoint in kz.eco.storage, and each
+// document object the backend returns already carries that exact endpoint's path in its own
+// `fileUrl` field (see DocumentItem/OrderPrimaryDocument/LaboratoryResultDocument types and
+// FileController's authorize() javadoc). So downloading a document means fetching its `fileUrl`
+// directly, never building a path out of orderId+documentId.
+
+export const getClientDocumentBlob = async (fileUrl: string): Promise<Blob> => {
+  const response = await api.get<Blob>(fileUrl, { responseType: 'blob' });
   if (!(response.data instanceof Blob) || response.data.size === 0) throw new Error('Сервер вернул пустой файл.');
   const contentType = String(response.headers['content-type'] || response.data.type || '').toLowerCase();
   if (contentType.includes('text/html') || contentType.includes('application/json')) throw new Error('Сервер вернул повреждённый файл.');
   return response.data;
 };
 
-export const downloadClientDocument = (orderId: string, documentId: string | number, fallbackName = 'document') =>
-  downloadAuthorizedBlob(`/client/orders/${orderId}/documents/${documentId}/download`, fallbackName);
-export const downloadClientPrimaryDocument = (orderId: string, documentId: string | number, fallbackName = 'document') =>
-  downloadAuthorizedBlob(`/client/orders/${orderId}/primary-documents/${documentId}/download`, fallbackName);
-export const downloadClientLaboratoryDocument = (orderId: string, documentId: string | number, fallbackName = 'laboratory-document') =>
-  downloadAuthorizedBlob(`/client/orders/${orderId}/laboratory/documents/${documentId}/download`, fallbackName);
-export const downloadClientQuarterDocument = (orderId: string, quarterId: string, documentId: string | number, fallbackName = 'quarter-document') =>
-  downloadAuthorizedBlob(`/client/orders/${orderId}/quarters/${quarterId}/documents/${documentId}/download`, fallbackName);
+const downloadByFileUrl = (fileUrl: string | undefined, fallbackName: string): Promise<void> => {
+  if (!fileUrl) return Promise.reject(new Error('Файл ещё не загружен.'));
+  return downloadAuthorizedBlob(fileUrl, fallbackName);
+};
+
+export const downloadClientDocument = (fileUrl: string | undefined, fallbackName = 'document') =>
+  downloadByFileUrl(fileUrl, fallbackName);
+export const downloadClientPrimaryDocument = (fileUrl: string | undefined, fallbackName = 'document') =>
+  downloadByFileUrl(fileUrl, fallbackName);
+export const downloadClientLaboratoryDocument = (fileUrl: string | undefined, fallbackName = 'laboratory-document') =>
+  downloadByFileUrl(fileUrl, fallbackName);
+export const downloadClientQuarterDocument = (fileUrl: string | undefined, fallbackName = 'quarter-document') =>
+  downloadByFileUrl(fileUrl, fallbackName);

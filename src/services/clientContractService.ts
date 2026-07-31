@@ -26,8 +26,9 @@ const certificateInfoFromSubject = (subject: string): CertificateInfo => {
   return { iin: fields.SERIALNUMBER?.replace(/^IIN/i, ''), bin: fields.OU?.replace(/^BIN/i, ''), fullName: fields.CN, serialNumber: fields.SERIALNUMBER };
 };
 
-export const signClientContract = async (orderId: string, documentId: string | number): Promise<Order | undefined> => {
-  const contract = await getClientDocumentBlob(orderId, String(documentId));
+export const signClientContract = async (orderId: string, documentId: string | number, fileUrl: string | undefined): Promise<Order | undefined> => {
+  if (!fileUrl) throw new Error('Файл договора ещё не загружен.');
+  const contract = await getClientDocumentBlob(fileUrl);
   const { signedCms, signerSubject } = await signBase64WithNCALayer(await blobToBase64(contract));
   if (!signedCms?.trim()) throw new Error('NCALayer не вернул электронную подпись.');
   const payload: ContractSignatureRequest = { documentId, cms: signedCms, certificateInfo: certificateInfoFromSubject(signerSubject) };
@@ -35,13 +36,19 @@ export const signClientContract = async (orderId: string, documentId: string | n
   return mapOrder(unwrapApiResponse(data) as Record<string, unknown>);
 };
 
-export const uploadSignedClientContract = async (orderId: string, file: File, comment = ''): Promise<unknown> => {
+// NOTE: there is no backend endpoint that accepts an already-signed contract file upload.
+// kz.eco.order.ClientOrderController's only contract-signing route is POST
+// /orders/{id}/contract/sign, which takes SignContractRequest (a CMS signature produced in-browser
+// via NCALayer - see signClientContract above), not a multipart file. "Upload a PDF you already
+// signed elsewhere" is a real, currently-missing backend feature, not a URL typo - do not silently
+// point this at a differently-shaped endpoint (e.g. the generic document upload route) since that
+// would misfile the document under the wrong category and lose the actual signing metadata. See
+// the frontend/backend reconciliation report for this gap.
+export const uploadSignedClientContract = async (_orderId: string, file: File, _comment = ''): Promise<unknown> => {
   const fileError = validateClientFile(file);
   if (fileError) throw new Error(fileError);
   if (!(file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) throw new Error('Подписанный договор должен быть в формате PDF.');
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('comment', comment.trim());
-  const { data } = await api.post<ApiResponse<unknown>>(`/client/orders/${orderId}/contract/upload-signed`, formData);
-  return unwrapApiResponse(data);
+  throw new Error(
+    'Загрузка уже подписанного договора пока не поддерживается сервером - подпишите договор через NCALayer прямо в кабинете.',
+  );
 };

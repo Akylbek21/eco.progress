@@ -436,8 +436,8 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
   const serviceContract = getPrimaryContractForOrder(order);
   const laboratoryOrder = Boolean(order.laboratoryStatus || order.laboratoryMeasurementAgreement || order.laboratoryPrimaryDocuments?.length || order.laboratoryResultDocuments?.length || /лаборатор/i.test(order.service));
   const errorMessage = (err: unknown, fallback: string) => getApiErrorMessage(err, fallback);
-  const downloadDocument = async (document: Pick<DocumentItem, 'id' | 'name'>) => {
-    try { await downloadClientDocument(order.id, document.id, document.name); }
+  const downloadDocument = async (document: Pick<DocumentItem, 'id' | 'name' | 'fileUrl'>) => {
+    try { await downloadClientDocument(document.fileUrl, document.name); }
     catch (error) { toast.error('Не удалось скачать документ', errorMessage(error, 'Повторите попытку.')); }
   };
   const submitComment = async (event: FormEvent<HTMLFormElement>) => {
@@ -523,7 +523,7 @@ export const CabinetOrderDetailsPage = ({ onNotify }: { onNotify?: (message: str
     catch (error) { toast.error('Не удалось удалить файл', errorMessage(error, 'Повторите попытку.')); }
   };
   const downloadPrimaryDoc = async (document: OrderPrimaryDocument) => {
-    try { await downloadClientPrimaryDocument(order.id, document.id, document.fileName || document.name); }
+    try { await downloadClientPrimaryDocument(document.fileUrl, document.fileName || document.name); }
     catch (error) { toast.error('Не удалось скачать документ', errorMessage(error, 'Повторите попытку.')); }
   };
   const sendAgreementResponse = async (sourceDocument: AgreementSourceDocument, values: AgreementResponseValues) => {
@@ -776,7 +776,7 @@ const ClientLaboratoryPanel = ({ order, onUpload, onAcceptMeasurement, onResched
           const status = normalizeDocumentStatus(doc.status);
           return <div key={doc.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold text-slate-900">{doc.name}</p><p className="mt-1 text-sm text-slate-600">{doc.fileName || 'Файл не загружен'} · {doc.uploadedAt || 'нет даты'}</p>{doc.employeeComment && <p className="mt-2 text-sm text-rose-700">Замечание: {doc.employeeComment}</p>}</div><span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${getDocumentStatusColor(doc.status)}`}>{getDocumentStatusLabel(doc.status)}</span></div>
-            {doc.fileName && <Button type="button" variant="secondary" className="mt-3 px-4 py-2 text-xs" onClick={() => void downloadClientLaboratoryDocument(order.id, doc.id, doc.fileName || doc.name)}>Скачать</Button>}
+            {doc.fileName && <Button type="button" variant="secondary" className="mt-3 px-4 py-2 text-xs" onClick={() => void downloadClientLaboratoryDocument(doc.fileUrl, doc.fileName || doc.name)}>Скачать</Button>}
             {['NEED_UPLOAD', 'UPLOADED', 'REVISION_REQUESTED'].includes(status) && <form className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]" onSubmit={(event) => onUpload(event, doc)}><input name="file" type="file" required className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" /><input name="comment" placeholder="Комментарий" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" /><Button type="submit">{doc.fileName ? 'Заменить' : 'Загрузить'}</Button></form>}
           </div>;
         })}
@@ -789,7 +789,7 @@ const ClientLaboratoryPanel = ({ order, onUpload, onAcceptMeasurement, onResched
         {canRespond && <div className="mt-4 grid gap-4 lg:grid-cols-2"><Button type="button" onClick={() => void onAcceptMeasurement()}>Подтвердить</Button><form className="grid gap-2 rounded-2xl bg-slate-50 p-4" onSubmit={onRescheduleMeasurement}><input name="rescheduleDate" type="date" required className="rounded-xl border border-slate-200 px-3 py-2" /><input name="rescheduleTime" type="time" required className="rounded-xl border border-slate-200 px-3 py-2" /><textarea name="comment" required placeholder="Причина переноса" className="rounded-xl border border-slate-200 px-3 py-2" /><Button type="submit" variant="secondary">Запросить перенос</Button></form></div>}
       </> : <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Дата выезда пока не предложена.</p>}
     </div>
-    <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6"><h3 className="text-xl font-bold text-eco-900">Лабораторные результаты</h3><div className="mt-4 grid gap-3 md:grid-cols-2">{results.map((result) => <div key={result.id} className="rounded-2xl bg-eco-50 p-4"><p className="font-bold text-slate-900">{result.name}</p><p className="mt-1 text-sm text-slate-600">Протокол: {result.protocolNumber || 'не указан'} · версия {result.version || 1}</p><p className="mt-1 text-xs text-slate-500">{result.readyAt || result.publishedAt || ''}{result.electronicallySigned ? ' · подписан ЭЦП' : ''}</p><Button type="button" className="mt-3 px-4 py-2 text-xs" onClick={() => void downloadClientLaboratoryDocument(order.id, result.id, result.fileName || result.name)}>Скачать</Button></div>)}{!results.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 md:col-span-2">Опубликованных результатов пока нет.</p>}</div></div>
+    <div className="rounded-[24px] bg-white p-5 shadow-sm sm:p-6"><h3 className="text-xl font-bold text-eco-900">Лабораторные результаты</h3><div className="mt-4 grid gap-3 md:grid-cols-2">{results.map((result) => <div key={result.id} className="rounded-2xl bg-eco-50 p-4"><p className="font-bold text-slate-900">{result.name}</p><p className="mt-1 text-sm text-slate-600">Протокол: {result.protocolNumber || 'не указан'} · версия {result.version || 1}</p><p className="mt-1 text-xs text-slate-500">{result.readyAt || result.publishedAt || ''}{result.electronicallySigned ? ' · подписан ЭЦП' : ''}</p><Button type="button" className="mt-3 px-4 py-2 text-xs" onClick={() => void downloadClientLaboratoryDocument(result.fileUrl, result.fileName || result.name)}>Скачать</Button></div>)}{!results.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 md:col-span-2">Опубликованных результатов пока нет.</p>}</div></div>
   </div></Reveal>;
 };
 
@@ -980,7 +980,7 @@ const ClientAgreementPanel = ({
           documentName={selectedDocument?.title || ''}
           description={selectedDocument?.comment}
           documentDate={selectedDocument?.uploadedAt}
-          onDownload={() => selectedDocument ? downloadClientDocument(order.id, selectedDocument.id, selectedDocument.fileName) : undefined}
+          onDownload={() => selectedDocument ? downloadClientDocument(selectedDocument.fileUrl, selectedDocument.fileName) : undefined}
           onClose={() => setSelectedDocument(null)}
           onSubmit={(values) => selectedDocument ? onSend(selectedDocument, values) : undefined}
         />

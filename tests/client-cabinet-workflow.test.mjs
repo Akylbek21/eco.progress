@@ -58,17 +58,30 @@ test('contract signing downloads bytes, calls NCALayer and posts CMS DTO', async
   assert.equal(canSignContract('SIGNED'), false);
 });
 
-test('signed PDF uses its dedicated multipart endpoint', async () => {
+// Backend (kz.eco.order.ClientOrderController) has no endpoint that accepts an already-signed
+// contract file - its only contract-signing route is POST /orders/{id}/contract/sign, which takes
+// a CMS signature payload (SignContractRequest), not a multipart file. Uploading a pre-signed PDF
+// is a genuine missing backend feature, so the frontend now fails fast with a clear message
+// instead of calling a URL that would 404.
+test('signed PDF upload is a known unsupported feature, not a silent 404', async () => {
   const service = await read('src/services/clientContractService.ts');
-  assert.match(service, /\/contract\/upload-signed/);
-  assert.match(service, /formData\.append\('file', file\)/);
-  assert.doesNotMatch(service, /formData\.append\('type', 'contract'\)/);
+  assert.doesNotMatch(service, /\/contract\/upload-signed/);
+  assert.match(service, /throw new Error/);
+  assert.match(service, /не поддерживается сервером/);
 });
 
-test('payment receipt sends full payment metadata and never marks payment paid', async () => {
+// Backend has no /client/orders/{id}/payments/receipts endpoint and no fields to store
+// amount/paymentDate/paymentMethod/paymentOrderNumber against an order - the only real primitive
+// is the generic document upload (POST /client/orders/{id}/documents, category=PAYMENT_RECEIPT).
+// The frontend now routes the receipt file through that real endpoint and folds the structured
+// fields into the document comment as best-effort text, and deliberately does NOT call /pay
+// automatically (that would silently mark the order paid with no staff review).
+test('payment receipt uses the real document-upload endpoint and never marks payment paid', async () => {
   const service = await read('src/services/clientPaymentService.ts');
-  for (const field of ['amount', 'paymentDate', 'paymentMethod', 'paymentOrderNumber', 'comment', 'file']) assert.match(service, new RegExp(`formData\\.append\\('${field}'`));
-  assert.match(service, /\/payments\/receipts/);
+  assert.match(service, /uploadClientDocument/);
+  assert.match(service, /category: 'PAYMENT_RECEIPT'/);
+  for (const field of ['amount', 'paymentDate', 'paymentMethod', 'paymentOrderNumber']) assert.match(service, new RegExp(field));
+  assert.doesNotMatch(service, /\/payments\/receipts/);
   assert.equal(normalizeClientPaymentStatus('receipt_uploaded'), 'RECEIPT_UPLOADED');
   assert.doesNotMatch(service, /'PAID'/);
 });

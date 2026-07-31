@@ -10,7 +10,7 @@ const envSchema = z.object({
 });
 
 const developmentDefaults = {
-  VITE_EDO_API_URL: 'http://localhost:8081/api',
+  VITE_EDO_API_URL: 'http://localhost:8080/api',
   VITE_EDO_APP_URL: 'http://localhost:4174',
   VITE_MAIN_SITE_URL: 'https://ecoprogress.kz',
   VITE_CRM_URL: 'https://crm.ecoprogress.kz',

@@ -91,7 +91,7 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
 };
 
 export const signOrderContractWithNCALayer = async (orderId: string, document: DocumentItem) => {
-  return signClientContract(orderId, document.id);
+  return signClientContract(orderId, document.id, document.fileUrl);
 };
 
 export type ClientDocumentResponsePayload = {
@@ -113,8 +113,9 @@ export const respondOrderDocument = async (
   return data.data;
 };
 
-export const signDocumentForResponse = async (orderId: string, document: Pick<DocumentItem, 'id' | 'fileUrl'>) => {
-  const blob = await getClientDocumentBlob(orderId, document.id);
+export const signDocumentForResponse = async (_orderId: string, document: Pick<DocumentItem, 'id' | 'fileUrl'>) => {
+  if (!document.fileUrl) throw new Error('Файл документа ещё не загружен.');
+  const blob = await getClientDocumentBlob(document.fileUrl);
   const fileBytes = await blob.arrayBuffer();
   return signBase64WithNCALayer(arrayBufferToBase64(fileBytes));
 };
