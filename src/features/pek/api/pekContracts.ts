@@ -256,7 +256,6 @@ export type PekReportCreationParams = {
 export type PekReportCreateRequest = PekReportCreationParams & {
   programId: number;
   collectImmediately: boolean;
-  responsibleUserId?: number;
 };
 export interface PekCreationContext {
   company?: PekNamedRef | null;

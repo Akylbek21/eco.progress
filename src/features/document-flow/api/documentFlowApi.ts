@@ -2,10 +2,10 @@ import axios, { type AxiosProgressEvent } from 'axios';
 import api from '../../../services/api';
 import type { ApiResponse } from '../../../services/apiHelpers';
 import type {
-  AccessContext, AuditEvent, Counterparty, CreateDocumentRequest, DashboardResponse, DocumentAttachment,
+  AccessContext, Counterparty, CreateDocumentRequest, DashboardResponse, DocumentAttachment,
   DocumentDetail, DocumentFilters, DocumentListItem, DocumentSignature, DocumentTypeConfig,
   DocumentVersion, PageResponse, PlanAdmin, PublicInvitation, PublicPlan, Representative,
-  OrganizationSigner, RevocationRequest, SelfSignPreparation, SigningRoute, SigningRouteRequest, SubscriptionAdmin, UpdateDocumentRequest,
+  RevocationRequest, SigningRoute, SigningRouteRequest, SubscriptionAdmin, UpdateDocumentRequest,
   UsageMetric,
 } from '../model/types';
 
@@ -67,8 +67,8 @@ const progress = (callback?: (percent: number | null) => void) => (event: AxiosP
 };
 
 export const documentFlowApi = {
-  access: async (organizationId?: number, signal?: AbortSignal) =>
-    unwrap<AccessContext>(await api.get('/document-flow/access-context', { params: compact({ organizationId }), signal })),
+  access: async (_organizationId?: number, signal?: AbortSignal) =>
+    unwrap<AccessContext>(await api.get('/document-flow/access', { signal })),
   plans: async (signal?: AbortSignal) =>
     unwrap<PublicPlan[]>(await publicClient.get('/plans', { signal })),
   plan: async (code: string, signal?: AbortSignal) =>
@@ -87,12 +87,6 @@ export const documentFlowApi = {
     unwrap<DocumentDetail>(await api.get(`/document-flow/documents/${id}`, { params: compact({ organizationId }), signal })),
   createDocument: async (payload: CreateDocumentRequest, idempotencyKey: string) =>
     unwrap<DocumentDetail>(await api.post('/document-flow/documents', payload, { headers: { 'Idempotency-Key': idempotencyKey } })),
-  selfSignPrepare: async (id: number, idempotencyKey: string) =>
-    unwrap<SelfSignPreparation>(await api.post(`/document-flow/documents/${id}/self-sign/prepare`, undefined, {
-      headers: { 'Idempotency-Key': idempotencyKey },
-    })),
-  selfSignComplete: async (id: number, payload: { challenge: string; cms: string; clientRequestId: string }) =>
-    unwrap<DocumentDetail>(await api.post(`/document-flow/documents/${id}/self-sign/complete`, payload)),
   updateDocument: async (id: number, payload: UpdateDocumentRequest, organizationId?: number) =>
     unwrap<DocumentDetail>(await api.patch(`/document-flow/documents/${id}`, payload, { params: compact({ organizationId }) })),
   deleteDocument: async (id: number, organizationId?: number) =>
@@ -133,10 +127,6 @@ export const documentFlowApi = {
     }));
     return rows.map(version);
   },
-  audit: async (id: number, page = 0, size = 50, organizationId?: number, signal?: AbortSignal) =>
-    unwrap<PageResponse<AuditEvent>>(await api.get(`/document-flow/documents/${id}/audit`, {
-      params: compact({ page, size, organizationId }), signal,
-    })),
   uploadVersion: async (id: number, file: File, options: UploadOptions = {}) => {
     const form = new FormData();
     form.append('file', file);
@@ -166,10 +156,6 @@ export const documentFlowApi = {
   representatives: async (id: number, organizationId?: number, signal?: AbortSignal) =>
     unwrap<Representative[]>(await api.get(`/document-flow/counterparties/${id}/representatives`, {
       params: compact({ organizationId }), signal,
-    })),
-  organizationSigners: async (organizationId: number, query: string, signal?: AbortSignal) =>
-    unwrap<OrganizationSigner[]>(await api.get(`/organizations/${organizationId}/signers`, {
-      params: { query }, signal,
     })),
   addRepresentative: async (id: number, payload: Omit<Representative, 'id' | 'counterpartyId' | 'active'>, organizationId?: number) =>
     unwrap<Representative>(await api.post(`/document-flow/counterparties/${id}/representatives`, payload, {
@@ -226,8 +212,6 @@ export const publicDocumentFlowApi = {
     publicClient.get<Blob>(`/signing/${encodeURIComponent(token)}/file`, { responseType: 'blob', signal }),
   viewed: async (token: string) =>
     publicClient.post(`/signing/${encodeURIComponent(token)}/viewed`),
-  prepare: async (token: string) =>
-    unwrap<SelfSignPreparation>(await publicClient.post(`/signing/${encodeURIComponent(token)}/prepare`)),
   sign: async (token: string, payload: {
     documentId: number; versionId: number; assignmentId: number; cms: string; clientRequestId: string;
   }) => unwrap<DocumentSignature>(await publicClient.post(`/signing/${encodeURIComponent(token)}/sign`, {

@@ -9,7 +9,6 @@ export const mapReportCreateRequest = (
   params: PekReportCreationParams,
   programId: number,
   collectImmediately: boolean,
-  responsibleUserId?: number,
 ): PekReportCreateRequest => ({
   companyId: params.companyId,
   objectId: params.objectId,
@@ -18,7 +17,6 @@ export const mapReportCreateRequest = (
   ...(params.periodType === 'QUARTER' ? { quarter: params.quarter } : {}),
   programId,
   collectImmediately,
-  ...(responsibleUserId ? { responsibleUserId } : {}),
 });
 
 export const getCreationBlockState = (context?: PekCreationContext) => ({

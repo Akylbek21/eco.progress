@@ -204,15 +204,6 @@ export interface SignProtocolRequest {
   cmsSignatureBase64: string;
 }
 
-export interface PrepareProtocolSigningResponse {
-  protocol: import('../../../types/protocols').Protocol;
-  signingPayload: string;
-}
-
-export interface SignAndCompleteProtocolRequest extends SignProtocolRequest {
-  version: number;
-}
-
 export interface QuickCreateProtocolResponse {
   id: string;
 }

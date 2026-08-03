@@ -14,7 +14,6 @@ export const documentFlowKeys = {
   documentTypes: () => [...documentFlowKeys.all, 'document-types'] as const,
   versions: (id: number) => [...documentFlowKeys.all, 'document', id, 'versions'] as const,
   attachments: (id: number) => [...documentFlowKeys.all, 'document', id, 'attachments'] as const,
-  audit: (id: number) => [...documentFlowKeys.all, 'document', id, 'audit'] as const,
   counterparties: (filters: object) => [...documentFlowKeys.all, 'counterparties', stable(filters)] as const,
   counterparty: (id: number) => [...documentFlowKeys.all, 'counterparty', id] as const,
   representatives: (id: number) => [...documentFlowKeys.all, 'counterparty', id, 'representatives'] as const,

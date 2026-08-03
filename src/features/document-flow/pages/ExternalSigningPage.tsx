@@ -4,8 +4,6 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { publicDocumentFlowApi } from '../api/documentFlowApi';
 import { documentFlowKeys } from '../api/documentFlowKeys';
-import { createCmsSignatureWithNCALayer } from '../../../services/ncalayer';
-import { mapDocumentFlowError } from '../utils/apiErrorMapper';
 
 export default function ExternalSigningPage() {
   const token = useParams().token || '';
@@ -39,17 +37,6 @@ export default function ExternalSigningPage() {
     mutationFn: () => publicDocumentFlowApi.reject(token, reason.trim()),
     onSuccess: () => { setRejectOpen(false); void invitation.refetch(); },
   });
-  const sign = useMutation({
-    mutationFn: async () => {
-      const prepared = await publicDocumentFlowApi.prepare(token);
-      const assignmentId = prepared.assignmentId || invitation.data?.assignmentId;
-      const versionId = prepared.versionId || invitation.data?.versionId;
-      if (!prepared.dataToSign || !assignmentId || !versionId || !invitation.data) throw new Error('Backend не вернул данные для внешней подписи.');
-      const cms = await createCmsSignatureWithNCALayer(prepared.dataToSign);
-      return publicDocumentFlowApi.sign(token, { documentId: invitation.data.documentId, versionId, assignmentId, cms, clientRequestId: crypto.randomUUID() });
-    },
-    onSuccess: () => invitation.refetch(),
-  });
   if (invitation.isLoading) return <Box minHeight="100vh" display="grid" sx={{ placeItems: 'center' }}><CircularProgress /></Box>;
   if (invitation.isError || !invitation.data) {
     return <Container maxWidth="sm" sx={{ py: 10 }}><Alert severity="error">Приглашение недействительно или срок его действия истёк.</Alert></Container>;
@@ -70,11 +57,10 @@ export default function ExternalSigningPage() {
         </Paper>
         {fileUrl && <Box component="iframe" title="Документ для внешнего подписания" src={fileUrl} width="100%" height="650px" border={0} />}
         {!terminal && <Stack direction="row" gap={2}>
-          <Button variant="contained" disabled={sign.isPending} onClick={() => sign.mutate()}>Подписать через NCALayer</Button>
+          <Button variant="contained" disabled title="Backend не возвращает assignmentId/versionId, обязательные для POST /sign">Подписать через NCALayer</Button>
           <Button color="error" onClick={() => setRejectOpen(true)}>Отклонить</Button>
         </Stack>}
-        {sign.isError && <Alert severity="error">{mapDocumentFlowError(sign.error).message}</Alert>}
-        {sign.isSuccess && <Alert severity="success">Документ успешно подписан.</Alert>}
+        {!terminal && <Alert severity="warning">Публичная подпись временно недоступна: backend не возвращает обязательные assignmentId и versionId. Фиктивный prepare-запрос не выполняется.</Alert>}
       </Stack>
       <Dialog open={rejectOpen} onClose={() => setRejectOpen(false)} fullWidth><DialogTitle>Отклонить документ</DialogTitle><DialogContent><TextField fullWidth multiline minRows={3} label="Причина" value={reason} onChange={(event) => setReason(event.target.value)} sx={{ mt: 1 }} />{reject.isError && <Alert severity="error">{reject.error.message}</Alert>}</DialogContent><DialogActions><Button onClick={() => setRejectOpen(false)}>Отмена</Button><Button color="error" disabled={!reason.trim() || reject.isPending} onClick={() => reject.mutate()}>Отклонить</Button></DialogActions></Dialog>
     </Container>

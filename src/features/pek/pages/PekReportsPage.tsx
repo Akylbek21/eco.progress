@@ -13,7 +13,7 @@ import { PekLoading, PekPageHeader, PekState, PekStatusBadge } from '../componen
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 
-const statuses = ['DRAFT', 'COLLECTING', 'REQUIRES_CORRECTION', 'READY_FOR_REVIEW', 'UNDER_REVIEW', 'RETURNED', 'APPROVED', 'READY_FOR_SIGNING', 'PARTIALLY_SIGNED', 'SIGNED', 'ARCHIVED'];
+const statuses = ['DRAFT', 'COLLECTING', 'READY_FOR_REVIEW', 'APPROVED', 'ARCHIVED'];
 const valueOrDash = (value?: number | null) => value === null || value === undefined ? '—' : value;
 
 const PekReportsPage = () => {

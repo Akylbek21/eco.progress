@@ -54,7 +54,7 @@ const PekProgramDocuments = ({ programId, version, documents, readOnly }: {
     mutationFn: async () => {
       if (!file) throw new Error('Выберите файл.');
       controller.current = new AbortController();
-      return pekApi.uploadProgramDocument(programId, version, file, documentType, {
+      return pekApi.uploadProgramDocument(programId, file, documentType, {
         signal: controller.current.signal,
         onUploadProgress: (event) => setProgress(event.total ? Math.round(event.loaded * 100 / event.total) : 0),
       });

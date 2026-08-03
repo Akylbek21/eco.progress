@@ -44,7 +44,7 @@ const PekProgramDetailsPage = () => {
       if (item.code === 'APPROVE') return pekApi.approveProgram(id, { version });
       if (item.code === 'ACTIVATE') return pekApi.activateProgram(id, { version });
       if (item.code === 'ARCHIVE') return pekApi.archiveProgram(id, { version });
-      if (item.code === 'CLONE') return pekApi.cloneProgram(id, version, {
+      if (item.code === 'CLONE') return pekApi.cloneProgram(id, {
         number: cloneNumber.trim(),
         name: cloneName.trim() || undefined,
         validFrom: cloneValidFrom || undefined,

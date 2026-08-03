@@ -8,7 +8,6 @@ import type { PekReportCreateRequest } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import PekCompanyObjectFilters from '../components/common/PekCompanyObjectFilters';
-import PekLookupSelect from '../components/common/PekLookupSelect';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { mapReportCreateRequest } from '../mappers/reportMappers';
@@ -29,7 +28,6 @@ const PekReportCreatePage = () => {
   const [quarter, setQuarter] = useState(Number(initial.get('quarter')) || 1);
   const [programId, setProgramId] = useState(0);
   const [collectImmediately, setCollectImmediately] = useState(true);
-  const [responsibleUserId, setResponsibleUserId] = useState<number | null>(null);
   const params: PekReportCreationParams = {
     companyId,
     objectId,
@@ -45,7 +43,6 @@ const PekReportCreatePage = () => {
     retry: retryPekQuery,
     staleTime: PEK_STALE_TIME_MS,
   });
-  const assignees = useQuery({ queryKey: pekKeys.assignees(['PEK_RESPONSIBLE']), queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal), retry: retryPekQuery });
   useEffect(() => {
     if (context.data?.selectedProgramId) setProgramId(context.data.selectedProgramId);
   }, [context.data?.selectedProgramId]);
@@ -108,9 +105,9 @@ const PekReportCreatePage = () => {
             {context.data.warnings.map((warning) => <p key={warning} className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{warning}</p>)}
             {context.data.blockingReasons.map((reason) => <p key={reason} className="rounded-xl bg-rose-50 p-3 text-sm text-rose-900">{reason}</p>)}
             {context.data.duplicateReportId && <p className="rounded-xl bg-amber-50 p-3 text-sm">Отчёт за период уже существует. <Link className="font-bold underline" to={`/staff/pek/reports/${context.data.duplicateReportId}`}>Открыть отчёт №{context.data.duplicateReportId}</Link></p>}
-            <PekLookupSelect label="Ответственный" required value={responsibleUserId} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={setResponsibleUserId} />
             <label className="flex items-center gap-2"><input type="checkbox" checked={collectImmediately} onChange={(event) => setCollectImmediately(event.target.checked)} />Сразу собрать подходящие протоколы</label>
-            <Button disabled={blocked || !responsibleUserId || create.isPending} aria-busy={create.isPending} onClick={() => create.mutate(mapReportCreateRequest(params, selectedProgramId, collectImmediately, responsibleUserId || undefined))}>
+            <PekState title="Ответственный отчёта определяется backend" message="CreateReportRequest не принимает поле ответственного." />
+            <Button disabled={blocked || create.isPending} aria-busy={create.isPending} onClick={() => create.mutate(mapReportCreateRequest(params, selectedProgramId, collectImmediately))}>
               {create.isPending ? 'Создание…' : 'Создать отчёт'}
             </Button>
           </section>}

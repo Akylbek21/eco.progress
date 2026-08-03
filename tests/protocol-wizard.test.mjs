@@ -18,8 +18,8 @@ test('wizard has five guarded steps and one quick-create mutation', async () => 
   const submission = await read('src/features/protocols/utils/quickCreateSubmission.ts');
   const steps = wizard.match(/const steps = \[([^\]]+)\]/)?.[1] || '';
   assert.equal((steps.match(/'/g) || []).length / 2, 5);
-  assert.match(wizard, /prepareSigning/);
-  assert.match(wizard, /signAndComplete/);
+  assert.match(wizard, /protocolService\.signProtocol/);
+  assert.doesNotMatch(wizard, /prepareSigning|signAndComplete/);
   assert.match(wizard, /acquireQuickCreateLock\(submittingRef\)/);
   assert.match(wizard, /protocolService\.quickCreateProtocol\(\{ payload, idempotencyKey \}\)/);
   assert.match(submission, /crypto\.randomUUID\(\)/);

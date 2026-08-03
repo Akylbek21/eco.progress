@@ -1079,20 +1079,7 @@ const ProtocolEditorPage = () => {
     }
     setBusy(true);
     try {
-      const savedResults = await protocolService.saveProtocolResults(
-        protocol.id,
-        protocol.results.map((result) => {
-          const rawNormativeId = result.values.normativeId;
-          return {
-            values: result.values,
-            measurementDeviceId: result.measurementDeviceId,
-            normativeId: result.normativeReference?.id
-              ?? (typeof rawNormativeId === 'string' || typeof rawNormativeId === 'number' ? rawNormativeId : null),
-          };
-        }),
-        protocol.version,
-      );
-      const summary = await protocolService.calculateProtocolSummary(protocol.id, savedResults.version);
+      const summary = await protocolService.calculateProtocolSummary(protocol.id, protocol.version);
       const calculated = await protocolService.getProtocol(protocol.id);
       await protocolService.checkNormatives(calculated.id, calculated.version);
       const updated = await protocolService.getProtocol(protocol.id);
@@ -1162,7 +1149,6 @@ const ProtocolEditorPage = () => {
       if (updated.pekProgramId) void queryClient.invalidateQueries({ queryKey: ['pek', 'program', Number(updated.pekProgramId)] });
       if (updated.pekReportId) {
         void queryClient.invalidateQueries({ queryKey: ['pek', 'report', Number(updated.pekReportId)] });
-        void queryClient.invalidateQueries({ queryKey: ['pek', 'plan-fact', Number(updated.pekReportId)] });
       }
       toast.success(success);
       return true;
@@ -1305,7 +1291,7 @@ const ProtocolEditorPage = () => {
     setBusy(true);
     try {
       const currentPekReport = await pekApi.getReport(pekReportContext);
-      await pekApi.collectReport(pekReportContext, currentPekReport.version);
+      await pekApi.collectReport(pekReportContext);
       await queryClient.invalidateQueries({ queryKey: ['pek', 'report', pekReportContext] });
       toast.success('Отчёт ПЭК повторно собран с учётом финализированных протоколов');
       navigate(`/staff/pek/reports/${pekReportContext}`);

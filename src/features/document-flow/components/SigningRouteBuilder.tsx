@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Add, ArrowDownward, ArrowUpward, Delete } from '@mui/icons-material';
 import {
-  Alert, Autocomplete, Box, Button, Card, CardContent, FormControl, IconButton, InputLabel,
+  Alert, Box, Button, Card, CardContent, FormControl, IconButton, InputLabel,
   MenuItem, Select, Stack, TextField, Typography,
 } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
-import { documentFlowApi } from '../api/documentFlowApi';
-import type { AccessContext, OrganizationSigner, SignerType, SigningAssignmentInput, SigningRouteRequest, SigningRouteType } from '../model/types';
+import type { AccessContext, SignerType, SigningAssignmentInput, SigningRouteRequest, SigningRouteType } from '../model/types';
 import { hasFeature, validateRequiredCount } from '../model/access';
 
 const emptyAssignment = (): SigningAssignmentInput => ({ signerType: 'ORGANIZATION_MEMBER', required: true });
@@ -17,30 +15,11 @@ function MemberPicker({ organizationId, value, excluded, onChange }: {
   excluded: number[];
   onChange: (value: SigningAssignmentInput) => void;
 }) {
-  const [query, setQuery] = useState('');
-  const signers = useQuery({
-    queryKey: ['document-flow', 'signers', organizationId, query],
-    queryFn: ({ signal }) => documentFlowApi.organizationSigners(organizationId!, query, signal),
-    enabled: Boolean(organizationId) && query.trim().length >= 2,
-    staleTime: 30_000,
-  });
-  const current: OrganizationSigner | null = value.userId ? {
-    id: value.userId, fullName: value.signerFullName || '', position: null,
-    email: value.email || null, active: true, organizationId: organizationId || 0,
-  } : null;
-  return <Autocomplete
-    sx={{ minWidth: 280, flex: 1 }}
-    value={current}
-    options={(signers.data || []).filter((item) => item.active && item.organizationId === organizationId && !excluded.includes(item.id))}
-    loading={signers.isFetching}
-    filterOptions={(options) => options}
-    getOptionLabel={(option) => option.fullName}
-    isOptionEqualToValue={(option, selected) => option.id === selected.id}
-    onInputChange={(_, next) => setQuery(next)}
-    onChange={(_, signer) => onChange({ ...value, userId: signer?.id, signerFullName: signer?.fullName, email: signer?.email || undefined })}
-    renderOption={(props, signer) => <li {...props} key={signer.id}><Stack><Typography>{signer.fullName}</Typography><Typography variant="caption" color="text.secondary">{[signer.position, signer.email].filter(Boolean).join(' · ')}</Typography></Stack></li>}
-    renderInput={(params) => <TextField {...params} label="Сотрудник" helperText={organizationId ? 'Введите минимум 2 символа' : 'Организация не определена backend-контекстом'} />}
-  />;
+  void organizationId;
+  void value;
+  void excluded;
+  void onChange;
+  return <Alert severity="warning" sx={{ flex: 1 }}>Backend не предоставляет каталог подписантов организации. Выберите внешнего подписанта.</Alert>;
 }
 
 export default function SigningRouteBuilder({ access, organizationId, value, onChange }: {

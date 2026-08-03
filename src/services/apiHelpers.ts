@@ -102,6 +102,16 @@ export interface ApiError {
   currentVersion?: number;
 }
 
+export interface NormalizedApiError {
+  status?: number;
+  message: string;
+  errorCode?: string;
+  fieldErrors: Record<string, string>;
+  raw?: unknown;
+}
+
+export const createIfMatch = (version: number | string): string => String(version);
+
 const responseRequestId = (error: unknown): string | undefined => {
   if (!axios.isAxiosError(error)) return undefined;
   const headers = error.response?.headers;
@@ -228,6 +238,20 @@ export const normalizeApiError = (error: unknown, fallback = 'Не удалос�
   };
 };
 
+export const normalizeBackendError = (
+  error: unknown,
+  fallback?: string,
+): NormalizedApiError => {
+  const normalized = normalizeApiError(error, fallback);
+  return {
+    status: normalized.status,
+    message: normalized.message,
+    errorCode: normalized.code,
+    fieldErrors: normalized.fieldErrors,
+    raw: error,
+  };
+};
+
 export const getApiErrorCode = (error: unknown): string | undefined => {
   if (!axios.isAxiosError(error)) return undefined;
   const responseData = asRecord(error.response?.data);
@@ -282,7 +306,10 @@ export interface ApiResponse<T> {
   success?: boolean;
   data: T;
   message?: string | null;
-  errors?: string[];
+  errors?: Array<string | { field?: string; code?: string; message?: string }>;
+  code?: string | null;
+  fieldErrors?: Record<string, string> | null;
+  traceId?: string | null;
 }
 
 export const unwrapApiResponse = <T>(response: ApiResponse<T> | T): T => {

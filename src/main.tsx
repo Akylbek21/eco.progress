@@ -11,7 +11,7 @@ import axios from 'axios';
 export const shouldRetry = (failureCount: number, error: unknown) => {
   if (!axios.isAxiosError(error)) return failureCount < 2;
   const status = error.response?.status;
-  if ([400, 401, 403, 404, 409, 422].includes(status ?? 0)) return false;
+  if ([400, 401, 403, 404, 409, 412, 422].includes(status ?? 0)) return false;
   return failureCount < 2;
 };
 
@@ -23,6 +23,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+console.info('[EcoProgress build]', __BUILD_INFO__);
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element not found');

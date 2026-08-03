@@ -1,6 +1,7 @@
 import type { AxiosProgressEvent } from 'axios';
 import { pekApiClient as api } from './pekApiClient';
 import { filenameFromDisposition, mapPekPage, unwrapPekData } from './pekMappers';
+import { createIfMatch } from '../../../services/apiHelpers';
 import type {
   PageResponse,
   PekBlobResult,
@@ -8,7 +9,6 @@ import type {
   PekDashboard,
   PekDashboardFilters,
   PekHistoryItem,
-  PekCollectionSummary,
   PekLookupOption,
   PekMutationBody,
   PekProgram,
@@ -20,9 +20,6 @@ import type {
   PekReportCreateRequest,
   PekReportCreationParams,
   PekReportFilters,
-  PekPlanFactRow,
-  PekReadiness,
-  PekUnmatchedSource,
 } from './pekContracts';
 import {
   mapCollectionResult,
@@ -38,7 +35,7 @@ const cleanParams = (input: Record<string, unknown>) => Object.fromEntries(
 const get = async <T>(url: string, params: Record<string, unknown> = {}, signal?: AbortSignal) =>
   unwrapPekData<T>((await api.get(url, { params: cleanParams(params), signal })).data);
 
-const ifMatch = (version: number) => ({ 'If-Match': String(version) });
+const ifMatch = (version: number) => ({ 'If-Match': createIfMatch(version) });
 
 const workflowBody = (body: PekMutationBody) => {
   const { version, ...command } = body;
@@ -90,24 +87,23 @@ export const pekApi = {
     mapProgramResponse(unwrapPekData<unknown>((await api.post('/pek/programs', body)).data)),
   updateProgram: async (id: number, version: number, body: PekProgramUpdateRequest) =>
     mapProgramResponse(unwrapPekData<unknown>(
-      (await api.patch(`/pek/programs/${id}`, { ...body, version: undefined }, { headers: ifMatch(version) })).data,
+      (await api.patch(`/pek/programs/${id}`, { ...body, version })).data,
     )),
   saveProgramDraft: async (id: number, version: number, body: PekProgramUpdateRequest, signal?: AbortSignal) =>
     mapProgramResponse(unwrapPekData<unknown>(
-      (await api.patch(`/pek/programs/${id}/draft`, { ...body, version: undefined }, { headers: ifMatch(version), signal })).data,
+      (await api.patch(`/pek/programs/${id}/draft`, { ...body, version }, { signal })).data,
     )),
   submitProgramReview: (id: number, body: PekMutationBody) => programAction(id, 'submit-review', body),
   returnProgram: (id: number, body: PekMutationBody) => programAction(id, 'return', body),
   approveProgram: (id: number, body: PekMutationBody) => programAction(id, 'approve', body),
   activateProgram: (id: number, body: PekMutationBody) => programAction(id, 'activate', body),
   archiveProgram: (id: number, body: PekMutationBody) => programAction(id, 'archive', body),
-  cloneProgram: async (id: number, version: number, body: PekProgramCloneRequest) =>
-    mapProgramResponse(unwrapPekData<unknown>((await api.post(`/pek/programs/${id}/clone`, body, { headers: ifMatch(version) })).data)),
+  cloneProgram: async (id: number, body: PekProgramCloneRequest) =>
+    mapProgramResponse(unwrapPekData<unknown>((await api.post(`/pek/programs/${id}/clone`, body)).data)),
   getProgramHistory: (id: number, signal?: AbortSignal) =>
     get<PekHistoryItem[]>(`/pek/programs/${id}/history`, {}, signal),
   uploadProgramDocument: async (
     id: number,
-    version: number,
     file: File,
     documentType: string,
     options: PekUploadOptions = {},
@@ -121,7 +117,6 @@ export const pekApi = {
       {
         signal: options.signal,
         onUploadProgress: options.onUploadProgress,
-        headers: { 'Content-Type': 'multipart/form-data', ...ifMatch(version) },
       },
     )).data);
   },
@@ -157,23 +152,8 @@ export const pekApi = {
   },
   createReport: async (body: PekReportCreateRequest) =>
     mapReportResponse(unwrapPekData<unknown>((await api.post('/pek/reports', body)).data)),
-  collectReport: async (id: number, version: number) =>
-    mapCollectionResult(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/collect`, {}, { headers: ifMatch(version) })).data)),
-  getLatestCollection: (id: number, signal?: AbortSignal) =>
-    get<PekCollectionSummary>(`/pek/reports/${id}/collection-runs/latest`, {}, signal),
-  validateReport: async (id: number, version: number) =>
-    (async () => {
-      await api.post(`/pek/reports/${id}/validate`, {}, { headers: ifMatch(version) });
-      return get<PekReadiness>(`/pek/reports/${id}/issues`);
-    })(),
-  getReportIssues: (id: number, signal?: AbortSignal) =>
-    get<PekReadiness>(`/pek/reports/${id}/issues`, {}, signal),
-  getPlanFact: (id: number, signal?: AbortSignal) =>
-    get<PageResponse<PekPlanFactRow>>(`/pek/reports/${id}/plan-fact`, { page: 0, size: 100 }, signal),
-  getUnmatchedSources: (id: number, signal?: AbortSignal) =>
-    get<PageResponse<PekUnmatchedSource>>(`/pek/reports/${id}/unmatched-sources`, { page: 0, size: 100 }, signal),
-  getReportHistory: (id: number, signal?: AbortSignal) =>
-    get<PageResponse<PekHistoryItem>>(`/pek/reports/${id}/history`, { page: 0, size: 100 }, signal),
+  collectReport: async (id: number) =>
+    mapCollectionResult(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/collect`)).data)),
   submitReportReview: (id: number, version: number) => reportAction(id, 'submit-review', version),
   approveReport: (id: number, version: number) => reportAction(id, 'approve', version),
   archiveReport: (id: number, version: number) => reportAction(id, 'archive', version),

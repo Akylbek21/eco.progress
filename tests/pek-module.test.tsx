@@ -156,16 +156,16 @@ describe('PEK backend contract', () => {
     expect(body).not.toHaveProperty('controlItems');
     expect(body).not.toHaveProperty('indicators');
     expect(body).not.toHaveProperty('measures');
-    expect(body).not.toHaveProperty('version');
-    expect(ifMatch).toBe('7');
+    expect(body).toHaveProperty('version', 7);
+    expect(ifMatch).toBeNull();
   });
 
   it('sends empty arrays and version in the full PATCH body', async () => {
     const request = mapProgramEditFormToRequest({ ...form, controlItems: [], indicators: [], measures: [] });
     await pekApi.updateProgram(1, 12, request);
     expect(body).toMatchObject({ controlItems: [], indicators: [], measures: [] });
-    expect(body).not.toHaveProperty('version');
-    expect(ifMatch).toBe('12');
+    expect(body).toHaveProperty('version', 12);
+    expect(ifMatch).toBeNull();
   });
 
   it('keeps return version in body and If-Match header', async () => {
@@ -253,9 +253,9 @@ describe('PEK backend contract', () => {
     expect(() => mapReportResponse({ id: 0, version: 1, status: 'DRAFT' })).toThrow(/контракт/);
   });
 
-  it('collect is synchronous, versioned and returns real protocol numbers', async () => {
-    const collected = await pekApi.collectReport(9, 13);
-    expect(ifMatch).toBe('13');
+  it('collect is synchronous, unversioned and returns real protocol numbers', async () => {
+    const collected = await pekApi.collectReport(9);
+    expect(ifMatch).toBeNull();
     expect(body).toEqual({});
     expect(collected.linkedProtocolNumbers).toEqual(['P-READY', 'P-SIGNED']);
     expect(collected.linkedProtocolNumbers).not.toContain('P-DRAFT');

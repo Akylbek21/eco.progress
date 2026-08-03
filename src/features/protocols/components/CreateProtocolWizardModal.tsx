@@ -47,8 +47,7 @@ import ExecutorDeviceStep from './steps/ExecutorDeviceStep';
 import ProtocolCheckStep from './steps/ProtocolCheckStep';
 import ProtocolSigningStep from './steps/ProtocolSigningStep';
 import { useAuth } from '../../../contexts/AuthContext';
-import { createCmsSignatureWithNCALayer } from '../../../services/ncalayer';
-import { protocolSigningPhaseLabel, type ProtocolSigningPhase } from '../utils/protocolSigning';
+import { createProtocolCmsSignature, protocolSigningPhaseLabel, type ProtocolSigningPhase } from '../utils/protocolSigning';
 
 const DRAFT_KEY = 'protocol-create-wizard-draft';
 const DRAFT_VERSION = 2;
@@ -444,10 +443,10 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
         setSigningPhase('LOADING_DOCUMENT');
         created = await protocolService.calculateProtocol(created.id, created.version);
         created = await protocolService.checkNormatives(created.id, created.version);
-        const prepared = await protocolService.prepareSigning(created.id, created.version);
-        const cmsSignatureBase64 = await createCmsSignatureWithNCALayer(prepared.signingPayload, setSigningPhase);
+        const file = await protocolService.downloadPdf(created.id);
+        const cmsSignatureBase64 = await createProtocolCmsSignature(file.blob, setSigningPhase);
         setSigningPhase('VERIFYING_SIGNATURE');
-        created = await protocolService.signAndComplete(created.id, { version: prepared.protocol.version, cmsSignatureBase64 });
+        created = await protocolService.signProtocol(created.id, { cmsSignatureBase64 });
         setSigningPhase('SIGNED');
       }
       await Promise.all([

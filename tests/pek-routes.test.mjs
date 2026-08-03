@@ -20,11 +20,15 @@ test('required PEK routes are registered once', () => {
   ].forEach((route) => assert.match(app, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))));
 });
 
-test('production PEK transport contains implemented report analytics and excludes pending contracts', () => {
+test('production PEK transport contains only backend-implemented report contracts', () => {
   assert.match(service, /reports\/\$\{id\}\/collect/);
   assert.match(service, /'submit-review' \| 'approve' \| 'archive'/);
-  ['plan-fact', 'issues', 'unmatched-sources', 'collection-runs/latest', 'history'].forEach((implemented) => assert.match(service, new RegExp(implemented)));
   [
+    'plan-fact',
+    'issues',
+    'unmatched-sources',
+    'collection-runs/latest',
+    'reports/${id}/history',
     'exceedances',
     'review-comments',
     'prepare-signing',
@@ -36,7 +40,7 @@ test('production PEK transport contains implemented report analytics and exclude
 
 test('report workspace has no fake async collection progress', () => {
   assert.match(workspace, /action\.isPending/);
-  assert.match(workspace, /getLatestCollection/);
+  assert.match(workspace, /Backend endpoint для раздела отсутствует/);
   assert.doesNotMatch(workspace, /setInterval|polling|progressPercent|collection-runs/);
 });
 
