@@ -15,7 +15,6 @@ import {
 } from '../src/features/pek/mappers/programMappers';
 import {
   getCreationBlockState,
-  getReportWorkflowActions,
   mapReportCreateRequest,
 } from '../src/features/pek/mappers/reportMappers';
 import { labelPekStatus } from '../src/features/pek/utils/pekLabels';
@@ -28,11 +27,14 @@ let programListCalls = 0;
 let reportListCalls = 0;
 const report = {
   id: 9,
+  companyId: 1,
+  objectId: 2,
+  programId: 10,
   version: 13,
   status: 'COLLECTING',
   periodType: 'QUARTER',
-  year: 2026,
-  quarter: 3,
+  reportYear: 2026,
+  reportQuarter: 3,
   periodStart: '2026-07-01',
   periodEnd: '2026-09-30',
   linkedProtocolCount: 2,
@@ -48,9 +50,10 @@ const server = setupServer(
     programListCalls += 1;
     return HttpResponse.json({ data: { content: [], number: 0, size: 20, totalElements: 0, totalPages: 0 }, search: new URL(request.url).searchParams.get('search') });
   }),
-  http.get('*/api/pek/reports', () => {
+  http.get('*/api/pek/reports', ({ request }) => {
     reportListCalls += 1;
-    return HttpResponse.json({ data: { content: [], number: 0, size: 20, totalElements: 0, totalPages: 0 } });
+    const params = new URL(request.url).searchParams;
+    return HttpResponse.json({ data: { content: [], number: 0, size: 20, totalElements: 0, totalPages: 0 }, companyId: params.get('companyId'), objectId: params.get('objectId') });
   }),
   http.patch('*/api/pek/programs/:id/draft', async ({ request }) => {
     body = await request.json();
@@ -174,12 +177,10 @@ describe('PEK backend contract', () => {
     expect(ifMatch).toBe('12');
   });
 
-  it('centralizes only implemented report workflow actions', () => {
-    expect(getReportWorkflowActions('DRAFT')).toEqual(['COLLECT']);
-    expect(getReportWorkflowActions('COLLECTING')).toEqual(['COLLECT', 'SUBMIT_REVIEW']);
-    expect(getReportWorkflowActions('READY_FOR_REVIEW')).toEqual(['APPROVE']);
-    expect(getReportWorkflowActions('APPROVED')).toEqual(['ARCHIVE']);
-    expect(getReportWorkflowActions('SIGNED')).toEqual([]);
+  it('does not derive report workflow actions from status', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
+    expect(source).not.toContain('availableActions');
+    expect(source).not.toContain("status ===");
   });
 
   it('maps Java ProgramResponse string actions without deriving status', () => {
@@ -200,7 +201,7 @@ describe('PEK backend contract', () => {
   });
 
   it('maps Java reportYear/reportQuarter and dashboard deadline fields exactly', () => {
-    expect(mapReportResponse({ ...report, reportYear: 2026, reportQuarter: 3, year: undefined, quarter: undefined }).year).toBe(2026);
+    expect(mapReportResponse(report).year).toBe(2026);
     expect(mapDashboardResponse({
       totalReportCount: 0,
       readinessPercent: 0,
@@ -275,11 +276,13 @@ describe('PEK backend contract', () => {
     expect(programListCalls).toBe(1);
   });
 
-  it('report list supports an unfiltered server page', () => {
+  it('report list waits for required company and object filters', async () => {
+    await pekApi.getReports({ companyId: 1, objectId: 2, page: 0, size: 20 });
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportsPage.tsx'), 'utf8');
     expect(source).toContain('pekApi.getReports(filters, signal)');
-    expect(source).toContain('По выбранным фильтрам отчётов нет');
-    expect(reportListCalls).toBe(0);
+    expect(source).toContain('enabled: Boolean(companyId && objectId)');
+    expect(source).toContain('Выберите компанию и объект');
+    expect(reportListCalls).toBe(1);
   });
 
   it('uses backend readOnly and editable statuses for autosave', () => {

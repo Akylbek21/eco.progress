@@ -9,6 +9,18 @@ export interface DocumentFlowError {
 }
 
 const codeMessages: Record<string, string> = {
+  ORGANIZATION_REQUIRED: 'Выберите организацию.',
+  ORGANIZATION_ACCESS_DENIED: 'У вас нет доступа к выбранной организации.',
+  COUNTERPARTY_MANAGE_FORBIDDEN: 'У вас нет права управлять контрагентами.',
+  COUNTERPARTY_DUPLICATE_BIN: 'Контрагент с таким БИН уже существует.',
+  COUNTERPARTY_INVALID_BIN: 'БИН должен содержать 12 цифр.',
+  COUNTERPARTY_NOT_FOUND: 'Контрагент не найден или относится к другой организации.',
+  OPTIMISTIC_LOCK_CONFLICT: 'Контрагент был изменён другим пользователем. Обновите данные.',
+  SUBSCRIPTION_READ_ONLY: 'Подписка разрешает только просмотр данных.',
+  MEMBER_NOT_FOUND: 'Пользователь с таким email не найден.',
+  MEMBER_ALREADY_EXISTS: 'Этот сотрудник уже имеет доступ.',
+  MEMBER_MANAGE_FORBIDDEN: 'У вас нет права управлять доступом сотрудников.',
+  DOCUMENT_FLOW_ACCESS_DENIED: 'У вас нет доступа к документообороту.',
   VERSION_CHANGED: 'Документ был изменён другим пользователем. Обновите данные и повторите действие.',
   ACTIVE_ROUTE_EXISTS: 'Для документа уже создан маршрут подписания.',
   FILE_TOO_LARGE: 'Файл превышает допустимый размер.',
@@ -51,8 +63,9 @@ export function mapDocumentFlowError(error: unknown): DocumentFlowError {
   const rawFields = nested.fieldErrors && typeof nested.fieldErrors === 'object'
     ? nested.fieldErrors as Record<string, unknown> : {};
   const fieldErrors = Object.fromEntries(Object.entries(rawFields).map(([key, value]) => [key, String(value)]));
+  const backendMessage = typeof nested.message === 'string' ? nested.message : undefined;
   const fallback = status ? statusMessages[status] : undefined;
-  let message = (code && codeMessages[code]) || fallback || 'Не удалось выполнить операцию.';
+  let message = (code && codeMessages[code]) || backendMessage || fallback || 'Не удалось выполнить операцию.';
   if (status === 500 && traceId) message += ` Код обращения: ${traceId}.`;
   return { message, code, traceId, fieldErrors, status };
 }

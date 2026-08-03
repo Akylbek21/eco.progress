@@ -159,7 +159,7 @@ export interface QuickCreateProtocolMeasurement {
 }
 
 export interface QuickCreateProtocolRequest {
-  templateId?: QuickCreateProtocolTemplateId;
+  templateId: QuickCreateProtocolTemplateId;
   sourceDocumentCode?: string;
   docxTemplateCode?: string;
   subtype?: string;
@@ -179,14 +179,6 @@ export interface QuickCreateProtocolRequest {
   conditions?: QuickCreateProtocolConditions;
   printVisibility: ProtocolPrintVisibility;
   orderId?: string;
-  orderServiceItemId?: string;
-  pekProgramId?: string;
-  pekReportId?: string;
-  pekControlItemId?: string;
-  pekControlEventId?: string;
-  monitoringPointId?: string;
-  emissionSourceId?: string;
-  waterOutletId?: string;
 }
 
 export interface ProtocolVersionRequest {

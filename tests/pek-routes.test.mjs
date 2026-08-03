@@ -17,6 +17,7 @@ test('required PEK routes are registered once', () => {
     '/staff/pek/reports',
     '/staff/pek/reports/new',
     '/staff/pek/reports/:reportId',
+    '/staff/pek/settings',
   ].forEach((route) => assert.match(app, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))));
 });
 
@@ -38,9 +39,9 @@ test('production PEK transport contains only backend-implemented report contract
   ].forEach((unsupported) => assert.doesNotMatch(service, new RegExp(unsupported)));
 });
 
-test('report workspace has no fake async collection progress', () => {
-  assert.match(workspace, /action\.isPending/);
-  assert.match(workspace, /Backend endpoint для раздела отсутствует/);
+test('report workspace exposes only backend-supported data', () => {
+  assert.match(workspace, /Связанные протоколы/);
+  assert.doesNotMatch(workspace, /План\/факт|Превышения|Замечания|Подписи|availableActions/);
   assert.doesNotMatch(workspace, /setInterval|polling|progressPercent|collection-runs/);
 });
 

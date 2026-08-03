@@ -92,6 +92,11 @@ export function normalizeOptionalId(value: unknown, fieldName = 'id'): number | 
   return requirePositiveIntegerId(value, fieldName);
 }
 
+export function normalizePositiveId(value: unknown): number | undefined {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 export function toApiDate(value: unknown, field: string): string {
   const normalized = normalizeNullableText(value);
   if (!normalized || !/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
@@ -223,12 +228,17 @@ export function mapMeasurementToRequest(
       'Укажите код показателя',
     );
   }
-  if (strict && !chemical && !factorType && !factorCode) {
+  if (strict && !chemical && !factorType) {
     throw new QuickCreateValidationError(
-      `results.${index}.factorCode`,
-      'Укажите код физического фактора',
+      `results.${index}.factorType`,
+      'Выберите тип физического фактора',
     );
   }
+
+  const rowRecord = row as MeasurementFormRow & { normativeRecordId?: unknown };
+  const normativeId = normalizePositiveId(row.normativeId)
+    ?? normalizePositiveId(rowRecord.normativeRecordId);
+  const manualNormative = row.normativeSource === 'MANUAL';
 
   const measurementDeviceId = strict
     ? requirePositiveIntegerId(
@@ -260,10 +270,10 @@ export function mapMeasurementToRequest(
     value: value ?? undefined,
     unit: unit ?? undefined,
     measurementDeviceId: measurementDeviceId ?? undefined,
-    normativeId: normalizeOptionalId(row.normativeRecordId || row.normativeId, `results.${index}.normativeId`) ?? undefined,
-    normativeValue: row.normativeRecordId || row.normativeId
-      ? undefined
-      : normalizeDecimal(row.normativeValue, `results.${index}.normativeValue`) ?? undefined,
+    normativeId,
+    normativeValue: manualNormative
+      ? normalizeDecimal(row.normativeValue, `results.${index}.normativeValue`) ?? undefined
+      : undefined,
     testingMethodNd: normalizeNullableText(row.testingMethodNd || row.methodDocument || form.testingMethodNd) ?? undefined,
     samplingMethodNd: normalizeNullableText(row.samplingMethodNd || form.samplingMethodNd) ?? undefined,
     values: compactValues({
@@ -282,6 +292,11 @@ export function mapMeasurementToRequest(
       cas: normalizeNullableText(row.cas) ?? undefined,
       formula: normalizeNullableText(row.formula) ?? undefined,
       note: normalizeNullableText(row.note) ?? undefined,
+      normativeSource: row.normativeSource,
+      normativeMin: manualNormative ? normalizeDecimal(row.normativeMin, `results.${index}.normativeMin`) ?? undefined : undefined,
+      normativeMax: manualNormative ? normalizeDecimal(row.normativeMax, `results.${index}.normativeMax`) ?? undefined : undefined,
+      comparisonType: manualNormative ? normalizeNullableText(row.comparisonType) ?? undefined : undefined,
+      normativeDocument: manualNormative ? normalizeNullableText(row.normativeDocument) ?? undefined : undefined,
     }),
   }) as QuickCreateProtocolMeasurement | Partial<QuickCreateProtocolMeasurement>;
 }
@@ -558,14 +573,6 @@ export function buildQuickCreatePayload(
     conditions: Object.keys(conditions).length ? conditions : undefined,
     printVisibility: mapPrintVisibilityToApi(form.printVisibility),
     orderId: orderId ?? undefined,
-    orderServiceItemId: normalizeNullableText(form.orderServiceItemId) ?? undefined,
-    pekProgramId: normalizeNullableText(form.pekProgramId) ?? undefined,
-    pekReportId: normalizeNullableText(form.pekReportId) ?? undefined,
-    pekControlItemId: normalizeNullableText(form.pekControlItemId) ?? undefined,
-    pekControlEventId: normalizeNullableText(form.pekControlEventId) ?? undefined,
-    monitoringPointId: normalizeNullableText(form.monitoringPointId) ?? undefined,
-    emissionSourceId: normalizeNullableText(form.emissionSourceId) ?? undefined,
-    waterOutletId: normalizeNullableText(form.waterOutletId) ?? undefined,
   });
 
   return payload as QuickCreateProtocolRequest | QuickCreateProtocolDraftRequest;

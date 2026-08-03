@@ -422,6 +422,7 @@ export interface Protocol {
   publishedAt?: string;
   publishedBy?: string;
   publishedDocumentId?: string | number;
+  syncWarning?: string;
 }
 
 export type ProtocolAvailableAction =
@@ -861,7 +862,8 @@ export type NormativeRecord = {
   validFrom: string;
   validUntil?: string;
   version?: string;
-  status?: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+  status?: 'ACTIVE' | 'REVIEW' | 'INACTIVE' | 'ARCHIVED';
+  matchQuality?: 'EXACT' | 'CONTEXT_GENERAL' | 'TEMPLATE_DOCUMENT' | 'TEMPLATE_ONLY' | string;
   active: boolean;
   archived?: boolean;
 };

@@ -53,10 +53,11 @@ test('wizard payload mapper filters empty rows and sends weather as quick-create
 
 test('result rows validate device date and chemical or physical codes', async () => {
   const wizard = await read('src/features/protocols/components/CreateProtocolWizardModal.tsx');
+  const validation = await read('src/features/protocols/utils/protocolWizardValidation.ts');
   const devices = await read('src/features/protocols/components/components/DeviceSelector.tsx');
-  assert.match(wizard, /CHEMICAL_TYPES\.has\(values\.templateId\)/);
-  assert.match(wizard, /укажите код загрязняющего вещества/);
-  assert.match(wizard, /укажите тип физического фактора/);
+  assert.match(validation, /chemicalTemplates\.has\(form\.templateId\)/);
+  assert.match(validation, /Укажите код показателя/);
+  assert.match(validation, /Выберите тип физического фактора/);
   assert.match(wizard, /isDeviceValidForDate\(device,values\.measurementDate\)/);
   assert.match(devices, /VALID|isDeviceValidForDate/);
 });

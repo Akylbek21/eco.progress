@@ -12,12 +12,14 @@ import { canMutate, hasFeature, limitProgress, validateDocumentFile, validateReq
 import type { AccessContext } from '../src/features/document-flow/model/types';
 import SigningRouteBuilder from '../src/features/document-flow/components/SigningRouteBuilder';
 import DocumentStatusBadge from '../src/features/document-flow/components/DocumentStatusBadge';
+import { emptyToUndefined, isValidEmail, isValidPhone, normalizeBin } from '../src/features/document-flow/utils/counterpartyForm';
 
 const server = setupServer();
 const originalBaseUrl = api.defaults.baseURL;
 const access = (extra: Partial<AccessContext> = {}): AccessContext => ({
   available: true,
   readOnly: false,
+  internalMode: true,
   status: 'ACTIVE',
   plan: { code: 'PRO', name: 'Pro' },
   startsAt: null,
@@ -29,6 +31,8 @@ const access = (extra: Partial<AccessContext> = {}): AccessContext => ({
   usage: { DOCUMENTS_CREATED: 4 },
   availableActions: [],
   reason: null,
+  organization: { id: 9, name: 'Eco LLP' },
+  organizations: [{ id: 9, name: 'Eco LLP', membershipStatus: 'ACTIVE' }],
   ...extra,
 });
 
@@ -96,6 +100,64 @@ describe('document flow access and mappers', () => {
 });
 
 describe('document flow secure commands and components', () => {
+  it('loads internal access and counterparties without organizationId', async () => {
+    const requests: string[] = [];
+    server.use(
+      http.get('http://localhost/api/document-flow/access', ({ request }) => {
+        requests.push(request.url);
+        return HttpResponse.json({ data: access() });
+      }),
+      http.get('http://localhost/api/document-flow/counterparties', ({ request }) => {
+        requests.push(request.url);
+        return HttpResponse.json({ data: {
+          items: [{ id: 1, ownerOrganizationId: 9, linkedOrganizationId: null, bin: '123456789012', name: 'A', status: 'ACTIVE', version: 0 }],
+          page: 0, size: 20, totalElements: 1, totalPages: 1, first: true, last: true, hasNext: false, hasPrevious: false,
+        } });
+      }),
+    );
+    const context = await documentFlowApi.access();
+    const page = await documentFlowApi.getCounterparties({ page: 0, size: 20 });
+    expect(context.organization?.id).toBe(9);
+    expect(page.items[0].organizationId).toBe(9);
+    expect(requests).toEqual([
+      'http://localhost/api/document-flow/access',
+      'http://localhost/api/document-flow/counterparties?page=0&size=20',
+    ]);
+  });
+
+  it('creates and archives a counterparty without organizationId', async () => {
+    const seen: Array<{ url: string; body?: Record<string, unknown> }> = [];
+    const dto = { id: 2, ownerOrganizationId: 9, linkedOrganizationId: null, bin: '123456789012', name: 'A', status: 'ACTIVE', version: 0 };
+    server.use(
+      http.post('http://localhost/api/document-flow/counterparties', async ({ request }) => {
+        seen.push({ url: request.url, body: await request.json() as Record<string, unknown> });
+        return HttpResponse.json({ data: dto });
+      }),
+      http.delete('http://localhost/api/document-flow/counterparties/2', ({ request }) => {
+        seen.push({ url: request.url });
+        return HttpResponse.json({ data: { ...dto, status: 'ARCHIVED' } });
+      }),
+    );
+    await documentFlowApi.createCounterparty({ bin: '123456789012', name: 'A' });
+    await documentFlowApi.archiveCounterparty(2);
+    expect(seen[0]).toEqual({
+      url: 'http://localhost/api/document-flow/counterparties',
+      body: { bin: '123456789012', name: 'A' },
+    });
+    expect(seen[1].url).toBe('http://localhost/api/document-flow/counterparties/2');
+  });
+
+  it('normalizes and validates counterparty form values', () => {
+    expect(normalizeBin('12 34-56.789/0123')).toBe('123456789012');
+    expect(normalizeBin('123')).toHaveLength(3);
+    expect(emptyToUndefined('   ')).toBeUndefined();
+    expect(emptyToUndefined(' Director ')).toBe('Director');
+    expect(isValidEmail('mail@example.kz')).toBe(true);
+    expect(isValidEmail('bad-email')).toBe(false);
+    expect(isValidPhone('+7 (701) 123-45-67')).toBe(true);
+    expect(isValidPhone('abc')).toBe(false);
+  });
+
   it('uses one idempotency key for document creation', async () => {
     let header = '';
     server.use(http.post('http://localhost/api/document-flow/documents', ({ request }) => {

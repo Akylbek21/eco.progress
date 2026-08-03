@@ -57,6 +57,7 @@ const PekReportsPage = lazy(() => import('./features/pek/pages/PekReportsPage'))
 const PekReportCreatePage = lazy(() => import('./features/pek/pages/PekReportCreatePage'));
 const PekReportWorkspacePage = lazy(() => import('./features/pek/pages/PekReportWorkspacePage'));
 const PekHistoryPage = lazy(() => import('./features/pek/pages/PekHistoryPage'));
+const PekSettingsPage = lazy(() => import('./features/pek/pages/PekSettingsPage'));
 const ContentDashboardPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentDashboardPage');
 const ContentListPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentListPage');
 const ContentEditorPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentEditorPage');
@@ -105,7 +106,7 @@ const PekAccess = ({ children }: { children: ReactNode }) => {
 };
 const PekSettingsAccess = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  return hasPermission(user, 'manage_settings')
+  return hasPermission(user, 'PEK_ADMIN')
     ? <>{children}</>
     : <ForbiddenPage message="Недостаточно прав для изменения настроек ПЭК." />;
 };
@@ -298,6 +299,8 @@ function App() {
         <Route path="/staff/pek/reports" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть отчёты ПЭК"><PekReportsPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/reports/new" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><PekPermissionAccess permission="PEK_REPORT_CREATE"><ErrorBoundary fallbackTitle="Не удалось создать отчёт ПЭК"><PekReportCreatePage /></ErrorBoundary></PekPermissionAccess></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/reports/:reportId" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть отчёт ПЭК"><PekReportWorkspacePage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/pek/settings" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><PekSettingsAccess><ErrorBoundary fallbackTitle="Не удалось открыть настройки ПЭК"><PekSettingsPage /></ErrorBoundary></PekSettingsAccess></PekAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/pek/*" element={<Navigate to="/staff/pek" replace />} />
         <Route path="/staff/normatives" element={<RoleAccess roles={normativeRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={normativeRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/measurement-devices" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/journals" element={<RoleAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']} loginPath="/staff/login" forbiddenMessage="Недостаточно прав для просмотра журналов"><StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']}><ErrorBoundary fallbackTitle="Не удалось открыть журналы"><LabJournalsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />

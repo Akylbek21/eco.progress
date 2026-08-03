@@ -9,7 +9,6 @@ import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import { PekLoading, PekPageHeader, PekPrimaryAction, PekReadiness, PekStatusBadge } from '../components/common/PekUi';
 import PekQueryError from '../components/common/PekQueryError';
-import PekReadinessPanel from '../components/common/PekReadinessPanel';
 import PekProgramDocuments from '../components/documents/PekProgramDocuments';
 import PekActionModal from '../components/workflow/PekActionModal';
 import { mapPekError } from '../utils/pekErrorMapper';
@@ -85,7 +84,7 @@ const PekProgramDetailsPage = () => {
       actions={<>
         <PekStatusBadge status={item.status} />
         {workflowActions.map((candidate) => (
-          <PekPrimaryAction key={candidate.code} action={candidate.code === 'SUBMIT_REVIEW' && item.readiness?.ready === false ? { ...candidate, enabled: false, disabledReason: 'Исправьте блокирующие проблемы готовности' } : candidate} pending={workflow.isPending} onClick={(selected) => selected.code === 'CLONE' ? setCloneAction(selected) : setAction(selected)} />
+          <PekPrimaryAction key={candidate.code} action={candidate} pending={workflow.isPending} onClick={(selected) => selected.code === 'CLONE' ? setCloneAction(selected) : setAction(selected)} />
         ))}
         {!item.readOnly && editAction?.enabled && (
           <button type="button" onClick={() => navigate(`/staff/pek/programs/${id}/edit`)} className="rounded-full border px-5 py-2 font-bold">Изменить</button>
@@ -99,10 +98,6 @@ const PekProgramDetailsPage = () => {
       <PekReadiness value={item.readinessPercent} />
       <Info label="Режим" value={item.readOnly ? 'Только чтение' : 'Редактирование разрешено'} />
     </section>
-    <PekReadinessPanel readiness={item.readiness} onIssueClick={(issue) => {
-      const section = String(issue.section || '').toUpperCase();
-      setTab(section.includes('CONTROL') ? 1 : section.includes('INDICATOR') ? 2 : section.includes('MEASURE') ? 3 : section.includes('DOCUMENT') ? 4 : 0);
-    }} />
     <nav className="flex gap-1 overflow-x-auto border-b">
       {tabs.map((label, index) => <button key={label} type="button" onClick={() => setTab(index)} className={`whitespace-nowrap px-4 py-3 font-bold ${tab === index ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}
     </nav>
@@ -114,7 +109,7 @@ const PekProgramDetailsPage = () => {
       {tab === 4 && <PekProgramDocuments programId={id} version={item.version} documents={item.documents || []} readOnly={item.readOnly} />}
       {tab === 5 && <Link className="font-bold text-eco-700" to={`/staff/pek/programs/${id}/history`}>Открыть историю программы</Link>}
       {tab === 6 && <div className="space-y-2"><Info label="Текущая версия" value={item.version} /><p className="text-sm text-slate-500">Согласованные версии доступны только для чтения. Полная цепочка версий отображается backend при наличии данных в карточке.</p></div>}
-      {tab === 7 && <Link className="font-bold text-eco-700" to={`/staff/pek/reports?programId=${id}`}>Открыть отчёты по программе</Link>}
+      {tab === 7 && <Link className="font-bold text-eco-700" to={`/staff/pek/reports?companyId=${item.company?.id || ''}&objectId=${item.object?.id || ''}`}>Открыть отчёты объекта</Link>}
     </section>
     <PekActionModal action={action} pending={workflow.isPending} onClose={() => setAction(null)} onConfirm={(comment) => action && workflow.mutate({ item: action, comment })} />
     <Modal

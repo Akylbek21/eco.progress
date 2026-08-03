@@ -16,6 +16,7 @@ export type SubscriptionStatus =
 export interface AccessContext {
   available: boolean;
   readOnly: boolean;
+  internalMode: boolean;
   status: SubscriptionStatus | string | null;
   plan: { code: string; name: string } | null;
   startsAt: string | null;
@@ -27,8 +28,14 @@ export interface AccessContext {
   usage: Partial<Record<UsageMetric, number>>;
   availableActions: string[];
   reason: string | null;
-  organization?: { id: number; name: string; role?: string | null } | null;
-  organizations?: Array<{ id: number; name: string; role?: string | null }>;
+  organization: { id: number; name: string; bin?: string; role?: string } | null;
+  organizations: Array<{
+    id: number;
+    name: string;
+    bin?: string;
+    membershipStatus: string;
+    role?: string;
+  }>;
   maxFileSizeBytes?: number | null;
 }
 
@@ -208,14 +215,33 @@ export interface AuditEvent {
 export interface Counterparty {
   id: number;
   organizationId: number;
+  linkedOrganizationId: number | null;
   bin: string;
   name: string;
   directorName: string | null;
   address: string | null;
   email: string | null;
   phone: string | null;
-  status: string;
+  status: 'ACTIVE' | 'ARCHIVED';
+  createdAt: string;
+  updatedAt: string;
   version: number;
+}
+
+export interface CreateCounterpartyRequest {
+  bin: string;
+  name: string;
+  linkedOrganizationId?: number | null;
+  directorName?: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface CounterpartyListParams {
+  page: number;
+  size: number;
+  signal?: AbortSignal;
 }
 
 export interface Representative {

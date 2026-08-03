@@ -25,7 +25,8 @@ export type ProtocolWizardResult = {
   duration: string;
   measurementDeviceId: string;
   normativeId: string;
-  normativeRecordId: string;
+  normativeSource: 'DIRECTORY' | 'MANUAL' | 'NONE';
+  normativeStatus: '' | 'ACTIVE' | 'REVIEW' | 'INACTIVE';
   normativeValue: string;
   normativeValueRaw: string;
   normativeMin: string;
@@ -115,7 +116,7 @@ const createClientRowId = () =>
 export const emptyWizardResult = (): ProtocolWizardResult => ({
   clientRowId: createClientRowId(),
   indicatorName: '', pollutantCode: '', factorType: '', factorCode: '', cas: '', formula: '', unit: '', value: '', textValue: '', samplingPlace: '', sampleNumber: '', samplingDepth: '', samplingSpeed: '', sampleVolume: '', waterType: '', direction: '', minimumValue: '', maximumValue: '', averageValue: '', duration: '',
-  measurementDeviceId: '', normativeId: '', normativeRecordId: '', normativeValue: '', normativeValueRaw: '', normativeMin: '', normativeMax: '', comparisonType: 'LESS_OR_EQUAL', normativeDocument: '', sourceDocumentCode: '', testingMethodNd: '', samplingMethodNd: '',
+  measurementDeviceId: '', normativeId: '', normativeSource: 'NONE', normativeStatus: '', normativeValue: '', normativeValueRaw: '', normativeMin: '', normativeMax: '', comparisonType: 'LESS_OR_EQUAL', normativeDocument: '', sourceDocumentCode: '', testingMethodNd: '', samplingMethodNd: '',
   methodName: '', methodDocument: '', note: '',
 });
 
@@ -162,10 +163,22 @@ export const normalizeProtocolWizardForm = (value?: unknown): ProtocolWizardForm
   const results = sourceRows.map((row) => {
     const rowDefaults = emptyWizardResult();
     const rowSource = asRecord(row);
+    const legacyNormativeId = rowSource.normativeRecordId;
+    const normativeId = typeof rowSource.normativeId === 'string'
+      ? rowSource.normativeId
+      : typeof legacyNormativeId === 'string'
+        ? legacyNormativeId
+        : '';
     return {
       ...rowDefaults,
       ...rowSource,
       ...normalizeStringDefaults(rowDefaults, rowSource),
+      normativeId,
+      normativeSource: rowSource.normativeSource === 'MANUAL'
+        ? 'MANUAL'
+        : normativeId
+          ? 'DIRECTORY'
+          : 'NONE',
     };
   }) as ProtocolWizardResult[];
 

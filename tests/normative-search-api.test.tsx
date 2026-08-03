@@ -45,6 +45,7 @@ const renderSelector = (onAdd = vi.fn()) => {
         templateId="water_wastewater"
         onClose={vi.fn()}
         onAdd={onAdd}
+        onManual={vi.fn()}
       />
     </QueryClientProvider>,
   );
@@ -111,13 +112,13 @@ describe('normative search HTTP contract', () => {
     expect(actualUrl?.searchParams.has('query')).toBe(false);
   });
 
-  it('retries the canonical search with relaxed optional filters', async () => {
+  it('runs ACTIVE, ALL, relaxed ACTIVE and relaxed ALL without losing templateId', async () => {
     let fallbackUrl: URL | undefined;
     let requestCount = 0;
     server.use(
       http.get('*/api/normatives/search', ({ request }) => {
         requestCount += 1;
-        if (requestCount === 1) {
+        if (requestCount < 4) {
           return HttpResponse.json({ data: { items: [], totalElements: 0 } });
         }
         fallbackUrl = new URL(request.url);
@@ -148,10 +149,11 @@ describe('normative search HTTP contract', () => {
     expect(fallbackUrl?.searchParams.get('query')).toBe('нике');
     expect(fallbackUrl?.searchParams.get('templateId')).toBe('water');
     expect(fallbackUrl?.searchParams.has('sourceDocumentCode')).toBe(false);
+    expect(fallbackUrl?.searchParams.get('status')).toBe('ALL');
     for (const forbidden of ['search', 'q', 'code', 'pollutantCode']) {
       expect(fallbackUrl?.searchParams.has(forbidden)).toBe(false);
     }
-    expect(requestCount).toBe(2);
+    expect(requestCount).toBe(4);
     expect(result.relaxed).toBe(true);
     expect(result.items[0]?.indicatorName).toBe('Никель');
     expect(extractNormativeItems({ data: { data: { records: [nickel] } } })).toEqual([
@@ -203,7 +205,7 @@ describe('normative selector modal', () => {
     fireEvent.change(input, { target: { value: 'ошибка' } });
     expect(
       await screen.findByText(
-        'Не удалось выполнить поиск нормативных показателей.',
+        'Поиск нормативов временно недоступен. Добавьте показатель вручную или повторите поиск.',
         {},
         { timeout: 2_500 },
       ),

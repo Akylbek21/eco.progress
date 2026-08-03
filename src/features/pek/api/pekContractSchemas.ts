@@ -15,10 +15,17 @@ export const pekProgramContractSchema = z.object({
 
 export const pekReportContractSchema = z.object({
   id: positiveId,
+  companyId: positiveId,
+  objectId: positiveId,
+  programId: positiveId,
   version,
   status: z.string().min(1),
+  periodType: z.enum(['QUARTER', 'YEAR']),
+  reportYear: z.coerce.number().int(),
+  reportQuarter: z.coerce.number().int().min(1).max(4).nullable(),
   periodStart: z.string().min(1),
   periodEnd: z.string().min(1),
+  linkedProtocolCount: z.coerce.number().int().nonnegative(),
 }).passthrough();
 
 export class PekContractError extends Error {

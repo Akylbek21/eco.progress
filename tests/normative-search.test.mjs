@@ -47,11 +47,12 @@ test('protocol context maps every physical subtype and water to the required doc
 test('API service retries the canonical endpoint with relaxed filters when search returns no rows', async () => {
   const source = await read('src/services/normativeSearchService.ts');
   assert.match(source, /api\.get<unknown>\('\/normatives\/search'/);
-  assert.match(source, /params: cleaned/);
-  assert.match(source, /if \(!normalized\.items\.length\)/);
-  assert.match(source, /const relaxedParams = cleanNormativeSearchParams/);
-  assert.match(source, /params: relaxedParams/);
-  assert.match(source, /relaxed: true/);
+  assert.match(source, /buildNormativeSearchSequence\(cleaned\)/);
+  assert.match(source, /STRICT_ACTIVE/);
+  assert.match(source, /STRICT_ALL/);
+  assert.match(source, /RELAXED_ACTIVE/);
+  assert.match(source, /RELAXED_ALL/);
+  assert.match(source, /params: candidate\.params/);
   assert.doesNotMatch(source, /api\.get<unknown>\('\/normatives\/records'/);
   assert.doesNotMatch(source, /q: query/);
   assert.doesNotMatch(source, /code: query/);
@@ -77,6 +78,7 @@ test('quick-create normative picker uses the shared debounced search', async () 
   assert.match(source, /Поиск нормативных показателей/);
   assert.match(source, /ничего не найдено/);
   assert.match(source, /Повторить поиск/);
+  assert.match(source, /Добавить показатель вручную/);
   assert.match(source, /useQuery\(/);
   assert.doesNotMatch(source, /protocolService\.searchNormative/);
 });
@@ -96,8 +98,8 @@ test('creation wizard preserves the selected backend normative id', async () => 
   const source = await read('src/features/protocols/components/steps/ResultsStep.tsx');
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   assert.match(source, /normativeId: String\(item\.id\)/);
-  assert.match(mapper, /row\.normativeRecordId \|\| row\.normativeId/);
-  assert.match(mapper, /normativeValue: row\.normativeRecordId \|\| row\.normativeId[\s\S]*?\? undefined[\s\S]*?: normalizeDecimal\(row\.normativeValue/);
+  assert.match(mapper, /normalizePositiveId\(row\.normativeId\)/);
+  assert.match(mapper, /row\.normativeSource === 'MANUAL'/);
 });
 
 test('router keeps protocol creation inside the list wizard', async () => {
@@ -120,6 +122,6 @@ test('protocol editor uses the shared single-request normative search', async ()
 });
 
 test('physical factor validation requires factor type but not a universal factor code', async () => {
-  const source = await read('src/features/protocols/components/CreateProtocolWizardModal.tsx');
-  assert.match(source, /trimmed\(row\.factorCode \|\| row\.factorType\)/);
+  const source = await read('src/features/protocols/utils/protocolWizardValidation.ts');
+  assert.match(source, /!text\(row\.factorType\)/);
 });

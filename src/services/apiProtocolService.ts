@@ -1137,23 +1137,33 @@ export async function quickCreateProtocol(params: {
   );
   const result = unwrapData(response);
   const protocol = requireProtocol(result, 'быстрое создание');
-  const persisted = await getProtocol(protocol.id);
-  const persistedChecks: Array<[string, unknown, unknown]> = [
-    ['protocolDate', payload.protocolDate, persisted.protocolDate],
-    ['sampleDate', payload.sampleDate, persisted.samplingDate || persisted.testing?.samplingDate],
-    ['measurementDate', payload.measurementDate, persisted.measurementDate],
-    ['testingStartDate', payload.testingStartDate, persisted.testingStartDate || persisted.testing?.testingStartDate],
-    ['testingEndDate', payload.testingEndDate, persisted.testingEndDate || persisted.testing?.testingEndDate],
-    ['sourceNumber', payload.sourceNumber, persisted.sourceNumber],
-    ['conditions.waterType', payload.conditions?.waterType, persisted.conditions?.waterType || persisted.waterType],
-    ['conditions.waterUseCategory', payload.conditions?.waterUseCategory, persisted.conditions?.waterUseCategory || persisted.waterUseCategory],
-  ];
-  const ignored = persistedChecks.find(([, expected, actual]) =>
-    expected !== undefined && expected !== null && String(expected) !== String(actual ?? ''));
-  if (ignored) {
-    throw new Error(`PROTOCOL_API_CONTRACT_MISMATCH: backend не сохранил поле «${ignored[0]}» после quick-create.`);
+  const warning = 'Протокол создан, но часть полей требует повторной синхронизации.';
+  try {
+    const persisted = await getProtocol(protocol.id);
+    const persistedChecks: Array<[string, unknown, unknown]> = [
+      ['protocolDate', payload.protocolDate, persisted.protocolDate],
+      ['sampleDate', payload.sampleDate, persisted.samplingDate || persisted.testing?.samplingDate],
+      ['measurementDate', payload.measurementDate, persisted.measurementDate],
+      ['testingStartDate', payload.testingStartDate, persisted.testingStartDate || persisted.testing?.testingStartDate],
+      ['testingEndDate', payload.testingEndDate, persisted.testingEndDate || persisted.testing?.testingEndDate],
+      ['sourceNumber', payload.sourceNumber, persisted.sourceNumber],
+      ['conditions.waterType', payload.conditions?.waterType, persisted.conditions?.waterType || persisted.waterType],
+      ['conditions.waterUseCategory', payload.conditions?.waterUseCategory, persisted.conditions?.waterUseCategory || persisted.waterUseCategory],
+    ];
+    const ignored = persistedChecks.find(([, expected, actual]) =>
+      expected !== undefined && expected !== null && String(expected) !== String(actual ?? ''));
+    if (ignored) {
+      console.warn('[Protocols] quick-create post-check mismatch', { protocolId: protocol.id, field: ignored[0] });
+      return { ...protocol, syncWarning: warning, printVisibility: normalizeProtocolPrintVisibility(protocol.printVisibility ?? payload.printVisibility) };
+    }
+    return { ...persisted, printVisibility: normalizeProtocolPrintVisibility(persisted.printVisibility ?? payload.printVisibility) };
+  } catch (postCheckError) {
+    console.warn('[Protocols] quick-create post-check failed', {
+      protocolId: protocol.id,
+      error: postCheckError instanceof Error ? postCheckError.name : 'UnknownError',
+    });
+    return { ...protocol, syncWarning: warning, printVisibility: normalizeProtocolPrintVisibility(protocol.printVisibility ?? payload.printVisibility) };
   }
-  return { ...persisted, printVisibility: normalizeProtocolPrintVisibility(persisted.printVisibility ?? payload.printVisibility) };
 }
 
 export async function refreshLaboratoryData(protocolId: string, version: number): Promise<Protocol> {

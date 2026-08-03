@@ -2,7 +2,7 @@ import axios, { type AxiosProgressEvent } from 'axios';
 import api from '../../../services/api';
 import type { ApiResponse } from '../../../services/apiHelpers';
 import type {
-  AccessContext, Counterparty, CreateDocumentRequest, DashboardResponse, DocumentAttachment,
+  AccessContext, Counterparty, CounterpartyListParams, CreateCounterpartyRequest, CreateDocumentRequest, DashboardResponse, DocumentAttachment,
   DocumentDetail, DocumentFilters, DocumentListItem, DocumentSignature, DocumentTypeConfig,
   DocumentVersion, PageResponse, PlanAdmin, PublicInvitation, PublicPlan, Representative,
   RevocationRequest, SigningRoute, SigningRouteRequest, SubscriptionAdmin, UpdateDocumentRequest,
@@ -26,6 +26,27 @@ const unwrap = <T>(response: { data: ApiResponse<T> | T }): T => {
 const compact = <T extends object>(value: T) => Object.fromEntries(
   Object.entries(value).filter(([, item]) => item !== undefined && item !== ''),
 );
+
+const counterparty = (source: Record<string, unknown>): Counterparty => ({
+  id: Number(source.id),
+  organizationId: Number(source.organizationId ?? source.ownerOrganizationId),
+  linkedOrganizationId: source.linkedOrganizationId == null ? null : Number(source.linkedOrganizationId),
+  bin: String(source.bin ?? ''),
+  name: String(source.name ?? ''),
+  directorName: source.directorName == null ? null : String(source.directorName),
+  address: source.address == null ? null : String(source.address),
+  email: source.email == null ? null : String(source.email),
+  phone: source.phone == null ? null : String(source.phone),
+  status: source.status === 'ARCHIVED' ? 'ARCHIVED' : 'ACTIVE',
+  createdAt: String(source.createdAt ?? ''),
+  updatedAt: String(source.updatedAt ?? ''),
+  version: Number(source.version ?? 0),
+});
+
+const counterpartyPage = (source: PageResponse<Record<string, unknown>>): PageResponse<Counterparty> => ({
+  ...source,
+  items: source.items.map(counterparty),
+});
 
 const attachment = (source: Record<string, unknown>): DocumentAttachment => ({
   id: Number(source.id),
@@ -67,8 +88,15 @@ const progress = (callback?: (percent: number | null) => void) => (event: AxiosP
 };
 
 export const documentFlowApi = {
-  access: async (_organizationId?: number, signal?: AbortSignal) =>
-    unwrap<AccessContext>(await api.get('/document-flow/access', { signal })),
+  access: async (signal?: AbortSignal) => {
+    const context = unwrap<AccessContext>(await api.get('/document-flow/access', { signal }));
+    return {
+      ...context,
+      internalMode: context.internalMode === true,
+      organization: context.organization ?? null,
+      organizations: context.organizations ?? [],
+    };
+  },
   plans: async (signal?: AbortSignal) =>
     unwrap<PublicPlan[]>(await publicClient.get('/plans', { signal })),
   plan: async (code: string, signal?: AbortSignal) =>
@@ -140,27 +168,24 @@ export const documentFlowApi = {
     api.get<Blob>(`/document-flow/documents/${id}/versions/${versionId}/download`, {
       params: compact({ organizationId }), responseType: 'blob',
     }),
-  counterparties: async (page = 0, size = 20, organizationId?: number, signal?: AbortSignal) =>
-    unwrap<PageResponse<Counterparty>>(await api.get('/document-flow/counterparties', {
-      params: compact({ page, size, organizationId }), signal,
-    })),
-  counterparty: async (id: number, organizationId?: number, signal?: AbortSignal) =>
-    unwrap<Counterparty>(await api.get(`/document-flow/counterparties/${id}`, { params: compact({ organizationId }), signal })),
-  createCounterparty: async (payload: {
-    bin: string; name: string; linkedOrganizationId?: number | null; directorName?: string;
-    address?: string; email?: string; phone?: string;
-  }, organizationId?: number) =>
-    unwrap<Counterparty>(await api.post('/document-flow/counterparties', payload, { params: compact({ organizationId }) })),
-  archiveCounterparty: async (id: number, organizationId?: number) =>
-    unwrap<Counterparty>(await api.delete(`/document-flow/counterparties/${id}`, { params: compact({ organizationId }) })),
-  representatives: async (id: number, organizationId?: number, signal?: AbortSignal) =>
+  getCounterparties: async ({ page, size, signal }: CounterpartyListParams) =>
+    counterpartyPage(unwrap<PageResponse<Record<string, unknown>>>(await api.get('/document-flow/counterparties', {
+      params: { page, size }, signal,
+    }))),
+  getCounterparty: async (id: number, signal?: AbortSignal) =>
+    counterparty(unwrap<Record<string, unknown>>(await api.get(`/document-flow/counterparties/${id}`, {
+      signal,
+    }))),
+  createCounterparty: async (request: CreateCounterpartyRequest) =>
+    counterparty(unwrap<Record<string, unknown>>(await api.post('/document-flow/counterparties', request))),
+  archiveCounterparty: async (id: number) =>
+    counterparty(unwrap<Record<string, unknown>>(await api.delete(`/document-flow/counterparties/${id}`))),
+  representatives: async (id: number, signal?: AbortSignal) =>
     unwrap<Representative[]>(await api.get(`/document-flow/counterparties/${id}/representatives`, {
-      params: compact({ organizationId }), signal,
+      signal,
     })),
-  addRepresentative: async (id: number, payload: Omit<Representative, 'id' | 'counterpartyId' | 'active'>, organizationId?: number) =>
-    unwrap<Representative>(await api.post(`/document-flow/counterparties/${id}/representatives`, payload, {
-      params: compact({ organizationId }),
-    })),
+  addRepresentative: async (id: number, payload: Omit<Representative, 'id' | 'counterpartyId' | 'active'>) =>
+    unwrap<Representative>(await api.post(`/document-flow/counterparties/${id}/representatives`, payload)),
   signingRoute: async (id: number, signal?: AbortSignal) =>
     unwrap<SigningRoute>(await api.get(`/document-flow/documents/${id}/signing-route`, { signal })),
   createSigningRoute: async (id: number, payload: SigningRouteRequest) =>

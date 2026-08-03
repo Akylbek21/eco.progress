@@ -4,7 +4,6 @@ import type {
   PekDashboard,
   PekProgram,
   PekReport,
-  PekReportAvailableAction,
 } from '../api/pekContracts';
 import { pekActionLabels } from '../utils/pekLabels';
 import { pekProgramContractSchema, pekReportContractSchema, validatePekContract } from '../api/pekContractSchemas';
@@ -71,7 +70,6 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
     responsibleUser: responsible,
     responsibleUserId: source.responsibleUserId == null ? null : numberValue(source.responsibleUserId),
     readinessPercent: source.readinessPercent == null ? undefined : numberValue(source.readinessPercent),
-    readiness: source.readiness && typeof source.readiness === 'object' ? source.readiness as PekProgram['readiness'] : null,
     updatedAt: source.updatedAt == null ? undefined : String(source.updatedAt),
     availableActions: (Array.isArray(source.availableActions) ? source.availableActions : [])
       .map(action)
@@ -84,34 +82,15 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
   };
 };
 
-const reportAction = (value: unknown): PekReportAvailableAction | null => {
-  const source = typeof value === 'string' ? { code: value } : row(value);
-  if (!source.code) return null;
-  const code = String(source.code) as PekReportAvailableAction['code'];
-  const labels: Record<string, string> = {
-    COLLECT: 'Собрать данные', RECOLLECT: 'Повторить сбор', VALIDATE: 'Проверить готовность',
-    SUBMIT_REVIEW: 'Отправить на проверку', RETURN: 'Вернуть на доработку', APPROVE: 'Согласовать',
-    GENERATE_DOCUMENT: 'Сформировать документ', SIGN: 'Подписать', ARCHIVE: 'Архивировать',
-  };
-  return {
-    code, label: String(source.label || labels[code] || code), enabled: source.enabled !== false,
-    disabledReason: source.disabledReason == null ? null : String(source.disabledReason),
-    confirmationRequired: source.confirmationRequired !== false,
-    requiresComment: Boolean(source.requiresComment),
-  };
-};
-
 export const mapReportResponse = (
   value: unknown,
   linkedProtocolNumbers: string[] = [],
 ): PekReport => {
   const source = row(validatePekContract(pekReportContractSchema, value, 'отчёта ПЭК'));
-  const programId = source.programId == null ? undefined : numberValue(source.programId);
   const responsibleUser = named(source.responsibleUser);
   return {
     ...source,
     id: numberValue(source.id),
-    number: source.number == null ? undefined : String(source.number),
     version: numberValue(source.version),
     status: String(source.status || ''),
     periodType: String(source.periodType || 'QUARTER') as PekReport['periodType'],
@@ -121,25 +100,15 @@ export const mapReportResponse = (
       : numberValue(source.reportQuarter ?? source.quarter),
     periodStart: String(source.periodStart || ''),
     periodEnd: String(source.periodEnd || ''),
-    companyId: source.companyId == null ? undefined : numberValue(source.companyId),
-    objectId: source.objectId == null ? undefined : numberValue(source.objectId),
-    programId,
+    companyId: numberValue(source.companyId),
+    objectId: numberValue(source.objectId),
+    programId: numberValue(source.programId),
     company: named(source.company),
     object: named(source.object),
-    program: programId ? { id: programId, name: `Программа №${programId}` } : null,
     responsibleUser,
-    linkedProtocolCount: optionalNumber(source.linkedProtocolCount),
+    linkedProtocolCount: numberValue(source.linkedProtocolCount),
     linkedProtocolNumbers,
     lastCollectedAt: source.lastCollectedAt == null ? null : String(source.lastCollectedAt),
-    completionPercent: optionalNumber(source.completionPercent),
-    plannedCount: optionalNumber(source.plannedCount),
-    actualCount: optionalNumber(source.actualCount),
-    missingCount: optionalNumber(source.missingCount),
-    exceedanceCount: optionalNumber(source.exceedanceCount),
-    commentCount: optionalNumber(source.commentCount),
-    availableActions: (Array.isArray(source.availableActions) ? source.availableActions : []).map(reportAction).filter((item): item is PekReportAvailableAction => item !== null),
-    readOnly: Boolean(source.readOnly),
-    readiness: source.readiness && typeof source.readiness === 'object' ? source.readiness as PekReport['readiness'] : null,
   };
 };
 

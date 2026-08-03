@@ -1,48 +1,263 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Alert, Button, Card, CardContent, Dialog, DialogActions, DialogContent, DialogTitle,
-  Grid, Stack, TextField, Typography,
+  Alert, Button, Card, CardContent, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
+  Paper, Stack, Table, TableBody, TableCell,
+  TableContainer, TableHead, TablePagination, TableRow, TextField, Typography, useMediaQuery, useTheme,
 } from '@mui/material';
+import { Controller, useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { documentFlowApi } from '../api/documentFlowApi';
 import { documentFlowKeys } from '../api/documentFlowKeys';
 import { canMutate } from '../model/access';
+import type { Counterparty } from '../model/types';
 import { useDocumentFlowContext } from '../components/DocumentFlowGate';
+import { mapDocumentFlowError } from '../utils/apiErrorMapper';
+import { emptyToUndefined, isValidEmail, isValidPhone, normalizeBin } from '../utils/counterpartyForm';
 
-const empty = { bin: '', name: '', directorName: '', address: '', email: '', phone: '' };
+interface CounterpartyFormValues {
+  bin: string;
+  name: string;
+  directorName: string;
+  address: string;
+  email: string;
+  phone: string;
+}
+
+interface RepresentativeFormValues {
+  fullName: string;
+  position: string;
+  email: string;
+  phone: string;
+}
+
+const defaultValues: CounterpartyFormValues = {
+  bin: '', name: '', directorName: '', address: '', email: '', phone: '',
+};
 
 export default function CounterpartiesPage() {
   const access = useDocumentFlowContext();
+  const mobile = useMediaQuery(useTheme().breakpoints.down('md'));
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(empty);
-  const query = useQuery({
-    queryKey: documentFlowKeys.counterparties({ page: 0, size: 100 }),
-    queryFn: ({ signal }) => documentFlowApi.counterparties(0, 100, undefined, signal),
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<Counterparty | null>(null);
+  const [representativeTarget, setRepresentativeTarget] = useState<Counterparty | null>(null);
+  const [search, setSearch] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const form = useForm<CounterpartyFormValues>({ defaultValues });
+  const representativeForm = useForm<RepresentativeFormValues>({
+    defaultValues: { fullName: '', position: '', email: '', phone: '' },
   });
-  const create = useMutation({
-    mutationFn: () => documentFlowApi.createCounterparty({ ...form, linkedOrganizationId: null }),
+  const filters = { page, size };
+
+  const counterpartiesQuery = useQuery({
+    queryKey: documentFlowKeys.counterparties(filters),
+    queryFn: ({ signal }) => documentFlowApi.getCounterparties({ page, size, signal }),
+  });
+
+  useEffect(() => {
+    setCreateDialogOpen(false);
+    setArchiveTarget(null);
+    setRepresentativeTarget(null);
+    form.reset(defaultValues);
+    setPage(0);
+  }, [form]);
+
+  const createMutation = useMutation({
+    mutationFn: (values: CounterpartyFormValues) => documentFlowApi.createCounterparty({
+      bin: normalizeBin(values.bin),
+      name: values.name.trim(),
+      directorName: emptyToUndefined(values.directorName),
+      address: emptyToUndefined(values.address),
+      email: emptyToUndefined(values.email),
+      phone: emptyToUndefined(values.phone),
+    }),
     onSuccess: async () => {
-      setOpen(false);
-      setForm(empty);
-      await queryClient.invalidateQueries({ queryKey: documentFlowKeys.counterparties({ page: 0, size: 100 }) });
+      setCreateDialogOpen(false);
+      form.reset(defaultValues);
+      setSuccessMessage('Контрагент добавлен');
+      await queryClient.invalidateQueries({ queryKey: documentFlowKeys.counterpartyLists() });
+    },
+    onError: (error) => {
+      const mapped = mapDocumentFlowError(error);
+      if (mapped.code === 'COUNTERPARTY_DUPLICATE_BIN') {
+        form.setError('bin', { type: 'server', message: 'Контрагент с таким БИН уже существует' });
+      }
+      Object.entries(mapped.fieldErrors).forEach(([field, message]) => {
+        if (field in defaultValues) form.setError(field as keyof CounterpartyFormValues, { type: 'server', message });
+      });
     },
   });
-  const archive = useMutation({
-    mutationFn: (id: number) => documentFlowApi.archiveCounterparty(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: documentFlowKeys.all }),
+
+  const archiveMutation = useMutation({
+    mutationFn: (counterpartyId: number) => documentFlowApi.archiveCounterparty(counterpartyId),
+    onSuccess: async (counterparty) => {
+      setArchiveTarget(null);
+      queryClient.setQueryData(documentFlowKeys.counterparty(counterparty.id), counterparty);
+      await queryClient.invalidateQueries({ queryKey: documentFlowKeys.counterpartyLists() });
+    },
   });
+
+  const representativesQuery = useQuery({
+    queryKey: representativeTarget
+      ? documentFlowKeys.representatives(representativeTarget.id)
+      : documentFlowKeys.representatives(0),
+    queryFn: ({ signal }) => documentFlowApi.representatives(representativeTarget!.id, signal),
+    enabled: Boolean(representativeTarget),
+  });
+
+  const addRepresentativeMutation = useMutation({
+    mutationFn: (values: RepresentativeFormValues) => documentFlowApi.addRepresentative(representativeTarget!.id, {
+      fullName: values.fullName.trim(),
+      position: emptyToUndefined(values.position) ?? null,
+      email: emptyToUndefined(values.email) ?? null,
+      phone: emptyToUndefined(values.phone) ?? null,
+    }),
+    onSuccess: async () => {
+      representativeForm.reset();
+      await queryClient.invalidateQueries({
+        queryKey: documentFlowKeys.representatives(representativeTarget!.id),
+      });
+    },
+  });
+
   const allowed = canMutate(access, 'MANAGE_COUNTERPARTIES');
+  const createError = createMutation.isError ? mapDocumentFlowError(createMutation.error) : null;
+  const archiveError = archiveMutation.isError ? mapDocumentFlowError(archiveMutation.error) : null;
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const visibleItems = (counterpartiesQuery.data?.items ?? []).filter((item) =>
+    !normalizedSearch || item.name.toLowerCase().includes(normalizedSearch) || item.bin.includes(normalizeBin(normalizedSearch))
+  );
+
   return (
     <Stack spacing={3}>
-      <Stack direction="row" justifyContent="space-between"><Typography variant="h4" fontWeight={800}>Контрагенты</Typography>{allowed && <Button variant="contained" onClick={() => setOpen(true)}>Добавить</Button>}</Stack>
-      <Alert severity="info">Текущий backend list endpoint не принимает поиск по BIN/названию. Client-side фильтрация одной страницы не используется.</Alert>
-      {query.isError && <Alert severity="error">{query.error.message}</Alert>}
-      <Grid container spacing={2}>{(query.data?.items || []).map((item) => <Grid size={{ xs: 12, md: 6 }} key={item.id}><Card><CardContent><Typography variant="h6">{item.name}</Typography><Typography>БИН: {item.bin}</Typography><Typography color="text.secondary">{item.email} {item.phone}</Typography>{allowed && item.status !== 'ARCHIVED' && <Button color="warning" onClick={() => archive.mutate(item.id)}>Архивировать контрагента</Button>}</CardContent></Card></Grid>)}</Grid>
-      <Dialog open={open} onClose={() => !create.isPending && setOpen(false)} fullWidth>
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={2}>
+        <div>
+          <Typography variant="h4" fontWeight={800}>Контрагенты</Typography>
+        </div>
+        {allowed && <Button variant="contained" onClick={() => setCreateDialogOpen(true)}>Добавить контрагента</Button>}
+      </Stack>
+
+      {successMessage && <Alert severity="success" onClose={() => setSuccessMessage('')}>{successMessage}</Alert>}
+      <TextField label="Поиск по названию или БИН" value={search} onChange={(event) => setSearch(event.target.value)} />
+      {counterpartiesQuery.isError && (
+        <Alert severity="error" action={<Button onClick={() => counterpartiesQuery.refetch()}>Повторить</Button>}>
+          {mapDocumentFlowError(counterpartiesQuery.error).message}
+        </Alert>
+      )}
+      {counterpartiesQuery.isLoading && <Stack alignItems="center" py={6}><CircularProgress /></Stack>}
+      {counterpartiesQuery.isSuccess && visibleItems.length === 0 && (
+        <Alert severity="info">{search ? 'По вашему запросу ничего не найдено на текущей странице.' : 'Контрагенты ещё не добавлены.'}</Alert>
+      )}
+      {counterpartiesQuery.isSuccess && visibleItems.length > 0 && mobile && (
+        <Stack spacing={2}>{visibleItems.map((item) => (
+          <Card key={item.id}><CardContent><Stack spacing={1}>
+            <Stack direction="row" justifyContent="space-between" gap={1}><Typography fontWeight={800}>{item.name}</Typography><Chip size="small" color={item.status === 'ACTIVE' ? 'success' : 'default'} label={item.status === 'ACTIVE' ? 'Активен' : 'В архиве'} /></Stack>
+            <Typography>БИН: {item.bin}</Typography><Typography>{item.directorName || 'Руководитель не указан'}</Typography>
+            <Typography>{item.phone || 'Телефон не указан'}</Typography><Typography>{item.email || 'Email не указан'}</Typography>
+            <Stack direction="row" flexWrap="wrap"><Button onClick={() => setRepresentativeTarget(item)}>Представители</Button>{allowed && item.status === 'ACTIVE' && <Button color="warning" onClick={() => setArchiveTarget(item)}>Архивировать</Button>}</Stack>
+          </Stack></CardContent></Card>
+        ))}<TablePagination component="div" count={counterpartiesQuery.data.totalElements} page={page} rowsPerPage={size} rowsPerPageOptions={[10, 20, 50]} onPageChange={(_, nextPage) => setPage(nextPage)} onRowsPerPageChange={(event) => { setSize(Number(event.target.value)); setPage(0); }} /></Stack>
+      )}
+      {counterpartiesQuery.isSuccess && visibleItems.length > 0 && !mobile && (
+        <Paper>
+          <TableContainer>
+            <Table>
+              <TableHead><TableRow>
+                <TableCell>Название</TableCell><TableCell>БИН</TableCell><TableCell>Руководитель</TableCell>
+                <TableCell>Email</TableCell><TableCell>Телефон</TableCell><TableCell>Статус</TableCell>
+                <TableCell>Дата изменения</TableCell><TableCell align="right">Действия</TableCell>
+              </TableRow></TableHead>
+              <TableBody>{visibleItems.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>{item.name}</TableCell><TableCell>{item.bin}</TableCell>
+                  <TableCell>{item.directorName || '—'}</TableCell><TableCell>{item.email || '—'}</TableCell>
+                  <TableCell>{item.phone || '—'}</TableCell>
+                  <TableCell><Chip size="small" color={item.status === 'ACTIVE' ? 'success' : 'default'} label={item.status === 'ACTIVE' ? 'Активен' : 'В архиве'} /></TableCell>
+                  <TableCell>{item.updatedAt ? new Date(item.updatedAt).toLocaleString('ru-RU') : '—'}</TableCell>
+                  <TableCell align="right">
+                    <Button onClick={() => setRepresentativeTarget(item)}>Представители</Button>
+                    {allowed && item.status === 'ACTIVE' && <Button color="warning" onClick={() => setArchiveTarget(item)}>Архивировать</Button>}
+                  </TableCell>
+                </TableRow>
+              ))}</TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div" count={counterpartiesQuery.data.totalElements} page={page}
+            rowsPerPage={size} rowsPerPageOptions={[10, 20, 50]}
+            onPageChange={(_, nextPage) => setPage(nextPage)}
+            onRowsPerPageChange={(event) => { setSize(Number(event.target.value)); setPage(0); }}
+          />
+        </Paper>
+      )}
+
+      <Dialog open={createDialogOpen} onClose={() => !createMutation.isPending && setCreateDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Новый контрагент</DialogTitle>
-        <DialogContent><Stack spacing={2} mt={1}>{Object.keys(empty).map((key) => <TextField key={key} label={{ bin: 'БИН', name: 'Название', directorName: 'Руководитель', address: 'Адрес', email: 'Email', phone: 'Телефон' }[key]} value={form[key as keyof typeof form]} onChange={(event) => setForm((value) => ({ ...value, [key]: event.target.value }))} />)}{create.isError && <Alert severity="error">{create.error.message}</Alert>}</Stack></DialogContent>
-        <DialogActions><Button onClick={() => setOpen(false)}>Отмена</Button><Button variant="contained" disabled={create.isPending || !/^\d{12}$/.test(form.bin) || !form.name.trim()} onClick={() => create.mutate()}>Создать</Button></DialogActions>
+        <DialogContent><Stack spacing={2} mt={1}>
+          <Controller name="bin" control={form.control} rules={{
+            required: 'Укажите БИН',
+            validate: (value) => normalizeBin(value).length === 12 || 'БИН должен содержать 12 цифр',
+          }} render={({ field, fieldState }) => (
+            <TextField {...field} label="БИН" inputMode="numeric" error={Boolean(fieldState.error)} helperText={fieldState.error?.message || `${normalizeBin(field.value).length} из 12 цифр`} />
+          )} />
+          <TextField label="Название" {...form.register('name', {
+            required: 'Укажите название', validate: (value) => Boolean(value.trim()) || 'Укажите название',
+          })} error={Boolean(form.formState.errors.name)} helperText={form.formState.errors.name?.message} />
+          <TextField label="ФИО руководителя" {...form.register('directorName')} />
+          <TextField label="Адрес" {...form.register('address')} />
+          <TextField label="Email" {...form.register('email', { validate: (value) => isValidEmail(value) || 'Укажите корректный email' })} error={Boolean(form.formState.errors.email)} helperText={form.formState.errors.email?.message} />
+          <TextField label="Телефон" {...form.register('phone', { validate: (value) => isValidPhone(value) || 'Укажите корректный телефон' })} error={Boolean(form.formState.errors.phone)} helperText={form.formState.errors.phone?.message} />
+          {createMutation.isSuccess && <Alert severity="success">Контрагент создан.</Alert>}
+          {createError && !form.formState.errors.bin && <Alert severity={createError.status === 403 ? 'warning' : 'error'}>{createError.message}</Alert>}
+        </Stack></DialogContent>
+        <DialogActions>
+          <Button disabled={createMutation.isPending} onClick={() => setCreateDialogOpen(false)}>Отмена</Button>
+          <Button variant="contained" disabled={createMutation.isPending} onClick={form.handleSubmit((values) => createMutation.mutate(values))}>
+            {createMutation.isPending ? 'Создание…' : 'Создать'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(archiveTarget)} onClose={() => !archiveMutation.isPending && setArchiveTarget(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Архивировать контрагента?</DialogTitle>
+        <DialogContent>
+          <Typography>Контрагент перестанет отображаться при создании новых документов. Существующие документы сохранят связь.</Typography>
+          {archiveError && <Alert severity="error" sx={{ mt: 2 }}>{archiveError.message}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={archiveMutation.isPending} onClick={() => setArchiveTarget(null)}>Отмена</Button>
+          <Button color="warning" variant="contained" disabled={archiveMutation.isPending} onClick={() => archiveTarget && archiveMutation.mutate(archiveTarget.id)}>
+            {archiveMutation.isPending ? 'Архивирование…' : 'Архивировать'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(representativeTarget)} onClose={() => !addRepresentativeMutation.isPending && setRepresentativeTarget(null)} fullWidth maxWidth="md">
+        <DialogTitle>Представители · {representativeTarget?.name}</DialogTitle>
+        <DialogContent><Stack spacing={2} mt={1}>
+          {representativesQuery.isLoading && <CircularProgress size={24} />}
+          {representativesQuery.isError && <Alert severity="error">{mapDocumentFlowError(representativesQuery.error).message}</Alert>}
+          {representativesQuery.isSuccess && representativesQuery.data.length === 0 && <Alert severity="info">Представители не добавлены.</Alert>}
+          {representativesQuery.isSuccess && representativesQuery.data.length > 0 && (
+            <Table size="small"><TableHead><TableRow><TableCell>ФИО</TableCell><TableCell>Должность</TableCell><TableCell>Email</TableCell><TableCell>Телефон</TableCell><TableCell>Статус</TableCell></TableRow></TableHead>
+              <TableBody>{representativesQuery.data.map((item) => <TableRow key={item.id}><TableCell>{item.fullName}</TableCell><TableCell>{item.position || '—'}</TableCell><TableCell>{item.email || '—'}</TableCell><TableCell>{item.phone || '—'}</TableCell><TableCell>{item.active ? 'Активен' : 'Неактивен'}</TableCell></TableRow>)}</TableBody>
+            </Table>
+          )}
+          {allowed && <Paper variant="outlined" sx={{ p: 2 }}><Stack spacing={2}>
+            <Typography fontWeight={700}>Добавить представителя</Typography>
+            <TextField label="ФИО" {...representativeForm.register('fullName', { required: 'Укажите ФИО', validate: (value) => Boolean(value.trim()) || 'Укажите ФИО' })} error={Boolean(representativeForm.formState.errors.fullName)} helperText={representativeForm.formState.errors.fullName?.message} />
+            <TextField label="Должность" {...representativeForm.register('position')} />
+            <TextField label="Email" {...representativeForm.register('email', { validate: (value) => isValidEmail(value) || 'Укажите корректный email' })} error={Boolean(representativeForm.formState.errors.email)} helperText={representativeForm.formState.errors.email?.message} />
+            <TextField label="Телефон" {...representativeForm.register('phone', { validate: (value) => isValidPhone(value) || 'Укажите корректный телефон' })} error={Boolean(representativeForm.formState.errors.phone)} helperText={representativeForm.formState.errors.phone?.message} />
+            {addRepresentativeMutation.isError && <Alert severity="error">{mapDocumentFlowError(addRepresentativeMutation.error).message}</Alert>}
+            <Button variant="contained" disabled={addRepresentativeMutation.isPending} onClick={representativeForm.handleSubmit((values) => addRepresentativeMutation.mutate(values))}>{addRepresentativeMutation.isPending ? 'Добавление…' : 'Добавить'}</Button>
+          </Stack></Paper>}
+          <Alert severity="info">Редактирование, активация, деактивация и признак «может подписывать» отсутствуют в backend API.</Alert>
+        </Stack></DialogContent>
+        <DialogActions><Button onClick={() => setRepresentativeTarget(null)}>Закрыть</Button></DialogActions>
       </Dialog>
     </Stack>
   );

@@ -30,6 +30,7 @@ const ProtocolResultRow = ({
 }: Props) => {
   const { register, control, watch, formState: { errors } } = useFormContext<ProtocolWizardForm>();
   const row = watch(`results.${index}`);
+  const manual = row?.normativeSource !== 'DIRECTORY';
   const rowErrors = errors.results?.[index];
 
   return (
@@ -49,6 +50,9 @@ const ProtocolResultRow = ({
           <h4 className="text-sm font-black text-slate-900">
             Показатель №{index + 1}
           </h4>
+          <p className={`mt-1 text-xs font-bold ${manual ? 'text-amber-700' : 'text-emerald-700'}`}>
+            {manual ? 'Норматив не выбран' : row?.normativeStatus === 'REVIEW' ? 'Требуется проверка' : 'Норматив выбран'}
+          </p>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -67,11 +71,11 @@ const ProtocolResultRow = ({
         <label className={`${labelClass} sm:col-span-2 lg:col-span-5`}>
           Наименование показателя
           <input
-            readOnly
+            readOnly={!manual}
             aria-label={`Показатель строки ${index + 1}`}
             placeholder="Выберите норматив через поиск"
             {...register(`results.${index}.indicatorName`)}
-            className={`${inputClass} cursor-default bg-slate-50 font-semibold text-slate-700 ${rowErrors?.indicatorName ? 'border-rose-400' : ''}`}
+            className={`${inputClass} font-semibold text-slate-700 ${!manual ? 'cursor-default bg-slate-50' : ''} ${rowErrors?.indicatorName ? 'border-rose-400' : ''}`}
           />
           {rowErrors?.indicatorName?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.indicatorName.message}</span>}
         </label>
@@ -79,7 +83,7 @@ const ProtocolResultRow = ({
         <label className={`${labelClass} lg:col-span-3`}>
           {chemical ? 'Код загрязняющего вещества' : 'Тип фактора'}
           <input
-            readOnly
+            readOnly={!manual}
             aria-label={
               chemical ? 'Код загрязняющего вещества' : 'Тип фактора'
             }
@@ -89,8 +93,10 @@ const ProtocolResultRow = ({
                 ? `results.${index}.pollutantCode`
                 : `results.${index}.factorType`,
             )}
-            className={`${inputClass} cursor-default bg-slate-50 text-slate-700`}
+            className={`${inputClass} text-slate-700 ${!manual ? 'cursor-default bg-slate-50' : ''} ${rowErrors?.factorType || rowErrors?.pollutantCode ? 'border-rose-400' : ''}`}
           />
+          {!chemical && rowErrors?.factorType?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.factorType.message}</span>}
+          {chemical && rowErrors?.pollutantCode?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.pollutantCode.message}</span>}
         </label>
 
         <label className={`${labelClass} lg:col-span-2`}>
@@ -108,11 +114,11 @@ const ProtocolResultRow = ({
         <label className={`${labelClass} lg:col-span-2`}>
           Единица измерения
           <input
-            readOnly
+            readOnly={!manual}
             aria-label="Единица измерения"
             placeholder="Из норматива"
             {...register(`results.${index}.unit`)}
-            className={`${inputClass} cursor-default bg-slate-50 text-slate-700 ${rowErrors?.unit ? 'border-rose-400' : ''}`}
+            className={`${inputClass} text-slate-700 ${!manual ? 'cursor-default bg-slate-50' : ''} ${rowErrors?.unit ? 'border-rose-400' : ''}`}
           />
           {rowErrors?.unit?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.unit.message}</span>}
         </label>
@@ -159,12 +165,12 @@ const ProtocolResultRow = ({
             aria-label="Норматив"
             value={
               row?.comparisonType === 'RANGE'
-                ? [row.normativeMin, row.normativeMax].filter(Boolean).join(' — ')
+                ? [row.normativeMin, row.normativeMax].filter((value) => value !== '').join(' — ')
                 : row?.comparisonType === 'GREATER_OR_EQUAL'
                   ? `≥ ${row.normativeMin || row.normativeValue || ''}`.trim()
                   : row?.normativeMax
                     ? `≤ ${row.normativeMax}`
-                    : row?.normativeValue
+                    : row?.normativeValue !== ''
                       ? `≤ ${row.normativeValue}`
                       : ''
             }

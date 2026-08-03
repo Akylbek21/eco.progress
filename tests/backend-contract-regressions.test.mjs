@@ -9,10 +9,10 @@ test('protocol quick-create boundary matches the backend DTO exactly', async () 
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   const service = await read('src/services/apiProtocolService.ts');
   assert.match(contracts, /interface QuickCreateProtocolRequest/);
-  for (const field of ['templateId', 'sourceDocumentCode', 'docxTemplateCode', 'protocolDate', 'sampleDate', 'measurementDate', 'testingStartDate', 'testingEndDate', 'sourceNumber', 'companyId', 'objectId', 'laboratoryId', 'executorId', 'measurementPlace', 'conditions', 'measurements', 'printVisibility', 'orderId', 'orderServiceItemId', 'pekProgramId', 'pekReportId', 'pekControlItemId', 'pekControlEventId', 'monitoringPointId', 'emissionSourceId', 'waterOutletId']) {
+  for (const field of ['templateId', 'sourceDocumentCode', 'docxTemplateCode', 'protocolDate', 'sampleDate', 'measurementDate', 'testingStartDate', 'testingEndDate', 'sourceNumber', 'companyId', 'objectId', 'laboratoryId', 'executorId', 'measurementPlace', 'conditions', 'measurements', 'printVisibility', 'orderId']) {
     assert.match(contracts, new RegExp(`\\b${field}\\b`));
   }
-  for (const field of ['samplingDate', 'deviceId', 'environment']) {
+  for (const field of ['samplingDate', 'deviceId', 'environment', 'orderServiceItemId', 'pekProgramId', 'pekReportId', 'pekControlItemId', 'pekControlEventId', 'monitoringPointId', 'emissionSourceId', 'waterOutletId']) {
     assert.doesNotMatch(contracts.match(/interface QuickCreateProtocolRequest[\s\S]*?\n}/)?.[0] || '', new RegExp(`\\b${field}\\b`));
   }
   assert.match(mapper, /requirePositiveIntegerId/);

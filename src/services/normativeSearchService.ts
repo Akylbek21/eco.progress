@@ -123,6 +123,7 @@ const normalizeItem = (value: unknown, index: number): NormativeSearchItem | nul
     conditionJson: conditionRecord(firstValue(record, ['conditionJson', 'condition_json', 'conditionsJson', 'conditions'])),
     status: optionalString(record.status) || undefined,
     relevanceScore: optionalNumber(record.relevanceScore) ?? undefined,
+    matchQuality: optionalString(firstValue(record, ['matchQuality', 'matchType', 'quality'])) || undefined,
   };
 };
 
@@ -219,32 +220,54 @@ export const searchNormatives = async (
   if (!options.bypassCache && cached && cached.expiresAt > Date.now()) return cached.value;
   if (cached) cache.delete(key);
 
-  const response = await api.get<unknown>('/normatives/search', {
-    params: cleaned,
-    signal,
-  });
-  let normalized = normalizeResponse(response.data, Number(cleaned.page ?? 0), Number(cleaned.size ?? 30));
-  if (!normalized.items.length) {
-    const relaxedParams = cleanNormativeSearchParams({
-      query: cleaned.query,
-      templateId: cleaned.templateId,
-      waterType: cleaned.waterType,
-      waterUseCategory: cleaned.waterUseCategory,
-      page: cleaned.page,
-      size: cleaned.size,
-      status: cleaned.status,
-    });
-    const relaxedResponse = await api.get<unknown>('/normatives/search', {
-      params: relaxedParams,
-      signal,
-    });
+  const sequence = buildNormativeSearchSequence(cleaned);
+  let normalized: NormativeSearchResponse['data'] = {
+    items: [], page: requestedPage, size: requestedSize, totalElements: 0, totalPages: 0,
+  };
+  for (const candidate of sequence) {
+    const response = await api.get<unknown>('/normatives/search', { params: candidate.params, signal });
+    const result = normalizeResponse(response.data, requestedPage, requestedSize);
     normalized = {
-      ...normalizeResponse(relaxedResponse.data, requestedPage, requestedSize),
-      relaxed: true,
+      ...result,
+      relaxed: candidate.stage === 'RELAXED_ACTIVE' || candidate.stage === 'RELAXED_ALL',
+      fallbackStage: candidate.stage,
     };
+    if (result.items.length) break;
   }
   if (normalized.items.length) cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, value: normalized });
   return normalized;
+};
+
+export const buildNormativeSearchSequence = (params: NormativeSearchRequest) => {
+  const strict = cleanNormativeSearchParams({ ...params, page: params.page ?? 0, size: params.size ?? 50 });
+  const relaxed = cleanNormativeSearchParams({
+    query: strict.query,
+    pollutantCode: strict.pollutantCode,
+    code: strict.code,
+    casNumber: strict.casNumber,
+    formula: strict.formula,
+    templateId: strict.templateId,
+    sourceDocumentCode: strict.sourceDocumentCode,
+    factorType: strict.factorType,
+    page: strict.page,
+    size: strict.size,
+  });
+  const fullyRelaxed = cleanNormativeSearchParams({
+    query: strict.query,
+    pollutantCode: strict.pollutantCode,
+    code: strict.code,
+    casNumber: strict.casNumber,
+    formula: strict.formula,
+    templateId: strict.templateId,
+    page: strict.page,
+    size: strict.size,
+  });
+  return [
+    { stage: 'STRICT_ACTIVE' as const, params: { ...strict, status: 'ACTIVE' } },
+    { stage: 'STRICT_ALL' as const, params: { ...strict, status: 'ALL' } },
+    { stage: 'RELAXED_ACTIVE' as const, params: { ...relaxed, status: 'ACTIVE' } },
+    { stage: 'RELAXED_ALL' as const, params: { ...fullyRelaxed, status: 'ALL' } },
+  ];
 };
 
 const valueString = (value: number | null | undefined): string => value === null || value === undefined ? '' : String(value);
@@ -292,6 +315,9 @@ export const normativeSearchItemToRecord = (item: NormativeSearchItem): Normativ
   testingMethod: item.testingMethodNd || '',
   samplingMethod: '',
   validFrom: '',
-  status: item.status === 'ACTIVE' ? 'ACTIVE' : undefined,
+  status: item.status === 'ACTIVE' || item.status === 'REVIEW' || item.status === 'INACTIVE'
+    ? item.status
+    : undefined,
+  matchQuality: item.matchQuality,
   active: item.status !== 'INACTIVE',
 });

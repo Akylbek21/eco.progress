@@ -18,6 +18,7 @@ type Props = {
   filters?: NormativeSearchRequest;
   onClose: () => void;
   onAdd: (items: NormativeRecord[]) => void;
+  onManual: () => void;
 };
 
 const SEARCH_DEBOUNCE_MS = 400;
@@ -29,6 +30,7 @@ const NormativeSelectorModal = ({
   filters = {},
   onClose,
   onAdd,
+  onManual,
 }: Props) => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -147,6 +149,9 @@ const NormativeSelectorModal = ({
           <Button type="button" variant="secondary" onClick={close}>
             Отмена
           </Button>
+          <Button type="button" variant="secondary" onClick={onManual}>
+            Добавить показатель вручную
+          </Button>
           <Button
             type="button"
             disabled={!selectedRecords.size}
@@ -219,7 +224,7 @@ const NormativeSelectorModal = ({
             className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"
           >
             <p className="font-semibold">
-              Не удалось выполнить поиск нормативных показателей.
+              Поиск нормативов временно недоступен. Добавьте показатель вручную или повторите поиск.
             </p>
             <button
               type="button"
@@ -255,10 +260,17 @@ const NormativeSelectorModal = ({
                   <span className="mt-1 block text-xs text-slate-500">
                     {item.code || item.pollutantCode || 'без кода'} ·{' '}
                     {item.unit || 'без единицы'} ·{' '}
-                    {item.value || item.normativeValue || '—'} ·{' '}
+                    {item.value ?? item.normativeValue ?? '—'} ·{' '}
                     {item.normativeDocument ||
                       item.sourceDocumentName ||
                       'источник не указан'}
+                  </span>
+                  <span className="mt-1 flex flex-wrap gap-1 text-xs font-semibold">
+                    {item.matchQuality === 'EXACT' && <Badge>Точное совпадение</Badge>}
+                    {item.matchQuality === 'CONTEXT_GENERAL' && <Badge>Общий норматив</Badge>}
+                    {(item.matchQuality === 'TEMPLATE_DOCUMENT' || item.matchQuality === 'TEMPLATE_ONLY') && <Badge>Совпадение по типу протокола</Badge>}
+                    {item.status === 'REVIEW' && <Badge warning>Требуется проверка</Badge>}
+                    {item.status === 'INACTIVE' && <Badge warning>Неактивный норматив</Badge>}
                   </span>
                 </span>
               </label>
@@ -268,5 +280,7 @@ const NormativeSelectorModal = ({
     </Modal>
   );
 };
+
+const Badge = ({ children, warning = false }: { children: React.ReactNode; warning?: boolean }) => <span className={`rounded-full px-2 py-0.5 ${warning ? 'bg-amber-100 text-amber-900' : 'bg-eco-100 text-eco-900'}`}>{children}</span>;
 
 export default NormativeSelectorModal;

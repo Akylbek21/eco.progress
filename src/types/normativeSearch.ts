@@ -45,6 +45,7 @@ export interface NormativeSearchItem {
   conditionJson?: Record<string, unknown> | null;
   status?: 'ACTIVE' | 'REVIEW' | string;
   relevanceScore?: number;
+  matchQuality?: 'EXACT' | 'CONTEXT_GENERAL' | 'TEMPLATE_DOCUMENT' | 'TEMPLATE_ONLY' | string;
 }
 
 export interface NormativeSearchResponse {
@@ -56,6 +57,7 @@ export interface NormativeSearchResponse {
     totalElements: number;
     totalPages: number;
     relaxed?: boolean;
+    fallbackStage?: 'STRICT_ACTIVE' | 'STRICT_ALL' | 'RELAXED_ACTIVE' | 'RELAXED_ALL';
   };
   message?: string | null;
   errors?: string[];

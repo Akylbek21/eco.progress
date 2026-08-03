@@ -21,6 +21,7 @@ import {
   buildQuickCreatePayload,
   mapQuickCreateTemplateId,
   normalizeDecimal,
+  normalizePositiveId,
   PayloadValidationError,
   requirePositiveIntegerId,
 } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
@@ -37,6 +38,7 @@ import {
 import {
   normalizeQuickCreateFieldPath,
 } from '../src/features/protocols/components/CreateProtocolWizardModal';
+import { validateDraft, validateForApproval } from '../src/features/protocols/utils/protocolWizardValidation';
 import api from '../src/services/api';
 import { normalizeApiError } from '../src/services/apiHelpers';
 import { quickCreateProtocol } from '../src/services/apiProtocolService';
@@ -78,7 +80,9 @@ const validForm = () => {
     value: ' 0,2 ',
     unit: 'мг/л',
     normativeValue: '0,2',
-    normativeRecordId: '123',
+    normativeId: '123',
+    normativeSource: 'DIRECTORY',
+    normativeStatus: 'ACTIVE',
     testingMethodNd: 'Методика строки',
     measurementDeviceId: '8',
     samplingPlace: 'Скважина № 1',
@@ -188,6 +192,8 @@ describe('quick-create payload contract', () => {
     for (const value of ['', 0, -1, '1.5', 'abc', Number.NaN]) {
       expect(() => requirePositiveIntegerId(value, 'objectId')).toThrow(PayloadValidationError);
     }
+    expect(normalizePositiveId('42')).toBe(42);
+    expect(normalizePositiveId(0)).toBeUndefined();
   });
 
   it('normalizes decimal commas, preserves zero and rejects NaN', () => {
@@ -242,16 +248,57 @@ describe('quick-create payload contract', () => {
     expect(payload.measurements[0]).not.toHaveProperty('methodology');
   });
 
-  it('preserves the complete PEK context in quick-create payload', () => {
+  it('does not pretend unsupported PEK links are accepted by quick-create backend', () => {
     const form = validForm();
     Object.assign(form, {
       pekProgramId: '11', pekReportId: '12', pekControlItemId: '13', pekControlEventId: '14',
       monitoringPointId: '15', emissionSourceId: '16', waterOutletId: '17', orderServiceItemId: '18',
     });
-    expect(buildQuickCreatePayload(form, strictContext)).toMatchObject({
-      pekProgramId: '11', pekReportId: '12', pekControlItemId: '13', pekControlEventId: '14',
-      monitoringPointId: '15', emissionSourceId: '16', waterOutletId: '17', orderServiceItemId: '18',
-    });
+    const payload = buildQuickCreatePayload(form, strictContext);
+    expect(payload.orderId).toBe('order-uuid-1');
+    for (const unsupported of ['pekProgramId', 'pekReportId', 'pekControlItemId', 'pekControlEventId', 'monitoringPointId', 'emissionSourceId', 'waterOutletId', 'orderServiceItemId']) {
+      expect(payload).not.toHaveProperty(unsupported);
+    }
+  });
+
+  it('allows a manual draft without normativeId but blocks approval', () => {
+    const form = validForm();
+    form.results[0] = {
+      ...form.results[0],
+      normativeId: '',
+      normativeSource: 'NONE',
+      normativeStatus: '',
+      normativeValue: '',
+    };
+    expect(validateDraft(form)).toEqual([]);
+    expect(validateForApproval(form)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'results.0.normativeId' }),
+    ]));
+    expect(buildQuickCreatePayload(form, strictContext).measurements[0].normativeId).toBeUndefined();
+  });
+
+  it('preserves manual normative metadata in backend-supported values', () => {
+    const form = validForm();
+    form.results[0] = {
+      ...form.results[0], normativeId: '', normativeSource: 'MANUAL', normativeValue: '0,5',
+      normativeMin: '0', normativeMax: '1', comparisonType: 'RANGE', normativeDocument: 'ДСМ-70',
+    };
+    const measurement = buildQuickCreatePayload(form, strictContext).measurements[0];
+    expect(measurement.normativeId).toBeUndefined();
+    expect(measurement.normativeValue).toBe(0.5);
+    expect(measurement.values).toMatchObject({ normativeSource: 'MANUAL', normativeMin: 0, normativeMax: 1, comparisonType: 'RANGE', normativeDocument: 'ДСМ-70' });
+  });
+
+  it('requires factorType for physical results even when factorCode exists', () => {
+    const form = validForm();
+    form.templateId = 'noise_vibration';
+    form.waterType = '';
+    form.waterUseCategory = '';
+    form.results[0] = { ...form.results[0], pollutantCode: '', factorType: '', factorCode: 'NOISE_1' };
+    expect(validateForApproval(form)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'results.0.factorType' }),
+    ]));
+    expect(() => buildQuickCreatePayload(form, strictContext)).toThrow(expect.objectContaining({ field: 'results.0.factorType' }));
   });
 
   it('accepts result 0 but blocks a missing or numeric unit before POST', () => {
@@ -529,6 +576,19 @@ describe('quick-create API request', () => {
       payload: buildQuickCreatePayload(validForm(), strictContext),
       idempotencyKey: 'failed-attempt',
     })).rejects.toBeDefined();
+    expect(requestCount).toBe(1);
+  });
+
+  it('keeps POST success when the post-create GET contract check mismatches', async () => {
+    server.use(http.get('http://localhost/api/protocols/77', () => HttpResponse.json({ data: {
+      id: '77', templateId: 'water', status: 'DRAFT', version: 1, protocolDate: '2000-01-01', results: [],
+    } })));
+    const protocol = await quickCreateProtocol({
+      payload: buildQuickCreatePayload(validForm(), strictContext),
+      idempotencyKey: 'post-check-warning',
+    });
+    expect(protocol.id).toBe('77');
+    expect(protocol.syncWarning).toBe('Протокол создан, но часть полей требует повторной синхронизации.');
     expect(requestCount).toBe(1);
   });
 });

@@ -11,6 +11,7 @@ const ProtocolResultDetails = ({ index }: { index: number }) => {
   const type = watch('templateId');
   const chemical = Boolean(type && CHEMICAL_TYPES.has(type));
   const rowErrors = errors.results?.[index];
+  const normativeSource = watch(`results.${index}.normativeSource`);
 
   return (
     <details className="group border-t border-slate-100">
@@ -25,6 +26,13 @@ const ProtocolResultDetails = ({ index }: { index: number }) => {
       </summary>
 
       <div className="grid gap-4 border-t border-slate-100 bg-slate-50/40 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-4">
+        {normativeSource === 'MANUAL' && <>
+          <label className={labelClass}>Нормативное значение<input inputMode="decimal" placeholder="Например, 0,5" {...register(`results.${index}.normativeValue`)} className={inputClass} /></label>
+          <label className={labelClass}>Сравнение<select {...register(`results.${index}.comparisonType`)} className={inputClass}><option value="LESS_OR_EQUAL">≤</option><option value="GREATER_OR_EQUAL">≥</option><option value="EQUAL">=</option><option value="RANGE">Диапазон</option></select></label>
+          <label className={labelClass}>Минимум<input inputMode="decimal" {...register(`results.${index}.normativeMin`)} className={inputClass} /></label>
+          <label className={labelClass}>Максимум<input inputMode="decimal" {...register(`results.${index}.normativeMax`)} className={inputClass} /></label>
+          <label className={`${labelClass} sm:col-span-2`}>Нормативный документ<input placeholder="Например, ДСМ-70" {...register(`results.${index}.normativeDocument`)} className={inputClass} /></label>
+        </>}
         <label className={labelClass}>
           Код методики
           <input

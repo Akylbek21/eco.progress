@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import { hasPermission } from '../../../config/permissions';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const navigation = [
   { to: '/staff/pek', label: 'Обзор', end: true },
   { to: '/staff/pek/programs', label: 'Программы' },
   { to: '/staff/pek/reports', label: 'Отчёты' },
-  { to: '/staff/pek/settings', label: 'Настройки' },
 ];
 
 const labels: Record<string, string> = {
@@ -21,6 +22,7 @@ const labels: Record<string, string> = {
 
 const PekLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
+  const { user } = useAuth();
   const segments = location.pathname.split('/').filter(Boolean).slice(2);
   const activeFilters = new URLSearchParams(location.search).size;
 
@@ -38,6 +40,7 @@ const PekLayout = ({ children }: { children: ReactNode }) => {
       </div>
       <nav aria-label="Разделы ПЭК" className="mt-3 flex max-w-full gap-1 overflow-x-auto">
         {navigation.map((item) => <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => `whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold ${isActive ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{item.label}</NavLink>)}
+        {hasPermission(user, 'PEK_ADMIN') && <NavLink to="/staff/pek/settings" className={({ isActive }) => `whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold ${isActive ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Настройки</NavLink>}
       </nav>
     </div>
     {children}

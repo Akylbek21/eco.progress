@@ -16,10 +16,6 @@ const metricDefinitions = [
   ['readinessPercent', 'Готовность', '%', false],
   ['overdueRiskCount', 'Риск просрочки', '', false],
   ['programExecutionPercent', 'Выполнение программ', '%', false],
-  ['criticalIssueCount', 'Критические проблемы', '', true],
-  ['openExceedanceCount', 'Превышения', '', true],
-  ['overdueActionCount', 'Просроченные действия', '', true],
-  ['missingProtocolCount', 'Отсутствующие протоколы', '', true],
 ] as const;
 
 const PekDashboardPage = () => {
@@ -104,11 +100,10 @@ const PekDashboardPage = () => {
           ? <PekState title="Нет данных dashboard" />
           : <>
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {metricDefinitions.map(([key, label, suffix, pendingEngine]) => (
-                <article key={key} className="rounded-2xl border bg-white p-5" title={pendingEngine ? 'Расчёт показателя будет доступен после подключения validation engine' : undefined}>
+              {metricDefinitions.map(([key, label, suffix]) => (
+                <article key={key} className="rounded-2xl border bg-white p-5">
                   <p className="text-sm text-slate-500">{label}</p>
                   <p className="mt-2 text-3xl font-black text-eco-900">{dashboard.data[key] == null ? '—' : `${dashboard.data[key]}${suffix}`}</p>
-                  {pendingEngine && <p className="mt-2 text-xs text-slate-400">Показатель возвращён backend</p>}
                   <Link className="mt-3 inline-block text-xs font-bold text-eco-700" to={`/staff/pek/reports?${new URLSearchParams({ ...(filters.companyId ? { companyId: String(filters.companyId) } : {}), ...(filters.objectId ? { objectId: String(filters.objectId) } : {}), ...(filters.year ? { year: String(filters.year) } : {}) })}`}>Открыть список</Link>
                 </article>
               ))}
@@ -130,7 +125,7 @@ const PekDashboardPage = () => {
                 <div className="mt-3 space-y-2">
                   {dashboard.data.reports.map((report) => (
                     <Link key={report.id} to={`/staff/pek/reports/${report.id}`} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-sm">
-                      <span>{report.number || `Отчёт №${report.id}`} · {report.periodStart}—{report.periodEnd}</span>
+                      <span>Отчёт, ID {report.id} · {report.periodStart}—{report.periodEnd}</span>
                       <PekStatusBadge status={report.status} />
                     </Link>
                   ))}

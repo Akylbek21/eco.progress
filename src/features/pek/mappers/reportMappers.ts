@@ -1,9 +1,4 @@
-import type {
-  PekCreationContext,
-  PekReportCreateRequest,
-  PekReportCreationParams,
-  PekReportStatus,
-} from '../api/pekContracts';
+import type { PekCreationContext, PekReportCreateRequest, PekReportCreationParams } from '../api/pekContracts';
 
 export const mapReportCreateRequest = (
   params: PekReportCreationParams,
@@ -27,24 +22,3 @@ export const getCreationBlockState = (context?: PekCreationContext) => ({
   duplicateReportId: context?.duplicateReportId ?? null,
   blockingReasons: context?.blockingReasons ?? [],
 });
-
-export type PekReportWorkflowAction = 'COLLECT' | 'SUBMIT_REVIEW' | 'APPROVE' | 'ARCHIVE';
-
-/**
- * TODO: удалить после добавления availableActions в ReportResponse.
- * Mapper intentionally contains only endpoints implemented by the current backend.
- */
-export const getReportWorkflowActions = (status: PekReportStatus | string): PekReportWorkflowAction[] => {
-  switch (status) {
-    case 'DRAFT':
-      return ['COLLECT'];
-    case 'COLLECTING':
-      return ['COLLECT', 'SUBMIT_REVIEW'];
-    case 'READY_FOR_REVIEW':
-      return ['APPROVE'];
-    case 'APPROVED':
-      return ['ARCHIVE'];
-    default:
-      return [];
-  }
-};

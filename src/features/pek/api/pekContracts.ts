@@ -143,7 +143,6 @@ export interface PekProgram {
   responsibleUser?: PekNamedRef | null;
   responsibleUserId?: PekId | null;
   readinessPercent?: number;
-  readiness?: PekReadiness | null;
   updatedAt?: string;
   availableActions: PekAvailableAction[];
   readOnly: boolean;
@@ -203,7 +202,6 @@ export type PekProgramFilters = {
 
 export interface PekReport {
   id: PekId;
-  number?: string;
   version: number;
   status: PekReportStatus | string;
   periodType: PekPeriodType;
@@ -213,38 +211,19 @@ export interface PekReport {
   periodEnd: string;
   company?: PekNamedRef | null;
   object?: PekNamedRef | null;
-  program?: (PekNamedRef & { version?: number }) | null;
-  companyId?: number;
-  objectId?: number;
-  programId?: number;
+  companyId: number;
+  objectId: number;
+  programId: number;
   responsibleUser?: PekNamedRef | null;
-  linkedProtocolCount?: number;
+  linkedProtocolCount: number;
   linkedProtocolNumbers: string[];
   lastCollectedAt?: string | null;
-  completionPercent?: number;
-  plannedCount?: number;
-  actualCount?: number;
-  missingCount?: number;
-  exceedanceCount?: number;
-  commentCount?: number;
-  availableActions: PekReportAvailableAction[];
-  readOnly: boolean;
-  readiness?: PekReadiness | null;
 }
 export type PekReportFilters = {
-  search?: string;
-  companyId?: number;
-  objectId?: number;
-  programId?: number;
-  year?: number;
-  periodType?: PekPeriodType;
-  status?: string;
-  responsibleUserId?: number;
-  hasExceedances?: boolean;
-  overdue?: boolean;
+  companyId: number;
+  objectId: number;
   page?: number;
   size?: number;
-  sort?: string;
 };
 export type PekReportCreationParams = {
   companyId: number;
@@ -345,55 +324,4 @@ export type PekReadiness = {
   missingCorrectiveActions?: number;
   documentReady?: boolean;
   signatureReady?: boolean;
-};
-
-export type PekReportActionCode =
-  | 'COLLECT' | 'RECOLLECT' | 'VALIDATE' | 'SUBMIT_REVIEW' | 'RETURN'
-  | 'APPROVE' | 'GENERATE_DOCUMENT' | 'SIGN' | 'ARCHIVE';
-export type PekReportAvailableAction = {
-  code: PekReportActionCode;
-  label: string;
-  enabled: boolean;
-  disabledReason?: string | null;
-  confirmationRequired?: boolean;
-  requiresComment?: boolean;
-};
-
-export type PekCollectionSummary = {
-  status: string;
-  protocolsFound?: number;
-  resultsFound?: number;
-  exactMatches?: number;
-  requiresReview?: number;
-  unmatched?: number;
-  rejected?: number;
-  errors?: number;
-  startedAt?: string | null;
-  completedAt?: string | null;
-};
-
-export type PekPlanFactRow = {
-  id: number;
-  controlItemName: string;
-  indicatorName: string;
-  unit?: string | null;
-  planned?: number;
-  actual?: number;
-  missing?: number;
-  maximum?: number | null;
-  normative?: number | null;
-  status: string;
-};
-
-export type PekUnmatchedSource = {
-  id: number;
-  protocolId?: number | null;
-  protocolNumber?: string | null;
-  protocolDate?: string | null;
-  indicatorName?: string | null;
-  value?: number | string | null;
-  unit?: string | null;
-  pointName?: string | null;
-  status: string;
-  reason?: string | null;
 };

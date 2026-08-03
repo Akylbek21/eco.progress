@@ -11,19 +11,22 @@ const DocumentDetailsPage = lazy(() => import('./pages/DocumentDetailsPage'));
 const CounterpartiesPage = lazy(() => import('./pages/CounterpartiesPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const MembersPage = lazy(() => import('./pages/MembersPage'));
 
 export default function DocumentFlowRoutes() {
   return (
     <Routes>
-      <Route path="plans" element={<DocumentFlowPricingPage />} />
+      <Route path="plans" element={<Navigate to="/document-flow/documents" replace />} />
       <Route element={<DocumentFlowGate />}>
         <Route element={<DocumentFlowLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="access" element={<DashboardPage />} />
+          <Route index element={<Navigate to="/document-flow/documents" replace />} />
+          <Route path="access" element={<Navigate to="/document-flow/members" replace />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="documents/new" element={<CreateDocumentPage />} />
           <Route path="documents/:id" element={<DocumentDetailsPage />} />
           <Route path="counterparties" element={<CounterpartiesPage />} />
+          <Route path="members" element={<MembersPage />} />
+          <Route path="archive" element={<Navigate to="/document-flow/documents?status=ARCHIVED" replace />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="subscription" element={<SubscriptionPage />} />
         </Route>

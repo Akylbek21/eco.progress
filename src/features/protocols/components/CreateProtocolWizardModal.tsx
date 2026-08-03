@@ -48,6 +48,7 @@ import ProtocolCheckStep from './steps/ProtocolCheckStep';
 import ProtocolSigningStep from './steps/ProtocolSigningStep';
 import { useAuth } from '../../../contexts/AuthContext';
 import { createProtocolCmsSignature, protocolSigningPhaseLabel, type ProtocolSigningPhase } from '../utils/protocolSigning';
+import { validateDraft, validateForApproval } from '../utils/protocolWizardValidation';
 
 const DRAFT_KEY = 'protocol-create-wizard-draft';
 const DRAFT_VERSION = 2;
@@ -273,18 +274,13 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     if (values.sampleDate && values.measurementDate && values.measurementDate < values.sampleDate) result.push({ message:'Дата измерения не может быть раньше даты отбора.',step:0 });
     if (isWaterProtocolType(values.templateId) && !values.waterType) result.push({ message:'Выберите тип воды',step:WATER_CONDITIONS_STEP_INDEX,field:'waterType' });
     if (isWaterProtocolType(values.templateId) && !values.waterUseCategory) result.push({ message:'Выберите категорию водопользования',step:WATER_CONDITIONS_STEP_INDEX,field:'waterUseCategory' });
-    const rows = (values.results || []).filter((row) =>
-      trimmed(row?.indicatorName) || trimmed(row?.value) || trimmed(row?.textValue));
-    if (!rows.length) result.push({ message:'Добавьте минимум одну строку результата.',step:2 });
-    rows.forEach((row,index) => {
-      if (!row.normativeId && !row.normativeRecordId) {
-        result.push({
-          message: `Строка ${index + 1}: выберите показатель через поиск нормативов.`,
-          step: 2,
-        });
-      }
-    });
-    rows.forEach((row,index) => { if (!trimmed(row.indicatorName)) result.push({ message:`Строка ${index + 1}: укажите показатель.`,step:2 }); if (!trimmed(row.value) && !trimmed(row.textValue)) result.push({ message:`Строка ${index + 1}: укажите результат.`,step:2 }); if ((trimmed(row.value) || trimmed(row.textValue)) && !trimmed(row.unit)) result.push({ message:`Строка ${index + 1}: укажите единицу измерения.`,step:2 }); if (trimmed(row.unit) && /^[-+]?\d+(?:[.,]\d+)?$/.test(trimmed(row.unit))) result.push({ message:`Строка ${index + 1}: единица измерения не может быть нормативным значением.`,step:2 }); if (values.templateId && CHEMICAL_TYPES.has(values.templateId) && !trimmed(row.pollutantCode)) result.push({ message:`Строка ${index + 1}: укажите код загрязняющего вещества.`,step:2 }); if (values.templateId && !CHEMICAL_TYPES.has(values.templateId) && !trimmed(row.factorCode || row.factorType)) result.push({ message:`Строка ${index + 1}: укажите тип физического фактора.`,step:2 }); const device = devices.find((item) => String(item.id) === row.measurementDeviceId); if (!row.measurementDeviceId) result.push({ message:`Строка ${index + 1}: выберите прибор.`,step:2 }); else if (!device || !isDeviceValidForDate(device,values.measurementDate)) result.push({ message:`Строка ${index + 1}: срок поверки прибора истёк или прибор неактивен.`,step:2 }); if (!trimmed(row.testingMethodNd || row.methodDocument || values.testingMethodNd)) result.push({ message:`Строка ${index + 1}: укажите методику испытаний.`,step:2,field:`results.${index}.testingMethodNd` as FieldPath<ProtocolWizardForm> }); });
+    validateDraft(values).forEach((issue) => result.push({
+      message: issue.message,
+      step: 2,
+      field: issue.field as FieldPath<ProtocolWizardForm>,
+    }));
+    const rows = (values.results || []).filter((row) => trimmed(row?.indicatorName) || trimmed(row?.value) || trimmed(row?.textValue));
+    rows.forEach((row,index) => { const device = devices.find((item) => String(item.id) === row.measurementDeviceId); if (!row.measurementDeviceId) result.push({ message:`Строка ${index + 1}: выберите прибор.`,step:2 }); else if (!device || !isDeviceValidForDate(device,values.measurementDate)) result.push({ message:`Строка ${index + 1}: срок поверки прибора истёк или прибор неактивен.`,step:2 }); if (!trimmed(row.testingMethodNd || row.methodDocument || values.testingMethodNd)) result.push({ message:`Строка ${index + 1}: укажите методику испытаний.`,step:2,field:`results.${index}.testingMethodNd` as FieldPath<ProtocolWizardForm> }); });
     if (!trimmed(values.testingMethodNd)) result.push({ message:'Укажите НД на метод испытаний.',step:2 });
     return result.map((item, index) => ({
       ...item,
@@ -293,6 +289,20 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
       severity: 'ERROR',
     }));
   }, [devices,selectedExecutor,selectedObject,values]);
+  const approvalIssues = useMemo<WizardIssue[]>(() => {
+    const draftKeys = new Set(validateDraft(values).map((issue) => `${issue.field}:${issue.message}`));
+    const extras = validateForApproval(values)
+      .filter((issue) => !draftKeys.has(`${issue.field}:${issue.message}`))
+      .map((issue, index) => ({
+        code: `APPROVAL_${index}_${issue.field.replace(/[^a-z0-9]+/gi, '_').toUpperCase()}`,
+        step: 2,
+        field: issue.field as FieldPath<ProtocolWizardForm>,
+        fieldPath: issue.field,
+        severity: 'ERROR' as const,
+        message: issue.message,
+      }));
+    return [...issues, ...extras];
+  }, [issues, values]);
   const submitPayloadResult = useMemo(() => {
     try {
       const payload = buildQuickCreatePayload(values, {
@@ -324,12 +334,13 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     || defaultLaboratoryQuery.isFetching
     || employeesQuery.isFetching
     || devicesQuery.isFetching;
-  const canCreate = submitPayloadResult.valid
+  const canSaveDraft = submitPayloadResult.valid
     && issues.length === 0
     && formState.isValid
     && Object.keys(formState.errors).length === 0
     && !requiredLookupsLoading
     && !mutation.isPending;
+  const canCreate = canSaveDraft && approvalIssues.length === 0;
   const canContinue = step === 0
     ? Boolean(values.templateId && values.companyId && values.objectId && values.protocolDate && trimmed(values.measurementPlace))
     : step === 1
@@ -413,6 +424,15 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     setServerIssues([]);
     form.clearErrors();
     try {
+      const blockingIssues = signAfterCreate ? approvalIssues : issues;
+      if (blockingIssues.length) {
+        const firstIssue = blockingIssues[0];
+        setServerIssues(blockingIssues);
+        setStep(firstIssue.step);
+        setError(signAfterCreate ? 'Перед подписанием подтвердите нормативы.' : 'Проверьте обязательные поля черновика.');
+        if (firstIssue.field) form.setError(firstIssue.field, { type: 'validate', message: firstIssue.message });
+        return;
+      }
       const payload = buildQuickCreatePayload(getValues(), {
         selectedObject,
         selectedExecutor,
@@ -457,7 +477,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
       idempotencyKeyRef.current = null;
       submittedFingerprintRef.current = null;
       submittedPayloadRef.current = null;
-      if (signAfterCreate) setSuccess(created);
+      if (signAfterCreate || created.syncWarning) setSuccess(created);
       else onCreated(created);
     } catch (requestError) {
       if (requestError instanceof QuickCreateValidationError) {
@@ -573,7 +593,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
       form.setFocus(field);
     });
   };
-  const content = step === 0 ? <div className="space-y-5"><BasicDataStep templates={templates} companies={companies} objects={objects} lockedCompanyId={lockedPekCompanyId} onCompanyChange={changeCompany} /><details className="rounded-xl border border-slate-200 p-4"><summary className="cursor-pointer font-bold text-eco-800">Условия и методики</summary><div className="mt-5 space-y-6"><EnvironmentStep weatherLoading={weatherQuery.isFetching} weatherMessage={weatherMessage} onRefresh={() => void weatherQuery.refetch()} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} /><MethodsStep /></div></details></div> : step === 1 ? <ExecutorDeviceStep laboratories={laboratories} employees={executorOptions} devices={devices} onLaboratoryChange={changeLaboratory} /> : step === 2 ? <ResultsStep devices={devices} /> : step === 3 ? <ProtocolCheckStep issues={issues} onGoTo={goToIssue} /> : <ProtocolSigningStep companies={companies} objects={objects} employees={executorOptions} />;
+  const content = step === 0 ? <div className="space-y-5"><BasicDataStep templates={templates} companies={companies} objects={objects} lockedCompanyId={lockedPekCompanyId} onCompanyChange={changeCompany} /><details className="rounded-xl border border-slate-200 p-4"><summary className="cursor-pointer font-bold text-eco-800">Условия и методики</summary><div className="mt-5 space-y-6"><EnvironmentStep weatherLoading={weatherQuery.isFetching} weatherMessage={weatherMessage} onRefresh={() => void weatherQuery.refetch()} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} /><MethodsStep /></div></details></div> : step === 1 ? <ExecutorDeviceStep laboratories={laboratories} employees={executorOptions} devices={devices} onLaboratoryChange={changeLaboratory} /> : step === 2 ? <ResultsStep devices={devices} /> : step === 3 ? <ProtocolCheckStep issues={approvalIssues} onGoTo={goToIssue} /> : <ProtocolSigningStep companies={companies} objects={objects} employees={executorOptions} />;
   const requestCode = apiFailure?.requestCode || apiFailure?.traceId || apiFailure?.requestId;
   const debugPanel = import.meta.env.DEV && step === 4 ? (
     <details className="mb-4 rounded-xl border border-slate-300 bg-slate-950 p-4 text-xs text-slate-100">
@@ -589,7 +609,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     </details>
   ) : null;
 
-  return <FormProvider {...form}><Modal open={open} onClose={requestClose} size="wizard" closeOnBackdrop={false} loading={mutation.isPending} contentClassName="!overflow-hidden !p-0 sm:!p-0"><div className="flex h-full min-h-0 flex-col"><ProtocolWizardHeader step={step} total={steps.length} title={steps[step]} submitting={mutation.isPending} onClose={requestClose} /><ProtocolWizardSteps steps={steps} current={step} maxVisited={maxVisited} onSelect={setStep} /><main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{apiFailure && <QuickCreateErrorPanel error={apiFailure} message={error || apiFailure.message} pending={mutation.isPending} onRetry={() => void createProtocol(false)} onReview={() => setStep(3)} onCopyCode={copyErrorCode} onCopyTechnicalInfo={copyTechnicalInfo} />}{!apiFailure && error && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><h3 className="font-black">Проверьте данные</h3><p className="mt-1 font-semibold">{error}</p></div>}{serverIssues.length > 0 && <div className="mb-4"><WizardValidationSummary issues={serverIssues} onGoTo={goToIssue} />{requestCode && <p className="mt-2 text-xs text-slate-600">Код обращения: {requestCode}</p>}</div>}{debugPanel}{success ? <div className="grid min-h-80 place-items-center text-center"><div><h3 className="text-2xl font-black text-emerald-800">Протокол №{success.protocolNumber || success.number || success.id} создан и подписан</h3><p className="mt-4 text-slate-600">Подписал: <strong>{user?.name || user?.email}</strong></p><p className="text-slate-600">Дата: {new Date(success.signedAt || Date.now()).toLocaleString('ru-RU')}</p><div className="mt-6 flex flex-wrap justify-center gap-3"><Button type="button" onClick={() => void protocolService.downloadPdf(success.id).then((file) => saveBlob(file.blob, file.fileName || `${success.protocolNumber}.pdf`))}>Скачать PDF</Button><Button type="button" variant="secondary" onClick={() => void protocolService.downloadDocx(success.id).then((file) => saveBlob(file.blob, file.fileName || `${success.protocolNumber}.docx`))}>Скачать DOCX</Button><Button type="button" variant="secondary" onClick={() => onCreated(success)}>Вернуться к протоколам</Button></div></div></div> : content}</main>{!success && <ProtocolWizardFooter step={step} total={steps.length} submitting={mutation.isPending} retrying={Boolean(apiFailure)} canContinue={canContinue} onBack={() => { setError(''); setStep((current) => Math.max(0,current - 1)); }} onNext={goNext} onCreate={() => setSignPrompt(true)} onSaveDraft={() => void createProtocol(false)} />}</div></Modal>
+  return <FormProvider {...form}><Modal open={open} onClose={requestClose} size="wizard" closeOnBackdrop={false} loading={mutation.isPending} contentClassName="!overflow-hidden !p-0 sm:!p-0"><div className="flex h-full min-h-0 flex-col"><ProtocolWizardHeader step={step} total={steps.length} title={steps[step]} submitting={mutation.isPending} onClose={requestClose} /><ProtocolWizardSteps steps={steps} current={step} maxVisited={maxVisited} onSelect={setStep} /><main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{apiFailure && <QuickCreateErrorPanel error={apiFailure} message={error || apiFailure.message} pending={mutation.isPending} onRetry={() => void createProtocol(false)} onReview={() => setStep(3)} onCopyCode={copyErrorCode} onCopyTechnicalInfo={copyTechnicalInfo} />}{!apiFailure && error && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><h3 className="font-black">Проверьте данные</h3><p className="mt-1 font-semibold">{error}</p></div>}{serverIssues.length > 0 && <div className="mb-4"><WizardValidationSummary issues={serverIssues} onGoTo={goToIssue} />{requestCode && <p className="mt-2 text-xs text-slate-600">Код обращения: {requestCode}</p>}</div>}{debugPanel}{success ? <div className="grid min-h-80 place-items-center text-center"><div><h3 className="text-2xl font-black text-emerald-800">Протокол №{success.protocolNumber || success.number || success.id} создан{success.signedAt ? ' и подписан' : ''}</h3>{success.syncWarning && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-900">{success.syncWarning}</p>}<p className="mt-4 text-slate-600">{success.signedAt ? <>Подписал: <strong>{user?.name || user?.email}</strong></> : 'Черновик сохранён'}</p><div className="mt-6 flex flex-wrap justify-center gap-3"><Button type="button" variant="secondary" onClick={() => onCreated(success)}>Открыть созданный протокол</Button></div></div></div> : content}</main>{!success && <ProtocolWizardFooter step={step} total={steps.length} submitting={mutation.isPending} retrying={Boolean(apiFailure)} canContinue={canContinue} canSaveDraft={canSaveDraft} onBack={() => { setError(''); setStep((current) => Math.max(0,current - 1)); }} onNext={goNext} onCreate={() => setSignPrompt(true)} onSaveDraft={() => void createProtocol(false)} />}</div></Modal>
     <Modal open={signPrompt} onClose={() => !mutation.isPending && setSignPrompt(false)} closeOnBackdrop={false} size="sm" title="Подписание протокола" footer={<><Button type="button" variant="secondary" disabled={mutation.isPending} onClick={() => setSignPrompt(false)}>Отмена</Button><Button type="button" disabled={mutation.isPending} onClick={() => { setSignPrompt(false); void createProtocol(true); }}>{mutation.isPending ? 'Подписание…' : 'Продолжить'}</Button></>}><p className="text-sm text-slate-700">Убедитесь, что NCALayer запущен, затем нажмите «Продолжить».</p>{signingPhase !== 'IDLE' && <div className="mt-4 rounded-xl bg-eco-50 p-3 text-sm font-bold text-eco-900">{protocolSigningPhaseLabel[signingPhase]}</div>}</Modal>
     <Modal open={draftPrompt && open} onClose={() => {}} closeOnBackdrop={false} size="sm" title="Найдена незавершённая форма протокола" footer={<><Button type="button" variant="secondary" onClick={newDraft}>Начать заново</Button><Button type="button" onClick={restoreDraft}>Продолжить</Button></>}><p className="text-sm text-slate-600">Продолжить заполнение временного черновика из текущей сессии?</p></Modal>
     <Modal open={closePrompt} onClose={() => setClosePrompt(false)} closeOnBackdrop={false} size="sm" title="Закрыть создание протокола?" footer={<><Button type="button" variant="secondary" onClick={() => setClosePrompt(false)}>Продолжить заполнение</Button><Button type="button" onClick={() => { setClosePrompt(false); onClose(); }}>Закрыть</Button><Button type="button" variant="danger" onClick={() => { sessionStorage.removeItem(draftKey); reset(createWizardDefaults()); setClosePrompt(false); onClose(); }}>Очистить и закрыть</Button></>}><p className="text-sm text-slate-600">Введённые данные сохранены как временный черновик и будут доступны до завершения текущей сессии.</p></Modal>

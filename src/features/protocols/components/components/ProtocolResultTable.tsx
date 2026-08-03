@@ -8,9 +8,10 @@ import { CHEMICAL_TYPES, type ProtocolWizardForm } from '../wizardTypes';
 type Props = {
   devices: MeasurementDevice[];
   onSelectNormatives: () => void;
+  onAddManual: () => void;
 };
 
-const ProtocolResultTable = ({ devices, onSelectNormatives }: Props) => {
+const ProtocolResultTable = ({ devices, onSelectNormatives, onAddManual }: Props) => {
   const { control, watch } = useFormContext<ProtocolWizardForm>();
   const { fields, remove } = useFieldArray({
     control,
@@ -67,6 +68,9 @@ const ProtocolResultTable = ({ devices, onSelectNormatives }: Props) => {
       >
         <Plus className="h-4 w-4" />
         Выбрать норматив
+      </button>
+      <button type="button" onClick={onAddManual} className="ml-2 mt-4 inline-flex items-center gap-2 rounded-xl border border-eco-300 bg-white px-4 py-2.5 text-sm font-bold text-eco-800">
+        <Plus className="h-4 w-4" /> Добавить показатель вручную
       </button>
     </div>
   );

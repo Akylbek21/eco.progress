@@ -6,7 +6,7 @@ const stable = (value: object) => Object.fromEntries(
 
 export const documentFlowKeys = {
   all: ['document-flow'] as const,
-  access: (organizationId?: number) => [...documentFlowKeys.all, 'access', organizationId ?? null] as const,
+  access: () => [...documentFlowKeys.all, 'access'] as const,
   plans: () => [...documentFlowKeys.all, 'plans'] as const,
   dashboard: (organizationId?: number) => [...documentFlowKeys.all, 'dashboard', organizationId ?? null] as const,
   documents: (filters: DocumentFilters) => [...documentFlowKeys.all, 'documents', stable(filters)] as const,
@@ -14,9 +14,11 @@ export const documentFlowKeys = {
   documentTypes: () => [...documentFlowKeys.all, 'document-types'] as const,
   versions: (id: number) => [...documentFlowKeys.all, 'document', id, 'versions'] as const,
   attachments: (id: number) => [...documentFlowKeys.all, 'document', id, 'attachments'] as const,
-  counterparties: (filters: object) => [...documentFlowKeys.all, 'counterparties', stable(filters)] as const,
+  counterparties: (filters?: object) => [...documentFlowKeys.all, 'counterparties', stable(filters ?? {})] as const,
+  counterpartyLists: () => [...documentFlowKeys.all, 'counterparties'] as const,
   counterparty: (id: number) => [...documentFlowKeys.all, 'counterparty', id] as const,
   representatives: (id: number) => [...documentFlowKeys.all, 'counterparty', id, 'representatives'] as const,
+  members: () => [...documentFlowKeys.all, 'members'] as const,
   signingRoute: (id: number) => [...documentFlowKeys.all, 'document', id, 'signing-route'] as const,
   signatures: (id: number) => [...documentFlowKeys.all, 'document', id, 'signatures'] as const,
   revocations: (id: number) => [...documentFlowKeys.all, 'document', id, 'revocations'] as const,

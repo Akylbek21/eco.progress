@@ -34,7 +34,7 @@ const ResultsStep = ({ devices }: Props) => {
   const addNormatives = (items: NormativeRecord[]) => {
     const existingIds = new Set(
       form.results
-        .map((row) => row.normativeRecordId || row.normativeId)
+        .map((row) => row.normativeId)
         .filter(Boolean),
     );
 
@@ -52,7 +52,8 @@ const ResultsStep = ({ devices }: Props) => {
         formula: item.formula || item.chemicalFormula || '',
         unit: item.unit || '',
         normativeId: String(item.id),
-        normativeRecordId: String(item.id),
+        normativeSource: 'DIRECTORY' as const,
+        normativeStatus: item.status === 'REVIEW' || item.status === 'INACTIVE' ? item.status : 'ACTIVE' as const,
         normativeValue: text(item.normativeValue ?? item.value),
         normativeValueRaw: text(item.normativeValue ?? item.value),
         normativeMin: text(item.min ?? item.minValue),
@@ -67,7 +68,6 @@ const ResultsStep = ({ devices }: Props) => {
       const emptyIndex = form.results.findIndex(
         (current) =>
           !current.normativeId &&
-          !current.normativeRecordId &&
           !current.indicatorName &&
           !current.value,
       );
@@ -76,6 +76,15 @@ const ResultsStep = ({ devices }: Props) => {
       else append(row);
       existingIds.add(String(item.id));
     });
+  };
+
+  const addManual = () => {
+    append({
+      ...emptyWizardResult(),
+      normativeSource: 'MANUAL',
+      measurementDeviceId: form.defaultMeasurementDeviceId || '',
+    });
+    setSelector(false);
   };
 
   return (
@@ -101,12 +110,16 @@ const ResultsStep = ({ devices }: Props) => {
         >
           Найти норматив
         </button>
+        <button type="button" onClick={addManual} className="rounded-full border border-eco-300 px-4 py-2 text-sm font-bold text-eco-800">
+          Добавить показатель вручную
+        </button>
       </div>
 
       <div className="mt-5">
         <ProtocolResultTable
           devices={devices}
           onSelectNormatives={() => setSelector(true)}
+          onAddManual={addManual}
         />
       </div>
 
@@ -126,6 +139,7 @@ const ResultsStep = ({ devices }: Props) => {
           visualWorkCategory: form.visualWorkCategory || undefined,
         }}
         onClose={() => setSelector(false)}
+        onManual={addManual}
         onAdd={(items) => {
           addNormatives(items);
           setSelector(false);
