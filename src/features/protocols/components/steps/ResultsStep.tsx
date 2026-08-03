@@ -62,6 +62,7 @@ const ResultsStep = ({ devices }: Props) => {
           item.normativeDocument || item.sourceDocumentName || '',
         sourceDocumentCode: item.sourceDocumentCode || '',
         testingMethodNd: item.testingMethod || '',
+        measurementDeviceId: form.defaultMeasurementDeviceId || '',
       };
       const emptyIndex = form.results.findIndex(
         (current) =>

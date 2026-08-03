@@ -12,6 +12,12 @@ import { canMutate } from '../model/access';
 import { useDocumentFlowContext } from '../components/DocumentFlowGate';
 import DocumentStatusBadge from '../components/DocumentStatusBadge';
 
+const statusOptions = [
+  ['DRAFT', 'Черновик'], ['READY_FOR_SIGNING', 'Готов к подписанию'], ['SIGNING', 'На подписании'],
+  ['SIGNED', 'Подписан'], ['REVISION_REQUIRED', 'Требуется доработка'],
+  ['REVOCATION_REQUESTED', 'Запрошен отзыв'], ['REVOKED', 'Отозван'], ['ARCHIVED', 'Архивирован'],
+] as const;
+
 export default function DocumentsPage() {
   const access = useDocumentFlowContext();
   const [params, setParams] = useSearchParams();
@@ -50,9 +56,8 @@ export default function DocumentsPage() {
         <Grid size={{ xs: 12, md: 4 }}><TextField fullWidth label="Поиск" value={search} onChange={(event) => setSearch(event.target.value)} /></Grid>
         <Grid size={{ xs: 12, sm: 4, md: 2 }}><FormControl fullWidth><InputLabel>Направление</InputLabel><Select label="Направление" value={params.get('direction') || ''} onChange={(event) => set('direction', event.target.value)}><MenuItem value="">Все</MenuItem><MenuItem value="INCOMING">Входящие</MenuItem><MenuItem value="OUTGOING">Исходящие</MenuItem><MenuItem value="INTERNAL">Внутренние</MenuItem></Select></FormControl></Grid>
         <Grid size={{ xs: 12, sm: 4, md: 3 }}><FormControl fullWidth><InputLabel>Тип</InputLabel><Select label="Тип" value={params.get('type') || ''} onChange={(event) => set('type', event.target.value)}><MenuItem value="">Все</MenuItem>{(types.data || []).filter((item) => item.active).map((item) => <MenuItem key={item.type} value={item.type}>{item.title}</MenuItem>)}</Select></FormControl></Grid>
-        <Grid size={{ xs: 12, sm: 4, md: 3 }}><TextField fullWidth label="Статус API" value={params.get('status') || ''} onChange={(event) => set('status', event.target.value)} /></Grid>
+        <Grid size={{ xs: 12, sm: 4, md: 3 }}><FormControl fullWidth><InputLabel>Статус</InputLabel><Select label="Статус" value={params.get('status') || ''} onChange={(event) => set('status', event.target.value)}><MenuItem value="">Все</MenuItem>{statusOptions.map(([value, label]) => <MenuItem value={value} key={value}>{label}</MenuItem>)}</Select></FormControl></Grid>
       </Grid>
-      {params.get('requiresMySignature') && <Alert severity="warning">Фильтр «Мне на подпись» скрыт: текущий backend принимает параметр, но не применяет его на SQL-уровне. Показан общий список без client-side фильтрации страницы.</Alert>}
       {query.isLoading && <Stack>{[1, 2, 3].map((key) => <Skeleton key={key} height={90} />)}</Stack>}
       {query.isError && <Alert severity="error" action={<Button onClick={() => query.refetch()}>Повторить</Button>}>{query.error.message}</Alert>}
       {!query.isLoading && !query.data?.items.length && <Alert severity="info">{Object.keys(filters).some((key) => !['page', 'size', 'sort'].includes(key)) ? 'По заданным фильтрам документов нет.' : 'Документы ещё не созданы.'}</Alert>}

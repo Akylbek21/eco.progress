@@ -107,8 +107,9 @@ const PekDashboardPage = () => {
               {metricDefinitions.map(([key, label, suffix, pendingEngine]) => (
                 <article key={key} className="rounded-2xl border bg-white p-5" title={pendingEngine ? 'Расчёт показателя будет доступен после подключения validation engine' : undefined}>
                   <p className="text-sm text-slate-500">{label}</p>
-                  <p className="mt-2 text-3xl font-black text-eco-900">{dashboard.data[key]}{suffix}</p>
+                  <p className="mt-2 text-3xl font-black text-eco-900">{dashboard.data[key] == null ? '—' : `${dashboard.data[key]}${suffix}`}</p>
                   {pendingEngine && <p className="mt-2 text-xs text-slate-400">Показатель возвращён backend</p>}
+                  <Link className="mt-3 inline-block text-xs font-bold text-eco-700" to={`/staff/pek/reports?${new URLSearchParams({ ...(filters.companyId ? { companyId: String(filters.companyId) } : {}), ...(filters.objectId ? { objectId: String(filters.objectId) } : {}), ...(filters.year ? { year: String(filters.year) } : {}) })}`}>Открыть список</Link>
                 </article>
               ))}
             </section>

@@ -13,6 +13,9 @@ export type BackendProtocolPermissions = {
   canCancel?: boolean;
   canArchive?: boolean;
   canPublish?: boolean;
+  canPrepareSigning?: boolean;
+  canDownloadPdf?: boolean;
+  canDownloadDocx?: boolean;
 };
 
 const allowed = (value: unknown) => value === true;
@@ -41,6 +44,9 @@ export const mapProtocolPermissions = (input: unknown): Record<string, boolean> 
     canCancel: allowed(source.canCancel),
     canArchive: allowed(source.canArchive),
     canPublish: allowed(source.canPublish),
+    canPrepareSigning: allowed(source.canPrepareSigning),
+    canDownloadPdf: allowed(source.canDownloadPdf),
+    canDownloadDocx: allowed(source.canDownloadDocx),
     canReadyForApproval: allowed(source.canSendToApproval),
     canReplace: allowed(source.canCreateCorrection),
     canGenerateDocuments: canGeneratePreview,

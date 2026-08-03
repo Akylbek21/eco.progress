@@ -137,7 +137,7 @@ const ForbiddenPage = ({ message = 'У вашей роли нет прав дл�
   </div>
 );
 
-const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/partners', '/news', '/faq', '/contacts', '/document-flow/plans', '/public/document-flow/sign'];
+const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/partners', '/news', '/faq', '/contacts', '/document-flow/plans', '/sign/document', '/public/document-flow/sign'];
 
 const RouteFallback = () => {
   const { pathname } = useLocation();
@@ -159,7 +159,7 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
-    const publicDocumentFlow = location.pathname === '/document-flow/plans' || location.pathname.startsWith('/public/document-flow/sign/');
+    const publicDocumentFlow = location.pathname === '/document-flow/plans' || location.pathname.startsWith('/sign/document/') || location.pathname.startsWith('/public/document-flow/sign/');
     const privatePrefixes = ['/cabinet', '/client', '/staff', '/admin', '/dashboard', '/document-flow', '/login', '/register', '/reset-password', '/api', '/internal', '/crm'];
     const isPrivate = !publicDocumentFlow && privatePrefixes.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
     let meta = document.head.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
@@ -223,6 +223,7 @@ function App() {
         <Route path="/regions" element={<PublicLayout><RegionsPage /></PublicLayout>} />
         <Route path="/search" element={<PublicLayout><SearchPage /></PublicLayout>} />
         <Route path="/document-flow/*" element={<DocumentFlowRoutes />} />
+        <Route path="/sign/document/:token" element={<ExternalDocumentSigningPage />} />
         <Route path="/public/document-flow/sign/:token" element={<ExternalDocumentSigningPage />} />
         <Route path="/shtrafy-za-ekologiyu-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
         <Route path="/shtrafy-za-ekologicheskie-narusheniya-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
@@ -292,6 +293,7 @@ function App() {
         <Route path="/staff/pek/programs/new" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><PekPermissionAccess permission="PEK_PROGRAM_CREATE"><ErrorBoundary fallbackTitle="Не удалось создать программу ПЭК"><PekProgramCreatePage /></ErrorBoundary></PekPermissionAccess></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/programs/:programId" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть программу ПЭК"><PekProgramDetailsPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/programs/:programId/edit" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><PekPermissionAccess permission="PEK_PROGRAM_EDIT"><ErrorBoundary fallbackTitle="Не удалось изменить программу ПЭК"><PekProgramCreatePage /></ErrorBoundary></PekPermissionAccess></PekAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/pek/programs/:programId/versions" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть версии программы ПЭК"><PekProgramDetailsPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/programs/:programId/history" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть историю программы ПЭК"><PekHistoryPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/reports" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть отчёты ПЭК"><PekReportsPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/reports/new" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><PekPermissionAccess permission="PEK_REPORT_CREATE"><ErrorBoundary fallbackTitle="Не удалось создать отчёт ПЭК"><PekReportCreatePage /></ErrorBoundary></PekPermissionAccess></PekAccess></StaffLayout></RoleAccess>} />

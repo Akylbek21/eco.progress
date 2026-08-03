@@ -8,6 +8,8 @@ import {
   createProtocolCmsSignature,
   type ProtocolSigningPhase,
 } from '../utils/protocolSigning';
+import { createCmsSignatureWithNCALayer } from '../../../services/ncalayer';
+import { protocolHasAction } from '../utils/protocolActions';
 
 const SIGN_ERROR_MESSAGES: Record<string, string> = {
   PROTOCOL_ALREADY_SIGNED: 'Вы уже подписали эту версию протокола',
@@ -43,10 +45,22 @@ export const useSignProtocolMutation = (
     mutationKey: ['sign-protocol', String(protocolId ?? '')],
     mutationFn: async ({ protocol }: SignVariables) => {
       const fresh = await protocolService.getProtocol(String(protocol.id));
-      if (!fresh.permissions?.canSign) throw new Error('Backend не разрешил подписание протокола.');
-      if (!fresh.hasPdf) {
-        throw new Error('Финальный PDF протокола не сформирован.');
+      const modernFlow = (fresh.availableActions?.length || 0) > 0;
+      if (modernFlow) {
+        if (!protocolHasAction(fresh, 'PREPARE_SIGNING') && !protocolHasAction(fresh, 'SIGN')) {
+          throw new Error(fresh.blockingReasons?.[0] || 'Нельзя подписать: заполните обязательные данные');
+        }
+        setPhase('LOADING_DOCUMENT');
+        let actual = fresh;
+        if (protocolHasAction(actual, 'CALCULATE')) actual = await protocolService.calculateProtocol(actual.id, actual.version);
+        if (protocolHasAction(actual, 'CHECK_NORMATIVES')) actual = await protocolService.checkNormatives(actual.id, actual.version);
+        const prepared = await protocolService.prepareSigning(actual.id, actual.version);
+        const cmsSignatureBase64 = await createCmsSignatureWithNCALayer(prepared.signingPayload, setPhase);
+        setPhase('VERIFYING_SIGNATURE');
+        return protocolService.signAndComplete(actual.id, { version: prepared.protocol.version, cmsSignatureBase64 });
       }
+      if (!fresh.permissions?.canSign) throw new Error('Backend не разрешил подписание протокола.');
+      if (!fresh.hasPdf) throw new Error('Финальный PDF протокола не сформирован.');
       const file = await protocolService.downloadPdf(fresh.id);
       const cmsSignatureBase64 = await createProtocolCmsSignature(file.blob, setPhase);
       setPhase('VERIFYING_SIGNATURE');

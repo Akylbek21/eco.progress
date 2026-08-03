@@ -23,13 +23,13 @@ const SignProtocolModal = ({ open, loading = false, phase = 'IDLE', protocol, on
     return item.deviceSnapshot.status === 'EXPIRED' || item.deviceSnapshot.status === 'ARCHIVED' || Boolean(validUntil && validUntil < new Date().toISOString().slice(0, 10));
   }).length || 0;
   return (
-  <Modal open={open} onClose={onClose} title="Подписать протокол">
+  <Modal open={open} onClose={onClose} title="Подписание протокола">
     <div className="space-y-4">
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
-        После подписания протокол нельзя будет редактировать.
+        После подписания протокол станет доступен только для просмотра и скачивания.
       </div>
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-        Перед продолжением запустите NCALayer и подключите ключ ЭЦП. Если соединение недоступно, приложение подскажет проверить NCALayer и адрес локального WebSocket.
+        Убедитесь, что NCALayer запущен, затем нажмите «Продолжить».
       </div>
       {protocol && (
         <dl className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 p-4 text-sm sm:grid-cols-2">
@@ -43,7 +43,7 @@ const SignProtocolModal = ({ open, loading = false, phase = 'IDLE', protocol, on
       )}
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button type="button" variant="secondary" disabled={loading} onClick={onClose}>Отмена</Button>
-        <Button type="button" disabled={loading || expiredDevices > 0} onClick={onConfirm}>{loading ? protocolSigningPhaseLabel[phase] : 'Подписать протокол'}</Button>
+        <Button type="button" disabled={loading || expiredDevices > 0} onClick={onConfirm}>{loading ? protocolSigningPhaseLabel[phase] : 'Продолжить'}</Button>
       </div>
     </div>
   </Modal>

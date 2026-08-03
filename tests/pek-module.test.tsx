@@ -19,6 +19,8 @@ import {
   mapReportCreateRequest,
 } from '../src/features/pek/mappers/reportMappers';
 import { labelPekStatus } from '../src/features/pek/utils/pekLabels';
+import { pekProgramFormSchema } from '../src/features/pek/validation/programSchema';
+import { pekDraftKey } from '../src/features/pek/utils/pekDraftStorage';
 
 let body: unknown;
 let ifMatch: string | null;
@@ -37,6 +39,10 @@ const report = {
   linkedProtocolNumbers: ['P-READY', 'P-SIGNED'],
   lastCollectedAt: '2026-07-31T10:00:00Z',
 };
+const programResponse = {
+  id: 1, version: 8, number: 'PEK-1', name: 'Program', status: 'DRAFT',
+  validFrom: '2026-01-01', validUntil: '2026-12-31', availableActions: ['EDIT'], readOnly: false,
+};
 const server = setupServer(
   http.get('*/api/pek/programs', ({ request }) => {
     programListCalls += 1;
@@ -49,17 +55,17 @@ const server = setupServer(
   http.patch('*/api/pek/programs/:id/draft', async ({ request }) => {
     body = await request.json();
     ifMatch = request.headers.get('If-Match');
-    return HttpResponse.json({ data: { id: 1, version: 8 } });
+    return HttpResponse.json({ data: programResponse });
   }),
   http.patch('*/api/pek/programs/:id', async ({ request }) => {
     body = await request.json();
     ifMatch = request.headers.get('If-Match');
-    return HttpResponse.json({ data: { id: 1, version: 8 } });
+    return HttpResponse.json({ data: programResponse });
   }),
   http.post('*/api/pek/programs/:id/return', async ({ request }) => {
     body = await request.json();
     ifMatch = request.headers.get('If-Match');
-    return HttpResponse.json({ data: { id: 1, version: 8 } });
+    return HttpResponse.json({ data: programResponse });
   }),
   http.post('*/api/pek/reports', async ({ request }) => {
     body = await request.json();
@@ -150,20 +156,21 @@ describe('PEK backend contract', () => {
     expect(body).not.toHaveProperty('controlItems');
     expect(body).not.toHaveProperty('indicators');
     expect(body).not.toHaveProperty('measures');
-    expect(body).toHaveProperty('version', 7);
-    expect(ifMatch).toBeNull();
+    expect(body).not.toHaveProperty('version');
+    expect(ifMatch).toBe('7');
   });
 
   it('sends empty arrays and version in the full PATCH body', async () => {
     const request = mapProgramEditFormToRequest({ ...form, controlItems: [], indicators: [], measures: [] });
     await pekApi.updateProgram(1, 12, request);
-    expect(body).toMatchObject({ version: 12, controlItems: [], indicators: [], measures: [] });
-    expect(ifMatch).toBeNull();
+    expect(body).toMatchObject({ controlItems: [], indicators: [], measures: [] });
+    expect(body).not.toHaveProperty('version');
+    expect(ifMatch).toBe('12');
   });
 
   it('keeps return version in body and If-Match header', async () => {
     await pekApi.returnProgram(1, { version: 12, reason: 'Исправить период' });
-    expect(body).toEqual({ version: 12, reason: 'Исправить период' });
+    expect(body).toEqual({ reason: 'Исправить период' });
     expect(ifMatch).toBe('12');
   });
 
@@ -226,9 +233,29 @@ describe('PEK backend contract', () => {
     expect(labelPekStatus('NEW_BACKEND_STATUS')).toBe('NEW_BACKEND_STATUS');
   });
 
+  it('preserves zero normative values and validates program dates', () => {
+    const valid = pekProgramFormSchema.safeParse({
+      ...form,
+      indicators: [{ ...form.indicators[0], normativeValue: 0 }],
+      measures: [{ ...form.measures[0], completionPercent: 0, plannedBudget: 0 }],
+    });
+    expect(valid.success).toBe(true);
+    const invalid = pekProgramFormSchema.safeParse({ ...form, validFrom: '2026-12-31', validUntil: '2026-01-01' });
+    expect(invalid.success).toBe(false);
+  });
+
+  it('scopes local draft keys by user, entity, company and server version', () => {
+    expect(pekDraftKey('program', 7, 10, 4, 22)).toBe('pek-program-draft:7:10:22:4');
+  });
+
+  it('rejects malformed critical backend contracts instead of creating id zero', () => {
+    expect(() => mapProgramResponse({ id: 0, version: 1, status: 'DRAFT' })).toThrow(/контракт/);
+    expect(() => mapReportResponse({ id: 0, version: 1, status: 'DRAFT' })).toThrow(/контракт/);
+  });
+
   it('collect is synchronous, versioned and returns real protocol numbers', async () => {
-    const collected = await pekApi.collectReport(9);
-    expect(ifMatch).toBeNull();
+    const collected = await pekApi.collectReport(9, 13);
+    expect(ifMatch).toBe('13');
     expect(body).toEqual({});
     expect(collected.linkedProtocolNumbers).toEqual(['P-READY', 'P-SIGNED']);
     expect(collected.linkedProtocolNumbers).not.toContain('P-DRAFT');
@@ -248,10 +275,10 @@ describe('PEK backend contract', () => {
     expect(programListCalls).toBe(1);
   });
 
-  it('report page query is guarded until companyId/objectId are selected', () => {
+  it('report list supports an unfiltered server page', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportsPage.tsx'), 'utf8');
-    expect(source).toContain('enabled: ready');
-    expect(source).toContain('Выберите компанию и объект для просмотра отчётов');
+    expect(source).toContain('pekApi.getReports(filters, signal)');
+    expect(source).toContain('По выбранным фильтрам отчётов нет');
     expect(reportListCalls).toBe(0);
   });
 

@@ -27,6 +27,9 @@ export interface AccessContext {
   usage: Partial<Record<UsageMetric, number>>;
   availableActions: string[];
   reason: string | null;
+  organization?: { id: number; name: string; role?: string | null } | null;
+  organizations?: Array<{ id: number; name: string; role?: string | null }>;
+  maxFileSizeBytes?: number | null;
 }
 
 export interface PublicPlanFeature {
@@ -50,10 +53,10 @@ export interface PublicPlan {
 
 export type DocumentDirection = 'INCOMING' | 'OUTGOING' | 'INTERNAL';
 export type DocumentStatus =
-  | 'DRAFT' | 'READY_FOR_SIGNING' | 'SENT_FOR_SIGNING'
+  | 'DRAFT' | 'READY_FOR_SIGNING' | 'SIGNING' | 'SENT_FOR_SIGNING'
   | 'PARTIALLY_SIGNED' | 'SIGNED' | 'REJECTED'
-  | 'RETURNED_FOR_REVISION' | 'REVOCATION_REQUESTED' | 'REVOKED'
-  | 'CANCELLED' | 'EXPIRED' | 'ARCHIVED';
+  | 'REVISION_REQUIRED' | 'RETURNED_FOR_REVISION' | 'REVOCATION_REQUESTED' | 'REVOKED'
+  | 'CANCELLED' | 'EXPIRED' | 'ARCHIVED' | 'DELETED';
 
 export type DocumentType =
   | 'REALIZATION_OF_GOODS_SERVICES' | 'RECEIPT_OF_GOODS_SERVICES'
@@ -153,6 +156,8 @@ export interface CreateDocumentRequest {
   counterpartyId?: number;
   signingDeadline?: string;
   organizationId?: number;
+  documentDate?: string;
+  documentNumber?: string;
 }
 
 export interface UpdateDocumentRequest {
@@ -189,6 +194,15 @@ export interface DocumentAttachment {
   sha256Hash: string;
   uploadedBy: number;
   createdAt: string;
+}
+
+export interface AuditEvent {
+  id: number;
+  createdAt: string;
+  actorName: string | null;
+  action: string;
+  status: string | null;
+  comment: string | null;
 }
 
 export interface Counterparty {
@@ -290,6 +304,31 @@ export interface PublicInvitation {
   status: 'AVAILABLE' | 'VIEWED' | 'SIGNED' | 'REJECTED' | 'EXPIRED' | string;
   invitationExpiresAt: string | null;
   signingDeadline: string | null;
+  organizationName?: string | null;
+  documentNumber?: string | null;
+  fileName?: string | null;
+  fileSize?: number | null;
+  assignmentId?: number;
+  versionId?: number;
+  challenge?: string;
+  dataToSign?: string;
+}
+
+export interface OrganizationSigner {
+  id: number;
+  fullName: string;
+  position: string | null;
+  email: string | null;
+  active: boolean;
+  organizationId: number;
+}
+
+export interface SelfSignPreparation {
+  challenge: string;
+  dataToSign: string;
+  versionId?: number;
+  assignmentId?: number;
+  expiresAt?: string | null;
 }
 
 export interface RevocationRequest {

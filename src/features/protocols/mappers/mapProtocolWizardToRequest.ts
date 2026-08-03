@@ -510,9 +510,6 @@ export function buildQuickCreatePayload(
     throw new QuickCreateValidationError('measurementPlace', 'Укажите место измерения');
   }
   const sourceNumber = normalizeNullableText(form.sourceNumber);
-  if (strict && !sourceNumber) {
-    throw new QuickCreateValidationError('sourceNumber', 'Укажите номер источника');
-  }
 
   const rows = form.results.filter(isNonEmptyResult);
   if (strict && rows.length === 0) {
@@ -561,6 +558,14 @@ export function buildQuickCreatePayload(
     conditions: Object.keys(conditions).length ? conditions : undefined,
     printVisibility: mapPrintVisibilityToApi(form.printVisibility),
     orderId: orderId ?? undefined,
+    orderServiceItemId: normalizeNullableText(form.orderServiceItemId) ?? undefined,
+    pekProgramId: normalizeNullableText(form.pekProgramId) ?? undefined,
+    pekReportId: normalizeNullableText(form.pekReportId) ?? undefined,
+    pekControlItemId: normalizeNullableText(form.pekControlItemId) ?? undefined,
+    pekControlEventId: normalizeNullableText(form.pekControlEventId) ?? undefined,
+    monitoringPointId: normalizeNullableText(form.monitoringPointId) ?? undefined,
+    emissionSourceId: normalizeNullableText(form.emissionSourceId) ?? undefined,
+    waterOutletId: normalizeNullableText(form.waterOutletId) ?? undefined,
   });
 
   return payload as QuickCreateProtocolRequest | QuickCreateProtocolDraftRequest;

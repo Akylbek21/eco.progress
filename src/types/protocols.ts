@@ -2,9 +2,12 @@ import type { LaboratoryDetails as CanonicalLaboratoryDetails, LaboratoryEmploye
 
 export type ProtocolStatus =
   | 'DRAFT'
+  | 'READY_TO_SIGN'
   | 'CALCULATED'
   | 'READY'
   | 'READY_FOR_APPROVAL'
+  | 'UNDER_REVIEW'
+  | 'RETURNED_FOR_CORRECTION'
   | 'NEEDS_REVISION'
   | 'APPROVED'
   | 'SIGNED'
@@ -412,6 +415,7 @@ export interface Protocol {
   emissionSourceId?: string | number;
   waterOutletId?: string | number;
   permissions?: Record<string, boolean>;
+  availableActions?: ProtocolAvailableAction[];
   canComplete?: boolean;
   blockingReasons?: string[];
   publishedToClientAt?: string;
@@ -419,6 +423,13 @@ export interface Protocol {
   publishedBy?: string;
   publishedDocumentId?: string | number;
 }
+
+export type ProtocolAvailableAction =
+  | 'EDIT' | 'SAVE' | 'CALCULATE' | 'CHECK_NORMATIVES'
+  | 'PREPARE_SIGNING' | 'SIGN' | 'RETURN_TO_DRAFT'
+  | 'DOWNLOAD_PDF' | 'DOWNLOAD_DOCX' | 'CREATE_CORRECTED_VERSION'
+  | 'ARCHIVE' | 'SUBMIT_FOR_REVIEW' | 'APPROVE' | 'RETURN_FOR_CORRECTION'
+  | string;
 
 export type ProtocolPage = {
   items: Protocol[];

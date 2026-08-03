@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { normalizeApiError } from '../../../services/apiHelpers';
+import type { PekValidationIssue } from '../api/pekContracts';
+import { PekContractError } from '../api/pekContractSchemas';
 
 const messages: Record<string, string> = {
   PEK_REPORT_DUPLICATE: 'Отчёт за этот период уже существует',
@@ -19,9 +21,16 @@ export type PekUiError = {
   traceId?: string;
   resourceId?: string;
   details?: unknown;
+  issues: PekValidationIssue[];
 };
 
 export const mapPekError = (error: unknown): PekUiError => {
+  if (error instanceof PekContractError) return {
+    message: error.message,
+    code: error.code,
+    fieldErrors: {},
+    issues: [],
+  };
   const parsed = normalizeApiError(error, 'Не удалось выполнить действие. Повторите попытку.');
   const raw = axios.isAxiosError(error) && error.response?.data && typeof error.response.data === 'object'
     ? error.response.data as Record<string, unknown>
@@ -33,6 +42,7 @@ export const mapPekError = (error: unknown): PekUiError => {
     : status === 403 ? 'Недостаточно прав для выполнения действия.'
       : status === 404 ? 'Программа или отчёт не найден.'
         : status === 409 ? 'Сущность изменена или действие недоступно в текущем статусе.'
+          : status === 413 ? 'Файл превышает допустимый размер.'
           : status === 422 ? 'Данные не прошли бизнес-проверку.'
             : (status || 0) >= 500 ? 'Внутренняя ошибка сервиса. Повторите позже.'
               : undefined;
@@ -44,5 +54,6 @@ export const mapPekError = (error: unknown): PekUiError => {
     traceId: parsed.requestCode || parsed.traceId || parsed.requestId || String(details.correlationId || ''),
     resourceId: parsed.resourceId || (details.resourceId ? String(details.resourceId) : undefined),
     details: import.meta.env.DEV ? details.details : undefined,
+    issues: Array.isArray(details.issues) ? details.issues as PekValidationIssue[] : [],
   };
 };

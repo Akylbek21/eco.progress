@@ -15,7 +15,6 @@ type Props = {
   primaryLabel: string;
   onBack: () => void;
   onPrimary: () => void;
-  onReturn: () => void;
   onDocx: () => void;
   onGenerateDocx: () => void;
   onGeneratePdf: () => void;
@@ -25,7 +24,7 @@ type Props = {
   onHistory: () => void;
 };
 
-const ProtocolHeader = ({ protocol, permissions, busy, primaryLabel, onBack, onPrimary, onReturn, ...menuActions }: Props) => (
+const ProtocolHeader = ({ protocol, permissions, busy, primaryLabel, onBack, onPrimary, ...menuActions }: Props) => (
   <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <button type="button" onClick={onBack} className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-eco-700"><ArrowLeft className="h-4 w-4" /> К протоколам</button>
     <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -39,7 +38,6 @@ const ProtocolHeader = ({ protocol, permissions, busy, primaryLabel, onBack, onP
         {protocol.orderId && <p className="mt-2 text-sm"><span className="text-slate-500">Заявка № {protocol.orderNumber || protocol.orderId}</span> · <Link className="font-bold text-eco-700" to={`/staff/orders/${protocol.orderId}`}>Открыть заявку</Link></p>}
       </div>
       <div className="flex flex-wrap gap-2 lg:justify-end">
-        {String(protocol.status) === 'READY_FOR_APPROVAL' && <Button type="button" variant="secondary" disabled={busy || !permissions.canReturnForRevision} title={!permissions.canReturnForRevision ? 'Возврат недоступен: backend не разрешил действие' : undefined} onClick={onReturn}>Вернуть на исправление</Button>}
         {primaryLabel && <Button type="button" className="hidden md:inline-flex" disabled={busy} onClick={onPrimary}>{primaryLabel}</Button>}
         <ProtocolActionsMenu protocol={protocol} permissions={permissions} busy={busy} {...menuActions} />
       </div>

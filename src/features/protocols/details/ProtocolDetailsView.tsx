@@ -24,9 +24,6 @@ type Props = {
   signing: boolean;
   onBack: () => void;
   onEdit: (section: ProtocolEditSection) => void;
-  onReady: () => void;
-  onApprove: () => void;
-  onReturn: () => void;
   onSign: () => void;
   onPublish: () => void;
   onPreview: () => void;
@@ -47,14 +44,12 @@ const baseTabs: Array<{ key: ProtocolDetailsTab; label: string }> = [
   { key: 'history', label: 'История' },
 ];
 
-const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErrors, busy, signing, onBack, onEdit, onReady, onApprove, onReturn, onSign, onPublish, onPreview, onGenerateDocx, onGeneratePdf, onDocx, onPdf, onCorrection, onCancel, onArchive, onReplacement }: Props) => {
+const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErrors, busy, signing, onBack, onEdit, onSign, onPublish, onPreview, onGenerateDocx, onGeneratePdf, onDocx, onPdf, onCorrection, onCancel, onArchive, onReplacement }: Props) => {
   const [activeTab, setActiveTab] = useState<ProtocolDetailsTab>('results');
   const tabs = permissions.canViewAudit ? baseTabs : baseTabs.filter((tab) => tab.key !== 'history');
   const primary = resolveProtocolPrimaryAction(protocol, role);
   const runPrimary = () => {
     if (primary.key === 'edit') onEdit('results');
-    else if (primary.key === 'ready') onReady();
-    else if (primary.key === 'approve') onApprove();
     else if (primary.key === 'sign') onSign();
     else if (primary.key === 'publish') onPublish();
     else if (primary.key === 'pdf') onPdf();
@@ -63,7 +58,7 @@ const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErr
   };
   return (
     <div className="space-y-4 pb-24">
-      <ProtocolHeader protocol={protocol} permissions={permissions} busy={busy} primaryLabel={primary.label} onBack={onBack} onPrimary={runPrimary} onReturn={onReturn} onDocx={onDocx} onGenerateDocx={onGenerateDocx} onGeneratePdf={onGeneratePdf} onCorrection={onCorrection} onCancel={onCancel} onArchive={onArchive} onHistory={() => setActiveTab('history')} />
+      <ProtocolHeader protocol={protocol} permissions={permissions} busy={busy} primaryLabel={primary.label} onBack={onBack} onPrimary={runPrimary} onDocx={onDocx} onGenerateDocx={onGenerateDocx} onGeneratePdf={onGeneratePdf} onCorrection={onCorrection} onCancel={onCancel} onArchive={onArchive} onHistory={() => setActiveTab('history')} />
       <ProtocolProgress status={protocol.status} />
       <ProtocolNextStepCard protocol={protocol} missing={missing} />
       <ProtocolContextLinks protocol={protocol} />

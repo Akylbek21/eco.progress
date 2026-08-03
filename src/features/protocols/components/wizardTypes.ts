@@ -60,6 +60,7 @@ export type ProtocolWizardForm = {
   basis: string;
   laboratoryId: string;
   executorId: string;
+  defaultMeasurementDeviceId: string;
   protocolDate: string;
   sampleDate: string;
   measurementDate: string;
@@ -122,7 +123,7 @@ export const createWizardDefaults = (): ProtocolWizardForm => {
   const now = new Date();
   const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   return {
-    templateId: '', companyId: '', objectId: '', customer: '', basis: '', laboratoryId: '', executorId: '', protocolDate: date,
+    templateId: '', companyId: '', objectId: '', customer: '', basis: '', laboratoryId: '', executorId: '', defaultMeasurementDeviceId: '', protocolDate: date,
     sampleDate: date, measurementDate: date, testingStartDate: date, testingEndDate: date, measurementTime: '12:00', measurementPlace: '', sourceNumber: '',
     temperature: '', humidity: '', pressure: '', windSpeed: '', windDirection: '', weatherConditions: '',
     environmentSource: 'MANUAL', environmentDataSource: '', environmentObservedAt: '', environmentManualChangeReason: '',

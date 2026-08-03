@@ -9,11 +9,12 @@ import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import { PekLoading, PekPageHeader, PekPrimaryAction, PekReadiness, PekStatusBadge } from '../components/common/PekUi';
 import PekQueryError from '../components/common/PekQueryError';
+import PekReadinessPanel from '../components/common/PekReadinessPanel';
 import PekProgramDocuments from '../components/documents/PekProgramDocuments';
 import PekActionModal from '../components/workflow/PekActionModal';
 import { mapPekError } from '../utils/pekErrorMapper';
 
-const tabs = ['Основное', 'Позиции контроля', 'Показатели', 'Мероприятия', 'Документы', 'История'];
+const tabs = ['Обзор', 'Объекты контроля', 'Показатели', 'Мероприятия', 'Документы', 'История', 'Версии', 'Отчёты'];
 
 const PekProgramDetailsPage = () => {
   const id = Number(useParams().programId);
@@ -34,14 +35,16 @@ const PekProgramDetailsPage = () => {
   });
   const workflow = useMutation({
     mutationFn: async ({ item, comment }: { item: PekAvailableAction; comment: string }) => {
-      const version = program.data?.version;
-      if (version === undefined) throw new Error('Версия программы не загружена.');
+      const fresh = await pekApi.getProgram(id);
+      const currentAction = fresh.availableActions.find((candidate) => candidate.code === item.code && candidate.enabled);
+      if (!currentAction) throw new Error('Backend больше не разрешает это действие. Карточка будет обновлена.');
+      const version = fresh.version;
       if (item.code === 'SUBMIT_REVIEW') return pekApi.submitProgramReview(id, { version });
       if (item.code === 'RETURN') return pekApi.returnProgram(id, { version, reason: comment });
       if (item.code === 'APPROVE') return pekApi.approveProgram(id, { version });
       if (item.code === 'ACTIVATE') return pekApi.activateProgram(id, { version });
       if (item.code === 'ARCHIVE') return pekApi.archiveProgram(id, { version });
-      if (item.code === 'CLONE') return pekApi.cloneProgram(id, {
+      if (item.code === 'CLONE') return pekApi.cloneProgram(id, version, {
         number: cloneNumber.trim(),
         name: cloneName.trim() || undefined,
         validFrom: cloneValidFrom || undefined,
@@ -82,7 +85,7 @@ const PekProgramDetailsPage = () => {
       actions={<>
         <PekStatusBadge status={item.status} />
         {workflowActions.map((candidate) => (
-          <PekPrimaryAction key={candidate.code} action={candidate} pending={workflow.isPending} onClick={(selected) => selected.code === 'CLONE' ? setCloneAction(selected) : setAction(selected)} />
+          <PekPrimaryAction key={candidate.code} action={candidate.code === 'SUBMIT_REVIEW' && item.readiness?.ready === false ? { ...candidate, enabled: false, disabledReason: 'Исправьте блокирующие проблемы готовности' } : candidate} pending={workflow.isPending} onClick={(selected) => selected.code === 'CLONE' ? setCloneAction(selected) : setAction(selected)} />
         ))}
         {!item.readOnly && editAction?.enabled && (
           <button type="button" onClick={() => navigate(`/staff/pek/programs/${id}/edit`)} className="rounded-full border px-5 py-2 font-bold">Изменить</button>
@@ -96,6 +99,10 @@ const PekProgramDetailsPage = () => {
       <PekReadiness value={item.readinessPercent} />
       <Info label="Режим" value={item.readOnly ? 'Только чтение' : 'Редактирование разрешено'} />
     </section>
+    <PekReadinessPanel readiness={item.readiness} onIssueClick={(issue) => {
+      const section = String(issue.section || '').toUpperCase();
+      setTab(section.includes('CONTROL') ? 1 : section.includes('INDICATOR') ? 2 : section.includes('MEASURE') ? 3 : section.includes('DOCUMENT') ? 4 : 0);
+    }} />
     <nav className="flex gap-1 overflow-x-auto border-b">
       {tabs.map((label, index) => <button key={label} type="button" onClick={() => setTab(index)} className={`whitespace-nowrap px-4 py-3 font-bold ${tab === index ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}
     </nav>
@@ -104,8 +111,10 @@ const PekProgramDetailsPage = () => {
       {tab === 1 && <DataRows rows={item.controlItems || []} />}
       {tab === 2 && <DataRows rows={item.indicators || []} />}
       {tab === 3 && <DataRows rows={item.measures || []} />}
-      {tab === 4 && <PekProgramDocuments programId={id} documents={item.documents || []} readOnly={item.readOnly} />}
+      {tab === 4 && <PekProgramDocuments programId={id} version={item.version} documents={item.documents || []} readOnly={item.readOnly} />}
       {tab === 5 && <Link className="font-bold text-eco-700" to={`/staff/pek/programs/${id}/history`}>Открыть историю программы</Link>}
+      {tab === 6 && <div className="space-y-2"><Info label="Текущая версия" value={item.version} /><p className="text-sm text-slate-500">Согласованные версии доступны только для чтения. Полная цепочка версий отображается backend при наличии данных в карточке.</p></div>}
+      {tab === 7 && <Link className="font-bold text-eco-700" to={`/staff/pek/reports?programId=${id}`}>Открыть отчёты по программе</Link>}
     </section>
     <PekActionModal action={action} pending={workflow.isPending} onClose={() => setAction(null)} onConfirm={(comment) => action && workflow.mutate({ item: action, comment })} />
     <Modal

@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography } from '@mui/material';
 import { Link, Navigate, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -54,7 +54,8 @@ const developmentAccess: AccessContext = {
   reason: null,
 };
 
-const Context = createContext<AccessContext | null>(null);
+type DocumentFlowContextValue = AccessContext & { selectOrganization: (organizationId: number) => void };
+const Context = createContext<DocumentFlowContextValue | null>(null);
 export const useDocumentFlowContext = () => {
   const value = useContext(Context);
   if (!value) throw new Error('DocumentFlowGate is missing');
@@ -63,7 +64,8 @@ export const useDocumentFlowContext = () => {
 
 export default function DocumentFlowGate() {
   const { isAuthenticated, loading } = useAuth();
-  const access = useDocumentFlowAccess();
+  const [organizationId, setOrganizationId] = useState<number>();
+  const access = useDocumentFlowAccess(organizationId);
   const bypassAccess = import.meta.env.DEV && import.meta.env.MODE !== 'test';
   const plans = useQuery({
     queryKey: documentFlowKeys.plans(),
@@ -71,6 +73,11 @@ export default function DocumentFlowGate() {
     enabled: !bypassAccess && access.isSuccess && access.data.available === false,
     staleTime: 5 * 60_000,
   });
+  useEffect(() => {
+    if (!organizationId && access.data?.organizations?.length === 1) setOrganizationId(access.data.organizations[0].id);
+  }, [access.data?.organizations, organizationId]);
+  const effectiveAccess = bypassAccess ? developmentAccess : access.data;
+  const contextValue = useMemo(() => effectiveAccess ? { ...effectiveAccess, selectOrganization: setOrganizationId } : null, [effectiveAccess]);
 
   // A stored JWT session is usable while /auth/me refreshes in parallel.
   // Local development still sends the access request, but does not block UI exploration on it.
@@ -87,7 +94,6 @@ export default function DocumentFlowGate() {
       </Container>
     );
   }
-  const effectiveAccess = bypassAccess ? developmentAccess : access.data;
   if (!effectiveAccess?.available) {
     return (
       <Container maxWidth="md" sx={{ py: 7 }}>
@@ -104,5 +110,5 @@ export default function DocumentFlowGate() {
       </Container>
     );
   }
-  return <Context.Provider value={effectiveAccess}><Outlet /></Context.Provider>;
+  return <Context.Provider value={contextValue}><Outlet /></Context.Provider>;
 }

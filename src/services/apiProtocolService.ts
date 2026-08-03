@@ -848,6 +848,9 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     emissionSourceId: pick(source, ['emissionSourceId', 'emission_source_id']),
     waterOutletId: pick(source, ['waterOutletId', 'water_outlet_id']),
     permissions: mapProtocolPermissions(source.permissions),
+    availableActions: Array.isArray(source.availableActions)
+      ? source.availableActions.map((item) => typeof item === 'string' ? item : pick(asRecord(item), ['code', 'action'])).filter(Boolean)
+      : [],
     canComplete: source.canComplete === true,
     blockingReasons: Array.isArray(source.blockingReasons) ? source.blockingReasons.map(String) : [],
     publishedToClientAt: pick(source, ['publishedAt', 'publishedToClientAt', 'published_to_client_at']),
@@ -1227,6 +1230,18 @@ export async function deleteProtocolResult(protocolId: string, resultId: string,
   await api.delete<ApiResponse<null>>(`/protocols/${protocolId}/results/${resultId}`, { params: { version } });
 }
 
+export async function saveProtocolResults(
+  protocolId: string,
+  results: ProtocolResultPayload[],
+  version: number,
+): Promise<Protocol> {
+  await api.put<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results`, {
+    version,
+    results: results.map(mapProtocolResultFormToRequest),
+  });
+  return getProtocol(protocolId);
+}
+
 export async function getProtocolAudit(protocolId: string): Promise<Protocol['history']> {
   const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/audit`);
   return extractList(response, ['history', 'audit', 'items']).map((item) => {
@@ -1310,6 +1325,21 @@ export async function signProtocol(protocolId: string | number, request: SignPro
     { cmsSignatureBase64: request.cmsSignatureBase64 },
   );
   return requireProtocol(unwrapData(response), 'подписание');
+}
+
+export async function prepareSigning(protocolId: string | number, version: number) {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/prepare-signing`, { version });
+  const payload = unwrapData(response.data);
+  const source = asRecord(payload);
+  const signingPayload = String(source.signingPayload || source.payload || source.dataToSign || '');
+  if (!signingPayload) throw new Error('Backend не вернул данные для подписания протокола.');
+  const protocolSource = source.protocol || source;
+  return { protocol: normalizeProtocol(protocolSource), signingPayload };
+}
+
+export async function signAndComplete(protocolId: string | number, request: { version: number; cmsSignatureBase64: string }): Promise<Protocol> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/sign-and-complete`, request);
+  return normalizeProtocol(extractItem(response, ['protocol']));
 }
 
 export async function publishToClient(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol> {

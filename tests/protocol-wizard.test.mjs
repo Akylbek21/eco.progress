@@ -13,10 +13,13 @@ test('protocol list opens the wizard without navigating to a creation page', asy
   assert.match(page, /navigate\(`\/staff\/protocols\/\$\{protocol\.id\}`\)/);
 });
 
-test('wizard has nine guarded steps and one quick-create mutation', async () => {
+test('wizard has five guarded steps and one quick-create mutation', async () => {
   const wizard = await read('src/features/protocols/components/CreateProtocolWizardModal.tsx');
   const submission = await read('src/features/protocols/utils/quickCreateSubmission.ts');
-  assert.match(wizard, /const steps = \[[^\]]*'Создание'\]/);
+  const steps = wizard.match(/const steps = \[([^\]]+)\]/)?.[1] || '';
+  assert.equal((steps.match(/'/g) || []).length / 2, 5);
+  assert.match(wizard, /prepareSigning/);
+  assert.match(wizard, /signAndComplete/);
   assert.match(wizard, /acquireQuickCreateLock\(submittingRef\)/);
   assert.match(wizard, /protocolService\.quickCreateProtocol\(\{ payload, idempotencyKey \}\)/);
   assert.match(submission, /crypto\.randomUUID\(\)/);
@@ -28,9 +31,11 @@ test('wizard has nine guarded steps and one quick-create mutation', async () => 
 test('wizard persists and clears the session draft', async () => {
   const wizard = await read('src/features/protocols/components/CreateProtocolWizardModal.tsx');
   assert.match(wizard, /protocol-create-wizard-draft/);
-  assert.match(wizard, /sessionStorage\.setItem\(DRAFT_KEY/);
-  assert.match(wizard, /sessionStorage\.getItem\(DRAFT_KEY/);
-  assert.match(wizard, /sessionStorage\.removeItem\(DRAFT_KEY\)/);
+  assert.match(wizard, /sessionStorage\.setItem\(draftKey/);
+  assert.match(wizard, /sessionStorage\.getItem\(draftKey/);
+  assert.match(wizard, /sessionStorage\.removeItem\(draftKey\)/);
+  assert.match(wizard, /user\?\.id/);
+  assert.match(wizard, /DRAFT_VERSION/);
   assert.match(wizard, /Найдена незавершённая форма протокола/);
 });
 

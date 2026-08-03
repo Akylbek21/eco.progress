@@ -9,10 +9,10 @@ test('protocol quick-create boundary matches the backend DTO exactly', async () 
   const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
   const service = await read('src/services/apiProtocolService.ts');
   assert.match(contracts, /interface QuickCreateProtocolRequest/);
-  for (const field of ['templateId', 'sourceDocumentCode', 'docxTemplateCode', 'protocolDate', 'sampleDate', 'measurementDate', 'testingStartDate', 'testingEndDate', 'sourceNumber', 'companyId', 'objectId', 'laboratoryId', 'executorId', 'measurementPlace', 'conditions', 'measurements', 'printVisibility', 'orderId']) {
+  for (const field of ['templateId', 'sourceDocumentCode', 'docxTemplateCode', 'protocolDate', 'sampleDate', 'measurementDate', 'testingStartDate', 'testingEndDate', 'sourceNumber', 'companyId', 'objectId', 'laboratoryId', 'executorId', 'measurementPlace', 'conditions', 'measurements', 'printVisibility', 'orderId', 'orderServiceItemId', 'pekProgramId', 'pekReportId', 'pekControlItemId', 'pekControlEventId', 'monitoringPointId', 'emissionSourceId', 'waterOutletId']) {
     assert.match(contracts, new RegExp(`\\b${field}\\b`));
   }
-  for (const field of ['samplingDate', 'deviceId', 'environment', 'orderServiceItemId', 'pekReportId']) {
+  for (const field of ['samplingDate', 'deviceId', 'environment']) {
     assert.doesNotMatch(contracts.match(/interface QuickCreateProtocolRequest[\s\S]*?\n}/)?.[0] || '', new RegExp(`\\b${field}\\b`));
   }
   assert.match(mapper, /requirePositiveIntegerId/);
@@ -33,7 +33,8 @@ test('protocol quick-create 500 keeps the wizard recoverable and exposes safe di
   assert.match(panel, /Повторить/);
   assert.match(panel, /Вернуться к проверке/);
   assert.match(panel, /Скопировать код ошибки/);
-  assert.match(panel, /HTTP-статус:/);
+  assert.doesNotMatch(panel, /HTTP-|INTERNAL_SCHEMA_ERROR|Stack trace/);
+  assert.match(panel, /import\.meta\.env\.DEV/);
   assert.match(errors, /Данные формы сохранены во временном черновике/);
   assert.match(errors, /resetIdempotencyKey: false/);
   for (const header of ['x-request-id', 'x-trace-id', 'trace-id']) assert.match(helpers, new RegExp(header));

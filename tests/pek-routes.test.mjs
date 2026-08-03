@@ -13,20 +13,19 @@ test('required PEK routes are registered once', () => {
     '/staff/pek/programs/new',
     '/staff/pek/programs/:programId',
     '/staff/pek/programs/:programId/edit',
+    '/staff/pek/programs/:programId/versions',
     '/staff/pek/reports',
     '/staff/pek/reports/new',
     '/staff/pek/reports/:reportId',
   ].forEach((route) => assert.match(app, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))));
 });
 
-test('production PEK transport contains only implemented report operations', () => {
+test('production PEK transport contains implemented report analytics and excludes pending contracts', () => {
   assert.match(service, /reports\/\$\{id\}\/collect/);
   assert.match(service, /'submit-review' \| 'approve' \| 'archive'/);
+  ['plan-fact', 'issues', 'unmatched-sources', 'collection-runs/latest', 'history'].forEach((implemented) => assert.match(service, new RegExp(implemented)));
   [
-    'plan-fact',
-    'issues',
     'exceedances',
-    'unmatched-sources',
     'review-comments',
     'prepare-signing',
     'exports/',
@@ -36,7 +35,8 @@ test('production PEK transport contains only implemented report operations', () 
 });
 
 test('report workspace has no fake async collection progress', () => {
-  assert.match(workspace, /Выполняется сбор протоколов/);
+  assert.match(workspace, /action\.isPending/);
+  assert.match(workspace, /getLatestCollection/);
   assert.doesNotMatch(workspace, /setInterval|polling|progressPercent|collection-runs/);
 });
 

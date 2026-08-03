@@ -95,7 +95,7 @@ const PekProgramsPage = () => {
             <div className="overflow-x-auto rounded-2xl border bg-white">
               <table className="w-full min-w-[1180px] text-sm">
                 <thead className="bg-slate-50 text-left"><tr>
-                  {['Номер', 'Название', 'Компания', 'Объект', 'Период действия', 'Ответственный', 'Статус', 'Готовность', 'Последнее изменение', 'Действия'].map((label) => <th key={label} className="px-4 py-3">{label}</th>)}
+                  {['Номер', 'Название', 'Компания', 'Объект', 'Период действия', 'Версия', 'Ответственный', 'Статус', 'Готовность', 'Последнее изменение', 'Действия'].map((label) => <th key={label} className="px-4 py-3">{label}</th>)}
                 </tr></thead>
                 <tbody>{programs.data.content.map((item) => <tr key={item.id} className="border-t">
                   <td className="px-4 py-3 font-bold">{item.number}</td>
@@ -103,6 +103,7 @@ const PekProgramsPage = () => {
                   <td className="px-4 py-3"><EntityName value={item.company} fallback="—" /></td>
                   <td className="px-4 py-3"><EntityName value={item.object} fallback="—" /></td>
                   <td className="px-4 py-3">{item.validFrom} — {item.validUntil}</td>
+                  <td className="px-4 py-3">{item.version}</td>
                   <td className="px-4 py-3">{item.responsible?.name || '—'}</td>
                   <td className="px-4 py-3"><PekStatusBadge status={item.status} /></td>
                   <td className="px-4 py-3"><PekReadiness value={item.readinessPercent} /></td>

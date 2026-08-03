@@ -1,4 +1,4 @@
-import { Alert, Box, Chip, Container, LinearProgress, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Box, Chip, Container, FormControl, InputLabel, LinearProgress, MenuItem, Paper, Select, Stack, Typography } from '@mui/material';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import { hasPermission, limitProgress } from '../model/access';
@@ -33,6 +33,7 @@ export default function DocumentFlowLayout() {
               <Typography variant="h5" fontWeight={800}>Документооборот</Typography>
               <Typography variant="body2" color="text.secondary">{user?.companyName || user?.name || 'Организация'}</Typography>
             </Box>
+            {(access.organizations?.length || 0) > 1 && <FormControl size="small" sx={{ minWidth: 240 }}><InputLabel>Организация</InputLabel><Select label="Организация" value={access.organization?.id || ''} onChange={(event) => access.selectOrganization(Number(event.target.value))}>{access.organizations?.map((organization) => <MenuItem key={organization.id} value={organization.id}>{organization.name}</MenuItem>)}</Select></FormControl>}
             <Chip label={access.plan?.name || 'Без тарифа'} />
             <Chip label={access.status || 'Статус не указан'} color={access.readOnly ? 'warning' : 'success'} />
             {access.daysRemaining != null && <Chip label={`${access.daysRemaining} дн. до окончания`} variant="outlined" />}

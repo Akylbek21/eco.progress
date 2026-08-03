@@ -4,8 +4,10 @@ import type {
   PekDashboard,
   PekProgram,
   PekReport,
+  PekReportAvailableAction,
 } from '../api/pekContracts';
 import { pekActionLabels } from '../utils/pekLabels';
+import { pekProgramContractSchema, pekReportContractSchema, validatePekContract } from '../api/pekContractSchemas';
 
 type Row = Record<string, unknown>;
 const row = (value: unknown): Row =>
@@ -13,6 +15,11 @@ const row = (value: unknown): Row =>
 const numberValue = (value: unknown, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+const optionalNumber = (value: unknown) => {
+  if (value === null || value === undefined || value === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 };
 
 const named = (value: unknown) => {
@@ -46,7 +53,7 @@ const action = (value: unknown): PekAvailableAction | null => {
 };
 
 export const mapProgramResponse = (value: unknown): PekProgram => {
-  const source = row(value);
+  const source = row(validatePekContract(pekProgramContractSchema, value, 'программы ПЭК'));
   const responsible = named(source.responsibleUser || source.responsible);
   return {
     ...source,
@@ -64,6 +71,7 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
     responsibleUser: responsible,
     responsibleUserId: source.responsibleUserId == null ? null : numberValue(source.responsibleUserId),
     readinessPercent: source.readinessPercent == null ? undefined : numberValue(source.readinessPercent),
+    readiness: source.readiness && typeof source.readiness === 'object' ? source.readiness as PekProgram['readiness'] : null,
     updatedAt: source.updatedAt == null ? undefined : String(source.updatedAt),
     availableActions: (Array.isArray(source.availableActions) ? source.availableActions : [])
       .map(action)
@@ -76,11 +84,28 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
   };
 };
 
+const reportAction = (value: unknown): PekReportAvailableAction | null => {
+  const source = typeof value === 'string' ? { code: value } : row(value);
+  if (!source.code) return null;
+  const code = String(source.code) as PekReportAvailableAction['code'];
+  const labels: Record<string, string> = {
+    COLLECT: 'Собрать данные', RECOLLECT: 'Повторить сбор', VALIDATE: 'Проверить готовность',
+    SUBMIT_REVIEW: 'Отправить на проверку', RETURN: 'Вернуть на доработку', APPROVE: 'Согласовать',
+    GENERATE_DOCUMENT: 'Сформировать документ', SIGN: 'Подписать', ARCHIVE: 'Архивировать',
+  };
+  return {
+    code, label: String(source.label || labels[code] || code), enabled: source.enabled !== false,
+    disabledReason: source.disabledReason == null ? null : String(source.disabledReason),
+    confirmationRequired: source.confirmationRequired !== false,
+    requiresComment: Boolean(source.requiresComment),
+  };
+};
+
 export const mapReportResponse = (
   value: unknown,
   linkedProtocolNumbers: string[] = [],
 ): PekReport => {
-  const source = row(value);
+  const source = row(validatePekContract(pekReportContractSchema, value, 'отчёта ПЭК'));
   const programId = source.programId == null ? undefined : numberValue(source.programId);
   const responsibleUser = named(source.responsibleUser);
   return {
@@ -103,9 +128,18 @@ export const mapReportResponse = (
     object: named(source.object),
     program: programId ? { id: programId, name: `Программа №${programId}` } : null,
     responsibleUser,
-    linkedProtocolCount: numberValue(source.linkedProtocolCount),
+    linkedProtocolCount: optionalNumber(source.linkedProtocolCount),
     linkedProtocolNumbers,
     lastCollectedAt: source.lastCollectedAt == null ? null : String(source.lastCollectedAt),
+    completionPercent: optionalNumber(source.completionPercent),
+    plannedCount: optionalNumber(source.plannedCount),
+    actualCount: optionalNumber(source.actualCount),
+    missingCount: optionalNumber(source.missingCount),
+    exceedanceCount: optionalNumber(source.exceedanceCount),
+    commentCount: optionalNumber(source.commentCount),
+    availableActions: (Array.isArray(source.availableActions) ? source.availableActions : []).map(reportAction).filter((item): item is PekReportAvailableAction => item !== null),
+    readOnly: Boolean(source.readOnly),
+    readiness: source.readiness && typeof source.readiness === 'object' ? source.readiness as PekReport['readiness'] : null,
   };
 };
 
@@ -120,14 +154,14 @@ export const mapCollectionResult = (value: unknown): PekReport => {
 export const mapDashboardResponse = (value: unknown): PekDashboard => {
   const source = row(value);
   return {
-    totalReportCount: numberValue(source.totalReportCount),
-    readinessPercent: numberValue(source.readinessPercent),
-    criticalIssueCount: numberValue(source.criticalIssueCount),
-    overdueRiskCount: numberValue(source.overdueRiskCount),
-    programExecutionPercent: numberValue(source.programExecutionPercent),
-    openExceedanceCount: numberValue(source.openExceedanceCount),
-    overdueActionCount: numberValue(source.overdueActionCount),
-    missingProtocolCount: numberValue(source.missingProtocolCount),
+    totalReportCount: optionalNumber(source.totalReportCount),
+    readinessPercent: optionalNumber(source.readinessPercent),
+    criticalIssueCount: optionalNumber(source.criticalIssueCount),
+    overdueRiskCount: optionalNumber(source.overdueRiskCount),
+    programExecutionPercent: optionalNumber(source.programExecutionPercent),
+    openExceedanceCount: optionalNumber(source.openExceedanceCount),
+    overdueActionCount: optionalNumber(source.overdueActionCount),
+    missingProtocolCount: optionalNumber(source.missingProtocolCount),
     deadlines: (Array.isArray(source.deadlines) ? source.deadlines : []).map((value) => {
       const deadline = row(value);
       return {

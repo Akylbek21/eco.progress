@@ -8,7 +8,7 @@ import { createWizardDefaults, emptyWizardResult } from '../src/features/protoco
 import { buildQuickCreatePayload } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
 import { normalizeProtocolStatus } from '../src/config/protocolStatus';
 import { getProtocolPermissions } from '../src/utils/protocolPermissions';
-import { readyForApproval, removeProtocolMeasurementDevice } from '../src/services/apiProtocolService';
+import { prepareSigning, readyForApproval, removeProtocolMeasurementDevice, saveProtocolResults, signAndComplete } from '../src/services/apiProtocolService';
 
 const server = setupServer();
 const originalBaseUrl = api.defaults.baseURL;
@@ -124,5 +124,38 @@ describe('current protocol backend contract', () => {
     await removeProtocolMeasurementDevice('42', '7', 8);
     expect(version).toBe('8');
     expect(body).toBe('');
+  });
+
+  it('uses the self-service prepare-signing and sign-and-complete contract', async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.post('http://localhost/api/protocols/42/prepare-signing', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ data: { protocol: { ...protocol, status: 'READY_TO_SIGN', version: 9 }, signingPayload: 'cGRm' } });
+      }),
+      http.post('http://localhost/api/protocols/42/sign-and-complete', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ data: { ...protocol, status: 'SIGNED', version: 10 } });
+      }),
+    );
+    const prepared = await prepareSigning('42', 8);
+    expect(prepared.signingPayload).toBe('cGRm');
+    const signed = await signAndComplete('42', { version: 9, cmsSignatureBase64: 'cms' });
+    expect(signed.status).toBe('SIGNED');
+    expect(bodies).toEqual([{ version: 8 }, { version: 9, cmsSignatureBase64: 'cms' }]);
+  });
+
+  it('saves all results with PUT and preserves zero', async () => {
+    let body: unknown;
+    server.use(
+      http.put('http://localhost/api/protocols/42/results', async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ data: null });
+      }),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: { ...protocol, version: 9 } })),
+    );
+    const saved = await saveProtocolResults('42', [{ values: { resultValue: 0 }, measurementDeviceId: 7 }], 8);
+    expect(saved.version).toBe(9);
+    expect(body).toEqual({ version: 8, results: [{ values: { resultValue: 0 }, measurementDeviceId: 7, normativeId: null }] });
   });
 });

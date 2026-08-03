@@ -25,14 +25,12 @@ const QuickCreateErrorPanel = ({
     <section role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
       <h3 className="font-black">Не удалось создать протокол</h3>
       <p className="mt-1 font-semibold">{message}</p>
-      {error.status && <p className="mt-2 text-xs">HTTP-статус: {error.status}</p>}
-      {error.code && <p className="mt-1 text-xs">Код ошибки backend: {error.code}</p>}
       {requestCode && <p className="mt-1 text-xs font-semibold">Код обращения: {requestCode}</p>}
       <div className="mt-3 flex flex-wrap gap-2">
         <Button type="button" disabled={pending} onClick={onRetry}>Повторить</Button>
         <Button type="button" variant="secondary" disabled={pending} onClick={onReview}>Вернуться к проверке</Button>
         {requestCode && <Button type="button" variant="secondary" onClick={onCopyCode}>Скопировать код ошибки</Button>}
-        <Button type="button" variant="secondary" onClick={onCopyTechnicalInfo}>Скопировать техническую информацию</Button>
+        {import.meta.env.DEV && <Button type="button" variant="secondary" onClick={onCopyTechnicalInfo}>Скопировать данные для разработчика</Button>}
       </div>
     </section>
   );

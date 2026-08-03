@@ -24,7 +24,7 @@ export const protocolSignUnavailableReason = (
   if (signatureCount >= maxSignatures) {
     return `Достигнуто максимальное количество подписей: ${maxSignatures}`;
   }
-  if (!['APPROVED', 'SIGNED'].includes(protocol.status)) {
+  if (!['READY', 'READY_TO_SIGN', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED'].includes(protocol.status)) {
     return ['ARCHIVED', 'REPLACED', 'CANCELLED'].includes(protocol.status)
       ? 'Подписание недоступно для текущего статуса'
       : 'Подписание будет доступно после утверждения протокола';

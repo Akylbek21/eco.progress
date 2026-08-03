@@ -9,9 +9,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { documentFlowApi } from '../api/documentFlowApi';
 import { documentFlowKeys } from '../api/documentFlowKeys';
 import DocumentStatusBadge from '../components/DocumentStatusBadge';
+import AuditTimeline from '../components/AuditTimeline';
 import { useDocumentFlowContext } from '../components/DocumentFlowGate';
 import { canMutate, documentMutationAllowed, hasFeature, hasPermission, isKnownDocumentStatus, validateDocumentFile } from '../model/access';
 import { createCmsSignatureWithNCALayer } from '../../../services/ncalayer';
+import { mapDocumentFlowError } from '../utils/apiErrorMapper';
 
 const saveBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
@@ -53,6 +55,7 @@ export default function DocumentDetailsPage() {
   const route = useQuery({ queryKey: documentFlowKeys.signingRoute(id), queryFn: ({ signal }) => documentFlowApi.signingRoute(id, signal), enabled: tab === 1 && Number.isSafeInteger(id), retry: false });
   const signatures = useQuery({ queryKey: documentFlowKeys.signatures(id), queryFn: ({ signal }) => documentFlowApi.signatures(id, signal), enabled: tab === 1 && Number.isSafeInteger(id) });
   const revocations = useQuery({ queryKey: documentFlowKeys.revocations(id), queryFn: ({ signal }) => documentFlowApi.revocations(id, signal), enabled: tab === 4 && Number.isSafeInteger(id) });
+  const audit = useQuery({ queryKey: documentFlowKeys.audit(id), queryFn: ({ signal }) => documentFlowApi.audit(id, 0, 50, access.organization?.id, signal), enabled: tab === 5 && hasPermission(access, 'VIEW_AUDIT_LOG') && Number.isSafeInteger(id), retry: false });
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: documentFlowKeys.document(id) }),
@@ -109,10 +112,10 @@ export default function DocumentDetailsPage() {
       if (!hasPermission(access, 'SIGN_DOCUMENT') || !hasFeature(access, 'NCALAYER_SIGNING') || access.readOnly) throw new Error('Backend-контекст не разрешает подписание через NCALayer.');
       if (!fresh.currentVersionId) throw new Error('У документа нет текущей версии.');
       const signingData = await documentFlowApi.signingData(id);
-      const userId = Number(JSON.parse(localStorage.getItem('eco-progress-user') || '{}').id);
-      const assignment = signingData.steps.flatMap((step) => step.assignments)
-        .find((item) => item.userId === userId && ['AVAILABLE', 'VIEWED'].includes(item.status));
-      if (!assignment) throw new Error('Активное задание на подпись для текущего пользователя не найдено.');
+      const assignments = signingData.steps.flatMap((step) => step.assignments)
+        .filter((item) => ['AVAILABLE', 'VIEWED'].includes(item.status));
+      if (assignments.length !== 1) throw new Error('Backend не вернул единственное активное задание текущего пользователя.');
+      const [assignment] = assignments;
       const file = await documentFlowApi.download(id);
       const cms = await createCmsSignatureWithNCALayer(await blobToBase64(file.data));
       return documentFlowApi.submitSignature(id, {
@@ -160,17 +163,19 @@ export default function DocumentDetailsPage() {
           setEditOpen(true);
         }}>Редактировать</Button>}
         {document.permissions.canDownload && document.currentVersionId && <><Button onClick={openPreview}>Preview</Button><Button onClick={download}>Скачать</Button></>}
-        {mutable && document.permissions.canSend && document.availableActions.includes('SEND_FOR_SIGNING') && <><Button onClick={() => action.mutate('prepare')}>Подготовить</Button><Button variant="contained" onClick={() => action.mutate('send')}>Отправить на подпись</Button></>}
-        {!access.readOnly && hasPermission(access, 'SIGN_DOCUMENT') && hasFeature(access, 'NCALAYER_SIGNING') && ['SENT_FOR_SIGNING', 'PARTIALLY_SIGNED'].includes(document.status) && <Button variant="contained" onClick={() => sign.mutate()}>Подписать через NCALayer</Button>}
-        {!access.readOnly && ['SENT_FOR_SIGNING', 'PARTIALLY_SIGNED'].includes(document.status) && <><Button color="error" onClick={() => setReasonAction('reject')}>Отклонить документ</Button><Button color="warning" onClick={() => setReasonAction('return')}>Вернуть на доработку</Button></>}
+        {mutable && document.permissions.canSend && document.availableActions.includes('PREPARE_FOR_SIGNING') && <Button variant="contained" onClick={() => action.mutate('prepare')}>Подготовить к подписанию</Button>}
+        {mutable && document.permissions.canSend && document.availableActions.includes('SEND_FOR_SIGNING') && <Button variant="contained" onClick={() => action.mutate('send')}>Отправить на подпись</Button>}
+        {!access.readOnly && hasPermission(access, 'SIGN_DOCUMENT') && hasFeature(access, 'NCALAYER_SIGNING') && (document.availableActions.includes('SIGN') || document.availableActions.includes('SELF_SIGN')) && <Button variant="contained" onClick={() => sign.mutate()}>Подписать через NCALayer</Button>}
+        {!access.readOnly && document.availableActions.includes('REJECT') && <Button color="error" onClick={() => setReasonAction('reject')}>Отказаться от подписания</Button>}
+        {!access.readOnly && document.availableActions.includes('RETURN') && <Button color="warning" onClick={() => setReasonAction('return')}>Вернуть на доработку</Button>}
         {document.status === 'SIGNED' && document.permissions.canDownload && document.availableActions.includes('DOWNLOAD') && <Button onClick={() => action.mutate('zip')}>Скачать подписанный ZIP</Button>}
-        {document.status === 'SIGNED' && canMutate(access, 'REVOKE_SIGNATURE', 'REVOCATION') && <Button color="warning" onClick={() => setReasonAction('revoke')}>Запросить отзыв</Button>}
+        {document.availableActions.includes('REVOKE') && canMutate(access, 'REVOKE_SIGNATURE', 'REVOCATION') && <Button color="warning" onClick={() => setReasonAction('revoke')}>Запросить отзыв</Button>}
         {mutable && document.permissions.canDelete && document.availableActions.includes('DELETE') && <Button color="error" onClick={() => action.mutate('delete')}>Удалить</Button>}
       </Stack>
-      {(action.isError || sign.isError) && <Alert severity="error">{action.error?.message || sign.error?.message}</Alert>}
+      {(action.isError || sign.isError) && <Alert severity="error">{mapDocumentFlowError(action.error || sign.error).message}</Alert>}
       {(action.isPending || sign.isPending) && <LinearProgress />}
       <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable">
-        <Tab label="Документ" /><Tab label="Подписание" /><Tab label="Версии" /><Tab label="Вложения" /><Tab label="Отзыв" />
+        <Tab label="Документ" /><Tab label="Подписание" /><Tab label="Версии" /><Tab label="Вложения" /><Tab label="Отзыв" />{hasPermission(access, 'VIEW_AUDIT_LOG') && <Tab label="История" />}
       </Tabs>
       {tab === 0 && <Grid container spacing={2}><Grid size={{ xs: 12, md: previewUrl ? 5 : 12 }}><Card><CardContent><Typography>{document.description || 'Описание отсутствует'}</Typography><Divider sx={{ my: 2 }} /><Typography>Тип: {typeConfig?.title || document.type}</Typography><Typography>Направление: {document.direction}</Typography><Typography>Контрагент: {document.counterparty?.name || '—'}</Typography><Typography>Автор: {document.author?.fullName || '—'}</Typography><Typography>Версия записи: {document.version}</Typography></CardContent></Card></Grid>{previewUrl && <Grid size={{ xs: 12, md: 7 }}><Box component="iframe" src={previewUrl} title="Предпросмотр документа" width="100%" height="650px" border={0} /></Grid>}</Grid>}
       {tab === 1 && <Stack spacing={2}>
@@ -181,6 +186,7 @@ export default function DocumentDetailsPage() {
       {tab === 2 && <Stack spacing={2}>{mutable && hasFeature(access, 'VERSIONING') && document.permissions.canUploadVersion && <Button component="label">Загрузить новую версию<input hidden type="file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file, 'version'); }} /></Button>}{(versions.data || []).map((item) => <Card key={item.id}><CardContent><Typography fontWeight={800}>Версия {item.versionNumber} {item.current && '· текущая'}</Typography><Typography>{item.originalFileName} · {item.mimeType} · {item.fileSize} байт</Typography><Typography>SHA-256: {item.sha256Hash}</Typography><Typography>{item.locked ? `Заблокирована ${item.lockedAt || ''}` : 'Не заблокирована'}</Typography><Button onClick={async () => saveBlob((await documentFlowApi.downloadVersion(id, item.id)).data, item.originalFileName)}>Скачать</Button></CardContent></Card>)}</Stack>}
       {tab === 3 && <Stack spacing={2}>{mutable && document.permissions.canManageAttachments && <Button component="label">Добавить вложение<input hidden type="file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file, 'attachment'); }} /></Button>}{(attachments.data || []).map((item) => <Card key={item.id}><CardContent><Typography>{item.originalFileName}</Typography><Typography>{item.mimeType} · {item.fileSize} байт</Typography><Typography>SHA-256: {item.sha256Hash}</Typography><Typography>Загрузил: {item.uploadedBy}, {new Date(item.createdAt).toLocaleString('ru-RU')}</Typography>{mutable && document.permissions.canManageAttachments && <Button color="error" onClick={() => documentFlowApi.deleteAttachment(id, item.id).then(refresh)}>Удалить</Button>}</CardContent></Card>)}</Stack>}
       {tab === 4 && <Stack spacing={2}>{!hasFeature(access, 'REVOCATION') && <Alert severity="info">Feature REVOCATION недоступен.</Alert>}{(revocations.data || []).map((item) => <Card key={item.id}><CardContent><Typography fontWeight={800}>{item.status}</Typography><Typography>{item.reason}</Typography><Typography color="text.secondary">{new Date(item.createdAt).toLocaleString('ru-RU')}</Typography>{canMutate(access, 'REVOKE_SIGNATURE', 'REVOCATION') && <Stack direction="row" gap={1} mt={1}>{item.status === 'DRAFT' && <><Button onClick={() => documentFlowApi.revocationAction(item.id, 'send').then(refresh)}>Отправить</Button><Button onClick={() => documentFlowApi.revocationAction(item.id, 'cancel').then(refresh)}>Отменить</Button></>}{item.status === 'PENDING' && <><Button color="success" onClick={() => documentFlowApi.revocationAction(item.id, 'approve').then(refresh)}>Согласовать отзыв</Button><Button color="error" onClick={() => documentFlowApi.revocationAction(item.id, 'reject').then(refresh)}>Отклонить отзыв</Button></>}</Stack>}</CardContent></Card>)}</Stack>}
+      {tab === 5 && hasPermission(access, 'VIEW_AUDIT_LOG') && <Stack spacing={2}>{audit.isLoading && <CircularProgress size={28} />}{audit.isError && <Alert severity="error" action={<Button onClick={() => audit.refetch()}>Повторить</Button>}>{mapDocumentFlowError(audit.error).message}</Alert>}{audit.data && <AuditTimeline events={audit.data.items} />}</Stack>}
       <Dialog open={reasonAction !== null} onClose={() => setReasonAction(null)} fullWidth><DialogTitle>{reasonAction === 'reject' ? 'Отклонить документ' : reasonAction === 'return' ? 'Вернуть на доработку' : 'Запросить отзыв'}</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} label="Причина" value={reason} onChange={(event) => setReason(event.target.value)} sx={{ mt: 1 }} />{reasonMutation.isError && <Alert severity="error">{reasonMutation.error.message}</Alert>}</DialogContent><DialogActions><Button onClick={() => setReasonAction(null)}>Отмена</Button><Button variant="contained" disabled={!reason.trim() || reasonMutation.isPending} onClick={() => reasonMutation.mutate()}>Подтвердить</Button></DialogActions></Dialog>
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth><DialogTitle>Редактировать документ</DialogTitle><DialogContent><Stack spacing={2} mt={1}><TextField label="Название" value={edit.title} onChange={(event) => setEdit((value) => ({ ...value, title: event.target.value }))} /><TextField label="Описание" multiline minRows={3} value={edit.description} onChange={(event) => setEdit((value) => ({ ...value, description: event.target.value }))} /><TextField label="Номер" value={edit.documentNumber} onChange={(event) => setEdit((value) => ({ ...value, documentNumber: event.target.value }))} /><TextField type="datetime-local" InputLabelProps={{ shrink: true }} label="Срок подписания" value={edit.signingDeadline} onChange={(event) => setEdit((value) => ({ ...value, signingDeadline: event.target.value }))} />{update.isError && <Alert severity="error">{update.error.message}</Alert>}</Stack></DialogContent><DialogActions><Button onClick={() => setEditOpen(false)}>Отмена</Button><Button variant="contained" disabled={!edit.title.trim() || update.isPending} onClick={() => update.mutate()}>Сохранить</Button></DialogActions></Dialog>
     </Stack>

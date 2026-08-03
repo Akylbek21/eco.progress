@@ -18,7 +18,8 @@ export const pekDraftKey = (
   userId: string | number | undefined,
   entityId?: string | number,
   backendVersion: string | number = 'new',
-) => `pek-${kind}-draft:${normalizePart(userId)}:${normalizePart(entityId)}:${normalizePart(backendVersion)}`;
+  companyId?: string | number,
+) => `pek-${kind}-draft:${normalizePart(userId)}:${normalizePart(entityId)}:${normalizePart(companyId)}:${normalizePart(backendVersion)}`;
 
 const openDatabase = () => new Promise<IDBDatabase>((resolve, reject) => {
   if (typeof indexedDB === 'undefined') {

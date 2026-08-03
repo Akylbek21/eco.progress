@@ -157,8 +157,8 @@ describe('quick-create form components', () => {
 
   it('disables creation when submit validation failed', () => {
     const create = vi.fn();
-    render(<ProtocolWizardFooter step={8} total={9} submitting={false} canContinue={false} onBack={vi.fn()} onNext={vi.fn()} onCreate={create} />);
-    const button = screen.getByRole('button', { name: 'Создать протокол' });
+    render(<ProtocolWizardFooter step={4} total={5} submitting={false} canContinue={false} onBack={vi.fn()} onNext={vi.fn()} onCreate={create} onSaveDraft={vi.fn()} />);
+    const button = screen.getByRole('button', { name: 'Создать и подписать протокол' });
     expect((button as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(button);
     expect(create).not.toHaveBeenCalled();
@@ -175,7 +175,7 @@ describe('quick-create form components', () => {
       onCopyTechnicalInfo={vi.fn()}
     />);
     expect(screen.getByText('Не удалось создать протокол')).toBeTruthy();
-    expect(screen.getByText(/HTTP-статус: 500/)).toBeTruthy();
+    expect(screen.queryByText(/HTTP-статус/)).toBeNull();
     expect(screen.getByText(/2beadd28/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Повторить' })).toBeTruthy();
   });
@@ -240,6 +240,18 @@ describe('quick-create payload contract', () => {
     expect(payload.measurements[0]).not.toHaveProperty('indicatorCode');
     expect(payload.measurements[0]).not.toHaveProperty('normValue');
     expect(payload.measurements[0]).not.toHaveProperty('methodology');
+  });
+
+  it('preserves the complete PEK context in quick-create payload', () => {
+    const form = validForm();
+    Object.assign(form, {
+      pekProgramId: '11', pekReportId: '12', pekControlItemId: '13', pekControlEventId: '14',
+      monitoringPointId: '15', emissionSourceId: '16', waterOutletId: '17', orderServiceItemId: '18',
+    });
+    expect(buildQuickCreatePayload(form, strictContext)).toMatchObject({
+      pekProgramId: '11', pekReportId: '12', pekControlItemId: '13', pekControlEventId: '14',
+      monitoringPointId: '15', emissionSourceId: '16', waterOutletId: '17', orderServiceItemId: '18',
+    });
   });
 
   it('accepts result 0 but blocks a missing or numeric unit before POST', () => {

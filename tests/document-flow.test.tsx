@@ -56,10 +56,10 @@ describe('document flow access and mappers', () => {
     expect(hasFeature(access(), 'MIXED_SIGNING')).toBe(false);
   });
 
-  it('maps only backend list filters and suppresses the known signing filter gap', () => {
+  it('maps backend list filters including the current-user action filter', () => {
     const filters = mapSearchParamsToDocumentFilters(new URLSearchParams('query= act &direction=OUTGOING&requiresMySignature=true&page=2&size=50'));
     expect(filters).toMatchObject({ query: 'act', direction: 'OUTGOING', page: 2, size: 50 });
-    expect(filters.requiresMySignature).toBeUndefined();
+    expect(filters.requiresMySignature).toBe(true);
   });
 
   it('creates the exact metadata payload and preserves optional IDs', () => {

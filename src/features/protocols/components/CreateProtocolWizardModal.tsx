@@ -29,14 +29,9 @@ import {
 import ProtocolWizardFooter from './ProtocolWizardFooter';
 import ProtocolWizardHeader from './ProtocolWizardHeader';
 import ProtocolWizardSteps from './ProtocolWizardSteps';
-import CompanyObjectStep from './steps/CompanyObjectStep';
 import EnvironmentStep from './steps/EnvironmentStep';
-import LaboratoryExecutorStep from './steps/LaboratoryExecutorStep';
-import MeasurementDetailsStep from './steps/MeasurementDetailsStep';
 import MethodsStep from './steps/MethodsStep';
-import ProtocolTypeStep from './steps/ProtocolTypeStep';
 import ResultsStep from './steps/ResultsStep';
-import ReviewStep from './steps/ReviewStep';
 import {
   CHEMICAL_TYPES,
   createWizardDefaults,
@@ -47,12 +42,20 @@ import {
 } from './wizardTypes';
 import WizardValidationSummary, { type WizardIssue } from './components/WizardValidationSummary';
 import QuickCreateErrorPanel from './components/QuickCreateErrorPanel';
+import BasicDataStep from './steps/BasicDataStep';
+import ExecutorDeviceStep from './steps/ExecutorDeviceStep';
+import ProtocolCheckStep from './steps/ProtocolCheckStep';
+import ProtocolSigningStep from './steps/ProtocolSigningStep';
+import { useAuth } from '../../../contexts/AuthContext';
+import { createCmsSignatureWithNCALayer } from '../../../services/ncalayer';
+import { protocolSigningPhaseLabel, type ProtocolSigningPhase } from '../utils/protocolSigning';
 
 const DRAFT_KEY = 'protocol-create-wizard-draft';
 const DRAFT_VERSION = 2;
-const steps = ['Тип протокола','Компания и объект','Лаборатория','Даты и место','Условия среды','Результаты','Методики','Проверка','Создание'];
-export const WATER_CONDITIONS_STEP_INDEX = 4;
+const steps = ['Основные данные', 'Исполнитель и прибор', 'Результаты', 'Проверка', 'Подписание'];
+export const WATER_CONDITIONS_STEP_INDEX = 0;
 const trimmed = (value: unknown) => String(value ?? '').trim();
+const saveBlob = (blob: Blob, fileName: string) => { const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = fileName; link.click(); URL.revokeObjectURL(url); };
 type StoredDraft = {
   version: number;
   timestamp: string;
@@ -94,12 +97,10 @@ export const resolveWizardStepByField = (field: string) => {
     return WATER_CONDITIONS_STEP_INDEX;
   }
   if (/^template/i.test(field)) return 0;
-  if (/company|object/i.test(field)) return 1;
-  if (/laboratory|executor/i.test(field)) return 2;
-  if (/protocolDate|sampleDate|measurementDate|measurementTime|measurementPlace|testing|sourceNumber/i.test(field)) return 3;
-  if (/environment|temperature|humidity|pressure|wind/i.test(field)) return 4;
-  if (/measurements|results|normative|device|indicator|unit/i.test(field)) return 5;
-  return 6;
+  if (/company|object|protocolDate|sampleDate|measurementDate|measurementTime|measurementPlace|environment|temperature|humidity|pressure|wind|testing|sourceNumber/i.test(field)) return 0;
+  if (/laboratory|executor|device/i.test(field)) return 1;
+  if (/measurements|results|normative|indicator|unit|method/i.test(field)) return 2;
+  return 3;
 };
 
 export const backendWizardIssues = (fieldErrors: Record<string, string>): WizardIssue[] =>
@@ -124,11 +125,15 @@ export const backendWizardIssues = (fieldErrors: Record<string, string>): Wizard
 
 const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', orderServiceItemId = '', pekPrefill }: CreateProtocolWizardModalProps) => {
   const form = useForm<ProtocolWizardForm>({ defaultValues: createWizardDefaults(), mode: 'onChange' });
+  const { user } = useAuth();
+  const draftKey = `${DRAFT_KEY}:${user?.id || 'anonymous'}:new:${DRAFT_VERSION}`;
   const { watch, getValues, setValue, reset, formState } = form;
   const queryClient = useQueryClient();
   const values = watch();
   const [step,setStep] = useState(0); const [maxVisited,setMaxVisited] = useState(0); const [error,setError] = useState(''); const [apiFailure,setApiFailure] = useState<ReturnType<typeof normalizeApiError> | null>(null); const [serverIssues,setServerIssues] = useState<WizardIssue[]>([]);
   const [closePrompt,setClosePrompt] = useState(false); const [draftPrompt,setDraftPrompt] = useState(false); const [pendingType,setPendingType] = useState<ProtocolTemplateId | null>(null); const [success,setSuccess] = useState<Protocol | null>(null);
+  const [signPrompt, setSignPrompt] = useState(false);
+  const [signingPhase, setSigningPhase] = useState<ProtocolSigningPhase>('IDLE');
   const submittingRef = useRef(false); const titleRef = useRef<HTMLElement | null>(null); const idempotencyKeyRef = useRef<string | null>(null); const submittedFingerprintRef = useRef<string | null>(null); const submittedPayloadRef = useRef<QuickCreateProtocolRequest | null>(null);
   const lockedPekCompanyId = pekPrefill?.companyId ? String(pekPrefill.companyId) : undefined;
   const automaticWeatherRef = useRef<Partial<Record<'temperature' | 'humidity' | 'pressure' | 'windSpeed', string>>>({});
@@ -183,27 +188,36 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     retry: false,
   });
 
-  useEffect(() => { if (!open) { idempotencyKeyRef.current = null; submittedFingerprintRef.current = null; return; } const stored = sessionStorage.getItem(DRAFT_KEY); setDraftPrompt(Boolean(stored)); if (!stored) { setValue('orderId', orderId); setValue('orderServiceItemId', orderServiceItemId); if (pekPrefill) Object.entries(pekPrefill).forEach(([key,value]) => { if (value !== undefined) setValue(key as FieldPath<ProtocolWizardForm>, value); }); } setError(''); setApiFailure(null); setSuccess(null); }, [open, orderId, orderServiceItemId, pekPrefill, setValue]);
+  useEffect(() => { if (!open) { idempotencyKeyRef.current = null; submittedFingerprintRef.current = null; return; } const stored = sessionStorage.getItem(draftKey); setDraftPrompt(Boolean(stored)); if (!stored) { setValue('orderId', orderId); setValue('orderServiceItemId', orderServiceItemId); if (pekPrefill) Object.entries(pekPrefill).forEach(([key,value]) => { if (value !== undefined) setValue(key as FieldPath<ProtocolWizardForm>, value); }); } setError(''); setApiFailure(null); setSuccess(null); }, [draftKey, open, orderId, orderServiceItemId, pekPrefill, setValue]);
   useEffect(() => {
     if (!open || draftPrompt || success) return;
+    let timer = 0;
     const subscription = watch((formValue) => {
-      const stored: StoredDraft = {
-        version: DRAFT_VERSION,
-        timestamp: new Date().toISOString(),
-        step,
-        form: formValue as ProtocolWizardForm,
-        idempotencyKey: idempotencyKeyRef.current,
-        payloadFingerprint: submittedFingerprintRef.current,
-      };
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(stored));
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const stored: StoredDraft = {
+          version: DRAFT_VERSION,
+          timestamp: new Date().toISOString(),
+          step,
+          form: formValue as ProtocolWizardForm,
+          idempotencyKey: idempotencyKeyRef.current,
+          payloadFingerprint: submittedFingerprintRef.current,
+        };
+        sessionStorage.setItem(draftKey, JSON.stringify(stored));
+      }, 1000);
     });
-    return () => subscription.unsubscribe();
-  }, [draftPrompt,open,step,success,watch]);
+    return () => { window.clearTimeout(timer); subscription.unsubscribe(); };
+  }, [draftKey,draftPrompt,open,step,success,watch]);
   useEffect(() => {
     const defaultLaboratory = defaultLaboratoryQuery.data;
     if (!open || !defaultLaboratory?.active || getValues('laboratoryId')) return;
     setValue('laboratoryId', String(defaultLaboratory.id), { shouldDirty: false });
   }, [defaultLaboratoryQuery.data, getValues, open, setValue]);
+  useEffect(() => {
+    if (!open || getValues('executorId') || !user?.id) return;
+    const currentEmployee = executorOptions.find((item) => String(item.userId || '') === String(user.id));
+    if (currentEmployee) setValue('executorId', String(currentEmployee.executorId), { shouldDirty: false });
+  }, [executorOptions, getValues, open, setValue, user?.id]);
   useEffect(() => { if (!open) return; window.requestAnimationFrame(() => { titleRef.current = document.getElementById('wizard-step-title'); titleRef.current?.focus(); }); }, [open,step]);
   useEffect(() => {
     if (step !== WATER_CONDITIONS_STEP_INDEX || !isWaterProtocolType(values.templateId)) return;
@@ -241,37 +255,38 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
   const issues = useMemo<WizardIssue[]>(() => {
     const result: Array<{ message: string; step: number; field?: FieldPath<ProtocolWizardForm> }> = [];
     if (!values.templateId) result.push({ message:'Выберите тип протокола.',step:0 });
-    if (!values.companyId) result.push({ message:'Выберите компанию.',step:1 });
-    if (!values.objectId) result.push({ message:'Выберите зарегистрированный объект компании.',step:1 });
-    else if (!selectedObject || selectedObject.virtual || selectedObject.isVirtual || selectedObject.persisted === false) result.push({ message:'Перед созданием протокола сохраните объект компании.',step:1,field:'objectId' });
-    if (!values.laboratoryId) result.push({ message:'Выберите лабораторию.',step:2 });
-    if (!values.executorId) result.push({ message:'Выберите исполнителя лаборатории.',step:2 });
-    else if (!selectedExecutor || selectedExecutor.active === false || String(selectedExecutor.laboratoryId) !== String(values.laboratoryId)) result.push({ message:'Выберите исполнителя выбранной лаборатории.',step:2 });
-    if (!values.protocolDate) result.push({ message:'Укажите дату протокола.',step:3 });
-    if (!values.sampleDate) result.push({ message:'Укажите дату отбора пробы.',step:3 });
-    if (!values.measurementDate) result.push({ message:'Укажите дату измерения.',step:3 });
-    if (!values.testingStartDate) result.push({ message:'Укажите дату начала испытаний.',step:3 });
-    if (!values.testingEndDate) result.push({ message:'Укажите дату завершения испытаний.',step:3 });
-    if (!values.measurementTime) result.push({ message:'Укажите время измерения.',step:3 });
-    if (!trimmed(values.measurementPlace)) result.push({ message:'Укажите место измерения.',step:3 });
-    if (trimmed(values.sourceNumber).replace(/[\u0000-\u001F\u007F]/g, '').length > 80) result.push({ message:'Номер источника должен содержать не более 80 символов',step:3,field:'sourceNumber' });
-    if (values.testingStartDate && values.testingEndDate && values.testingEndDate < values.testingStartDate) result.push({ message:'Дата завершения испытаний не может быть раньше даты начала.',step:3 });
-    if (values.sampleDate && values.measurementDate && values.measurementDate < values.sampleDate) result.push({ message:'Дата измерения не может быть раньше даты отбора.',step:4 });
+    if (!values.companyId) result.push({ message:'Выберите компанию.',step:0 });
+    if (!values.objectId) result.push({ message:'Выберите зарегистрированный объект компании.',step:0 });
+    else if (!selectedObject || selectedObject.virtual || selectedObject.isVirtual || selectedObject.persisted === false) result.push({ message:'Перед созданием протокола сохраните объект компании.',step:0,field:'objectId' });
+    if (!values.laboratoryId) result.push({ message:'Выберите лабораторию.',step:1 });
+    if (!values.executorId) result.push({ message:'Выберите исполнителя лаборатории.',step:1 });
+    else if (!selectedExecutor || selectedExecutor.active === false || String(selectedExecutor.laboratoryId) !== String(values.laboratoryId)) result.push({ message:'Выберите исполнителя выбранной лаборатории.',step:1 });
+    if (!values.defaultMeasurementDeviceId) result.push({ message:'Выберите действующий прибор.',step:1,field:'defaultMeasurementDeviceId' });
+    if (!values.protocolDate) result.push({ message:'Укажите дату протокола.',step:0 });
+    if (!values.sampleDate) result.push({ message:'Укажите дату отбора пробы.',step:0 });
+    if (!values.measurementDate) result.push({ message:'Укажите дату измерения.',step:0 });
+    if (!values.testingStartDate) result.push({ message:'Укажите дату начала испытаний.',step:0 });
+    if (!values.testingEndDate) result.push({ message:'Укажите дату завершения испытаний.',step:0 });
+    if (!values.measurementTime) result.push({ message:'Укажите время измерения.',step:0 });
+    if (!trimmed(values.measurementPlace)) result.push({ message:'Укажите место измерения.',step:0 });
+    if (trimmed(values.sourceNumber).replace(/[\u0000-\u001F\u007F]/g, '').length > 80) result.push({ message:'Номер источника должен содержать не более 80 символов',step:0,field:'sourceNumber' });
+    if (values.testingStartDate && values.testingEndDate && values.testingEndDate < values.testingStartDate) result.push({ message:'Дата завершения испытаний не может быть раньше даты начала.',step:0 });
+    if (values.sampleDate && values.measurementDate && values.measurementDate < values.sampleDate) result.push({ message:'Дата измерения не может быть раньше даты отбора.',step:0 });
     if (isWaterProtocolType(values.templateId) && !values.waterType) result.push({ message:'Выберите тип воды',step:WATER_CONDITIONS_STEP_INDEX,field:'waterType' });
     if (isWaterProtocolType(values.templateId) && !values.waterUseCategory) result.push({ message:'Выберите категорию водопользования',step:WATER_CONDITIONS_STEP_INDEX,field:'waterUseCategory' });
     const rows = (values.results || []).filter((row) =>
       trimmed(row?.indicatorName) || trimmed(row?.value) || trimmed(row?.textValue));
-    if (!rows.length) result.push({ message:'Добавьте минимум одну строку результата.',step:5 });
+    if (!rows.length) result.push({ message:'Добавьте минимум одну строку результата.',step:2 });
     rows.forEach((row,index) => {
       if (!row.normativeId && !row.normativeRecordId) {
         result.push({
           message: `Строка ${index + 1}: выберите показатель через поиск нормативов.`,
-          step: 5,
+          step: 2,
         });
       }
     });
-    rows.forEach((row,index) => { if (!trimmed(row.indicatorName)) result.push({ message:`Строка ${index + 1}: укажите показатель.`,step:5 }); if (!trimmed(row.value) && !trimmed(row.textValue)) result.push({ message:`Строка ${index + 1}: укажите результат.`,step:5 }); if ((trimmed(row.value) || trimmed(row.textValue)) && !trimmed(row.unit)) result.push({ message:`Строка ${index + 1}: укажите единицу измерения.`,step:5 }); if (trimmed(row.unit) && /^[-+]?\d+(?:[.,]\d+)?$/.test(trimmed(row.unit))) result.push({ message:`Строка ${index + 1}: единица измерения не может быть нормативным значением.`,step:5 }); if (values.templateId && CHEMICAL_TYPES.has(values.templateId) && !trimmed(row.pollutantCode)) result.push({ message:`Строка ${index + 1}: укажите код загрязняющего вещества.`,step:5 }); if (values.templateId && !CHEMICAL_TYPES.has(values.templateId) && !trimmed(row.factorCode || row.factorType)) result.push({ message:`Строка ${index + 1}: укажите тип физического фактора.`,step:5 }); const device = devices.find((item) => String(item.id) === row.measurementDeviceId); if (!row.measurementDeviceId) result.push({ message:`Строка ${index + 1}: выберите прибор.`,step:5 }); else if (!device || !isDeviceValidForDate(device,values.measurementDate)) result.push({ message:`Строка ${index + 1}: срок поверки прибора истёк или прибор неактивен.`,step:5 }); if (!trimmed(row.testingMethodNd || row.methodDocument || values.testingMethodNd)) result.push({ message:`Строка ${index + 1}: укажите методику испытаний.`,step:6,field:`results.${index}.testingMethodNd` as FieldPath<ProtocolWizardForm> }); });
-    if (!trimmed(values.testingMethodNd)) result.push({ message:'Укажите НД на метод испытаний.',step:6 });
+    rows.forEach((row,index) => { if (!trimmed(row.indicatorName)) result.push({ message:`Строка ${index + 1}: укажите показатель.`,step:2 }); if (!trimmed(row.value) && !trimmed(row.textValue)) result.push({ message:`Строка ${index + 1}: укажите результат.`,step:2 }); if ((trimmed(row.value) || trimmed(row.textValue)) && !trimmed(row.unit)) result.push({ message:`Строка ${index + 1}: укажите единицу измерения.`,step:2 }); if (trimmed(row.unit) && /^[-+]?\d+(?:[.,]\d+)?$/.test(trimmed(row.unit))) result.push({ message:`Строка ${index + 1}: единица измерения не может быть нормативным значением.`,step:2 }); if (values.templateId && CHEMICAL_TYPES.has(values.templateId) && !trimmed(row.pollutantCode)) result.push({ message:`Строка ${index + 1}: укажите код загрязняющего вещества.`,step:2 }); if (values.templateId && !CHEMICAL_TYPES.has(values.templateId) && !trimmed(row.factorCode || row.factorType)) result.push({ message:`Строка ${index + 1}: укажите тип физического фактора.`,step:2 }); const device = devices.find((item) => String(item.id) === row.measurementDeviceId); if (!row.measurementDeviceId) result.push({ message:`Строка ${index + 1}: выберите прибор.`,step:2 }); else if (!device || !isDeviceValidForDate(device,values.measurementDate)) result.push({ message:`Строка ${index + 1}: срок поверки прибора истёк или прибор неактивен.`,step:2 }); if (!trimmed(row.testingMethodNd || row.methodDocument || values.testingMethodNd)) result.push({ message:`Строка ${index + 1}: укажите методику испытаний.`,step:2,field:`results.${index}.testingMethodNd` as FieldPath<ProtocolWizardForm> }); });
+    if (!trimmed(values.testingMethodNd)) result.push({ message:'Укажите НД на метод испытаний.',step:2 });
     return result.map((item, index) => ({
       ...item,
       code: `WIZARD_${item.field ? String(item.field).replace(/[^a-z0-9]+/gi, '_').toUpperCase() : `${item.step}_${index}`}`,
@@ -316,7 +331,13 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     && Object.keys(formState.errors).length === 0
     && !requiredLookupsLoading
     && !mutation.isPending;
-  const canContinue = step === 0 ? Boolean(values.templateId) : step === 1 ? Boolean(values.companyId) : step === steps.length - 1 ? canCreate : true;
+  const canContinue = step === 0
+    ? Boolean(values.templateId && values.companyId && values.objectId && values.protocolDate && trimmed(values.measurementPlace))
+    : step === 1
+      ? Boolean(values.laboratoryId && values.executorId && values.defaultMeasurementDeviceId)
+      : step === 2
+        ? !issues.some((item) => item.step === 2)
+        : step === steps.length - 1 ? canCreate : true;
   const applyWaterTypeTransition = (current: ProtocolWizardForm['templateId'], next: ProtocolTemplateId) => {
     if (isWaterProtocolType(current) && !isWaterProtocolType(next)) {
       setValue('waterType', '', { shouldDirty: true });
@@ -336,10 +357,10 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
   const changeCompany = (id: string) => { if (lockedPekCompanyId && id !== lockedPekCompanyId) return; setValue('companyId',id,{ shouldDirty:true }); setValue('objectId','',{ shouldDirty:true }); setValue('customer','',{ shouldDirty:true }); setValue('basis','',{ shouldDirty:true }); };
   const changeLaboratory = (id: string) => { setValue('laboratoryId',id,{ shouldDirty:true }); setValue('executorId','',{ shouldDirty:true }); getValues('results').forEach((_,index) => setValue(`results.${index}.measurementDeviceId`,'',{ shouldDirty:true })); };
   const goNext = () => { if (!canContinue) { setError(issues.find((item) => item.step === step)?.message || 'Исправьте ошибки текущего шага.'); return; } setError(''); setStep((current) => { const next = Math.min(steps.length - 1,current + 1); setMaxVisited((visited) => Math.max(visited,next)); return next; }); };
-  const requestClose = () => { if (mutation.isPending) return; if (formState.isDirty || sessionStorage.getItem(DRAFT_KEY)) setClosePrompt(true); else onClose(); };
+  const requestClose = () => { if (mutation.isPending) return; if (formState.isDirty || sessionStorage.getItem(draftKey)) setClosePrompt(true); else onClose(); };
   const restoreDraft = () => {
     try {
-      const raw = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || '') as Partial<StoredDraft> & { form?: ProtocolWizardForm };
+      const raw = JSON.parse(sessionStorage.getItem(draftKey) || '') as Partial<StoredDraft> & { form?: ProtocolWizardForm };
       if (!raw.form) throw new Error('Некорректный черновик');
       const defaults = createWizardDefaults();
       const migratedForm = normalizeProtocolWizardForm({
@@ -357,7 +378,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
       idempotencyKeyRef.current = typeof raw.idempotencyKey === 'string' ? raw.idempotencyKey : null;
       submittedFingerprintRef.current = typeof raw.payloadFingerprint === 'string' ? raw.payloadFingerprint : null;
       if (raw.version !== DRAFT_VERSION) {
-        sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+        sessionStorage.setItem(draftKey, JSON.stringify({
           version: DRAFT_VERSION,
           timestamp: new Date().toISOString(),
           step: restoredStep,
@@ -367,16 +388,16 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
         } satisfies StoredDraft));
       }
     } catch {
-      sessionStorage.removeItem(DRAFT_KEY);
+      sessionStorage.removeItem(draftKey);
       reset(createWizardDefaults());
       idempotencyKeyRef.current = null;
       submittedFingerprintRef.current = null;
     }
     setDraftPrompt(false);
   };
-  const newDraft = () => { sessionStorage.removeItem(DRAFT_KEY); idempotencyKeyRef.current = null; submittedFingerprintRef.current = null; submittedPayloadRef.current = null; reset(normalizeProtocolWizardForm({ ...(pekPrefill || {}), orderId, orderServiceItemId })); setStep(0); setMaxVisited(0); setDraftPrompt(false); };
+  const newDraft = () => { sessionStorage.removeItem(draftKey); idempotencyKeyRef.current = null; submittedFingerprintRef.current = null; submittedPayloadRef.current = null; reset(normalizeProtocolWizardForm({ ...(pekPrefill || {}), orderId, orderServiceItemId })); setStep(0); setMaxVisited(0); setDraftPrompt(false); };
   const saveDraft = () => {
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+    sessionStorage.setItem(draftKey, JSON.stringify({
       version: DRAFT_VERSION,
       timestamp: new Date().toISOString(),
       step,
@@ -385,7 +406,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
       payloadFingerprint: submittedFingerprintRef.current,
     } satisfies StoredDraft));
   };
-  const createProtocol = async () => {
+  const createProtocol = async (signAfterCreate = false) => {
     if (mutation.isPending) return;
     if (!acquireQuickCreateLock(submittingRef)) return;
     setError('');
@@ -406,7 +427,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
       idempotencyKeyRef.current = attempt.idempotencyKey;
       submittedFingerprintRef.current = attempt.payloadFingerprint;
       submittedPayloadRef.current = payload;
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+      sessionStorage.setItem(draftKey, JSON.stringify({
         version: DRAFT_VERSION,
         timestamp: new Date().toISOString(),
         step,
@@ -414,21 +435,31 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
         idempotencyKey: attempt.idempotencyKey,
         payloadFingerprint: attempt.payloadFingerprint,
       } satisfies StoredDraft));
-      const created = await mutation.mutateAsync({
+      let created = await mutation.mutateAsync({
         payload,
         idempotencyKey: attempt.idempotencyKey,
       });
       if (!created.id) throw new Error('Backend не вернул идентификатор созданного протокола.');
+      if (signAfterCreate) {
+        setSigningPhase('LOADING_DOCUMENT');
+        created = await protocolService.calculateProtocol(created.id, created.version);
+        created = await protocolService.checkNormatives(created.id, created.version);
+        const prepared = await protocolService.prepareSigning(created.id, created.version);
+        const cmsSignatureBase64 = await createCmsSignatureWithNCALayer(prepared.signingPayload, setSigningPhase);
+        setSigningPhase('VERIFYING_SIGNATURE');
+        created = await protocolService.signAndComplete(created.id, { version: prepared.protocol.version, cmsSignatureBase64 });
+        setSigningPhase('SIGNED');
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['protocols'] }),
         queryClient.invalidateQueries({ queryKey: ['protocol-statistics'] }),
       ]);
-      sessionStorage.removeItem(DRAFT_KEY);
+      sessionStorage.removeItem(draftKey);
       idempotencyKeyRef.current = null;
       submittedFingerprintRef.current = null;
       submittedPayloadRef.current = null;
-      setSuccess(created);
-      window.setTimeout(() => onCreated(created),400);
+      if (signAfterCreate) setSuccess(created);
+      else onCreated(created);
     } catch (requestError) {
       if (requestError instanceof QuickCreateValidationError) {
         form.setError(requestError.field as FieldPath<ProtocolWizardForm>, {
@@ -480,7 +511,14 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
         idempotencyKeyRef.current = null;
         submittedFingerprintRef.current = null;
       }
-      setError(mappedIssues.length ? '' : normalized.resultIndex === undefined ? errorResolution.message : `Строка ${normalized.resultIndex + 1}: ${errorResolution.message}`);
+      const signingError = signAfterCreate && /ncalayer|websocket|socket|certificate|сертификат/i.test(normalized.message);
+      setError(mappedIssues.length
+        ? ''
+        : signingError
+          ? 'Не удалось подключиться к NCALayer. Запустите NCALayer и повторите.'
+          : normalized.resultIndex === undefined
+            ? errorResolution.message
+            : `Строка ${normalized.resultIndex + 1}: ${errorResolution.message}`);
       if (mappedIssues.length) {
         const firstIssue = mappedIssues[0];
         setStep(firstIssue.step);
@@ -492,7 +530,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
           });
         }
       }
-      else if (normalized.resultIndex !== undefined) setStep(5);
+      else if (normalized.resultIndex !== undefined) setStep(2);
     } finally {
       releaseQuickCreateLock(submittingRef);
     }
@@ -536,9 +574,9 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
       form.setFocus(field);
     });
   };
-  const content = step === 0 ? <ProtocolTypeStep templates={templates} onSelect={chooseType} /> : step === 1 ? <CompanyObjectStep companies={companies} objects={objects} loading={objectsQuery.isFetching} lockedCompanyId={lockedPekCompanyId} onCompanyChange={changeCompany} /> : step === 2 ? <LaboratoryExecutorStep laboratories={laboratories} employees={executorOptions} loading={employeesQuery.isFetching} error={employeesQuery.isError} onLaboratoryChange={changeLaboratory} /> : step === 3 ? <MeasurementDetailsStep /> : step === 4 ? <EnvironmentStep weatherLoading={weatherQuery.isFetching} weatherMessage={weatherMessage} onRefresh={() => void weatherQuery.refetch()} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} /> : step === 5 ? <ResultsStep devices={devices} /> : step === 6 ? <MethodsStep /> : <ReviewStep final={step === 8} apiPayloadValid={submitPayloadResult.valid} companies={companies} objects={objects} laboratories={laboratories} employees={employees} issues={issues} onGoTo={goToIssue} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} />;
+  const content = step === 0 ? <div className="space-y-5"><BasicDataStep templates={templates} companies={companies} objects={objects} lockedCompanyId={lockedPekCompanyId} onCompanyChange={changeCompany} /><details className="rounded-xl border border-slate-200 p-4"><summary className="cursor-pointer font-bold text-eco-800">Условия и методики</summary><div className="mt-5 space-y-6"><EnvironmentStep weatherLoading={weatherQuery.isFetching} weatherMessage={weatherMessage} onRefresh={() => void weatherQuery.refetch()} waterTypeOptions={waterTypeOptions} waterUseCategoryOptions={waterUseCategoryOptions} /><MethodsStep /></div></details></div> : step === 1 ? <ExecutorDeviceStep laboratories={laboratories} employees={executorOptions} devices={devices} onLaboratoryChange={changeLaboratory} /> : step === 2 ? <ResultsStep devices={devices} /> : step === 3 ? <ProtocolCheckStep issues={issues} onGoTo={goToIssue} /> : <ProtocolSigningStep companies={companies} objects={objects} employees={executorOptions} />;
   const requestCode = apiFailure?.requestCode || apiFailure?.traceId || apiFailure?.requestId;
-  const debugPanel = import.meta.env.DEV && step === 8 ? (
+  const debugPanel = import.meta.env.DEV && step === 4 ? (
     <details className="mb-4 rounded-xl border border-slate-300 bg-slate-950 p-4 text-xs text-slate-100">
       <summary className="cursor-pointer font-bold">Debug: нормализованный quick-create payload</summary>
       <pre className="mt-3 overflow-auto whitespace-pre-wrap">{JSON.stringify({
@@ -552,9 +590,10 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
     </details>
   ) : null;
 
-  return <FormProvider {...form}><Modal open={open} onClose={requestClose} size="wizard" closeOnBackdrop={false} loading={mutation.isPending} contentClassName="!overflow-hidden !p-0 sm:!p-0"><div className="flex h-full min-h-0 flex-col"><ProtocolWizardHeader step={step} total={steps.length} title={steps[step]} submitting={mutation.isPending} onClose={requestClose} /><ProtocolWizardSteps steps={steps} current={step} maxVisited={maxVisited} onSelect={setStep} /><main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{apiFailure && <QuickCreateErrorPanel error={apiFailure} message={error || apiFailure.message} pending={mutation.isPending} onRetry={createProtocol} onReview={() => setStep(7)} onCopyCode={copyErrorCode} onCopyTechnicalInfo={copyTechnicalInfo} />}{!apiFailure && error && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><h3 className="font-black">Ошибка проверки данных</h3><p className="mt-1 font-semibold">{error}</p></div>}{serverIssues.length > 0 && <div className="mb-4"><WizardValidationSummary issues={serverIssues} onGoTo={goToIssue} />{requestCode && <p className="mt-2 text-xs text-slate-600">Код обращения: {requestCode}</p>}</div>}{debugPanel}{success ? <div className="grid min-h-72 place-items-center text-center"><div><h3 className="text-2xl font-black text-emerald-800">Протокол успешно создан</h3><p className="mt-3">Номер: {success.protocolNumber || success.number || success.id}</p><p>Статус: {success.status}</p></div></div> : content}</main>{!success && <ProtocolWizardFooter step={step} total={steps.length} submitting={mutation.isPending} retrying={Boolean(apiFailure)} canContinue={canContinue} onBack={() => { setError(''); setStep((current) => Math.max(0,current - 1)); }} onNext={goNext} onCreate={createProtocol} onSaveDraft={saveDraft} />}</div></Modal>
+  return <FormProvider {...form}><Modal open={open} onClose={requestClose} size="wizard" closeOnBackdrop={false} loading={mutation.isPending} contentClassName="!overflow-hidden !p-0 sm:!p-0"><div className="flex h-full min-h-0 flex-col"><ProtocolWizardHeader step={step} total={steps.length} title={steps[step]} submitting={mutation.isPending} onClose={requestClose} /><ProtocolWizardSteps steps={steps} current={step} maxVisited={maxVisited} onSelect={setStep} /><main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{apiFailure && <QuickCreateErrorPanel error={apiFailure} message={error || apiFailure.message} pending={mutation.isPending} onRetry={() => void createProtocol(false)} onReview={() => setStep(3)} onCopyCode={copyErrorCode} onCopyTechnicalInfo={copyTechnicalInfo} />}{!apiFailure && error && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><h3 className="font-black">Проверьте данные</h3><p className="mt-1 font-semibold">{error}</p></div>}{serverIssues.length > 0 && <div className="mb-4"><WizardValidationSummary issues={serverIssues} onGoTo={goToIssue} />{requestCode && <p className="mt-2 text-xs text-slate-600">Код обращения: {requestCode}</p>}</div>}{debugPanel}{success ? <div className="grid min-h-80 place-items-center text-center"><div><h3 className="text-2xl font-black text-emerald-800">Протокол №{success.protocolNumber || success.number || success.id} создан и подписан</h3><p className="mt-4 text-slate-600">Подписал: <strong>{user?.name || user?.email}</strong></p><p className="text-slate-600">Дата: {new Date(success.signedAt || Date.now()).toLocaleString('ru-RU')}</p><div className="mt-6 flex flex-wrap justify-center gap-3"><Button type="button" onClick={() => void protocolService.downloadPdf(success.id).then((file) => saveBlob(file.blob, file.fileName || `${success.protocolNumber}.pdf`))}>Скачать PDF</Button><Button type="button" variant="secondary" onClick={() => void protocolService.downloadDocx(success.id).then((file) => saveBlob(file.blob, file.fileName || `${success.protocolNumber}.docx`))}>Скачать DOCX</Button><Button type="button" variant="secondary" onClick={() => onCreated(success)}>Вернуться к протоколам</Button></div></div></div> : content}</main>{!success && <ProtocolWizardFooter step={step} total={steps.length} submitting={mutation.isPending} retrying={Boolean(apiFailure)} canContinue={canContinue} onBack={() => { setError(''); setStep((current) => Math.max(0,current - 1)); }} onNext={goNext} onCreate={() => setSignPrompt(true)} onSaveDraft={() => void createProtocol(false)} />}</div></Modal>
+    <Modal open={signPrompt} onClose={() => !mutation.isPending && setSignPrompt(false)} closeOnBackdrop={false} size="sm" title="Подписание протокола" footer={<><Button type="button" variant="secondary" disabled={mutation.isPending} onClick={() => setSignPrompt(false)}>Отмена</Button><Button type="button" disabled={mutation.isPending} onClick={() => { setSignPrompt(false); void createProtocol(true); }}>{mutation.isPending ? 'Подписание…' : 'Продолжить'}</Button></>}><p className="text-sm text-slate-700">Убедитесь, что NCALayer запущен, затем нажмите «Продолжить».</p>{signingPhase !== 'IDLE' && <div className="mt-4 rounded-xl bg-eco-50 p-3 text-sm font-bold text-eco-900">{protocolSigningPhaseLabel[signingPhase]}</div>}</Modal>
     <Modal open={draftPrompt && open} onClose={() => {}} closeOnBackdrop={false} size="sm" title="Найдена незавершённая форма протокола" footer={<><Button type="button" variant="secondary" onClick={newDraft}>Начать заново</Button><Button type="button" onClick={restoreDraft}>Продолжить</Button></>}><p className="text-sm text-slate-600">Продолжить заполнение временного черновика из текущей сессии?</p></Modal>
-    <Modal open={closePrompt} onClose={() => setClosePrompt(false)} closeOnBackdrop={false} size="sm" title="Закрыть создание протокола?" footer={<><Button type="button" variant="secondary" onClick={() => setClosePrompt(false)}>Продолжить заполнение</Button><Button type="button" onClick={() => { setClosePrompt(false); onClose(); }}>Закрыть</Button><Button type="button" variant="danger" onClick={() => { sessionStorage.removeItem(DRAFT_KEY); reset(createWizardDefaults()); setClosePrompt(false); onClose(); }}>Очистить и закрыть</Button></>}><p className="text-sm text-slate-600">Введённые данные сохранены как временный черновик и будут доступны до завершения текущей сессии.</p></Modal>
+    <Modal open={closePrompt} onClose={() => setClosePrompt(false)} closeOnBackdrop={false} size="sm" title="Закрыть создание протокола?" footer={<><Button type="button" variant="secondary" onClick={() => setClosePrompt(false)}>Продолжить заполнение</Button><Button type="button" onClick={() => { setClosePrompt(false); onClose(); }}>Закрыть</Button><Button type="button" variant="danger" onClick={() => { sessionStorage.removeItem(draftKey); reset(createWizardDefaults()); setClosePrompt(false); onClose(); }}>Очистить и закрыть</Button></>}><p className="text-sm text-slate-600">Введённые данные сохранены как временный черновик и будут доступны до завершения текущей сессии.</p></Modal>
     <Modal open={Boolean(pendingType)} onClose={() => setPendingType(null)} closeOnBackdrop={false} size="sm" title="Изменить тип протокола?" footer={<><Button type="button" variant="secondary" onClick={() => setPendingType(null)}>Отмена</Button><Button type="button" variant="danger" onClick={applyTypeChange}>Изменить тип</Button></>}><p className="text-sm text-slate-600">При изменении типа результаты, приборы и нормативы будут очищены.</p></Modal>
   </FormProvider>;
 };

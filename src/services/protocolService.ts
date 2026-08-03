@@ -23,6 +23,8 @@ import type {
   ReplaceProtocolRequest,
   ReturnForRevisionRequest,
   SignProtocolRequest,
+  SignAndCompleteProtocolRequest,
+  PrepareProtocolSigningResponse,
   ProtocolVersionRequest,
 } from '../features/protocols/api/protocolContracts';
 
@@ -49,6 +51,7 @@ export interface ProtocolService {
   addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow>;
   updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow>;
   deleteProtocolResult(protocolId: string, resultId: string, version: number): Promise<void>;
+  saveProtocolResults(protocolId: string, results: ProtocolResultPayload[], version: number): Promise<Protocol>;
   bulkAssignDevice(protocolId: string, resultIds: string[], measurementDeviceId: string | number, version: number): Promise<Protocol>;
   bulkUpdatePlace(protocolId: string, resultIds: string[], measurementPlace: string, version: number): Promise<Protocol>;
   bulkDeleteResults(protocolId: string, resultIds: string[], version: number): Promise<Protocol>;
@@ -69,6 +72,8 @@ export interface ProtocolService {
   approveProtocol(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
   returnForRevision(protocolId: string, request: ReturnForRevisionRequest): Promise<Protocol>;
   signProtocol(protocolId: string | number, request: SignProtocolRequest): Promise<Protocol>;
+  prepareSigning(protocolId: string | number, version: number): Promise<PrepareProtocolSigningResponse>;
+  signAndComplete(protocolId: string | number, request: SignAndCompleteProtocolRequest): Promise<Protocol>;
   publishToClient(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
   replaceProtocol(protocolId: string, request: ReplaceProtocolRequest): Promise<Protocol>;
   createCorrection(protocolId: string, request: ReplaceProtocolRequest): Promise<Protocol>;
@@ -121,6 +126,7 @@ const protocolService: ProtocolService = {
   addProtocolResult: async (protocolId, payload, version) => (await implementation()).addProtocolResult(protocolId, payload, version),
   updateProtocolResult: async (protocolId, resultId, payload, version) => (await implementation()).updateProtocolResult(protocolId, resultId, payload, version),
   deleteProtocolResult: async (protocolId, resultId, version) => (await implementation()).deleteProtocolResult(protocolId, resultId, version),
+  saveProtocolResults: async (protocolId, results, version) => (await implementation()).saveProtocolResults(protocolId, results, version),
   bulkAssignDevice: async (protocolId, resultIds, measurementDeviceId, version) => (await implementation()).bulkAssignDevice(protocolId, resultIds, measurementDeviceId, version),
   bulkUpdatePlace: async (protocolId, resultIds, measurementPlace, version) => (await implementation()).bulkUpdatePlace(protocolId, resultIds, measurementPlace, version),
   bulkDeleteResults: async (protocolId, resultIds, version) => (await implementation()).bulkDeleteResults(protocolId, resultIds, version),
@@ -136,6 +142,8 @@ const protocolService: ProtocolService = {
   approveProtocol: async (protocolId, request) => (await implementation()).approveProtocol(protocolId, request),
   returnForRevision: async (protocolId, request) => (await implementation()).returnForRevision(protocolId, request),
   signProtocol: async (protocolId, request) => (await implementation()).signProtocol(protocolId, request),
+  prepareSigning: async (protocolId, version) => (await implementation()).prepareSigning(protocolId, version),
+  signAndComplete: async (protocolId, request) => (await implementation()).signAndComplete(protocolId, request),
   publishToClient: async (protocolId, request) => (await implementation()).publishToClient(protocolId, request),
   replaceProtocol: async (protocolId, request) => (await implementation()).replaceProtocol(protocolId, request),
   createCorrection: async (protocolId, request) => (await implementation()).createCorrection(protocolId, request),

@@ -15,6 +15,7 @@ export const mapSearchParamsToDocumentFilters = (params: URLSearchParams): Docum
   authorId: optionalNumber(params.get('authorId')),
   signerId: optionalNumber(params.get('signerId')),
   overdue: params.get('overdue') === 'true' || undefined,
+  requiresMySignature: params.get('requiresMySignature') === 'true' || undefined,
   createdFrom: params.get('createdFrom') || undefined,
   createdTo: params.get('createdTo') || undefined,
   deadlineFrom: params.get('deadlineFrom') || undefined,
@@ -23,7 +24,6 @@ export const mapSearchParamsToDocumentFilters = (params: URLSearchParams): Docum
   page: Math.max(0, Number(params.get('page')) || 0),
   size: [10, 20, 50, 100].includes(Number(params.get('size'))) ? Number(params.get('size')) : 20,
   sort: params.get('sort') || 'createdAt,desc',
-  // TODO backend gap: do not send requiresMySignature until SQL filtering and list counters are implemented.
 });
 
 export const mapCreateDocumentPayload = (value: {

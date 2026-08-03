@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldPath } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
@@ -20,7 +21,7 @@ import {
   mapProgramEditFormToRequest,
   mapProgramToForm,
 } from '../mappers/programMappers';
-import { loadPekDraft, pekDraftKey, removePekDraft, savePekDraft } from '../utils/pekDraftStorage';
+import { loadPekDraft, pekDraftKey, removePekDraft, savePekDraft, type PekStoredDraft } from '../utils/pekDraftStorage';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { pekProgramFormSchema } from '../validation/programSchema';
 
@@ -51,6 +52,10 @@ const newMeasure = (): PekMeasure => ({
   completionPercent: 0,
   currency: 'KZT',
 });
+const stepForField = (field: string) => field.startsWith('controlItems') ? 1
+  : field.startsWith('indicators') ? 2
+    : field.startsWith('measures') ? 3
+      : field.startsWith('documents') ? 4 : 0;
 
 const PekProgramCreatePage = () => {
   const { programId } = useParams();
@@ -61,11 +66,16 @@ const PekProgramCreatePage = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [step, setStep] = useState(0);
-  const [autosaveState, setAutosaveState] = useState<'idle' | 'saving' | 'saved' | 'error' | 'conflict'>('idle');
+  const [autosaveState, setAutosaveState] = useState<'idle' | 'saving' | 'saved' | 'offline' | 'error' | 'conflict'>('idle');
   const [conflictOpen, setConflictOpen] = useState(false);
+  const [draftToRestore, setDraftToRestore] = useState<PekStoredDraft<PekProgramForm> | null>(null);
   const versionRef = useRef<number>(0);
   const hydratedProgramId = useRef<number>();
   const autosaveTimer = useRef<number>();
+  const autosaveController = useRef<AbortController>();
+  const autosaveSequence = useRef(0);
+  const appliedAutosaveSequence = useRef(0);
+  const lastAutosaveHash = useRef('');
 
   const form = useForm<PekProgramForm>({
     defaultValues: pekProgramDefaults,
@@ -102,8 +112,8 @@ const PekProgramCreatePage = () => {
     enabled: objectId > 0,
   });
   const draftKey = useMemo(
-    () => pekDraftKey('program', user?.id, programId, edit ? program.data?.version ?? 'loading' : 'new'),
-    [edit, program.data?.version, programId, user?.id],
+    () => pekDraftKey('program', user?.id, programId, edit ? program.data?.version ?? 'loading' : 'new', companyId || 'none'),
+    [companyId, edit, program.data?.version, programId, user?.id],
   );
 
   useEffect(() => {
@@ -115,26 +125,36 @@ const PekProgramCreatePage = () => {
   }, [program.data, reset]);
 
   useEffect(() => {
-    if (edit) return;
+    if (edit && !program.data) return;
     let active = true;
-    void loadPekDraft<PekProgramForm>(draftKey, 'new').then((draft) => {
-      if (active && draft?.form) reset({ ...pekProgramDefaults, ...draft.form });
+    const backendVersion = edit ? program.data?.version ?? 'loading' : 'new';
+    void loadPekDraft<PekProgramForm>(draftKey, backendVersion).then((draft) => {
+      if (active && draft?.form) setDraftToRestore(draft);
     }).catch(() => undefined);
     return () => { active = false; };
-  }, [draftKey, edit, reset]);
+  }, [draftKey, edit, program.data]);
 
   const autosave = useMutation({
-    mutationFn: (value: PekProgramForm) =>
-      pekApi.saveProgramDraft(id, versionRef.current, mapProgramAutosaveToRequest(value)),
+    mutationFn: async (value: PekProgramForm) => {
+      autosaveController.current?.abort();
+      const controller = new AbortController();
+      autosaveController.current = controller;
+      const sequence = ++autosaveSequence.current;
+      const saved = await pekApi.saveProgramDraft(id, versionRef.current, mapProgramAutosaveToRequest(value), controller.signal);
+      return { saved, sequence };
+    },
     retry: false,
     onMutate: () => setAutosaveState('saving'),
-    onSuccess: (saved) => {
+    onSuccess: ({ saved, sequence }) => {
+      if (sequence < appliedAutosaveSequence.current) return;
+      appliedAutosaveSequence.current = sequence;
       versionRef.current = saved.version;
       queryClient.setQueryData(pekKeys.program(id), saved);
       setAutosaveState('saved');
       void removePekDraft(draftKey);
     },
     onError: (error) => {
+      if (axios.isCancel(error) || (error instanceof DOMException && error.name === 'AbortError')) return;
       if (mapPekError(error).status === 409) {
         setAutosaveState('conflict');
         setConflictOpen(true);
@@ -150,6 +170,13 @@ const PekProgramCreatePage = () => {
       autosaveTimer.current = window.setTimeout(() => {
         const value = { ...pekProgramDefaults, ...partial } as PekProgramForm;
         void savePekDraft(draftKey, value, edit ? versionRef.current : 'new');
+        const payloadHash = JSON.stringify(mapProgramAutosaveToRequest(value));
+        if (payloadHash === lastAutosaveHash.current) return;
+        lastAutosaveHash.current = payloadHash;
+        if (!navigator.onLine) {
+          setAutosaveState('offline');
+          return;
+        }
         if (
           edit
           && program.data
@@ -163,6 +190,7 @@ const PekProgramCreatePage = () => {
     return () => {
       subscription.unsubscribe();
       if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
+      autosaveController.current?.abort();
     };
   }, [autosave, draftKey, edit, program.data, watch]);
 
@@ -198,6 +226,12 @@ const PekProgramCreatePage = () => {
         setAutosaveState('conflict');
         setConflictOpen(true);
       }
+      const firstField = Object.keys(mapped.fieldErrors)[0];
+      Object.entries(mapped.fieldErrors).forEach(([field, message]) => form.setError(field as FieldPath<PekProgramForm>, { message }));
+      if (firstField) {
+        setStep(stepForField(firstField));
+        window.setTimeout(() => form.setFocus(firstField as FieldPath<PekProgramForm>), 0);
+      }
       toast.error(mapped.message);
     },
   });
@@ -211,8 +245,9 @@ const PekProgramCreatePage = () => {
   const submit = form.handleSubmit((value) => {
     const parsed = pekProgramFormSchema.safeParse(value);
     if (!parsed.success) {
+      parsed.error.issues.forEach((issue) => form.setError(issue.path.join('.') as FieldPath<PekProgramForm>, { message: issue.message }));
       toast.error(parsed.error.issues[0]?.message || 'Проверьте поля программы');
-      setStep(0);
+      setStep(stepForField(parsed.error.issues[0]?.path.join('.') || ''));
       return;
     }
     save.mutate(value);
@@ -223,6 +258,21 @@ const PekProgramCreatePage = () => {
     setValue('indicators', indicators.map((row, rowIndex) => rowIndex === index ? { ...row, ...patch } : row), { shouldDirty: true });
   const updateMeasure = (index: number, patch: Partial<PekMeasure>) =>
     setValue('measures', measures.map((row, rowIndex) => rowIndex === index ? { ...row, ...patch } : row), { shouldDirty: true });
+  const nextStep = () => {
+    const value = getValues();
+    let message = '';
+    if (step === 0) {
+      if (!value.companyId) { form.setError('companyId', { message: 'Выберите компанию' }); message = 'Выберите компанию'; }
+      else if (!value.objectId) { form.setError('objectId', { message: 'Выберите объект' }); message = 'Выберите объект'; }
+      else if (!value.number.trim()) { form.setError('number', { message: 'Укажите номер' }); message = 'Укажите номер'; }
+      else if (!value.name.trim()) { form.setError('name', { message: 'Укажите название' }); message = 'Укажите название'; }
+      else if (!value.validFrom || !value.validUntil || value.validUntil < value.validFrom) { form.setError('validUntil', { message: 'Проверьте период программы' }); message = 'Проверьте период программы'; }
+    } else if (step === 1 && value.controlItems.some((row) => !row.code.trim() || !row.name.trim())) message = 'Заполните код и название каждого объекта контроля';
+    else if (step === 2 && value.indicators.some((row) => !row.controlItemClientId || !row.indicatorName.trim())) message = 'Свяжите каждый показатель с объектом контроля и укажите название';
+    else if (step === 3 && value.measures.some((row) => !row.name.trim())) message = 'Укажите названия мероприятий';
+    if (message) { toast.error(message); return; }
+    setStep((current) => current + 1);
+  };
 
   return <div className="space-y-5">
     <PekPageHeader
@@ -231,6 +281,7 @@ const PekProgramCreatePage = () => {
       actions={<span className="text-sm font-semibold text-slate-600" role="status">
         {autosaveState === 'saving' && 'Сохранение…'}
         {autosaveState === 'saved' && 'Сохранено'}
+        {autosaveState === 'offline' && <span className="text-amber-700">Нет соединения · черновик сохранён локально</span>}
         {autosaveState === 'error' && <><span className="text-rose-700">Ошибка autosave</span> <button type="button" className="underline" onClick={() => autosave.mutate(getValues())}>Повторить</button></>}
         {autosaveState === 'conflict' && <span className="text-rose-700">Конфликт версии</span>}
       </span>}
@@ -240,6 +291,7 @@ const PekProgramCreatePage = () => {
     </ol>
     <form onSubmit={submit}>
       <section className="rounded-2xl border bg-white p-5">
+        {Object.keys(formState.errors).length > 0 && <div role="alert" aria-live="assertive" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">Проверьте заполнение текущего раздела. Первая ошибка: {String(Object.values(formState.errors)[0]?.message || 'некорректные данные')}</div>}
         {step === 0 && <div className="grid gap-4 md:grid-cols-2">
           <label>Компания *<select {...register('companyId', { valueAsNumber: true })} disabled={edit} onChange={(event) => { setValue('companyId', Number(event.target.value), { shouldDirty: true }); setValue('objectId', 0); }} className={inputClass}><option value={0}>Выберите компанию</option>{companies.data?.items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label>Объект *<select {...register('objectId', { valueAsNumber: true })} className={inputClass} disabled={edit || !companyId}><option value={0}>Выберите объект</option>{objects.data?.filter((item) => item.status !== 'ARCHIVED' && item.persisted !== false && item.isVirtual !== true).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -263,11 +315,6 @@ const PekProgramCreatePage = () => {
               <TextField label="Раздел" value={row.sectionCode} onChange={(value) => updateControl(index, { sectionCode: value })} />
               <TextField label="Тип контроля" value={row.controlType} onChange={(value) => updateControl(index, { controlType: value })} />
               <TextField label="Компонент среды" value={row.environmentComponent} onChange={(value) => updateControl(index, { environmentComponent: value })} />
-              <NumberField label="Точка мониторинга ID" value={row.monitoringPointId} onChange={(value) => updateControl(index, { monitoringPointId: value })} />
-              <NumberField label="Источник выбросов ID" value={row.emissionSourceId} onChange={(value) => updateControl(index, { emissionSourceId: value })} />
-              <NumberField label="Выпуск воды ID" value={row.waterOutletId} onChange={(value) => updateControl(index, { waterOutletId: value })} />
-              <NumberField label="Источник отходов ID" value={row.wasteSourceId} onChange={(value) => updateControl(index, { wasteSourceId: value })} />
-              <NumberField label="Лаборатория ID" value={row.laboratoryId} onChange={(value) => updateControl(index, { laboratoryId: value })} />
               <TextField label="Периодичность" value={row.frequencyType} onChange={(value) => updateControl(index, { frequencyType: value })} />
               <NumberField label="Значение периодичности" value={row.frequencyValue} onChange={(value) => updateControl(index, { frequencyValue: value })} />
               <NumberField label="Плановое количество" value={row.plannedCount} onChange={(value) => updateControl(index, { plannedCount: value })} />
@@ -275,7 +322,7 @@ const PekProgramCreatePage = () => {
               <TextField label="Метод отбора" value={row.samplingMethod} onChange={(value) => updateControl(index, { samplingMethod: value })} />
               <TextField label="Дата начала" type="date" value={row.startDate} onChange={(value) => updateControl(index, { startDate: value })} />
               <TextField label="Дата окончания" type="date" value={row.endDate} onChange={(value) => updateControl(index, { endDate: value })} />
-              <NumberField label="Ответственный ID" value={row.responsibleUserId} onChange={(value) => updateControl(index, { responsibleUserId: value })} />
+              <PekLookupSelect label="Ответственный" value={row.responsibleUserId} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => updateControl(index, { responsibleUserId: value })} />
               <label className="flex items-center gap-2"><input type="checkbox" checked={row.mandatory} onChange={(event) => updateControl(index, { mandatory: event.target.checked })} />Обязательная</label>
               <label className="flex items-center gap-2"><input type="checkbox" checked={row.active} onChange={(event) => updateControl(index, { active: event.target.checked })} />Активна</label>
             </div>
@@ -288,16 +335,13 @@ const PekProgramCreatePage = () => {
             <div className="mb-3 flex justify-between"><strong>Показатель {index + 1}</strong><button type="button" className="text-rose-700" onClick={() => setValue('indicators', indicators.filter((_, i) => i !== index), { shouldDirty: true })}>Удалить</button></div>
             <div className="grid gap-3 md:grid-cols-3">
               <label>Позиция контроля<select value={row.controlItemClientId || ''} onChange={(event) => updateIndicator(index, { controlItemClientId: event.target.value, controlItemId: undefined })} className={inputClass}>{controlItems.map((item) => <option key={item.clientId} value={item.clientId}>{item.code || item.name || 'Без названия'}</option>)}</select></label>
-              <NumberField label="Показатель ID" value={row.indicatorId} onChange={(value) => updateIndicator(index, { indicatorId: value })} />
               <TextField label="Код показателя" value={row.indicatorCode} onChange={(value) => updateIndicator(index, { indicatorCode: value })} />
               <TextField label="Название" value={row.indicatorName} onChange={(value) => updateIndicator(index, { indicatorName: value })} />
               <TextField label="Единица" value={row.unit} onChange={(value) => updateIndicator(index, { unit: value })} />
-              <NumberField label="Норматив ID" value={row.normativeId} onChange={(value) => updateIndicator(index, { normativeId: value })} />
               <NumberField label="Норматив" value={row.normativeValue} onChange={(value) => updateIndicator(index, { normativeValue: value })} />
-              <TextField label="Тип сравнения" value={row.comparisonType} onChange={(value) => updateIndicator(index, { comparisonType: value })} />
+              <label>Условие сравнения<select value={row.comparisonType || ''} onChange={(event) => updateIndicator(index, { comparisonType: event.target.value || null })} className={inputClass}><option value="">Информационный показатель</option><option value="MAX">Не более</option><option value="MIN">Не менее</option><option value="RANGE">Диапазон</option><option value="EQUAL">Равно</option></select></label>
               <NumberField label="Минимум" value={row.minValue} onChange={(value) => updateIndicator(index, { minValue: value })} />
               <NumberField label="Максимум" value={row.maxValue} onChange={(value) => updateIndicator(index, { maxValue: value })} />
-              <NumberField label="Методология ID" value={row.methodologyId} onChange={(value) => updateIndicator(index, { methodologyId: value })} />
               <TextField label="Тип прибора" value={row.measurementDeviceType} onChange={(value) => updateIndicator(index, { measurementDeviceType: value })} />
               <label className="flex items-center gap-2"><input type="checkbox" checked={row.mandatory} onChange={(event) => updateIndicator(index, { mandatory: event.target.checked })} />Обязательный</label>
             </div>
@@ -314,7 +358,7 @@ const PekProgramCreatePage = () => {
               <TextField label="Описание" value={row.description} onChange={(value) => updateMeasure(index, { description: value })} />
               <TextField label="Начало" type="date" value={row.plannedStartDate} onChange={(value) => updateMeasure(index, { plannedStartDate: value })} />
               <TextField label="Окончание" type="date" value={row.plannedEndDate} onChange={(value) => updateMeasure(index, { plannedEndDate: value })} />
-              <NumberField label="Ответственный ID" value={row.responsibleUserId} onChange={(value) => updateMeasure(index, { responsibleUserId: value })} />
+              <PekLookupSelect label="Ответственный" value={row.responsibleUserId} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => updateMeasure(index, { responsibleUserId: value })} />
               <NumberField label="Бюджет" value={row.plannedBudget} onChange={(value) => updateMeasure(index, { plannedBudget: value })} />
               <TextField label="Валюта" value={row.currency} onChange={(value) => updateMeasure(index, { currency: value })} />
               <TextField label="Статус" value={row.status} onChange={(value) => updateMeasure(index, { status: value })} />
@@ -337,10 +381,21 @@ const PekProgramCreatePage = () => {
       <footer className="mt-4 flex justify-between">
         <Button type="button" variant="secondary" disabled={step === 0 || save.isPending} onClick={() => setStep((value) => value - 1)}>Назад</Button>
         {step < steps.length - 1
-          ? <Button type="button" onClick={() => setStep((value) => value + 1)}>Продолжить</Button>
+          ? <Button type="button" onClick={nextStep}>Продолжить</Button>
           : <Button type="submit" disabled={save.isPending} aria-busy={save.isPending}>{save.isPending ? 'Сохранение…' : 'Сохранить программу'}</Button>}
       </footer>
     </form>
+    <Modal
+      open={Boolean(draftToRestore)}
+      title="Найден локальный черновик"
+      description={draftToRestore ? `Сохранён ${new Date(draftToRestore.savedAt).toLocaleString('ru-RU')}. Выберите, какие данные продолжить редактировать.` : undefined}
+      onClose={() => setDraftToRestore(null)}
+      footer={<>
+        <Button variant="secondary" onClick={() => setDraftToRestore(null)}>Продолжить с серверной версией</Button>
+        <Button variant="secondary" onClick={() => { void removePekDraft(draftKey); setDraftToRestore(null); }}>Удалить черновик</Button>
+        <Button onClick={() => { if (draftToRestore) reset({ ...pekProgramDefaults, ...draftToRestore.form }); setDraftToRestore(null); }}>Восстановить</Button>
+      </>}
+    ><p className="text-sm text-slate-600">Черновик принадлежит текущему пользователю, компании и версии сущности. Автоматически серверные данные не перезаписываются.</p></Modal>
     <Modal
       open={conflictOpen}
       title="Программа изменена другим пользователем"
