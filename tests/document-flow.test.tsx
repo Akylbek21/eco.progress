@@ -7,19 +7,29 @@ import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import api from '../src/services/api';
 import { documentFlowApi } from '../src/features/document-flow/api/documentFlowApi';
-import { mapCreateDocumentPayload, mapSearchParamsToDocumentFilters } from '../src/features/document-flow/mappers/documentMappers';
+import {
+  mapCreateDocumentPayload, mapSearchParamsToDocumentFilters, resetDocumentFilterParams, setDocumentFilterParam,
+} from '../src/features/document-flow/mappers/documentMappers';
 import { canMutate, hasFeature, limitProgress, validateDocumentFile, validateRequiredCount } from '../src/features/document-flow/model/access';
 import type { AccessContext } from '../src/features/document-flow/model/types';
 import SigningRouteBuilder from '../src/features/document-flow/components/SigningRouteBuilder';
 import DocumentStatusBadge from '../src/features/document-flow/components/DocumentStatusBadge';
 import { emptyToUndefined, isValidEmail, isValidPhone, normalizeBin } from '../src/features/document-flow/utils/counterpartyForm';
+import {
+  createCreationCheckpoint, runCreationWorkflow, type CreationStage, type CreationWorkflowOperations,
+} from '../src/features/document-flow/model/creationCheckpoint';
+import type { DocumentAttachment, DocumentDetail, DocumentVersion, SigningRoute } from '../src/features/document-flow/model/types';
+import { resolveDocumentActions } from '../src/features/document-flow/model/documentActions';
+import {
+  accessContextSchema, apiErrorSchema, documentDetailSchema, documentListItemSchema,
+  publicInvitationSchema, signingAssignmentSchema, signingRouteSchema,
+} from '../src/features/document-flow/api/contractSchemas';
 
 const server = setupServer();
 const originalBaseUrl = api.defaults.baseURL;
 const access = (extra: Partial<AccessContext> = {}): AccessContext => ({
   available: true,
   readOnly: false,
-  internalMode: true,
   status: 'ACTIVE',
   plan: { code: 'PRO', name: 'Pro' },
   startsAt: null,
@@ -31,8 +41,18 @@ const access = (extra: Partial<AccessContext> = {}): AccessContext => ({
   usage: { DOCUMENTS_CREATED: 4 },
   availableActions: [],
   reason: null,
-  organization: { id: 9, name: 'Eco LLP' },
-  organizations: [{ id: 9, name: 'Eco LLP', membershipStatus: 'ACTIVE' }],
+  ...extra,
+});
+const detailDto = (extra: Record<string, unknown> = {}) => ({
+  id: 7, publicId: 'public-7', number: null, title: 'A', description: null, type: 'CONTRACT',
+  direction: 'OUTGOING', counterparty: null, author: null, createdAt: '2026-08-03T10:00:00',
+  updatedAt: '2026-08-03T10:00:00', deadline: null, status: 'DRAFT', currentVersionId: null,
+  version: 1,
+  permissions: {
+    canView: true, canEdit: true, canDelete: true, canSend: false, canDownload: false,
+    canUploadVersion: true, canArchive: false, canManageAttachments: true,
+  },
+  availableActions: ['EDIT', 'DELETE', 'UPLOAD_VERSION', 'MANAGE_ATTACHMENTS'],
   ...extra,
 });
 
@@ -53,6 +73,34 @@ afterAll(() => {
 });
 
 describe('document flow access and mappers', () => {
+  it('validates Java DTO examples at the API boundary', () => {
+    expect(accessContextSchema.parse(access()).available).toBe(true);
+    expect(documentDetailSchema.parse(detailDto()).publicId).toBe('public-7');
+    expect(documentListItemSchema.parse({
+      id: 7, number: null, title: 'A', type: 'CONTRACT', direction: 'OUTGOING', counterparty: null,
+      author: null, createdAt: '2026-08-03T10:00:00', deadline: null, status: 'DRAFT',
+      signedCount: 0, requiredCount: 0, requiresMySignature: false, version: 1,
+      permissions: detailDto().permissions, availableActions: ['EDIT'],
+    }).signedCount).toBe(0);
+    const assignment = {
+      id: 3, stepId: 2, signerType: 'ORGANIZATION_MEMBER', userId: 5, signerFullName: null,
+      organizationName: null, organizationBin: null, email: null, phone: null, roleCode: 'SIGNER',
+      required: true, status: 'AVAILABLE', availableAt: null, viewedAt: null, signedAt: null,
+      rejectedAt: null, rejectionReason: null, invitationExpiresAt: null,
+    };
+    expect(signingAssignmentSchema.parse(assignment).userId).toBe(5);
+    expect(signingRouteSchema.parse({
+      id: 9, documentId: 7, routeType: 'SEQUENTIAL', status: 'ACTIVE', createdBy: 1,
+      createdAt: '2026-08-03T10:00:00Z', activatedAt: null, completedAt: null, version: 0,
+      steps: [{ id: 2, stepOrder: 0, requiredCount: 1, assignments: [assignment] }],
+    }).id).toBe(9);
+    expect(publicInvitationSchema.parse({
+      documentId: 7, documentTitle: 'A', roleCode: null, required: true, status: 'AVAILABLE',
+      invitationExpiresAt: null, signingDeadline: null,
+    }).documentId).toBe(7);
+    expect(apiErrorSchema.parse({ success: false, data: null, message: 'Conflict', code: 'CONFLICT' }).code).toBe('CONFLICT');
+    expect(() => publicInvitationSchema.parse({ documentId: 7, documentTitle: 'A' })).toThrow();
+  });
   it('enforces access, read-only, permission and feature gates', () => {
     expect(canMutate(access(), 'CREATE_DOCUMENT', 'DOCUMENT_CREATE')).toBe(true);
     expect(canMutate(access({ readOnly: true }), 'CREATE_DOCUMENT', 'DOCUMENT_CREATE')).toBe(false);
@@ -60,10 +108,30 @@ describe('document flow access and mappers', () => {
     expect(hasFeature(access(), 'MIXED_SIGNING')).toBe(false);
   });
 
+  it('reports an active-assignment SIGN gap without granting the action', () => {
+    const resolved = resolveDocumentActions(['DOWNLOAD'], ['SIGN']);
+    expect(resolved.supportedByFrontend).toEqual(['DOWNLOAD']);
+    expect(resolved.unavailableBecauseBackendContract).toEqual(['SIGN']);
+    expect(resolved.backendActions).not.toContain('SIGN');
+  });
+
   it('maps backend list filters including the current-user action filter', () => {
     const filters = mapSearchParamsToDocumentFilters(new URLSearchParams('query= act &direction=OUTGOING&requiresMySignature=true&page=2&size=50'));
     expect(filters).toMatchObject({ query: 'act', direction: 'OUTGOING', page: 2, size: 50 });
     expect(filters.requiresMySignature).toBe(true);
+  });
+
+  it('writes, restores and resets URL filters without empty parameters', () => {
+    let params = new URLSearchParams('page=4&size=50&sort=title%2Casc');
+    params = setDocumentFilterParam(params, 'requiresMySignature', 'true');
+    params = setDocumentFilterParam(params, 'direction', 'OUTGOING');
+    params = setDocumentFilterParam(params, 'query', '   ');
+    expect(params.get('page')).toBe('0');
+    expect(params.has('query')).toBe(false);
+    expect(mapSearchParamsToDocumentFilters(new URLSearchParams(params.toString()))).toMatchObject({
+      page: 0, size: 50, sort: 'title,asc', direction: 'OUTGOING', requiresMySignature: true,
+    });
+    expect(resetDocumentFilterParams(50).toString()).toBe('page=0&size=50&sort=createdAt%2Cdesc');
   });
 
   it('creates the exact metadata payload and preserves optional IDs', () => {
@@ -100,29 +168,89 @@ describe('document flow access and mappers', () => {
 });
 
 describe('document flow secure commands and components', () => {
+  it('uses the shared client without JWT for public document-flow requests', async () => {
+    let authorization: string | null = 'not-called';
+    server.use(http.get('http://localhost/api/public/document-flow/plans', ({ request }) => {
+      authorization = request.headers.get('Authorization');
+      return HttpResponse.json({ success: true, data: [] });
+    }));
+    await documentFlowApi.plans();
+    expect(authorization).toBeNull();
+  });
+
+  it('keeps the private CRM session when a public invitation returns 401', async () => {
+    localStorage.setItem('eco-progress-token', 'secret-token');
+    localStorage.setItem('eco-progress-user', JSON.stringify({ id: '7' }));
+    sessionStorage.removeItem('eco-progress-401-redirect');
+    server.use(http.get('http://localhost/api/public/document-flow/signing/expired', () =>
+      HttpResponse.json({ success: false, code: 'INVITATION_EXPIRED', message: 'Expired' }, { status: 401 }),
+    ));
+    const { publicDocumentFlowApi } = await import('../src/features/document-flow/api/documentFlowApi');
+    await expect(publicDocumentFlowApi.invitation('expired')).rejects.toBeTruthy();
+    expect(localStorage.getItem('eco-progress-token')).toBe('secret-token');
+    expect(localStorage.getItem('eco-progress-user')).toBe(JSON.stringify({ id: '7' }));
+    expect(sessionStorage.getItem('eco-progress-401-redirect')).toBeNull();
+  });
+
+  it('rejects a logical backend failure returned with HTTP 200', async () => {
+    server.use(http.get('http://localhost/api/public/document-flow/plans', () =>
+      HttpResponse.json({ success: false, message: 'Тарифы временно недоступны', data: null }),
+    ));
+    await expect(documentFlowApi.plans()).rejects.toThrow('Тарифы временно недоступны');
+  });
+
+  it.each([400, 403, 404, 409, 412, 422, 500])('preserves the Java ApiResponse error envelope for HTTP %s', async (status) => {
+    server.use(http.get('http://localhost/api/public/document-flow/plans', () =>
+      HttpResponse.json({
+        success: false, data: null, message: `Failure ${status}`, code: `HTTP_${status}`,
+        errors: [`Failure ${status}`], fieldErrors: null, traceId: `trace-${status}`,
+      }, { status }),
+    ));
+    await expect(documentFlowApi.plans()).rejects.toMatchObject({
+      response: { status, data: { success: false, code: `HTTP_${status}`, traceId: `trace-${status}` } },
+    });
+  });
+
   it('loads internal access and counterparties without organizationId', async () => {
     const requests: string[] = [];
     server.use(
       http.get('http://localhost/api/document-flow/access', ({ request }) => {
         requests.push(request.url);
-        return HttpResponse.json({ data: access() });
+        return HttpResponse.json({ success: true, data: access(), message: null });
       }),
       http.get('http://localhost/api/document-flow/counterparties', ({ request }) => {
         requests.push(request.url);
-        return HttpResponse.json({ data: {
+        return HttpResponse.json({ success: true, data: {
           items: [{ id: 1, ownerOrganizationId: 9, linkedOrganizationId: null, bin: '123456789012', name: 'A', status: 'ACTIVE', version: 0 }],
           page: 0, size: 20, totalElements: 1, totalPages: 1, first: true, last: true, hasNext: false, hasPrevious: false,
-        } });
+        }, message: null });
       }),
     );
     const context = await documentFlowApi.access();
     const page = await documentFlowApi.getCounterparties({ page: 0, size: 20 });
-    expect(context.organization?.id).toBe(9);
+    expect(context.status).toBe('ACTIVE');
     expect(page.items[0].organizationId).toBe(9);
     expect(requests).toEqual([
       'http://localhost/api/document-flow/access',
       'http://localhost/api/document-flow/counterparties?page=0&size=20',
     ]);
+  });
+
+  it('forms the document-list backend query once with boolean and sorting', async () => {
+    let calls = 0;
+    let seen = '';
+    server.use(http.get('http://localhost/api/document-flow/documents', ({ request }) => {
+      calls += 1;
+      seen = new URL(request.url).search;
+      return HttpResponse.json({ success: true, data: {
+        items: [], page: 0, size: 20, totalElements: 0, totalPages: 0,
+        first: true, last: true, hasNext: false, hasPrevious: false,
+      } });
+    }));
+    await documentFlowApi.documents({ page: 0, size: 20, sort: 'createdAt,desc', requiresMySignature: true });
+    expect(calls).toBe(1);
+    expect(new URLSearchParams(seen).get('requiresMySignature')).toBe('true');
+    expect(new URLSearchParams(seen).get('sort')).toBe('createdAt,desc');
   });
 
   it('creates and archives a counterparty without organizationId', async () => {
@@ -131,11 +259,11 @@ describe('document flow secure commands and components', () => {
     server.use(
       http.post('http://localhost/api/document-flow/counterparties', async ({ request }) => {
         seen.push({ url: request.url, body: await request.json() as Record<string, unknown> });
-        return HttpResponse.json({ data: dto });
+        return HttpResponse.json({ success: true, data: dto, message: null });
       }),
       http.delete('http://localhost/api/document-flow/counterparties/2', ({ request }) => {
         seen.push({ url: request.url });
-        return HttpResponse.json({ data: { ...dto, status: 'ARCHIVED' } });
+        return HttpResponse.json({ success: true, data: { ...dto, status: 'ARCHIVED' }, message: null });
       }),
     );
     await documentFlowApi.createCounterparty({ bin: '123456789012', name: 'A' });
@@ -162,10 +290,113 @@ describe('document flow secure commands and components', () => {
     let header = '';
     server.use(http.post('http://localhost/api/document-flow/documents', ({ request }) => {
       header = request.headers.get('Idempotency-Key') || '';
-      return HttpResponse.json({ data: { id: 7 } });
+      return HttpResponse.json({ success: true, data: detailDto() });
     }));
     await documentFlowApi.createDocument({ documentType: 'CONTRACT', direction: 'OUTGOING', title: 'A' }, 'stable-key');
     expect(header).toBe('stable-key');
+  });
+
+  it('sends the Java UpdateDocumentRequest payload and verifies the saved number with GET', async () => {
+    let patchBody: Record<string, unknown> = {};
+    server.use(
+      http.patch('http://localhost/api/document-flow/documents/7', async ({ request }) => {
+        patchBody = await request.json() as Record<string, unknown>;
+        return HttpResponse.json({ success: true, data: detailDto({ number: 'DOC-2026-001', version: 2 }) });
+      }),
+      http.get('http://localhost/api/document-flow/documents/7', () =>
+        HttpResponse.json({ success: true, data: detailDto({ number: 'DOC-2026-001', version: 2 }) }),
+      ),
+    );
+    await documentFlowApi.updateDocument(7, { documentNumber: 'DOC-2026-001' });
+    const actual = await documentFlowApi.document(7);
+    expect(patchBody).toEqual({ documentNumber: 'DOC-2026-001' });
+    expect(actual.number).toBe('DOC-2026-001');
+  });
+
+  it.each<CreationStage>([
+    'LOCAL_DRAFT', 'DOCUMENT_CREATED', 'REQUISITES_UPDATED', 'MAIN_FILE_UPLOADED',
+    'ATTACHMENTS_UPLOADED', 'ROUTE_CREATED', 'PREPARED',
+  ])('resumes after a %s-stage failure without duplicate document or route', async (failedAt) => {
+    const main = new File(['main'], 'main.pdf', { type: 'application/pdf' });
+    const extra = new File(['extra'], 'extra.pdf', { type: 'application/pdf' });
+    const document = { id: 7, number: null, version: 1, currentVersionId: null } as DocumentDetail;
+    const route = { id: 9, documentId: 7, status: 'DRAFT' } as SigningRoute;
+    const state = {
+      created: false, route: null as SigningRoute | null, prepared: false, sent: false,
+      attachments: [] as DocumentAttachment[], failed: false,
+      calls: { create: 0, update: 0, upload: 0, attachment: 0, route: 0, prepare: 0, send: 0 },
+    };
+    const failAfterEffect = (stage: CreationStage) => {
+      if (failedAt === stage && !state.failed) { state.failed = true; throw new Error(`network after ${stage}`); }
+    };
+    const operations: CreationWorkflowOperations = {
+      createDocument: async () => {
+        state.calls.create += 1;
+        state.created = true;
+        failAfterEffect('LOCAL_DRAFT');
+        return document;
+      },
+      updateDocument: async (_id, payload) => {
+        state.calls.update += 1;
+        document.number = payload.documentNumber ?? null;
+        document.version += 1;
+        failAfterEffect('DOCUMENT_CREATED');
+        return document;
+      },
+      getDocument: async () => document,
+      uploadMainFile: async () => {
+        state.calls.upload += 1;
+        document.currentVersionId = 3;
+        document.version += 1;
+        failAfterEffect('REQUISITES_UPDATED');
+        return { id: 3, versionNumber: 1 } as DocumentVersion;
+      },
+      uploadAttachment: async (_id, file) => {
+        state.calls.attachment += 1;
+        const item = { id: 4, originalFileName: file.name, fileSize: file.size } as DocumentAttachment;
+        state.attachments.push(item);
+        failAfterEffect('MAIN_FILE_UPLOADED');
+        return item;
+      },
+      listAttachments: async () => state.attachments,
+      getSigningRoute: async () => state.route,
+      createSigningRoute: async () => {
+        state.calls.route += 1;
+        state.route = route;
+        failAfterEffect('ATTACHMENTS_UPLOADED');
+        return route;
+      },
+      prepare: async () => {
+        state.calls.prepare += 1;
+        state.prepared = true;
+        failAfterEffect('ROUTE_CREATED');
+        return route;
+      },
+      send: async () => {
+        state.calls.send += 1;
+        state.sent = true;
+        state.route = { ...route, status: 'ACTIVE' };
+        failAfterEffect('PREPARED');
+        return state.route;
+      },
+    };
+    let checkpoint = createCreationCheckpoint(5, 'backend-resolved:5');
+    const run = () => runCreationWorkflow({
+      checkpoint,
+      createPayload: { documentType: 'CONTRACT', direction: 'OUTGOING', title: 'A' },
+      requisites: { documentNumber: 'DOC-1' }, expectedDocumentNumber: 'DOC-1',
+      mainFile: main, mainFileRequired: true, attachments: [extra],
+      route: { routeType: 'SEQUENTIAL', steps: [{ requiredCount: 1, assignments: [{ signerType: 'EXTERNAL', email: 'a@b.kz', required: true }] }] },
+      submit: true, operations,
+      persist: (value) => { checkpoint = value; },
+    });
+    await expect(run()).rejects.toThrow('network after');
+    const completed = await run();
+    expect(completed.stage).toBe('COMPLETED');
+    expect(state.created && state.sent).toBe(true);
+    expect(state.calls.route).toBe(1);
+    expect(state.calls.upload).toBe(1);
+    expect(state.calls.attachment).toBe(1);
   });
 
   it('never sends private key material in signature payload', async () => {

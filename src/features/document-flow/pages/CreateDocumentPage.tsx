@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { isAxiosError } from 'axios';
 import {
   Alert, Box, Button, Collapse, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, LinearProgress,
   MenuItem, Paper, Select, Stack, Step, StepLabel, Stepper, TextField,
@@ -7,6 +8,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 import { documentFlowApi } from '../api/documentFlowApi';
 import { documentFlowKeys } from '../api/documentFlowKeys';
 import DocumentFileUploader from '../components/DocumentFileUploader';
@@ -16,14 +18,19 @@ import { hasFeature, validateDocumentFile, validateRequiredCount } from '../mode
 import type { Counterparty, DocumentDirection, DocumentType, SigningRouteRequest } from '../model/types';
 import { mapDocumentFlowError } from '../utils/apiErrorMapper';
 import { normalizeBin } from '../utils/counterpartyForm';
+import { useDocumentFlowTenant } from '../hooks/useDocumentFlowTenant';
+import {
+  createCreationCheckpoint, creationCheckpointStorageKey, readCreationCheckpoint, runCreationWorkflow,
+  type CreationCheckpoint,
+} from '../model/creationCheckpoint';
 
 interface FormValues {
   documentType: DocumentType | '';
+  direction: DocumentDirection | '';
   title: string;
   counterpartyId: string;
   description: string;
   documentNumber: string;
-  documentDate: string;
   comment: string;
 }
 
@@ -38,15 +45,16 @@ const phases: Array<{ key: ProcessPhase; label: string }> = [
   { key: 'DONE', label: 'Завершено' },
 ];
 
-const draftKey = 'document-flow:create-draft';
+const legacyDraftKey = 'document-flow:create-draft';
+const draftSchemaVersion = 1;
 
 export default function CreateDocumentPage() {
   const access = useDocumentFlowContext();
+  const { user } = useAuth();
+  const tenant = useDocumentFlowTenant();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const createKey = useRef(crypto.randomUUID());
-  const createdId = useRef<number | null>(null);
-  const uploaded = useRef(false);
+  const checkpoint = useRef<CreationCheckpoint | null>(null);
   const [step, setStep] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null | undefined>();
@@ -57,14 +65,15 @@ export default function CreateDocumentPage() {
   const [quickCreated, setQuickCreated] = useState<Counterparty | null>(null);
   const [route, setRoute] = useState<SigningRouteRequest>({ routeType: 'SEQUENTIAL', steps: [] });
   const { control, register, watch, trigger, getValues, reset, setError, setValue, formState: { errors, isDirty } } = useForm<FormValues>({
-    defaultValues: { documentType: '', title: '', counterpartyId: '', description: '', documentNumber: '', documentDate: new Date().toISOString().slice(0, 10), comment: '' },
+    defaultValues: { documentType: '', direction: '', title: '', counterpartyId: '', description: '', documentNumber: '', comment: '' },
   });
   const quickForm = useForm<QuickCounterpartyValues>({ defaultValues: { bin: '', name: '' } });
   const values = watch();
   const types = useQuery({ queryKey: documentFlowKeys.documentTypes(), queryFn: ({ signal }) => documentFlowApi.documentTypes(signal) });
   const counterparties = useQuery({
-    queryKey: documentFlowKeys.counterparties({ page: 0, size: 20, status: 'ACTIVE' }),
+    queryKey: tenant.tenantScope ? documentFlowKeys.counterparties(tenant.tenantScope, { page: 0, size: 20, status: 'ACTIVE' }) : ['document-flow', 'tenant-unresolved', 'counterparties'],
     queryFn: ({ signal }) => documentFlowApi.getCounterparties({ page: 0, size: 20, signal }),
+    enabled: tenant.organizationResolved,
   });
   const quickCreate = useMutation({
     mutationFn: (input: QuickCounterpartyValues) => documentFlowApi.createCounterparty({
@@ -75,7 +84,7 @@ export default function CreateDocumentPage() {
       setValue('counterpartyId', String(created.id), { shouldDirty: true, shouldValidate: true });
       quickForm.reset();
       setQuickOpen(false);
-      await queryClient.invalidateQueries({ queryKey: documentFlowKeys.counterpartyLists() });
+      await queryClient.invalidateQueries({ queryKey: documentFlowKeys.counterpartyLists(tenant.tenantScope!) });
     },
     onError: (error) => {
       const mapped = mapDocumentFlowError(error);
@@ -90,6 +99,12 @@ export default function CreateDocumentPage() {
     return quickCreated && !items.some((item) => item.id === quickCreated.id) ? [quickCreated, ...items] : items;
   }, [counterparties.data?.items, quickCreated]);
   const selectedType = useMemo(() => types.data?.find((item) => item.type === values.documentType), [types.data, values.documentType]);
+  const organizationScope = tenant.tenantScope ?? 'tenant-unresolved';
+  const numericUserId = Number(user?.id);
+  const draftKey = `document-flow:create-draft:${user?.id ?? 'anonymous'}:${organizationScope}`;
+  const checkpointKey = Number.isSafeInteger(numericUserId)
+    ? creationCheckpointStorageKey(numericUserId, organizationScope)
+    : null;
   const fileError = file && selectedType ? validateDocumentFile(file, selectedType) : null;
   const routeInvalid = !route.steps.length || route.steps.some((item) =>
     !validateRequiredCount(item.requiredCount, item.assignments.length)
@@ -98,69 +113,99 @@ export default function CreateDocumentPage() {
   );
 
   useEffect(() => {
+    localStorage.removeItem(legacyDraftKey);
     const raw = localStorage.getItem(draftKey);
     if (!raw) return;
     try {
-      const saved = JSON.parse(raw) as Partial<FormValues>;
-      reset({ ...getValues(), ...saved });
+      const saved = JSON.parse(raw) as { schemaVersion?: number; values?: Partial<FormValues>; route?: SigningRouteRequest };
+      if (saved.schemaVersion !== draftSchemaVersion || !saved.values) throw new Error('Unsupported draft schema');
+      reset({ ...getValues(), ...saved.values });
+      if (saved.route) setRoute(saved.route);
       setRestored(true);
     } catch { localStorage.removeItem(draftKey); }
-  }, [getValues, reset]);
+  }, [draftKey, getValues, reset]);
   useEffect(() => {
     if (!isDirty) return;
-    const timer = window.setTimeout(() => localStorage.setItem(draftKey, JSON.stringify(getValues())), 500);
+    const timer = window.setTimeout(() => localStorage.setItem(draftKey, JSON.stringify({
+      schemaVersion: draftSchemaVersion,
+      savedAt: new Date().toISOString(),
+      values: getValues(),
+      route,
+    })), 500);
     return () => window.clearTimeout(timer);
-  }, [getValues, isDirty, values]);
+  }, [draftKey, getValues, isDirty, route, values]);
+  useEffect(() => {
+    if (!checkpointKey || !tenant.tenantScope) return;
+    checkpoint.current = readCreationCheckpoint(checkpointKey, numericUserId, tenant.tenantScope);
+    if (checkpoint.current?.documentId) setRestored(true);
+  }, [checkpointKey, numericUserId, tenant.tenantScope]);
+  useEffect(() => {
+    if (!selectedType) return;
+    if (selectedType.allowedDirections === 'IN') setValue('direction', 'INCOMING', { shouldValidate: true });
+    else if (selectedType.allowedDirections === 'OUT') setValue('direction', 'OUTGOING', { shouldValidate: true });
+    else setValue('direction', '', { shouldValidate: true });
+  }, [selectedType, setValue]);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (isDirty && !mutation.isSuccess) event.preventDefault(); };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   });
 
-  const direction = (): DocumentDirection => selectedType?.allowedDirections === 'IN' ? 'INCOMING' : 'OUTGOING';
-  const ensureDraftAndFile = async (fileRequired: boolean) => {
-    let id = createdId.current;
-    if (!id) {
-      setPhase('CREATING');
-      const form = getValues();
-      const document = await documentFlowApi.createDocument({
-        documentType: form.documentType as DocumentType,
-        direction: direction(),
-        title: form.title.trim(),
-        description: form.description.trim() || undefined,
-        counterpartyId: form.counterpartyId ? Number(form.counterpartyId) : undefined,
-        documentDate: form.documentDate || undefined,
-        documentNumber: form.documentNumber.trim() || undefined,
-      }, createKey.current);
-      id = document.id;
-      createdId.current = id;
-    }
-    if (!uploaded.current && file) {
-      setPhase('UPLOADING');
-      setUploadProgress(null);
-      await documentFlowApi.uploadFile(id, file, { changeReason: getValues().comment.trim() || undefined, onProgress: setUploadProgress });
-      uploaded.current = true;
-    }
-    if (fileRequired && !uploaded.current) throw new Error('Выберите основной файл.');
-    return id;
-  };
-
   const mutation = useMutation({
     mutationFn: async (intent: 'DRAFT' | 'SUBMIT') => {
-      const valid = await trigger(['documentType', 'title', 'counterpartyId']);
-      if (!valid || fileError || (intent === 'SUBMIT' && (!file || routeInvalid))) throw new Error(fileError || 'Проверьте обязательные поля, файл и маршрут подписания.');
-      const id = await ensureDraftAndFile(intent === 'SUBMIT');
-      if (intent === 'DRAFT') return { id, signed: false };
-      await documentFlowApi.createSigningRoute(id, route);
-      setPhase('PREPARING');
-      const fresh = await documentFlowApi.document(id);
-      await documentFlowApi.prepareForSigning(id, fresh.version);
-      await documentFlowApi.sendForSigning(id);
+      const valid = await trigger(['documentType', 'direction', 'title', 'counterpartyId']);
+      if (!valid || fileError || (intent === 'SUBMIT' && (!file || selectedType?.signingRequired !== true || routeInvalid))) throw new Error(fileError || 'Проверьте обязательные поля, файл и маршрут подписания.');
+      if (!checkpointKey || !tenant.tenantScope || !Number.isSafeInteger(numericUserId)) {
+        throw new Error('Не удалось определить пользователя для безопасного tenant checkpoint.');
+      }
+      const form = getValues();
+      checkpoint.current ??= createCreationCheckpoint(numericUserId, tenant.tenantScope);
+      const result = await runCreationWorkflow({
+        checkpoint: checkpoint.current,
+        createPayload: {
+          documentType: form.documentType as DocumentType,
+          direction: form.direction as DocumentDirection,
+          title: form.title.trim(),
+          description: form.description.trim() || undefined,
+          counterpartyId: form.counterpartyId ? Number(form.counterpartyId) : undefined,
+        },
+        requisites: form.documentNumber.trim() ? { documentNumber: form.documentNumber.trim() } : undefined,
+        expectedDocumentNumber: form.documentNumber.trim() || undefined,
+        mainFile: file ?? undefined,
+        mainFileRequired: intent === 'SUBMIT',
+        route: intent === 'SUBMIT' ? route : undefined,
+        submit: intent === 'SUBMIT',
+        operations: {
+          createDocument: (payload, key) => { setPhase('CREATING'); return documentFlowApi.createDocument(payload, key); },
+          updateDocument: (id, payload) => documentFlowApi.updateDocument(id, payload),
+          getDocument: (id) => documentFlowApi.document(id),
+          uploadMainFile: (id, selectedFile) => {
+            setPhase('UPLOADING');
+            setUploadProgress(null);
+            return documentFlowApi.uploadFile(id, selectedFile, { changeReason: form.comment.trim() || undefined, onProgress: setUploadProgress });
+          },
+          uploadAttachment: (id, selectedFile) => documentFlowApi.uploadAttachment(id, selectedFile),
+          listAttachments: (id) => documentFlowApi.attachments(id),
+          getSigningRoute: async (id) => {
+            try { return await documentFlowApi.signingRoute(id); }
+            catch (error) { if (isAxiosError(error) && error.response?.status === 404) return null; throw error; }
+          },
+          createSigningRoute: (id, payload) => documentFlowApi.createSigningRoute(id, payload),
+          prepare: (id, version) => { setPhase('PREPARING'); return documentFlowApi.prepareForSigning(id, version); },
+          send: (id) => documentFlowApi.sendForSigning(id),
+        },
+        persist: (next) => {
+          checkpoint.current = next;
+          localStorage.setItem(checkpointKey, JSON.stringify(next));
+        },
+      });
+      checkpoint.current = result;
       setPhase('DONE');
-      return { id, signed: false };
+      return { id: result.documentId!, signed: false };
     },
     onSuccess: async ({ id }) => {
       localStorage.removeItem(draftKey);
+      if (checkpointKey) localStorage.removeItem(checkpointKey);
       await queryClient.invalidateQueries({ queryKey: documentFlowKeys.all });
       navigate(`/document-flow/documents/${id}`);
     },
@@ -170,7 +215,7 @@ export default function CreateDocumentPage() {
     },
   });
   const next = async () => {
-    const valid = await trigger(['documentType', 'title', 'counterpartyId']);
+      const valid = await trigger(['documentType', 'direction', 'title', 'counterpartyId']);
     if (valid) setStep(1);
   };
   const error = mutation.isError ? mapDocumentFlowError(mutation.error) : null;
@@ -184,22 +229,24 @@ export default function CreateDocumentPage() {
       <Paper sx={{ p: { xs: 2, md: 4 } }}>
         {step === 0 && <Stack spacing={2}>
           <Controller name="documentType" control={control} rules={{ required: 'Выберите тип документа.' }} render={({ field }) => <FormControl fullWidth error={Boolean(errors.documentType)}><InputLabel>Тип документа</InputLabel><Select {...field} label="Тип документа">{(types.data || []).filter((item) => item.active && (!item.requiredFeature || hasFeature(access, item.requiredFeature))).map((item) => <MenuItem key={item.type} value={item.type}>{item.title}</MenuItem>)}</Select></FormControl>} />
+          <Controller name="direction" control={control} rules={{ required: 'Выберите направление.' }} render={({ field }) => <FormControl fullWidth error={Boolean(errors.direction)} disabled={selectedType?.allowedDirections !== 'BOTH'}><InputLabel>Направление</InputLabel><Select {...field} label="Направление"><MenuItem value="INCOMING">Входящий</MenuItem><MenuItem value="OUTGOING">Исходящий</MenuItem></Select></FormControl>} />
           <TextField label="Название" {...register('title', { required: 'Укажите название.', validate: (value) => Boolean(value.trim()) || 'Укажите название.' })} error={Boolean(errors.title)} helperText={errors.title?.message} />
-          <Stack direction={{ xs: 'column', sm: 'row' }} gap={2}><TextField fullWidth type="date" label="Дата документа" InputLabelProps={{ shrink: true }} {...register('documentDate')} /><TextField fullWidth label="Номер" placeholder="Будет присвоен автоматически" {...register('documentNumber')} /></Stack>
+          <TextField fullWidth label="Номер" placeholder="Будет присвоен автоматически" {...register('documentNumber')} />
           {selectedType?.counterpartyRequired && <Controller name="counterpartyId" control={control} rules={{ required: 'Выберите контрагента.' }} render={({ field }) => <FormControl fullWidth error={Boolean(errors.counterpartyId)}><InputLabel>Контрагент</InputLabel><Select {...field} label="Контрагент" onChange={(event) => event.target.value === '__new__' ? setQuickOpen(true) : field.onChange(event)}><MenuItem value="__new__">+ Новый контрагент</MenuItem>{activeCounterparties.map((item) => <MenuItem key={item.id} value={String(item.id)}>{item.name} · {item.bin}</MenuItem>)}</Select></FormControl>} />}
           <TextField label="Описание" multiline minRows={3} {...register('description')} />
           <Box textAlign="right"><Button variant="contained" onClick={next}>Далее</Button></Box>
         </Stack>}
         {step === 1 && <Stack spacing={3}>
-          <DocumentFileUploader config={selectedType} file={file} onChange={(next) => { setFile(next); uploaded.current = false; }} progress={uploadProgress} disabled={mutation.isPending} />
+          <DocumentFileUploader config={selectedType} file={file} onChange={setFile} progress={uploadProgress} disabled={mutation.isPending} />
           <TextField label="Комментарий" multiline minRows={2} {...register('comment')} />
           {selectedType?.signingRequired && <Alert severity="info">Подписание выполняется только через backend-маршрут: маршрут → подготовка → отправка → подписи.</Alert>}
-          <><Button variant="text" onClick={() => setAdvanced((value) => !value)}>Настройки маршрута подписания</Button><Collapse in={advanced}><SigningRouteBuilder access={access} value={route} onChange={setRoute} /></Collapse></>
+          {selectedType && !selectedType.signingRequired && <Alert severity="info">Backend пока не предоставляет переход в готовый статус без маршрута. Документ и файл можно безопасно сохранить как черновик.</Alert>}
+          {selectedType?.signingRequired && <><Button variant="text" onClick={() => setAdvanced((value) => !value)}>Настройки маршрута подписания</Button><Collapse in={advanced}><SigningRouteBuilder access={access} value={route} onChange={setRoute} /></Collapse></>}
           {phase && <Box><Stepper activeStep={activePhase} alternativeLabel sx={{ display: { xs: 'none', md: 'flex' } }}>{phases.map((item) => <Step key={item.key}><StepLabel>{item.label}</StepLabel></Step>)}</Stepper><LinearProgress sx={{ mt: 2 }} /></Box>}
           {error && <Alert severity="error">{error.message}{error.code === 'NCALAYER_NOT_AVAILABLE' && ' Запустите NCALayer и нажмите кнопку ещё раз — документ повторно не создастся.'}</Alert>}
           <Stack direction={{ xs: 'column-reverse', sm: 'row' }} justifyContent="space-between" gap={1}>
             <Button disabled={mutation.isPending} onClick={() => setStep(0)}>Назад</Button>
-            <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}><Button disabled={mutation.isPending} onClick={() => mutation.mutate('DRAFT')}>Сохранить черновик</Button><Button variant="contained" disabled={mutation.isPending || !file || Boolean(fileError || routeInvalid)} onClick={() => mutation.mutate('SUBMIT')}>Создать и отправить на подписание</Button></Stack>
+            <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}><Button disabled={mutation.isPending} onClick={() => mutation.mutate('DRAFT')}>Сохранить черновик</Button>{selectedType?.signingRequired && <Button variant="contained" disabled={mutation.isPending || !file || Boolean(fileError || routeInvalid)} onClick={() => mutation.mutate('SUBMIT')}>Создать и отправить на подписание</Button>}</Stack>
           </Stack>
         </Stack>}
       </Paper>

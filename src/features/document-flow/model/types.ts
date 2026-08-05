@@ -13,30 +13,34 @@ export type SubscriptionStatus =
   | 'PENDING' | 'TRIAL' | 'ACTIVE' | 'GRACE_PERIOD'
   | 'SUSPENDED' | 'EXPIRED' | 'CANCELLED';
 
+export type MembershipRole =
+  | 'OWNER' | 'DOCUMENT_FLOW_ADMIN' | 'DOCUMENT_MANAGER'
+  | 'SIGNER' | 'ACCOUNTANT' | 'VIEWER' | 'EXTERNAL_SIGNER';
+
+export type DocumentFlowPermission =
+  | 'VIEW_DOCUMENTS' | 'CREATE_DOCUMENT' | 'EDIT_DOCUMENT' | 'DELETE_DOCUMENT'
+  | 'SIGN_DOCUMENT' | 'SIGN_EXTERNAL' | 'REVOKE_SIGNATURE' | 'MANAGE_MEMBERS'
+  | 'MANAGE_COUNTERPARTIES' | 'MANAGE_TEMPLATES' | 'VIEW_AUDIT_LOG'
+  | 'MANAGE_SUBSCRIPTION';
+
+export type AvailableAction =
+  | 'EDIT' | 'DELETE' | 'SEND_FOR_SIGNING' | 'DOWNLOAD'
+  | 'UPLOAD_VERSION' | 'ARCHIVE' | 'MANAGE_ATTACHMENTS';
+
 export interface AccessContext {
   available: boolean;
   readOnly: boolean;
-  internalMode: boolean;
-  status: SubscriptionStatus | string | null;
+  status: SubscriptionStatus | null;
   plan: { code: string; name: string } | null;
   startsAt: string | null;
   expiresAt: string | null;
   daysRemaining: number | null;
   features: FeatureCode[];
-  permissions: string[];
+  permissions: DocumentFlowPermission[];
   limits: Partial<Record<UsageMetric, number>>;
   usage: Partial<Record<UsageMetric, number>>;
-  availableActions: string[];
+  availableActions: DocumentFlowPermission[];
   reason: string | null;
-  organization: { id: number; name: string; bin?: string; role?: string } | null;
-  organizations: Array<{
-    id: number;
-    name: string;
-    bin?: string;
-    membershipStatus: string;
-    role?: string;
-  }>;
-  maxFileSizeBytes?: number | null;
 }
 
 export interface PublicPlanFeature {
@@ -60,10 +64,10 @@ export interface PublicPlan {
 
 export type DocumentDirection = 'INCOMING' | 'OUTGOING' | 'INTERNAL';
 export type DocumentStatus =
-  | 'DRAFT' | 'READY_FOR_SIGNING' | 'SIGNING' | 'SENT_FOR_SIGNING'
+  | 'DRAFT' | 'READY_FOR_SIGNING' | 'SENT_FOR_SIGNING'
   | 'PARTIALLY_SIGNED' | 'SIGNED' | 'REJECTED'
-  | 'REVISION_REQUIRED' | 'RETURNED_FOR_REVISION' | 'REVOCATION_REQUESTED' | 'REVOKED'
-  | 'CANCELLED' | 'EXPIRED' | 'ARCHIVED' | 'DELETED';
+  | 'RETURNED_FOR_REVISION' | 'REVOCATION_REQUESTED' | 'REVOKED'
+  | 'CANCELLED' | 'EXPIRED' | 'ARCHIVED';
 
 export type DocumentType =
   | 'REALIZATION_OF_GOODS_SERVICES' | 'RECEIPT_OF_GOODS_SERVICES'
@@ -101,22 +105,22 @@ export interface DocumentListItem {
   id: number;
   number: string | null;
   title: string;
-  type: DocumentType | string;
-  direction: DocumentDirection | string;
+  type: DocumentType;
+  direction: DocumentDirection;
   counterparty: { id: number; name: string; bin: string } | null;
   author: { id: number; fullName: string } | null;
   createdAt: string;
   deadline: string | null;
-  status: DocumentStatus | string;
-  signedCount: number;
-  requiredCount: number;
-  requiresMySignature: boolean;
+  status: DocumentStatus;
+  signedCount?: number;
+  requiredCount?: number;
+  requiresMySignature?: boolean;
   version: number;
   permissions: DocumentPermissions;
-  availableActions: string[];
+  availableActions: AvailableAction[];
 }
 
-export interface DocumentDetail extends DocumentListItem {
+export interface DocumentDetail extends Omit<DocumentListItem, 'signedCount' | 'requiredCount' | 'requiresMySignature'> {
   publicId: string;
   description: string | null;
   updatedAt: string;
@@ -163,8 +167,6 @@ export interface CreateDocumentRequest {
   counterpartyId?: number;
   signingDeadline?: string;
   organizationId?: number;
-  documentDate?: string;
-  documentNumber?: string;
 }
 
 export interface UpdateDocumentRequest {
@@ -239,6 +241,7 @@ export interface CreateCounterpartyRequest {
 }
 
 export interface CounterpartyListParams {
+  organizationId?: number;
   page: number;
   size: number;
   signal?: AbortSignal;
@@ -259,14 +262,14 @@ export type SignerType = 'ORGANIZATION_MEMBER' | 'COUNTERPARTY_REPRESENTATIVE' |
 
 export interface SigningAssignmentInput {
   signerType: SignerType;
-  userId?: number;
-  signerFullName?: string;
-  signerIin?: string;
-  organizationName?: string;
-  organizationBin?: string;
-  email?: string;
-  phone?: string;
-  roleCode?: string;
+  userId?: number | null;
+  signerFullName?: string | null;
+  signerIin?: string | null;
+  organizationName?: string | null;
+  organizationBin?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  roleCode?: string | null;
   required: boolean;
 }
 
@@ -283,7 +286,7 @@ export interface SigningRouteRequest {
 export interface SigningAssignment extends SigningAssignmentInput {
   id: number;
   stepId: number;
-  status: string;
+  status: SigningAssignmentStatus;
   availableAt: string | null;
   viewedAt: string | null;
   signedAt: string | null;
@@ -296,7 +299,7 @@ export interface SigningRoute {
   id: number;
   documentId: number;
   routeType: SigningRouteType;
-  status: string;
+  status: SigningRouteStatus;
   createdBy: number;
   createdAt: string;
   activatedAt: string | null;
@@ -319,49 +322,27 @@ export interface DocumentSignature {
   certificateValidFrom: string;
   certificateValidTo: string;
   signedAt: string;
-  verificationStatus: 'VALID' | 'INVALID' | 'EXPIRED_CERTIFICATE' | 'REVOKED_CERTIFICATE' | string;
+  verificationStatus: 'VALID' | 'INVALID' | 'EXPIRED_CERTIFICATE' | 'REVOKED_CERTIFICATE';
 }
+
+export type SigningRouteStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+export type SigningAssignmentStatus = 'PENDING' | 'AVAILABLE' | 'VIEWED' | 'SIGNED' | 'REJECTED' | 'EXPIRED';
 
 export interface PublicInvitation {
   documentId: number;
   documentTitle: string;
   roleCode: string | null;
   required: boolean;
-  status: 'AVAILABLE' | 'VIEWED' | 'SIGNED' | 'REJECTED' | 'EXPIRED' | string;
+  status: 'AVAILABLE' | 'VIEWED' | 'SIGNED' | 'REJECTED' | 'EXPIRED';
   invitationExpiresAt: string | null;
   signingDeadline: string | null;
-  organizationName?: string | null;
-  documentNumber?: string | null;
-  fileName?: string | null;
-  fileSize?: number | null;
-  assignmentId?: number;
-  versionId?: number;
-  challenge?: string;
-  dataToSign?: string;
-}
-
-export interface OrganizationSigner {
-  id: number;
-  fullName: string;
-  position: string | null;
-  email: string | null;
-  active: boolean;
-  organizationId: number;
-}
-
-export interface SelfSignPreparation {
-  challenge: string;
-  dataToSign: string;
-  versionId?: number;
-  assignmentId?: number;
-  expiresAt?: string | null;
 }
 
 export interface RevocationRequest {
   id: number;
   documentId: number;
   requestedBy: number;
-  status: 'DRAFT' | 'SENT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | string;
+  status: RevocationStatus;
   reason: string;
   createdAt: string;
   updatedAt: string;
@@ -369,6 +350,8 @@ export interface RevocationRequest {
   resolvedBy: number | null;
   resolutionComment: string | null;
 }
+
+export type RevocationStatus = 'DRAFT' | 'SENT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 
 export interface DashboardResponse {
   total: number;

@@ -11,6 +11,7 @@ const legacyPermissionByAction: Partial<Record<ProtocolAvailableAction, string>>
   DOWNLOAD_DOCX: 'canDownload',
   CREATE_CORRECTED_VERSION: 'canReplace',
   ARCHIVE: 'canArchive',
+  DELETE: 'canDelete',
 };
 
 export const protocolHasAction = (protocol: Protocol, action: ProtocolAvailableAction): boolean => {

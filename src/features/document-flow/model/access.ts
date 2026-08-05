@@ -1,14 +1,14 @@
-import type { AccessContext, DocumentDetail, DocumentStatus, DocumentTypeConfig, FeatureCode, UsageMetric } from './types';
+import type { AccessContext, DocumentDetail, DocumentFlowPermission, DocumentStatus, DocumentTypeConfig, FeatureCode, UsageMetric } from './types';
 
 export const hasFeature = (access: AccessContext | undefined, feature: FeatureCode) =>
   access?.available === true && access.features.includes(feature);
 
-export const hasPermission = (access: AccessContext | undefined, permission: string) =>
+export const hasPermission = (access: AccessContext | undefined, permission: DocumentFlowPermission) =>
   access?.available === true && access.permissions.includes(permission);
 
 export const canMutate = (
   access: AccessContext | undefined,
-  permission?: string,
+  permission?: DocumentFlowPermission,
   feature?: FeatureCode,
 ) => Boolean(
   access?.available
@@ -18,9 +18,9 @@ export const canMutate = (
 );
 
 export const isKnownDocumentStatus = (status: string): status is DocumentStatus => [
-  'DRAFT', 'READY_FOR_SIGNING', 'SIGNING', 'SENT_FOR_SIGNING', 'PARTIALLY_SIGNED', 'SIGNED',
-  'REJECTED', 'REVISION_REQUIRED', 'RETURNED_FOR_REVISION', 'REVOCATION_REQUESTED', 'REVOKED',
-  'CANCELLED', 'EXPIRED', 'ARCHIVED', 'DELETED',
+  'DRAFT', 'READY_FOR_SIGNING', 'SENT_FOR_SIGNING', 'PARTIALLY_SIGNED', 'SIGNED',
+  'REJECTED', 'RETURNED_FOR_REVISION', 'REVOCATION_REQUESTED', 'REVOKED',
+  'CANCELLED', 'EXPIRED', 'ARCHIVED',
 ].includes(status);
 
 export const documentMutationAllowed = (document: DocumentDetail, access: AccessContext) =>

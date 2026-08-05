@@ -1215,8 +1215,7 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
 }
 
 export async function deleteProtocol(protocolId: string, version: number): Promise<void> {
-  void version;
-  await api.delete<ApiResponse<null>>(`/protocols/${protocolId}`);
+  await api.delete<ApiResponse<null>>(`/protocols/${protocolId}`, { params: { version } });
 }
 
 export async function addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow> {

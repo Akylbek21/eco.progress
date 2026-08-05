@@ -1,10 +1,24 @@
 # Document Flow frontend integration report
 
+## Повторная контрактная сверка 2026-08-03
+
+- public plans и public signing переведены на общий Axios client; interceptor не добавляет JWT к `/public/**` и не завершает приватную сессию из-за public `401`;
+- HTTP 200 с `success=false` теперь считается ошибкой через общий `unwrapApiResponse`;
+- удалены придуманные поля access context (`internalMode`, `organization`, `organizations`), которых нет в `AccessContextDto`;
+- frontend enum статусов, permissions, route/assignment/revocation и `availableActions` приведены к Java enum/mapper;
+- query keys разделены по `organizationId` там, где backend его принимает; старые данные списка больше не показываются через `placeholderData`;
+- список получил URL-фильтры дат, автора, контрагента, overdue, «требует моей подписи», сортировку, точный total и debounce 400 мс;
+- `allowedDirections=BOTH` требует явного выбора пользователя;
+- create request больше не отправляет отсутствующие `documentDate`/`documentNumber`; номер сохраняется поддерживаемым PATCH, а повтор использует тот же idempotency key и созданный document ID;
+- локальный черновик имеет schema version, timestamp и user-scoped key; старый общий key удаляется. Organization scope остаётся заблокирован отсутствующим backend access DTO;
+- опасное удаление черновика требует отдельного подтверждения с описанием последствия;
+- добавлены проверки общего public client без JWT и логической ошибки `success=false` при HTTP 200.
+
 Дата: 31.07.2026.
 
 ## Результат
 
-Существующий redirect на отдельный EDO-кабинет заменён встроенным разделом EcoProgress. Внутренние запросы используют общий JWT Axios client, public token signing — отдельный client без JWT. Production mocks не добавлялись.
+Существующий redirect на отдельный EDO-кабинет заменён встроенным разделом EcoProgress. Внутренние и public запросы используют общий Axios client; interceptor для `/public/**` не добавляет JWT и не запускает private 401 logout/redirect. Production mocks не добавлялись.
 
 ## Routes
 
@@ -189,8 +203,8 @@ Admin routes дополнительно проверяют роль `ADMIN`.
 - `npm run lint` — успешно, 2/2.
 - `npm test` — успешно:
   - Node tests: 155/155;
-  - Vitest: 127/127, 13/13 файлов;
-  - Document Flow focused tests: 8/8.
+  - Vitest: 142/142, 13/13 файлов;
+  - Document Flow focused tests: 13/13.
 - `npm run build` — успешно:
   - TypeScript;
   - Vite production build;

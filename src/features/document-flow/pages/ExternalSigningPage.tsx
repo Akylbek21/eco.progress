@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { publicDocumentFlowApi } from '../api/documentFlowApi';
 import { documentFlowKeys } from '../api/documentFlowKeys';
+import BackendContractBlocker from '../components/BackendContractBlocker';
 
 export default function ExternalSigningPage() {
   const token = useParams().token || '';
@@ -48,8 +49,6 @@ export default function ExternalSigningPage() {
       <Stack spacing={3}>
         <Paper sx={{ p: 3 }}>
           <Typography variant="h4" fontWeight={800}>{data.documentTitle}</Typography>
-          {data.organizationName && <Typography color="text.secondary">{data.organizationName}</Typography>}
-          {data.documentNumber && <Typography>Номер: {data.documentNumber}</Typography>}
           <Typography>Статус: {data.status}</Typography>
           <Typography>Обязательная подпись: {data.required ? 'Да' : 'Нет'}</Typography>
           <Typography>Приглашение до: {data.invitationExpiresAt || '—'}</Typography>
@@ -57,10 +56,9 @@ export default function ExternalSigningPage() {
         </Paper>
         {fileUrl && <Box component="iframe" title="Документ для внешнего подписания" src={fileUrl} width="100%" height="650px" border={0} />}
         {!terminal && <Stack direction="row" gap={2}>
-          <Button variant="contained" disabled title="Backend не возвращает assignmentId/versionId, обязательные для POST /sign">Подписать через NCALayer</Button>
           <Button color="error" onClick={() => setRejectOpen(true)}>Отклонить</Button>
         </Stack>}
-        {!terminal && <Alert severity="warning">Публичная подпись временно недоступна: backend не возвращает обязательные assignmentId и versionId. Фиктивный prepare-запрос не выполняется.</Alert>}
+        {!terminal && <BackendContractBlocker title="Подписание временно недоступно" reason="Приглашение не содержит данных, необходимых для безопасной отправки подписи. Документ можно просмотреть или отклонить." technicalCode="DF_PUBLIC_SIGN_CONTEXT_MISSING" publicAudience />}
       </Stack>
       <Dialog open={rejectOpen} onClose={() => setRejectOpen(false)} fullWidth><DialogTitle>Отклонить документ</DialogTitle><DialogContent><TextField fullWidth multiline minRows={3} label="Причина" value={reason} onChange={(event) => setReason(event.target.value)} sx={{ mt: 1 }} />{reject.isError && <Alert severity="error">{reject.error.message}</Alert>}</DialogContent><DialogActions><Button onClick={() => setRejectOpen(false)}>Отмена</Button><Button color="error" disabled={!reason.trim() || reject.isPending} onClick={() => reject.mutate()}>Отклонить</Button></DialogActions></Dialog>
     </Container>

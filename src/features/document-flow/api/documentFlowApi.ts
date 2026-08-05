@@ -1,6 +1,6 @@
-import axios, { type AxiosProgressEvent } from 'axios';
+import type { AxiosProgressEvent } from 'axios';
 import api from '../../../services/api';
-import type { ApiResponse } from '../../../services/apiHelpers';
+import { unwrapApiResponse, type ApiResponse } from '../../../services/apiHelpers';
 import type {
   AccessContext, Counterparty, CounterpartyListParams, CreateCounterpartyRequest, CreateDocumentRequest, DashboardResponse, DocumentAttachment,
   DocumentDetail, DocumentFilters, DocumentListItem, DocumentSignature, DocumentTypeConfig,
@@ -8,20 +8,15 @@ import type {
   RevocationRequest, SigningRoute, SigningRouteRequest, SubscriptionAdmin, UpdateDocumentRequest,
   UsageMetric,
 } from '../model/types';
-
-const publicClient = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL
-    ? `${import.meta.env.VITE_BACKEND_URL}/api/public/document-flow`
-    : '/api/public/document-flow',
-  timeout: 15_000,
-});
+import {
+  accessContextSchema, documentDetailSchema, documentListItemSchema, pageSchema, publicInvitationSchema, signingRouteSchema,
+} from './contractSchemas';
 
 const unwrap = <T>(response: { data: ApiResponse<T> | T }): T => {
-  const body = response.data;
-  return body && typeof body === 'object' && 'data' in body
-    ? (body as ApiResponse<T>).data
-    : body as T;
+  return unwrapApiResponse<T>(response.data);
 };
+
+const parseContract = <T>(schema: { parse(value: unknown): unknown }, value: unknown): T => schema.parse(value) as T;
 
 const compact = <T extends object>(value: T) => Object.fromEntries(
   Object.entries(value).filter(([, item]) => item !== undefined && item !== ''),
@@ -46,6 +41,13 @@ const counterparty = (source: Record<string, unknown>): Counterparty => ({
 const counterpartyPage = (source: PageResponse<Record<string, unknown>>): PageResponse<Counterparty> => ({
   ...source,
   items: source.items.map(counterparty),
+});
+
+const documentListPage = (source: PageResponse<DocumentListItem>): PageResponse<DocumentListItem> => ({
+  ...source,
+  // DocumentService currently hard-codes 0/0/false (DocumentDtos.java TODO-RECONCILE).
+  // Do not present those placeholders as signing facts.
+  items: source.items.map(({ signedCount: _signed, requiredCount: _required, requiresMySignature: _mine, ...item }) => item),
 });
 
 const attachment = (source: Record<string, unknown>): DocumentAttachment => ({
@@ -88,19 +90,12 @@ const progress = (callback?: (percent: number | null) => void) => (event: AxiosP
 };
 
 export const documentFlowApi = {
-  access: async (signal?: AbortSignal) => {
-    const context = unwrap<AccessContext>(await api.get('/document-flow/access', { signal }));
-    return {
-      ...context,
-      internalMode: context.internalMode === true,
-      organization: context.organization ?? null,
-      organizations: context.organizations ?? [],
-    };
-  },
+  access: async (signal?: AbortSignal) =>
+    parseContract<AccessContext>(accessContextSchema, unwrap<unknown>(await api.get('/document-flow/access', { signal }))),
   plans: async (signal?: AbortSignal) =>
-    unwrap<PublicPlan[]>(await publicClient.get('/plans', { signal })),
+    unwrap<PublicPlan[]>(await api.get('/public/document-flow/plans', { signal })),
   plan: async (code: string, signal?: AbortSignal) =>
-    unwrap<PublicPlan>(await publicClient.get(`/plans/${encodeURIComponent(code)}`, { signal })),
+    unwrap<PublicPlan>(await api.get(`/public/document-flow/plans/${encodeURIComponent(code)}`, { signal })),
   requestAccess: async (payload: {
     contactName: string; phone?: string; email?: string; planCode?: string;
     membersCount?: number; comment?: string;
@@ -110,13 +105,13 @@ export const documentFlowApi = {
   documentTypes: async (signal?: AbortSignal) =>
     unwrap<DocumentTypeConfig[]>(await api.get('/document-flow/document-types', { signal })),
   documents: async (filters: DocumentFilters, signal?: AbortSignal) =>
-    unwrap<PageResponse<DocumentListItem>>(await api.get('/document-flow/documents', { params: compact(filters), signal })),
+    documentListPage(parseContract<PageResponse<DocumentListItem>>(pageSchema(documentListItemSchema), unwrap<unknown>(await api.get('/document-flow/documents', { params: compact(filters), signal })))),
   document: async (id: number, organizationId?: number, signal?: AbortSignal) =>
-    unwrap<DocumentDetail>(await api.get(`/document-flow/documents/${id}`, { params: compact({ organizationId }), signal })),
+    parseContract<DocumentDetail>(documentDetailSchema, unwrap<unknown>(await api.get(`/document-flow/documents/${id}`, { params: compact({ organizationId }), signal }))),
   createDocument: async (payload: CreateDocumentRequest, idempotencyKey: string) =>
-    unwrap<DocumentDetail>(await api.post('/document-flow/documents', payload, { headers: { 'Idempotency-Key': idempotencyKey } })),
+    parseContract<DocumentDetail>(documentDetailSchema, unwrap<unknown>(await api.post('/document-flow/documents', payload, { headers: { 'Idempotency-Key': idempotencyKey } }))),
   updateDocument: async (id: number, payload: UpdateDocumentRequest, organizationId?: number) =>
-    unwrap<DocumentDetail>(await api.patch(`/document-flow/documents/${id}`, payload, { params: compact({ organizationId }) })),
+    parseContract<DocumentDetail>(documentDetailSchema, unwrap<unknown>(await api.patch(`/document-flow/documents/${id}`, payload, { params: compact({ organizationId }) }))),
   deleteDocument: async (id: number, organizationId?: number) =>
     api.delete(`/document-flow/documents/${id}`, { params: compact({ organizationId }) }),
   uploadFile: async (id: number, file: File, options: UploadOptions = {}) => {
@@ -168,9 +163,9 @@ export const documentFlowApi = {
     api.get<Blob>(`/document-flow/documents/${id}/versions/${versionId}/download`, {
       params: compact({ organizationId }), responseType: 'blob',
     }),
-  getCounterparties: async ({ page, size, signal }: CounterpartyListParams) =>
+  getCounterparties: async ({ organizationId, page, size, signal }: CounterpartyListParams) =>
     counterpartyPage(unwrap<PageResponse<Record<string, unknown>>>(await api.get('/document-flow/counterparties', {
-      params: { page, size }, signal,
+      params: compact({ organizationId, page, size }), signal,
     }))),
   getCounterparty: async (id: number, signal?: AbortSignal) =>
     counterparty(unwrap<Record<string, unknown>>(await api.get(`/document-flow/counterparties/${id}`, {
@@ -187,15 +182,15 @@ export const documentFlowApi = {
   addRepresentative: async (id: number, payload: Omit<Representative, 'id' | 'counterpartyId' | 'active'>) =>
     unwrap<Representative>(await api.post(`/document-flow/counterparties/${id}/representatives`, payload)),
   signingRoute: async (id: number, signal?: AbortSignal) =>
-    unwrap<SigningRoute>(await api.get(`/document-flow/documents/${id}/signing-route`, { signal })),
+    parseContract<SigningRoute>(signingRouteSchema, unwrap<unknown>(await api.get(`/document-flow/documents/${id}/signing-route`, { signal }))),
   createSigningRoute: async (id: number, payload: SigningRouteRequest) =>
-    unwrap<SigningRoute>(await api.post(`/document-flow/documents/${id}/signing-route`, payload)),
+    parseContract<SigningRoute>(signingRouteSchema, unwrap<unknown>(await api.post(`/document-flow/documents/${id}/signing-route`, payload))),
   updateSigningRoute: async (id: number, payload: SigningRouteRequest) =>
-    unwrap<SigningRoute>(await api.put(`/document-flow/documents/${id}/signing-route`, payload)),
+    parseContract<SigningRoute>(signingRouteSchema, unwrap<unknown>(await api.put(`/document-flow/documents/${id}/signing-route`, payload))),
   prepareForSigning: async (id: number, expectedVersion: number) =>
-    unwrap<SigningRoute>(await api.post(`/document-flow/documents/${id}/prepare-for-signing`, { expectedVersion })),
+    parseContract<SigningRoute>(signingRouteSchema, unwrap<unknown>(await api.post(`/document-flow/documents/${id}/prepare-for-signing`, { expectedVersion }))),
   sendForSigning: async (id: number) =>
-    unwrap<SigningRoute>(await api.post(`/document-flow/documents/${id}/send-for-signing`)),
+    parseContract<SigningRoute>(signingRouteSchema, unwrap<unknown>(await api.post(`/document-flow/documents/${id}/send-for-signing`))),
   cancelSigning: async (id: number, reason?: string) =>
     unwrap<SigningRoute>(await api.post(`/document-flow/documents/${id}/cancel-signing`, reason ? { reason } : undefined)),
   signingData: async (id: number) =>
@@ -232,14 +227,14 @@ export const documentFlowApi = {
 
 export const publicDocumentFlowApi = {
   invitation: async (token: string, signal?: AbortSignal) =>
-    unwrap<PublicInvitation>(await publicClient.get(`/signing/${encodeURIComponent(token)}`, { signal })),
+    parseContract<PublicInvitation>(publicInvitationSchema, unwrap<unknown>(await api.get(`/public/document-flow/signing/${encodeURIComponent(token)}`, { signal }))),
   file: async (token: string, signal?: AbortSignal) =>
-    publicClient.get<Blob>(`/signing/${encodeURIComponent(token)}/file`, { responseType: 'blob', signal }),
+    api.get<Blob>(`/public/document-flow/signing/${encodeURIComponent(token)}/file`, { responseType: 'blob', signal }),
   viewed: async (token: string) =>
-    publicClient.post(`/signing/${encodeURIComponent(token)}/viewed`),
+    api.post(`/public/document-flow/signing/${encodeURIComponent(token)}/viewed`),
   sign: async (token: string, payload: {
     documentId: number; versionId: number; assignmentId: number; cms: string; clientRequestId: string;
-  }) => unwrap<DocumentSignature>(await publicClient.post(`/signing/${encodeURIComponent(token)}/sign`, {
+  }) => unwrap<DocumentSignature>(await api.post(`/public/document-flow/signing/${encodeURIComponent(token)}/sign`, {
     documentId: payload.documentId,
     versionId: payload.versionId,
     assignmentId: payload.assignmentId,
@@ -247,7 +242,7 @@ export const publicDocumentFlowApi = {
     clientRequestId: payload.clientRequestId,
   })),
   reject: async (token: string, reason: string) =>
-    publicClient.post(`/signing/${encodeURIComponent(token)}/reject`, { reason }),
+    api.post(`/public/document-flow/signing/${encodeURIComponent(token)}/reject`, { reason }),
 };
 
 export const adminDocumentFlowApi = {

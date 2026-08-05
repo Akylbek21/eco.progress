@@ -42,8 +42,12 @@ export const useSignProtocolMutation = (
   const mutation = useMutation({
     mutationKey: ['sign-protocol', String(protocolId ?? '')],
     mutationFn: async ({ protocol }: SignVariables) => {
-      const fresh = await protocolService.getProtocol(String(protocol.id));
+      let fresh = await protocolService.getProtocol(String(protocol.id));
       if (!fresh.permissions?.canSign) throw new Error('Backend не разрешил подписание протокола.');
+      if (!fresh.hasPdf) {
+        await protocolService.generatePdf(fresh.id, fresh.version);
+        fresh = await protocolService.getProtocol(String(fresh.id));
+      }
       if (!fresh.hasPdf) throw new Error('Финальный PDF протокола не сформирован.');
       const file = await protocolService.downloadPdf(fresh.id);
       const cmsSignatureBase64 = await createProtocolCmsSignature(file.blob, setPhase);

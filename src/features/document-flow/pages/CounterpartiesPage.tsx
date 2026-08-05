@@ -13,6 +13,7 @@ import type { Counterparty } from '../model/types';
 import { useDocumentFlowContext } from '../components/DocumentFlowGate';
 import { mapDocumentFlowError } from '../utils/apiErrorMapper';
 import { emptyToUndefined, isValidEmail, isValidPhone, normalizeBin } from '../utils/counterpartyForm';
+import { useDocumentFlowTenant } from '../hooks/useDocumentFlowTenant';
 
 interface CounterpartyFormValues {
   bin: string;
@@ -36,6 +37,7 @@ const defaultValues: CounterpartyFormValues = {
 
 export default function CounterpartiesPage() {
   const access = useDocumentFlowContext();
+  const tenant = useDocumentFlowTenant();
   const mobile = useMediaQuery(useTheme().breakpoints.down('md'));
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
@@ -43,7 +45,6 @@ export default function CounterpartiesPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<Counterparty | null>(null);
   const [representativeTarget, setRepresentativeTarget] = useState<Counterparty | null>(null);
-  const [search, setSearch] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const form = useForm<CounterpartyFormValues>({ defaultValues });
   const representativeForm = useForm<RepresentativeFormValues>({
@@ -52,8 +53,9 @@ export default function CounterpartiesPage() {
   const filters = { page, size };
 
   const counterpartiesQuery = useQuery({
-    queryKey: documentFlowKeys.counterparties(filters),
+    queryKey: tenant.tenantScope ? documentFlowKeys.counterparties(tenant.tenantScope, filters) : ['document-flow', 'tenant-unresolved', 'counterparties'],
     queryFn: ({ signal }) => documentFlowApi.getCounterparties({ page, size, signal }),
+    enabled: tenant.organizationResolved,
   });
 
   useEffect(() => {
@@ -77,7 +79,7 @@ export default function CounterpartiesPage() {
       setCreateDialogOpen(false);
       form.reset(defaultValues);
       setSuccessMessage('Контрагент добавлен');
-      await queryClient.invalidateQueries({ queryKey: documentFlowKeys.counterpartyLists() });
+      await queryClient.invalidateQueries({ queryKey: documentFlowKeys.counterpartyLists(tenant.tenantScope!) });
     },
     onError: (error) => {
       const mapped = mapDocumentFlowError(error);
@@ -94,15 +96,15 @@ export default function CounterpartiesPage() {
     mutationFn: (counterpartyId: number) => documentFlowApi.archiveCounterparty(counterpartyId),
     onSuccess: async (counterparty) => {
       setArchiveTarget(null);
-      queryClient.setQueryData(documentFlowKeys.counterparty(counterparty.id), counterparty);
-      await queryClient.invalidateQueries({ queryKey: documentFlowKeys.counterpartyLists() });
+      queryClient.setQueryData(documentFlowKeys.counterparty(tenant.tenantScope!, counterparty.id), counterparty);
+      await queryClient.invalidateQueries({ queryKey: documentFlowKeys.counterpartyLists(tenant.tenantScope!) });
     },
   });
 
   const representativesQuery = useQuery({
     queryKey: representativeTarget
-      ? documentFlowKeys.representatives(representativeTarget.id)
-      : documentFlowKeys.representatives(0),
+      ? documentFlowKeys.representatives(tenant.tenantScope!, representativeTarget.id)
+      : documentFlowKeys.representatives(tenant.tenantScope!, 0),
     queryFn: ({ signal }) => documentFlowApi.representatives(representativeTarget!.id, signal),
     enabled: Boolean(representativeTarget),
   });
@@ -117,7 +119,7 @@ export default function CounterpartiesPage() {
     onSuccess: async () => {
       representativeForm.reset();
       await queryClient.invalidateQueries({
-        queryKey: documentFlowKeys.representatives(representativeTarget!.id),
+        queryKey: documentFlowKeys.representatives(tenant.tenantScope!, representativeTarget!.id),
       });
     },
   });
@@ -126,10 +128,7 @@ export default function CounterpartiesPage() {
   const createError = createMutation.isError ? mapDocumentFlowError(createMutation.error) : null;
   const archiveError = archiveMutation.isError ? mapDocumentFlowError(archiveMutation.error) : null;
 
-  const normalizedSearch = search.trim().toLowerCase();
-  const visibleItems = (counterpartiesQuery.data?.items ?? []).filter((item) =>
-    !normalizedSearch || item.name.toLowerCase().includes(normalizedSearch) || item.bin.includes(normalizeBin(normalizedSearch))
-  );
+  const visibleItems = counterpartiesQuery.data?.items ?? [];
 
   return (
     <Stack spacing={3}>
@@ -141,7 +140,7 @@ export default function CounterpartiesPage() {
       </Stack>
 
       {successMessage && <Alert severity="success" onClose={() => setSuccessMessage('')}>{successMessage}</Alert>}
-      <TextField label="Поиск по названию или БИН" value={search} onChange={(event) => setSearch(event.target.value)} />
+      <Alert severity="info">Backend списка контрагентов поддерживает только page/size. Текстовый поиск не применяется, поэтому показана серверная страница без локальной фильтрации.</Alert>
       {counterpartiesQuery.isError && (
         <Alert severity="error" action={<Button onClick={() => counterpartiesQuery.refetch()}>Повторить</Button>}>
           {mapDocumentFlowError(counterpartiesQuery.error).message}
@@ -149,7 +148,7 @@ export default function CounterpartiesPage() {
       )}
       {counterpartiesQuery.isLoading && <Stack alignItems="center" py={6}><CircularProgress /></Stack>}
       {counterpartiesQuery.isSuccess && visibleItems.length === 0 && (
-        <Alert severity="info">{search ? 'По вашему запросу ничего не найдено на текущей странице.' : 'Контрагенты ещё не добавлены.'}</Alert>
+        <Alert severity="info">Контрагенты ещё не добавлены.</Alert>
       )}
       {counterpartiesQuery.isSuccess && visibleItems.length > 0 && mobile && (
         <Stack spacing={2}>{visibleItems.map((item) => (

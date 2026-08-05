@@ -5,7 +5,7 @@ import { protocolHasAction } from '../utils/protocolActions';
 
 export type ProtocolDetailsTab = 'results' | 'main' | 'documents' | 'history';
 export type ProtocolEditSection = 'general' | 'organization' | 'laboratory' | 'environment' | 'results' | 'methods';
-export type ProtocolPrimaryActionKey = 'edit' | 'sign' | 'publish' | 'pdf' | 'replacement' | 'review' | null;
+export type ProtocolPrimaryActionKey = 'edit' | 'ready' | 'approve' | 'sign' | 'publish' | 'pdf' | 'replacement' | 'review' | null;
 
 export const formatProtocolDate = (value?: string | null) => {
   if (!value) return 'Не заполнено';
@@ -85,6 +85,8 @@ export const humanHistoryAction = (item: ProtocolHistoryItem) => {
 export const resolveProtocolPrimaryAction = (protocol: Protocol, role?: string): { key: ProtocolPrimaryActionKey; label: string } => {
   const status = normalizeProtocolStatus(protocol.status);
   const permissions = getProtocolPermissions(protocol, role);
+  if (permissions.canApprove) return { key: 'approve', label: 'Утвердить' };
+  if (permissions.canReadyForApproval) return { key: 'ready', label: 'Отправить на утверждение' };
   if (status === 'DRAFT') return { key: protocolHasAction(protocol, 'EDIT') || protocolHasAction(protocol, 'SAVE') ? 'edit' : null, label: 'Продолжить' };
   if (['CALCULATED', 'READY', 'READY_TO_SIGN', 'READY_FOR_APPROVAL', 'APPROVED'].includes(status)) {
     if (protocolHasAction(protocol, 'SIGN')) return { key: 'sign', label: 'Подписать' };

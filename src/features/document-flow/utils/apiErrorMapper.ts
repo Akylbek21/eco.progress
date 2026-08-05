@@ -1,12 +1,6 @@
-import axios from 'axios';
+import { normalizeApiError, type ApiError } from '../../../services/apiHelpers';
 
-export interface DocumentFlowError {
-  message: string;
-  code?: string;
-  traceId?: string;
-  fieldErrors: Record<string, string>;
-  status?: number;
-}
+export type DocumentFlowError = ApiError;
 
 const codeMessages: Record<string, string> = {
   ORGANIZATION_REQUIRED: 'Выберите организацию.',
@@ -51,21 +45,11 @@ const statusMessages: Record<number, string> = {
 };
 
 export function mapDocumentFlowError(error: unknown): DocumentFlowError {
-  if (!axios.isAxiosError(error)) {
-    return { message: error instanceof Error ? error.message : 'Не удалось выполнить операцию.', fieldErrors: {} };
+  const normalized = normalizeApiError(error, 'Не удалось выполнить операцию.');
+  const fallback = normalized.status ? statusMessages[normalized.status] : undefined;
+  let message = (normalized.code && codeMessages[normalized.code]) || normalized.message || fallback || 'Не удалось выполнить операцию.';
+  if (normalized.status === 500 && normalized.traceId && !message.includes(normalized.traceId)) {
+    message += ` Код обращения: ${normalized.traceId}.`;
   }
-  const status = error.response?.status;
-  const body = (error.response?.data && typeof error.response.data === 'object'
-    ? error.response.data : {}) as Record<string, unknown>;
-  const nested = body.error && typeof body.error === 'object' ? body.error as Record<string, unknown> : body;
-  const code = typeof nested.code === 'string' ? nested.code : undefined;
-  const traceId = typeof nested.traceId === 'string' ? nested.traceId : undefined;
-  const rawFields = nested.fieldErrors && typeof nested.fieldErrors === 'object'
-    ? nested.fieldErrors as Record<string, unknown> : {};
-  const fieldErrors = Object.fromEntries(Object.entries(rawFields).map(([key, value]) => [key, String(value)]));
-  const backendMessage = typeof nested.message === 'string' ? nested.message : undefined;
-  const fallback = status ? statusMessages[status] : undefined;
-  let message = (code && codeMessages[code]) || backendMessage || fallback || 'Не удалось выполнить операцию.';
-  if (status === 500 && traceId) message += ` Код обращения: ${traceId}.`;
-  return { message, code, traceId, fieldErrors, status };
+  return { ...normalized, message };
 }

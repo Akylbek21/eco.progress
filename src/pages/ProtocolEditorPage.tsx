@@ -88,7 +88,7 @@ const saveBlob = (blob: Blob, name: string) => {
   URL.revokeObjectURL(url);
 };
 
-const editableSignature = (protocol: Protocol) => JSON.stringify({
+const editableState = (protocol: Protocol) => ({
   number: protocol.protocolNumber || protocol.number || '',
   protocolDate: protocol.protocolDate || '',
   formCode: protocol.formCode || '',
@@ -108,6 +108,52 @@ const editableSignature = (protocol: Protocol) => JSON.stringify({
   explanatoryNote: protocol.explanatoryNote,
   printVisibility: protocol.printVisibility,
 });
+
+const editableSignature = (protocol: Protocol) => JSON.stringify(editableState(protocol));
+
+const rebaseEditableProtocol = (base: Protocol, local: Protocol, remote: Protocol) => {
+  const baseState = editableState(base);
+  const localState = editableState(local);
+  const remoteState = editableState(remote);
+  const mergedState = { ...remoteState };
+  const conflicts: string[] = [];
+
+  (Object.keys(localState) as Array<keyof typeof localState>).forEach((key) => {
+    const baseValue = JSON.stringify(baseState[key] ?? null);
+    const localValue = JSON.stringify(localState[key] ?? null);
+    const remoteValue = JSON.stringify(remoteState[key] ?? null);
+    const localChanged = localValue !== baseValue;
+    const remoteChanged = remoteValue !== baseValue;
+    if (localChanged && remoteChanged && localValue !== remoteValue) conflicts.push(String(key));
+    else if (localChanged) (mergedState as Record<string, unknown>)[key] = localState[key];
+  });
+
+  return {
+    conflicts,
+    protocol: {
+      ...remote,
+      protocolNumber: mergedState.number,
+      number: mergedState.number,
+      protocolDate: mergedState.protocolDate,
+      formCode: mergedState.formCode,
+      appendixNumber: mergedState.appendixNumber,
+      sourceNumber: mergedState.sourceNumber,
+      executor: mergedState.executor,
+      executorId: mergedState.executorId,
+      approver: mergedState.approver,
+      laboratory: mergedState.laboratory,
+      organization: mergedState.organization,
+      testing: mergedState.testing,
+      environment: mergedState.environment,
+      objectId: mergedState.objectId,
+      measurementDate: mergedState.measurementDate,
+      measurementTime: mergedState.measurementTime,
+      measurementPlace: mergedState.measurementPlace,
+      explanatoryNote: mergedState.explanatoryNote,
+      printVisibility: mergedState.printVisibility,
+    } as Protocol,
+  };
+};
 
 const SnapshotSection = ({ snapshot }: { snapshot: ProtocolCompanySnapshot }) => {
   const rows: Array<[string, string | undefined]> = [
@@ -300,6 +346,27 @@ const getMissingFields = (protocol: Protocol): MissingField[] => {
   if (!protocol.measurementDevices.length) items.push({ label: 'средство измерения', stepKey: 'instruments' });
   else if (!hasValidResultDevices(protocol)) items.push({ label: 'действующий прибор для каждой строки результата', stepKey: 'results' });
   return items;
+};
+
+const getApprovalBlockers = (protocol: Protocol): string[] => {
+  const blockers: string[] = [];
+  if (!hasText(protocol.protocolNumber || protocol.number)) blockers.push('Заполните номер протокола');
+  if (!hasText(protocol.protocolDate)) blockers.push('Заполните дату протокола');
+  if (!hasText(protocol.organization?.organizationName || protocol.companySnapshot?.companyName)) blockers.push('Заполните организацию');
+  if (!hasText(protocol.organization?.objectName || protocol.companySnapshot?.objectName)) blockers.push('Заполните объект');
+  if (!hasText(protocol.testing?.samplingDate || protocol.measurementDate)) blockers.push('Заполните дату отбора');
+  if (!hasText(protocol.testing?.testingEndDate || protocol.testing?.testingDate || protocol.testing?.testingStartDate || protocol.measurementDate)) blockers.push('Заполните дату испытаний');
+  if (!hasText(protocol.testing?.testingMethodDocument || protocol.testingMethodDocument)) blockers.push('Укажите НД на методы испытаний');
+  if (!hasText(protocol.executor || protocol.laboratory?.executor)) blockers.push('Укажите исполнителя');
+  if (!protocol.results.length) blockers.push('Добавьте хотя бы одну строку результата');
+  protocol.results.forEach((row, index) => {
+    if (!hasText(resultValue(row))) blockers.push(`Строка ${index + 1}: нет значения результата`);
+    const calculationStatus = String(row.calculationStatus || '').trim().toUpperCase();
+    if (calculationStatus === 'WAITING_INPUTS') blockers.push(`Строка ${index + 1}: не заполнены исходные данные`);
+    if (calculationStatus === 'ERROR') blockers.push(`Строка ${index + 1}: ошибка расчёта`);
+    if (calculationStatus === 'NEEDS_REPEAT') blockers.push(`Строка ${index + 1}: требуется повторный анализ`);
+  });
+  return blockers;
 };
 
 const getStepStatus = (protocol: Protocol, stepKey: ProtocolStepKey): StepStatus => {
@@ -686,6 +753,7 @@ const ProtocolEditorPage = () => {
   const autoPreviewRef = useRef(false);
   const draftUnlockRef = useRef('');
   const protocolRef = useRef<Protocol | null>(null);
+  const serverProtocolRef = useRef<Protocol | null>(null);
   const editVersionRef = useRef(0);
   const saveRequestRef = useRef(0);
   const saveInFlightRef = useRef<Promise<Protocol | null> | null>(null);
@@ -708,6 +776,7 @@ const ProtocolEditorPage = () => {
     };
     savedSignatureRef.current = editableSignature(normalized);
     protocolRef.current = normalized;
+    serverProtocolRef.current = normalized;
     setSaveStatus('saved');
     setProtocol(normalized);
     return normalized;
@@ -907,43 +976,44 @@ const ProtocolEditorPage = () => {
     setBusy(true);
     let conflictDetected = false;
     const operation = (async (): Promise<Protocol | null> => {
+      const updateSnapshot = (item: Protocol) => protocolService.updateProtocol(item.id, {
+        version: Number(item.version || 0),
+        number: item.protocolNumber || item.number || '',
+        protocolDate: item.protocolDate || '',
+        companyId: item.companyId,
+        objectId: item.objectId,
+        laboratoryId: item.laboratory?.laboratoryId || item.laboratory?.id,
+        sampleDate: item.testing.samplingDate || item.measurementDate || item.protocolDate,
+        sampleNumber: item.sampleNumber,
+        samplingPlace: item.samplingPlace || item.measurementPlace,
+        samplingDepth: item.samplingDepth,
+        measurementDate: item.measurementDate || item.testing.samplingDate || item.protocolDate,
+        measurementTime: item.measurementTime,
+        measurementPlace: item.measurementPlace,
+        formCode: item.formCode,
+        appendixNumber: item.appendixNumber,
+        executor: item.executor || '',
+        executorId: item.executorId,
+        approver: item.approver || '',
+        laboratory: item.laboratory,
+        organization: item.organization,
+        testing: item.testing,
+        environment: item.environment,
+        conditions: {
+          ...(item.conditions || {}),
+          ...(isWaterProtocolType(item.templateId) ? {
+            waterType: item.waterType,
+            waterUseCategory: item.waterUseCategory,
+          } : {}),
+        },
+        explanatoryNote: item.explanatoryNote,
+        testingMethodDocument: item.testingMethodDocument || item.testing.testingMethodDocument,
+        complianceDocument: item.complianceDocument,
+        printVisibility: item.printVisibility,
+      });
       try {
         const draftProtocol = await ensureDraftProtocol(snapshot);
-        const updated = await protocolService.updateProtocol(draftProtocol.id, {
-           version: Number(snapshot.version || 0),
-           number: snapshot.protocolNumber || snapshot.number || '',
-           protocolDate: snapshot.protocolDate || '',
-           companyId: snapshot.companyId,
-           objectId: snapshot.objectId,
-          laboratoryId: snapshot.laboratory?.laboratoryId || snapshot.laboratory?.id,
-           sampleDate: snapshot.testing.samplingDate || snapshot.measurementDate || snapshot.protocolDate,
-           sampleNumber: snapshot.sampleNumber,
-           samplingPlace: snapshot.samplingPlace || snapshot.measurementPlace,
-           samplingDepth: snapshot.samplingDepth,
-          measurementDate: snapshot.measurementDate || snapshot.testing.samplingDate || snapshot.protocolDate,
-          measurementTime: snapshot.measurementTime,
-          measurementPlace: snapshot.measurementPlace,
-          formCode: snapshot.formCode,
-          appendixNumber: snapshot.appendixNumber,
-          executor: snapshot.executor || '',
-          executorId: snapshot.executorId,
-          approver: snapshot.approver || '',
-          laboratory: snapshot.laboratory,
-          organization: snapshot.organization,
-          testing: snapshot.testing,
-           environment: snapshot.environment,
-           conditions: {
-             ...(snapshot.conditions || {}),
-             ...(isWaterProtocolType(snapshot.templateId) ? {
-               waterType: snapshot.waterType,
-               waterUseCategory: snapshot.waterUseCategory,
-             } : {}),
-           },
-           explanatoryNote: snapshot.explanatoryNote,
-           testingMethodDocument: snapshot.testingMethodDocument,
-           complianceDocument: snapshot.complianceDocument,
-          printVisibility: snapshot.printVisibility,
-        });
+        const updated = await updateSnapshot(draftProtocol);
         if (requestId === saveRequestRef.current && startedVersion === editVersionRef.current) {
           applyServerProtocol(updated);
           sessionStorage.removeItem(protocolBackupKey(user?.id, updated.id));
@@ -955,14 +1025,27 @@ const ProtocolEditorPage = () => {
         return protocolRef.current;
       } catch (saveError) {
         if (getApiStatus(saveError) === 409) {
-          conflictDetected = true;
-          saveQueuedRef.current = false;
-          setSaveStatus('conflict');
-          setConflictOpen(true);
           try {
-            setConflictLatest(await protocolService.getProtocol(snapshot.id));
+            const fresh = await protocolService.getProtocol(snapshot.id);
+            const rebased = rebaseEditableProtocol(serverProtocolRef.current || snapshot, snapshot, fresh);
+            if (!rebased.conflicts.length) {
+              const updated = await updateSnapshot(rebased.protocol);
+              applyServerProtocol(updated);
+              sessionStorage.removeItem(protocolBackupKey(user?.id, updated.id));
+              toast.success('Протокол сохранён');
+              return updated;
+            }
+            conflictDetected = true;
+            saveQueuedRef.current = false;
+            setSaveStatus('conflict');
+            setConflictLatest(fresh);
+            setConflictOpen(true);
           } catch {
+            conflictDetected = true;
+            saveQueuedRef.current = false;
+            setSaveStatus('conflict');
             setConflictLatest(null);
+            setConflictOpen(true);
           }
         } else {
           setSaveStatus('error');
@@ -1285,6 +1368,21 @@ const ProtocolEditorPage = () => {
     }
   };
 
+  const sendForApproval = async () => {
+    const current = await ensureSavedProtocol('Сначала сохраняю изменения, затем отправляю протокол на утверждение.');
+    if (!current) return;
+    const blockers = getApprovalBlockers(current);
+    if (blockers.length) {
+      setWorkflowErrors(blockers);
+      toast.warning('Протокол пока нельзя отправить на утверждение', blockers[0]);
+      return;
+    }
+    await run(
+      () => protocolService.readyForApproval(current.id, { version: Number(current.version) }),
+      'Протокол отправлен на утверждение',
+    );
+  };
+
   const pekReportContext = Number(new URLSearchParams(location.search).get('pekReportId'));
   const recollectPekReport = async () => {
     if (!Number.isInteger(pekReportContext) || pekReportContext <= 0) return;
@@ -1336,6 +1434,8 @@ const ProtocolEditorPage = () => {
       signing={signMutation.isPending}
       onBack={() => navigateSafely('/staff/protocols')}
       onEdit={setEditSection}
+      onReady={() => { void sendForApproval(); }}
+      onApprove={() => { void run(() => protocolService.approveProtocol(protocol.id, { version: Number(protocol.version) }), 'Протокол утверждён'); }}
       onSign={signCurrentProtocol}
       onPublish={() => { void run(() => protocolService.publishToClient(protocol.id, { version: Number(protocol.version) }), 'Протокол отправлен клиенту'); }}
       onPreview={() => { void preview(); }}

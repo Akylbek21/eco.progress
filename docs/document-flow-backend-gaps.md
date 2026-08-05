@@ -4,6 +4,14 @@
 
 ## Блокирующие gaps
 
+### 0. `availableActions` не покрывает существующие workflow endpoints
+
+`DocumentPermissionService.availableActions()` возвращает только `EDIT`, `DELETE`, `SEND_FOR_SIGNING`, `DOWNLOAD`, `UPLOAD_VERSION`, `ARCHIVE`, `MANAGE_ATTACHMENTS`. При этом backend имеет endpoints подписи, отклонения, возврата и отзыва, но detail DTO никогда не разрешает действия `SIGN`, `REJECT`, `RETURN_FOR_REVISION`, `CREATE_REVOCATION` и действия обработки отзыва. Frontend не показывает эти кнопки без backend-разрешения. Требуется единый backend action enum и расчёт действий с учётом текущего assignment/route/revocation.
+
+### 0.1. Тип документа без подписи нельзя завершить
+
+Для `signingRequired=false` отсутствует endpoint/transition, переводящий загруженный DRAFT в готовое состояние без signing route. Frontend честно сохраняет такой документ и файл как черновик и не создаёт фиктивный маршрут.
+
 ### 1. Public signing не может сформировать корректный POST `/sign`
 
 `PublicSigningService.PublicInvitationView` возвращает только:
@@ -60,11 +68,17 @@ Feature `AUDIT_LOG` и `DocumentFlowAuditService` существуют, но con
 
 ### 7. Нет справочника участников организации для route builder
 
-Signing route принимает `userId`, но Document Flow API не предоставляет endpoint списка доступных внутренних участников. Builder поддерживает backend payload и ручной `userId`, однако полноценный безопасный picker требует member lookup endpoint.
+Signing route принимает `userId`, но Document Flow API не предоставляет endpoint списка доступных внутренних участников. Ручной ввод `userId` отключён: полноценный безопасный picker требует member lookup endpoint и серверной проверки membership/права подписи.
 
 ### 8. Multi-organization context неполон
 
 `AccessContext` внутри backend содержит `organizationId`, но `AccessContextDto` его не возвращает. `/access` выбирает первую membership. При нескольких организациях frontend не может построить корректный selector только из Document Flow API.
+
+Дополнительно `OrganizationResolver` требует явный `organizationId`, если memberships больше одной, поэтому пользователь с несколькими организациями получает ошибку уже на списке документов, не имея способа узнать допустимые ID. Нужен endpoint memberships либо расширение `/access` полями активной организации и списком доступных организаций.
+
+### 8.1. Create DTO не хранит дату и принимает номер только через PATCH
+
+`CreateDocumentRequest` не содержит `documentDate` и `documentNumber`; `UpdateDocumentRequest` содержит только номер. Frontend перестал отправлять неподдерживаемые поля и сохраняет номер отдельным PATCH после идемпотентного создания. Дата документа удалена из формы до появления backend-поля.
 
 ### 9. Entity DTO раскрывает storage fields
 
@@ -78,4 +92,3 @@ Version и attachment endpoints возвращают JPA entities, содерж�
 - authenticated integration test list signing filters выполнить невозможно;
 - gaps подтверждены непосредственно Java-кодом, DTO и `DocumentSpecifications`;
 - полный E2E с реальной БД, NCALayer и invitation token не запускался.
-

@@ -5,14 +5,17 @@ import { documentFlowApi } from '../api/documentFlowApi';
 import { documentFlowKeys } from '../api/documentFlowKeys';
 import { canMutate } from '../model/access';
 import { useDocumentFlowContext } from '../components/DocumentFlowGate';
+import { useDocumentFlowTenant } from '../hooks/useDocumentFlowTenant';
 
 const directionLabels: Record<string, string> = { INCOMING: 'Входящие', OUTGOING: 'Исходящие', INTERNAL: 'Внутренние' };
 
 export default function DashboardPage() {
   const access = useDocumentFlowContext();
+  const tenant = useDocumentFlowTenant();
   const query = useQuery({
-    queryKey: documentFlowKeys.dashboard(),
+    queryKey: tenant.tenantScope ? documentFlowKeys.dashboard(tenant.tenantScope) : ['document-flow', 'tenant-unresolved', 'dashboard'],
     queryFn: ({ signal }) => documentFlowApi.dashboard(undefined, signal),
+    enabled: tenant.organizationResolved,
   });
   if (query.isLoading) return <Grid container spacing={2}>{[1, 2, 3, 4].map((key) => <Grid size={{ xs: 12, sm: 6, md: 3 }} key={key}><Skeleton height={130} /></Grid>)}</Grid>;
   if (query.isError) return <Alert severity="error" action={<Button onClick={() => query.refetch()}>Повторить</Button>}>{query.error.message}</Alert>;

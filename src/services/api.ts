@@ -9,7 +9,8 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('eco-progress-token');
   const requestPath = String(config.url || '').replace(/^\/api/, '').split('?')[0];
-  const isPublicAuthRequest = ['/auth/login', '/auth/staff/login', '/auth/register'].includes(requestPath);
+  const isPublicRequest = ['/auth/login', '/auth/staff/login', '/auth/register'].includes(requestPath)
+    || requestPath.startsWith('/public/');
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     const headers = config.headers as Record<string, unknown> & { delete?: (key: string) => void };
     if (typeof headers.delete === 'function') {
@@ -20,7 +21,7 @@ api.interceptors.request.use((config) => {
       delete headers['content-type'];
     }
   }
-  if (token && !isPublicAuthRequest) {
+  if (token && !isPublicRequest) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   const method = String(config.method || 'GET').toUpperCase();
@@ -64,7 +65,8 @@ api.interceptors.response.use(
       });
     }
     error.message = getApiErrorMessage(error, error.message);
-    if (error.response?.status === 401) {
+    const requestPath = String(error.config?.url || '').replace(/^\/api/, '').split('?')[0];
+    if (error.response?.status === 401 && !requestPath.startsWith('/public/')) {
       localStorage.removeItem('eco-progress-token');
       localStorage.removeItem('eco-progress-user');
       const path = window.location.pathname;

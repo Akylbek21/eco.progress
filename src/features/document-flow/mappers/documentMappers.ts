@@ -26,6 +26,20 @@ export const mapSearchParamsToDocumentFilters = (params: URLSearchParams): Docum
   sort: params.get('sort') || 'createdAt,desc',
 });
 
+export const setDocumentFilterParam = (
+  current: URLSearchParams, key: string, value: string, resetPage = true,
+) => {
+  const next = new URLSearchParams(current);
+  const normalized = value.trim();
+  normalized ? next.set(key, normalized) : next.delete(key);
+  if (resetPage) next.set('page', '0');
+  return next;
+};
+
+export const resetDocumentFilterParams = (size: number) => new URLSearchParams({
+  page: '0', size: String(size), sort: 'createdAt,desc',
+});
+
 export const mapCreateDocumentPayload = (value: {
   documentType: DocumentType;
   direction: DocumentDirection;
