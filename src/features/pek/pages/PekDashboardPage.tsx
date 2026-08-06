@@ -12,10 +12,14 @@ import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 
 const statuses: PekReportStatus[] = ['DRAFT', 'COLLECTING', 'READY_FOR_REVIEW', 'APPROVED', 'ARCHIVED'];
 const metricDefinitions = [
-  ['totalReportCount', 'Количество отчётов', '', false],
-  ['readinessPercent', 'Готовность', '%', false],
-  ['overdueRiskCount', 'Риск просрочки', '', false],
-  ['programExecutionPercent', 'Выполнение программ', '%', false],
+  ['criticalIssueCount', 'Требуют внимания', '', '/staff/pek/reports'],
+  ['overdueRiskCount', 'Просроченные измерения', '', '/staff/pek/programs'],
+  ['missingProtocolCount', 'Отсутствующие протоколы', '', '/staff/pek/reports'],
+  ['openExceedanceCount', 'Открытые превышения', '', '/staff/pek/reports'],
+  ['overdueActionCount', 'Просроченные мероприятия', '', '/staff/pek/programs'],
+  ['readinessPercent', 'Готовность отчётов', '%', '/staff/pek/reports'],
+  ['programExecutionPercent', 'Выполнение программ', '%', '/staff/pek/programs'],
+  ['totalReportCount', 'Отчёты за период', '', '/staff/pek/reports'],
 ] as const;
 
 const PekDashboardPage = () => {
@@ -52,7 +56,7 @@ const PekDashboardPage = () => {
   return <div className="space-y-5">
     <PekPageHeader
       title="Производственный экологический контроль"
-      description="Фактические показатели программ и отчётов ПЭК"
+      description="Что требует вашего действия сегодня"
       actions={<>
         <Link className="rounded-full border px-5 py-2.5 text-sm font-bold" to="/staff/pek/programs">Программы</Link>
         <Link className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white" to="/staff/pek/reports">Отчёты</Link>
@@ -95,29 +99,29 @@ const PekDashboardPage = () => {
     {dashboard.isLoading
       ? <PekLoading />
       : dashboard.isError
-        ? <PekQueryError error={dashboard.error} resource="Dashboard ПЭК" retry={() => void dashboard.refetch()} />
+        ? <PekQueryError error={dashboard.error} resource="сводка ПЭК" retry={() => void dashboard.refetch()} />
         : !dashboard.data
-          ? <PekState title="Нет данных dashboard" />
+          ? <PekState title="Сводка пока недоступна" />
           : <>
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {metricDefinitions.map(([key, label, suffix]) => (
+              {metricDefinitions.map(([key, label, suffix, path]) => (
                 <article key={key} className="rounded-2xl border bg-white p-5">
                   <p className="text-sm text-slate-500">{label}</p>
-                  <p className="mt-2 text-3xl font-black text-eco-900">{dashboard.data[key] == null ? '—' : `${dashboard.data[key]}${suffix}`}</p>
-                  <Link className="mt-3 inline-block text-xs font-bold text-eco-700" to={`/staff/pek/reports?${new URLSearchParams({ ...(filters.companyId ? { companyId: String(filters.companyId) } : {}), ...(filters.objectId ? { objectId: String(filters.objectId) } : {}), ...(filters.year ? { year: String(filters.year) } : {}) })}`}>Открыть список</Link>
+                  <p className="mt-2 text-3xl font-black text-eco-900">{dashboard.data[key] == null ? <span className="text-lg text-slate-500">Нет данных</span> : `${dashboard.data[key]}${suffix}`}</p>
+                  {dashboard.data[key] != null && <Link className="mt-3 inline-block text-xs font-bold text-eco-700" to={`${path}?${new URLSearchParams({ ...(filters.companyId ? { companyId: String(filters.companyId) } : {}), ...(filters.objectId ? { objectId: String(filters.objectId) } : {}), ...(filters.year ? { year: String(filters.year) } : {}) })}`}>Открыть</Link>}
                 </article>
               ))}
             </section>
             <section className="grid gap-4 lg:grid-cols-2">
               <div className="rounded-2xl border bg-white p-5">
-                <h2 className="font-black">Ближайшие сроки</h2>
+                <h2 className="font-black">Ближайшие задачи</h2>
                 <div className="mt-3 space-y-2">
                   {dashboard.data.deadlines.map((item) => (
                     <Link key={`${item.type}-${item.id}-${item.date}`} to={item.type.includes('PROGRAM') ? `/staff/pek/programs/${item.id}` : `/staff/pek/reports/${item.id}`} className="flex justify-between rounded-xl bg-slate-50 p-3 text-sm">
                       <span>{item.description}</span><strong>{item.date}</strong>
                     </Link>
                   ))}
-                  {!dashboard.data.deadlines.length && <p className="text-sm text-slate-500">Ближайших сроков нет</p>}
+                  {!dashboard.data.deadlines.length && <p className="text-sm text-slate-500">На ближайшее время задач нет</p>}
                 </div>
               </div>
               <div className="rounded-2xl border bg-white p-5">
@@ -125,7 +129,7 @@ const PekDashboardPage = () => {
                 <div className="mt-3 space-y-2">
                   {dashboard.data.reports.map((report) => (
                     <Link key={report.id} to={`/staff/pek/reports/${report.id}`} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-sm">
-                      <span>Отчёт, ID {report.id} · {report.periodStart}—{report.periodEnd}</span>
+                      <span>Отчёт ПЭК · {report.periodStart}—{report.periodEnd}</span>
                       <PekStatusBadge status={report.status} />
                     </Link>
                   ))}

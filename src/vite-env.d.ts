@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  readonly VITE_API_URL?: string;
   readonly VITE_ENABLE_MSW?: string;
   readonly VITE_PEK_MSW_SCENARIO?: string;
 }

@@ -220,20 +220,13 @@ export const searchNormatives = async (
   if (!options.bypassCache && cached && cached.expiresAt > Date.now()) return cached.value;
   if (cached) cache.delete(key);
 
-  const sequence = buildNormativeSearchSequence(cleaned);
-  let normalized: NormativeSearchResponse['data'] = {
-    items: [], page: requestedPage, size: requestedSize, totalElements: 0, totalPages: 0,
+  const response = await api.get<unknown>('/normatives/search', { params: cleaned, signal });
+  const result = normalizeResponse(response.data, requestedPage, requestedSize);
+  const normalized: NormativeSearchResponse['data'] = {
+    ...result,
+    relaxed: false,
+    fallbackStage: cleaned.status === 'ALL' ? 'STRICT_ALL' : 'STRICT_ACTIVE',
   };
-  for (const candidate of sequence) {
-    const response = await api.get<unknown>('/normatives/search', { params: candidate.params, signal });
-    const result = normalizeResponse(response.data, requestedPage, requestedSize);
-    normalized = {
-      ...result,
-      relaxed: candidate.stage === 'RELAXED_ACTIVE' || candidate.stage === 'RELAXED_ALL',
-      fallbackStage: candidate.stage,
-    };
-    if (result.items.length) break;
-  }
   if (normalized.items.length) cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, value: normalized });
   return normalized;
 };

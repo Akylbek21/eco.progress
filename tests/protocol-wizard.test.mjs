@@ -62,13 +62,18 @@ test('result rows validate device date and chemical or physical codes', async ()
   assert.match(devices, /VALID|isDeviceValidForDate/);
 });
 
-test('quick-create result editor uses responsive cards instead of an oversized table', async () => {
+test('result editor uses a compact desktop table and responsive mobile cards', async () => {
   const table = await read('src/features/protocols/components/components/ProtocolResultTable.tsx');
   const row = await read('src/features/protocols/components/components/ProtocolResultRow.tsx');
   const details = await read('src/features/protocols/components/components/ProtocolResultDetails.tsx');
   const devices = await read('src/features/protocols/components/components/DeviceSelector.tsx');
 
-  assert.doesNotMatch(table, /min-w-\[1450px\]|overflow-x-auto|<table/);
+  assert.match(table, /<table/);
+  assert.match(table, /min-w-\[900px\]/);
+  assert.doesNotMatch(table, /min-w-\[1450px\]/);
+  assert.match(table, /md:hidden/);
+  assert.match(table, /Применить прибор/);
+  assert.match(table, /Применить методику/);
   assert.match(row, /sm:grid-cols-2/);
   assert.match(row, /lg:grid-cols-12/);
   assert.match(row, /Наименование показателя/);

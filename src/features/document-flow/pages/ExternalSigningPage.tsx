@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { publicDocumentFlowApi } from '../api/documentFlowApi';
 import { documentFlowKeys } from '../api/documentFlowKeys';
 import BackendContractBlocker from '../components/BackendContractBlocker';
+import { mapDocumentFlowError } from '../utils/apiErrorMapper';
 
 export default function ExternalSigningPage() {
   const token = useParams().token || '';
-  const viewed = useRef(false);
   const [fileUrl, setFileUrl] = useState('');
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState('');
@@ -23,20 +23,25 @@ export default function ExternalSigningPage() {
     queryFn: ({ signal }) => publicDocumentFlowApi.file(token, signal),
     enabled: invitation.isSuccess && ['AVAILABLE', 'VIEWED'].includes(invitation.data.status),
   });
-  useEffect(() => {
-    if (!invitation.isSuccess || viewed.current) return;
-    viewed.current = true;
-    void publicDocumentFlowApi.viewed(token);
-  }, [invitation.isSuccess, token]);
+  const challenge = useQuery({
+    queryKey: [...documentFlowKeys.publicSigning(token), 'challenge'],
+    queryFn: ({ signal }) => publicDocumentFlowApi.challenge(token, signal),
+    enabled: invitation.isSuccess && ['AVAILABLE', 'VIEWED'].includes(invitation.data.status),
+    retry: false,
+  });
   useEffect(() => {
     if (!file.data) return;
+    if (!(file.data.data instanceof Blob) || file.data.data.size === 0 || file.data.data.type.includes('json')) return;
     const url = URL.createObjectURL(file.data.data);
     setFileUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file.data]);
   const reject = useMutation({
-    mutationFn: () => publicDocumentFlowApi.reject(token, reason.trim()),
-    onSuccess: () => { setRejectOpen(false); void invitation.refetch(); },
+    mutationFn: () => {
+      if (reason.trim().length < 5 || reason.trim().length > 1000) throw new Error('Причина должна содержать от 5 до 1000 символов.');
+      return publicDocumentFlowApi.reject(token, reason.trim());
+    },
+    onSuccess: () => { setRejectOpen(false); setReason(''); void invitation.refetch(); },
   });
   if (invitation.isLoading) return <Box minHeight="100vh" display="grid" sx={{ placeItems: 'center' }}><CircularProgress /></Box>;
   if (invitation.isError || !invitation.data) {
@@ -58,9 +63,9 @@ export default function ExternalSigningPage() {
         {!terminal && <Stack direction="row" gap={2}>
           <Button color="error" onClick={() => setRejectOpen(true)}>Отклонить</Button>
         </Stack>}
-        {!terminal && <BackendContractBlocker title="Подписание временно недоступно" reason="Приглашение не содержит данных, необходимых для безопасной отправки подписи. Документ можно просмотреть или отклонить." technicalCode="DF_PUBLIC_SIGN_CONTEXT_MISSING" publicAudience />}
+        {!terminal && <BackendContractBlocker title="Подписание ожидает проверку challenge DTO" reason={challenge.isError ? 'Backend challenge недоступен. Документ можно просмотреть или отклонить.' : 'Challenge получен, но без Java DTO проверки CMS нельзя безопасно определить точные подписываемые байты.'} technicalCode="DF_PUBLIC_SIGN_CHALLENGE_UNVERIFIED" endpoint={`/api/public/document-flow/signing/{token}/challenge`} publicAudience />}
       </Stack>
-      <Dialog open={rejectOpen} onClose={() => setRejectOpen(false)} fullWidth><DialogTitle>Отклонить документ</DialogTitle><DialogContent><TextField fullWidth multiline minRows={3} label="Причина" value={reason} onChange={(event) => setReason(event.target.value)} sx={{ mt: 1 }} />{reject.isError && <Alert severity="error">{reject.error.message}</Alert>}</DialogContent><DialogActions><Button onClick={() => setRejectOpen(false)}>Отмена</Button><Button color="error" disabled={!reason.trim() || reject.isPending} onClick={() => reject.mutate()}>Отклонить</Button></DialogActions></Dialog>
+      <Dialog open={rejectOpen} onClose={() => !reject.isPending && setRejectOpen(false)} fullWidth><DialogTitle>Отклонить документ</DialogTitle><DialogContent><TextField fullWidth multiline minRows={3} inputProps={{ maxLength: 1000 }} label="Причина" value={reason} onChange={(event) => setReason(event.target.value)} error={reason.length > 0 && reason.trim().length < 5} helperText={`${reason.trim().length}/1000, минимум 5 символов`} sx={{ mt: 1 }} />{reject.isError && <Alert severity="error">{mapDocumentFlowError(reject.error).message}</Alert>}</DialogContent><DialogActions><Button disabled={reject.isPending} onClick={() => setRejectOpen(false)}>Отмена</Button><Button color="error" disabled={reason.trim().length < 5 || reason.trim().length > 1000 || reject.isPending} onClick={() => reject.mutate()}>Отклонить</Button></DialogActions></Dialog>
     </Container>
   );
 }

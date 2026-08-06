@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert, Box, Button, Card, CardActionArea, CardContent, Checkbox, FormControl, FormControlLabel, Grid, InputLabel,
+  Alert, Box, Button, Card, CardActionArea, CardContent, Checkbox, Chip, FormControl, FormControlLabel, Grid, InputLabel,
   MenuItem, Pagination, Select, Skeleton, Stack, TextField, Typography, useMediaQuery, useTheme,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
@@ -33,12 +33,13 @@ export default function DocumentsPage() {
     }, 400);
     return () => window.clearTimeout(timer);
   }, [search, setParams]);
-  const filters = useMemo(() => mapSearchParamsToDocumentFilters(params), [params]);
+  const urlFilters = useMemo(() => mapSearchParamsToDocumentFilters(params), [params]);
+  const filters = useMemo(() => ({ ...urlFilters, organizationId: tenant.organizationId! }), [tenant.organizationId, urlFilters]);
   const types = useQuery({ queryKey: documentFlowKeys.documentTypes(), queryFn: ({ signal }) => documentFlowApi.documentTypes(signal) });
   const query = useQuery({
     queryKey: tenant.tenantScope ? documentFlowKeys.documents(tenant.tenantScope, filters) : ['document-flow', 'tenant-unresolved', 'documents'],
     queryFn: ({ signal }) => documentFlowApi.documents(filters, signal),
-    enabled: tenant.organizationResolved,
+    enabled: tenant.organizationResolved && access.available,
   });
   const set = (key: string, value: string, resetPage = true) => {
     setParams(setDocumentFilterParam(params, key, value, resetPage));
@@ -76,8 +77,13 @@ export default function DocumentsPage() {
               <Typography variant="h6" mt={1}>{document.title}</Typography>
               <Typography color="text.secondary">{document.counterparty?.name || 'Без контрагента'} · {new Date(document.createdAt).toLocaleDateString('ru-RU')}</Typography>
               <Typography variant="body2">{document.direction === 'INCOMING' ? 'Входящий' : document.direction === 'OUTGOING' ? 'Исходящий' : 'Внутренний'} · Автор: {document.author?.fullName || 'Нет данных'}</Typography>
-              <Typography variant="body2" mt={1}>Подписей: {document.signedCount === undefined || document.requiredCount === undefined ? 'Нет данных' : `${document.signedCount} / ${document.requiredCount}`}</Typography>
-              <Typography variant="body2">Моя подпись: {document.requiresMySignature === undefined ? 'Нет данных' : document.requiresMySignature ? 'требуется' : 'не требуется'} · Срок: {document.deadline ? new Date(document.deadline).toLocaleDateString('ru-RU') : 'не указан'}</Typography>
+              <Typography variant="body2" mt={1}>Подписей: {document.signedCount} / {document.requiredCount} · Отказов: {document.rejectedCount}</Typography>
+              <Typography variant="body2">Моя подпись: {document.requiresMySignature ? 'требуется' : 'не требуется'} · Срок: {document.deadline ? new Date(document.deadline).toLocaleDateString('ru-RU') : 'не указан'}</Typography>
+              <Typography variant="body2">Обновлён: {new Date(document.updatedAt).toLocaleString('ru-RU')}</Typography>
+              <Stack direction="row" gap={0.5} mt={1} flexWrap="wrap">
+                {document.requiresMySignature && <Chip size="small" color="warning" label="Требуется моя подпись" />}
+                {document.availableActions.map((item) => <Chip size="small" variant="outlined" key={item} label={item} />)}
+              </Stack>
             </CardContent></CardActionArea></Card>
           </Grid>
         ))}

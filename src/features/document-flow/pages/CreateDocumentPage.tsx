@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
 import {
-  Alert, Box, Button, Collapse, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, LinearProgress,
+  Alert, Autocomplete, Box, Button, CircularProgress, Collapse, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, LinearProgress,
   MenuItem, Paper, Select, Stack, Step, StepLabel, Stepper, TextField,
   Typography,
 } from '@mui/material';
@@ -63,6 +63,9 @@ export default function CreateDocumentPage() {
   const [restored, setRestored] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickCreated, setQuickCreated] = useState<Counterparty | null>(null);
+  const [counterpartyPickerOpen, setCounterpartyPickerOpen] = useState(false);
+  const [counterpartySearch, setCounterpartySearch] = useState('');
+  const [debouncedCounterpartySearch, setDebouncedCounterpartySearch] = useState('');
   const [route, setRoute] = useState<SigningRouteRequest>({ routeType: 'SEQUENTIAL', steps: [] });
   const { control, register, watch, trigger, getValues, reset, setError, setValue, formState: { errors, isDirty } } = useForm<FormValues>({
     defaultValues: { documentType: '', direction: '', title: '', counterpartyId: '', description: '', documentNumber: '', comment: '' },
@@ -70,14 +73,19 @@ export default function CreateDocumentPage() {
   const quickForm = useForm<QuickCounterpartyValues>({ defaultValues: { bin: '', name: '' } });
   const values = watch();
   const types = useQuery({ queryKey: documentFlowKeys.documentTypes(), queryFn: ({ signal }) => documentFlowApi.documentTypes(signal) });
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedCounterpartySearch(counterpartySearch.trim()), 350);
+    return () => window.clearTimeout(timer);
+  }, [counterpartySearch]);
+  const counterpartyFilters = { query: debouncedCounterpartySearch || undefined, status: 'ACTIVE' as const, page: 0, size: 20, sort: 'name,asc' };
   const counterparties = useQuery({
-    queryKey: tenant.tenantScope ? documentFlowKeys.counterparties(tenant.tenantScope, { page: 0, size: 20, status: 'ACTIVE' }) : ['document-flow', 'tenant-unresolved', 'counterparties'],
-    queryFn: ({ signal }) => documentFlowApi.getCounterparties({ page: 0, size: 20, signal }),
-    enabled: tenant.organizationResolved,
+    queryKey: tenant.tenantScope ? documentFlowKeys.counterparties(tenant.tenantScope, counterpartyFilters) : ['document-flow', 'tenant-unresolved', 'counterparties'],
+    queryFn: ({ signal }) => documentFlowApi.getCounterparties({ organizationId: tenant.organizationId!, ...counterpartyFilters, signal }),
+    enabled: tenant.organizationResolved && (counterpartyPickerOpen || debouncedCounterpartySearch.length >= 2),
   });
   const quickCreate = useMutation({
     mutationFn: (input: QuickCounterpartyValues) => documentFlowApi.createCounterparty({
-      bin: normalizeBin(input.bin), name: input.name.trim(),
+      organizationId: tenant.organizationId!, bin: normalizeBin(input.bin), name: input.name.trim(),
     }),
     onSuccess: async (created) => {
       setQuickCreated(created);
@@ -99,17 +107,17 @@ export default function CreateDocumentPage() {
     return quickCreated && !items.some((item) => item.id === quickCreated.id) ? [quickCreated, ...items] : items;
   }, [counterparties.data?.items, quickCreated]);
   const selectedType = useMemo(() => types.data?.find((item) => item.type === values.documentType), [types.data, values.documentType]);
-  const organizationScope = tenant.tenantScope ?? 'tenant-unresolved';
+  const organizationScope = tenant.organizationId;
   const numericUserId = Number(user?.id);
-  const draftKey = `document-flow:create-draft:${user?.id ?? 'anonymous'}:${organizationScope}`;
-  const checkpointKey = Number.isSafeInteger(numericUserId)
+  const draftKey = `document-flow:create-draft:${user?.id ?? 'anonymous'}:${organizationScope ?? 'tenant-unresolved'}`;
+  const checkpointKey = Number.isSafeInteger(numericUserId) && organizationScope !== null
     ? creationCheckpointStorageKey(numericUserId, organizationScope)
     : null;
   const fileError = file && selectedType ? validateDocumentFile(file, selectedType) : null;
   const routeInvalid = !route.steps.length || route.steps.some((item) =>
     !validateRequiredCount(item.requiredCount, item.assignments.length)
     || !item.assignments.length
-    || item.assignments.some((assignment) => assignment.signerType === 'ORGANIZATION_MEMBER' ? !assignment.userId : !assignment.email)
+    || item.assignments.some((assignment) => assignment.signerType === 'ORGANIZATION_MEMBER' ? !assignment.memberId : !assignment.email || !/^\S+@\S+\.\S+$/.test(assignment.email))
   );
 
   useEffect(() => {
@@ -135,10 +143,10 @@ export default function CreateDocumentPage() {
     return () => window.clearTimeout(timer);
   }, [draftKey, getValues, isDirty, route, values]);
   useEffect(() => {
-    if (!checkpointKey || !tenant.tenantScope) return;
-    checkpoint.current = readCreationCheckpoint(checkpointKey, numericUserId, tenant.tenantScope);
+    if (!checkpointKey || organizationScope === null) return;
+    checkpoint.current = readCreationCheckpoint(checkpointKey, numericUserId, organizationScope);
     if (checkpoint.current?.documentId) setRestored(true);
-  }, [checkpointKey, numericUserId, tenant.tenantScope]);
+  }, [checkpointKey, numericUserId, organizationScope]);
   useEffect(() => {
     if (!selectedType) return;
     if (selectedType.allowedDirections === 'IN') setValue('direction', 'INCOMING', { shouldValidate: true });
@@ -155,11 +163,11 @@ export default function CreateDocumentPage() {
     mutationFn: async (intent: 'DRAFT' | 'SUBMIT') => {
       const valid = await trigger(['documentType', 'direction', 'title', 'counterpartyId']);
       if (!valid || fileError || (intent === 'SUBMIT' && (!file || selectedType?.signingRequired !== true || routeInvalid))) throw new Error(fileError || 'Проверьте обязательные поля, файл и маршрут подписания.');
-      if (!checkpointKey || !tenant.tenantScope || !Number.isSafeInteger(numericUserId)) {
+      if (!checkpointKey || organizationScope === null || !Number.isSafeInteger(numericUserId)) {
         throw new Error('Не удалось определить пользователя для безопасного tenant checkpoint.');
       }
       const form = getValues();
-      checkpoint.current ??= createCreationCheckpoint(numericUserId, tenant.tenantScope);
+      checkpoint.current ??= createCreationCheckpoint(numericUserId, organizationScope);
       const result = await runCreationWorkflow({
         checkpoint: checkpoint.current,
         createPayload: {
@@ -168,6 +176,7 @@ export default function CreateDocumentPage() {
           title: form.title.trim(),
           description: form.description.trim() || undefined,
           counterpartyId: form.counterpartyId ? Number(form.counterpartyId) : undefined,
+          organizationId: organizationScope,
         },
         requisites: form.documentNumber.trim() ? { documentNumber: form.documentNumber.trim() } : undefined,
         expectedDocumentNumber: form.documentNumber.trim() || undefined,
@@ -177,22 +186,21 @@ export default function CreateDocumentPage() {
         submit: intent === 'SUBMIT',
         operations: {
           createDocument: (payload, key) => { setPhase('CREATING'); return documentFlowApi.createDocument(payload, key); },
-          updateDocument: (id, payload) => documentFlowApi.updateDocument(id, payload),
-          getDocument: (id) => documentFlowApi.document(id),
+          updateDocument: (id, payload) => documentFlowApi.updateDocument(id, payload, organizationScope),
+          getDocument: (id) => documentFlowApi.document(id, organizationScope),
           uploadMainFile: (id, selectedFile) => {
             setPhase('UPLOADING');
             setUploadProgress(null);
-            return documentFlowApi.uploadFile(id, selectedFile, { changeReason: form.comment.trim() || undefined, onProgress: setUploadProgress });
+            return documentFlowApi.uploadFile(id, selectedFile, { organizationId: organizationScope, changeReason: form.comment.trim() || undefined, onProgress: setUploadProgress });
           },
-          uploadAttachment: (id, selectedFile) => documentFlowApi.uploadAttachment(id, selectedFile),
-          listAttachments: (id) => documentFlowApi.attachments(id),
+          uploadAttachment: (id, selectedFile) => documentFlowApi.uploadAttachment(id, selectedFile, { organizationId: organizationScope }),
+          listAttachments: (id) => documentFlowApi.attachments(id, organizationScope),
           getSigningRoute: async (id) => {
             try { return await documentFlowApi.signingRoute(id); }
             catch (error) { if (isAxiosError(error) && error.response?.status === 404) return null; throw error; }
           },
           createSigningRoute: (id, payload) => documentFlowApi.createSigningRoute(id, payload),
-          prepare: (id, version) => { setPhase('PREPARING'); return documentFlowApi.prepareForSigning(id, version); },
-          send: (id) => documentFlowApi.sendForSigning(id),
+          send: (id) => { setPhase('PREPARING'); return documentFlowApi.sendForSigning(id); },
         },
         persist: (next) => {
           checkpoint.current = next;
@@ -232,7 +240,20 @@ export default function CreateDocumentPage() {
           <Controller name="direction" control={control} rules={{ required: 'Выберите направление.' }} render={({ field }) => <FormControl fullWidth error={Boolean(errors.direction)} disabled={selectedType?.allowedDirections !== 'BOTH'}><InputLabel>Направление</InputLabel><Select {...field} label="Направление"><MenuItem value="INCOMING">Входящий</MenuItem><MenuItem value="OUTGOING">Исходящий</MenuItem></Select></FormControl>} />
           <TextField label="Название" {...register('title', { required: 'Укажите название.', validate: (value) => Boolean(value.trim()) || 'Укажите название.' })} error={Boolean(errors.title)} helperText={errors.title?.message} />
           <TextField fullWidth label="Номер" placeholder="Будет присвоен автоматически" {...register('documentNumber')} />
-          {selectedType?.counterpartyRequired && <Controller name="counterpartyId" control={control} rules={{ required: 'Выберите контрагента.' }} render={({ field }) => <FormControl fullWidth error={Boolean(errors.counterpartyId)}><InputLabel>Контрагент</InputLabel><Select {...field} label="Контрагент" onChange={(event) => event.target.value === '__new__' ? setQuickOpen(true) : field.onChange(event)}><MenuItem value="__new__">+ Новый контрагент</MenuItem>{activeCounterparties.map((item) => <MenuItem key={item.id} value={String(item.id)}>{item.name} · {item.bin}</MenuItem>)}</Select></FormControl>} />}
+          {selectedType?.counterpartyRequired && <Controller name="counterpartyId" control={control} rules={{ required: 'Выберите контрагента.' }} render={({ field }) => <Stack spacing={1}><Autocomplete
+            open={counterpartyPickerOpen}
+            onOpen={() => setCounterpartyPickerOpen(true)}
+            onClose={() => setCounterpartyPickerOpen(false)}
+            options={activeCounterparties}
+            loading={counterparties.isFetching}
+            filterOptions={(options) => options}
+            getOptionLabel={(option) => `${option.name} · ${option.bin}`}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            value={activeCounterparties.find((item) => String(item.id) === field.value) ?? null}
+            onChange={(_, value) => field.onChange(value ? String(value.id) : '')}
+            onInputChange={(_, value, reason) => { if (reason === 'input') setCounterpartySearch(value); }}
+            renderInput={(params) => <TextField {...params} label="Контрагент" error={Boolean(errors.counterpartyId)} helperText={errors.counterpartyId?.message || 'Поиск выполняется на сервере по названию или БИН'} InputProps={{ ...params.InputProps, endAdornment: <>{counterparties.isFetching && <CircularProgress size={18} />}{params.InputProps.endAdornment}</> }} />}
+          /><Button sx={{ alignSelf: 'flex-start' }} onClick={() => setQuickOpen(true)}>+ Новый контрагент</Button></Stack>} />}
           <TextField label="Описание" multiline minRows={3} {...register('description')} />
           <Box textAlign="right"><Button variant="contained" onClick={next}>Далее</Button></Box>
         </Stack>}
@@ -241,7 +262,7 @@ export default function CreateDocumentPage() {
           <TextField label="Комментарий" multiline minRows={2} {...register('comment')} />
           {selectedType?.signingRequired && <Alert severity="info">Подписание выполняется только через backend-маршрут: маршрут → подготовка → отправка → подписи.</Alert>}
           {selectedType && !selectedType.signingRequired && <Alert severity="info">Backend пока не предоставляет переход в готовый статус без маршрута. Документ и файл можно безопасно сохранить как черновик.</Alert>}
-          {selectedType?.signingRequired && <><Button variant="text" onClick={() => setAdvanced((value) => !value)}>Настройки маршрута подписания</Button><Collapse in={advanced}><SigningRouteBuilder access={access} value={route} onChange={setRoute} /></Collapse></>}
+          {selectedType?.signingRequired && <><Button variant="text" onClick={() => setAdvanced((value) => !value)}>Настройки маршрута подписания</Button><Collapse in={advanced}><SigningRouteBuilder access={access} organizationId={organizationScope ?? undefined} value={route} onChange={setRoute} /></Collapse></>}
           {phase && <Box><Stepper activeStep={activePhase} alternativeLabel sx={{ display: { xs: 'none', md: 'flex' } }}>{phases.map((item) => <Step key={item.key}><StepLabel>{item.label}</StepLabel></Step>)}</Stepper><LinearProgress sx={{ mt: 2 }} /></Box>}
           {error && <Alert severity="error">{error.message}{error.code === 'NCALAYER_NOT_AVAILABLE' && ' Запустите NCALayer и нажмите кнопку ещё раз — документ повторно не создастся.'}</Alert>}
           <Stack direction={{ xs: 'column-reverse', sm: 'row' }} justifyContent="space-between" gap={1}>

@@ -27,7 +27,7 @@ const formatDate = (value?: string) => value && !Number.isNaN(new Date(value).ge
 const primaryLabel = (protocol: Protocol) => {
   const status = normalizeProtocolStatus(protocol.status);
   if (status === 'DRAFT') return 'Продолжить';
-  if (protocolHasAction(protocol, 'SIGN')) return 'Подписать';
+  if (protocolHasAction(protocol, 'SIGN')) return 'Открыть';
   if (status === 'SIGNED' && protocol.hasPdf) return 'Скачать PDF';
   return 'Открыть';
 };
@@ -40,7 +40,6 @@ const ProtocolRowActions = ({ protocol, busy, onOpen, onSign, onEdit, onDelete, 
   const primary = primaryLabel(protocol);
   const runPrimary = () => {
     if (primary === 'Скачать PDF') onDownload(protocol, 'pdf');
-    else if (primary === 'Подписать') onSign(protocol);
     else onOpen(protocol);
   };
   return <div className="flex items-center justify-end gap-2">

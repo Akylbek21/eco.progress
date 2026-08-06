@@ -1,24 +1,8 @@
 import type { Protocol, ProtocolAvailableAction } from '../../../types/protocols';
 
-const legacyPermissionByAction: Partial<Record<ProtocolAvailableAction, string>> = {
-  EDIT: 'canEdit',
-  SAVE: 'canEdit',
-  CALCULATE: 'canCalculate',
-  CHECK_NORMATIVES: 'canCheckNormatives',
-  PREPARE_SIGNING: 'canPrepareSigning',
-  SIGN: 'canSign',
-  DOWNLOAD_PDF: 'canDownload',
-  DOWNLOAD_DOCX: 'canDownload',
-  CREATE_CORRECTED_VERSION: 'canReplace',
-  ARCHIVE: 'canArchive',
-  DELETE: 'canDelete',
-};
-
 export const protocolHasAction = (protocol: Protocol, action: ProtocolAvailableAction): boolean => {
-  const actions = protocol.availableActions || [];
-  if (actions.length > 0) return actions.includes(action);
-  const permission = legacyPermissionByAction[action];
-  return permission ? protocol.permissions?.[permission] === true : false;
+  if (protocol.status === 'UNKNOWN') return false;
+  return Array.isArray(protocol.availableActions) && protocol.availableActions.includes(action);
 };
 
 export const protocolActionReason = (protocol: Protocol, action: ProtocolAvailableAction): string | null => {

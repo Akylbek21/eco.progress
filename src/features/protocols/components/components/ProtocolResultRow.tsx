@@ -4,6 +4,7 @@ import type { MeasurementDevice } from '../../../../types/protocols';
 import DeviceSelector from './DeviceSelector';
 import ProtocolResultDetails from './ProtocolResultDetails';
 import type { ProtocolWizardForm } from '../wizardTypes';
+import { protocolFactorTypeOptions } from '../../model/protocolFieldOptions';
 
 type Props = {
   index: number;
@@ -82,19 +83,21 @@ const ProtocolResultRow = ({
 
         <label className={`${labelClass} lg:col-span-3`}>
           {chemical ? 'Код загрязняющего вещества' : 'Тип фактора'}
-          <input
+          {chemical ? <input
             readOnly={!manual}
-            aria-label={
-              chemical ? 'Код загрязняющего вещества' : 'Тип фактора'
-            }
-            placeholder={chemical ? 'Код из норматива' : 'Тип из норматива'}
-            {...register(
-              chemical
-                ? `results.${index}.pollutantCode`
-                : `results.${index}.factorType`,
-            )}
-            className={`${inputClass} text-slate-700 ${!manual ? 'cursor-default bg-slate-50' : ''} ${rowErrors?.factorType || rowErrors?.pollutantCode ? 'border-rose-400' : ''}`}
-          />
+            aria-label="Код загрязняющего вещества"
+            placeholder="Код из норматива"
+            {...register(`results.${index}.pollutantCode`)}
+            className={`${inputClass} text-slate-700 ${!manual ? 'cursor-default bg-slate-50' : ''} ${rowErrors?.pollutantCode ? 'border-rose-400' : ''}`}
+          /> : <select
+            aria-label="Тип фактора"
+            disabled={!manual}
+            {...register(`results.${index}.factorType`)}
+            className={`${inputClass} text-slate-700 ${!manual ? 'cursor-default bg-slate-50' : ''} ${rowErrors?.factorType ? 'border-rose-400' : ''}`}
+          >
+            <option value="">Выберите тип фактора</option>
+            {protocolFactorTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>}
           {!chemical && rowErrors?.factorType?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.factorType.message}</span>}
           {chemical && rowErrors?.pollutantCode?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.pollutantCode.message}</span>}
         </label>

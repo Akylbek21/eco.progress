@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import type { User, UserRole } from '../types';
+import { clearStoredDocumentFlowOrganizations } from '../features/document-flow/model/organizationSelection';
 
 type AuthState = {
   user: User | null;
@@ -117,6 +119,7 @@ const normalizeStoredUser = (value: User): User => ({
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const queryClient = useQueryClient();
   const [user, setUserState] = useState<User | null>(() => {
     const raw = localStorage.getItem(USER_KEY);
     if (!raw) return null;
@@ -136,9 +139,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const clearSession = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    clearStoredDocumentFlowOrganizations();
+    queryClient.removeQueries({ queryKey: ['document-flow'] });
+    queryClient.removeQueries({ queryKey: ['protocols'] });
+    queryClient.removeQueries({ queryKey: ['protocol'] });
+    queryClient.removeQueries({ queryKey: ['protocol-results'] });
+    queryClient.removeQueries({ queryKey: ['pek'] });
     setToken(null);
     setUserState(null);
-  }, []);
+  }, [queryClient]);
 
   const refreshUser = useCallback(async () => {
     if (!localStorage.getItem(TOKEN_KEY)) return null;

@@ -132,7 +132,7 @@ describe('collective protocol signing API and mutation', () => {
   it('blocks double click, updates the signature UI and invalidates protocol queries', async () => {
     let requestCount = 0;
     server.use(
-      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: protocol() })),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: protocol({ availableActions: ['SIGN'] }) })),
       http.post('http://localhost/api/protocols/42/sign', async () => {
         requestCount += 1;
         await delay(100);

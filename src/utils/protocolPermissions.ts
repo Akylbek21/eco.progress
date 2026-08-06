@@ -3,67 +3,34 @@ import type { Protocol, ProtocolStatus } from '../types/protocols';
 
 type ProtocolUser = { id?: string | number | null; role?: string | null } | null | undefined;
 type ProtocolLike =
-  | (Pick<Protocol, 'status'> & Partial<Pick<Protocol, 'permissions' | 'signatureCount' | 'maxSignatures' | 'signedByCurrentUser' | 'signatures' | 'publishedAt' | 'publishedToClientAt'>>)
+  | (Pick<Protocol, 'status'> & Partial<Pick<Protocol, 'permissions' | 'availableActions' | 'signatureCount' | 'maxSignatures' | 'signedByCurrentUser' | 'signatures' | 'publishedAt' | 'publishedToClientAt'>>)
   | ProtocolStatus
   | string
   | null
   | undefined;
 
-const EDITABLE_STATUSES = new Set<ProtocolStatus>([
-  'DRAFT',
-  'CALCULATED',
-  'READY',
-  'NEEDS_REVISION',
-]);
-const TERMINAL_STATUSES = new Set<ProtocolStatus>(['ARCHIVED', 'CANCELLED']);
-const CORRECTION_STATUSES = new Set<ProtocolStatus>(['SIGNED', 'REPLACED']);
-
-const roleOf = (user: ProtocolUser | string) =>
-  String(typeof user === 'string' ? user : user?.role || '').trim().toUpperCase();
 const statusOf = (protocol: ProtocolLike) =>
   normalizeProtocolStatus(typeof protocol === 'object' && protocol ? protocol.status : protocol);
-const signatureCountOf = (protocol: ProtocolLike) => typeof protocol === 'object' && protocol
-  ? Number(protocol.signatureCount ?? protocol.signatures?.length ?? 0)
-  : 0;
-const maxSignaturesOf = (protocol: ProtocolLike) => typeof protocol === 'object' && protocol
-  ? Number(protocol.maxSignatures)
-  : 0;
-const signedByCurrentUser = (protocol: ProtocolLike) => typeof protocol === 'object'
-  && protocol?.signedByCurrentUser === true;
-const canSignCurrentVersion = (protocol: ProtocolLike) => {
-  const status = statusOf(protocol);
-  return ['APPROVED', 'SIGNED'].includes(status)
-    && !signedByCurrentUser(protocol)
-    && signatureCountOf(protocol) < maxSignaturesOf(protocol);
-};
-export const isInternalProtocolUser = (user: ProtocolUser | string): boolean => {
-  const role = roleOf(user);
-  return Boolean(role && role !== 'CLIENT');
-};
+const actionOf = (protocol: ProtocolLike, action: string) => typeof protocol === 'object'
+  && protocol !== null
+  && statusOf(protocol) !== 'UNKNOWN'
+  && Array.isArray(protocol.availableActions)
+  && protocol.availableActions.includes(action);
+export const isInternalProtocolUser = (_user: ProtocolUser | string): boolean => false;
 
 export { normalizeProtocolStatus };
-export const canViewProtocol = (user: ProtocolUser, _protocol?: ProtocolLike) =>
-  isInternalProtocolUser(user);
-export const canCreateProtocol = (user: ProtocolUser) => isInternalProtocolUser(user);
-export const canEditProtocol = (user: ProtocolUser, protocol: ProtocolLike) =>
-  isInternalProtocolUser(user) && EDITABLE_STATUSES.has(statusOf(protocol));
+export const canViewProtocol = (_user: ProtocolUser, protocol?: ProtocolLike) => actionOf(protocol, 'VIEW');
+export const canCreateProtocol = (_user: ProtocolUser) => false;
+export const canEditProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => actionOf(protocol, 'EDIT');
 export const canEditResults = canEditProtocol;
-export const canSendForApproval = (user: ProtocolUser, protocol: ProtocolLike) =>
-  isInternalProtocolUser(user) && EDITABLE_STATUSES.has(statusOf(protocol));
-export const canReturnForRevision = (user: ProtocolUser, protocol: ProtocolLike) =>
-  isInternalProtocolUser(user) && statusOf(protocol) === 'READY_FOR_APPROVAL';
-export const canApproveProtocol = (user: ProtocolUser, protocol: ProtocolLike) =>
-  isInternalProtocolUser(user) && statusOf(protocol) === 'READY_FOR_APPROVAL';
-export const canSignProtocol = (user: ProtocolUser, protocol: ProtocolLike) =>
-  isInternalProtocolUser(user) && canSignCurrentVersion(protocol);
-export const canCreateCorrection = (user: ProtocolUser, protocol: ProtocolLike) =>
-  isInternalProtocolUser(user) && CORRECTION_STATUSES.has(statusOf(protocol));
-export const canCancelProtocol = (user: ProtocolUser, protocol: ProtocolLike) =>
-  isInternalProtocolUser(user) && EDITABLE_STATUSES.has(statusOf(protocol));
-export const canArchiveProtocol = (user: ProtocolUser, protocol: ProtocolLike) =>
-  isInternalProtocolUser(user) && ['REPLACED', 'CANCELLED'].includes(statusOf(protocol));
-export const canDownloadProtocol = (user: ProtocolUser, protocol: ProtocolLike) =>
-  canViewProtocol(user, protocol);
+export const canSendForApproval = (_user: ProtocolUser, protocol: ProtocolLike) => actionOf(protocol, 'SUBMIT_FOR_REVIEW');
+export const canReturnForRevision = (_user: ProtocolUser, protocol: ProtocolLike) => actionOf(protocol, 'RETURN_FOR_CORRECTION');
+export const canApproveProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => actionOf(protocol, 'APPROVE');
+export const canSignProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => actionOf(protocol, 'SIGN');
+export const canCreateCorrection = (_user: ProtocolUser, protocol: ProtocolLike) => actionOf(protocol, 'CREATE_CORRECTED_VERSION');
+export const canCancelProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => actionOf(protocol, 'CANCEL');
+export const canArchiveProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => actionOf(protocol, 'ARCHIVE');
+export const canDownloadProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => actionOf(protocol, 'DOWNLOAD_PDF') || actionOf(protocol, 'DOWNLOAD_DOCX');
 
 export type ProtocolPermissions = {
   canView: boolean;
@@ -93,6 +60,24 @@ export const getProtocolPermissions = (
   allowAll = false,
 ): ProtocolPermissions => {
   const backend = typeof protocol === 'object' && protocol ? protocol.permissions : undefined;
+  const actions = typeof protocol === 'object' && protocol && Array.isArray(protocol.availableActions)
+    ? new Set(protocol.availableActions)
+    : null;
+  if (actions) {
+    const has = (action: string) => statusOf(protocol) !== 'UNKNOWN' && actions.has(action);
+    return {
+      canView: has('VIEW'), canEdit: has('EDIT') || has('SAVE'), canDelete: has('DELETE'),
+      canCalculate: has('CALCULATE'), canCheckNormatives: has('CHECK_NORMATIVES'),
+      canGeneratePreview: has('PREPARE_SIGNING') || has('PREVIEW'),
+      canGenerateDocuments: has('GENERATE_PDF') || has('GENERATE_DOCX'),
+      canReadyForApproval: has('SUBMIT_FOR_REVIEW'), canReturnForRevision: has('RETURN_FOR_CORRECTION'),
+      canApprove: has('APPROVE'), canSign: has('SIGN'), canReplace: has('CREATE_CORRECTED_VERSION'),
+      canCancel: has('CANCEL'), canArchive: has('ARCHIVE'), canPublish: has('PUBLISH_TO_CLIENT'),
+      canDownload: has('DOWNLOAD_PDF') || has('DOWNLOAD_DOCX'),
+      canManageResults: has('EDIT_RESULTS') || has('EDIT'), canManageDevices: has('EDIT_DEVICES') || has('EDIT'),
+      canViewAudit: has('VIEW_AUDIT') || has('VIEW'),
+    };
+  }
   const backendFlag = (key: keyof ProtocolPermissions) => backend?.[key] === true;
   if (backend && Object.keys(backend).length) {
     if (statusOf(protocol) === 'UNKNOWN') {

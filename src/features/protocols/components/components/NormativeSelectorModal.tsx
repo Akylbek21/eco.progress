@@ -35,6 +35,7 @@ const NormativeSelectorModal = ({
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [includeAllStatuses, setIncludeAllStatuses] = useState(false);
   const [selectedRecords, setSelectedRecords] = useState<
     Map<string, NormativeRecord>
   >(new Map());
@@ -45,6 +46,7 @@ const NormativeSelectorModal = ({
     void queryClient.cancelQueries({
       queryKey: ['protocol-normative-search-v2'],
     });
+    setIncludeAllStatuses(false);
     if (!normalizedSearch) {
       setDebouncedSearch('');
       return;
@@ -67,9 +69,9 @@ const NormativeSelectorModal = ({
       query: debouncedSearch || undefined,
       page: 0,
       size: SEARCH_PAGE_SIZE,
-      status: 'ACTIVE',
+      status: includeAllStatuses ? 'ALL' : 'ACTIVE',
     }),
-    [debouncedSearch, filters, searchContext],
+    [debouncedSearch, filters, includeAllStatuses, searchContext],
   );
   const searchAllowed = canSearchNormative(debouncedSearch);
   const query = useQuery({
@@ -112,6 +114,7 @@ const NormativeSelectorModal = ({
   const close = () => {
     setSearch('');
     setDebouncedSearch('');
+    setIncludeAllStatuses(false);
     setSelectedRecords(new Map());
     onClose();
   };
@@ -206,15 +209,12 @@ const NormativeSelectorModal = ({
         )}
 
         {currentQueryFinished && rows.length === 0 && (
-          <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
-            По запросу «{debouncedSearch}» ничего не найдено в выбранном типе
-            протокола.
-          </p>
+          <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><p>По запросу «{debouncedSearch}» ничего не найдено {includeAllStatuses ? 'во всех статусах' : 'среди активных нормативов'} для выбранного типа протокола.</p>{!includeAllStatuses && <button type="button" className="mt-2 font-bold underline" onClick={() => setIncludeAllStatuses(true)}>Искать также архивные и требующие проверки</button>}</div>
         )}
 
-        {currentQueryFinished && Boolean(query.data?.relaxed) && rows.length > 0 && (
+        {currentQueryFinished && includeAllStatuses && rows.length > 0 && (
           <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
-            Показатель найден, но применимый норматив необходимо проверить.
+            Показаны нормативы всех статусов. Проверьте статус перед передачей протокола.
           </p>
         )}
 

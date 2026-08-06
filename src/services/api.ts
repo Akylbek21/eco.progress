@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { getApiErrorMessage, normalizeApiError, type ApiResponse } from './apiHelpers';
 
+const apiBaseUrl = import.meta.env.VITE_API_URL?.trim() || '/api';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : '/api',
+  baseURL: apiBaseUrl,
   timeout: 15_000,
 });
 

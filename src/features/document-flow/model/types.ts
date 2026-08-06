@@ -24,14 +24,29 @@ export type DocumentFlowPermission =
   | 'MANAGE_SUBSCRIPTION';
 
 export type AvailableAction =
-  | 'EDIT' | 'DELETE' | 'SEND_FOR_SIGNING' | 'DOWNLOAD'
-  | 'UPLOAD_VERSION' | 'ARCHIVE' | 'MANAGE_ATTACHMENTS';
+  | 'VIEW' | 'EDIT' | 'DELETE' | 'UPLOAD_VERSION' | 'MANAGE_ROUTE' | 'SEND'
+  | 'SIGN' | 'REJECT' | 'RETURN_FOR_REVISION' | 'DOWNLOAD_SIGNED_PACKAGE'
+  | 'VIEW_AUDIT' | 'CREATE_REVOCATION' | 'APPROVE_REVOCATION'
+  | 'REJECT_REVOCATION' | 'CANCEL_REVOCATION' | 'ARCHIVE' | 'MANAGE_ATTACHMENTS';
+
+export interface DocumentFlowOrganization {
+  id: number;
+  name: string;
+  role?: MembershipRole | null;
+  membershipStatus?: string | null;
+  permissions?: DocumentFlowPermission[];
+}
 
 export interface AccessContext {
   available: boolean;
   readOnly: boolean;
-  status: SubscriptionStatus | null;
-  plan: { code: string; name: string } | null;
+  internalMode?: boolean;
+  organizationId?: number | string | null;
+  role?: MembershipRole | null;
+  membershipStatus?: string | null;
+  organization?: DocumentFlowOrganization | null;
+  status: SubscriptionStatus | string | null;
+  plan: unknown;
   startsAt: string | null;
   expiresAt: string | null;
   daysRemaining: number | null;
@@ -41,6 +56,7 @@ export interface AccessContext {
   usage: Partial<Record<UsageMetric, number>>;
   availableActions: DocumentFlowPermission[];
   reason: string | null;
+  testMode?: boolean;
 }
 
 export interface PublicPlanFeature {
@@ -112,15 +128,18 @@ export interface DocumentListItem {
   createdAt: string;
   deadline: string | null;
   status: DocumentStatus;
-  signedCount?: number;
-  requiredCount?: number;
-  requiresMySignature?: boolean;
+  signedCount: number;
+  requiredCount: number;
+  rejectedCount: number;
+  requiresMySignature: boolean;
+  updatedAt: string;
+  currentStep?: number | null;
   version: number;
   permissions: DocumentPermissions;
   availableActions: AvailableAction[];
 }
 
-export interface DocumentDetail extends Omit<DocumentListItem, 'signedCount' | 'requiredCount' | 'requiresMySignature'> {
+export interface DocumentDetail extends Omit<DocumentListItem, 'signedCount' | 'requiredCount' | 'rejectedCount' | 'requiresMySignature'> {
   publicId: string;
   description: string | null;
   updatedAt: string;
@@ -231,6 +250,7 @@ export interface Counterparty {
 }
 
 export interface CreateCounterpartyRequest {
+  organizationId: number;
   bin: string;
   name: string;
   linkedOrganizationId?: number | null;
@@ -240,8 +260,24 @@ export interface CreateCounterpartyRequest {
   phone?: string;
 }
 
+export interface MyAssignment {
+  required: boolean;
+  assignmentId: number;
+  stepOrder: number;
+  action: string;
+  status: string;
+  versionId: number;
+  deadline: string | null;
+  availableActions: AvailableAction[];
+}
+
+export type UpdateCounterpartyRequest = Partial<Omit<CreateCounterpartyRequest, 'organizationId' | 'bin'>>;
+
 export interface CounterpartyListParams {
-  organizationId?: number;
+  organizationId: number;
+  query?: string;
+  status?: Counterparty['status'];
+  sort?: string;
   page: number;
   size: number;
   signal?: AbortSignal;
@@ -257,12 +293,39 @@ export interface Representative {
   active: boolean;
 }
 
+export interface DocumentFlowMember {
+  id: number;
+  organizationId: number;
+  userId: number;
+  fullName: string;
+  email: string | null;
+  role: MembershipRole;
+  status: string;
+}
+
+export interface MemberListParams {
+  organizationId: number;
+  query?: string;
+  status?: string;
+  role?: MembershipRole;
+  page: number;
+  size: number;
+  sort?: string;
+  signal?: AbortSignal;
+}
+
+export interface CreateMemberRequest {
+  organizationId: number;
+  userId: number;
+  role: MembershipRole;
+}
+
 export type SigningRouteType = 'SEQUENTIAL' | 'PARALLEL' | 'MIXED';
 export type SignerType = 'ORGANIZATION_MEMBER' | 'COUNTERPARTY_REPRESENTATIVE' | 'EXTERNAL';
 
 export interface SigningAssignmentInput {
   signerType: SignerType;
-  userId?: number | null;
+  memberId?: number | null;
   signerFullName?: string | null;
   signerIin?: string | null;
   organizationName?: string | null;

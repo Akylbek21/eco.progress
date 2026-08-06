@@ -41,6 +41,13 @@ export const validateForApproval = (form: ProtocolWizardForm): ProtocolWizardVal
     if (row.normativeStatus === 'INACTIVE') {
       issues.push({ field: `${prefix}.normativeId`, message: 'Неактивный норматив нельзя использовать для согласования.' });
     }
+    if (form.templateId === 'soil') {
+      if (!text(row.sampleNumber)) issues.push({ field: `${prefix}.sampleNumber`, message: 'Укажите номер пробы.' });
+      const depth = text(row.samplingDepth).replace(',', '.');
+      if (!depth || !Number.isFinite(Number(depth)) || Number(depth) < 0) {
+        issues.push({ field: `${prefix}.samplingDepth`, message: 'Укажите корректную глубину отбора пробы.' });
+      }
+    }
   });
   return issues;
 };

@@ -17,7 +17,7 @@ export type CreationStage =
 export interface CreationCheckpoint {
   schemaVersion: number;
   userId: number;
-  organizationScope: string;
+  organizationScope: number;
   documentId?: number;
   routeId?: number;
   backendVersion?: number;
@@ -36,7 +36,7 @@ const stages: CreationStage[] = [
 
 const reached = (current: CreationStage, expected: CreationStage) => stages.indexOf(current) >= stages.indexOf(expected);
 
-export const createCreationCheckpoint = (userId: number, organizationScope: string): CreationCheckpoint => ({
+export const createCreationCheckpoint = (userId: number, organizationScope: number): CreationCheckpoint => ({
   schemaVersion: CREATION_CHECKPOINT_SCHEMA_VERSION,
   userId,
   organizationScope,
@@ -46,10 +46,10 @@ export const createCreationCheckpoint = (userId: number, organizationScope: stri
   updatedAt: new Date().toISOString(),
 });
 
-export const creationCheckpointStorageKey = (userId: number, organizationScope: string) =>
+export const creationCheckpointStorageKey = (userId: number, organizationScope: number) =>
   `document-flow:create-checkpoint:${userId}:${organizationScope}`;
 
-export const readCreationCheckpoint = (key: string, userId: number, organizationScope: string): CreationCheckpoint | null => {
+export const readCreationCheckpoint = (key: string, userId: number, organizationScope: number): CreationCheckpoint | null => {
   const raw = localStorage.getItem(key);
   if (!raw) return null;
   try {
@@ -73,8 +73,7 @@ export interface CreationWorkflowOperations {
   listAttachments(id: number): Promise<DocumentAttachment[]>;
   getSigningRoute(id: number): Promise<SigningRoute | null>;
   createSigningRoute(id: number, payload: SigningRouteRequest): Promise<SigningRoute>;
-  prepare(id: number, expectedVersion: number): Promise<SigningRoute>;
-  send(id: number): Promise<SigningRoute>;
+  send(id: number): Promise<unknown>;
 }
 
 export interface CreationWorkflowInput {
@@ -157,7 +156,7 @@ export const runCreationWorkflow = async (input: CreationWorkflowInput): Promise
 
   if (!reached(checkpoint.stage, 'PREPARED')) {
     const current = await input.operations.getDocument(documentId);
-    await input.operations.prepare(documentId, current.version);
+    if (!current.availableActions.includes('SEND')) throw new Error('Backend не разрешает отправку документа: action SEND отсутствует.');
     advance('PREPARED', { backendVersion: current.version });
   }
 

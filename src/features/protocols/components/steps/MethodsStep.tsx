@@ -8,7 +8,7 @@ const MethodsStep = () => {
   return (
     <section>
       <h3 id="wizard-step-title" tabIndex={-1} className="text-xl font-black">Методики</h3>
-      <p className="mt-2 text-sm text-slate-500">Указываются только реквизиты, поддерживаемые backend quick-create.</p>
+      <p className="mt-2 text-sm text-slate-500">Укажите данные проведения испытания.</p>
       <label className="mt-5 block text-sm font-bold">
         НД на метод испытаний *
         <input {...register('testingMethodNd')} className={`${input} mt-1.5 ${errors.testingMethodNd ? 'border-rose-400' : ''}`} />

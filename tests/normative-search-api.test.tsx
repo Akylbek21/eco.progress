@@ -112,25 +112,14 @@ describe('normative search HTTP contract', () => {
     expect(actualUrl?.searchParams.has('query')).toBe(false);
   });
 
-  it('runs ACTIVE, ALL, relaxed ACTIVE and relaxed ALL without losing templateId', async () => {
-    let fallbackUrl: URL | undefined;
+  it('runs one explicit ACTIVE search without silently relaxing filters', async () => {
+    let actualUrl: URL | undefined;
     let requestCount = 0;
     server.use(
       http.get('*/api/normatives/search', ({ request }) => {
         requestCount += 1;
-        if (requestCount < 4) {
-          return HttpResponse.json({ data: { items: [], totalElements: 0 } });
-        }
-        fallbackUrl = new URL(request.url);
-        return HttpResponse.json({
-          data: {
-            records: [nickel],
-            page: 0,
-            size: 50,
-            totalElements: 1,
-            totalPages: 1,
-          },
-        });
+        actualUrl = new URL(request.url);
+        return HttpResponse.json({ data: { items: [], totalElements: 0 } });
       }),
     );
 
@@ -146,16 +135,16 @@ describe('normative search HTTP contract', () => {
       { bypassCache: true },
     );
 
-    expect(fallbackUrl?.searchParams.get('query')).toBe('нике');
-    expect(fallbackUrl?.searchParams.get('templateId')).toBe('water');
-    expect(fallbackUrl?.searchParams.has('sourceDocumentCode')).toBe(false);
-    expect(fallbackUrl?.searchParams.get('status')).toBe('ALL');
+    expect(actualUrl?.searchParams.get('query')).toBe('нике');
+    expect(actualUrl?.searchParams.get('templateId')).toBe('water');
+    expect(actualUrl?.searchParams.get('sourceDocumentCode')).toBe('DSM_138');
+    expect(actualUrl?.searchParams.get('status')).toBe('ACTIVE');
     for (const forbidden of ['search', 'q', 'code', 'pollutantCode']) {
-      expect(fallbackUrl?.searchParams.has(forbidden)).toBe(false);
+      expect(actualUrl?.searchParams.has(forbidden)).toBe(false);
     }
-    expect(requestCount).toBe(4);
-    expect(result.relaxed).toBe(true);
-    expect(result.items[0]?.indicatorName).toBe('Никель');
+    expect(requestCount).toBe(1);
+    expect(result.relaxed).toBe(false);
+    expect(result.items).toEqual([]);
     expect(extractNormativeItems({ data: { data: { records: [nickel] } } })).toEqual([
       nickel,
     ]);

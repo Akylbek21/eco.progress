@@ -272,9 +272,9 @@ const userProtocolError = (error: unknown) => {
   const message = error instanceof Error ? error.message : '';
   const normalized = message.toLowerCase();
   if (normalized.includes('только в статусах') || normalized.includes('only in statuses') || normalized.includes('draft') && normalized.includes('calculated')) {
-    return 'Backend пока не разрешает сохранять протокол в текущем статусе. Нужно обновить backend: PATCH/PUT протокола должен работать без перевода в DRAFT.';
+    return 'Протокол нельзя изменить в текущем статусе. Обновите данные и повторите действие.';
   }
-  if (normalized.includes('черновик')) return 'Backend пока требует черновик для сохранения. Нужно обновить backend, frontend не переводит протокол в DRAFT.';
+  if (normalized.includes('черновик')) return 'Изменения можно сохранить только в черновике.';
   return message || undefined;
 };
 const hasText = (value: unknown) => value !== undefined && value !== null && String(value).trim() !== '';
@@ -685,7 +685,7 @@ const ProtocolStepFooter = ({
               {activeStep === 'review' && (
                 <>
                   <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
-                  <Button type="button" disabled={busy || missingFields.length > 0} title={missingFields.length ? `Нельзя подписать: ${missingFields[0]?.label}` : undefined} onClick={onSign}>Создать и подписать протокол</Button>
+                  <Button type="button" disabled={busy || missingFields.length > 0} title={missingFields.length ? `Нельзя открыть предпросмотр: ${missingFields[0]?.label}` : undefined} onClick={onSign}>Открыть предварительный просмотр</Button>
                 </>
               )}
             </>
@@ -803,7 +803,7 @@ const ProtocolEditorPage = () => {
 
   const signCurrentProtocol = () => {
     if (!protocol || signMutation.isPending) return;
-    if (!protocolActions.canSign && !protocolHasAction(protocol, 'PREPARE_SIGNING') && !protocolHasAction(protocol, 'SIGN')) {
+    if (!protocolHasAction(protocol, 'SIGN')) {
       toast.warning(protocol.blockingReasons?.[0] || 'Нельзя подписать: заполните обязательные данные и выберите действующий прибор');
       return;
     }
@@ -811,7 +811,7 @@ const ProtocolEditorPage = () => {
       toast.error('Не удалось подписать протокол', 'Версия протокола не определена. Обновите данные');
       return;
     }
-    setSignOpen(true);
+    void preview();
   };
 
   const ensureDraftProtocol = async (item: Protocol) => {
@@ -1127,7 +1127,7 @@ const ProtocolEditorPage = () => {
   const checkSavedNormatives = async () => {
     if (!protocol) return;
     if (!protocolActions.canCheckNormatives) {
-      toast.warning('Backend не разрешил проверку нормативов');
+      toast.warning('Проверка нормативов сейчас недоступна');
       return;
     }
     if (protocol.signatureCount > 0) {
@@ -1142,13 +1142,13 @@ const ProtocolEditorPage = () => {
     await run(async () => {
       await protocolService.checkNormatives(protocol.id, protocol.version);
       return protocolService.getProtocol(protocol.id);
-    }, 'Расчёт выполнен backend');
+    }, 'Расчёт выполнен');
   };
 
   const calculateProtocolResults = async () => {
     if (!protocol) return;
     if (!protocolActions.canCalculate) {
-      toast.warning('Backend не разрешил расчёт результатов');
+      toast.warning('Расчёт результатов сейчас недоступен');
       return;
     }
     if (protocol.signatureCount > 0) {
@@ -1291,7 +1291,7 @@ const ProtocolEditorPage = () => {
     setBusy(true);
     try {
       const downloaded = kind === 'pdf' ? await protocolService.downloadPdf(current.id) : await protocolService.downloadDocx(current.id);
-      if (!downloaded?.blob.size) throw new Error('Backend вернул пустой файл.');
+      if (!downloaded?.blob.size) throw new Error('Не удалось получить сформированный файл.');
       saveBlob(downloaded.blob, downloaded.fileName || fileName(current, kind));
     } catch (downloadError) {
       toast.error('Не удалось скачать файл', userProtocolError(downloadError));
@@ -1422,8 +1422,8 @@ const ProtocolEditorPage = () => {
 
   return (
     <>
-    {protocol.status === 'UNKNOWN' && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900">Backend вернул неподдерживаемый статус «{protocol.apiStatus || 'пусто'}». Протокол открыт только для чтения; изменяющие действия отключены.</div>}
-    {pekReportContext > 0 && ['READY', 'APPROVED', 'SIGNED'].includes(protocol.status) && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><span>Протокол финализирован. Можно повторно собрать связанный отчёт ПЭК по канонической backend-связи.</span><Button type="button" disabled={busy} onClick={() => { void recollectPekReport(); }}>Повторно собрать отчёт ПЭК</Button></div>}
+    {protocol.status === 'UNKNOWN' && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900">Статус протокола пока не поддерживается. Данные доступны только для чтения.</div>}
+    {pekReportContext > 0 && ['READY', 'APPROVED', 'SIGNED'].includes(protocol.status) && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><span>Протокол завершён. Можно повторно собрать связанный отчёт ПЭК.</span><Button type="button" disabled={busy} onClick={() => { void recollectPekReport(); }}>Повторно собрать отчёт ПЭК</Button></div>}
     <ProtocolDetailsView
       protocol={protocol}
       role={user?.role}
@@ -1472,7 +1472,18 @@ const ProtocolEditorPage = () => {
         {editSection === 'results' && <ProtocolResultsTable protocolId={protocol.id} version={protocol.version} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} devices={protocol.measurementDevices} readOnly={!protocolActions.canManageResults} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />}
       </Modal>
 
-      <ProtocolPreviewModal open={previewOpen} loading={previewLoading} previewUrl={previewUrl} protocol={protocol} draft={false} onClose={() => setPreviewOpen(false)} />
+      <ProtocolPreviewModal
+        open={previewOpen}
+        loading={previewLoading}
+        previewUrl={previewUrl}
+        protocol={protocol}
+        draft={false}
+        onClose={() => setPreviewOpen(false)}
+        onConfirmSign={protocolHasAction(protocol, 'SIGN') ? () => {
+          setPreviewOpen(false);
+          setSignOpen(true);
+        } : undefined}
+      />
       <Modal open={conflictOpen} onClose={() => setConflictOpen(false)} title="Протокол был изменён. Обновляем актуальные данные">
         <p className="text-sm text-slate-600">Мы загрузили последнюю версию. Проверьте изменения и повторите действие.</p>
         <div className="mt-5 flex justify-end gap-3">

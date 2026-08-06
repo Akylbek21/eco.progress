@@ -13,6 +13,7 @@ import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi'
 import { mapReportCreateRequest } from '../mappers/reportMappers';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
+import { currentQuarter } from '../utils/pekPeriod';
 
 const inputClass = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2';
 
@@ -25,9 +26,9 @@ const PekReportCreatePage = () => {
   const [objectId, setObjectId] = useState(Number(initial.get('objectId')) || 0);
   const [periodType, setPeriodType] = useState<PekPeriodType>(initial.get('periodType') === 'YEAR' ? 'YEAR' : 'QUARTER');
   const [year, setYear] = useState(Number(initial.get('year')) || new Date().getFullYear());
-  const [quarter, setQuarter] = useState(Number(initial.get('quarter')) || 1);
+  const [quarter, setQuarter] = useState(Number(initial.get('quarter')) || currentQuarter());
   const [programId, setProgramId] = useState(0);
-  const [collectImmediately, setCollectImmediately] = useState(true);
+  const [collectImmediately, setCollectImmediately] = useState(false);
   const params: PekReportCreationParams = {
     companyId,
     objectId,
@@ -74,7 +75,7 @@ const PekReportCreatePage = () => {
   );
 
   return <div className="space-y-5">
-    <PekPageHeader title="Создание отчёта ПЭК" description="Период вычисляет backend; даты нельзя редактировать вручную" />
+    <PekPageHeader title="Создание отчёта ПЭК" description="Выберите программу и отчётный период. Точные даты система определит автоматически." />
     <section className="grid gap-4 rounded-2xl border bg-white p-5 md:grid-cols-3">
       <PekCompanyObjectFilters
         companyId={companyId || undefined}
@@ -106,7 +107,7 @@ const PekReportCreatePage = () => {
             {context.data.blockingReasons.map((reason) => <p key={reason} className="rounded-xl bg-rose-50 p-3 text-sm text-rose-900">{reason}</p>)}
             {context.data.duplicateReportId && <p className="rounded-xl bg-amber-50 p-3 text-sm">Отчёт за период уже существует. <Link className="font-bold underline" to={`/staff/pek/reports/${context.data.duplicateReportId}`}>Открыть отчёт №{context.data.duplicateReportId}</Link></p>}
             <label className="flex items-center gap-2"><input type="checkbox" checked={collectImmediately} onChange={(event) => setCollectImmediately(event.target.checked)} />Сразу собрать подходящие протоколы</label>
-            <PekState title="Ответственный отчёта определяется backend" message="CreateReportRequest не принимает поле ответственного." />
+            <PekState title="Ответственный будет назначен автоматически" message="После создания назначение отобразится в рабочей области отчёта." />
             <Button disabled={blocked || create.isPending} aria-busy={create.isPending} onClick={() => create.mutate(mapReportCreateRequest(params, selectedProgramId, collectImmediately))}>
               {create.isPending ? 'Создание…' : 'Создать отчёт'}
             </Button>

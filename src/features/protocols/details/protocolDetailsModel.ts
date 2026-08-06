@@ -90,7 +90,7 @@ export const resolveProtocolPrimaryAction = (protocol: Protocol, role?: string):
   if (status === 'DRAFT') return { key: protocolHasAction(protocol, 'EDIT') || protocolHasAction(protocol, 'SAVE') ? 'edit' : null, label: 'Продолжить' };
   if (['CALCULATED', 'READY', 'READY_TO_SIGN', 'READY_FOR_APPROVAL', 'APPROVED'].includes(status)) {
     if (protocolHasAction(protocol, 'SIGN')) return { key: 'sign', label: 'Подписать' };
-    if (protocolHasAction(protocol, 'PREPARE_SIGNING')) return { key: 'sign', label: 'Создать и подписать протокол' };
+    if (protocolHasAction(protocol, 'PREPARE_SIGNING')) return { key: 'sign', label: 'Открыть предварительный просмотр' };
     return protocol.hasPdf && protocolHasAction(protocol, 'DOWNLOAD_PDF') ? { key: 'pdf', label: 'Скачать PDF' } : { key: null, label: '' };
   }
   if (status === 'UNDER_REVIEW') return { key: null, label: '' };

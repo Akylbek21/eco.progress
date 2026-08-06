@@ -16,7 +16,7 @@ export const protocolStatusConfig: Record<ProtocolStatus, { label: string; edita
   REPLACED: { label: 'Заменён новой версией', editable: false, color: 'neutral' },
   CANCELLED: { label: 'Отменён', editable: false, color: 'danger' },
   ARCHIVED: { label: 'Архив', editable: false, color: 'neutral' },
-  UNKNOWN: { label: 'Несовместимый статус API', editable: false, color: 'danger' },
+  UNKNOWN: { label: 'Неизвестный статус', editable: false, color: 'danger' },
 };
 
 export const normalizeProtocolStatus = (status?: string | null): ProtocolStatus => {

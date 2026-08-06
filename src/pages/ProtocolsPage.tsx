@@ -6,7 +6,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import ReplaceProtocolModal from '../components/protocols/ReplaceProtocolModal';
 import ProtocolList from '../components/protocols/ProtocolList';
-import CreateProtocolWizardModal from '../features/protocols/components/CreateProtocolWizardModal';
+import CreateProtocolWizardModal from '../features/protocols/components/CreateProtocolWizardModalV2';
 import { useSignProtocolMutation } from '../features/protocols/hooks/useSignProtocolMutation';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -39,8 +39,8 @@ const ProtocolsPage = () => {
   });
   const update = (changes: Record<string, string | number | boolean | undefined>) => { const next = new URLSearchParams(params); Object.entries(changes).forEach(([key, value]) => { if (value === undefined || value === '') next.delete(key); else next.set(key, String(value)); }); setParams(next, { replace: true }); };
 
-  const companiesQuery = useQuery({ queryKey: ['companies', 'protocol-filter'], queryFn: () => getActiveCompanies() });
-  const templatesQuery = useQuery({ queryKey: ['protocol-types', 'filter'], queryFn: () => protocolService.getProtocolTemplates() });
+  const companiesQuery = useQuery({ queryKey: ['companies', 'protocol-filter', user?.id], queryFn: () => getActiveCompanies() });
+  const templatesQuery = useQuery({ queryKey: ['protocol-types', 'filter', user?.id], queryFn: () => protocolService.getProtocolTemplates() });
   useEffect(() => {
     const timer = window.setTimeout(() => update({ search: searchInput.trim() || undefined, page: 0 }), 400);
     return () => window.clearTimeout(timer);
@@ -66,7 +66,7 @@ const ProtocolsPage = () => {
       sort: params.get('sort') || undefined,
     };
   }, [params, page, size]);
-  const protocolsQuery = useQuery({ queryKey: ['protocols', query], queryFn: ({ signal }) => protocolService.getProtocolsPage(query, signal), placeholderData: keepPreviousData });
+  const protocolsQuery = useQuery({ queryKey: ['protocols', user?.id ?? 'anonymous', companyId || 'all', query], queryFn: ({ signal }) => protocolService.getProtocolsPage(query, signal), placeholderData: keepPreviousData });
   const data = protocolsQuery.data; const protocols = data?.items || [];
   useEffect(() => { if (data && data.totalPages > 0 && page >= data.totalPages) update({ page: data.totalPages - 1 }); }, [data?.totalPages, page]);
 

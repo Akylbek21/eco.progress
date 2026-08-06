@@ -7,7 +7,7 @@ export const useDocumentFlowAccess = () => {
   const tenant = useDocumentFlowTenant();
   return useQuery({
     queryKey: tenant.tenantScope ? documentFlowKeys.access(tenant.tenantScope) : ['document-flow', 'tenant-unresolved'],
-    queryFn: ({ signal }) => documentFlowApi.access(signal),
+    queryFn: ({ signal }) => documentFlowApi.access(tenant.organizationId!, signal),
     enabled: tenant.organizationResolved,
     staleTime: 30_000,
     gcTime: 15 * 60_000,

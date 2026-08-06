@@ -13,6 +13,7 @@ type Props = {
   protocol?: Protocol | null;
   draft?: boolean;
   onClose: () => void;
+  onConfirmSign?: () => void;
 };
 
 const value = (raw: unknown) => raw === undefined || raw === null || raw === '' ? '—' : String(raw);
@@ -33,7 +34,7 @@ const resultValue = (protocol: Protocol, row: Protocol['results'][number], key: 
   return rowValue ?? topLevel;
 };
 
-const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, draft = false, onClose }: Props) => {
+const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, draft = false, onClose, onConfirmSign }: Props) => {
   if (!open) return null;
   const landscape = protocol?.templateId === 'industrial_emissions';
   const columns = protocol ? getProtocolResultColumns(protocol.templateId, protocol.subtype) : [];
@@ -141,6 +142,16 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
           </article>
         )}
       </div>
+      {onConfirmSign && !loading && (previewUrl || protocol) && (
+        <div className="flex justify-end gap-3 border-t border-white/10 bg-slate-900 px-4 py-3 sm:px-6">
+          <button type="button" onClick={onClose} className="rounded-xl border border-white/30 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">
+            Вернуться
+          </button>
+          <button type="button" onClick={onConfirmSign} className="rounded-xl bg-eco-600 px-5 py-2 text-sm font-bold text-white hover:bg-eco-700">
+            Подписать просмотренную версию
+          </button>
+        </div>
+      )}
     </div>,
     document.body,
   );

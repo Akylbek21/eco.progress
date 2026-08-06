@@ -44,15 +44,12 @@ test('protocol context maps every physical subtype and water to the required doc
   assert.match(configSource, /factorType: subtype \|\| protocolFactorType\[normalizedType as ProtocolTypeKey\]/);
 });
 
-test('API service retries the canonical endpoint with relaxed filters when search returns no rows', async () => {
+test('API service performs one explicit search and does not silently relax filters', async () => {
   const source = await read('src/services/normativeSearchService.ts');
   assert.match(source, /api\.get<unknown>\('\/normatives\/search'/);
-  assert.match(source, /buildNormativeSearchSequence\(cleaned\)/);
-  assert.match(source, /STRICT_ACTIVE/);
-  assert.match(source, /STRICT_ALL/);
-  assert.match(source, /RELAXED_ACTIVE/);
-  assert.match(source, /RELAXED_ALL/);
-  assert.match(source, /params: candidate\.params/);
+  assert.match(source, /status: params\.status \|\| 'ACTIVE'/);
+  assert.doesNotMatch(source, /buildNormativeSearchSequence\(cleaned\)/);
+  assert.match(source, /params: cleaned/);
   assert.doesNotMatch(source, /api\.get<unknown>\('\/normatives\/records'/);
   assert.doesNotMatch(source, /q: query/);
   assert.doesNotMatch(source, /code: query/);

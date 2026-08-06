@@ -6,7 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import api from '../src/services/api';
-import { documentFlowApi } from '../src/features/document-flow/api/documentFlowApi';
+import { documentFlowApi, publicDocumentFlowApi } from '../src/features/document-flow/api/documentFlowApi';
 import {
   mapCreateDocumentPayload, mapSearchParamsToDocumentFilters, resetDocumentFilterParams, setDocumentFilterParam,
 } from '../src/features/document-flow/mappers/documentMappers';
@@ -22,7 +22,7 @@ import type { DocumentAttachment, DocumentDetail, DocumentVersion, SigningRoute 
 import { resolveDocumentActions } from '../src/features/document-flow/model/documentActions';
 import {
   accessContextSchema, apiErrorSchema, documentDetailSchema, documentListItemSchema,
-  publicInvitationSchema, signingAssignmentSchema, signingRouteSchema,
+  documentFlowOrganizationsSchema, publicInvitationSchema, signingAssignmentSchema, signingRouteSchema,
 } from '../src/features/document-flow/api/contractSchemas';
 
 const server = setupServer();
@@ -75,20 +75,36 @@ afterAll(() => {
 describe('document flow access and mappers', () => {
   it('validates Java DTO examples at the API boundary', () => {
     expect(accessContextSchema.parse(access()).available).toBe(true);
+    expect(accessContextSchema.parse(access({
+      available: false,
+      readOnly: true,
+      status: null,
+      plan: null,
+      internalMode: true,
+      organizationId: 2,
+      role: 'OWNER',
+      membershipStatus: 'INVITED',
+      organization: { id: 2, name: 'Администратор ECOPROGRESS GROUP' },
+      features: [],
+      limits: {},
+      usage: {},
+      reason: 'Нет активной подписки на модуль документооборота',
+      testMode: false,
+    })).reason).toBe('Нет активной подписки на модуль документооборота');
     expect(documentDetailSchema.parse(detailDto()).publicId).toBe('public-7');
     expect(documentListItemSchema.parse({
       id: 7, number: null, title: 'A', type: 'CONTRACT', direction: 'OUTGOING', counterparty: null,
-      author: null, createdAt: '2026-08-03T10:00:00', deadline: null, status: 'DRAFT',
-      signedCount: 0, requiredCount: 0, requiresMySignature: false, version: 1,
+      author: null, createdAt: '2026-08-03T10:00:00', updatedAt: '2026-08-03T10:00:00', deadline: null, status: 'DRAFT',
+      signedCount: 0, requiredCount: 0, rejectedCount: 0, requiresMySignature: false, version: 1,
       permissions: detailDto().permissions, availableActions: ['EDIT'],
     }).signedCount).toBe(0);
     const assignment = {
-      id: 3, stepId: 2, signerType: 'ORGANIZATION_MEMBER', userId: 5, signerFullName: null,
+      id: 3, stepId: 2, signerType: 'ORGANIZATION_MEMBER', memberId: 5, signerFullName: null,
       organizationName: null, organizationBin: null, email: null, phone: null, roleCode: 'SIGNER',
       required: true, status: 'AVAILABLE', availableAt: null, viewedAt: null, signedAt: null,
       rejectedAt: null, rejectionReason: null, invitationExpiresAt: null,
     };
-    expect(signingAssignmentSchema.parse(assignment).userId).toBe(5);
+    expect(signingAssignmentSchema.parse(assignment).memberId).toBe(5);
     expect(signingRouteSchema.parse({
       id: 9, documentId: 7, routeType: 'SEQUENTIAL', status: 'ACTIVE', createdBy: 1,
       createdAt: '2026-08-03T10:00:00Z', activatedAt: null, completedAt: null, version: 0,
@@ -108,11 +124,11 @@ describe('document flow access and mappers', () => {
     expect(hasFeature(access(), 'MIXED_SIGNING')).toBe(false);
   });
 
-  it('reports an active-assignment SIGN gap without granting the action', () => {
-    const resolved = resolveDocumentActions(['DOWNLOAD'], ['SIGN']);
-    expect(resolved.supportedByFrontend).toEqual(['DOWNLOAD']);
-    expect(resolved.unavailableBecauseBackendContract).toEqual(['SIGN']);
-    expect(resolved.backendActions).not.toContain('SIGN');
+  it('uses the backend action enum without status-derived fallbacks', () => {
+    const resolved = resolveDocumentActions(['DOWNLOAD_SIGNED_PACKAGE', 'SIGN'], ['SIGN']);
+    expect(resolved.supportedByFrontend).toEqual(['DOWNLOAD_SIGNED_PACKAGE', 'SIGN']);
+    expect(resolved.unavailableBecauseBackendContract).toEqual([]);
+    expect(resolved.backendActions).toContain('SIGN');
   });
 
   it('maps backend list filters including the current-user action filter', () => {
@@ -211,12 +227,28 @@ describe('document flow secure commands and components', () => {
     });
   });
 
-  it('loads internal access and counterparties without organizationId', async () => {
+  it('loads access and counterparties with the selected organization tenant', async () => {
     const requests: string[] = [];
+    const currentAccess = access({
+      available: false,
+      readOnly: true,
+      status: null,
+      plan: null,
+      internalMode: true,
+      organizationId: 2,
+      role: 'OWNER',
+      membershipStatus: 'INVITED',
+      organization: { id: 2, name: 'Администратор ECOPROGRESS GROUP' },
+      features: [],
+      limits: {},
+      usage: {},
+      reason: 'Нет активной подписки на модуль документооборота',
+      testMode: false,
+    });
     server.use(
       http.get('http://localhost/api/document-flow/access', ({ request }) => {
         requests.push(request.url);
-        return HttpResponse.json({ success: true, data: access(), message: null });
+        return HttpResponse.json({ success: true, data: currentAccess, message: null });
       }),
       http.get('http://localhost/api/document-flow/counterparties', ({ request }) => {
         requests.push(request.url);
@@ -226,13 +258,18 @@ describe('document flow secure commands and components', () => {
         }, message: null });
       }),
     );
-    const context = await documentFlowApi.access();
-    const page = await documentFlowApi.getCounterparties({ page: 0, size: 20 });
-    expect(context.status).toBe('ACTIVE');
+    const context = await documentFlowApi.access(2);
+    const page = await documentFlowApi.getCounterparties({ organizationId: 2, query: 'A', status: 'ACTIVE', sort: 'name,asc', page: 0, size: 20 });
+    expect(context).toMatchObject({
+      available: false,
+      organizationId: 2,
+      membershipStatus: 'INVITED',
+      reason: 'Нет активной подписки на модуль документооборота',
+    });
     expect(page.items[0].organizationId).toBe(9);
     expect(requests).toEqual([
-      'http://localhost/api/document-flow/access',
-      'http://localhost/api/document-flow/counterparties?page=0&size=20',
+      'http://localhost/api/document-flow/access?organizationId=2',
+      'http://localhost/api/document-flow/counterparties?organizationId=2&query=A&status=ACTIVE&sort=name,asc&page=0&size=20',
     ]);
   });
 
@@ -253,7 +290,7 @@ describe('document flow secure commands and components', () => {
     expect(new URLSearchParams(seen).get('sort')).toBe('createdAt,desc');
   });
 
-  it('creates and archives a counterparty without organizationId', async () => {
+  it('creates and archives a counterparty in the selected organization', async () => {
     const seen: Array<{ url: string; body?: Record<string, unknown> }> = [];
     const dto = { id: 2, ownerOrganizationId: 9, linkedOrganizationId: null, bin: '123456789012', name: 'A', status: 'ACTIVE', version: 0 };
     server.use(
@@ -266,13 +303,13 @@ describe('document flow secure commands and components', () => {
         return HttpResponse.json({ success: true, data: { ...dto, status: 'ARCHIVED' }, message: null });
       }),
     );
-    await documentFlowApi.createCounterparty({ bin: '123456789012', name: 'A' });
-    await documentFlowApi.archiveCounterparty(2);
+    await documentFlowApi.createCounterparty({ organizationId: 9, bin: '123456789012', name: 'A' });
+    await documentFlowApi.archiveCounterparty(2, 9);
     expect(seen[0]).toEqual({
       url: 'http://localhost/api/document-flow/counterparties',
-      body: { bin: '123456789012', name: 'A' },
+      body: { organizationId: 9, bin: '123456789012', name: 'A' },
     });
-    expect(seen[1].url).toBe('http://localhost/api/document-flow/counterparties/2');
+    expect(seen[1].url).toBe('http://localhost/api/document-flow/counterparties/2?organizationId=9');
   });
 
   it('normalizes and validates counterparty form values', () => {
@@ -315,16 +352,16 @@ describe('document flow secure commands and components', () => {
 
   it.each<CreationStage>([
     'LOCAL_DRAFT', 'DOCUMENT_CREATED', 'REQUISITES_UPDATED', 'MAIN_FILE_UPLOADED',
-    'ATTACHMENTS_UPLOADED', 'ROUTE_CREATED', 'PREPARED',
+    'ATTACHMENTS_UPLOADED', 'PREPARED',
   ])('resumes after a %s-stage failure without duplicate document or route', async (failedAt) => {
     const main = new File(['main'], 'main.pdf', { type: 'application/pdf' });
     const extra = new File(['extra'], 'extra.pdf', { type: 'application/pdf' });
-    const document = { id: 7, number: null, version: 1, currentVersionId: null } as DocumentDetail;
+    const document = { id: 7, number: null, version: 1, currentVersionId: null, availableActions: ['SEND'] } as DocumentDetail;
     const route = { id: 9, documentId: 7, status: 'DRAFT' } as SigningRoute;
     const state = {
-      created: false, route: null as SigningRoute | null, prepared: false, sent: false,
+      created: false, route: null as SigningRoute | null, sent: false,
       attachments: [] as DocumentAttachment[], failed: false,
-      calls: { create: 0, update: 0, upload: 0, attachment: 0, route: 0, prepare: 0, send: 0 },
+      calls: { create: 0, update: 0, upload: 0, attachment: 0, route: 0, send: 0 },
     };
     const failAfterEffect = (stage: CreationStage) => {
       if (failedAt === stage && !state.failed) { state.failed = true; throw new Error(`network after ${stage}`); }
@@ -366,12 +403,6 @@ describe('document flow secure commands and components', () => {
         failAfterEffect('ATTACHMENTS_UPLOADED');
         return route;
       },
-      prepare: async () => {
-        state.calls.prepare += 1;
-        state.prepared = true;
-        failAfterEffect('ROUTE_CREATED');
-        return route;
-      },
       send: async () => {
         state.calls.send += 1;
         state.sent = true;
@@ -380,7 +411,7 @@ describe('document flow secure commands and components', () => {
         return state.route;
       },
     };
-    let checkpoint = createCreationCheckpoint(5, 'backend-resolved:5');
+    let checkpoint = createCreationCheckpoint(5, 9);
     const run = () => runCreationWorkflow({
       checkpoint,
       createPayload: { documentType: 'CONTRACT', direction: 'OUTGOING', title: 'A' },
@@ -401,21 +432,79 @@ describe('document flow secure commands and components', () => {
 
   it('never sends private key material in signature payload', async () => {
     let body: Record<string, unknown> = {};
-    server.use(http.post('http://localhost/api/document-flow/documents/7/signatures', async ({ request }) => {
+    server.use(http.post('http://localhost/api/document-flow/signatures', async ({ request }) => {
       body = await request.json() as Record<string, unknown>;
       return HttpResponse.json({ data: { id: 1 } });
     }));
     const unsafe = { documentId: 7, versionId: 2, assignmentId: 3, cms: 'cms', clientRequestId: 'request', privateKey: 'secret', password: 'secret', pkcs12: 'secret' };
-    await documentFlowApi.submitSignature(7, unsafe);
+    await documentFlowApi.submitSignature(unsafe);
     expect(body).toEqual({ documentId: 7, versionId: 2, assignmentId: 3, cms: 'cms', clientRequestId: 'request' });
   });
 
   it('downloads the signed package as a backend blob', async () => {
     const blob = new Blob(['zip'], { type: 'application/zip' });
     const get = vi.spyOn(api, 'get').mockResolvedValue({ data: blob });
-    const response = await documentFlowApi.signedPackage(7);
+    const response = await documentFlowApi.signedPackage(7, 2);
     expect(response.data).toBeInstanceOf(Blob);
-    expect(get).toHaveBeenCalledWith('/document-flow/documents/7/signed-package', { responseType: 'blob' });
+    expect(get).toHaveBeenCalledWith('/document-flow/documents/7/signed-package', { params: { organizationId: 2 }, responseType: 'blob' });
+  });
+
+  it('accepts nullable membership collections without granting extra access', () => {
+    expect(documentFlowOrganizationsSchema.parse([
+      { organizationId: 2, organizationName: 'EcoProgress', role: 'OWNER', membershipStatus: 'INVITED', permissions: null },
+    ])).toEqual([
+      { id: 2, name: 'EcoProgress', role: 'OWNER', membershipStatus: 'INVITED', permissions: undefined },
+    ]);
+    expect(accessContextSchema.parse({
+      available: false,
+      readOnly: true,
+      status: null,
+      features: null,
+      permissions: null,
+      limits: null,
+      usage: null,
+      availableActions: null,
+      reason: 'Нет активной подписки на модуль документооборота',
+    })).toMatchObject({ available: false, features: [], permissions: [], limits: {}, usage: {}, availableActions: [] });
+  });
+
+  it('normalizes organizations and never uses userId as tenant', async () => {
+    server.use(http.get('http://localhost/api/document-flow/organizations', () => HttpResponse.json({ data: [
+      { organizationId: 12, organizationName: 'Eco One', role: 'OWNER', membershipStatus: 'ACTIVE' },
+    ] })));
+    await expect(documentFlowApi.organizations()).resolves.toEqual([
+      { id: 12, name: 'Eco One', role: 'OWNER', membershipStatus: 'ACTIVE', permissions: undefined },
+    ]);
+  });
+
+  it('uses server member filters and selected organization scope', async () => {
+    let seen = '';
+    server.use(http.get('http://localhost/api/document-flow/members', ({ request }) => {
+      seen = request.url;
+      return HttpResponse.json({ data: {
+        items: [{ id: 4, organizationId: 12, userId: 8, fullName: 'Иван И.', email: 'i@example.kz', role: 'SIGNER', status: 'ACTIVE' }],
+        page: 0, size: 20, totalElements: 1, totalPages: 1, first: true, last: true, hasNext: false, hasPrevious: false,
+      } });
+    }));
+    const result = await documentFlowApi.members({ organizationId: 12, query: 'Иван', status: 'ACTIVE', role: 'SIGNER', page: 0, size: 20, sort: 'fullName,asc' });
+    expect(result.items[0]).toMatchObject({ id: 4, organizationId: 12, role: 'SIGNER' });
+    const params = new URL(seen).searchParams;
+    expect(params.get('organizationId')).toBe('12');
+    expect(params.get('query')).toBe('Иван');
+  });
+
+  it('public signing challenge and submit are token-only contracts', async () => {
+    const bodies: Record<string, unknown>[] = [];
+    server.use(
+      http.get('http://localhost/api/public/document-flow/signing/token/challenge', () => HttpResponse.json({ data: { opaque: true } })),
+      http.post('http://localhost/api/public/document-flow/signing/token/sign', async ({ request }) => {
+        bodies.push(await request.json() as Record<string, unknown>);
+        return HttpResponse.json({ data: { id: 1 } });
+      }),
+    );
+    await expect(publicDocumentFlowApi.challenge('token')).resolves.toEqual({ opaque: true });
+    await publicDocumentFlowApi.sign('token', { cms: 'cms', clientRequestId: 'request-1' });
+    expect(bodies).toEqual([{ cms: 'cms', clientRequestId: 'request-1' }]);
   });
 
   it('hides MIXED without feature and exposes unknown status as incompatible', () => {

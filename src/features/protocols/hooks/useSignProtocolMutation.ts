@@ -8,6 +8,7 @@ import {
   createProtocolCmsSignature,
   type ProtocolSigningPhase,
 } from '../utils/protocolSigning';
+import { protocolHasAction } from '../utils/protocolActions';
 
 const SIGN_ERROR_MESSAGES: Record<string, string> = {
   PROTOCOL_ALREADY_SIGNED: 'Вы уже подписали эту версию протокола',
@@ -43,7 +44,9 @@ export const useSignProtocolMutation = (
     mutationKey: ['sign-protocol', String(protocolId ?? '')],
     mutationFn: async ({ protocol }: SignVariables) => {
       let fresh = await protocolService.getProtocol(String(protocol.id));
-      if (!fresh.permissions?.canSign) throw new Error('Backend не разрешил подписание протокола.');
+      if (!protocolHasAction(fresh, 'SIGN')) {
+        throw new Error('У вас нет права подписывать протокол. Передайте его руководителю.');
+      }
       if (!fresh.hasPdf) {
         await protocolService.generatePdf(fresh.id, fresh.version);
         fresh = await protocolService.getProtocol(String(fresh.id));

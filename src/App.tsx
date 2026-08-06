@@ -65,6 +65,7 @@ const ContentAnalyticsPage = lazyNamed(() => import('./pages/content/ContentMana
 const ContentAuditPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAuditPage');
 const DocumentFlowRoutes = lazy(() => import('./features/document-flow/DocumentFlowRoutes'));
 const AdminDocumentFlowRoutes = lazy(() => import('./features/document-flow/AdminDocumentFlowRoutes'));
+const DocumentFlowAccessAdminPage = lazy(() => import('./features/document-flow-admin/pages/DocumentFlowAccessAdminPage'));
 const ExternalDocumentSigningPage = lazy(() => import('./features/document-flow/pages/ExternalSigningPage'));
 
 const CabinetCompanyPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetCompanyPage');
@@ -315,6 +316,7 @@ function App() {
 
         <Route path="/admin" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminPage /></AdminLayout></RoleAccess>} />
         <Route path="/admin/users" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminUsersPage /></AdminLayout></RoleAccess>} />
+        <Route path="/admin/document-flow-access" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><DocumentFlowAccessAdminPage /></AdminLayout></RoleAccess>} />
         <Route path="/admin/document-flow/*" element={<AdminDocumentFlowRoutes />} />
         <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
         </Routes>

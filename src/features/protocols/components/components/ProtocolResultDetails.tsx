@@ -108,6 +108,7 @@ const ProtocolResultDetails = ({ index }: { index: number }) => {
                 className={inputClass}
               />
             </label>
+            <label className={labelClass}>Дата отбора<input type="date" {...register(`results.${index}.samplingDate`)} className={inputClass} /></label>
           </>
         )}
 
@@ -129,6 +130,7 @@ const ProtocolResultDetails = ({ index }: { index: number }) => {
                 className={inputClass}
               />
             </label>
+            <label className={labelClass}>Дата отбора<input type="date" {...register(`results.${index}.samplingDate`)} className={inputClass} /></label>
           </>
         )}
 

@@ -1,6 +1,6 @@
 ﻿import { ReactNode, useState } from 'react';
 import { NavLink, Link, Navigate } from 'react-router-dom';
-import { BarChart3, Bell, BookOpenCheck, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, FlaskConical, Gauge, Handshake, LayoutDashboard, Leaf, LockKeyhole, LogOut, Menu, Settings, ShieldCheck, UserRoundSearch, X } from 'lucide-react';
+import { BarChart3, Bell, BookOpenCheck, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileKey2, FileSignature, FileText, FlaskConical, Gauge, Handshake, LayoutDashboard, Leaf, LockKeyhole, LogOut, Menu, Settings, ShieldCheck, UserRoundSearch, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
 import { canAccess } from '../config/permissions';
@@ -34,6 +34,7 @@ const links: Array<{ label: string; path: string; icon: typeof ClipboardList; pa
   { label: 'Уведомления', path: '/staff/notifications', icon: Bell },
   { label: 'Отчеты', path: '/staff/reports', icon: BarChart3, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Роли пользователей', path: '/staff/user-roles', icon: ShieldCheck, rolesOnly: true },
+  { label: 'Доступ к документообороту', path: '/admin/document-flow-access', icon: FileKey2, allowedRoles: ['ADMIN'] },
 ];
 
 const roleLabel = (role?: string) => {

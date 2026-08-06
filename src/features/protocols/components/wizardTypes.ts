@@ -3,6 +3,7 @@ import { DEFAULT_PROTOCOL_PRINT_VISIBILITY } from '../../../utils/protocolPrintV
 
 export type ProtocolWizardResult = {
   clientRowId: string;
+  serverResultId?: string;
   indicatorName: string;
   pollutantCode: string;
   factorType: string;
@@ -13,6 +14,7 @@ export type ProtocolWizardResult = {
   value: string;
   textValue: string;
   samplingPlace: string;
+  samplingDate: string;
   sampleNumber: string;
   samplingDepth: string;
   samplingSpeed: string;
@@ -115,7 +117,7 @@ const createClientRowId = () =>
 
 export const emptyWizardResult = (): ProtocolWizardResult => ({
   clientRowId: createClientRowId(),
-  indicatorName: '', pollutantCode: '', factorType: '', factorCode: '', cas: '', formula: '', unit: '', value: '', textValue: '', samplingPlace: '', sampleNumber: '', samplingDepth: '', samplingSpeed: '', sampleVolume: '', waterType: '', direction: '', minimumValue: '', maximumValue: '', averageValue: '', duration: '',
+  indicatorName: '', pollutantCode: '', factorType: '', factorCode: '', cas: '', formula: '', unit: '', value: '', textValue: '', samplingPlace: '', samplingDate: '', sampleNumber: '', samplingDepth: '', samplingSpeed: '', sampleVolume: '', waterType: '', direction: '', minimumValue: '', maximumValue: '', averageValue: '', duration: '',
   measurementDeviceId: '', normativeId: '', normativeSource: 'NONE', normativeStatus: '', normativeValue: '', normativeValueRaw: '', normativeMin: '', normativeMax: '', comparisonType: 'LESS_OR_EQUAL', normativeDocument: '', sourceDocumentCode: '', testingMethodNd: '', samplingMethodNd: '',
   methodName: '', methodDocument: '', note: '',
 });

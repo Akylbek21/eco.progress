@@ -19,7 +19,7 @@ const server = setupServer();
 let service: typeof import('../src/features/lab-journals/api/labJournalService');
 
 beforeAll(async () => {
-  vi.stubEnv('VITE_BACKEND_URL', origin);
+  vi.stubEnv('VITE_API_URL', `${origin}/api`);
   vi.stubGlobal('localStorage', { getItem: () => null, removeItem: () => undefined, setItem: () => undefined });
   server.listen({ onUnhandledRequest: 'error' });
   service = await import('../src/features/lab-journals/api/labJournalService');

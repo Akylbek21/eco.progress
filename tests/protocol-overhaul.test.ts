@@ -57,11 +57,11 @@ describe('protocol access and draft compatibility', () => {
   });
 
   it.each(['ADMIN', 'HEAD', 'MANAGER', 'LABORATORY', 'ACCOUNTANT', 'STAFF', 'AUDITOR'])(
-    'allows an authenticated internal %s to open and create protocols',
+    'does not infer global protocol capabilities from the %s role',
     (role) => {
       const user = { id: 10, role };
-      expect(canViewProtocol(user)).toBe(true);
-      expect(canCreateProtocol(user)).toBe(true);
+      expect(canViewProtocol(user)).toBe(false);
+      expect(canCreateProtocol(user)).toBe(false);
     },
   );
 

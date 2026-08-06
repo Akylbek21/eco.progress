@@ -199,31 +199,8 @@ export const canAccess = (role: UserRole | undefined, permission: Permission) =>
   return rolePermissions[role]?.includes(permission) ?? false;
 };
 
-const pekViewRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
-const pekEditRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'WASTE_SPECIALIST'];
-const pekPermissionRoles: Partial<Record<Permission, UserRole[]>> = {
-  PEK_VIEW: pekViewRoles,
-  PEK_PROGRAM_CREATE: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'],
-  PEK_PROGRAM_VIEW: pekViewRoles,
-  PEK_PROGRAM_EDIT: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'],
-  PEK_PROGRAM_SUBMIT: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'],
-  PEK_PROGRAM_APPROVE: ['ADMIN', 'DIRECTOR', 'HEAD'],
-  PEK_PROGRAM_ACTIVATE: ['ADMIN', 'DIRECTOR', 'HEAD'],
-  PEK_PROGRAM_ARCHIVE: ['ADMIN', 'DIRECTOR', 'HEAD'],
-  PEK_REPORT_CREATE: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY'],
-  PEK_REPORT_VIEW: pekViewRoles,
-  PEK_REPORT_EDIT: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'],
-  PEK_REPORT_COLLECT: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY'],
-  PEK_REPORT_MATCH: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY'],
-  PEK_REPORT_VALIDATE: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'],
-  PEK_REPORT_REVIEW: ['ADMIN', 'DIRECTOR', 'HEAD'],
-  PEK_REPORT_RETURN: ['ADMIN', 'DIRECTOR', 'HEAD'],
-  PEK_REPORT_APPROVE: ['ADMIN', 'DIRECTOR', 'HEAD'],
-  PEK_REPORT_SIGN: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'],
-  PEK_REPORT_SUBMIT: ['ADMIN', 'DIRECTOR', 'HEAD'],
-  PEK_REPORT_EXPORT: pekViewRoles,
-  PEK_ADMIN: ['ADMIN', 'DIRECTOR'],
-};
+const isPekPermission = (permission: string) =>
+  permission === 'view_pek' || permission === 'edit_pek' || permission.startsWith('PEK_');
 
 export const hasPermission = (
   user: { role?: UserRole; permissions?: string[] } | null | undefined,
@@ -231,10 +208,9 @@ export const hasPermission = (
 ) => {
   if (!user?.role) return false;
   if (Array.isArray(user.permissions)) return user.permissions.includes(permission);
-  if (permission === 'view_pek') return pekViewRoles.includes(user.role);
-  if (permission === 'edit_pek') return pekEditRoles.includes(user.role);
-  const pekRoles = pekPermissionRoles[permission as Permission];
-  if (pekRoles) return pekRoles.includes(user.role);
+  // PEK permissions are server-authoritative. A staff role is not a safe
+  // substitute for a missing capability list.
+  if (isPekPermission(permission)) return false;
   return canAccess(user.role, permission as Permission);
 };
 

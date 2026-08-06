@@ -162,7 +162,7 @@ describe('quick-create form components', () => {
   it('disables creation when submit validation failed', () => {
     const create = vi.fn();
     render(<ProtocolWizardFooter step={4} total={5} submitting={false} canContinue={false} onBack={vi.fn()} onNext={vi.fn()} onCreate={create} onSaveDraft={vi.fn()} />);
-    const button = screen.getByRole('button', { name: 'Создать и подписать протокол' });
+    const button = screen.getByRole('button', { name: 'Создать протокол' });
     expect((button as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(button);
     expect(create).not.toHaveBeenCalled();

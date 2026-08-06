@@ -1,6 +1,11 @@
-import type { AvailableAction } from './types';
+import type { AvailableAction, DocumentDetail, DocumentListItem } from './types';
 
-export type DocumentAction = AvailableAction | 'SIGN' | 'REJECT' | 'RETURN_FOR_REVISION' | 'REVOKE' | 'VIEW_AUDIT';
+export type DocumentAction = AvailableAction;
+
+export const hasDocumentAction = (
+  document: Pick<DocumentDetail | DocumentListItem, 'availableActions'> | null | undefined,
+  action: DocumentAction,
+) => Boolean(document?.availableActions.includes(action));
 
 export interface ResolvedDocumentActions {
   backendActions: DocumentAction[];
@@ -9,18 +14,16 @@ export interface ResolvedDocumentActions {
 }
 
 const frontendActions = new Set<DocumentAction>([
-  'EDIT', 'DELETE', 'SEND_FOR_SIGNING', 'DOWNLOAD', 'UPLOAD_VERSION', 'ARCHIVE',
-  'MANAGE_ATTACHMENTS', 'SIGN', 'REJECT', 'RETURN_FOR_REVISION', 'REVOKE', 'VIEW_AUDIT',
+  'VIEW', 'EDIT', 'DELETE', 'UPLOAD_VERSION', 'MANAGE_ROUTE', 'SEND', 'SIGN', 'REJECT',
+  'RETURN_FOR_REVISION', 'DOWNLOAD_SIGNED_PACKAGE', 'VIEW_AUDIT', 'CREATE_REVOCATION',
+  'APPROVE_REVOCATION', 'REJECT_REVOCATION', 'CANCEL_REVOCATION', 'ARCHIVE', 'MANAGE_ATTACHMENTS',
 ]);
 
 export const resolveDocumentActions = (
   backendActions: AvailableAction[],
   contextExpectedActions: DocumentAction[] = [],
-): ResolvedDocumentActions => {
-  const returned = [...backendActions] as DocumentAction[];
-  return {
-    backendActions: returned,
-    supportedByFrontend: returned.filter((action) => frontendActions.has(action)),
-    unavailableBecauseBackendContract: contextExpectedActions.filter((action) => !returned.includes(action)),
-  };
-};
+): ResolvedDocumentActions => ({
+  backendActions: [...backendActions],
+  supportedByFrontend: backendActions.filter((action) => frontendActions.has(action)),
+  unavailableBecauseBackendContract: contextExpectedActions.filter((action) => !backendActions.includes(action)),
+});

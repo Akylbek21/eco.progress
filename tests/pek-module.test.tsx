@@ -20,6 +20,8 @@ import {
 import { labelPekStatus } from '../src/features/pek/utils/pekLabels';
 import { pekProgramFormSchema } from '../src/features/pek/validation/programSchema';
 import { pekDraftKey } from '../src/features/pek/utils/pekDraftStorage';
+import { currentQuarter } from '../src/features/pek/utils/pekPeriod';
+import { hasPermission } from '../src/config/permissions';
 
 let body: unknown;
 let ifMatch: string | null;
@@ -120,6 +122,8 @@ const form: PekProgramForm = {
     clientId: 'control-a',
     code: 'AIR-1',
     name: 'Air',
+    controlType: 'EMISSIONS',
+    frequencyType: 'QUARTERLY',
     mandatory: true,
     active: true,
     sortOrder: 0,
@@ -128,10 +132,13 @@ const form: PekProgramForm = {
     clientId: 'indicator-a',
     controlItemClientId: 'control-a',
     indicatorName: 'NO2',
+    unit: 'mg/m3',
+    comparisonType: 'MAX',
+    normativeValue: 10,
     mandatory: true,
     sortOrder: 0,
   }],
-  measures: [{ clientId: 'measure-a', name: 'Filters' }],
+  measures: [{ clientId: 'measure-a', code: 'M-1', name: 'Filters', responsibleUserId: 7, plannedEndDate: '2026-10-01' }],
 };
 
 describe('PEK backend contract', () => {
@@ -243,6 +250,32 @@ describe('PEK backend contract', () => {
     expect(valid.success).toBe(true);
     const invalid = pekProgramFormSchema.safeParse({ ...form, validFrom: '2026-12-31', validUntil: '2026-01-01' });
     expect(invalid.success).toBe(false);
+  });
+
+  it('calculates the current quarter from the supplied date', () => {
+    expect(currentQuarter(new Date('2026-01-15T00:00:00Z'))).toBe(1);
+    expect(currentQuarter(new Date('2026-08-05T00:00:00Z'))).toBe(3);
+    expect(currentQuarter(new Date('2026-12-31T00:00:00Z'))).toBe(4);
+  });
+
+  it('requires control type and PER_EVENT planned count', () => {
+    const missingType = pekProgramFormSchema.safeParse({ ...form, controlItems: [{ ...form.controlItems[0], controlType: '' }] });
+    const missingCount = pekProgramFormSchema.safeParse({ ...form, controlItems: [{ ...form.controlItems[0], frequencyType: 'PER_EVENT', plannedCount: null }] });
+    expect(missingType.success).toBe(false);
+    expect(missingCount.success).toBe(false);
+  });
+
+  it('validates RANGE values and preserves numeric zero', () => {
+    const invalid = pekProgramFormSchema.safeParse({ ...form, indicators: [{ ...form.indicators[0], comparisonType: 'RANGE', minValue: 5, maxValue: 4 }] });
+    const valid = pekProgramFormSchema.safeParse({ ...form, indicators: [{ ...form.indicators[0], comparisonType: 'RANGE', minValue: 0, maxValue: 0 }] });
+    expect(invalid.success).toBe(false);
+    expect(valid.success).toBe(true);
+  });
+
+  it('does not grant PEK permission from a staff role fallback', () => {
+    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(false);
+    expect(hasPermission({ role: 'ECOLOGIST', permissions: ['PEK_VIEW'] }, 'PEK_VIEW')).toBe(true);
+    expect(hasPermission({ role: 'ECOLOGIST', permissions: [] }, 'PEK_PROGRAM_CREATE')).toBe(false);
   });
 
   it('scopes local draft keys by user, entity, company and server version', () => {

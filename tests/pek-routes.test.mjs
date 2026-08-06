@@ -40,9 +40,11 @@ test('production PEK transport contains only backend-implemented report contract
 });
 
 test('report workspace exposes only backend-supported data', () => {
-  assert.match(workspace, /Связанные протоколы/);
-  assert.doesNotMatch(workspace, /План\/факт|Превышения|Замечания|Подписи|availableActions/);
+  assert.match(workspace, /Фактически связанные протоколы/);
+  assert.match(workspace, /План\/факт|Превышения|Несопоставленные|Корректирующие действия/);
+  assert.doesNotMatch(workspace, /availableActions/);
   assert.doesNotMatch(workspace, /setInterval|polling|progressPercent|collection-runs/);
+  assert.doesNotMatch(workspace, /\/staff\/protocols\?/);
 });
 
 test('production source does not boot PEK mocks', () => {

@@ -2,14 +2,15 @@ import type { AxiosProgressEvent } from 'axios';
 import api from '../../../services/api';
 import { unwrapApiResponse, type ApiResponse } from '../../../services/apiHelpers';
 import type {
-  AccessContext, Counterparty, CounterpartyListParams, CreateCounterpartyRequest, CreateDocumentRequest, DashboardResponse, DocumentAttachment,
+  AccessContext, AuditEvent, AvailableAction, Counterparty, CounterpartyListParams, CreateCounterpartyRequest, CreateDocumentRequest, CreateMemberRequest, DashboardResponse, DocumentAttachment,
+  DocumentFlowMember, DocumentFlowOrganization, MemberListParams, MembershipRole, MyAssignment,
   DocumentDetail, DocumentFilters, DocumentListItem, DocumentSignature, DocumentTypeConfig,
   DocumentVersion, PageResponse, PlanAdmin, PublicInvitation, PublicPlan, Representative,
-  RevocationRequest, SigningRoute, SigningRouteRequest, SubscriptionAdmin, UpdateDocumentRequest,
+  RevocationRequest, SigningRoute, SigningRouteRequest, SubscriptionAdmin, UpdateCounterpartyRequest, UpdateDocumentRequest,
   UsageMetric,
 } from '../model/types';
 import {
-  accessContextSchema, documentDetailSchema, documentListItemSchema, pageSchema, publicInvitationSchema, signingRouteSchema,
+  accessContextSchema, documentDetailSchema, documentFlowOrganizationsSchema, documentListItemSchema, pageSchema, publicInvitationSchema, signingRouteSchema,
 } from './contractSchemas';
 
 const unwrap = <T>(response: { data: ApiResponse<T> | T }): T => {
@@ -43,11 +44,33 @@ const counterpartyPage = (source: PageResponse<Record<string, unknown>>): PageRe
   items: source.items.map(counterparty),
 });
 
-const documentListPage = (source: PageResponse<DocumentListItem>): PageResponse<DocumentListItem> => ({
+const member = (source: Record<string, unknown>): DocumentFlowMember => {
+  const user = typeof source.user === 'object' && source.user !== null ? source.user as Record<string, unknown> : {};
+  return {
+    id: Number(source.id),
+    organizationId: Number(source.organizationId),
+    userId: Number(source.userId ?? user.id),
+    fullName: String(source.fullName ?? user.fullName ?? ''),
+    email: source.email ?? user.email ? String(source.email ?? user.email) : null,
+    role: String(source.role) as MembershipRole,
+    status: String(source.status ?? source.membershipStatus ?? ''),
+  };
+};
+
+const memberPage = (source: PageResponse<Record<string, unknown>>): PageResponse<DocumentFlowMember> => ({
   ...source,
-  // DocumentService currently hard-codes 0/0/false (DocumentDtos.java TODO-RECONCILE).
-  // Do not present those placeholders as signing facts.
-  items: source.items.map(({ signedCount: _signed, requiredCount: _required, requiresMySignature: _mine, ...item }) => item),
+  items: source.items.map(member),
+});
+
+const myAssignment = (source: Record<string, unknown>): MyAssignment => ({
+  required: source.required === true || source.requiresMySignature === true,
+  assignmentId: Number(source.assignmentId ?? source.id),
+  stepOrder: Number(source.stepOrder ?? source.stepNumber ?? 0),
+  action: String(source.action ?? source.actionType ?? 'SIGN'),
+  status: String(source.status ?? ''),
+  versionId: Number(source.versionId ?? source.documentVersionId),
+  deadline: source.deadline == null ? null : String(source.deadline),
+  availableActions: Array.isArray(source.availableActions) ? source.availableActions.map(String) as AvailableAction[] : [],
 });
 
 const attachment = (source: Record<string, unknown>): DocumentAttachment => ({
@@ -90,8 +113,12 @@ const progress = (callback?: (percent: number | null) => void) => (event: AxiosP
 };
 
 export const documentFlowApi = {
-  access: async (signal?: AbortSignal) =>
-    parseContract<AccessContext>(accessContextSchema, unwrap<unknown>(await api.get('/document-flow/access', { signal }))),
+  organizations: async (signal?: AbortSignal) =>
+    parseContract<DocumentFlowOrganization[]>(documentFlowOrganizationsSchema, unwrap<unknown>(await api.get('/document-flow/organizations', { signal }))),
+  access: async (organizationId: number, signal?: AbortSignal) =>
+    parseContract<AccessContext>(accessContextSchema, unwrap<unknown>(await api.get('/document-flow/access', {
+      params: { organizationId }, signal,
+    }))),
   plans: async (signal?: AbortSignal) =>
     unwrap<PublicPlan[]>(await api.get('/public/document-flow/plans', { signal })),
   plan: async (code: string, signal?: AbortSignal) =>
@@ -105,7 +132,7 @@ export const documentFlowApi = {
   documentTypes: async (signal?: AbortSignal) =>
     unwrap<DocumentTypeConfig[]>(await api.get('/document-flow/document-types', { signal })),
   documents: async (filters: DocumentFilters, signal?: AbortSignal) =>
-    documentListPage(parseContract<PageResponse<DocumentListItem>>(pageSchema(documentListItemSchema), unwrap<unknown>(await api.get('/document-flow/documents', { params: compact(filters), signal })))),
+    parseContract<PageResponse<DocumentListItem>>(pageSchema(documentListItemSchema), unwrap<unknown>(await api.get('/document-flow/documents', { params: compact(filters), signal }))),
   document: async (id: number, organizationId?: number, signal?: AbortSignal) =>
     parseContract<DocumentDetail>(documentDetailSchema, unwrap<unknown>(await api.get(`/document-flow/documents/${id}`, { params: compact({ organizationId }), signal }))),
   createDocument: async (payload: CreateDocumentRequest, idempotencyKey: string) =>
@@ -163,41 +190,71 @@ export const documentFlowApi = {
     api.get<Blob>(`/document-flow/documents/${id}/versions/${versionId}/download`, {
       params: compact({ organizationId }), responseType: 'blob',
     }),
-  getCounterparties: async ({ organizationId, page, size, signal }: CounterpartyListParams) =>
+  downloadAttachment: async (id: number, attachmentId: number, organizationId: number) =>
+    api.get<Blob>(`/document-flow/documents/${id}/attachments/${attachmentId}/download`, {
+      params: { organizationId }, responseType: 'blob',
+    }),
+  getCounterparties: async ({ organizationId, query, status, sort, page, size, signal }: CounterpartyListParams) =>
     counterpartyPage(unwrap<PageResponse<Record<string, unknown>>>(await api.get('/document-flow/counterparties', {
-      params: compact({ organizationId, page, size }), signal,
+      params: compact({ organizationId, query: query?.trim(), status, sort, page, size }), signal,
     }))),
-  getCounterparty: async (id: number, signal?: AbortSignal) =>
+  getCounterparty: async (id: number, organizationId: number, signal?: AbortSignal) =>
     counterparty(unwrap<Record<string, unknown>>(await api.get(`/document-flow/counterparties/${id}`, {
-      signal,
+      params: { organizationId }, signal,
     }))),
   createCounterparty: async (request: CreateCounterpartyRequest) =>
     counterparty(unwrap<Record<string, unknown>>(await api.post('/document-flow/counterparties', request))),
-  archiveCounterparty: async (id: number) =>
-    counterparty(unwrap<Record<string, unknown>>(await api.delete(`/document-flow/counterparties/${id}`))),
+  updateCounterparty: async (id: number, request: UpdateCounterpartyRequest, organizationId: number) =>
+    counterparty(unwrap<Record<string, unknown>>(await api.patch(`/document-flow/counterparties/${id}`, request, {
+      params: { organizationId },
+    }))),
+  archiveCounterparty: async (id: number, organizationId: number) =>
+    counterparty(unwrap<Record<string, unknown>>(await api.delete(`/document-flow/counterparties/${id}`, {
+      params: { organizationId },
+    }))),
   representatives: async (id: number, signal?: AbortSignal) =>
     unwrap<Representative[]>(await api.get(`/document-flow/counterparties/${id}/representatives`, {
       signal,
     })),
   addRepresentative: async (id: number, payload: Omit<Representative, 'id' | 'counterpartyId' | 'active'>) =>
     unwrap<Representative>(await api.post(`/document-flow/counterparties/${id}/representatives`, payload)),
+  members: async ({ organizationId, query, status, role, page, size, sort, signal }: MemberListParams) =>
+    memberPage(unwrap<PageResponse<Record<string, unknown>>>(await api.get('/document-flow/members', {
+      params: compact({ organizationId, query: query?.trim(), status, role, page, size, sort }), signal,
+    }))),
+  createMember: async (payload: CreateMemberRequest) =>
+    member(unwrap<Record<string, unknown>>(await api.post('/document-flow/members', payload))),
+  updateMemberRole: async (id: number, role: MembershipRole, organizationId: number) =>
+    member(unwrap<Record<string, unknown>>(await api.patch(`/document-flow/members/${id}`, { role }, {
+      params: { organizationId },
+    }))),
+  activateMember: async (id: number, organizationId: number) =>
+    member(unwrap<Record<string, unknown>>(await api.post(`/document-flow/members/${id}/activate`, undefined, {
+      params: { organizationId },
+    }))),
+  deactivateMember: async (id: number, organizationId: number) =>
+    member(unwrap<Record<string, unknown>>(await api.post(`/document-flow/members/${id}/deactivate`, undefined, {
+      params: { organizationId },
+    }))),
   signingRoute: async (id: number, signal?: AbortSignal) =>
     parseContract<SigningRoute>(signingRouteSchema, unwrap<unknown>(await api.get(`/document-flow/documents/${id}/signing-route`, { signal }))),
   createSigningRoute: async (id: number, payload: SigningRouteRequest) =>
     parseContract<SigningRoute>(signingRouteSchema, unwrap<unknown>(await api.post(`/document-flow/documents/${id}/signing-route`, payload))),
   updateSigningRoute: async (id: number, payload: SigningRouteRequest) =>
     parseContract<SigningRoute>(signingRouteSchema, unwrap<unknown>(await api.put(`/document-flow/documents/${id}/signing-route`, payload))),
-  prepareForSigning: async (id: number, expectedVersion: number) =>
-    parseContract<SigningRoute>(signingRouteSchema, unwrap<unknown>(await api.post(`/document-flow/documents/${id}/prepare-for-signing`, { expectedVersion }))),
   sendForSigning: async (id: number) =>
-    parseContract<SigningRoute>(signingRouteSchema, unwrap<unknown>(await api.post(`/document-flow/documents/${id}/send-for-signing`))),
+    unwrap<unknown>(await api.post(`/document-flow/documents/${id}/send`)),
   cancelSigning: async (id: number, reason?: string) =>
     unwrap<SigningRoute>(await api.post(`/document-flow/documents/${id}/cancel-signing`, reason ? { reason } : undefined)),
   signingData: async (id: number) =>
     unwrap<SigningRoute>(await api.get(`/document-flow/documents/${id}/signing-data`)),
-  submitSignature: async (id: number, payload: {
+  myAssignment: async (id: number, organizationId: number, signal?: AbortSignal) =>
+    myAssignment(unwrap<Record<string, unknown>>(await api.get(`/document-flow/documents/${id}/my-assignment`, {
+      params: { organizationId }, signal,
+    }))),
+  submitSignature: async (payload: {
     documentId: number; versionId: number; assignmentId: number; cms: string; clientRequestId: string;
-  }) => unwrap<DocumentSignature>(await api.post(`/document-flow/documents/${id}/signatures`, {
+  }) => unwrap<DocumentSignature>(await api.post('/document-flow/signatures', {
     documentId: payload.documentId,
     versionId: payload.versionId,
     assignmentId: payload.assignmentId,
@@ -210,12 +267,18 @@ export const documentFlowApi = {
     unwrap<Record<string, string>>(await api.post(`/document-flow/documents/${id}/signatures/verify-all`)),
   verificationReport: async (id: number, signal?: AbortSignal) =>
     unwrap<Record<string, string>>(await api.get(`/document-flow/documents/${id}/verification-report`, { signal })),
-  reject: async (id: number, reason: string) =>
-    api.post(`/document-flow/documents/${id}/reject`, { reason }),
-  returnForRevision: async (id: number, reason: string) =>
-    api.post(`/document-flow/documents/${id}/return-for-revision`, { reason }),
-  signedPackage: async (id: number) =>
-    api.get<Blob>(`/document-flow/documents/${id}/signed-package`, { responseType: 'blob' }),
+  reject: async (id: number, reason: string, organizationId: number) =>
+    api.post(`/document-flow/documents/${id}/reject`, { reason }, { params: { organizationId } }),
+  returnForRevision: async (id: number, reason: string, organizationId: number) =>
+    api.post(`/document-flow/documents/${id}/return-for-revision`, { reason }, { params: { organizationId } }),
+  archive: async (id: number, organizationId: number) =>
+    api.post(`/document-flow/documents/${id}/archive`, undefined, { params: { organizationId } }),
+  audit: async (id: number, organizationId: number, page: number, size: number, signal?: AbortSignal) =>
+    unwrap<PageResponse<AuditEvent>>(await api.get(`/document-flow/documents/${id}/audit`, {
+      params: { organizationId, page, size }, signal,
+    })),
+  signedPackage: async (id: number, organizationId: number) =>
+    api.get<Blob>(`/document-flow/documents/${id}/signed-package`, { params: { organizationId }, responseType: 'blob' }),
   revocations: async (id: number, signal?: AbortSignal) =>
     unwrap<RevocationRequest[]>(await api.get(`/document-flow/documents/${id}/revocation-requests`, { signal })),
   createRevocation: async (id: number, reason: string) =>
@@ -230,17 +293,10 @@ export const publicDocumentFlowApi = {
     parseContract<PublicInvitation>(publicInvitationSchema, unwrap<unknown>(await api.get(`/public/document-flow/signing/${encodeURIComponent(token)}`, { signal }))),
   file: async (token: string, signal?: AbortSignal) =>
     api.get<Blob>(`/public/document-flow/signing/${encodeURIComponent(token)}/file`, { responseType: 'blob', signal }),
-  viewed: async (token: string) =>
-    api.post(`/public/document-flow/signing/${encodeURIComponent(token)}/viewed`),
-  sign: async (token: string, payload: {
-    documentId: number; versionId: number; assignmentId: number; cms: string; clientRequestId: string;
-  }) => unwrap<DocumentSignature>(await api.post(`/public/document-flow/signing/${encodeURIComponent(token)}/sign`, {
-    documentId: payload.documentId,
-    versionId: payload.versionId,
-    assignmentId: payload.assignmentId,
-    cms: payload.cms,
-    clientRequestId: payload.clientRequestId,
-  })),
+  challenge: async (token: string, signal?: AbortSignal) =>
+    unwrap<unknown>(await api.get(`/public/document-flow/signing/${encodeURIComponent(token)}/challenge`, { signal })),
+  sign: async (token: string, payload: { cms: string; clientRequestId: string }) =>
+    unwrap<DocumentSignature>(await api.post(`/public/document-flow/signing/${encodeURIComponent(token)}/sign`, payload)),
   reject: async (token: string, reason: string) =>
     api.post(`/public/document-flow/signing/${encodeURIComponent(token)}/reject`, { reason }),
 };

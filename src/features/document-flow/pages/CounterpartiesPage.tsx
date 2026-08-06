@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Alert, Button, Card, CardContent, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
-  Paper, Stack, Table, TableBody, TableCell,
+  MenuItem, Paper, Stack, Table, TableBody, TableCell,
   TableContainer, TableHead, TablePagination, TableRow, TextField, Typography, useMediaQuery, useTheme,
 } from '@mui/material';
 import { Controller, useForm } from 'react-hook-form';
@@ -42,32 +42,47 @@ export default function CounterpartiesPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [status, setStatus] = useState<'' | Counterparty['status']>('ACTIVE');
+  const [sort, setSort] = useState('name,asc');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Counterparty | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Counterparty | null>(null);
   const [representativeTarget, setRepresentativeTarget] = useState<Counterparty | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const form = useForm<CounterpartyFormValues>({ defaultValues });
+  const editForm = useForm<Omit<CounterpartyFormValues, 'bin'>>({
+    defaultValues: { name: '', directorName: '', address: '', email: '', phone: '' },
+  });
   const representativeForm = useForm<RepresentativeFormValues>({
     defaultValues: { fullName: '', position: '', email: '', phone: '' },
   });
-  const filters = { page, size };
+  const filters = { query: debouncedQuery || undefined, status: status || undefined, sort, page, size };
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { setDebouncedQuery(query.trim()); setPage(0); }, 350);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
   const counterpartiesQuery = useQuery({
     queryKey: tenant.tenantScope ? documentFlowKeys.counterparties(tenant.tenantScope, filters) : ['document-flow', 'tenant-unresolved', 'counterparties'],
-    queryFn: ({ signal }) => documentFlowApi.getCounterparties({ page, size, signal }),
+    queryFn: ({ signal }) => documentFlowApi.getCounterparties({ organizationId: tenant.organizationId!, ...filters, signal }),
     enabled: tenant.organizationResolved,
   });
 
   useEffect(() => {
     setCreateDialogOpen(false);
+    setEditTarget(null);
     setArchiveTarget(null);
     setRepresentativeTarget(null);
     form.reset(defaultValues);
     setPage(0);
-  }, [form]);
+  }, [form, tenant.organizationId]);
 
   const createMutation = useMutation({
     mutationFn: (values: CounterpartyFormValues) => documentFlowApi.createCounterparty({
+      organizationId: tenant.organizationId!,
       bin: normalizeBin(values.bin),
       name: values.name.trim(),
       directorName: emptyToUndefined(values.directorName),
@@ -92,8 +107,29 @@ export default function CounterpartiesPage() {
     },
   });
 
+  const editMutation = useMutation({
+    mutationFn: (values: Omit<CounterpartyFormValues, 'bin'>) => documentFlowApi.updateCounterparty(editTarget!.id, {
+      name: values.name.trim(),
+      directorName: emptyToUndefined(values.directorName),
+      address: emptyToUndefined(values.address),
+      email: emptyToUndefined(values.email),
+      phone: emptyToUndefined(values.phone),
+    }, tenant.organizationId!),
+    onSuccess: async (counterparty) => {
+      setEditTarget(null);
+      queryClient.setQueryData(documentFlowKeys.counterparty(tenant.tenantScope!, counterparty.id), counterparty);
+      await queryClient.invalidateQueries({ queryKey: documentFlowKeys.counterpartyLists(tenant.tenantScope!) });
+    },
+    onError: (error) => {
+      const mapped = mapDocumentFlowError(error);
+      Object.entries(mapped.fieldErrors).forEach(([field, message]) => {
+        if (field !== 'bin' && field in defaultValues) editForm.setError(field as keyof Omit<CounterpartyFormValues, 'bin'>, { type: 'server', message });
+      });
+    },
+  });
+
   const archiveMutation = useMutation({
-    mutationFn: (counterpartyId: number) => documentFlowApi.archiveCounterparty(counterpartyId),
+    mutationFn: (counterpartyId: number) => documentFlowApi.archiveCounterparty(counterpartyId, tenant.organizationId!),
     onSuccess: async (counterparty) => {
       setArchiveTarget(null);
       queryClient.setQueryData(documentFlowKeys.counterparty(tenant.tenantScope!, counterparty.id), counterparty);
@@ -140,7 +176,15 @@ export default function CounterpartiesPage() {
       </Stack>
 
       {successMessage && <Alert severity="success" onClose={() => setSuccessMessage('')}>{successMessage}</Alert>}
-      <Alert severity="info">Backend списка контрагентов поддерживает только page/size. Текстовый поиск не применяется, поэтому показана серверная страница без локальной фильтрации.</Alert>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+        <TextField fullWidth label="Поиск по названию или БИН/ИИН" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <TextField select label="Статус" value={status} onChange={(event) => { setStatus(event.target.value as '' | Counterparty['status']); setPage(0); }} sx={{ minWidth: 170 }}>
+          <MenuItem value="">Все</MenuItem><MenuItem value="ACTIVE">Активные</MenuItem><MenuItem value="ARCHIVED">В архиве</MenuItem>
+        </TextField>
+        <TextField select label="Сортировка" value={sort} onChange={(event) => { setSort(event.target.value); setPage(0); }} sx={{ minWidth: 220 }}>
+          <MenuItem value="name,asc">Название А–Я</MenuItem><MenuItem value="name,desc">Название Я–А</MenuItem><MenuItem value="updatedAt,desc">Недавно изменённые</MenuItem>
+        </TextField>
+      </Stack>
       {counterpartiesQuery.isError && (
         <Alert severity="error" action={<Button onClick={() => counterpartiesQuery.refetch()}>Повторить</Button>}>
           {mapDocumentFlowError(counterpartiesQuery.error).message}
@@ -155,8 +199,8 @@ export default function CounterpartiesPage() {
           <Card key={item.id}><CardContent><Stack spacing={1}>
             <Stack direction="row" justifyContent="space-between" gap={1}><Typography fontWeight={800}>{item.name}</Typography><Chip size="small" color={item.status === 'ACTIVE' ? 'success' : 'default'} label={item.status === 'ACTIVE' ? 'Активен' : 'В архиве'} /></Stack>
             <Typography>БИН: {item.bin}</Typography><Typography>{item.directorName || 'Руководитель не указан'}</Typography>
-            <Typography>{item.phone || 'Телефон не указан'}</Typography><Typography>{item.email || 'Email не указан'}</Typography>
-            <Stack direction="row" flexWrap="wrap"><Button onClick={() => setRepresentativeTarget(item)}>Представители</Button>{allowed && item.status === 'ACTIVE' && <Button color="warning" onClick={() => setArchiveTarget(item)}>Архивировать</Button>}</Stack>
+            <Typography>{item.address || 'Адрес не указан'}</Typography><Typography>{item.phone || 'Телефон не указан'}</Typography><Typography>{item.email || 'Email не указан'}</Typography>
+            <Stack direction="row" flexWrap="wrap"><Button onClick={() => setRepresentativeTarget(item)}>Представители</Button>{allowed && <Button onClick={() => { setEditTarget(item); editForm.reset({ name: item.name, directorName: item.directorName || '', address: item.address || '', email: item.email || '', phone: item.phone || '' }); }}>Изменить</Button>}{allowed && item.status === 'ACTIVE' && <Button color="warning" onClick={() => setArchiveTarget(item)}>Архивировать</Button>}</Stack>
           </Stack></CardContent></Card>
         ))}<TablePagination component="div" count={counterpartiesQuery.data.totalElements} page={page} rowsPerPage={size} rowsPerPageOptions={[10, 20, 50]} onPageChange={(_, nextPage) => setPage(nextPage)} onRowsPerPageChange={(event) => { setSize(Number(event.target.value)); setPage(0); }} /></Stack>
       )}
@@ -178,6 +222,7 @@ export default function CounterpartiesPage() {
                   <TableCell>{item.updatedAt ? new Date(item.updatedAt).toLocaleString('ru-RU') : '—'}</TableCell>
                   <TableCell align="right">
                     <Button onClick={() => setRepresentativeTarget(item)}>Представители</Button>
+                    {allowed && <Button onClick={() => { setEditTarget(item); editForm.reset({ name: item.name, directorName: item.directorName || '', address: item.address || '', email: item.email || '', phone: item.phone || '' }); }}>Изменить</Button>}
                     {allowed && item.status === 'ACTIVE' && <Button color="warning" onClick={() => setArchiveTarget(item)}>Архивировать</Button>}
                   </TableCell>
                 </TableRow>
@@ -218,6 +263,19 @@ export default function CounterpartiesPage() {
             {createMutation.isPending ? 'Создание…' : 'Создать'}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(editTarget)} onClose={() => !editMutation.isPending && setEditTarget(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Редактирование · {editTarget?.bin}</DialogTitle>
+        <DialogContent><Stack spacing={2} mt={1}>
+          <TextField label="Название" {...editForm.register('name', { required: 'Укажите название', validate: (value) => Boolean(value.trim()) || 'Укажите название' })} error={Boolean(editForm.formState.errors.name)} helperText={editForm.formState.errors.name?.message} />
+          <TextField label="ФИО руководителя" {...editForm.register('directorName')} />
+          <TextField label="Адрес" {...editForm.register('address')} />
+          <TextField label="Email" {...editForm.register('email', { validate: (value) => isValidEmail(value) || 'Укажите корректный email' })} error={Boolean(editForm.formState.errors.email)} helperText={editForm.formState.errors.email?.message} />
+          <TextField label="Телефон" {...editForm.register('phone', { validate: (value) => isValidPhone(value) || 'Укажите корректный телефон' })} error={Boolean(editForm.formState.errors.phone)} helperText={editForm.formState.errors.phone?.message} />
+          {editMutation.isError && <Alert severity="error">{mapDocumentFlowError(editMutation.error).message}</Alert>}
+        </Stack></DialogContent>
+        <DialogActions><Button disabled={editMutation.isPending} onClick={() => setEditTarget(null)}>Отмена</Button><Button variant="contained" disabled={editMutation.isPending} onClick={editForm.handleSubmit((values) => editMutation.mutate(values))}>{editMutation.isPending ? 'Сохранение…' : 'Сохранить'}</Button></DialogActions>
       </Dialog>
 
       <Dialog open={Boolean(archiveTarget)} onClose={() => !archiveMutation.isPending && setArchiveTarget(null)} fullWidth maxWidth="sm">

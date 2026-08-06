@@ -36,7 +36,7 @@ const PekProgramDetailsPage = () => {
     mutationFn: async ({ item, comment }: { item: PekAvailableAction; comment: string }) => {
       const fresh = await pekApi.getProgram(id);
       const currentAction = fresh.availableActions.find((candidate) => candidate.code === item.code && candidate.enabled);
-      if (!currentAction) throw new Error('Backend больше не разрешает это действие. Карточка будет обновлена.');
+      if (!currentAction) throw new Error('Действие больше недоступно. Карточка будет обновлена.');
       const version = fresh.version;
       if (item.code === 'SUBMIT_REVIEW') return pekApi.submitProgramReview(id, { version });
       if (item.code === 'RETURN') return pekApi.returnProgram(id, { version, reason: comment });
@@ -49,7 +49,7 @@ const PekProgramDetailsPage = () => {
         validFrom: cloneValidFrom || undefined,
         validUntil: cloneValidUntil || undefined,
       });
-      throw new Error('Действие не поддерживается текущим backend.');
+      throw new Error('Это действие сейчас недоступно.');
     },
     retry: false,
     onSuccess: async (saved) => {
@@ -108,14 +108,14 @@ const PekProgramDetailsPage = () => {
       {tab === 3 && <DataRows rows={item.measures || []} />}
       {tab === 4 && <PekProgramDocuments programId={id} version={item.version} documents={item.documents || []} readOnly={item.readOnly} />}
       {tab === 5 && <Link className="font-bold text-eco-700" to={`/staff/pek/programs/${id}/history`}>Открыть историю программы</Link>}
-      {tab === 6 && <div className="space-y-2"><Info label="Текущая версия" value={item.version} /><p className="text-sm text-slate-500">Согласованные версии доступны только для чтения. Полная цепочка версий отображается backend при наличии данных в карточке.</p></div>}
+      {tab === 6 && <div className="space-y-2"><Info label="Текущая версия" value={item.version} /><p className="text-sm text-slate-500">Согласованные версии доступны только для чтения. Здесь отображаются только сохранённые версии программы.</p></div>}
       {tab === 7 && <Link className="font-bold text-eco-700" to={`/staff/pek/reports?companyId=${item.company?.id || ''}&objectId=${item.object?.id || ''}`}>Открыть отчёты объекта</Link>}
     </section>
     <PekActionModal action={action} pending={workflow.isPending} onClose={() => setAction(null)} onConfirm={(comment) => action && workflow.mutate({ item: action, comment })} />
     <Modal
       open={Boolean(cloneAction)}
       title="Клонировать программу"
-      description="Укажите уникальный номер новой программы. Документы backend не копирует."
+      description="Укажите уникальный номер новой программы. Прикреплённые документы не копируются."
       loading={workflow.isPending}
       onClose={() => setCloneAction(null)}
       footer={<>

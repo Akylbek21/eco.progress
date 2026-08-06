@@ -138,6 +138,7 @@ const EnvironmentStep = ({
         {lighting && (
           <>
             <label className="text-sm font-bold">Тип помещения<input {...register('roomType')} className={`${input} mt-1.5`} /></label>
+            <label className="text-sm font-bold">Тип рабочего места<input required {...register('workplaceType', { required: 'Укажите тип рабочего места' })} className={`${input} mt-1.5 ${errors.workplaceType ? 'border-rose-400' : ''}`} />{errors.workplaceType?.message && <span className="mt-1 block text-xs text-rose-700">{errors.workplaceType.message}</span>}</label>
             <label className="text-sm font-bold">Уровень нормирования<input {...register('normLevel')} className={`${input} mt-1.5`} /></label>
             <label className="text-sm font-bold">Тип освещения<input {...register('lightingType')} className={`${input} mt-1.5`} /></label>
             <label className="text-sm font-bold">Разряд зрительной работы<input {...register('visualWorkCategory')} className={`${input} mt-1.5`} /></label>

@@ -10,13 +10,13 @@ const PekQueryError = ({ error, resource, retry }: {
   const title = failure.status === 403
     ? 'Недостаточно прав'
     : failure.status === 404
-      ? 'Функция ПЭК отсутствует на backend'
+      ? 'Функция ПЭК пока недоступна'
       : failure.status && failure.status >= 500
         ? 'Сервис ПЭК временно недоступен'
         : `Не удалось загрузить ${resource.toLowerCase()}`;
   const correlation = failure.traceId ? ` Код обращения: ${failure.traceId}.` : '';
   const message = failure.status === 404
-    ? `Backend не зарегистрировал запрошенный endpoint для ресурса «${resource}».${correlation}`
+    ? `Раздел «${resource}» пока недоступен.${correlation}`
     : `${failure.message}${correlation}`;
   return <PekState title={title} message={message} retry={retry} />;
 };

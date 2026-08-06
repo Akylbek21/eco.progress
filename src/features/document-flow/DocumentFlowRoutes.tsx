@@ -16,10 +16,11 @@ const MembersPage = lazy(() => import('./pages/MembersPage'));
 export default function DocumentFlowRoutes() {
   return (
     <Routes>
-      <Route path="plans" element={<Navigate to="/document-flow/documents" replace />} />
+      <Route path="plans" element={<DocumentFlowPricingPage />} />
       <Route element={<DocumentFlowGate />}>
         <Route element={<DocumentFlowLayout />}>
           <Route index element={<Navigate to="/document-flow/documents" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
           <Route path="access" element={<Navigate to="/document-flow/members" replace />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="documents/new" element={<CreateDocumentPage />} />

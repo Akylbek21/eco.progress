@@ -7,7 +7,6 @@ const optionalNumber = (value: string | null) => {
 };
 
 export const mapSearchParamsToDocumentFilters = (params: URLSearchParams): DocumentFilters => ({
-  organizationId: optionalNumber(params.get('organizationId')),
   direction: (params.get('direction') || undefined) as DocumentFilters['direction'],
   type: (params.get('type') || undefined) as DocumentFilters['type'],
   status: (params.get('status') || undefined) as DocumentFilters['status'],

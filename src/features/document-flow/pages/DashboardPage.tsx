@@ -14,7 +14,7 @@ export default function DashboardPage() {
   const tenant = useDocumentFlowTenant();
   const query = useQuery({
     queryKey: tenant.tenantScope ? documentFlowKeys.dashboard(tenant.tenantScope) : ['document-flow', 'tenant-unresolved', 'dashboard'],
-    queryFn: ({ signal }) => documentFlowApi.dashboard(undefined, signal),
+    queryFn: ({ signal }) => documentFlowApi.dashboard(tenant.organizationId!, signal),
     enabled: tenant.organizationResolved,
   });
   if (query.isLoading) return <Grid container spacing={2}>{[1, 2, 3, 4].map((key) => <Grid size={{ xs: 12, sm: 6, md: 3 }} key={key}><Skeleton height={130} /></Grid>)}</Grid>;

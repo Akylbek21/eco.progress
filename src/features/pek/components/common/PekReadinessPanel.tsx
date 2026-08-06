@@ -5,7 +5,7 @@ export default function PekReadinessPanel({ readiness, onIssueClick }: {
   readiness?: PekReadiness | null;
   onIssueClick?: (issue: PekValidationIssue) => void;
 }) {
-  if (!readiness) return <section className="rounded-2xl border bg-white p-5"><p className="font-bold">Готовность не предоставлена backend</p><p className="mt-1 text-sm text-slate-500">Значения не рассчитываются на frontend.</p></section>;
+  if (!readiness) return <section className="rounded-2xl border bg-white p-5"><p className="font-bold">Готовность ещё не рассчитана</p><p className="mt-1 text-sm text-slate-500">После проверки здесь появятся фактический процент и список необходимых действий.</p></section>;
   const blocking = readiness.issues.filter((issue) => issue.severity === 'BLOCKING');
   const warnings = readiness.issues.filter((issue) => issue.severity !== 'BLOCKING');
   return <section className="rounded-2xl border bg-white p-5" aria-label="Панель готовности">

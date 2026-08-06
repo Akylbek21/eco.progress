@@ -278,7 +278,7 @@ export function mapMeasurementToRequest(
     samplingMethodNd: normalizeNullableText(row.samplingMethodNd || form.samplingMethodNd) ?? undefined,
     values: compactValues({
       samplingDate: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
-        ? optionalApiDate(form.sampleDate, 'sampleDate')
+        ? optionalApiDate(row.samplingDate || form.sampleDate, `results.${index}.samplingDate`)
         : undefined,
       samplingPlace: (form.templateId === 'soil' || isWaterProtocolType(form.templateId))
         ? samplingPlace ?? undefined

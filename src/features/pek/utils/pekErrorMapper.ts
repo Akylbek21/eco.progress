@@ -26,7 +26,7 @@ export type PekUiError = {
 
 export const mapPekError = (error: unknown): PekUiError => {
   if (error instanceof PekContractError) return {
-    message: error.message,
+    message: 'Получены неполные данные. Обновите страницу или обратитесь в поддержку.',
     code: error.code,
     fieldErrors: {},
     issues: [],
@@ -57,3 +57,6 @@ export const mapPekError = (error: unknown): PekUiError => {
     issues: Array.isArray(details.issues) ? details.issues as PekValidationIssue[] : [],
   };
 };
+
+/** Single UI boundary for PEK API and validation failures. */
+export const mapPekApiErrorsToUi = mapPekError;
