@@ -53,7 +53,7 @@ describe('protocol wizard HTTP boundary', () => {
     const createProtocolDraft = async () => ({ id: 'draft-1', version: 0, status: 'DRAFT', results: [] }) as Protocol;
     const service = { createProtocolDraft } as unknown as ProtocolService;
 
-    const saved = await saveProtocolWizardDraft(form, null, service);
+    const saved = await saveProtocolWizardDraft(form, null, 'protocol-draft-test-key', service);
 
     expect(saved.protocol).toMatchObject({ id: 'draft-1', version: 0, status: 'DRAFT' });
     expect(saved.resultIds).toEqual([]);

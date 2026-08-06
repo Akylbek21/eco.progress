@@ -44,6 +44,7 @@ import type {
   SignProtocolRequest,
   ProtocolVersionRequest,
   CreateProtocolDraftRequest,
+  UpdateProtocolDraftRequest,
 } from '../features/protocols/api/protocolContracts';
 import { normalizeProtocolStatus } from '../config/protocolStatus';
 import { canonicalProtocolResultAliases } from '../utils/protocolResultAliases';
@@ -1232,7 +1233,7 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
   return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
 }
 
-export async function updateProtocolDraft(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol> {
+export async function updateProtocolDraft(protocolId: string, payload: UpdateProtocolDraftRequest): Promise<Protocol> {
   const request = mapProtocolFormToPatchRequest(payload, payload.version);
   const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/draft`, request);
   return protocolFromActionResponse(protocolId, response);

@@ -10,6 +10,12 @@ const messages: Record<string, string> = {
   PEK_OBJECT_COMPANY_MISMATCH: 'Выбранный объект не относится к компании',
   VERSION_CONFLICT: 'Сущность изменена другим сотрудником',
   PEK_VERSION_CONFLICT: 'Сущность изменена другим сотрудником',
+  OPTIMISTIC_LOCK_CONFLICT: 'Данные были изменены другим пользователем',
+  PEK_REPORT_NOT_EDITABLE: 'Отчёт нельзя изменять в текущем статусе',
+  PEK_REPORT_NOT_READY: 'Отчёт содержит блокирующие проблемы',
+  PEK_PROTOCOL_NOT_ELIGIBLE: 'Протокол не соответствует условиям отчёта',
+  PEK_COMPANY_ACCESS_DENIED: 'Нет доступа к выбранной организации',
+  VALIDATION_ERROR: 'Проверьте заполненные данные',
   FILE_STORAGE_UNAVAILABLE: 'Файловое хранилище временно недоступно',
 };
 

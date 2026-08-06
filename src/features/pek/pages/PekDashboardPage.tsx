@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { PekDashboardFilters, PekReportStatus } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
@@ -17,13 +17,18 @@ const metricDefinitions = [
   ['missingProtocolCount', 'Отсутствующие протоколы', '', '/staff/pek/reports'],
   ['openExceedanceCount', 'Открытые превышения', '', '/staff/pek/reports'],
   ['overdueActionCount', 'Просроченные мероприятия', '', '/staff/pek/programs'],
-  ['readinessPercent', 'Готовность отчётов', '%', '/staff/pek/reports'],
-  ['programExecutionPercent', 'Выполнение программ', '%', '/staff/pek/programs'],
+  ['readinessPercent', 'Отчёты на проверке и утверждённые', '%', '/staff/pek/reports'],
+  ['programExecutionPercent', 'Доля активных программ', '%', '/staff/pek/programs'],
+  ['returnedReportCount', 'Возвращённые отчёты', '', '/staff/pek/reports'],
+  ['unmatchedSourceCount', 'Несопоставленные результаты', '', '/staff/pek/reports'],
+  ['ambiguousSourceCount', 'Неоднозначные результаты', '', '/staff/pek/reports'],
+  ['staleSourceCount', 'Устаревшие связи', '', '/staff/pek/reports'],
   ['totalReportCount', 'Отчёты за период', '', '/staff/pek/reports'],
 ] as const;
 const currentlyUnsupportedZeroMetrics = new Set(['criticalIssueCount', 'missingProtocolCount', 'openExceedanceCount', 'overdueActionCount']);
 
 const PekDashboardPage = () => {
+  const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const filters: PekDashboardFilters = {
     companyId: Number(params.get('companyId')) || undefined,
@@ -36,6 +41,10 @@ const PekDashboardPage = () => {
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     value ? next.set(key, value) : next.delete(key);
+    if (key === 'companyId') {
+      next.delete('objectId');
+      void queryClient.cancelQueries({ queryKey: pekKeys.all });
+    }
     setParams(next, { replace: true });
   };
   const dashboard = useQuery({

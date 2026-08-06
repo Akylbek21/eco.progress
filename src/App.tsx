@@ -11,7 +11,7 @@ import type { UserRole } from './types';
 import { companyRoleMatrix, hasPermission } from './config/permissions';
 import { publicRouteLoaders } from './utils/publicRoutePreload';
 import PekLayout from './features/pek/routes/PekLayout';
-import { canManagePekSettings, canUsePekPermission, canViewPek, pekViewRoles } from './features/pek/permissions/pekAccess';
+import { canUsePekPermission, canViewPek, pekViewRoles } from './features/pek/permissions/pekAccess';
 
 const lazyNamed = <T extends Record<string, unknown>, K extends keyof T>(loader: () => Promise<T>, key: K) =>
   lazy(() => loader().then((module) => ({ default: module[key] as unknown as ComponentType<Record<string, unknown>> })));
@@ -106,12 +106,6 @@ const PekAccess = ({ children }: { children: ReactNode }) => {
     ? <PekLayout>{children}</PekLayout>
     : <ForbiddenPage message="Недостаточно прав для просмотра производственного экологического контроля." />;
 };
-const PekSettingsAccess = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
-  return canManagePekSettings(user)
-    ? <>{children}</>
-    : <ForbiddenPage message="Недостаточно прав для изменения настроек ПЭК." />;
-};
 const PekPermissionAccess = ({ permission, children }: { permission: string; children: ReactNode }) => {
   const { user } = useAuth();
   return canUsePekPermission(user, permission)
@@ -123,6 +117,12 @@ const ProtocolAccess = ({ children }: { children: ReactNode }) => {
   return hasPermission(user, 'view_protocols')
     ? <>{children}</>
     : <ForbiddenPage message="Недостаточно прав для просмотра протоколов." />;
+};
+const ProtocolCreateAccess = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  return hasPermission(user, 'create_protocols')
+    ? <>{children}</>
+    : <ForbiddenPage message="У вас нет права создавать лабораторные протоколы." />;
 };
 
 const StaffAccess = ({ roles, children }: { roles?: UserRole[]; children: ReactNode }) => {
@@ -287,8 +287,8 @@ function App() {
         <Route path="/staff/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/calendar" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']}><StaffCalendarPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ProtocolAccess><ErrorBoundary fallbackTitle="Не удалось открыть протоколы"><ProtocolsPage /></ErrorBoundary></ProtocolAccess></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/protocols/create" element={<Navigate to="/staff/protocols?create=1" replace />} />
-        <Route path="/staff/protocols/new" element={<Navigate to="/staff/protocols?create=1" replace />} />
+        <Route path="/staff/protocols/create" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><ProtocolCreateAccess><Navigate to="/staff/protocols?create=1" replace /></ProtocolCreateAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/protocols/new" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><ProtocolCreateAccess><Navigate to="/staff/protocols?create=1" replace /></ProtocolCreateAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols/:protocolId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ProtocolAccess><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></ProtocolAccess></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols/:protocolId/edit" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ProtocolAccess><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></ProtocolAccess></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть ПЭК"><PekDashboardPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
@@ -297,12 +297,11 @@ function App() {
         <Route path="/staff/pek/programs/new" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><PekPermissionAccess permission="PEK_PROGRAM_CREATE"><ErrorBoundary fallbackTitle="Не удалось создать программу ПЭК"><PekProgramCreatePage /></ErrorBoundary></PekPermissionAccess></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/programs/:programId" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть программу ПЭК"><PekProgramDetailsPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/programs/:programId/edit" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><PekPermissionAccess permission="PEK_PROGRAM_EDIT"><ErrorBoundary fallbackTitle="Не удалось изменить программу ПЭК"><PekProgramCreatePage /></ErrorBoundary></PekPermissionAccess></PekAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/pek/programs/:programId/versions" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть версии программы ПЭК"><PekProgramDetailsPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/programs/:programId/history" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть историю программы ПЭК"><PekHistoryPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/reports" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть отчёты ПЭК"><PekReportsPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/reports/new" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><PekPermissionAccess permission="PEK_REPORT_CREATE"><ErrorBoundary fallbackTitle="Не удалось создать отчёт ПЭК"><PekReportCreatePage /></ErrorBoundary></PekPermissionAccess></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/reports/:reportId" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть отчёт ПЭК"><PekReportWorkspacePage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/pek/settings" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><PekSettingsAccess><ErrorBoundary fallbackTitle="Не удалось открыть настройки ПЭК"><PekSettingsPage /></ErrorBoundary></PekSettingsAccess></PekAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/pek/settings" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть настройки ПЭК"><PekSettingsPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/*" element={<Navigate to="/staff/pek" replace />} />
         <Route path="/staff/normatives" element={<RoleAccess roles={normativeRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={normativeRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/measurement-devices" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />

@@ -23,6 +23,8 @@ import { migrateLegacyDraft, pekDraftKey } from '../src/features/pek/utils/pekDr
 import { currentQuarter } from '../src/features/pek/utils/pekPeriod';
 import { hasPermission } from '../src/config/permissions';
 import { comparisonTypeLabels, migrateComparisonType } from '../src/features/pek/model/pekDictionaries';
+import { canCollectPekReport, canSubmitPekReport } from '../src/features/pek/permissions/pekAccess';
+import { pekKeys } from '../src/features/pek/api/pekQueryKeys';
 
 let body: unknown;
 let ifMatch: string | null;
@@ -205,10 +207,61 @@ describe('PEK backend contract', () => {
     expect(ifMatch).toBe('12');
   });
 
-  it('uses report availableActions instead of deriving actions from status', () => {
+  it('uses report availableActions together with permissions and status', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
     expect(source).toContain('availableActions');
-    expect(source).not.toContain("status ===");
+    expect(source).toContain('canMutateSources');
+    expect(source).toContain('actions.matchSources === true');
+  });
+
+  it('LABORATORY can collect but cannot submit when backend exposes the action', () => {
+    const item = { status: 'COLLECTING', availableActions: { collect: true, submitReview: true } };
+    expect(canCollectPekReport({ role: 'LABORATORY' }, item)).toBe(true);
+    expect(canSubmitPekReport({ role: 'LABORATORY' }, item)).toBe(false);
+    expect(canSubmitPekReport({ role: 'ECOLOGIST' }, item)).toBe(true);
+  });
+
+  it('closed report and false availableActions hide source mutations', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
+    expect(source).toContain("actions.matchSources === true && canEditPekReport");
+    expect(source).toContain("source.matchStatus !== 'STALE'");
+    expect(source).not.toContain('actions.matchSources ||');
+  });
+
+  it('settings handles query errors before the empty-form state and supports read-only mode', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekSettingsPage.tsx'), 'utf8');
+    expect(source.indexOf('if (settings.isError)')).toBeLessThan(source.indexOf('if (!settings.data || !form)'));
+    expect(source).toContain('Настройки доступны только для просмотра');
+    expect(source).toContain('{editable &&');
+  });
+
+  it('company id is part of PEK query keys', () => {
+    expect(pekKeys.settings(1)).not.toEqual(pekKeys.settings(2));
+    expect(pekKeys.report(9, 1)).not.toEqual(pekKeys.report(9, 2));
+    expect(pekKeys.dashboard({ companyId: 1 })).not.toEqual(pekKeys.dashboard({ companyId: 2 }));
+  });
+
+  it('missing dashboard KPI stays absent and renders as a dash', () => {
+    const mapped = mapDashboardResponse({ deadlines: [], reports: [] });
+    expect(mapped.returnedReportCount).toBeUndefined();
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekDashboardPage.tsx'), 'utf8');
+    expect(source).toContain("dashboard.data[key] == null");
+  });
+
+  it('RETURNED, STALE, readiness and version conflict have explicit UI states', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
+    expect(source).toContain("item.status === 'RETURNED'");
+    expect(source).toContain('Отчёт возвращён на доработку');
+    expect(source).toContain('Устаревшая связь · системно исключён');
+    expect(source).toContain('getReportReadiness(id)');
+    expect(source).toContain('Данные были изменены другим пользователем');
+  });
+
+  it('does not expose a fake program versions route or report history endpoint', () => {
+    const app = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
+    const service = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
+    expect(app).not.toContain('/staff/pek/programs/:programId/versions');
+    expect(service).not.toContain('/pek/reports/${id}/history');
   });
 
   it('maps Java ProgramResponse string actions without deriving status', () => {

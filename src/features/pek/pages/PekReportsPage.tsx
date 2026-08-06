@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { hasPermission } from '../../../config/permissions';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -13,6 +13,7 @@ import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 
 const PekReportsPage = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const companyId = Number(params.get('companyId')) || 0;
   const objectId = Number(params.get('objectId')) || 0;
@@ -30,6 +31,10 @@ const PekReportsPage = () => {
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     value ? next.set(key, value) : next.delete(key);
+    if (key === 'companyId') {
+      next.delete('objectId');
+      void queryClient.cancelQueries({ queryKey: pekKeys.all });
+    }
     if (key !== 'page') next.set('page', '0');
     setParams(next, { replace: true });
   };

@@ -41,14 +41,14 @@ const cleanParams = (input: Record<string, unknown>) => Object.fromEntries(
 const get = async <T>(url: string, params: Record<string, unknown> = {}, signal?: AbortSignal) =>
   unwrapPekData<T>((await api.get(url, { params: cleanParams(params), signal })).data);
 
-const ifMatch = (version: number) => ({ 'If-Match': createIfMatch(version) });
+export const withEntityVersion = (version: number) => ({ 'If-Match': createIfMatch(version) });
 
 const workflowBody = (body: PekMutationBody) => {
   const { version, ...command } = body;
   if (version === undefined) throw new Error('Для workflow ПЭК требуется актуальная версия.');
   return {
     command,
-    headers: ifMatch(version),
+    headers: withEntityVersion(version),
   };
 };
 
@@ -68,7 +68,7 @@ const reportAction = async (
   action: 'submit-review' | 'approve' | 'archive',
   version: number,
 ) => mapReportResponse(unwrapPekData<unknown>(
-  (await api.post(`/pek/reports/${id}/${action}`, {}, { headers: ifMatch(version) })).data,
+  (await api.post(`/pek/reports/${id}/${action}`, {}, { headers: withEntityVersion(version) })).data,
 ));
 
 export type PekUploadOptions = {
@@ -187,4 +187,4 @@ export const pekApi = {
 // Compatibility alias: there is still only one PEK transport implementation.
 export const pekService = pekApi;
 export type PekService = typeof pekApi;
-export { cleanParams, ifMatch };
+export { cleanParams };

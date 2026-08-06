@@ -31,16 +31,24 @@ const ProtocolsPage = () => {
   const navigate = useNavigate(); const toast = useToast(); const { user } = useAuth(); const queryClient = useQueryClient();
   const scope = protocolScope(user?.id);
   const [params, setParams] = useSearchParams();
+  const canCreate = hasPermission(user, 'create_protocols');
   const page = integer(params.get('page'), 0); const requestedSize = integer(params.get('size'), 20); const size = sizes.includes(requestedSize) ? requestedSize : 20;
   const companyId = params.get('companyId') || '';
   const [searchInput, setSearchInput] = useState(params.get('search') || '');
-  const [busyId, setBusyId] = useState(''); const [signTargetId, setSignTargetId] = useState(''); const [archiveTarget, setArchiveTarget] = useState<Protocol | null>(null); const [deleteTarget, setDeleteTarget] = useState<Protocol | null>(null); const [replaceTarget, setReplaceTarget] = useState<Protocol | null>(null); const [createModalOpen, setCreateModalOpen] = useState(params.get('create') === '1');
+  const [busyId, setBusyId] = useState(''); const [signTargetId, setSignTargetId] = useState(''); const [archiveTarget, setArchiveTarget] = useState<Protocol | null>(null); const [deleteTarget, setDeleteTarget] = useState<Protocol | null>(null); const [replaceTarget, setReplaceTarget] = useState<Protocol | null>(null); const [createModalOpen, setCreateModalOpen] = useState(params.get('create') === '1' && canCreate);
   const signMutation = useSignProtocolMutation(undefined, {
     currentUserId: user?.id,
     onSigned: () => { setSignTargetId(''); toast.success('Протокол подписан'); },
     onError: (message) => { setSignTargetId(''); toast.error(message); },
   });
   const update = (changes: Record<string, string | number | boolean | undefined>) => { const next = new URLSearchParams(params); Object.entries(changes).forEach(([key, value]) => { if (value === undefined || value === '') next.delete(key); else next.set(key, String(value)); }); setParams(next, { replace: true }); };
+  useEffect(() => {
+    if (canCreate || params.get('create') !== '1') return;
+    setCreateModalOpen(false);
+    const next = new URLSearchParams(params);
+    next.delete('create');
+    setParams(next, { replace: true });
+  }, [canCreate, params, setParams]);
 
   const companiesQuery = useQuery({ queryKey: ['companies', 'protocol-filter', user?.id], queryFn: () => getActiveCompanies() });
   const templatesQuery = useQuery({ queryKey: ['protocol-types', 'filter', user?.id], queryFn: () => protocolService.getProtocolTemplates() });
@@ -82,7 +90,7 @@ const ProtocolsPage = () => {
   const from = data && protocols.length ? data.page * data.size + 1 : 0; const to = data ? data.page * data.size + protocols.length : 0;
 
   return <div className="space-y-6 pb-10">
-    <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-wide text-eco-700">Испытательная лаборатория</p><h1 className="mt-1 text-3xl font-black text-slate-950">Протоколы</h1><p className="mt-2 text-sm text-slate-500">Заполните результаты, подпишите протокол и скачайте готовый документ.</p></div>{hasPermission(user, 'create_protocols') && <Button type="button" onClick={() => { setCreateModalOpen(true); update({ create: 1 }); }}><Plus className="h-4 w-4" /> Создать протокол</Button>}</header>
+    <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-wide text-eco-700">Испытательная лаборатория</p><h1 className="mt-1 text-3xl font-black text-slate-950">Протоколы</h1><p className="mt-2 text-sm text-slate-500">Заполните результаты, подпишите протокол и скачайте готовый документ.</p></div>{canCreate && <Button type="button" onClick={() => { setCreateModalOpen(true); update({ create: 1 }); }}><Plus className="h-4 w-4" /> Создать протокол</Button>}</header>
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <input aria-label="Поиск протоколов" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} className={inputClass} placeholder="Номер, компания, объект…" />
@@ -100,7 +108,7 @@ const ProtocolsPage = () => {
     <Modal open={Boolean(archiveTarget)} loading={busyId === archiveTarget?.id} onClose={() => !busyId && setArchiveTarget(null)} title={`Архивировать протокол «${archiveTarget?.protocolNumber || ''}»?`} size="sm" footer={<><Button type="button" variant="secondary" disabled={Boolean(busyId)} onClick={() => setArchiveTarget(null)}>Отмена</Button><Button type="button" variant="danger" disabled={Boolean(busyId)} onClick={archive}>{busyId ? 'Архивирование…' : 'Архивировать'}</Button></>}><p className="text-sm text-slate-600">Протокол останется доступен только для просмотра и скачивания существующих документов.</p></Modal>
     <Modal open={Boolean(deleteTarget)} loading={busyId === deleteTarget?.id} onClose={() => !busyId && setDeleteTarget(null)} title={`Удалить протокол «${deleteTarget?.protocolNumber || ''}»?`} size="sm" footer={<><Button type="button" variant="secondary" disabled={Boolean(busyId)} onClick={() => setDeleteTarget(null)}>Отмена</Button><Button type="button" variant="danger" disabled={Boolean(busyId)} onClick={remove}>{busyId ? 'Удаление…' : 'Удалить'}</Button></>}><p className="text-sm text-slate-600">Неподписанный протокол будет удалён из рабочего списка. Подписанные документы удалить нельзя.</p></Modal>
     <ReplaceProtocolModal open={Boolean(replaceTarget)} loading={busyId === replaceTarget?.id} onClose={() => !busyId && setReplaceTarget(null)} onConfirm={replace} />
-    <CreateProtocolWizardModal open={createModalOpen} orderId={params.get('orderId') || ''} orderServiceItemId={params.get('orderServiceItemId') || ''} pekPrefill={{ companyId: params.get('companyId') || '', objectId: params.get('objectId') || '', pekProgramId: params.get('pekProgramId') || '', pekControlItemId: params.get('pekControlItemId') || '', pekControlEventId: params.get('pekControlEventId') || '', pekReportId: params.get('pekReportId') || '', monitoringPointId: params.get('monitoringPointId') || '', emissionSourceId: params.get('emissionSourceId') || '', waterOutletId: params.get('waterOutletId') || '', measurementDate: params.get('measurementDate') || undefined, measurementPlace: params.get('measurementPlace') || undefined }} onClose={() => { setCreateModalOpen(false); update({ create: undefined }); }} onCreated={(protocol) => { setCreateModalOpen(false); void queryClient.invalidateQueries({ queryKey: protocolQueryKeys.all(scope) }); if (protocol.orderId) void queryClient.invalidateQueries({ queryKey: ['order', String(protocol.orderId)] }); const navigation = new URLSearchParams(); const pekReportId = params.get('pekReportId'); if (pekReportId) { navigation.set('pekReportId', pekReportId); navigation.set('returnTo', `/staff/pek/reports/${pekReportId}`); } navigate(`/staff/protocols/${protocol.id}${navigation.size ? `?${navigation}` : ''}`); }} />
+    <CreateProtocolWizardModal open={createModalOpen && canCreate} orderId={params.get('orderId') || ''} orderServiceItemId={params.get('orderServiceItemId') || ''} pekPrefill={{ companyId: params.get('companyId') || '', objectId: params.get('objectId') || '', pekProgramId: params.get('pekProgramId') || '', pekControlItemId: params.get('pekControlItemId') || '', pekControlEventId: params.get('pekControlEventId') || '', pekReportId: params.get('pekReportId') || '', monitoringPointId: params.get('monitoringPointId') || '', emissionSourceId: params.get('emissionSourceId') || '', waterOutletId: params.get('waterOutletId') || '', measurementDate: params.get('measurementDate') || undefined, measurementPlace: params.get('measurementPlace') || undefined }} onClose={() => { setCreateModalOpen(false); update({ create: undefined }); }} onCreated={(protocol) => { setCreateModalOpen(false); void queryClient.invalidateQueries({ queryKey: protocolQueryKeys.all(scope) }); if (protocol.orderId) void queryClient.invalidateQueries({ queryKey: ['order', String(protocol.orderId)] }); const navigation = new URLSearchParams(); const pekReportId = params.get('pekReportId'); if (pekReportId) { navigation.set('pekReportId', pekReportId); navigation.set('returnTo', `/staff/pek/reports/${pekReportId}`); } navigate(`/staff/protocols/${protocol.id}${navigation.size ? `?${navigation}` : ''}`); }} />
   </div>;
 };
 

@@ -7,6 +7,8 @@ import { resolveProtocolNormativeContext } from '../../../../data/protocolNormat
 import {
   canSearchNormative,
   normativeSearchItemToRecord,
+  normalizeNormativeSearchRequest,
+  normativeSearchQueryKey,
   searchNormatives,
   type NormativeSearchRequest,
 } from '../../../../services/normativeSearchService';
@@ -44,7 +46,7 @@ const NormativeSelectorModal = ({
 
   useEffect(() => {
     void queryClient.cancelQueries({
-      queryKey: ['protocol-normative-search-v2'],
+      queryKey: ['protocol-normative-search-v3'],
     });
     setIncludeAllStatuses(false);
     if (!normalizedSearch) {
@@ -63,7 +65,7 @@ const NormativeSelectorModal = ({
     [templateId],
   );
   const request = useMemo<NormativeSearchRequest>(
-    () => ({
+    () => normalizeNormativeSearchRequest({
       ...searchContext,
       ...filters,
       query: debouncedSearch || undefined,
@@ -75,25 +77,7 @@ const NormativeSelectorModal = ({
   );
   const searchAllowed = canSearchNormative(debouncedSearch);
   const query = useQuery({
-    queryKey: [
-      'protocol-normative-search-v2',
-      request.query,
-      request.templateId,
-      request.sourceDocumentCode,
-      request.waterType,
-      request.waterUseCategory,
-      request.factorType,
-      request.categoryCode,
-      request.lightingType,
-      request.noiseType,
-      request.roomType,
-      request.season,
-      request.workCategory,
-      request.workplaceType,
-      request.page,
-      request.size,
-      request.status,
-    ],
+    queryKey: normativeSearchQueryKey(request),
     enabled:
       open &&
       Boolean(templateId) &&

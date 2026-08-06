@@ -16,11 +16,12 @@ export type SavedProtocolWizardDraft = {
 export const saveProtocolWizardDraft = async (
   form: ProtocolWizardForm,
   current: Protocol | null,
+  idempotencyKey: string,
   service: ProtocolService = protocolService,
 ): Promise<SavedProtocolWizardDraft> => {
   let protocol = current
     ? await service.updateProtocolDraft(current.id, mapWizardToUpdateDraft(form, current))
-    : await service.createProtocolDraft(mapWizardToCreateDraft(form), `protocol-draft-${crypto.randomUUID()}`);
+    : await service.createProtocolDraft(mapWizardToCreateDraft(form), idempotencyKey);
 
   if (!protocol.id) throw new Error('Не удалось сохранить протокол: сервер не вернул идентификатор.');
 

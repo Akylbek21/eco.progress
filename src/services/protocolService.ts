@@ -25,6 +25,7 @@ import type {
   SignProtocolRequest,
   ProtocolVersionRequest,
   CreateProtocolDraftRequest,
+  UpdateProtocolDraftRequest,
 } from '../features/protocols/api/protocolContracts';
 
 export type DownloadedProtocolFile = {
@@ -44,7 +45,7 @@ export interface ProtocolService {
   getProtocolById(protocolId: string): Promise<Protocol>;
   createProtocol(payload: CreateProtocolPayload): Promise<Protocol>;
   createProtocolDraft(payload: CreateProtocolDraftRequest, idempotencyKey: string): Promise<Protocol>;
-  updateProtocolDraft(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol>;
+  updateProtocolDraft(protocolId: string, payload: UpdateProtocolDraftRequest): Promise<Protocol>;
   quickCreateProtocol(params: { payload: QuickCreateProtocolRequest; idempotencyKey: string }): Promise<Protocol>;
   refreshLaboratoryData(protocolId: string, version: number): Promise<Protocol>;
   updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol>;

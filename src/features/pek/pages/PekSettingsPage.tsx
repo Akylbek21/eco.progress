@@ -6,7 +6,7 @@ import type { PekSettingsUpdateRequest } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import PekQueryError from '../components/common/PekQueryError';
-import { PekLoading, PekPageHeader } from '../components/common/PekUi';
+import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { parseApiError } from '../../../services/apiHelpers';
 
 const booleanFields: Array<[keyof PekSettingsUpdateRequest, string]> = [
@@ -44,13 +44,15 @@ const PekSettingsPage = () => {
     onSuccess: (data) => { queryClient.setQueryData(pekKeys.settings(), data); setMessage('Настройки ПЭК сохранены.'); },
     onError: (error) => setMessage(parseApiError(error, 'Не удалось сохранить настройки ПЭК.').message),
   });
-  if (settings.isLoading || !form) return <PekLoading />;
+  if (settings.isLoading) return <PekLoading />;
   if (settings.isError) return <PekQueryError error={settings.error} resource="настройки ПЭК" retry={() => void settings.refetch()} />;
+  if (!settings.data || !form) return <PekState title="Настройки ПЭК не получены" message="Сервис не вернул данные настроек." />;
   const editable = settings.data?.availableActions.edit === true;
   const dirty = settings.data ? JSON.stringify(form) !== JSON.stringify(toRequest(settings.data)) : false;
   const set = <K extends keyof PekSettingsUpdateRequest>(key: K, value: PekSettingsUpdateRequest[K]) => setForm((current) => current ? { ...current, [key]: value } : current);
   return <div className="space-y-5">
     <PekPageHeader title="Настройки ПЭК" description="Правила сбора данных и проверки готовности отчётов" />
+    {!editable && <Alert severity="info">Настройки доступны только для просмотра</Alert>}
     {message && <Alert severity={save.isError ? 'error' : 'success'}>{message}</Alert>}
     {settings.data?.capabilities.automaticCollectionSupported === false && <Alert severity="info">Автоматический сбор по расписанию backend пока не поддерживает. Доступен ручной сбор из отчёта.</Alert>}
     <section className="space-y-5 rounded-2xl border bg-white p-5">
@@ -61,7 +63,7 @@ const PekSettingsPage = () => {
         <TextField type="number" label="Уведомлять до срока, дней" value={form.notifyBeforeDeadlineDays} disabled={!editable} inputProps={{ min: 0, max: 365 }} onChange={(event) => set('notifyBeforeDeadlineDays', Number(event.target.value))} />
       </div>
       <div className="grid gap-2 md:grid-cols-2">{booleanFields.map(([key, label]) => <FormControlLabel key={key} control={<Checkbox checked={Boolean(form[key])} disabled={!editable} onChange={(event) => set(key, event.target.checked)} />} label={label} />)}</div>
-      <div className="flex justify-end gap-3"><Button variant="outlined" disabled={!dirty || save.isPending} onClick={() => settings.data && setForm(toRequest(settings.data))}>Сбросить</Button><Button variant="contained" disabled={!editable || !dirty || save.isPending} onClick={() => save.mutate(form)}>{save.isPending ? 'Сохранение…' : 'Сохранить'}</Button></div>
+      {editable && <div className="flex justify-end gap-3"><Button variant="outlined" disabled={!dirty || save.isPending} onClick={() => settings.data && setForm(toRequest(settings.data))}>Сбросить</Button><Button variant="contained" disabled={!dirty || save.isPending} onClick={() => save.mutate(form)}>{save.isPending ? 'Сохранение…' : 'Сохранить'}</Button></div>}
     </section>
   </div>;
 };

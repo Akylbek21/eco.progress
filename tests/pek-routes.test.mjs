@@ -13,12 +13,12 @@ test('required PEK routes are registered once', () => {
     '/staff/pek/programs/new',
     '/staff/pek/programs/:programId',
     '/staff/pek/programs/:programId/edit',
-    '/staff/pek/programs/:programId/versions',
     '/staff/pek/reports',
     '/staff/pek/reports/new',
     '/staff/pek/reports/:reportId',
     '/staff/pek/settings',
   ].forEach((route) => assert.match(app, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))));
+  assert.doesNotMatch(app, /\/staff\/pek\/programs\/:programId\/versions/);
 });
 
 test('production PEK transport contains only backend-implemented report contracts', () => {

@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { hasPermission } from '../../../config/permissions';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -18,6 +18,7 @@ const statuses: PekProgramStatus[] = ['DRAFT', 'UNDER_REVIEW', 'RETURNED', 'APPR
 
 const PekProgramsPage = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const rawSearch = params.get('search') || '';
   const filters: PekProgramFilters = {
@@ -34,6 +35,10 @@ const PekProgramsPage = () => {
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     value ? next.set(key, value) : next.delete(key);
+    if (key === 'companyId') {
+      next.delete('objectId');
+      void queryClient.cancelQueries({ queryKey: pekKeys.all });
+    }
     if (key !== 'page') next.set('page', '0');
     setParams(next, { replace: true });
   };

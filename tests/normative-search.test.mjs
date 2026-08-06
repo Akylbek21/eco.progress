@@ -65,7 +65,9 @@ test('API service performs one explicit search and does not silently relax filte
 
 test('quick-create normative picker uses the shared debounced search', async () => {
   const source = await read('src/features/protocols/components/components/NormativeSelectorModal.tsx');
-  assert.match(source, /protocol-normative-search-v2/);
+  const service = await read('src/services/normativeSearchService.ts');
+  assert.match(source, /normativeSearchQueryKey\(request\)/);
+  assert.match(service, /protocol-normative-search-v3/);
   assert.match(source, /setDebouncedSearch\(normalizedSearch\)/);
   assert.match(source, /SEARCH_DEBOUNCE_MS = 400/);
   assert.match(source, /queryFn: \(\{ signal \}\) => searchNormatives\(request, signal\)/);
@@ -108,7 +110,10 @@ test('router keeps protocol creation inside the list wizard', async () => {
 
 test('protocol editor uses the shared single-request normative search', async () => {
   const source = await read('src/components/protocols/ProtocolResultsTable.tsx');
-  assert.match(source, /getNormativesForProtocol\(buildNormativeSearchParams\(value, page\), controller\.signal\)/);
+  assert.match(source, /getNormativesForProtocol\(buildNormativeSearchParams\(value, page, mode\), controller\.signal\)/);
+  assert.match(source, /type NormativeSearchMode = 'ACTIVE_ONLY' \| 'ALL_STATUSES'/);
+  assert.match(source, /status: mode === 'ALL_STATUSES' \? 'ALL' : 'ACTIVE'/);
+  assert.match(source, /Искать также архивные и требующие проверки/);
   assert.match(source, /size: 20/);
   assert.match(source, /normativeRecordId: normative\.id/);
   assert.match(source, /подтверждённой backend-конвертации/);

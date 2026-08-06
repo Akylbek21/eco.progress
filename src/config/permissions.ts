@@ -64,7 +64,11 @@ export type Permission =
   | 'PEK_ADMIN'
   | 'PEK_SETTINGS_EDIT'
   | 'view_protocols'
-  | 'create_protocols';
+  | 'create_protocols'
+  | 'edit_protocols'
+  | 'delete_protocols'
+  | 'sign_protocols'
+  | 'generate_protocol_documents';
 
 const staffBase: Permission[] = [
   'view_companies',
@@ -106,6 +110,10 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'manage_roles',
     'manage_settings',
     'create_protocols',
+    'edit_protocols',
+    'delete_protocols',
+    'sign_protocols',
+    'generate_protocol_documents',
     'edit_content',
     'review_content_expert',
     'review_content_legal',
@@ -128,6 +136,10 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'review_content_seo',
     'publish_content',
     'create_protocols',
+    'edit_protocols',
+    'delete_protocols',
+    'sign_protocols',
+    'generate_protocol_documents',
   ],
   HEAD: [
     ...staffBase,
@@ -142,6 +154,11 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'manage_employees',
     'review_content_expert',
     'publish_content',
+    'create_protocols',
+    'edit_protocols',
+    'delete_protocols',
+    'sign_protocols',
+    'generate_protocol_documents',
   ],
   MANAGER: [
     ...staffBase,
@@ -182,6 +199,10 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'view_tasks',
     'edit_tasks',
     'edit_documents',
+    'create_protocols',
+    'edit_protocols',
+    'delete_protocols',
+    'generate_protocol_documents',
   ],
   WASTE_SPECIALIST: [
     ...staffBase,
@@ -191,7 +212,6 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'view_tasks',
     'edit_tasks',
     'edit_documents',
-    'create_protocols',
   ],
   STAFF: [...staffBase],
 };
@@ -204,11 +224,19 @@ export const canAccess = (role: UserRole | undefined, permission: Permission) =>
 const isPekPermission = (permission: string) =>
   permission === 'view_pek' || permission === 'edit_pek' || permission.startsWith('PEK_');
 
+const protocolRolePermissions = new Set<Permission>([
+  'view_protocols', 'create_protocols', 'edit_protocols', 'delete_protocols',
+  'sign_protocols', 'generate_protocol_documents',
+]);
+
 export const hasPermission = (
   user: { role?: UserRole; permissions?: string[] } | null | undefined,
   permission: Permission | string,
 ) => {
   if (!user?.role) return false;
+  if (protocolRolePermissions.has(permission as Permission)) {
+    return canAccess(user.role, permission as Permission);
+  }
   if (Array.isArray(user.permissions)) return user.permissions.includes(permission);
   if (isPekPermission(permission)) return canUsePekPermission(user, permission);
   return canAccess(user.role, permission as Permission);

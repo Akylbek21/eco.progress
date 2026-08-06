@@ -2,6 +2,7 @@ import type {
   ProtocolEnvironmentalConditions,
   ProtocolPrintVisibility,
   ProtocolResultValue,
+  UpdateProtocolPayload,
 } from '../../../types/protocols';
 
 /** DTOs in this file are the only shapes allowed to cross the protocols API boundary. */
@@ -104,7 +105,7 @@ export interface ProtocolTypeConditionsRequest {
 export interface CreateProtocolDraftRequest {
   templateId: string;
   subtype: string | null;
-  companyId: number | null;
+  companyId: number;
   objectId: number | null;
   protocolDate: string | null;
   measurementDate: string | null;
@@ -117,6 +118,9 @@ export interface CreateProtocolDraftRequest {
   testingEndDate: string | null;
   environment: ProtocolEnvironmentRequest | null;
 }
+
+/** PATCH /protocols/{id}/draft. Company is immutable after draft creation and is intentionally absent. */
+export type UpdateProtocolDraftRequest = Omit<UpdateProtocolPayload, 'companyId'>;
 
 export interface ProtocolResultRequest {
   values: Record<string, ProtocolResultValue>;

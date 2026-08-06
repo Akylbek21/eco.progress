@@ -1,5 +1,5 @@
 import type { Protocol, ProtocolResultPayload, UpdateProtocolPayload } from '../../../types/protocols';
-import type { CreateProtocolDraftRequest } from '../api/protocolContracts';
+import type { CreateProtocolDraftRequest, UpdateProtocolDraftRequest } from '../api/protocolContracts';
 import { mapFrontendProtocolType } from '../api/protocolTypeMapper';
 import { mapMeasurementToRequest } from './mapProtocolWizardToRequest';
 import { normalizeProtocolWizardForm, type ProtocolWizardForm, type ProtocolWizardResult } from '../components/wizardTypes';
@@ -17,10 +17,13 @@ const nullableDecimal = (value: string): number | null => {
   return value.trim() && Number.isFinite(parsed) ? parsed : null;
 };
 
-export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocolDraftRequest => ({
+export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocolDraftRequest => {
+  const companyId = nullableNumber(form.companyId);
+  if (companyId === null) throw new Error('Для создания серверного черновика выберите компанию.');
+  return {
   templateId: mapFrontendProtocolType(form.templateId as Exclude<ProtocolWizardForm['templateId'], ''>),
   subtype: null,
-  companyId: nullableNumber(form.companyId),
+  companyId,
   objectId: nullableNumber(form.objectId),
   protocolDate: form.protocolDate,
   measurementDate: nullableText(form.measurementDate),
@@ -49,13 +52,13 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
     },
   },
   printVisibility: form.printVisibility,
-});
+  };
+};
 
-export const mapWizardToUpdateDraft = (form: ProtocolWizardForm, protocol: Protocol): UpdateProtocolPayload => ({
+export const mapWizardToUpdateDraft = (form: ProtocolWizardForm, protocol: Protocol): UpdateProtocolDraftRequest => ({
   version: protocol.version,
   number: protocol.number || protocol.protocolNumber || '',
   protocolDate: form.protocolDate,
-  companyId: numericId(form.companyId),
   objectId: numericId(form.objectId),
   laboratoryId: numericId(form.laboratoryId),
   executorId: form.executorId || undefined,

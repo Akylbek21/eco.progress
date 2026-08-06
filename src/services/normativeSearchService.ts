@@ -178,8 +178,25 @@ const normalizeResponse = (
 export const cleanNormativeSearchParams = (
   params: NormativeSearchRequest,
 ): NormativeSearchRequest => Object.fromEntries(
-  Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+  Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => [
+      key,
+      Array.isArray(value)
+        ? [...value].sort((left, right) => String(left).localeCompare(String(right)))
+        : value,
+    ]),
 ) as NormativeSearchRequest;
+
+export const normalizeNormativeSearchRequest = (
+  params: NormativeSearchRequest,
+): NormativeSearchRequest => cleanNormativeSearchParams(params);
+
+export const normativeSearchQueryKey = (params: NormativeSearchRequest) => [
+  'protocol-normative-search-v3',
+  normalizeNormativeSearchRequest(params),
+] as const;
 
 const cacheKey = (params: NormativeSearchRequest): string => JSON.stringify(
   Object.entries(params).sort(([left], [right]) => left.localeCompare(right)),

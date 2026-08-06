@@ -10,7 +10,10 @@ const VIEW_ROLES: readonly UserRole[] = [
   'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST',
 ];
 const EDIT_PROGRAM_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'];
-const EDIT_REPORT_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY'];
+export const REPORT_EDIT_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY'];
+export const REPORT_COLLECT_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY'];
+export const REPORT_SUBMIT_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'];
+export const REPORT_APPROVE_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD'];
 const REVIEW_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD'];
 const ADMIN_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR'];
 
@@ -35,12 +38,14 @@ const permissionRoles = (permission: string): readonly UserRole[] => {
       return EDIT_PROGRAM_ROLES;
     case 'PEK_REPORT_CREATE':
     case 'PEK_REPORT_EDIT':
-    case 'PEK_REPORT_COLLECT':
     case 'PEK_REPORT_MATCH':
     case 'PEK_REPORT_VALIDATE':
+      return REPORT_EDIT_ROLES;
+    case 'PEK_REPORT_COLLECT':
+      return REPORT_COLLECT_ROLES;
     case 'PEK_REPORT_SUBMIT':
     case 'PEK_REPORT_SIGN':
-      return EDIT_REPORT_ROLES;
+      return REPORT_SUBMIT_ROLES;
     case 'PEK_PROGRAM_APPROVE':
     case 'PEK_PROGRAM_ACTIVATE':
     case 'PEK_PROGRAM_ARCHIVE':
@@ -78,5 +83,21 @@ export const canApprovePek = (user: PekUser) =>
 export const canManagePekSettings = (user: PekUser) =>
   canUsePekPermission(user, 'PEK_SETTINGS_EDIT');
 
-export const pekViewRoles = VIEW_ROLES;
+export type PekReportAccess = { status?: string; availableActions?: Record<string, boolean> } | null | undefined;
+const actionAllowed = (report: PekReportAccess, action: string, statuses: readonly string[]) =>
+  report?.availableActions?.[action] === true && Boolean(report.status && statuses.includes(report.status));
 
+export const canEditPekReport = (user: PekUser, report: PekReportAccess) =>
+  canUsePekPermission(user, 'PEK_REPORT_EDIT') && actionAllowed(report, 'edit', ['DRAFT', 'COLLECTING', 'RETURNED']);
+export const canCollectPekReport = (user: PekUser, report: PekReportAccess) =>
+  canUsePekPermission(user, 'PEK_REPORT_COLLECT') && actionAllowed(report, 'collect', ['DRAFT', 'COLLECTING', 'RETURNED']);
+export const canSubmitPekReport = (user: PekUser, report: PekReportAccess) =>
+  canUsePekPermission(user, 'PEK_REPORT_SUBMIT') && actionAllowed(report, 'submitReview', ['COLLECTING', 'RETURNED']);
+export const canApprovePekReport = (user: PekUser, report: PekReportAccess) =>
+  canUsePekPermission(user, 'PEK_REPORT_APPROVE') && actionAllowed(report, 'approve', ['READY_FOR_REVIEW']);
+export const canReturnPekReport = (user: PekUser, report: PekReportAccess) =>
+  canUsePekPermission(user, 'PEK_REPORT_RETURN') && actionAllowed(report, 'returnForRevision', ['READY_FOR_REVIEW']);
+export const canArchivePekReport = (user: PekUser, report: PekReportAccess) =>
+  canUsePekPermission(user, 'PEK_REPORT_APPROVE') && actionAllowed(report, 'archive', ['APPROVED']);
+
+export const pekViewRoles = VIEW_ROLES;

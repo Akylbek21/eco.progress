@@ -69,7 +69,8 @@ test('32-36 protocol picker is contextual, paginated, snapshots values and rejec
   assert.match(picker, /normativeRecordId: normative\.id/);
   assert.match(picker, /conditions: JSON\.stringify\(normativeConditions\(normative\)\)/);
   assert.match(picker, /Единица результата/);
-  assert.match(picker, /status: 'ACTIVE'/);
+  assert.match(picker, /status: mode === 'ALL_STATUSES' \? 'ALL' : 'ACTIVE'/);
+  assert.match(picker, /Искать также архивные и требующие проверки/);
 });
 
 test('37 URL state survives mount and 38 row actions are not nested controls', async () => {

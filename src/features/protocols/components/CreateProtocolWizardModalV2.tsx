@@ -34,10 +34,17 @@ import {
 } from './wizardTypes';
 import { getWaterProtocolOptions, isWaterProtocolType } from '../../../config/protocolWater';
 import { protocolQueryKeys, protocolScope } from '../hooks/queryKeys';
+import {
+  createProtocolDraftIdempotencyKey,
+  findLatestLocalProtocolDraft,
+  localProtocolDraftKey,
+  LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION,
+  writeLocalProtocolDraft,
+  type LocalProtocolDraftEnvelope,
+} from '../utils/protocolDraftRecovery';
 
 const steps = ['Основные сведения', 'Условия', 'Показатели и результаты', 'Проверка', 'Завершение'];
-const BUFFER_SCHEMA_VERSION = 3;
-type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+type SaveState = 'idle' | 'local' | 'creating' | 'created' | 'saving' | 'saved' | 'error' | 'conflict';
 
 const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', orderServiceItemId = '', pekPrefill }: CreateProtocolWizardModalProps) => {
   const { user } = useAuth();
@@ -51,9 +58,14 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [generalError, setGeneralError] = useState('');
   const [conflict, setConflict] = useState(false);
+  const [recoveryCandidate, setRecoveryCandidate] = useState<{ key: string; envelope: LocalProtocolDraftEnvelope } | null>(null);
+  const [recoveryServer, setRecoveryServer] = useState<Protocol | null>(null);
+  const [newProtocolConfirm, setNewProtocolConfirm] = useState(false);
   const [serverIssues, setServerIssues] = useState<Array<{ code: string; step: number; field?: FieldPath<ProtocolWizardForm>; fieldPath: string; severity: 'ERROR'; message: string }>>([]);
   const initialCreateStarted = useRef(false);
-  const bufferKey = `protocol-draft:${user?.id ?? 'anonymous'}:${serverDraft?.id ?? 'new'}:${BUFFER_SCHEMA_VERSION}`;
+  const idempotencyKeyRef = useRef(createProtocolDraftIdempotencyKey());
+  const lastSavedFingerprintRef = useRef('');
+  const bufferKey = localProtocolDraftKey(user?.id ?? 'anonymous', serverDraft?.id ?? null);
   const prefillKey = JSON.stringify(pekPrefill ?? {});
 
   const typesQuery = useQuery({ queryKey: ['protocol-types', user?.id], queryFn: () => protocolService.getProtocolTypes(), enabled: open });
@@ -83,13 +95,17 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   useEffect(() => {
     if (!open) return;
     initialCreateStarted.current = false;
+    idempotencyKeyRef.current = createProtocolDraftIdempotencyKey();
+    lastSavedFingerprintRef.current = '';
     setServerDraft(null);
     setSaveState('idle');
     setGeneralError('');
     setStep(0);
     setMaxVisited(0);
     form.reset(normalizeProtocolWizardForm({ ...(pekPrefill ?? {}), orderId, orderServiceItemId }));
-  }, [form, open, orderId, orderServiceItemId, prefillKey]);
+    setRecoveryCandidate(user?.id ? findLatestLocalProtocolDraft(sessionStorage, user.id) : null);
+    setRecoveryServer(null);
+  }, [form, open, orderId, orderServiceItemId, prefillKey, user?.id]);
   useEffect(() => {
     const laboratory = defaultLaboratoryQuery.data;
     if (open && laboratory?.active && !form.getValues('laboratoryId')) form.setValue('laboratoryId', String(laboratory.id), { shouldDirty: false });
@@ -100,27 +116,34 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     if (employee) form.setValue('executorId', String(employee.executorId), { shouldDirty: false });
   }, [employees, form, open, user?.id]);
   useEffect(() => {
-    if (!open) return;
-    const timer = window.setTimeout(() => sessionStorage.setItem(bufferKey, JSON.stringify({
-      schemaVersion: BUFFER_SCHEMA_VERSION,
-      userId: user?.id ?? null,
-      protocolId: serverDraft?.id ?? null,
-      timestamp: new Date().toISOString(),
-      step,
-      form: form.getValues(),
-    })), 700);
+    if (!open || recoveryCandidate) return;
+    const timer = window.setTimeout(() => {
+      writeLocalProtocolDraft(sessionStorage, {
+        schemaVersion: LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION,
+        userId: String(user?.id ?? 'anonymous'),
+        protocolId: serverDraft?.id ?? null,
+        backendVersion: serverDraft?.version ?? null,
+        idempotencyKey: idempotencyKeyRef.current,
+        currentStep: step,
+        formValues: form.getValues(),
+        savedAt: new Date().toISOString(),
+        hasUnsavedChanges: form.formState.isDirty,
+      });
+      if (!serverDraft && saveState === 'idle') setSaveState('local');
+    }, 700);
     return () => window.clearTimeout(timer);
-  }, [bufferKey, form, open, serverDraft?.id, step, values, user?.id]);
+  }, [bufferKey, form, open, recoveryCandidate, saveState, serverDraft, step, values, user?.id]);
 
   const saveMutation = useMutation({
-    mutationFn: () => saveProtocolWizardDraft(form.getValues(), serverDraft),
-    onMutate: () => { setSaveState('saving'); setGeneralError(''); setServerIssues([]); },
-    onSuccess: async ({ protocol, resultIds }) => {
+    mutationFn: (snapshot: ProtocolWizardForm) => saveProtocolWizardDraft(snapshot, serverDraft, idempotencyKeyRef.current),
+    onMutate: () => { setSaveState(serverDraft ? 'saving' : 'creating'); setGeneralError(''); setServerIssues([]); },
+    onSuccess: async ({ protocol, resultIds }, snapshot) => {
+      if (!serverDraft) sessionStorage.removeItem(localProtocolDraftKey(user?.id ?? 'anonymous', null));
       setServerDraft(protocol);
+      lastSavedFingerprintRef.current = JSON.stringify(snapshot);
       form.reset(mapProtocolToWizardForm(protocol), { keepDirtyValues: true });
       resultIds.forEach((id, index) => form.setValue(`results.${index}.serverResultId`, id, { shouldDirty: false }));
-      setSaveState('saved');
-      sessionStorage.removeItem(bufferKey);
+      setSaveState(serverDraft ? 'saved' : 'created');
       queryClient.setQueryData(protocolQueryKeys.detail(scope, protocol.id), protocol);
       await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) });
     },
@@ -128,6 +151,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
       setSaveState('error');
       const apiError = normalizeApiError(error, 'Не удалось сохранить протокол. Проверьте выделенные поля.');
       if (apiError.status === 409 && /PROTOCOL_VERSION_CONFLICT|version/i.test(`${apiError.code ?? ''} ${apiError.message}`)) {
+        setSaveState('conflict');
         setConflict(true);
         return;
       }
@@ -137,13 +161,23 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     },
   });
 
-  const canStartDraft = Boolean(values.templateId);
+  const canStartDraft = Boolean(values.templateId && values.companyId);
   useEffect(() => {
-    if (!open || serverDraft || !canStartDraft || initialCreateStarted.current || saveMutation.isPending) return;
-    initialCreateStarted.current = true;
-    const timer = window.setTimeout(() => saveMutation.mutate(), 800);
+    if (!open || recoveryCandidate || serverDraft || !canStartDraft || initialCreateStarted.current || saveMutation.isPending || conflict) return;
+    const timer = window.setTimeout(() => {
+      if (initialCreateStarted.current) return;
+      initialCreateStarted.current = true;
+      saveMutation.mutate(form.getValues());
+    }, 800);
     return () => window.clearTimeout(timer);
-  }, [canStartDraft, open, saveMutation, serverDraft]);
+  }, [canStartDraft, conflict, form, open, recoveryCandidate, saveMutation, serverDraft]);
+  useEffect(() => {
+    if (!open || !serverDraft || saveMutation.isPending || conflict) return;
+    const snapshot = form.getValues();
+    if (JSON.stringify(snapshot) === lastSavedFingerprintRef.current) return;
+    const timer = window.setTimeout(() => saveMutation.mutate(form.getValues()), 900);
+    return () => window.clearTimeout(timer);
+  }, [conflict, form, open, saveMutation, serverDraft, values]);
 
   const approvalIssues = useMemo(() => validateForApproval(values).map((issue, index) => ({
     code: `LOCAL_${index}`, field: issue.field as FieldPath<ProtocolWizardForm>, fieldPath: issue.field,
@@ -157,11 +191,12 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   };
   const save = async () => {
     if (!canStartDraft) {
-      setGeneralError('Сначала выберите тип протокола.');
+      setGeneralError('Сначала выберите тип протокола и компанию. До этого сохраняется только локальная копия.');
       setStep(0);
       return null;
     }
-    return saveMutation.mutateAsync();
+    if (saveMutation.isPending) return null;
+    return saveMutation.mutateAsync(form.getValues());
   };
   const next = async () => {
     if (step === 3 && approvalIssues.length) {
@@ -180,7 +215,11 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   const complete = async () => {
     try {
       const saved = await save();
-      if (saved) onCreated(saved.protocol);
+      if (saved) {
+        sessionStorage.removeItem(localProtocolDraftKey(user?.id ?? 'anonymous', null));
+        sessionStorage.removeItem(localProtocolDraftKey(user?.id ?? 'anonymous', saved.protocol.id));
+        onCreated(saved.protocol);
+      }
     } catch { /* mutation state contains the user-facing error */ }
   };
   const loadLatest = async () => {
@@ -191,9 +230,62 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     setConflict(false);
     setGeneralError('Актуальная версия загружена. Локальная копия формы сохранена в аварийном буфере.');
   };
+  const applyRecoveredDraft = (envelope: LocalProtocolDraftEnvelope, current: Protocol | null, pauseAutosave = false) => {
+    idempotencyKeyRef.current = envelope.idempotencyKey;
+    initialCreateStarted.current = Boolean(current);
+    setServerDraft(current);
+    form.reset(normalizeProtocolWizardForm(envelope.formValues));
+    setStep(Math.max(0, Math.min(steps.length - 1, envelope.currentStep)));
+    setMaxVisited(Math.max(0, Math.min(steps.length - 1, envelope.currentStep)));
+    lastSavedFingerprintRef.current = current && envelope.backendVersion === current.version
+      ? JSON.stringify(envelope.formValues)
+      : '';
+    setConflict(pauseAutosave);
+    setSaveState(pauseAutosave ? 'conflict' : current ? 'saved' : 'local');
+    setRecoveryCandidate(null);
+    setRecoveryServer(null);
+  };
+  const restoreRecovery = async () => {
+    if (!recoveryCandidate) return;
+    const envelope = recoveryCandidate.envelope;
+    if (!envelope.protocolId) {
+      applyRecoveredDraft(envelope, null);
+      return;
+    }
+    try {
+      const current = await protocolService.getProtocol(envelope.protocolId);
+      if (envelope.backendVersion !== null && current.version > envelope.backendVersion) {
+        setRecoveryServer(current);
+        return;
+      }
+      applyRecoveredDraft(envelope, current);
+    } catch {
+      applyRecoveredDraft(envelope, null);
+      setGeneralError('Серверный черновик не найден. Открыта локальная аварийная копия.');
+    }
+  };
+  const deleteRecovery = () => {
+    if (recoveryCandidate) sessionStorage.removeItem(recoveryCandidate.key);
+    setRecoveryCandidate(null);
+    setRecoveryServer(null);
+  };
+  const startNewProtocol = () => {
+    sessionStorage.removeItem(bufferKey);
+    idempotencyKeyRef.current = createProtocolDraftIdempotencyKey();
+    initialCreateStarted.current = false;
+    lastSavedFingerprintRef.current = '';
+    setServerDraft(null);
+    setStep(0);
+    setMaxVisited(0);
+    setSaveState('idle');
+    setConflict(false);
+    setGeneralError('');
+    form.reset(normalizeProtocolWizardForm({ ...(pekPrefill ?? {}), orderId, orderServiceItemId }));
+    setNewProtocolConfirm(false);
+  };
 
   const content = step === 0
-    ? <BasicDataStep templates={templates} companies={companies} objects={objects} lockedCompanyId={pekPrefill?.companyId ? String(pekPrefill.companyId) : undefined} onCompanyChange={(id) => { form.setValue('companyId', id, { shouldDirty: true }); form.setValue('objectId', '', { shouldDirty: true }); }} />
+    ? <BasicDataStep templates={templates} companies={companies} objects={objects} companyLocked={Boolean(serverDraft)} onStartNew={() => setNewProtocolConfirm(true)} onCompanyChange={(id) => { form.setValue('companyId', id, { shouldDirty: true }); form.setValue('objectId', '', { shouldDirty: true }); }} />
     : step === 1
       ? <div className="space-y-7"><ExecutorDeviceStep laboratories={laboratories} employees={employees} devices={devices} onLaboratoryChange={(id) => { form.setValue('laboratoryId', id, { shouldDirty: true }); form.setValue('executorId', '', { shouldDirty: true }); }} /><EnvironmentStep weatherLoading={false} weatherMessage="" onRefresh={() => {}} waterTypeOptions={waterOptions.waterTypes} waterUseCategoryOptions={waterOptions.waterUseCategories} /><MethodsStep /></div>
       : step === 2
@@ -212,10 +304,13 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
           {generalError && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900">{generalError}</div>}
           {content}
         </main>
-        <ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue={step === 0 ? canStartDraft : true} canSaveDraft={canStartDraft} saveState={saveState === 'saving' ? 'Сохраняем…' : saveState === 'saved' ? 'Изменения сохранены' : saveState === 'error' ? 'Не удалось сохранить' : undefined} onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />
+        <ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue canSaveDraft={canStartDraft} saveState={saveState === 'local' ? 'Локальная копия сохранена' : saveState === 'creating' ? 'Создание серверного черновика…' : saveState === 'created' ? 'Черновик сохранён на сервере' : saveState === 'saving' ? 'Сохранение изменений…' : saveState === 'saved' ? 'Изменения сохранены' : saveState === 'conflict' ? 'Конфликт версий' : saveState === 'error' ? 'Не удалось сохранить' : undefined} onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />
       </div>
     </Modal>
-    <Modal open={conflict} onClose={() => setConflict(false)} closeOnBackdrop={false} size="sm" title="Протокол изменён другим сотрудником" footer={<><Button type="button" variant="secondary" onClick={() => { sessionStorage.setItem(bufferKey, JSON.stringify({ schemaVersion: BUFFER_SCHEMA_VERSION, userId: user?.id ?? null, protocolId: serverDraft?.id ?? null, timestamp: new Date().toISOString(), step, form: form.getValues() })); setConflict(false); }}>Сохранить локальную копию</Button><Button type="button" onClick={() => void loadLatest()}>Загрузить актуальную версию</Button></>}><p className="text-sm text-slate-700">Данные не были перезаписаны. Выберите, сохранить ли введённые данные локально или загрузить актуальную серверную версию.</p></Modal>
+    <Modal open={conflict} onClose={() => setConflict(false)} closeOnBackdrop={false} size="sm" title="Протокол изменён другим сотрудником" footer={<><Button type="button" variant="secondary" onClick={() => { writeLocalProtocolDraft(sessionStorage, { schemaVersion: LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION, userId: String(user?.id ?? 'anonymous'), protocolId: serverDraft?.id ?? null, backendVersion: serverDraft?.version ?? null, idempotencyKey: idempotencyKeyRef.current, currentStep: step, formValues: form.getValues(), savedAt: new Date().toISOString(), hasUnsavedChanges: true }); setConflict(false); }}>Сохранить локальную копию</Button><Button type="button" onClick={() => void loadLatest()}>Загрузить актуальную версию</Button></>}><p className="text-sm text-slate-700">Данные не были перезаписаны. Выберите, сохранить ли введённые данные локально или загрузить актуальную серверную версию.</p></Modal>
+    <Modal open={Boolean(recoveryCandidate) && !recoveryServer} onClose={() => {}} closeOnBackdrop={false} size="sm" title="Найдена несохранённая копия протокола" footer={<><Button type="button" variant="secondary" onClick={deleteRecovery}>Удалить копию</Button><Button type="button" onClick={() => void restoreRecovery()}>Восстановить</Button></>}><p className="text-sm text-slate-700">Сохранено: {recoveryCandidate ? new Date(recoveryCandidate.envelope.savedAt).toLocaleString('ru-RU') : '—'}</p></Modal>
+    <Modal open={Boolean(recoveryCandidate && recoveryServer)} onClose={() => {}} closeOnBackdrop={false} size="sm" title="Черновик был изменён на сервере" footer={<><Button type="button" variant="secondary" onClick={deleteRecovery}>Удалить локальную копию</Button><Button type="button" variant="secondary" onClick={() => { if (recoveryCandidate && recoveryServer) applyRecoveredDraft(recoveryCandidate.envelope, recoveryServer, true); }}>Открыть локальную копию для сравнения</Button><Button type="button" onClick={() => { if (recoveryServer) { if (recoveryCandidate) sessionStorage.removeItem(recoveryCandidate.key); setServerDraft(recoveryServer); form.reset(mapProtocolToWizardForm(recoveryServer)); setRecoveryCandidate(null); setRecoveryServer(null); } }}>Загрузить серверную версию</Button></>}><p className="text-sm text-slate-700">Серверная версия новее локальной. Автоматическое объединение результатов не выполняется.</p></Modal>
+    <Modal open={newProtocolConfirm} onClose={() => setNewProtocolConfirm(false)} closeOnBackdrop={false} size="sm" title="Начать новый протокол?" footer={<><Button type="button" variant="secondary" onClick={() => setNewProtocolConfirm(false)}>Отмена</Button><Button type="button" onClick={startNewProtocol}>Начать новый протокол</Button></>}><p className="text-sm text-slate-700">Текущий серверный черновик останется в списке. Локальная аварийная копия этого мастера будет удалена.</p></Modal>
   </FormProvider>;
 };
 

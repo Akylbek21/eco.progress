@@ -292,6 +292,10 @@ export interface PekDashboard {
   openExceedanceCount?: number;
   overdueActionCount?: number;
   missingProtocolCount?: number;
+  returnedReportCount?: number;
+  unmatchedSourceCount?: number;
+  ambiguousSourceCount?: number;
+  staleSourceCount?: number;
   deadlines: PekDashboardDeadline[];
   reports: PekReport[];
 }

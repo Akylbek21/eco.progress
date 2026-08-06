@@ -63,6 +63,7 @@ type NormativeSuggestion = Pollutant & {
 };
 
 type SearchState = 'idle' | 'minLength' | 'searching' | 'empty' | 'ready' | 'error';
+export type NormativeSearchMode = 'ACTIVE_ONLY' | 'ALL_STATUSES';
 
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100 disabled:bg-slate-100 disabled:text-slate-500';
 const automaticClass = 'rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700';
@@ -366,6 +367,7 @@ const ProtocolResultsTable = ({
   const [suggestions, setSuggestions] = useState<NormativeSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchState, setSearchState] = useState<SearchState>('idle');
+  const [normativeSearchMode, setNormativeSearchMode] = useState<NormativeSearchMode>('ACTIVE_ONLY');
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkDeviceId, setBulkDeviceId] = useState('');
   const [bulkPlace, setBulkPlace] = useState('');
@@ -409,9 +411,9 @@ const ProtocolResultsTable = ({
   const isWaterProtocol = normalizedTemplateId === 'water';
   const effectiveWaterType = waterType || valueOf(rows[0] || ({ values: {} } as ProtocolResultRow), ['waterType']) || 'DRINKING_WATER';
 
-  const buildNormativeSearchParams = (value: string, page = 0): NormativeSearchParams => ({
+  const buildNormativeSearchParams = (value: string, page = 0, mode: NormativeSearchMode = normativeSearchMode): NormativeSearchParams => ({
       query: value.trim(),
-      status: 'ACTIVE',
+      status: mode === 'ALL_STATUSES' ? 'ALL' : 'ACTIVE',
       templateId: normalizedTemplateId,
       sourceDocumentCode,
       categoryCode: searchContext.categoryCode || undefined,
@@ -437,11 +439,12 @@ const ProtocolResultsTable = ({
     value: string,
     _pollutant?: Pollutant,
     page = 0,
+    mode: NormativeSearchMode = normativeSearchMode,
   ): Promise<NormativeRecord[]> => {
     searchAbortRef.current?.abort();
     const controller = new AbortController();
     searchAbortRef.current = controller;
-    const result = await getNormativesForProtocol(buildNormativeSearchParams(value, page), controller.signal);
+    const result = await getNormativesForProtocol(buildNormativeSearchParams(value, page, mode), controller.signal);
     setNormativePage(result.page);
     setNormativeTotalPages(result.totalPages);
     setNormativeTotalElements(result.totalElements);
@@ -486,9 +489,10 @@ const ProtocolResultsTable = ({
     setSelectedNormative(null);
     setResultValue('');
     setResultDeviceId('');
+    setNormativeSearchMode('ACTIVE_ONLY');
   };
 
-  const searchNormativesForDialog = async (page = 0) => {
+  const searchNormativesForDialog = async (page = 0, mode: NormativeSearchMode = normativeSearchMode) => {
     const value = normativeQuery.trim();
     setSelectedNormative(null);
     if (!canSearchNormative(value)) {
@@ -500,7 +504,7 @@ const ProtocolResultsTable = ({
     setNormativeLoading(true);
     setNormativeSearchDone(false);
     try {
-      const candidates = await searchNormativeCandidates(value, undefined, page);
+      const candidates = await searchNormativeCandidates(value, undefined, page, mode);
       setNormativeResults(candidates);
       setNormativeSearchDone(true);
       if (!candidates.length) onNotify('Норматив не найден. Проверьте код или добавьте норматив в справочник.', 'warning');
@@ -614,6 +618,7 @@ const ProtocolResultsTable = ({
   }, [query, templateId, subtype, objectId, testingDate, isPhysicalFactors, isSoilProtocol, isWaterProtocol, sourceDocumentCode, effectiveWaterType, physicalSubtype, physicalConditions]);
 
   const search = (value: string) => {
+    if (value !== query) setNormativeSearchMode('ACTIVE_ONLY');
     setQuery(value);
   };
 
@@ -1169,6 +1174,9 @@ const ProtocolResultsTable = ({
             <div className="mt-2 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900 sm:flex-row sm:items-center sm:justify-between">
               <span>{isPhysicalFactors ? physicalNormativeNotFoundMessage : notFoundSearchMessage}</span>
               <div className="flex flex-wrap gap-2">
+                {normativeSearchMode === 'ACTIVE_ONLY' && <Button type="button" variant="secondary" className="shrink-0" disabled={readOnly || saving} onClick={() => { setNormativeSearchMode('ALL_STATUSES'); void searchNormativeCandidates(query.trim(), undefined, 0, 'ALL_STATUSES').then((items) => { setSuggestions(items.map(normativeToSuggestion).slice(0, 12)); setSearchState(items.length ? 'ready' : 'empty'); }); }}>
+                  Искать также архивные и требующие проверки
+                </Button>}
                 <Button type="button" variant="secondary" className="shrink-0" disabled={readOnly || saving} onClick={() => openAddDialog(query.trim())}>
                   Выбрать вручную
                 </Button>
@@ -1374,7 +1382,7 @@ const ProtocolResultsTable = ({
               <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
               <input
                 value={normativeQuery}
-                onChange={(event) => setNormativeQuery(event.target.value)}
+                onChange={(event) => { setNormativeQuery(event.target.value); setNormativeSearchMode('ACTIVE_ONLY'); setNormativeSearchDone(false); }}
                 onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void searchNormativesForDialog(0); } }}
                 aria-label="Поиск норматива"
                 placeholder="азот, 0301, NO2, 10102-44-0"
@@ -1383,6 +1391,12 @@ const ProtocolResultsTable = ({
             </label>
             <Button type="button" variant="secondary" disabled={normativeLoading} onClick={() => void searchNormativesForDialog(0)}>Найти</Button>
           </div>
+
+          {normativeSearchDone && normativeResults.length === 0 && normativeSearchMode === 'ACTIVE_ONLY' && (
+            <Button type="button" variant="secondary" disabled={normativeLoading} onClick={() => { setNormativeSearchMode('ALL_STATUSES'); void searchNormativesForDialog(0, 'ALL_STATUSES'); }}>
+              Искать также архивные и требующие проверки
+            </Button>
+          )}
 
           <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
             <table className="min-w-[900px] w-full text-left text-sm">
@@ -1402,10 +1416,11 @@ const ProtocolResultsTable = ({
                   <tr><td colSpan={7} className="px-3 py-8 text-center text-sm font-semibold text-slate-500">Загрузка нормативов...</td></tr>
                 ) : normativeResults.length ? normativeResults.map((item) => {
                   const active = selectedNormative?.id === item.id;
+                  const inactive = normativeSearchMode === 'ALL_STATUSES' && item.status !== 'ACTIVE';
                   return (
-                    <tr key={item.id} onClick={() => setSelectedNormative(item)} className={`cursor-pointer ${active ? 'bg-eco-50' : 'hover:bg-slate-50'}`}>
+                    <tr key={item.id} onClick={() => setSelectedNormative(item)} className={`cursor-pointer ${active ? 'bg-eco-50' : inactive ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-slate-50'}`}>
                       <td className="px-3 py-3 font-black text-eco-800">{item.pollutantCode || item.code || '-'}</td>
-                      <td className="px-3 py-3 font-bold text-slate-900">{item.indicator || item.indicatorName || item.pollutantName || '-'}</td>
+                      <td className="px-3 py-3 font-bold text-slate-900">{item.indicator || item.indicatorName || item.pollutantName || '-'}{inactive && <span className="ml-2 rounded-full bg-amber-200 px-2 py-0.5 text-xs text-amber-900">Неактивный норматив</span>}</td>
                       <td className="px-3 py-3">{item.cas || item.casNumber || '-'}</td>
                       <td className="px-3 py-3">{item.formula || item.chemicalFormula || '-'}</td>
                       <td className="px-3 py-3 font-semibold">{normativeDisplayValue(item) || '-'}</td>

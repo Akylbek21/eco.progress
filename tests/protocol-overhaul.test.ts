@@ -56,8 +56,17 @@ describe('protocol access and draft compatibility', () => {
     expect(requestBody).toEqual({ version: 0, protocolDate: '2026-07-13' });
   });
 
-  it.each(['ADMIN', 'HEAD', 'MANAGER', 'LABORATORY', 'ACCOUNTANT', 'STAFF', 'AUDITOR'])(
-    'does not infer global protocol capabilities from the %s role',
+  it.each(['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'])(
+    'allows protocol creation for backend laboratory role %s without inferring resource view permission',
+    (role) => {
+      const user = { id: 10, role };
+      expect(canViewProtocol(user)).toBe(false);
+      expect(canCreateProtocol(user)).toBe(true);
+    },
+  );
+
+  it.each(['MANAGER', 'ACCOUNTANT', 'ECOLOGIST', 'WASTE_SPECIALIST', 'STAFF', 'AUDITOR'])(
+    'does not infer protocol creation for read-only role %s',
     (role) => {
       const user = { id: 10, role };
       expect(canViewProtocol(user)).toBe(false);

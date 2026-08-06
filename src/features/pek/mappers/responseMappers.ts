@@ -144,6 +144,10 @@ export const mapDashboardResponse = (value: unknown): PekDashboard => {
     openExceedanceCount: optionalNumber(source.openExceedanceCount),
     overdueActionCount: optionalNumber(source.overdueActionCount),
     missingProtocolCount: optionalNumber(source.missingProtocolCount),
+    returnedReportCount: optionalNumber(source.returnedReportCount),
+    unmatchedSourceCount: optionalNumber(source.unmatchedSourceCount),
+    ambiguousSourceCount: optionalNumber(source.ambiguousSourceCount),
+    staleSourceCount: optionalNumber(source.staleSourceCount),
     deadlines: (Array.isArray(source.deadlines) ? source.deadlines : []).map((value) => {
       const deadline = row(value);
       return {

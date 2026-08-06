@@ -9,7 +9,9 @@ import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState, PekStatusBadge } from '../components/common/PekUi';
-import { canUsePekPermission } from '../permissions/pekAccess';
+import PekReportActions from '../components/workflow/PekReportActions';
+import { canEditPekReport } from '../permissions/pekAccess';
+import { mapPekError } from '../utils/pekErrorMapper';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 
 const tabs = [
@@ -19,7 +21,6 @@ const tabs = [
   { key: 'exceedances', label: 'Превышения' },
   { key: 'actions', label: 'Мероприятия' },
   { key: 'documents', label: 'Документы' },
-  { key: 'history', label: 'История' },
 ] as const;
 type TabKey = typeof tabs[number]['key'];
 
@@ -41,6 +42,7 @@ const PekReportWorkspacePage = () => {
   const tab = tabs.some((item) => item.key === requestedTab) ? requestedTab as TabKey : 'overview';
   const [sourceFilter, setSourceFilter] = useState('ALL');
   const [selectedSource, setSelectedSource] = useState<PekReportSource | null>(null);
+  const [controlItemId, setControlItemId] = useState('');
   const [indicatorId, setIndicatorId] = useState('');
   const [excludeSource, setExcludeSource] = useState<PekReportSource | null>(null);
   const [excludeReason, setExcludeReason] = useState('');
@@ -48,44 +50,62 @@ const PekReportWorkspacePage = () => {
   const [returnReason, setReturnReason] = useState('');
   const [collectionSummary, setCollectionSummary] = useState<Awaited<ReturnType<typeof pekApi.collectReport>> | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [readinessBlockers, setReadinessBlockers] = useState<string[]>([]);
+  const [conflictOpen, setConflictOpen] = useState(false);
 
   const report = useQuery({
     queryKey: pekKeys.report(id), queryFn: ({ signal }) => pekApi.getReport(id, signal),
     enabled: Number.isSafeInteger(id) && id > 0, retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS,
   });
   const program = useQuery({
-    queryKey: pekKeys.program(report.data?.programId || 'pending'),
+    queryKey: pekKeys.program(report.data?.programId || 'pending', report.data?.companyId),
     queryFn: ({ signal }) => pekApi.getProgram(report.data!.programId, signal),
     enabled: Boolean(report.data?.programId), retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS,
   });
   const sources = useQuery({
-    queryKey: pekKeys.reportSources(id, sourceFilter === 'ALL' ? {} : sourceFilter === 'EXCLUDED' ? { excluded: true } : { matchStatus: sourceFilter }),
+    queryKey: pekKeys.reportSources(id, sourceFilter === 'ALL' ? {} : sourceFilter === 'EXCLUDED' ? { excluded: true } : { matchStatus: sourceFilter }, report.data?.companyId),
     queryFn: ({ signal }) => pekApi.getReportSources(id, sourceFilter === 'ALL' ? {} : sourceFilter === 'EXCLUDED' ? { excluded: true } : { matchStatus: sourceFilter }, signal),
     enabled: Boolean(report.data) && tab === 'sources', retry: retryPekQuery,
   });
   const sourceSummary = useQuery({
-    queryKey: pekKeys.reportSourcesSummary(id), queryFn: ({ signal }) => pekApi.getReportSourcesSummary(id, signal),
+    queryKey: pekKeys.reportSourcesSummary(id, report.data?.companyId), queryFn: ({ signal }) => pekApi.getReportSourcesSummary(id, signal),
     enabled: Boolean(report.data), retry: retryPekQuery,
   });
   const planFact = useQuery({
-    queryKey: pekKeys.planFact(id), queryFn: ({ signal }) => pekApi.getReportPlanFact(id, signal),
+    queryKey: pekKeys.planFact(id, report.data?.companyId), queryFn: ({ signal }) => pekApi.getReportPlanFact(id, signal),
     enabled: Boolean(report.data) && ['overview', 'plan-fact', 'exceedances'].includes(tab), retry: retryPekQuery,
   });
   const readiness = useQuery({
-    queryKey: pekKeys.readiness(id), queryFn: ({ signal }) => pekApi.getReportReadiness(id, signal),
+    queryKey: pekKeys.readiness(id, report.data?.companyId), queryFn: ({ signal }) => pekApi.getReportReadiness(id, signal),
     enabled: Boolean(report.data) && tab === 'overview', retry: retryPekQuery,
   });
 
   const invalidateReportData = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: pekKeys.report(id) }),
-      queryClient.invalidateQueries({ queryKey: pekKeys.reportSourcesRoot(id) }),
-      queryClient.invalidateQueries({ queryKey: pekKeys.reportSourcesSummary(id) }),
-      queryClient.invalidateQueries({ queryKey: pekKeys.planFact(id) }),
-      queryClient.invalidateQueries({ queryKey: pekKeys.readiness(id) }),
-      queryClient.invalidateQueries({ queryKey: ['pek', 'dashboard'] }),
-      queryClient.invalidateQueries({ queryKey: ['pek', 'reports'] }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportSourcesRoot(id, report.data?.companyId) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportSourcesSummary(id, report.data?.companyId) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.planFact(id, report.data?.companyId) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.readiness(id, report.data?.companyId) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.dashboardRoot(report.data?.companyId) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportsRoot(report.data?.companyId) }),
     ]);
+  };
+  const handleMutationError = async (error: unknown, fallback: string) => {
+    const mapped = mapPekError(error);
+    if (mapped.code === 'PEK_REPORT_NOT_EDITABLE') {
+      await report.refetch();
+      setActionError('Отчёт уже перешёл в статус, в котором изменения запрещены');
+      return;
+    }
+    if (mapped.code === 'OPTIMISTIC_LOCK_CONFLICT' || mapped.code === 'PEK_VERSION_CONFLICT') {
+      setConflictOpen(true);
+      setActionError('Данные были изменены другим пользователем');
+      return;
+    }
+    setActionError(mapped.message || fallback);
   };
   const refreshAfterWorkflow = async (expected: string[]) => {
     const actual = await pekApi.getReport(id);
@@ -120,39 +140,36 @@ const PekReportWorkspacePage = () => {
   const match = useMutation({
     mutationFn: () => pekApi.matchReportSource(id, selectedSource!.id, Number(indicatorId), selectedSource!.version),
     onSuccess: async () => { setSelectedSource(null); setIndicatorId(''); setActionError(null); await invalidateReportData(); },
-    onError: (error) => setActionError(parseApiError(error, 'Не удалось сопоставить результат.').message),
+    onError: (error) => void handleMutationError(error, 'Не удалось сопоставить результат.'),
   });
   const exclude = useMutation({
     mutationFn: () => pekApi.excludeReportSource(id, excludeSource!.id, excludeReason.trim(), excludeSource!.version),
     onSuccess: async () => { setExcludeSource(null); setExcludeReason(''); setActionError(null); await invalidateReportData(); },
-    onError: (error) => setActionError(parseApiError(error, 'Не удалось исключить источник.').message),
+    onError: (error) => void handleMutationError(error, 'Не удалось исключить источник.'),
   });
   const restore = useMutation({
     mutationFn: (source: PekReportSource) => pekApi.restoreReportSource(id, source.id, source.version),
     onSuccess: invalidateReportData,
-    onError: (error) => setActionError(parseApiError(error, 'Не удалось восстановить источник.').message),
+    onError: (error) => void handleMutationError(error, 'Не удалось восстановить источник.'),
   });
 
   const indicators = useMemo(() => program.data?.indicators || [], [program.data?.indicators]);
+  const controlItems = useMemo(() => program.data?.controlItems || [], [program.data?.controlItems]);
+  const filteredIndicators = useMemo(() => indicators.filter((indicator) => String(indicator.controlItemId || '') === controlItemId), [controlItemId, indicators]);
   if (report.isLoading) return <PekLoading />;
   if (report.isError || !report.data) return <PekQueryError error={report.error} resource="отчёт ПЭК" retry={() => void report.refetch()} />;
   const item = report.data;
   const actions = item.availableActions || {};
-  const canEdit = canUsePekPermission(user, 'PEK_REPORT_EDIT');
-  const canReview = canUsePekPermission(user, 'PEK_REPORT_REVIEW');
+  const canMutateSources = actions.matchSources === true && canEditPekReport(user, item);
   const pending = collect.isPending || submitReview.isPending || returnReport.isPending || approve.isPending || archive.isPending;
   const setTab = (nextTab: TabKey) => { const next = new URLSearchParams(params); nextTab === 'overview' ? next.delete('tab') : next.set('tab', nextTab); setParams(next, { replace: true }); };
 
   return <div className="space-y-5">
     <PekPageHeader title={`Отчёт ПЭК за ${item.periodStart} — ${item.periodEnd}`} description={`${item.company?.name || 'Компания не указана'} · ${item.object?.name || 'Объект не указан'} · версия ${item.version}`} actions={<PekStatusBadge status={item.status} />} />
     {actionError && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void report.refetch()}>Обновить данные</MuiButton>}>{actionError}</Alert>}
-    <div className="flex flex-wrap gap-2">
-      {actions.collect && canEdit && <MuiButton variant="contained" disabled={pending} onClick={() => collect.mutate()}>Собрать данные из протоколов</MuiButton>}
-      {actions.submitReview && canUsePekPermission(user, 'PEK_REPORT_SUBMIT') && <MuiButton variant="contained" disabled={pending || readiness.isFetching || readiness.data?.ready === false} onClick={() => submitReview.mutate(item)}>Отправить на проверку</MuiButton>}
-      {actions.returnForRevision && canReview && <MuiButton color="warning" variant="outlined" disabled={pending} onClick={() => setReturnOpen(true)}>Вернуть на доработку</MuiButton>}
-      {actions.approve && canReview && <MuiButton variant="contained" disabled={pending} onClick={() => approve.mutate(item)}>Утвердить</MuiButton>}
-      {actions.archive && canReview && <MuiButton variant="outlined" disabled={pending} onClick={() => archive.mutate(item)}>Архивировать</MuiButton>}
-    </div>
+    <PekReportActions report={item} user={user} isPending={pending} readinessPending={readiness.isFetching} readinessBlocked={readiness.data?.ready === false} onCollect={() => collect.mutate()} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => void pekApi.getReportReadiness(id).then((latest) => { queryClient.setQueryData(pekKeys.readiness(id, item.companyId), latest); const blockers = latest.issues.filter((issue) => issue.blocking).map((issue) => issue.message); setReadinessBlockers(blockers); if (!blockers.length) setApproveConfirmOpen(true); }).catch((error) => void handleMutationError(error, 'Не удалось проверить готовность отчёта.'))} onArchive={() => setArchiveConfirmOpen(true)} />
+    {item.status === 'RETURNED' && <Alert severity="warning"><strong>Отчёт возвращён на доработку.</strong> Текущая версия: {item.version}. Причина, автор и дата возврата отсутствуют в ответе сервиса.</Alert>}
+    {readinessBlockers.length > 0 && <Alert severity="error"><strong>Отчёт содержит блокирующие проблемы:</strong><ul className="mt-2 list-disc pl-5">{readinessBlockers.map((message) => <li key={message}>{message}</li>)}</ul></Alert>}
     {collectionSummary && <Alert severity={collectionSummary.warnings.length ? 'warning' : 'success'}>
       Найдено протоколов: {collectionSummary.linkedProtocolCount}. Сопоставлено: {collectionSummary.matchedCount}. Не сопоставлено: {collectionSummary.unmatchedCount}. Неоднозначно: {collectionSummary.ambiguousCount}. Устаревших связей удалено: {collectionSummary.removedStaleSourceCount}.
       {collectionSummary.warnings.length > 0 && <ul className="mt-2 list-disc pl-5">{collectionSummary.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
@@ -174,18 +191,19 @@ const PekReportWorkspacePage = () => {
 
     {tab === 'sources' && <section className="space-y-4 rounded-2xl border bg-white p-5">
       <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-black">Источники данных</h2><p className="text-sm text-slate-600">Только фактически сохранённые backend связи отчёта.</p></div><TextField select size="small" label="Статус" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)} sx={{ minWidth: 220 }}><MenuItem value="ALL">Все</MenuItem><MenuItem value="MATCHED">Сопоставленные</MenuItem><MenuItem value="MANUALLY_MATCHED">Сопоставленные вручную</MenuItem><MenuItem value="UNMATCHED">Несопоставленные</MenuItem><MenuItem value="AMBIGUOUS">Неоднозначные</MenuItem><MenuItem value="STALE">Устаревшие</MenuItem><MenuItem value="EXCLUDED">Исключённые</MenuItem></TextField></div>
-      {sources.isLoading ? <PekLoading /> : sources.isError ? <PekQueryError error={sources.error} resource="источники отчёта" retry={() => void sources.refetch()} /> : !sources.data?.length ? <PekState title="Источники не найдены" message="Запустите сбор данных или измените фильтр." /> : <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm"><thead><tr className="border-b text-left"><th className="p-2">Протокол</th><th>Показатель программы</th><th>Ед.</th><th>Позиция</th><th>Статус</th><th>Причина</th><th>Действия</th></tr></thead><tbody>{sources.data.map((source) => <tr key={source.id} className={`border-b ${source.excluded ? 'bg-slate-100 text-slate-500' : ''}`}><td className="p-2">№ {source.protocolNumber}</td><td>{source.indicatorName || 'Не сопоставлен'}</td><td>{source.unit || '—'}</td><td>{source.controlItemId || '—'}</td><td>{source.excluded ? 'Исключён' : matchLabels[source.matchStatus] || source.matchStatus}</td><td>{source.exclusionReason || source.matchReason || '—'}</td><td><div className="flex flex-wrap gap-2">{!source.excluded && ['UNMATCHED', 'AMBIGUOUS'].includes(source.matchStatus) && actions.matchSources && canEdit && <MuiButton size="small" onClick={() => { setSelectedSource(source); setIndicatorId(''); }}>Сопоставить вручную</MuiButton>}{!source.excluded && canEdit && <MuiButton size="small" color="error" onClick={() => setExcludeSource(source)}>Исключить</MuiButton>}{source.excluded && canEdit && <MuiButton size="small" disabled={restore.isPending} onClick={() => restore.mutate(source)}>Восстановить</MuiButton>}</div></td></tr>)}</tbody></table></div>}
+      {sources.isLoading ? <PekLoading /> : sources.isError ? <PekQueryError error={sources.error} resource="источники отчёта" retry={() => void sources.refetch()} /> : !sources.data?.length ? <PekState title="Источники не найдены" message="Запустите сбор данных или измените фильтр." /> : <div className="max-h-[65vh] overflow-auto"><table className="w-full min-w-[1100px] text-sm"><thead className="sticky top-0 z-10 bg-white"><tr className="border-b text-left"><th className="p-2">Протокол</th><th>Исходный результат</th><th>Показатель программы</th><th>Ед.</th><th>Позиция</th><th>Статус</th><th>Причина</th><th>Обновлено</th><th>Действия</th></tr></thead><tbody>{sources.data.map((source) => <tr key={source.id} className={`border-b ${source.excluded || source.matchStatus === 'STALE' ? 'bg-slate-100 text-slate-500' : ''}`}><td className="p-2">№ {source.protocolNumber}</td><td>Результат № {source.protocolResultId}</td><td>{source.indicatorName || 'Не сопоставлен'}</td><td>{source.unit || '—'}</td><td>{source.controlItemId || '—'}</td><td>{source.matchStatus === 'STALE' ? 'Устаревшая связь · системно исключён' : source.excluded ? 'Исключён' : matchLabels[source.matchStatus] || source.matchStatus}</td><td>{source.matchStatus === 'STALE' ? 'Источник больше не соответствует условиям отчёта и не участвует в расчётах' : source.exclusionReason || source.matchReason || '—'}</td><td>{source.updatedAt || '—'}</td><td><div className="flex flex-wrap gap-2">{canMutateSources && !source.excluded && ['UNMATCHED', 'AMBIGUOUS'].includes(source.matchStatus) && <MuiButton size="small" onClick={() => { setSelectedSource(source); setControlItemId(''); setIndicatorId(''); }}>Сопоставить вручную</MuiButton>}{canMutateSources && !source.excluded && source.matchStatus !== 'STALE' && <MuiButton size="small" color="error" onClick={() => setExcludeSource(source)}>Исключить</MuiButton>}{canMutateSources && source.excluded && source.matchStatus !== 'STALE' && <MuiButton size="small" disabled={restore.isPending} onClick={() => restore.mutate(source)}>Восстановить</MuiButton>}</div></td></tr>)}</tbody></table></div>}
     </section>}
 
     {tab === 'plan-fact' && <PlanFactContent loading={planFact.isLoading} error={planFact.error} data={planFact.data} retry={() => void planFact.refetch()} />}
     {tab === 'exceedances' && <section className="rounded-2xl border bg-white p-5"><h2 className="font-black">Превышения</h2>{planFact.isLoading ? <PekLoading /> : planFact.data?.items.some((row) => row.hasExceedance) ? <div className="mt-4 overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th>Позиция</th><th>Показатель</th><th>Норматив</th><th>Худшее значение</th><th>Количество</th></tr></thead><tbody>{planFact.data.items.filter((row) => row.hasExceedance).map((row) => <tr key={row.planFactRowId} className="border-b"><td className="py-3">{row.controlItemName}</td><td>{row.indicatorName}</td><td>{row.normativeValue ?? '—'}</td><td>{row.worstValue ?? '—'}</td><td>{row.exceedanceCount}</td></tr>)}</tbody></table></div> : <PekState title="Превышения не обнаружены" message="Показаны только результаты, рассчитанные backend plan/fact." />}</section>}
     {tab === 'actions' && <PekState title="Мероприятия отчёта недоступны" message="В актуальном backend нет API корректирующих мероприятий отчёта. Данные не подменяются локальной таблицей." />}
     {tab === 'documents' && <PekState title="Документы отчёта недоступны" message="В актуальном backend нет API документов отчёта. Документы программы доступны в карточке программы." />}
-    {tab === 'history' && <PekState title="История отчёта недоступна" message="Backend предоставляет историю программ, но не отдельную историю отчётов." />}
-
-    <Dialog open={Boolean(selectedSource)} onClose={() => !match.isPending && setSelectedSource(null)} fullWidth maxWidth="sm"><DialogTitle>Сопоставить результат вручную</DialogTitle><DialogContent className="space-y-4"><Alert severity="info">Протокол № {selectedSource?.protocolNumber}. Исходный результат: {selectedSource?.protocolResultId}. Backend не возвращает название и значение исходного показателя в DTO источника.</Alert><TextField select fullWidth margin="normal" label="Показатель программы" value={indicatorId} onChange={(event) => setIndicatorId(event.target.value)}>{indicators.map((indicator) => <MenuItem key={indicator.id} value={indicator.id}>{indicator.indicatorName} · {indicator.unit || 'без единицы'}</MenuItem>)}</TextField></DialogContent><DialogActions><MuiButton onClick={() => setSelectedSource(null)}>Отмена</MuiButton><MuiButton variant="contained" disabled={!indicatorId || match.isPending} onClick={() => match.mutate()}>Сопоставить</MuiButton></DialogActions></Dialog>
+    <Dialog open={Boolean(selectedSource)} onClose={() => !match.isPending && setSelectedSource(null)} fullWidth maxWidth="sm"><DialogTitle>Сопоставить результат вручную</DialogTitle><DialogContent className="space-y-4"><Alert severity="info">Протокол № {selectedSource?.protocolNumber}. Исходный результат № {selectedSource?.protocolResultId}. Значение, норматив, место отбора и методика не предоставлены сервисом источников.</Alert><TextField select fullWidth margin="normal" label="Позиция программы" value={controlItemId} onChange={(event) => { setControlItemId(event.target.value); setIndicatorId(''); }}>{controlItems.map((controlItem) => <MenuItem key={controlItem.id} value={controlItem.id}>{controlItem.code} · {controlItem.name}</MenuItem>)}</TextField><TextField select fullWidth margin="normal" label="Показатель программы" value={indicatorId} disabled={!controlItemId} onChange={(event) => setIndicatorId(event.target.value)}>{filteredIndicators.map((indicator) => <MenuItem key={indicator.id} value={indicator.id}>{indicator.indicatorName} · {indicator.unit || 'без единицы'}</MenuItem>)}</TextField></DialogContent><DialogActions><MuiButton onClick={() => setSelectedSource(null)}>Отмена</MuiButton><MuiButton variant="contained" disabled={!controlItemId || !indicatorId || match.isPending} onClick={() => match.mutate()}>Сопоставить</MuiButton></DialogActions></Dialog>
     <Dialog open={Boolean(excludeSource)} onClose={() => !exclude.isPending && setExcludeSource(null)} fullWidth maxWidth="sm"><DialogTitle>Исключить источник из отчёта</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина исключения *" value={excludeReason} onChange={(event) => setExcludeReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setExcludeSource(null)}>Отмена</MuiButton><MuiButton color="error" variant="contained" disabled={!excludeReason.trim() || exclude.isPending} onClick={() => exclude.mutate()}>Исключить</MuiButton></DialogActions></Dialog>
     <Dialog open={returnOpen} onClose={() => !returnReport.isPending && setReturnOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Вернуть отчёт на доработку</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина возврата *" value={returnReason} onChange={(event) => setReturnReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setReturnOpen(false)}>Отмена</MuiButton><MuiButton color="warning" variant="contained" disabled={!returnReason.trim() || returnReport.isPending} onClick={() => returnReport.mutate(item)}>Вернуть</MuiButton></DialogActions></Dialog>
+    <Dialog open={approveConfirmOpen} onClose={() => !approve.isPending && setApproveConfirmOpen(false)}><DialogTitle>Утвердить отчёт?</DialogTitle><DialogContent><Alert severity="success">Актуальная проверка готовности не содержит блокирующих проблем.</Alert></DialogContent><DialogActions><MuiButton onClick={() => setApproveConfirmOpen(false)}>Отмена</MuiButton><MuiButton variant="contained" disabled={approve.isPending} onClick={() => { setApproveConfirmOpen(false); approve.mutate(item); }}>Утвердить</MuiButton></DialogActions></Dialog>
+    <Dialog open={archiveConfirmOpen} onClose={() => !archive.isPending && setArchiveConfirmOpen(false)}><DialogTitle>Архивировать отчёт?</DialogTitle><DialogContent><Alert severity="warning">После архивирования изменение отчёта и его источников будет недоступно.</Alert></DialogContent><DialogActions><MuiButton onClick={() => setArchiveConfirmOpen(false)}>Отмена</MuiButton><MuiButton variant="contained" disabled={archive.isPending} onClick={() => { setArchiveConfirmOpen(false); archive.mutate(item); }}>Архивировать</MuiButton></DialogActions></Dialog>
+    <Dialog open={conflictOpen} onClose={() => setConflictOpen(false)}><DialogTitle>Данные были изменены другим пользователем</DialogTitle><DialogContent>Загрузите актуальную версию отчёта. Старый запрос не будет отправлен повторно автоматически.</DialogContent><DialogActions><MuiButton onClick={() => setConflictOpen(false)}>Отменить мои несохранённые изменения</MuiButton><MuiButton variant="contained" onClick={() => { setConflictOpen(false); void report.refetch(); }}>Обновить данные</MuiButton></DialogActions></Dialog>
   </div>;
 };
 
