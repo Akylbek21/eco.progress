@@ -73,10 +73,10 @@ test('laboratory activity, default and employee removal avoid unsupported endpoi
   assert.doesNotMatch(service, /canExecuteMeasurements, true/);
 });
 
-test('company restore operations and normalized object count are canonical', async () => {
+test('company restore operations and current backend object count are canonical', async () => {
   const service = await read('src/services/companyService.ts');
   assert.match(service, /restoreCompany/);
   assert.match(service, /restoreCompanyObject/);
-  assert.match(service, /source\.objectCount/);
-  assert.doesNotMatch(service, /objectsCount|facilityCount/);
+  assert.match(service, /source\.objectsCount \?\? source\.objectCount/);
+  assert.doesNotMatch(service, /facilityCount/);
 });

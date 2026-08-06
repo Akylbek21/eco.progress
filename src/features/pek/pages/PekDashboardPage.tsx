@@ -10,10 +10,10 @@ import { PekLoading, PekPageHeader, PekState, PekStatusBadge } from '../componen
 import { pekStatusLabels } from '../utils/pekLabels';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 
-const statuses: PekReportStatus[] = ['DRAFT', 'COLLECTING', 'READY_FOR_REVIEW', 'APPROVED', 'ARCHIVED'];
+const statuses: PekReportStatus[] = ['DRAFT', 'COLLECTING', 'READY_FOR_REVIEW', 'RETURNED', 'APPROVED', 'ARCHIVED'];
 const metricDefinitions = [
   ['criticalIssueCount', 'Требуют внимания', '', '/staff/pek/reports'],
-  ['overdueRiskCount', 'Просроченные измерения', '', '/staff/pek/programs'],
+  ['overdueRiskCount', 'Срок заканчивается в ближайшие 30 дней', '', '/staff/pek/programs'],
   ['missingProtocolCount', 'Отсутствующие протоколы', '', '/staff/pek/reports'],
   ['openExceedanceCount', 'Открытые превышения', '', '/staff/pek/reports'],
   ['overdueActionCount', 'Просроченные мероприятия', '', '/staff/pek/programs'],
@@ -21,6 +21,7 @@ const metricDefinitions = [
   ['programExecutionPercent', 'Выполнение программ', '%', '/staff/pek/programs'],
   ['totalReportCount', 'Отчёты за период', '', '/staff/pek/reports'],
 ] as const;
+const currentlyUnsupportedZeroMetrics = new Set(['criticalIssueCount', 'missingProtocolCount', 'openExceedanceCount', 'overdueActionCount']);
 
 const PekDashboardPage = () => {
   const [params, setParams] = useSearchParams();
@@ -107,8 +108,8 @@ const PekDashboardPage = () => {
               {metricDefinitions.map(([key, label, suffix, path]) => (
                 <article key={key} className="rounded-2xl border bg-white p-5">
                   <p className="text-sm text-slate-500">{label}</p>
-                  <p className="mt-2 text-3xl font-black text-eco-900">{dashboard.data[key] == null ? <span className="text-lg text-slate-500">Нет данных</span> : `${dashboard.data[key]}${suffix}`}</p>
-                  {dashboard.data[key] != null && <Link className="mt-3 inline-block text-xs font-bold text-eco-700" to={`${path}?${new URLSearchParams({ ...(filters.companyId ? { companyId: String(filters.companyId) } : {}), ...(filters.objectId ? { objectId: String(filters.objectId) } : {}), ...(filters.year ? { year: String(filters.year) } : {}) })}`}>Открыть</Link>}
+                  <p className="mt-2 text-3xl font-black text-eco-900" title={currentlyUnsupportedZeroMetrics.has(key) && dashboard.data[key] === 0 ? 'Показатель пока не рассчитан backend' : undefined}>{dashboard.data[key] == null || (currentlyUnsupportedZeroMetrics.has(key) && dashboard.data[key] === 0) ? <span className="text-lg text-slate-500">—</span> : `${dashboard.data[key]}${suffix}`}</p>
+                  {dashboard.data[key] != null && !(currentlyUnsupportedZeroMetrics.has(key) && dashboard.data[key] === 0) && <Link className="mt-3 inline-block text-xs font-bold text-eco-700" to={`${path}?${new URLSearchParams({ ...(filters.companyId ? { companyId: String(filters.companyId) } : {}), ...(filters.objectId ? { objectId: String(filters.objectId) } : {}), ...(filters.year ? { year: String(filters.year) } : {}) })}`}>Открыть</Link>}
                 </article>
               ))}
             </section>

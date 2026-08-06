@@ -114,8 +114,8 @@ export const normalizeCompany = (raw: unknown): CompanyDetails => {
     samplingLocation: pick(source, ['samplingLocation', 'samplingPlace']),
     customerRepresentative: pick(source, ['customerRepresentative', 'clientRepresentative']),
     objects,
-    objectCount: numberValue(source.objectCount, objects.filter((item) => item.status === 'ACTIVE').length),
-    status: archived(source.status ?? source.active) ? 'ARCHIVED' : 'ACTIVE',
+    objectCount: numberValue(source.objectsCount ?? source.objectCount, objects.filter((item) => item.status === 'ACTIVE').length),
+    status: source.archived === true || archived(source.status ?? source.active) ? 'ARCHIVED' : 'ACTIVE',
     createdAt: pick(source, ['createdAt', 'created_at']),
     updatedAt: pick(source, ['updatedAt', 'updated_at']),
   };

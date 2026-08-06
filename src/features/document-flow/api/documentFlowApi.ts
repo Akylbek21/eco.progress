@@ -2,12 +2,11 @@ import type { AxiosProgressEvent } from 'axios';
 import api from '../../../services/api';
 import { unwrapApiResponse, type ApiResponse } from '../../../services/apiHelpers';
 import type {
-  AccessContext, AuditEvent, AvailableAction, Counterparty, CounterpartyListParams, CreateCounterpartyRequest, CreateDocumentRequest, CreateMemberRequest, DashboardResponse, DocumentAttachment,
+  AccessContext, AccessRequestPayload, AuditEvent, AvailableAction, Counterparty, CounterpartyListParams, CreateCounterpartyRequest, CreateDocumentRequest, CreateMemberRequest, DashboardResponse, DocumentAttachment,
   DocumentFlowMember, DocumentFlowOrganization, MemberListParams, MembershipRole, MyAssignment,
   DocumentDetail, DocumentFilters, DocumentListItem, DocumentSignature, DocumentTypeConfig,
-  DocumentVersion, PageResponse, PlanAdmin, PublicInvitation, PublicPlan, Representative,
-  RevocationRequest, SigningRoute, SigningRouteRequest, SubscriptionAdmin, UpdateCounterpartyRequest, UpdateDocumentRequest,
-  UsageMetric,
+  DocumentVersion, PageResponse, PublicInvitation, PublicPlan, Representative,
+  RevocationRequest, SigningRoute, SigningRouteRequest, UpdateCounterpartyRequest, UpdateDocumentRequest,
 } from '../model/types';
 import {
   accessContextSchema, documentDetailSchema, documentFlowOrganizationsSchema, documentListItemSchema, pageSchema, publicInvitationSchema, signingRouteSchema,
@@ -123,10 +122,7 @@ export const documentFlowApi = {
     unwrap<PublicPlan[]>(await api.get('/public/document-flow/plans', { signal })),
   plan: async (code: string, signal?: AbortSignal) =>
     unwrap<PublicPlan>(await api.get(`/public/document-flow/plans/${encodeURIComponent(code)}`, { signal })),
-  requestAccess: async (payload: {
-    contactName: string; phone?: string; email?: string; planCode?: string;
-    membersCount?: number; comment?: string;
-  }) => unwrap(await api.post('/document-flow/access-requests', payload)),
+  requestAccess: async (payload: AccessRequestPayload) => unwrap(await api.post('/document-flow/access-requests', payload)),
   dashboard: async (organizationId?: number, signal?: AbortSignal) =>
     unwrap<DashboardResponse>(await api.get('/document-flow/dashboard', { params: compact({ organizationId }), signal })),
   documentTypes: async (signal?: AbortSignal) =>
@@ -299,30 +295,4 @@ export const publicDocumentFlowApi = {
     unwrap<DocumentSignature>(await api.post(`/public/document-flow/signing/${encodeURIComponent(token)}/sign`, payload)),
   reject: async (token: string, reason: string) =>
     api.post(`/public/document-flow/signing/${encodeURIComponent(token)}/reject`, { reason }),
-};
-
-export const adminDocumentFlowApi = {
-  plans: async (signal?: AbortSignal) =>
-    unwrap<PlanAdmin[]>(await api.get('/admin/document-flow/plans', { signal })),
-  createPlan: async (payload: object) =>
-    unwrap<PlanAdmin>(await api.post('/admin/document-flow/plans', payload)),
-  updatePlan: async (id: number, payload: object) =>
-    unwrap<PlanAdmin>(await api.patch(`/admin/document-flow/plans/${id}`, payload)),
-  subscriptions: async (signal?: AbortSignal) =>
-    unwrap<SubscriptionAdmin[]>(await api.get('/admin/document-flow/subscriptions', { signal })),
-  subscription: async (organizationId: number) =>
-    unwrap<SubscriptionAdmin>(await api.get(`/admin/document-flow/subscriptions/${organizationId}`)),
-  subscriptionAction: async (
-    organizationId: number,
-    action: 'extend' | 'suspend' | 'restore' | 'revoke' | 'change-plan' | 'limits' | 'entitlements',
-    payload: object,
-  ) => unwrap<AccessContext>(await api.post(`/admin/document-flow/subscriptions/${organizationId}/${action}`, payload)),
-  grantAccess: async (payload: {
-    organizationId: number; planCode: string; startsAt: string; expiresAt?: string;
-    graceEndsAt?: string; paymentMode: string; paymentReference?: string; reason?: string;
-    limits?: Partial<Record<UsageMetric, number>>;
-  }, idempotencyKey: string) =>
-    unwrap<AccessContext>(await api.post('/admin/document-flow/access-grants', payload, {
-      headers: { 'Idempotency-Key': idempotencyKey },
-    })),
 };

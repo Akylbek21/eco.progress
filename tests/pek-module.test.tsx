@@ -19,9 +19,10 @@ import {
 } from '../src/features/pek/mappers/reportMappers';
 import { labelPekStatus } from '../src/features/pek/utils/pekLabels';
 import { pekProgramFormSchema } from '../src/features/pek/validation/programSchema';
-import { pekDraftKey } from '../src/features/pek/utils/pekDraftStorage';
+import { migrateLegacyDraft, pekDraftKey } from '../src/features/pek/utils/pekDraftStorage';
 import { currentQuarter } from '../src/features/pek/utils/pekPeriod';
 import { hasPermission } from '../src/config/permissions';
+import { comparisonTypeLabels, migrateComparisonType } from '../src/features/pek/model/pekDictionaries';
 
 let body: unknown;
 let ifMatch: string | null;
@@ -83,8 +84,28 @@ const server = setupServer(
       report,
       linkedProtocolCount: 2,
       linkedProtocolNumbers: ['P-READY', 'P-SIGNED'],
+      protocolResultCount: 5,
+      matchedCount: 3,
+      unmatchedCount: 1,
+      ambiguousCount: 1,
+      removedStaleSourceCount: 2,
+      updatedSourceCount: 4,
+      warnings: ['Проверьте ручную связь'],
     } });
   }),
+  http.get('*/api/pek/reports/:id/sources', () => HttpResponse.json({ data: [{ id: 31, protocolId: 4, protocolNumber: 'P-4', protocolResultId: 8, matchStatus: 'UNMATCHED', manual: false, excluded: false, sourceVersion: 1, version: 2 }] })),
+  http.get('*/api/pek/reports/:id/sources/summary', () => HttpResponse.json({ data: { linkedProtocolCount: 1, linkedResultCount: 1, unmatchedResultCount: 1, ambiguousResultCount: 0, staleResultCount: 0, excludedResultCount: 0 } })),
+  http.get('*/api/pek/reports/:id/plan-fact', () => HttpResponse.json({ data: { summary: { planned: 1, completed: 0, missing: 1, completionPercent: 0, exceedances: 0 }, items: [] } })),
+  http.get('*/api/pek/reports/:id/readiness', () => HttpResponse.json({ data: { ready: false, progressPercent: 0, summary: { planned: 1, completed: 0, missing: 1, unmatched: 1, ambiguous: 0, stale: 0, openExceedances: 0, overdueActions: 0 }, issues: [{ code: 'UNMATCHED_SOURCES', section: 'SOURCES', severity: 'ERROR', message: 'Есть несопоставленные результаты: 1', blocking: true }] } })),
+  http.post('*/api/pek/reports/:reportId/sources/:sourceId/match', async ({ request }) => {
+    body = await request.json();
+    return HttpResponse.json({ data: { id: 31, protocolId: 4, protocolNumber: 'P-4', protocolResultId: 8, matchStatus: 'MANUALLY_MATCHED', manual: true, excluded: false, sourceVersion: 1, version: 3 } });
+  }),
+  http.post('*/api/pek/reports/:id/return', async ({ request }) => {
+    body = await request.json();
+    return HttpResponse.json({ data: { ...report, status: 'RETURNED', version: 14 } });
+  }),
+  http.get('*/api/pek/settings', () => HttpResponse.json({ data: { companyId: 1, defaultResponsibleUserId: null, defaultLaboratoryId: null, defaultReportType: 'QUARTERLY', autoCollectProtocols: false, includeOnlySignedProtocols: true, allowFallbackMatching: true, requireManualAmbiguousConfirmation: true, requireAllPlanFactItems: true, blockSubmitWithUnmatchedResults: true, blockSubmitWithAmbiguousResults: true, blockSubmitWithStaleSources: true, blockSubmitWithOpenExceedances: true, notifyBeforeDeadlineDays: 7, notifyMissingProtocols: true, notifyExceedances: true, notifyReportReturned: true, version: 0, availableActions: { view: true, edit: true }, capabilities: { automaticCollectionSupported: false } } })),
   http.get('*/api/pek/dashboard', () => HttpResponse.json({ data: {
     totalReportCount: 0,
     readinessPercent: 0,
@@ -122,7 +143,7 @@ const form: PekProgramForm = {
     clientId: 'control-a',
     code: 'AIR-1',
     name: 'Air',
-    controlType: 'EMISSIONS',
+    controlType: 'EMISSION',
     frequencyType: 'QUARTERLY',
     mandatory: true,
     active: true,
@@ -133,7 +154,7 @@ const form: PekProgramForm = {
     controlItemClientId: 'control-a',
     indicatorName: 'NO2',
     unit: 'mg/m3',
-    comparisonType: 'MAX',
+    comparisonType: 'LESS_OR_EQUAL',
     normativeValue: 10,
     mandatory: true,
     sortOrder: 0,
@@ -184,9 +205,9 @@ describe('PEK backend contract', () => {
     expect(ifMatch).toBe('12');
   });
 
-  it('does not derive report workflow actions from status', () => {
+  it('uses report availableActions instead of deriving actions from status', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
-    expect(source).not.toContain('availableActions');
+    expect(source).toContain('availableActions');
     expect(source).not.toContain("status ===");
   });
 
@@ -272,10 +293,23 @@ describe('PEK backend contract', () => {
     expect(valid.success).toBe(true);
   });
 
-  it('does not grant PEK permission from a staff role fallback', () => {
-    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(false);
+  it('uses the confirmed backend role matrix when UserResponse omits permissions', () => {
+    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(true);
+    expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(true);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: ['PEK_VIEW'] }, 'PEK_VIEW')).toBe(true);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: [] }, 'PEK_PROGRAM_CREATE')).toBe(false);
+  });
+
+  it('maps only backend comparison enums and migrates an old draft', () => {
+    expect(migrateComparisonType('MAX')).toBe('LESS_OR_EQUAL');
+    expect(migrateComparisonType('MIN')).toBe('GREATER_OR_EQUAL');
+    expect(migrateComparisonType('INFORMATIONAL')).toBe('INFO');
+    expect(comparisonTypeLabels.LESS_OR_EQUAL).toBe('Не более');
+    const migrated = migrateLegacyDraft({
+      key: 'legacy', contractVersion: 1, backendVersion: 'new', savedAt: '2026-08-06T00:00:00Z',
+      form: { indicators: [{ comparisonType: 'MAX' }] },
+    });
+    expect(migrated?.form.indicators[0].comparisonType).toBe('LESS_OR_EQUAL');
   });
 
   it('scopes local draft keys by user, entity, company and server version', () => {
@@ -293,6 +327,33 @@ describe('PEK backend contract', () => {
     expect(body).toEqual({});
     expect(collected.linkedProtocolNumbers).toEqual(['P-READY', 'P-SIGNED']);
     expect(collected.linkedProtocolNumbers).not.toContain('P-DRAFT');
+    expect(collected).toMatchObject({ matchedCount: 3, unmatchedCount: 1, ambiguousCount: 1, removedStaleSourceCount: 2 });
+    expect(collected.warnings).toEqual(['Проверьте ручную связь']);
+  });
+
+  it('loads sources, plan/fact and backend readiness without local calculation', async () => {
+    const [sources, summary, planFact, readiness] = await Promise.all([
+      pekApi.getReportSources(9), pekApi.getReportSourcesSummary(9), pekApi.getReportPlanFact(9), pekApi.getReportReadiness(9),
+    ]);
+    expect(sources[0]).toMatchObject({ id: 31, matchStatus: 'UNMATCHED', version: 2 });
+    expect(summary.unmatchedResultCount).toBe(1);
+    expect(planFact.summary.missing).toBe(1);
+    expect(readiness.ready).toBe(false);
+    expect(readiness.issues[0]).toMatchObject({ section: 'SOURCES', blocking: true });
+  });
+
+  it('sends source and report versions in the body where backend requires them', async () => {
+    await pekApi.matchReportSource(9, 31, 77, 2);
+    expect(body).toEqual({ indicatorId: 77, version: 2 });
+    await pekApi.returnReport(9, 13, 'Исправить сопоставление');
+    expect(body).toEqual({ version: 13, reason: 'Исправить сопоставление' });
+  });
+
+  it('loads real PEK settings and capabilities', async () => {
+    const settings = await pekApi.getSettings();
+    expect(settings.defaultReportType).toBe('QUARTERLY');
+    expect(settings.availableActions.edit).toBe(true);
+    expect(settings.capabilities.automaticCollectionSupported).toBe(false);
   });
 
   it('downloads a program document through the authorized PEK API client', () => {

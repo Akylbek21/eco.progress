@@ -2,6 +2,7 @@ import type {
   PekAvailableAction,
   PekAvailableActionCode,
   PekDashboard,
+  PekCollectResponse,
   PekProgram,
   PekReport,
 } from '../api/pekContracts';
@@ -109,15 +110,27 @@ export const mapReportResponse = (
     linkedProtocolCount: numberValue(source.linkedProtocolCount),
     linkedProtocolNumbers,
     lastCollectedAt: source.lastCollectedAt == null ? null : String(source.lastCollectedAt),
+    availableActions: Object.fromEntries(Object.entries(row(source.availableActions)).map(([key, enabled]) => [key, Boolean(enabled)])),
   };
 };
 
-export const mapCollectionResult = (value: unknown): PekReport => {
+export const mapCollectionResult = (value: unknown): PekCollectResponse => {
   const source = row(value);
   const numbers = Array.isArray(source.linkedProtocolNumbers)
     ? source.linkedProtocolNumbers.map(String)
     : [];
-  return mapReportResponse(source.report, numbers);
+  return {
+    report: mapReportResponse(source.report, numbers),
+    linkedProtocolCount: numberValue(source.linkedProtocolCount),
+    linkedProtocolNumbers: numbers,
+    protocolResultCount: numberValue(source.protocolResultCount),
+    matchedCount: numberValue(source.matchedCount),
+    unmatchedCount: numberValue(source.unmatchedCount),
+    ambiguousCount: numberValue(source.ambiguousCount),
+    removedStaleSourceCount: numberValue(source.removedStaleSourceCount),
+    updatedSourceCount: numberValue(source.updatedSourceCount),
+    warnings: Array.isArray(source.warnings) ? source.warnings.map(String) : [],
+  };
 };
 
 export const mapDashboardResponse = (value: unknown): PekDashboard => {

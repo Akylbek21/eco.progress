@@ -1,10 +1,10 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useState } from 'react';
 import {
   Alert, Box, Button, CircularProgress, Container, FormControl, InputLabel, MenuItem, Select, Stack, Typography,
 } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ZodError } from 'zod';
-import { Link, Navigate, Outlet } from 'react-router-dom';
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import type { AccessContext } from '../model/types';
 import { useDocumentFlowAccess } from '../hooks/useDocumentFlowAccess';
@@ -52,18 +52,47 @@ const accessReason = (access: AccessContext) => {
 };
 
 export default function DocumentFlowGate() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAuth();
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const [requestOpen, setRequestOpen] = useState(false);
   const tenant = useDocumentFlowTenant();
   const access = useDocumentFlowAccess();
+  const invited = access.data?.membershipStatus?.toUpperCase() === 'INVITED';
+  const canManageAccess = canManageDocumentFlowAccess(user);
   const plans = useQuery({
     queryKey: documentFlowKeys.plans(),
     queryFn: ({ signal }) => documentFlowApi.plans(signal),
-    enabled: isAuthenticated && access.isSuccess && access.data.available === false,
+    enabled: isAuthenticated && access.isSuccess && access.data.available === false && !invited && requestOpen,
     retry: false,
+  });
+  const invitedMembers = useQuery({
+    queryKey: tenant.tenantScope
+      ? documentFlowKeys.members(tenant.tenantScope, { status: 'INVITED', selfActivation: true })
+      : ['document-flow', 'tenant-unresolved', 'invited-members'],
+    queryFn: ({ signal }) => documentFlowApi.members({
+      organizationId: tenant.organizationId!, status: 'INVITED', page: 0, size: 50, sort: 'fullName,asc', signal,
+    }),
+    enabled: Boolean(tenant.organizationResolved && invited && canManageAccess),
+    retry: false,
+  });
+  const currentMembership = invitedMembers.data?.items.find((member) =>
+    String(member.userId) === String(user?.id)
+    || Boolean(user?.email && member.email?.toLowerCase() === user.email.toLowerCase()),
+  );
+  const activateMembership = useMutation({
+    mutationFn: () => documentFlowApi.activateMember(currentMembership!.id, tenant.organizationId!),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: documentFlowKeys.organizations() }),
+        queryClient.invalidateQueries({ queryKey: documentFlowKeys.access(tenant.organizationId!) }),
+        queryClient.invalidateQueries({ queryKey: documentFlowKeys.memberLists(tenant.organizationId!) }),
+      ]);
+    },
   });
 
   if (loading) return <Box minHeight="70vh" display="grid" sx={{ placeItems: 'center' }}><CircularProgress /></Box>;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to={`/document-flow/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />;
   if (tenant.organizationsQuery.isLoading) {
     return <Box minHeight="70vh" display="grid" sx={{ placeItems: 'center' }}><CircularProgress /></Box>;
   }
@@ -71,7 +100,7 @@ export default function DocumentFlowGate() {
     return <Container maxWidth="md" sx={{ py: 8 }}><ContractError error={tenant.organizationsQuery.error} retry={() => void tenant.organizationsQuery.refetch()} /></Container>;
   }
   if (!tenant.organizations.length) {
-    return <Container maxWidth="md" sx={{ py: 8 }}><Alert severity="warning">У пользователя нет доступного membership в организациях.</Alert></Container>;
+    return <Container maxWidth="md" sx={{ py: 8 }}><Stack spacing={2}><Alert severity="warning"><Typography fontWeight={700}>Документооборот пока не подключён</Typography><Typography variant="body2">Ваш аккаунт ещё не добавлен ни в одну организацию документооборота.</Typography></Alert><Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}><Button component={Link} to="/document-flow/request" variant="contained">Оставить заявку</Button><Button component={Link} to="/document-flow/login?redirect=%2Fdocument-flow" onClick={logout} variant="outlined">Войти под другим аккаунтом</Button></Stack></Stack></Container>;
   }
   if (tenant.selectionRequired) {
     return (
@@ -102,10 +131,20 @@ export default function DocumentFlowGate() {
         <Stack spacing={3}>
           <Typography variant="h4" fontWeight={800}>Документооборот</Typography>
           <Typography color="text.secondary">Организация: {tenant.organization?.name}</Typography>
-          <Alert severity="warning"><Typography fontWeight={700}>Доступ к документообороту не подключён</Typography><Typography variant="body2">{access.data ? accessReason(access.data) : 'Доступ не подтверждён.'}</Typography><Typography variant="body2">Обратитесь к администратору EcoProgress для подключения модуля.</Typography></Alert>
-          {canManageDocumentFlowAccess(user) && <Button component={Link} to={`/admin/document-flow-access?organizationId=${tenant.organizationId}`} variant="contained" sx={{ alignSelf: 'flex-start' }}>Выдать доступ</Button>}
-          {plans.isError && <Alert severity="error">Не удалось загрузить доступные тарифы.</Alert>}
-          {plans.isSuccess && <AccessRequestForm plans={plans.data} />}
+          <Alert severity="warning"><Typography fontWeight={700}>{invited ? 'Приглашение в организацию не принято' : 'Доступ к документообороту не подключён'}</Typography><Typography variant="body2">{access.data ? accessReason(access.data) : 'Доступ не подтверждён.'}</Typography><Typography variant="body2">{invited ? 'Активируйте участие, чтобы войти в документооборот.' : 'Обратитесь к администратору EcoProgress для подключения модуля.'}</Typography></Alert>
+          {invited && canManageAccess && invitedMembers.isLoading && <Alert severity="info">Проверяем приглашение пользователя…</Alert>}
+          {invited && canManageAccess && currentMembership && <Button variant="contained" disabled={activateMembership.isPending} onClick={() => activateMembership.mutate()} sx={{ alignSelf: 'flex-start' }}>{activateMembership.isPending ? 'Активация…' : 'Активировать моё участие'}</Button>}
+          {invited && canManageAccess && invitedMembers.isSuccess && !currentMembership && <Alert severity="info">Ваше приглашение не найдено в списке участников. Попросите администратора организации активировать участника или отправить приглашение повторно.</Alert>}
+          {invitedMembers.isError && <Alert severity="error">Не удалось получить приглашение. Откройте управление участниками или обратитесь к администратору организации.</Alert>}
+          {activateMembership.isError && <Alert severity="error">{mapDocumentFlowError(activateMembership.error).message}</Alert>}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'flex-start' }}>
+            {!invited && <Button variant="contained" onClick={() => setRequestOpen(true)}>Оставить заявку</Button>}
+            <Button component={Link} to="/document-flow/login?redirect=%2Fdocument-flow" onClick={logout} variant="outlined">Войти под другим аккаунтом</Button>
+            {canManageAccess && <Button component={Link} to={`/admin/document-flow-access?organizationId=${tenant.organizationId}`} variant="outlined">Управление подпиской</Button>}
+          </Stack>
+          {!invited && requestOpen && plans.isLoading && <Stack alignItems="center" py={3}><CircularProgress /></Stack>}
+          {!invited && requestOpen && plans.isError && <Alert severity="error" action={<Button onClick={() => plans.refetch()}>Повторить</Button>}>Не удалось загрузить доступные тарифы.</Alert>}
+          {!invited && requestOpen && plans.isSuccess && <AccessRequestForm plans={plans.data} initialOrganizationName={tenant.organization?.name} initialBin={tenant.organization?.bin ?? ''} />}
         </Stack>
       </Container>
     );

@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import { useToast } from '../../../hooks/useToast';
+import { useAuth } from '../../../contexts/AuthContext';
 import type { PekAvailableAction, PekProgram } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
@@ -12,6 +13,7 @@ import PekQueryError from '../components/common/PekQueryError';
 import PekProgramDocuments from '../components/documents/PekProgramDocuments';
 import PekActionModal from '../components/workflow/PekActionModal';
 import { mapPekError } from '../utils/pekErrorMapper';
+import { canUsePekPermission } from '../permissions/pekAccess';
 
 const tabs = ['Обзор', 'Объекты контроля', 'Показатели', 'Мероприятия', 'Документы', 'История', 'Версии', 'Отчёты'];
 
@@ -27,6 +29,7 @@ const PekProgramDetailsPage = () => {
   const client = useQueryClient();
   const toast = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const program = useQuery({
     queryKey: pekKeys.program(id),
     queryFn: ({ signal }) => pekApi.getProgram(id, signal),
@@ -74,7 +77,15 @@ const PekProgramDetailsPage = () => {
   if (program.isLoading) return <PekLoading />;
   if (program.isError || !program.data) return <PekQueryError error={program.error} resource="Программа ПЭК" retry={() => void program.refetch()} />;
   const item = program.data;
-  const workflowActions = item.availableActions.filter((candidate) => candidate.code !== 'EDIT');
+  const allowed = (code: PekAvailableAction['code']) => {
+    if (code === 'EDIT' || code === 'SUBMIT_REVIEW') return canUsePekPermission(user, 'PEK_PROGRAM_EDIT');
+    if (code === 'CLONE') return canUsePekPermission(user, 'PEK_PROGRAM_CREATE');
+    if (code === 'RETURN' || code === 'APPROVE') return canUsePekPermission(user, 'PEK_PROGRAM_APPROVE');
+    if (code === 'ACTIVATE') return canUsePekPermission(user, 'PEK_PROGRAM_ACTIVATE');
+    if (code === 'ARCHIVE') return canUsePekPermission(user, 'PEK_PROGRAM_ARCHIVE');
+    return false;
+  };
+  const workflowActions = item.availableActions.filter((candidate) => candidate.code !== 'EDIT' && allowed(candidate.code));
   const editAction = item.availableActions.find((candidate) => candidate.code === 'EDIT');
 
   return <div className="space-y-5">
@@ -86,7 +97,7 @@ const PekProgramDetailsPage = () => {
         {workflowActions.map((candidate) => (
           <PekPrimaryAction key={candidate.code} action={candidate} pending={workflow.isPending} onClick={(selected) => selected.code === 'CLONE' ? setCloneAction(selected) : setAction(selected)} />
         ))}
-        {!item.readOnly && editAction?.enabled && (
+        {!item.readOnly && editAction?.enabled && allowed('EDIT') && (
           <button type="button" onClick={() => navigate(`/staff/pek/programs/${id}/edit`)} className="rounded-full border px-5 py-2 font-bold">Изменить</button>
         )}
       </>}

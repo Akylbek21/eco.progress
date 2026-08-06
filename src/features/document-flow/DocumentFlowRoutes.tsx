@@ -4,6 +4,8 @@ import DocumentFlowGate from './components/DocumentFlowGate';
 import DocumentFlowLayout from './layout/DocumentFlowLayout';
 
 const DocumentFlowPricingPage = lazy(() => import('./pages/DocumentFlowPricingPage'));
+const DocumentFlowLandingPage = lazy(() => import('./pages/DocumentFlowLandingPage'));
+const DocumentFlowLoginPage = lazy(() => import('../../pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
 const CreateDocumentPage = lazy(() => import('./pages/CreateDocumentPage'));
@@ -16,10 +18,12 @@ const MembersPage = lazy(() => import('./pages/MembersPage'));
 export default function DocumentFlowRoutes() {
   return (
     <Routes>
+      <Route index element={<DocumentFlowLandingPage />} />
+      <Route path="request" element={<DocumentFlowLandingPage requestInitiallyOpen />} />
+      <Route path="login" element={<DocumentFlowLoginPage documentFlow />} />
       <Route path="plans" element={<DocumentFlowPricingPage />} />
       <Route element={<DocumentFlowGate />}>
         <Route element={<DocumentFlowLayout />}>
-          <Route index element={<Navigate to="/document-flow/documents" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="access" element={<Navigate to="/document-flow/members" replace />} />
           <Route path="documents" element={<DocumentsPage />} />

@@ -24,9 +24,10 @@ test('required PEK routes are registered once', () => {
 test('production PEK transport contains only backend-implemented report contracts', () => {
   assert.match(service, /reports\/\$\{id\}\/collect/);
   assert.match(service, /'submit-review' \| 'approve' \| 'archive'/);
+  assert.match(service, /reports\/\$\{id\}\/plan-fact/);
+  assert.match(service, /reports\/\$\{id\}\/sources/);
+  assert.match(service, /reports\/\$\{id\}\/readiness/);
   [
-    'plan-fact',
-    'issues',
     'unmatched-sources',
     'collection-runs/latest',
     'reports/${id}/history',
@@ -40,10 +41,11 @@ test('production PEK transport contains only backend-implemented report contract
 });
 
 test('report workspace exposes only backend-supported data', () => {
-  assert.match(workspace, /Фактически связанные протоколы/);
-  assert.match(workspace, /План\/факт|Превышения|Несопоставленные|Корректирующие действия/);
-  assert.doesNotMatch(workspace, /availableActions/);
-  assert.doesNotMatch(workspace, /setInterval|polling|progressPercent|collection-runs/);
+  assert.match(workspace, /Источники данных/);
+  assert.match(workspace, /План \/ факт|Превышения|Сопоставить вручную/);
+  assert.match(workspace, /availableActions/);
+  assert.match(workspace, /progressPercent/);
+  assert.doesNotMatch(workspace, /setInterval|polling|collection-runs/);
   assert.doesNotMatch(workspace, /\/staff\/protocols\?/);
 });
 

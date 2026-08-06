@@ -24,6 +24,13 @@ import {
 import { loadPekDraft, pekDraftKey, removePekDraft, savePekDraft, type PekStoredDraft } from '../utils/pekDraftStorage';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { pekProgramFormSchema } from '../validation/programSchema';
+import {
+  comparisonTypeOptions,
+  pekActionStatusOptions,
+  pekControlTypeOptions,
+  pekPeriodicityOptions,
+} from '../model/pekDictionaries';
+import type { ComparisonType, PekActionStatus, PekControlType, PekPeriodicity } from '../api/pekContracts';
 
 const steps = ['Основные сведения', 'План контроля', 'Мероприятия', 'Документы', 'Проверка'];
 const inputClass = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2';
@@ -356,9 +363,9 @@ const PekProgramCreatePage = () => {
               <TextField label="Код *" value={row.code} onChange={(value) => updateControl(index, { code: value })} />
               <TextField label="Название *" value={row.name} onChange={(value) => updateControl(index, { name: value })} />
               <TextField label="Раздел" value={row.sectionCode} onChange={(value) => updateControl(index, { sectionCode: value })} />
-              <TextField label="Тип контроля *" value={row.controlType} onChange={(value) => updateControl(index, { controlType: value })} />
+              <SelectField label="Тип контроля *" value={row.controlType} options={pekControlTypeOptions} onChange={(value) => updateControl(index, { controlType: value as PekControlType })} />
               <TextField label="Компонент среды" value={row.environmentComponent} onChange={(value) => updateControl(index, { environmentComponent: value })} />
-              <TextField label="Периодичность *" value={row.frequencyType} onChange={(value) => updateControl(index, { frequencyType: value })} />
+              <SelectField label="Периодичность *" value={row.frequencyType} options={pekPeriodicityOptions} onChange={(value) => updateControl(index, { frequencyType: value as PekPeriodicity })} />
               <NumberField label="Значение периодичности" value={row.frequencyValue} onChange={(value) => updateControl(index, { frequencyValue: value })} />
               <NumberField label="Плановое количество" value={row.plannedCount} onChange={(value) => updateControl(index, { plannedCount: value })} />
               {row.frequencyType === 'PER_EVENT' && <p className="self-end text-sm text-slate-600">По событию — укажите ожидаемое количество измерений.</p>}
@@ -384,7 +391,7 @@ const PekProgramCreatePage = () => {
               <TextField label="Название *" value={row.indicatorName} onChange={(value) => updateIndicator(index, { indicatorName: value })} />
               <TextField label="Единица *" value={row.unit} onChange={(value) => updateIndicator(index, { unit: value })} />
               <NumberField label="Норматив" value={row.normativeValue} onChange={(value) => updateIndicator(index, { normativeValue: value })} />
-              <label>Условие сравнения *<select value={row.comparisonType || ''} onChange={(event) => updateIndicator(index, { comparisonType: event.target.value || null })} className={inputClass}><option value="">Выберите условие</option><option value="MAX">Не более</option><option value="MIN">Не менее</option><option value="RANGE">Диапазон</option><option value="EQUAL">Равно</option><option value="INFORMATIONAL">Информационный</option></select></label>
+              <SelectField label="Условие сравнения *" value={row.comparisonType} options={comparisonTypeOptions} onChange={(value) => updateIndicator(index, { comparisonType: value as ComparisonType })} />
               <NumberField label="Минимум" value={row.minValue} onChange={(value) => updateIndicator(index, { minValue: value })} />
               <NumberField label="Максимум" value={row.maxValue} onChange={(value) => updateIndicator(index, { maxValue: value })} />
               <TextField label="Тип прибора" value={row.measurementDeviceType} onChange={(value) => updateIndicator(index, { measurementDeviceType: value })} />
@@ -406,7 +413,7 @@ const PekProgramCreatePage = () => {
               <PekLookupSelect label="Ответственный *" value={row.responsibleUserId} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => updateMeasure(index, { responsibleUserId: value })} />
               <NumberField label="Бюджет" value={row.plannedBudget} onChange={(value) => updateMeasure(index, { plannedBudget: value })} />
               <TextField label="Валюта" value={row.currency} onChange={(value) => updateMeasure(index, { currency: value })} />
-              <TextField label="Статус" value={row.status} onChange={(value) => updateMeasure(index, { status: value })} />
+              <SelectField label="Статус" value={row.status} options={pekActionStatusOptions} onChange={(value) => updateMeasure(index, { status: value as PekActionStatus })} />
               <NumberField label="Выполнение, %" value={row.completionPercent} onChange={(value) => updateMeasure(index, { completionPercent: value })} />
               <TextField label="Результат" value={row.resultDescription} onChange={(value) => updateMeasure(index, { resultDescription: value })} />
             </div>
@@ -482,5 +489,15 @@ const NumberField = ({ label, value, onChange }: {
   value?: number | null;
   onChange: (value: number | null) => void;
 }) => <label>{label}<input type="number" value={value ?? ''} onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value))} className={inputClass} /></label>;
+
+const SelectField = <T extends string>({ label, value, options, onChange }: {
+  label: string;
+  value?: string | null;
+  options: Array<{ value: T; label: string }>;
+  onChange: (value: T) => void;
+}) => <label>{label}<select value={value || ''} onChange={(event) => onChange(event.target.value as T)} className={inputClass}>
+  <option value="">Выберите значение</option>
+  {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+</select></label>;
 
 export default PekProgramCreatePage;

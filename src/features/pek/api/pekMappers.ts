@@ -1,4 +1,5 @@
 import type { PageResponse } from './pekContracts';
+import { unwrapApiResponse } from '../../../services/apiHelpers';
 
 /**
  * Temporary response-envelope migration adapter.
@@ -14,8 +15,7 @@ export const asPekRecord = (value: unknown): Row =>
 export const unwrapPekData = <T>(value: unknown): T => {
   const outer = asPekRecord(value);
   const response = 'status' in outer && 'data' in outer ? outer.data : value;
-  const envelope = asPekRecord(response);
-  return ('data' in envelope ? envelope.data : response) as T;
+  return unwrapApiResponse<T>(response as T);
 };
 export const mapPekPage = <T>(value: unknown): PageResponse<T> => {
   const data = unwrapPekData<unknown>(value);

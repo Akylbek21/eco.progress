@@ -11,6 +11,7 @@ import type { UserRole } from './types';
 import { companyRoleMatrix, hasPermission } from './config/permissions';
 import { publicRouteLoaders } from './utils/publicRoutePreload';
 import PekLayout from './features/pek/routes/PekLayout';
+import { canManagePekSettings, canUsePekPermission, canViewPek, pekViewRoles } from './features/pek/permissions/pekAccess';
 
 const lazyNamed = <T extends Record<string, unknown>, K extends keyof T>(loader: () => Promise<T>, key: K) =>
   lazy(() => loader().then((module) => ({ default: module[key] as unknown as ComponentType<Record<string, unknown>> })));
@@ -64,7 +65,7 @@ const ContentEditorPage = lazyNamed(() => import('./pages/content/ContentManagem
 const ContentAnalyticsPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAnalyticsPage');
 const ContentAuditPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAuditPage');
 const DocumentFlowRoutes = lazy(() => import('./features/document-flow/DocumentFlowRoutes'));
-const AdminDocumentFlowRoutes = lazy(() => import('./features/document-flow/AdminDocumentFlowRoutes'));
+const DocumentFlowEntryPage = lazy(() => import('./features/document-flow/pages/DocumentFlowEntryPage'));
 const DocumentFlowAccessAdminPage = lazy(() => import('./features/document-flow-admin/pages/DocumentFlowAccessAdminPage'));
 const ExternalDocumentSigningPage = lazy(() => import('./features/document-flow/pages/ExternalSigningPage'));
 
@@ -97,23 +98,23 @@ const protocolRoles: UserRole[] = allStaffRoles;
 const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
 const companyReadRoles: UserRole[] = [...companyRoleMatrix.read];
 const companyManageRoles: UserRole[] = [...companyRoleMatrix.write];
-const pekRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
+const pekRoles: UserRole[] = [...pekViewRoles];
 
 const PekAccess = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  return hasPermission(user, 'view_pek')
+  return canViewPek(user)
     ? <PekLayout>{children}</PekLayout>
     : <ForbiddenPage message="Недостаточно прав для просмотра производственного экологического контроля." />;
 };
 const PekSettingsAccess = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  return hasPermission(user, 'PEK_ADMIN')
+  return canManagePekSettings(user)
     ? <>{children}</>
     : <ForbiddenPage message="Недостаточно прав для изменения настроек ПЭК." />;
 };
 const PekPermissionAccess = ({ permission, children }: { permission: string; children: ReactNode }) => {
   const { user } = useAuth();
-  return hasPermission(user, permission)
+  return canUsePekPermission(user, permission)
     ? <>{children}</>
     : <ForbiddenPage message="У вас нет права для выполнения этого действия в ПЭК." />;
 };
@@ -282,6 +283,7 @@ function App() {
         <Route path="/staff/tasks" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffTasksPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/documents" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDocumentsPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/documents/:orderId" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDocumentsPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/document-flow" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><DocumentFlowEntryPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/calendar" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']}><StaffCalendarPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ProtocolAccess><ErrorBoundary fallbackTitle="Не удалось открыть протоколы"><ProtocolsPage /></ErrorBoundary></ProtocolAccess></StaffAccess></StaffLayout></RoleAccess>} />
@@ -317,7 +319,6 @@ function App() {
         <Route path="/admin" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminPage /></AdminLayout></RoleAccess>} />
         <Route path="/admin/users" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminUsersPage /></AdminLayout></RoleAccess>} />
         <Route path="/admin/document-flow-access" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><DocumentFlowAccessAdminPage /></AdminLayout></RoleAccess>} />
-        <Route path="/admin/document-flow/*" element={<AdminDocumentFlowRoutes />} />
         <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
         </Routes>
         </Suspense>

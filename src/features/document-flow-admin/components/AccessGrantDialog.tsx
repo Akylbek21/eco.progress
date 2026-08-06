@@ -13,6 +13,7 @@ import { documentFlowAdminApi } from '../api/documentFlowAdminApi';
 import { accessGrantFormSchema } from '../api/documentFlowAdminSchemas';
 import { documentFlowAdminKeys } from '../model/queryKeys';
 import type { AccessGrantRequest, AccessGrantResult } from '../model/types';
+import { usageMetricLabels } from '../model/labels';
 
 const metrics: UsageMetric[] = ['ACTIVE_MEMBERS', 'DOCUMENTS_CREATED', 'STORAGE_BYTES', 'EXTERNAL_SIGNATURES_CREATED', 'SIGNATURES_CREATED'];
 const nowLocal = () => {
@@ -76,7 +77,7 @@ export default function AccessGrantDialog({ open, internal = false, initialOrgan
 
   const grant = useMutation({
     mutationFn: async () => {
-      if (!organization) throw new Error('Выберите организацию из результатов backend.');
+      if (!organization) throw new Error('Выберите организацию из результатов поиска.');
       const values = form.getValues();
       const parsed = accessGrantFormSchema.safeParse({
         organizationId: Number(organization.id), planCode: values.planCode, startsAt: values.startsAt,
@@ -126,6 +127,7 @@ export default function AccessGrantDialog({ open, internal = false, initialOrgan
     setResult({ ...result, access, synchronized });
   };
   const mappedError = grant.isError ? mapDocumentFlowError(grant.error) : null;
+  const invalidLimits = Object.values(limits).some((value) => value != null && (!Number.isInteger(value) || value < 0));
   return <Dialog open={open} onClose={() => !grant.isPending && onClose()} fullWidth maxWidth="md">
     <DialogTitle>{internal ? 'Выдать внутренний доступ' : 'Выдать доступ к документообороту'}</DialogTitle>
     <DialogContent><Stack spacing={2} mt={1}>
@@ -137,22 +139,25 @@ export default function AccessGrantDialog({ open, internal = false, initialOrgan
         getOptionLabel={(option) => `${option.name} · ${option.bin} · ID ${option.id}`}
         renderInput={(params) => <TextField {...params} required label="Организация" helperText="Поиск по названию или БИН выполняется на сервере" InputProps={{ ...params.InputProps, endAdornment: <>{organizations.isFetching && <CircularProgress size={18} />}{params.InputProps.endAdornment}</> }} />}
       />}
-      {internal && !plans.isLoading && !internalPlanAvailable && <Alert severity="error">Backend не вернул активный тариф INTERNAL. Выдача заблокирована.</Alert>}
+      {internal && !plans.isLoading && !internalPlanAvailable && <Alert severity="error">Внутренний тариф сейчас недоступен. Выдача заблокирована.</Alert>}
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 6 }}><Controller name="planCode" control={form.control} render={({ field, fieldState }) => <TextField {...field} select fullWidth disabled={internal} required label="Тариф" error={Boolean(fieldState.error)} helperText={fieldState.error?.message}>{activePlans.map((plan) => <MenuItem key={plan.id} value={plan.code}>{plan.name} ({plan.code})</MenuItem>)}</TextField>} /></Grid>
-        <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth label="Способ выдачи" value="ADMIN_GRANT" disabled /></Grid>
+        <Grid size={{ xs: 12, md: 6 }}><Controller name="planCode" control={form.control} render={({ field, fieldState }) => <TextField {...field} select fullWidth disabled={internal} required label="Тариф" error={Boolean(fieldState.error)} helperText={fieldState.error?.message}>{activePlans.map((plan) => <MenuItem key={plan.id} value={plan.code}>{plan.name}</MenuItem>)}</TextField>} /></Grid>
+        <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth label="Способ выдачи" value="Администратором" disabled /></Grid>
         <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth type="datetime-local" InputLabelProps={{ shrink: true }} label="Дата начала" {...form.register('startsAt')} error={Boolean(form.formState.errors.startsAt)} helperText={form.formState.errors.startsAt?.message} /></Grid>
         <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth disabled={internal} type="datetime-local" InputLabelProps={{ shrink: true }} label="Дата окончания" {...form.register('expiresAt')} error={Boolean(form.formState.errors.expiresAt)} helperText={form.formState.errors.expiresAt?.message || (internal ? 'Бессрочно' : 'Обязательно для временного тарифа')} /></Grid>
-        <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth type="datetime-local" InputLabelProps={{ shrink: true }} label="Grace period до" {...form.register('graceEndsAt')} /></Grid>
-        <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth label="Payment reference" {...form.register('paymentReference')} /></Grid>
+        <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth type="datetime-local" InputLabelProps={{ shrink: true }} label="Льготный период до" {...form.register('graceEndsAt')} /></Grid>
+        <Grid size={{ xs: 12, md: 6 }}><TextField fullWidth label="Номер счёта или основание" {...form.register('paymentReference')} /></Grid>
       </Grid>
       <TextField multiline minRows={3} label="Причина" required {...form.register('reason')} error={Boolean(form.formState.errors.reason)} helperText={form.formState.errors.reason?.message} />
-      <Typography fontWeight={700}>Лимиты, поддерживаемые текущим backend contract</Typography>
-      <Grid container spacing={2}>{metrics.map((metric) => <Grid size={{ xs: 12, sm: 6 }} key={metric}><TextField fullWidth type="number" label={metric} value={limits[metric] ?? ''} onChange={(event) => setLimits((value) => ({ ...value, [metric]: event.target.value === '' ? undefined : Number(event.target.value) }))} /></Grid>)}</Grid>
+      <Typography fontWeight={700}>Лимиты подписки</Typography>
+      <Grid container spacing={2}>{metrics.map((metric) => {
+        const invalid = limits[metric] != null && (!Number.isInteger(limits[metric]) || limits[metric]! < 0);
+        return <Grid size={{ xs: 12, sm: 6 }} key={metric}><TextField fullWidth type="number" label={usageMetricLabels[metric]} value={limits[metric] ?? ''} error={invalid} helperText={invalid ? 'Укажите целое число не меньше нуля' : ''} inputProps={{ min: 0, step: 1 }} onChange={(event) => setLimits((value) => ({ ...value, [metric]: event.target.value === '' ? undefined : Number(event.target.value) }))} /></Grid>;
+      })}</Grid>
       {internal && <><Alert severity="warning">Организация получит бессрочный полный доступ к документообороту.</Alert><FormControlLabel control={<Checkbox checked={confirmedInternal} onChange={(event) => setConfirmedInternal(event.target.checked)} />} label="Подтверждаю выдачу бессрочного доступа выбранной организации" /></>}
       {mappedError && <Alert severity={mappedError.status === 409 ? 'warning' : 'error'}>{mappedError.message}{mappedError.status === 409 && ' Откройте существующую подписку для изменения.'}{mappedError.traceId && <Typography variant="caption" component="div">Trace ID: {mappedError.traceId}</Typography>}</Alert>}
-      {result && <Alert severity={result.synchronized ? 'success' : 'warning'}>{result.synchronized ? 'Доступ создан и подтверждён повторным запросом /document-flow/access.' : 'Запись создана, но backend ещё возвращает прежнее состояние доступа. Повторный POST не выполняется.'}{result.subscriptionId && <Typography variant="caption" component="div">Subscription ID: {result.subscriptionId}</Typography>}{!result.synchronized && <Button onClick={() => void retryAccessCheck()}>Повторить проверку GET</Button>}</Alert>}
+      {result && <Alert severity={result.synchronized ? 'success' : 'warning'}>{result.synchronized ? 'Доступ создан и подтверждён.' : 'Подписка создана, но состояние доступа ещё не обновилось. Повторная выдача не выполняется.'}{result.subscriptionId && <Typography variant="caption" component="div">Номер подписки: {result.subscriptionId}</Typography>}{!result.synchronized && <Button onClick={() => void retryAccessCheck()}>Проверить ещё раз</Button>}</Alert>}
     </Stack></DialogContent>
-    <DialogActions><Button disabled={grant.isPending} onClick={onClose}>{result?.synchronized ? 'Закрыть' : 'Отмена'}</Button><Button variant="contained" disabled={grant.isPending || Boolean(result) || !organization || !form.watch('planCode') || (internal && (!confirmedInternal || !internalPlanAvailable))} onClick={() => grant.mutate()}>{grant.isPending ? 'Выдача…' : 'Выдать доступ'}</Button></DialogActions>
+    <DialogActions><Button disabled={grant.isPending} onClick={onClose}>{result?.synchronized ? 'Закрыть' : 'Отмена'}</Button><Button variant="contained" disabled={grant.isPending || Boolean(result) || invalidLimits || !organization || !form.watch('planCode') || (internal && (!confirmedInternal || !internalPlanAvailable))} onClick={() => grant.mutate()}>{grant.isPending ? 'Выдача…' : 'Выдать доступ'}</Button></DialogActions>
   </Dialog>;
 }

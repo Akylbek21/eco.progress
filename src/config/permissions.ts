@@ -1,4 +1,5 @@
 import type { UserRole } from '../types';
+import { canUsePekPermission } from '../features/pek/permissions/pekAccess.ts';
 
 export type Permission =
   | 'view_companies'
@@ -61,6 +62,7 @@ export type Permission =
   | 'PEK_REPORT_SUBMIT'
   | 'PEK_REPORT_EXPORT'
   | 'PEK_ADMIN'
+  | 'PEK_SETTINGS_EDIT'
   | 'view_protocols'
   | 'create_protocols';
 
@@ -208,9 +210,7 @@ export const hasPermission = (
 ) => {
   if (!user?.role) return false;
   if (Array.isArray(user.permissions)) return user.permissions.includes(permission);
-  // PEK permissions are server-authoritative. A staff role is not a safe
-  // substitute for a missing capability list.
-  if (isPekPermission(permission)) return false;
+  if (isPekPermission(permission)) return canUsePekPermission(user, permission);
   return canAccess(user.role, permission as Permission);
 };
 

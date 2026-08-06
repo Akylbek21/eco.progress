@@ -32,6 +32,8 @@ export type AvailableAction =
 export interface DocumentFlowOrganization {
   id: number;
   name: string;
+  bin?: string | null;
+  readOnly?: boolean;
   role?: MembershipRole | null;
   membershipStatus?: string | null;
   permissions?: DocumentFlowPermission[];
@@ -320,6 +322,15 @@ export interface CreateMemberRequest {
   role: MembershipRole;
 }
 
+export interface AccessRequestPayload {
+  contactName: string;
+  phone?: string;
+  email?: string;
+  planCode?: string;
+  membersCount?: number;
+  comment?: string;
+}
+
 export type SigningRouteType = 'SEQUENTIAL' | 'PARALLEL' | 'MIXED';
 export type SignerType = 'ORGANIZATION_MEMBER' | 'COUNTERPARTY_REPRESENTATIVE' | 'EXTERNAL';
 
@@ -422,27 +433,3 @@ export interface DashboardResponse {
   byDirection: Record<string, number>;
 }
 
-export interface SubscriptionAdmin {
-  id: number;
-  organizationId: number;
-  planId: number;
-  status: SubscriptionStatus;
-  startsAt: string;
-  expiresAt: string | null;
-  trialEndsAt: string | null;
-  graceEndsAt: string | null;
-  autoRenew: boolean;
-  paymentMode: string;
-  paymentReference: string | null;
-  suspensionReason: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PlanAdmin extends Omit<PublicPlan, 'features'> {
-  id: number;
-  active: boolean;
-  visible: boolean;
-  sortOrder: number;
-  features: Array<PublicPlanFeature & { metadataJson: string | null }>;
-}

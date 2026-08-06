@@ -3,11 +3,12 @@ import { NavLink, Link, Navigate } from 'react-router-dom';
 import { BarChart3, Bell, BookOpenCheck, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileKey2, FileSignature, FileText, FlaskConical, Gauge, Handshake, LayoutDashboard, Leaf, LockKeyhole, LogOut, Menu, Settings, ShieldCheck, UserRoundSearch, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
-import { canAccess } from '../config/permissions';
+import { canAccess, hasPermission } from '../config/permissions';
 import type { UserRole } from '../types';
 import { companyRoleMatrix } from '../config/permissions';
 import type { Permission } from '../config/permissions';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { canViewPek, pekViewRoles } from '../features/pek/permissions/pekAccess';
 
 const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER', 'ACCOUNTANT', 'ECOLOGIST', 'WASTE_SPECIALIST', 'STAFF'];
 const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
@@ -24,13 +25,14 @@ const links: Array<{ label: string; path: string; icon: typeof ClipboardList; pa
   { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Календарь', path: '/staff/calendar', icon: CalendarDays, allowedRoles: ['ADMIN', 'MANAGER', 'ECOLOGIST', 'LABORATORY'] },
   { label: 'Протоколы', path: '/staff/protocols', icon: FlaskConical, allowedRoles: protocolRoles },
-  { label: 'ПЭК', path: '/staff/pek', icon: Leaf, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'] },
+  { label: 'ПЭК', path: '/staff/pek', icon: Leaf, allowedRoles: [...pekViewRoles], permission: 'PEK_VIEW' },
   { label: 'Журналы', path: '/staff/journals', icon: BookOpenCheck, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'] },
   { label: 'Нормативы', path: '/staff/normatives', icon: BookOpenCheck, allowedRoles: normativeRoles },
   { label: 'Средства измерений', path: '/staff/measurement-devices', icon: Gauge, allowedRoles: protocolRoles },
   { label: 'Лаборатории', path: '/staff/settings/laboratories', icon: Settings, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'] },
   { label: 'Задачи', path: '/staff/tasks', icon: ClipboardCheck },
   { label: 'Документы', path: '/staff/documents', icon: FileText },
+  { label: 'Документооборот', path: '/staff/document-flow', icon: FileSignature },
   { label: 'Уведомления', path: '/staff/notifications', icon: Bell },
   { label: 'Отчеты', path: '/staff/reports', icon: BarChart3, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Роли пользователей', path: '/staff/user-roles', icon: ShieldCheck, rolesOnly: true },
@@ -68,7 +70,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
       ).map((item) => {
         const Icon = item.icon;
         if (item.allowedRoles && (!user?.role || !item.allowedRoles.includes(user.role))) return null;
-        if (item.permission && !canAccess(user?.role, item.permission)) return null;
+        if (item.permission && (item.permission === 'PEK_VIEW' ? !canViewPek(user) : !hasPermission(user, item.permission))) return null;
         const locked = (item.paymentsOnly && !canAccessPayments(user?.role)) || (item.rolesOnly && !canAccess(user?.role, 'manage_roles') && !canAccess(user?.role, 'manage_employees'));
         if (locked) {
           const title = item.rolesOnly ? 'Доступно администратору и руководителю' : 'Доступно администратору, руководителю и бухгалтеру';

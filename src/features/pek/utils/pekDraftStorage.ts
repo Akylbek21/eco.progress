@@ -1,6 +1,24 @@
 const DATABASE = 'eco-progress-pek';
 const STORE = 'drafts';
-const CONTRACT_VERSION = 1;
+const CONTRACT_VERSION = 2;
+
+const migrateLegacyDraft = <T>(draft: PekStoredDraft<T>): PekStoredDraft<T> | undefined => {
+  if (draft.contractVersion !== 1) return undefined;
+  const form = draft.form as Record<string, unknown>;
+  if (!form || typeof form !== 'object') return undefined;
+  const indicators = Array.isArray(form.indicators)
+    ? form.indicators.map((item) => {
+      if (!item || typeof item !== 'object') return item;
+      const row = item as Record<string, unknown>;
+      const comparisonType = row.comparisonType === 'MAX' ? 'LESS_OR_EQUAL'
+        : row.comparisonType === 'MIN' ? 'GREATER_OR_EQUAL'
+          : row.comparisonType === 'INFORMATIONAL' ? 'INFO'
+            : row.comparisonType;
+      return { ...row, comparisonType };
+    })
+    : form.indicators;
+  return { ...draft, contractVersion: CONTRACT_VERSION, form: { ...form, indicators } as T };
+};
 
 export type PekStoredDraft<T> = {
   key: string;
@@ -68,8 +86,14 @@ export const savePekDraft = async <T>(key: string, form: T, backendVersion: stri
 
 export const loadPekDraft = async <T>(key: string, backendVersion: string | number = 'new') => {
   const draft = await transaction<PekStoredDraft<T> | undefined>('readonly', (store) => store.get(key));
-  return draft?.contractVersion === CONTRACT_VERSION && draft.backendVersion === String(backendVersion) ? draft : undefined;
+  if (!draft || draft.backendVersion !== String(backendVersion)) return undefined;
+  if (draft.contractVersion === CONTRACT_VERSION) return draft;
+  const migrated = migrateLegacyDraft(draft);
+  if (migrated) await transaction('readwrite', (store) => store.put(migrated));
+  return migrated;
 };
+
+export { CONTRACT_VERSION, migrateLegacyDraft };
 
 export const removePekDraft = async (key: string) => {
   await transaction('readwrite', (store) => store.delete(key));

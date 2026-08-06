@@ -30,6 +30,4 @@ export const documentFlowKeys = {
   audit: (tenantScope: TenantScope, id: number, page = 0) => [...documentFlowKeys.all, tenantScope, 'document', id, 'audit', page] as const,
   revocations: (tenantScope: TenantScope, id: number) => [...documentFlowKeys.all, tenantScope, 'document', id, 'revocations'] as const,
   publicSigning: (token: string) => [...documentFlowKeys.all, 'public-signing', token] as const,
-  adminPlans: () => [...documentFlowKeys.all, 'admin', 'plans'] as const,
-  adminSubscriptions: () => [...documentFlowKeys.all, 'admin', 'subscriptions'] as const,
 };

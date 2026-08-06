@@ -10,9 +10,37 @@ export type PekReportStatus =
   | 'DRAFT'
   | 'COLLECTING'
   | 'READY_FOR_REVIEW'
+  | 'RETURNED'
   | 'APPROVED'
   | 'ARCHIVED';
 export type PekPeriodType = 'QUARTER' | 'YEAR';
+export type ComparisonType =
+  | 'LESS_OR_EQUAL'
+  | 'GREATER_OR_EQUAL'
+  | 'RANGE'
+  | 'BETWEEN'
+  | 'EQUAL'
+  | 'ABSENT'
+  | 'INFO';
+export type PekControlType =
+  | 'EMISSION'
+  | 'AMBIENT_AIR'
+  | 'WATER_INTAKE'
+  | 'WASTEWATER'
+  | 'WASTE'
+  | 'SOIL'
+  | 'PHYSICAL_FACTOR'
+  | 'BIODIVERSITY';
+export type PekPeriodicity =
+  | 'DAILY'
+  | 'WEEKLY'
+  | 'MONTHLY'
+  | 'QUARTERLY'
+  | 'SEMIANNUAL'
+  | 'ANNUAL'
+  | 'PER_EVENT';
+export type PekActionStatus = 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE' | 'CANCELLED';
+export type PekMatchStatus = 'MATCHED' | 'MANUAL' | 'MANUALLY_MATCHED' | 'UNMATCHED' | 'AMBIGUOUS' | 'STALE' | 'EXCLUDED';
 
 export type ApiResponse<T> = { success?: boolean; message?: string | null; data: T };
 export type PageResponse<T> = {
@@ -61,14 +89,14 @@ export interface PekControlItem {
   code: string;
   name: string;
   sectionCode?: string | null;
-  controlType?: string | null;
+  controlType?: PekControlType | null;
   environmentComponent?: string | null;
   monitoringPointId?: PekId | null;
   emissionSourceId?: PekId | null;
   waterOutletId?: PekId | null;
   wasteSourceId?: PekId | null;
   laboratoryId?: PekId | null;
-  frequencyType?: string | null;
+  frequencyType?: PekPeriodicity | null;
   frequencyValue?: number | null;
   plannedCount?: number | null;
   measurementMethod?: string | null;
@@ -93,7 +121,7 @@ export interface PekIndicator {
   unit?: string | null;
   normativeId?: PekId | null;
   normativeValue?: number | null;
-  comparisonType?: string | null;
+  comparisonType?: ComparisonType | null;
   minValue?: number | null;
   maxValue?: number | null;
   methodologyId?: PekId | null;
@@ -113,7 +141,7 @@ export interface PekMeasure {
   responsibleUserId?: PekId | null;
   plannedBudget?: number | null;
   currency?: string | null;
-  status?: string | null;
+  status?: PekActionStatus | null;
   completionPercent?: number | null;
   resultDescription?: string | null;
 }
@@ -218,6 +246,7 @@ export interface PekReport {
   linkedProtocolCount: number;
   linkedProtocolNumbers: string[];
   lastCollectedAt?: string | null;
+  availableActions: Record<string, boolean>;
 }
 export type PekReportFilters = {
   companyId: number;
@@ -325,3 +354,111 @@ export type PekReadiness = {
   documentReady?: boolean;
   signatureReady?: boolean;
 };
+
+export interface PekCollectResponse {
+  report: PekReport;
+  linkedProtocolCount: number;
+  linkedProtocolNumbers: string[];
+  protocolResultCount: number;
+  matchedCount: number;
+  unmatchedCount: number;
+  ambiguousCount: number;
+  removedStaleSourceCount: number;
+  updatedSourceCount: number;
+  warnings: string[];
+}
+
+export interface PekReportSource {
+  id: number;
+  protocolId: number;
+  protocolNumber: string;
+  protocolResultId: number;
+  indicatorName?: string | null;
+  unit?: string | null;
+  controlItemId?: number | null;
+  programIndicatorId?: number | null;
+  matchStatus: PekMatchStatus | string;
+  matchType?: string | null;
+  manual: boolean;
+  excluded: boolean;
+  exclusionReason?: string | null;
+  sourceVersion: number;
+  version: number;
+  matchReason?: string | null;
+  matchedAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface PekReportSourceSummary {
+  linkedProtocolCount: number;
+  linkedResultCount: number;
+  unmatchedResultCount: number;
+  ambiguousResultCount: number;
+  staleResultCount: number;
+  excludedResultCount: number;
+}
+
+export interface PekPlanFactItem {
+  planFactRowId: number;
+  controlItemId: number;
+  controlItemName: string;
+  indicatorId: number;
+  indicatorName: string;
+  unit?: string | null;
+  plannedCount: number;
+  actualCount: number;
+  missingCount: number;
+  completionPercent: number;
+  normativeValue?: number | null;
+  comparisonType?: ComparisonType | null;
+  bestValue?: number | null;
+  worstValue?: number | null;
+  averageValue?: number | null;
+  hasExceedance: boolean;
+  exceedanceCount: number;
+  status: string;
+}
+
+export interface PekPlanFactResponse {
+  summary: { planned: number; completed: number; missing: number; completionPercent: number; exceedances: number };
+  items: PekPlanFactItem[];
+}
+
+export interface PekReadinessResponse {
+  ready: boolean;
+  progressPercent: number;
+  summary: { planned: number; completed: number; missing: number; unmatched: number; ambiguous: number; stale: number; openExceedances: number; overdueActions: number };
+  issues: Array<{ code: string; section: string; severity: string; message: string; blocking: boolean }>;
+}
+
+export interface PekSettings {
+  companyId: number;
+  defaultResponsibleUserId?: number | null;
+  defaultLaboratoryId?: number | null;
+  defaultResponsibleUser?: { id: number; fullName: string } | null;
+  defaultLaboratory?: { id: number; name: string } | null;
+  defaultReportType: 'QUARTERLY' | 'YEARLY';
+  autoCollectProtocols: boolean;
+  includeOnlySignedProtocols: boolean;
+  allowFallbackMatching: boolean;
+  requireManualAmbiguousConfirmation: boolean;
+  requireAllPlanFactItems: boolean;
+  blockSubmitWithUnmatchedResults: boolean;
+  blockSubmitWithAmbiguousResults: boolean;
+  blockSubmitWithStaleSources: boolean;
+  blockSubmitWithOpenExceedances: boolean;
+  notifyBeforeDeadlineDays: number;
+  notifyMissingProtocols: boolean;
+  notifyExceedances: boolean;
+  notifyReportReturned: boolean;
+  version: number;
+  availableActions: Record<string, boolean>;
+  capabilities: Record<string, boolean>;
+}
+
+export type PekSettingsUpdateRequest = Omit<PekSettings, 'companyId' | 'defaultResponsibleUser' | 'defaultLaboratory' | 'availableActions' | 'capabilities'>;
+
+export type PekProgramListItem = PekProgram;
+export type PekProgramDetails = PekProgram;
+export type PekReportListItem = PekReport;
+export type PekReportDetails = PekReport;

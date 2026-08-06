@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { cleanup, render, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -14,6 +16,7 @@ import { canMutate, hasFeature, limitProgress, validateDocumentFile, validateReq
 import type { AccessContext } from '../src/features/document-flow/model/types';
 import SigningRouteBuilder from '../src/features/document-flow/components/SigningRouteBuilder';
 import DocumentStatusBadge from '../src/features/document-flow/components/DocumentStatusBadge';
+import { toAccessRequestPayload } from '../src/features/document-flow/components/AccessRequestForm';
 import { emptyToUndefined, isValidEmail, isValidPhone, normalizeBin } from '../src/features/document-flow/utils/counterpartyForm';
 import {
   createCreationCheckpoint, runCreationWorkflow, type CreationStage, type CreationWorkflowOperations,
@@ -466,6 +469,78 @@ describe('document flow secure commands and components', () => {
       availableActions: null,
       reason: 'Нет активной подписки на модуль документооборота',
     })).toMatchObject({ available: false, features: [], permissions: [], limits: {}, usage: {}, availableActions: [] });
+  });
+
+  it('maps the deployed organization membership DTO', () => {
+    expect(documentFlowOrganizationsSchema.parse([{
+      organizationId: 2,
+      name: 'Администратор ECOPROGRESS GROUP',
+      bin: 'DF-USER-1',
+      role: 'OWNER',
+      status: 'INVITED',
+      readOnly: false,
+    }])).toEqual([{
+      id: 2,
+      name: 'Администратор ECOPROGRESS GROUP',
+      bin: 'DF-USER-1',
+      role: 'OWNER',
+      membershipStatus: 'INVITED',
+      readOnly: false,
+      permissions: undefined,
+    }]);
+  });
+
+  it('activates an invited membership through the confirmed member endpoint', async () => {
+    let called = '';
+    server.use(http.post('http://localhost/api/document-flow/members/41/activate', ({ request }) => {
+      called = request.url;
+      return HttpResponse.json({ data: { id: 41, organizationId: 2, userId: 1, fullName: 'Администратор', email: 'admin@ecoprogress.kz', role: 'OWNER', status: 'ACTIVE' } });
+    }));
+    await expect(documentFlowApi.activateMember(41, 2)).resolves.toMatchObject({ id: 41, status: 'ACTIVE' });
+    expect(new URL(called).searchParams.get('organizationId')).toBe('2');
+  });
+
+  it('offers self-activation only for the invited administrator flow', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/document-flow/components/DocumentFlowGate.tsx'), 'utf8');
+    expect(source).toContain("membershipStatus?.toUpperCase() === 'INVITED'");
+    expect(source).toContain('Активировать моё участие');
+    expect(source).toContain('canManageAccess');
+  });
+
+  it('provides a staff entry page with an explicit sign-in button', () => {
+    const app = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
+    const layout = readFileSync(resolve(process.cwd(), 'src/layouts/StaffLayout.tsx'), 'utf8');
+    const entry = readFileSync(resolve(process.cwd(), 'src/features/document-flow/pages/DocumentFlowEntryPage.tsx'), 'utf8');
+    expect(app).toContain('path="/staff/document-flow"');
+    expect(layout).toContain("label: 'Документооборот', path: '/staff/document-flow'");
+    expect(entry).toContain('Войти под аккаунтом организации');
+    expect(entry).toContain('to="/document-flow/login?redirect=%2Fdocument-flow"');
+    expect(entry).toContain('onClick={logout}');
+  });
+
+  it('provides the public request and sign-in path without inventing access-request DTO fields', () => {
+    const routes = readFileSync(resolve(process.cwd(), 'src/features/document-flow/DocumentFlowRoutes.tsx'), 'utf8');
+    const landing = readFileSync(resolve(process.cwd(), 'src/features/document-flow/pages/DocumentFlowLandingPage.tsx'), 'utf8');
+    const login = readFileSync(resolve(process.cwd(), 'src/pages/LoginPage.tsx'), 'utf8');
+    expect(routes).toContain('<Route index element={<DocumentFlowLandingPage />} />');
+    expect(routes).toContain('<Route path="login" element={<DocumentFlowLoginPage documentFlow />} />');
+    expect(login).toContain('Войти как участник организации');
+    expect(login).toContain('Войти как сотрудник EcoProgress');
+    expect(login).toContain('await staffLogin(email, password)');
+    expect(landing).toContain('Оставить заявку');
+    expect(landing).toContain('Войти');
+    expect(login).toContain('safeRedirect');
+
+    const payload = toAccessRequestPayload({
+      organizationName: 'ТОО Эко Тест', bin: '123456789012', contactName: 'Иван Иванов',
+      phone: '+77010000000', email: 'owner@example.kz', planCode: 'START', membersCount: 3, comment: 'Позвонить утром',
+    });
+    expect(payload).toEqual({
+      contactName: 'Иван Иванов', phone: '+77010000000', email: 'owner@example.kz', planCode: 'START', membersCount: 3,
+      comment: 'Организация: ТОО Эко Тест\nБИН/ИИН: 123456789012\nПозвонить утром',
+    });
+    expect(payload).not.toHaveProperty('organizationName');
+    expect(payload).not.toHaveProperty('bin');
   });
 
   it('normalizes organizations and never uses userId as tenant', async () => {

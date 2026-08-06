@@ -20,6 +20,12 @@ import type {
   PekReportCreateRequest,
   PekReportCreationParams,
   PekReportFilters,
+  PekPlanFactResponse,
+  PekReadinessResponse,
+  PekReportSource,
+  PekReportSourceSummary,
+  PekSettings,
+  PekSettingsUpdateRequest,
 } from './pekContracts';
 import {
   mapCollectionResult,
@@ -154,9 +160,28 @@ export const pekApi = {
     mapReportResponse(unwrapPekData<unknown>((await api.post('/pek/reports', body)).data)),
   collectReport: async (id: number) =>
     mapCollectionResult(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/collect`)).data)),
+  getReportPlanFact: (id: number, signal?: AbortSignal) =>
+    get<PekPlanFactResponse>(`/pek/reports/${id}/plan-fact`, {}, signal),
+  getReportSources: (id: number, filters: Record<string, unknown> = {}, signal?: AbortSignal) =>
+    get<PekReportSource[]>(`/pek/reports/${id}/sources`, filters, signal),
+  getReportSourcesSummary: (id: number, signal?: AbortSignal) =>
+    get<PekReportSourceSummary>(`/pek/reports/${id}/sources/summary`, {}, signal),
+  matchReportSource: async (reportId: number, sourceId: number, indicatorId: number, version: number) =>
+    unwrapPekData<PekReportSource>((await api.post(`/pek/reports/${reportId}/sources/${sourceId}/match`, { indicatorId, version })).data),
+  excludeReportSource: async (reportId: number, sourceId: number, reason: string, version: number) =>
+    unwrapPekData<PekReportSource>((await api.post(`/pek/reports/${reportId}/sources/${sourceId}/exclude`, { version, reason })).data),
+  restoreReportSource: async (reportId: number, sourceId: number, version: number, reason = 'Источник восстановлен сотрудником') =>
+    unwrapPekData<PekReportSource>((await api.post(`/pek/reports/${reportId}/sources/${sourceId}/restore`, { version, reason })).data),
+  getReportReadiness: (id: number, signal?: AbortSignal) =>
+    get<PekReadinessResponse>(`/pek/reports/${id}/readiness`, {}, signal),
   submitReportReview: (id: number, version: number) => reportAction(id, 'submit-review', version),
+  returnReport: async (id: number, version: number, reason: string) =>
+    mapReportResponse(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/return`, { version, reason })).data)),
   approveReport: (id: number, version: number) => reportAction(id, 'approve', version),
   archiveReport: (id: number, version: number) => reportAction(id, 'archive', version),
+  getSettings: (signal?: AbortSignal) => get<PekSettings>('/pek/settings', {}, signal),
+  updateSettings: async (body: PekSettingsUpdateRequest) =>
+    unwrapPekData<PekSettings>((await api.put('/pek/settings', body)).data),
 };
 
 // Compatibility alias: there is still only one PEK transport implementation.

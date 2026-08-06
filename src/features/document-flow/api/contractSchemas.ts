@@ -46,13 +46,20 @@ const organizationSummarySchema = z.object({
 }));
 
 const organizationMembershipSchema = z.object({
-  organizationId: z.number().int(), organizationName: z.string(), role: nullableString.optional(),
-  membershipStatus: nullableString.optional(), permissions: z.array(z.string()).nullish(),
-}).passthrough().transform((value) => ({
+  organizationId: z.number().int(), organizationName: z.string().optional(), name: z.string().optional(),
+  bin: nullableString.optional(), role: nullableString.optional(), membershipStatus: nullableString.optional(),
+  status: nullableString.optional(), readOnly: z.boolean().optional(), permissions: z.array(z.string()).nullish(),
+}).passthrough().superRefine((value, context) => {
+  if (!value.organizationName && !value.name) {
+    context.addIssue({ code: 'custom', path: ['name'], message: 'Organization name is required' });
+  }
+}).transform((value) => ({
   id: value.organizationId,
-  name: value.organizationName,
+  name: value.organizationName ?? value.name!,
+  bin: value.bin,
   role: value.role,
-  membershipStatus: value.membershipStatus,
+  membershipStatus: value.membershipStatus ?? value.status,
+  readOnly: value.readOnly,
   permissions: value.permissions ?? undefined,
 }));
 
