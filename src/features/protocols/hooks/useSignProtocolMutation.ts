@@ -3,12 +3,12 @@ import { useRef, useState } from 'react';
 import { normalizeApiError } from '../../../services/apiHelpers';
 import protocolService from '../../../services/protocolService';
 import type { Protocol } from '../../../types/protocols';
-import { protocolQueryKeys } from './queryKeys';
+import { protocolQueryKeys, protocolScope } from './queryKeys';
 import {
   createProtocolCmsSignature,
   type ProtocolSigningPhase,
 } from '../utils/protocolSigning';
-import { protocolHasAction } from '../utils/protocolActions';
+import { hasProtocolPermission } from '../utils/protocolActions';
 
 const SIGN_ERROR_MESSAGES: Record<string, string> = {
   PROTOCOL_ALREADY_SIGNED: 'Вы уже подписали эту версию протокола',
@@ -29,6 +29,7 @@ export const protocolSignErrorMessage = (error: unknown): string => {
 
 type SignVariables = { protocol: Protocol };
 type Options = {
+  currentUserId?: string | number | null;
   onSigned?: (response: Protocol) => void | Promise<void>;
   onError?: (message: string, error: unknown) => void | Promise<void>;
 };
@@ -38,13 +39,14 @@ export const useSignProtocolMutation = (
   options: Options = {},
 ) => {
   const queryClient = useQueryClient();
+  const scope = protocolScope(options.currentUserId);
   const inFlightRef = useRef(false);
   const [phase, setPhase] = useState<ProtocolSigningPhase>('IDLE');
   const mutation = useMutation({
     mutationKey: ['sign-protocol', String(protocolId ?? '')],
     mutationFn: async ({ protocol }: SignVariables) => {
       let fresh = await protocolService.getProtocol(String(protocol.id));
-      if (!protocolHasAction(fresh, 'SIGN')) {
+      if (!hasProtocolPermission(fresh, 'canSign')) {
         throw new Error('У вас нет права подписывать протокол. Передайте его руководителю.');
       }
       if (!fresh.hasPdf) {
@@ -69,12 +71,11 @@ export const useSignProtocolMutation = (
     },
     retry: false,
     onSuccess: async (updatedProtocol, variables) => {
-      queryClient.setQueryData(protocolQueryKeys.detail(variables.protocol.id), updatedProtocol);
-      queryClient.setQueryData(['protocol', String(variables.protocol.id)], updatedProtocol);
+      queryClient.setQueryData(protocolQueryKeys.detail(scope, variables.protocol.id), updatedProtocol);
       await options.onSigned?.(updatedProtocol);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['protocols'] }),
-        queryClient.invalidateQueries({ queryKey: ['protocol-signatures', String(variables.protocol.id)] }),
+        queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) }),
+        queryClient.invalidateQueries({ queryKey: protocolQueryKeys.signatures(scope, variables.protocol.id) }),
       ]);
       setPhase('SIGNED');
     },
@@ -83,8 +84,7 @@ export const useSignProtocolMutation = (
       if (normalized.code === 'PROTOCOL_VERSION_CONFLICT' || normalized.code === 'VERSION_CONFLICT') {
         const actual = await protocolService.getProtocol(String(variables.protocol.id)).catch(() => null);
         if (actual) {
-          queryClient.setQueryData(protocolQueryKeys.detail(variables.protocol.id), actual);
-          queryClient.setQueryData(['protocol', String(variables.protocol.id)], actual);
+          queryClient.setQueryData(protocolQueryKeys.detail(scope, variables.protocol.id), actual);
         }
       }
       await options.onError?.(protocolSignErrorMessage(error), error);

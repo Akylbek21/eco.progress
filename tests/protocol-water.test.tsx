@@ -69,13 +69,13 @@ describe('water protocol wizard and editor contract', () => {
     expect(issues.map((issue) => issue.field)).toEqual(['waterType', 'waterUseCategory']);
   });
 
-  it('hydrates quick-create conditions but does not send unsupported conditions in PATCH', () => {
+  it('hydrates nested backend environment conditions and preserves them in PATCH', () => {
     const normalized = normalizeProtocol({
       id: 1,
       templateId: 'water',
       status: 'DRAFT',
       version: 1,
-      conditions: { waterType: 'SURFACE_WATER', waterUseCategory: 'II' },
+      environment: { conditions: { waterType: 'SURFACE_WATER', waterUseCategory: 'II' } },
       testing: {},
       results: [],
     });
@@ -95,7 +95,7 @@ describe('water protocol wizard and editor contract', () => {
       testing: { productNormativeDocument: '', samplingMethodDocument: '', testingMethodDocument: '', samplingDate: '', testingStartDate: '', testingEndDate: '', testingDate: '', testingPurpose: '', environmentConditions: '' },
       conditions: { waterType: 'SURFACE_WATER', waterUseCategory: 'II' },
     });
-    expect(request).not.toHaveProperty('conditions');
+    expect(request.environment?.conditions).toMatchObject({ waterType: 'SURFACE_WATER', waterUseCategory: 'II' });
   });
 
   it('does not replace an unknown enum with the first option', () => {

@@ -4,14 +4,11 @@ export type ProtocolStatusColor = 'neutral' | 'info' | 'warning' | 'success' | '
 
 export const protocolStatusConfig: Record<ProtocolStatus, { label: string; editable: boolean; color: ProtocolStatusColor }> = {
   DRAFT: { label: 'Черновик', editable: true, color: 'neutral' },
-  READY_TO_SIGN: { label: 'Готов к подписи', editable: false, color: 'info' },
   CALCULATED: { label: 'Расчёт выполнен', editable: true, color: 'info' },
-  READY: { label: 'Готов к подписи', editable: true, color: 'info' },
-  READY_FOR_APPROVAL: { label: 'Готов к подписи', editable: false, color: 'info' },
-  UNDER_REVIEW: { label: 'На проверке', editable: false, color: 'warning' },
-  RETURNED_FOR_CORRECTION: { label: 'Нужно исправить', editable: true, color: 'warning' },
+  READY: { label: 'Готов (устаревший статус)', editable: true, color: 'info' },
+  READY_FOR_APPROVAL: { label: 'На утверждении', editable: false, color: 'warning' },
   NEEDS_REVISION: { label: 'Нужно исправить', editable: true, color: 'warning' },
-  APPROVED: { label: 'Готов к подписи', editable: false, color: 'info' },
+  APPROVED: { label: 'Утверждён', editable: false, color: 'info' },
   SIGNED: { label: 'Подписан', editable: false, color: 'success' },
   REPLACED: { label: 'Заменён новой версией', editable: false, color: 'neutral' },
   CANCELLED: { label: 'Отменён', editable: false, color: 'danger' },

@@ -20,7 +20,7 @@
     "build": "npm run generate:sitemap && tsc && vite build && npm run test:production-no-msw && npm run test:production-api-base && npm run prerender && npm run seo:audit",
     "test:production-no-msw": "node scripts/verify-production-no-msw.mjs",
     "test:production-api-base": "node scripts/verify-production-api-base.mjs",
-    "test": "node --test tests/*.test.mjs && vitest run tests/lab-journal-api.test.ts tests/laboratory-api.test.ts tests/laboratory-components.test.tsx tests/normative-search-api.test.tsx tests/protocol-domain.test.ts tests/protocol-details.test.ts tests/protocol-water.test.tsx tests/protocol-quick-create.test.tsx tests/protocol-overhaul.test.ts tests/protocol-signatures.test.tsx tests/protocol-current-backend.test.ts tests/protocol-wizard-v2.test.ts tests/pek-module.test.tsx tests/document-flow.test.tsx tests/document-flow-admin.test.tsx",
+    "test": "node --test tests/*.test.mjs && vitest run --maxWorkers=1 tests/lab-journal-api.test.ts tests/laboratory-api.test.ts tests/laboratory-components.test.tsx tests/normative-search-api.test.tsx tests/protocol-domain.test.ts tests/protocol-details.test.ts tests/protocol-water.test.tsx tests/protocol-quick-create.test.tsx tests/protocol-overhaul.test.ts tests/protocol-signatures.test.tsx tests/protocol-current-backend.test.ts tests/protocol-wizard-v2.test.ts tests/pek-module.test.tsx tests/document-flow.test.tsx tests/document-flow-admin.test.tsx",
     "preview": "vite preview"
   },
   "dependencies": {

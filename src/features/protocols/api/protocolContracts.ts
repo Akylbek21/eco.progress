@@ -61,24 +61,61 @@ export interface UpdateProtocolRequest {
   complianceDocument: string | null;
   explanatoryNote: string | null;
   printVisibility: ProtocolPrintVisibility;
+  orderId: string | null;
+  orderServiceItemId: string | null;
 }
 
 export interface ProtocolEnvironmentRequest {
-  temperatureC: string | null;
-  temperatureMinC: string | null;
-  temperatureMaxC: string | null;
-  humidityPercent: string | null;
-  humidityMinPercent: string | null;
-  humidityMaxPercent: string | null;
-  pressureKpa: string | null;
-  pressureHpa: string | null;
-  windSpeedMs: string | null;
+  temperatureC: number | null;
+  temperatureMinC: number | null;
+  temperatureMaxC: number | null;
+  humidityPercent: number | null;
+  humidityMinPercent: number | null;
+  humidityMaxPercent: number | null;
+  pressureKpa: number | null;
+  pressureHpa: number | null;
+  windSpeedMs: number | null;
   conditionsComment: string | null;
   source: ProtocolEnvironmentalConditions['source'] | null;
   dataSource: string | null;
   observedAt: string | null;
   loadedAt: string | null;
   manualChangeReason: string | null;
+  conditions: ProtocolTypeConditionsRequest | null;
+}
+
+export interface ProtocolTypeConditionsRequest {
+  season: string | null;
+  workCategory: string | null;
+  roomType: string | null;
+  workplaceType: string | null;
+  lightingType: string | null;
+  noiseType: string | null;
+  visualWorkCategory: string | null;
+  normLevel: string | null;
+  sampleNumber: string | null;
+  samplingDepth: string | null;
+  samplingPlace: string | null;
+  waterType: string | null;
+  waterUseCategory: string | null;
+  factorType: string | null;
+}
+
+export interface CreateProtocolDraftRequest {
+  templateId: string;
+  subtype: string | null;
+  companyId: number | null;
+  objectId: number | null;
+  protocolDate: string | null;
+  measurementDate: string | null;
+  laboratoryId: number | null;
+  executorId: number | null;
+  orderId: string | null;
+  orderServiceItemId: string | null;
+  printVisibility: ProtocolPrintVisibility;
+  testingStartDate: string | null;
+  testingEndDate: string | null;
+  environment: ProtocolEnvironmentRequest | null;
 }
 
 export interface ProtocolResultRequest {
@@ -179,6 +216,7 @@ export interface QuickCreateProtocolRequest {
   conditions?: QuickCreateProtocolConditions;
   printVisibility: ProtocolPrintVisibility;
   orderId?: string;
+  orderServiceItemId?: string;
 }
 
 export interface ProtocolVersionRequest {

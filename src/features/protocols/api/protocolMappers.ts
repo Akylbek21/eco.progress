@@ -24,14 +24,16 @@ const idOrNull = (value: unknown): string | number | null => {
   return optionalText(value);
 };
 
-const decimalOrNull = (value: unknown): string | null => {
+const decimalOrNull = (value: unknown): number | null => {
   const text = optionalText(value);
   if (!text) return null;
-  return text.replace(',', '.');
+  const parsed = Number(text.replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 export const mapProtocolEnvironmentToRequest = (
   environment: UpdateProtocolPayload['environment'],
+  conditions: UpdateProtocolPayload['conditions'] = environment?.conditions ?? undefined,
 ): ProtocolEnvironmentRequest => ({
   temperatureC: decimalOrNull(environment?.temperature),
   temperatureMinC: decimalOrNull(environment?.minTemperature),
@@ -48,6 +50,22 @@ export const mapProtocolEnvironmentToRequest = (
   observedAt: optionalText(environment?.observedAt),
   loadedAt: optionalText(environment?.loadedAt),
   manualChangeReason: optionalText(environment?.manualChangeReason),
+  conditions: conditions ? {
+    season: optionalText(conditions.season),
+    workCategory: optionalText(conditions.workCategory),
+    roomType: optionalText(conditions.roomType),
+    workplaceType: optionalText(conditions.workplaceType),
+    lightingType: optionalText(conditions.lightingType),
+    noiseType: optionalText(conditions.noiseType),
+    visualWorkCategory: optionalText(conditions.visualWorkCategory),
+    normLevel: optionalText(conditions.normLevel),
+    sampleNumber: optionalText(conditions.sampleNumber),
+    samplingDepth: optionalText(conditions.samplingDepth),
+    samplingPlace: optionalText(conditions.samplingPlace),
+    waterType: optionalText(conditions.waterType),
+    waterUseCategory: optionalText(conditions.waterUseCategory),
+    factorType: optionalText(conditions.factorType),
+  } : null,
 });
 
 export const mapProtocolFormToPatchRequest = (
@@ -92,11 +110,13 @@ export const mapProtocolFormToPatchRequest = (
     testingPurpose: optionalText(payload.testing.testingPurpose),
     environmentConditions: optionalText(payload.testing.environmentConditions),
   },
-  environment: mapProtocolEnvironmentToRequest(payload.environment),
+  environment: mapProtocolEnvironmentToRequest(payload.environment, payload.conditions),
   testingMethodDocument: optionalText(payload.testingMethodDocument ?? payload.testing.testingMethodDocument),
   complianceDocument: optionalText(payload.complianceDocument),
   explanatoryNote: optionalText(payload.explanatoryNote ?? payload.notes),
   printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
+  orderId: optionalText(payload.orderId),
+  orderServiceItemId: optionalText(payload.orderServiceItemId),
 });
 
 /** @deprecated Use mapProtocolFormToPatchRequest(form, version). */

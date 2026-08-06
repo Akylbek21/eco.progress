@@ -17,7 +17,8 @@ const classes = {
 const ProtocolStatusBadge = ({ status }: { status: ProtocolStatus | string }) => {
   const normalized = normalizeProtocolStatus(status);
   const config = protocolStatusConfig[normalized];
-  return <span className={clsx('inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1', classes[config.color])}>{config.label}</span>;
+  const label = normalized === 'UNKNOWN' ? `Неизвестный статус: ${String(status || '—')}` : config.label;
+  return <span className={clsx('inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1', classes[config.color])}>{label}</span>;
 };
 
 export default ProtocolStatusBadge;

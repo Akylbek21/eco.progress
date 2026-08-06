@@ -10,8 +10,9 @@ import { getAvailableMeasurementDevices } from '../../../services/measurementDev
 import protocolService from '../../../services/protocolService';
 import { normalizeApiError } from '../../../services/apiHelpers';
 import type { Protocol } from '../../../types/protocols';
-import { protocolHasAction } from '../utils/protocolActions';
+import { hasProtocolPermission } from '../utils/protocolActions';
 import { saveProtocolWizardDraft } from '../api/saveProtocolWizardDraft';
+import { mapProtocolToWizardForm } from '../mappers/protocolWizardDraftMapper';
 import { applyProtocolApiErrorsToForm } from '../utils/protocolFormErrors';
 import { validateForApproval } from '../utils/protocolWizardValidation';
 import ProtocolWizardHeader from './ProtocolWizardHeader';
@@ -32,6 +33,7 @@ import {
   type ProtocolWizardForm,
 } from './wizardTypes';
 import { getWaterProtocolOptions, isWaterProtocolType } from '../../../config/protocolWater';
+import { protocolQueryKeys, protocolScope } from '../hooks/queryKeys';
 
 const steps = ['Основные сведения', 'Условия', 'Показатели и результаты', 'Проверка', 'Завершение'];
 const BUFFER_SCHEMA_VERSION = 3;
@@ -40,6 +42,7 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', orderServiceItemId = '', pekPrefill }: CreateProtocolWizardModalProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const scope = protocolScope(user?.id);
   const form = useForm<ProtocolWizardForm>({ defaultValues: createWizardDefaults(), mode: 'onChange' });
   const values = form.watch();
   const [step, setStep] = useState(0);
@@ -50,7 +53,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   const [conflict, setConflict] = useState(false);
   const [serverIssues, setServerIssues] = useState<Array<{ code: string; step: number; field?: FieldPath<ProtocolWizardForm>; fieldPath: string; severity: 'ERROR'; message: string }>>([]);
   const initialCreateStarted = useRef(false);
-  const bufferKey = `protocol-wizard-buffer:${user?.id ?? 'anonymous'}:${serverDraft?.id ?? 'new'}`;
+  const bufferKey = `protocol-draft:${user?.id ?? 'anonymous'}:${serverDraft?.id ?? 'new'}:${BUFFER_SCHEMA_VERSION}`;
   const prefillKey = JSON.stringify(pekPrefill ?? {});
 
   const typesQuery = useQuery({ queryKey: ['protocol-types', user?.id], queryFn: () => protocolService.getProtocolTypes(), enabled: open });
@@ -114,11 +117,12 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     onMutate: () => { setSaveState('saving'); setGeneralError(''); setServerIssues([]); },
     onSuccess: async ({ protocol, resultIds }) => {
       setServerDraft(protocol);
+      form.reset(mapProtocolToWizardForm(protocol), { keepDirtyValues: true });
       resultIds.forEach((id, index) => form.setValue(`results.${index}.serverResultId`, id, { shouldDirty: false }));
       setSaveState('saved');
       sessionStorage.removeItem(bufferKey);
-      queryClient.setQueryData(['protocol', String(protocol.id)], protocol);
-      await queryClient.invalidateQueries({ queryKey: ['protocols'] });
+      queryClient.setQueryData(protocolQueryKeys.detail(scope, protocol.id), protocol);
+      await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) });
     },
     onError: (error) => {
       setSaveState('error');
@@ -133,7 +137,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     },
   });
 
-  const canStartDraft = Boolean(values.templateId && values.companyId && values.objectId && values.protocolDate);
+  const canStartDraft = Boolean(values.templateId);
   useEffect(() => {
     if (!open || serverDraft || !canStartDraft || initialCreateStarted.current || saveMutation.isPending) return;
     initialCreateStarted.current = true;
@@ -153,7 +157,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   };
   const save = async () => {
     if (!canStartDraft) {
-      setGeneralError('Сначала выберите тип протокола, компанию и объект.');
+      setGeneralError('Сначала выберите тип протокола.');
       setStep(0);
       return null;
     }
@@ -165,7 +169,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
       goToIssue(approvalIssues[0].step, approvalIssues[0].field);
       return;
     }
-    if (step === 3 && serverDraft && protocolHasAction(serverDraft, 'CHECK_NORMATIVES')) {
+    if (step === 3 && serverDraft && hasProtocolPermission(serverDraft, 'canCheckNormatives')) {
       try {
         const saved = await save();
         if (saved) setServerDraft(await protocolService.checkNormatives(saved.protocol.id, saved.protocol.version));
@@ -183,6 +187,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     if (!serverDraft) return;
     const current = await protocolService.getProtocol(serverDraft.id);
     setServerDraft(current);
+    form.reset(mapProtocolToWizardForm(current));
     setConflict(false);
     setGeneralError('Актуальная версия загружена. Локальная копия формы сохранена в аварийном буфере.');
   };

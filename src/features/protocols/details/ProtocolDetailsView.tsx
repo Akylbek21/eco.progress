@@ -81,7 +81,7 @@ const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErr
       </nav>
       {activeTab === 'results' && <ProtocolResultsTab protocol={protocol} editable={permissions.canManageResults} onEdit={() => onEdit('results')} />}
       {activeTab === 'main' && <ProtocolMainDataTab protocol={protocol} editable={permissions.canEdit} onEdit={onEdit} />}
-      {activeTab === 'documents' && <ProtocolDocumentsTab protocol={protocol} busy={busy} canGenerate={permissions.canGenerateDocuments} canDownload={permissions.canDownload} canSign={permissions.canSign} onPreview={onPreview} onGenerateDocx={onGenerateDocx} onGeneratePdf={onGeneratePdf} onDocx={onDocx} onPdf={onPdf} onSign={onSign} />}
+      {activeTab === 'documents' && <ProtocolDocumentsTab protocol={protocol} busy={busy} canGenerate={permissions.canGenerateDocuments} canRegenerate={permissions.canRegenerateDocuments} canDownload={permissions.canDownload} canSign={permissions.canSign} onPreview={onPreview} onGenerateDocx={onGenerateDocx} onGeneratePdf={onGeneratePdf} onDocx={onDocx} onPdf={onPdf} onSign={onSign} />}
       {activeTab === 'history' && permissions.canViewAudit && <ProtocolHistoryTab protocol={protocol} />}
       {primary.label && <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:hidden"><button type="button" disabled={busy} onClick={runPrimary} className="min-h-12 w-full rounded-xl bg-eco-600 px-4 font-bold text-white disabled:opacity-50">{primary.label}</button></div>}
     </div>

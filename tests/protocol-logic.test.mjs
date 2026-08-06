@@ -50,13 +50,13 @@ test('result aliases resolve device ids from nested backend objects and values a
 
 test('protocol permission matrix is backend-authoritative and immutable-safe', async () => {
   const source = await read('src/utils/protocolPermissions.ts');
-  assert.match(source, /protocol\.permissions/);
-  assert.match(source, /backendFlag\('canEdit'\)/);
-  assert.match(source, /backendFlag\('canReadyForApproval'\)/);
-  assert.match(source, /backendFlag\('canReplace'\)/);
-  assert.match(source, /canApprove: false/);
-  assert.match(source, /canSign: backendFlag\('canSign'\)/);
-  assert.match(source, /without server permissions is intentionally fail-closed/);
+  assert.match(source, /protocol\?\.permissions/);
+  assert.match(source, /flag\('canEdit'\)/);
+  assert.match(source, /canReadyForApproval: flag\('canSendToApproval'\)/);
+  assert.match(source, /canReplace: flag\('canCreateCorrection'\)/);
+  assert.match(source, /canApprove: flag\('canApprove'\)/);
+  assert.match(source, /canSign: flag\('canSign'\)/);
+  assert.match(source, /backend\?\.\[key\] === true/);
 });
 
 test('protocol normative display keeps zero values', async () => {

@@ -19,6 +19,7 @@ import {
 } from '../../services/normativeSearchService';
 import { getNormativesForProtocol } from '../../services/normativeService';
 import { useAuth } from '../../contexts/AuthContext';
+import { protocolQueryKeys, protocolScope } from '../../features/protocols/hooks/queryKeys';
 import { resolveMeasurementDeviceId } from '../../utils/protocolResultAliases';
 import type { NormativeSearchParams } from '../../types/normativeSearch';
 import type {
@@ -352,12 +353,13 @@ const ProtocolResultsTable = ({
   onChange, onCheckNormatives, onImported, onNotify, onGoToInstruments,
 }: Props) => {
   const { user } = useAuth();
+  const cacheScope = protocolScope(user?.id);
   const queryClient = useQueryClient();
   const invalidateProtocolQueries = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['protocol', protocolId] }),
-      queryClient.invalidateQueries({ queryKey: ['protocol-results', protocolId] }),
-      queryClient.invalidateQueries({ queryKey: ['protocols'] }),
+      queryClient.invalidateQueries({ queryKey: protocolQueryKeys.detail(cacheScope, protocolId) }),
+      queryClient.invalidateQueries({ queryKey: protocolQueryKeys.results(cacheScope, protocolId) }),
+      queryClient.invalidateQueries({ queryKey: protocolQueryKeys.all(cacheScope) }),
     ]);
   };
   const [query, setQuery] = useState('');

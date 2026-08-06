@@ -38,8 +38,9 @@ import { normalizeProtocolError } from '../utils/protocolError';
 import ProtocolDetailsView from '../features/protocols/details/ProtocolDetailsView';
 import type { ProtocolEditSection } from '../features/protocols/details/protocolDetailsModel';
 import { useSignProtocolMutation } from '../features/protocols/hooks/useSignProtocolMutation';
+import { protocolQueryKeys, protocolScope } from '../features/protocols/hooks/queryKeys';
 import { pekApi } from '../features/pek/api/pekApi';
-import { protocolHasAction } from '../features/protocols/utils/protocolActions';
+import { hasProtocolPermission } from '../features/protocols/utils/protocolActions';
 
 const emptyLaboratory = {
   laboratoryName: '',
@@ -231,13 +232,10 @@ const protocolSteps: Array<{ key: ProtocolStepKey; label: string }> = [
 const lifecycleSteps = ['Черновик', 'Результаты', 'Готов к подписи', 'Подписан'];
 const lifecycleIndexByStatus: Record<Protocol['status'], number> = {
   DRAFT: 0,
-  READY_TO_SIGN: 2,
   NEEDS_REVISION: 1,
-  RETURNED_FOR_CORRECTION: 1,
   CALCULATED: 2,
   READY: 2,
   READY_FOR_APPROVAL: 2,
-  UNDER_REVIEW: 2,
   APPROVED: 2,
   SIGNED: 3,
   UNKNOWN: 0,
@@ -690,7 +688,7 @@ const ProtocolStepFooter = ({
               )}
             </>
           )}
-          {['READY_TO_SIGN', 'READY', 'READY_FOR_APPROVAL', 'APPROVED'].includes(String(protocol.status).toUpperCase()) && (
+          {['READY', 'READY_FOR_APPROVAL', 'APPROVED'].includes(String(protocol.status).toUpperCase()) && (
             <>
               <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
               {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadDocx}>DOCX</Button>}
@@ -726,6 +724,7 @@ const ProtocolEditorPage = () => {
   const location = useLocation();
   const toast = useToast();
   const { user, refreshUser } = useAuth();
+  const protocolCacheScope = protocolScope(user?.id);
   const [protocol, setProtocol] = useState<Protocol | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -783,6 +782,7 @@ const ProtocolEditorPage = () => {
   };
 
   const signMutation = useSignProtocolMutation(protocol?.id, {
+    currentUserId: user?.id,
     onSigned: async (updatedProtocol) => {
       setSignOpen(false);
       setEditSection(null);
@@ -803,7 +803,7 @@ const ProtocolEditorPage = () => {
 
   const signCurrentProtocol = () => {
     if (!protocol || signMutation.isPending) return;
-    if (!protocolHasAction(protocol, 'SIGN')) {
+    if (!hasProtocolPermission(protocol, 'canSign')) {
       toast.warning(protocol.blockingReasons?.[0] || 'Нельзя подписать: заполните обязательные данные и выберите действующий прибор');
       return;
     }
@@ -1226,8 +1226,8 @@ const ProtocolEditorPage = () => {
     try {
       const updated = await action();
       applyServerProtocol(updated);
-      void queryClient.invalidateQueries({ queryKey: ['protocols'] });
-      void queryClient.invalidateQueries({ queryKey: ['protocol', updated.id] });
+      void queryClient.invalidateQueries({ queryKey: protocolQueryKeys.all(protocolCacheScope) });
+      void queryClient.invalidateQueries({ queryKey: protocolQueryKeys.detail(protocolCacheScope, updated.id) });
       if (updated.orderId) void queryClient.invalidateQueries({ queryKey: ['order', String(updated.orderId)] });
       if (updated.pekProgramId) void queryClient.invalidateQueries({ queryKey: ['pek', 'program', Number(updated.pekProgramId)] });
       if (updated.pekReportId) {
@@ -1467,7 +1467,7 @@ const ProtocolEditorPage = () => {
         {editSection === 'general' && <div className="space-y-5"><ProtocolGeneralForm protocol={protocol} readOnly={!protocolActions.canEdit} onChange={patchProtocol} /><ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} measurementDate={protocol.measurementDate || protocol.testing.samplingDate} readOnly={!protocolActions.canEdit} onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })} onChange={(testing) => patchProtocol({ testing })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'organization' && <div className="space-y-5"><ProtocolOrganizationForm value={protocol.organization} readOnly={!protocolActions.canEdit} onChange={(organization) => patchProtocol({ organization })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'laboratory' && <ProtocolLaboratoryForm value={protocol.laboratory} employees={laboratoryEmployees} readOnly={!protocolActions.canManageDevices} loading={busy} canOpenSettings={protocolActions.canManageDevices} onExecutorChange={(employee) => patchProtocol({ executorId: String(employee.id), executor: employee.fullName, laboratory: { ...protocol.laboratory, executorId: String(employee.id), executor: employee.fullName } })} onRefresh={refreshLaboratorySnapshot} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
-        {editSection === 'environment' && <div className="space-y-5">{isWaterProtocolType(protocol.templateId) && <div><ProtocolWaterCharacteristicsForm waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} readOnly onChange={() => undefined} /><p className="mt-2 text-xs text-slate-500">Характеристики воды задаются при создании: текущий PATCH API их не редактирует.</p></div>}<ProtocolEnvironmentForm value={protocol.environment || {}} measurementDate={protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate} measurementTime={protocol.measurementTime || ''} objectId={String(protocol.objectId || '')} objectName={companyObjects.find((item) => item.id === String(protocol.objectId))?.name || protocol.companySnapshot.objectName || ''} objectOptions={companyObjects.map((item) => ({ id: item.id, name: item.name }))} readOnly={!protocolActions.canEdit} loading={busy} onSelectionChange={changeWeatherSelection} onRequestConditions={refreshWeather} onChange={(environment) => patchProtocol({ environment })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
+        {editSection === 'environment' && <div className="space-y-5">{isWaterProtocolType(protocol.templateId) && <ProtocolWaterCharacteristicsForm waterType={protocol.waterType || String(protocol.environment?.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.environment?.conditions?.waterUseCategory || '')} readOnly={!protocolActions.canEdit} onChange={({ waterType, waterUseCategory }) => patchProtocol({ conditions: { ...(protocol.environment?.conditions || {}), waterType, waterUseCategory } })} />}<ProtocolEnvironmentForm value={protocol.environment || {}} measurementDate={protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate} measurementTime={protocol.measurementTime || ''} objectId={String(protocol.objectId || '')} objectName={companyObjects.find((item) => item.id === String(protocol.objectId))?.name || protocol.companySnapshot.objectName || ''} objectOptions={companyObjects.map((item) => ({ id: item.id, name: item.name }))} readOnly={!protocolActions.canEdit} loading={busy} onSelectionChange={changeWeatherSelection} onRequestConditions={refreshWeather} onChange={(environment) => patchProtocol({ environment })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'methods' && <ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} measurementDate={protocol.measurementDate || protocol.testing.samplingDate} readOnly={!protocolActions.canEdit} onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })} onChange={(testing) => patchProtocol({ testing })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
         {editSection === 'results' && <ProtocolResultsTable protocolId={protocol.id} version={protocol.version} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} devices={protocol.measurementDevices} readOnly={!protocolActions.canManageResults} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />}
       </Modal>
@@ -1479,7 +1479,7 @@ const ProtocolEditorPage = () => {
         protocol={protocol}
         draft={false}
         onClose={() => setPreviewOpen(false)}
-        onConfirmSign={protocolHasAction(protocol, 'SIGN') ? () => {
+        onConfirmSign={hasProtocolPermission(protocol, 'canSign') ? () => {
           setPreviewOpen(false);
           setSignOpen(true);
         } : undefined}

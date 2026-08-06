@@ -9,8 +9,9 @@ const id = (value: string | number | undefined) => {
 };
 
 const decimal = (value: unknown) => {
-  if (value === null || value === undefined || value === '') return undefined;
-  return String(value).trim().replace(',', '.');
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(String(value).trim().replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 /** Canonical mapper for POST /api/protocols. It intentionally does not share the quick-create conditions contract. */
@@ -56,7 +57,10 @@ export const mapFormToCreateProtocolRequest = (form: CreateProtocolPayload) => {
       observedAt: form.environment.observedAt || undefined,
       loadedAt: form.environment.loadedAt || undefined,
       manualChangeReason: form.environment.manualChangeReason || undefined,
+      conditions: form.environment.conditions || null,
     } : undefined,
     printVisibility: normalizeProtocolPrintVisibility(form.printVisibility),
+    orderId: form.orderId || undefined,
+    orderServiceItemId: form.orderServiceItemId || undefined,
   };
 };

@@ -36,7 +36,7 @@ afterAll(() => {
 });
 
 describe('current protocol backend contract', () => {
-  it('maps only real backend permissions and the two canonical UI aliases', () => {
+  it('maps only the exact real backend permission fields', () => {
     const mapped = mapProtocolPermissions({
       canView: true,
       canEdit: false,
@@ -44,10 +44,12 @@ describe('current protocol backend contract', () => {
       canCreateCorrection: false,
       canDownload: true,
     });
-    expect(mapped.canReadyForApproval).toBe(true);
-    expect(mapped.canReplace).toBe(false);
+    expect(mapped.canSendToApproval).toBe(true);
+    expect(mapped.canCreateCorrection).toBe(false);
     expect(mapped.canEdit).toBe(false);
-    expect(mapped).not.toHaveProperty('canDownloadFromBackend');
+    expect(mapped).not.toHaveProperty('canReadyForApproval');
+    expect(mapped).not.toHaveProperty('canReplace');
+    expect(mapped).not.toHaveProperty('canDownload');
   });
 
   it('keeps unknown status read-only', () => {
@@ -90,7 +92,7 @@ describe('current protocol backend contract', () => {
       protocolDate: '2026-07-31',
       environment: { temperature: '0', pressureHpa: '1013', source: 'MANUAL' },
     });
-    expect(request.environment).toMatchObject({ temperatureC: '0', pressureHpa: '1013', source: 'MANUAL' });
+    expect(request.environment).toMatchObject({ temperatureC: 0, pressureHpa: 1013, source: 'MANUAL' });
     expect(request).not.toHaveProperty('conditions');
   });
 

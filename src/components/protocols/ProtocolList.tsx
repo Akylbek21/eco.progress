@@ -3,7 +3,7 @@ import { MoreHorizontal } from 'lucide-react';
 import ProtocolStatusBadge from './ProtocolStatusBadge';
 import type { Protocol } from '../../types/protocols';
 import { templateName } from '../../data/protocolTemplates';
-import { protocolHasAction } from '../../features/protocols/utils/protocolActions';
+import { hasProtocolPermission } from '../../features/protocols/utils/protocolActions';
 import { normalizeProtocolStatus } from '../../config/protocolStatus';
 
 type Props = {
@@ -27,7 +27,7 @@ const formatDate = (value?: string) => value && !Number.isNaN(new Date(value).ge
 const primaryLabel = (protocol: Protocol) => {
   const status = normalizeProtocolStatus(protocol.status);
   if (status === 'DRAFT') return 'Продолжить';
-  if (protocolHasAction(protocol, 'SIGN')) return 'Открыть';
+  if (hasProtocolPermission(protocol, 'canSign')) return 'Открыть';
   if (status === 'SIGNED' && protocol.hasPdf) return 'Скачать PDF';
   return 'Открыть';
 };
@@ -47,12 +47,12 @@ const ProtocolRowActions = ({ protocol, busy, onOpen, onSign, onEdit, onDelete, 
     <div className="relative">
       <button type="button" aria-label={`Дополнительные действия ${protocol.protocolNumber || ''}`} aria-expanded={open} onClick={() => setOpen((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white"><MoreHorizontal className="h-5 w-5" /></button>
       {open && <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-        {protocolHasAction(protocol, 'EDIT') && <button type="button" onClick={() => { setOpen(false); onEdit(protocol); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">Изменить</button>}
-        {protocol.hasDocx && protocolHasAction(protocol, 'DOWNLOAD_DOCX') && <button type="button" onClick={() => { setOpen(false); onDownload(protocol, 'docx'); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">Скачать DOCX</button>}
-        {protocolHasAction(protocol, 'CREATE_CORRECTED_VERSION') && <button type="button" onClick={() => { setOpen(false); onReplace(protocol); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">Создать исправленную версию</button>}
+        {hasProtocolPermission(protocol, 'canEdit') && <button type="button" onClick={() => { setOpen(false); onEdit(protocol); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">Изменить</button>}
+        {protocol.hasDocx && hasProtocolPermission(protocol, 'canView') && <button type="button" onClick={() => { setOpen(false); onDownload(protocol, 'docx'); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">Скачать DOCX</button>}
+        {hasProtocolPermission(protocol, 'canCreateCorrection') && <button type="button" onClick={() => { setOpen(false); onReplace(protocol); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">Создать исправленную версию</button>}
         <button type="button" onClick={() => { setOpen(false); onOpen(protocol); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">История</button>
-        {protocolHasAction(protocol, 'DELETE') && <button type="button" onClick={() => { setOpen(false); onDelete(protocol); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-rose-700 hover:bg-rose-50">Удалить</button>}
-        {protocolHasAction(protocol, 'ARCHIVE') && <button type="button" onClick={() => { setOpen(false); onArchive(protocol); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-rose-700 hover:bg-rose-50">Архивировать</button>}
+        {hasProtocolPermission(protocol, 'canDelete') && <button type="button" onClick={() => { setOpen(false); onDelete(protocol); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-rose-700 hover:bg-rose-50">Удалить</button>}
+        {hasProtocolPermission(protocol, 'canArchive') && <button type="button" onClick={() => { setOpen(false); onArchive(protocol); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-rose-700 hover:bg-rose-50">Архивировать</button>}
       </div>}
     </div>
   </div>;

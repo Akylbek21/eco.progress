@@ -24,6 +24,7 @@ import type {
   ReturnForRevisionRequest,
   SignProtocolRequest,
   ProtocolVersionRequest,
+  CreateProtocolDraftRequest,
 } from '../features/protocols/api/protocolContracts';
 
 export type DownloadedProtocolFile = {
@@ -42,6 +43,8 @@ export interface ProtocolService {
   getProtocolAudit(protocolId: string): Promise<Protocol['history']>;
   getProtocolById(protocolId: string): Promise<Protocol>;
   createProtocol(payload: CreateProtocolPayload): Promise<Protocol>;
+  createProtocolDraft(payload: CreateProtocolDraftRequest, idempotencyKey: string): Promise<Protocol>;
+  updateProtocolDraft(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol>;
   quickCreateProtocol(params: { payload: QuickCreateProtocolRequest; idempotencyKey: string }): Promise<Protocol>;
   refreshLaboratoryData(protocolId: string, version: number): Promise<Protocol>;
   updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol>;
@@ -113,6 +116,8 @@ const protocolService: ProtocolService = {
   getProtocolAudit: async (protocolId) => (await import('../features/protocols/api/protocolQueries')).getProtocolAudit(protocolId),
   getProtocolById: async (protocolId) => (await implementation()).getProtocolById(protocolId),
   createProtocol: async (payload) => (await implementation()).createProtocol(payload),
+  createProtocolDraft: async (payload, idempotencyKey) => (await implementation()).createProtocolDraft(payload, idempotencyKey),
+  updateProtocolDraft: async (protocolId, payload) => (await implementation()).updateProtocolDraft(protocolId, payload),
   quickCreateProtocol: async (params) => (await import('./apiProtocolService')).quickCreateProtocol(params),
   // Snapshot refresh must always use the real transactional backend endpoint.
   refreshLaboratoryData: async (protocolId, version) => (await import('./apiProtocolService')).refreshLaboratoryData(protocolId, version),

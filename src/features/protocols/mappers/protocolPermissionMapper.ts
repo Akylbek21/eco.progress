@@ -1,58 +1,14 @@
-export type BackendProtocolPermissions = {
-  canView?: boolean;
-  canEdit?: boolean;
-  canDelete?: boolean;
-  canCalculate?: boolean;
-  canCheckNormatives?: boolean;
-  canGeneratePreview?: boolean;
-  canSendToApproval?: boolean;
-  canReturnForRevision?: boolean;
-  canApprove?: boolean;
-  canSign?: boolean;
-  canCreateCorrection?: boolean;
-  canCancel?: boolean;
-  canArchive?: boolean;
-  canPublish?: boolean;
-  canPrepareSigning?: boolean;
-  canDownloadPdf?: boolean;
-  canDownloadDocx?: boolean;
-};
+import type { ProtocolPermissions } from '../../../types/protocols';
 
-const allowed = (value: unknown) => value === true;
+const permissionKeys = [
+  'canView', 'canEdit', 'canDelete', 'canCalculate', 'canCheckNormatives',
+  'canGeneratePreview', 'canSendToApproval', 'canReturnForRevision', 'canApprove',
+  'canSign', 'canCreateCorrection', 'canCancel', 'canArchive', 'canPublish',
+  'canGenerateDocuments', 'canRegenerateDocuments',
+] as const satisfies readonly (keyof ProtocolPermissions)[];
 
-/** The only boundary that maps backend permission names to UI capabilities. */
-export const mapProtocolPermissions = (input: unknown): Record<string, boolean> => {
-  const source = input && typeof input === 'object'
-    ? input as BackendProtocolPermissions
-    : {};
-  const canView = allowed(source.canView);
-  const canEdit = allowed(source.canEdit);
-  const canGeneratePreview = allowed(source.canGeneratePreview);
-
-  return {
-    canView,
-    canEdit,
-    canDelete: allowed(source.canDelete),
-    canCalculate: allowed(source.canCalculate),
-    canCheckNormatives: allowed(source.canCheckNormatives),
-    canGeneratePreview,
-    canSendToApproval: allowed(source.canSendToApproval),
-    canReturnForRevision: allowed(source.canReturnForRevision),
-    canApprove: allowed(source.canApprove),
-    canSign: allowed(source.canSign),
-    canCreateCorrection: allowed(source.canCreateCorrection),
-    canCancel: allowed(source.canCancel),
-    canArchive: allowed(source.canArchive),
-    canPublish: allowed(source.canPublish),
-    canPrepareSigning: allowed(source.canPrepareSigning),
-    canDownloadPdf: allowed(source.canDownloadPdf),
-    canDownloadDocx: allowed(source.canDownloadDocx),
-    canReadyForApproval: allowed(source.canSendToApproval),
-    canReplace: allowed(source.canCreateCorrection),
-    canGenerateDocuments: canGeneratePreview,
-    canDownload: canView,
-    canManageResults: canEdit,
-    canManageDevices: canEdit,
-    canViewAudit: canView,
-  };
+/** Fail-closed boundary: only literal backend true values enable an action. */
+export const mapProtocolPermissions = (input: unknown): ProtocolPermissions => {
+  const source = input && typeof input === 'object' ? input as Record<string, unknown> : {};
+  return Object.fromEntries(permissionKeys.map((key) => [key, source[key] === true])) as ProtocolPermissions;
 };

@@ -13,21 +13,20 @@ const protocol = (status: ProtocolStatus, extra: Partial<Protocol> = {}): Protoc
 
 describe('simplified protocol details', () => {
   it('uses human-readable status and compliance labels', () => {
-    expect(protocolStatusLabel('READY_FOR_APPROVAL')).toBe('Готов к подписи');
-    expect(protocolStatusLabel('UNDER_REVIEW')).toBe('На проверке');
+    expect(protocolStatusLabel('READY_FOR_APPROVAL')).toBe('На утверждении');
+    expect(protocolStatusLabel('UNDER_REVIEW')).toBe('Неизвестный статус');
     expect(protocolStatusLabel('NEEDS_REVISION')).toBe('Нужно исправить');
     expect(complianceLabel('NORMATIVE_NOT_FOUND')).toBe('Норматив не найден');
     expect(complianceLabel('EXCEEDED')).toBe('Есть превышение');
   });
 
   it('shows one backend-permission-aware primary action', () => {
-    expect(resolveProtocolPrimaryAction(protocol('DRAFT', { availableActions: ['EDIT'], permissions: { canEdit: true } }), 'LABORATORY')).toEqual({ key: 'edit', label: 'Продолжить' });
+    expect(resolveProtocolPrimaryAction(protocol('DRAFT', { permissions: { canEdit: true } }), 'LABORATORY')).toEqual({ key: 'edit', label: 'Продолжить' });
     expect(resolveProtocolPrimaryAction(protocol('READY_FOR_APPROVAL'), 'LABORATORY').key).toBeNull();
-    expect(resolveProtocolPrimaryAction(protocol('CALCULATED', { permissions: { canReadyForApproval: true } }), 'LABORATORY')).toEqual({ key: 'ready', label: 'Отправить на утверждение' });
+    expect(resolveProtocolPrimaryAction(protocol('CALCULATED', { permissions: { canSendToApproval: true } }), 'LABORATORY')).toEqual({ key: 'ready', label: 'Отправить на утверждение' });
     expect(resolveProtocolPrimaryAction(protocol('READY_FOR_APPROVAL', { permissions: { canApprove: true } }), 'DIRECTOR')).toEqual({ key: 'approve', label: 'Утвердить' });
-    expect(resolveProtocolPrimaryAction(protocol('READY_FOR_APPROVAL', { availableActions: ['SIGN'], permissions: { canSign: true } }), 'LABORATORY')).toEqual({ key: 'sign', label: 'Подписать' });
-    expect(resolveProtocolPrimaryAction(protocol('READY_TO_SIGN', { availableActions: ['SIGN'], signatureCount: 0, maxSignatures: 1, permissions: { canSign: true } }), 'LABORATORY')).toEqual({ key: 'sign', label: 'Подписать' });
-    expect(resolveProtocolPrimaryAction(protocol('READY', { availableActions: ['PREPARE_SIGNING'] }), 'LABORATORY')).toEqual({ key: 'sign', label: 'Открыть предварительный просмотр' });
+    expect(resolveProtocolPrimaryAction(protocol('APPROVED', { permissions: { canSign: true } }), 'LABORATORY')).toEqual({ key: 'sign', label: 'Подписать' });
+    expect(resolveProtocolPrimaryAction(protocol('READY', { permissions: { canGeneratePreview: true } }), 'LABORATORY')).toEqual({ key: 'sign', label: 'Открыть предварительный просмотр' });
   });
 
   it('maps the lifecycle to five employee-facing stages', () => {

@@ -59,7 +59,7 @@ const protocol = (extra: Partial<Protocol> = {}): Protocol => ({
   signatures: [],
   hasPdf: true,
   pdfFileId: 'pdf-42',
-  permissions: { canSign: true, canEdit: true, canManageResults: true, canManageDevices: true, canGenerateDocuments: true },
+  permissions: { canSign: true, canEdit: true, canGenerateDocuments: true },
   companySnapshot: { companyName: 'Eco', objectName: 'Object' },
   protocolDate: '2026-07-27',
   organization: { organizationName: '', organizationAddress: '', objectName: '', productName: '', testingBasis: '' },
@@ -132,7 +132,7 @@ describe('collective protocol signing API and mutation', () => {
   it('blocks double click, updates the signature UI and invalidates protocol queries', async () => {
     let requestCount = 0;
     server.use(
-      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: protocol({ availableActions: ['SIGN'] }) })),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: protocol({ permissions: { canSign: true } }) })),
       http.post('http://localhost/api/protocols/42/sign', async () => {
         requestCount += 1;
         await delay(100);
@@ -154,8 +154,8 @@ describe('collective protocol signing API and mutation', () => {
     expect(screen.getByText('Ажибек Акылбек Бауыржанулы')).toBeTruthy();
     expect(requestCount).toBe(1);
     await waitFor(() => {
-      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['protocols'] });
-      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['protocol-signatures', '42'] });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['protocols', 'backend-resolved:unauthenticated', 'list'] });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['protocols', 'backend-resolved:unauthenticated', 'detail', '42', 'signatures'] });
     });
   });
 });
@@ -220,7 +220,7 @@ describe('signature card states and locking', () => {
         canEdit: true,
         canCalculate: true,
         canGenerateDocuments: true,
-        canReplace: true,
+        canCreateCorrection: true,
         canSign: true,
       },
     });

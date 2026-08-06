@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createWizardDefaults, emptyWizardResult } from '../src/features/protocols/components/wizardTypes';
-import { mapWizardResultToDraftRequest, mapWizardToCreateDraft } from '../src/features/protocols/mappers/protocolWizardDraftMapper';
+import { mapProtocolToWizardForm, mapWizardResultToDraftRequest, mapWizardToCreateDraft } from '../src/features/protocols/mappers/protocolWizardDraftMapper';
 import { saveProtocolWizardDraft } from '../src/features/protocols/api/saveProtocolWizardDraft';
 import { mapProtocolApiErrorsToForm } from '../src/features/protocols/utils/protocolFormErrors';
-import { protocolHasAction } from '../src/features/protocols/utils/protocolActions';
+import { hasProtocolPermission } from '../src/features/protocols/utils/protocolActions';
 import { validateForApproval } from '../src/features/protocols/utils/protocolWizardValidation';
 import type { Protocol } from '../src/types/protocols';
 import type { ProtocolService } from '../src/services/protocolService';
@@ -11,7 +11,7 @@ import type { ProtocolService } from '../src/services/protocolService';
 describe('protocol wizard HTTP boundary', () => {
   it('preserves zero and confirmed type-specific values in a result request', () => {
     const form = createWizardDefaults();
-    form.templateId = 'physical_factors';
+    form.templateId = 'noise_vibration';
     form.workplaceType = 'PERMANENT';
     const row = {
       ...emptyWizardResult(),
@@ -28,7 +28,7 @@ describe('protocol wizard HTTP boundary', () => {
     expect(request.values.workplaceType).toBe('PERMANENT');
   });
 
-  it('does not invent unsupported order and PEK fields in CreateProtocolRequest', () => {
+  it('sends supported order links and does not invent unsupported PEK fields in draft DTO', () => {
     const form = createWizardDefaults();
     Object.assign(form, {
       templateId: 'ambient_air',
@@ -42,8 +42,7 @@ describe('protocol wizard HTTP boundary', () => {
 
     const request = mapWizardToCreateDraft(form) as unknown as Record<string, unknown>;
 
-    expect(request).not.toHaveProperty('orderId');
-    expect(request).not.toHaveProperty('orderServiceItemId');
+    expect(request).toMatchObject({ orderId: '30', orderServiceItemId: '40' });
     expect(request).not.toHaveProperty('pekProgramId');
     expect(request).not.toHaveProperty('pekControlEventId');
   });
@@ -51,13 +50,27 @@ describe('protocol wizard HTTP boundary', () => {
   it('creates a real server draft before any result exists', async () => {
     const form = createWizardDefaults();
     Object.assign(form, { templateId: 'ambient_air', companyId: '10', objectId: '20' });
-    const createProtocol = async () => ({ id: 'draft-1', version: 0, status: 'DRAFT', results: [] }) as Protocol;
-    const service = { createProtocol } as unknown as ProtocolService;
+    const createProtocolDraft = async () => ({ id: 'draft-1', version: 0, status: 'DRAFT', results: [] }) as Protocol;
+    const service = { createProtocolDraft } as unknown as ProtocolService;
 
     const saved = await saveProtocolWizardDraft(form, null, service);
 
     expect(saved.protocol).toMatchObject({ id: 'draft-1', version: 0, status: 'DRAFT' });
     expect(saved.resultIds).toEqual([]);
+  });
+});
+
+describe('protocol environment mapping', () => {
+  it('restores environment.conditions, links and a zero result from GET', () => {
+    const protocol = {
+      id: '1', templateId: 'water', status: 'DRAFT', version: 2, protocolDate: '2026-08-06',
+      environment: { temperature: '0', conditions: { waterType: 'DRINKING', workplaceType: 'PERMANENT' } },
+      orderId: 'order-1', orderServiceItemId: 'item-2', results: [{ id: 'r1', values: { indicatorName: 'pH', value: 0, unit: 'ед.' } }],
+      laboratory: {}, testing: {},
+    } as unknown as Protocol;
+    const form = mapProtocolToWizardForm(protocol);
+    expect(form).toMatchObject({ temperature: '0', waterType: 'DRINKING', workplaceType: 'PERMANENT', orderId: 'order-1', orderServiceItemId: 'item-2' });
+    expect(form.results[0].value).toBe('0');
   });
 });
 
@@ -86,20 +99,16 @@ describe('protocol wizard validation and backend errors', () => {
   });
 });
 
-describe('backend availableActions authority', () => {
-  const protocol = (status: Protocol['status'], availableActions?: Protocol['availableActions']) => ({
-    status,
-    availableActions,
-  }) as Protocol;
+describe('backend permissions authority', () => {
+  const protocol = (permissions?: Protocol['permissions']) => ({ permissions }) as Protocol;
 
   it('does not infer edit or sign from status', () => {
-    expect(protocolHasAction(protocol('DRAFT'), 'EDIT')).toBe(false);
-    expect(protocolHasAction(protocol('READY_TO_SIGN'), 'SIGN')).toBe(false);
+    expect(hasProtocolPermission(protocol(), 'canEdit')).toBe(false);
+    expect(hasProtocolPermission(protocol(), 'canSign')).toBe(false);
   });
 
   it('allows only explicitly returned actions and fails closed for an unknown status', () => {
-    expect(protocolHasAction(protocol('DRAFT', ['EDIT']), 'EDIT')).toBe(true);
-    expect(protocolHasAction(protocol('DRAFT', ['EDIT']), 'SIGN')).toBe(false);
-    expect(protocolHasAction(protocol('UNKNOWN', ['EDIT']), 'EDIT')).toBe(false);
+    expect(hasProtocolPermission(protocol({ canEdit: true }), 'canEdit')).toBe(true);
+    expect(hasProtocolPermission(protocol({ canEdit: true }), 'canSign')).toBe(false);
   });
 });

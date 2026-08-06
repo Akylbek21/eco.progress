@@ -19,8 +19,8 @@ export const saveProtocolWizardDraft = async (
   service: ProtocolService = protocolService,
 ): Promise<SavedProtocolWizardDraft> => {
   let protocol = current
-    ? await service.updateProtocol(current.id, mapWizardToUpdateDraft(form, current))
-    : await service.createProtocol(mapWizardToCreateDraft(form));
+    ? await service.updateProtocolDraft(current.id, mapWizardToUpdateDraft(form, current))
+    : await service.createProtocolDraft(mapWizardToCreateDraft(form), `protocol-draft-${crypto.randomUUID()}`);
 
   if (!protocol.id) throw new Error('Не удалось сохранить протокол: сервер не вернул идентификатор.');
 

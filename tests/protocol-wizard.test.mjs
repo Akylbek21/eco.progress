@@ -9,8 +9,8 @@ test('protocol list opens the wizard without navigating to a creation page', asy
   assert.match(page, /setCreateModalOpen\(true\)/);
   assert.match(page, /<CreateProtocolWizardModal/);
   assert.doesNotMatch(page, /navigate\('\/staff\/protocols\/create'/);
-  assert.match(page, /invalidateQueries\(\{ queryKey: \['protocols'\] \}\)/);
-  assert.match(page, /navigate\(`\/staff\/protocols\/\$\{protocol\.id\}`\)/);
+  assert.match(page, /invalidateQueries\(\{ queryKey: protocolQueryKeys\.all\(scope\) \}\)/);
+  assert.match(page, /navigate\(`\/staff\/protocols\/\$\{protocol\.id\}/);
 });
 
 test('wizard has five guarded steps and one quick-create mutation', async () => {

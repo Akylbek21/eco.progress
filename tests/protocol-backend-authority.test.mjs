@@ -37,9 +37,9 @@ test('workflow keeps version in body, one revision reason and backend permission
   assert.doesNotMatch(client, /version: bodyVersion, \.\.\.body/);
   assert.match(api, /\{ version: request\.version, reason \}/);
   assert.doesNotMatch(api, /\{ comment, reason:/);
-  assert.match(permissions, /protocol\.permissions/);
+  assert.match(permissions, /protocol\?\.permissions/);
   assert.match(api, /cmsSignatureBase64/);
-  assert.match(permissions, /backendFlag\('canPublish'\)/);
+  assert.match(permissions, /flag\('canPublish'\)/);
 });
 
 test('bulk result operations use atomic backend endpoints', async () => {

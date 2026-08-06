@@ -2,12 +2,9 @@ import type { LaboratoryDetails as CanonicalLaboratoryDetails, LaboratoryEmploye
 
 export type ProtocolStatus =
   | 'DRAFT'
-  | 'READY_TO_SIGN'
   | 'CALCULATED'
   | 'READY'
   | 'READY_FOR_APPROVAL'
-  | 'UNDER_REVIEW'
-  | 'RETURNED_FOR_CORRECTION'
   | 'NEEDS_REVISION'
   | 'APPROVED'
   | 'SIGNED'
@@ -15,6 +12,25 @@ export type ProtocolStatus =
   | 'CANCELLED'
   | 'ARCHIVED'
   | 'UNKNOWN';
+
+export interface ProtocolPermissions {
+  canView?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canCalculate?: boolean;
+  canCheckNormatives?: boolean;
+  canGeneratePreview?: boolean;
+  canSendToApproval?: boolean;
+  canReturnForRevision?: boolean;
+  canApprove?: boolean;
+  canSign?: boolean;
+  canCreateCorrection?: boolean;
+  canCancel?: boolean;
+  canArchive?: boolean;
+  canPublish?: boolean;
+  canGenerateDocuments?: boolean;
+  canRegenerateDocuments?: boolean;
+}
 
 export type ProtocolResultValue = string | number | null | undefined | Array<string | number | null>;
 
@@ -258,6 +274,7 @@ export type ProtocolEnvironmentalConditions = {
   manualChangeReason?: string;
   available?: boolean;
   warning?: string;
+  conditions?: Record<string, ProtocolResultValue> | null;
 };
 
 export type WeatherConditionsStatus =
@@ -414,8 +431,7 @@ export interface Protocol {
   monitoringPointId?: string | number;
   emissionSourceId?: string | number;
   waterOutletId?: string | number;
-  permissions?: Record<string, boolean>;
-  availableActions?: ProtocolAvailableAction[];
+  permissions?: ProtocolPermissions;
   canComplete?: boolean;
   blockingReasons?: string[];
   publishedToClientAt?: string;
@@ -424,13 +440,6 @@ export interface Protocol {
   publishedDocumentId?: string | number;
   syncWarning?: string;
 }
-
-export type ProtocolAvailableAction =
-  | 'EDIT' | 'SAVE' | 'CALCULATE' | 'CHECK_NORMATIVES'
-  | 'PREPARE_SIGNING' | 'SIGN' | 'RETURN_TO_DRAFT'
-  | 'DOWNLOAD_PDF' | 'DOWNLOAD_DOCX' | 'CREATE_CORRECTED_VERSION'
-  | 'ARCHIVE' | 'SUBMIT_FOR_REVIEW' | 'APPROVE' | 'RETURN_FOR_CORRECTION'
-  | string;
 
 export type ProtocolPage = {
   items: Protocol[];
@@ -538,6 +547,8 @@ export interface CreateProtocolPayload {
   waterUseCategory?: string;
   environment?: ProtocolEnvironmentalConditions;
   printVisibility?: ProtocolPrintVisibility;
+  orderId?: string | number;
+  orderServiceItemId?: string | number;
 }
 
 export type UpdateProtocolPayload = {
@@ -571,6 +582,8 @@ export type UpdateProtocolPayload = {
   complianceDocument?: string;
   notes?: string;
   printVisibility?: ProtocolPrintVisibility;
+  orderId?: string | number;
+  orderServiceItemId?: string | number;
 };
 
 export type ProtocolResultPayload = {

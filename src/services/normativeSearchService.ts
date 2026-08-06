@@ -12,8 +12,6 @@ export interface NormativeSearchRequest {
   query?: string;
   pollutantCode?: string;
   code?: string;
-  casNumber?: string;
-  formula?: string;
   templateId?: string;
   sourceDocumentCode?: string;
   environmentType?: string;
@@ -201,8 +199,6 @@ export const searchNormatives = async (
   const hasExactFilter = Boolean(
     params.pollutantCode ||
       params.code ||
-      params.casNumber ||
-      params.formula ||
       params.factorCode,
   );
   if ((!query || !canSearchNormative(query)) && !hasExactFilter) {
@@ -237,8 +233,6 @@ export const buildNormativeSearchSequence = (params: NormativeSearchRequest) => 
     query: strict.query,
     pollutantCode: strict.pollutantCode,
     code: strict.code,
-    casNumber: strict.casNumber,
-    formula: strict.formula,
     templateId: strict.templateId,
     sourceDocumentCode: strict.sourceDocumentCode,
     factorType: strict.factorType,
@@ -249,8 +243,6 @@ export const buildNormativeSearchSequence = (params: NormativeSearchRequest) => 
     query: strict.query,
     pollutantCode: strict.pollutantCode,
     code: strict.code,
-    casNumber: strict.casNumber,
-    formula: strict.formula,
     templateId: strict.templateId,
     page: strict.page,
     size: strict.size,
