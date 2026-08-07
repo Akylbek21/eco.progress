@@ -85,8 +85,8 @@ export default function CreateDocumentPage() {
   });
   const quickCreate = useMutation({
     mutationFn: (input: QuickCounterpartyValues) => documentFlowApi.createCounterparty({
-      organizationId: tenant.organizationId!, bin: normalizeBin(input.bin), name: input.name.trim(),
-    }),
+      bin: normalizeBin(input.bin), name: input.name.trim(),
+    }, tenant.organizationId!),
     onSuccess: async (created) => {
       setQuickCreated(created);
       setValue('counterpartyId', String(created.id), { shouldDirty: true, shouldValidate: true });
@@ -117,7 +117,7 @@ export default function CreateDocumentPage() {
   const routeInvalid = !route.steps.length || route.steps.some((item) =>
     !validateRequiredCount(item.requiredCount, item.assignments.length)
     || !item.assignments.length
-    || item.assignments.some((assignment) => assignment.signerType === 'ORGANIZATION_MEMBER' ? !assignment.memberId : !assignment.email || !/^\S+@\S+\.\S+$/.test(assignment.email))
+    || item.assignments.some((assignment) => assignment.signerType === 'ORGANIZATION_MEMBER' ? !assignment.userId : !assignment.email || !/^\S+@\S+\.\S+$/.test(assignment.email))
   );
 
   useEffect(() => {
@@ -200,6 +200,7 @@ export default function CreateDocumentPage() {
             catch (error) { if (isAxiosError(error) && error.response?.status === 404) return null; throw error; }
           },
           createSigningRoute: (id, payload) => documentFlowApi.createSigningRoute(id, payload),
+          prepare: (id, expectedVersion) => { setPhase('PREPARING'); return documentFlowApi.prepareForSigning(id, expectedVersion); },
           send: (id) => { setPhase('PREPARING'); return documentFlowApi.sendForSigning(id); },
         },
         persist: (next) => {

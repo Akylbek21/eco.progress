@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert, Box, Button, Card, CardContent, CircularProgress, Dialog, DialogActions,
   DialogContent, DialogTitle, Divider, Grid, LinearProgress, Stack, Tab, Tabs,
@@ -13,8 +13,9 @@ import { useDocumentFlowContext } from '../components/DocumentFlowGate';
 import { documentMutationAllowed, hasFeature, isKnownDocumentStatus, validateDocumentFile } from '../model/access';
 import { mapDocumentFlowError } from '../utils/apiErrorMapper';
 import { useDocumentFlowTenant } from '../hooks/useDocumentFlowTenant';
-import BackendContractBlocker from '../components/BackendContractBlocker';
 import { hasDocumentAction } from '../model/documentActions';
+import AuditTimeline from '../components/AuditTimeline';
+import { createCmsSignatureWithNCALayer } from '../../../services/ncalayer';
 
 const saveBlob = (blob: Blob, filename: string) => {
   if (!(blob instanceof Blob) || blob.size === 0 || blob.type.includes('json')) throw new Error('Backend не вернул ожидаемый файл.');
@@ -39,6 +40,9 @@ export default function DocumentDetailsPage() {
   const [reasonAction, setReasonAction] = useState<'reject' | 'return' | 'revoke' | null>(null);
   const [reason, setReason] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveReason, setArchiveReason] = useState('Документ завершён');
+  const signatureRequestId = useRef<string | null>(null);
   const documentQuery = useQuery({
     queryKey: tenant.tenantScope ? documentFlowKeys.document(tenant.tenantScope, id) : ['document-flow', 'tenant-unresolved', 'document', id],
     queryFn: ({ signal }) => documentFlowApi.document(id, tenant.organizationId!, signal),
@@ -68,10 +72,11 @@ export default function DocumentDetailsPage() {
       const document = documentQuery.data;
       if (!document) throw new Error('Документ не загружен.');
       if (name === 'send') {
+        await documentFlowApi.prepareForSigning(id, document.version);
         return documentFlowApi.sendForSigning(id);
       }
       if (name === 'delete') return documentFlowApi.deleteDocument(id, tenant.organizationId!);
-      if (name === 'archive') return documentFlowApi.archive(id, tenant.organizationId!);
+      if (name === 'archive') return documentFlowApi.archive(id, tenant.organizationId!, document.version, archiveReason.trim());
       if (name === 'zip') {
         const response = await documentFlowApi.signedPackage(id, tenant.organizationId!);
         saveBlob(response.data, `document-${id}-signed-package.zip`);
@@ -96,6 +101,21 @@ export default function DocumentDetailsPage() {
       return documentFlowApi.createRevocation(id, reason.trim());
     },
     onSuccess: async () => { setReasonAction(null); setReason(''); await refresh(); },
+  });
+  const signMutation = useMutation({
+    mutationFn: async () => {
+      const fresh = await documentFlowApi.document(id, tenant.organizationId!);
+      const own = await documentFlowApi.myAssignment(id, tenant.organizationId!);
+      if (!own?.canSign) throw new Error('Подписание недоступно для текущего пользователя.');
+      const response = await documentFlowApi.download(id, tenant.organizationId!);
+      const bytes = new Uint8Array(await response.data.arrayBuffer());
+      let binary = '';
+      bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+      const cms = await createCmsSignatureWithNCALayer(btoa(binary));
+      signatureRequestId.current ??= crypto.randomUUID();
+      return documentFlowApi.submitSignature({ documentId: fresh.id, versionId: own.versionId, assignmentId: own.assignmentId, cms, clientRequestId: signatureRequestId.current });
+    },
+    onSuccess: async () => { signatureRequestId.current = null; await refresh(); },
   });
   const update = useMutation({
     mutationFn: () => documentFlowApi.updateDocument(id, {
@@ -146,7 +166,7 @@ export default function DocumentDetailsPage() {
         {mutable && document.permissions.canSend && document.availableActions.includes('SEND') && <Button variant="contained" onClick={() => action.mutate('send')}>Отправить на подпись</Button>}
         {document.permissions.canDownload && document.availableActions.includes('DOWNLOAD_SIGNED_PACKAGE') && <Button onClick={() => action.mutate('zip')}>Скачать подписанный ZIP</Button>}
         {mutable && document.permissions.canDelete && document.availableActions.includes('DELETE') && <Button color="error" onClick={() => setDeleteOpen(true)}>Удалить</Button>}
-        {mutable && hasDocumentAction(document, 'ARCHIVE') && <Button color="warning" disabled={action.isPending} onClick={() => action.mutate('archive')}>В архив</Button>}
+        {mutable && hasDocumentAction(document, 'ARCHIVE') && <Button color="warning" disabled={action.isPending} onClick={() => setArchiveOpen(true)}>В архив</Button>}
       </Stack>
       {action.isError && <Alert severity="error">{mapDocumentFlowError(action.error).message}</Alert>}
       {action.isPending && <LinearProgress />}
@@ -155,8 +175,7 @@ export default function DocumentDetailsPage() {
       </Tabs>
       {tab === 0 && <Grid container spacing={2}><Grid size={{ xs: 12, md: previewUrl ? 5 : 12 }}><Card><CardContent><Typography>{document.description || 'Описание отсутствует'}</Typography><Divider sx={{ my: 2 }} /><Typography>Тип: {typeConfig?.title || document.type}</Typography><Typography>Направление: {document.direction}</Typography><Typography>Контрагент: {document.counterparty?.name || '—'}</Typography><Typography>Автор: {document.author?.fullName || '—'}</Typography><Typography>Версия записи: {document.version}</Typography></CardContent></Card></Grid>{previewUrl && <Grid size={{ xs: 12, md: 7 }}><Box component="iframe" src={previewUrl} title="Предпросмотр документа" width="100%" height="650px" border={0} /></Grid>}</Grid>}
       {tab === 1 && <Stack spacing={2}>
-        <Card><CardContent><Typography fontWeight={800}>Моя задача</Typography>{assignment.isLoading && <CircularProgress size={22} />}{assignment.isError && <Alert severity="info" sx={{ mt: 1 }}>Активная задача для текущего участника не найдена.</Alert>}{assignment.data && <Stack spacing={0.5} mt={1}><Typography>Требуется подпись: {assignment.data.required ? 'да' : 'нет'}</Typography><Typography>Assignment ID: {assignment.data.assignmentId}</Typography><Typography>Шаг: {assignment.data.stepOrder}</Typography><Typography>Действие: {assignment.data.action}</Typography><Typography>Статус: {assignment.data.status}</Typography><Typography>Версия: {assignment.data.versionId}</Typography><Typography>Дедлайн: {assignment.data.deadline ? new Date(assignment.data.deadline).toLocaleString('ru-RU') : '—'}</Typography><Stack direction="row" gap={1} flexWrap="wrap">{hasDocumentAction(document, 'SIGN') && <Button variant="contained" disabled>Подписать</Button>}{hasDocumentAction(document, 'REJECT') && <Button color="error" onClick={() => setReasonAction('reject')}>Отклонить</Button>}{hasDocumentAction(document, 'RETURN_FOR_REVISION') && <Button color="warning" onClick={() => setReasonAction('return')}>Вернуть на доработку</Button>}</Stack></Stack>}</CardContent></Card>
-        {hasDocumentAction(document, 'SIGN') && <BackendContractBlocker title="Подписание ожидает точный challenge DTO" reason="Backend-код проверки CMS и приватный challenge в доступном исходном коде отсутствуют. Подписание другого payload было бы криптографически неверным." technicalCode="DF_PRIVATE_SIGN_CHALLENGE_UNVERIFIED" endpoint={`/api/document-flow/documents/${id}/my-assignment`} missingField="точные подписываемые bytes/challenge" />}
+        <Card><CardContent><Typography fontWeight={800}>Моя задача</Typography>{assignment.isLoading && <CircularProgress size={22} />}{assignment.isError && <Alert severity="info" sx={{ mt: 1 }}>Активная задача для текущего участника не найдена.</Alert>}{assignment.data && <Stack spacing={0.5} mt={1}><Typography>Требуется подпись: {assignment.data.required ? 'да' : 'нет'}</Typography><Typography>Шаг: {assignment.data.stepOrder}</Typography><Typography>Статус: {assignment.data.status}</Typography><Typography>Версия: {assignment.data.versionId}</Typography><Typography>Дедлайн: {assignment.data.deadline ? new Date(assignment.data.deadline).toLocaleString('ru-RU') : '—'}</Typography><Stack direction="row" gap={1} flexWrap="wrap">{assignment.data.canSign && <Button variant="contained" disabled={signMutation.isPending} onClick={() => signMutation.mutate()}>Подписать</Button>}{assignment.data.canReject && <Button color="error" onClick={() => setReasonAction('reject')}>Отклонить</Button>}{assignment.data.canReturn && <Button color="warning" onClick={() => setReasonAction('return')}>Вернуть на доработку</Button>}</Stack>{signMutation.isError && <Alert severity="error">{mapDocumentFlowError(signMutation.error).message}</Alert>}</Stack>}</CardContent></Card>
         {route.isError ? <Alert severity="info">Маршрут подписания ещё не создан.</Alert> : route.data?.steps.map((step) => <Card key={step.id}><CardContent><Typography fontWeight={800}>Шаг {step.stepOrder}: требуется {step.requiredCount}</Typography>{step.assignments.map((item) => <Typography key={item.id}>{item.signerFullName || item.roleCode || item.signerType} — {item.status}</Typography>)}</CardContent></Card>)}
         {(signatures.data || []).map((item) => <Card key={item.id}><CardContent><Typography>{item.certificateSubject}</Typography><Typography color="text.secondary">Сертификат: {item.certificateSerialNumber}</Typography><Typography>Проверка: {item.verificationStatus}</Typography></CardContent></Card>)}
         {(signatures.data?.length || 0) > 0 && <Button onClick={() => action.mutate('verify')}>Проверить все подписи</Button>}
@@ -164,8 +183,9 @@ export default function DocumentDetailsPage() {
       {tab === 2 && <Stack spacing={2}>{mutable && hasFeature(access, 'VERSIONING') && document.permissions.canUploadVersion && <Button component="label">Загрузить новую версию<input hidden type="file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file, 'version'); }} /></Button>}{(versions.data || []).map((item) => <Card key={item.id}><CardContent><Typography fontWeight={800}>Версия {item.versionNumber} {item.current && '· текущая'}</Typography><Typography>{item.originalFileName} · {item.mimeType} · {item.fileSize} байт</Typography><Typography>SHA-256: {item.sha256Hash}</Typography><Typography>{item.locked ? `Заблокирована ${item.lockedAt || ''}` : 'Не заблокирована'}</Typography><Button onClick={async () => saveBlob((await documentFlowApi.downloadVersion(id, item.id, tenant.organizationId!)).data, item.originalFileName)}>Скачать</Button></CardContent></Card>)}</Stack>}
       {tab === 3 && <Stack spacing={2}>{mutable && document.permissions.canManageAttachments && <Button component="label">Добавить вложение<input hidden type="file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file, 'attachment'); }} /></Button>}{(attachments.data || []).map((item) => <Card key={item.id}><CardContent><Typography>{item.originalFileName}</Typography><Typography>{item.mimeType} · {item.fileSize} байт</Typography><Typography>SHA-256: {item.sha256Hash}</Typography><Typography>Загрузил: {item.uploadedBy}, {new Date(item.createdAt).toLocaleString('ru-RU')}</Typography><Button onClick={async () => saveBlob((await documentFlowApi.downloadAttachment(id, item.id, tenant.organizationId!)).data, item.originalFileName)}>Скачать</Button>{mutable && document.permissions.canManageAttachments && <Button color="error" onClick={() => documentFlowApi.deleteAttachment(id, item.id, tenant.organizationId!).then(refresh)}>Удалить</Button>}</CardContent></Card>)}</Stack>}
       {tab === 4 && <Stack spacing={2}>{!hasFeature(access, 'REVOCATION') && <Alert severity="info">Feature REVOCATION недоступен.</Alert>}{(revocations.data || []).map((item) => <Card key={item.id}><CardContent><Typography fontWeight={800}>{item.status}</Typography><Typography>{item.reason}</Typography><Typography color="text.secondary">{new Date(item.createdAt).toLocaleString('ru-RU')}</Typography></CardContent></Card>)}</Stack>}
-      {tab === 5 && hasDocumentAction(document, 'VIEW_AUDIT') && <Stack spacing={2}>{audit.isLoading && <CircularProgress size={24} />}{audit.isError && <Alert severity="error">{mapDocumentFlowError(audit.error).message}</Alert>}{(audit.data?.items ?? []).map((item) => <Card key={item.id}><CardContent><Typography fontWeight={800}>{item.action}</Typography><Typography>{item.actorName || 'Система'} · {new Date(item.createdAt).toLocaleString('ru-RU')}</Typography><Typography>{item.comment || 'Без комментария'}</Typography><Typography color="text.secondary">{item.status || '—'}</Typography></CardContent></Card>)}</Stack>}
+      {tab === 5 && hasDocumentAction(document, 'VIEW_AUDIT') && <Stack spacing={2}>{audit.isLoading && <CircularProgress size={24} />}{audit.isError && <Alert severity="error">{mapDocumentFlowError(audit.error).message}</Alert>}<AuditTimeline events={audit.data?.items ?? []} /></Stack>}
       <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} fullWidth maxWidth="xs"><DialogTitle>Удалить черновик?</DialogTitle><DialogContent><Typography>Черновик и связанные с ним загруженные файлы будут удалены без возможности восстановления.</Typography></DialogContent><DialogActions><Button onClick={() => setDeleteOpen(false)}>Отмена</Button><Button color="error" variant="contained" disabled={action.isPending} onClick={() => action.mutate('delete')}>Удалить черновик</Button></DialogActions></Dialog>
+      <Dialog open={archiveOpen} onClose={() => !action.isPending && setArchiveOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Архивировать документ?</DialogTitle><DialogContent><Alert severity="warning">После архивирования документ нельзя будет редактировать.</Alert><TextField fullWidth multiline minRows={2} label="Причина" value={archiveReason} onChange={(event) => setArchiveReason(event.target.value)} sx={{ mt: 2 }} /></DialogContent><DialogActions><Button disabled={action.isPending} onClick={() => setArchiveOpen(false)}>Отмена</Button><Button color="warning" variant="contained" disabled={action.isPending || archiveReason.trim().length < 3} onClick={() => { action.mutate('archive'); setArchiveOpen(false); }}>Архивировать</Button></DialogActions></Dialog>
       <Dialog open={reasonAction !== null} onClose={() => !reasonMutation.isPending && setReasonAction(null)} fullWidth><DialogTitle>{reasonAction === 'reject' ? 'Отклонить документ' : reasonAction === 'return' ? 'Вернуть на доработку' : 'Запросить отзыв'}</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} inputProps={{ maxLength: 1000 }} label="Причина" value={reason} onChange={(event) => setReason(event.target.value)} error={reason.length > 0 && reason.trim().length < 5} helperText={`${reason.trim().length}/1000, минимум 5 символов`} sx={{ mt: 1 }} />{reasonMutation.isError && <Alert severity="error">{mapDocumentFlowError(reasonMutation.error).message}</Alert>}</DialogContent><DialogActions><Button disabled={reasonMutation.isPending} onClick={() => setReasonAction(null)}>Отмена</Button><Button variant="contained" disabled={reason.trim().length < 5 || reason.trim().length > 1000 || reasonMutation.isPending} onClick={() => reasonMutation.mutate()}>Подтвердить</Button></DialogActions></Dialog>
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth><DialogTitle>Редактировать документ</DialogTitle><DialogContent><Stack spacing={2} mt={1}><TextField label="Название" value={edit.title} onChange={(event) => setEdit((value) => ({ ...value, title: event.target.value }))} /><TextField label="Описание" multiline minRows={3} value={edit.description} onChange={(event) => setEdit((value) => ({ ...value, description: event.target.value }))} /><TextField label="Номер" value={edit.documentNumber} onChange={(event) => setEdit((value) => ({ ...value, documentNumber: event.target.value }))} /><TextField type="datetime-local" InputLabelProps={{ shrink: true }} label="Срок подписания" value={edit.signingDeadline} onChange={(event) => setEdit((value) => ({ ...value, signingDeadline: event.target.value }))} />{update.isError && <Alert severity="error">{update.error.message}</Alert>}</Stack></DialogContent><DialogActions><Button onClick={() => setEditOpen(false)}>Отмена</Button><Button variant="contained" disabled={!edit.title.trim() || update.isPending} onClick={() => update.mutate()}>Сохранить</Button></DialogActions></Dialog>
     </Stack>

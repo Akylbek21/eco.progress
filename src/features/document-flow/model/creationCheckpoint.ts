@@ -5,12 +5,15 @@ import type {
 
 export type CreationStage =
   | 'LOCAL_DRAFT'
+  | 'CREATING_DOCUMENT'
   | 'DOCUMENT_CREATED'
   | 'REQUISITES_UPDATED'
   | 'MAIN_FILE_UPLOADED'
   | 'ATTACHMENTS_UPLOADED'
   | 'ROUTE_CREATED'
-  | 'PREPARED'
+  | 'PREPARING_FOR_SIGNING'
+  | 'PREPARED_FOR_SIGNING'
+  | 'SENDING'
   | 'SENT'
   | 'COMPLETED';
 
@@ -27,11 +30,11 @@ export interface CreationCheckpoint {
   updatedAt: string;
 }
 
-export const CREATION_CHECKPOINT_SCHEMA_VERSION = 1;
+export const CREATION_CHECKPOINT_SCHEMA_VERSION = 2;
 
 const stages: CreationStage[] = [
-  'LOCAL_DRAFT', 'DOCUMENT_CREATED', 'REQUISITES_UPDATED', 'MAIN_FILE_UPLOADED',
-  'ATTACHMENTS_UPLOADED', 'ROUTE_CREATED', 'PREPARED', 'SENT', 'COMPLETED',
+  'LOCAL_DRAFT', 'CREATING_DOCUMENT', 'DOCUMENT_CREATED', 'REQUISITES_UPDATED', 'MAIN_FILE_UPLOADED',
+  'ATTACHMENTS_UPLOADED', 'ROUTE_CREATED', 'PREPARING_FOR_SIGNING', 'PREPARED_FOR_SIGNING', 'SENDING', 'SENT', 'COMPLETED',
 ];
 
 const reached = (current: CreationStage, expected: CreationStage) => stages.indexOf(current) >= stages.indexOf(expected);
@@ -73,6 +76,7 @@ export interface CreationWorkflowOperations {
   listAttachments(id: number): Promise<DocumentAttachment[]>;
   getSigningRoute(id: number): Promise<SigningRoute | null>;
   createSigningRoute(id: number, payload: SigningRouteRequest): Promise<SigningRoute>;
+  prepare(id: number, expectedVersion: number): Promise<SigningRoute>;
   send(id: number): Promise<unknown>;
 }
 
@@ -98,6 +102,7 @@ export const runCreationWorkflow = async (input: CreationWorkflowInput): Promise
   };
 
   if (!reached(checkpoint.stage, 'DOCUMENT_CREATED')) {
+    advance('CREATING_DOCUMENT');
     const document = await input.operations.createDocument(input.createPayload, checkpoint.idempotencyKey);
     advance('DOCUMENT_CREATED', { documentId: document.id, backendVersion: document.version });
   }
@@ -154,18 +159,26 @@ export const runCreationWorkflow = async (input: CreationWorkflowInput): Promise
     advance('ROUTE_CREATED', { routeId: route.id });
   }
 
-  if (!reached(checkpoint.stage, 'PREPARED')) {
+  if (!reached(checkpoint.stage, 'PREPARED_FOR_SIGNING')) {
     const current = await input.operations.getDocument(documentId);
     if (!current.availableActions.includes('SEND')) throw new Error('Backend не разрешает отправку документа: action SEND отсутствует.');
-    advance('PREPARED', { backendVersion: current.version });
+    advance('PREPARING_FOR_SIGNING', { backendVersion: current.version });
+    await input.operations.prepare(documentId, current.version);
+    const prepared = await input.operations.getDocument(documentId);
+    advance('PREPARED_FOR_SIGNING', { backendVersion: prepared.version });
   }
 
   if (!reached(checkpoint.stage, 'SENT')) {
     const currentRoute = await input.operations.getSigningRoute(documentId);
     if (currentRoute?.status !== 'ACTIVE' && currentRoute?.status !== 'COMPLETED') {
+      advance('SENDING');
       await input.operations.send(documentId);
     }
-    advance('SENT');
+    const sent = await input.operations.getDocument(documentId);
+    if (!['SENT_FOR_SIGNING', 'PARTIALLY_SIGNED', 'SIGNED'].includes(sent.status)) {
+      throw new Error(`Сервер не подтвердил отправку документа. Текущий статус: ${sent.status}`);
+    }
+    advance('SENT', { backendVersion: sent.version });
   }
   advance('COMPLETED');
   return checkpoint;

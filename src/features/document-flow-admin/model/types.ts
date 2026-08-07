@@ -1,4 +1,4 @@
-import type { AccessContext, SubscriptionStatus, UsageMetric } from '../../document-flow/model/types';
+import type { SubscriptionStatus, UsageMetric } from '../../document-flow/model/types';
 import type { CompanyListItem, PageResponse } from '../../../types/companies';
 
 export type DocumentFlowSubscriptionStatus = SubscriptionStatus;
@@ -30,6 +30,26 @@ export interface DocumentFlowAdminSubscription {
   version: number | null;
 }
 
+export interface AdminOrganizationAccess {
+  organizationId: number; hasSubscription: boolean; subscriptionId: number | null; subscriptionVersion: number | null;
+  subscriptionStatus: DocumentFlowSubscriptionStatus | null; planId: number | null; planCode: string | null; planName: string | null;
+  available: boolean; readOnly: boolean; reason: string | null; startsAt: string | null; expiresAt: string | null;
+  limits: Partial<Record<UsageMetric, number>>; usage: Partial<Record<UsageMetric, number>>;
+  activeMemberCount: number; hasOwner: boolean; availableAdminActions: string[];
+}
+
+export interface AdminOrganizationAccessListItem {
+  organizationId: number; organizationName: string; organizationBin: string; hasSubscription: boolean;
+  subscriptionId: number | null; subscriptionStatus: DocumentFlowSubscriptionStatus | null; planCode: string | null;
+  planName: string | null; available: boolean; readOnly: boolean; startsAt: string | null; expiresAt: string | null;
+  activeMemberCount: number; hasOwner: boolean; availableAdminActions: string[];
+}
+
+export interface SubscriptionEventAdmin {
+  id: number; subscriptionId: number; organizationId: number; eventType: string; oldStatus: string | null;
+  newStatus: string | null; reason: string | null; actorUserId: number | null; createdAt: string;
+}
+
 export interface AccessGrantRequest {
   organizationId: number;
   planCode: string;
@@ -44,7 +64,7 @@ export interface AccessGrantRequest {
 
 export interface AccessGrantResult {
   subscriptionId: number | null;
-  access: AccessContext;
+  access: AdminOrganizationAccess;
   synchronized: boolean;
 }
 
@@ -69,8 +89,7 @@ export interface AccessGrantFilters {
 export interface OrganizationAccessRow {
   organization: CompanyListItem;
   subscription: DocumentFlowAdminSubscription | null;
-  access: AccessContext | null;
+  access: AdminOrganizationAccess | null;
 }
 
 export type OrganizationPage = PageResponse<CompanyListItem>;
-

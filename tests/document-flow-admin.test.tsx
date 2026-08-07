@@ -114,19 +114,18 @@ describe('document flow access administration', () => {
     const requests: Array<{ key: string | null; body: Record<string, unknown> }> = [];
     server.use(http.post('http://localhost/api/admin/document-flow/access-grants', async ({ request }) => {
       requests.push({ key: request.headers.get('Idempotency-Key'), body: await request.json() as Record<string, unknown> });
-      return HttpResponse.json({ data: { id: 77 } });
+      return HttpResponse.json({ success: true, data: { id: 77 } });
     }));
     const result = await documentFlowAdminApi.createAccessGrant({ organizationId: 2, planCode: 'INTERNAL', startsAt: '2026-08-05T11:00', expiresAt: null, graceEndsAt: null, paymentMode: 'ADMIN_GRANT', paymentReference: 'ECOPROGRESS_INTERNAL', reason: 'Бессрочный внутренний доступ' }, 'document-flow-access-2-request');
     expect(result.id).toBe(77);
     expect(requests).toEqual([{ key: 'document-flow-access-2-request', body: { organizationId: 2, planCode: 'INTERNAL', startsAt: '2026-08-05T11:00', expiresAt: null, graceEndsAt: null, paymentMode: 'ADMIN_GRANT', paymentReference: 'ECOPROGRESS_INTERNAL', reason: 'Бессрочный внутренний доступ' } }]);
   });
 
-  it('rechecks organization access through the tenant endpoint', async () => {
-    server.use(http.get('http://localhost/api/document-flow/access', ({ request }) => {
-      expect(new URL(request.url).searchParams.get('organizationId')).toBe('2');
-      return HttpResponse.json({ data: { available: true, readOnly: false, status: 'ACTIVE', reason: null } });
+  it('rechecks organization access through the admin endpoint', async () => {
+    server.use(http.get('http://localhost/api/admin/document-flow/access/2', () => {
+      return HttpResponse.json({ success: true, data: { organizationId: 2, available: true, readOnly: false, subscriptionStatus: 'ACTIVE', reason: null } });
     }));
-    await expect(documentFlowAdminApi.organizationAccess(2)).resolves.toMatchObject({ available: true, readOnly: false, status: 'ACTIVE', reason: null });
+    await expect(documentFlowAdminApi.organizationAccess(2)).resolves.toMatchObject({ available: true, readOnly: false, subscriptionStatus: 'ACTIVE', reason: null });
   });
 
   it.each([
@@ -135,10 +134,10 @@ describe('document flow access administration', () => {
     let calls = 0;
     server.use(http.post(`http://localhost/api/admin/document-flow/subscriptions/2/${path}`, async ({ request }) => {
       calls += 1;
-      expect(await request.json()).toEqual({ reason: 'Причина операции' });
-      return HttpResponse.json({ data: {} });
+      expect(await request.json()).toEqual({ reason: 'Причина операции', expectedVersion: 4 });
+      return HttpResponse.json({ success: true, data: {} });
     }));
-    await documentFlowAdminApi[path](2, 'Причина операции');
+    await documentFlowAdminApi[path](2, 'Причина операции', 4);
     expect(calls).toBe(1);
   });
 

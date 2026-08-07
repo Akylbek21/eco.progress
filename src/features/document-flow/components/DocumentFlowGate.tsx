@@ -84,9 +84,9 @@ export default function DocumentFlowGate() {
     mutationFn: () => documentFlowApi.activateMember(currentMembership!.id, tenant.organizationId!),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: documentFlowKeys.organizations() }),
-        queryClient.invalidateQueries({ queryKey: documentFlowKeys.access(tenant.organizationId!) }),
-        queryClient.invalidateQueries({ queryKey: documentFlowKeys.memberLists(tenant.organizationId!) }),
+        queryClient.invalidateQueries({ queryKey: documentFlowKeys.organizations(String(user?.id ?? 'anonymous')) }),
+        queryClient.invalidateQueries({ queryKey: documentFlowKeys.access(tenant.tenantScope!) }),
+        queryClient.invalidateQueries({ queryKey: documentFlowKeys.memberLists(tenant.tenantScope!) }),
       ]);
     },
   });

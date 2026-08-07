@@ -97,7 +97,7 @@ export default function AccessGrantDialog({ open, internal = false, initialOrgan
       const created = await documentFlowAdminApi.createAccessGrant(parsed.data as AccessGrantRequest, idempotencyKey);
       const access = await documentFlowAdminApi.organizationAccess(Number(organization.id));
       const synchronized = access.available === true && access.readOnly === false
-        && ['ACTIVE', 'TRIAL'].includes(String(access.status)) && access.reason == null;
+        && ['ACTIVE', 'TRIAL'].includes(String(access.subscriptionStatus)) && access.reason == null;
       return { subscriptionId: created.subscriptionId ?? created.id ?? null, access, synchronized };
     },
     onSuccess: async (next) => {
@@ -123,7 +123,7 @@ export default function AccessGrantDialog({ open, internal = false, initialOrgan
   const retryAccessCheck = async () => {
     if (!organization || !result) return;
     const access = await documentFlowAdminApi.organizationAccess(Number(organization.id));
-    const synchronized = access.available && !access.readOnly && ['ACTIVE', 'TRIAL'].includes(String(access.status)) && access.reason == null;
+    const synchronized = access.available && !access.readOnly && ['ACTIVE', 'TRIAL'].includes(String(access.subscriptionStatus)) && access.reason == null;
     setResult({ ...result, access, synchronized });
   };
   const mappedError = grant.isError ? mapDocumentFlowError(grant.error) : null;

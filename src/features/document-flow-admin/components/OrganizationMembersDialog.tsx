@@ -69,7 +69,7 @@ export default function OrganizationMembersDialog({ open, organization, onClose 
         user = await createUser({ name: name.trim(), email: email.trim(), password, role: 'CLIENT', type: 'individual', status: 'active' });
       }
       if (!user) throw new Error('Выберите существующий аккаунт.');
-      const member = await documentFlowApi.createMember({ organizationId, userId: user.id, role });
+      const member = await documentFlowApi.createMember({ email: user.email, role });
       return { member, credentials: mode === 'new' ? { email: email.trim(), password } : null };
     },
     onSuccess: async ({ credentials }) => {

@@ -1,6 +1,6 @@
 import type { DocumentFilters } from '../model/types';
 
-export type TenantScope = number;
+export type TenantScope = Readonly<{ userId: string; organizationId: number }> | number;
 
 const stable = (value: object) => Object.fromEntries(
   Object.entries(value).filter(([, item]) => item !== undefined && item !== '').sort(([a], [b]) => a.localeCompare(b)),
@@ -8,7 +8,7 @@ const stable = (value: object) => Object.fromEntries(
 
 export const documentFlowKeys = {
   all: ['document-flow'] as const,
-  organizations: () => [...documentFlowKeys.all, 'organizations'] as const,
+  organizations: (userId = 'anonymous') => [...documentFlowKeys.all, { userId }, 'organizations'] as const,
   access: (organizationId: TenantScope) => [...documentFlowKeys.all, organizationId, 'access'] as const,
   plans: () => [...documentFlowKeys.all, 'plans'] as const,
   dashboard: (tenantScope: TenantScope) => [...documentFlowKeys.all, tenantScope, 'dashboard'] as const,

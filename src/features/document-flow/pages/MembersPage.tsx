@@ -17,7 +17,7 @@ import { mapDocumentFlowError } from '../utils/apiErrorMapper';
 
 const roles: MembershipRole[] = ['OWNER', 'DOCUMENT_FLOW_ADMIN', 'DOCUMENT_MANAGER', 'SIGNER', 'ACCOUNTANT', 'VIEWER', 'EXTERNAL_SIGNER'];
 
-interface MemberFormValues { userId: string; role: MembershipRole }
+interface MemberFormValues { email: string; role: MembershipRole }
 
 export default function MembersPage() {
   const access = useDocumentFlowContext();
@@ -32,7 +32,7 @@ export default function MembersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [roleTarget, setRoleTarget] = useState<DocumentFlowMember | null>(null);
   const [stateTarget, setStateTarget] = useState<DocumentFlowMember | null>(null);
-  const form = useForm<MemberFormValues>({ defaultValues: { userId: '', role: 'VIEWER' } });
+  const form = useForm<MemberFormValues>({ defaultValues: { email: '', role: 'VIEWER' } });
 
   useEffect(() => {
     const timer = window.setTimeout(() => { setDebouncedQuery(query.trim()); setPage(0); }, 350);
@@ -47,14 +47,12 @@ export default function MembersPage() {
   });
   const invalidate = () => queryClient.invalidateQueries({ queryKey: documentFlowKeys.memberLists(tenant.tenantScope!) });
   const createMember = useMutation({
-    mutationFn: (values: MemberFormValues) => documentFlowApi.createMember({
-      organizationId: tenant.organizationId!, userId: Number(values.userId), role: values.role,
-    }),
+    mutationFn: (values: MemberFormValues) => documentFlowApi.createMember({ email: values.email.trim(), role: values.role }),
     onSuccess: async () => { setCreateOpen(false); form.reset(); await invalidate(); },
     onError: (error) => {
       const mapped = mapDocumentFlowError(error);
       Object.entries(mapped.fieldErrors).forEach(([field, message]) => {
-        if (field === 'userId' || field === 'role') form.setError(field, { type: 'server', message });
+        if (field === 'email' || field === 'role') form.setError(field, { type: 'server', message });
       });
     },
   });
@@ -94,7 +92,7 @@ export default function MembersPage() {
         {items.map((item) => <TableRow key={item.id}><TableCell>{item.fullName || `Пользователь #${item.userId}`}</TableCell><TableCell>{item.email || '—'}</TableCell><TableCell>{item.role}</TableCell><TableCell><Chip size="small" label={item.status} color={item.status === 'ACTIVE' ? 'success' : 'default'} /></TableCell><TableCell align="right">{mutable && <><Button onClick={() => setRoleTarget(item)}>Изменить роль</Button><Button color={item.status === 'ACTIVE' ? 'warning' : 'success'} onClick={() => setStateTarget(item)}>{item.status === 'ACTIVE' ? 'Деактивировать' : 'Активировать'}</Button></>}</TableCell></TableRow>)}
       </TableBody></Table></TableContainer><TablePagination component="div" count={members.data.totalElements} page={page} rowsPerPage={size} rowsPerPageOptions={[10, 20, 50]} onPageChange={(_, next) => setPage(next)} onRowsPerPageChange={(event) => { setSize(Number(event.target.value)); setPage(0); }} /></Paper>}
 
-      <Dialog open={createOpen} onClose={() => !createMember.isPending && setCreateOpen(false)} fullWidth maxWidth="xs"><DialogTitle>Добавить участника</DialogTitle><DialogContent><Stack spacing={2} mt={1}><TextField type="number" label="ID пользователя" {...form.register('userId', { required: 'Укажите ID пользователя', validate: (value) => Number(value) > 0 || 'ID должен быть положительным' })} error={Boolean(form.formState.errors.userId)} helperText={form.formState.errors.userId?.message} /><TextField select label="Роль" defaultValue="VIEWER" {...form.register('role')}>{roles.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>{createMember.isError && <Alert severity={mapDocumentFlowError(createMember.error).status === 409 ? 'warning' : 'error'}>{mapDocumentFlowError(createMember.error).message}</Alert>}</Stack></DialogContent><DialogActions><Button disabled={createMember.isPending} onClick={() => setCreateOpen(false)}>Отмена</Button><Button variant="contained" disabled={createMember.isPending} onClick={form.handleSubmit((values) => createMember.mutate(values))}>Добавить</Button></DialogActions></Dialog>
+      <Dialog open={createOpen} onClose={() => !createMember.isPending && setCreateOpen(false)} fullWidth maxWidth="xs"><DialogTitle>Добавить сотрудника</DialogTitle><DialogContent><Stack spacing={2} mt={1}><TextField type="email" label="Email сотрудника" {...form.register('email', { required: 'Укажите email сотрудника', pattern: { value: /^\S+@\S+\.\S+$/, message: 'Укажите корректный email' } })} error={Boolean(form.formState.errors.email)} helperText={form.formState.errors.email?.message || 'Сотрудник войдёт под этим email через кабинет сотрудника'} /><TextField select label="Роль" defaultValue="VIEWER" {...form.register('role')}>{roles.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>{createMember.isError && <Alert severity={mapDocumentFlowError(createMember.error).status === 409 ? 'warning' : 'error'}>{mapDocumentFlowError(createMember.error).message}</Alert>}</Stack></DialogContent><DialogActions><Button disabled={createMember.isPending} onClick={() => setCreateOpen(false)}>Отмена</Button><Button variant="contained" disabled={createMember.isPending} onClick={form.handleSubmit((values) => createMember.mutate(values))}>Добавить</Button></DialogActions></Dialog>
 
       <Dialog open={Boolean(roleTarget)} onClose={() => !changeRole.isPending && setRoleTarget(null)} fullWidth maxWidth="xs"><DialogTitle>Изменить роль</DialogTitle><DialogContent><TextField select fullWidth sx={{ mt: 1 }} label="Роль" value={roleTarget?.role ?? 'VIEWER'} onChange={(event) => setRoleTarget((current) => current ? { ...current, role: event.target.value as MembershipRole } : current)}>{roles.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>{changeRole.isError && <Alert severity="error" sx={{ mt: 2 }}>{mapDocumentFlowError(changeRole.error).message}</Alert>}</DialogContent><DialogActions><Button disabled={changeRole.isPending} onClick={() => setRoleTarget(null)}>Отмена</Button><Button variant="contained" disabled={changeRole.isPending} onClick={() => roleTarget && changeRole.mutate(roleTarget.role)}>Сохранить</Button></DialogActions></Dialog>
 

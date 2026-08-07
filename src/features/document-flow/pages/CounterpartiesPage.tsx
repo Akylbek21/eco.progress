@@ -47,14 +47,10 @@ export default function CounterpartiesPage() {
   const [status, setStatus] = useState<'' | Counterparty['status']>('ACTIVE');
   const [sort, setSort] = useState('name,asc');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Counterparty | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Counterparty | null>(null);
   const [representativeTarget, setRepresentativeTarget] = useState<Counterparty | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const form = useForm<CounterpartyFormValues>({ defaultValues });
-  const editForm = useForm<Omit<CounterpartyFormValues, 'bin'>>({
-    defaultValues: { name: '', directorName: '', address: '', email: '', phone: '' },
-  });
   const representativeForm = useForm<RepresentativeFormValues>({
     defaultValues: { fullName: '', position: '', email: '', phone: '' },
   });
@@ -73,7 +69,6 @@ export default function CounterpartiesPage() {
 
   useEffect(() => {
     setCreateDialogOpen(false);
-    setEditTarget(null);
     setArchiveTarget(null);
     setRepresentativeTarget(null);
     form.reset(defaultValues);
@@ -82,14 +77,13 @@ export default function CounterpartiesPage() {
 
   const createMutation = useMutation({
     mutationFn: (values: CounterpartyFormValues) => documentFlowApi.createCounterparty({
-      organizationId: tenant.organizationId!,
       bin: normalizeBin(values.bin),
       name: values.name.trim(),
       directorName: emptyToUndefined(values.directorName),
       address: emptyToUndefined(values.address),
       email: emptyToUndefined(values.email),
       phone: emptyToUndefined(values.phone),
-    }),
+    }, tenant.organizationId!),
     onSuccess: async () => {
       setCreateDialogOpen(false);
       form.reset(defaultValues);
@@ -107,26 +101,6 @@ export default function CounterpartiesPage() {
     },
   });
 
-  const editMutation = useMutation({
-    mutationFn: (values: Omit<CounterpartyFormValues, 'bin'>) => documentFlowApi.updateCounterparty(editTarget!.id, {
-      name: values.name.trim(),
-      directorName: emptyToUndefined(values.directorName),
-      address: emptyToUndefined(values.address),
-      email: emptyToUndefined(values.email),
-      phone: emptyToUndefined(values.phone),
-    }, tenant.organizationId!),
-    onSuccess: async (counterparty) => {
-      setEditTarget(null);
-      queryClient.setQueryData(documentFlowKeys.counterparty(tenant.tenantScope!, counterparty.id), counterparty);
-      await queryClient.invalidateQueries({ queryKey: documentFlowKeys.counterpartyLists(tenant.tenantScope!) });
-    },
-    onError: (error) => {
-      const mapped = mapDocumentFlowError(error);
-      Object.entries(mapped.fieldErrors).forEach(([field, message]) => {
-        if (field !== 'bin' && field in defaultValues) editForm.setError(field as keyof Omit<CounterpartyFormValues, 'bin'>, { type: 'server', message });
-      });
-    },
-  });
 
   const archiveMutation = useMutation({
     mutationFn: (counterpartyId: number) => documentFlowApi.archiveCounterparty(counterpartyId, tenant.organizationId!),
@@ -200,7 +174,7 @@ export default function CounterpartiesPage() {
             <Stack direction="row" justifyContent="space-between" gap={1}><Typography fontWeight={800}>{item.name}</Typography><Chip size="small" color={item.status === 'ACTIVE' ? 'success' : 'default'} label={item.status === 'ACTIVE' ? 'Активен' : 'В архиве'} /></Stack>
             <Typography>БИН: {item.bin}</Typography><Typography>{item.directorName || 'Руководитель не указан'}</Typography>
             <Typography>{item.address || 'Адрес не указан'}</Typography><Typography>{item.phone || 'Телефон не указан'}</Typography><Typography>{item.email || 'Email не указан'}</Typography>
-            <Stack direction="row" flexWrap="wrap"><Button onClick={() => setRepresentativeTarget(item)}>Представители</Button>{allowed && <Button onClick={() => { setEditTarget(item); editForm.reset({ name: item.name, directorName: item.directorName || '', address: item.address || '', email: item.email || '', phone: item.phone || '' }); }}>Изменить</Button>}{allowed && item.status === 'ACTIVE' && <Button color="warning" onClick={() => setArchiveTarget(item)}>Архивировать</Button>}</Stack>
+            <Stack direction="row" flexWrap="wrap"><Button onClick={() => setRepresentativeTarget(item)}>Представители</Button>{allowed && item.status === 'ACTIVE' && <Button color="warning" onClick={() => setArchiveTarget(item)}>Архивировать</Button>}</Stack>
           </Stack></CardContent></Card>
         ))}<TablePagination component="div" count={counterpartiesQuery.data.totalElements} page={page} rowsPerPage={size} rowsPerPageOptions={[10, 20, 50]} onPageChange={(_, nextPage) => setPage(nextPage)} onRowsPerPageChange={(event) => { setSize(Number(event.target.value)); setPage(0); }} /></Stack>
       )}
@@ -222,7 +196,6 @@ export default function CounterpartiesPage() {
                   <TableCell>{item.updatedAt ? new Date(item.updatedAt).toLocaleString('ru-RU') : '—'}</TableCell>
                   <TableCell align="right">
                     <Button onClick={() => setRepresentativeTarget(item)}>Представители</Button>
-                    {allowed && <Button onClick={() => { setEditTarget(item); editForm.reset({ name: item.name, directorName: item.directorName || '', address: item.address || '', email: item.email || '', phone: item.phone || '' }); }}>Изменить</Button>}
                     {allowed && item.status === 'ACTIVE' && <Button color="warning" onClick={() => setArchiveTarget(item)}>Архивировать</Button>}
                   </TableCell>
                 </TableRow>
@@ -263,19 +236,6 @@ export default function CounterpartiesPage() {
             {createMutation.isPending ? 'Создание…' : 'Создать'}
           </Button>
         </DialogActions>
-      </Dialog>
-
-      <Dialog open={Boolean(editTarget)} onClose={() => !editMutation.isPending && setEditTarget(null)} fullWidth maxWidth="sm">
-        <DialogTitle>Редактирование · {editTarget?.bin}</DialogTitle>
-        <DialogContent><Stack spacing={2} mt={1}>
-          <TextField label="Название" {...editForm.register('name', { required: 'Укажите название', validate: (value) => Boolean(value.trim()) || 'Укажите название' })} error={Boolean(editForm.formState.errors.name)} helperText={editForm.formState.errors.name?.message} />
-          <TextField label="ФИО руководителя" {...editForm.register('directorName')} />
-          <TextField label="Адрес" {...editForm.register('address')} />
-          <TextField label="Email" {...editForm.register('email', { validate: (value) => isValidEmail(value) || 'Укажите корректный email' })} error={Boolean(editForm.formState.errors.email)} helperText={editForm.formState.errors.email?.message} />
-          <TextField label="Телефон" {...editForm.register('phone', { validate: (value) => isValidPhone(value) || 'Укажите корректный телефон' })} error={Boolean(editForm.formState.errors.phone)} helperText={editForm.formState.errors.phone?.message} />
-          {editMutation.isError && <Alert severity="error">{mapDocumentFlowError(editMutation.error).message}</Alert>}
-        </Stack></DialogContent>
-        <DialogActions><Button disabled={editMutation.isPending} onClick={() => setEditTarget(null)}>Отмена</Button><Button variant="contained" disabled={editMutation.isPending} onClick={editForm.handleSubmit((values) => editMutation.mutate(values))}>{editMutation.isPending ? 'Сохранение…' : 'Сохранить'}</Button></DialogActions>
       </Dialog>
 
       <Dialog open={Boolean(archiveTarget)} onClose={() => !archiveMutation.isPending && setArchiveTarget(null)} fullWidth maxWidth="sm">

@@ -1,17 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { publicDocumentFlowApi } from '../api/documentFlowApi';
 import { documentFlowKeys } from '../api/documentFlowKeys';
-import BackendContractBlocker from '../components/BackendContractBlocker';
 import { mapDocumentFlowError } from '../utils/apiErrorMapper';
+import { createCmsSignatureWithNCALayer } from '../../../services/ncalayer';
 
 export default function ExternalSigningPage() {
   const token = useParams().token || '';
   const [fileUrl, setFileUrl] = useState('');
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState('');
+  const clientRequestId = useRef<string | null>(null);
   const invitation = useQuery({
     queryKey: documentFlowKeys.publicSigning(token),
     queryFn: ({ signal }) => publicDocumentFlowApi.invitation(token, signal),
@@ -43,6 +44,18 @@ export default function ExternalSigningPage() {
     },
     onSuccess: () => { setRejectOpen(false); setReason(''); void invitation.refetch(); },
   });
+  const sign = useMutation({
+    mutationFn: async () => {
+      if (!challenge.data || !file.data?.data) throw new Error('Данные для подписания ещё не загружены.');
+      const bytes = new Uint8Array(await file.data.data.arrayBuffer());
+      let binary = '';
+      bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+      const cms = await createCmsSignatureWithNCALayer(btoa(binary));
+      clientRequestId.current ??= crypto.randomUUID();
+      return publicDocumentFlowApi.sign(token, { cms, clientRequestId: clientRequestId.current });
+    },
+    onSuccess: () => { clientRequestId.current = null; void invitation.refetch(); },
+  });
   if (invitation.isLoading) return <Box minHeight="100vh" display="grid" sx={{ placeItems: 'center' }}><CircularProgress /></Box>;
   if (invitation.isError || !invitation.data) {
     return <Container maxWidth="sm" sx={{ py: 10 }}><Alert severity="error">Приглашение недействительно или срок его действия истёк.</Alert></Container>;
@@ -61,9 +74,11 @@ export default function ExternalSigningPage() {
         </Paper>
         {fileUrl && <Box component="iframe" title="Документ для внешнего подписания" src={fileUrl} width="100%" height="650px" border={0} />}
         {!terminal && <Stack direction="row" gap={2}>
+          <Button variant="contained" disabled={!challenge.data || !file.data || sign.isPending} onClick={() => sign.mutate()}>Подписать через NCALayer</Button>
           <Button color="error" onClick={() => setRejectOpen(true)}>Отклонить</Button>
         </Stack>}
-        {!terminal && <BackendContractBlocker title="Подписание ожидает проверку challenge DTO" reason={challenge.isError ? 'Backend challenge недоступен. Документ можно просмотреть или отклонить.' : 'Challenge получен, но без Java DTO проверки CMS нельзя безопасно определить точные подписываемые байты.'} technicalCode="DF_PUBLIC_SIGN_CHALLENGE_UNVERIFIED" endpoint={`/api/public/document-flow/signing/{token}/challenge`} publicAudience />}
+        {challenge.isError && !terminal && <Alert severity="error">Не удалось получить данные для подписи.</Alert>}
+        {sign.isError && <Alert severity="error">{mapDocumentFlowError(sign.error).message}</Alert>}
       </Stack>
       <Dialog open={rejectOpen} onClose={() => !reject.isPending && setRejectOpen(false)} fullWidth><DialogTitle>Отклонить документ</DialogTitle><DialogContent><TextField fullWidth multiline minRows={3} inputProps={{ maxLength: 1000 }} label="Причина" value={reason} onChange={(event) => setReason(event.target.value)} error={reason.length > 0 && reason.trim().length < 5} helperText={`${reason.trim().length}/1000, минимум 5 символов`} sx={{ mt: 1 }} />{reject.isError && <Alert severity="error">{mapDocumentFlowError(reject.error).message}</Alert>}</DialogContent><DialogActions><Button disabled={reject.isPending} onClick={() => setRejectOpen(false)}>Отмена</Button><Button color="error" disabled={reason.trim().length < 5 || reason.trim().length > 1000 || reject.isPending} onClick={() => reject.mutate()}>Отклонить</Button></DialogActions></Dialog>
     </Container>

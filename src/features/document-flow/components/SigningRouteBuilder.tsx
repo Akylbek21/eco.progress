@@ -9,6 +9,7 @@ import { documentFlowApi } from '../api/documentFlowApi';
 import { documentFlowKeys } from '../api/documentFlowKeys';
 import type { AccessContext, SignerType, SigningAssignmentInput, SigningRouteRequest, SigningRouteType } from '../model/types';
 import { hasFeature, validateRequiredCount } from '../model/access';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const emptyAssignment = (): SigningAssignmentInput => ({ signerType: 'ORGANIZATION_MEMBER', required: true });
 
@@ -18,6 +19,7 @@ function MemberPicker({ organizationId, value, excluded, onChange }: {
   excluded: number[];
   onChange: (value: SigningAssignmentInput) => void;
 }) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -27,19 +29,19 @@ function MemberPicker({ organizationId, value, excluded, onChange }: {
   }, [query]);
   const filters = { query: debouncedQuery || undefined, status: 'ACTIVE', page: 0, size: 20, sort: 'fullName,asc' };
   const members = useQuery({
-    queryKey: organizationId ? documentFlowKeys.members(organizationId, filters) : ['document-flow', 'tenant-unresolved', 'members'],
+    queryKey: organizationId && user ? documentFlowKeys.members({ userId: String(user.id), organizationId }, filters) : ['document-flow', 'tenant-unresolved', 'members'],
     queryFn: ({ signal }) => documentFlowApi.members({ organizationId: organizationId!, ...filters, signal }),
     enabled: Boolean(organizationId && (open || debouncedQuery.length >= 2)),
   });
-  const options = (members.data?.items ?? []).filter((item) => !excluded.includes(item.id));
-  const selected = options.find((item) => item.id === value.memberId) ?? null;
+  const options = (members.data?.items ?? []).filter((item) => !excluded.includes(item.userId));
+  const selected = options.find((item) => item.userId === value.userId) ?? null;
   return <Autocomplete
     sx={{ flex: 1 }} open={open} onOpen={() => setOpen(true)} onClose={() => setOpen(false)}
     options={options} value={selected} filterOptions={(items) => items}
     isOptionEqualToValue={(option, current) => option.id === current.id}
     getOptionLabel={(option) => `${option.fullName} · ${option.role}`}
     onInputChange={(_, input, reason) => { if (reason === 'input') setQuery(input); }}
-    onChange={(_, member) => onChange({ ...value, memberId: member?.id ?? null, signerFullName: member?.fullName ?? null })}
+    onChange={(_, member) => onChange({ ...value, userId: member?.userId ?? null, signerFullName: member?.fullName ?? null })}
     loading={members.isFetching}
     renderInput={(params) => <TextField {...params} label="Участник организации" required error={members.isError} helperText={members.isError ? 'Не удалось загрузить участников' : 'Поиск выполняется на сервере'} InputProps={{ ...params.InputProps, endAdornment: <>{members.isFetching && <CircularProgress size={18} />}{params.InputProps.endAdornment}</> }} />}
   />;
@@ -88,7 +90,7 @@ export default function SigningRouteBuilder({ access, organizationId, value, onC
           return <Stack direction={{ xs: 'column', md: 'row' }} gap={1} alignItems={{ md: 'flex-start' }} key={assignmentIndex}>
             <Select value={assignment.signerType} onChange={(event) => update({ signerType: event.target.value as SignerType, required: true })}><MenuItem value="ORGANIZATION_MEMBER">Сотрудник</MenuItem>{hasFeature(access, 'EXTERNAL_SIGNING') && <MenuItem value="EXTERNAL">Внешний подписант</MenuItem>}</Select>
             {assignment.signerType === 'ORGANIZATION_MEMBER'
-              ? <MemberPicker organizationId={organizationId} value={assignment} excluded={step.assignments.filter((_, index) => index !== assignmentIndex).flatMap((item) => item.memberId ? [item.memberId] : [])} onChange={update} />
+              ? <MemberPicker organizationId={organizationId} value={assignment} excluded={step.assignments.filter((_, index) => index !== assignmentIndex).flatMap((item) => item.userId ? [item.userId] : [])} onChange={update} />
               : <Stack direction={{ xs: 'column', md: 'row' }} gap={1} flex={1}><TextField required label="ФИО или название" value={assignment.signerFullName || ''} onChange={(event) => update({ ...assignment, signerFullName: event.target.value })} /><TextField required type="email" label="Email" value={assignment.email || ''} error={Boolean(assignment.email && !/^\S+@\S+\.\S+$/.test(assignment.email))} onChange={(event) => update({ ...assignment, email: event.target.value })} /><TextField label="ИИН/БИН" value={assignment.signerIin || ''} onChange={(event) => update({ ...assignment, signerIin: event.target.value })} /></Stack>}
             <IconButton aria-label="Удалить подписанта" onClick={() => setAssignments(stepIndex, step.assignments.filter((_, index) => index !== assignmentIndex))}><Delete /></IconButton>
           </Stack>;

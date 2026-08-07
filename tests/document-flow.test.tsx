@@ -102,12 +102,12 @@ describe('document flow access and mappers', () => {
       permissions: detailDto().permissions, availableActions: ['EDIT'],
     }).signedCount).toBe(0);
     const assignment = {
-      id: 3, stepId: 2, signerType: 'ORGANIZATION_MEMBER', memberId: 5, signerFullName: null,
+      id: 3, stepId: 2, signerType: 'ORGANIZATION_MEMBER', userId: 5, signerFullName: null,
       organizationName: null, organizationBin: null, email: null, phone: null, roleCode: 'SIGNER',
       required: true, status: 'AVAILABLE', availableAt: null, viewedAt: null, signedAt: null,
       rejectedAt: null, rejectionReason: null, invitationExpiresAt: null,
     };
-    expect(signingAssignmentSchema.parse(assignment).memberId).toBe(5);
+    expect(signingAssignmentSchema.parse(assignment).userId).toBe(5);
     expect(signingRouteSchema.parse({
       id: 9, documentId: 7, routeType: 'SEQUENTIAL', status: 'ACTIVE', createdBy: 1,
       createdAt: '2026-08-03T10:00:00Z', activatedAt: null, completedAt: null, version: 0,
@@ -355,16 +355,16 @@ describe('document flow secure commands and components', () => {
 
   it.each<CreationStage>([
     'LOCAL_DRAFT', 'DOCUMENT_CREATED', 'REQUISITES_UPDATED', 'MAIN_FILE_UPLOADED',
-    'ATTACHMENTS_UPLOADED', 'PREPARED',
+    'ATTACHMENTS_UPLOADED', 'PREPARED_FOR_SIGNING',
   ])('resumes after a %s-stage failure without duplicate document or route', async (failedAt) => {
     const main = new File(['main'], 'main.pdf', { type: 'application/pdf' });
     const extra = new File(['extra'], 'extra.pdf', { type: 'application/pdf' });
-    const document = { id: 7, number: null, version: 1, currentVersionId: null, availableActions: ['SEND'] } as DocumentDetail;
+    const document = { id: 7, number: null, version: 1, currentVersionId: null, status: 'DRAFT', availableActions: ['SEND'] } as DocumentDetail;
     const route = { id: 9, documentId: 7, status: 'DRAFT' } as SigningRoute;
     const state = {
       created: false, route: null as SigningRoute | null, sent: false,
       attachments: [] as DocumentAttachment[], failed: false,
-      calls: { create: 0, update: 0, upload: 0, attachment: 0, route: 0, send: 0 },
+      calls: { create: 0, update: 0, upload: 0, attachment: 0, route: 0, prepare: 0, send: 0 },
     };
     const failAfterEffect = (stage: CreationStage) => {
       if (failedAt === stage && !state.failed) { state.failed = true; throw new Error(`network after ${stage}`); }
@@ -406,11 +406,17 @@ describe('document flow secure commands and components', () => {
         failAfterEffect('ATTACHMENTS_UPLOADED');
         return route;
       },
+      prepare: async () => {
+        state.calls.prepare += 1;
+        document.version += 1;
+        return route;
+      },
       send: async () => {
         state.calls.send += 1;
         state.sent = true;
         state.route = { ...route, status: 'ACTIVE' };
-        failAfterEffect('PREPARED');
+        document.status = 'SENT_FOR_SIGNING';
+        failAfterEffect('PREPARED_FOR_SIGNING');
         return state.route;
       },
     };
@@ -435,9 +441,9 @@ describe('document flow secure commands and components', () => {
 
   it('never sends private key material in signature payload', async () => {
     let body: Record<string, unknown> = {};
-    server.use(http.post('http://localhost/api/document-flow/signatures', async ({ request }) => {
+    server.use(http.post('http://localhost/api/document-flow/documents/7/signatures', async ({ request }) => {
       body = await request.json() as Record<string, unknown>;
-      return HttpResponse.json({ data: { id: 1 } });
+      return HttpResponse.json({ success: true, data: { id: 1 } });
     }));
     const unsafe = { documentId: 7, versionId: 2, assignmentId: 3, cms: 'cms', clientRequestId: 'request', privateKey: 'secret', password: 'secret', pkcs12: 'secret' };
     await documentFlowApi.submitSignature(unsafe);
@@ -494,7 +500,7 @@ describe('document flow secure commands and components', () => {
     let called = '';
     server.use(http.post('http://localhost/api/document-flow/members/41/activate', ({ request }) => {
       called = request.url;
-      return HttpResponse.json({ data: { id: 41, organizationId: 2, userId: 1, fullName: 'Администратор', email: 'admin@ecoprogress.kz', role: 'OWNER', status: 'ACTIVE' } });
+      return HttpResponse.json({ success: true, data: { id: 41, organizationId: 2, userId: 1, fullName: 'Администратор', email: 'admin@ecoprogress.kz', role: 'OWNER', status: 'ACTIVE' } });
     }));
     await expect(documentFlowApi.activateMember(41, 2)).resolves.toMatchObject({ id: 41, status: 'ACTIVE' });
     expect(new URL(called).searchParams.get('organizationId')).toBe('2');
@@ -544,7 +550,7 @@ describe('document flow secure commands and components', () => {
   });
 
   it('normalizes organizations and never uses userId as tenant', async () => {
-    server.use(http.get('http://localhost/api/document-flow/organizations', () => HttpResponse.json({ data: [
+    server.use(http.get('http://localhost/api/document-flow/organizations', () => HttpResponse.json({ success: true, data: [
       { organizationId: 12, organizationName: 'Eco One', role: 'OWNER', membershipStatus: 'ACTIVE' },
     ] })));
     await expect(documentFlowApi.organizations()).resolves.toEqual([
@@ -556,28 +562,25 @@ describe('document flow secure commands and components', () => {
     let seen = '';
     server.use(http.get('http://localhost/api/document-flow/members', ({ request }) => {
       seen = request.url;
-      return HttpResponse.json({ data: {
-        items: [{ id: 4, organizationId: 12, userId: 8, fullName: 'Иван И.', email: 'i@example.kz', role: 'SIGNER', status: 'ACTIVE' }],
-        page: 0, size: 20, totalElements: 1, totalPages: 1, first: true, last: true, hasNext: false, hasPrevious: false,
-      } });
+      return HttpResponse.json({ success: true, data: [{ id: 4, userId: 8, fullName: 'Иван И.', email: 'i@example.kz', role: 'SIGNER', status: 'ACTIVE' }] });
     }));
     const result = await documentFlowApi.members({ organizationId: 12, query: 'Иван', status: 'ACTIVE', role: 'SIGNER', page: 0, size: 20, sort: 'fullName,asc' });
-    expect(result.items[0]).toMatchObject({ id: 4, organizationId: 12, role: 'SIGNER' });
+    expect(result.items[0]).toMatchObject({ id: 4, role: 'SIGNER' });
     const params = new URL(seen).searchParams;
     expect(params.get('organizationId')).toBe('12');
-    expect(params.get('query')).toBe('Иван');
+    expect(params.get('query')).toBeNull();
   });
 
   it('public signing challenge and submit are token-only contracts', async () => {
     const bodies: Record<string, unknown>[] = [];
     server.use(
-      http.get('http://localhost/api/public/document-flow/signing/token/challenge', () => HttpResponse.json({ data: { opaque: true } })),
+      http.get('http://localhost/api/public/document-flow/signing/token/challenge', () => HttpResponse.json({ success: true, data: { documentTitle: 'Договор', documentNumber: 'DOC-1', signerRole: null, fileName: 'a.pdf', mimeType: 'application/pdf', fileSize: 10, sha256: 'hash', dataToSign: 'DOCUMENT_BYTES', algorithm: 'SHA-256', invitationExpiresAt: null, signingDeadline: null } })),
       http.post('http://localhost/api/public/document-flow/signing/token/sign', async ({ request }) => {
         bodies.push(await request.json() as Record<string, unknown>);
-        return HttpResponse.json({ data: { id: 1 } });
+        return HttpResponse.json({ success: true, data: { id: 1 } });
       }),
     );
-    await expect(publicDocumentFlowApi.challenge('token')).resolves.toEqual({ opaque: true });
+    await expect(publicDocumentFlowApi.challenge('token')).resolves.toMatchObject({ documentTitle: 'Договор', dataToSign: 'DOCUMENT_BYTES' });
     await publicDocumentFlowApi.sign('token', { cms: 'cms', clientRequestId: 'request-1' });
     expect(bodies).toEqual([{ cms: 'cms', clientRequestId: 'request-1' }]);
   });

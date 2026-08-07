@@ -14,7 +14,7 @@ export const useDocumentFlowTenant = () => {
   const select = useDocumentFlowOrganizationSelection((state) => state.select);
   const userId = user ? String(user.id) : null;
   const organizationsQuery = useQuery({
-    queryKey: documentFlowKeys.organizations(),
+    queryKey: documentFlowKeys.organizations(userId ?? undefined),
     queryFn: ({ signal }) => documentFlowApi.organizations(signal),
     enabled: isAuthenticated && Boolean(user),
     staleTime: 30_000,
@@ -37,7 +37,7 @@ export const useDocumentFlowTenant = () => {
     if (!userId || !organizationsQuery.data?.some((item) => item.id === nextOrganizationId)) return;
     const previousOrganizationId = useDocumentFlowOrganizationSelection.getState().organizationId;
     if (previousOrganizationId !== null && previousOrganizationId !== nextOrganizationId) {
-      queryClient.removeQueries({ queryKey: [...documentFlowKeys.all, previousOrganizationId] });
+      queryClient.removeQueries({ queryKey: [...documentFlowKeys.all, { userId, organizationId: previousOrganizationId }] });
     }
     select(userId, nextOrganizationId);
   }, [organizationsQuery.data, queryClient, select, userId]);
@@ -45,7 +45,7 @@ export const useDocumentFlowTenant = () => {
   const organizations = organizationsQuery.data ?? [];
   return {
     organizationId,
-    tenantScope: organizationId,
+    tenantScope: userId && organizationId ? { userId, organizationId } as const : null,
     organizationResolved: Boolean(user && organizationId),
     selectionRequired: organizations.length > 1 && organizationId === null,
     organization: organizations.find((item) => item.id === organizationId) ?? null,

@@ -30,11 +30,16 @@ export default function EditAccessDialog({ open, row, plans, onClose, onComplete
     mutationFn: async () => {
       if (!row?.subscription) throw new Error('Подписка не загружена.');
       const organizationId = Number(row.organization.id);
-      if (planCode !== currentPlan?.code) await documentFlowAdminApi.changePlan(organizationId, planCode, reason.trim());
+      let version = (await documentFlowAdminApi.organizationAccess(organizationId)).subscriptionVersion;
+      if (version == null) throw new Error('Backend не вернул версию подписки. Обновите данные.');
+      if (planCode !== currentPlan?.code) {
+        const changed = await documentFlowAdminApi.changePlan(organizationId, planCode, reason.trim(), version);
+        version = changed.subscriptionVersion ?? version;
+      }
       const definedLimits = Object.fromEntries(
         Object.entries(limits).filter((entry): entry is [string, number] => entry[1] != null),
       ) as Partial<Record<UsageMetric, number>>;
-      await documentFlowAdminApi.changeLimits(organizationId, definedLimits, reason.trim());
+      await documentFlowAdminApi.changeLimits(organizationId, definedLimits, reason.trim(), version);
       await onCompleted(organizationId);
     },
     onSuccess: onClose,

@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
 const nullableString = z.string().nullable();
-const userSummary = z.object({ id: z.number(), fullName: z.string() }).passthrough();
-const counterpartySummary = z.object({ id: z.number(), name: z.string(), bin: z.string() }).passthrough();
+const userSummary = z.object({ id: z.number(), fullName: z.string() });
+const counterpartySummary = z.object({ id: z.number(), name: z.string(), bin: z.string() });
 const permissions = z.object({
   canView: z.boolean(), canEdit: z.boolean(), canDelete: z.boolean(), canSend: z.boolean(),
   canDownload: z.boolean(), canUploadVersion: z.boolean(), canArchive: z.boolean(), canManageAttachments: z.boolean(),
-}).passthrough();
+});
 
 const numericRecord = z.record(z.string(), z.unknown()).transform((record) => Object.fromEntries(
   Object.entries(record).filter((entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1])),
@@ -24,23 +24,23 @@ export const documentListItemSchema = z.object({
   ...documentBase,
   signedCount: z.number().int(), requiredCount: z.number().int(), rejectedCount: z.number().int(),
   requiresMySignature: z.boolean(), currentStep: z.number().int().nullable().optional(),
-}).passthrough();
+});
 
 /** Java: DocumentDtos.DocumentDetailDto (not a subtype of DocumentListItemDto). */
 export const documentDetailSchema = z.object({
   ...documentBase,
   publicId: z.string(), description: nullableString, currentVersionId: z.number().nullable(),
-}).passthrough();
+});
 
 export const pageSchema = <T extends z.ZodType>(item: T) => z.object({
   items: z.array(item), page: z.number().int(), size: z.number().int(), totalElements: z.number().int(),
   totalPages: z.number().int(), first: z.boolean(), last: z.boolean(), hasNext: z.boolean(), hasPrevious: z.boolean(),
-}).passthrough();
+});
 
 const organizationSummarySchema = z.object({
   id: z.number().int(), name: z.string(), role: nullableString.optional(),
   membershipStatus: nullableString.optional(), permissions: z.array(z.string()).nullish(),
-}).passthrough().transform((value) => ({
+}).transform((value) => ({
   ...value,
   permissions: value.permissions ?? undefined,
 }));
@@ -49,7 +49,7 @@ const organizationMembershipSchema = z.object({
   organizationId: z.number().int(), organizationName: z.string().optional(), name: z.string().optional(),
   bin: nullableString.optional(), role: nullableString.optional(), membershipStatus: nullableString.optional(),
   status: nullableString.optional(), readOnly: z.boolean().optional(), permissions: z.array(z.string()).nullish(),
-}).passthrough().superRefine((value, context) => {
+}).superRefine((value, context) => {
   if (!value.organizationName && !value.name) {
     context.addIssue({ code: 'custom', path: ['name'], message: 'Organization name is required' });
   }
@@ -79,16 +79,16 @@ export const accessContextSchema = z.object({
   permissions: z.array(z.string()).nullish().transform((value) => value ?? []),
   limits: numericRecord.nullish().transform((value) => value ?? {}), usage: numericRecord.nullish().transform((value) => value ?? {}),
   availableActions: z.array(z.string()).nullish().transform((value) => value ?? []), reason: nullableString.optional().default(null), testMode: z.boolean().optional(),
-}).passthrough();
+});
 
 /** Java: SigningRouteDtos.AssignmentResponse. */
 export const signingAssignmentSchema = z.object({
-  id: z.number(), stepId: z.number(), signerType: z.string(), memberId: z.number().nullable(),
+  id: z.number(), stepId: z.number(), signerType: z.string(), userId: z.number().nullable(),
   signerFullName: nullableString, organizationName: nullableString, organizationBin: nullableString,
   email: nullableString, phone: nullableString, roleCode: nullableString, required: z.boolean(), status: z.string(),
   availableAt: nullableString, viewedAt: nullableString, signedAt: nullableString, rejectedAt: nullableString,
   rejectionReason: nullableString, invitationExpiresAt: nullableString,
-}).passthrough();
+});
 
 /** Java: SigningRouteDtos.SigningRouteResponse. */
 export const signingRouteSchema = z.object({
@@ -103,7 +103,28 @@ export const signingRouteSchema = z.object({
 export const publicInvitationSchema = z.object({
   documentId: z.number(), documentTitle: z.string(), roleCode: nullableString, required: z.boolean(),
   status: z.string(), invitationExpiresAt: nullableString, signingDeadline: nullableString,
-}).passthrough();
+});
+
+export const memberSchema = z.object({
+  id: z.number(), userId: z.number(), email: nullableString, fullName: z.string(), role: z.string(), status: z.string(),
+});
+
+export const myAssignmentSchema = z.object({
+  assignmentId: z.number(), documentId: z.number(), versionId: z.number(), routeId: z.number(),
+  stepId: z.number().nullable(), stepOrder: z.number().int(), status: z.string(), required: z.boolean(),
+  signerRole: nullableString, deadline: nullableString, canSign: z.boolean(), canReject: z.boolean(), canReturn: z.boolean(),
+});
+
+export const auditEventSchema = z.object({
+  id: z.number(), createdAt: z.string(), actorUserId: z.number().nullable(), actorName: nullableString,
+  eventType: z.string(), description: nullableString,
+});
+
+export const publicSigningChallengeSchema = z.object({
+  documentTitle: z.string(), documentNumber: z.string(), signerRole: nullableString,
+  fileName: z.string(), mimeType: z.string(), fileSize: z.number(), sha256: z.string(),
+  dataToSign: z.string(), algorithm: z.string(), invitationExpiresAt: nullableString, signingDeadline: nullableString,
+});
 
 /** Java: ApiResponse error projection. */
 export const apiErrorSchema = z.object({

@@ -1,14 +1,20 @@
 import api from '../../../services/api';
-import { unwrapApiResponse, type ApiResponse } from '../../../services/apiHelpers';
-import { accessContextSchema } from '../../document-flow/api/contractSchemas';
-import type { AccessContext, UsageMetric } from '../../document-flow/model/types';
+import type { ApiResponse } from '../../../services/apiHelpers';
+import type { UsageMetric } from '../../document-flow/model/types';
 import { getCompanies } from '../../../services/companyService';
 import type {
-  AccessGrantRequest, DocumentFlowAdminPlan, DocumentFlowAdminSubscription, OrganizationSearchParams,
+  AccessGrantRequest, AdminOrganizationAccess, AdminOrganizationAccessListItem, DocumentFlowAdminPlan,
+  DocumentFlowAdminSubscription, OrganizationSearchParams, SubscriptionEventAdmin,
 } from '../model/types';
+import type { PageResponse } from '../../../types/companies';
 import { accessGrantRequestSchema, accessGrantResponseSchema, plansResponseSchema, subscriptionResponseSchema, subscriptionsResponseSchema } from './documentFlowAdminSchemas';
 
-const unwrap = <T>(response: { data: ApiResponse<T> | T }): T => unwrapApiResponse<T>(response.data);
+const unwrap = <T>(response: { data: ApiResponse<T> | T }): T => {
+  const envelope = response.data;
+  if (!envelope || typeof envelope !== 'object' || !('success' in envelope) || !('data' in envelope)) throw new Error('Не удалось обработать ответ сервера. Код: CONTRACT_MISMATCH');
+  if (envelope.success !== true) throw new Error(envelope.message || 'Backend отклонил запрос.');
+  return envelope.data;
+};
 const parse = <T>(schema: { parse(value: unknown): unknown }, value: unknown): T => schema.parse(value) as T;
 
 export const documentFlowAdminApi = {
@@ -21,8 +27,10 @@ export const documentFlowAdminApi = {
     unwrap<unknown>(await api.get('/admin/document-flow/subscriptions', { signal }))),
   subscription: async (organizationId: number, signal?: AbortSignal) => parse<DocumentFlowAdminSubscription>(subscriptionResponseSchema,
     unwrap<unknown>(await api.get(`/admin/document-flow/subscriptions/${organizationId}`, { signal }))),
-  organizationAccess: async (organizationId: number, signal?: AbortSignal) => parse<AccessContext>(accessContextSchema,
-    unwrap<unknown>(await api.get('/document-flow/access', { params: { organizationId }, signal }))),
+  accessList: async (params: { search?: string; status?: string; planCode?: string; accessState?: string; hasSubscription?: boolean; expiresBefore?: string; page: number; size: number; sort: string; direction: string }, signal?: AbortSignal) =>
+    unwrap<PageResponse<AdminOrganizationAccessListItem>>(await api.get('/admin/document-flow/access', { params, signal })),
+  organizationAccess: async (organizationId: number, signal?: AbortSignal) =>
+    unwrap<AdminOrganizationAccess>(await api.get(`/admin/document-flow/access/${organizationId}`, { signal })),
   createAccessGrant: async (request: AccessGrantRequest, idempotencyKey: string) => {
     const payload = accessGrantRequestSchema.parse(request);
     const raw = unwrap<unknown>(await api.post('/admin/document-flow/access-grants', payload, {
@@ -30,17 +38,18 @@ export const documentFlowAdminApi = {
     }));
     return accessGrantResponseSchema.parse(raw);
   },
-  extend: (organizationId: number, expiresAt: string, reason: string) =>
-    api.post(`/admin/document-flow/subscriptions/${organizationId}/extend`, { expiresAt, reason }),
-  changePlan: (organizationId: number, planCode: string, reason: string) =>
-    api.post(`/admin/document-flow/subscriptions/${organizationId}/change-plan`, { planCode, reason }),
-  changeLimits: (organizationId: number, limits: Partial<Record<UsageMetric, number>>, reason: string) =>
-    api.post(`/admin/document-flow/subscriptions/${organizationId}/limits`, { limits, reason }),
-  suspend: (organizationId: number, reason: string) =>
-    api.post(`/admin/document-flow/subscriptions/${organizationId}/suspend`, { reason }),
-  restore: (organizationId: number, reason: string) =>
-    api.post(`/admin/document-flow/subscriptions/${organizationId}/restore`, { reason }),
-  revoke: (organizationId: number, reason: string) =>
-    api.post(`/admin/document-flow/subscriptions/${organizationId}/revoke`, { reason }),
+  extend: async (organizationId: number, newExpiresAt: string, reason: string, expectedVersion: number) =>
+    unwrap<AdminOrganizationAccess>(await api.post(`/admin/document-flow/subscriptions/${organizationId}/extend`, { newExpiresAt, reason, expectedVersion })),
+  changePlan: async (organizationId: number, planCode: string, reason: string, expectedVersion: number) =>
+    unwrap<AdminOrganizationAccess>(await api.post(`/admin/document-flow/subscriptions/${organizationId}/change-plan`, { planCode, reason, expectedVersion })),
+  changeLimits: async (organizationId: number, limits: Partial<Record<UsageMetric, number>>, reason: string, expectedVersion: number, startsAt?: string | null, expiresAt?: string | null) =>
+    unwrap<AdminOrganizationAccess>(await api.post(`/admin/document-flow/subscriptions/${organizationId}/limits`, { limits, startsAt, expiresAt, reason, expectedVersion })),
+  suspend: async (organizationId: number, reason: string, expectedVersion: number) =>
+    unwrap<AdminOrganizationAccess>(await api.post(`/admin/document-flow/subscriptions/${organizationId}/suspend`, { reason, expectedVersion })),
+  restore: async (organizationId: number, reason: string, expectedVersion: number) =>
+    unwrap<AdminOrganizationAccess>(await api.post(`/admin/document-flow/subscriptions/${organizationId}/restore`, { reason, expectedVersion })),
+  revoke: async (organizationId: number, reason: string, expectedVersion: number) =>
+    unwrap<AdminOrganizationAccess>(await api.post(`/admin/document-flow/subscriptions/${organizationId}/revoke`, { reason, expectedVersion })),
+  subscriptionEvents: async (organizationId: number, page = 0, size = 20, signal?: AbortSignal) =>
+    unwrap<PageResponse<SubscriptionEventAdmin>>(await api.get(`/admin/document-flow/subscriptions/${organizationId}/events`, { params: { page, size }, signal })),
 };
-

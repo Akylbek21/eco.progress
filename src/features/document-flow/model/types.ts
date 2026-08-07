@@ -229,10 +229,10 @@ export interface DocumentAttachment {
 export interface AuditEvent {
   id: number;
   createdAt: string;
+  actorUserId: number | null;
   actorName: string | null;
-  action: string;
-  status: string | null;
-  comment: string | null;
+  eventType: string;
+  description: string | null;
 }
 
 export interface Counterparty {
@@ -252,7 +252,6 @@ export interface Counterparty {
 }
 
 export interface CreateCounterpartyRequest {
-  organizationId: number;
   bin: string;
   name: string;
   linkedOrganizationId?: number | null;
@@ -263,14 +262,19 @@ export interface CreateCounterpartyRequest {
 }
 
 export interface MyAssignment {
-  required: boolean;
   assignmentId: number;
+  documentId: number;
+  routeId: number;
+  stepId: number | null;
   stepOrder: number;
-  action: string;
   status: string;
+  required: boolean;
+  signerRole: string | null;
   versionId: number;
   deadline: string | null;
-  availableActions: AvailableAction[];
+  canSign: boolean;
+  canReject: boolean;
+  canReturn: boolean;
 }
 
 export type UpdateCounterpartyRequest = Partial<Omit<CreateCounterpartyRequest, 'organizationId' | 'bin'>>;
@@ -297,7 +301,7 @@ export interface Representative {
 
 export interface DocumentFlowMember {
   id: number;
-  organizationId: number;
+  organizationId?: number;
   userId: number;
   fullName: string;
   email: string | null;
@@ -317,8 +321,7 @@ export interface MemberListParams {
 }
 
 export interface CreateMemberRequest {
-  organizationId: number;
-  userId: number;
+  email: string;
   role: MembershipRole;
 }
 
@@ -336,7 +339,7 @@ export type SignerType = 'ORGANIZATION_MEMBER' | 'COUNTERPARTY_REPRESENTATIVE' |
 
 export interface SigningAssignmentInput {
   signerType: SignerType;
-  memberId?: number | null;
+  userId?: number | null;
   signerFullName?: string | null;
   signerIin?: string | null;
   organizationName?: string | null;
@@ -408,6 +411,20 @@ export interface PublicInvitation {
   roleCode: string | null;
   required: boolean;
   status: 'AVAILABLE' | 'VIEWED' | 'SIGNED' | 'REJECTED' | 'EXPIRED';
+  invitationExpiresAt: string | null;
+  signingDeadline: string | null;
+}
+
+export interface PublicSigningChallenge {
+  documentTitle: string;
+  documentNumber: string;
+  signerRole: string | null;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  sha256: string;
+  dataToSign: string;
+  algorithm: string;
   invitationExpiresAt: string | null;
   signingDeadline: string | null;
 }

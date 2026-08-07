@@ -30,10 +30,12 @@ export default function OrganizationAccessCard({ organization }: { organization:
   };
   const mutation = useMutation({
     mutationFn: async ({ name, reason, date }: { name: CardAction; reason: string; date?: string }) => {
-      if (name === 'extend') await documentFlowAdminApi.extend(organizationId, date!, reason);
-      if (name === 'suspend') await documentFlowAdminApi.suspend(organizationId, reason);
-      if (name === 'restore') await documentFlowAdminApi.restore(organizationId, reason);
-      if (name === 'revoke') await documentFlowAdminApi.revoke(organizationId, reason);
+      const version = subscription.data?.version;
+      if (version == null) throw new Error('Backend не вернул версию подписки. Обновите данные.');
+      if (name === 'extend') await documentFlowAdminApi.extend(organizationId, date!, reason, version);
+      if (name === 'suspend') await documentFlowAdminApi.suspend(organizationId, reason, version);
+      if (name === 'restore') await documentFlowAdminApi.restore(organizationId, reason, version);
+      if (name === 'revoke') await documentFlowAdminApi.revoke(organizationId, reason, version);
       await refresh();
     },
     onSuccess: () => setAction(null),
