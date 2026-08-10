@@ -214,16 +214,17 @@ describe('PEK backend contract', () => {
     expect(source).toContain('actions.matchSources === true');
   });
 
-  it('LABORATORY can collect but cannot submit when backend exposes the action', () => {
+  it('uses backend report actions without overriding them from a local role matrix', () => {
     const item = { status: 'COLLECTING', availableActions: { collect: true, submitReview: true } };
     expect(canCollectPekReport({ role: 'LABORATORY' }, item)).toBe(true);
-    expect(canSubmitPekReport({ role: 'LABORATORY' }, item)).toBe(false);
+    expect(canSubmitPekReport({ role: 'LABORATORY' }, item)).toBe(true);
     expect(canSubmitPekReport({ role: 'ECOLOGIST' }, item)).toBe(true);
+    expect(canCollectPekReport({ role: 'ADMIN' }, { ...item, availableActions: { collect: false } })).toBe(false);
   });
 
   it('closed report and false availableActions hide source mutations', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
-    expect(source).toContain("actions.matchSources === true && canEditPekReport");
+    expect(source).toContain("const canMutateSources = actions.matchSources === true");
     expect(source).toContain("source.matchStatus !== 'STALE'");
     expect(source).not.toContain('actions.matchSources ||');
   });
@@ -239,6 +240,14 @@ describe('PEK backend contract', () => {
     expect(pekKeys.settings(1)).not.toEqual(pekKeys.settings(2));
     expect(pekKeys.report(9, 1)).not.toEqual(pekKeys.report(9, 2));
     expect(pekKeys.dashboard({ companyId: 1 })).not.toEqual(pekKeys.dashboard({ companyId: 2 }));
+    expect(pekKeys.report(9, 1, 'user-1')).not.toEqual(pekKeys.report(9, 1, 'user-2'));
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekQueryKeys.ts'), 'utf8');
+    expect(source).not.toContain('localStorage');
+  });
+
+  it('clears PEK cache on login, logout and explicit user replacement', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/contexts/AuthContext.tsx'), 'utf8');
+    expect(source.match(/removeQueries\(\{ queryKey: \['pek'\] \}\)/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
   it('missing dashboard KPI stays absent and renders as a dash', () => {
@@ -246,6 +255,17 @@ describe('PEK backend contract', () => {
     expect(mapped.returnedReportCount).toBeUndefined();
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekDashboardPage.tsx'), 'utf8');
     expect(source).toContain("dashboard.data[key] == null");
+    expect(source).not.toContain('currentlyUnsupportedZeroMetrics');
+  });
+
+  it('confirms collection, blocks double submit and reconciles all report caches', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
+    expect(source).toContain('collectConfirmOpen');
+    expect(source).toContain("collect.isPending ? 'Сбор…'");
+    expect(source).toContain('pekKeys.reportSourcesRoot');
+    expect(source).toContain('pekKeys.planFact');
+    expect(source).toContain('pekKeys.readiness');
+    expect(source).toContain('mapped.status === 409');
   });
 
   it('RETURNED, STALE, readiness and version conflict have explicit UI states', () => {
@@ -346,9 +366,9 @@ describe('PEK backend contract', () => {
     expect(valid.success).toBe(true);
   });
 
-  it('uses the confirmed backend role matrix when UserResponse omits permissions', () => {
-    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(true);
-    expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(true);
+  it('requires backend auth permissions for PEK operations', () => {
+    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(false);
+    expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(false);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: ['PEK_VIEW'] }, 'PEK_VIEW')).toBe(true);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: [] }, 'PEK_PROGRAM_CREATE')).toBe(false);
   });
@@ -447,6 +467,6 @@ describe('PEK backend contract', () => {
 
   it('treats empty permits as a valid state', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramCreatePage.tsx'), 'utf8');
-    expect(source).toContain('Для объекта нет доступных разрешительных документов');
+    expect(source).toContain('Для объекта нет действующих разрешительных документов');
   });
 });

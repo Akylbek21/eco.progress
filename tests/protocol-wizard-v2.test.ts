@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createWizardDefaults, emptyWizardResult } from '../src/features/protocols/components/wizardTypes';
 import { mapProtocolToWizardForm, mapWizardResultToDraftRequest, mapWizardToCreateDraft } from '../src/features/protocols/mappers/protocolWizardDraftMapper';
 import { saveProtocolWizardDraft } from '../src/features/protocols/api/saveProtocolWizardDraft';
@@ -28,7 +28,7 @@ describe('protocol wizard HTTP boundary', () => {
     expect(request.values.workplaceType).toBe('PERMANENT');
   });
 
-  it('sends supported order links and does not invent unsupported PEK fields in draft DTO', () => {
+  it('creates from PEK with the exact backend pekContext payload', () => {
     const form = createWizardDefaults();
     Object.assign(form, {
       templateId: 'ambient_air',
@@ -37,14 +37,33 @@ describe('protocol wizard HTTP boundary', () => {
       orderId: '30',
       orderServiceItemId: '40',
       pekProgramId: '50',
-      pekControlEventId: '60',
+      pekReportId: '51',
+      pekControlItemId: '52',
+      pekControlEventId: '53',
+      monitoringPointId: '54',
+      emissionSourceId: '55',
+      waterOutletId: '56',
     });
 
     const request = mapWizardToCreateDraft(form) as unknown as Record<string, unknown>;
 
     expect(request).toMatchObject({ orderId: '30', orderServiceItemId: '40' });
+    expect(request.pekContext).toEqual({
+      pekProgramId: 50,
+      pekReportId: 51,
+      pekControlItemId: 52,
+      pekControlEventId: 53,
+      monitoringPointId: 54,
+      emissionSourceId: 55,
+      waterOutletId: 56,
+    });
     expect(request).not.toHaveProperty('pekProgramId');
-    expect(request).not.toHaveProperty('pekControlEventId');
+  });
+
+  it('sends null instead of an empty PEK object', () => {
+    const form = createWizardDefaults();
+    Object.assign(form, { templateId: 'ambient_air', companyId: '10' });
+    expect(mapWizardToCreateDraft(form).pekContext).toBeNull();
   });
 
   it('creates a real server draft before any result exists', async () => {
@@ -56,7 +75,7 @@ describe('protocol wizard HTTP boundary', () => {
     const saved = await saveProtocolWizardDraft(form, null, 'protocol-draft-test-key', service);
 
     expect(saved.protocol).toMatchObject({ id: 'draft-1', version: 0, status: 'DRAFT' });
-    expect(saved.resultIds).toEqual([]);
+    expect([...saved.resultIdsByClientRowId]).toEqual([]);
   });
 });
 
@@ -71,6 +90,41 @@ describe('protocol environment mapping', () => {
     const form = mapProtocolToWizardForm(protocol);
     expect(form).toMatchObject({ temperature: '0', waterType: 'DRINKING', workplaceType: 'PERMANENT', orderId: 'order-1', orderServiceItemId: 'item-2' });
     expect(form.results[0].value).toBe('0');
+  });
+
+  it('restores sourceNumber and basis from the authoritative DTO', () => {
+    const form = mapProtocolToWizardForm({
+      id: '1', templateId: 'ambient_air', status: 'DRAFT', version: 2, protocolDate: '2026-08-06',
+      sourceNumber: 'ИЗА-17', organization: { testingBasis: 'Договор №42' }, results: [], laboratory: {}, testing: {},
+    } as unknown as Protocol);
+    expect(form.sourceNumber).toBe('ИЗА-17');
+    expect(form.basis).toBe('Договор №42');
+  });
+});
+
+describe('result reconciliation', () => {
+  it('uses clientRowId and performs only one authoritative GET for multiple rows', async () => {
+    const form = createWizardDefaults();
+    Object.assign(form, { templateId: 'ambient_air', companyId: '10' });
+    const first = { ...emptyWizardResult(), clientRowId: 'client-a', indicatorName: 'A', pollutantCode: 'A', value: '1', unit: 'мг' };
+    const second = { ...emptyWizardResult(), clientRowId: 'client-b', indicatorName: 'B', pollutantCode: 'B', value: '2', unit: 'мг' };
+    form.results = [second, first];
+    const getProtocol = vi.fn(async () => ({ id: 'draft-1', version: 3, status: 'DRAFT', results: [] }) as Protocol);
+    const addProtocolResult = vi.fn(async (_id, payload: { values: Record<string, unknown> }, version: number) => ({
+      id: payload.values.clientRowId === 'client-b' ? 'server-b' : 'server-a', values: payload.values, version,
+    }));
+    const service = {
+      createProtocolDraft: vi.fn(async () => ({ id: 'draft-1', version: 1, status: 'DRAFT', results: [] }) as Protocol),
+      addProtocolResult,
+      getProtocol,
+    } as unknown as ProtocolService;
+
+    const saved = await saveProtocolWizardDraft(form, null, 'stable-key', service);
+
+    expect(addProtocolResult.mock.calls.map((call) => call[2])).toEqual([1, 2]);
+    expect(getProtocol).toHaveBeenCalledTimes(1);
+    expect(saved.resultIdsByClientRowId.get('client-a')).toBe('server-a');
+    expect(saved.resultIdsByClientRowId.get('client-b')).toBe('server-b');
   });
 });
 
@@ -96,6 +150,21 @@ describe('protocol wizard validation and backend errors', () => {
 
     expect(fields).toContain('results.0.sampleNumber');
     expect(fields).toContain('results.0.samplingDepth');
+  });
+
+  it('accepts row-level devices without a default device and keeps warnings non-blocking', () => {
+    const form = createWizardDefaults();
+    Object.assign(form, {
+      templateId: 'ambient_air', companyId: '1', objectId: '2', laboratoryId: '3', executorId: '4',
+    });
+    form.results = [{
+      ...emptyWizardResult(), indicatorName: 'NO2', pollutantCode: 'NO2', value: '0.1', unit: 'мг/м3',
+      measurementDeviceId: 'device-1', normativeSource: 'MANUAL', normativeValue: '0.2',
+    }];
+    const issues = validateForApproval(form);
+    expect(issues).not.toEqual(expect.arrayContaining([expect.objectContaining({ code: 'DEVICE_REQUIRED' })]));
+    expect(issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'ENVIRONMENT_EMPTY', severity: 'WARNING' })]));
+    expect(issues.filter((item) => item.severity === 'ERROR')).toEqual([]);
   });
 });
 

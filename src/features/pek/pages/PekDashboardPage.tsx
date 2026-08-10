@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 import type { PekDashboardFilters, PekReportStatus } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
@@ -25,9 +26,8 @@ const metricDefinitions = [
   ['staleSourceCount', 'Устаревшие связи', '', '/staff/pek/reports'],
   ['totalReportCount', 'Отчёты за период', '', '/staff/pek/reports'],
 ] as const;
-const currentlyUnsupportedZeroMetrics = new Set(['criticalIssueCount', 'missingProtocolCount', 'openExceedanceCount', 'overdueActionCount']);
-
 const PekDashboardPage = () => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const filters: PekDashboardFilters = {
@@ -48,13 +48,13 @@ const PekDashboardPage = () => {
     setParams(next, { replace: true });
   };
   const dashboard = useQuery({
-    queryKey: pekKeys.dashboard(filters),
+    queryKey: pekKeys.dashboard(filters, user?.id),
     queryFn: ({ signal }) => pekApi.getDashboard(filters, signal),
     retry: retryPekQuery,
     staleTime: PEK_STALE_TIME_MS,
   });
   const assignees = useQuery({
-    queryKey: pekKeys.assignees(['PEK_RESPONSIBLE', 'PEK_REVIEWER', 'PEK_APPROVER']),
+    queryKey: pekKeys.assignees(['PEK_RESPONSIBLE', 'PEK_REVIEWER', 'PEK_APPROVER'], user?.id),
     queryFn: ({ signal }) => pekApi.getAssignees(
       ['PEK_RESPONSIBLE', 'PEK_REVIEWER', 'PEK_APPROVER'],
       signal,
@@ -117,8 +117,8 @@ const PekDashboardPage = () => {
               {metricDefinitions.map(([key, label, suffix, path]) => (
                 <article key={key} className="rounded-2xl border bg-white p-5">
                   <p className="text-sm text-slate-500">{label}</p>
-                  <p className="mt-2 text-3xl font-black text-eco-900" title={currentlyUnsupportedZeroMetrics.has(key) && dashboard.data[key] === 0 ? 'Показатель пока не рассчитан backend' : undefined}>{dashboard.data[key] == null || (currentlyUnsupportedZeroMetrics.has(key) && dashboard.data[key] === 0) ? <span className="text-lg text-slate-500">—</span> : `${dashboard.data[key]}${suffix}`}</p>
-                  {dashboard.data[key] != null && !(currentlyUnsupportedZeroMetrics.has(key) && dashboard.data[key] === 0) && <Link className="mt-3 inline-block text-xs font-bold text-eco-700" to={`${path}?${new URLSearchParams({ ...(filters.companyId ? { companyId: String(filters.companyId) } : {}), ...(filters.objectId ? { objectId: String(filters.objectId) } : {}), ...(filters.year ? { year: String(filters.year) } : {}) })}`}>Открыть</Link>}
+                  <p className="mt-2 text-3xl font-black text-eco-900">{dashboard.data[key] == null ? <span className="text-lg text-slate-500">—</span> : `${dashboard.data[key]}${suffix}`}</p>
+                  {dashboard.data[key] != null && <Link className="mt-3 inline-block text-xs font-bold text-eco-700" to={`${path}?${new URLSearchParams({ ...(filters.companyId ? { companyId: String(filters.companyId) } : {}), ...(filters.objectId ? { objectId: String(filters.objectId) } : {}), ...(filters.year ? { year: String(filters.year) } : {}) })}`}>Открыть</Link>}
                 </article>
               ))}
             </section>

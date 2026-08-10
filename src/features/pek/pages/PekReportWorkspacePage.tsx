@@ -3,14 +3,12 @@ import { Alert, Button as MuiButton, Dialog, DialogActions, DialogContent, Dialo
 import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
-import { parseApiError } from '../../../services/apiHelpers';
 import type { PekReport, PekReportSource } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState, PekStatusBadge } from '../components/common/PekUi';
 import PekReportActions from '../components/workflow/PekReportActions';
-import { canEditPekReport } from '../permissions/pekAccess';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 
@@ -54,43 +52,44 @@ const PekReportWorkspacePage = () => {
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [readinessBlockers, setReadinessBlockers] = useState<string[]>([]);
   const [conflictOpen, setConflictOpen] = useState(false);
+  const [collectConfirmOpen, setCollectConfirmOpen] = useState(false);
 
   const report = useQuery({
-    queryKey: pekKeys.report(id), queryFn: ({ signal }) => pekApi.getReport(id, signal),
+    queryKey: pekKeys.report(id, undefined, user?.id), queryFn: ({ signal }) => pekApi.getReport(id, signal),
     enabled: Number.isSafeInteger(id) && id > 0, retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS,
   });
   const program = useQuery({
-    queryKey: pekKeys.program(report.data?.programId || 'pending', report.data?.companyId),
+    queryKey: pekKeys.program(report.data?.programId || 'pending', report.data?.companyId, user?.id),
     queryFn: ({ signal }) => pekApi.getProgram(report.data!.programId, signal),
     enabled: Boolean(report.data?.programId), retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS,
   });
   const sources = useQuery({
-    queryKey: pekKeys.reportSources(id, sourceFilter === 'ALL' ? {} : sourceFilter === 'EXCLUDED' ? { excluded: true } : { matchStatus: sourceFilter }, report.data?.companyId),
+    queryKey: pekKeys.reportSources(id, sourceFilter === 'ALL' ? {} : sourceFilter === 'EXCLUDED' ? { excluded: true } : { matchStatus: sourceFilter }, report.data?.companyId, user?.id),
     queryFn: ({ signal }) => pekApi.getReportSources(id, sourceFilter === 'ALL' ? {} : sourceFilter === 'EXCLUDED' ? { excluded: true } : { matchStatus: sourceFilter }, signal),
     enabled: Boolean(report.data) && tab === 'sources', retry: retryPekQuery,
   });
   const sourceSummary = useQuery({
-    queryKey: pekKeys.reportSourcesSummary(id, report.data?.companyId), queryFn: ({ signal }) => pekApi.getReportSourcesSummary(id, signal),
+    queryKey: pekKeys.reportSourcesSummary(id, report.data?.companyId, user?.id), queryFn: ({ signal }) => pekApi.getReportSourcesSummary(id, signal),
     enabled: Boolean(report.data), retry: retryPekQuery,
   });
   const planFact = useQuery({
-    queryKey: pekKeys.planFact(id, report.data?.companyId), queryFn: ({ signal }) => pekApi.getReportPlanFact(id, signal),
+    queryKey: pekKeys.planFact(id, report.data?.companyId, user?.id), queryFn: ({ signal }) => pekApi.getReportPlanFact(id, signal),
     enabled: Boolean(report.data) && ['overview', 'plan-fact', 'exceedances'].includes(tab), retry: retryPekQuery,
   });
   const readiness = useQuery({
-    queryKey: pekKeys.readiness(id, report.data?.companyId), queryFn: ({ signal }) => pekApi.getReportReadiness(id, signal),
+    queryKey: pekKeys.readiness(id, report.data?.companyId, user?.id), queryFn: ({ signal }) => pekApi.getReportReadiness(id, signal),
     enabled: Boolean(report.data) && tab === 'overview', retry: retryPekQuery,
   });
 
   const invalidateReportData = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: pekKeys.report(id) }),
-      queryClient.invalidateQueries({ queryKey: pekKeys.reportSourcesRoot(id, report.data?.companyId) }),
-      queryClient.invalidateQueries({ queryKey: pekKeys.reportSourcesSummary(id, report.data?.companyId) }),
-      queryClient.invalidateQueries({ queryKey: pekKeys.planFact(id, report.data?.companyId) }),
-      queryClient.invalidateQueries({ queryKey: pekKeys.readiness(id, report.data?.companyId) }),
-      queryClient.invalidateQueries({ queryKey: pekKeys.dashboardRoot(report.data?.companyId) }),
-      queryClient.invalidateQueries({ queryKey: pekKeys.reportsRoot(report.data?.companyId) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.report(id, undefined, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportSourcesRoot(id, report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportSourcesSummary(id, report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.planFact(id, report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.readiness(id, report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.dashboardRoot(report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportsRoot(report.data?.companyId, user?.id) }),
     ]);
   };
   const handleMutationError = async (error: unknown, fallback: string) => {
@@ -100,7 +99,7 @@ const PekReportWorkspacePage = () => {
       setActionError('Отчёт уже перешёл в статус, в котором изменения запрещены');
       return;
     }
-    if (mapped.code === 'OPTIMISTIC_LOCK_CONFLICT' || mapped.code === 'PEK_VERSION_CONFLICT') {
+    if (mapped.status === 409 || mapped.code === 'OPTIMISTIC_LOCK_CONFLICT' || mapped.code === 'PEK_VERSION_CONFLICT') {
       setConflictOpen(true);
       setActionError('Данные были изменены другим пользователем');
       return;
@@ -109,7 +108,7 @@ const PekReportWorkspacePage = () => {
   };
   const refreshAfterWorkflow = async (expected: string[]) => {
     const actual = await pekApi.getReport(id);
-    queryClient.setQueryData(pekKeys.report(id), actual);
+    queryClient.setQueryData(pekKeys.report(id, undefined, user?.id), actual);
     if (!expected.includes(actual.status)) throw new Error(`Операция выполнена, но сервер вернул статус ${actual.status}. Обновите данные.`);
     await invalidateReportData();
     return actual;
@@ -117,25 +116,25 @@ const PekReportWorkspacePage = () => {
 
   const collect = useMutation({
     mutationFn: () => pekApi.collectReport(id),
-    onSuccess: async (result) => { setCollectionSummary(result); setActionError(null); await invalidateReportData(); },
-    onError: (error) => setActionError(parseApiError(error, 'Не удалось собрать данные из протоколов.').message),
+    onSuccess: async (result) => { setCollectConfirmOpen(false); setCollectionSummary(result); setActionError(null); await invalidateReportData(); },
+    onError: (error) => void handleMutationError(error, 'Не удалось собрать данные из протоколов.'),
   });
   const submitReview = useMutation({
     mutationFn: async (item: PekReport) => { await pekApi.getReportReadiness(id).then((value) => { if (!value.ready) throw new Error('Отчёт пока не готов к отправке. Исправьте блокирующие ошибки.'); }); await pekApi.submitReportReview(id, item.version); return refreshAfterWorkflow(['READY_FOR_REVIEW']); },
-    onError: (error) => setActionError(parseApiError(error, 'Не удалось отправить отчёт на проверку.').message),
+    onError: (error) => void handleMutationError(error, 'Не удалось отправить отчёт на проверку.'),
   });
   const returnReport = useMutation({
     mutationFn: async (item: PekReport) => { await pekApi.returnReport(id, item.version, returnReason.trim()); return refreshAfterWorkflow(['RETURNED']); },
     onSuccess: () => { setReturnOpen(false); setReturnReason(''); setActionError(null); },
-    onError: (error) => setActionError(parseApiError(error, 'Не удалось вернуть отчёт.').message),
+    onError: (error) => void handleMutationError(error, 'Не удалось вернуть отчёт.'),
   });
   const approve = useMutation({
     mutationFn: async (item: PekReport) => { await pekApi.approveReport(id, item.version); return refreshAfterWorkflow(['APPROVED']); },
-    onError: (error) => setActionError(parseApiError(error, 'Не удалось утвердить отчёт.').message),
+    onError: (error) => void handleMutationError(error, 'Не удалось утвердить отчёт.'),
   });
   const archive = useMutation({
     mutationFn: async (item: PekReport) => { await pekApi.archiveReport(id, item.version); return refreshAfterWorkflow(['ARCHIVED']); },
-    onError: (error) => setActionError(parseApiError(error, 'Не удалось архивировать отчёт.').message),
+    onError: (error) => void handleMutationError(error, 'Не удалось архивировать отчёт.'),
   });
   const match = useMutation({
     mutationFn: () => pekApi.matchReportSource(id, selectedSource!.id, Number(indicatorId), selectedSource!.version),
@@ -160,14 +159,14 @@ const PekReportWorkspacePage = () => {
   if (report.isError || !report.data) return <PekQueryError error={report.error} resource="отчёт ПЭК" retry={() => void report.refetch()} />;
   const item = report.data;
   const actions = item.availableActions || {};
-  const canMutateSources = actions.matchSources === true && canEditPekReport(user, item);
+  const canMutateSources = actions.matchSources === true;
   const pending = collect.isPending || submitReview.isPending || returnReport.isPending || approve.isPending || archive.isPending;
   const setTab = (nextTab: TabKey) => { const next = new URLSearchParams(params); nextTab === 'overview' ? next.delete('tab') : next.set('tab', nextTab); setParams(next, { replace: true }); };
 
   return <div className="space-y-5">
     <PekPageHeader title={`Отчёт ПЭК за ${item.periodStart} — ${item.periodEnd}`} description={`${item.company?.name || 'Компания не указана'} · ${item.object?.name || 'Объект не указан'} · версия ${item.version}`} actions={<PekStatusBadge status={item.status} />} />
     {actionError && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void report.refetch()}>Обновить данные</MuiButton>}>{actionError}</Alert>}
-    <PekReportActions report={item} user={user} isPending={pending} readinessPending={readiness.isFetching} readinessBlocked={readiness.data?.ready === false} onCollect={() => collect.mutate()} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => void pekApi.getReportReadiness(id).then((latest) => { queryClient.setQueryData(pekKeys.readiness(id, item.companyId), latest); const blockers = latest.issues.filter((issue) => issue.blocking).map((issue) => issue.message); setReadinessBlockers(blockers); if (!blockers.length) setApproveConfirmOpen(true); }).catch((error) => void handleMutationError(error, 'Не удалось проверить готовность отчёта.'))} onArchive={() => setArchiveConfirmOpen(true)} />
+    <PekReportActions report={item} user={user} isPending={pending} readinessPending={readiness.isFetching} readinessBlocked={readiness.data?.ready === false} onCollect={() => setCollectConfirmOpen(true)} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => void pekApi.getReportReadiness(id).then((latest) => { queryClient.setQueryData(pekKeys.readiness(id, item.companyId, user?.id), latest); const blockers = latest.issues.filter((issue) => issue.blocking).map((issue) => issue.message); setReadinessBlockers(blockers); if (!blockers.length) setApproveConfirmOpen(true); }).catch((error) => void handleMutationError(error, 'Не удалось проверить готовность отчёта.'))} onArchive={() => setArchiveConfirmOpen(true)} />
     {item.status === 'RETURNED' && <Alert severity="warning"><strong>Отчёт возвращён на доработку.</strong> Текущая версия: {item.version}. Причина, автор и дата возврата отсутствуют в ответе сервиса.</Alert>}
     {readinessBlockers.length > 0 && <Alert severity="error"><strong>Отчёт содержит блокирующие проблемы:</strong><ul className="mt-2 list-disc pl-5">{readinessBlockers.map((message) => <li key={message}>{message}</li>)}</ul></Alert>}
     {collectionSummary && <Alert severity={collectionSummary.warnings.length ? 'warning' : 'success'}>
@@ -198,6 +197,11 @@ const PekReportWorkspacePage = () => {
     {tab === 'exceedances' && <section className="rounded-2xl border bg-white p-5"><h2 className="font-black">Превышения</h2>{planFact.isLoading ? <PekLoading /> : planFact.data?.items.some((row) => row.hasExceedance) ? <div className="mt-4 overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th>Позиция</th><th>Показатель</th><th>Норматив</th><th>Худшее значение</th><th>Количество</th></tr></thead><tbody>{planFact.data.items.filter((row) => row.hasExceedance).map((row) => <tr key={row.planFactRowId} className="border-b"><td className="py-3">{row.controlItemName}</td><td>{row.indicatorName}</td><td>{row.normativeValue ?? '—'}</td><td>{row.worstValue ?? '—'}</td><td>{row.exceedanceCount}</td></tr>)}</tbody></table></div> : <PekState title="Превышения не обнаружены" message="Показаны только результаты, рассчитанные backend plan/fact." />}</section>}
     {tab === 'actions' && <PekState title="Мероприятия отчёта недоступны" message="В актуальном backend нет API корректирующих мероприятий отчёта. Данные не подменяются локальной таблицей." />}
     {tab === 'documents' && <PekState title="Документы отчёта недоступны" message="В актуальном backend нет API документов отчёта. Документы программы доступны в карточке программы." />}
+    <Dialog open={collectConfirmOpen} onClose={() => !collect.isPending && setCollectConfirmOpen(false)} fullWidth maxWidth="sm">
+      <DialogTitle>{item.lastCollectedAt ? 'Повторить сбор протоколов?' : 'Собрать протоколы?'}</DialogTitle>
+      <DialogContent><Alert severity="info">Backend заново проверит подходящие протоколы, обновит сопоставления, план/факт и готовность отчёта. Ручные решения будут обработаны по серверным правилам reconciliation.</Alert></DialogContent>
+      <DialogActions><MuiButton disabled={collect.isPending} onClick={() => setCollectConfirmOpen(false)}>Отмена</MuiButton><MuiButton variant="contained" disabled={collect.isPending} onClick={() => collect.mutate()}>{collect.isPending ? 'Сбор…' : item.lastCollectedAt ? 'Повторить сбор' : 'Собрать протоколы'}</MuiButton></DialogActions>
+    </Dialog>
     <Dialog open={Boolean(selectedSource)} onClose={() => !match.isPending && setSelectedSource(null)} fullWidth maxWidth="sm"><DialogTitle>Сопоставить результат вручную</DialogTitle><DialogContent className="space-y-4"><Alert severity="info">Протокол № {selectedSource?.protocolNumber}. Исходный результат № {selectedSource?.protocolResultId}. Значение, норматив, место отбора и методика не предоставлены сервисом источников.</Alert><TextField select fullWidth margin="normal" label="Позиция программы" value={controlItemId} onChange={(event) => { setControlItemId(event.target.value); setIndicatorId(''); }}>{controlItems.map((controlItem) => <MenuItem key={controlItem.id} value={controlItem.id}>{controlItem.code} · {controlItem.name}</MenuItem>)}</TextField><TextField select fullWidth margin="normal" label="Показатель программы" value={indicatorId} disabled={!controlItemId} onChange={(event) => setIndicatorId(event.target.value)}>{filteredIndicators.map((indicator) => <MenuItem key={indicator.id} value={indicator.id}>{indicator.indicatorName} · {indicator.unit || 'без единицы'}</MenuItem>)}</TextField></DialogContent><DialogActions><MuiButton onClick={() => setSelectedSource(null)}>Отмена</MuiButton><MuiButton variant="contained" disabled={!controlItemId || !indicatorId || match.isPending} onClick={() => match.mutate()}>Сопоставить</MuiButton></DialogActions></Dialog>
     <Dialog open={Boolean(excludeSource)} onClose={() => !exclude.isPending && setExcludeSource(null)} fullWidth maxWidth="sm"><DialogTitle>Исключить источник из отчёта</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина исключения *" value={excludeReason} onChange={(event) => setExcludeReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setExcludeSource(null)}>Отмена</MuiButton><MuiButton color="error" variant="contained" disabled={!excludeReason.trim() || exclude.isPending} onClick={() => exclude.mutate()}>Исключить</MuiButton></DialogActions></Dialog>
     <Dialog open={returnOpen} onClose={() => !returnReport.isPending && setReturnOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Вернуть отчёт на доработку</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина возврата *" value={returnReason} onChange={(event) => setReturnReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setReturnOpen(false)}>Отмена</MuiButton><MuiButton color="warning" variant="contained" disabled={!returnReason.trim() || returnReport.isPending} onClick={() => returnReport.mutate(item)}>Вернуть</MuiButton></DialogActions></Dialog>

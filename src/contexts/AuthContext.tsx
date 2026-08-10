@@ -129,12 +129,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(!!localStorage.getItem(TOKEN_KEY));
 
   const saveSession = useCallback((newToken: string, newUser: User) => {
+    queryClient.removeQueries({ queryKey: ['pek'] });
     localStorage.setItem(TOKEN_KEY, newToken);
     localStorage.setItem(USER_KEY, JSON.stringify(newUser));
     sessionStorage.removeItem('eco-progress-401-redirect');
     setToken(newToken);
     setUserState(newUser);
-  }, []);
+  }, [queryClient]);
 
   const clearSession = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
@@ -154,9 +155,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data } = await api.get<{ data: User; message: string | null }>('/auth/me');
     const nextUser = normalizeStoredUser(data.data);
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
-    setUserState(nextUser);
+    setUserState((currentUser) => {
+      if (currentUser?.id !== nextUser.id) queryClient.removeQueries({ queryKey: ['pek'] });
+      return nextUser;
+    });
     return nextUser;
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     const storedToken = localStorage.getItem(TOKEN_KEY);
@@ -203,9 +207,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [clearSession, refreshUser]);
 
   const setUser = useCallback((u: User) => {
+    queryClient.removeQueries({ queryKey: ['pek'] });
     localStorage.setItem(USER_KEY, JSON.stringify(u));
     setUserState(u);
-  }, []);
+  }, [queryClient]);
 
   const isAuthenticated = !!token && !!user;
   const isStaff = !!user && staffRoles.includes(user.role);

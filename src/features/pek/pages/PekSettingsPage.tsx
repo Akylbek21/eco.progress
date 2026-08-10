@@ -8,6 +8,7 @@ import { pekApi } from '../api/pekService';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { parseApiError } from '../../../services/apiHelpers';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const booleanFields: Array<[keyof PekSettingsUpdateRequest, string]> = [
   ['includeOnlySignedProtocols', 'Учитывать только подписанные протоколы'],
@@ -29,10 +30,12 @@ const toRequest = (value: NonNullable<Awaited<ReturnType<typeof pekApi.getSettin
 };
 
 const PekSettingsPage = () => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const settings = useQuery({ queryKey: pekKeys.settings(), queryFn: ({ signal }) => pekApi.getSettings(signal) });
-  const assignees = useQuery({ queryKey: pekKeys.assignees(['PEK_RESPONSIBLE']), queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal) });
-  const laboratories = useQuery({ queryKey: ['laboratories', 'pek-settings'], queryFn: ({ signal }) => getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }, signal) });
+  const settingsKey = pekKeys.settings(undefined, user?.id);
+  const settings = useQuery({ queryKey: settingsKey, queryFn: ({ signal }) => pekApi.getSettings(signal) });
+  const assignees = useQuery({ queryKey: pekKeys.assignees(['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal) });
+  const laboratories = useQuery({ queryKey: ['laboratories', 'pek-settings', `user:${user?.id ?? 'anonymous'}`], queryFn: ({ signal }) => getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }, signal) });
   const [form, setForm] = useState<PekSettingsUpdateRequest | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   useEffect(() => {
@@ -41,7 +44,11 @@ const PekSettingsPage = () => {
   }, [settings.data]);
   const save = useMutation({
     mutationFn: (body: PekSettingsUpdateRequest) => pekApi.updateSettings(body),
-    onSuccess: (data) => { queryClient.setQueryData(pekKeys.settings(), data); setMessage('Настройки ПЭК сохранены.'); },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: settingsKey });
+      await settings.refetch();
+      setMessage('Настройки ПЭК сохранены.');
+    },
     onError: (error) => setMessage(parseApiError(error, 'Не удалось сохранить настройки ПЭК.').message),
   });
   if (settings.isLoading) return <PekLoading />;

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import { useAuth } from '../../../contexts/AuthContext';
-import { getActiveCompanies, getCompanyObjects } from '../../../services/companyService';
+import { getActiveCompanies, getCompanyObject, getCompanyObjects } from '../../../services/companyService';
 import { getActiveLaboratories, getDefaultLaboratory, getLaboratoryEmployees } from '../../../services/laboratorySettingsService';
 import { getAvailableMeasurementDevices } from '../../../services/measurementDeviceService';
 import protocolService from '../../../services/protocolService';
@@ -14,7 +14,7 @@ import { hasProtocolPermission } from '../utils/protocolActions';
 import { saveProtocolWizardDraft } from '../api/saveProtocolWizardDraft';
 import { mapProtocolToWizardForm } from '../mappers/protocolWizardDraftMapper';
 import { applyProtocolApiErrorsToForm } from '../utils/protocolFormErrors';
-import { validateForApproval } from '../utils/protocolWizardValidation';
+import { validateProtocolForSubmit, validateProtocolWizardStep } from '../utils/protocolWizardValidation';
 import ProtocolWizardHeader from './ProtocolWizardHeader';
 import ProtocolWizardSteps from './ProtocolWizardSteps';
 import ProtocolWizardFooter from './ProtocolWizardFooter';
@@ -34,6 +34,7 @@ import {
 } from './wizardTypes';
 import { getWaterProtocolOptions, isWaterProtocolType } from '../../../config/protocolWater';
 import { protocolQueryKeys, protocolScope } from '../hooks/queryKeys';
+import { useProtocolEnvironmentConditions } from '../hooks/useProtocolEnvironmentConditions';
 import {
   createProtocolDraftIdempotencyKey,
   findLatestLocalProtocolDraft,
@@ -73,6 +74,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   const laboratoriesQuery = useQuery({ queryKey: ['laboratories', 'protocol-wizard', user?.id], queryFn: ({ signal }) => getActiveLaboratories(signal), enabled: open });
   const defaultLaboratoryQuery = useQuery({ queryKey: ['laboratories', 'default', user?.id], queryFn: ({ signal }) => getDefaultLaboratory(signal), enabled: open, retry: false });
   const objectsQuery = useQuery({ queryKey: ['company-objects', user?.id, values.companyId], queryFn: ({ signal }) => getCompanyObjects(values.companyId, false, signal), enabled: open && Boolean(values.companyId) });
+  const objectDetailsQuery = useQuery({ queryKey: ['company-object', user?.id, values.companyId, values.objectId], queryFn: ({ signal }) => getCompanyObject(values.companyId, values.objectId, signal), enabled: open && Boolean(values.companyId && values.objectId) });
   const employeesQuery = useQuery({ queryKey: ['laboratory-employees', user?.id, values.laboratoryId], queryFn: ({ signal }) => getLaboratoryEmployees(values.laboratoryId, { signal }), enabled: open && Boolean(values.laboratoryId) });
   const devicesQuery = useQuery({
     queryKey: ['measurement-devices', 'available', user?.id, values.laboratoryId, values.measurementDate, values.templateId],
@@ -83,6 +85,15 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   const templates = typesQuery.data ?? [];
   const companies = companiesQuery.data ?? [];
   const objects = (objectsQuery.data ?? []).filter((item) => item.status === 'ACTIVE' && !item.virtual && !item.isVirtual);
+  const selectedObject = (objectsQuery.data ?? []).find((item) => String(item.id) === String(values.objectId));
+  const weather = useProtocolEnvironmentConditions({
+    enabled: open,
+    objectId: values.objectId,
+    coordinates: objectDetailsQuery.data?.coordinates || selectedObject?.coordinates || undefined,
+    date: values.sampleDate || values.measurementDate,
+    time: values.measurementTime || '12:00',
+    form,
+  });
   const laboratories = laboratoriesQuery.data ?? [];
   const employees = useMemo<LaboratoryExecutorOption[]>(() => (employeesQuery.data ?? []).filter((item) => item.active).map((item) => ({
     executorId: item.id, laboratoryEmployeeId: item.id, userId: item.userId ?? undefined,
@@ -137,15 +148,26 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   const saveMutation = useMutation({
     mutationFn: (snapshot: ProtocolWizardForm) => saveProtocolWizardDraft(snapshot, serverDraft, idempotencyKeyRef.current),
     onMutate: () => { setSaveState(serverDraft ? 'saving' : 'creating'); setGeneralError(''); setServerIssues([]); },
-    onSuccess: async ({ protocol, resultIds }, snapshot) => {
-      if (!serverDraft) sessionStorage.removeItem(localProtocolDraftKey(user?.id ?? 'anonymous', null));
+    onSuccess: async ({ protocol, resultIdsByClientRowId }, snapshot) => {
+      const created = !serverDraft;
+      if (created) sessionStorage.removeItem(localProtocolDraftKey(user?.id ?? 'anonymous', null));
       setServerDraft(protocol);
-      lastSavedFingerprintRef.current = JSON.stringify(snapshot);
-      form.reset(mapProtocolToWizardForm(protocol), { keepDirtyValues: true });
-      resultIds.forEach((id, index) => form.setValue(`results.${index}.serverResultId`, id, { shouldDirty: false }));
-      setSaveState(serverDraft ? 'saved' : 'created');
+      const liveRows = form.getValues('results');
+      liveRows.forEach((row, index) => {
+        const serverResultId = resultIdsByClientRowId.get(row.clientRowId);
+        if (serverResultId) form.setValue(`results.${index}.serverResultId`, serverResultId, { shouldDirty: false });
+      });
+      const savedSnapshot: ProtocolWizardForm = {
+        ...snapshot,
+        results: snapshot.results.map((row) => {
+          const serverResultId = resultIdsByClientRowId.get(row.clientRowId);
+          return serverResultId ? { ...row, serverResultId } : row;
+        }),
+      };
+      lastSavedFingerprintRef.current = JSON.stringify(savedSnapshot);
+      setSaveState(created ? 'created' : 'saved');
       queryClient.setQueryData(protocolQueryKeys.detail(scope, protocol.id), protocol);
-      await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) });
+      if (created) await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) });
     },
     onError: (error) => {
       setSaveState('error');
@@ -161,36 +183,39 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     },
   });
 
-  const canStartDraft = Boolean(values.templateId && values.companyId);
+  const canSaveServerDraft = Boolean(values.templateId && values.companyId);
+  const canAutoCreateDraft = Boolean(canSaveServerDraft && values.objectId);
   useEffect(() => {
-    if (!open || recoveryCandidate || serverDraft || !canStartDraft || initialCreateStarted.current || saveMutation.isPending || conflict) return;
+    if (!open || recoveryCandidate || serverDraft || !canAutoCreateDraft || initialCreateStarted.current || saveMutation.isPending || conflict) return;
     const timer = window.setTimeout(() => {
       if (initialCreateStarted.current) return;
       initialCreateStarted.current = true;
       saveMutation.mutate(form.getValues());
     }, 800);
     return () => window.clearTimeout(timer);
-  }, [canStartDraft, conflict, form, open, recoveryCandidate, saveMutation, serverDraft]);
+  }, [canAutoCreateDraft, conflict, form, open, recoveryCandidate, saveMutation, serverDraft]);
   useEffect(() => {
     if (!open || !serverDraft || saveMutation.isPending || conflict) return;
     const snapshot = form.getValues();
     if (JSON.stringify(snapshot) === lastSavedFingerprintRef.current) return;
-    const timer = window.setTimeout(() => saveMutation.mutate(form.getValues()), 900);
+    const timer = window.setTimeout(() => saveMutation.mutate(form.getValues()), 2000);
     return () => window.clearTimeout(timer);
   }, [conflict, form, open, saveMutation, serverDraft, values]);
 
-  const approvalIssues = useMemo(() => validateForApproval(values).map((issue, index) => ({
-    code: `LOCAL_${index}`, field: issue.field as FieldPath<ProtocolWizardForm>, fieldPath: issue.field,
-    step: /^results\./.test(issue.field) ? 2 : /laboratory|executor|device|condition|work|room|season|factor|method/i.test(issue.field) ? 1 : 0,
-    severity: 'ERROR' as const, message: issue.message,
+  const approvalIssues = useMemo(() => validateProtocolForSubmit(values).map((issue) => ({
+    ...issue,
+    field: issue.field as FieldPath<ProtocolWizardForm>,
+    fieldPath: issue.field,
   })), [values]);
+  const blockingIssues = approvalIssues.filter((issue) => issue.severity === 'ERROR');
+  const currentStepErrors = validateProtocolWizardStep(values, step).filter((issue) => issue.severity === 'ERROR');
 
   const goToIssue = (target: number, field?: FieldPath<ProtocolWizardForm>) => {
     setStep(target);
     if (field) window.requestAnimationFrame(() => form.setFocus(field));
   };
   const save = async () => {
-    if (!canStartDraft) {
+    if (!canSaveServerDraft) {
       setGeneralError('Сначала выберите тип протокола и компанию. До этого сохраняется только локальная копия.');
       setStep(0);
       return null;
@@ -199,9 +224,14 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     return saveMutation.mutateAsync(form.getValues());
   };
   const next = async () => {
-    if (step === 3 && approvalIssues.length) {
-      setServerIssues(approvalIssues);
-      goToIssue(approvalIssues[0].step, approvalIssues[0].field);
+    if (step === 3 && blockingIssues.length) {
+      const first = blockingIssues[0];
+      goToIssue(first.step, first.field);
+      return;
+    }
+    if (currentStepErrors.length) {
+      const first = currentStepErrors[0];
+      goToIssue(first.step, first.field as FieldPath<ProtocolWizardForm>);
       return;
     }
     if (step === 3 && serverDraft && hasProtocolPermission(serverDraft, 'canCheckNormatives')) {
@@ -213,9 +243,15 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     setStep((current) => { const value = Math.min(steps.length - 1, current + 1); setMaxVisited((visited) => Math.max(visited, value)); return value; });
   };
   const complete = async () => {
+    if (blockingIssues.length) {
+      const first = blockingIssues[0];
+      goToIssue(first.step, first.field);
+      return;
+    }
     try {
       const saved = await save();
       if (saved) {
+        await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) });
         sessionStorage.removeItem(localProtocolDraftKey(user?.id ?? 'anonymous', null));
         sessionStorage.removeItem(localProtocolDraftKey(user?.id ?? 'anonymous', saved.protocol.id));
         onCreated(saved.protocol);
@@ -287,7 +323,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   const content = step === 0
     ? <BasicDataStep templates={templates} companies={companies} objects={objects} companyLocked={Boolean(serverDraft)} onStartNew={() => setNewProtocolConfirm(true)} onCompanyChange={(id) => { form.setValue('companyId', id, { shouldDirty: true }); form.setValue('objectId', '', { shouldDirty: true }); }} />
     : step === 1
-      ? <div className="space-y-7"><ExecutorDeviceStep laboratories={laboratories} employees={employees} devices={devices} onLaboratoryChange={(id) => { form.setValue('laboratoryId', id, { shouldDirty: true }); form.setValue('executorId', '', { shouldDirty: true }); }} /><EnvironmentStep weatherLoading={false} weatherMessage="" onRefresh={() => {}} waterTypeOptions={waterOptions.waterTypes} waterUseCategoryOptions={waterOptions.waterUseCategories} /><MethodsStep /></div>
+      ? <div className="space-y-7"><ExecutorDeviceStep laboratories={laboratories} employees={employees} devices={devices} onLaboratoryChange={(id) => { form.setValue('laboratoryId', id, { shouldDirty: true }); form.setValue('executorId', '', { shouldDirty: true }); }} /><EnvironmentStep weatherLoading={weather.loading} weatherMessage={weather.message} onRefresh={() => void weather.refresh()} waterTypeOptions={waterOptions.waterTypes} waterUseCategoryOptions={waterOptions.waterUseCategories} /><MethodsStep /></div>
       : step === 2
         ? <ResultsStep devices={devices} />
         : step === 3
@@ -304,7 +340,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
           {generalError && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900">{generalError}</div>}
           {content}
         </main>
-        <ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue canSaveDraft={canStartDraft} saveState={saveState === 'local' ? 'Локальная копия сохранена' : saveState === 'creating' ? 'Создание серверного черновика…' : saveState === 'created' ? 'Черновик сохранён на сервере' : saveState === 'saving' ? 'Сохранение изменений…' : saveState === 'saved' ? 'Изменения сохранены' : saveState === 'conflict' ? 'Конфликт версий' : saveState === 'error' ? 'Не удалось сохранить' : undefined} onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />
+        <ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue={currentStepErrors.length === 0 && (step < steps.length - 1 || blockingIssues.length === 0)} canSaveDraft={canSaveServerDraft} saveState={saveState === 'local' ? 'Локальная копия сохранена' : saveState === 'creating' ? 'Создание серверного черновика…' : saveState === 'created' ? 'Черновик сохранён на сервере' : saveState === 'saving' ? 'Сохранение изменений…' : saveState === 'saved' ? 'Изменения сохранены' : saveState === 'conflict' ? 'Конфликт версий' : saveState === 'error' ? 'Не удалось сохранить' : undefined} onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />
       </div>
     </Modal>
     <Modal open={conflict} onClose={() => setConflict(false)} closeOnBackdrop={false} size="sm" title="Протокол изменён другим сотрудником" footer={<><Button type="button" variant="secondary" onClick={() => { writeLocalProtocolDraft(sessionStorage, { schemaVersion: LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION, userId: String(user?.id ?? 'anonymous'), protocolId: serverDraft?.id ?? null, backendVersion: serverDraft?.version ?? null, idempotencyKey: idempotencyKeyRef.current, currentStep: step, formValues: form.getValues(), savedAt: new Date().toISOString(), hasUnsavedChanges: true }); setConflict(false); }}>Сохранить локальную копию</Button><Button type="button" onClick={() => void loadLatest()}>Загрузить актуальную версию</Button></>}><p className="text-sm text-slate-700">Данные не были перезаписаны. Выберите, сохранить ли введённые данные локально или загрузить актуальную серверную версию.</p></Modal>

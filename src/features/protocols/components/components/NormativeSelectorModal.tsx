@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import Button from '../../../../components/ui/Button';
 import Modal from '../../../../components/ui/Modal';
 import { resolveProtocolNormativeContext } from '../../../../data/protocolNormativeContext';
+import { physicalFactorTypes } from '../../../../data/protocolTemplates';
 import {
   canSearchNormative,
+  isNumericPollutantCode,
   normativeSearchItemToRecord,
   normalizeNormativeSearchRequest,
   normativeSearchQueryKey,
-  searchNormatives,
+  searchNormativesStaged,
   type NormativeSearchRequest,
 } from '../../../../services/normativeSearchService';
 import type { NormativeRecord, ProtocolTemplateId } from '../../../../types/protocols';
@@ -37,7 +39,7 @@ const NormativeSelectorModal = ({
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [includeAllStatuses, setIncludeAllStatuses] = useState(false);
+  const [factorType, setFactorType] = useState(filters.factorType ?? '');
   const [selectedRecords, setSelectedRecords] = useState<
     Map<string, NormativeRecord>
   >(new Map());
@@ -48,7 +50,6 @@ const NormativeSelectorModal = ({
     void queryClient.cancelQueries({
       queryKey: ['protocol-normative-search-v3'],
     });
-    setIncludeAllStatuses(false);
     if (!normalizedSearch) {
       setDebouncedSearch('');
       return;
@@ -60,30 +61,49 @@ const NormativeSelectorModal = ({
     return () => window.clearTimeout(timeoutId);
   }, [normalizedSearch, queryClient]);
 
+  useEffect(() => {
+    if (open) setFactorType(filters.factorType ?? '');
+  }, [filters.factorType, open, templateId]);
+
+  const factorOptions = useMemo(() => {
+    if (templateId === 'noise_vibration') {
+      return physicalFactorTypes.filter((item) => ['NOISE', 'VIBRATION', 'NOISE_VIBRATION', 'INFRASOUND', 'ULTRASOUND'].includes(item.value));
+    }
+    if (templateId === 'uv_emf_laser') {
+      return physicalFactorTypes.filter((item) => ['UV', 'AEROIONS', 'ELECTROMAGNETIC_FIELD', 'LASER'].includes(item.value));
+    }
+    return [];
+  }, [templateId]);
+  const factorRequired = factorOptions.length > 0;
+
   const searchContext = useMemo(
     () => resolveProtocolNormativeContext(templateId),
     [templateId],
   );
+  const numericCodeSearch = isNumericPollutantCode(debouncedSearch);
   const request = useMemo<NormativeSearchRequest>(
     () => normalizeNormativeSearchRequest({
       ...searchContext,
       ...filters,
-      query: debouncedSearch || undefined,
+      factorType: factorType || searchContext.factorType || filters.factorType,
+      query: numericCodeSearch ? undefined : debouncedSearch || undefined,
+      code: numericCodeSearch ? debouncedSearch : undefined,
       page: 0,
       size: SEARCH_PAGE_SIZE,
-      status: includeAllStatuses ? 'ALL' : 'ACTIVE',
+      status: 'ACTIVE',
     }),
-    [debouncedSearch, filters, includeAllStatuses, searchContext],
+    [debouncedSearch, factorType, filters, numericCodeSearch, searchContext],
   );
-  const searchAllowed = canSearchNormative(debouncedSearch);
+  const searchAllowed = numericCodeSearch || canSearchNormative(debouncedSearch);
   const query = useQuery({
     queryKey: normativeSearchQueryKey(request),
     enabled:
       open &&
       Boolean(templateId) &&
+      (!factorRequired || Boolean(factorType || request.factorType)) &&
       searchAllowed &&
       !waitingForDebounce,
-    queryFn: ({ signal }) => searchNormatives(request, signal),
+    queryFn: ({ signal }) => searchNormativesStaged(request, signal),
     retry: false,
     placeholderData: (previousData) => previousData,
     staleTime: (cachedQuery) =>
@@ -98,7 +118,7 @@ const NormativeSelectorModal = ({
   const close = () => {
     setSearch('');
     setDebouncedSearch('');
-    setIncludeAllStatuses(false);
+    setFactorType(filters.factorType ?? '');
     setSelectedRecords(new Map());
     onClose();
   };
@@ -160,6 +180,20 @@ const NormativeSelectorModal = ({
         />
       </div>
 
+      {factorRequired && (
+        <label className="mt-4 block text-sm font-semibold text-slate-800">
+          Вид физического фактора
+          <select
+            value={factorType}
+            onChange={(event) => setFactorType(event.target.value)}
+            className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none focus:border-eco-500 focus:ring-2 focus:ring-eco-100"
+          >
+            <option value="">Выберите вид фактора</option>
+            {factorOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+          </select>
+        </label>
+      )}
+
       <div
         className="mt-4 max-h-[55vh] space-y-2 overflow-y-auto"
         aria-live="polite"
@@ -180,7 +214,13 @@ const NormativeSelectorModal = ({
             </p>
           )}
 
-        {waitingForDebounce && normalizedSearch && (
+        {factorRequired && !factorType && normalizedSearch && (
+          <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+            Сначала выберите вид физического фактора.
+          </p>
+        )}
+
+        {waitingForDebounce && normalizedSearch && (!factorRequired || Boolean(factorType)) && (
           <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
             Подготавливаем поиск…
           </p>
@@ -193,12 +233,18 @@ const NormativeSelectorModal = ({
         )}
 
         {currentQueryFinished && rows.length === 0 && (
-          <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><p>По запросу «{debouncedSearch}» ничего не найдено {includeAllStatuses ? 'во всех статусах' : 'среди активных нормативов'} для выбранного типа протокола.</p>{!includeAllStatuses && <button type="button" className="mt-2 font-bold underline" onClick={() => setIncludeAllStatuses(true)}>Искать также архивные и требующие проверки</button>}</div>
+          <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">Норматив не найден в справочнике для данного типа протокола. Можно добавить показатель вручную.</div>
         )}
 
-        {currentQueryFinished && includeAllStatuses && rows.length > 0 && (
+        {currentQueryFinished && query.data?.fallbackStage?.endsWith('_ALL') && rows.length > 0 && (
           <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
             Показаны нормативы всех статусов. Проверьте статус перед передачей протокола.
+          </p>
+        )}
+
+        {currentQueryFinished && query.data?.relaxed && rows.length > 0 && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+            Норматив найден по типу протокола. Дополнительные условия не совпали — проверьте применимость.
           </p>
         )}
 

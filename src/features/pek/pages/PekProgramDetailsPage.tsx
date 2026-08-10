@@ -13,7 +13,6 @@ import PekQueryError from '../components/common/PekQueryError';
 import PekProgramDocuments from '../components/documents/PekProgramDocuments';
 import PekActionModal from '../components/workflow/PekActionModal';
 import { mapPekError } from '../utils/pekErrorMapper';
-import { canUsePekPermission } from '../permissions/pekAccess';
 
 const tabs = ['Обзор', 'Объекты контроля', 'Показатели', 'Мероприятия', 'Документы', 'История', 'Версии', 'Отчёты'];
 
@@ -31,7 +30,7 @@ const PekProgramDetailsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const program = useQuery({
-    queryKey: pekKeys.program(id),
+    queryKey: pekKeys.program(id, undefined, user?.id),
     queryFn: ({ signal }) => pekApi.getProgram(id, signal),
     enabled: Number.isFinite(id),
   });
@@ -58,11 +57,11 @@ const PekProgramDetailsPage = () => {
     onSuccess: async (saved) => {
       setAction(null);
       setCloneAction(null);
-      client.setQueryData(pekKeys.program(saved.id), saved);
+      client.setQueryData(pekKeys.program(saved.id, saved.company?.id, user?.id), saved);
       await Promise.all([
-        client.invalidateQueries({ queryKey: pekKeys.programs() }),
-        client.invalidateQueries({ queryKey: pekKeys.dashboard() }),
-        client.invalidateQueries({ queryKey: pekKeys.programHistory(id) }),
+        client.invalidateQueries({ queryKey: pekKeys.programs({}, user?.id) }),
+        client.invalidateQueries({ queryKey: pekKeys.dashboard({}, user?.id) }),
+        client.invalidateQueries({ queryKey: pekKeys.programHistory(id, user?.id) }),
       ]);
       toast.success('Действие выполнено');
       if (saved.id !== id) navigate(`/staff/pek/programs/${saved.id}`);
@@ -77,15 +76,7 @@ const PekProgramDetailsPage = () => {
   if (program.isLoading) return <PekLoading />;
   if (program.isError || !program.data) return <PekQueryError error={program.error} resource="Программа ПЭК" retry={() => void program.refetch()} />;
   const item = program.data;
-  const allowed = (code: PekAvailableAction['code']) => {
-    if (code === 'EDIT' || code === 'SUBMIT_REVIEW') return canUsePekPermission(user, 'PEK_PROGRAM_EDIT');
-    if (code === 'CLONE') return canUsePekPermission(user, 'PEK_PROGRAM_CREATE');
-    if (code === 'RETURN' || code === 'APPROVE') return canUsePekPermission(user, 'PEK_PROGRAM_APPROVE');
-    if (code === 'ACTIVATE') return canUsePekPermission(user, 'PEK_PROGRAM_ACTIVATE');
-    if (code === 'ARCHIVE') return canUsePekPermission(user, 'PEK_PROGRAM_ARCHIVE');
-    return false;
-  };
-  const workflowActions = item.availableActions.filter((candidate) => candidate.code !== 'EDIT' && allowed(candidate.code));
+  const workflowActions = item.availableActions.filter((candidate) => candidate.code !== 'EDIT');
   const editAction = item.availableActions.find((candidate) => candidate.code === 'EDIT');
 
   return <div className="space-y-5">
@@ -97,7 +88,7 @@ const PekProgramDetailsPage = () => {
         {workflowActions.map((candidate) => (
           <PekPrimaryAction key={candidate.code} action={candidate} pending={workflow.isPending} onClick={(selected) => selected.code === 'CLONE' ? setCloneAction(selected) : setAction(selected)} />
         ))}
-        {!item.readOnly && editAction?.enabled && allowed('EDIT') && (
+        {!item.readOnly && editAction?.enabled && (
           <button type="button" onClick={() => navigate(`/staff/pek/programs/${id}/edit`)} className="rounded-full border px-5 py-2 font-bold">Изменить</button>
         )}
       </>}

@@ -51,21 +51,36 @@ describe('server draft boundary and idempotency', () => {
     expect(source).toContain("setSaveState('conflict')");
   });
 
+  it('debounces autosave and does not refetch the list after every draft PATCH', async () => {
+    const source = await import('node:fs/promises').then((fs) => fs.readFile('src/features/protocols/components/CreateProtocolWizardModalV2.tsx', 'utf8'));
+    expect(source).toContain('form.getValues()), 2000)');
+    expect(source).toContain('if (created) await queryClient.invalidateQueries');
+    expect(source).not.toContain('form.reset(mapProtocolToWizardForm(protocol), { keepDirtyValues: true })');
+  });
+
   it('does not generate an idempotency key inside the API operation', async () => {
     const source = await import('node:fs/promises').then((fs) => fs.readFile('src/features/protocols/api/saveProtocolWizardDraft.ts', 'utf8'));
     expect(source).not.toContain('randomUUID');
     expect(source).toContain('idempotencyKey: string');
   });
 
-  it('creates with companyId and never patches companyId or PEK ids', () => {
+  it('creates with companyId and nested PEK context while company stays immutable in PATCH', () => {
     const form = createWizardDefaults();
     Object.assign(form, { templateId: 'ambient_air', companyId: '10', pekProgramId: '55', pekControlEventId: '66' });
     const create = mapWizardToCreateDraft(form) as unknown as Record<string, unknown>;
     const update = mapWizardToUpdateDraft(form, draftProtocol()) as unknown as Record<string, unknown>;
     expect(create.companyId).toBe(10);
     expect(update).not.toHaveProperty('companyId');
-    expect(create).not.toHaveProperty('pekProgramId');
+    expect(create.pekContext).toEqual(expect.objectContaining({ pekProgramId: 55, pekControlEventId: 66 }));
     expect(update).not.toHaveProperty('pekProgramId');
+  });
+
+  it('maps sourceNumber and basis into the actual PATCH fields', () => {
+    const form = createWizardDefaults();
+    Object.assign(form, { templateId: 'ambient_air', companyId: '10', sourceNumber: 'ИЗА-2', basis: 'Договор №5' });
+    const update = mapWizardToUpdateDraft(form, draftProtocol());
+    expect(update.sourceNumber).toBe('ИЗА-2');
+    expect(update.organization.testingBasis).toBe('Договор №5');
   });
 
   it('uses the same idempotency key after a failed attempt', async () => {

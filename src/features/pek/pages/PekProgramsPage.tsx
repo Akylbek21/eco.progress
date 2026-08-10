@@ -43,14 +43,14 @@ const PekProgramsPage = () => {
     setParams(next, { replace: true });
   };
   const programs = useQuery({
-    queryKey: pekKeys.programs(filters),
+    queryKey: pekKeys.programs(filters, user?.id),
     queryFn: ({ signal }) => pekApi.getPrograms(filters, signal),
     placeholderData: keepPreviousData,
     retry: retryPekQuery,
     staleTime: PEK_STALE_TIME_MS,
   });
   const assignees = useQuery({
-    queryKey: pekKeys.assignees(['PEK_RESPONSIBLE']),
+    queryKey: pekKeys.assignees(['PEK_RESPONSIBLE'], user?.id),
     queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal),
     retry: retryPekQuery,
   });

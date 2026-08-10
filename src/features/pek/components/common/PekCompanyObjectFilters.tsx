@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { getCompanies, getCompanyObjects } from '../../../../services/companyService';
+import { useAuth } from '../../../../contexts/AuthContext';
 import { retryPekQuery } from '../../utils/pekQueryPolicy';
 
 type Props = {
@@ -17,14 +19,15 @@ const PekCompanyObjectFilters = ({
   onObjectChange,
   required,
 }: Props) => {
+  const { user } = useAuth();
   const companies = useQuery({
-    queryKey: ['pek', 'filters', 'companies'],
+    queryKey: ['pek', `user:${user?.id ?? 'anonymous'}`, 'filters', 'companies'],
     queryFn: ({ signal }) => getCompanies({ page: 0, size: 100, status: 'ACTIVE' }, signal),
     retry: retryPekQuery,
     staleTime: 60_000,
   });
   const objects = useQuery({
-    queryKey: ['pek', 'filters', 'objects', companyId],
+    queryKey: ['pek', `user:${user?.id ?? 'anonymous'}`, 'filters', 'objects', companyId],
     queryFn: ({ signal }) => getCompanyObjects(String(companyId), false, signal),
     enabled: Boolean(companyId),
     retry: retryPekQuery,
@@ -35,6 +38,26 @@ const PekCompanyObjectFilters = ({
     && item.persisted !== false
     && item.isVirtual !== true
     && Number(item.id) > 0);
+
+  useEffect(() => {
+    if (!companies.data) return;
+    const available = companies.data.items;
+    if (companyId && !available.some((item) => Number(item.id) === companyId)) {
+      onCompanyChange('');
+      onObjectChange('');
+      return;
+    }
+    if (!companyId && available.length === 1) onCompanyChange(String(available[0].id));
+  }, [companies.data, companyId, onCompanyChange, onObjectChange]);
+
+  useEffect(() => {
+    if (!companyId || !objects.data) return;
+    if (objectId && !realObjects.some((item) => Number(item.id) === objectId)) {
+      onObjectChange('');
+      return;
+    }
+    if (!objectId && realObjects.length === 1) onObjectChange(String(realObjects[0].id));
+  }, [companyId, objectId, objects.data, onObjectChange, realObjects]);
 
   return <>
     <label className="text-xs font-bold text-slate-600">

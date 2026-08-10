@@ -81,6 +81,7 @@ export const mapProtocolFormToPatchRequest = (
   measurementDate: optionalText(payload.measurementDate),
   measurementTime: optionalText(payload.measurementTime),
   measurementPlace: optionalText(payload.measurementPlace),
+  sourceNumber: optionalText(payload.sourceNumber),
   testingStartDate: optionalText(payload.testing.testingStartDate),
   testingEndDate: optionalText(payload.testing.testingEndDate ?? payload.testing.testingDate),
   formCode: optionalText(payload.formCode),

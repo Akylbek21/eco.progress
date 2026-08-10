@@ -34,7 +34,7 @@ const PekReportActions = ({
   onApprove,
   onArchive,
 }: Props) => <div className="flex flex-wrap gap-2">
-  {canCollectPekReport(user, report) && <Button variant="contained" disabled={isPending} onClick={onCollect}>Собрать данные из протоколов</Button>}
+  {canCollectPekReport(user, report) && <Button variant="contained" disabled={isPending} onClick={onCollect}>{report.lastCollectedAt ? 'Повторить сбор' : 'Собрать протоколы'}</Button>}
   {canSubmitPekReport(user, report) && <Button variant="contained" disabled={isPending || readinessPending || readinessBlocked} onClick={onSubmit}>{report.status === 'RETURNED' ? 'Повторно отправить на проверку' : 'Отправить на проверку'}</Button>}
   {canReturnPekReport(user, report) && <Button color="warning" variant="outlined" disabled={isPending} onClick={onReturn}>Вернуть на доработку</Button>}
   {canApprovePekReport(user, report) && <Button variant="contained" disabled={isPending || readinessPending} onClick={onApprove}>Утвердить</Button>}

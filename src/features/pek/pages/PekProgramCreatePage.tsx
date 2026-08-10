@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import dayjs from 'dayjs';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, type FieldPath } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -96,25 +97,26 @@ const PekProgramCreatePage = () => {
   const measures = watch('measures');
 
   const program = useQuery({
-    queryKey: pekKeys.program(id),
+    queryKey: pekKeys.program(id, undefined, user?.id),
     queryFn: ({ signal }) => pekApi.getProgram(id, signal),
     enabled: edit && Number.isFinite(id),
   });
   const companies = useQuery({
-    queryKey: ['pek', 'program-form', 'companies'],
+    queryKey: ['pek', `user:${user?.id ?? 'anonymous'}`, 'program-form', 'companies'],
     queryFn: ({ signal }) => getCompanies({ page: 0, size: 100, status: 'ACTIVE' }, signal),
   });
   const objects = useQuery({
-    queryKey: ['pek', 'program-form', 'objects', companyId],
+    queryKey: ['pek', `user:${user?.id ?? 'anonymous'}`, 'program-form', 'objects', companyId],
     queryFn: ({ signal }) => getCompanyObjects(String(companyId), false, signal),
     enabled: companyId > 0,
   });
   const assignees = useQuery({
-    queryKey: pekKeys.assignees(['PEK_RESPONSIBLE']),
+    queryKey: pekKeys.assignees(['PEK_RESPONSIBLE'], user?.id),
     queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal),
+    enabled: companyId > 0,
   });
   const permits = useQuery({
-    queryKey: pekKeys.permits(objectId),
+    queryKey: pekKeys.permits(objectId, user?.id),
     queryFn: ({ signal }) => pekApi.getObjectPermits(objectId, signal),
     enabled: objectId > 0,
   });
@@ -122,6 +124,31 @@ const PekProgramCreatePage = () => {
     () => pekDraftKey('program', user?.id, programId, edit ? program.data?.version ?? 'loading' : 'new', companyId || 'none'),
     [companyId, edit, program.data?.version, programId, user?.id],
   );
+  const activePermits = useMemo(() => (permits.data || []).filter((permit) =>
+    permit.status !== 'EXPIRED'
+    && permit.status !== 'ARCHIVED'
+    && (!permit.validUntil || !dayjs(permit.validUntil).isBefore(dayjs(), 'day'))), [permits.data]);
+
+  useEffect(() => {
+    if (!companies.data || edit) return;
+    const available = companies.data.items;
+    if (companyId && !available.some((company) => Number(company.id) === companyId)) {
+      setValue('companyId', 0, { shouldDirty: true });
+      setValue('objectId', 0, { shouldDirty: true });
+      return;
+    }
+    if (!companyId && available.length === 1) setValue('companyId', Number(available[0].id), { shouldDirty: true });
+  }, [companies.data, companyId, edit, setValue]);
+
+  useEffect(() => {
+    if (!objects.data || edit || !companyId) return;
+    const available = objects.data.filter((item) => item.status !== 'ARCHIVED' && item.persisted !== false && item.isVirtual !== true);
+    if (objectId && !available.some((object) => Number(object.id) === objectId)) {
+      setValue('objectId', 0, { shouldDirty: true });
+      return;
+    }
+    if (!objectId && available.length === 1) setValue('objectId', Number(available[0].id), { shouldDirty: true });
+  }, [companyId, edit, objectId, objects.data, setValue]);
 
   useEffect(() => {
     if (!program.data) return;
@@ -156,7 +183,7 @@ const PekProgramCreatePage = () => {
       if (sequence < appliedAutosaveSequence.current) return;
       appliedAutosaveSequence.current = sequence;
       versionRef.current = saved.version;
-      queryClient.setQueryData(pekKeys.program(id), saved);
+      queryClient.setQueryData(pekKeys.program(id, saved.company?.id, user?.id), saved);
       setAutosaveState('saved');
       void removePekDraft(draftKey);
     },
@@ -219,10 +246,10 @@ const PekProgramCreatePage = () => {
     onSuccess: async (saved) => {
       versionRef.current = saved.version;
       await removePekDraft(draftKey).catch(() => undefined);
-      queryClient.setQueryData(pekKeys.program(saved.id), saved);
+      queryClient.setQueryData(pekKeys.program(saved.id, saved.company?.id, user?.id), saved);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: pekKeys.programs() }),
-        queryClient.invalidateQueries({ queryKey: pekKeys.dashboard() }),
+        queryClient.invalidateQueries({ queryKey: pekKeys.programs({}, user?.id) }),
+        queryClient.invalidateQueries({ queryKey: pekKeys.dashboard({}, user?.id) }),
       ]);
       toast.success(edit ? 'Программа обновлена' : 'Программа создана');
       navigate(`/staff/pek/programs/${saved.id}`);
@@ -254,9 +281,9 @@ const PekProgramCreatePage = () => {
     onMutate: () => setAutosaveState('saving'),
     onSuccess: async (saved) => {
       versionRef.current = saved.version;
-      queryClient.setQueryData(pekKeys.program(saved.id), saved);
+      queryClient.setQueryData(pekKeys.program(saved.id, saved.company?.id, user?.id), saved);
       await removePekDraft(draftKey).catch(() => undefined);
-      await queryClient.invalidateQueries({ queryKey: pekKeys.programs() });
+      await queryClient.invalidateQueries({ queryKey: pekKeys.programs({}, user?.id) });
       setAutosaveState('saved');
       toast.success('Черновик программы сохранён');
       navigate(`/staff/pek/programs/${saved.id}/edit?step=1`, { replace: true });
@@ -271,7 +298,7 @@ const PekProgramCreatePage = () => {
 
   if (program.isLoading) return <PekLoading />;
   if (program.isError) return <PekQueryError error={program.error} resource="Программа ПЭК" retry={() => void program.refetch()} />;
-  if (edit && program.data?.readOnly) {
+  if (edit && (program.data?.readOnly || !program.data?.availableActions.some((action) => action.code === 'EDIT' && action.enabled))) {
     return <PekState title="Программа доступна только для просмотра" message="Изменение этой программы сейчас недоступно." />;
   }
 
@@ -352,7 +379,7 @@ const PekProgramCreatePage = () => {
           <label>Действует до *<input type="date" {...register('validUntil')} className={inputClass} /></label>
           <PekLookupSelect label="Ответственный" value={watch('responsibleUserId')} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => setValue('responsibleUserId', value, { shouldDirty: true })} />
           {edit && <p className="text-xs text-slate-500 md:col-span-2">Компания, объект и номер фиксируются при создании программы.</p>}
-          <div className="text-sm text-slate-600"><strong>Разрешительные документы</strong><p className="mt-2">{permits.isLoading ? 'Загрузка…' : permits.data?.length ? permits.data.map((item) => item.name).join(', ') : 'Для объекта нет доступных разрешительных документов'}</p></div>
+          <div className="text-sm text-slate-600"><strong>Действующие разрешительные документы</strong><p className="mt-2">{permits.isLoading ? 'Загрузка…' : activePermits.length ? activePermits.map((item) => item.name).join(', ') : 'Для объекта нет действующих разрешительных документов'}</p></div>
           {Object.values(formState.errors).length > 0 && <p role="alert" className="md:col-span-2 text-sm text-rose-700">Проверьте обязательные поля программы.</p>}
         </div>}
         {step === 1 && <div className="space-y-4">

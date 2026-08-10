@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import PekQueryError from '../components/common/PekQueryError';
@@ -7,9 +8,10 @@ import { PekLoading, PekPageHeader } from '../components/common/PekUi';
 import PekHistoryTimeline from '../components/sections/PekHistoryTimeline';
 
 const PekHistoryPage = () => {
+  const { user } = useAuth();
   const id = Number(useParams().programId);
   const history = useQuery({
-    queryKey: pekKeys.programHistory(id),
+    queryKey: pekKeys.programHistory(id, user?.id),
     queryFn: ({ signal }) => pekApi.getProgramHistory(id, signal),
     enabled: Number.isFinite(id),
   });

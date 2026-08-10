@@ -32,6 +32,9 @@ test('protocol context maps every physical subtype and water to the required doc
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.ambient_air.templateId, 'ambient_air');
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.ambient_air.sourceDocumentCode, 'DSM_70');
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.water.sourceDocumentCode, 'DSM_138');
+  assert.equal(PROTOCOL_NORMATIVE_CONTEXT.microclimate.templateId, 'physical_factors');
+  assert.equal(PROTOCOL_NORMATIVE_CONTEXT.lighting.templateId, 'physical_factors');
+  assert.equal(PROTOCOL_NORMATIVE_CONTEXT.noise_vibration.templateId, 'physical_factors');
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.lighting.factorType, 'LIGHTING');
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.vibration.factorType, 'VIBRATION');
   assert.equal(PROTOCOL_NORMATIVE_CONTEXT.uv.factorType, 'UV');
@@ -44,15 +47,23 @@ test('protocol context maps every physical subtype and water to the required doc
   assert.match(configSource, /factorType: subtype \|\| protocolFactorType\[normalizedType as ProtocolTypeKey\]/);
 });
 
-test('API service performs one explicit search and does not silently relax filters', async () => {
+test('API service performs a bounded staged search without crossing protocol context', async () => {
   const source = await read('src/services/normativeSearchService.ts');
   assert.match(source, /api\.get<unknown>\('\/normatives\/search'/);
   assert.match(source, /status: params\.status \|\| 'ACTIVE'/);
-  assert.doesNotMatch(source, /buildNormativeSearchSequence\(cleaned\)/);
+  assert.match(source, /buildNormativeSearchSequence\(params\)/);
+  assert.match(source, /'STRICT_ACTIVE'/);
+  assert.match(source, /'STRICT_ALL'/);
+  assert.match(source, /'RELAXED_ACTIVE'/);
+  assert.match(source, /'RELAXED_ALL'/);
+  assert.match(source, /sourceDocumentCode/);
+  assert.match(source, /factorType/);
+  assert.match(source, /matchQuality: item\.matchQuality \|\| 'CONTEXT_GENERAL'/);
+  assert.match(source, /if \(seen\.has\(key\)\) continue/);
   assert.match(source, /params: cleaned/);
   assert.doesNotMatch(source, /api\.get<unknown>\('\/normatives\/records'/);
   assert.doesNotMatch(source, /q: query/);
-  assert.doesNotMatch(source, /code: query/);
+  assert.match(source, /isNumericPollutantCode/);
   assert.doesNotMatch(source, /pollutantCode: query/);
   assert.doesNotMatch(source, /search: query/);
   assert.match(source, /requestedPage = params\.page \?\? 0/);
@@ -70,12 +81,15 @@ test('quick-create normative picker uses the shared debounced search', async () 
   assert.match(service, /protocol-normative-search-v3/);
   assert.match(source, /setDebouncedSearch\(normalizedSearch\)/);
   assert.match(source, /SEARCH_DEBOUNCE_MS = 400/);
-  assert.match(source, /queryFn: \(\{ signal \}\) => searchNormatives\(request, signal\)/);
+  assert.match(source, /queryFn: \(\{ signal \}\) => searchNormativesStaged\(request, signal\)/);
+  assert.match(source, /code: numericCodeSearch \? debouncedSearch : undefined/);
+  assert.match(source, /query: numericCodeSearch \? undefined/);
+  assert.match(service, /buildNormativeSearchSequence\(params\)/);
   assert.match(source, /queryClient\.cancelQueries/);
   assert.match(source, /new Map/);
   assert.match(source, /Array\.from\(selectedRecords\.values\(\)\)/);
   assert.match(source, /Поиск нормативных показателей/);
-  assert.match(source, /ничего не найдено/);
+  assert.match(source, /Норматив не найден в справочнике для данного типа протокола/);
   assert.match(source, /Повторить поиск/);
   assert.match(source, /Добавить показатель вручную/);
   assert.match(source, /useQuery\(/);

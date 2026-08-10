@@ -24,7 +24,7 @@ const PekReportsPage = () => {
     size: [10, 20, 50].includes(Number(params.get('size'))) ? Number(params.get('size')) : 20,
   };
   const reports = useQuery({
-    queryKey: pekKeys.reports(filters), queryFn: ({ signal }) => pekApi.getReports(filters, signal),
+    queryKey: pekKeys.reports(filters, user?.id), queryFn: ({ signal }) => pekApi.getReports(filters, signal),
     placeholderData: keepPreviousData, retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS,
     enabled: Boolean(companyId && objectId),
   });

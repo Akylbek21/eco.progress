@@ -50,6 +50,7 @@ export interface UpdateProtocolRequest {
   measurementDate: string | null;
   measurementTime: string | null;
   measurementPlace: string | null;
+  sourceNumber: string | null;
   testingStartDate: string | null;
   testingEndDate: string | null;
   formCode: string | null;
@@ -64,6 +65,16 @@ export interface UpdateProtocolRequest {
   printVisibility: ProtocolPrintVisibility;
   orderId: string | null;
   orderServiceItemId: string | null;
+}
+
+export interface ProtocolPekContextRequest {
+  pekProgramId?: number | null;
+  pekReportId?: number | null;
+  pekControlItemId?: number | null;
+  pekControlEventId?: number | null;
+  monitoringPointId?: number | null;
+  emissionSourceId?: number | null;
+  waterOutletId?: number | null;
 }
 
 export interface ProtocolEnvironmentRequest {
@@ -117,6 +128,7 @@ export interface CreateProtocolDraftRequest {
   testingStartDate: string | null;
   testingEndDate: string | null;
   environment: ProtocolEnvironmentRequest | null;
+  pekContext?: ProtocolPekContextRequest | null;
 }
 
 /** PATCH /protocols/{id}/draft. Company is immutable after draft creation and is intentionally absent. */

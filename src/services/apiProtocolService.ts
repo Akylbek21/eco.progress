@@ -678,6 +678,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
   const signatureCount = Number(source.signatureCount);
   const maxSignatures = Number(source.maxSignatures);
   const header = asRecord(source.header);
+  const pekContext = asRecord(source.pekContext);
   const conditions = asRecord(environment.conditions);
   const firstResultValues = asRecord(asRecord(resultsSource[0]).values);
   const waterType = pick(conditions, ['waterType', 'water_type'])
@@ -847,14 +848,14 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     orderId: pick(source, ['orderId', 'order_id']),
     orderServiceItemId: pick(source, ['orderServiceItemId', 'order_service_item_id']),
     orderNumber: pick(source, ['orderNumber', 'order_number']),
-    pekProgramId: pick(source, ['pekProgramId', 'pek_program_id']),
-    pekReportId: pick(source, ['pekReportId', 'pek_report_id']),
-    pekControlItemId: pick(source, ['pekControlItemId', 'pek_control_item_id']),
-    pekControlEventId: pick(source, ['pekControlEventId', 'pek_control_event_id']),
-    monitoringPointId: pick(source, ['monitoringPointId', 'monitoring_point_id']),
-    emissionSourceId: pick(source, ['emissionSourceId', 'emission_source_id']),
-    waterOutletId: pick(source, ['waterOutletId', 'water_outlet_id']),
-    permissions: mapProtocolPermissions(source.permissions),
+    pekProgramId: pick(pekContext, ['pekProgramId', 'pek_program_id']) || pick(source, ['pekProgramId', 'pek_program_id']),
+    pekReportId: pick(pekContext, ['pekReportId', 'pek_report_id']) || pick(source, ['pekReportId', 'pek_report_id']),
+    pekControlItemId: pick(pekContext, ['pekControlItemId', 'pek_control_item_id']) || pick(source, ['pekControlItemId', 'pek_control_item_id']),
+    pekControlEventId: pick(pekContext, ['pekControlEventId', 'pek_control_event_id']) || pick(source, ['pekControlEventId', 'pek_control_event_id']),
+    monitoringPointId: pick(pekContext, ['monitoringPointId', 'monitoring_point_id']) || pick(source, ['monitoringPointId', 'monitoring_point_id']),
+    emissionSourceId: pick(pekContext, ['emissionSourceId', 'emission_source_id']) || pick(source, ['emissionSourceId', 'emission_source_id']),
+    waterOutletId: pick(pekContext, ['waterOutletId', 'water_outlet_id']) || pick(source, ['waterOutletId', 'water_outlet_id']),
+    permissions: mapProtocolPermissions(source.permissions ?? source.availableActions),
     canComplete: source.canComplete === true,
     blockingReasons: Array.isArray(source.blockingReasons) ? source.blockingReasons.map(String) : [],
     publishedToClientAt: pick(source, ['publishedAt', 'publishedToClientAt', 'published_to_client_at']),
@@ -1256,12 +1257,8 @@ export async function updateProtocolResult(protocolId: string, resultId: string,
     ...mapProtocolResultFormToRequest(payload),
     version,
   });
-  // Some backend versions return 204 or a partial result after PATCH. Reload
-  // the protocol so the editor always receives the actually persisted row.
-  const protocol = await getProtocol(protocolId);
-  const saved = protocol.results.find((row) => String(row.id) === String(resultId));
-  if (saved) return saved;
-  return requireResult(response);
+  const result = normalizeResult(extractActionResult(response));
+  return result.id ? result : { id: resultId, values: payload.values };
 }
 
 export async function deleteProtocolResult(protocolId: string, resultId: string, version: number): Promise<void> {

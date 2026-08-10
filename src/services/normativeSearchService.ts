@@ -36,6 +36,7 @@ export interface NormativeSearchRequest {
 
 const CACHE_TTL_MS = 45_000;
 export const NORMATIVE_SEARCH_DEBOUNCE_MS = 400;
+export const isNumericPollutantCode = (value: string): boolean => /^\d{1,7}$/.test(value.trim());
 const cache = new Map<string, { expiresAt: number; value: NormativeSearchResponse['data'] }>();
 export const clearNormativeSearchCache = (): void => cache.clear();
 
@@ -73,7 +74,7 @@ const conditionRecord = (value: unknown): Record<string, unknown> | null => {
   }
 };
 
-const normalizeItem = (value: unknown, index: number): NormativeSearchItem | null => {
+const normalizeItem = (value: unknown): NormativeSearchItem | null => {
   const record = asRecord(value);
   if (!record) return null;
   const pollutant = asRecord(record.pollutant || record.substance || record.indicatorReference) || {};
@@ -83,11 +84,12 @@ const normalizeItem = (value: unknown, index: number): NormativeSearchItem | nul
   ])) || optionalString(firstValue(pollutant, ['indicatorName', 'indicator', 'pollutantName', 'name', 'nameRu']));
   if (!indicatorName) return null;
   const id = firstValue(record, ['id', '_id', 'normativeId', 'recordId', 'referenceId']);
+  if ((typeof id !== 'number' && typeof id !== 'string') || String(id).trim() === '') return null;
   const code = firstValue(record, ['code', 'factorCode', 'pollutantCode', 'substanceCode', 'indicatorCode', 'referenceCode'])
     ?? firstValue(pollutant, ['code', 'pollutantCode']);
 
   return {
-    id: typeof id === 'number' || typeof id === 'string' ? id : `search-${index}`,
+    id,
     code: optionalString(code),
     pollutantCode: optionalString(firstValue(record, ['pollutantCode', 'substanceCode', 'code']) ?? code),
     indicatorName,
@@ -244,32 +246,69 @@ export const searchNormatives = async (
   return normalized;
 };
 
+export const searchNormativesActiveThenAll = async (
+  params: NormativeSearchRequest,
+  signal?: AbortSignal,
+): Promise<NormativeSearchResponse['data']> => {
+  const active = await searchNormatives({ ...params, status: 'ACTIVE' }, signal);
+  if (active.items.length) return active;
+  return searchNormatives({ ...params, status: 'ALL' }, signal);
+};
+
 export const buildNormativeSearchSequence = (params: NormativeSearchRequest) => {
   const strict = cleanNormativeSearchParams({ ...params, page: params.page ?? 0, size: params.size ?? 50 });
-  const relaxed = cleanNormativeSearchParams({
-    query: strict.query,
-    pollutantCode: strict.pollutantCode,
-    code: strict.code,
-    templateId: strict.templateId,
-    sourceDocumentCode: strict.sourceDocumentCode,
-    factorType: strict.factorType,
-    page: strict.page,
-    size: strict.size,
-  });
-  const fullyRelaxed = cleanNormativeSearchParams({
-    query: strict.query,
-    pollutantCode: strict.pollutantCode,
-    code: strict.code,
-    templateId: strict.templateId,
-    page: strict.page,
-    size: strict.size,
-  });
+  const {
+    waterType: _waterType,
+    waterUseCategory: _waterUseCategory,
+    lightingType: _lightingType,
+    noiseType: _noiseType,
+    roomType: _roomType,
+    season: _season,
+    workCategory: _workCategory,
+    workplaceType: _workplaceType,
+    normLevel: _normLevel,
+    visualWorkCategory: _visualWorkCategory,
+    status: _status,
+    ...relaxedFields
+  } = strict;
+  const relaxed = cleanNormativeSearchParams(relaxedFields);
   return [
     { stage: 'STRICT_ACTIVE' as const, params: { ...strict, status: 'ACTIVE' } },
     { stage: 'STRICT_ALL' as const, params: { ...strict, status: 'ALL' } },
     { stage: 'RELAXED_ACTIVE' as const, params: { ...relaxed, status: 'ACTIVE' } },
-    { stage: 'RELAXED_ALL' as const, params: { ...fullyRelaxed, status: 'ALL' } },
+    { stage: 'RELAXED_ALL' as const, params: { ...relaxed, status: 'ALL' } },
   ];
+};
+
+export const searchNormativesStaged = async (
+  params: NormativeSearchRequest,
+  signal?: AbortSignal,
+): Promise<NormativeSearchResponse['data']> => {
+  const seen = new Set<string>();
+  let lastResult: NormativeSearchResponse['data'] = {
+    items: [], page: params.page ?? 0, size: params.size ?? 50, totalElements: 0, totalPages: 0,
+    relaxed: false, fallbackStage: 'STRICT_ACTIVE',
+  };
+
+  for (const step of buildNormativeSearchSequence(params)) {
+    const cleaned = cleanNormativeSearchParams(step.params);
+    const key = cacheKey(cleaned);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const result = await searchNormatives(cleaned, signal);
+    const relaxed = step.stage === 'RELAXED_ACTIVE' || step.stage === 'RELAXED_ALL';
+    lastResult = {
+      ...result,
+      relaxed,
+      fallbackStage: step.stage,
+      items: relaxed
+        ? result.items.map((item) => ({ ...item, matchQuality: item.matchQuality || 'CONTEXT_GENERAL' }))
+        : result.items,
+    };
+    if (lastResult.items.length) return lastResult;
+  }
+
+  return lastResult;
 };
 
 const valueString = (value: number | null | undefined): string => value === null || value === undefined ? '' : String(value);

@@ -20,6 +20,10 @@ const nullableDecimal = (value: string): number | null => {
 export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocolDraftRequest => {
   const companyId = nullableNumber(form.companyId);
   if (companyId === null) throw new Error('Для создания серверного черновика выберите компанию.');
+  const hasPekContext = [
+    form.pekProgramId, form.pekReportId, form.pekControlItemId, form.pekControlEventId,
+    form.monitoringPointId, form.emissionSourceId, form.waterOutletId,
+  ].some((value) => nullableNumber(value) !== null);
   return {
   templateId: mapFrontendProtocolType(form.templateId as Exclude<ProtocolWizardForm['templateId'], ''>),
   subtype: null,
@@ -51,6 +55,15 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
       factorType: nullableText(form.results.find((row) => row.factorType)?.factorType || ''),
     },
   },
+  pekContext: hasPekContext ? {
+    pekProgramId: nullableNumber(form.pekProgramId),
+    pekReportId: nullableNumber(form.pekReportId),
+    pekControlItemId: nullableNumber(form.pekControlItemId),
+    pekControlEventId: nullableNumber(form.pekControlEventId),
+    monitoringPointId: nullableNumber(form.monitoringPointId),
+    emissionSourceId: nullableNumber(form.emissionSourceId),
+    waterOutletId: nullableNumber(form.waterOutletId),
+  } : null,
   printVisibility: form.printVisibility,
   };
 };
@@ -68,12 +81,15 @@ export const mapWizardToUpdateDraft = (form: ProtocolWizardForm, protocol: Proto
   measurementTime: form.measurementTime || undefined,
   measurementPlace: form.measurementPlace || undefined,
   sampleDate: form.sampleDate || undefined,
-  sourceNumber: form.sourceNumber || undefined,
-  basis: form.basis || undefined,
+  sourceNumber: nullableText(form.sourceNumber) ?? undefined,
+  basis: nullableText(form.basis) ?? undefined,
   formCode: form.formCode || undefined,
   appendixNumber: form.appendixNumber || undefined,
   laboratory: protocol.laboratory,
-  organization: protocol.organization,
+  organization: {
+    ...protocol.organization,
+    testingBasis: nullableText(form.basis) ?? '',
+  },
   testing: {
     ...protocol.testing,
     samplingDate: form.sampleDate || protocol.testing.samplingDate,
@@ -154,6 +170,7 @@ export const mapProtocolToWizardForm = (protocol: Protocol): ProtocolWizardForm 
     testingEndDate: protocol.testingEndDate ?? protocol.testing?.testingEndDate,
     measurementTime: protocol.measurementTime, measurementPlace: protocol.measurementPlace,
     sourceNumber: protocol.sourceNumber,
+    basis: protocol.organization?.testingBasis ?? protocol.testingBasis ?? '',
     temperature: textValue(protocol.environment?.temperature), humidity: textValue(protocol.environment?.humidity),
     pressure: textValue(protocol.environment?.pressureKpa ?? protocol.environment?.pressure),
     windSpeed: textValue(protocol.environment?.windSpeed), environmentSource: protocol.environment?.source ?? 'MANUAL',
@@ -173,6 +190,7 @@ export const mapProtocolToWizardForm = (protocol: Protocol): ProtocolWizardForm 
     monitoringPointId: textValue(protocol.monitoringPointId), emissionSourceId: textValue(protocol.emissionSourceId),
     waterOutletId: textValue(protocol.waterOutletId), printVisibility: protocol.printVisibility,
     results: protocol.results.map((row) => ({
+      clientRowId: textValue(row.values.clientRowId) || undefined,
       serverResultId: row.id, indicatorName: textValue(row.values.indicatorName ?? row.indicatorName),
       pollutantCode: textValue(row.values.pollutantCode ?? row.code), factorType: textValue(row.values.factorType),
       factorCode: textValue(row.values.factorCode), cas: textValue(row.values.cas ?? row.values.casNumber),

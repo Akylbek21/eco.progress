@@ -69,11 +69,15 @@ const permissionRoles = (permission: string): readonly UserRole[] => {
  */
 export const canUsePekPermission = (user: PekUser, permission: string) => {
   const explicit = explicitPermission(user, permission);
-  if (explicit !== undefined) return explicit;
-  return roleAllowed(user, permissionRoles(permission));
+  return explicit ?? false;
 };
 
-export const canViewPek = (user: PekUser) => canUsePekPermission(user, 'PEK_VIEW');
+// The role fallback is limited to hiding the top-level route before the
+// authoritative auth permissions have loaded. It must not authorize actions.
+export const canViewPek = (user: PekUser) => {
+  const explicit = explicitPermission(user, 'PEK_VIEW');
+  return explicit ?? roleAllowed(user, VIEW_ROLES);
+};
 export const canEditPek = (user: PekUser) =>
   canUsePekPermission(user, 'PEK_PROGRAM_EDIT') || canUsePekPermission(user, 'PEK_REPORT_EDIT');
 export const canReviewPek = (user: PekUser) =>
@@ -83,21 +87,14 @@ export const canApprovePek = (user: PekUser) =>
 export const canManagePekSettings = (user: PekUser) =>
   canUsePekPermission(user, 'PEK_SETTINGS_EDIT');
 
-export type PekReportAccess = { status?: string; availableActions?: Record<string, boolean> } | null | undefined;
-const actionAllowed = (report: PekReportAccess, action: string, statuses: readonly string[]) =>
-  report?.availableActions?.[action] === true && Boolean(report.status && statuses.includes(report.status));
+export type PekReportAccess = { availableActions?: Record<string, boolean> } | null | undefined;
+const actionAllowed = (report: PekReportAccess, action: string) => report?.availableActions?.[action] === true;
 
-export const canEditPekReport = (user: PekUser, report: PekReportAccess) =>
-  canUsePekPermission(user, 'PEK_REPORT_EDIT') && actionAllowed(report, 'edit', ['DRAFT', 'COLLECTING', 'RETURNED']);
-export const canCollectPekReport = (user: PekUser, report: PekReportAccess) =>
-  canUsePekPermission(user, 'PEK_REPORT_COLLECT') && actionAllowed(report, 'collect', ['DRAFT', 'COLLECTING', 'RETURNED']);
-export const canSubmitPekReport = (user: PekUser, report: PekReportAccess) =>
-  canUsePekPermission(user, 'PEK_REPORT_SUBMIT') && actionAllowed(report, 'submitReview', ['COLLECTING', 'RETURNED']);
-export const canApprovePekReport = (user: PekUser, report: PekReportAccess) =>
-  canUsePekPermission(user, 'PEK_REPORT_APPROVE') && actionAllowed(report, 'approve', ['READY_FOR_REVIEW']);
-export const canReturnPekReport = (user: PekUser, report: PekReportAccess) =>
-  canUsePekPermission(user, 'PEK_REPORT_RETURN') && actionAllowed(report, 'returnForRevision', ['READY_FOR_REVIEW']);
-export const canArchivePekReport = (user: PekUser, report: PekReportAccess) =>
-  canUsePekPermission(user, 'PEK_REPORT_APPROVE') && actionAllowed(report, 'archive', ['APPROVED']);
+export const canEditPekReport = (_user: PekUser, report: PekReportAccess) => actionAllowed(report, 'edit');
+export const canCollectPekReport = (_user: PekUser, report: PekReportAccess) => actionAllowed(report, 'collect');
+export const canSubmitPekReport = (_user: PekUser, report: PekReportAccess) => actionAllowed(report, 'submitReview');
+export const canApprovePekReport = (_user: PekUser, report: PekReportAccess) => actionAllowed(report, 'approve');
+export const canReturnPekReport = (_user: PekUser, report: PekReportAccess) => actionAllowed(report, 'returnForRevision');
+export const canArchivePekReport = (_user: PekUser, report: PekReportAccess) => actionAllowed(report, 'archive');
 
 export const pekViewRoles = VIEW_ROLES;

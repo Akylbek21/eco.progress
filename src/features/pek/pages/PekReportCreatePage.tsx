@@ -14,10 +14,12 @@ import { mapReportCreateRequest } from '../mappers/reportMappers';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 import { currentQuarter } from '../utils/pekPeriod';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const inputClass = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2';
 
 const PekReportCreatePage = () => {
+  const { user } = useAuth();
   const [initial] = useSearchParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -38,7 +40,7 @@ const PekReportCreatePage = () => {
   };
   const ready = companyId > 0 && objectId > 0 && year > 0 && (periodType === 'YEAR' || quarter >= 1 && quarter <= 4);
   const context = useQuery({
-    queryKey: pekKeys.creationContext(params),
+    queryKey: pekKeys.creationContext(params, user?.id),
     queryFn: ({ signal }) => pekApi.getReportCreationContext(params, signal),
     enabled: ready,
     retry: retryPekQuery,
@@ -51,10 +53,10 @@ const PekReportCreatePage = () => {
     mutationFn: (request: PekReportCreateRequest) => pekApi.createReport(request),
     retry: false,
     onSuccess: async (report) => {
-      client.setQueryData(pekKeys.report(report.id), report);
+      client.setQueryData(pekKeys.report(report.id, report.companyId, user?.id), report);
       await Promise.all([
-        client.invalidateQueries({ queryKey: pekKeys.reports({ companyId, objectId }) }),
-        client.invalidateQueries({ queryKey: pekKeys.dashboard() }),
+        client.invalidateQueries({ queryKey: pekKeys.reports({ companyId, objectId }, user?.id) }),
+        client.invalidateQueries({ queryKey: pekKeys.dashboard({}, user?.id) }),
       ]);
       toast.success('Отчёт ПЭК создан');
       navigate(`/staff/pek/reports/${report.id}`);
