@@ -53,6 +53,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { getApiErrorMessage } from '../services/apiHelpers';
+import { downloadClientDocument, downloadStaffDocument } from '../services/clientDocumentService';
 import {
   deleteStaffRepositoryDocument,
   getStaffRepositoryDocuments,
@@ -3877,35 +3878,61 @@ const List = ({ title, items }: { title: string; items: string[] }) => (
   </div>
 );
 
-const DocumentColumn = ({ title, documents }: { title: string; documents: DocumentItem[] }) => (
-  <div className="min-w-0">
-    <h4 className="font-semibold text-slate-900">{title}</h4>
-    <div className="mt-3 space-y-3">
-      {documents.map((document) => {
-        const href = document.fileUrl || `/api/files/documents/${encodeURIComponent(document.id)}`;
-        return (
+const DocumentColumn = ({ title, documents }: { title: string; documents: DocumentItem[] }) => {
+  const { error: showError } = useToast();
+  
+  const handleDownload = async (document: DocumentItem) => {
+    try {
+      await downloadClientDocument(document.fileUrl, document.name || `document-${document.id}`);
+    } catch (err) {
+      showError(getApiErrorMessage(err, 'Не удалось скачать документ'));
+    }
+  };
+
+  const handleOpen = (document: DocumentItem) => {
+    if (document.fileUrl) {
+      window.open(document.fileUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  return (
+    <div className="min-w-0">
+      <h4 className="font-semibold text-slate-900">{title}</h4>
+      <div className="mt-3 space-y-3">
+        {documents.map((document) => (
           <div key={document.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
             <div className="min-w-0">
               <p className="break-words text-sm font-bold text-slate-900">{document.name}</p>
               <p className="mt-1 text-xs font-semibold text-slate-500">{document.status} · {document.uploadedAt}</p>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <a href={href} target="_blank" rel="noreferrer" className="rounded-full bg-white px-3 py-2 text-xs font-bold text-eco-800 ring-1 ring-eco-100">
+              <button
+                type="button"
+                onClick={() => handleOpen(document)}
+                disabled={!document.fileUrl}
+                className="rounded-full bg-white px-3 py-2 text-xs font-bold text-eco-800 ring-1 ring-eco-100 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 Открыть
-              </a>
-              <a href={href} download={document.name} className="rounded-full bg-eco-900 px-3 py-2 text-xs font-bold text-white">
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDownload(document)}
+                disabled={!document.fileUrl}
+                className="rounded-full bg-eco-900 px-3 py-2 text-xs font-bold text-white hover:bg-eco-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 Скачать
-              </a>
+              </button>
             </div>
           </div>
-        );
-      })}
-      {!documents.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Документов нет</p>}
+        ))}
+        {!documents.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Документов нет</p>}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ClientSentPrimaryDocuments = ({ order }: { order: Order }) => {
+  const { error: showError } = useToast();
   const documents = (order.primaryDocuments || []).filter((doc) => Boolean(doc.fileName));
 
   if (!documents.length) {
@@ -3916,12 +3943,20 @@ const ClientSentPrimaryDocuments = ({ order }: { order: Order }) => {
     );
   }
 
+  const handleDownload = async (doc: OrderPrimaryDocument) => {
+    try {
+      if (doc.fileUrl) {
+        await downloadClientDocument(doc.fileUrl, doc.fileName || doc.name);
+      }
+    } catch (err) {
+      showError(getApiErrorMessage(err, 'Не удалось скачать документ'));
+    }
+  };
+
   return (
     <div className="space-y-3">
       {documents.map((doc) => {
         const fileName = doc.fileName || doc.name;
-        const downloadHref = doc.fileUrl || `/api/files/documents/${doc.id}`;
-
         return (
           <div key={doc.id} className="grid gap-3 rounded-2xl border border-slate-200 p-4 md:grid-cols-[1fr_auto] md:items-center">
             <div className="min-w-0">
@@ -3937,14 +3972,15 @@ const ClientSentPrimaryDocuments = ({ order }: { order: Order }) => {
                 </div>
               </div>
             </div>
-            <a
-              href={downloadHref}
-              download={fileName}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-eco-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-eco-800"
+            <button
+              type="button"
+              onClick={() => handleDownload(doc)}
+              disabled={!doc.fileUrl}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-eco-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-eco-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Download size={16} />
               Скачать
-            </a>
+            </button>
           </div>
         );
       })}
@@ -4024,7 +4060,15 @@ const LaboratoryRequestOverview = ({ order }: { order: Order }) => {
       <Section title="Все документы от клиента" icon={<FileText size={20} />}>
         <div className="space-y-3">
           {allClientDocuments.length ? allClientDocuments.map((doc) => {
-            const downloadHref = doc.fileUrl || `/api/files/documents/${doc.id}`;
+            const handleDownload = async () => {
+              try {
+                if (doc.fileUrl) {
+                  await downloadClientDocument(doc.fileUrl, doc.fileName || `document-${doc.id}`);
+                }
+              } catch (err) {
+                showError(getApiErrorMessage(err, 'Не удалось скачать документ'));
+              }
+            };
             return (
               <div key={doc.id} className="grid gap-3 rounded-2xl border border-slate-200 p-4 md:grid-cols-[1fr_auto] md:items-center">
                 <div className="min-w-0">
@@ -4033,14 +4077,15 @@ const LaboratoryRequestOverview = ({ order }: { order: Order }) => {
                   <p className="mt-1 text-xs font-semibold text-slate-400">{doc.uploadedAt} · {doc.status}</p>
                   {doc.comment && <p className="mt-2 break-words rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-700">{doc.comment}</p>}
                 </div>
-                <a
-                  href={downloadHref}
-                  download={doc.fileName}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-eco-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-eco-800"
+                <button
+                  type="button"
+                  onClick={() => void handleDownload()}
+                  disabled={!doc.fileUrl}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-eco-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-eco-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Download size={16} />
                   Скачать
-                </a>
+                </button>
               </div>
             );
           }) : <EmptyState text="Клиент пока не отправил документы" />}

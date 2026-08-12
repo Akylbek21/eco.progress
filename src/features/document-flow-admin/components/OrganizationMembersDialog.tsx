@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CompanyListItem } from '../../../types/companies';
-import { createUser, getUsers, type AdminUserRecord } from '../../../services/adminUserService';
+import { listUsers, type AdminUserRecord } from '../../../services/adminUserService';
 import { documentFlowApi } from '../../document-flow/api/documentFlowApi';
 import { documentFlowKeys } from '../../document-flow/api/documentFlowKeys';
 import type { DocumentFlowMember, MembershipRole } from '../../document-flow/model/types';
@@ -30,17 +30,15 @@ interface Props {
 export default function OrganizationMembersDialog({ open, organization, onClose }: Props) {
   const queryClient = useQueryClient();
   const organizationId = Number(organization?.id ?? 0);
-  const [mode, setMode] = useState<'existing' | 'new'>('new');
+  const [mode, setMode] = useState<'existing' | 'invite'>('invite');
   const [selectedUser, setSelectedUser] = useState<AdminUserRecord | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
   const [role, setRole] = useState<MembershipRole>('VIEWER');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [invitationSent, setInvitationSent] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setMode('new'); setSelectedUser(null); setRole('VIEWER'); setName(''); setEmail(''); setPassword(''); setCreatedCredentials(null);
+    setMode('invite'); setSelectedUser(null); setRole('VIEWER'); setInviteEmail(''); setInvitationSent(false);
   }, [open, organizationId]);
 
   const members = useQuery({
@@ -49,9 +47,14 @@ export default function OrganizationMembersDialog({ open, organization, onClose 
     enabled: open && organizationId > 0,
     retry: false,
   });
-  const users = useQuery({ queryKey: ['admin', 'users'], queryFn: getUsers, enabled: open && mode === 'existing', retry: false });
+  const users = useQuery({ 
+    queryKey: ['admin', 'users', 'paginated'], 
+    queryFn: () => listUsers({ limit: 1000 }), 
+    enabled: open && mode === 'existing', 
+    retry: false 
+  });
   const existingUserIds = useMemo(() => new Set((members.data?.items ?? []).map((member) => member.userId)), [members.data]);
-  const availableUsers = useMemo(() => (users.data ?? []).filter((user) => user.status !== 'blocked' && !existingUserIds.has(user.id)), [existingUserIds, users.data]);
+  const availableUsers = useMemo(() => (users.data?.items ?? []).filter((user) => user.status !== 'blocked' && !existingUserIds.has(user.id)), [existingUserIds, users.data]);
 
   const invalidate = async () => {
     await Promise.all([
@@ -59,45 +62,124 @@ export default function OrganizationMembersDialog({ open, organization, onClose 
       queryClient.invalidateQueries({ queryKey: documentFlowKeys.access(organizationId) }),
     ]);
   };
-  const addMember = useMutation({
+
+  const addExistingMember = useMutation({
     mutationFn: async () => {
-      let user = selectedUser;
-      if (mode === 'new') {
-        if (name.trim().length < 2) throw new Error('Укажите ФИО сотрудника.');
-        if (!/^\S+@\S+\.\S+$/.test(email.trim())) throw new Error('Укажите корректный email.');
-        if (password.length < 6) throw new Error('Пароль должен содержать не меньше 6 символов.');
-        user = await createUser({ name: name.trim(), email: email.trim(), password, role: 'CLIENT', type: 'individual', status: 'active' });
-      }
-      if (!user) throw new Error('Выберите существующий аккаунт.');
-      const member = await documentFlowApi.createMember({ email: user.email, role });
-      return { member, credentials: mode === 'new' ? { email: email.trim(), password } : null };
+      if (!selectedUser) throw new Error('Выберите существующий аккаунт.');
+      await documentFlowApi.createMember({ email: selectedUser.email, role });
+      return { member: null, invited: false };
     },
-    onSuccess: async ({ credentials }) => {
-      setCreatedCredentials(credentials);
-      setSelectedUser(null); setName(''); setEmail(''); setPassword('');
+    onSuccess: async () => {
+      setSelectedUser(null);
       await invalidate();
     },
   });
+
+  const inviteMember = useMutation({
+    mutationFn: async () => {
+      if (!inviteEmail.trim()) throw new Error('Укажите email сотрудника.');
+      if (!/^\S+@\S+\.\S+$/.test(inviteEmail.trim())) throw new Error('Укажите корректный email.');
+      await documentFlowApi.inviteMember({ email: inviteEmail.trim(), role }, organizationId);
+      return { invited: true };
+    },
+    onSuccess: async () => {
+      setInvitationSent(true);
+      setInviteEmail('');
+      setTimeout(() => setInvitationSent(false), 4000);
+      await invalidate();
+    },
+  });
+
   const activate = useMutation({
     mutationFn: (member: DocumentFlowMember) => documentFlowApi.activateMember(member.id, organizationId),
     onSuccess: invalidate,
   });
-  const error = addMember.isError ? mapDocumentFlowError(addMember.error) : null;
 
-  return <Dialog open={open} onClose={() => !addMember.isPending && onClose()} fullWidth maxWidth="md">
+  const error = (addExistingMember.isError || inviteMember.isError) ? (addExistingMember.error || inviteMember.error) : null;
+  const mappedError = error ? mapDocumentFlowError(error as any) : null;
+
+  return <Dialog open={open} onClose={() => !(addExistingMember.isPending || inviteMember.isPending) && onClose()} fullWidth maxWidth="md">
     <DialogTitle>Сотрудники · {organization?.name}</DialogTitle>
     <DialogContent><Stack spacing={2} mt={1}>
-      <Alert severity="info">Подписка организации и аккаунт сотрудника — разные сущности. Здесь создаётся или выбирается аккаунт, затем он добавляется в организацию.</Alert>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-        <Button variant={mode === 'new' ? 'contained' : 'outlined'} onClick={() => { setMode('new'); setCreatedCredentials(null); }}>Создать новый аккаунт</Button>
-        <Button variant={mode === 'existing' ? 'contained' : 'outlined'} onClick={() => { setMode('existing'); setCreatedCredentials(null); }}>Выбрать существующий</Button>
+        <Button variant={mode === 'invite' ? 'contained' : 'outlined'} onClick={() => { setMode('invite'); setInvitationSent(false); }}>Пригласить по email</Button>
+        <Button variant={mode === 'existing' ? 'contained' : 'outlined'} onClick={() => { setMode('existing'); setInvitationSent(false); }}>Добавить существующего</Button>
       </Stack>
-      {mode === 'new' ? <Stack spacing={2}>
-        <TextField required label="ФИО сотрудника" value={name} onChange={(event) => setName(event.target.value)} />
-        <TextField required type="email" label="Email для входа" value={email} onChange={(event) => setEmail(event.target.value)} />
-        <TextField required type="password" label="Временный пароль" value={password} onChange={(event) => setPassword(event.target.value)} helperText="Передайте email и пароль сотруднику безопасным способом" />
-      </Stack> : <Autocomplete
-        options={availableUsers} value={selectedUser} onChange={(_, value) => setSelectedUser(value)} loading={users.isFetching}
+
+      {mode === 'invite' ? <Stack spacing={2}>
+        <TextField 
+          required 
+          type="email" 
+          label="Email для приглашения" 
+          value={inviteEmail} 
+          onChange={(event) => setInviteEmail(event.target.value)} 
+          placeholder="example@company.com"
+          helperText="Приглашение будет отправлено на этот адрес"
+        />
+        <TextField 
+          select 
+          required 
+          label="Роль в документообороте" 
+          value={role} 
+          onChange={(event) => setRole(event.target.value as MembershipRole)}
+        >
+          {roleOptions.map((option) => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
+        </TextField>
+        {mappedError && <Alert severity="error">{mappedError.message}</Alert>}
+        {invitationSent && <Alert severity="success">Приглашение отправлено на {inviteEmail}</Alert>}
+      </Stack> : <Stack spacing={2}>
+        <Autocomplete
+          options={availableUsers} 
+          value={selectedUser} 
+          onChange={(_, value) => setSelectedUser(value)} 
+          loading={users.isFetching}
+          getOptionLabel={(option) => `${option.name || option.fullName || option.email} · ${option.email} · ${option.role}`}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          renderInput={(params) => <TextField 
+            {...params} 
+            required 
+            label="Существующий аккаунт" 
+            helperText="Выберите из доступных пользователей в системе"
+            InputProps={{ ...params.InputProps, endAdornment: <>{users.isFetching && <CircularProgress size={18} />}{params.InputProps.endAdornment}</> }} 
+          />}
+        />
+        <TextField 
+          select 
+          required 
+          label="Роль в документообороте" 
+          value={role} 
+          onChange={(event) => setRole(event.target.value as MembershipRole)}
+        >
+          {roleOptions.map((option) => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
+        </TextField>
+        {mappedError && <Alert severity="error">{mappedError.message}</Alert>}
+      </Stack>}
+
+      <Typography variant="h6" fontWeight={800} mt={1}>Участники организации</Typography>
+      {members.isLoading && <Stack alignItems="center" py={3}><CircularProgress /></Stack>}
+      {members.isError && <Alert severity="error">{mapDocumentFlowError(members.error as any).message}</Alert>}
+      {members.isSuccess && members.data.items.length === 0 && <Alert severity="info">Участников пока нет.</Alert>}
+      {members.isSuccess && members.data.items.length > 0 && <Table size="small"><TableHead><TableRow><TableCell>Сотрудник</TableCell><TableCell>Email</TableCell><TableCell>Роль</TableCell><TableCell>Статус</TableCell><TableCell align="right">Действие</TableCell></TableRow></TableHead><TableBody>{members.data.items.map((member) => <TableRow key={member.id}><TableCell>{member.fullName || `Пользователь #${member.userId}`}</TableCell><TableCell>{member.email || '—'}</TableCell><TableCell>{roleOptions.find((item) => item.value === member.role)?.label ?? member.role}</TableCell><TableCell><Chip size="small" label={member.status} color={member.status === 'ACTIVE' ? 'success' : member.status === 'INVITED' ? 'info' : 'default'} /></TableCell><TableCell align="right">{member.status !== 'ACTIVE' && <Button size="small" disabled={activate.isPending} onClick={() => activate.mutate(member)}>Активировать</Button>}</TableCell></TableRow>)}</TableBody></Table>}
+      {activate.isError && <Alert severity="error">{mapDocumentFlowError(activate.error as any).message}</Alert>}
+    </Stack></DialogContent>
+    <DialogActions>
+      <Button disabled={addExistingMember.isPending || inviteMember.isPending} onClick={onClose}>Закрыть</Button>
+      {mode === 'invite' ? <Button 
+        variant="contained" 
+        disabled={inviteMember.isPending || !inviteEmail.trim()} 
+        onClick={() => inviteMember.mutate()}
+      >
+        {inviteMember.isPending ? 'Отправка…' : 'Пригласить'}
+      </Button> : <Button 
+        variant="contained" 
+        disabled={addExistingMember.isPending || !selectedUser} 
+        onClick={() => addExistingMember.mutate()}
+      >
+        {addExistingMember.isPending ? 'Добавление…' : 'Добавить'}
+      </Button>}
+    </DialogActions>
+  </Dialog>;
+}
         getOptionLabel={(option) => `${option.name || option.fullName || option.email} · ${option.email} · ${option.role} · ID ${option.id}`}
         isOptionEqualToValue={(option, value) => option.id === value.id}
         renderInput={(params) => <TextField {...params} required label="Существующий аккаунт" helperText="Можно выбрать сотрудника EcoProgress или клиентский аккаунт, ещё не добавленный в организацию" InputProps={{ ...params.InputProps, endAdornment: <>{users.isFetching && <CircularProgress size={18} />}{params.InputProps.endAdornment}</> }} />}

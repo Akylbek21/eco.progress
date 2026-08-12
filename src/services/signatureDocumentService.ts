@@ -74,13 +74,13 @@ export const signatureDocumentService = {
   async upload(file: File, name = file.name): Promise<SignatureDocument> {
     const form = new FormData();
     form.append('file', file);
-    form.append('name', name.trim() || file.name);
+    form.append('title', name.trim() || file.name);
     const response = await api.post<unknown>(BASE_PATH, form);
     return normalizeDocument(extractItem(response.data, ['document', 'signatureDocument']));
   },
 
   async downloadOriginal(document: SignatureDocument): Promise<DownloadedSignatureFile> {
-    const response = await api.get<Blob>(`${BASE_PATH}/${document.id}/original`, { responseType: 'blob' });
+    const response = await api.get<Blob>(`${BASE_PATH}/${document.id}/content`, { responseType: 'blob' });
     return { blob: response.data, fileName: fileNameFromDisposition(response.headers['content-disposition'], document.fileName) };
   },
 
@@ -104,7 +104,7 @@ export const signatureDocumentService = {
   },
 
   async submitSignature(payload: SubmitSignatureDocumentPayload): Promise<void> {
-    await api.post(`${BASE_PATH}/${payload.documentId}/sign`, payload);
+    await api.post(`${BASE_PATH}/${payload.documentId}/signatures`, payload);
   },
 
   async downloadSignedPackage(document: SignatureDocument): Promise<DownloadedSignatureFile> {

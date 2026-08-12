@@ -230,6 +230,14 @@ export const documentFlowApi = {
   },
   createMember: async (payload: CreateMemberRequest) =>
     member(unwrap<Record<string, unknown>>(await api.post('/document-flow/members', payload))),
+  inviteMember: async (payload: CreateMemberRequest, organizationId?: number) =>
+    member(unwrap<Record<string, unknown>>(await api.post('/document-flow/members/invite', payload, {
+      params: compact({ organizationId }),
+    }))),
+  resendInvitation: async (id: number, organizationId?: number) =>
+    unwrap<{ invitationSent: boolean }>(await api.post(`/document-flow/members/${id}/resend-invitation`, undefined, {
+      params: compact({ organizationId }),
+    })),
   updateMemberRole: async (id: number, role: MembershipRole, organizationId: number) =>
     member(unwrap<Record<string, unknown>>(await api.patch(`/document-flow/members/${id}`, { role }, {
       params: { organizationId },
@@ -242,6 +250,11 @@ export const documentFlowApi = {
     member(unwrap<Record<string, unknown>>(await api.post(`/document-flow/members/${id}/deactivate`, undefined, {
       params: { organizationId },
     }))),
+  getMemberAuditLog: async (id: number, page: number, size: number, organizationId?: number, signal?: AbortSignal) =>
+    parseContract<PageResponse<AuditEvent>>(pageSchema(auditEventSchema), unwrap<unknown>(await api.get(`/document-flow/members/${id}/audit-log`, {
+      params: compact({ organizationId, page, size }),
+      signal,
+    })), 'GET /document-flow/members/{id}/audit-log'),
   signingRoute: async (id: number, signal?: AbortSignal) =>
     parseContract<SigningRoute>(signingRouteSchema, unwrap<unknown>(await api.get(`/document-flow/documents/${id}/signing-route`, { signal })), 'GET /document-flow/documents/{id}/signing-route'),
   createSigningRoute: async (id: number, payload: SigningRouteRequest) =>

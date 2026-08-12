@@ -99,3 +99,5 @@ export const downloadClientLaboratoryDocument = (fileUrl: string | undefined, fa
   downloadByFileUrl(fileUrl, fallbackName);
 export const downloadClientQuarterDocument = (fileUrl: string | undefined, fallbackName = 'quarter-document') =>
   downloadByFileUrl(fileUrl, fallbackName);
+export const downloadStaffDocument = (documentId: string, fallbackName = 'document') =>
+  downloadAuthorizedBlob(`/api/staff/documents/${encodeURIComponent(documentId)}/download`, fallbackName);
