@@ -232,7 +232,7 @@ export default function CreateDocumentPage() {
 
   return (
     <Stack spacing={3} maxWidth={1000} mx="auto">
-      <Box><Typography variant="h4" fontWeight={800}>Новый документ</Typography><Typography color="text.secondary">Два шага: данные, затем файл и подписание.</Typography></Box>
+      <Box><Typography variant="h4" fontWeight={800}>Загрузить документ</Typography><Typography color="text.secondary">Выберите файл и укажите, кто должен его подписать.</Typography></Box>
       {restored && <Alert severity="info" onClose={() => setRestored(false)}>Восстановлен локальный черновик формы. Файл нужно выбрать заново.</Alert>}
       <Stepper activeStep={step}><Step><StepLabel>Данные документа</StepLabel></Step><Step><StepLabel>Файл и подписание</StepLabel></Step></Stepper>
       <Paper sx={{ p: { xs: 2, md: 4 } }}>
@@ -268,7 +268,7 @@ export default function CreateDocumentPage() {
           {error && <Alert severity="error">{error.message}{error.code === 'NCALAYER_NOT_AVAILABLE' && ' Запустите NCALayer и нажмите кнопку ещё раз — документ повторно не создастся.'}</Alert>}
           <Stack direction={{ xs: 'column-reverse', sm: 'row' }} justifyContent="space-between" gap={1}>
             <Button disabled={mutation.isPending} onClick={() => setStep(0)}>Назад</Button>
-            <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}><Button disabled={mutation.isPending} onClick={() => mutation.mutate('DRAFT')}>Сохранить черновик</Button>{selectedType?.signingRequired && <Button variant="contained" disabled={mutation.isPending || !file || Boolean(fileError || routeInvalid)} onClick={() => mutation.mutate('SUBMIT')}>Создать и отправить на подписание</Button>}</Stack>
+            <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}><Button disabled={mutation.isPending} onClick={() => mutation.mutate('DRAFT')}>Сохранить без подписи</Button>{selectedType?.signingRequired && <Button variant="contained" disabled={mutation.isPending || !file || Boolean(fileError || routeInvalid)} onClick={() => mutation.mutate('SUBMIT')}>Загрузить и отправить на подпись</Button>}</Stack>
           </Stack>
         </Stack>}
       </Paper>

@@ -14,10 +14,11 @@ const PekQueryError = ({ error, resource, retry }: {
       : failure.status && failure.status >= 500
         ? 'Сервис ПЭК временно недоступен'
         : `Не удалось загрузить ${resource.toLowerCase()}`;
-  const correlation = failure.traceId ? ` Код обращения: ${failure.traceId}.` : '';
+  const code = failure.code ? ` Код ошибки: ${failure.code}.` : '';
+  const correlation = failure.traceId ? ` Trace ID: ${failure.traceId}.` : '';
   const message = failure.status === 404
-    ? `Запрошенные данные недоступны или были удалены.${correlation}`
-    : `${failure.message}${correlation}`;
+    ? `Запрошенные данные недоступны или были удалены.${code}${correlation}`
+    : `${failure.message}${code}${correlation}`;
   return <PekState title={title} message={message} retry={retry} />;
 };
 

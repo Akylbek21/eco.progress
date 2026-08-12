@@ -297,6 +297,7 @@ export function mapMeasurementToRequest(
       normativeMax: manualNormative ? normalizeDecimal(row.normativeMax, `results.${index}.normativeMax`) ?? undefined : undefined,
       comparisonType: manualNormative ? normalizeNullableText(row.comparisonType) ?? undefined : undefined,
       normativeDocument: manualNormative ? normalizeNullableText(row.normativeDocument) ?? undefined : undefined,
+      manualNormativeReason: manualNormative ? normalizeNullableText(row.manualNormativeReason) ?? undefined : undefined,
     }),
   }) as QuickCreateProtocolMeasurement | Partial<QuickCreateProtocolMeasurement>;
 }
@@ -565,7 +566,7 @@ export function buildQuickCreatePayload(
     companyId,
     objectId,
     laboratoryId,
-    executorId,
+    laboratoryEmployeeId: executorId,
     measurementTime: measurementTime ?? undefined,
     measurementPlace: measurementPlace ?? '',
     sourceNumber: sourceNumber ?? '',

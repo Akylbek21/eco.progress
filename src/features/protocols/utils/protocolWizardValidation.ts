@@ -53,6 +53,7 @@ export const validateProtocolForSubmit = (form: ProtocolWizardForm): ProtocolVal
     if (!manualConfirmed && !directoryConfirmed) issues.push(issue('NORMATIVE_REQUIRED', 'Выберите или укажите норматив перед согласованием.', `${prefix}.normativeId`, 2, 'ERROR', row.clientRowId));
     if (row.normativeStatus === 'REVIEW') issues.push(issue('NORMATIVE_REVIEW', 'Норматив со статусом REVIEW требует подтверждения.', `${prefix}.normativeId`, 2, 'ERROR', row.clientRowId));
     if (row.normativeStatus === 'INACTIVE') issues.push(issue('NORMATIVE_INACTIVE', 'Неактивный норматив нельзя использовать для согласования.', `${prefix}.normativeId`, 2, 'ERROR', row.clientRowId));
+    if (row.normativeSource === 'MANUAL' && !text(row.manualNormativeReason)) issues.push(issue('MANUAL_NORMATIVE_REASON_REQUIRED', 'Укажите причину использования ручного норматива.', `${prefix}.manualNormativeReason`, 2, 'ERROR', row.clientRowId));
     if (form.templateId === 'soil') {
       if (!text(row.sampleNumber)) issues.push(issue('SOIL_SAMPLE_REQUIRED', 'Укажите номер пробы.', `${prefix}.sampleNumber`, 2, 'ERROR', row.clientRowId));
       if (!text(row.samplingPlace || form.measurementPlace)) issues.push(issue('SOIL_PLACE_REQUIRED', 'Укажите место отбора пробы.', `${prefix}.samplingPlace`, 2, 'ERROR', row.clientRowId));

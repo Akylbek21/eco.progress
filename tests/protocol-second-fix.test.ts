@@ -30,7 +30,7 @@ const memoryStorage = () => {
 const draftProtocol = (version = 1): Protocol => ({
   id: 'draft-1', version, status: 'DRAFT', results: [], protocolDate: '2026-08-06',
   templateId: 'ambient_air', number: '', protocolNumber: '', laboratory: {}, organization: {},
-  companySnapshot: { companyId: 10, companyName: 'Eco Test' }, testing: {}, permissions: { canView: true, canEdit: true },
+  companySnapshot: { companyId: 10, companyName: 'Eco Test' }, testing: {}, permissions: { canView: true, canEdit: true }, availableActions: [],
 } as Protocol);
 
 describe('protocol role matrix v18', () => {
@@ -56,6 +56,19 @@ describe('server draft boundary and idempotency', () => {
     expect(source).toContain('form.getValues()), 2000)');
     expect(source).toContain('if (created) await queryClient.invalidateQueries');
     expect(source).not.toContain('form.reset(mapProtocolToWizardForm(protocol), { keepDirtyValues: true })');
+  });
+
+  it('does not repeat an unchanged failed wizard autosave', async () => {
+    const source = await import('node:fs/promises').then((fs) => fs.readFile('src/features/protocols/components/CreateProtocolWizardModalV2.tsx', 'utf8'));
+    expect(source).toContain("apiError.code === 'LABORATORY_NOT_FOUND'");
+    expect(source).toContain('invalidLaboratorySelection');
+    expect(source).toContain('fingerprint === lastFailedFingerprintRef.current');
+  });
+
+  it('does not repeat an unchanged failed editor autosave', async () => {
+    const source = await import('node:fs/promises').then((fs) => fs.readFile('src/pages/ProtocolEditorPage.tsx', 'utf8'));
+    expect(source).toContain("apiError.code === 'LABORATORY_NOT_FOUND'");
+    expect(source).toContain('editableSignature(protocol) === failedSaveSignatureRef.current');
   });
 
   it('does not generate an idempotency key inside the API operation', async () => {
@@ -92,7 +105,8 @@ describe('server draft boundary and idempotency', () => {
       if (keys.length === 1) throw new Error('timeout');
       return draftProtocol();
     });
-    const service = { createProtocolDraft } as unknown as ProtocolService;
+    const saveProtocolDraftResults = vi.fn(async () => draftProtocol(2));
+    const service = { createProtocolDraft, saveProtocolDraftResults } as unknown as ProtocolService;
     const key = 'protocol-draft-stable';
     await expect(saveProtocolWizardDraft(form, null, key, service)).rejects.toThrow('timeout');
     await saveProtocolWizardDraft(form, null, key, service);
@@ -136,14 +150,14 @@ describe('local protocol draft recovery', () => {
 });
 
 describe('protocol document download guard', () => {
-  const protocol = { status: 'SIGNED', permissions: { canView: true } } as Protocol;
-  it('fails closed for read-only and missing roles', () => {
-    expect(canDownloadProtocolDocument(protocol, 'MANAGER')).toBe(false);
+  it('fails closed without a backend download action regardless of role', () => {
+    const protocol = { status: 'SIGNED', permissions: { canView: true }, availableActions: [] } as Protocol;
+    expect(canDownloadProtocolDocument(protocol, 'HEAD')).toBe(false);
     expect(canDownloadProtocolDocument(protocol, undefined)).toBe(false);
-    expect(canDownloadProtocolDocument({ status: 'SIGNED' } as Protocol, 'HEAD')).toBe(false);
   });
-  it.each(['HEAD', 'LABORATORY'] as const)('%s can download a visible protocol', (role) => {
-    expect(canDownloadProtocolDocument(protocol, role)).toBe(true);
+  it('allows download only when backend exposes a matching action', () => {
+    const protocol = { status: 'SIGNED', availableActions: ['DOWNLOAD_PDF'] } as Protocol;
+    expect(canDownloadProtocolDocument(protocol, 'MANAGER')).toBe(true);
   });
 });
 

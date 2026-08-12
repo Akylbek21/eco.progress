@@ -41,7 +41,7 @@ describe('protocol domain contract', () => {
     form.templateId = 'water'; form.companyId = '15'; form.objectId = '38'; form.laboratoryId = '2'; form.executorId = '17'; form.measurementPlace = 'Точка отбора'; form.sourceNumber = 'W-1'; form.testingMethodNd = 'ГОСТ'; form.temperature = '20'; form.waterType = 'DRINKING_WATER'; form.waterUseCategory = 'I';
     form.results = [{ ...emptyWizardResult(), indicatorName: 'Хлориды', pollutantCode: 'CL', unit: 'мг/л', value: '12', measurementDeviceId: '5' }];
     const request = mapProtocolWizardToRequest(form);
-    expect(request).toMatchObject({ templateId: 'water', companyId: 15, objectId: 38, laboratoryId: 2, executorId: 17, conditions: { waterType: 'DRINKING_WATER', waterUseCategory: 'I', temperature: '20', weatherSource: 'MANUAL' } });
+    expect(request).toMatchObject({ templateId: 'water', companyId: 15, objectId: 38, laboratoryId: 2, laboratoryEmployeeId: 17, conditions: { waterType: 'DRINKING_WATER', waterUseCategory: 'I', temperature: '20', weatherSource: 'MANUAL' } });
     expect(request.measurements).toHaveLength(1);
     expect(request.measurements[0].testingMethodNd).toBe('ГОСТ');
     expect(request.measurements[0].unit).toBe('мг/дм³');
@@ -65,7 +65,7 @@ describe('protocol domain contract', () => {
       environment: { humidity: '50' },
     });
     expect(request.objectId).toBe(11);
-    expect(request.executorId).toBe(21);
+    expect(request.laboratoryEmployeeId).toBe(21);
     expect(request.testing.samplingDate).toBe('2026-07-21');
     expect(request.organization).not.toHaveProperty('objectId');
     expect(request.executor).toBe('Иванов И.И.');

@@ -12,6 +12,7 @@ import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { mapReportCreateRequest } from '../mappers/reportMappers';
 import { mapPekError } from '../utils/pekErrorMapper';
+import { labelPekStatus } from '../utils/pekLabels';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 import { currentQuarter } from '../utils/pekPeriod';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -43,6 +44,13 @@ const PekReportCreatePage = () => {
     queryKey: pekKeys.creationContext(params, user?.id),
     queryFn: ({ signal }) => pekApi.getReportCreationContext(params, signal),
     enabled: ready,
+    retry: retryPekQuery,
+    staleTime: PEK_STALE_TIME_MS,
+  });
+  const programsInScope = useQuery({
+    queryKey: pekKeys.programList({ companyId, objectId, page: 0, size: 20, sort: 'updatedAt,desc' }),
+    queryFn: ({ signal }) => pekApi.getPrograms({ companyId, objectId, page: 0, size: 20, sort: 'updatedAt,desc' }, signal),
+    enabled: ready && context.isSuccess && context.data.programs.length === 0,
     retry: retryPekQuery,
     staleTime: PEK_STALE_TIME_MS,
   });
@@ -104,7 +112,30 @@ const PekReportCreatePage = () => {
               <Summary label="Окончание периода" value={context.data.periodEnd} />
             </div>
             {availablePrograms.length > 0 && <label>Программа<select value={selectedProgramId} onChange={(event) => setProgramId(Number(event.target.value))} className={inputClass}><option value={0}>Выберите программу</option>{availablePrograms.map((program) => <option key={program.id} value={program.id}>{program.number} · {program.name}</option>)}</select></label>}
-            {!availablePrograms.length && <PekState title="Подходящих программ нет" />}
+            {!availablePrograms.length && programsInScope.isLoading && <PekLoading />}
+            {!availablePrograms.length && programsInScope.isError && (
+              <PekQueryError error={programsInScope.error} resource="Программы выбранного объекта" retry={() => void programsInScope.refetch()} />
+            )}
+            {!availablePrograms.length && programsInScope.isSuccess && programsInScope.data.content.length === 0 && (
+              <PekState title="Для выбранного объекта программ ПЭК нет" message="Проверьте выбранный объект или создайте программу ПЭК для него." />
+            )}
+            {!availablePrograms.length && programsInScope.isSuccess && programsInScope.data.content.length > 0 && (
+              <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div>
+                  <p className="font-bold text-amber-950">Программа найдена, но пока не подходит для отчёта</p>
+                  <p className="mt-1 text-sm text-amber-900">Для создания отчёта backend требует статус «Действует» и период программы, полностью покрывающий отчётный период.</p>
+                </div>
+                {programsInScope.data.content.map((program) => (
+                  <div key={program.id} className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-bold text-slate-950">{program.number} · {program.name}</p>
+                      <p className="mt-1 text-sm text-slate-600">Статус: {labelPekStatus(program.status)} · Период: {program.validFrom} — {program.validUntil}</p>
+                    </div>
+                    <Link to={`/staff/pek/programs/${program.id}?companyId=${program.company?.id || companyId}`} className="shrink-0 rounded-full border border-amber-300 px-4 py-2 text-center text-sm font-bold text-amber-950">Открыть программу</Link>
+                  </div>
+                ))}
+              </div>
+            )}
             {context.data.warnings.map((warning) => <p key={warning} className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{warning}</p>)}
             {context.data.blockingReasons.map((reason) => <p key={reason} className="rounded-xl bg-rose-50 p-3 text-sm text-rose-900">{reason}</p>)}
             {context.data.duplicateReportId && <p className="rounded-xl bg-amber-50 p-3 text-sm">Отчёт за период уже существует. <Link className="font-bold underline" to={`/staff/pek/reports/${context.data.duplicateReportId}`}>Открыть отчёт №{context.data.duplicateReportId}</Link></p>}

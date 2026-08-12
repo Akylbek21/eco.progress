@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import { useToast } from '../../../hooks/useToast';
 import { useAuth } from '../../../contexts/AuthContext';
 import type { PekAvailableAction, PekProgram } from '../api/pekContracts';
+import { commitPekProgramMutation } from '../api/pekProgramCache';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import { PekLoading, PekPageHeader, PekPrimaryAction, PekReadiness, PekStatusBadge } from '../components/common/PekUi';
@@ -18,6 +19,9 @@ const tabs = ['Обзор', 'Объекты контроля', 'Показате
 
 const PekProgramDetailsPage = () => {
   const id = Number(useParams().programId);
+  const [searchParams] = useSearchParams();
+  const companyId = Number(searchParams.get('companyId')) || undefined;
+  const programDetailKey = pekKeys.programDetail(companyId, id);
   const [tab, setTab] = useState(0);
   const [action, setAction] = useState<PekAvailableAction | null>(null);
   const [cloneAction, setCloneAction] = useState<PekAvailableAction | null>(null);
@@ -30,7 +34,7 @@ const PekProgramDetailsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const program = useQuery({
-    queryKey: pekKeys.program(id, undefined, user?.id),
+    queryKey: programDetailKey,
     queryFn: ({ signal }) => pekApi.getProgram(id, signal),
     enabled: Number.isFinite(id),
   });
@@ -57,14 +61,13 @@ const PekProgramDetailsPage = () => {
     onSuccess: async (saved) => {
       setAction(null);
       setCloneAction(null);
-      client.setQueryData(pekKeys.program(saved.id, saved.company?.id, user?.id), saved);
+      await commitPekProgramMutation(client, saved.id === id ? companyId : saved.company?.id, saved);
       await Promise.all([
-        client.invalidateQueries({ queryKey: pekKeys.programs({}, user?.id) }),
         client.invalidateQueries({ queryKey: pekKeys.dashboard({}, user?.id) }),
         client.invalidateQueries({ queryKey: pekKeys.programHistory(id, user?.id) }),
       ]);
       toast.success('Действие выполнено');
-      if (saved.id !== id) navigate(`/staff/pek/programs/${saved.id}`);
+      if (saved.id !== id) navigate(`/staff/pek/programs/${saved.id}?companyId=${saved.company?.id || companyId || ''}`);
     },
     onError: async (error) => {
       const mapped = mapPekError(error);
@@ -89,7 +92,7 @@ const PekProgramDetailsPage = () => {
           <PekPrimaryAction key={candidate.code} action={candidate} pending={workflow.isPending} onClick={(selected) => selected.code === 'CLONE' ? setCloneAction(selected) : setAction(selected)} />
         ))}
         {!item.readOnly && editAction?.enabled && (
-          <button type="button" onClick={() => navigate(`/staff/pek/programs/${id}/edit`)} className="rounded-full border px-5 py-2 font-bold">Изменить</button>
+          <button type="button" onClick={() => navigate(`/staff/pek/programs/${id}/edit?companyId=${companyId || item.company?.id || ''}`)} className="rounded-full border px-5 py-2 font-bold">Изменить</button>
         )}
       </>}
     />
@@ -108,7 +111,7 @@ const PekProgramDetailsPage = () => {
       {tab === 1 && <DataRows rows={item.controlItems || []} />}
       {tab === 2 && <DataRows rows={item.indicators || []} />}
       {tab === 3 && <DataRows rows={item.measures || []} />}
-      {tab === 4 && <PekProgramDocuments programId={id} version={item.version} documents={item.documents || []} readOnly={item.readOnly} />}
+      {tab === 4 && <PekProgramDocuments companyId={companyId} programId={id} version={item.version} documents={item.documents || []} readOnly={item.readOnly} />}
       {tab === 5 && <Link className="font-bold text-eco-700" to={`/staff/pek/programs/${id}/history`}>Открыть историю программы</Link>}
       {tab === 6 && <div className="space-y-2"><Info label="Текущая версия" value={item.version} /><p className="text-sm text-slate-500">Согласованные версии доступны только для чтения. Здесь отображаются только сохранённые версии программы.</p></div>}
       {tab === 7 && <Link className="font-bold text-eco-700" to={`/staff/pek/reports?companyId=${item.company?.id || ''}&objectId=${item.object?.id || ''}`}>Открыть отчёты объекта</Link>}

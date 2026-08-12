@@ -16,6 +16,7 @@ import {
   Microscope,
   Send,
   StickyNote,
+  Trash2,
   Upload,
   UserCheck,
   X,
@@ -52,6 +53,13 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { getApiErrorMessage } from '../services/apiHelpers';
+import {
+  deleteStaffRepositoryDocument,
+  getStaffRepositoryDocuments,
+  staffRepositoryDocumentDownloadUrl,
+  uploadStaffRepositoryDocument,
+  type StaffRepositoryDocument,
+} from '../services/staffDocumentRepositoryService';
 import { getFinanceContracts } from '../services/paymentService';
 import { addAnnualQuarterComment, addAnnualQuarterPayment, addAnnualQuarterResult, addComment, applyPartialPayment, assignManager, completeAnnualRequest, createClient, createStaffOrder, getClients, getOrderById, getOrders, markPaymentPaid, requestPrimaryDocumentsBatch, saveLaboratoryMeasurementAgreement, sendContractAndInvoice, sendLaboratoryMeasurementAgreement, updateAnnualQuarterWorkStatus, updateContractStatus, updateEcologyStatus, updateLaboratoryMeasurementAgreementStatus, updateLaboratoryPrimaryDocumentStatus, updateLaboratoryResultDocumentStatus, updateLaboratoryStatus, updateOrderStatus, updatePaymentStatus, updatePrimaryDocumentStatus, uploadAnnualQuarterDocument, uploadContractDocument, uploadDocument, uploadInvoiceDocument, uploadLaboratoryResultDocument } from '../services/staffOrderService';
 import type { CreateClientPayload, StaffCreateOrderPayload } from '../services/staffOrderService';
@@ -537,18 +545,6 @@ const collectDocuments = (orders: Order[]): StaffDocument[] =>
       uploadedBy: doc.type === 'client' ? order.contactPerson || order.clientName : 'Сотрудник',
     }))
   );
-
-const standaloneStaffDocument = (doc: DocumentItem): StaffDocument => ({
-  ...doc,
-  orderId: '',
-  company: 'Без заявки',
-  orderService: 'Общий документ',
-  orderStatus: 'Готово',
-  docType: documentType(doc),
-  uploadedBy: 'Сотрудник',
-  uploadedAt: doc.uploadedAt || new Date().toLocaleString('ru-RU'),
-});
-
 
 type EcoDocumentSection = 'overview' | 'projecting' | 'permit' | 'laboratory';
 type EcoDocument = {
@@ -4595,55 +4591,42 @@ const DocumentLine = ({ doc }: { doc: StaffDocument }) => (
       <p>{doc.status}</p>
       <p>{doc.uploadedAt}</p>
     </div>
-    {doc.orderId ? (
-      <Link to={`/staff/documents/${doc.orderId}`} className="inline-flex justify-center rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Открыть</Link>
-    ) : (
-      <a href={documentHref(doc)} target="_blank" rel="noreferrer" className="inline-flex justify-center rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Посмотреть</a>
-    )}
-  </div>
-);
-
-const DocumentFileRow = ({ doc }: { doc: StaffDocument }) => (
-  <div className="grid items-center gap-3 rounded-2xl bg-slate-50 p-4 lg:grid-cols-[1.7fr_0.8fr_0.8fr_auto]">
-    <div className="min-w-0">
-      <p className="break-words font-bold text-slate-900">{doc.name}</p>
-      <p className="mt-1 text-sm text-slate-500">{doc.uploadedBy} · {doc.uploadedAt}</p>
-    </div>
-    <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-eco-800">{doc.docType}</span>
-    <p className="text-sm font-semibold text-slate-700">{doc.status}</p>
-    <div className="flex flex-wrap gap-2">
-      <a href={documentHref(doc)} target="_blank" rel="noreferrer" className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-eco-800 transition hover:bg-white">Посмотреть</a>
-      <a href={documentHref(doc)} download={doc.name} className="rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Скачать</a>
-    </div>
+    <a href={documentHref(doc)} target="_blank" rel="noreferrer" className="inline-flex justify-center rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Посмотреть</a>
   </div>
 );
 
 export const StaffDocumentsPage = () => {
-  const { orders, refresh } = useOrders();
-  const { orderId } = useParams();
   const toast = useToast();
   const [q, setQ] = useState('');
-  const [company, setCompany] = useState('Все');
   const [type, setType] = useState('Все');
-  const [status, setStatus] = useState('Все');
+  const [documents, setDocuments] = useState<StaffRepositoryDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError] = useState('');
-  const docs = useMemo(() => collectDocuments(orders), [orders]);
-  const companies = useMemo(() => Array.from(new Set(docs.map((doc) => doc.company))).sort(), [docs]);
-  const types = useMemo(() => Array.from(new Set(docs.map((doc) => doc.docType))).sort(), [docs]);
-  const statuses = useMemo(() => Array.from(new Set(docs.map((doc) => doc.status))).sort(), [docs]);
-  const filtered = useMemo(() => docs
-    .filter((doc) => company === 'Все' || doc.company === company)
-    .filter((doc) => type === 'Все' || doc.docType === type)
-    .filter((doc) => status === 'Все' || doc.status === status)
-    .filter((doc) => `${doc.name} ${doc.company} ${doc.orderId}`.toLowerCase().includes(q.toLowerCase())), [docs, company, type, status, q]);
-  const grouped = useMemo(() => filtered.reduce<Record<string, StaffDocument[]>>((acc, doc) => {
-    acc[doc.company] = [...(acc[doc.company] || []), doc];
-    return acc;
-  }, {}), [filtered]);
-  const selectedOrder = orderId ? orders.find((order) => order.id === orderId) : undefined;
-  const selectedDocs = selectedOrder ? collectDocuments([selectedOrder]) : [];
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const types = useMemo(() => Array.from(new Set(documents.map((doc) => doc.category))).sort(), [documents]);
+  const filtered = useMemo(() => documents
+    .filter((doc) => type === 'Все' || doc.category === type)
+    .filter((doc) => `${doc.name} ${doc.originalFileName} ${doc.comment} ${doc.uploadedBy}`.toLowerCase().includes(q.trim().toLowerCase())), [documents, type, q]);
+
+  const loadDocuments = async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      setDocuments(await getStaffRepositoryDocuments());
+    } catch (error) {
+      setLoadError(getApiErrorMessage(error, 'Не удалось загрузить документы.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadDocuments();
+  }, []);
+
   const openUpload = () => {
     setUploadError('');
     setUploadOpen(true);
@@ -4657,57 +4640,67 @@ export const StaffDocumentsPage = () => {
     event.preventDefault();
     setUploadError('');
     const form = new FormData(event.currentTarget);
-    const targetOrderId = selectedOrder?.id || '';
     const title = String(form.get('name') || '').trim();
     const category = String(form.get('category') || 'other');
     const comment = String(form.get('comment') || '').trim();
     const file = form.get('file');
-    if (!targetOrderId) {
-      setUploadError('Сначала выберите заявку, к которой относится документ.');
-      return;
-    }
-    if (!title) {
-      setUploadError('Укажите название документа.');
-      return;
-    }
     if (!(file instanceof File) || !file.name) {
       setUploadError('Выберите файл документа.');
       return;
     }
     setUploadLoading(true);
     try {
-      const payload = {
-        file,
-        title,
-        type: category,
-        comment,
-      };
-      await uploadDocument(targetOrderId, payload);
-      toast.success('Документ загружен', 'Файл добавлен в CRM и привязан к заявке.');
+      const uploaded = await uploadStaffRepositoryDocument({ file, name: title, category, comment });
+      setDocuments((current) => [uploaded, ...current.filter((item) => item.id !== uploaded.id)]);
+      toast.success('Документ загружен', 'Файл добавлен в общее хранилище документов.');
       setUploadOpen(false);
       event.currentTarget.reset();
-      refresh();
     } catch (err) {
-      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (err as Error)?.message || 'Не удалось загрузить документ.';
+      const message = getApiErrorMessage(err, 'Не удалось загрузить документ.');
       setUploadError(message);
       toast.error('Документ не загружен', message);
     } finally {
       setUploadLoading(false);
     }
   };
+
+  const deleteDocument = async (document: StaffRepositoryDocument) => {
+    if (!window.confirm(`Удалить документ «${document.name}»? Это действие нельзя отменить.`)) return;
+    setDeletingId(document.id);
+    try {
+      await deleteStaffRepositoryDocument(document.id);
+      setDocuments((current) => current.filter((item) => item.id !== document.id));
+      toast.success('Документ удалён');
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'Не удалось удалить документ.');
+      toast.error('Документ не удалён', message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const formatFileSize = (size: number | null) => {
+    if (size === null) return 'Размер не указан';
+    if (size < 1024) return `${size} Б`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} КБ`;
+    return `${(size / (1024 * 1024)).toFixed(1)} МБ`;
+  };
+
+  const categoryLabel = (value: string) => staffDocumentUploadCategories.find(([key]) => key === value)?.[1] || value;
+
   const uploadModal = (
     <Modal
       isOpen={uploadOpen}
       onClose={closeUpload}
       title="Загрузить документ"
-      description={selectedOrder ? `Заявка ${selectedOrder.id} · ${getOrderCompanyName(selectedOrder)}` : 'Добавьте название и файл документа'}
+      description="Документ будет добавлен в общее хранилище без привязки к заявке"
       loading={uploadLoading}
     >
       <form onSubmit={submitUpload} className="grid gap-4">
         {uploadError && <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{uploadError}</p>}
         <label className="text-sm font-semibold text-slate-700">
           Название документа
-          <input name="name" required placeholder="Например: Протокол анализа воздуха" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+          <input name="name" placeholder="Необязательно — по умолчанию имя файла" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
         </label>
         <label className="text-sm font-semibold text-slate-700">
           Тип документа
@@ -4717,7 +4710,7 @@ export const StaffDocumentsPage = () => {
         </label>
         <label className="text-sm font-semibold text-slate-700">
           Файл
-          <input name="file" type="file" required accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,application/pdf,application/zip" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
+          <input name="file" type="file" required className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3" />
         </label>
         <label className="text-sm font-semibold text-slate-700">
           Комментарий
@@ -4731,58 +4724,6 @@ export const StaffDocumentsPage = () => {
     </Modal>
   );
 
-  if (orderId) {
-    if (!selectedOrder) {
-      return (
-        <>
-          <Reveal>
-            <div className="rounded-[22px] bg-white p-6 shadow-sm">
-              <Link to="/staff/documents" className="text-sm font-bold text-eco-700">← Документы</Link>
-              <EmptyState text="Заявка не найдена" />
-            </div>
-          </Reveal>
-          {uploadModal}
-        </>
-      );
-    }
-
-    return (
-      <>
-        <Reveal>
-          <div className="rounded-[22px] bg-white p-6 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <Link to="/staff/documents" className="text-sm font-bold text-eco-700">← Документы</Link>
-                <h2 className="mt-3 text-3xl font-bold text-eco-900">{selectedOrder.id} · {getOrderCompanyName(selectedOrder)}</h2>
-                <p className="mt-2 text-sm text-slate-500">{selectedOrder.service}</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {badge(selectedOrder.status)}
-                <Button type="button" onClick={openUpload} className="gap-2">
-                  <Upload size={16} />
-                  Добавить
-                </Button>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3 md:grid-cols-4">
-              <InfoTile label="Компания" value={getOrderCompanyName(selectedOrder)} />
-              <InfoTile label="Контакт" value={selectedOrder.contactPerson || selectedOrder.clientName} />
-              <InfoTile label="Дата" value={selectedOrder.createdAt} />
-              <InfoTile label="Документы" value={String(selectedDocs.length)} />
-            </div>
-
-            <div className="mt-6 space-y-3">
-              {selectedDocs.map((doc) => <DocumentFileRow key={doc.id} doc={doc} />)}
-              {!selectedDocs.length && <EmptyState text="Документов нет" />}
-            </div>
-          </div>
-        </Reveal>
-        {uploadModal}
-      </>
-    );
-  }
-
   return (
     <>
       <Reveal>
@@ -4790,33 +4731,43 @@ export const StaffDocumentsPage = () => {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h2 className="text-3xl font-bold text-eco-900">Документы</h2>
+              <p className="mt-2 text-sm text-slate-500">Общее хранилище файлов, не связанное с заявками</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <p className="rounded-full bg-eco-50 px-4 py-2 text-sm font-bold text-eco-800">Найдено: {filtered.length}</p>
-              <Button type="button" disabled title="Сначала откройте заявку" className="gap-2">
+              <Button type="button" onClick={openUpload} className="gap-2">
                 <Upload size={16} />
                 Добавить
               </Button>
             </div>
           </div>
-          <div className="mt-4"><BackendFeatureUnavailable title="Загрузка документа" description="Сначала откройте нужную заявку: сервер принимает документы только с привязкой к заявке." /></div>
-          <div className="mt-5 grid gap-3 lg:grid-cols-5">
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
-            <select value={company} onChange={(e) => setCompany(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{companies.map((item) => <option key={item}>{item}</option>)}</select>
-            <select value={type} onChange={(e) => setType(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{types.map((item) => <option key={item}>{item}</option>)}</select>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{statuses.map((item) => <option key={item}>{item}</option>)}</select>
-            <button type="button" onClick={() => { setQ(''); setCompany('Все'); setType('Все'); setStatus('Все'); }} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-eco-800 transition hover:bg-eco-50">Сбросить</button>
+          <div className="mt-5 grid gap-3 lg:grid-cols-[2fr_1fr_auto]">
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск по названию, файлу или автору" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+            <select value={type} onChange={(e) => setType(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{types.map((item) => <option key={item} value={item}>{categoryLabel(item)}</option>)}</select>
+            <button type="button" onClick={() => { setQ(''); setType('Все'); }} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-eco-800 transition hover:bg-eco-50">Сбросить</button>
           </div>
-          <div className="mt-6 space-y-5">
-            {Object.entries(grouped).map(([companyName, items]) => (
-              <div key={companyName} className="rounded-[20px] border border-slate-100 p-4">
-                <h3 className="font-bold text-eco-900">{companyName}</h3>
-                <div className="mt-3 space-y-2">
-                  {items.map((doc) => <DocumentLine key={doc.id} doc={doc} />)}
+          {loadError && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700"><span>{loadError}</span><button type="button" onClick={() => void loadDocuments()} className="rounded-full bg-white px-4 py-2">Повторить</button></div>}
+          <div className="mt-6 space-y-3">
+            {loading && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Загружаем документы…</p>}
+            {!loading && filtered.map((doc) => (
+              <div key={doc.id} className="grid items-center gap-4 rounded-[20px] border border-slate-100 p-4 lg:grid-cols-[1.7fr_0.8fr_1fr_auto]">
+                <div className="min-w-0">
+                  <p className="break-words font-bold text-slate-900">{doc.name}</p>
+                  <p className="mt-1 break-words text-sm text-slate-500">{doc.originalFileName} · {formatFileSize(doc.fileSize)}</p>
+                  {doc.comment && <p className="mt-2 text-sm text-slate-600">{doc.comment}</p>}
+                </div>
+                <span className="w-fit rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">{categoryLabel(doc.category)}</span>
+                <div className="text-sm text-slate-600">
+                  <p className="font-semibold text-slate-800">{doc.uploadedBy}</p>
+                  <p>{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString('ru-RU') : 'Дата не указана'}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a href={staffRepositoryDocumentDownloadUrl(doc)} target="_blank" rel="noreferrer" className="rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Скачать</a>
+                  {doc.canDelete && <button type="button" disabled={deletingId === doc.id} onClick={() => void deleteDocument(doc)} className="inline-flex items-center gap-1 rounded-full border border-rose-200 px-4 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"><Trash2 size={14} />{deletingId === doc.id ? 'Удаление…' : 'Удалить'}</button>}
                 </div>
               </div>
             ))}
-            {!filtered.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Документов нет</p>}
+            {!loading && !loadError && !filtered.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Документов пока нет. Нажмите «Добавить», чтобы загрузить первый файл.</p>}
           </div>
         </div>
       </Reveal>

@@ -46,6 +46,7 @@ import {
 
 const steps = ['Основные сведения', 'Условия', 'Показатели и результаты', 'Проверка', 'Завершение'];
 type SaveState = 'idle' | 'local' | 'creating' | 'created' | 'saving' | 'saved' | 'error' | 'conflict';
+const unavailableLaboratoryMessage = 'Выбранная лаборатория не найдена или больше не активна. Выберите лабораторию повторно.';
 
 const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', orderServiceItemId = '', pekPrefill }: CreateProtocolWizardModalProps) => {
   const { user } = useAuth();
@@ -66,6 +67,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   const initialCreateStarted = useRef(false);
   const idempotencyKeyRef = useRef(createProtocolDraftIdempotencyKey());
   const lastSavedFingerprintRef = useRef('');
+  const lastFailedFingerprintRef = useRef('');
   const bufferKey = localProtocolDraftKey(user?.id ?? 'anonymous', serverDraft?.id ?? null);
   const prefillKey = JSON.stringify(pekPrefill ?? {});
 
@@ -95,6 +97,11 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     form,
   });
   const laboratories = laboratoriesQuery.data ?? [];
+  const invalidLaboratorySelection = Boolean(
+    values.laboratoryId
+    && laboratoriesQuery.isSuccess
+    && !laboratories.some((item) => String(item.id) === String(values.laboratoryId)),
+  );
   const employees = useMemo<LaboratoryExecutorOption[]>(() => (employeesQuery.data ?? []).filter((item) => item.active).map((item) => ({
     executorId: item.id, laboratoryEmployeeId: item.id, userId: item.userId ?? undefined,
     fullName: item.fullName, laboratoryId: item.laboratoryId, active: item.active,
@@ -108,6 +115,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     initialCreateStarted.current = false;
     idempotencyKeyRef.current = createProtocolDraftIdempotencyKey();
     lastSavedFingerprintRef.current = '';
+    lastFailedFingerprintRef.current = '';
     setServerDraft(null);
     setSaveState('idle');
     setGeneralError('');
@@ -126,6 +134,19 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     const employee = employees.find((item) => String(item.userId ?? '') === String(user.id));
     if (employee) form.setValue('executorId', String(employee.executorId), { shouldDirty: false });
   }, [employees, form, open, user?.id]);
+  useEffect(() => {
+    if (!open) return;
+    if (invalidLaboratorySelection) {
+      form.setError('laboratoryId', { type: 'server', message: unavailableLaboratoryMessage });
+      setGeneralError(unavailableLaboratoryMessage);
+      setStep(1);
+      return;
+    }
+    if (form.getFieldState('laboratoryId').error?.message === unavailableLaboratoryMessage) {
+      form.clearErrors('laboratoryId');
+      setGeneralError((current) => current === unavailableLaboratoryMessage ? '' : current);
+    }
+  }, [form, invalidLaboratorySelection, open]);
   useEffect(() => {
     if (!open || recoveryCandidate) return;
     const timer = window.setTimeout(() => {
@@ -165,11 +186,13 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
         }),
       };
       lastSavedFingerprintRef.current = JSON.stringify(savedSnapshot);
+      lastFailedFingerprintRef.current = '';
       setSaveState(created ? 'created' : 'saved');
       queryClient.setQueryData(protocolQueryKeys.detail(scope, protocol.id), protocol);
       if (created) await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) });
     },
-    onError: (error) => {
+    onError: (error, snapshot) => {
+      lastFailedFingerprintRef.current = JSON.stringify(snapshot);
       setSaveState('error');
       const apiError = normalizeApiError(error, 'Не удалось сохранить протокол. Проверьте выделенные поля.');
       if (apiError.status === 409 && /PROTOCOL_VERSION_CONFLICT|version/i.test(`${apiError.code ?? ''} ${apiError.message}`)) {
@@ -179,12 +202,24 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
       }
       const mapped = applyProtocolApiErrorsToForm(form, apiError.fieldErrors, setStep);
       setServerIssues(mapped.map((issue, index) => ({ ...issue, code: `SERVER_${index}`, field: issue.field ?? undefined, severity: 'ERROR' as const })));
-      setGeneralError(mapped.length ? 'Не удалось сохранить протокол. Проверьте выделенные поля.' : apiError.message);
+      const message = apiError.code === 'LABORATORY_NOT_FOUND'
+        ? unavailableLaboratoryMessage
+        : apiError.message;
+      if (apiError.code === 'LABORATORY_NOT_FOUND') {
+        form.setError('laboratoryId', { type: 'server', message });
+        setStep(1);
+      }
+      setGeneralError(mapped.length ? 'Не удалось сохранить протокол. Проверьте выделенные поля.' : message);
     },
   });
 
   const canSaveServerDraft = Boolean(values.templateId && values.companyId);
-  const canAutoCreateDraft = Boolean(canSaveServerDraft && values.objectId);
+  const canAutoCreateDraft = Boolean(
+    canSaveServerDraft
+    && values.objectId
+    && !invalidLaboratorySelection
+    && (!values.laboratoryId || laboratoriesQuery.isSuccess),
+  );
   useEffect(() => {
     if (!open || recoveryCandidate || serverDraft || !canAutoCreateDraft || initialCreateStarted.current || saveMutation.isPending || conflict) return;
     const timer = window.setTimeout(() => {
@@ -195,12 +230,13 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     return () => window.clearTimeout(timer);
   }, [canAutoCreateDraft, conflict, form, open, recoveryCandidate, saveMutation, serverDraft]);
   useEffect(() => {
-    if (!open || !serverDraft || saveMutation.isPending || conflict) return;
+    if (!open || !serverDraft || saveMutation.isPending || conflict || invalidLaboratorySelection) return;
     const snapshot = form.getValues();
-    if (JSON.stringify(snapshot) === lastSavedFingerprintRef.current) return;
+    const fingerprint = JSON.stringify(snapshot);
+    if (fingerprint === lastSavedFingerprintRef.current || fingerprint === lastFailedFingerprintRef.current) return;
     const timer = window.setTimeout(() => saveMutation.mutate(form.getValues()), 2000);
     return () => window.clearTimeout(timer);
-  }, [conflict, form, open, saveMutation, serverDraft, values]);
+  }, [conflict, form, invalidLaboratorySelection, open, saveMutation, serverDraft, values]);
 
   const approvalIssues = useMemo(() => validateProtocolForSubmit(values).map((issue) => ({
     ...issue,
@@ -215,6 +251,12 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     if (field) window.requestAnimationFrame(() => form.setFocus(field));
   };
   const save = async () => {
+    if (invalidLaboratorySelection) {
+      form.setError('laboratoryId', { type: 'server', message: unavailableLaboratoryMessage });
+      setGeneralError(unavailableLaboratoryMessage);
+      setStep(1);
+      return null;
+    }
     if (!canSaveServerDraft) {
       setGeneralError('Сначала выберите тип протокола и компанию. До этого сохраняется только локальная копия.');
       setStep(0);

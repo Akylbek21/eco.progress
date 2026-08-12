@@ -9,7 +9,7 @@ import { documentFlowKeys } from '../api/documentFlowKeys';
 import AccessRequestForm from '../components/AccessRequestForm';
 
 export default function DocumentFlowLandingPage({ requestInitiallyOpen = false }: { requestInitiallyOpen?: boolean }) {
-  const { isAuthenticated, isStaff, loading, logout, user } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const [requestOpen, setRequestOpen] = useState(requestInitiallyOpen);
   const plans = useQuery({
     queryKey: documentFlowKeys.plans(),
@@ -19,7 +19,7 @@ export default function DocumentFlowLandingPage({ requestInitiallyOpen = false }
   });
 
   if (loading) return <Stack minHeight="70vh" alignItems="center" justifyContent="center"><CircularProgress /></Stack>;
-  if (isAuthenticated && !isStaff) return <Navigate to="/document-flow/documents" replace />;
+  if (isAuthenticated) return <Navigate to="/document-flow/documents" replace />;
 
   return (
     <PublicLayout>
@@ -29,17 +29,10 @@ export default function DocumentFlowLandingPage({ requestInitiallyOpen = false }
             <Typography variant="h3" fontWeight={900}>Документооборот</Typography>
             <Typography color="text.secondary" mt={1}>Создавайте, отправляйте и подписывайте документы в защищённом кабинете своей организации.</Typography>
           </div>
-          {isStaff ? <>
-            <Alert severity="info">Сейчас выполнен вход в CRM сотрудника: {user?.email || user?.name}. Для входа владельца или сотрудника организации используйте отдельную учётную запись документооборота.</Alert>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <Button component={Link} to="/document-flow/login?redirect=%2Fdocument-flow" onClick={logout} variant="contained" size="large">Войти под аккаунтом организации</Button>
-              <Button component={Link} to="/document-flow/documents" variant="outlined" size="large">Продолжить с аккаунтом CRM</Button>
-              {user?.role === 'ADMIN' && <Button component={Link} to="/admin/document-flow-access" variant="outlined" size="large">Управление подписками</Button>}
-            </Stack>
-          </> : <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <Button variant="contained" size="large" onClick={() => setRequestOpen(true)}>Оставить заявку</Button>
             <Button component={Link} to="/document-flow/login?redirect=%2Fdocument-flow" variant="outlined" size="large">Войти</Button>
-          </Stack>}
+          </Stack>
           {requestOpen && <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography variant="h5" fontWeight={800} mb={2}>Заявка на подключение</Typography>
             {plans.isLoading && <Stack alignItems="center" py={4}><CircularProgress /></Stack>}

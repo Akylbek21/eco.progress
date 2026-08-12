@@ -6,7 +6,6 @@ import type { PekProgramDocument } from '../../api/pekContracts';
 import { pekKeys } from '../../api/pekQueryKeys';
 import { pekApi } from '../../api/pekService';
 import { mapPekError } from '../../utils/pekErrorMapper';
-import { useAuth } from '../../../../contexts/AuthContext';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const ALLOWED_MIME = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'image/jpeg', 'image/png'];
@@ -20,13 +19,13 @@ const saveBlob = (blob: Blob, filename: string) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
-const PekProgramDocuments = ({ programId, version, documents, readOnly }: {
+const PekProgramDocuments = ({ companyId, programId, version, documents, readOnly }: {
+  companyId?: number;
   programId: number;
   version: number;
   documents: PekProgramDocument[];
   readOnly: boolean;
 }) => {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const toast = useToast();
   const controller = useRef<AbortController>();
@@ -65,7 +64,7 @@ const PekProgramDocuments = ({ programId, version, documents, readOnly }: {
     onSuccess: async () => {
       setFile(null);
       setProgress(0);
-      await queryClient.invalidateQueries({ queryKey: pekKeys.program(programId, undefined, user?.id) });
+      await queryClient.invalidateQueries({ queryKey: pekKeys.programDetail(companyId, programId) });
       toast.success('Документ загружен');
     },
     onError: (error) => toast.error(mapPekError(error).message),

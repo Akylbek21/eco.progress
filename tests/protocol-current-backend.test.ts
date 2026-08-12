@@ -8,7 +8,8 @@ import { createWizardDefaults, emptyWizardResult } from '../src/features/protoco
 import { buildQuickCreatePayload } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
 import { normalizeProtocolStatus } from '../src/config/protocolStatus';
 import { getProtocolPermissions } from '../src/utils/protocolPermissions';
-import { addProtocolResult, readyForApproval, removeProtocolMeasurementDevice, signProtocol } from '../src/services/apiProtocolService';
+import { addProtocolResult, readyForApproval, removeProtocolMeasurementDevice, saveProtocolDraftResults, signProtocol } from '../src/services/apiProtocolService';
+import { normalizeApiError } from '../src/services/apiHelpers';
 
 const server = setupServer();
 const originalBaseUrl = api.defaults.baseURL;
@@ -79,6 +80,8 @@ describe('current protocol backend contract', () => {
     });
     form.results = [{ ...emptyWizardResult(), indicatorName: 'pH', pollutantCode: 'PH', value: '0', unit: 'ед.', measurementDeviceId: '5', samplingPlace: 'Точка' }];
     const request = buildQuickCreatePayload(form);
+    expect(request.laboratoryEmployeeId).toBe(4);
+    expect(request).not.toHaveProperty('executorId');
     expect(request.conditions).toMatchObject({ temperature: '0', humidity: '0', windSpeed: '0' });
     expect(request.measurements[0].value).toBe(0);
     expect(request.measurements[0]).not.toHaveProperty('clientRowId');
@@ -136,21 +139,35 @@ describe('current protocol backend contract', () => {
         return HttpResponse.json({ data: { ...protocol, status: 'SIGNED', version: 10 } });
       }),
     );
-    const signed = await signProtocol('42', { cmsSignatureBase64: 'cms' });
+    const signed = await signProtocol('42', { cmsSignatureBase64: 'cms', version: 8 });
     expect(signed.status).toBe('SIGNED');
-    expect(body).toEqual({ cmsSignatureBase64: 'cms' });
+    expect(body).toEqual({ cmsSignatureBase64: 'cms', version: 8 });
   });
 
-  it('adds a result with POST and preserves zero', async () => {
+  it('replaces draft results atomically with version and preserves zero', async () => {
     let body: unknown;
+    let savedResults: Array<Record<string, unknown>> = [];
     server.use(
-      http.post('http://localhost/api/protocols/42/results', async ({ request }) => {
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: { ...protocol, version: savedResults.length ? 9 : 8, results: savedResults } })),
+      http.put('http://localhost/api/protocols/42/draft-results', async ({ request }) => {
         body = await request.json();
-        return HttpResponse.json({ data: { id: '5', values: { resultValue: 0 }, measurementDeviceId: 7 } });
+        const requestBody = body as { results: Array<Record<string, unknown>> };
+        savedResults = requestBody.results.map((row) => ({ ...row, id: '5' }));
+        return HttpResponse.json({ data: { ...protocol, version: 9, results: savedResults } });
       }),
     );
     const saved = await addProtocolResult('42', { values: { resultValue: 0 }, measurementDeviceId: 7 }, 8);
     expect(saved.values.resultValue).toBe(0);
-    expect(body).toEqual({ values: { resultValue: 0 }, measurementDeviceId: 7, normativeId: null, version: 8 });
+    expect(body).toMatchObject({ version: 8, results: [{ values: { resultValue: 0 }, measurementDeviceId: 7, normativeId: null }] });
+  });
+
+  it('keeps backend 409 details from atomic result saving', async () => {
+    server.use(
+      http.put('http://localhost/api/protocols/42/draft-results', () => HttpResponse.json({
+        code: 'PROTOCOL_VERSION_CONFLICT', message: 'Протокол уже изменён', currentVersion: 9,
+      }, { status: 409 })),
+    );
+    const error = await saveProtocolDraftResults('42', { version: 8, results: [] }).catch((value: unknown) => value);
+    expect(normalizeApiError(error)).toMatchObject({ status: 409, code: 'PROTOCOL_VERSION_CONFLICT', currentVersion: 9 });
   });
 });

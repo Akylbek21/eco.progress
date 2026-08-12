@@ -1,7 +1,7 @@
 import { normalizeProtocolStatus, protocolStatusConfig } from '../../../config/protocolStatus';
 import type { Protocol, ProtocolHistoryItem, ProtocolInternalStatus, ProtocolResult } from '../../../types/protocols';
 import { getProtocolPermissions } from '../../../utils/protocolPermissions';
-import { hasProtocolPermission } from '../utils/protocolActions';
+import { hasProtocolAction, hasProtocolPermission } from '../utils/protocolActions';
 
 export type ProtocolDetailsTab = 'results' | 'main' | 'documents' | 'history';
 export type ProtocolEditSection = 'general' | 'organization' | 'laboratory' | 'environment' | 'results' | 'methods';
@@ -88,9 +88,9 @@ export const resolveProtocolPrimaryAction = (protocol: Protocol, role?: string):
   if (permissions.canReadyForApproval) return { key: 'ready', label: 'Отправить на утверждение' };
   if (status === 'DRAFT') return { key: hasProtocolPermission(protocol, 'canEdit') ? 'edit' : null, label: 'Продолжить' };
   if (['CALCULATED', 'READY', 'READY_FOR_APPROVAL', 'APPROVED'].includes(status)) {
-    if (hasProtocolPermission(protocol, 'canSign')) return { key: 'sign', label: 'Подписать' };
+    if (hasProtocolAction(protocol, 'SIGN')) return { key: 'sign', label: 'Подписать' };
     if (hasProtocolPermission(protocol, 'canGeneratePreview')) return { key: 'sign', label: 'Открыть предварительный просмотр' };
-    return protocol.hasPdf && hasProtocolPermission(protocol, 'canView') ? { key: 'pdf', label: 'Скачать PDF' } : { key: null, label: '' };
+    return protocol.hasPdf && hasProtocolAction(protocol, 'DOWNLOAD_PDF') ? { key: 'pdf', label: 'Скачать PDF' } : { key: null, label: '' };
   }
   if (status === 'NEEDS_REVISION') return { key: permissions.canEdit ? 'edit' : null, label: 'Исправить протокол' };
   if (status === 'SIGNED' && permissions.canSign) return { key: 'sign', label: 'Подписать' };

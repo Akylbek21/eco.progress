@@ -11,6 +11,7 @@ import { useToast } from '../../../hooks/useToast';
 import { getCompanies, getCompanyObjects } from '../../../services/companyService';
 import type { PekControlItem, PekIndicator, PekMeasure, PekProgramForm } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
+import { commitPekProgramMutation } from '../api/pekProgramCache';
 import { pekApi } from '../api/pekService';
 import PekLookupSelect from '../components/common/PekLookupSelect';
 import PekQueryError from '../components/common/PekQueryError';
@@ -70,6 +71,8 @@ const PekProgramCreatePage = () => {
   const id = Number(programId);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const routeCompanyId = Number(searchParams.get('companyId')) || undefined;
+  const programDetailKey = pekKeys.programDetail(routeCompanyId, id);
   const toast = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -97,7 +100,7 @@ const PekProgramCreatePage = () => {
   const measures = watch('measures');
 
   const program = useQuery({
-    queryKey: pekKeys.program(id, undefined, user?.id),
+    queryKey: programDetailKey,
     queryFn: ({ signal }) => pekApi.getProgram(id, signal),
     enabled: edit && Number.isFinite(id),
   });
@@ -183,7 +186,7 @@ const PekProgramCreatePage = () => {
       if (sequence < appliedAutosaveSequence.current) return;
       appliedAutosaveSequence.current = sequence;
       versionRef.current = saved.version;
-      queryClient.setQueryData(pekKeys.program(id, saved.company?.id, user?.id), saved);
+      queryClient.setQueryData(programDetailKey, saved);
       setAutosaveState('saved');
       void removePekDraft(draftKey);
     },
@@ -246,13 +249,16 @@ const PekProgramCreatePage = () => {
     onSuccess: async (saved) => {
       versionRef.current = saved.version;
       await removePekDraft(draftKey).catch(() => undefined);
-      queryClient.setQueryData(pekKeys.program(saved.id, saved.company?.id, user?.id), saved);
+      await commitPekProgramMutation(
+        queryClient,
+        edit ? routeCompanyId : saved.company?.id ?? companyId,
+        saved,
+      );
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: pekKeys.programs({}, user?.id) }),
         queryClient.invalidateQueries({ queryKey: pekKeys.dashboard({}, user?.id) }),
       ]);
       toast.success(edit ? 'Программа обновлена' : 'Программа создана');
-      navigate(`/staff/pek/programs/${saved.id}`);
+      navigate(`/staff/pek/programs/${saved.id}?companyId=${saved.company?.id ?? companyId ?? routeCompanyId ?? ''}`);
     },
     onError: (error) => {
       const mapped = mapPekError(error);
@@ -281,12 +287,11 @@ const PekProgramCreatePage = () => {
     onMutate: () => setAutosaveState('saving'),
     onSuccess: async (saved) => {
       versionRef.current = saved.version;
-      queryClient.setQueryData(pekKeys.program(saved.id, saved.company?.id, user?.id), saved);
+      await commitPekProgramMutation(queryClient, saved.company?.id ?? companyId, saved);
       await removePekDraft(draftKey).catch(() => undefined);
-      await queryClient.invalidateQueries({ queryKey: pekKeys.programs({}, user?.id) });
       setAutosaveState('saved');
       toast.success('Черновик программы сохранён');
-      navigate(`/staff/pek/programs/${saved.id}/edit?step=1`, { replace: true });
+      navigate(`/staff/pek/programs/${saved.id}/edit?companyId=${saved.company?.id ?? companyId}&step=1`, { replace: true });
     },
     onError: (error) => {
       setAutosaveState('error');

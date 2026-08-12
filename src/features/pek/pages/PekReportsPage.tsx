@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { hasPermission } from '../../../config/permissions';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -25,7 +25,7 @@ const PekReportsPage = () => {
   };
   const reports = useQuery({
     queryKey: pekKeys.reports(filters, user?.id), queryFn: ({ signal }) => pekApi.getReports(filters, signal),
-    placeholderData: keepPreviousData, retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS,
+    retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS,
     enabled: Boolean(companyId && objectId),
   });
   const update = (key: string, value: string) => {

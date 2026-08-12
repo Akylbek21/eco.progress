@@ -111,6 +111,7 @@ describe('protocol access and draft compatibility', () => {
     });
     expect(payload).not.toHaveProperty('objectId');
     expect(payload).not.toHaveProperty('executorId');
+    expect(payload).not.toHaveProperty('laboratoryEmployeeId');
   });
 
   it('does not synthesize correction permission for a signed protocol', () => {
@@ -162,23 +163,19 @@ describe('normative search behavior', () => {
 });
 
 describe('protocol mutation HTTP contracts', () => {
-  it('uses the three backend bulk endpoints and includes the current version', async () => {
+  it('uses only the atomic draft-results endpoint for bulk result changes', async () => {
     const calls: Array<{ method: string; path: string; body: unknown }> = [];
-    const response = { data: { id: '42', templateId: 'ambient_air', status: 'DRAFT', version: 15, results: [] } };
+    const draft = { id: '42', templateId: 'ambient_air', status: 'DRAFT', version: 14, results: [
+      { id: '1', values: { indicatorName: 'A' }, measurementDeviceId: null },
+      { id: '2', values: { indicatorName: 'B' }, measurementDeviceId: null },
+    ] };
+    const response = { data: { ...draft, version: 15 } };
     server.use(
-      http.patch('http://localhost/api/protocols/42/results/bulk-device', async ({ request }) => {
+      http.put('http://localhost/api/protocols/42/draft-results', async ({ request }) => {
         calls.push({ method: request.method, path: new URL(request.url).pathname, body: await request.json() });
         return HttpResponse.json(response);
       }),
-      http.patch('http://localhost/api/protocols/42/results/bulk-place', async ({ request }) => {
-        calls.push({ method: request.method, path: new URL(request.url).pathname, body: await request.json() });
-        return HttpResponse.json(response);
-      }),
-      http.delete('http://localhost/api/protocols/42/results/bulk', async ({ request }) => {
-        calls.push({ method: request.method, path: new URL(request.url).pathname, body: await request.json() });
-        return HttpResponse.json(response);
-      }),
-      http.get('http://localhost/api/protocols/42', () => HttpResponse.json(response)),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: draft })),
     );
 
     await bulkAssignDevice('42', ['1', '2'], 9, 14);
@@ -187,19 +184,19 @@ describe('protocol mutation HTTP contracts', () => {
 
     expect(calls).toEqual([
       {
-        method: 'PATCH',
-        path: '/api/protocols/42/results/bulk-device',
-        body: { resultIds: ['1', '2'], measurementDeviceId: 9, version: 14 },
+        method: 'PUT',
+        path: '/api/protocols/42/draft-results',
+        body: expect.objectContaining({ version: 14, results: expect.any(Array) }),
       },
       {
-        method: 'PATCH',
-        path: '/api/protocols/42/results/bulk-place',
-        body: { resultIds: ['1'], measurementPlace: 'Точка №1', version: 14 },
+        method: 'PUT',
+        path: '/api/protocols/42/draft-results',
+        body: expect.objectContaining({ version: 14, results: expect.any(Array) }),
       },
       {
-        method: 'DELETE',
-        path: '/api/protocols/42/results/bulk',
-        body: { resultIds: ['2'], version: 14 },
+        method: 'PUT',
+        path: '/api/protocols/42/draft-results',
+        body: expect.objectContaining({ version: 14, results: expect.any(Array) }),
       },
     ]);
   });

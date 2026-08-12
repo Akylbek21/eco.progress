@@ -43,13 +43,22 @@ const PekSettingsPage = () => {
     setForm(toRequest(settings.data));
   }, [settings.data]);
   const save = useMutation({
-    mutationFn: (body: PekSettingsUpdateRequest) => pekApi.updateSettings(body),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: settingsKey });
-      await settings.refetch();
+    mutationFn: async (body: PekSettingsUpdateRequest) => {
+      await pekApi.updateSettings(body);
+      const confirmed = await pekApi.getSettings();
+      if (JSON.stringify(toRequest(confirmed)) !== JSON.stringify(body)) {
+        throw new Error('Сервер не подтвердил сохранение всех настроек ПЭК. Показаны актуальные серверные значения.');
+      }
+      return confirmed;
+    },
+    onSuccess: (confirmed) => {
+      queryClient.setQueryData(settingsKey, confirmed);
       setMessage('Настройки ПЭК сохранены.');
     },
-    onError: (error) => setMessage(parseApiError(error, 'Не удалось сохранить настройки ПЭК.').message),
+    onError: async (error) => {
+      setMessage(parseApiError(error, 'Не удалось сохранить настройки ПЭК.').message);
+      await settings.refetch();
+    },
   });
   if (settings.isLoading) return <PekLoading />;
   if (settings.isError) return <PekQueryError error={settings.error} resource="настройки ПЭК" retry={() => void settings.refetch()} />;

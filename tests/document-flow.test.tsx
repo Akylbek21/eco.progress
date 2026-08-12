@@ -513,15 +513,25 @@ describe('document flow secure commands and components', () => {
     expect(source).toContain('canManageAccess');
   });
 
-  it('provides a staff entry page with an explicit sign-in button', () => {
+  it('opens document flow from the existing staff CRM session without another sign-in', () => {
     const app = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
     const layout = readFileSync(resolve(process.cwd(), 'src/layouts/StaffLayout.tsx'), 'utf8');
     const entry = readFileSync(resolve(process.cwd(), 'src/features/document-flow/pages/DocumentFlowEntryPage.tsx'), 'utf8');
     expect(app).toContain('path="/staff/document-flow"');
     expect(layout).toContain("label: 'Документооборот', path: '/staff/document-flow'");
-    expect(entry).toContain('Войти под аккаунтом организации');
-    expect(entry).toContain('to="/document-flow/login?redirect=%2Fdocument-flow"');
-    expect(entry).toContain('onClick={logout}');
+    expect(entry).toContain('<Navigate to="/document-flow/documents" replace />');
+    expect(entry).not.toContain('document-flow/login');
+    expect(entry).not.toContain('logout');
+  });
+
+  it('keeps the staff workspace focused on upload and signing', () => {
+    const layout = readFileSync(resolve(process.cwd(), 'src/features/document-flow/layout/DocumentFlowLayout.tsx'), 'utf8');
+    const list = readFileSync(resolve(process.cwd(), 'src/features/document-flow/pages/DocumentsPage.tsx'), 'utf8');
+    const create = readFileSync(resolve(process.cwd(), 'src/features/document-flow/pages/CreateDocumentPage.tsx'), 'utf8');
+    expect(layout).toContain("['/document-flow/documents', 'Документы', true]");
+    expect(layout).toContain("['/document-flow/documents?requiresMySignature=true', 'Ожидают моей подписи', true]");
+    expect(list).toContain('Загрузить документ');
+    expect(create).toContain('Загрузить и отправить на подпись');
   });
 
   it('provides the public request and sign-in path without inventing access-request DTO fields', () => {

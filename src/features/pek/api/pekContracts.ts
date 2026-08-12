@@ -246,6 +246,15 @@ export interface PekReport {
   linkedProtocolCount: number;
   linkedProtocolNumbers: string[];
   lastCollectedAt?: string | null;
+  returnInfo?: {
+    reason?: string;
+    comment?: string;
+    returnedAt?: string;
+    returnedBy?: {
+      id?: number;
+      name?: string;
+    };
+  } | null;
   availableActions: Record<string, boolean>;
 }
 export type PekReportFilters = {

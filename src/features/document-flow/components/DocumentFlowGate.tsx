@@ -52,7 +52,7 @@ const accessReason = (access: AccessContext) => {
 };
 
 export default function DocumentFlowGate() {
-  const { user, isAuthenticated, loading, logout } = useAuth();
+  const { user, isAuthenticated, isStaff, loading } = useAuth();
   const location = useLocation();
   const queryClient = useQueryClient();
   const [requestOpen, setRequestOpen] = useState(false);
@@ -100,7 +100,7 @@ export default function DocumentFlowGate() {
     return <Container maxWidth="md" sx={{ py: 8 }}><ContractError error={tenant.organizationsQuery.error} retry={() => void tenant.organizationsQuery.refetch()} /></Container>;
   }
   if (!tenant.organizations.length) {
-    return <Container maxWidth="md" sx={{ py: 8 }}><Stack spacing={2}><Alert severity="warning"><Typography fontWeight={700}>Документооборот пока не подключён</Typography><Typography variant="body2">Ваш аккаунт ещё не добавлен ни в одну организацию документооборота.</Typography></Alert><Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}><Button component={Link} to="/document-flow/request" variant="contained">Оставить заявку</Button><Button component={Link} to="/document-flow/login?redirect=%2Fdocument-flow" onClick={logout} variant="outlined">Войти под другим аккаунтом</Button></Stack></Stack></Container>;
+    return <Container maxWidth="md" sx={{ py: 8 }}><Stack spacing={2}><Alert severity="warning"><Typography fontWeight={700}>Документооборот пока не подключён</Typography><Typography variant="body2">Для текущего сотрудника CRM не настроена организация документооборота. Повторный вход не требуется — попросите администратора добавить сотрудника.</Typography></Alert>{!isStaff && <Button component={Link} to="/document-flow/request" variant="contained" sx={{ alignSelf: 'flex-start' }}>Оставить заявку</Button>}</Stack></Container>;
   }
   if (tenant.selectionRequired) {
     return (
@@ -139,7 +139,7 @@ export default function DocumentFlowGate() {
           {activateMembership.isError && <Alert severity="error">{mapDocumentFlowError(activateMembership.error).message}</Alert>}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'flex-start' }}>
             {!invited && <Button variant="contained" onClick={() => setRequestOpen(true)}>Оставить заявку</Button>}
-            <Button component={Link} to="/document-flow/login?redirect=%2Fdocument-flow" onClick={logout} variant="outlined">Войти под другим аккаунтом</Button>
+            {!isStaff && <Button component={Link} to="/document-flow/request" variant="outlined">Оставить заявку</Button>}
             {canManageAccess && <Button component={Link} to={`/admin/document-flow-access?organizationId=${tenant.organizationId}`} variant="outlined">Управление подпиской</Button>}
           </Stack>
           {!invited && requestOpen && plans.isLoading && <Stack alignItems="center" py={3}><CircularProgress /></Stack>}

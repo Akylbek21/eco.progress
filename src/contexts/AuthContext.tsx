@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import type { User, UserRole } from '../types';
 import { clearStoredDocumentFlowOrganizations } from '../features/document-flow/model/organizationSelection';
+import { clearCompanyQueries } from '../features/companies/companyCache';
 
 type AuthState = {
   user: User | null;
@@ -44,7 +45,7 @@ export type RegisterPayload =
 const TOKEN_KEY = 'eco-progress-token';
 const USER_KEY = 'eco-progress-user';
 
-const staffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
+const staffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST', 'STAFF'];
 
 type AuthResponsePayload = {
   data?: Record<string, unknown>;
@@ -127,14 +128,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(!!localStorage.getItem(TOKEN_KEY));
+  const userIdRef = useRef(user?.id);
 
   const saveSession = useCallback((newToken: string, newUser: User) => {
     queryClient.removeQueries({ queryKey: ['pek'] });
+    if (userIdRef.current !== newUser.id) clearCompanyQueries(queryClient);
     localStorage.setItem(TOKEN_KEY, newToken);
     localStorage.setItem(USER_KEY, JSON.stringify(newUser));
     sessionStorage.removeItem('eco-progress-401-redirect');
     setToken(newToken);
     setUserState(newUser);
+    userIdRef.current = newUser.id;
   }, [queryClient]);
 
   const clearSession = useCallback(() => {
@@ -146,19 +150,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     queryClient.removeQueries({ queryKey: ['protocol'] });
     queryClient.removeQueries({ queryKey: ['protocol-results'] });
     queryClient.removeQueries({ queryKey: ['pek'] });
+    clearCompanyQueries(queryClient);
     setToken(null);
     setUserState(null);
+    userIdRef.current = undefined;
   }, [queryClient]);
 
   const refreshUser = useCallback(async () => {
     if (!localStorage.getItem(TOKEN_KEY)) return null;
     const { data } = await api.get<{ data: User; message: string | null }>('/auth/me');
     const nextUser = normalizeStoredUser(data.data);
+    if (userIdRef.current !== nextUser.id) clearCompanyQueries(queryClient);
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
     setUserState((currentUser) => {
       if (currentUser?.id !== nextUser.id) queryClient.removeQueries({ queryKey: ['pek'] });
       return nextUser;
     });
+    userIdRef.current = nextUser.id;
     return nextUser;
   }, [queryClient]);
 
@@ -208,8 +216,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const setUser = useCallback((u: User) => {
     queryClient.removeQueries({ queryKey: ['pek'] });
+    if (userIdRef.current !== u.id) clearCompanyQueries(queryClient);
     localStorage.setItem(USER_KEY, JSON.stringify(u));
     setUserState(u);
+    userIdRef.current = u.id;
   }, [queryClient]);
 
   const isAuthenticated = !!token && !!user;

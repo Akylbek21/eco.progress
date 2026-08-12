@@ -466,7 +466,7 @@ const CreateProtocolWizardModal = ({ open, onClose, onCreated, orderId = '', ord
         const file = await protocolService.downloadPdf(created.id);
         const cmsSignatureBase64 = await createProtocolCmsSignature(file.blob, setSigningPhase);
         setSigningPhase('VERIFYING_SIGNATURE');
-        created = await protocolService.signProtocol(created.id, { cmsSignatureBase64 });
+        created = await protocolService.signProtocol(created.id, { cmsSignatureBase64, version: created.version });
         setSigningPhase('SIGNED');
       }
       await Promise.all([

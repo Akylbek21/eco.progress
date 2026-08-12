@@ -42,13 +42,17 @@ test('workflow keeps version in body, one revision reason and backend permission
   assert.match(permissions, /flag\('canPublish'\)/);
 });
 
-test('bulk result operations use atomic backend endpoints', async () => {
+test('all result changes use the single atomic draft-results endpoint', async () => {
   const table = await read('src/components/protocols/ProtocolResultsTable.tsx');
   const api = await read('src/services/apiProtocolService.ts');
+  const bulkAdd = table.slice(table.indexOf('const addBulk'), table.indexOf('const addManualIndicator'));
   assert.doesNotMatch(table, /Promise\.allSettled/);
-  assert.match(api, /results\/bulk-device/);
-  assert.match(api, /results\/bulk-place/);
-  assert.match(api, /results\/bulk`/);
+  assert.match(bulkAdd, /saveProtocolDraftResults/);
+  assert.doesNotMatch(bulkAdd, /addProtocolResult/);
+  assert.match(api, /protocols\/\$\{protocolId\}\/draft-results/);
+  assert.match(api, /saveProtocolDraftResults/);
+  assert.doesNotMatch(api, /results\/bulk-device/);
+  assert.doesNotMatch(api, /results\/bulk-place/);
   assert.doesNotMatch(api, /results\/bulk-update/);
   assert.doesNotMatch(api, /results\/bulk-delete/);
 });

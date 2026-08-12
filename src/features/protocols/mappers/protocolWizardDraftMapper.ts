@@ -34,7 +34,7 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
   testingStartDate: nullableText(form.testingStartDate),
   testingEndDate: nullableText(form.testingEndDate),
   laboratoryId: nullableNumber(form.laboratoryId),
-  executorId: nullableNumber(form.executorId),
+  laboratoryEmployeeId: nullableNumber(form.executorId),
   orderId: nullableText(form.orderId),
   orderServiceItemId: nullableText(form.orderServiceItemId),
   environment: {
@@ -202,6 +202,7 @@ export const mapProtocolToWizardForm = (protocol: Protocol): ProtocolWizardForm 
       normativeId: textValue(row.values.normativeId), normativeValue: textValue(row.values.normativeValue ?? row.normativeValue),
       normativeMin: textValue(row.values.normativeMin ?? row.normativeMin), normativeMax: textValue(row.values.normativeMax ?? row.normativeMax),
       comparisonType: textValue(row.values.comparisonType ?? row.comparisonType), normativeDocument: textValue(row.values.normativeDocument ?? row.normativeDocument),
+      manualNormativeReason: textValue(row.values.manualNormativeReason),
       testingMethodNd: textValue(row.values.testingMethodNd ?? row.testingMethodNd), samplingMethodNd: textValue(row.values.samplingMethodNd ?? row.samplingMethodNd),
       note: textValue(row.values.note ?? row.comment),
     })),

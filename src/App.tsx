@@ -8,10 +8,11 @@ import AnalyticsRouteTracker from './components/AnalyticsRouteTracker';
 import { useToast } from './hooks/useToast';
 import { useAuth } from './contexts/AuthContext';
 import type { UserRole } from './types';
-import { companyRoleMatrix, hasPermission } from './config/permissions';
+import { hasPermission } from './config/permissions';
 import { publicRouteLoaders } from './utils/publicRoutePreload';
 import PekLayout from './features/pek/routes/PekLayout';
 import { canUsePekPermission, canViewPek, pekViewRoles } from './features/pek/permissions/pekAccess';
+import { hasCompanyPermission, type CompanyPermissionAction } from './features/companies/companyPermissions';
 
 const lazyNamed = <T extends Record<string, unknown>, K extends keyof T>(loader: () => Promise<T>, key: K) =>
   lazy(() => loader().then((module) => ({ default: module[key] as unknown as ComponentType<Record<string, unknown>> })));
@@ -96,8 +97,6 @@ const StaffUserRolesPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffU
 const allStaffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST', 'STAFF'];
 const protocolRoles: UserRole[] = allStaffRoles;
 const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
-const companyReadRoles: UserRole[] = [...companyRoleMatrix.read];
-const companyManageRoles: UserRole[] = [...companyRoleMatrix.write];
 const pekRoles: UserRole[] = [...pekViewRoles];
 
 const PekAccess = ({ children }: { children: ReactNode }) => {
@@ -123,6 +122,12 @@ const ProtocolCreateAccess = ({ children }: { children: ReactNode }) => {
   return hasPermission(user, 'create_protocols')
     ? <>{children}</>
     : <ForbiddenPage message="У вас нет права создавать лабораторные протоколы." />;
+};
+const CompanyPermissionAccess = ({ permission, children }: { permission: CompanyPermissionAction; children: ReactNode }) => {
+  const { user } = useAuth();
+  return hasCompanyPermission(user, permission)
+    ? <>{children}</>
+    : <ForbiddenPage message="У вас нет права для выполнения этого действия с компаниями." />;
 };
 
 const StaffAccess = ({ roles, children }: { roles?: UserRole[]; children: ReactNode }) => {
@@ -274,15 +279,14 @@ function App() {
         <Route path="/staff/content/redirects/:id" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentEditorPage type="REDIRECT" /></StaffLayout></RoleAccess>} />
         <Route path="/staff/content/audit" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentAuditPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/content/analytics" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><ContentAnalyticsPage /></StaffLayout></RoleAccess>} />
-        <Route path="/staff/companies" element={<RoleAccess roles={companyReadRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={companyReadRoles}><ErrorBoundary fallbackTitle="Не удалось открыть компании"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/companies/new" element={<RoleAccess roles={companyManageRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={companyManageRoles}><ErrorBoundary fallbackTitle="Не удалось открыть создание компании"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/companies/:companyId" element={<RoleAccess roles={companyReadRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={companyReadRoles}><ErrorBoundary fallbackTitle="Не удалось открыть компанию"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/companies/:companyId/edit" element={<RoleAccess roles={companyManageRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={companyManageRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактирование компании"><CompaniesPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><CompanyPermissionAccess permission="read"><ErrorBoundary fallbackTitle="Не удалось открыть компании"><CompaniesPage /></ErrorBoundary></CompanyPermissionAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies/new" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><CompanyPermissionAccess permission="create"><ErrorBoundary fallbackTitle="Не удалось открыть создание компании"><CompaniesPage /></ErrorBoundary></CompanyPermissionAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies/:companyId" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><CompanyPermissionAccess permission="read"><ErrorBoundary fallbackTitle="Не удалось открыть компанию"><CompaniesPage /></ErrorBoundary></CompanyPermissionAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/companies/:companyId/edit" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><CompanyPermissionAccess permission="edit"><ErrorBoundary fallbackTitle="Не удалось открыть редактирование компании"><CompaniesPage /></ErrorBoundary></CompanyPermissionAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/commercial-offers" element={<RoleAccess roles={['MANAGER', 'ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER']}><StaffCommercialOffersPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/contracts" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER', 'ACCOUNTANT']}><StaffContractsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/tasks" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffTasksPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/documents" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDocumentsPage /></StaffLayout></RoleAccess>} />
-        <Route path="/staff/documents/:orderId" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDocumentsPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/document-flow" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><DocumentFlowEntryPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/calendar" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']}><StaffCalendarPage /></StaffAccess></StaffLayout></RoleAccess>} />

@@ -46,7 +46,7 @@ export interface UpdateProtocolRequest {
   protocolDate: string;
   objectId: string | number | null;
   executor: string | null;
-  executorId: string | number | null;
+  laboratoryEmployeeId: string | number | null;
   measurementDate: string | null;
   measurementTime: string | null;
   measurementPlace: string | null;
@@ -121,7 +121,7 @@ export interface CreateProtocolDraftRequest {
   protocolDate: string | null;
   measurementDate: string | null;
   laboratoryId: number | null;
-  executorId: number | null;
+  laboratoryEmployeeId: number | null;
   orderId: string | null;
   orderServiceItemId: string | null;
   printVisibility: ProtocolPrintVisibility;
@@ -138,6 +138,12 @@ export interface ProtocolResultRequest {
   values: Record<string, ProtocolResultValue>;
   measurementDeviceId: string | number | null;
   normativeId: string | number | null;
+}
+
+/** PUT /protocols/{id}/draft-results replaces all draft rows atomically. */
+export interface SaveProtocolDraftResultsRequest {
+  version: number;
+  results: ProtocolResultRequest[];
 }
 
 export interface ProtocolsQueryRequest {
@@ -224,7 +230,7 @@ export interface QuickCreateProtocolRequest {
   companyId: number;
   objectId: number;
   laboratoryId: number;
-  executorId: number;
+  laboratoryEmployeeId: number;
   measurementTime?: string;
   measurementPlace: string;
   sourceNumber: string;
@@ -246,7 +252,7 @@ export interface ReturnForRevisionRequest extends ProtocolVersionRequest {
 export type ReplaceProtocolRequest = ReturnForRevisionRequest;
 export type CancelProtocolRequest = ReturnForRevisionRequest;
 
-export interface SignProtocolRequest {
+export interface SignProtocolRequest extends ProtocolVersionRequest {
   cmsSignatureBase64: string;
 }
 

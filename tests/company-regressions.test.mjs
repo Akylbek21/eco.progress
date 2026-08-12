@@ -79,12 +79,15 @@ test('company archive is confirmed, non-optimistic and invalidates related queri
   assert.match(service, /companies\/\$\{id\}\/archive/);
 });
 
-test('LABORATORY is read-only and MANAGER can create and update but not archive', async () => {
+test('company routes use auth/me permissions and have no local role matrix', async () => {
   const [, , , , app, permissions] = await sources;
-  assert.match(permissions, /read: \['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER', 'LABORATORY'\]/);
-  assert.match(permissions, /write: \['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER'\]/);
-  assert.match(permissions, /archive: \['ADMIN', 'DIRECTOR', 'HEAD'\]/);
-  assert.match(app, /roles=\{companyManageRoles\}/);
+  const companyPermissions = await read('src/features/companies/companyPermissions.ts');
+  assert.doesNotMatch(permissions, /companyRoleMatrix/);
+  assert.match(app, /CompanyPermissionAccess permission="read"/);
+  assert.match(app, /CompanyPermissionAccess permission="create"/);
+  assert.match(app, /CompanyPermissionAccess permission="edit"/);
+  assert.match(companyPermissions, /Array\.isArray\(user\?\.permissions\)/);
+  assert.doesNotMatch(companyPermissions, /user\.role|rolePermissions/);
 });
 
 test('object create, update and soft archive use the single company service', async () => {
@@ -93,6 +96,8 @@ test('object create, update and soft archive use the single company service', as
   assert.match(page, /updateCompanyObject\(companyId, editing\.id, request\)/);
   assert.match(page, /archiveCompanyObject\(companyId, archiveTarget\.id\)/);
   assert.match(service, /objects\/\$\{objectId\}\/archive/);
+  assert.match(page, /getCompanyObjects\(companyId, true, signal\)/);
+  assert.match(page, /restoreCompanyObject\(companyId, archiveTarget\.id\)/);
   assert.doesNotMatch(service, /api\.delete/);
 });
 
@@ -106,12 +111,15 @@ test('virtual objects are editable, refreshed and never physically deleted', asy
 
 test('company form trims values, sends nulls and validates Kazakhstan requisites', async () => {
   const [, , form] = await sources;
+  const navigationGuard = await read('src/hooks/useUnsavedChangesWarning.ts');
   assert.match(form, /value\.trim\(\) \|\| null/);
   assert.match(form, /\^KZ\\d\{2\}\[A-Z0-9\]\{16\}\$/);
   assert.match(form, /\^\[A-Z0-9\]\{8\}/);
   assert.match(form, /\^\\d\{2\}\$/);
-  assert.match(form, /beforeunload/);
+  assert.match(navigationGuard, /beforeunload/);
+  assert.match(navigationGuard, /popstate/);
   assert.match(form, /Есть несохранённые изменения\. Закрыть форму\?/);
+  for (const field of ['directorName', 'responsiblePerson', 'responsiblePersonPhone']) assert.match(form, new RegExp(`${field}: nullable`));
 });
 
 test('table actions are siblings and stop row propagation', async () => {

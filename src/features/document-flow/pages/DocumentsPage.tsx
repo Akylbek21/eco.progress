@@ -12,6 +12,7 @@ import { canMutate } from '../model/access';
 import { useDocumentFlowContext } from '../components/DocumentFlowGate';
 import DocumentStatusBadge from '../components/DocumentStatusBadge';
 import { useDocumentFlowTenant } from '../hooks/useDocumentFlowTenant';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const statusOptions = [
   ['DRAFT', 'Черновик'], ['READY_FOR_SIGNING', 'Готов к подписанию'], ['SENT_FOR_SIGNING', 'На подписании'],
@@ -22,6 +23,7 @@ const statusOptions = [
 
 export default function DocumentsPage() {
   const access = useDocumentFlowContext();
+  const { isStaff } = useAuth();
   const tenant = useDocumentFlowTenant();
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState(params.get('query') || '');
@@ -47,10 +49,14 @@ export default function DocumentsPage() {
   return (
     <Stack spacing={3}>
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={2}>
-        <Typography variant="h4" fontWeight={800}>Документы</Typography>
-        {canMutate(access, 'CREATE_DOCUMENT', 'DOCUMENT_CREATE') && <Button component={Link} to="/document-flow/documents/new" variant="contained">Создать</Button>}
+        <Box><Typography variant="h4" fontWeight={800}>Документооборот</Typography>{isStaff && <Typography color="text.secondary">Загрузите документ, отправьте на подпись и храните подписанный файл.</Typography>}</Box>
+        {canMutate(access, 'CREATE_DOCUMENT', 'DOCUMENT_CREATE') && <Button component={Link} to="/document-flow/documents/new" variant="contained">Загрузить документ</Button>}
       </Stack>
-      <Grid container spacing={2}>
+      {isStaff && <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <TextField fullWidth label="Найти документ" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <FormControlLabel sx={{ minWidth: 250 }} control={<Checkbox checked={params.get('requiresMySignature') === 'true'} onChange={(event) => set('requiresMySignature', event.target.checked ? 'true' : '')} />} label="Ожидают моей подписи" />
+      </Stack>}
+      {!isStaff && <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 4 }}><TextField fullWidth label="Поиск" value={search} onChange={(event) => setSearch(event.target.value)} /></Grid>
         <Grid size={{ xs: 12, sm: 4, md: 2 }}><FormControl fullWidth><InputLabel>Направление</InputLabel><Select label="Направление" value={params.get('direction') || ''} onChange={(event) => set('direction', event.target.value)}><MenuItem value="">Все</MenuItem><MenuItem value="INCOMING">Входящие</MenuItem><MenuItem value="OUTGOING">Исходящие</MenuItem><MenuItem value="INTERNAL">Внутренние</MenuItem></Select></FormControl></Grid>
         <Grid size={{ xs: 12, sm: 4, md: 3 }}><FormControl fullWidth><InputLabel>Тип</InputLabel><Select label="Тип" value={params.get('type') || ''} onChange={(event) => set('type', event.target.value)}><MenuItem value="">Все</MenuItem>{(types.data || []).filter((item) => item.active).map((item) => <MenuItem key={item.type} value={item.type}>{item.title}</MenuItem>)}</Select></FormControl></Grid>
@@ -65,7 +71,7 @@ export default function DocumentsPage() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}><FormControlLabel control={<Checkbox checked={params.get('requiresMySignature') === 'true'} onChange={(event) => set('requiresMySignature', event.target.checked ? 'true' : '')} />} label="Требует моей подписи" /></Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}><FormControlLabel control={<Checkbox checked={params.get('overdue') === 'true'} onChange={(event) => set('overdue', event.target.checked ? 'true' : '')} />} label="Просроченные" /></Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}><Button onClick={() => { setSearch(''); setParams(resetDocumentFilterParams(filters.size)); }}>Сбросить фильтры</Button></Grid>
-      </Grid>
+      </Grid>}
       {query.isLoading && <Stack>{[1, 2, 3].map((key) => <Skeleton key={key} height={90} />)}</Stack>}
       {query.isError && <Alert severity="error" action={<Button onClick={() => query.refetch()}>Повторить</Button>}>{query.error.message}</Alert>}
       {!query.isLoading && !query.data?.items.length && <Alert severity="info">{Object.keys(filters).some((key) => !['page', 'size', 'sort'].includes(key)) ? 'По заданным фильтрам документов нет.' : 'Документы ещё не созданы.'}</Alert>}

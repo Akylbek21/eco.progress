@@ -44,6 +44,7 @@ import type {
   SignProtocolRequest,
   ProtocolVersionRequest,
   CreateProtocolDraftRequest,
+  SaveProtocolDraftResultsRequest,
   UpdateProtocolDraftRequest,
 } from '../features/protocols/api/protocolContracts';
 import { normalizeProtocolStatus } from '../config/protocolStatus';
@@ -231,7 +232,7 @@ export const normalizeProtocolResult = (raw: unknown): ProtocolResultRow => {
       validFrom: pick(normativeSource, ['validFrom']),
       validUntil: pick(normativeSource, ['validUntil']),
       version: pick(normativeSource, ['version']),
-      active: normativeSource.active !== false,
+      active: normativeSource.active === true || firstString(normativeSource.status).toUpperCase() === 'ACTIVE',
     } : undefined,
     calculationDetails: Object.keys(calculationSource).length ? normalizeCalculationDetails(calculationSource) : undefined,
     uncertaintyValue: firstString(source.uncertaintyValue, values.uncertaintyValue),
@@ -770,7 +771,8 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     explanatoryNote: pick(source, ['explanatoryNote', 'note']),
     complianceResult: pick(source, ['complianceStatus', 'complianceResult', 'overallStatus', 'internalStatus']),
     executor: pick(asRecord(source.executor), ['fullName', 'name']) || pick(source, ['executorName']) || pick(laboratory, ['executor', 'executorName']),
-    executorId: pick(source, ['executorId', 'laboratoryEmployeeId', 'executor_id']) || pick(asRecord(source.executor), ['laboratoryEmployeeId', 'id']) || pick(laboratory, ['executorId']),
+    executorId: pick(source, ['laboratoryEmployeeId', 'executorId', 'executor_id']) || pick(asRecord(source.executor), ['laboratoryEmployeeId', 'id']) || pick(laboratory, ['laboratoryEmployeeId', 'executorId']),
+    laboratoryEmployeeId: pick(source, ['laboratoryEmployeeId', 'executorId', 'executor_id']) || pick(asRecord(source.executor), ['laboratoryEmployeeId', 'id']),
     approver: pick(source, ['approver']),
     approvedAt: pick(source, ['approvedAt', 'approved_at']),
     signedAt: pick(source, ['signedAt', 'signed_at']),
@@ -855,7 +857,10 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     monitoringPointId: pick(pekContext, ['monitoringPointId', 'monitoring_point_id']) || pick(source, ['monitoringPointId', 'monitoring_point_id']),
     emissionSourceId: pick(pekContext, ['emissionSourceId', 'emission_source_id']) || pick(source, ['emissionSourceId', 'emission_source_id']),
     waterOutletId: pick(pekContext, ['waterOutletId', 'water_outlet_id']) || pick(source, ['waterOutletId', 'water_outlet_id']),
-    permissions: mapProtocolPermissions(source.permissions ?? source.availableActions),
+    permissions: mapProtocolPermissions(source.permissions),
+    availableActions: Array.isArray(source.availableActions)
+      ? source.availableActions.filter((action): action is string => typeof action === 'string').map((action) => action.trim().toUpperCase()).filter(Boolean)
+      : [],
     canComplete: source.canComplete === true,
     blockingReasons: Array.isArray(source.blockingReasons) ? source.blockingReasons.map(String) : [],
     publishedToClientAt: pick(source, ['publishedAt', 'publishedToClientAt', 'published_to_client_at']),
@@ -1030,7 +1035,7 @@ export const toQuickCreateProtocolApiPayload = (
   companyId: payload.companyId,
   objectId: payload.objectId,
   laboratoryId: payload.laboratoryId,
-  executorId: payload.executorId,
+  laboratoryEmployeeId: payload.laboratoryEmployeeId,
   measurementTime: payload.measurementTime,
   measurementPlace: payload.measurementPlace,
   sourceNumber: payload.sourceNumber,
@@ -1177,8 +1182,7 @@ export async function quickCreateProtocol(params: {
 }
 
 export async function refreshLaboratoryData(protocolId: string, version: number): Promise<Protocol> {
-  await assertCurrentProtocolVersion(protocolId, version);
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/refresh-laboratory-data`);
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/refresh-laboratory-data`, { version });
   return requireProtocol(unwrapData(response), 'refresh laboratory data');
 }
 
@@ -1192,16 +1196,6 @@ export async function getProtocol(protocolId: string): Promise<Protocol> {
 }
 
 export const getProtocolById = getProtocol;
-
-const assertCurrentProtocolVersion = async (protocolId: string, expectedVersion: number): Promise<void> => {
-  const current = await getProtocol(protocolId);
-  if (current.version !== expectedVersion) {
-    const error = new Error('Протокол изменён другим сотрудником. Обновите данные перед продолжением.') as Error & { code: string; status: number };
-    error.code = 'PROTOCOL_VERSION_CONFLICT';
-    error.status = 409;
-    throw error;
-  }
-};
 
 export async function updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol> {
   const request = mapProtocolFormToPatchRequest(payload, payload.version);
@@ -1240,29 +1234,57 @@ export async function updateProtocolDraft(protocolId: string, payload: UpdatePro
   return protocolFromActionResponse(protocolId, response);
 }
 
+export async function saveProtocolDraftResults(
+  protocolId: string,
+  request: SaveProtocolDraftResultsRequest,
+): Promise<Protocol> {
+  const response = await api.put<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/draft-results`, request);
+  await protocolFromActionResponse(protocolId, response);
+  return getProtocol(protocolId);
+}
+
 export async function deleteProtocol(protocolId: string, version: number): Promise<void> {
   await api.delete<ApiResponse<null>>(`/protocols/${protocolId}`, { params: { version } });
 }
 
+const persistedResultRequest = (row: ProtocolResultRow) => mapProtocolResultFormToRequest({
+  values: { ...row.values },
+  measurementDeviceId: row.measurementDeviceId ?? row.deviceId ?? null,
+  normativeId: row.normativeReference?.id ?? (
+    Array.isArray(row.values.normativeId) ? row.values.normativeId[0] : row.values.normativeId
+  ) ?? null,
+});
+
+const currentDraftForVersion = async (protocolId: string, _version: number) => getProtocol(protocolId);
+
 export async function addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results`, {
-    ...mapProtocolResultFormToRequest(payload),
+  const current = await currentDraftForVersion(protocolId, version);
+  const clientRowId = `atomic-${globalThis.crypto?.randomUUID?.() || Date.now()}`;
+  const added = mapProtocolResultFormToRequest({ ...payload, values: { ...payload.values, clientRowId } });
+  const updated = await saveProtocolDraftResults(protocolId, {
     version,
+    results: [...current.results.map(persistedResultRequest), added],
   });
-  return requireResult(response);
+  const saved = updated.results.find((row) => row.values.clientRowId === clientRowId) || updated.results[updated.results.length - 1];
+  if (!saved) throw new Error('Backend не вернул сохранённую строку результата.');
+  return saved;
 }
 
 export async function updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow> {
-  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/results/${resultId}`, {
-    ...mapProtocolResultFormToRequest(payload),
+  const current = await currentDraftForVersion(protocolId, version);
+  const updated = await saveProtocolDraftResults(protocolId, {
     version,
+    results: current.results.map((row) => row.id === resultId ? mapProtocolResultFormToRequest(payload) : persistedResultRequest(row)),
   });
-  const result = normalizeResult(extractActionResult(response));
-  return result.id ? result : { id: resultId, values: payload.values };
+  return updated.results.find((row) => row.id === resultId) || { id: resultId, values: payload.values };
 }
 
 export async function deleteProtocolResult(protocolId: string, resultId: string, version: number): Promise<void> {
-  await api.delete<ApiResponse<null>>(`/protocols/${protocolId}/results/${resultId}`, { params: { version } });
+  const current = await currentDraftForVersion(protocolId, version);
+  await saveProtocolDraftResults(protocolId, {
+    version,
+    results: current.results.filter((row) => row.id !== resultId).map(persistedResultRequest),
+  });
 }
 
 export async function getProtocolAudit(protocolId: string): Promise<Protocol['history']> {
@@ -1285,11 +1307,12 @@ export async function bulkAssignDevice(
   measurementDeviceId: string | number,
   version: number,
 ): Promise<Protocol> {
-  const response = await api.patch<ApiResponse<unknown> | unknown>(
-    `/protocols/${protocolId}/results/bulk-device`,
-    { resultIds, measurementDeviceId, version },
-  );
-  return protocolFromActionResponse(protocolId, response);
+  const current = await currentDraftForVersion(protocolId, version);
+  const selected = new Set(resultIds);
+  return saveProtocolDraftResults(protocolId, { version, results: current.results.map((row) => {
+    const request = persistedResultRequest(row);
+    return selected.has(row.id) ? { ...request, measurementDeviceId } : request;
+  }) });
 }
 
 export async function bulkUpdatePlace(
@@ -1298,11 +1321,12 @@ export async function bulkUpdatePlace(
   measurementPlace: string,
   version: number,
 ): Promise<Protocol> {
-  const response = await api.patch<ApiResponse<unknown> | unknown>(
-    `/protocols/${protocolId}/results/bulk-place`,
-    { resultIds, measurementPlace, version },
-  );
-  return protocolFromActionResponse(protocolId, response);
+  const current = await currentDraftForVersion(protocolId, version);
+  const selected = new Set(resultIds);
+  return saveProtocolDraftResults(protocolId, { version, results: current.results.map((row) => {
+    const request = persistedResultRequest(row);
+    return selected.has(row.id) ? { ...request, values: { ...request.values, measurementPlace } } : request;
+  }) });
 }
 
 export async function bulkDeleteResults(
@@ -1310,11 +1334,12 @@ export async function bulkDeleteResults(
   resultIds: string[],
   version: number,
 ): Promise<Protocol> {
-  const response = await api.delete<ApiResponse<unknown> | unknown>(
-    `/protocols/${protocolId}/results/bulk`,
-    { data: { resultIds, version } },
-  );
-  return protocolFromActionResponse(protocolId, response);
+  const current = await currentDraftForVersion(protocolId, version);
+  const selected = new Set(resultIds);
+  return saveProtocolDraftResults(protocolId, {
+    version,
+    results: current.results.filter((row) => !selected.has(row.id)).map(persistedResultRequest),
+  });
 }
 
 export async function checkNormatives(protocolId: string, version: number): Promise<Protocol> {
@@ -1345,7 +1370,7 @@ export async function signProtocol(protocolId: string | number, request: SignPro
   if (!request.cmsSignatureBase64.trim()) throw new Error('CMS-подпись не сформирована.');
   const response = await api.post<ApiResponse<unknown> | unknown>(
     `/protocols/${protocolId}/sign`,
-    { cmsSignatureBase64: request.cmsSignatureBase64 },
+    { cmsSignatureBase64: request.cmsSignatureBase64, version: request.version },
   );
   return requireProtocol(unwrapData(response), 'подписание');
 }
@@ -1387,14 +1412,12 @@ export async function previewProtocol(protocolId: string): Promise<Blob> {
 }
 
 export async function generateDocx(protocolId: string, version: number): Promise<Protocol> {
-  await assertCurrentProtocolVersion(protocolId, version);
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-docx`);
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-docx`, { version });
   return protocolFromActionResponse(protocolId, response);
 }
 
 export async function generatePdf(protocolId: string, version: number): Promise<Protocol> {
-  await assertCurrentProtocolVersion(protocolId, version);
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-pdf`);
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-pdf`, { version });
   return protocolFromActionResponse(protocolId, response);
 }
 
@@ -1453,9 +1476,9 @@ const normalizeBlobError = async (error: unknown): Promise<Error> => {
 };
 
 export async function importExcel(protocolId: string, file: File, version: number): Promise<Protocol> {
-  await assertCurrentProtocolVersion(protocolId, version);
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('version', String(version));
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/import-excel`, formData);
   return protocolFromActionResponse(protocolId, response);
 }
@@ -1598,11 +1621,11 @@ export async function saveRawMeasurements(
   methodTemplateId: string | number | null | undefined,
   version: number,
 ): Promise<ProtocolResultRow | undefined> {
-  const request: SaveRawMeasurementsRequest = {
+  const request: SaveRawMeasurementsRequest & { version: number } = {
     methodTemplateId: methodTemplateId || null,
     measurements: payload,
+    version,
   };
-  await assertCurrentProtocolVersion(protocolId, version);
   const response = await api.post<ApiResponse<unknown> | unknown>(
     `/protocols/${protocolId}/results/${resultId}/raw-measurements`,
     request,
@@ -1615,16 +1638,15 @@ export async function saveRawMeasurements(
 }
 
 export async function calculateResult(protocolId: string, resultId: string, version: number): Promise<CalculationResultResponse> {
-  await assertCurrentProtocolVersion(protocolId, version);
   const response = await api.post<ApiResponse<unknown> | unknown>(
     `/protocols/${protocolId}/results/${resultId}/calculate`,
+    { version },
   );
   return normalizeCalculationResult(unwrapApiResponse<unknown>(response.data), protocolId, resultId);
 }
 
 export async function calculateProtocolSummary(protocolId: string, version: number): Promise<ProtocolCalculationSummaryResponse> {
-  await assertCurrentProtocolVersion(protocolId, version);
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`);
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/calculate`, { version });
   return normalizeCalculationSummary(unwrapApiResponse<unknown>(response.data), protocolId);
 }
 

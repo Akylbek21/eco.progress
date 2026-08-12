@@ -35,6 +35,7 @@ export type ProtocolWizardResult = {
   normativeMax: string;
   comparisonType: string;
   normativeDocument: string;
+  manualNormativeReason: string;
   sourceDocumentCode: string;
   testingMethodNd: string;
   samplingMethodNd: string;
@@ -118,7 +119,7 @@ const createClientRowId = () =>
 export const emptyWizardResult = (): ProtocolWizardResult => ({
   clientRowId: createClientRowId(),
   indicatorName: '', pollutantCode: '', factorType: '', factorCode: '', cas: '', formula: '', unit: '', value: '', textValue: '', samplingPlace: '', samplingDate: '', sampleNumber: '', samplingDepth: '', samplingSpeed: '', sampleVolume: '', waterType: '', direction: '', minimumValue: '', maximumValue: '', averageValue: '', duration: '',
-  measurementDeviceId: '', normativeId: '', normativeSource: 'NONE', normativeStatus: '', normativeValue: '', normativeValueRaw: '', normativeMin: '', normativeMax: '', comparisonType: 'LESS_OR_EQUAL', normativeDocument: '', sourceDocumentCode: '', testingMethodNd: '', samplingMethodNd: '',
+  measurementDeviceId: '', normativeId: '', normativeSource: 'NONE', normativeStatus: '', normativeValue: '', normativeValueRaw: '', normativeMin: '', normativeMax: '', comparisonType: 'LESS_OR_EQUAL', normativeDocument: '', manualNormativeReason: '', sourceDocumentCode: '', testingMethodNd: '', samplingMethodNd: '',
   methodName: '', methodDocument: '', note: '',
 });
 

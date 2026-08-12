@@ -3,11 +3,16 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { hasPermission } from '../model/access';
 import { useDocumentFlowContext } from '../components/DocumentFlowGate';
 import { useDocumentFlowTenant } from '../hooks/useDocumentFlowTenant';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export default function DocumentFlowLayout() {
   const access = useDocumentFlowContext();
   const tenant = useDocumentFlowTenant();
-  const links = [
+  const { isStaff } = useAuth();
+  const links = isStaff ? [
+    ['/document-flow/documents', 'Документы', true],
+    ['/document-flow/documents?requiresMySignature=true', 'Ожидают моей подписи', true],
+  ] as const : [
     ['/document-flow/dashboard', 'Обзор', true],
     ['/document-flow/documents', 'Документы', true],
     ['/document-flow/documents?requiresMySignature=true', 'Ожидают моей подписи', true],

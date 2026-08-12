@@ -59,7 +59,7 @@ const PekReportWorkspacePage = () => {
     enabled: Number.isSafeInteger(id) && id > 0, retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS,
   });
   const program = useQuery({
-    queryKey: pekKeys.program(report.data?.programId || 'pending', report.data?.companyId, user?.id),
+    queryKey: pekKeys.programDetail(report.data?.companyId, report.data?.programId || 'pending'),
     queryFn: ({ signal }) => pekApi.getProgram(report.data!.programId, signal),
     enabled: Boolean(report.data?.programId), retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS,
   });
@@ -94,17 +94,21 @@ const PekReportWorkspacePage = () => {
   };
   const handleMutationError = async (error: unknown, fallback: string) => {
     const mapped = mapPekError(error);
+    const diagnostics = [mapped.code && `код ${mapped.code}`, mapped.traceId && `traceId ${mapped.traceId}`]
+      .filter(Boolean)
+      .join(', ');
+    const message = `${mapped.message || fallback}${diagnostics ? ` (${diagnostics})` : ''}`;
     if (mapped.code === 'PEK_REPORT_NOT_EDITABLE') {
       await report.refetch();
-      setActionError('Отчёт уже перешёл в статус, в котором изменения запрещены');
+      setActionError(`${message}. Отчёт уже перешёл в статус, в котором изменения запрещены.`);
       return;
     }
-    if (mapped.status === 409 || mapped.code === 'OPTIMISTIC_LOCK_CONFLICT' || mapped.code === 'PEK_VERSION_CONFLICT') {
+    if (mapped.status === 409 || mapped.status === 412 || mapped.code === 'OPTIMISTIC_LOCK_CONFLICT' || mapped.code === 'PEK_VERSION_CONFLICT') {
       setConflictOpen(true);
-      setActionError('Данные были изменены другим пользователем');
+      setActionError(message);
       return;
     }
-    setActionError(mapped.message || fallback);
+    setActionError(message);
   };
   const refreshAfterWorkflow = async (expected: string[]) => {
     const actual = await pekApi.getReport(id);
@@ -115,7 +119,15 @@ const PekReportWorkspacePage = () => {
   };
 
   const collect = useMutation({
-    mutationFn: () => pekApi.collectReport(id),
+    mutationFn: async () => {
+      const result = await pekApi.collectReport(id);
+      const actual = await pekApi.getReport(id);
+      if (actual.linkedProtocolCount !== result.linkedProtocolCount) {
+        throw new Error('Сбор завершён, но повторный GET не подтвердил пересчёт связанных протоколов.');
+      }
+      queryClient.setQueryData(pekKeys.report(id, undefined, user?.id), actual);
+      return { ...result, report: actual };
+    },
     onSuccess: async (result) => { setCollectConfirmOpen(false); setCollectionSummary(result); setActionError(null); await invalidateReportData(); },
     onError: (error) => void handleMutationError(error, 'Не удалось собрать данные из протоколов.'),
   });
@@ -137,17 +149,36 @@ const PekReportWorkspacePage = () => {
     onError: (error) => void handleMutationError(error, 'Не удалось архивировать отчёт.'),
   });
   const match = useMutation({
-    mutationFn: () => pekApi.matchReportSource(id, selectedSource!.id, Number(indicatorId), selectedSource!.version),
+    mutationFn: async () => {
+      const sourceId = selectedSource!.id;
+      await pekApi.matchReportSource(id, sourceId, Number(indicatorId), selectedSource!.version);
+      const actual = (await pekApi.getReportSources(id)).find((source) => source.id === sourceId);
+      if (!actual || !['MANUAL', 'MANUALLY_MATCHED', 'MATCHED'].includes(actual.matchStatus)) {
+        throw new Error('Сопоставление отправлено, но повторный GET не подтвердил связь.');
+      }
+      return actual;
+    },
     onSuccess: async () => { setSelectedSource(null); setIndicatorId(''); setActionError(null); await invalidateReportData(); },
     onError: (error) => void handleMutationError(error, 'Не удалось сопоставить результат.'),
   });
   const exclude = useMutation({
-    mutationFn: () => pekApi.excludeReportSource(id, excludeSource!.id, excludeReason.trim(), excludeSource!.version),
+    mutationFn: async () => {
+      const sourceId = excludeSource!.id;
+      await pekApi.excludeReportSource(id, sourceId, excludeReason.trim(), excludeSource!.version);
+      const actual = (await pekApi.getReportSources(id)).find((source) => source.id === sourceId);
+      if (!actual?.excluded) throw new Error('Исключение отправлено, но повторный GET не подтвердил изменение источника.');
+      return actual;
+    },
     onSuccess: async () => { setExcludeSource(null); setExcludeReason(''); setActionError(null); await invalidateReportData(); },
     onError: (error) => void handleMutationError(error, 'Не удалось исключить источник.'),
   });
   const restore = useMutation({
-    mutationFn: (source: PekReportSource) => pekApi.restoreReportSource(id, source.id, source.version),
+    mutationFn: async (source: PekReportSource) => {
+      await pekApi.restoreReportSource(id, source.id, source.version);
+      const actual = (await pekApi.getReportSources(id)).find((item) => item.id === source.id);
+      if (!actual || actual.excluded) throw new Error('Восстановление отправлено, но повторный GET не подтвердил изменение источника.');
+      return actual;
+    },
     onSuccess: invalidateReportData,
     onError: (error) => void handleMutationError(error, 'Не удалось восстановить источник.'),
   });
@@ -167,7 +198,15 @@ const PekReportWorkspacePage = () => {
     <PekPageHeader title={`Отчёт ПЭК за ${item.periodStart} — ${item.periodEnd}`} description={`${item.company?.name || 'Компания не указана'} · ${item.object?.name || 'Объект не указан'} · версия ${item.version}`} actions={<PekStatusBadge status={item.status} />} />
     {actionError && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void report.refetch()}>Обновить данные</MuiButton>}>{actionError}</Alert>}
     <PekReportActions report={item} user={user} isPending={pending} readinessPending={readiness.isFetching} readinessBlocked={readiness.data?.ready === false} onCollect={() => setCollectConfirmOpen(true)} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => void pekApi.getReportReadiness(id).then((latest) => { queryClient.setQueryData(pekKeys.readiness(id, item.companyId, user?.id), latest); const blockers = latest.issues.filter((issue) => issue.blocking).map((issue) => issue.message); setReadinessBlockers(blockers); if (!blockers.length) setApproveConfirmOpen(true); }).catch((error) => void handleMutationError(error, 'Не удалось проверить готовность отчёта.'))} onArchive={() => setArchiveConfirmOpen(true)} />
-    {item.status === 'RETURNED' && <Alert severity="warning"><strong>Отчёт возвращён на доработку.</strong> Текущая версия: {item.version}. Причина, автор и дата возврата отсутствуют в ответе сервиса.</Alert>}
+    {item.status === 'RETURNED' && <Alert severity="warning">
+      <strong>Отчёт возвращён на доработку</strong>
+      {item.returnInfo ? <div className="mt-2 space-y-1">
+        <div><strong>Причина:</strong> {item.returnInfo.reason || 'не указана'}</div>
+        {item.returnInfo.comment && <div><strong>Комментарий:</strong> {item.returnInfo.comment}</div>}
+        <div><strong>Кто вернул:</strong> {item.returnInfo.returnedBy?.name || 'не указано'}</div>
+        <div><strong>Дата возврата:</strong> {item.returnInfo.returnedAt || 'не указана'}</div>
+      </div> : <div className="mt-2">Причина, автор и дата возврата отсутствуют в ответе сервиса. Текущая версия: {item.version}.</div>}
+    </Alert>}
     {readinessBlockers.length > 0 && <Alert severity="error"><strong>Отчёт содержит блокирующие проблемы:</strong><ul className="mt-2 list-disc pl-5">{readinessBlockers.map((message) => <li key={message}>{message}</li>)}</ul></Alert>}
     {collectionSummary && <Alert severity={collectionSummary.warnings.length ? 'warning' : 'success'}>
       Найдено протоколов: {collectionSummary.linkedProtocolCount}. Сопоставлено: {collectionSummary.matchedCount}. Не сопоставлено: {collectionSummary.unmatchedCount}. Неоднозначно: {collectionSummary.ambiguousCount}. Устаревших связей удалено: {collectionSummary.removedStaleSourceCount}.

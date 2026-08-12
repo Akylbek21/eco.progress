@@ -1,11 +1,11 @@
 import { isProtocolStatusEditable, normalizeProtocolStatus } from '../config/protocolStatus';
 import type { Protocol, ProtocolPermissions as BackendProtocolPermissions } from '../types/protocols';
-import { hasProtocolPermission } from '../features/protocols/utils/protocolActions';
+import { hasProtocolAction, hasProtocolPermission } from '../features/protocols/utils/protocolActions';
 
 export { hasProtocolPermission, normalizeProtocolStatus };
 
 type ProtocolUser = { id?: string | number | null; role?: string | null } | null | undefined;
-type ProtocolLike = Pick<Protocol, 'permissions' | 'status'> | null | undefined;
+type ProtocolLike = Pick<Protocol, 'permissions' | 'status' | 'availableActions'> | null | undefined;
 
 export const PROTOCOL_DOCUMENT_ROLES = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'] as const;
 export const PROTOCOL_CREATE_ROLES = PROTOCOL_DOCUMENT_ROLES;
@@ -18,15 +18,15 @@ export const canViewProtocol = (_user: ProtocolUser, protocol?: ProtocolLike) =>
 export const canCreateProtocol = (user: ProtocolUser) => isProtocolDocumentRole(user?.role);
 export const canEditProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canEdit');
 export const canEditResults = canEditProtocol;
-export const canSendForApproval = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canSendToApproval');
+export const canSendForApproval = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolAction(protocol || undefined, 'COMPLETE');
 export const canReturnForRevision = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canReturnForRevision');
 export const canApproveProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canApprove');
-export const canSignProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canSign');
+export const canSignProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolAction(protocol || undefined, 'SIGN');
 export const canCreateCorrection = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canCreateCorrection');
 export const canCancelProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canCancel');
 export const canArchiveProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canArchive');
-export const canDownloadProtocolDocument = (protocol: ProtocolLike, role?: string | null): boolean =>
-  hasProtocolPermission(protocol || undefined, 'canView') && isProtocolDocumentRole(role);
+export const canDownloadProtocolDocument = (protocol: ProtocolLike, _role?: string | null): boolean =>
+  hasProtocolAction(protocol || undefined, 'DOWNLOAD');
 export const canDownloadProtocol = (user: ProtocolUser, protocol: ProtocolLike) =>
   canDownloadProtocolDocument(protocol, user?.role);
 
@@ -50,11 +50,11 @@ export const getProtocolPermissions = (protocol: ProtocolLike, role?: string, _a
     canView: flag('canView'), canEdit: flag('canEdit'), canDelete: flag('canDelete'),
     canCalculate: flag('canCalculate'), canCheckNormatives: flag('canCheckNormatives'),
     canGeneratePreview: flag('canGeneratePreview'), canSendToApproval: flag('canSendToApproval'),
-    canReturnForRevision: flag('canReturnForRevision'), canApprove: flag('canApprove'),
-    canSign: flag('canSign'), canCreateCorrection: flag('canCreateCorrection'),
+    canReturnForRevision: flag('canReturnForRevision'), canApprove: hasProtocolAction(protocol || undefined, 'APPROVE'),
+    canSign: hasProtocolAction(protocol || undefined, 'SIGN'), canCreateCorrection: flag('canCreateCorrection'),
     canCancel: flag('canCancel'), canArchive: flag('canArchive'), canPublish: flag('canPublish'),
     canGenerateDocuments: flag('canGenerateDocuments'), canRegenerateDocuments: flag('canRegenerateDocuments'),
-    canReadyForApproval: flag('canSendToApproval'), canReplace: flag('canCreateCorrection'),
+    canReadyForApproval: hasProtocolAction(protocol || undefined, 'COMPLETE'), canReplace: flag('canCreateCorrection'),
     canDownload: canDownloadProtocolDocument(protocol, role), canManageResults: flag('canEdit'), canManageDevices: flag('canEdit'),
     canViewAudit: flag('canView'),
   };

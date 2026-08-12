@@ -31,6 +31,25 @@ const named = (value: unknown) => {
   };
 };
 
+const returnInfo = (value: unknown): PekReport['returnInfo'] => {
+  if (value === null || value === undefined) return null;
+  const source = row(value);
+  const returnedBy = row(source.returnedBy);
+  return {
+    reason: source.reason == null ? undefined : String(source.reason),
+    comment: source.comment == null ? undefined : String(source.comment),
+    returnedAt: source.returnedAt == null ? undefined : String(source.returnedAt),
+    returnedBy: Object.keys(returnedBy).length ? {
+      id: optionalNumber(returnedBy.id),
+      name: returnedBy.name == null ? undefined : String(returnedBy.name),
+    } : undefined,
+  };
+};
+
+const availableActionFlags = (value: unknown): Record<string, boolean> => Object.fromEntries(
+  Object.entries(row(value)).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean'),
+);
+
 const action = (value: unknown): PekAvailableAction | null => {
   if (typeof value === 'string') {
     const code = value as PekAvailableActionCode;
@@ -110,7 +129,8 @@ export const mapReportResponse = (
     linkedProtocolCount: numberValue(source.linkedProtocolCount),
     linkedProtocolNumbers,
     lastCollectedAt: source.lastCollectedAt == null ? null : String(source.lastCollectedAt),
-    availableActions: Object.fromEntries(Object.entries(row(source.availableActions)).map(([key, enabled]) => [key, Boolean(enabled)])),
+    returnInfo: returnInfo(source.returnInfo),
+    availableActions: availableActionFlags(source.availableActions),
   };
 };
 

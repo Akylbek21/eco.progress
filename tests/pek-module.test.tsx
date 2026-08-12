@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { QueryClient } from '@tanstack/react-query';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { PekProgramForm } from '../src/features/pek/api/pekContracts';
 import { pekApi } from '../src/features/pek/api/pekService';
@@ -23,8 +25,18 @@ import { migrateLegacyDraft, pekDraftKey } from '../src/features/pek/utils/pekDr
 import { currentQuarter } from '../src/features/pek/utils/pekPeriod';
 import { hasPermission } from '../src/config/permissions';
 import { comparisonTypeLabels, migrateComparisonType } from '../src/features/pek/model/pekDictionaries';
-import { canCollectPekReport, canSubmitPekReport } from '../src/features/pek/permissions/pekAccess';
+import {
+  canArchiveReport,
+  canCollectPekReport,
+  canCreateProgram,
+  canCreateReport,
+  canSignReport,
+  canSubmitPekReport,
+  canTransitionExceedance,
+} from '../src/features/pek/permissions/pekAccess';
 import { pekKeys } from '../src/features/pek/api/pekQueryKeys';
+import { commitPekProgramMutation } from '../src/features/pek/api/pekProgramCache';
+import PekReportActions from '../src/features/pek/components/workflow/PekReportActions';
 
 let body: unknown;
 let ifMatch: string | null;
@@ -124,6 +136,7 @@ const server = setupServer(
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  cleanup();
   body = undefined;
   ifMatch = null;
   programListCalls = 0;
@@ -222,6 +235,62 @@ describe('PEK backend contract', () => {
     expect(canCollectPekReport({ role: 'ADMIN' }, { ...item, availableActions: { collect: false } })).toBe(false);
   });
 
+  it('preserves every literal backend report action and fails closed for missing or non-boolean values', () => {
+    const availableActions = {
+      edit: true,
+      collect: true,
+      submitReview: true,
+      approve: false,
+      returnForRevision: true,
+      archive: false,
+      matchSources: true,
+      manageExceedance: true,
+      reviewExceedance: false,
+      generateDocument: true,
+      sign: false,
+    };
+    expect(mapReportResponse({ ...report, availableActions }).availableActions).toEqual(availableActions);
+    expect(mapReportResponse(report).availableActions).toEqual({});
+    expect(mapReportResponse({ ...report, availableActions: { collect: { enabled: true }, archive: null } }).availableActions).toEqual({});
+  });
+
+  it('renders report buttons only for backend actions set to true', () => {
+    const callbacks = {
+      onCollect: () => undefined,
+      onSubmit: () => undefined,
+      onReturn: () => undefined,
+      onApprove: () => undefined,
+      onArchive: () => undefined,
+    };
+    const enabled = mapReportResponse({
+      ...report,
+      availableActions: {
+        collect: true,
+        submitReview: true,
+        returnForRevision: true,
+        approve: true,
+        archive: true,
+      },
+    });
+    const view = render(<PekReportActions report={enabled} user={{ role: 'ADMIN' }} isPending={false} {...callbacks} />);
+    expect(screen.getByRole('button', { name: 'Повторить сбор' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Отправить на проверку' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Вернуть на доработку' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Утвердить' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Архивировать' })).toBeTruthy();
+
+    view.rerender(<PekReportActions
+      report={{ ...enabled, availableActions: { collect: false, submitReview: false, returnForRevision: false, approve: false, archive: false } }}
+      user={{ role: 'ADMIN' }}
+      isPending={false}
+      {...callbacks}
+    />);
+    expect(screen.queryByRole('button')).toBeNull();
+
+    view.rerender(<PekReportActions report={{ ...enabled, availableActions: {} }} user={{ role: 'ADMIN' }} isPending={false} {...callbacks} />);
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
   it('closed report and false availableActions hide source mutations', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
     expect(source).toContain("const canMutateSources = actions.matchSources === true");
@@ -241,6 +310,9 @@ describe('PEK backend contract', () => {
     expect(pekKeys.report(9, 1)).not.toEqual(pekKeys.report(9, 2));
     expect(pekKeys.dashboard({ companyId: 1 })).not.toEqual(pekKeys.dashboard({ companyId: 2 }));
     expect(pekKeys.report(9, 1, 'user-1')).not.toEqual(pekKeys.report(9, 1, 'user-2'));
+    expect(pekKeys.programsRoot()).toEqual(['pek', 'programs']);
+    expect(pekKeys.programList({ companyId: 1 })).not.toEqual(pekKeys.programList({ companyId: 2 }));
+    expect(pekKeys.programDetail(1, 9)).not.toEqual(pekKeys.programDetail(2, 9));
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekQueryKeys.ts'), 'utf8');
     expect(source).not.toContain('localStorage');
   });
@@ -366,11 +438,52 @@ describe('PEK backend contract', () => {
     expect(valid.success).toBe(true);
   });
 
-  it('requires backend auth permissions for PEK operations', () => {
-    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(false);
-    expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(false);
+  it('uses the current backend PEK role contract when auth permissions are absent', () => {
+    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(true);
+    expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(true);
+    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_CREATE')).toBe(true);
+    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_REPORT_CREATE')).toBe(true);
+    expect(hasPermission({ role: 'LABORATORY' }, 'PEK_PROGRAM_CREATE')).toBe(false);
+    expect(hasPermission({ role: 'LABORATORY' }, 'PEK_REPORT_CREATE')).toBe(true);
+    expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_REPORT_CREATE')).toBe(false);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: ['PEK_VIEW'] }, 'PEK_VIEW')).toBe(true);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: [] }, 'PEK_PROGRAM_CREATE')).toBe(false);
+  });
+
+  it('fails closed for an unknown role and prioritizes resource-level actions', () => {
+    const unknown = { role: 'UNKNOWN_ROLE' as never };
+    expect(canCreateProgram(unknown)).toBe(false);
+    expect(canCreateReport(unknown)).toBe(false);
+    expect(canSignReport({ role: 'ADMIN' }, { availableActions: { sign: false } })).toBe(false);
+    expect(canArchiveReport({ role: 'ADMIN' }, { canArchive: false })).toBe(false);
+    expect(canTransitionExceedance({ allowedTransitions: ['IN_REVIEW'] }, 'CLOSED')).toBe(false);
+    expect(canTransitionExceedance({ allowedTransitions: ['CLOSED'] }, 'CLOSED')).toBe(true);
+  });
+
+  it('preserves backend returnInfo through the report mapper', () => {
+    const mapped = mapReportResponse({
+      ...report,
+      status: 'RETURNED',
+      returnInfo: {
+        reason: 'Исправить расчёт',
+        comment: 'Проверить источник',
+        returnedAt: '2026-08-10T12:00:00Z',
+        returnedBy: { id: 7, name: 'Руководитель' },
+      },
+    });
+    expect(mapped.returnInfo).toEqual({
+      reason: 'Исправить расчёт',
+      comment: 'Проверить источник',
+      returnedAt: '2026-08-10T12:00:00Z',
+      returnedBy: { id: 7, name: 'Руководитель' },
+    });
+  });
+
+  it('does not retain previous company rows while a new company query loads', () => {
+    const reportsPage = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportsPage.tsx'), 'utf8');
+    const programsPage = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramsPage.tsx'), 'utf8');
+    expect(reportsPage).not.toContain('keepPreviousData');
+    expect(programsPage).not.toContain('keepPreviousData');
   });
 
   it('maps only backend comparison enums and migrates an old draft', () => {
@@ -422,6 +535,67 @@ describe('PEK backend contract', () => {
     expect(body).toEqual({ version: 13, reason: 'Исправить сопоставление' });
   });
 
+  it('uses the contracted HTTP methods and URLs for report reconciliation', async () => {
+    const requests: Array<{ method: string; pathname: string }> = [];
+    server.use(
+      http.get('*/api/pek/reports/:id/sources', ({ request }) => {
+        requests.push({ method: request.method, pathname: new URL(request.url).pathname });
+        return HttpResponse.json({ data: [] });
+      }),
+      http.get('*/api/pek/reports/:id/plan-fact', ({ request }) => {
+        requests.push({ method: request.method, pathname: new URL(request.url).pathname });
+        return HttpResponse.json({ data: { summary: { planned: 0, completed: 0, missing: 0, completionPercent: 0, exceedances: 0 }, items: [] } });
+      }),
+      http.get('*/api/pek/reports/:id/readiness', ({ request }) => {
+        requests.push({ method: request.method, pathname: new URL(request.url).pathname });
+        return HttpResponse.json({ data: { ready: true, progressPercent: 100, summary: {}, issues: [] } });
+      }),
+      http.post('*/api/pek/reports/:reportId/sources/:sourceId/match', async ({ request }) => {
+        requests.push({ method: request.method, pathname: new URL(request.url).pathname });
+        return HttpResponse.json({ data: { id: 31, matchStatus: 'MANUAL', version: 3 } });
+      }),
+    );
+
+    await pekApi.getReportSources(9);
+    await pekApi.getReportPlanFact(9);
+    await pekApi.getReportReadiness(9);
+    await pekApi.matchReportSource(9, 31, 77, 2);
+
+    expect(requests).toEqual([
+      { method: 'GET', pathname: '/api/pek/reports/9/sources' },
+      { method: 'GET', pathname: '/api/pek/reports/9/plan-fact' },
+      { method: 'GET', pathname: '/api/pek/reports/9/readiness' },
+      { method: 'POST', pathname: '/api/pek/reports/9/sources/31/match' },
+    ]);
+  });
+
+  it('updates the exact detail cache and invalidates every program list after workflow', async () => {
+    let workflowRequest: { method: string; pathname: string } | undefined;
+    server.use(http.post('*/api/pek/programs/:id/approve', ({ request }) => {
+      workflowRequest = { method: request.method, pathname: new URL(request.url).pathname };
+      return HttpResponse.json({ data: {
+        ...programResponse,
+        id: 9,
+        company: { id: 1, name: 'Company' },
+        status: 'APPROVED',
+        version: 9,
+      } });
+    }));
+    const queryClient = new QueryClient();
+    const firstListKey = pekKeys.programList({ companyId: 1, status: 'DRAFT' });
+    const secondListKey = pekKeys.programList({ companyId: 2, search: 'PEK' });
+    queryClient.setQueryData(firstListKey, { content: [] });
+    queryClient.setQueryData(secondListKey, { content: [] });
+
+    const saved = await pekApi.approveProgram(9, { version: 8 });
+    await commitPekProgramMutation(queryClient, 1, saved);
+
+    expect(workflowRequest).toEqual({ method: 'POST', pathname: '/api/pek/programs/9/approve' });
+    expect(queryClient.getQueryData(pekKeys.programDetail(1, 9))).toEqual(saved);
+    expect(queryClient.getQueryState(firstListKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(secondListKey)?.isInvalidated).toBe(true);
+  });
+
   it('loads real PEK settings and capabilities', async () => {
     const settings = await pekApi.getSettings();
     expect(settings.defaultReportType).toBe('QUARTERLY');
@@ -450,6 +624,15 @@ describe('PEK backend contract', () => {
     expect(source).toContain('enabled: Boolean(companyId && objectId)');
     expect(source).toContain('Выберите компанию и объект');
     expect(reportListCalls).toBe(1);
+  });
+
+  it('report creation explains an existing non-active program instead of claiming none exist', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportCreatePage.tsx'), 'utf8');
+    expect(source).toContain("context.data.programs.length === 0");
+    expect(source).toContain("pekApi.getPrograms({ companyId, objectId");
+    expect(source).toContain('Программа найдена, но пока не подходит для отчёта');
+    expect(source).toContain('Статус: {labelPekStatus(program.status)}');
+    expect(source).toContain('to={`/staff/pek/programs/${program.id}?companyId=');
   });
 
   it('uses backend readOnly and editable statuses for autosave', () => {

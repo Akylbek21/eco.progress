@@ -60,6 +60,7 @@ const protocol = (extra: Partial<Protocol> = {}): Protocol => ({
   hasPdf: true,
   pdfFileId: 'pdf-42',
   permissions: { canSign: true, canEdit: true, canGenerateDocuments: true },
+  availableActions: ['SIGN', 'DOWNLOAD_PDF'],
   companySnapshot: { companyName: 'Eco', objectName: 'Object' },
   protocolDate: '2026-07-27',
   organization: { organizationName: '', organizationAddress: '', objectName: '', productName: '', testingBasis: '' },
@@ -109,7 +110,7 @@ const SigningHarness = () => {
 };
 
 describe('collective protocol signing API and mutation', () => {
-  it('posts only CMS and never sends version or a user identity', async () => {
+  it('posts CMS with the current version and never sends a user identity', async () => {
     let body: Record<string, unknown> = {};
     let ifMatch = '';
     server.use(
@@ -120,9 +121,9 @@ describe('collective protocol signing API and mutation', () => {
       }),
     );
 
-    const response = await signProtocol(42, { cmsSignatureBase64: 'cms-base64' });
+    const response = await signProtocol(42, { cmsSignatureBase64: 'cms-base64', version: 12 });
 
-    expect(body).toEqual({ cmsSignatureBase64: 'cms-base64' });
+    expect(body).toEqual({ cmsSignatureBase64: 'cms-base64', version: 12 });
     expect(ifMatch).toBe('');
     expect(body).not.toHaveProperty('userId');
     expect(body).not.toHaveProperty('signerFullName');
@@ -178,7 +179,7 @@ describe('signature card states and locking', () => {
     expect((screen.getByRole('button', { name: 'Подписать' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('prevents repeat signing, enforces the limit and excludes CLIENT', () => {
+  it('prevents repeat signing, enforces the limit and fails closed without SIGN action', () => {
     const alreadySigned = protocol({ status: 'SIGNED', signatureCount: 1, signedByCurrentUser: true });
     const { rerender } = render(
       <ProtocolSignaturesCard
@@ -203,8 +204,8 @@ describe('signature card states and locking', () => {
 
     rerender(
       <ProtocolSignaturesCard
-        protocol={protocol({ permissions: {} })}
-        permissions={getProtocolPermissions(protocol({ permissions: {} }), 'CLIENT')}
+        protocol={protocol({ permissions: {}, availableActions: [] })}
+        permissions={getProtocolPermissions(protocol({ permissions: {}, availableActions: [] }), 'CLIENT')}
         onSign={vi.fn()}
       />,
     );

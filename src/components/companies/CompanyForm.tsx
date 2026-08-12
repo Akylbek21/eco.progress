@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useForm, type FieldPath, type SubmitHandler } from 'react-hook-form';
 import Button from '../ui/Button';
+import { useUnsavedChangesWarning } from '../../hooks/useUnsavedChangesWarning';
 import { getCompanyFieldErrors } from '../../services/companyService';
 import type { CompanyCreateRequest, CompanyDetails, CompanyFormValues } from '../../types/companies';
 
@@ -14,7 +15,7 @@ interface Props {
 
 const emptyValues: CompanyFormValues = {
   name: '', shortName: '', bin: '', legalAddress: '', actualAddress: '', phone: '', email: '', website: '',
-  directorFullName: '', contactPerson: '', contactPhone: '', contactEmail: '', bankName: '', bik: '', iban: '', kbe: '', notes: '',
+  directorName: '', responsiblePerson: '', responsiblePersonPhone: '', contactEmail: '', bankName: '', bik: '', iban: '', kbe: '', notes: '',
 };
 const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100';
 const errorClass = 'mt-1 text-sm font-medium text-rose-700';
@@ -33,9 +34,9 @@ export const toCompanyRequest = (values: CompanyFormValues): CompanyCreateReques
   phone: nullable(values.phone),
   email: nullable(values.email),
   website: nullable(values.website),
-  directorFullName: nullable(values.directorFullName),
-  contactPerson: nullable(values.contactPerson),
-  contactPhone: nullable(values.contactPhone),
+  directorName: nullable(values.directorName),
+  responsiblePerson: nullable(values.responsiblePerson),
+  responsiblePersonPhone: nullable(values.responsiblePersonPhone),
   contactEmail: nullable(values.contactEmail),
   bankName: nullable(values.bankName),
   bik: nullable(values.bik.replace(/\s/g, '').toUpperCase()),
@@ -45,8 +46,15 @@ export const toCompanyRequest = (values: CompanyFormValues): CompanyCreateReques
 });
 
 const serverFieldMap: Record<string, FieldPath<CompanyFormValues>> = {
-  directorName: 'directorFullName', responsiblePerson: 'contactPerson', responsiblePersonPhone: 'contactPhone',
+  directorFullName: 'directorName', contactPerson: 'responsiblePerson', contactPhone: 'responsiblePersonPhone',
   responsiblePersonEmail: 'contactEmail', bank: 'bankName', bic: 'bik', comment: 'notes',
+};
+
+const resolveServerField = (field: string): FieldPath<CompanyFormValues> | undefined => {
+  const path = field.replace(/\[\d+\]/g, '').split('.').filter(Boolean);
+  const leaf = path[path.length - 1] || field;
+  return serverFieldMap[field] || serverFieldMap[leaf]
+    || (leaf in emptyValues ? leaf as FieldPath<CompanyFormValues> : undefined);
 };
 
 const CompanyForm = ({ initialValue, loading = false, submitText = 'Сохранить', onSubmit, onCancel }: Props) => {
@@ -57,19 +65,7 @@ const CompanyForm = ({ initialValue, loading = false, submitText = 'Сохран
   const { register, handleSubmit, reset, setError, formState: { errors, isDirty, isSubmitting } } = useForm<CompanyFormValues>({ defaultValues: defaults, mode: 'onBlur' });
 
   useEffect(() => reset(defaults), [defaults, reset]);
-  useEffect(() => {
-    if (!isDirty) return undefined;
-    const preventUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
-    const preventInternalNavigation = (event: MouseEvent) => {
-      if (event.defaultPrevented || event.button !== 0) return;
-      const target = event.target instanceof HTMLElement ? event.target.closest('a[href]') as HTMLAnchorElement | null : null;
-      if (!target || target.target === '_blank' || target.origin !== window.location.origin) return;
-      if (!window.confirm('Есть несохранённые изменения. Закрыть форму?')) { event.preventDefault(); event.stopPropagation(); }
-    };
-    window.addEventListener('beforeunload', preventUnload);
-    document.addEventListener('click', preventInternalNavigation, true);
-    return () => { window.removeEventListener('beforeunload', preventUnload); document.removeEventListener('click', preventInternalNavigation, true); };
-  }, [isDirty]);
+  useUnsavedChangesWarning(isDirty);
 
   const submit: SubmitHandler<CompanyFormValues> = async (values) => {
     try {
@@ -77,11 +73,15 @@ const CompanyForm = ({ initialValue, loading = false, submitText = 'Сохран
       reset(values);
     } catch (error) {
       const fieldErrors = getCompanyFieldErrors(error);
+      let mappedErrors = 0;
       fieldErrors.forEach(({ field, message }) => {
-        const target = serverFieldMap[field] || (field in emptyValues ? field as FieldPath<CompanyFormValues> : undefined);
-        if (target) setError(target, { type: 'server', message });
+        const target = resolveServerField(field);
+        if (target) {
+          mappedErrors += 1;
+          setError(target, { type: 'server', message });
+        }
       });
-      if (!fieldErrors.length) setError('root.server', { type: 'server', message: error instanceof Error ? error.message : 'Не удалось сохранить компанию.' });
+      if (!mappedErrors) setError('root.server', { type: 'server', message: error instanceof Error ? error.message : 'Не удалось сохранить компанию.' });
     }
   };
 
@@ -122,9 +122,9 @@ const CompanyForm = ({ initialValue, loading = false, submitText = 'Сохран
           <Field name="actualAddress" label="Фактический адрес" />
           <Field name="phone" label="Телефон" rules={{ pattern: { value: phonePattern, message: 'Укажите корректный телефон' } }} />
           <Field name="email" label="Email" type="email" rules={{ pattern: { value: emailPattern, message: 'Укажите корректный email' } }} />
-          <Field name="directorFullName" label="Руководитель" />
-          <Field name="contactPerson" label="Контактное лицо" />
-          <Field name="contactPhone" label="Телефон контактного лица" rules={{ pattern: { value: phonePattern, message: 'Укажите корректный телефон' } }} />
+          <Field name="directorName" label="Руководитель" />
+          <Field name="responsiblePerson" label="Контактное лицо" />
+          <Field name="responsiblePersonPhone" label="Телефон контактного лица" rules={{ pattern: { value: phonePattern, message: 'Укажите корректный телефон' } }} />
           <Field name="contactEmail" label="Email контактного лица" type="email" rules={{ pattern: { value: emailPattern, message: 'Укажите корректный email' } }} />
         </div>
       </section>

@@ -32,6 +32,16 @@ export interface ProtocolPermissions {
   canRegenerateDocuments?: boolean;
 }
 
+export type ProtocolAvailableAction =
+  | 'COMPLETE'
+  | 'READY_FOR_APPROVAL'
+  | 'SEND_TO_APPROVAL'
+  | 'SIGN'
+  | 'DOWNLOAD'
+  | 'DOWNLOAD_PDF'
+  | 'DOWNLOAD_DOCX'
+  | string;
+
 export type ProtocolResultValue = string | number | null | undefined | Array<string | number | null>;
 
 export type ProtocolTemplateId =
@@ -394,6 +404,7 @@ export interface Protocol {
   complianceResult?: ProtocolInternalStatus | string;
   executor?: string;
   executorId?: string;
+  laboratoryEmployeeId?: string | number;
   approver?: string;
   approvedAt?: string;
   signedAt?: string;
@@ -432,6 +443,7 @@ export interface Protocol {
   emissionSourceId?: string | number;
   waterOutletId?: string | number;
   permissions?: ProtocolPermissions;
+  availableActions: ProtocolAvailableAction[];
   canComplete?: boolean;
   blockingReasons?: string[];
   publishedToClientAt?: string;

@@ -243,12 +243,3 @@ export const hasPermission = (
 };
 
 export const permissionsForRole = (role: UserRole | undefined) => (role ? rolePermissions[role] ?? [] : []);
-
-export const companyRoleMatrix = {
-  read: ['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER', 'LABORATORY'],
-  write: ['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER'],
-  archive: ['ADMIN', 'DIRECTOR', 'HEAD'],
-  readObjects: ['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER', 'LABORATORY'],
-  writeObjects: ['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER'],
-  archiveObjects: ['ADMIN', 'DIRECTOR', 'HEAD'],
-} as const satisfies Record<string, readonly UserRole[]>;

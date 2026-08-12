@@ -20,6 +20,7 @@ import {
 import { getNormativesForProtocol } from '../../services/normativeService';
 import { useAuth } from '../../contexts/AuthContext';
 import { protocolQueryKeys, protocolScope } from '../../features/protocols/hooks/queryKeys';
+import { mapProtocolResultFormToRequest } from '../../features/protocols/api/protocolMappers';
 import { resolveMeasurementDeviceId } from '../../utils/protocolResultAliases';
 import type { NormativeSearchParams } from '../../types/normativeSearch';
 import type {
@@ -670,12 +671,12 @@ const ProtocolResultsTable = ({
     }
   };
 
-  const createResultRowFromNormative = async (normative: NormativeRecord): Promise<ProtocolResultRow> => {
+  const createResultPayloadFromNormative = (normative: NormativeRecord): ProtocolResultPayload => {
     const resolvedUnit = normative.unit || fallbackUnitForEnvironment(templateId, normative);
     const code = normative.factorCode || normative.pollutantCode || normative.code || '';
     const name = normative.indicator || normative.indicatorName || normative.pollutantName || '';
     const normativeValues = normativeValuesFromRecord(normative, templateId, resolvedUnit);
-    return protocolService.addProtocolResult(protocolId, {
+    return {
       normativeId: normative.id,
       values: {
         ...normativeValues,
@@ -701,8 +702,16 @@ const ProtocolResultsTable = ({
         templateId: normative.templateId || normalizedTemplateId,
         categoryCode: normative.categoryCode || normative.category || searchContext.categoryCode || '',
       },
-    }, version);
+    };
   };
+
+  const persistedResultRequest = (row: ProtocolResultRow) => mapProtocolResultFormToRequest({
+    values: { ...row.values },
+    measurementDeviceId: row.measurementDeviceId ?? row.deviceId ?? null,
+    normativeId: row.normativeReference?.id ?? (
+      Array.isArray(row.values.normativeId) ? row.values.normativeId[0] : row.values.normativeId
+    ) ?? null,
+  });
 
   const addBulk = async () => {
     const tokens = query.split(/[,;]+/).map((item) => item.trim()).filter(Boolean);
@@ -721,7 +730,7 @@ const ProtocolResultsTable = ({
     setSearching(true);
     setSaving(true);
     try {
-      const created: ProtocolResultRow[] = [];
+      const created: ProtocolResultPayload[] = [];
       for (const token of tokens) {
         const candidates = await searchNormativeCandidates(token, { code: token, name: token }).catch((error) => {
           if (isNormativeSearchCanceled(error)) return [];
@@ -736,14 +745,21 @@ const ProtocolResultsTable = ({
           continue;
         }
         const normativeCode = normative.pollutantCode || normative.code || normative.factorCode || token;
-        const exists = [...rows, ...created].some((row) => pollutantCode(row).toLowerCase() === normativeCode.toLowerCase());
+        const exists = rows.some((row) => pollutantCode(row).toLowerCase() === normativeCode.toLowerCase())
+          || created.some((row) => String(row.values.pollutantCode || row.values.code || '').toLowerCase() === normativeCode.toLowerCase());
         if (!exists) {
-          const saved = await createResultRowFromNormative(normative);
-          created.push(saved);
+          created.push(createResultPayloadFromNormative(normative));
         }
       }
       if (created.length) {
-        onChange([...rows, ...created]);
+        const updated = await protocolService.saveProtocolDraftResults(protocolId, {
+          version,
+          results: [
+            ...rows.map(persistedResultRequest),
+            ...created.map(mapProtocolResultFormToRequest),
+          ],
+        });
+        onChange(updated.results);
         await onImported();
         setQuery('');
         setSuggestions([]);
@@ -838,7 +854,8 @@ const ProtocolResultsTable = ({
       let latestRow = saved;
       let recalculated = true;
       try {
-        const calculation = await protocolService.calculateResult(protocolId, editing.id, version);
+        const current = await protocolService.getProtocol(protocolId);
+        const calculation = await protocolService.calculateResult(protocolId, editing.id, current.version);
         if (calculation.row) latestRow = calculation.row;
       } catch (calculationError) {
         recalculated = false;
@@ -1035,6 +1052,7 @@ const ProtocolResultsTable = ({
     if (row?.id) {
       onChange(rows.map((item) => item.id === row.id ? row : item));
     }
+    await onImported();
   };
 
   const calculateRow = async (row: ProtocolResultRow) => {
@@ -1042,7 +1060,7 @@ const ProtocolResultsTable = ({
     try {
       const calculated = await protocolService.calculateResult(protocolId, row.id, version);
       if (calculated.row?.id) onChange(rows.map((item) => item.id === calculated.row!.id ? calculated.row! : item));
-      else await onImported();
+      await onImported();
       onNotify('Результат рассчитан', 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать строку', 'error');
@@ -1072,7 +1090,7 @@ const ProtocolResultsTable = ({
       setCalculationSummary(summary);
       const rowMap = new Map(summary.rows.filter((item) => item.row?.id).map((item) => [item.row!.id, item.row!]));
       if (rowMap.size) onChange(rows.map((row) => rowMap.get(row.id) || row));
-      else await onImported();
+      await onImported();
       onNotify('Результаты рассчитаны', summary.errors || summary.waitingInputs ? 'warning' : 'success');
     } catch (error) {
       onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать результаты', 'error');

@@ -8,7 +8,7 @@ import {
   createProtocolCmsSignature,
   type ProtocolSigningPhase,
 } from '../utils/protocolSigning';
-import { hasProtocolPermission } from '../utils/protocolActions';
+import { hasProtocolAction } from '../utils/protocolActions';
 
 const SIGN_ERROR_MESSAGES: Record<string, string> = {
   PROTOCOL_ALREADY_SIGNED: 'Вы уже подписали эту версию протокола',
@@ -46,7 +46,7 @@ export const useSignProtocolMutation = (
     mutationKey: ['sign-protocol', String(protocolId ?? '')],
     mutationFn: async ({ protocol }: SignVariables) => {
       let fresh = await protocolService.getProtocol(String(protocol.id));
-      if (!hasProtocolPermission(fresh, 'canSign')) {
+      if (!hasProtocolAction(fresh, 'SIGN')) {
         throw new Error('У вас нет права подписывать протокол. Передайте его руководителю.');
       }
       if (!fresh.hasPdf) {
@@ -58,7 +58,7 @@ export const useSignProtocolMutation = (
       const cmsSignatureBase64 = await createProtocolCmsSignature(file.blob, setPhase);
       setPhase('VERIFYING_SIGNATURE');
       try {
-        return await protocolService.signProtocol(fresh.id, { cmsSignatureBase64 });
+        return await protocolService.signProtocol(fresh.id, { cmsSignatureBase64, version: fresh.version });
       } catch (error) {
         const actual = await protocolService.getProtocol(String(fresh.id)).catch(() => null);
         if (actual && (

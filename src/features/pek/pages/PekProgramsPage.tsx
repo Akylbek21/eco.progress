@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { hasPermission } from '../../../config/permissions';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -43,9 +43,8 @@ const PekProgramsPage = () => {
     setParams(next, { replace: true });
   };
   const programs = useQuery({
-    queryKey: pekKeys.programs(filters, user?.id),
+    queryKey: pekKeys.programList(filters),
     queryFn: ({ signal }) => pekApi.getPrograms(filters, signal),
-    placeholderData: keepPreviousData,
     retry: retryPekQuery,
     staleTime: PEK_STALE_TIME_MS,
   });
@@ -113,7 +112,7 @@ const PekProgramsPage = () => {
                   <td className="px-4 py-3"><PekStatusBadge status={item.status} /></td>
                   <td className="px-4 py-3"><PekReadiness value={item.readinessPercent} /></td>
                   <td className="px-4 py-3">{item.updatedAt || '—'}</td>
-                  <td className="px-4 py-3"><Link className="font-bold text-eco-700" to={`/staff/pek/programs/${item.id}`}>Открыть</Link></td>
+                  <td className="px-4 py-3"><Link className="font-bold text-eco-700" to={`/staff/pek/programs/${item.id}?companyId=${item.company?.id || filters.companyId || ''}`}>Открыть</Link></td>
                 </tr>)}</tbody>
               </table>
             </div>

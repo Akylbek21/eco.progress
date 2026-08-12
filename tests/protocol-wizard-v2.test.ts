@@ -3,7 +3,7 @@ import { createWizardDefaults, emptyWizardResult } from '../src/features/protoco
 import { mapProtocolToWizardForm, mapWizardResultToDraftRequest, mapWizardToCreateDraft } from '../src/features/protocols/mappers/protocolWizardDraftMapper';
 import { saveProtocolWizardDraft } from '../src/features/protocols/api/saveProtocolWizardDraft';
 import { mapProtocolApiErrorsToForm } from '../src/features/protocols/utils/protocolFormErrors';
-import { hasProtocolPermission } from '../src/features/protocols/utils/protocolActions';
+import { hasProtocolAction, hasProtocolPermission } from '../src/features/protocols/utils/protocolActions';
 import { validateForApproval } from '../src/features/protocols/utils/protocolWizardValidation';
 import type { Protocol } from '../src/types/protocols';
 import type { ProtocolService } from '../src/services/protocolService';
@@ -70,11 +70,13 @@ describe('protocol wizard HTTP boundary', () => {
     const form = createWizardDefaults();
     Object.assign(form, { templateId: 'ambient_air', companyId: '10', objectId: '20' });
     const createProtocolDraft = async () => ({ id: 'draft-1', version: 0, status: 'DRAFT', results: [] }) as Protocol;
-    const service = { createProtocolDraft } as unknown as ProtocolService;
+    const saveProtocolDraftResults = vi.fn(async () => ({ id: 'draft-1', version: 1, status: 'DRAFT', results: [] }) as Protocol);
+    const service = { createProtocolDraft, saveProtocolDraftResults } as unknown as ProtocolService;
 
     const saved = await saveProtocolWizardDraft(form, null, 'protocol-draft-test-key', service);
 
-    expect(saved.protocol).toMatchObject({ id: 'draft-1', version: 0, status: 'DRAFT' });
+    expect(saved.protocol).toMatchObject({ id: 'draft-1', version: 1, status: 'DRAFT' });
+    expect(saveProtocolDraftResults).toHaveBeenCalledWith('draft-1', { version: 0, results: [] });
     expect([...saved.resultIdsByClientRowId]).toEqual([]);
   });
 });
@@ -103,26 +105,27 @@ describe('protocol environment mapping', () => {
 });
 
 describe('result reconciliation', () => {
-  it('uses clientRowId and performs only one authoritative GET for multiple rows', async () => {
+  it('saves all rows with one atomic draft-results request and reconciles clientRowId', async () => {
     const form = createWizardDefaults();
     Object.assign(form, { templateId: 'ambient_air', companyId: '10' });
     const first = { ...emptyWizardResult(), clientRowId: 'client-a', indicatorName: 'A', pollutantCode: 'A', value: '1', unit: 'мг' };
     const second = { ...emptyWizardResult(), clientRowId: 'client-b', indicatorName: 'B', pollutantCode: 'B', value: '2', unit: 'мг' };
     form.results = [second, first];
-    const getProtocol = vi.fn(async () => ({ id: 'draft-1', version: 3, status: 'DRAFT', results: [] }) as Protocol);
-    const addProtocolResult = vi.fn(async (_id, payload: { values: Record<string, unknown> }, version: number) => ({
-      id: payload.values.clientRowId === 'client-b' ? 'server-b' : 'server-a', values: payload.values, version,
-    }));
+    const saveProtocolDraftResults = vi.fn(async (_id, request: { version: number; results: Array<{ values: Record<string, unknown> }> }) => ({
+      id: 'draft-1', version: 2, status: 'DRAFT', results: request.results.map((row) => ({
+        id: row.values.clientRowId === 'client-b' ? 'server-b' : 'server-a', values: row.values,
+      })),
+    }) as Protocol);
     const service = {
       createProtocolDraft: vi.fn(async () => ({ id: 'draft-1', version: 1, status: 'DRAFT', results: [] }) as Protocol),
-      addProtocolResult,
-      getProtocol,
+      saveProtocolDraftResults,
     } as unknown as ProtocolService;
 
     const saved = await saveProtocolWizardDraft(form, null, 'stable-key', service);
 
-    expect(addProtocolResult.mock.calls.map((call) => call[2])).toEqual([1, 2]);
-    expect(getProtocol).toHaveBeenCalledTimes(1);
+    expect(saveProtocolDraftResults).toHaveBeenCalledTimes(1);
+    expect(saveProtocolDraftResults).toHaveBeenCalledWith('draft-1', expect.objectContaining({ version: 1 }));
+    expect(saveProtocolDraftResults.mock.calls[0][1].results).toHaveLength(2);
     expect(saved.resultIdsByClientRowId.get('client-a')).toBe('server-a');
     expect(saved.resultIdsByClientRowId.get('client-b')).toBe('server-b');
   });
@@ -159,12 +162,24 @@ describe('protocol wizard validation and backend errors', () => {
     });
     form.results = [{
       ...emptyWizardResult(), indicatorName: 'NO2', pollutantCode: 'NO2', value: '0.1', unit: 'мг/м3',
-      measurementDeviceId: 'device-1', normativeSource: 'MANUAL', normativeValue: '0.2',
+      measurementDeviceId: 'device-1', normativeSource: 'MANUAL', normativeValue: '0.2', manualNormativeReason: 'Нет норматива в справочнике',
     }];
     const issues = validateForApproval(form);
     expect(issues).not.toEqual(expect.arrayContaining([expect.objectContaining({ code: 'DEVICE_REQUIRED' })]));
     expect(issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'ENVIRONMENT_EMPTY', severity: 'WARNING' })]));
     expect(issues.filter((item) => item.severity === 'ERROR')).toEqual([]);
+  });
+
+  it('blocks a manual normative without a reason', () => {
+    const form = createWizardDefaults();
+    Object.assign(form, { templateId: 'ambient_air', companyId: '1', objectId: '2', laboratoryId: '3', executorId: '4' });
+    form.results = [{
+      ...emptyWizardResult(), indicatorName: 'NO2', pollutantCode: 'NO2', value: '0.1', unit: 'мг/м3',
+      measurementDeviceId: 'device-1', normativeSource: 'MANUAL', normativeValue: '0.2', manualNormativeReason: '',
+    }];
+    expect(validateForApproval(form)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'MANUAL_NORMATIVE_REASON_REQUIRED', field: 'results.0.manualNormativeReason' }),
+    ]));
   });
 });
 
@@ -179,5 +194,13 @@ describe('backend permissions authority', () => {
   it('allows only explicitly returned actions and fails closed for an unknown status', () => {
     expect(hasProtocolPermission(protocol({ canEdit: true }), 'canEdit')).toBe(true);
     expect(hasProtocolPermission(protocol({ canEdit: true }), 'canSign')).toBe(false);
+  });
+
+  it('uses availableActions for completion, signing and download', () => {
+    const item = { availableActions: ['COMPLETE', 'SIGN', 'DOWNLOAD_PDF'] } as Protocol;
+    expect(hasProtocolAction(item, 'COMPLETE')).toBe(true);
+    expect(hasProtocolAction(item, 'SIGN')).toBe(true);
+    expect(hasProtocolAction(item, 'DOWNLOAD_PDF')).toBe(true);
+    expect(hasProtocolAction({ availableActions: [] } as Protocol, 'SIGN')).toBe(false);
   });
 });

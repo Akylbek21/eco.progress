@@ -32,6 +32,7 @@ const ProtocolResultDetails = ({ index }: { index: number }) => {
           <label className={labelClass}>Минимум<input inputMode="decimal" {...register(`results.${index}.normativeMin`)} className={inputClass} /></label>
           <label className={labelClass}>Максимум<input inputMode="decimal" {...register(`results.${index}.normativeMax`)} className={inputClass} /></label>
           <label className={`${labelClass} sm:col-span-2`}>Нормативный документ<input placeholder="Например, ДСМ-70" {...register(`results.${index}.normativeDocument`)} className={inputClass} /></label>
+          <label className={`${labelClass} sm:col-span-2`}>Причина использования ручного норматива<input placeholder="Почему норматив нельзя выбрать из справочника" {...register(`results.${index}.manualNormativeReason`)} className={`${inputClass} ${rowErrors?.manualNormativeReason ? 'border-rose-400' : ''}`} />{rowErrors?.manualNormativeReason?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.manualNormativeReason.message}</span>}</label>
         </>}
         <label className={labelClass}>
           Код методики

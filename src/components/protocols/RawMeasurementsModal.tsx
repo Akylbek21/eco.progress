@@ -184,7 +184,8 @@ const RawMeasurementsModal = ({
         onClose();
         return;
       }
-      const calculated = await protocolService.calculateResult(protocolId, row.id, version);
+      const current = await protocolService.getProtocol(protocolId);
+      const calculated = await protocolService.calculateResult(protocolId, row.id, current.version);
       onClose();
       if (calculated.row) await onCalculated(calculated.row);
       else await onReload?.();

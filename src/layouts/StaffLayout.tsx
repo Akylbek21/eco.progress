@@ -5,21 +5,21 @@ import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
 import { canAccess, hasPermission } from '../config/permissions';
 import type { UserRole } from '../types';
-import { companyRoleMatrix } from '../config/permissions';
 import type { Permission } from '../config/permissions';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { canViewPek, pekViewRoles } from '../features/pek/permissions/pekAccess';
+import { hasCompanyPermission, type CompanyPermissionAction } from '../features/companies/companyPermissions';
 
 const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER', 'ACCOUNTANT', 'ECOLOGIST', 'WASTE_SPECIALIST', 'STAFF'];
 const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
 
-const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[]; permission?: Permission }> = [
+const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[]; permission?: Permission; companyPermission?: CompanyPermissionAction }> = [
   { label: 'Обзор', path: '/staff', icon: LayoutDashboard },
   { label: 'Заявки', path: '/staff/orders', icon: ClipboardList },
   { label: 'Клиенты', path: '/staff/clients', icon: Building2, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Лиды', path: '/staff/leads', icon: UserRoundSearch, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Контент сайта', path: '/staff/content', icon: BookOpenCheck, permission: 'view_content' },
-  { label: 'Компании', path: '/staff/companies', icon: Building2, allowedRoles: [...companyRoleMatrix.read] },
+  { label: 'Компании', path: '/staff/companies', icon: Building2, companyPermission: 'read' },
   { label: 'КП', path: '/staff/commercial-offers', icon: Handshake, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Договоры', path: '/staff/contracts', icon: FileSignature, allowedRoles: ['ADMIN', 'MANAGER', 'ACCOUNTANT'] },
   { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
@@ -65,11 +65,13 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
       {(user?.role === 'LABORATORY'
-        ? links.filter((item) => ['/staff/protocols', '/staff/journals', '/staff/pek'].includes(item.path))
+        ? links.filter((item) => ['/staff/protocols', '/staff/journals', '/staff/pek'].includes(item.path)
+          || Boolean(item.companyPermission && hasCompanyPermission(user, item.companyPermission)))
         : links
       ).map((item) => {
         const Icon = item.icon;
         if (item.allowedRoles && (!user?.role || !item.allowedRoles.includes(user.role))) return null;
+        if (item.companyPermission && !hasCompanyPermission(user, item.companyPermission)) return null;
         if (item.permission && (item.permission === 'PEK_VIEW' ? !canViewPek(user) : !hasPermission(user, item.permission))) return null;
         const locked = (item.paymentsOnly && !canAccessPayments(user?.role)) || (item.rolesOnly && !canAccess(user?.role, 'manage_roles') && !canAccess(user?.role, 'manage_employees'));
         if (locked) {

@@ -51,11 +51,12 @@ test('result aliases resolve device ids from nested backend objects and values a
 test('protocol permission matrix is backend-authoritative and immutable-safe', async () => {
   const source = await read('src/utils/protocolPermissions.ts');
   assert.match(source, /protocol\?\.permissions/);
+  assert.match(source, /availableActions/);
   assert.match(source, /flag\('canEdit'\)/);
-  assert.match(source, /canReadyForApproval: flag\('canSendToApproval'\)/);
+  assert.match(source, /canReadyForApproval: hasProtocolAction\(protocol \|\| undefined, 'COMPLETE'\)/);
   assert.match(source, /canReplace: flag\('canCreateCorrection'\)/);
-  assert.match(source, /canApprove: flag\('canApprove'\)/);
-  assert.match(source, /canSign: flag\('canSign'\)/);
+  assert.match(source, /canApprove: hasProtocolAction\(protocol \|\| undefined, 'APPROVE'\)/);
+  assert.match(source, /canSign: hasProtocolAction\(protocol \|\| undefined, 'SIGN'\)/);
   assert.match(source, /backend\?\.\[key\] === true/);
 });
 
