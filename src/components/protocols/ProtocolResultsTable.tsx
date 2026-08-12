@@ -6,18 +6,18 @@ import Modal from '../ui/Modal';
 import NormativeStatusBadge, { normativeStatusLabels } from './NormativeStatusBadge';
 import RawMeasurementsModal from './RawMeasurementsModal';
 import protocolService from '../../services/protocolService';
-import { getApiStatus } from '../../services/apiHelpers';
 import { getMeasurementDevices } from '../../services/measurementDeviceService';
 import { getPhysicalFactorIndicators } from '../../data/physicalFactors';
 import { subtypeName } from '../../data/protocolTemplates';
 import { resolveNormativeSearchContext } from '../../data/protocolTypeConfig';
 import {
   canSearchNormative,
+  formatNormativeSearchError,
   isNormativeSearchCanceled,
   NORMATIVE_SEARCH_DEBOUNCE_MS,
   normativeSearchItemToRecord,
+  searchNormativesStaged,
 } from '../../services/normativeSearchService';
-import { getNormativesForProtocol } from '../../services/normativeService';
 import { useAuth } from '../../contexts/AuthContext';
 import { protocolQueryKeys, protocolScope } from '../../features/protocols/hooks/queryKeys';
 import { mapProtocolResultFormToRequest } from '../../features/protocols/api/protocolMappers';
@@ -361,6 +361,7 @@ const ProtocolResultsTable = ({
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: protocolQueryKeys.detail(cacheScope, protocolId) }),
       queryClient.invalidateQueries({ queryKey: protocolQueryKeys.results(cacheScope, protocolId) }),
+      queryClient.invalidateQueries({ queryKey: protocolQueryKeys.documents(cacheScope, protocolId) }),
       queryClient.invalidateQueries({ queryKey: protocolQueryKeys.all(cacheScope) }),
     ]);
   };
@@ -368,6 +369,7 @@ const ProtocolResultsTable = ({
   const [suggestions, setSuggestions] = useState<NormativeSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchState, setSearchState] = useState<SearchState>('idle');
+  const [normativeSearchError, setNormativeSearchError] = useState('');
   const [normativeSearchMode, setNormativeSearchMode] = useState<NormativeSearchMode>('ACTIVE_ONLY');
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkDeviceId, setBulkDeviceId] = useState('');
@@ -445,7 +447,7 @@ const ProtocolResultsTable = ({
     searchAbortRef.current?.abort();
     const controller = new AbortController();
     searchAbortRef.current = controller;
-    const result = await getNormativesForProtocol(buildNormativeSearchParams(value, page, mode), controller.signal);
+    const result = await searchNormativesStaged(buildNormativeSearchParams(value, page, mode), controller.signal);
     setNormativePage(result.page);
     setNormativeTotalPages(result.totalPages);
     setNormativeTotalElements(result.totalElements);
@@ -496,6 +498,7 @@ const ProtocolResultsTable = ({
   const searchNormativesForDialog = async (page = 0, mode: NormativeSearchMode = normativeSearchMode) => {
     const value = normativeQuery.trim();
     setSelectedNormative(null);
+    setNormativeSearchError('');
     if (!canSearchNormative(value)) {
       setNormativeResults([]);
       setNormativeSearchDone(false);
@@ -511,7 +514,9 @@ const ProtocolResultsTable = ({
       if (!candidates.length) onNotify('Норматив не найден. Проверьте код или добавьте норматив в справочник.', 'warning');
     } catch (error) {
       if (isNormativeSearchCanceled(error)) return;
-      onNotify(error instanceof Error ? error.message : 'Не удалось загрузить нормативы', 'error');
+      const message = formatNormativeSearchError(error, 'Не удалось загрузить нормативы');
+      setNormativeSearchError(message);
+      onNotify(message, 'error');
       setNormativeResults([]);
       setNormativeSearchDone(true);
     } finally {
@@ -594,6 +599,7 @@ const ProtocolResultsTable = ({
     const timer = window.setTimeout(async () => {
       setSearching(true);
       setSearchState('searching');
+      setNormativeSearchError('');
       try {
         if (requestId !== searchRequestRef.current) return;
         const candidates = await searchNormativeCandidates(value);
@@ -608,7 +614,9 @@ const ProtocolResultsTable = ({
       } catch (error) {
         if (requestId !== searchRequestRef.current) return;
         if (isNormativeSearchCanceled(error)) return;
-        if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
+        const message = formatNormativeSearchError(error, searchUnavailableMessage);
+        setNormativeSearchError(message);
+        onNotify(message, 'error');
         setSuggestions([]);
         setSearchState('error');
       } finally {
@@ -639,7 +647,7 @@ const ProtocolResultsTable = ({
           pollutant,
         ).catch((error) => {
           if (isNormativeSearchCanceled(error)) return [];
-          if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
+          onNotify(formatNormativeSearchError(error, searchUnavailableMessage), 'error');
           return [];
         });
       const normative = selectedNormative || (candidates.length === 1 ? candidates[0] : undefined);
@@ -734,7 +742,7 @@ const ProtocolResultsTable = ({
       for (const token of tokens) {
         const candidates = await searchNormativeCandidates(token, { code: token, name: token }).catch((error) => {
           if (isNormativeSearchCanceled(error)) return [];
-          if (getApiStatus(error) === 500) onNotify(searchUnavailableMessage, 'error');
+          onNotify(formatNormativeSearchError(error, searchUnavailableMessage), 'error');
           return [];
         });
         const normalized = token.toLowerCase();
@@ -1207,6 +1215,11 @@ const ProtocolResultsTable = ({
               </div>
             </div>
           )}
+          {!searching && searchState === 'error' && normativeSearchError && (
+            <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800">
+              {normativeSearchError}
+            </div>
+          )}
         </div>
         {selectedRows.length > 0 && <div className="grid gap-2 rounded-xl border border-eco-100 bg-white p-3 lg:grid-cols-[1fr_auto_1fr_auto_auto]">
           <select value={bulkDeviceId} onChange={(event) => setBulkDeviceId(event.target.value)} className={inputClass}><option value="">Прибор для выбранных строк</option>{devices.map((item) => <option key={item.deviceId} value={item.deviceId}>{item.deviceSnapshot.name} · {item.deviceSnapshot.serialNumber}</option>)}</select>
@@ -1414,6 +1427,11 @@ const ProtocolResultsTable = ({
             <Button type="button" variant="secondary" disabled={normativeLoading} onClick={() => { setNormativeSearchMode('ALL_STATUSES'); void searchNormativesForDialog(0, 'ALL_STATUSES'); }}>
               Искать также архивные и требующие проверки
             </Button>
+          )}
+          {!searching && searchState === 'error' && normativeSearchError && (
+            <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800">
+              {normativeSearchError}
+            </div>
           )}
 
           <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">

@@ -1,6 +1,6 @@
 ﻿import { ReactNode, useState } from 'react';
 import { Link, NavLink, Navigate } from 'react-router-dom';
-import { Building2, CreditCard, FileSignature, FileText, Home, LogOut, Menu, User, X } from 'lucide-react';
+import { Building2, CreditCard, FileText, Home, LogOut, Menu, User, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
@@ -16,7 +16,6 @@ const CabinetLayout = ({ children }: { children: ReactNode }) => {
     { label: 'Главная', path: '/cabinet', icon: Home },
     { label: 'Мои заявки', path: '/cabinet/orders', icon: FileText },
     { label: 'Документы', path: '/cabinet/documents', icon: FileText },
-    { label: 'Документооборот', path: '/document-flow', icon: FileSignature },
     { label: 'Оплата', path: '/cabinet/payments', icon: CreditCard },
     { label: 'Профиль компании', path: '/cabinet/company', icon: isIndividual ? User : Building2 },
   ];

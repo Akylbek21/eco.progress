@@ -4,16 +4,18 @@ import type { MeasurementDevice, NormativeRecord } from '../../../../types/proto
 import NormativeSelectorModal from '../components/NormativeSelectorModal';
 import ProtocolResultTable from '../components/ProtocolResultTable';
 import { emptyWizardResult, type ProtocolWizardForm } from '../wizardTypes';
+import { validateProtocolWizardStep } from '../../utils/protocolWizardValidation';
 
-type Props = { devices: MeasurementDevice[] };
+type Props = { devices: MeasurementDevice[]; onSuggestChangeType?: () => void };
 
 const text = (value: unknown) => value == null ? '' : String(value);
 
-const ResultsStep = ({ devices }: Props) => {
+const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
   const [selector, setSelector] = useState(false);
   const { control, watch, setValue } = useFormContext<ProtocolWizardForm>();
   const { append, update } = useFieldArray({ control, name: 'results' });
   const form = watch();
+  const resultErrors = validateProtocolWizardStep(form, 2).filter((item) => item.severity === 'ERROR');
   const automaticCommonMethodRef = useRef('');
 
   useEffect(() => {
@@ -123,6 +125,17 @@ const ResultsStep = ({ devices }: Props) => {
         />
       </div>
 
+      {resultErrors.length > 0 && (
+        <div role="alert" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-black">Для завершения заполните:</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 font-semibold">
+            {resultErrors.slice(0, 5).map((item) => <li key={`${item.code}-${item.field}`}>{item.message}</li>)}
+          </ul>
+          {resultErrors.length > 5 && <p className="mt-2 font-semibold">Ещё ошибок: {resultErrors.length - 5}</p>}
+          <p className="mt-2 text-xs font-semibold text-amber-800">Нажмите карандаш в строке, чтобы открыть все поля.</p>
+        </div>
+      )}
+
       <NormativeSelectorModal
         open={selector}
         templateId={form.templateId}
@@ -140,6 +153,11 @@ const ResultsStep = ({ devices }: Props) => {
         }}
         onClose={() => setSelector(false)}
         onManual={addManual}
+        onSuggestChangeType={(templateId) => {
+          setValue('templateId', templateId, { shouldDirty: true });
+          setSelector(false);
+          onSuggestChangeType?.();
+        }}
         onAdd={(items) => {
           addNormatives(items);
           setSelector(false);

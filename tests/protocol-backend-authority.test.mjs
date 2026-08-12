@@ -50,6 +50,8 @@ test('all result changes use the single atomic draft-results endpoint', async ()
   assert.match(bulkAdd, /saveProtocolDraftResults/);
   assert.doesNotMatch(bulkAdd, /addProtocolResult/);
   assert.match(api, /protocols\/\$\{protocolId\}\/draft-results/);
+  assert.match(api, /api\.patch[^\n]+draft-results/);
+  assert.doesNotMatch(api, /api\.put[^\n]+draft-results/);
   assert.match(api, /saveProtocolDraftResults/);
   assert.doesNotMatch(api, /results\/bulk-device/);
   assert.doesNotMatch(api, /results\/bulk-place/);

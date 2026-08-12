@@ -189,13 +189,14 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
       lastFailedFingerprintRef.current = '';
       setSaveState(created ? 'created' : 'saved');
       queryClient.setQueryData(protocolQueryKeys.detail(scope, protocol.id), protocol);
+      await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.documents(scope, protocol.id) });
       if (created) await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) });
     },
     onError: (error, snapshot) => {
       lastFailedFingerprintRef.current = JSON.stringify(snapshot);
       setSaveState('error');
       const apiError = normalizeApiError(error, 'Не удалось сохранить протокол. Проверьте выделенные поля.');
-      if (apiError.status === 409 && /PROTOCOL_VERSION_CONFLICT|version/i.test(`${apiError.code ?? ''} ${apiError.message}`)) {
+      if (apiError.status === 409 && /OPTIMISTIC_LOCK_CONFLICT|PROTOCOL_VERSION_CONFLICT|VERSION_CONFLICT|optimistic|version/i.test(`${apiError.code ?? ''} ${apiError.message}`)) {
         setSaveState('conflict');
         setConflict(true);
         return;
@@ -266,6 +267,13 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     return saveMutation.mutateAsync(form.getValues());
   };
   const next = async () => {
+    // The next screen is the validation summary. Let the user open it even
+    // when result rows are incomplete; completion remains blocked there.
+    if (step === 2) {
+      setStep(3);
+      setMaxVisited((visited) => Math.max(visited, 3));
+      return;
+    }
     if (step === 3 && blockingIssues.length) {
       const first = blockingIssues[0];
       goToIssue(first.step, first.field);
@@ -367,7 +375,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     : step === 1
       ? <div className="space-y-7"><ExecutorDeviceStep laboratories={laboratories} employees={employees} devices={devices} onLaboratoryChange={(id) => { form.setValue('laboratoryId', id, { shouldDirty: true }); form.setValue('executorId', '', { shouldDirty: true }); }} /><EnvironmentStep weatherLoading={weather.loading} weatherMessage={weather.message} onRefresh={() => void weather.refresh()} waterTypeOptions={waterOptions.waterTypes} waterUseCategoryOptions={waterOptions.waterUseCategories} /><MethodsStep /></div>
       : step === 2
-        ? <ResultsStep devices={devices} />
+        ? <ResultsStep devices={devices} onSuggestChangeType={() => setStep(0)} />
         : step === 3
           ? <ProtocolCheckStep issues={[...approvalIssues, ...serverIssues]} onGoTo={goToIssue} />
           : <ProtocolSigningStep companies={companies} objects={objects} employees={employees} />;
@@ -382,7 +390,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
           {generalError && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900">{generalError}</div>}
           {content}
         </main>
-        <ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue={currentStepErrors.length === 0 && (step < steps.length - 1 || blockingIssues.length === 0)} canSaveDraft={canSaveServerDraft} saveState={saveState === 'local' ? 'Локальная копия сохранена' : saveState === 'creating' ? 'Создание серверного черновика…' : saveState === 'created' ? 'Черновик сохранён на сервере' : saveState === 'saving' ? 'Сохранение изменений…' : saveState === 'saved' ? 'Изменения сохранены' : saveState === 'conflict' ? 'Конфликт версий' : saveState === 'error' ? 'Не удалось сохранить' : undefined} onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />
+        <ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue={step === 2 || (currentStepErrors.length === 0 && (step < steps.length - 1 || blockingIssues.length === 0))} canSaveDraft={canSaveServerDraft} saveState={saveState === 'local' ? 'Локальная копия сохранена' : saveState === 'creating' ? 'Создание серверного черновика…' : saveState === 'created' ? 'Черновик сохранён на сервере' : saveState === 'saving' ? 'Сохранение изменений…' : saveState === 'saved' ? 'Изменения сохранены' : saveState === 'conflict' ? 'Конфликт версий' : saveState === 'error' ? 'Не удалось сохранить' : undefined} onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />
       </div>
     </Modal>
     <Modal open={conflict} onClose={() => setConflict(false)} closeOnBackdrop={false} size="sm" title="Протокол изменён другим сотрудником" footer={<><Button type="button" variant="secondary" onClick={() => { writeLocalProtocolDraft(sessionStorage, { schemaVersion: LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION, userId: String(user?.id ?? 'anonymous'), protocolId: serverDraft?.id ?? null, backendVersion: serverDraft?.version ?? null, idempotencyKey: idempotencyKeyRef.current, currentStep: step, formValues: form.getValues(), savedAt: new Date().toISOString(), hasUnsavedChanges: true }); setConflict(false); }}>Сохранить локальную копию</Button><Button type="button" onClick={() => void loadLatest()}>Загрузить актуальную версию</Button></>}><p className="text-sm text-slate-700">Данные не были перезаписаны. Выберите, сохранить ли введённые данные локально или загрузить актуальную серверную версию.</p></Modal>

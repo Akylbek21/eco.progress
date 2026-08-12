@@ -771,8 +771,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     explanatoryNote: pick(source, ['explanatoryNote', 'note']),
     complianceResult: pick(source, ['complianceStatus', 'complianceResult', 'overallStatus', 'internalStatus']),
     executor: pick(asRecord(source.executor), ['fullName', 'name']) || pick(source, ['executorName']) || pick(laboratory, ['executor', 'executorName']),
-    executorId: pick(source, ['laboratoryEmployeeId', 'executorId', 'executor_id']) || pick(asRecord(source.executor), ['laboratoryEmployeeId', 'id']) || pick(laboratory, ['laboratoryEmployeeId', 'executorId']),
-    laboratoryEmployeeId: pick(source, ['laboratoryEmployeeId', 'executorId', 'executor_id']) || pick(asRecord(source.executor), ['laboratoryEmployeeId', 'id']),
+    executorId: pick(source, ['executorId', 'executor_id']) || pick(asRecord(source.executor), ['executorId', 'id']) || pick(laboratory, ['executorId']),
     approver: pick(source, ['approver']),
     approvedAt: pick(source, ['approvedAt', 'approved_at']),
     signedAt: pick(source, ['signedAt', 'signed_at']),
@@ -891,14 +890,8 @@ const isProtocolLike = (value: unknown) => {
   );
 };
 
-const protocolFromActionResponse = async (protocolId: string, response: unknown): Promise<Protocol> => {
-  try {
-    return requireProtocol(unwrapData(response), 'обновление');
-  } catch {
-    // Compatibility fallback only for older partial/204 responses.
-    return getProtocol(protocolId);
-  }
-};
+const protocolFromActionResponse = async (protocolId: string, _response: unknown): Promise<Protocol> =>
+  getProtocol(protocolId);
 
 const requireProtocol = (input: unknown, action: string): Protocol => {
   const direct = asRecord(input);
@@ -1035,7 +1028,7 @@ export const toQuickCreateProtocolApiPayload = (
   companyId: payload.companyId,
   objectId: payload.objectId,
   laboratoryId: payload.laboratoryId,
-  laboratoryEmployeeId: payload.laboratoryEmployeeId,
+  executorId: payload.executorId,
   measurementTime: payload.measurementTime,
   measurementPlace: payload.measurementPlace,
   sourceNumber: payload.sourceNumber,
@@ -1238,9 +1231,8 @@ export async function saveProtocolDraftResults(
   protocolId: string,
   request: SaveProtocolDraftResultsRequest,
 ): Promise<Protocol> {
-  const response = await api.put<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/draft-results`, request);
-  await protocolFromActionResponse(protocolId, response);
-  return getProtocol(protocolId);
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/draft-results`, request);
+  return protocolFromActionResponse(protocolId, response);
 }
 
 export async function deleteProtocol(protocolId: string, version: number): Promise<void> {
@@ -1372,7 +1364,7 @@ export async function signProtocol(protocolId: string | number, request: SignPro
     `/protocols/${protocolId}/sign`,
     { cmsSignatureBase64: request.cmsSignatureBase64, version: request.version },
   );
-  return requireProtocol(unwrapData(response), 'подписание');
+  return protocolFromActionResponse(String(protocolId), response);
 }
 
 export async function publishToClient(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol> {

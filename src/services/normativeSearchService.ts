@@ -1,5 +1,6 @@
 import axios from 'axios';
 import api from './api';
+import { normalizeApiError } from './apiHelpers';
 import type { NormativeSearchItem, NormativeSearchResponse } from '../types/normativeSearch';
 import type { NormativeComparisonType, NormativeRecord, ProtocolTemplateId } from '../types/protocols';
 import { canSearchNormative } from '../utils/normativeSearchRules';
@@ -39,6 +40,17 @@ export const NORMATIVE_SEARCH_DEBOUNCE_MS = 400;
 export const isNumericPollutantCode = (value: string): boolean => /^\d{1,7}$/.test(value.trim());
 const cache = new Map<string, { expiresAt: number; value: NormativeSearchResponse['data'] }>();
 export const clearNormativeSearchCache = (): void => cache.clear();
+
+export const formatNormativeSearchError = (
+  error: unknown,
+  fallback = 'Не удалось выполнить поиск нормативов.',
+): string => {
+  const normalized = normalizeApiError(error, fallback);
+  const status = normalized.status ? `HTTP ${normalized.status}` : '';
+  const code = normalized.code ? normalized.code : '';
+  const prefix = [status, code].filter(Boolean).join(' / ');
+  return prefix ? `${prefix}: ${normalized.message}` : normalized.message;
+};
 
 const asRecord = (value: unknown): UnknownRecord | null =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : null;
@@ -174,7 +186,14 @@ const normalizeResponse = (
   const size = optionalNumber(container.size) ?? requestedSize;
   const totalElements = optionalNumber(firstValue(container, ['totalElements', 'total', 'count'])) ?? items.length;
   const totalPages = optionalNumber(container.totalPages) ?? Math.ceil(totalElements / Math.max(size, 1));
-  return { items, page, size, totalElements, totalPages };
+  const filtersRecord = asRecord(container.filtersApplied) || asRecord(root?.filtersApplied);
+  const filtersApplied = filtersRecord ? {
+    code: optionalString(filtersRecord.code),
+    query: optionalString(filtersRecord.query),
+    templateId: optionalString(filtersRecord.templateId),
+    sourceDocumentCode: optionalString(filtersRecord.sourceDocumentCode),
+  } : undefined;
+  return { items, page, size, totalElements, totalPages, filtersApplied };
 };
 
 export const cleanNormativeSearchParams = (
@@ -280,6 +299,76 @@ export const buildNormativeSearchSequence = (params: NormativeSearchRequest) => 
   ];
 };
 
+const physicalTemplateByFactor: Record<string, ProtocolTemplateId> = {
+  MICROCLIMATE: 'microclimate',
+  LIGHTING: 'lighting',
+  NOISE: 'noise_vibration',
+  VIBRATION: 'noise_vibration',
+  NOISE_VIBRATION: 'noise_vibration',
+  INFRASOUND: 'noise_vibration',
+  ULTRASOUND: 'noise_vibration',
+  UV: 'uv_emf_laser',
+  AEROIONS: 'uv_emf_laser',
+  ELECTROMAGNETIC_FIELD: 'uv_emf_laser',
+  LASER: 'uv_emf_laser',
+};
+
+export const normativeItemProtocolTemplate = (
+  item: NormativeSearchItem,
+): ProtocolTemplateId | null => {
+  const templateId = optionalString(item.templateId);
+  if (templateId && ['ambient_air', 'workplace_air', 'soil', 'water', 'microclimate', 'lighting', 'noise_vibration', 'uv_emf_laser'].includes(templateId)) {
+    return templateId as ProtocolTemplateId;
+  }
+  if (templateId === 'physical_factors' && item.factorType) {
+    return physicalTemplateByFactor[String(item.factorType).toUpperCase()] || null;
+  }
+  const environmentType = String(item.environmentType || '').toUpperCase();
+  if (environmentType === 'WORKPLACE_AIR') return 'workplace_air';
+  if (environmentType === 'ATMOSPHERIC_AIR') return 'ambient_air';
+  const sourceDocumentCode = String(item.sourceDocumentCode || '').toUpperCase();
+  if (sourceDocumentCode === 'DSM_32') return 'soil';
+  if (sourceDocumentCode === 'DSM_138') return 'water';
+  if (sourceDocumentCode === 'DSM_15' && item.factorType) {
+    return physicalTemplateByFactor[String(item.factorType).toUpperCase()] || null;
+  }
+  return null;
+};
+
+export const isNormativeCompatibleWithRequest = (
+  item: NormativeSearchItem,
+  params: NormativeSearchRequest,
+): boolean => {
+  const rawRequestedTemplate = String(params.templateId || '');
+  const requestedTemplate = rawRequestedTemplate === 'physical_factors'
+    ? physicalTemplateByFactor[String(params.factorType || '').toUpperCase()] || rawRequestedTemplate
+    : rawRequestedTemplate;
+  const requestedDocument = String(params.sourceDocumentCode || '').toUpperCase();
+  const itemTemplate = normativeItemProtocolTemplate(item);
+  const itemDocument = String(item.sourceDocumentCode || '').toUpperCase();
+
+  // Soil is deliberately strict: a soil protocol may use DSM_32 records only.
+  if (requestedTemplate === 'soil') {
+    return requestedDocument === 'DSM_32'
+      && itemDocument === 'DSM_32'
+      && (!itemTemplate || itemTemplate === 'soil');
+  }
+  if (itemTemplate && requestedTemplate && itemTemplate !== requestedTemplate) return false;
+  if (requestedDocument && itemDocument && requestedDocument !== itemDocument) return false;
+  return true;
+};
+
+export const buildCrossTemplateSearchParams = (
+  params: NormativeSearchRequest,
+): NormativeSearchRequest => cleanNormativeSearchParams({
+  query: params.query,
+  pollutantCode: params.pollutantCode,
+  code: params.code,
+  page: params.page ?? 0,
+  size: params.size ?? 50,
+  status: 'ACTIVE',
+});
+
 export const searchNormativesStaged = async (
   params: NormativeSearchRequest,
   signal?: AbortSignal,
@@ -297,15 +386,31 @@ export const searchNormativesStaged = async (
     seen.add(key);
     const result = await searchNormatives(cleaned, signal);
     const relaxed = step.stage === 'RELAXED_ACTIVE' || step.stage === 'RELAXED_ALL';
+    const compatibleItems = result.items.filter((item) => isNormativeCompatibleWithRequest(item, params));
     lastResult = {
       ...result,
       relaxed,
       fallbackStage: step.stage,
       items: relaxed
-        ? result.items.map((item) => ({ ...item, matchQuality: item.matchQuality || 'CONTEXT_GENERAL' }))
-        : result.items,
+        ? compatibleItems.map((item) => ({ ...item, matchQuality: item.matchQuality || 'CONTEXT_GENERAL' }))
+        : compatibleItems,
     };
     if (lastResult.items.length) return lastResult;
+  }
+
+  if (params.templateId) {
+    const diagnosticParams = buildCrossTemplateSearchParams(params);
+    const diagnostic = await searchNormatives(diagnosticParams, signal);
+    const incompatibleItems = diagnostic.items.filter((item) => !isNormativeCompatibleWithRequest(item, params));
+    if (incompatibleItems.length) {
+      return {
+        ...lastResult,
+        items: [],
+        incompatibleItems,
+        fallbackStage: 'CROSS_TEMPLATE',
+        filtersApplied: diagnostic.filtersApplied,
+      };
+    }
   }
 
   return lastResult;

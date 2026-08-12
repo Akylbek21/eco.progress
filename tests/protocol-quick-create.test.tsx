@@ -107,7 +107,7 @@ const selectedObject: CompanyObject = {
 
 const selectedExecutor: LaboratoryExecutorOption = {
   executorId: 10,
-  laboratoryEmployeeId: 10,
+  executorId: 10,
   userId: 999,
   laboratoryId: 4,
   fullName: 'Исполнитель',
@@ -210,7 +210,7 @@ describe('quick-create payload contract', () => {
       companyId: 1,
       objectId: 2,
       laboratoryId: 4,
-      laboratoryEmployeeId: 10,
+      executorId: 10,
       protocolDate: '2026-07-20',
       sampleDate: '2026-07-21',
       measurementDate: '2026-07-22',
@@ -315,14 +315,14 @@ describe('quick-create payload contract', () => {
       .toThrow(expect.objectContaining({ field: 'results.0.unit' }));
   });
 
-  it('blocks virtual objects and maps laboratoryEmployeeId without using userId', () => {
+  it('blocks virtual objects and maps executorId without using userId', () => {
     expect(() => buildQuickCreatePayload(validForm(), {
       ...strictContext,
       selectedObject: { ...selectedObject, isVirtual: true, persisted: false },
     })).toThrow(expect.objectContaining({ field: 'objectId' }));
     const payload = buildQuickCreatePayload(validForm(), strictContext);
-    expect(payload.laboratoryEmployeeId).toBe(10);
-    expect(payload.laboratoryEmployeeId).not.toBe(selectedExecutor.userId);
+    expect(payload.executorId).toBe(10);
+    expect(payload.executorId).not.toBe(selectedExecutor.userId);
   });
 
   it('validates executor membership and active state', () => {

@@ -122,9 +122,9 @@ test('router keeps protocol creation inside the list wizard', async () => {
   assert.match(app, /path="\/staff\/protocols\/:protocolId"[\s\S]*<ProtocolEditorPage/);
 });
 
-test('protocol editor uses the shared single-request normative search', async () => {
+test('protocol editor uses the shared staged normative search', async () => {
   const source = await read('src/components/protocols/ProtocolResultsTable.tsx');
-  assert.match(source, /getNormativesForProtocol\(buildNormativeSearchParams\(value, page, mode\), controller\.signal\)/);
+  assert.match(source, /searchNormativesStaged\(buildNormativeSearchParams\(value, page, mode\), controller\.signal\)/);
   assert.match(source, /type NormativeSearchMode = 'ACTIVE_ONLY' \| 'ALL_STATUSES'/);
   assert.match(source, /status: mode === 'ALL_STATUSES' \? 'ALL' : 'ACTIVE'/);
   assert.match(source, /Искать также архивные и требующие проверки/);

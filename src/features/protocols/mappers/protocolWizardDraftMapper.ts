@@ -4,7 +4,10 @@ import { mapFrontendProtocolType } from '../api/protocolTypeMapper';
 import { mapMeasurementToRequest } from './mapProtocolWizardToRequest';
 import { normalizeProtocolWizardForm, type ProtocolWizardForm, type ProtocolWizardResult } from '../components/wizardTypes';
 
-const numericId = (value: string) => value ? Number(value) : undefined;
+const numericId = (value: string) => {
+  const parsed = Number(value);
+  return value.trim() && Number.isFinite(parsed) ? parsed : undefined;
+};
 
 const nullableNumber = (value: string): number | null => {
   const parsed = Number(value);
@@ -24,6 +27,7 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
     form.pekProgramId, form.pekReportId, form.pekControlItemId, form.pekControlEventId,
     form.monitoringPointId, form.emissionSourceId, form.waterOutletId,
   ].some((value) => nullableNumber(value) !== null);
+  const firstSample = form.results.find((row) => row.sampleNumber.trim() || row.samplingDepth.trim() || row.samplingPlace.trim());
   return {
   templateId: mapFrontendProtocolType(form.templateId as Exclude<ProtocolWizardForm['templateId'], ''>),
   subtype: null,
@@ -34,7 +38,7 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
   testingStartDate: nullableText(form.testingStartDate),
   testingEndDate: nullableText(form.testingEndDate),
   laboratoryId: nullableNumber(form.laboratoryId),
-  laboratoryEmployeeId: nullableNumber(form.executorId),
+  executorId: nullableNumber(form.executorId),
   orderId: nullableText(form.orderId),
   orderServiceItemId: nullableText(form.orderServiceItemId),
   environment: {
@@ -50,7 +54,9 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
       roomType: nullableText(form.roomType), workplaceType: nullableText(form.workplaceType),
       lightingType: nullableText(form.lightingType), noiseType: nullableText(form.noiseType),
       visualWorkCategory: nullableText(form.visualWorkCategory), normLevel: nullableText(form.normLevel),
-      sampleNumber: null, samplingDepth: null, samplingPlace: nullableText(form.measurementPlace),
+      sampleNumber: form.templateId === 'soil' ? nullableText(firstSample?.sampleNumber || '') : null,
+      samplingDepth: form.templateId === 'soil' ? nullableText(firstSample?.samplingDepth || '') : null,
+      samplingPlace: nullableText(firstSample?.samplingPlace || form.measurementPlace),
       waterType: nullableText(form.waterType), waterUseCategory: nullableText(form.waterUseCategory),
       factorType: nullableText(form.results.find((row) => row.factorType)?.factorType || ''),
     },
@@ -81,6 +87,9 @@ export const mapWizardToUpdateDraft = (form: ProtocolWizardForm, protocol: Proto
   measurementTime: form.measurementTime || undefined,
   measurementPlace: form.measurementPlace || undefined,
   sampleDate: form.sampleDate || undefined,
+  sampleNumber: form.templateId === 'soil' ? form.results[0]?.sampleNumber || undefined : undefined,
+  samplingPlace: form.results[0]?.samplingPlace || form.measurementPlace || undefined,
+  samplingDepth: form.templateId === 'soil' ? form.results[0]?.samplingDepth || undefined : undefined,
   sourceNumber: nullableText(form.sourceNumber) ?? undefined,
   basis: nullableText(form.basis) ?? undefined,
   formCode: form.formCode || undefined,
@@ -120,6 +129,9 @@ export const mapWizardToUpdateDraft = (form: ProtocolWizardForm, protocol: Proto
     normLevel: form.normLevel || null, lightingType: form.lightingType || null,
     noiseType: form.noiseType || null, visualWorkCategory: form.visualWorkCategory || null,
     waterType: form.waterType || null, waterUseCategory: form.waterUseCategory || null,
+    sampleNumber: form.templateId === 'soil' ? form.results[0]?.sampleNumber || null : null,
+    samplingDepth: form.templateId === 'soil' ? form.results[0]?.samplingDepth || null : null,
+    samplingPlace: form.results[0]?.samplingPlace || form.measurementPlace || null,
     factorType: form.results.find((row) => row.factorType)?.factorType || null,
   },
 });
@@ -130,19 +142,49 @@ export const mapWizardResultToDraftRequest = (
   index: number,
 ): ProtocolResultPayload => {
   const measurement = mapMeasurementToRequest(row, form, index, false);
+  const { sampleName: _legacySampleName, ...measurementValues } = measurement.values ?? {};
   return {
     normativeId: measurement.normativeId ?? null,
-    measurementDeviceId: measurement.measurementDeviceId ?? null,
+    measurementDeviceId: measurement.measurementDeviceId ?? numericId(form.defaultMeasurementDeviceId) ?? null,
     values: {
       indicatorName: measurement.indicatorName ?? null,
       pollutantCode: measurement.pollutantCode ?? null,
       factorType: measurement.factorType ?? null,
       factorCode: measurement.factorCode ?? null,
-      value: measurement.value ?? null,
+      resultValue: measurement.value ?? null,
       unit: measurement.unit ?? null,
       testingMethodNd: measurement.testingMethodNd ?? null,
       samplingMethodNd: measurement.samplingMethodNd ?? null,
-      ...measurement.values,
+      ...measurementValues,
+      textValue: nullableText(row.textValue),
+      cas: nullableText(row.cas),
+      formula: nullableText(row.formula),
+      measurementPlace: nullableText(row.samplingPlace || form.measurementPlace),
+      samplingPlace: nullableText(row.samplingPlace || form.measurementPlace),
+      samplingDate: nullableText(row.samplingDate || form.sampleDate),
+      samplingSpeed: nullableText(row.samplingSpeed),
+      sampleVolume: nullableText(row.sampleVolume),
+      sampleNumber: nullableText(row.sampleNumber),
+      samplingDepth: form.templateId === 'soil' ? nullableDecimal(row.samplingDepth) : null,
+      waterType: nullableText(row.waterType || form.waterType),
+      direction: nullableText(row.direction),
+      minimumValue: nullableDecimal(row.minimumValue),
+      maximumValue: nullableDecimal(row.maximumValue),
+      averageValue: nullableDecimal(row.averageValue),
+      duration: nullableDecimal(row.duration),
+      normativeSource: row.normativeSource,
+      normativeStatus: nullableText(row.normativeStatus),
+      normativeValue: nullableDecimal(row.normativeValue),
+      normativeValueRaw: nullableText(row.normativeValueRaw),
+      normativeMin: nullableDecimal(row.normativeMin),
+      normativeMax: nullableDecimal(row.normativeMax),
+      comparisonType: nullableText(row.comparisonType),
+      normativeDocument: nullableText(row.normativeDocument),
+      manualNormativeReason: nullableText(row.manualNormativeReason),
+      sourceDocumentCode: nullableText(row.sourceDocumentCode),
+      methodName: nullableText(row.methodName),
+      methodDocument: nullableText(row.methodDocument),
+      note: nullableText(row.note),
       workplaceType: form.workplaceType || null,
       roomType: form.roomType || null,
       season: form.season || null,
@@ -195,15 +237,23 @@ export const mapProtocolToWizardForm = (protocol: Protocol): ProtocolWizardForm 
       pollutantCode: textValue(row.values.pollutantCode ?? row.code), factorType: textValue(row.values.factorType),
       factorCode: textValue(row.values.factorCode), cas: textValue(row.values.cas ?? row.values.casNumber),
       formula: textValue(row.values.formula), unit: textValue(row.values.unit ?? row.unit),
-      value: textValue(row.values.value ?? row.values.resultValue ?? row.resultValue ?? row.result),
+      value: textValue(row.values.resultValue ?? row.resultValue ?? row.result ?? row.values.value),
       textValue: textValue(row.values.textValue), samplingPlace: textValue(row.values.samplingPlace ?? row.measurementPlace),
       samplingDate: textValue(row.values.samplingDate), sampleNumber: textValue(row.values.sampleNumber),
       samplingDepth: textValue(row.values.samplingDepth), measurementDeviceId: textValue(row.measurementDeviceId),
-      normativeId: textValue(row.values.normativeId), normativeValue: textValue(row.values.normativeValue ?? row.normativeValue),
+      samplingSpeed: textValue(row.values.samplingSpeed), sampleVolume: textValue(row.values.sampleVolume),
+      waterType: textValue(row.values.waterType), direction: textValue(row.values.direction),
+      minimumValue: textValue(row.values.minimumValue), maximumValue: textValue(row.values.maximumValue),
+      averageValue: textValue(row.values.averageValue), duration: textValue(row.values.duration),
+      normativeId: textValue(row.normativeReference?.id ?? row.values.normativeId),
+      normativeSource: row.values.normativeSource === 'MANUAL' ? 'MANUAL' : row.normativeReference?.id || row.values.normativeId ? 'DIRECTORY' : 'NONE',
+      normativeStatus: textValue(row.values.normativeStatus || (row.normativeReference?.active ? 'ACTIVE' : '')) as ProtocolWizardResult['normativeStatus'],
+      normativeValue: textValue(row.values.normativeValue ?? row.normativeValue), normativeValueRaw: textValue(row.values.normativeValueRaw),
       normativeMin: textValue(row.values.normativeMin ?? row.normativeMin), normativeMax: textValue(row.values.normativeMax ?? row.normativeMax),
       comparisonType: textValue(row.values.comparisonType ?? row.comparisonType), normativeDocument: textValue(row.values.normativeDocument ?? row.normativeDocument),
-      manualNormativeReason: textValue(row.values.manualNormativeReason),
+      manualNormativeReason: textValue(row.values.manualNormativeReason), sourceDocumentCode: textValue(row.values.sourceDocumentCode),
       testingMethodNd: textValue(row.values.testingMethodNd ?? row.testingMethodNd), samplingMethodNd: textValue(row.values.samplingMethodNd ?? row.samplingMethodNd),
+      methodName: textValue(row.values.methodName), methodDocument: textValue(row.values.methodDocument),
       note: textValue(row.values.note ?? row.comment),
     })),
   });

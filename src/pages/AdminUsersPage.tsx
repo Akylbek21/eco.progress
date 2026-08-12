@@ -67,6 +67,7 @@ const emptyStaffForm = {
   name: '',
   email: '',
   phone: '',
+  iin: '',
   password: '',
   role: 'MANAGER' as StaffRole,
   position: '',
@@ -269,6 +270,7 @@ const AdminUsersPage = () => {
       name: user.name || '',
       email: user.email || '',
       phone: user.phone || '',
+      iin: user.iin || '',
       password: '',
       role: staffRoleValues.has(user.role as StaffRole) ? user.role as StaffRole : 'MANAGER',
       position: user.position || '',
@@ -291,6 +293,7 @@ const AdminUsersPage = () => {
     if (!email) errors.email = 'Укажите email';
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Введите корректный email';
     if (!staffForm.phone.trim()) errors.phone = 'Укажите телефон';
+    if (!/^\d{12}$/.test(staffForm.iin.trim())) errors.iin = 'ИИН должен состоять из 12 цифр';
     if (!editingStaff && !staffForm.password.trim()) errors.password = 'Пароль обязателен при создании';
     if (!staffForm.role) errors.role = 'Выберите роль';
     if (!staffForm.position.trim()) errors.position = 'Укажите должность';
@@ -307,6 +310,7 @@ const AdminUsersPage = () => {
       email: staffForm.email.trim(),
       name: staffForm.name.trim(),
       phone: staffForm.phone.trim(),
+      iin: staffForm.iin.trim(),
       city: staffForm.city.trim(),
       legalAddress: staffForm.legalAddress.trim() || undefined,
       position: staffForm.position.trim(),
@@ -653,6 +657,7 @@ const AdminUsersPage = () => {
                   <StaffTextField field="email" label="Email" type="email" form={staffForm} errors={staffErrors} onChange={handleStaffChange} required />
                   <StaffTextField field="phone" label="Телефон" form={staffForm} errors={staffErrors} onChange={handleStaffChange} required />
                 </div>
+                <StaffTextField field="iin" label="ИИН сотрудника" form={staffForm} errors={staffErrors} onChange={handleStaffChange} required />
                 <div className="grid gap-5 sm:grid-cols-2">
                   <StaffTextField field="password" label={editingStaff ? 'Новый пароль' : 'Пароль'} type="password" form={staffForm} errors={staffErrors} onChange={handleStaffChange} required={!editingStaff} />
                   <label className={labelClass}>

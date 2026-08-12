@@ -403,8 +403,7 @@ export interface Protocol {
   explanatoryNote?: string;
   complianceResult?: ProtocolInternalStatus | string;
   executor?: string;
-  executorId?: string;
-  laboratoryEmployeeId?: string | number;
+  executorId?: string | number;
   approver?: string;
   approvedAt?: string;
   signedAt?: string;

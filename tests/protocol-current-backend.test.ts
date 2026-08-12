@@ -8,7 +8,7 @@ import { createWizardDefaults, emptyWizardResult } from '../src/features/protoco
 import { buildQuickCreatePayload } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
 import { normalizeProtocolStatus } from '../src/config/protocolStatus';
 import { getProtocolPermissions } from '../src/utils/protocolPermissions';
-import { addProtocolResult, readyForApproval, removeProtocolMeasurementDevice, saveProtocolDraftResults, signProtocol } from '../src/services/apiProtocolService';
+import { addProtocolResult, normalizeProtocol, readyForApproval, removeProtocolMeasurementDevice, saveProtocolDraftResults, signProtocol } from '../src/services/apiProtocolService';
 import { normalizeApiError } from '../src/services/apiHelpers';
 
 const server = setupServer();
@@ -61,6 +61,11 @@ describe('current protocol backend contract', () => {
     }, 'ADMIN')).toMatchObject({ canView: true, canEdit: false, canReadyForApproval: false });
   });
 
+  it('uses availableActions only when the backend DTO contains them', () => {
+    expect(normalizeProtocol({ ...protocol, availableActions: ['SIGN'] }).availableActions).toEqual(['SIGN']);
+    expect(normalizeProtocol(protocol).availableActions).toEqual([]);
+  });
+
   it('preserves zero as a string in quick-create conditions and never sends clientRowId', () => {
     const form = createWizardDefaults();
     Object.assign(form, {
@@ -80,8 +85,8 @@ describe('current protocol backend contract', () => {
     });
     form.results = [{ ...emptyWizardResult(), indicatorName: 'pH', pollutantCode: 'PH', value: '0', unit: 'ед.', measurementDeviceId: '5', samplingPlace: 'Точка' }];
     const request = buildQuickCreatePayload(form);
-    expect(request.laboratoryEmployeeId).toBe(4);
-    expect(request).not.toHaveProperty('executorId');
+    expect(request.executorId).toBe(4);
+    expect(request).not.toHaveProperty('laboratoryEmployeeId');
     expect(request.conditions).toMatchObject({ temperature: '0', humidity: '0', windSpeed: '0' });
     expect(request.measurements[0].value).toBe(0);
     expect(request.measurements[0]).not.toHaveProperty('clientRowId');
@@ -138,6 +143,7 @@ describe('current protocol backend contract', () => {
         body = await request.json();
         return HttpResponse.json({ data: { ...protocol, status: 'SIGNED', version: 10 } });
       }),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: { ...protocol, status: 'SIGNED', version: 10 } })),
     );
     const signed = await signProtocol('42', { cmsSignatureBase64: 'cms', version: 8 });
     expect(signed.status).toBe('SIGNED');
@@ -149,7 +155,7 @@ describe('current protocol backend contract', () => {
     let savedResults: Array<Record<string, unknown>> = [];
     server.use(
       http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: { ...protocol, version: savedResults.length ? 9 : 8, results: savedResults } })),
-      http.put('http://localhost/api/protocols/42/draft-results', async ({ request }) => {
+      http.patch('http://localhost/api/protocols/42/draft-results', async ({ request }) => {
         body = await request.json();
         const requestBody = body as { results: Array<Record<string, unknown>> };
         savedResults = requestBody.results.map((row) => ({ ...row, id: '5' }));
@@ -163,11 +169,11 @@ describe('current protocol backend contract', () => {
 
   it('keeps backend 409 details from atomic result saving', async () => {
     server.use(
-      http.put('http://localhost/api/protocols/42/draft-results', () => HttpResponse.json({
-        code: 'PROTOCOL_VERSION_CONFLICT', message: 'Протокол уже изменён', currentVersion: 9,
+      http.patch('http://localhost/api/protocols/42/draft-results', () => HttpResponse.json({
+        code: 'OPTIMISTIC_LOCK_CONFLICT', message: 'Протокол уже изменён', currentVersion: 9,
       }, { status: 409 })),
     );
     const error = await saveProtocolDraftResults('42', { version: 8, results: [] }).catch((value: unknown) => value);
-    expect(normalizeApiError(error)).toMatchObject({ status: 409, code: 'PROTOCOL_VERSION_CONFLICT', currentVersion: 9 });
+    expect(normalizeApiError(error)).toMatchObject({ status: 409, code: 'OPTIMISTIC_LOCK_CONFLICT', currentVersion: 9 });
   });
 });

@@ -57,7 +57,16 @@ export interface NormativeSearchResponse {
     totalElements: number;
     totalPages: number;
     relaxed?: boolean;
-    fallbackStage?: 'STRICT_ACTIVE' | 'STRICT_ALL' | 'RELAXED_ACTIVE' | 'RELAXED_ALL';
+    fallbackStage?: 'STRICT_ACTIVE' | 'STRICT_ALL' | 'RELAXED_ACTIVE' | 'RELAXED_ALL' | 'CROSS_TEMPLATE';
+    /** Filters that the backend actually applied to this response. */
+    filtersApplied?: {
+      code?: string | null;
+      query?: string | null;
+      templateId?: string | null;
+      sourceDocumentCode?: string | null;
+    };
+    /** Diagnostic matches from another protocol section. Never selectable. */
+    incompatibleItems?: NormativeSearchItem[];
   };
   message?: string | null;
   errors?: string[];

@@ -10,6 +10,7 @@ import NormativeSelectorModal from '../src/features/protocols/components/compone
 import {
   clearNormativeSearchCache,
   extractNormativeItems,
+  formatNormativeSearchError,
   searchNormatives,
   searchNormativesStaged,
 } from '../src/services/normativeSearchService';
@@ -25,6 +26,17 @@ const nickel = {
   sourceDocumentCode: 'DSM_138',
 };
 
+const protocolSearchCases = [
+  { wizardType: 'ambient_air', templateId: 'ambient_air', sourceDocumentCode: 'DSM_70', environmentType: 'ATMOSPHERIC_AIR' },
+  { wizardType: 'workplace_air', templateId: 'workplace_air', sourceDocumentCode: 'DSM_70', environmentType: 'WORKPLACE_AIR' },
+  { wizardType: 'soil', templateId: 'soil', sourceDocumentCode: 'DSM_32' },
+  { wizardType: 'water', templateId: 'water', sourceDocumentCode: 'DSM_138' },
+  { wizardType: 'microclimate', templateId: 'physical_factors', sourceDocumentCode: 'DSM_15', factorType: 'MICROCLIMATE' },
+  { wizardType: 'lighting', templateId: 'physical_factors', sourceDocumentCode: 'DSM_15', factorType: 'LIGHTING' },
+  { wizardType: 'noise_vibration', templateId: 'physical_factors', sourceDocumentCode: 'DSM_15', factorType: 'NOISE' },
+  { wizardType: 'uv_emf_laser', templateId: 'physical_factors', sourceDocumentCode: 'DSM_15', factorType: 'UV' },
+] as const;
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   cleanup();
@@ -37,6 +49,7 @@ const renderSelector = (
   onAdd = vi.fn(),
   templateId: React.ComponentProps<typeof NormativeSelectorModal>['templateId'] = 'water',
   filters: React.ComponentProps<typeof NormativeSelectorModal>['filters'] = {},
+  onSuggestChangeType = vi.fn(),
 ) => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -52,6 +65,7 @@ const renderSelector = (
         onClose={vi.fn()}
         onAdd={onAdd}
         onManual={vi.fn()}
+        onSuggestChangeType={onSuggestChangeType}
       />
     </QueryClientProvider>,
   );
@@ -183,6 +197,72 @@ describe('normative search HTTP contract', () => {
     expect(actualUrl?.searchParams.get('query')).toBe(value);
     expect(actualUrl?.searchParams.has('code')).toBe(false);
   });
+
+  it.each(protocolSearchCases.flatMap((protocol) => [
+    { ...protocol, searchField: 'code' as const, searchValue: '2322' },
+    { ...protocol, searchField: 'query' as const, searchValue: 'Никель' },
+  ]))('searches $wizardType by $searchField without dropping its protocol filters', async ({
+    templateId, sourceDocumentCode, environmentType, factorType, searchField, searchValue,
+  }) => {
+    let actualUrl: URL | undefined;
+    server.use(http.get('*/api/normatives/search', ({ request }) => {
+      actualUrl = new URL(request.url);
+      const filtersApplied = {
+        code: actualUrl.searchParams.get('code'),
+        query: actualUrl.searchParams.get('query'),
+        templateId: actualUrl.searchParams.get('templateId'),
+        sourceDocumentCode: actualUrl.searchParams.get('sourceDocumentCode'),
+      };
+      return HttpResponse.json({ data: { items: [{
+        ...nickel,
+        id: `${templateId}-${searchField}`,
+        code: '2322',
+        pollutantCode: '2322',
+        indicatorName: 'Никель',
+        templateId,
+        sourceDocumentCode,
+        environmentType,
+        factorType,
+      }], filtersApplied } });
+    }));
+
+    const result = await searchNormativesStaged({
+      [searchField]: searchValue,
+      templateId,
+      sourceDocumentCode,
+      environmentType,
+      factorType,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(actualUrl?.searchParams.get(searchField)).toBe(searchValue);
+    expect(actualUrl?.searchParams.get('templateId')).toBe(templateId);
+    expect(actualUrl?.searchParams.get('sourceDocumentCode')).toBe(sourceDocumentCode);
+    expect(result.filtersApplied).toEqual({
+      code: searchField === 'code' ? searchValue : null,
+      query: searchField === 'query' ? searchValue : null,
+      templateId,
+      sourceDocumentCode,
+    });
+  });
+
+  it('keeps the real HTTP status and backend code in a search error', async () => {
+    server.use(http.get('*/api/normatives/search', () => HttpResponse.json({
+      code: 'ACCESS_DENIED',
+      message: 'Нет прав на поиск норматив',
+    }, { status: 403 })));
+
+    let message = '';
+    try {
+      await searchNormativesStaged({ query: 'Никель', templateId: 'water' });
+    } catch (error) {
+      message = formatNormativeSearchError(error);
+    }
+
+    expect(message).toContain('HTTP 403');
+    expect(message).toContain('ACCESS_DENIED');
+    expect(message).toContain('Нет прав на поиск норматив');
+  });
 });
 
 describe('normative selector modal', () => {
@@ -212,7 +292,14 @@ describe('normative selector modal', () => {
     let actualUrl: URL | undefined;
     server.use(http.get('*/api/normatives/search', ({ request }) => {
       actualUrl = new URL(request.url);
-      return HttpResponse.json({ data: { items: [{ ...nickel, id: 1233, pollutantCode: '1233' }] } });
+      return HttpResponse.json({ data: { items: [{
+        ...nickel,
+        id: 1233,
+        pollutantCode: '1233',
+        templateId: 'ambient_air',
+        sourceDocumentCode: 'DSM_70',
+        environmentType: 'ATMOSPHERIC_AIR',
+      }] } });
     }));
     renderSelector(vi.fn(), 'ambient_air');
 
@@ -268,8 +355,33 @@ describe('normative selector modal', () => {
 
     expect(await screen.findByText('Норматив не найден в справочнике для данного типа протокола. Можно добавить показатель вручную.', {}, { timeout: 2_500 })).toBeTruthy();
     expect(requestedTemplates.length).toBeGreaterThan(0);
-    expect(requestedTemplates.every((template) => template === 'soil')).toBe(true);
+    expect(requestedTemplates.slice(0, -1).every((template) => template === 'soil')).toBe(true);
+    expect(requestedTemplates.at(-1)).toBe('');
     expect(screen.queryByText('Никель')).toBeNull();
+  });
+
+  it('explains an incompatible code and offers to change the protocol type', async () => {
+    const onSuggestChangeType = vi.fn();
+    server.use(http.get('*/api/normatives/search', ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json({ data: { items: !url.searchParams.has('templateId') ? [{
+        ...nickel,
+        id: 2322,
+        code: '2322',
+        pollutantCode: '2322',
+        templateId: 'workplace_air',
+        sourceDocumentCode: 'DSM_70',
+        environmentType: 'WORKPLACE_AIR',
+      }] : [] } });
+    }));
+    renderSelector(vi.fn(), 'soil', {}, onSuggestChangeType);
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '2322' } });
+
+    expect(await screen.findByText('Код 2322 относится к “Воздуху рабочей зоны” и недоступен для протокола “Почва”.', {}, { timeout: 2_500 })).toBeTruthy();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Сменить тип протокола на “Воздух рабочей зоны”' }));
+    expect(onSuggestChangeType).toHaveBeenCalledWith('workplace_air');
   });
 
   it('does not search short text and exposes an API retry action', async () => {
@@ -378,7 +490,12 @@ describe('normative selector modal', () => {
         const params = new URL(request.url).searchParams;
         requestedFactor = params.get('factorType') || '';
         requestedTemplate = params.get('templateId') || '';
-        return HttpResponse.json({ data: { items: [{ ...nickel, factorType: 'NOISE' }] } });
+        return HttpResponse.json({ data: { items: [{
+          ...nickel,
+          templateId: 'physical_factors',
+          sourceDocumentCode: 'DSM_15',
+          factorType: 'NOISE',
+        }] } });
       }),
     );
     renderSelector(vi.fn(), 'noise_vibration');

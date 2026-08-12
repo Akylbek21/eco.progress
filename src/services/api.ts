@@ -12,8 +12,7 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('eco-progress-token');
   const requestPath = String(config.url || '').replace(/^\/api/, '').split('?')[0];
   const isPublicRequest = ['/auth/login', '/auth/staff/login', '/auth/register'].includes(requestPath)
-    || requestPath.startsWith('/public/')
-    || requestPath === '/document-flow/access-requests';
+    || requestPath.startsWith('/public/');
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     const headers = config.headers as Record<string, unknown> & { delete?: (key: string) => void };
     if (typeof headers.delete === 'function') {
@@ -73,11 +72,7 @@ api.interceptors.response.use(
       localStorage.removeItem('eco-progress-token');
       localStorage.removeItem('eco-progress-user');
       const path = window.location.pathname;
-      const loginPath = path.startsWith('/staff') || path.startsWith('/admin')
-        ? '/staff/login'
-        : path.startsWith('/document-flow')
-          ? `/document-flow/login?redirect=${encodeURIComponent(path)}`
-          : '/login';
+      const loginPath = path.startsWith('/staff') || path.startsWith('/admin') ? '/staff/login' : '/login';
       if (!path.includes('/login') && sessionStorage.getItem('eco-progress-401-redirect') !== '1') {
         sessionStorage.setItem('eco-progress-401-redirect', '1');
         window.location.replace(loginPath);

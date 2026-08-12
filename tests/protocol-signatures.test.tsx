@@ -119,6 +119,7 @@ describe('collective protocol signing API and mutation', () => {
         ifMatch = request.headers.get('If-Match') || '';
         return HttpResponse.json(successResponse);
       }),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json(successResponse)),
     );
 
     const response = await signProtocol(42, { cmsSignatureBase64: 'cms-base64', version: 12 });
@@ -132,11 +133,13 @@ describe('collective protocol signing API and mutation', () => {
 
   it('blocks double click, updates the signature UI and invalidates protocol queries', async () => {
     let requestCount = 0;
+    let signed = false;
     server.use(
-      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: protocol({ permissions: { canSign: true } }) })),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json(signed ? successResponse : { data: protocol({ permissions: { canSign: true } }) })),
       http.post('http://localhost/api/protocols/42/sign', async () => {
         requestCount += 1;
         await delay(100);
+        signed = true;
         return HttpResponse.json(successResponse);
       }),
     );
@@ -157,6 +160,7 @@ describe('collective protocol signing API and mutation', () => {
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ['protocols', 'backend-resolved:unauthenticated', 'list'] });
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ['protocols', 'backend-resolved:unauthenticated', 'detail', '42', 'signatures'] });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['protocols', 'backend-resolved:unauthenticated', 'detail', '42', 'documents'] });
     });
   });
 });
@@ -286,7 +290,7 @@ describe('signature card states and locking', () => {
 
 describe('collective signing errors', () => {
   it.each([
-    ['PROTOCOL_VERSION_CONFLICT', 'Протокол был изменён другим сотрудником. Обновите данные'],
+    ['OPTIMISTIC_LOCK_CONFLICT', 'Протокол был изменён другим сотрудником. Обновите данные'],
     ['PROTOCOL_ALREADY_SIGNED', 'Вы уже подписали эту версию протокола'],
     ['SIGNATURE_LIMIT_REACHED', 'Достигнуто максимальное количество подписей: 5'],
   ])('maps %s to a clear message', (code, message) => {

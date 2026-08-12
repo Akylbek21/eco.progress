@@ -23,8 +23,8 @@ export interface ProtocolLaboratoryRequest {
 }
 
 export interface ProtocolExecutorRequest {
-  /** The laboratory employee primary key. This is intentionally not a user id. */
-  laboratoryEmployeeId: string | number | null;
+  /** Backend executor primary key. This is intentionally not a user id. */
+  executorId: string | number | null;
   fullName: string | null;
 }
 
@@ -46,7 +46,7 @@ export interface UpdateProtocolRequest {
   protocolDate: string;
   objectId: string | number | null;
   executor: string | null;
-  laboratoryEmployeeId: string | number | null;
+  executorId: string | number | null;
   measurementDate: string | null;
   measurementTime: string | null;
   measurementPlace: string | null;
@@ -121,7 +121,7 @@ export interface CreateProtocolDraftRequest {
   protocolDate: string | null;
   measurementDate: string | null;
   laboratoryId: number | null;
-  laboratoryEmployeeId: number | null;
+  executorId: number | null;
   orderId: string | null;
   orderServiceItemId: string | null;
   printVisibility: ProtocolPrintVisibility;
@@ -140,7 +140,7 @@ export interface ProtocolResultRequest {
   normativeId: string | number | null;
 }
 
-/** PUT /protocols/{id}/draft-results replaces all draft rows atomically. */
+/** PATCH /protocols/{id}/draft-results replaces all draft rows atomically. */
 export interface SaveProtocolDraftResultsRequest {
   version: number;
   results: ProtocolResultRequest[];
@@ -230,7 +230,7 @@ export interface QuickCreateProtocolRequest {
   companyId: number;
   objectId: number;
   laboratoryId: number;
-  laboratoryEmployeeId: number;
+  executorId: number;
   measurementTime?: string;
   measurementPlace: string;
   sourceNumber: string;

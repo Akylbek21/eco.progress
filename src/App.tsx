@@ -65,10 +65,7 @@ const ContentListPage = lazyNamed(() => import('./pages/content/ContentManagemen
 const ContentEditorPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentEditorPage');
 const ContentAnalyticsPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAnalyticsPage');
 const ContentAuditPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentAuditPage');
-const DocumentFlowRoutes = lazy(() => import('./features/document-flow/DocumentFlowRoutes'));
-const DocumentFlowEntryPage = lazy(() => import('./features/document-flow/pages/DocumentFlowEntryPage'));
-const DocumentFlowAccessAdminPage = lazy(() => import('./features/document-flow-admin/pages/DocumentFlowAccessAdminPage'));
-const ExternalDocumentSigningPage = lazy(() => import('./features/document-flow/pages/ExternalSigningPage'));
+const SignatureDocumentsPage = lazy(() => import('./pages/SignatureDocumentsPage'));
 
 const CabinetCompanyPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetCompanyPage');
 const CabinetDashboardPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetDashboardPage');
@@ -145,7 +142,7 @@ const ForbiddenPage = ({ message = 'У вашей роли нет прав дл�
   </div>
 );
 
-const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/partners', '/news', '/faq', '/contacts', '/document-flow/plans', '/sign/document', '/public/document-flow/sign'];
+const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/partners', '/news', '/faq', '/contacts'];
 
 const RouteFallback = () => {
   const { pathname } = useLocation();
@@ -167,9 +164,8 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
-    const publicDocumentFlow = location.pathname === '/document-flow/plans' || location.pathname.startsWith('/sign/document/') || location.pathname.startsWith('/public/document-flow/sign/');
-    const privatePrefixes = ['/cabinet', '/client', '/staff', '/admin', '/dashboard', '/document-flow', '/login', '/register', '/reset-password', '/api', '/internal', '/crm'];
-    const isPrivate = !publicDocumentFlow && privatePrefixes.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
+    const privatePrefixes = ['/cabinet', '/client', '/staff', '/admin', '/dashboard', '/login', '/register', '/reset-password', '/api', '/internal', '/crm'];
+    const isPrivate = privatePrefixes.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
     let meta = document.head.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
     if (!meta) {
       meta = document.createElement('meta');
@@ -230,9 +226,6 @@ function App() {
         <Route path="/contacts" element={<PublicLayout><ContactsPage /></PublicLayout>} />
         <Route path="/regions" element={<PublicLayout><RegionsPage /></PublicLayout>} />
         <Route path="/search" element={<PublicLayout><SearchPage /></PublicLayout>} />
-        <Route path="/document-flow/*" element={<DocumentFlowRoutes />} />
-        <Route path="/sign/document/:token" element={<ExternalDocumentSigningPage />} />
-        <Route path="/public/document-flow/sign/:token" element={<ExternalDocumentSigningPage />} />
         <Route path="/shtrafy-za-ekologiyu-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
         <Route path="/shtrafy-za-ekologicheskie-narusheniya-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
         <Route path="/:seoSlug" element={<PublicLayout><SeoLandingPage /></PublicLayout>} />
@@ -287,7 +280,7 @@ function App() {
         <Route path="/staff/contracts" element={<RoleAccess roles={['MANAGER', 'ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'MANAGER', 'ACCOUNTANT']}><StaffContractsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/tasks" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffTasksPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/documents" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDocumentsPage /></StaffLayout></RoleAccess>} />
-        <Route path="/staff/document-flow" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><DocumentFlowEntryPage /></StaffLayout></RoleAccess>} />
+        <Route path="/staff/document-flow" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><SignatureDocumentsPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/calendar" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']}><StaffCalendarPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ProtocolAccess><ErrorBoundary fallbackTitle="Не удалось открыть протоколы"><ProtocolsPage /></ErrorBoundary></ProtocolAccess></StaffAccess></StaffLayout></RoleAccess>} />
@@ -321,7 +314,6 @@ function App() {
 
         <Route path="/admin" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminPage /></AdminLayout></RoleAccess>} />
         <Route path="/admin/users" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminUsersPage /></AdminLayout></RoleAccess>} />
-        <Route path="/admin/document-flow-access" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><DocumentFlowAccessAdminPage /></AdminLayout></RoleAccess>} />
         <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
         </Routes>
         </Suspense>

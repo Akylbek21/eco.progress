@@ -22,6 +22,7 @@ const fieldRules: Array<{ pattern: RegExp; field: string }> = [
 ];
 
 const friendlyRules: Array<{ pattern: RegExp; message: string }> = [
+  { pattern: /OPTIMISTIC_LOCK_CONFLICT|PROTOCOL_VERSION_CONFLICT|VERSION_CONFLICT|optimistic lock|version conflict/i, message: 'Протокол изменён другим сотрудником. Обновите данные и повторите действие.' },
   { pattern: /waterType|тип воды/i, message: 'Выберите тип воды' },
   { pattern: /waterUseCategory|категори.*водопольз/i, message: 'Выберите категорию водопользования' },
   { pattern: /measurementDeviceId|укажите.*прибор|device.*required/i, message: 'Выберите прибор.' },

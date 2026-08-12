@@ -566,7 +566,7 @@ export function buildQuickCreatePayload(
     companyId,
     objectId,
     laboratoryId,
-    laboratoryEmployeeId: executorId,
+    executorId,
     measurementTime: measurementTime ?? undefined,
     measurementPlace: measurementPlace ?? '',
     sourceNumber: sourceNumber ?? '',

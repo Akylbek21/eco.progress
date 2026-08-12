@@ -37,7 +37,7 @@ export const buildQuickCreateTechnicalReport = (
           companyId: Number.isFinite(payload.companyId),
           objectId: Number.isFinite(payload.objectId),
           laboratoryId: Number.isFinite(payload.laboratoryId),
-          laboratoryEmployeeId: Number.isFinite(payload.laboratoryEmployeeId),
+          executorId: Number.isFinite(payload.executorId),
         },
         sourceNumberPresent: Boolean(payload.sourceNumber),
         measurementCount: payload.measurements.length,

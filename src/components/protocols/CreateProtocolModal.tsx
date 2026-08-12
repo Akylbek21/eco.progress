@@ -26,7 +26,7 @@ import type {
   WeatherConditionsStatus,
 } from '../../types/protocols';
 import { templateName } from '../../data/protocolTemplates';
-import { canSearchNormative as canSearch, NORMATIVE_SEARCH_DEBOUNCE_MS, normativeSearchItemToRecord, searchNormatives } from '../../services/normativeSearchService';
+import { canSearchNormative as canSearch, formatNormativeSearchError, NORMATIVE_SEARCH_DEBOUNCE_MS, normativeSearchItemToRecord, searchNormativesStaged } from '../../services/normativeSearchService';
 import { resolveProtocolNormativeContext } from '../../data/protocolNormativeContext';
 import {
   protocolNormativeConditionLabel,
@@ -136,6 +136,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
   const [suggestions, setSuggestions] = useState<Pollutant[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchState, setSearchState] = useState<SearchState>('idle');
+  const [normativeSearchError, setNormativeSearchError] = useState('');
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [sourceParameters, setSourceParameters] = useState<Record<string, string>>({
     flowSpeed: '', ductShape: 'ROUND', diameter: '', width: '', height: '', temperature: '', pressureKpa: '',
@@ -175,7 +176,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       : isWaterTemplate
         ? 'water'
         : String(templateId);
-    const result = await searchNormatives({
+    const result = await searchNormativesStaged({
       query,
       page: 0,
       size: 30,
@@ -279,6 +280,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       searchAbortRef.current = controller;
       setSearching(true);
       setSearchState('searching');
+      setNormativeSearchError('');
       try {
         const apiItems = (await searchNormativeItems(query, controller.signal)).map(normativeToPollutant);
         if (requestId === searchRequestRef.current) {
@@ -287,7 +289,9 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
         }
       } catch (searchError) {
         if (!controller.signal.aborted && requestId === searchRequestRef.current) {
-          setError(getApiErrorMessage(searchError, searchUnavailableMessage));
+          const message = formatNormativeSearchError(searchError, searchUnavailableMessage);
+          setNormativeSearchError(message);
+          setError(message);
           setSuggestions([]);
           setSearchState('error');
         }
@@ -335,7 +339,7 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
       setPlace(previous.measurementPlace || String(previous.results[0]?.values.measurementPlace || previous.results[0]?.values.samplingPlace || ''));
       setSourceNumber(previous.sourceNumber || String(previous.results[0]?.values.sourceNumber || ''));
       setLaboratoryId(previous.laboratory.laboratoryId || laboratoryId);
-      setExecutorId(previous.executorId || previous.laboratory.executorId || '');
+      setExecutorId(String(previous.executorId || previous.laboratory.executorId || ''));
       if (previous.companyId) {
         await selectCompany(String(previous.companyId));
         setObjectId(String(previous.objectId || ''));
@@ -766,6 +770,11 @@ const CreateProtocolModal = ({ open, loading = false, templates, onClose, onCrea
             {!searching && searchState === 'empty' && (
               <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
                 {notFoundSearchMessage}
+              </div>
+            )}
+            {!searching && searchState === 'error' && normativeSearchError && (
+              <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800">
+                {normativeSearchError}
               </div>
             )}
           </div>

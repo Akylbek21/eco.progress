@@ -344,7 +344,7 @@ const getMissingFields = (protocol: Protocol): MissingField[] => {
   if (!hasText(protocol.measurementDate || protocol.testing?.samplingDate)) items.push({ label: 'дата замера', stepKey: 'general' });
   if (!hasText(protocol.measurementTime)) items.push({ label: 'время замера', stepKey: 'general' });
   if (!hasLaboratory(protocol)) items.push({ label: 'данные лаборатории', stepKey: 'general' });
-  if (!hasText(protocol.laboratoryEmployeeId ?? protocol.executorId)) items.push({ label: 'исполнитель лаборатории', stepKey: 'general' });
+  if (!hasText(protocol.executorId)) items.push({ label: 'исполнитель лаборатории', stepKey: 'general' });
   if (!hasText(protocol.organization?.organizationName)) items.push({ label: 'организация', stepKey: 'organization' });
   if (!hasText(protocol.organization?.organizationAddress)) items.push({ label: 'адрес организации', stepKey: 'organization' });
   if (!hasText(protocol.organization?.objectName || protocol.companySnapshot?.objectName)) items.push({ label: 'данные объекта', stepKey: 'organization' });
@@ -371,7 +371,7 @@ const getApprovalBlockers = (protocol: Protocol): string[] => {
   if (!hasText(protocol.testing?.samplingDate || protocol.measurementDate)) blockers.push('Заполните дату отбора');
   if (!hasText(protocol.testing?.testingEndDate || protocol.testing?.testingDate || protocol.testing?.testingStartDate || protocol.measurementDate)) blockers.push('Заполните дату испытаний');
   if (!hasText(protocol.testing?.testingMethodDocument || protocol.testingMethodDocument)) blockers.push('Укажите НД на методы испытаний');
-  if (!hasText(protocol.laboratoryEmployeeId ?? protocol.executorId)) blockers.push('Выберите исполнителя лаборатории');
+  if (!hasText(protocol.executorId)) blockers.push('Выберите исполнителя лаборатории');
   if (!protocol.results.length) blockers.push('Добавьте хотя бы одну строку результата');
   protocol.results.forEach((row, index) => {
     if (!hasText(resultValue(row))) blockers.push(`Строка ${index + 1}: нет значения результата`);
@@ -810,7 +810,7 @@ const ProtocolEditorPage = () => {
     },
     onError: async (message, signError) => {
       toast.error('Не удалось подписать протокол', message);
-      if (normalizeApiError(signError).code === 'PROTOCOL_VERSION_CONFLICT' && protocol?.id) {
+      if (['OPTIMISTIC_LOCK_CONFLICT', 'PROTOCOL_VERSION_CONFLICT', 'VERSION_CONFLICT'].includes(normalizeApiError(signError).code || '') && protocol?.id) {
         try {
           applyServerProtocol(await protocolService.getProtocol(protocol.id));
         } catch {
@@ -957,14 +957,8 @@ const ProtocolEditorPage = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl('');
     setPreviewOpen(false);
-    applyServerProtocol({
-      ...fresh,
-      measurementDevices: collectProtocolDevices(fresh),
-      hasPdf: false,
-      pdfFileId: undefined,
-      finalPdfFileId: undefined,
-      finalPdfHash: undefined,
-    });
+    applyServerProtocol({ ...fresh, measurementDevices: collectProtocolDevices(fresh) });
+    await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.documents(protocolCacheScope, protocolId) });
   };
 
   const navigateSafely = (to: string) => {
@@ -1011,9 +1005,7 @@ const ProtocolEditorPage = () => {
         formCode: item.formCode,
         appendixNumber: item.appendixNumber,
         executor: item.executor || '',
-        executorId: item.laboratoryEmployeeId !== undefined && item.laboratoryEmployeeId !== null
-          ? String(item.laboratoryEmployeeId)
-          : item.executorId,
+        executorId: item.executorId == null ? undefined : String(item.executorId),
         approver: item.approver || '',
         laboratory: item.laboratory,
         organization: item.organization,
@@ -1035,7 +1027,7 @@ const ProtocolEditorPage = () => {
         const draftProtocol = await ensureDraftProtocol(snapshot);
         const saved = await updateSnapshot(draftProtocol);
         const refreshed = await protocolService.getProtocol(saved.id);
-        const updated = { ...refreshed, hasPdf: false, pdfFileId: undefined, finalPdfFileId: undefined, finalPdfHash: undefined };
+        const updated = refreshed;
         if (requestId === saveRequestRef.current && startedVersion === editVersionRef.current) {
           applyServerProtocol(updated);
           sessionStorage.removeItem(protocolBackupKey(user?.id, updated.id));
@@ -1053,7 +1045,7 @@ const ProtocolEditorPage = () => {
             if (!rebased.conflicts.length) {
               const saved = await updateSnapshot(rebased.protocol);
               const refreshed = await protocolService.getProtocol(saved.id);
-              const updated = { ...refreshed, hasPdf: false, pdfFileId: undefined, finalPdfFileId: undefined, finalPdfHash: undefined };
+              const updated = refreshed;
               applyServerProtocol(updated);
               sessionStorage.removeItem(protocolBackupKey(user?.id, updated.id));
               toast.success('Протокол сохранён');
@@ -1254,6 +1246,7 @@ const ProtocolEditorPage = () => {
       applyServerProtocol(updated);
       void queryClient.invalidateQueries({ queryKey: protocolQueryKeys.all(protocolCacheScope) });
       void queryClient.invalidateQueries({ queryKey: protocolQueryKeys.detail(protocolCacheScope, updated.id) });
+      void queryClient.invalidateQueries({ queryKey: protocolQueryKeys.documents(protocolCacheScope, updated.id) });
       if (updated.orderId) void queryClient.invalidateQueries({ queryKey: ['order', String(updated.orderId)] });
       if (updated.pekProgramId) void queryClient.invalidateQueries({ queryKey: ['pek', 'program', Number(updated.pekProgramId)] });
       if (updated.pekReportId) {
@@ -1496,7 +1489,7 @@ const ProtocolEditorPage = () => {
       >
         {editSection === 'general' && <div className="space-y-5"><ProtocolGeneralForm protocol={protocol} readOnly={!protocolActions.canEdit} onChange={patchProtocol} /><ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} measurementDate={protocol.measurementDate || protocol.testing.samplingDate} readOnly={!protocolActions.canEdit} onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })} onChange={(testing) => patchProtocol({ testing })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'organization' && <div className="space-y-5"><ProtocolOrganizationForm value={protocol.organization} readOnly={!protocolActions.canEdit} onChange={(organization) => patchProtocol({ organization })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
-        {editSection === 'laboratory' && <ProtocolLaboratoryForm value={protocol.laboratory} employees={laboratoryEmployees} readOnly={!protocolActions.canManageDevices} loading={busy} canOpenSettings={protocolActions.canManageDevices} onExecutorChange={(employee) => patchProtocol({ laboratoryEmployeeId: employee.id, executorId: String(employee.id), executor: employee.fullName, laboratory: { ...protocol.laboratory, executorId: String(employee.id), executor: employee.fullName } })} onRefresh={refreshLaboratorySnapshot} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
+        {editSection === 'laboratory' && <ProtocolLaboratoryForm value={protocol.laboratory} employees={laboratoryEmployees} readOnly={!protocolActions.canManageDevices} loading={busy} canOpenSettings={protocolActions.canManageDevices} onExecutorChange={(employee) => patchProtocol({ executorId: employee.id, executor: employee.fullName, laboratory: { ...protocol.laboratory, executorId: String(employee.id), executor: employee.fullName } })} onRefresh={refreshLaboratorySnapshot} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
         {editSection === 'environment' && <div className="space-y-5">{isWaterProtocolType(protocol.templateId) && <ProtocolWaterCharacteristicsForm waterType={protocol.waterType || String(protocol.environment?.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.environment?.conditions?.waterUseCategory || '')} readOnly={!protocolActions.canEdit} onChange={({ waterType, waterUseCategory }) => patchProtocol({ conditions: { ...(protocol.environment?.conditions || {}), waterType, waterUseCategory } })} />}<ProtocolEnvironmentForm value={protocol.environment || {}} measurementDate={protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate} measurementTime={protocol.measurementTime || ''} objectId={String(protocol.objectId || '')} objectName={companyObjects.find((item) => item.id === String(protocol.objectId))?.name || protocol.companySnapshot.objectName || ''} objectOptions={companyObjects.map((item) => ({ id: item.id, name: item.name }))} readOnly={!protocolActions.canEdit} loading={busy} onSelectionChange={changeWeatherSelection} onRequestConditions={refreshWeather} onChange={(environment) => patchProtocol({ environment })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'methods' && <ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} measurementDate={protocol.measurementDate || protocol.testing.samplingDate} readOnly={!protocolActions.canEdit} onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })} onChange={(testing) => patchProtocol({ testing })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
         {editSection === 'results' && <ProtocolResultsTable protocolId={protocol.id} version={protocol.version} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} devices={protocol.measurementDevices} readOnly={!protocolActions.canManageResults} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />}

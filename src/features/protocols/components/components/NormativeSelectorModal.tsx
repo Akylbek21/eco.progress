@@ -8,6 +8,7 @@ import { physicalFactorTypes } from '../../../../data/protocolTemplates';
 import {
   canSearchNormative,
   isNumericPollutantCode,
+  normativeItemProtocolTemplate,
   normativeSearchItemToRecord,
   normalizeNormativeSearchRequest,
   normativeSearchQueryKey,
@@ -23,10 +24,31 @@ type Props = {
   onClose: () => void;
   onAdd: (items: NormativeRecord[]) => void;
   onManual: () => void;
+  onSuggestChangeType?: (templateId: ProtocolTemplateId) => void;
 };
 
 const SEARCH_DEBOUNCE_MS = 400;
 const SEARCH_PAGE_SIZE = 50;
+const protocolTypeLabels: Record<ProtocolTemplateId, string> = {
+  ambient_air: 'Атмосферный воздух',
+  workplace_air: 'Воздух рабочей зоны',
+  soil: 'Почва',
+  microclimate: 'Микроклимат',
+  lighting: 'Освещённость',
+  noise_vibration: 'Шум и вибрация',
+  water: 'Вода / сточные воды',
+  uv_emf_laser: 'УФ, ЭМП и лазерное излучение',
+};
+const relatedSectionLabels: Record<ProtocolTemplateId, string> = {
+  ambient_air: 'Атмосферному воздуху',
+  workplace_air: 'Воздуху рабочей зоны',
+  soil: 'Почве',
+  microclimate: 'Микроклимату',
+  lighting: 'Освещённости',
+  noise_vibration: 'Шуму и вибрации',
+  water: 'Воде / сточным водам',
+  uv_emf_laser: 'УФ, ЭМП и лазерному излучению',
+};
 
 const NormativeSelectorModal = ({
   open,
@@ -35,6 +57,7 @@ const NormativeSelectorModal = ({
   onClose,
   onAdd,
   onManual,
+  onSuggestChangeType,
 }: Props) => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -114,6 +137,20 @@ const NormativeSelectorModal = ({
     () => (query.data?.items ?? []).map(normativeSearchItemToRecord),
     [query.data?.items],
   );
+  const incompatibleItem = query.data?.incompatibleItems?.[0];
+  const incompatibleTemplate = incompatibleItem
+    ? normativeItemProtocolTemplate(incompatibleItem)
+    : null;
+  const currentTemplateLabel = templateId
+    ? protocolTypeLabels[templateId] || templateId
+    : '';
+  const incompatibleTemplateLabel = incompatibleTemplate
+    ? protocolTypeLabels[incompatibleTemplate] || incompatibleTemplate
+    : '';
+  const incompatibleSectionLabel = incompatibleTemplate
+    ? relatedSectionLabels[incompatibleTemplate] || incompatibleTemplateLabel
+    : '';
+  const incompatibleCode = incompatibleItem?.code || incompatibleItem?.pollutantCode || debouncedSearch;
 
   const close = () => {
     setSearch('');
@@ -232,7 +269,28 @@ const NormativeSelectorModal = ({
           </p>
         )}
 
-        {currentQueryFinished && rows.length === 0 && (
+        {currentQueryFinished && rows.length === 0 && incompatibleItem && (
+          <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+            <p className="font-bold">
+              Код {incompatibleCode} относится к “{incompatibleSectionLabel || 'другому разделу'}” и недоступен для протокола “{currentTemplateLabel}”.
+            </p>
+            <p className="mt-2">Норматив нельзя выбрать для текущего типа протокола.</p>
+            {incompatibleTemplate && onSuggestChangeType && (
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  onSuggestChangeType(incompatibleTemplate);
+                }}
+                className="mt-3 font-bold text-amber-950 underline underline-offset-2"
+              >
+                Сменить тип протокола на “{incompatibleTemplateLabel}”
+              </button>
+            )}
+          </div>
+        )}
+
+        {currentQueryFinished && rows.length === 0 && !incompatibleItem && (
           <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">Норматив не найден в справочнике для данного типа протокола. Можно добавить показатель вручную.</div>
         )}
 

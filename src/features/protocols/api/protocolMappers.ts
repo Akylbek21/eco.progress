@@ -77,7 +77,7 @@ export const mapProtocolFormToPatchRequest = (
   protocolDate: payload.protocolDate,
   objectId: idOrNull(payload.objectId),
   executor: optionalText(payload.executor),
-  laboratoryEmployeeId: idOrNull(payload.executorId),
+  executorId: idOrNull(payload.executorId),
   measurementDate: optionalText(payload.measurementDate),
   measurementTime: optionalText(payload.measurementTime),
   measurementPlace: optionalText(payload.measurementPlace),

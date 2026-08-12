@@ -21,7 +21,6 @@ const navItems = [
   { label: 'Статьи', path: '/news' },
   { label: 'О компании', path: '/about' },
   { label: 'Контакты', path: '/contacts' },
-  { label: 'Документооборот', path: '/document-flow' },
   { label: 'WhatsApp', path: getWhatsAppUrl() },
   { label: 'Войти', path: '/login' },
 ];

@@ -64,7 +64,7 @@ test('29-31 document-specific DSM views share the common service', async () => {
 
 test('32-36 protocol picker is contextual, paginated, snapshots values and rejects unit mismatch', async () => {
   const picker = await read('src/components/protocols/ProtocolResultsTable.tsx');
-  assert.match(picker, /getNormativesForProtocol/);
+  assert.match(picker, /searchNormativesStaged/);
   assert.match(picker, /normativePage/);
   assert.match(picker, /normativeRecordId: normative\.id/);
   assert.match(picker, /conditions: JSON\.stringify\(normativeConditions\(normative\)\)/);

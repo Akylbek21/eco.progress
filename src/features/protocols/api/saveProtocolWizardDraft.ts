@@ -20,18 +20,21 @@ export const saveProtocolWizardDraft = async (
   idempotencyKey: string,
   service: ProtocolService = protocolService,
 ): Promise<SavedProtocolWizardDraft> => {
-  let protocol = current
-    ? await service.updateProtocolDraft(current.id, mapWizardToUpdateDraft(form, current))
-    : await service.createProtocolDraft(mapWizardToCreateDraft(form), idempotencyKey);
-
-  if (!protocol.id) throw new Error('Не удалось сохранить протокол: сервер не вернул идентификатор.');
-
+  // Build the complete replacement before creating/updating the server draft. A
+  // client-side mapping error must not leave behind a header-only protocol.
   const results = form.results.flatMap((row, index) => {
     if (!isNonEmptyResult(row)) return [];
     const payload = mapWizardResultToDraftRequest(row, form, index);
     payload.values.clientRowId = row.clientRowId;
     return [mapProtocolResultFormToRequest(payload)];
   });
+
+  let protocol = current
+    ? await service.updateProtocolDraft(current.id, mapWizardToUpdateDraft(form, current))
+    : await service.createProtocolDraft(mapWizardToCreateDraft(form), idempotencyKey);
+
+  if (!protocol.id) throw new Error('Не удалось сохранить протокол: сервер не вернул идентификатор.');
+
   protocol = await service.saveProtocolDraftResults(protocol.id, { version: protocol.version, results });
 
   const resultIdsByClientRowId = new Map<string, string>();

@@ -171,7 +171,7 @@ describe('protocol mutation HTTP contracts', () => {
     ] };
     const response = { data: { ...draft, version: 15 } };
     server.use(
-      http.put('http://localhost/api/protocols/42/draft-results', async ({ request }) => {
+      http.patch('http://localhost/api/protocols/42/draft-results', async ({ request }) => {
         calls.push({ method: request.method, path: new URL(request.url).pathname, body: await request.json() });
         return HttpResponse.json(response);
       }),
@@ -184,17 +184,17 @@ describe('protocol mutation HTTP contracts', () => {
 
     expect(calls).toEqual([
       {
-        method: 'PUT',
+        method: 'PATCH',
         path: '/api/protocols/42/draft-results',
         body: expect.objectContaining({ version: 14, results: expect.any(Array) }),
       },
       {
-        method: 'PUT',
+        method: 'PATCH',
         path: '/api/protocols/42/draft-results',
         body: expect.objectContaining({ version: 14, results: expect.any(Array) }),
       },
       {
-        method: 'PUT',
+        method: 'PATCH',
         path: '/api/protocols/42/draft-results',
         body: expect.objectContaining({ version: 14, results: expect.any(Array) }),
       },
@@ -206,12 +206,12 @@ describe('protocol mutation HTTP contracts', () => {
       isAxiosError: true,
       response: {
         status: 409,
-        data: { code: 'PROTOCOL_VERSION_CONFLICT', currentVersion: 14 },
+        data: { code: 'OPTIMISTIC_LOCK_CONFLICT', currentVersion: 14 },
       },
     });
     expect(parsed).toMatchObject({
       status: 409,
-      code: 'PROTOCOL_VERSION_CONFLICT',
+      code: 'OPTIMISTIC_LOCK_CONFLICT',
       currentVersion: 14,
     });
   });

@@ -1,6 +1,6 @@
 ﻿import { ReactNode, useState } from 'react';
 import { NavLink, Link, Navigate } from 'react-router-dom';
-import { BarChart3, Bell, BookOpenCheck, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileKey2, FileSignature, FileText, FlaskConical, Gauge, Handshake, LayoutDashboard, Leaf, LockKeyhole, LogOut, Menu, Settings, ShieldCheck, UserRoundSearch, X } from 'lucide-react';
+import { BarChart3, Bell, BookOpenCheck, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, FlaskConical, Gauge, Handshake, LayoutDashboard, Leaf, LockKeyhole, LogOut, Menu, Settings, ShieldCheck, UserRoundSearch, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
 import { canAccess, hasPermission } from '../config/permissions';
@@ -32,11 +32,10 @@ const links: Array<{ label: string; path: string; icon: typeof ClipboardList; pa
   { label: 'Лаборатории', path: '/staff/settings/laboratories', icon: Settings, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'] },
   { label: 'Задачи', path: '/staff/tasks', icon: ClipboardCheck },
   { label: 'Документы', path: '/staff/documents', icon: FileText },
-  { label: 'Документооборот', path: '/staff/document-flow', icon: FileSignature },
+  { label: 'Подписание документов', path: '/staff/document-flow', icon: FileSignature },
   { label: 'Уведомления', path: '/staff/notifications', icon: Bell },
   { label: 'Отчеты', path: '/staff/reports', icon: BarChart3, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Роли пользователей', path: '/staff/user-roles', icon: ShieldCheck, rolesOnly: true },
-  { label: 'Доступ к документообороту', path: '/admin/document-flow-access', icon: FileKey2, allowedRoles: ['ADMIN'] },
 ];
 
 const roleLabel = (role?: string) => {
@@ -65,7 +64,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
       {(user?.role === 'LABORATORY'
-        ? links.filter((item) => ['/staff/protocols', '/staff/journals', '/staff/pek'].includes(item.path)
+        ? links.filter((item) => ['/staff/protocols', '/staff/journals', '/staff/pek', '/staff/document-flow'].includes(item.path)
           || Boolean(item.companyPermission && hasCompanyPermission(user, item.companyPermission)))
         : links
       ).map((item) => {

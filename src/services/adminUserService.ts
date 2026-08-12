@@ -11,6 +11,7 @@ export type AdminUserRecord = {
   firstName?: string | null;
   middleName?: string | null;
   phone?: string | null;
+  iin?: string | null;
   city?: string | null;
   companyName?: string | null;
   bin?: string | null;
@@ -31,6 +32,7 @@ export type CreateAdminUserPayload = {
   role: string;
   type?: string;
   phone?: string;
+  iin?: string;
   city?: string;
   companyName?: string;
   bin?: string;
