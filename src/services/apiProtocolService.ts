@@ -1247,15 +1247,20 @@ const persistedResultRequest = (row: ProtocolResultRow) => mapProtocolResultForm
   ) ?? null,
 });
 
+const draftResultCreateRequest = (payload: ProtocolResultPayload, clientRowId: string | null = null) => ({
+  ...mapProtocolResultFormToRequest(payload),
+  clientRowId,
+});
+
 const currentDraftForVersion = async (protocolId: string, _version: number) => getProtocol(protocolId);
 
 export async function addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow> {
-  const current = await currentDraftForVersion(protocolId, version);
   const clientRowId = `atomic-${globalThis.crypto?.randomUUID?.() || Date.now()}`;
-  const added = mapProtocolResultFormToRequest({ ...payload, values: { ...payload.values, clientRowId } });
   const updated = await saveProtocolDraftResults(protocolId, {
     version,
-    results: [...current.results.map(persistedResultRequest), added],
+    added: [draftResultCreateRequest(payload, clientRowId)],
+    updated: [],
+    deletedIds: [],
   });
   const saved = updated.results.find((row) => row.values.clientRowId === clientRowId) || updated.results[updated.results.length - 1];
   if (!saved) throw new Error('Backend не вернул сохранённую строку результата.');
@@ -1263,19 +1268,21 @@ export async function addProtocolResult(protocolId: string, payload: ProtocolRes
 }
 
 export async function updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow> {
-  const current = await currentDraftForVersion(protocolId, version);
   const updated = await saveProtocolDraftResults(protocolId, {
     version,
-    results: current.results.map((row) => row.id === resultId ? mapProtocolResultFormToRequest(payload) : persistedResultRequest(row)),
+    added: [],
+    updated: [{ ...mapProtocolResultFormToRequest(payload), id: resultId }],
+    deletedIds: [],
   });
   return updated.results.find((row) => row.id === resultId) || { id: resultId, values: payload.values };
 }
 
 export async function deleteProtocolResult(protocolId: string, resultId: string, version: number): Promise<void> {
-  const current = await currentDraftForVersion(protocolId, version);
   await saveProtocolDraftResults(protocolId, {
     version,
-    results: current.results.filter((row) => row.id !== resultId).map(persistedResultRequest),
+    added: [],
+    updated: [],
+    deletedIds: [resultId],
   });
 }
 
@@ -1301,10 +1308,16 @@ export async function bulkAssignDevice(
 ): Promise<Protocol> {
   const current = await currentDraftForVersion(protocolId, version);
   const selected = new Set(resultIds);
-  return saveProtocolDraftResults(protocolId, { version, results: current.results.map((row) => {
-    const request = persistedResultRequest(row);
-    return selected.has(row.id) ? { ...request, measurementDeviceId } : request;
-  }) });
+  return saveProtocolDraftResults(protocolId, {
+    version,
+    added: [],
+    updated: current.results.filter((row) => selected.has(row.id)).map((row) => ({
+      ...persistedResultRequest(row),
+      id: row.id,
+      measurementDeviceId,
+    })),
+    deletedIds: [],
+  });
 }
 
 export async function bulkUpdatePlace(
@@ -1315,10 +1328,15 @@ export async function bulkUpdatePlace(
 ): Promise<Protocol> {
   const current = await currentDraftForVersion(protocolId, version);
   const selected = new Set(resultIds);
-  return saveProtocolDraftResults(protocolId, { version, results: current.results.map((row) => {
-    const request = persistedResultRequest(row);
-    return selected.has(row.id) ? { ...request, values: { ...request.values, measurementPlace } } : request;
-  }) });
+  return saveProtocolDraftResults(protocolId, {
+    version,
+    added: [],
+    updated: current.results.filter((row) => selected.has(row.id)).map((row) => {
+      const request = persistedResultRequest(row);
+      return { ...request, id: row.id, values: { ...request.values, measurementPlace } };
+    }),
+    deletedIds: [],
+  });
 }
 
 export async function bulkDeleteResults(
@@ -1326,11 +1344,11 @@ export async function bulkDeleteResults(
   resultIds: string[],
   version: number,
 ): Promise<Protocol> {
-  const current = await currentDraftForVersion(protocolId, version);
-  const selected = new Set(resultIds);
   return saveProtocolDraftResults(protocolId, {
     version,
-    results: current.results.filter((row) => !selected.has(row.id)).map(persistedResultRequest),
+    added: [],
+    updated: [],
+    deletedIds: resultIds,
   });
 }
 

@@ -150,21 +150,30 @@ describe('current protocol backend contract', () => {
     expect(body).toEqual({ cmsSignatureBase64: 'cms', version: 8 });
   });
 
-  it('replaces draft results atomically with version and preserves zero', async () => {
+  it('adds draft results with the backend delta contract and preserves zero', async () => {
     let body: unknown;
     let savedResults: Array<Record<string, unknown>> = [];
     server.use(
       http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: { ...protocol, version: savedResults.length ? 9 : 8, results: savedResults } })),
       http.patch('http://localhost/api/protocols/42/draft-results', async ({ request }) => {
         body = await request.json();
-        const requestBody = body as { results: Array<Record<string, unknown>> };
-        savedResults = requestBody.results.map((row) => ({ ...row, id: '5' }));
+        const requestBody = body as { added: Array<Record<string, unknown>> };
+        savedResults = requestBody.added.map((row) => ({
+          ...row,
+          id: '5',
+          values: { ...(row.values as Record<string, unknown>), clientRowId: row.clientRowId },
+        }));
         return HttpResponse.json({ data: { ...protocol, version: 9, results: savedResults } });
       }),
     );
     const saved = await addProtocolResult('42', { values: { resultValue: 0 }, measurementDeviceId: 7 }, 8);
     expect(saved.values.resultValue).toBe(0);
-    expect(body).toMatchObject({ version: 8, results: [{ values: { resultValue: 0 }, measurementDeviceId: 7, normativeId: null }] });
+    expect(body).toMatchObject({
+      version: 8,
+      added: [{ clientRowId: expect.any(String), values: { resultValue: 0 }, measurementDeviceId: 7, normativeId: null }],
+      updated: [],
+      deletedIds: [],
+    });
   });
 
   it('keeps backend 409 details from atomic result saving', async () => {
@@ -173,7 +182,9 @@ describe('current protocol backend contract', () => {
         code: 'OPTIMISTIC_LOCK_CONFLICT', message: 'Протокол уже изменён', currentVersion: 9,
       }, { status: 409 })),
     );
-    const error = await saveProtocolDraftResults('42', { version: 8, results: [] }).catch((value: unknown) => value);
+    const error = await saveProtocolDraftResults('42', {
+      version: 8, added: [], updated: [], deletedIds: [],
+    }).catch((value: unknown) => value);
     expect(normalizeApiError(error)).toMatchObject({ status: 409, code: 'OPTIMISTIC_LOCK_CONFLICT', currentVersion: 9 });
   });
 });

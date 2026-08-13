@@ -444,6 +444,75 @@ export interface PekReadinessResponse {
   issues: Array<{ code: string; section: string; severity: string; message: string; blocking: boolean }>;
 }
 
+export interface PekReportDocumentVersion {
+  id: number;
+  reportId: number;
+  version: number;
+  hasDocx: boolean;
+  hasPdf: boolean;
+  contentHash?: string | null;
+  generatedAt?: string | null;
+  generatedBy?: number | null;
+}
+
+export interface PekReportSignature {
+  id: number;
+  reportId: number;
+  documentVersionId: number;
+  signerUserId: number;
+  signedAt: string;
+  documentHash?: string | null;
+  signatureType?: string | null;
+  certificateSubject?: string | null;
+  certificateCn?: string | null;
+  certificateSerial?: string | null;
+  certificateOrganization?: string | null;
+  verified: boolean;
+}
+
+export interface PekExceedance {
+  id: number;
+  reportId: number;
+  planFactRowId: number;
+  protocolId: number;
+  protocolResultId: number;
+  programIndicatorId: number;
+  actualValue?: number | null;
+  normativeValue?: number | null;
+  comparisonType?: string | null;
+  exceedanceRatio?: number | null;
+  severity?: string | null;
+  status: string;
+  comment?: string | null;
+  responsibleUserId?: number | null;
+  responsibleUser?: { id: number; fullName?: string; name?: string } | null;
+  correctiveAction?: string | null;
+  dueDate?: string | null;
+  completedAt?: string | null;
+  resolutionComment?: string | null;
+  evidenceFileIds: string[];
+  resolvedAt?: string | null;
+  resolution?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  version: number;
+  availableActions: Record<string, boolean>;
+}
+
+export interface PekAssignExceedanceRequest {
+  version: number;
+  responsibleUserId: number;
+  dueDate: string;
+  correctiveAction: string;
+}
+
+export interface PekTransitionExceedanceRequest {
+  version: number;
+  status: string;
+  comment?: string;
+  resolutionComment?: string;
+}
+
 export interface PekSettings {
   companyId: number;
   defaultResponsibleUserId?: number | null;

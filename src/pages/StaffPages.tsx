@@ -56,8 +56,8 @@ import { getApiErrorMessage } from '../services/apiHelpers';
 import { downloadClientDocument, downloadStaffDocument } from '../services/clientDocumentService';
 import {
   deleteStaffRepositoryDocument,
+  downloadStaffRepositoryDocument,
   getStaffRepositoryDocuments,
-  staffRepositoryDocumentDownloadUrl,
   uploadStaffRepositoryDocument,
   type StaffRepositoryDocument,
 } from '../services/staffDocumentRepositoryService';
@@ -4643,7 +4643,17 @@ const DocumentLine = ({ doc }: { doc: StaffDocument }) => (
 export const StaffDocumentsPage = () => {
   const toast = useToast();
   const [q, setQ] = useState('');
-  const [type, setType] = useState('Все');
+  const [debouncedQ, setDebouncedQ] = useState('');
+  const [category, setCategory] = useState('');
+  const [uploadedByUserId, setUploadedByUserId] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
+  const [sort, setSort] = useState('uploadedAt,desc');
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [documents, setDocuments] = useState<StaffRepositoryDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -4651,26 +4661,29 @@ export const StaffDocumentsPage = () => {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const types = useMemo(() => Array.from(new Set(documents.map((doc) => doc.category))).sort(), [documents]);
-  const filtered = useMemo(() => documents
-    .filter((doc) => type === 'Все' || doc.category === type)
-    .filter((doc) => `${doc.name} ${doc.originalFileName} ${doc.comment} ${doc.uploadedBy}`.toLowerCase().includes(q.trim().toLowerCase())), [documents, type, q]);
-
-  const loadDocuments = async () => {
-    setLoading(true);
-    setLoadError('');
-    try {
-      setDocuments(await getStaffRepositoryDocuments());
-    } catch (error) {
-      setLoadError(getApiErrorMessage(error, 'Не удалось загрузить документы.'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
-    void loadDocuments();
-  }, []);
+    const timer = window.setTimeout(() => setDebouncedQ(q.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [q]);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError('');
+    getStaffRepositoryDocuments({ q: debouncedQ, category, uploadedByUserId, dateFrom, dateTo, page, size, sort })
+      .then((result) => {
+        if (!active) return;
+        setDocuments(result.items);
+        setTotalElements(result.totalElements);
+        setTotalPages(result.totalPages);
+        if (result.page !== page) setPage(result.page);
+      })
+      .catch((error) => { if (active) setLoadError(getApiErrorMessage(error, 'Не удалось загрузить документы.')); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [debouncedQ, category, uploadedByUserId, dateFrom, dateTo, page, size, sort, refreshKey]);
 
   const openUpload = () => {
     setUploadError('');
@@ -4695,11 +4708,12 @@ export const StaffDocumentsPage = () => {
     }
     setUploadLoading(true);
     try {
-      const uploaded = await uploadStaffRepositoryDocument({ file, name: title, category, comment });
-      setDocuments((current) => [uploaded, ...current.filter((item) => item.id !== uploaded.id)]);
+      await uploadStaffRepositoryDocument({ file, name: title, category, comment });
       toast.success('Документ загружен', 'Файл добавлен в общее хранилище документов.');
       setUploadOpen(false);
       event.currentTarget.reset();
+      if (page !== 0) setPage(0);
+      else setRefreshKey((value) => value + 1);
     } catch (err) {
       const message = getApiErrorMessage(err, 'Не удалось загрузить документ.');
       setUploadError(message);
@@ -4714,13 +4728,36 @@ export const StaffDocumentsPage = () => {
     setDeletingId(document.id);
     try {
       await deleteStaffRepositoryDocument(document.id);
-      setDocuments((current) => current.filter((item) => item.id !== document.id));
       toast.success('Документ удалён');
+      if (documents.length === 1 && page > 0) setPage((value) => value - 1);
+      else setRefreshKey((value) => value + 1);
     } catch (error) {
       const message = getApiErrorMessage(error, 'Не удалось удалить документ.');
       toast.error('Документ не удалён', message);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const downloadDocument = async (item: StaffRepositoryDocument) => {
+    setDownloadingId(item.id);
+    try {
+      const blob = await downloadStaffRepositoryDocument(item.id);
+      const objectUrl = URL.createObjectURL(blob);
+      try {
+        const anchor = window.document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = item.originalFileName || item.name || 'document';
+        window.document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    } catch (error) {
+      toast.error('Документ не скачан', getApiErrorMessage(error, 'Не удалось скачать документ.'));
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -4779,22 +4816,26 @@ export const StaffDocumentsPage = () => {
               <p className="mt-2 text-sm text-slate-500">Общее хранилище файлов, не связанное с заявками</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <p className="rounded-full bg-eco-50 px-4 py-2 text-sm font-bold text-eco-800">Найдено: {filtered.length}</p>
+              <p className="rounded-full bg-eco-50 px-4 py-2 text-sm font-bold text-eco-800">Найдено: {totalElements}</p>
               <Button type="button" onClick={openUpload} className="gap-2">
                 <Upload size={16} />
                 Добавить
               </Button>
             </div>
           </div>
-          <div className="mt-5 grid gap-3 lg:grid-cols-[2fr_1fr_auto]">
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск по названию, файлу или автору" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
-            <select value={type} onChange={(e) => setType(e.target.value)} className="input-focus rounded-2xl border border-slate-200 px-4 py-3"><option>Все</option>{types.map((item) => <option key={item} value={item}>{categoryLabel(item)}</option>)}</select>
-            <button type="button" onClick={() => { setQ(''); setType('Все'); }} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-eco-800 transition hover:bg-eco-50">Сбросить</button>
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="Поиск по названию, файлу или автору" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+            <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(0); }} className="input-focus rounded-2xl border border-slate-200 bg-white px-4 py-3"><option value="">Все категории</option>{staffDocumentUploadCategories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+            <input value={uploadedByUserId} onChange={(e) => { setUploadedByUserId(e.target.value); setPage(0); }} placeholder="ID загрузившего сотрудника" className="input-focus rounded-2xl border border-slate-200 px-4 py-3" />
+            <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(0); }} className="input-focus rounded-2xl border border-slate-200 bg-white px-4 py-3"><option value="uploadedAt,desc">Сначала новые</option><option value="uploadedAt,asc">Сначала старые</option><option value="name,asc">Название: А–Я</option><option value="name,desc">Название: Я–А</option></select>
+            <label className="text-xs font-semibold text-slate-600">С даты<input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(0); }} className="input-focus mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" /></label>
+            <label className="text-xs font-semibold text-slate-600">По дату<input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(0); }} className="input-focus mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" /></label>
+            <button type="button" onClick={() => { setQ(''); setCategory(''); setUploadedByUserId(''); setDateFrom(''); setDateTo(''); setSort('uploadedAt,desc'); setPage(0); }} className="self-end rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-eco-800 transition hover:bg-eco-50">Сбросить</button>
           </div>
-          {loadError && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700"><span>{loadError}</span><button type="button" onClick={() => void loadDocuments()} className="rounded-full bg-white px-4 py-2">Повторить</button></div>}
+          {loadError && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700"><span>{loadError}</span><button type="button" onClick={() => setRefreshKey((value) => value + 1)} className="rounded-full bg-white px-4 py-2">Повторить</button></div>}
           <div className="mt-6 space-y-3">
             {loading && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Загружаем документы…</p>}
-            {!loading && filtered.map((doc) => (
+            {!loading && documents.map((doc) => (
               <div key={doc.id} className="grid items-center gap-4 rounded-[20px] border border-slate-100 p-4 lg:grid-cols-[1.7fr_0.8fr_1fr_auto]">
                 <div className="min-w-0">
                   <p className="break-words font-bold text-slate-900">{doc.name}</p>
@@ -4807,13 +4848,14 @@ export const StaffDocumentsPage = () => {
                   <p>{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString('ru-RU') : 'Дата не указана'}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <a href={staffRepositoryDocumentDownloadUrl(doc)} target="_blank" rel="noreferrer" className="rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white">Скачать</a>
+                  <button type="button" disabled={downloadingId === doc.id} onClick={() => void downloadDocument(doc)} className="rounded-full bg-eco-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{downloadingId === doc.id ? 'Скачивание…' : 'Скачать'}</button>
                   {doc.canDelete && <button type="button" disabled={deletingId === doc.id} onClick={() => void deleteDocument(doc)} className="inline-flex items-center gap-1 rounded-full border border-rose-200 px-4 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"><Trash2 size={14} />{deletingId === doc.id ? 'Удаление…' : 'Удалить'}</button>}
                 </div>
               </div>
             ))}
-            {!loading && !loadError && !filtered.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Документов пока нет. Нажмите «Добавить», чтобы загрузить первый файл.</p>}
+            {!loading && !loadError && !documents.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Документы по заданным условиям не найдены.</p>}
           </div>
+          {!loading && !loadError && totalPages > 0 && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5"><p className="text-sm font-semibold text-slate-600">Страница {page + 1} из {totalPages} · всего {totalElements}</p><div className="flex flex-wrap items-center gap-2"><select aria-label="Документов на странице" value={size} onChange={(e) => { setSize(Number(e.target.value)); setPage(0); }} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option><option value={100}>100</option></select><button type="button" disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-eco-800 disabled:opacity-40">Назад</button><button type="button" disabled={page + 1 >= totalPages} onClick={() => setPage((value) => value + 1)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-eco-800 disabled:opacity-40">Вперёд</button></div></div>}
         </div>
       </Reveal>
       {uploadModal}

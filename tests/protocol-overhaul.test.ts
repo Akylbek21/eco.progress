@@ -186,17 +186,17 @@ describe('protocol mutation HTTP contracts', () => {
       {
         method: 'PATCH',
         path: '/api/protocols/42/draft-results',
-        body: expect.objectContaining({ version: 14, results: expect.any(Array) }),
+        body: expect.objectContaining({ version: 14, added: [], updated: expect.any(Array), deletedIds: [] }),
       },
       {
         method: 'PATCH',
         path: '/api/protocols/42/draft-results',
-        body: expect.objectContaining({ version: 14, results: expect.any(Array) }),
+        body: expect.objectContaining({ version: 14, added: [], updated: expect.any(Array), deletedIds: [] }),
       },
       {
         method: 'PATCH',
         path: '/api/protocols/42/draft-results',
-        body: expect.objectContaining({ version: 14, results: expect.any(Array) }),
+        body: { version: 14, added: [], updated: [], deletedIds: ['2'] },
       },
     ]);
   });

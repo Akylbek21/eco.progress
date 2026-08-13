@@ -26,6 +26,11 @@ import type {
   PekReportSourceSummary,
   PekSettings,
   PekSettingsUpdateRequest,
+  PekAssignExceedanceRequest,
+  PekExceedance,
+  PekReportDocumentVersion,
+  PekReportSignature,
+  PekTransitionExceedanceRequest,
 } from './pekContracts';
 import {
   mapCollectionResult,
@@ -70,6 +75,9 @@ const reportAction = async (
 ) => mapReportResponse(unwrapPekData<unknown>(
   (await api.post(`/pek/reports/${id}/${action}`, {}, { headers: withEntityVersion(version) })).data,
 ));
+
+const getDocumentMutation = async <T>(url: string): Promise<T> =>
+  unwrapPekData<T>((await api.post(url)).data);
 
 export type PekUploadOptions = {
   signal?: AbortSignal;
@@ -179,9 +187,36 @@ export const pekApi = {
     mapReportResponse(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/return`, { version, reason })).data)),
   approveReport: (id: number, version: number) => reportAction(id, 'approve', version),
   archiveReport: (id: number, version: number) => reportAction(id, 'archive', version),
-  getSettings: (signal?: AbortSignal) => get<PekSettings>('/pek/settings', {}, signal),
-  updateSettings: async (body: PekSettingsUpdateRequest) =>
-    unwrapPekData<PekSettings>((await api.put('/pek/settings', body)).data),
+  generateReportDocx: (id: number) =>
+    getDocumentMutation<PekReportDocumentVersion>(`/pek/reports/${id}/document/generate-docx`),
+  generateReportPdf: (id: number) =>
+    getDocumentMutation<PekReportDocumentVersion>(`/pek/reports/${id}/document/generate-pdf`),
+  getReportDocumentVersions: (id: number, signal?: AbortSignal) =>
+    get<PekReportDocumentVersion[]>(`/pek/reports/${id}/document/versions`, {}, signal),
+  downloadReportDocument: async (id: number, format: 'docx' | 'pdf'): Promise<PekBlobResult> => {
+    const response = await api.get<Blob>(`/pek/reports/${id}/document/download/${format}`, { responseType: 'blob' });
+    return {
+      blob: response.data,
+      filename: filenameFromDisposition(response.headers['content-disposition'], `pek-report-${id}.${format}`),
+    };
+  },
+  signReportDocument: async (id: number, cms: string) =>
+    unwrapPekData<PekReportSignature>((await api.post(`/pek/reports/${id}/document/sign`, { cms })).data),
+  getReportSignatures: (id: number, signal?: AbortSignal) =>
+    get<PekReportSignature[]>(`/pek/reports/${id}/document/signatures`, {}, signal),
+  getReportExceedances: (reportId: number, signal?: AbortSignal) =>
+    get<PekExceedance[]>(`/pek/reports/${reportId}/exceedances`, {}, signal),
+  getExceedance: (id: number, signal?: AbortSignal) =>
+    get<PekExceedance>(`/pek/exceedances/${id}`, {}, signal),
+  assignExceedance: async (id: number, body: PekAssignExceedanceRequest) =>
+    unwrapPekData<PekExceedance>((await api.post(`/pek/exceedances/${id}/assign`, body)).data),
+  attachExceedanceEvidence: async (id: number, version: number, fileId: string) =>
+    unwrapPekData<PekExceedance>((await api.post(`/pek/exceedances/${id}/evidence`, { version, fileId })).data),
+  transitionExceedance: async (id: number, body: PekTransitionExceedanceRequest) =>
+    unwrapPekData<PekExceedance>((await api.post(`/pek/exceedances/${id}/transition`, body)).data),
+  getSettings: (companyId: number, signal?: AbortSignal) => get<PekSettings>('/pek/settings', { companyId }, signal),
+  updateSettings: async (companyId: number, body: PekSettingsUpdateRequest) =>
+    unwrapPekData<PekSettings>((await api.put('/pek/settings', body, { params: { companyId } })).data),
 };
 
 // Compatibility alias: there is still only one PEK transport implementation.

@@ -19,7 +19,7 @@ const links: Array<{ label: string; path: string; icon: typeof ClipboardList; pa
   { label: 'Клиенты', path: '/staff/clients', icon: Building2, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Лиды', path: '/staff/leads', icon: UserRoundSearch, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Контент сайта', path: '/staff/content', icon: BookOpenCheck, permission: 'view_content' },
-  { label: 'Компании', path: '/staff/companies', icon: Building2, companyPermission: 'read' },
+  { label: 'Компании', path: '/staff/companies', icon: Building2, companyPermission: 'COMPANY_VIEW' },
   { label: 'КП', path: '/staff/commercial-offers', icon: Handshake, allowedRoles: ['ADMIN', 'MANAGER'] },
   { label: 'Договоры', path: '/staff/contracts', icon: FileSignature, allowedRoles: ['ADMIN', 'MANAGER', 'ACCOUNTANT'] },
   { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },

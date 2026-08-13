@@ -1,6 +1,14 @@
 export type ClientType = 'individual' | 'company';
 import type { LeadContentAttribution } from './contentManagement';
 export type UserRole = 'CLIENT' | 'MANAGER' | 'ADMIN' | 'DIRECTOR' | 'HEAD' | 'ACCOUNTANT' | 'ECOLOGIST' | 'LABORATORY' | 'WASTE_SPECIALIST' | 'STAFF';
+export type CompanyPermission =
+  | 'COMPANY_VIEW'
+  | 'COMPANY_CREATE'
+  | 'COMPANY_EDIT'
+  | 'COMPANY_ARCHIVE'
+  | 'COMPANY_CREATE_OBJECT'
+  | 'COMPANY_EDIT_OBJECT'
+  | 'COMPANY_ARCHIVE_OBJECT';
 
 export type { ServiceCategory } from '../content/serviceCatalog';
 import type { ServiceCategory } from '../content/serviceCatalog';
@@ -617,6 +625,7 @@ export type User = {
   legalAddress?: string;
   position?: string;
   permissions?: string[];
+  companyPermissions?: Partial<Record<CompanyPermission, boolean>>;
 };
 
 export * from './crmFull';

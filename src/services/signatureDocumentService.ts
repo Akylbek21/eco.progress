@@ -1,5 +1,5 @@
 import api from './api';
-import { extractItem, extractList } from './apiHelpers';
+import { extractItem, extractList, unwrapApiData } from './apiHelpers';
 
 const BASE_PATH = '/staff/signature-documents';
 
@@ -42,6 +42,18 @@ export interface DownloadedSignatureFile {
   fileName: string;
 }
 
+export interface SignatureDocumentPage {
+  items: SignatureDocument[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
 const normalizeDocument = (raw: unknown): SignatureDocument => {
   const source = asRecord(raw);
   const rawStatus = text(source.status, source.signatureStatus).toUpperCase();
@@ -66,9 +78,28 @@ const fileNameFromDisposition = (disposition: unknown, fallback: string): string
 };
 
 export const signatureDocumentService = {
-  async list(signal?: AbortSignal): Promise<SignatureDocument[]> {
-    const response = await api.get<unknown>(BASE_PATH, { signal });
-    return extractList(response.data, ['documents', 'signatureDocuments']).map(normalizeDocument).filter((item) => item.id);
+  async list(page = 0, size = 20, signal?: AbortSignal): Promise<SignatureDocumentPage> {
+    const response = await api.get<unknown>(BASE_PATH, { params: { page, size }, signal });
+    const payload = unwrapApiData<unknown>(response.data);
+    const source = asRecord(payload);
+    const items = extractList(payload, ['documents', 'signatureDocuments'])
+      .map(normalizeDocument)
+      .filter((item) => item.id);
+    const responsePage = number(source.page, source.number, page);
+    const responseSize = number(source.size, source.pageSize, size) || size;
+    const totalElements = number(source.totalElements, source.total, items.length);
+    const totalPages = number(source.totalPages, source.pages, responseSize > 0 ? Math.ceil(totalElements / responseSize) : 0);
+    return {
+      items,
+      page: responsePage,
+      size: responseSize,
+      totalElements,
+      totalPages,
+      first: typeof source.first === 'boolean' ? source.first : responsePage === 0,
+      last: typeof source.last === 'boolean' ? source.last : totalPages === 0 || responsePage >= totalPages - 1,
+      hasNext: typeof source.hasNext === 'boolean' ? source.hasNext : responsePage + 1 < totalPages,
+      hasPrevious: typeof source.hasPrevious === 'boolean' ? source.hasPrevious : responsePage > 0,
+    };
   },
 
   async upload(file: File, name = file.name): Promise<SignatureDocument> {
@@ -115,4 +146,3 @@ export const signatureDocumentService = {
     };
   },
 };
-

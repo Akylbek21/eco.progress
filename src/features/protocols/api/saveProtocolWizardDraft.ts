@@ -25,8 +25,7 @@ export const saveProtocolWizardDraft = async (
   const results = form.results.flatMap((row, index) => {
     if (!isNonEmptyResult(row)) return [];
     const payload = mapWizardResultToDraftRequest(row, form, index);
-    payload.values.clientRowId = row.clientRowId;
-    return [mapProtocolResultFormToRequest(payload)];
+    return [{ row, request: mapProtocolResultFormToRequest(payload) }];
   });
 
   let protocol = current
@@ -35,7 +34,13 @@ export const saveProtocolWizardDraft = async (
 
   if (!protocol.id) throw new Error('Не удалось сохранить протокол: сервер не вернул идентификатор.');
 
-  protocol = await service.saveProtocolDraftResults(protocol.id, { version: protocol.version, results });
+  const retainedIds = new Set(results.flatMap(({ row }) => row.serverResultId ? [String(row.serverResultId)] : []));
+  protocol = await service.saveProtocolDraftResults(protocol.id, {
+    version: protocol.version,
+    added: results.flatMap(({ row, request }) => row.serverResultId ? [] : [{ ...request, clientRowId: row.clientRowId }]),
+    updated: results.flatMap(({ row, request }) => row.serverResultId ? [{ ...request, id: row.serverResultId }] : []),
+    deletedIds: protocol.results.flatMap((row) => retainedIds.has(String(row.id)) ? [] : [row.id]),
+  });
 
   const resultIdsByClientRowId = new Map<string, string>();
   protocol.results.forEach((row) => {

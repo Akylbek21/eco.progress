@@ -140,10 +140,20 @@ export interface ProtocolResultRequest {
   normativeId: string | number | null;
 }
 
-/** PATCH /protocols/{id}/draft-results replaces all draft rows atomically. */
+export interface ProtocolDraftResultCreateRequest extends ProtocolResultRequest {
+  clientRowId: string | null;
+}
+
+export interface ProtocolDraftResultUpdateRequest extends ProtocolResultRequest {
+  id: string | number;
+}
+
+/** PATCH /protocols/{id}/draft-results applies one atomic result-row delta. */
 export interface SaveProtocolDraftResultsRequest {
   version: number;
-  results: ProtocolResultRequest[];
+  added: ProtocolDraftResultCreateRequest[];
+  updated: ProtocolDraftResultUpdateRequest[];
+  deletedIds: Array<string | number>;
 }
 
 export interface ProtocolsQueryRequest {

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Checkbox, FormControlLabel, MenuItem, TextField } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getLaboratories } from '../../laboratories/api/laboratoryService';
 import type { PekSettingsUpdateRequest } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
@@ -9,6 +10,7 @@ import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { parseApiError } from '../../../services/apiHelpers';
 import { useAuth } from '../../../contexts/AuthContext';
+import { getActiveCompanies } from '../../../services/companyService';
 
 const booleanFields: Array<[keyof PekSettingsUpdateRequest, string]> = [
   ['includeOnlySignedProtocols', 'Учитывать только подписанные протоколы'],
@@ -32,20 +34,31 @@ const toRequest = (value: NonNullable<Awaited<ReturnType<typeof pekApi.getSettin
 const PekSettingsPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const settingsKey = pekKeys.settings(undefined, user?.id);
-  const settings = useQuery({ queryKey: settingsKey, queryFn: ({ signal }) => pekApi.getSettings(signal) });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const companies = useQuery({ queryKey: ['companies', 'pek-settings', `user:${user?.id ?? 'anonymous'}`], queryFn: ({ signal }) => getActiveCompanies(signal) });
+  const selectedCompanyId = Number(searchParams.get('companyId')) || 0;
+  const settingsKey = pekKeys.settings(selectedCompanyId || null, user?.id);
+  const settings = useQuery({
+    queryKey: settingsKey,
+    queryFn: ({ signal }) => pekApi.getSettings(selectedCompanyId, signal),
+    enabled: selectedCompanyId > 0,
+  });
   const assignees = useQuery({ queryKey: pekKeys.assignees(['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal) });
   const laboratories = useQuery({ queryKey: ['laboratories', 'pek-settings', `user:${user?.id ?? 'anonymous'}`], queryFn: ({ signal }) => getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }, signal) });
   const [form, setForm] = useState<PekSettingsUpdateRequest | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (!companies.data?.length || selectedCompanyId) return;
+    if (companies.data.length === 1) setSearchParams({ companyId: String(companies.data[0].id) }, { replace: true });
+  }, [companies.data, selectedCompanyId, setSearchParams]);
   useEffect(() => {
     if (!settings.data) return;
     setForm(toRequest(settings.data));
   }, [settings.data]);
   const save = useMutation({
     mutationFn: async (body: PekSettingsUpdateRequest) => {
-      await pekApi.updateSettings(body);
-      const confirmed = await pekApi.getSettings();
+      await pekApi.updateSettings(selectedCompanyId, body);
+      const confirmed = await pekApi.getSettings(selectedCompanyId);
       if (JSON.stringify(toRequest(confirmed)) !== JSON.stringify(body)) {
         throw new Error('Сервер не подтвердил сохранение всех настроек ПЭК. Показаны актуальные серверные значения.');
       }
@@ -60,7 +73,10 @@ const PekSettingsPage = () => {
       await settings.refetch();
     },
   });
-  if (settings.isLoading) return <PekLoading />;
+  const showCompanySelector = user?.role === 'ADMIN' || user?.role === 'DIRECTOR' || (companies.data?.length ?? 0) > 1;
+  if (companies.isLoading || (selectedCompanyId > 0 && settings.isLoading)) return <PekLoading />;
+  if (companies.isError) return <PekQueryError error={companies.error} resource="компании для настроек ПЭК" retry={() => void companies.refetch()} />;
+  if (!selectedCompanyId) return <div className="space-y-5"><PekPageHeader title="Настройки ПЭК" description="Выберите компанию, настройки которой нужно открыть" />{showCompanySelector && <TextField select fullWidth label="Компания" value="" onChange={(event) => setSearchParams({ companyId: event.target.value }, { replace: true })}><MenuItem value="">Выберите компанию</MenuItem>{companies.data?.map((company) => <MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>)}</TextField>}<PekState title="Выберите компанию" message="Для загрузки настроек ПЭК требуется companyId." /></div>;
   if (settings.isError) return <PekQueryError error={settings.error} resource="настройки ПЭК" retry={() => void settings.refetch()} />;
   if (!settings.data || !form) return <PekState title="Настройки ПЭК не получены" message="Сервис не вернул данные настроек." />;
   const editable = settings.data?.availableActions.edit === true;
@@ -68,6 +84,7 @@ const PekSettingsPage = () => {
   const set = <K extends keyof PekSettingsUpdateRequest>(key: K, value: PekSettingsUpdateRequest[K]) => setForm((current) => current ? { ...current, [key]: value } : current);
   return <div className="space-y-5">
     <PekPageHeader title="Настройки ПЭК" description="Правила сбора данных и проверки готовности отчётов" />
+    {showCompanySelector && <TextField select fullWidth label="Компания" value={selectedCompanyId} onChange={(event) => { setForm(null); setMessage(null); setSearchParams({ companyId: event.target.value }, { replace: true }); }}>{companies.data?.map((company) => <MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>)}</TextField>}
     {!editable && <Alert severity="info">Настройки доступны только для просмотра</Alert>}
     {message && <Alert severity={save.isError ? 'error' : 'success'}>{message}</Alert>}
     {settings.data?.capabilities.automaticCollectionSupported === false && <Alert severity="info">Автоматический сбор по расписанию backend пока не поддерживает. Доступен ручной сбор из отчёта.</Alert>}

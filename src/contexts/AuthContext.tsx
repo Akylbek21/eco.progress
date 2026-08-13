@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
-import type { User, UserRole } from '../types';
+import type { CompanyPermission, User, UserRole } from '../types';
 import { clearStoredDocumentFlowOrganizations } from '../features/document-flow/model/organizationSelection';
 import { clearCompanyQueries } from '../features/companies/companyCache';
 
@@ -46,6 +46,15 @@ const TOKEN_KEY = 'eco-progress-token';
 const USER_KEY = 'eco-progress-user';
 
 const staffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST', 'STAFF'];
+const companyPermissionNames: CompanyPermission[] = [
+  'COMPANY_VIEW',
+  'COMPANY_CREATE',
+  'COMPANY_EDIT',
+  'COMPANY_ARCHIVE',
+  'COMPANY_CREATE_OBJECT',
+  'COMPANY_EDIT_OBJECT',
+  'COMPANY_ARCHIVE_OBJECT',
+];
 
 type AuthResponsePayload = {
   data?: Record<string, unknown>;
@@ -84,6 +93,14 @@ const normalizeRole = (value: unknown, fallback: UserRole): UserRole => {
   return map[raw] || fallback;
 };
 
+const normalizeCompanyPermissions = (value: unknown): User['companyPermissions'] => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const source = value as Record<string, unknown>;
+  return Object.fromEntries(
+    companyPermissionNames.map((permission) => [permission, source[permission] === true]),
+  ) as Record<CompanyPermission, boolean>;
+};
+
 const readAuthPayload = (payload: AuthResponsePayload, email: string, staff = false): { token: string; user: User } => {
   const source = (payload.data || payload) as AuthResponsePayload;
   const rawUser = (source.user || source.employee || source.staff || source.account || source) as Partial<User> & Record<string, unknown>;
@@ -108,6 +125,7 @@ const readAuthPayload = (payload: AuthResponsePayload, email: string, staff = fa
       permissions: Array.isArray(rawUser.permissions)
         ? rawUser.permissions.map(String).filter(Boolean)
         : undefined,
+      companyPermissions: normalizeCompanyPermissions(rawUser.companyPermissions),
     },
   };
 };
@@ -117,6 +135,7 @@ const normalizeStoredUser = (value: User): User => ({
   ...value,
   role: normalizeRole(value.role, value.role === 'CLIENT' ? 'CLIENT' : 'MANAGER'),
   permissions: Array.isArray(value.permissions) ? value.permissions.map(String).filter(Boolean) : undefined,
+  companyPermissions: normalizeCompanyPermissions(value.companyPermissions),
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -178,13 +197,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         clearSession();
       })
       .finally(() => setLoading(false));
-  }, [clearSession]);
+  }, [clearSession, refreshUser]);
 
   const login = useCallback(async (email: string, password: string) => {
     const { data } = await api.post<AuthResponsePayload & { message?: string | null }>('/auth/login', { email, password });
     const session = readAuthPayload(data, email);
-    saveSession(session.token, session.user);
-  }, [saveSession]);
+    saveSession(session.token, { ...session.user, companyPermissions: undefined });
+    try {
+      await refreshUser();
+    } catch (error) {
+      clearSession();
+      throw error;
+    }
+  }, [clearSession, refreshUser, saveSession]);
 
   const staffLogin = useCallback(async (email: string, password: string) => {
     let payload: AuthResponsePayload & { message?: string | null };
@@ -200,26 +225,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const session = readAuthPayload(payload, email, true);
     if (!staffRoles.includes(session.user.role)) throw new Error('У пользователя нет роли сотрудника.');
-    saveSession(session.token, session.user);
-  }, [saveSession]);
+    saveSession(session.token, { ...session.user, companyPermissions: undefined });
+    try {
+      await refreshUser();
+    } catch (error) {
+      clearSession();
+      throw error;
+    }
+  }, [clearSession, refreshUser, saveSession]);
 
   const register = useCallback(async (payload: RegisterPayload) => {
     const { data } = await api.post<AuthResponsePayload & { message?: string | null }>('/auth/register', payload);
     const session = readAuthPayload(data, 'email' in payload ? payload.email : '');
-    saveSession(session.token, session.user);
-  }, [saveSession]);
+    saveSession(session.token, { ...session.user, companyPermissions: undefined });
+    try {
+      await refreshUser();
+    } catch (error) {
+      clearSession();
+      throw error;
+    }
+  }, [clearSession, refreshUser, saveSession]);
 
   const logout = useCallback(() => {
     api.post('/auth/logout').catch(() => {});
     clearSession();
-  }, [clearSession, refreshUser]);
+  }, [clearSession]);
 
   const setUser = useCallback((u: User) => {
+    const normalizedUser = normalizeStoredUser(u);
     queryClient.removeQueries({ queryKey: ['pek'] });
-    if (userIdRef.current !== u.id) clearCompanyQueries(queryClient);
-    localStorage.setItem(USER_KEY, JSON.stringify(u));
-    setUserState(u);
-    userIdRef.current = u.id;
+    if (userIdRef.current !== normalizedUser.id) clearCompanyQueries(queryClient);
+    localStorage.setItem(USER_KEY, JSON.stringify(normalizedUser));
+    setUserState(normalizedUser);
+    userIdRef.current = normalizedUser.id;
   }, [queryClient]);
 
   const isAuthenticated = !!token && !!user;

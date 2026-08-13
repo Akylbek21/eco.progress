@@ -11,6 +11,8 @@ import { PekLoading, PekPageHeader, PekState, PekStatusBadge } from '../componen
 import PekReportActions from '../components/workflow/PekReportActions';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
+import PekReportDocuments from '../components/documents/PekReportDocuments';
+import PekReportExceedances from '../components/exceedances/PekReportExceedances';
 
 const tabs = [
   { key: 'overview', label: 'Обзор' },
@@ -74,7 +76,7 @@ const PekReportWorkspacePage = () => {
   });
   const planFact = useQuery({
     queryKey: pekKeys.planFact(id, report.data?.companyId, user?.id), queryFn: ({ signal }) => pekApi.getReportPlanFact(id, signal),
-    enabled: Boolean(report.data) && ['overview', 'plan-fact', 'exceedances'].includes(tab), retry: retryPekQuery,
+    enabled: Boolean(report.data) && ['overview', 'plan-fact'].includes(tab), retry: retryPekQuery,
   });
   const readiness = useQuery({
     queryKey: pekKeys.readiness(id, report.data?.companyId, user?.id), queryFn: ({ signal }) => pekApi.getReportReadiness(id, signal),
@@ -233,9 +235,9 @@ const PekReportWorkspacePage = () => {
     </section>}
 
     {tab === 'plan-fact' && <PlanFactContent loading={planFact.isLoading} error={planFact.error} data={planFact.data} retry={() => void planFact.refetch()} />}
-    {tab === 'exceedances' && <section className="rounded-2xl border bg-white p-5"><h2 className="font-black">Превышения</h2>{planFact.isLoading ? <PekLoading /> : planFact.data?.items.some((row) => row.hasExceedance) ? <div className="mt-4 overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th>Позиция</th><th>Показатель</th><th>Норматив</th><th>Худшее значение</th><th>Количество</th></tr></thead><tbody>{planFact.data.items.filter((row) => row.hasExceedance).map((row) => <tr key={row.planFactRowId} className="border-b"><td className="py-3">{row.controlItemName}</td><td>{row.indicatorName}</td><td>{row.normativeValue ?? '—'}</td><td>{row.worstValue ?? '—'}</td><td>{row.exceedanceCount}</td></tr>)}</tbody></table></div> : <PekState title="Превышения не обнаружены" message="Показаны только результаты, рассчитанные backend plan/fact." />}</section>}
-    {tab === 'actions' && <PekState title="Мероприятия отчёта недоступны" message="В актуальном backend нет API корректирующих мероприятий отчёта. Данные не подменяются локальной таблицей." />}
-    {tab === 'documents' && <PekState title="Документы отчёта недоступны" message="В актуальном backend нет API документов отчёта. Документы программы доступны в карточке программы." />}
+    {tab === 'exceedances' && <PekReportExceedances report={item} />}
+    {tab === 'actions' && <PekReportExceedances report={item} />}
+    {tab === 'documents' && <PekReportDocuments report={item} />}
     <Dialog open={collectConfirmOpen} onClose={() => !collect.isPending && setCollectConfirmOpen(false)} fullWidth maxWidth="sm">
       <DialogTitle>{item.lastCollectedAt ? 'Повторить сбор протоколов?' : 'Собрать протоколы?'}</DialogTitle>
       <DialogContent><Alert severity="info">Backend заново проверит подходящие протоколы, обновит сопоставления, план/факт и готовность отчёта. Ручные решения будут обработаны по серверным правилам reconciliation.</Alert></DialogContent>

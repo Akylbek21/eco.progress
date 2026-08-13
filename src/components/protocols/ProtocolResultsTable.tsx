@@ -713,14 +713,6 @@ const ProtocolResultsTable = ({
     };
   };
 
-  const persistedResultRequest = (row: ProtocolResultRow) => mapProtocolResultFormToRequest({
-    values: { ...row.values },
-    measurementDeviceId: row.measurementDeviceId ?? row.deviceId ?? null,
-    normativeId: row.normativeReference?.id ?? (
-      Array.isArray(row.values.normativeId) ? row.values.normativeId[0] : row.values.normativeId
-    ) ?? null,
-  });
-
   const addBulk = async () => {
     const tokens = query.split(/[,;]+/).map((item) => item.trim()).filter(Boolean);
     if (!tokens.length) {
@@ -762,10 +754,9 @@ const ProtocolResultsTable = ({
       if (created.length) {
         const updated = await protocolService.saveProtocolDraftResults(protocolId, {
           version,
-          results: [
-            ...rows.map(persistedResultRequest),
-            ...created.map(mapProtocolResultFormToRequest),
-          ],
+          added: created.map((payload) => ({ ...mapProtocolResultFormToRequest(payload), clientRowId: null })),
+          updated: [],
+          deletedIds: [],
         });
         onChange(updated.results);
         await onImported();

@@ -79,7 +79,9 @@ describe('protocol wizard HTTP boundary', () => {
     const saved = await saveProtocolWizardDraft(form, null, 'protocol-draft-test-key', service);
 
     expect(saved.protocol).toMatchObject({ id: 'draft-1', version: 1, status: 'DRAFT' });
-    expect(saveProtocolDraftResults).toHaveBeenCalledWith('draft-1', { version: 0, results: [] });
+    expect(saveProtocolDraftResults).toHaveBeenCalledWith('draft-1', {
+      version: 0, added: [], updated: [], deletedIds: [],
+    });
     expect([...saved.resultIdsByClientRowId]).toEqual([]);
   });
 });
@@ -165,9 +167,9 @@ describe('result reconciliation', () => {
     const first = { ...emptyWizardResult(), clientRowId: 'client-a', indicatorName: 'A', pollutantCode: 'A', value: '1', unit: 'мг' };
     const second = { ...emptyWizardResult(), clientRowId: 'client-b', indicatorName: 'B', pollutantCode: 'B', value: '2', unit: 'мг' };
     form.results = [second, first];
-    const saveProtocolDraftResults = vi.fn(async (_id, request: { version: number; results: Array<{ values: Record<string, unknown> }> }) => ({
-      id: 'draft-1', version: 2, status: 'DRAFT', results: request.results.map((row) => ({
-        id: row.values.clientRowId === 'client-b' ? 'server-b' : 'server-a', values: row.values,
+    const saveProtocolDraftResults = vi.fn(async (_id, request: { version: number; added: Array<{ clientRowId: string; values: Record<string, unknown> }> }) => ({
+      id: 'draft-1', version: 2, status: 'DRAFT', results: request.added.map((row) => ({
+        id: row.clientRowId === 'client-b' ? 'server-b' : 'server-a', values: { ...row.values, clientRowId: row.clientRowId },
       })),
     }) as Protocol);
     const service = {
@@ -179,9 +181,39 @@ describe('result reconciliation', () => {
 
     expect(saveProtocolDraftResults).toHaveBeenCalledTimes(1);
     expect(saveProtocolDraftResults).toHaveBeenCalledWith('draft-1', expect.objectContaining({ version: 1 }));
-    expect(saveProtocolDraftResults.mock.calls[0][1].results).toHaveLength(2);
+    expect(saveProtocolDraftResults.mock.calls[0][1].added).toHaveLength(2);
+    expect(saveProtocolDraftResults.mock.calls[0][1]).toMatchObject({ updated: [], deletedIds: [] });
     expect(saved.resultIdsByClientRowId.get('client-a')).toBe('server-a');
     expect(saved.resultIdsByClientRowId.get('client-b')).toBe('server-b');
+  });
+
+  it('sends existing, new and removed wizard rows in separate delta collections', async () => {
+    const form = createWizardDefaults();
+    Object.assign(form, { templateId: 'ambient_air', companyId: '10' });
+    form.results = [
+      { ...emptyWizardResult(), clientRowId: 'existing-client', serverResultId: '11', indicatorName: 'A', value: '2', unit: 'mg' },
+      { ...emptyWizardResult(), clientRowId: 'new-client', indicatorName: 'C', value: '3', unit: 'mg' },
+    ];
+    const current = {
+      id: 'draft-1', version: 4, status: 'DRAFT', laboratory: {}, organization: {}, testing: {}, results: [
+        { id: '11', values: { indicatorName: 'A', resultValue: 1 } },
+        { id: '12', values: { indicatorName: 'B', resultValue: 1 } },
+      ],
+    } as Protocol;
+    const saveProtocolDraftResults = vi.fn(async () => ({ ...current, version: 6, results: [] }) as Protocol);
+    const service = {
+      updateProtocolDraft: vi.fn(async () => ({ ...current, version: 5 }) as Protocol),
+      saveProtocolDraftResults,
+    } as unknown as ProtocolService;
+
+    await saveProtocolWizardDraft(form, current, 'stable-key', service);
+
+    expect(saveProtocolDraftResults).toHaveBeenCalledWith('draft-1', {
+      version: 5,
+      added: [expect.objectContaining({ clientRowId: 'new-client' })],
+      updated: [expect.objectContaining({ id: '11', values: expect.objectContaining({ resultValue: 2 }) })],
+      deletedIds: ['12'],
+    });
   });
 
   it('maps all rows before creating a draft and never falls back to per-row mutations', async () => {
@@ -217,7 +249,9 @@ describe('result reconciliation', () => {
     expect(saveProtocolDraftResults).toHaveBeenCalledTimes(1);
     expect(saveProtocolDraftResults).toHaveBeenCalledWith('draft-1', expect.objectContaining({
       version: 3,
-      results: [expect.objectContaining({ values: expect.objectContaining({ clientRowId: 'stable-row', resultValue: 1 }) })],
+      added: [expect.objectContaining({ clientRowId: 'stable-row', values: expect.objectContaining({ resultValue: 1 }) })],
+      updated: [],
+      deletedIds: [],
     }));
     expect(service.addProtocolResult).not.toHaveBeenCalled();
     expect(service.updateProtocolResult).not.toHaveBeenCalled();

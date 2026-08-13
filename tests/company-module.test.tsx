@@ -2,12 +2,13 @@
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { QueryClient } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import CompanyForm from '../src/components/companies/CompanyForm';
+import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { clearCompanyQueries } from '../src/features/companies/companyCache';
 import { canOpenCompanyEditor, hasCompanyPermission } from '../src/features/companies/companyPermissions';
 import api from '../src/services/api';
@@ -23,6 +24,8 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+  localStorage.clear();
+  sessionStorage.clear();
 });
 afterAll(() => {
   api.defaults.baseURL = originalBaseUrl;
@@ -31,17 +34,54 @@ afterAll(() => {
 
 describe('companies frontend contract', () => {
   it('uses only permissions returned by auth/me and never grants access by role', () => {
-    expect(hasCompanyPermission({ permissions: undefined }, 'read')).toBe(false);
-    expect(hasCompanyPermission({ permissions: [] }, 'read')).toBe(false);
-    expect(hasCompanyPermission({ permissions: ['view_companies'] }, 'read')).toBe(true);
-    expect(hasCompanyPermission({ permissions: ['COMPANY_EDIT'] }, 'edit')).toBe(true);
-    expect(hasCompanyPermission({ permissions: ['COMPANY_EDIT'] }, 'archive')).toBe(false);
+    expect(hasCompanyPermission({ companyPermissions: undefined }, 'COMPANY_VIEW')).toBe(false);
+    expect(hasCompanyPermission({ companyPermissions: {} }, 'COMPANY_VIEW')).toBe(false);
+    expect(hasCompanyPermission({ companyPermissions: { COMPANY_VIEW: true } }, 'COMPANY_VIEW')).toBe(true);
+    expect(hasCompanyPermission({ companyPermissions: { COMPANY_EDIT: true } }, 'COMPANY_EDIT')).toBe(true);
+    expect(hasCompanyPermission({ companyPermissions: { COMPANY_EDIT: false } }, 'COMPANY_EDIT')).toBe(false);
+    expect(hasCompanyPermission({ companyPermissions: { COMPANY_EDIT: true } }, 'COMPANY_ARCHIVE')).toBe(false);
 
     const app = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
     const config = readFileSync(resolve(process.cwd(), 'src/config/permissions.ts'), 'utf8');
-    expect(app).toContain('<CompanyPermissionAccess permission="read">');
-    expect(app).toContain('<CompanyPermissionAccess permission="edit">');
+    expect(app).toContain('<CompanyPermissionAccess permission="COMPANY_VIEW">');
+    expect(app).toContain('<CompanyPermissionAccess permission="COMPANY_EDIT">');
     expect(config).not.toContain('companyRoleMatrix');
+  });
+
+  it('replaces login permissions with the latest companyPermissions from auth/me', async () => {
+    server.use(
+      http.post('http://localhost/api/auth/staff/login', () => HttpResponse.json({
+        token: 'fresh-token',
+        user: { id: '7', role: 'ADMIN', email: 'admin@example.com', name: 'Admin', companyPermissions: { COMPANY_EDIT: false } },
+      })),
+      http.get('http://localhost/api/auth/me', () => HttpResponse.json({
+        data: {
+          id: '7', role: 'ADMIN', type: 'admin', email: 'admin@example.com', name: 'Admin',
+          companyPermissions: { COMPANY_VIEW: true, COMPANY_EDIT: true, COMPANY_ARCHIVE: false },
+        },
+        message: null,
+      })),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const Harness = () => {
+      const { staffLogin, user } = useAuth();
+      return <>
+        <button type="button" onClick={() => void staffLogin('admin@example.com', 'secret')}>login</button>
+        <output>{JSON.stringify(user?.companyPermissions ?? {})}</output>
+      </>;
+    };
+    render(<QueryClientProvider client={client}><AuthProvider><Harness /></AuthProvider></QueryClientProvider>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'login' }));
+
+    await waitFor(() => expect(screen.getByText(/"COMPANY_VIEW":true/)).toBeTruthy());
+    expect(screen.getByText(/"COMPANY_EDIT":true/)).toBeTruthy();
+    expect(screen.getByText(/"COMPANY_ARCHIVE":false/)).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem('eco-progress-user') || '{}').companyPermissions).toMatchObject({
+      COMPANY_VIEW: true,
+      COMPANY_EDIT: true,
+      COMPANY_ARCHIVE: false,
+    });
   });
 
   it('clears every company cache namespace without touching unrelated data', () => {
@@ -64,7 +104,7 @@ describe('companies frontend contract', () => {
   });
 
   it('blocks the editor for an archived company even with edit permission', () => {
-    const editor = { permissions: ['COMPANY_EDIT'] };
+    const editor = { companyPermissions: { COMPANY_EDIT: true } };
     expect(canOpenCompanyEditor(editor, 'ACTIVE')).toBe(true);
     expect(canOpenCompanyEditor(editor, 'ARCHIVED')).toBe(false);
 

@@ -69,9 +69,9 @@ const CompaniesList = () => {
   const [searchInput, setSearchInput] = useState(search);
   const [archiveTarget, setArchiveTarget] = useState<CompanyListItem | null>(null);
   const [archiving, setArchiving] = useState(false);
-  const canCreate = hasCompanyPermission(user, 'create');
-  const canEdit = hasCompanyPermission(user, 'edit');
-  const canArchive = hasCompanyPermission(user, 'archive');
+  const canCreate = hasCompanyPermission(user, 'COMPANY_CREATE');
+  const canEdit = hasCompanyPermission(user, 'COMPANY_EDIT');
+  const canArchive = hasCompanyPermission(user, 'COMPANY_ARCHIVE');
 
   const updateParams = (changes: Record<string, string | number | undefined>) => {
     const next = new URLSearchParams(searchParams);
@@ -209,9 +209,9 @@ const CompanyObjectModal = ({ open, object, loading, onClose, onSubmit }: { open
 
 const CompanyObjectsSection = ({ companyId, companyArchived }: { companyId: string; companyArchived: boolean }) => {
   const { user } = useAuth(); const toast = useToast(); const queryClient = useQueryClient();
-  const canCreate = hasCompanyPermission(user, 'createObjects') && !companyArchived;
-  const canEdit = hasCompanyPermission(user, 'editObjects') && !companyArchived;
-  const canArchive = hasCompanyPermission(user, 'archiveObjects') && !companyArchived;
+  const canCreate = hasCompanyPermission(user, 'COMPANY_CREATE_OBJECT') && !companyArchived;
+  const canEdit = hasCompanyPermission(user, 'COMPANY_EDIT_OBJECT') && !companyArchived;
+  const canArchive = hasCompanyPermission(user, 'COMPANY_ARCHIVE_OBJECT') && !companyArchived;
   const [editing, setEditing] = useState<CompanyObject | null>(null); const [modalOpen, setModalOpen] = useState(false); const [archiveTarget, setArchiveTarget] = useState<CompanyObject | null>(null); const [saving, setSaving] = useState(false);
   const objectsQuery = useQuery({ queryKey: ['company-objects', companyId, true], queryFn: ({ signal }) => getCompanyObjects(companyId, true, signal) });
   const saveObject = async (request: CompanyObjectRequest) => { if ((editing ? !canEdit : !canCreate) || saving) return; setSaving(true); try { if (editing) await updateCompanyObject(companyId, editing.id, request); else await createCompanyObject(companyId, request); await queryClient.invalidateQueries({ queryKey: ['company-objects', companyId] }); await queryClient.invalidateQueries({ queryKey: ['company', companyId] }); toast.success(editing ? 'Объект обновлён' : 'Объект создан'); setModalOpen(false); setEditing(null); } catch (error) { throw error; } finally { setSaving(false); } };
@@ -243,7 +243,7 @@ const CompanyFormPage = ({ edit = false }: { edit?: boolean }) => {
   const { companyId } = useParams(); const navigate = useNavigate(); const toast = useToast(); const queryClient = useQueryClient(); const { user } = useAuth();
   const companyQuery = useQuery({ queryKey: ['company', companyId], queryFn: ({ signal }) => getCompanyById(companyId || '', signal), enabled: edit && Boolean(companyId) });
   const [saving, setSaving] = useState(false);
-  const canSubmit = hasCompanyPermission(user, edit ? 'edit' : 'create');
+  const canSubmit = hasCompanyPermission(user, edit ? 'COMPANY_EDIT' : 'COMPANY_CREATE');
   const submit = async (request: CompanyCreateRequest) => { if (!canSubmit || saving || (edit && companyQuery.data && !canOpenCompanyEditor(user, companyQuery.data.status))) return; setSaving(true); try { const saved = edit && companyId ? await updateCompany(companyId, request) : await createCompany(request); await queryClient.invalidateQueries({ queryKey: ['companies'] }); queryClient.setQueryData(['company', saved.id], saved); toast.success(edit ? 'Компания обновлена' : 'Компания создана'); navigate(`/staff/companies/${saved.id}`); } catch (error) { toast.error('Не удалось сохранить компанию', getApiErrorMessage(error)); throw error; } finally { setSaving(false); } };
   if (!canSubmit) return <ErrorBox message="У вас нет права на изменение компаний" back={() => navigate('/staff/companies')} />;
   if (companyQuery.isLoading) return <TableSkeleton rows={5} />;
@@ -256,8 +256,8 @@ const CompanyViewPage = () => {
   const { companyId } = useParams(); const navigate = useNavigate(); const toast = useToast(); const queryClient = useQueryClient(); const { user } = useAuth(); const [archiveOpen, setArchiveOpen] = useState(false); const [archiving, setArchiving] = useState(false);
   const companyQuery = useQuery({ queryKey: ['company', companyId], queryFn: ({ signal }) => getCompanyById(companyId || '', signal), enabled: Boolean(companyId) });
   const company = companyQuery.data;
-  const canEdit = hasCompanyPermission(user, 'edit');
-  const canArchive = hasCompanyPermission(user, 'archive');
+  const canEdit = hasCompanyPermission(user, 'COMPANY_EDIT');
+  const canArchive = hasCompanyPermission(user, 'COMPANY_ARCHIVE');
   const confirmArchive = async () => { if (!company || !canArchive || archiving) return; setArchiving(true); try { const saved = await archiveCompany(company.id); queryClient.setQueryData(['company', company.id], { ...company, ...saved, status: 'ARCHIVED' }); await queryClient.invalidateQueries({ queryKey: ['companies'] }); setArchiveOpen(false); toast.success('Компания архивирована'); } catch (error) { toast.error('Не удалось архивировать компанию', getApiErrorMessage(error)); } finally { setArchiving(false); } };
   if (companyQuery.isLoading) return <TableSkeleton rows={6} />;
   if (companyQuery.isError || !company) return <ErrorBox message={getApiStatus(companyQuery.error) === 403 ? 'У вас нет доступа к компании' : 'Не удалось загрузить компанию'} retry={() => companyQuery.refetch()} back={() => navigate('/staff/companies')} />;

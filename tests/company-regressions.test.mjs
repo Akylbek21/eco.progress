@@ -83,10 +83,11 @@ test('company routes use auth/me permissions and have no local role matrix', asy
   const [, , , , app, permissions] = await sources;
   const companyPermissions = await read('src/features/companies/companyPermissions.ts');
   assert.doesNotMatch(permissions, /companyRoleMatrix/);
-  assert.match(app, /CompanyPermissionAccess permission="read"/);
-  assert.match(app, /CompanyPermissionAccess permission="create"/);
-  assert.match(app, /CompanyPermissionAccess permission="edit"/);
-  assert.match(companyPermissions, /Array\.isArray\(user\?\.permissions\)/);
+  assert.match(app, /CompanyPermissionAccess permission="COMPANY_VIEW"/);
+  assert.match(app, /CompanyPermissionAccess permission="COMPANY_CREATE"/);
+  assert.match(app, /CompanyPermissionAccess permission="COMPANY_EDIT"/);
+  assert.match(companyPermissions, /user\?\.companyPermissions\?\.\[permission\] === true/);
+  assert.doesNotMatch(companyPermissions, /COMPANY_OBJECT_CREATE|COMPANY_OBJECT_EDIT|COMPANY_OBJECT_ARCHIVE/);
   assert.doesNotMatch(companyPermissions, /user\.role|rolePermissions/);
 });
 
