@@ -23,6 +23,7 @@ import LeadForm from '../components/LeadForm';
 import OrderChoiceModal from '../components/OrderChoiceModal';
 import { getWhatsAppUrl } from '../config/company';
 import { trackWhatsAppClick } from '../services/analytics';
+import { aboutPublicContent } from '../content/aboutPublicContent';
 
 type CardItem = {
   title: string;
@@ -408,6 +409,25 @@ const AboutPage = () => {
       </div>
     </section>
 
+    <section className="bg-white px-4 py-16 sm:px-8 sm:py-20">
+      <div className="mx-auto max-w-7xl space-y-12">
+        <SectionIntro eyebrow="Практическая информация" title="Как ECOPROGRESS помогает бизнесу" text="Состав услуги определяется по фактическому объекту и подтвержденным исходным данным." />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <AboutTextList title="Кому нужны услуги" items={aboutPublicContent.audience} />
+          <AboutTextList title="Что входит в работу" items={aboutPublicContent.included} />
+          <AboutTextList title="Необходимые документы" items={aboutPublicContent.documents} />
+          <AboutTextList title="Этапы" items={aboutPublicContent.steps} />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <AboutText title="Сроки" text={aboutPublicContent.timing} />
+          <AboutText title="Результат" text={aboutPublicContent.result} />
+          <AboutText title="Нормативная база" text={aboutPublicContent.legalBasis} />
+        </div>
+        <section><h2 className="text-3xl font-bold text-eco-900">Частые вопросы</h2><div className="mt-6 grid gap-4 md:grid-cols-2">{aboutPublicContent.faq.map((item) => <article key={item.question} className="rounded-[8px] border border-slate-200 p-5"><h3 className="font-bold text-eco-900">{item.question}</h3><p className="mt-3 text-sm leading-6 text-slate-600">{item.answer}</p></article>)}</div></section>
+        <section><h2 className="text-3xl font-bold text-eco-900">Связанные услуги и разделы</h2><div className="mt-5 flex flex-wrap gap-3">{aboutPublicContent.relatedLinks.map((item) => <a key={item.path} href={item.path} className="rounded-full border border-eco-200 bg-eco-50 px-4 py-2 text-sm font-semibold text-eco-800">{item.label}</a>)}</div></section>
+      </div>
+    </section>
+
     <section id="lead" className="bg-white px-4 py-16 text-eco-900 sm:px-8 sm:py-20">
       <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
         <Reveal direction="right">
@@ -444,5 +464,8 @@ const SectionIntro = ({ eyebrow, title, text }: { eyebrow: string; title: string
     </div>
   </Reveal>
 );
+
+const AboutTextList = ({ title, items }: { title: string; items: readonly string[] }) => <section className="rounded-[8px] border border-slate-200 p-6"><h2 className="text-2xl font-bold text-eco-900">{title}</h2><ul className="mt-4 space-y-3 text-sm leading-6 text-slate-600">{items.map((item) => <li key={item}>• {item}</li>)}</ul></section>;
+const AboutText = ({ title, text }: { title: string; text: string }) => <section className="rounded-[8px] bg-eco-50 p-6"><h2 className="text-2xl font-bold text-eco-900">{title}</h2><p className="mt-4 text-sm leading-7 text-slate-600">{text}</p></section>;
 
 export default AboutPage;

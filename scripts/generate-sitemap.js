@@ -157,6 +157,9 @@ const body = sitemapEntries.map((entry) => [
   `    <priority>${entry.priority.toFixed(1)}</priority>`,
   '  </url>',
 ].join('\n')).join('\n');
-fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`, 'utf8');
+const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
+fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), sitemapXml, 'utf8');
+const distDir = path.join(root, 'dist');
+if (fs.existsSync(distDir)) fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemapXml, 'utf8');
 
 console.log(`Generated unified SEO registry and sitemap.xml with ${sitemapEntries.length} public URLs.`);

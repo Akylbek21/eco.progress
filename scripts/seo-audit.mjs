@@ -22,6 +22,8 @@ const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[
 if (!/^<\?xml[^>]+>\s*<urlset[\s\S]*<\/urlset>\s*$/i.test(sitemap)) errors.push('Invalid sitemap XML document');
 if (new Set(urls).size !== urls.length) errors.push('Duplicate URLs in sitemap');
 const registry = JSON.parse(read(path.join(root, 'src', 'data', 'seoRegistry.generated.json')));
+const seoPageContent = JSON.parse(read(path.join(root, 'src', 'data', 'seoPages.generated.json')));
+const seoPageByPath = new Map(seoPageContent.map((entry) => [`/${entry.slug}`, entry]));
 const registryByCanonical = new Map(registry.map((entry) => [entry.canonical, entry]));
 const registryPaths = new Set(registry.map((entry) => entry.path));
 const titles = new Map();
@@ -34,6 +36,12 @@ const paragraphAllowlist = new Set([
   'ecoprogress group экологические документы лабораторные замеры пэк отходы и сопровождение бизнеса в казахстане',
 ]);
 const normalizeText = (value) => value.replace(/<[^>]+>/g, ' ').replace(/&\w+;/g, ' ').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLowerCase();
+const visibleText = (html) => normalizeText(html
+  .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+  .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+  .replace(/<nav[\s\S]*?<\/nav>/gi, ' ')
+  .replace(/<header[\s\S]*?<\/header>/gi, ' ')
+  .replace(/<footer[\s\S]*?<\/footer>/gi, ' '));
 const schemas = (html) => [...html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)].flatMap((match) => {
   try { const value = JSON.parse(match[1]); return Array.isArray(value) ? value : [value]; } catch { return []; }
 });
@@ -64,6 +72,7 @@ for (const url of urls) {
   const h1Count = count(html, /<h1(?:\s[^>]*)?>[\s\S]*?<\/h1>/gi);
   const h1 = normalizeText(one(html, /<h1(?:\s[^>]*)?>([\s\S]*?)<\/h1>/i));
   const pageSchemas = schemas(html);
+  const words = visibleText(html).split(' ').filter(Boolean);
 
   if (!title) errors.push(`Missing title: ${parsed.pathname}`);
   if (!description) errors.push(`Missing description: ${parsed.pathname}`);
@@ -76,6 +85,12 @@ for (const url of urls) {
   if (!twitterCard) errors.push(`Missing Twitter Card: ${parsed.pathname}`);
   if (robots !== 'index,follow') errors.push(`Unexpected robots at ${parsed.pathname}: ${robots || 'missing'}`);
   if (!/application\/ld\+json/i.test(html)) errors.push(`Missing JSON-LD: ${parsed.pathname}`);
+  if (!/data-prerendered=["']true["']/i.test(html)) errors.push(`Missing prerender marker: ${parsed.pathname}`);
+  const minimumWords = parsed.pathname === '/about' ? 220
+    : parsed.pathname.startsWith('/services/') ? 150
+      : parsed.pathname.startsWith('/ecologicheskie-uslugi-') ? 300
+        : /^\/(?:ndv|pek|ovos|szz|puo|roos|pasport-othodov|ekologicheskoe-razreshenie|laboratornye-zamery|utilizaciya-othodov)-/.test(parsed.pathname) ? 300 : 0;
+  if (minimumWords && words.length < minimumWords) errors.push(`Thin prerender content (${words.length}/${minimumWords} words): ${parsed.pathname}`);
   if (h1 && headings.has(h1)) errors.push(`Duplicate H1: ${parsed.pathname} and ${headings.get(h1)}`);
   else if (h1) headings.set(h1, parsed.pathname);
   if (!ogImage.startsWith(`${SITE_URL}/`)) errors.push(`Invalid OG image: ${parsed.pathname}`);
@@ -125,19 +140,60 @@ for (const url of urls) {
   }
 }
 
-for (const [paragraph, paths] of paragraphs) if (paths.size > 5) warnings.push(`Repeated paragraph on ${paths.size} pages: ${paragraph.slice(0, 100)}…`);
+for (const entry of registry.filter((item) => item.robots === 'index,follow' && item.includeInSitemap)) {
+  if (!sitemapPaths.has(entry.path)) errors.push(`Indexable registry page missing from sitemap: ${entry.path}`);
+  if (!fs.existsSync(pageFile(entry.path))) errors.push(`Static HTTP status would be 404: ${entry.path}`);
+}
 
-const seoPageContent = JSON.parse(read(path.join(root, 'src', 'data', 'seoPages.generated.json')));
+const redirectConfig = read(path.join(root, 'deploy', 'nginx-host', 'snippets', 'legacy-redirects.conf'));
+for (const pathname of sitemapPaths) {
+  const escaped = pathname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (new RegExp(`location\\s+=\\s+${escaped}(?:\\s|\\{)`).test(redirectConfig)) errors.push(`Redirect URL present in sitemap: ${pathname}`);
+}
+
+for (const [paragraph, paths] of paragraphs) {
+  const cities = new Set([...paths].map((pathname) => seoPageByPath.get(pathname)?.city).filter(Boolean));
+  if (cities.size > 5) warnings.push(`Repeated regional paragraph across ${cities.size} cities (${paths.size} pages): ${paragraph.slice(0, 100)}…`);
+}
+
 const regionEntries = seoPageContent.filter((entry) => entry.type === 'city' && entry.indexable !== false);
-const tokens = (value) => new Set(normalizeText(value).split(' ').filter((token) => token.length > 3));
+const tokens = (value) => {
+  const words = normalizeText(value).split(' ').filter(Boolean);
+  return new Set(words.slice(0, Math.max(0, words.length - 4)).map((_, index) => words.slice(index, index + 5).join(' ')));
+};
 for (let index = 0; index < regionEntries.length; index += 1) {
   for (let other = index + 1; other < regionEntries.length; other += 1) {
     const regionText = (entry) => [entry.intro, ...entry.sections.map((section) => `${section.title} ${section.body}`), ...entry.faq.map((faq) => `${faq.question} ${faq.answer}`)].join(' ');
     const left = tokens(regionText(regionEntries[index]));
     const right = tokens(regionText(regionEntries[other]));
     const intersection = [...left].filter((token) => right.has(token)).length;
-    const similarity = intersection / Math.max(1, Math.min(left.size, right.size));
-    if (similarity > 0.90) warnings.push(`Regional text similarity ${(similarity * 100).toFixed(0)}%: /${regionEntries[index].slug} and /${regionEntries[other].slug}`);
+    const similarity = intersection / Math.max(1, new Set([...left, ...right]).size);
+    const message = `Regional text similarity ${(similarity * 100).toFixed(0)}%: /${regionEntries[index].slug} and /${regionEntries[other].slug}`;
+    if (similarity >= 0.82) errors.push(message);
+    else if (similarity >= 0.68) warnings.push(message);
+  }
+}
+
+const serviceCityEntries = seoPageContent.filter((entry) => entry.type === 'service-city' && entry.indexable !== false);
+const shingles = (value, width = 5) => {
+  const words = normalizeText(value).split(' ').filter(Boolean);
+  return new Set(words.slice(0, Math.max(0, words.length - width + 1)).map((_, index) => words.slice(index, index + width).join(' ')));
+};
+const pageBody = (entry) => [entry.intro, ...entry.sections.map((section) => `${section.title} ${section.body}`), ...entry.faq.map((faq) => `${faq.question} ${faq.answer}`), entry.ctaTitle, entry.ctaText].filter(Boolean).join(' ');
+const groupedServiceCities = new Map();
+for (const entry of serviceCityEntries) groupedServiceCities.set(entry.service, [...(groupedServiceCities.get(entry.service) || []), entry]);
+for (const [service, entries] of groupedServiceCities) {
+  for (let index = 0; index < entries.length; index += 1) {
+    const left = shingles(pageBody(entries[index]));
+    for (let other = index + 1; other < entries.length; other += 1) {
+      const right = shingles(pageBody(entries[other]));
+      const intersection = [...left].filter((item) => right.has(item)).length;
+      const union = new Set([...left, ...right]).size;
+      const similarity = intersection / Math.max(1, union);
+      const message = `Service-city text similarity ${(similarity * 100).toFixed(0)}% (${service}): /${entries[index].slug} and /${entries[other].slug}`;
+      if (similarity >= 0.82) errors.push(message);
+      else if (similarity >= 0.68) warnings.push(message);
+    }
   }
 }
 

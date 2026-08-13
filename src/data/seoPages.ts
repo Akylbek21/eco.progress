@@ -39,6 +39,8 @@ export interface SeoPageConfig {
   changefreq?: string;
   lastmod?: string;
   indexable?: boolean;
+  ctaTitle?: string;
+  ctaText?: string;
 }
 
 export const seoPages = seoPagesJson as SeoPageConfig[];

@@ -2,6 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { LASTMOD, OG_IMAGE, SITE_URL, publicStaticPages, seoArticles, seoPages } from './seo-data.mjs';
 import { COMPANY } from '../src/config/companyData.ts';
+import { activeServices, formatKztPrice, PRELIMINARY_PRICE_NOTICE } from '../src/content/serviceCatalog.ts';
+import { serviceContentMap } from '../src/content/services/serviceContent.ts';
+import { aboutPublicContent } from '../src/content/aboutPublicContent.ts';
 
 const root = process.cwd();
 const distDir = path.join(root, 'dist');
@@ -170,6 +173,75 @@ const pageShell = (meta, body) => {
 
 const renderLinks = (links = []) => links.map((item) => `<a href="${escapeHtml(item.path)}">${escapeHtml(item.label)}</a>`).join('');
 const renderList = (items = []) => `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+const renderCards = (items = [], title = (item) => item.title, body = (item) => item.description) =>
+  items.map((item) => `<article><h3>${escapeHtml(title(item))}</h3>${body(item) ? `<p>${escapeHtml(body(item))}</p>` : ''}</article>`).join('');
+
+const renderServicePage = (page) => {
+  const slug = page.path.replace('/services/', '');
+  const service = activeServices.find((item) => item.slug === slug);
+  if (!service) return '';
+  const content = serviceContentMap.get(slug);
+  const faq = content?.faq || service.faq;
+  const related = [...new Set([...(service.relatedServiceSlugs || []), ...(content?.relatedServices || [])])]
+    .map((relatedSlug) => activeServices.find((item) => item.slug === relatedSlug))
+    .filter(Boolean)
+    .map((item) => ({ label: item.title, path: `/services/${item.slug}` }));
+  const heroTitle = content?.hero.title || service.title;
+  const heroText = content?.hero.subtitle || service.fullDescription;
+  const summary = content?.summary;
+  return `${layout(`<main class="seo-static-page">
+    <nav class="seo-breadcrumbs">${renderLinks([{ label: 'Главная', path: '/' }, { label: 'Услуги', path: '/services' }, { label: service.title, path: page.path }])}</nav>
+    <section><p>${escapeHtml(service.category)}</p><h1>${escapeHtml(heroTitle)}</h1><p>${escapeHtml(heroText)}</p><p><strong>${escapeHtml(formatKztPrice(service.pricing))}</strong></p><p>${escapeHtml(service.areaServed.description)}</p><p><a href="#lead">Оставить заявку</a> <a href="${whatsappUrl}">WhatsApp</a></p></section>
+    ${content ? `<section><h2>Об услуге</h2><p>${escapeHtml(summary.shortDescription)}</p><p><strong>Результат для клиента:</strong> ${escapeHtml(summary.clientResult)}</p><p><strong>Срок:</strong> ${escapeHtml(summary.durationText)}</p><p><strong>Стоимость:</strong> ${escapeHtml(formatKztPrice(service.pricing))}</p><p>${escapeHtml(PRELIMINARY_PRICE_NOTICE)}</p><p><strong>Региональная доступность:</strong> ${escapeHtml(summary.availability)}</p></section>
+    <section><h2>Когда требуется услуга</h2>${renderCards(content.whenRequired)}</section>
+    <section><h2>Для кого подходит</h2>${renderCards(content.targetClients)}</section>
+    <section><h2>Какие задачи решаем</h2>${renderCards(content.problemsSolved, (item) => `Задача: ${item.problem}`, (item) => `Решение: ${item.solution}`)}</section>
+    <section><h2>Что получает клиент</h2>${renderCards(content.deliverables, (item) => item.title, (item) => `${item.description}${item.format ? ` Формат: ${item.format}.` : ''}`)}</section>
+    <section><h2>Этапы работы</h2>${renderCards(content.workflow, (item) => `${item.order}. ${item.title}`, (item) => `${item.description}${item.result ? ` Результат этапа: ${item.result}.` : ''}`)}</section>
+    <section><h2>Необходимые документы</h2>${renderCards(content.requiredDocuments, (item) => item.title, (item) => item.description || (item.required ? 'Обязательный исходный документ.' : 'Предоставляется при наличии.'))}</section>
+    <section><h2>Что влияет на стоимость</h2>${renderCards(content.pricingFactors)}</section>
+    <section><h2>Что не входит</h2>${renderList(content.notIncluded)}</section>
+    <section><h2>Нормативная база</h2>${renderCards(content.legalBasis, (item) => `${item.title}${item.number ? ` ${item.number}` : ''}`, (item) => item.note)}</section>
+    <section><h2>Риски и профилактика</h2>${renderCards(content.risks, (item) => item.risk, (item) => `Как снизить риск: ${item.prevention}`)}</section>` : `<section><h2>Кому нужна услуга</h2>${renderList(service.targetClients)}</section>
+    <section><h2>Что входит и какой результат</h2>${renderList(service.deliverables)}</section>
+    <section><h2>Необходимые документы</h2>${renderList(service.requiredDocuments)}</section>
+    <section><h2>Этапы работы</h2>${renderCards(service.workflow)}</section>
+    <section><h2>Сроки</h2><p>${escapeHtml(service.duration.text)}</p></section>
+    <section><h2>Нормативная база</h2>${renderCards(service.legalBasis || [], (item) => item.title, (item) => item.documentNumber || '')}</section>`}
+    <section><h2>Частые вопросы</h2>${faq.map((item) => `<article><h3>${escapeHtml(item.question)}</h3><p>${escapeHtml(item.answer)}</p></article>`).join('')}</section>
+    <section><h2>Связанные услуги</h2>${renderLinks(related)}</section>
+    <section id="lead"><h2>Получить консультацию по услуге</h2><p>Опишите задачу, и специалист подскажет сроки, документы и порядок работы.</p><p><a href="/contacts">Оставить заявку</a> <a href="${whatsappUrl}">WhatsApp</a></p></section>
+  </main>`)}`;
+};
+
+const renderAboutPage = (hero) => `${hero}
+  <section><h2>Комплексные экологические услуги для бизнеса</h2>${[
+    'Мы оказываем экологическое проектирование, лабораторные исследования и сопровождение бизнеса по Казахстану. Сбор, транспортировка, переработка и утилизация отходов доступны в Шымкенте.',
+    'В нашу деятельность входят разработка экологической документации, получение разрешений, производственный экологический контроль, лабораторные анализы воды, почвы и воздуха рабочей зоны, а также сопровождение проектов в уполномоченных органах.',
+    'Компания работает с опасными и неопасными отходами, включая ТБО, производственные и промышленные отходы, нефтешлам, отработанные масла, химические отходы, строительные отходы, шины и РТИ.',
+    'Наше преимущество — комплексный подход: консультация, подготовка документов, лабораторные протоколы, отчетность и сопровождение до согласованного результата.',
+    'Наша цель — помогать бизнесу безопасно и законно выполнять экологические требования и минимизировать воздействие на окружающую среду.',
+  ].map((item) => `<p>${escapeHtml(item)}</p>`).join('')}</section>
+  <section><h2>Объединённые усилия — чистое будущее</h2><p>ECOPROGRESS объединяет проектное, лабораторное и операционное направления, чтобы задачи клиента велись последовательно и прозрачно.</p></section>
+  <section><h2>Чем мы занимаемся</h2>${renderCards([
+    ['Экологическое проектирование', 'ОВОС, РООС, ПУО, ПЭК, НДВ, отчеты и разрешения.'], ['Лабораторные исследования', 'Анализы и замеры воды, воздуха, почвы и выбросов с протоколами.'],
+    ['Транспортировка отходов', 'Вывоз отходов в доступном регионе с документальным сопровождением.'], ['Утилизация и переработка', 'Передача отходов на переработку, утилизацию или безопасное размещение.'],
+    ['Полигон ТБО', 'Решения по законному размещению твердых бытовых отходов.'], ['Сопровождение бизнеса', 'Подготовка к проверкам, документы и снижение экологических рисков.'],
+  ], (item) => item[0], (item) => item[1])}</section>
+  <section><h2>Группа компаний ecoprogress.kz</h2>${renderCards([['Tumar Construction Group', 'Экологическое проектирование, лабораторный контроль и сопровождение предприятий.'], ['Tumar Partners', 'Полигон ТБО и услуги по законному размещению твердых бытовых отходов.'], ['EcoTrans', 'Транспортировка отходов и сопровождение вывоза.'], ['EcoAnalytics', 'Аналитика, лабораторные исследования и контроль экологических показателей.']], (item) => item[0], (item) => item[1])}</section>
+  <section><h2>Почему нам доверяют</h2>${renderList(['Комплексный подход', 'Работа по требованиям Республики Казахстан', 'Лабораторные исследования', 'Документальное сопровождение', 'Безопасная транспортировка отходов', 'Ответственный подход к экологии'])}</section>
+  <section><h2>Документы, сертификаты и разрешения</h2>${renderList(['Сертификаты специалистов', 'Разрешения на деятельность', 'Лабораторные протоколы', 'Документы по полигону', 'Документы по транспортировке отходов'])}<p><a href="/about#documents">Открыть опубликованные документы</a></p></section>
+  <section><h2>Как мы работаем</h2>${renderList(['Вы оставляете заявку', 'Специалист уточняет задачу', 'Мы подбираем решение', 'Готовим документы или организуем услугу', 'Вы получаете результат и сопровождение'])}</section>
+  <section><h2>Кому нужны услуги</h2>${renderList(aboutPublicContent.audience)}</section>
+  <section><h2>Что входит в работу</h2>${renderList(aboutPublicContent.included)}</section>
+  <section><h2>Необходимые документы</h2>${renderList(aboutPublicContent.documents)}</section>
+  <section><h2>Этапы</h2>${renderList(aboutPublicContent.steps)}</section>
+  <section><h2>Сроки</h2><p>${escapeHtml(aboutPublicContent.timing)}</p></section>
+  <section><h2>Результат</h2><p>${escapeHtml(aboutPublicContent.result)}</p></section>
+  <section><h2>Нормативная база</h2><p>${escapeHtml(aboutPublicContent.legalBasis)}</p></section>
+  <section><h2>Частые вопросы</h2>${aboutPublicContent.faq.map((item) => `<article><h3>${escapeHtml(item.question)}</h3><p>${escapeHtml(item.answer)}</p></article>`).join('')}</section>
+  <section><h2>Связанные услуги и разделы</h2>${renderLinks(aboutPublicContent.relatedLinks)}</section>
+  <section><h2>Нужна помощь с экологическими документами или отходами?</h2><p>Опишите объект и задачу — специалист подскажет следующий шаг.</p><p><a href="/contacts">Получить консультацию</a> <a href="${whatsappUrl}">WhatsApp</a></p></section>`;
 
 const layout = (content) => `
 <header class="seo-static-header">
@@ -208,7 +280,8 @@ const renderSeoPage = (page) => layout(`
   <section><h2>Что получает клиент</h2>${renderList(page.outcomes)}</section>
   ${page.sections.map((section) => `<section><h2>${escapeHtml(section.title)}</h2><p>${escapeHtml(section.body)}</p></section>`).join('')}
   <section><h2>Частые вопросы</h2>${page.faq.map((item) => `<article><h3>${escapeHtml(item.question)}</h3><p>${escapeHtml(item.answer)}</p></article>`).join('')}</section>
-  <section><h2>Внутренние ссылки</h2>${renderLinks(page.relatedLinks)}</section>
+  <section><h2>Связанные услуги и страницы</h2>${renderLinks(page.relatedLinks)}</section>
+  <section id="lead-form"><h2>${escapeHtml(page.ctaTitle || 'Заказать расчет стоимости')}</h2><p>${escapeHtml(page.ctaText || 'Опишите объект и текущие документы — специалист уточнит состав, сроки и порядок работы.')}</p><p><a href="/contacts">Оставить заявку</a> <a href="${whatsappUrl}">Написать в WhatsApp</a></p></section>
 </main>`);
 
 const renderArticle = (article) => layout(`
@@ -229,13 +302,14 @@ const renderArticle = (article) => layout(`
 </main>`);
 
 const renderStaticPage = (page) => {
+  if (page.path.startsWith('/services/')) return renderServicePage(page);
   const cityLinks = seoPages.filter((item) => item.type === 'city' && item.indexable !== false).slice(0, 18).map((item) => ({ label: item.h1, path: `/${item.slug}` }));
   const serviceLinks = seoPages.filter((item) => item.type === 'service-city').slice(0, 18).map((item) => ({ label: item.h1, path: `/${item.slug}` }));
   const articleLinks = seoArticles.map((item) => ({ label: item.h1, path: item.slug }));
   const hero = `<section><h1>${escapeHtml(page.h1)}</h1><p>${escapeHtml(page.description)}</p><p><a href="/contacts">Получить консультацию</a> <a href="${whatsappUrl}">WhatsApp</a></p></section>`;
   const contentByPath = {
     '/contacts': `${hero}<section><h2>Контактные данные</h2><address><p>${escapeHtml(COMPANY.name)}</p><p>${escapeHtml(`г. ${COMPANY.address.city}, ${COMPANY.address.street}`)}</p><p><a href="tel:+${COMPANY.phone.value}">${escapeHtml(COMPANY.phone.display)}</a></p><p><a href="mailto:${escapeHtml(COMPANY.email)}">${escapeHtml(COMPANY.email)}</a></p><p>${escapeHtml(COMPANY.workingHours)}</p></address></section>`,
-    '/about': `${hero}<section><h2>Чем занимается компания</h2><p>ECOPROGRESS GROUP сопровождает предприятия по экологическим документам, лабораторным исследованиям, обращению с отходами и производственному контролю.</p></section><section><h2>Подход к работе</h2><p>Специалисты проверяют исходные данные и применимость требований, согласуют состав работ и фиксируют результат для клиента.</p></section>`,
+    '/about': renderAboutPage(hero),
     '/employees': `${hero}<section><h2>Компетенции команды</h2><p>В проектах участвуют специалисты по экологическому проектированию, лабораторным исследованиям, отходам и сопровождению предприятий. Персональные данные публикуются только после подтверждения сотрудником.</p></section>`,
     '/partners': `${hero}<section><h2>Направления сотрудничества</h2><p>Компания взаимодействует с лабораториями, проектными организациями, перевозчиками и площадками обращения с отходами в рамках конкретных договоров и задач.</p></section>`,
     '/tariffs': `${hero}<section><h2>Как формируется стоимость</h2><p>Стоимость зависит от категории объекта, полноты исходных данных, числа источников воздействия, состава измерений, выезда и требуемого результата.</p><p>Точный расчёт предоставляется после проверки задачи.</p></section>`,
@@ -244,9 +318,7 @@ const renderStaticPage = (page) => {
     '/news': `${hero}<section><h2>Опубликованные материалы</h2>${renderLinks(articleLinks)}</section>`,
     '/regions': `${hero}<section><h2>Регионы обслуживания</h2>${renderLinks(cityLinks)}</section>`,
   };
-  const specificContent = contentByPath[page.path] || (page.path.startsWith('/services/')
-    ? `${hero}<section><h2>Что входит в услугу «${escapeHtml(page.h1)}»</h2><p>${escapeHtml(page.description)} Состав работ уточняется по объекту и подтверждённым исходным данным клиента.</p></section><section><h2>Связанные материалы</h2>${renderLinks(articleLinks.slice(0, 4))}</section>`
-    : `${hero}<section><h2>Основные направления</h2>${renderLinks(serviceLinks.slice(0, 8))}</section>`);
+  const specificContent = contentByPath[page.path] || `${hero}<section><h2>Основные направления</h2>${renderLinks(serviceLinks.slice(0, 8))}</section>`;
   return layout(`
   <main class="seo-static-page">
     <nav class="seo-breadcrumbs"><a href="/">Главная</a></nav>

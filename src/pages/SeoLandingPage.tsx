@@ -178,7 +178,11 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
             </div>
           </div>
           <div id="lead-form">
-            <LeadForm source={`seo_${page.slug}`} defaultService={page.service || 'Экологические услуги'} title="Заказать расчет стоимости" />
+            <div className="mb-5 rounded-[8px] border border-eco-200 bg-eco-50 p-5">
+              <h2 className="text-2xl font-bold text-eco-900">{page.ctaTitle || 'Заказать расчет стоимости'}</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{page.ctaText || 'Опишите объект и текущие документы — специалист уточнит состав, сроки и порядок работы.'}</p>
+            </div>
+            <LeadForm source={`seo_${page.slug}`} defaultService={page.service || 'Экологические услуги'} title="Оставить заявку" />
           </div>
         </div>
       </section>

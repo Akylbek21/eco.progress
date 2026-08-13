@@ -44,12 +44,25 @@ test('nginx normalizes www, slash and legacy penalty URLs with 301', async () =>
   assert.match(hostNginx, /server_name www\.ecoprogress\.kz[\s\S]*return 301 https:\/\/ecoprogress\.kz\$request_uri/);
   assert.match(hostNginx, /location ~ \^\(\.\+\)\/\+\$/);
   assert.match(redirects, /shtrafy-za-ekologicheskie-narusheniya-kazakhstan \{ return 301 \/news\/shtrafy-za-ekologicheskie-narusheniya;/);
+  assert.match(redirects, /passport-othodov-\(\[a-z-\]\+\).*return 301 \/pasport-othodov-\$1/);
+  assert.match(redirects, /otchet-pek-\(\[a-z-\]\+\).*return 301 \/pek-\$1/);
+  assert.match(redirects, /ekologicheskoe-proektirovanie-\(\[a-z-\]\+\).*return 301 \/roos-\$1/);
+  assert.match(redirects, /razreshenie-na-emissii-\(\[a-z-\]\+\).*return 301 \/ekologicheskoe-razreshenie-\$1/);
 });
 
-test('waste utilization SEO is limited to Shymkent', () => {
-  const utilizationPages = seoPages.filter((page) => page.slug.startsWith('utilizaciya-othodov-'));
-  assert.deepEqual(utilizationPages.map((page) => page.slug), ['utilizaciya-othodov-shymkent']);
-  assert.ok(utilizationPages.every((page) => page.city === 'Шымкент'));
+test('every active SEO city has every core service landing', () => {
+  const cityPages = seoPages.filter((page) => page.type === 'city' && page.indexable !== false);
+  const servicePages = seoPages.filter((page) => page.type === 'service-city' && page.indexable !== false);
+  const prefixes = ['ndv', 'pek', 'ovos', 'szz', 'puo', 'roos', 'pasport-othodov', 'ekologicheskoe-razreshenie', 'laboratornye-zamery', 'utilizaciya-othodov'];
+  assert.equal(servicePages.length, cityPages.length * prefixes.length);
+  for (const cityPage of cityPages) {
+    const citySlug = cityPage.slug.replace('ecologicheskie-uslugi-', '');
+    for (const prefix of prefixes) assert.ok(servicePages.some((page) => page.slug === `${prefix}-${citySlug}`), `${prefix}-${citySlug}`);
+  }
+  for (const page of servicePages) {
+    assert.ok(page.relatedLinks.some((item) => item.path === `/ecologicheskie-uslugi-${page.slug.split('-').slice(-1)[0]}`) || page.relatedLinks.some((item) => item.label.startsWith('Экологические услуги')));
+    assert.ok(page.relatedLinks.filter((item) => servicePages.some((candidate) => `/${candidate.slug}` === item.path)).length >= 4);
+  }
 });
 
 test('city names use the prepositional case after the preposition', () => {

@@ -1,6 +1,9 @@
 import { frontendServices } from './service-catalog.mjs';
 import { articleContent } from '../src/content/articles/articleContent.ts';
 import { regionContentMap } from '../src/content/regions/regionContent.ts';
+import { activeServices } from '../src/content/serviceCatalog.ts';
+import { serviceContentMap } from '../src/content/services/serviceContent.ts';
+import { aboutPublicContent } from '../src/content/aboutPublicContent.ts';
 
 const SITE_URL = 'https://ecoprogress.kz';
 const LASTMOD = '2026-07-17';
@@ -63,18 +66,18 @@ const serviceProfiles = [
   },
   {
     key: 'industrial-control',
-    slugPrefix: 'proizvodstvennyy-kontrol-ses',
-    name: 'Производственный контроль СЭС',
-    titleName: 'Производственный контроль СЭС',
-    h1: 'Производственный контроль СЭС',
-    descriptionNoun: 'программу производственного контроля, лабораторные замеры и протоколы для санитарных требований',
-    examples: 'кафе, школы, клиники, пищевые производства, склады и рабочие зоны',
-    result: 'план контроля, протоколы замеров и комплект материалов для проверки',
+    slugPrefix: 'szz',
+    name: 'Проект санитарно-защитной зоны',
+    titleName: 'Проект СЗЗ',
+    h1: 'Проект санитарно-защитной зоны (СЗЗ)',
+    descriptionNoun: 'обоснование санитарно-защитной зоны, исходные материалы и проектные решения по границе воздействия',
+    examples: 'производственные площадки, котельные, склады, объекты с источниками шума и выбросов',
+    result: 'проектные материалы по СЗЗ и перечень дальнейших процедур по объекту',
     image: '/cottonbro.jpg',
   },
   {
     key: 'waste-passport',
-    slugPrefix: 'passport-othodov',
+    slugPrefix: 'pasport-othodov',
     name: 'Паспорт отходов',
     titleName: 'Паспорт отходов',
     h1: 'Паспорт отходов',
@@ -96,40 +99,40 @@ const serviceProfiles = [
   },
   {
     key: 'pek-report',
-    slugPrefix: 'otchet-pek',
-    name: 'Отчет ПЭК',
-    titleName: 'Отчет ПЭК',
-    h1: 'Отчет ПЭК',
-    descriptionNoun: 'производственный экологический контроль, лабораторные данные и отчет ПЭК',
+    slugPrefix: 'pek',
+    name: 'Производственный экологический контроль',
+    titleName: 'ПЭК',
+    h1: 'Производственный экологический контроль (ПЭК)',
+    descriptionNoun: 'программу производственного экологического контроля, календарь наблюдений и отчетные материалы ПЭК',
     examples: 'объекты с выбросами, отходами, сбросами, производственными площадками и разрешениями',
     result: 'готовый отчет ПЭК и список действий для следующего отчетного периода',
     image: '/images (1).jpg',
   },
   {
     key: 'environmental-design',
-    slugPrefix: 'ekologicheskoe-proektirovanie',
-    name: 'Экологическое проектирование',
-    titleName: 'Экологическое проектирование',
-    h1: 'Экологическое проектирование',
-    descriptionNoun: 'экологические проекты, ОВОС, скрининг, декларации, нормативы и разрешительные материалы',
+    slugPrefix: 'roos',
+    name: 'Раздел охраны окружающей среды',
+    titleName: 'Разработка РООС',
+    h1: 'Разработка раздела охраны окружающей среды (РООС)',
+    descriptionNoun: 'раздел охраны окружающей среды для проектной документации и обоснование природоохранных решений',
     examples: 'новые объекты, реконструкция, производство, строительство, склады и сервисные площадки',
     result: 'проектную документацию и понятный маршрут согласования',
     image: '/cottonbro.jpg',
   },
   {
     key: 'emission-permit',
-    slugPrefix: 'razreshenie-na-emissii',
-    name: 'Разрешение на эмиссии',
-    titleName: 'Разрешение на эмиссии',
-    h1: 'Разрешение на эмиссии',
-    descriptionNoun: 'подготовку материалов для разрешения на эмиссии и сопровождение по требованиям РК',
+    slugPrefix: 'ekologicheskoe-razreshenie',
+    name: 'Экологическое разрешение',
+    titleName: 'Экологическое разрешение',
+    h1: 'Экологическое разрешение',
+    descriptionNoun: 'проверку исходных данных, подготовку разрешительных материалов и сопровождение экологического разрешения',
     examples: 'источники выбросов, котельные, производственные линии, вентиляция и технологические процессы',
     result: 'перечень исходных данных, проектные материалы и сопровождение до результата',
     image: '/para.jpg',
   },
   {
     key: 'eia-screening',
-    slugPrefix: 'ovos-skrining-vozdeystviya',
+    slugPrefix: 'ovos',
     name: 'ОВОС и скрининг воздействия',
     titleName: 'ОВОС / скрининг',
     h1: 'ОВОС и скрининг воздействия',
@@ -138,7 +141,53 @@ const serviceProfiles = [
     result: 'подготовленные материалы для оценки воздействия и дальнейших решений',
     image: '/pexels-jan-van.jpg',
   },
+  {
+    key: 'ndv', slugPrefix: 'ndv', name: 'Проект НДВ', titleName: 'Проект НДВ',
+    h1: 'Проект нормативов допустимых выбросов (НДВ)',
+    descriptionNoun: 'инвентаризацию источников, расчеты выбросов и проект нормативов допустимых выбросов',
+    examples: 'котельные, вентиляционные системы, технологическое оборудование и организованные источники выбросов',
+    result: 'проект НДВ с расчетами, перечнем источников и материалами в согласованном составе', image: '/cottonbro.jpg',
+  },
+  {
+    key: 'puo', slugPrefix: 'puo', name: 'Программа управления отходами', titleName: 'ПУО',
+    h1: 'Программа управления отходами (ПУО)',
+    descriptionNoun: 'анализ потоков отходов, целевые показатели и программу управления отходами',
+    examples: 'производственные площадки, строительство, склады, сервисные и промышленные предприятия',
+    result: 'программу управления отходами с мероприятиями и показателями по данным предприятия', image: '/utilizacija-othodov-3.jpg',
+  },
 ];
+
+const mainServiceSlug = {
+  'laboratory-tests': 'laboratory-tests', 'industrial-control': 'environmental-design', 'waste-passport': 'ecological-documents',
+  'waste-utilization': 'waste-recycling', 'pek-report': 'program-pek', 'environmental-design': 'environmental-design',
+  'emission-permit': 'environmental-permits', 'eia-screening': 'ovos', ndv: 'ndv', puo: 'puo',
+};
+
+const serviceDocuments = {
+  'laboratory-tests': ['задание и цель исследований', 'адрес и схема точек отбора', 'режим работы объекта', 'имеющиеся программы контроля'],
+  'industrial-control': ['генеральный план', 'описание технологии и оборудования', 'сведения об источниках воздействия', 'имеющиеся замеры и проектные материалы'],
+  'waste-passport': ['перечень и происхождение отходов', 'данные о составе или исследованиях', 'объемы образования', 'договоры и документы движения отходов'],
+  'waste-utilization': ['перечень и фото отходов', 'объем и состояние партии', 'адрес и условия погрузки', 'реквизиты владельца отходов'],
+  'pek-report': ['экологическое разрешение или декларация', 'программа ПЭК', 'протоколы и журналы периода', 'данные по выбросам, сбросам и отходам'],
+  'environmental-design': ['проектная документация', 'генеральный план', 'технологические решения', 'данные по ресурсам, выбросам и отходам'],
+  'emission-permit': ['категория объекта', 'проектные нормативы', 'решения экологической оценки', 'действующие разрешительные документы'],
+  'eia-screening': ['описание намечаемой деятельности', 'местоположение и генплан', 'технологические показатели', 'варианты реализации проекта'],
+  ndv: ['инвентаризация источников', 'режимы оборудования', 'характеристики вентиляции и топлива', 'генплан и ситуационная схема'],
+  puo: ['инвентаризация отходов', 'объемы по видам', 'договоры передачи', 'производственные планы и целевые показатели'],
+};
+
+const serviceLegalBasis = {
+  'laboratory-tests': 'Применимые санитарные правила, методики измерений и программа контроля определяются по объекту и показателям.',
+  'industrial-control': 'Состав проекта определяется санитарными требованиями Республики Казахстан и фактическими источниками воздействия.',
+  'waste-passport': 'Классификация и паспортирование выполняются по Экологическому кодексу Республики Казахстан и действующим правилам обращения с отходами.',
+  'waste-utilization': 'Передача отходов оформляется по требованиям Экологического кодекса Республики Казахстан и применимым правилам учета движения отходов.',
+  'pek-report': 'Программа и отчетность ПЭК формируются по Экологическому кодексу Республики Казахстан и правилам производственного экологического контроля.',
+  'environmental-design': 'РООС готовится в составе проектных материалов с учетом Экологического кодекса Республики Казахстан и применимых инструкций экологической оценки.',
+  'emission-permit': 'Разрешительная процедура определяется Экологическим кодексом Республики Казахстан, категорией объекта и составом утвержденных нормативов.',
+  'eia-screening': 'Экологическая оценка проводится по Экологическому кодексу Республики Казахстан и действующей инструкции по организации экологической оценки.',
+  ndv: 'Нормативы выбросов разрабатываются по Экологическому кодексу Республики Казахстан и применимой методике определения нормативов эмиссий.',
+  puo: 'ПУО разрабатывается по Экологическому кодексу Республики Казахстан и правилам разработки программы управления отходами.',
+};
 
 const priorityCities = ['almaty', 'astana', 'shymkent', 'taraz', 'turkestan', 'kyzylorda', 'aktobe', 'atyrau', 'karaganda'];
 
@@ -171,9 +220,9 @@ const cityFaq = (city) => [
 
 const serviceFaq = (service, city) => [
   [`Сколько стоит ${service.name.toLowerCase()} в ${city.namePrepositional}?`, `Цена зависит от объекта, количества точек, документов и срочности. Мы уточняем задачу по объекту в ${city.namePrepositional}, после чего готовим расчет стоимости и перечень работ.`],
-  [`Какие данные нужны для услуги "${service.name}"?`, `Обычно нужны реквизиты компании, адрес объекта, описание деятельности, фото или схема площадки, сведения об отходах, источниках воздействия и текущих документах.`],
-  ['Можно ли начать дистанционно?', 'Да. Первичный аудит, расчет и подготовку документов можно начать дистанционно. Если нужны замеры или выезд на объект, согласуем дату и состав работ отдельно.'],
-  ['Что получает клиент по итогам работы?', `Клиент получает ${service.result}, рекомендации по недостающим документам и сопровождение до понятного результата.`],
+  [`Какие данные нужны для услуги «${service.name}» в ${city.namePrepositional}?`, `Для объекта в ${city.namePrepositional} нужны реквизиты компании, адрес, описание деятельности, схема площадки и применимые сведения об отходах, источниках воздействия и текущих документах.`],
+  [`Можно ли начать дистанционно из ${city.name}?`, `Да. Первичный аудит, расчет и подготовку документов для ${city.regionGenitive} можно начать дистанционно. Замеры или выезд согласуются по адресу и заданию отдельно.`],
+  [`Что получает клиент по итогам работы в ${city.namePrepositional}?`, `По задаче в ${city.namePrepositional} клиент получает ${service.result}, рекомендации по недостающим документам и сопровождение в согласованном составе.`],
   ['Подходит ли услуга для проверки СЭС или экологии?', 'Да, если перечень работ подобран под фактическую проверку. Мы заранее уточняем, какие документы и протоколы могут запросить контролирующие органы.'],
   ['Можно ли заказать комплексное сопровождение?', 'Да. К услуге можно подключить экологическое проектирование, лабораторные замеры, ПЭК, паспорта отходов и сопровождение проверок. Утилизация доступна только в Шымкенте.'],
 ].map(([question, answer]) => ({ question, answer }));
@@ -187,6 +236,13 @@ const cityLinks = (city) => {
     link('Контакты', '/contacts'),
     ...nearby.map((item) => link(`Экологические услуги в ${item.namePrepositional}`, `/ecologicheskie-uslugi-${item.slug}`)),
   ];
+};
+
+const activeCityProfiles = cityProfiles.filter((city) => city.name && city.region && city.objects && city.localNote);
+const serviceCityLink = (service, city) => link(`${service.titleName} в ${city.namePrepositional}`, `/${service.slugPrefix}-${city.slug}`);
+const relatedServiceCityLinks = (service, city) => {
+  const current = serviceProfiles.findIndex((item) => item.key === service.key);
+  return [1, 2, 3, 4].map((offset) => serviceProfiles[(current + offset) % serviceProfiles.length]).map((item) => serviceCityLink(item, city));
 };
 
 const citySections = (city) => [
@@ -216,52 +272,70 @@ const createCityPage = (city) => ({
     { title: 'Региональная логистика', body: regionContentMap.get(city.slug).logisticsNote },
     { title: 'Типовые задачи региона', body: regionContentMap.get(city.slug).commonTasks.join('. ') },
   ] : [])],
-  services: baseServices.filter(([key]) => city.slug === 'shymkent' || key !== 'waste-management').map(([_, label, path]) => link(label, path)),
+  services: serviceProfiles.map((service) => serviceCityLink(service, city)),
   audience: objectList,
   outcomes: clientResults,
   faq: [...cityFaq(city), ...(regionContentMap.get(city.slug)?.faq || [])],
   relatedLinks: cityLinks(city),
   breadcrumbs: [link('Главная', '/'), link('Города', '/regions'), link(`Экологические услуги в ${city.namePrepositional}`, `/ecologicheskie-uslugi-${city.slug}`)],
   schemaType: 'WebPage',
-  indexable: regionContentMap.has(city.slug),
+  indexable: true,
   image: '/para.jpg',
   priority: 0.8,
   changefreq: 'weekly',
   lastmod: LASTMOD,
+  ctaTitle: `Подобрать экологические услуги для объекта в ${city.namePrepositional}`,
+  ctaText: `Укажите вид деятельности и адрес в ${city.regionGenitive}. Специалист сопоставит задачу с доступными дистанционными работами, отдельно проверит необходимость выезда и подготовит перечень исходных данных.`,
 });
 
-const createServiceCityPage = (service, city) => ({
+const createServiceCityPage = (service, city) => {
+  const region = regionContentMap.get(city.slug);
+  const documents = serviceDocuments[service.key];
+  const mainPath = `/services/${mainServiceSlug[service.key]}`;
+  const visitText = region
+    ? `${region.onSiteConditions.join('. ')}. ${region.logisticsNote}`
+    : `Документальные этапы выполняются дистанционно. Обследование, отбор проб или выезд в ${city.name} подтверждаются только после проверки адреса, задания и доступности специалистов; местный офис не заявляется.`;
+  const regionalTask = region?.commonTasks.join(', ') || city.localNote;
+  const operationalNote = service.key === 'waste-utilization' && city.slug !== 'shymkent'
+    ? `ECOPROGRESS не заявляет собственный вывоз или прием отходов в ${city.namePrepositional}. Для такой заявки сначала проверяются вид отхода, маршрут и наличие подходящего оператора; до подтверждения это консультация и документальная подготовка, а не обещание оказать операционную услугу.`
+    : '';
+  return ({
   slug: `${service.slugPrefix}-${city.slug}`,
   city: city.name,
   service: service.name,
   type: 'service-city',
   indexable: true,
-  title: `${service.titleName} для бизнеса в ${city.namePrepositional} | ECOPROGRESS`,
-  description: `Закажите ${service.name.toLowerCase()} в ${city.namePrepositional}: консультация, расчет стоимости, подготовка документов и сопровождение для бизнеса.`,
+  title: `${service.titleName} в ${city.namePrepositional} для бизнеса | ECOPROGRESS`,
+  description: service.key === 'waste-utilization' && city.slug !== 'shymkent'
+    ? `Утилизация отходов в ${city.namePrepositional}: проверка партии, документов и доступности оператора без заявления местного офиса или собственного вывоза.`
+    : `${service.titleName} в ${city.namePrepositional}: аудит исходных данных, подготовка документов для предприятий ${city.regionGenitive} и согласование выезда.`,
   h1: `${service.h1} в ${city.namePrepositional}`,
   canonical: canonical(`${service.slugPrefix}-${city.slug}`),
   keywords: [service.name, `${service.name} ${city.name}`, 'экологические услуги Казахстан', 'документы для проверки'],
-  intro: `Помогаем бизнесу в ${city.namePrepositional} заказать ${service.descriptionNoun}. Уточняем объект, подбираем состав работ, готовим документы и сопровождаем клиента до результата.`,
+  intro: `Для предприятий ${city.regionGenitive} рассматриваем задачу по направлению «${service.titleName}». Работу начинаем с проверки применимости услуги к объекту, исходных документов и фактической деятельности, а полевые этапы согласуем отдельно. ${operationalNote}`,
   sections: [
-    { title: 'Когда нужна услуга', body: `${service.name} требуется, когда бизнесу нужны подтверждающие документы, протоколы, проектные материалы или доказательная база для проверки. В ${city.namePrepositional} это актуально для объектов: ${city.objects}.` },
-    { title: 'Что входит в услугу', body: `Мы уточняем задачу, проверяем исходные данные, формируем перечень работ, выполняем ${service.descriptionNoun}, готовим результат и объясняем, как использовать документы при проверке.` },
-    { title: 'Какие документы нужны', body: 'На старте обычно нужны реквизиты компании, адрес объекта, описание деятельности, текущие разрешения и отчеты, сведения об отходах, источниках воздействия, рабочих зонах и контакт ответственного лица.' },
+    { title: `Кому нужен ${service.titleName} в ${city.namePrepositional}`, body: `${service.name} рассматривают при запуске, реконструкции, изменении технологии или устранении пробелов в документах. В региональном профиле указаны ${city.objects}; применимость всегда проверяется по конкретной площадке.` },
+    { title: 'Что входит в работу', body: `Для объекта в ${city.namePrepositional} проверяем исходные данные и границы задачи, формируем техническое задание, выполняем ${service.descriptionNoun}, проводим внутреннюю проверку материалов и передаем результат с пояснением дальнейших действий.` },
+    { title: 'Необходимые документы', body: `Для площадки в ${city.namePrepositional} запрашиваются реквизиты и адрес, а по направлению «${service.titleName}» — ${documents.join(', ')}. Если части данных нет, сначала составляем перечень пробелов без подмены фактических сведений.` },
     { title: 'Примеры объектов', body: `Услуга подходит для таких ситуаций: ${service.examples}. Для предприятий ${city.regionGenitive} состав работ согласуется по фактическому объекту и требованиям проверяющих.` },
-    { title: 'Как проходит работа', body: 'Первый шаг - консультация и сбор данных. Затем расчет стоимости, договоренность по срокам, выполнение работ, передача документов в PDF/Word и сопровождение по вопросам клиента.' },
-    { title: 'Сроки', body: 'Срок зависит от объема исходных данных, количества точек, необходимости выезда и сложности объекта. Для срочных задач можно начать с экспресс-аудита документов и приоритетного плана действий.' },
-    { title: 'Ответственность и штрафы', body: `Отсутствие документов по направлению "${service.name}" может привести к замечаниям при проверке, предписаниям, повторным запросам и финансовым рискам. Лучше закрыть пробелы заранее.` },
-    { title: 'Что получает клиент', body: `По итогам работы клиент получает ${service.result}, понятный список следующих шагов и помощь при коммуникации с проверяющими или внутренними ответственными сотрудниками.` },
+    { title: 'Этапы выполнения', body: `Маршрут включает первичную консультацию, аудит исходных файлов, согласование состава и сроков, подготовку материалов, контроль качества и передачу результата. Для ${city.name} формат выезда фиксируется до начала полевых работ.` },
+    { title: 'Сроки', body: `Срок рассчитывается после аудита: на него влияют полнота исходных данных, число источников или площадок, необходимость измерений и маршрут до объекта в ${city.namePrepositional}. Необоснованные фиксированные сроки до анализа не обещаются.` },
+    { title: `Региональные условия для ${city.name}`, body: `${city.localNote} Для направления «${service.titleName}» типовой региональный контекст: ${regionalTask}. ${visitText} ${operationalNote}` },
+    { title: 'Результат', body: `По объекту в ${city.namePrepositional} клиент получает ${service.result}, реестр использованных исходных данных и список следующих шагов. Состав результата закрепляется в задании и договоре.` },
+    { title: 'Нормативная база', body: `${serviceLegalBasis[service.key]} Регион не меняет применимое республиканское регулирование; требования проверяются по объекту в ${city.namePrepositional}.` },
   ],
   services: baseServices.map(([_, label, path]) => link(label, path)),
   audience: objectList.slice(0, 12),
   outcomes: clientResults,
-  faq: serviceFaq(service, city),
+  faq: [
+    ...serviceFaq(service, city).slice(0, 4),
+    { question: `Как организована работа по ${service.titleName} для ${city.name}?`, answer: `${city.localNote} ${visitText}` },
+    { question: `Какие особенности объекта в ${city.namePrepositional} нужно сообщить?`, answer: `Нужно указать адрес, режим и вид деятельности, оборудование и источники воздействия. Для региона характерны ${city.objects}, но решение принимается только по данным конкретного объекта.` },
+  ],
   relatedLinks: [
     link(`Экологические услуги в ${city.namePrepositional}`, `/ecologicheskie-uslugi-${city.slug}`),
-    link('Лабораторные исследования', '/services/laboratory-tests'),
-    link('Производственный контроль', '/services/industrial-control'),
-    link('Штрафы за экологические нарушения', '/news/shtrafy-za-ekologicheskie-narusheniya'),
-    link('Контакты', '/contacts'),
+    link(`Основная страница «${service.name}»`, mainPath),
+    ...relatedServiceCityLinks(service, city),
   ],
   breadcrumbs: [link('Главная', '/'), link('Услуги', '/services'), link(`${service.name} в ${city.namePrepositional}`, `/${service.slugPrefix}-${city.slug}`)],
   schemaType: 'Service',
@@ -269,7 +343,10 @@ const createServiceCityPage = (service, city) => ({
   priority: priorityCities.includes(city.slug) ? 0.8 : 0.7,
   changefreq: 'weekly',
   lastmod: LASTMOD,
-});
+  ctaTitle: `Рассчитать ${service.titleName} для объекта в ${city.namePrepositional}`,
+  ctaText: `Опишите площадку и текущие документы. Специалист проверит задачу для ${city.regionGenitive}, назовет недостающие данные и предложит обоснованный порядок работ без обещания неподтвержденных сроков или выезда.`,
+  });
+};
 
 const specialPages = [
   {
@@ -453,12 +530,8 @@ export const seoArticles = articleContent.filter((article) => article.status ===
 }));
 
 export const seoPages = [
-  ...cityProfiles.map(createCityPage),
-  // Шаблонные service × city страницы исключены из индексируемого набора: без
-  // самостоятельного локального контента они конкурируют с канонической услугой.
-  ...serviceProfiles
-    .filter((service) => service.key === 'waste-utilization')
-    .map((service) => createServiceCityPage(service, byCity('shymkent'))),
+  ...activeCityProfiles.map(createCityPage),
+  ...serviceProfiles.flatMap((service) => activeCityProfiles.map((city) => createServiceCityPage(service, city))),
   ...specialPages.map(enrichSpecialPage),
 ].filter((page) => page.slug !== 'shtrafy-za-ekologiyu-kazakhstan');
 
@@ -478,7 +551,7 @@ const legacyStaticPages = [
   { path: '/services/waste-management', title: 'Вывоз и утилизация отходов в Шымкенте | ECOPROGRESS', description: 'Утилизация отходов для бизнеса в Шымкенте: вывоз, переработка, акты, закрывающие документы и экологическое сопровождение.', h1: 'Вывоз и утилизация отходов в Шымкенте', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/services/environmental-permits', title: 'Экологические разрешения | ECOPROGRESS', description: 'Разрешение на эмиссии, декларация воздействия, ОВОС, скрининг и экологические документы для бизнеса.', h1: 'Экологические разрешения', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/services/ecological-support', title: 'Экологическое сопровождение бизнеса | ECOPROGRESS', description: 'Экологическое сопровождение бизнеса: аудит, документы, ПЭК, замеры, отходы, проверки и консультации.', h1: 'Экологическое сопровождение бизнеса', priority: 0.9, changefreq: 'weekly', type: 'service' },
-  { path: '/about', title: 'О компании и специалистах ECOPROGRESS', description: 'ECOPROGRESS GROUP оказывает экологические услуги для бизнеса в Казахстане: документы, лаборатория, отходы и сопровождение.', h1: 'ECOPROGRESS GROUP', priority: 0.7, changefreq: 'monthly', type: 'main' },
+  { path: '/about', title: 'О компании и специалистах ECOPROGRESS', description: 'ECOPROGRESS GROUP оказывает экологические услуги для бизнеса в Казахстане: документы, лаборатория, отходы и сопровождение.', h1: 'ECOPROGRESS GROUP', faq: aboutPublicContent.faq, priority: 0.7, changefreq: 'monthly', type: 'main' },
   { path: '/contacts', title: 'Контакты экологической компании ECOPROGRESS', description: 'Контакты ECOPROGRESS: телефон, WhatsApp, email, адрес и консультация по экологическим услугам в Казахстане.', h1: 'Контакты ECOPROGRESS', priority: 0.8, changefreq: 'monthly', type: 'main' },
   { path: '/news', title: 'Статьи об экологии для бизнеса | ECOPROGRESS', description: 'Статьи ECOPROGRESS об экологических документах, ПЭК, СЭС, отходах, замерах, разрешениях и проверках бизнеса.', h1: 'Статьи и новости', priority: 0.7, changefreq: 'weekly', type: 'article' },
   { path: '/employees', title: 'Экологи и специалисты компании ECOPROGRESS', description: 'Команда ECOPROGRESS: специалисты по экологическим документам, лабораторным замерам, отходам и сопровождению бизнеса.', h1: 'Сотрудники ECOPROGRESS', priority: 0.6, changefreq: 'monthly', type: 'main' },
@@ -489,11 +562,12 @@ const legacyStaticPages = [
 
 export const publicStaticPages = [
   ...legacyStaticPages.filter((page) => page.path === '/services' || !page.path.startsWith('/services/')),
-  ...frontendServices.map((service) => ({
+  ...activeServices.map((service) => ({
     path: `/services/${service.slug}`,
-    title: serviceSeoTitle(service.title),
-    description: serviceSeoDescription(service.description),
-    h1: service.title,
+    title: service.seo.title || serviceSeoTitle(service.title),
+    description: service.seo.description || serviceSeoDescription(service.shortDescription),
+    h1: serviceContentMap.get(service.slug)?.hero.title || service.title,
+    faq: serviceContentMap.get(service.slug)?.faq || service.faq,
     priority: 0.9,
     changefreq: 'weekly',
     type: 'service',
