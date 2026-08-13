@@ -1,4 +1,5 @@
 import api, { type ApiResponse } from './api';
+import { unwrapApiResponse } from './apiHelpers';
 
 export type AdminUserRecord = {
   id: number;
@@ -72,7 +73,7 @@ export async function listUsers(params?: AdminUserListParams): Promise<AdminUser
       sort: params?.sort ?? 'name,asc',
     },
   });
-  const payload = 'success' in response.data ? response.data.data : response.data;
+  const payload = unwrapApiResponse<AdminUserPageResponse>(response.data);
   return payload || { items: [], page: 0, limit: 20, total: 0, totalPages: 0 };
 }
 

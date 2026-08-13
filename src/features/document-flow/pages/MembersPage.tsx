@@ -51,14 +51,14 @@ export default function MembersPage() {
 
   const auditLog = useQuery({
     queryKey: auditTarget ? ['members', 'audit', auditTarget.id, auditPage] : [],
-    queryFn: ({ signal }) => auditTarget ? documentFlowApi.getMemberAuditLog(auditTarget.id, auditPage, 10, tenant.organizationId, signal) : Promise.resolve(null),
+    queryFn: ({ signal }) => auditTarget ? documentFlowApi.getMemberAuditLog(auditTarget.id, auditPage, 10, tenant.organizationId ?? undefined, signal) : Promise.resolve(null),
     enabled: Boolean(auditTarget),
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: documentFlowKeys.memberLists(tenant.tenantScope!) });
 
   const inviteMember = useMutation({
-    mutationFn: (values: MemberFormValues) => documentFlowApi.inviteMember({ email: values.email.trim(), role: values.role }, tenant.organizationId),
+    mutationFn: (values: MemberFormValues) => documentFlowApi.inviteMember({ email: values.email.trim(), role: values.role }, tenant.organizationId ?? undefined),
     onSuccess: async () => { setInviteOpen(false); form.reset(); await invalidate(); },
     onError: (error) => {
       const mapped = mapDocumentFlowError(error);
@@ -69,7 +69,7 @@ export default function MembersPage() {
   });
 
   const resendInvite = useMutation({
-    mutationFn: (memberId: number) => documentFlowApi.resendInvitation(memberId, tenant.organizationId),
+    mutationFn: (memberId: number) => documentFlowApi.resendInvitation(memberId, tenant.organizationId ?? undefined),
     onSuccess: async () => { await invalidate(); },
     onError: (error) => {
       console.error('Resend invitation error:', mapDocumentFlowError(error));

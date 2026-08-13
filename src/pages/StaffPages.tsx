@@ -3989,6 +3989,7 @@ const ClientSentPrimaryDocuments = ({ order }: { order: Order }) => {
 };
 
 const LaboratoryRequestOverview = ({ order }: { order: Order }) => {
+  const { error: showError } = useToast();
   const laboratoryPrimaryDocuments = order.laboratoryPrimaryDocuments || [];
   const uploadedPrimaryDocuments = (order.primaryDocuments || []).filter((doc) => Boolean(doc.fileName));
   const clientDocuments = order.documents.filter((doc) => doc.type === 'client');

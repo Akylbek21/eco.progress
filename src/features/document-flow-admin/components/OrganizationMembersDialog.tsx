@@ -180,20 +180,3 @@ export default function OrganizationMembersDialog({ open, organization, onClose 
     </DialogActions>
   </Dialog>;
 }
-        getOptionLabel={(option) => `${option.name || option.fullName || option.email} · ${option.email} · ${option.role} · ID ${option.id}`}
-        isOptionEqualToValue={(option, value) => option.id === value.id}
-        renderInput={(params) => <TextField {...params} required label="Существующий аккаунт" helperText="Можно выбрать сотрудника EcoProgress или клиентский аккаунт, ещё не добавленный в организацию" InputProps={{ ...params.InputProps, endAdornment: <>{users.isFetching && <CircularProgress size={18} />}{params.InputProps.endAdornment}</> }} />}
-      />}
-      <TextField select required label="Роль в документообороте" value={role} onChange={(event) => setRole(event.target.value as MembershipRole)}>{roleOptions.map((option) => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}</TextField>
-      {error && <Alert severity={error.status === 409 ? 'warning' : 'error'}>{error.message}{error.traceId && <Typography variant="caption" component="div">Trace ID: {error.traceId}</Typography>}</Alert>}
-      {createdCredentials && <Alert severity="success"><Typography fontWeight={700}>Аккаунт создан и добавлен.</Typography><Typography>Email: {createdCredentials.email}</Typography><Typography>Временный пароль: {createdCredentials.password}</Typography><Typography variant="caption">Скопируйте данные сейчас. После закрытия окна пароль больше не показывается.</Typography></Alert>}
-      <Typography variant="h6" fontWeight={800} mt={1}>Участники организации</Typography>
-      {members.isLoading && <Stack alignItems="center" py={3}><CircularProgress /></Stack>}
-      {members.isError && <Alert severity="error">{mapDocumentFlowError(members.error).message}</Alert>}
-      {members.isSuccess && members.data.items.length === 0 && <Alert severity="info">Участников пока нет.</Alert>}
-      {members.isSuccess && members.data.items.length > 0 && <Table size="small"><TableHead><TableRow><TableCell>Сотрудник</TableCell><TableCell>Email</TableCell><TableCell>Роль</TableCell><TableCell>Статус</TableCell><TableCell align="right">Действие</TableCell></TableRow></TableHead><TableBody>{members.data.items.map((member) => <TableRow key={member.id}><TableCell>{member.fullName || `Пользователь #${member.userId}`}</TableCell><TableCell>{member.email || '—'}</TableCell><TableCell>{roleOptions.find((item) => item.value === member.role)?.label ?? member.role}</TableCell><TableCell><Chip size="small" label={member.status} color={member.status === 'ACTIVE' ? 'success' : 'default'} /></TableCell><TableCell align="right">{member.status !== 'ACTIVE' && <Button size="small" disabled={activate.isPending} onClick={() => activate.mutate(member)}>Активировать</Button>}</TableCell></TableRow>)}</TableBody></Table>}
-      {activate.isError && <Alert severity="error">{mapDocumentFlowError(activate.error).message}</Alert>}
-    </Stack></DialogContent>
-    <DialogActions><Button disabled={addMember.isPending} onClick={onClose}>Закрыть</Button><Button variant="contained" disabled={addMember.isPending || (mode === 'existing' ? !selectedUser : !name.trim() || !email.trim() || password.length < 6)} onClick={() => addMember.mutate()}>{addMember.isPending ? 'Добавление…' : 'Добавить сотрудника'}</Button></DialogActions>
-  </Dialog>;
-}
