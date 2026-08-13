@@ -3,6 +3,7 @@ import type {
   PekAvailableActionCode,
   PekDashboard,
   PekCollectResponse,
+  PekExceedance,
   PekProgram,
   PekReport,
 } from '../api/pekContracts';
@@ -130,6 +131,30 @@ export const mapReportResponse = (
     linkedProtocolNumbers,
     lastCollectedAt: source.lastCollectedAt == null ? null : String(source.lastCollectedAt),
     returnInfo: returnInfo(source.returnInfo),
+    availableActions: availableActionFlags(source.availableActions),
+  };
+};
+
+export const mapExceedanceResponse = (value: unknown): PekExceedance => {
+  const source = row(value);
+  const responsible = row(source.responsibleUser);
+  return {
+    ...source,
+    id: numberValue(source.id),
+    reportId: numberValue(source.reportId),
+    planFactRowId: numberValue(source.planFactRowId),
+    protocolId: numberValue(source.protocolId),
+    protocolResultId: numberValue(source.protocolResultId),
+    programIndicatorId: numberValue(source.programIndicatorId),
+    status: String(source.status || ''),
+    responsibleUserId: optionalNumber(source.responsibleUserId),
+    responsibleUser: Object.keys(responsible).length ? {
+      id: numberValue(responsible.id),
+      fullName: responsible.fullName == null ? undefined : String(responsible.fullName),
+      name: responsible.name == null ? undefined : String(responsible.name),
+    } : null,
+    evidenceFileIds: Array.isArray(source.evidenceFileIds) ? source.evidenceFileIds.map(String) : [],
+    version: numberValue(source.version),
     availableActions: availableActionFlags(source.availableActions),
   };
 };

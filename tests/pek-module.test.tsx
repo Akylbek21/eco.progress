@@ -658,7 +658,24 @@ describe('PEK backend contract', () => {
     ]));
     const serviceSource = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
     expect(serviceSource).toContain('/document/download/${format}');
+    expect(serviceSource).toContain("format: 'docx' | 'pdf'");
     expect(serviceSource).toContain("responseType: 'blob'");
+  });
+
+  it('refreshes PEK server state after document and exceedance mutations', () => {
+    const documents = readFileSync(resolve(process.cwd(), 'src/features/pek/components/documents/PekReportDocuments.tsx'), 'utf8');
+    const exceedances = readFileSync(resolve(process.cwd(), 'src/features/pek/components/exceedances/PekReportExceedances.tsx'), 'utf8');
+    expect(documents).toContain('await pekApi.generateReportDocx(report.id)');
+    expect(documents).toContain('await pekApi.signReportDocument(report.id, cms)');
+    expect(documents).toContain('const actual = await pekApi.getReport(report.id)');
+    expect(documents).toContain('Скачать DOCX');
+    expect(documents).toContain('Скачать PDF');
+    expect(documents).not.toContain('getReportDocumentVersions');
+    expect(documents).not.toContain('getReportSignatures');
+    expect(exceedances).toContain('pekApi.getExceedance(id)');
+    expect(exceedances).toContain('pekApi.getReportExceedances(report.id)');
+    expect(exceedances).toContain("transitionMutation.mutate('CLOSED')");
+    expect(exceedances).toContain('Закрыть превышение');
   });
 
   it('downloads a program document through the authorized PEK API client', () => {

@@ -5,7 +5,7 @@ import { hasProtocolAction, hasProtocolPermission } from '../utils/protocolActio
 
 export type ProtocolDetailsTab = 'results' | 'main' | 'documents' | 'history';
 export type ProtocolEditSection = 'general' | 'organization' | 'laboratory' | 'environment' | 'results' | 'methods';
-export type ProtocolPrimaryActionKey = 'edit' | 'ready' | 'approve' | 'sign' | 'publish' | 'pdf' | 'replacement' | 'review' | null;
+export type ProtocolPrimaryActionKey = 'edit' | 'ready' | 'approve' | 'sign' | 'preview' | 'publish' | 'pdf' | 'replacement' | 'review' | null;
 
 export const formatProtocolDate = (value?: string | null) => {
   if (!value) return 'Не заполнено';
@@ -89,7 +89,7 @@ export const resolveProtocolPrimaryAction = (protocol: Protocol, role?: string):
   if (status === 'DRAFT') return { key: hasProtocolPermission(protocol, 'canEdit') ? 'edit' : null, label: 'Продолжить' };
   if (['CALCULATED', 'READY', 'READY_FOR_APPROVAL', 'APPROVED'].includes(status)) {
     if (hasProtocolAction(protocol, 'SIGN')) return { key: 'sign', label: 'Подписать' };
-    if (hasProtocolPermission(protocol, 'canGeneratePreview')) return { key: 'sign', label: 'Открыть предварительный просмотр' };
+    if (hasProtocolPermission(protocol, 'canGeneratePreview')) return { key: 'preview', label: 'Открыть предварительный просмотр' };
     return protocol.hasPdf && hasProtocolAction(protocol, 'DOWNLOAD_PDF') ? { key: 'pdf', label: 'Скачать PDF' } : { key: null, label: '' };
   }
   if (status === 'NEEDS_REVISION') return { key: permissions.canEdit ? 'edit' : null, label: 'Исправить протокол' };

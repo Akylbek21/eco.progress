@@ -53,7 +53,7 @@ test('protocol permission matrix is backend-authoritative and immutable-safe', a
   assert.match(source, /protocol\?\.permissions/);
   assert.match(source, /availableActions/);
   assert.match(source, /flag\('canEdit'\)/);
-  assert.match(source, /canReadyForApproval: hasProtocolAction\(protocol \|\| undefined, 'COMPLETE'\)/);
+  assert.match(source, /canReadyForApproval: flag\('canSendToApproval'\)/);
   assert.match(source, /canReplace: flag\('canCreateCorrection'\)/);
   assert.match(source, /canApprove: hasProtocolAction\(protocol \|\| undefined, 'APPROVE'\)/);
   assert.match(source, /canSign: hasProtocolAction\(protocol \|\| undefined, 'SIGN'\)/);

@@ -73,15 +73,20 @@ describe('protocol wizard HTTP boundary', () => {
     const form = createWizardDefaults();
     Object.assign(form, { templateId: 'ambient_air', companyId: '10', objectId: '20' });
     const createProtocolDraft = async () => ({ id: 'draft-1', version: 0, status: 'DRAFT', results: [] }) as Protocol;
-    const saveProtocolDraftResults = vi.fn(async () => ({ id: 'draft-1', version: 1, status: 'DRAFT', results: [] }) as Protocol);
-    const service = { createProtocolDraft, saveProtocolDraftResults } as unknown as ProtocolService;
+    const persisted = { id: 'draft-1', version: 2, status: 'DRAFT', results: [] } as Protocol;
+    const updateProtocolDraft = vi.fn(async () => ({ ...persisted, version: 1 }) as Protocol);
+    const saveProtocolDraftResults = vi.fn(async () => persisted);
+    const getProtocol = vi.fn(async () => persisted);
+    const service = { createProtocolDraft, updateProtocolDraft, saveProtocolDraftResults, getProtocol } as unknown as ProtocolService;
 
     const saved = await saveProtocolWizardDraft(form, null, 'protocol-draft-test-key', service);
 
-    expect(saved.protocol).toMatchObject({ id: 'draft-1', version: 1, status: 'DRAFT' });
+    expect(saved.protocol).toMatchObject({ id: 'draft-1', version: 2, status: 'DRAFT' });
+    expect(updateProtocolDraft).toHaveBeenCalledWith('draft-1', expect.objectContaining({ version: 0 }));
     expect(saveProtocolDraftResults).toHaveBeenCalledWith('draft-1', {
-      version: 0, added: [], updated: [], deletedIds: [],
+      version: 1, added: [], updated: [], deletedIds: [],
     });
+    expect(getProtocol).toHaveBeenCalledWith('draft-1');
     expect([...saved.resultIdsByClientRowId]).toEqual([]);
   });
 });
@@ -172,15 +177,23 @@ describe('result reconciliation', () => {
         id: row.clientRowId === 'client-b' ? 'server-b' : 'server-a', values: { ...row.values, clientRowId: row.clientRowId },
       })),
     }) as Protocol);
+    const persisted = {
+      id: 'draft-1', version: 3, status: 'DRAFT', results: [
+        { id: 'server-b', values: { indicatorName: 'B', clientRowId: 'client-b' } },
+        { id: 'server-a', values: { indicatorName: 'A', clientRowId: 'client-a' } },
+      ],
+    } as Protocol;
     const service = {
       createProtocolDraft: vi.fn(async () => ({ id: 'draft-1', version: 1, status: 'DRAFT', results: [] }) as Protocol),
+      updateProtocolDraft: vi.fn(async () => ({ id: 'draft-1', version: 2, status: 'DRAFT', results: [] }) as Protocol),
       saveProtocolDraftResults,
+      getProtocol: vi.fn(async () => persisted),
     } as unknown as ProtocolService;
 
     const saved = await saveProtocolWizardDraft(form, null, 'stable-key', service);
 
     expect(saveProtocolDraftResults).toHaveBeenCalledTimes(1);
-    expect(saveProtocolDraftResults).toHaveBeenCalledWith('draft-1', expect.objectContaining({ version: 1 }));
+    expect(saveProtocolDraftResults).toHaveBeenCalledWith('draft-1', expect.objectContaining({ version: 2 }));
     expect(saveProtocolDraftResults.mock.calls[0][1].added).toHaveLength(2);
     expect(saveProtocolDraftResults.mock.calls[0][1]).toMatchObject({ updated: [], deletedIds: [] });
     expect(saved.resultIdsByClientRowId.get('client-a')).toBe('server-a');
@@ -204,6 +217,7 @@ describe('result reconciliation', () => {
     const service = {
       updateProtocolDraft: vi.fn(async () => ({ ...current, version: 5 }) as Protocol),
       saveProtocolDraftResults,
+      getProtocol: vi.fn(async () => ({ ...current, version: 6, results: [] }) as Protocol),
     } as unknown as ProtocolService;
 
     await saveProtocolWizardDraft(form, current, 'stable-key', service);
@@ -241,6 +255,7 @@ describe('result reconciliation', () => {
     const saveProtocolDraftResults = vi.fn(async () => { throw failure; });
     const service = {
       createProtocolDraft: vi.fn(async () => ({ id: 'draft-1', version: 3, status: 'DRAFT', results: [] }) as Protocol),
+      updateProtocolDraft: vi.fn(async () => ({ id: 'draft-1', version: 4, status: 'DRAFT', results: [] }) as Protocol),
       saveProtocolDraftResults,
       addProtocolResult: vi.fn(), updateProtocolResult: vi.fn(), deleteProtocolResult: vi.fn(),
     } as unknown as ProtocolService;
@@ -248,7 +263,7 @@ describe('result reconciliation', () => {
     await expect(saveProtocolWizardDraft(form, null, 'same-idempotency-key', service)).rejects.toBe(failure);
     expect(saveProtocolDraftResults).toHaveBeenCalledTimes(1);
     expect(saveProtocolDraftResults).toHaveBeenCalledWith('draft-1', expect.objectContaining({
-      version: 3,
+      version: 4,
       added: [expect.objectContaining({ clientRowId: 'stable-row', values: expect.objectContaining({ resultValue: 1 }) })],
       updated: [],
       deletedIds: [],
@@ -260,6 +275,54 @@ describe('result reconciliation', () => {
 });
 
 describe('protocol wizard validation and backend errors', () => {
+  it('presents protocol creation as a guided flow without technical contract language', () => {
+    const wizard = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/CreateProtocolWizardModalV2.tsx'), 'utf8');
+    const header = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/ProtocolWizardHeader.tsx'), 'utf8');
+    const basic = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/steps/BasicDataStep.tsx'), 'utf8');
+    const results = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/steps/ResultsStep.tsx'), 'utf8');
+
+    expect(header).toContain('Черновик сохраняется автоматически');
+    expect(header).not.toContain('подтверждённого контракта');
+    expect(basic).toContain('Обязательные пункты');
+    expect(basic).toContain('Тип протокола *');
+    expect(basic).toContain('Компания *');
+    expect(basic).toContain('Объект *');
+    expect(results).toContain('Добавить из справочника');
+    expect(wizard).toContain('createLabel="Создать и открыть"');
+    expect(wizard).not.toContain('quickCreateProtocol');
+  });
+
+  it('uses the canonical draft, header, delta and GET sequence', () => {
+    const saveDraft = readFileSync(resolve(process.cwd(), 'src/features/protocols/api/saveProtocolWizardDraft.ts'), 'utf8');
+
+    expect(saveDraft.indexOf('service.createProtocolDraft')).toBeLessThan(saveDraft.indexOf('service.updateProtocolDraft'));
+    expect(saveDraft.indexOf('service.updateProtocolDraft')).toBeLessThan(saveDraft.indexOf('service.saveProtocolDraftResults'));
+    expect(saveDraft.indexOf('service.saveProtocolDraftResults')).toBeLessThan(saveDraft.indexOf('service.getProtocol'));
+    expect(saveDraft).toContain('added: results.flatMap');
+    expect(saveDraft).toContain('updated: results.flatMap');
+    expect(saveDraft).toContain('deletedIds: previousResults.flatMap');
+    expect(saveDraft).not.toMatch(/\{\s*version[^}]*results\s*:/s);
+  });
+
+  it('uses one shared field array so selected normatives appear in the results table', () => {
+    const results = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/steps/ResultsStep.tsx'), 'utf8');
+    const table = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/components/ProtocolResultTable.tsx'), 'utf8');
+
+    expect(results).toContain("const fieldArray = useFieldArray({ control, name: 'results' })");
+    expect(results).toContain('fieldArray={fieldArray}');
+    expect(table).toContain("UseFieldArrayReturn<ProtocolWizardForm, 'results', 'id'>");
+    expect(table).not.toContain("useFieldArray({ control, name: 'results' })");
+  });
+
+  it('allows entering the testing basis directly on the methods step', () => {
+    const methods = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/steps/MethodsStep.tsx'), 'utf8');
+    const editor = readFileSync(resolve(process.cwd(), 'src/pages/ProtocolEditorPage.tsx'), 'utf8');
+
+    expect(methods).toContain("register('basis')");
+    expect(editor).toContain('testingBasis={protocol.organization.testingBasis}');
+    expect(editor).toContain('onTestingBasisChange={(testingBasis)');
+  });
+
   it('keeps Continue enabled on results so validation details open on the Review step', () => {
     const wizard = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/CreateProtocolWizardModalV2.tsx'), 'utf8');
     const results = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/steps/ResultsStep.tsx'), 'utf8');

@@ -1,17 +1,22 @@
 import { Copy, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { useFieldArray, useFormContext } from 'react-hook-form';
+import { useFormContext, type UseFieldArrayReturn } from 'react-hook-form';
 import type { MeasurementDevice } from '../../../../types/protocols';
 import { isDeviceValidForDate } from '../../../../utils/protocolDevices';
 import ProtocolResultRow from './ProtocolResultRow';
 import { CHEMICAL_TYPES, emptyWizardResult, type ProtocolWizardForm } from '../wizardTypes';
 import { validateProtocolWizardStep } from '../../utils/protocolWizardValidation';
 
-type Props = { devices: MeasurementDevice[]; onSelectNormatives: () => void; onAddManual: () => void };
+type Props = {
+  devices: MeasurementDevice[];
+  fieldArray: UseFieldArrayReturn<ProtocolWizardForm, 'results', 'id'>;
+  onSelectNormatives: () => void;
+  onAddManual: () => void;
+};
 
-const ProtocolResultTable = ({ devices, onSelectNormatives, onAddManual }: Props) => {
-  const { control, watch, setValue } = useFormContext<ProtocolWizardForm>();
-  const { fields, append, remove } = useFieldArray({ control, name: 'results' });
+const ProtocolResultTable = ({ devices, fieldArray, onSelectNormatives, onAddManual }: Props) => {
+  const { watch, setValue } = useFormContext<ProtocolWizardForm>();
+  const { fields, append, remove } = fieldArray;
   const values = watch();
   const validationIssues = validateProtocolWizardStep(values, 2).filter((item) => item.severity === 'ERROR');
   const [selected, setSelected] = useState<Set<string>>(new Set());

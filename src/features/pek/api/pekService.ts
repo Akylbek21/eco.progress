@@ -27,7 +27,6 @@ import type {
   PekSettings,
   PekSettingsUpdateRequest,
   PekAssignExceedanceRequest,
-  PekExceedance,
   PekReportDocumentVersion,
   PekReportSignature,
   PekTransitionExceedanceRequest,
@@ -35,6 +34,7 @@ import type {
 import {
   mapCollectionResult,
   mapDashboardResponse,
+  mapExceedanceResponse,
   mapProgramResponse,
   mapReportResponse,
 } from '../mappers/responseMappers';
@@ -204,16 +204,16 @@ export const pekApi = {
     unwrapPekData<PekReportSignature>((await api.post(`/pek/reports/${id}/document/sign`, { cms })).data),
   getReportSignatures: (id: number, signal?: AbortSignal) =>
     get<PekReportSignature[]>(`/pek/reports/${id}/document/signatures`, {}, signal),
-  getReportExceedances: (reportId: number, signal?: AbortSignal) =>
-    get<PekExceedance[]>(`/pek/reports/${reportId}/exceedances`, {}, signal),
-  getExceedance: (id: number, signal?: AbortSignal) =>
-    get<PekExceedance>(`/pek/exceedances/${id}`, {}, signal),
+  getReportExceedances: async (reportId: number, signal?: AbortSignal) =>
+    (await get<unknown[]>(`/pek/reports/${reportId}/exceedances`, {}, signal)).map(mapExceedanceResponse),
+  getExceedance: async (id: number, signal?: AbortSignal) =>
+    mapExceedanceResponse(await get<unknown>(`/pek/exceedances/${id}`, {}, signal)),
   assignExceedance: async (id: number, body: PekAssignExceedanceRequest) =>
-    unwrapPekData<PekExceedance>((await api.post(`/pek/exceedances/${id}/assign`, body)).data),
+    mapExceedanceResponse(unwrapPekData<unknown>((await api.post(`/pek/exceedances/${id}/assign`, body)).data)),
   attachExceedanceEvidence: async (id: number, version: number, fileId: string) =>
-    unwrapPekData<PekExceedance>((await api.post(`/pek/exceedances/${id}/evidence`, { version, fileId })).data),
+    mapExceedanceResponse(unwrapPekData<unknown>((await api.post(`/pek/exceedances/${id}/evidence`, { version, fileId })).data)),
   transitionExceedance: async (id: number, body: PekTransitionExceedanceRequest) =>
-    unwrapPekData<PekExceedance>((await api.post(`/pek/exceedances/${id}/transition`, body)).data),
+    mapExceedanceResponse(unwrapPekData<unknown>((await api.post(`/pek/exceedances/${id}/transition`, body)).data)),
   getSettings: (companyId: number, signal?: AbortSignal) => get<PekSettings>('/pek/settings', { companyId }, signal),
   updateSettings: async (companyId: number, body: PekSettingsUpdateRequest) =>
     unwrapPekData<PekSettings>((await api.put('/pek/settings', body, { params: { companyId } })).data),

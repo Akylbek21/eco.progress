@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { Protocol, ProtocolStatus } from '../src/types/protocols';
 import { complianceLabel, humanHistoryAction, lifecycleStage, protocolStatusLabel, resolveProtocolPrimaryAction } from '../src/features/protocols/details/protocolDetailsModel';
 
@@ -12,6 +14,15 @@ const protocol = (status: ProtocolStatus, extra: Partial<Protocol> = {}): Protoc
 });
 
 describe('simplified protocol details', () => {
+  it('does not block protocol loading while the optional audit request is pending', () => {
+    const editor = readFileSync(resolve(process.cwd(), 'src/pages/ProtocolEditorPage.tsx'), 'utf8');
+    const loadBody = editor.slice(editor.indexOf('const load = async () =>'), editor.indexOf('useEffect(() => {\n    load();'));
+
+    expect(loadBody).toContain('const item = await protocolService.getProtocol(requestedProtocolId)');
+    expect(loadBody).toContain('void protocolService.getProtocolAudit(requestedProtocolId)');
+    expect(loadBody).not.toContain('await Promise.all');
+  });
+
   it('uses human-readable status and compliance labels', () => {
     expect(protocolStatusLabel('READY_FOR_APPROVAL')).toBe('На утверждении');
     expect(protocolStatusLabel('UNDER_REVIEW')).toBe('Неизвестный статус');
@@ -23,10 +34,10 @@ describe('simplified protocol details', () => {
   it('shows one backend-permission-aware primary action', () => {
     expect(resolveProtocolPrimaryAction(protocol('DRAFT', { permissions: { canEdit: true } }), 'LABORATORY')).toEqual({ key: 'edit', label: 'Продолжить' });
     expect(resolveProtocolPrimaryAction(protocol('READY_FOR_APPROVAL'), 'LABORATORY').key).toBeNull();
-    expect(resolveProtocolPrimaryAction(protocol('CALCULATED', { permissions: { canSendToApproval: true }, availableActions: ['COMPLETE'] }), 'LABORATORY')).toEqual({ key: 'ready', label: 'Отправить на утверждение' });
+    expect(resolveProtocolPrimaryAction(protocol('CALCULATED', { permissions: { canSendToApproval: true } }), 'LABORATORY')).toEqual({ key: 'ready', label: 'Отправить на утверждение' });
     expect(resolveProtocolPrimaryAction(protocol('READY_FOR_APPROVAL', { permissions: { canApprove: true }, availableActions: ['APPROVE'] }), 'DIRECTOR')).toEqual({ key: 'approve', label: 'Утвердить' });
     expect(resolveProtocolPrimaryAction(protocol('APPROVED', { permissions: { canSign: true }, availableActions: ['SIGN'] }), 'LABORATORY')).toEqual({ key: 'sign', label: 'Подписать' });
-    expect(resolveProtocolPrimaryAction(protocol('READY', { permissions: { canGeneratePreview: true } }), 'LABORATORY')).toEqual({ key: 'sign', label: 'Открыть предварительный просмотр' });
+    expect(resolveProtocolPrimaryAction(protocol('READY', { permissions: { canGeneratePreview: true } }), 'LABORATORY')).toEqual({ key: 'preview', label: 'Открыть предварительный просмотр' });
   });
 
   it('maps the lifecycle to five employee-facing stages', () => {

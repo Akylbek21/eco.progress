@@ -44,7 +44,7 @@ import {
   type LocalProtocolDraftEnvelope,
 } from '../utils/protocolDraftRecovery';
 
-const steps = ['Основные сведения', 'Условия', 'Показатели и результаты', 'Проверка', 'Завершение'];
+const steps = ['Клиент и протокол', 'Условия измерения', 'Результаты', 'Проверка', 'Готово'];
 type SaveState = 'idle' | 'local' | 'creating' | 'created' | 'saving' | 'saved' | 'error' | 'conflict';
 const unavailableLaboratoryMessage = 'Выбранная лаборатория не найдена или больше не активна. Выберите лабораторию повторно.';
 
@@ -373,7 +373,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   const content = step === 0
     ? <BasicDataStep templates={templates} companies={companies} objects={objects} companyLocked={Boolean(serverDraft)} onStartNew={() => setNewProtocolConfirm(true)} onCompanyChange={(id) => { form.setValue('companyId', id, { shouldDirty: true }); form.setValue('objectId', '', { shouldDirty: true }); }} />
     : step === 1
-      ? <div className="space-y-7"><ExecutorDeviceStep laboratories={laboratories} employees={employees} devices={devices} onLaboratoryChange={(id) => { form.setValue('laboratoryId', id, { shouldDirty: true }); form.setValue('executorId', '', { shouldDirty: true }); }} /><EnvironmentStep weatherLoading={weather.loading} weatherMessage={weather.message} onRefresh={() => void weather.refresh()} waterTypeOptions={waterOptions.waterTypes} waterUseCategoryOptions={waterOptions.waterUseCategories} /><MethodsStep /></div>
+      ? <div className="space-y-7"><div className="rounded-2xl border border-eco-200 bg-eco-50/60 p-4 text-sm text-eco-950"><p className="font-black">На этом шаге</p><p className="mt-1">Проверьте исполнителя, условия на объекте и методику. Прибор можно выбрать сейчас для всех показателей или позже отдельно в каждой строке.</p></div><ExecutorDeviceStep laboratories={laboratories} employees={employees} devices={devices} onLaboratoryChange={(id) => { form.setValue('laboratoryId', id, { shouldDirty: true }); form.setValue('executorId', '', { shouldDirty: true }); }} /><EnvironmentStep weatherLoading={weather.loading} weatherMessage={weather.message} onRefresh={() => void weather.refresh()} waterTypeOptions={waterOptions.waterTypes} waterUseCategoryOptions={waterOptions.waterUseCategories} /><MethodsStep /></div>
       : step === 2
         ? <ResultsStep devices={devices} onSuggestChangeType={() => setStep(0)} />
         : step === 3
@@ -386,11 +386,11 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
         <ProtocolWizardHeader step={step} total={steps.length} title={steps[step]} submitting={saveMutation.isPending} onClose={onClose} />
         <ProtocolWizardSteps steps={steps} current={step} maxVisited={maxVisited} onSelect={setStep} />
         <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          {serverDraft && <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">Серверный черновик №{serverDraft.protocolNumber || serverDraft.id}, версия {serverDraft.version}</div>}
-          {generalError && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900">{generalError}</div>}
+          {serverDraft && <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">Черновик протокола №{serverDraft.protocolNumber || serverDraft.id} создан. Автосохранение включено.</div>}
+          {generalError && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><p className="font-black">Проверьте данные</p><p className="mt-1 font-semibold">{generalError}</p></div>}
           {content}
         </main>
-        <ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue={step === 2 || (currentStepErrors.length === 0 && (step < steps.length - 1 || blockingIssues.length === 0))} canSaveDraft={canSaveServerDraft} saveState={saveState === 'local' ? 'Локальная копия сохранена' : saveState === 'creating' ? 'Создание серверного черновика…' : saveState === 'created' ? 'Черновик сохранён на сервере' : saveState === 'saving' ? 'Сохранение изменений…' : saveState === 'saved' ? 'Изменения сохранены' : saveState === 'conflict' ? 'Конфликт версий' : saveState === 'error' ? 'Не удалось сохранить' : undefined} onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />
+        <ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue={step === 2 || (currentStepErrors.length === 0 && (step < steps.length - 1 || blockingIssues.length === 0))} canSaveDraft={canSaveServerDraft} saveState={saveState === 'local' ? 'Локальная копия сохранена' : saveState === 'creating' ? 'Создание серверного черновика…' : saveState === 'created' ? 'Черновик сохранён на сервере' : saveState === 'saving' ? 'Сохранение изменений…' : saveState === 'saved' ? 'Изменения сохранены' : saveState === 'conflict' ? 'Конфликт версий' : saveState === 'error' ? 'Не удалось сохранить' : undefined} nextLabel={step === 0 ? 'К условиям' : step === 1 ? 'К результатам' : step === 2 ? 'Проверить данные' : 'К завершению'} createLabel="Создать и открыть" onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />
       </div>
     </Modal>
     <Modal open={conflict} onClose={() => setConflict(false)} closeOnBackdrop={false} size="sm" title="Протокол изменён другим сотрудником" footer={<><Button type="button" variant="secondary" onClick={() => { writeLocalProtocolDraft(sessionStorage, { schemaVersion: LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION, userId: String(user?.id ?? 'anonymous'), protocolId: serverDraft?.id ?? null, backendVersion: serverDraft?.version ?? null, idempotencyKey: idempotencyKeyRef.current, currentStep: step, formValues: form.getValues(), savedAt: new Date().toISOString(), hasUnsavedChanges: true }); setConflict(false); }}>Сохранить локальную копию</Button><Button type="button" onClick={() => void loadLatest()}>Загрузить актуальную версию</Button></>}><p className="text-sm text-slate-700">Данные не были перезаписаны. Выберите, сохранить ли введённые данные локально или загрузить актуальную серверную версию.</p></Modal>

@@ -13,7 +13,8 @@ const text = (value: unknown) => value == null ? '' : String(value);
 const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
   const [selector, setSelector] = useState(false);
   const { control, watch, setValue } = useFormContext<ProtocolWizardForm>();
-  const { append, update } = useFieldArray({ control, name: 'results' });
+  const fieldArray = useFieldArray({ control, name: 'results' });
+  const { append, update } = fieldArray;
   const form = watch();
   const resultErrors = validateProtocolWizardStep(form, 2).filter((item) => item.severity === 'ERROR');
   const automaticCommonMethodRef = useRef('');
@@ -40,10 +41,10 @@ const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
         .filter(Boolean),
     );
 
-    items.forEach((item) => {
-      if (existingIds.has(String(item.id))) return;
-
-      const row = {
+    const rows = items.flatMap((item) => {
+      if (existingIds.has(String(item.id))) return [];
+      existingIds.add(String(item.id));
+      return [{
         ...emptyWizardResult(),
         indicatorName:
           item.indicator || item.indicatorName || item.name || '',
@@ -66,18 +67,23 @@ const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
         sourceDocumentCode: item.sourceDocumentCode || '',
         testingMethodNd: item.testingMethod || '',
         measurementDeviceId: form.defaultMeasurementDeviceId || '',
-      };
-      const emptyIndex = form.results.findIndex(
-        (current) =>
-          !current.normativeId &&
-          !current.indicatorName &&
-          !current.value,
-      );
-
-      if (emptyIndex >= 0) update(emptyIndex, row);
-      else append(row);
-      existingIds.add(String(item.id));
+      }];
     });
+    if (!rows.length) return;
+
+    const emptyIndex = form.results.findIndex(
+      (current) =>
+        !current.normativeId &&
+        !current.indicatorName &&
+        !current.value,
+    );
+    if (emptyIndex >= 0) {
+      const [first, ...rest] = rows;
+      update(emptyIndex, first);
+      if (rest.length) append(rest);
+      return;
+    }
+    append(rows);
   };
 
   const addManual = () => {
@@ -101,24 +107,22 @@ const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
             Результаты измерений
           </h3>
           <p className="mt-1 text-sm text-slate-500">
-            Сначала выберите норматив через поиск, затем укажите результат
-            замера и прибор из «Средств измерений».
+            Добавьте показатели и заполните результат каждой строки.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setSelector(true)}
-          className="rounded-full bg-eco-100 px-4 py-2 text-sm font-bold text-eco-800"
-        >
-          Найти норматив
-        </button>
-        <button type="button" onClick={addManual} className="rounded-full border border-eco-300 px-4 py-2 text-sm font-bold text-eco-800">
-          Добавить показатель вручную
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => setSelector(true)} className="rounded-full bg-eco-700 px-4 py-2 text-sm font-bold text-white hover:bg-eco-800">Добавить из справочника</button>
+          <button type="button" onClick={addManual} className="rounded-full border border-eco-300 px-4 py-2 text-sm font-bold text-eco-800">Добавить вручную</button>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-2 rounded-2xl border border-eco-200 bg-eco-50/60 p-4 sm:grid-cols-3">
+        {['Добавьте норматив', 'Введите результат и единицу', 'Выберите прибор'].map((label, index) => <div key={label} className="flex items-center gap-2 text-sm font-semibold text-eco-950"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-eco-700 text-xs text-white">{index + 1}</span>{label}</div>)}
       </div>
 
       <div className="mt-5">
         <ProtocolResultTable
+          fieldArray={fieldArray}
           devices={devices}
           onSelectNormatives={() => setSelector(true)}
           onAddManual={addManual}

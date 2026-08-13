@@ -53,6 +53,19 @@ describe('current protocol backend contract', () => {
     expect(mapped).not.toHaveProperty('canDownload');
   });
 
+  it('uses canSendToApproval as the backend authority for protocol submission', () => {
+    expect(getProtocolPermissions({
+      status: 'CALCULATED',
+      permissions: { canSendToApproval: true },
+      availableActions: [],
+    }, 'LABORATORY').canReadyForApproval).toBe(true);
+    expect(getProtocolPermissions({
+      status: 'CALCULATED',
+      permissions: { canSendToApproval: false },
+      availableActions: ['COMPLETE'],
+    }, 'LABORATORY').canReadyForApproval).toBe(false);
+  });
+
   it('keeps unknown status read-only', () => {
     expect(normalizeProtocolStatus('FUTURE_STATUS')).toBe('UNKNOWN');
     expect(getProtocolPermissions({
@@ -120,6 +133,17 @@ describe('current protocol backend contract', () => {
     expect(ifMatch).toBeNull();
   });
 
+  it('allows the ready-for-approval workflow more time than the global API timeout', async () => {
+    const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { data: { ...protocol, status: 'READY_FOR_APPROVAL', version: 9 } } });
+    const get = vi.spyOn(api, 'get').mockResolvedValue({ data: { data: { ...protocol, status: 'READY_FOR_APPROVAL', version: 9 } } });
+
+    await readyForApproval('42', { version: 8 });
+
+    expect(post).toHaveBeenCalledWith('/protocols/42/ready-for-approval', { version: 8 }, { timeout: 60_000 });
+    post.mockRestore();
+    get.mockRestore();
+  });
+
   it('sends detach version as a query parameter and not a DELETE body', async () => {
     let version = '';
     let body = '';
@@ -174,6 +198,22 @@ describe('current protocol backend contract', () => {
       updated: [],
       deletedIds: [],
     });
+  });
+
+  it('strips legacy results from the runtime draft-results payload', async () => {
+    let body: unknown;
+    server.use(
+      http.patch('http://localhost/api/protocols/42/draft-results', async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ data: { ...protocol, version: 9, results: [] } });
+      }),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: { ...protocol, version: 9, results: [] } })),
+    );
+    await saveProtocolDraftResults('42', {
+      version: 8, added: [], updated: [], deletedIds: [],
+      ...({ results: [{ id: 'legacy' }] } as object),
+    });
+    expect(body).toEqual({ version: 8, added: [], updated: [], deletedIds: [] });
   });
 
   it('keeps backend 409 details from atomic result saving', async () => {

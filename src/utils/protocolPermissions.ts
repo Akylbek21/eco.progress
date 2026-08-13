@@ -18,7 +18,7 @@ export const canViewProtocol = (_user: ProtocolUser, protocol?: ProtocolLike) =>
 export const canCreateProtocol = (user: ProtocolUser) => isProtocolDocumentRole(user?.role);
 export const canEditProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canEdit');
 export const canEditResults = canEditProtocol;
-export const canSendForApproval = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolAction(protocol || undefined, 'COMPLETE');
+export const canSendForApproval = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canSendToApproval');
 export const canReturnForRevision = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canReturnForRevision');
 export const canApproveProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canApprove');
 export const canSignProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolAction(protocol || undefined, 'SIGN');
@@ -54,7 +54,7 @@ export const getProtocolPermissions = (protocol: ProtocolLike, role?: string, _a
     canSign: hasProtocolAction(protocol || undefined, 'SIGN'), canCreateCorrection: flag('canCreateCorrection'),
     canCancel: flag('canCancel'), canArchive: flag('canArchive'), canPublish: flag('canPublish'),
     canGenerateDocuments: flag('canGenerateDocuments'), canRegenerateDocuments: flag('canRegenerateDocuments'),
-    canReadyForApproval: hasProtocolAction(protocol || undefined, 'COMPLETE'), canReplace: flag('canCreateCorrection'),
+    canReadyForApproval: flag('canSendToApproval'), canReplace: flag('canCreateCorrection'),
     canDownload: canDownloadProtocolDocument(protocol, role), canManageResults: flag('canEdit'), canManageDevices: flag('canEdit'),
     canViewAudit: flag('canView'),
   };

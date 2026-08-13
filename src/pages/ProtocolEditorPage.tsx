@@ -41,6 +41,7 @@ import { useSignProtocolMutation } from '../features/protocols/hooks/useSignProt
 import { protocolQueryKeys, protocolScope } from '../features/protocols/hooks/queryKeys';
 import { pekApi } from '../features/pek/api/pekApi';
 import { hasProtocolAction } from '../features/protocols/utils/protocolActions';
+import { hasUsableProtocolResultNormative } from '../features/protocols/utils/protocolResultNormative';
 
 const emptyLaboratory = {
   laboratoryName: '',
@@ -327,16 +328,6 @@ const hasValidResultDevices = (protocol: Protocol) => protocol.results.every((ro
   return !validUntil || !protocol.measurementDate || validUntil >= protocol.measurementDate;
 });
 
-const resultHasUsableNormative = (row: Protocol['results'][number], protocolDate: string) => {
-  const source = String(row.values.normativeSource || '').toUpperCase();
-  if (source === 'MANUAL') return Boolean(String(row.values.manualNormativeReason || '').trim());
-  const normative = row.normativeReference;
-  if (!normative || normative.active !== true) return false;
-  if (normative.validFrom && protocolDate && normative.validFrom > protocolDate) return false;
-  if (normative.validUntil && protocolDate && normative.validUntil < protocolDate) return false;
-  return true;
-};
-
 const getMissingFields = (protocol: Protocol): MissingField[] => {
   const items: MissingField[] = [];
   if (!hasText(protocol.protocolNumber || protocol.number)) items.push({ label: 'номер протокола', stepKey: 'general' });
@@ -356,7 +347,7 @@ const getMissingFields = (protocol: Protocol): MissingField[] => {
   if (isWaterProtocolType(protocol.templateId) && !hasText(protocol.waterUseCategory || protocol.conditions?.waterUseCategory)) items.push({ label: 'категория водопользования', stepKey: 'environment' });
   if (!protocol.results.length) items.push({ label: 'результаты испытаний', stepKey: 'results' });
   if (protocol.results.length && !hasCheckedResults(protocol)) items.push({ label: 'проверка соответствия нормативам', stepKey: 'results' });
-  if (protocol.results.some((row) => !resultHasUsableNormative(row, protocol.protocolDate))) items.push({ label: 'действующий норматив и причина для ручного норматива', stepKey: 'results' });
+  if (protocol.results.some((row) => !hasUsableProtocolResultNormative(row, protocol.protocolDate))) items.push({ label: 'норматив для каждой строки результата', stepKey: 'results' });
   if (!protocol.measurementDevices.length) items.push({ label: 'средство измерения', stepKey: 'instruments' });
   else if (!hasValidResultDevices(protocol)) items.push({ label: 'действующий прибор для каждой строки результата', stepKey: 'results' });
   return items;
@@ -379,7 +370,12 @@ const getApprovalBlockers = (protocol: Protocol): string[] => {
     if (calculationStatus === 'WAITING_INPUTS') blockers.push(`Строка ${index + 1}: не заполнены исходные данные`);
     if (calculationStatus === 'ERROR') blockers.push(`Строка ${index + 1}: ошибка расчёта`);
     if (calculationStatus === 'NEEDS_REPEAT') blockers.push(`Строка ${index + 1}: требуется повторный анализ`);
-    if (!resultHasUsableNormative(row, protocol.protocolDate)) blockers.push(`Строка ${index + 1}: выберите действующий норматив; для ручного норматива укажите причину`);
+    if (!hasUsableProtocolResultNormative(row, protocol.protocolDate)) {
+      const manual = String(row.values.normativeSource || '').trim().toUpperCase() === 'MANUAL';
+      blockers.push(manual
+        ? `Строка ${index + 1}: укажите причину ручного норматива`
+        : `Строка ${index + 1}: выберите действующий норматив из справочника`);
+    }
   });
   return blockers;
 };
@@ -839,15 +835,23 @@ const ProtocolEditorPage = () => {
 
   const load = async () => {
     if (!protocolId) return;
+    const requestedProtocolId = protocolId;
     if (dirty && !window.confirm('Есть несохранённые изменения. Обновить страницу протокола и потерять их?')) return;
     setLoading(true);
     setError('');
     try {
-      const [item, history] = await Promise.all([
-        protocolService.getProtocol(protocolId),
-        protocolService.getProtocolAudit(protocolId).catch(() => []),
-      ]);
-      applyServerProtocol({ ...item, history });
+      const item = await protocolService.getProtocol(requestedProtocolId);
+      applyServerProtocol(item);
+      void protocolService.getProtocolAudit(requestedProtocolId).then((history) => {
+        setProtocol((current) => {
+          if (!current || String(current.id) !== String(requestedProtocolId)) return current;
+          const updated = { ...current, history };
+          protocolRef.current = updated;
+          return updated;
+        });
+      }).catch(() => {
+        // Audit is supplementary and must never block protocol details.
+      });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить протокол');
     } finally {
@@ -1491,7 +1495,7 @@ const ProtocolEditorPage = () => {
         {editSection === 'organization' && <div className="space-y-5"><ProtocolOrganizationForm value={protocol.organization} readOnly={!protocolActions.canEdit} onChange={(organization) => patchProtocol({ organization })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'laboratory' && <ProtocolLaboratoryForm value={protocol.laboratory} employees={laboratoryEmployees} readOnly={!protocolActions.canManageDevices} loading={busy} canOpenSettings={protocolActions.canManageDevices} onExecutorChange={(employee) => patchProtocol({ executorId: employee.id, executor: employee.fullName, laboratory: { ...protocol.laboratory, executorId: String(employee.id), executor: employee.fullName } })} onRefresh={refreshLaboratorySnapshot} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
         {editSection === 'environment' && <div className="space-y-5">{isWaterProtocolType(protocol.templateId) && <ProtocolWaterCharacteristicsForm waterType={protocol.waterType || String(protocol.environment?.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.environment?.conditions?.waterUseCategory || '')} readOnly={!protocolActions.canEdit} onChange={({ waterType, waterUseCategory }) => patchProtocol({ conditions: { ...(protocol.environment?.conditions || {}), waterType, waterUseCategory } })} />}<ProtocolEnvironmentForm value={protocol.environment || {}} measurementDate={protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate} measurementTime={protocol.measurementTime || ''} objectId={String(protocol.objectId || '')} objectName={companyObjects.find((item) => item.id === String(protocol.objectId))?.name || protocol.companySnapshot.objectName || ''} objectOptions={companyObjects.map((item) => ({ id: item.id, name: item.name }))} readOnly={!protocolActions.canEdit} loading={busy} onSelectionChange={changeWeatherSelection} onRequestConditions={refreshWeather} onChange={(environment) => patchProtocol({ environment })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
-        {editSection === 'methods' && <ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} measurementDate={protocol.measurementDate || protocol.testing.samplingDate} readOnly={!protocolActions.canEdit} onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })} onChange={(testing) => patchProtocol({ testing })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
+        {editSection === 'methods' && <ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} measurementDate={protocol.measurementDate || protocol.testing.samplingDate} readOnly={!protocolActions.canEdit} onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })} onChange={(testing) => patchProtocol({ testing })} testingBasis={protocol.organization.testingBasis} onTestingBasisChange={(testingBasis) => patchProtocol({ organization: { ...protocol.organization, testingBasis } })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
         {editSection === 'results' && <ProtocolResultsTable protocolId={protocol.id} version={protocol.version} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} devices={protocol.measurementDevices} readOnly={!protocolActions.canManageResults} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />}
       </Modal>
 

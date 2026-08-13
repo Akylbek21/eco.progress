@@ -36,8 +36,8 @@ const EnvironmentStep = ({
 
   return (
     <section>
-      <h3 id="wizard-step-title" tabIndex={-1} className="text-xl font-black">Условия среды</h3>
-      <p className="mt-2 text-sm text-slate-500">Условия заполняются автоматически по объекту, дате отбора и времени измерения.</p>
+      <h3 className="text-xl font-black">Условия на объекте</h3>
+      <p className="mt-2 text-sm text-slate-500">Погода заполняется по объекту, дате и времени. Если автоматические данные недоступны, значения можно ввести вручную.</p>
       {water && (
         <fieldset
           id="water-characteristics"

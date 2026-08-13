@@ -248,11 +248,11 @@ export const normalizeProtocolResult = (raw: unknown): ProtocolResultRow => {
       code,
       unit,
       result,
-      resultValue: typeof apiValues.resultValue === 'string' || typeof apiValues.resultValue === 'number' || apiValues.resultValue === null
+      resultValue: (typeof apiValues.resultValue === 'string' || typeof apiValues.resultValue === 'number' || apiValues.resultValue === null
         ? apiValues.resultValue
         : typeof source.resultValue === 'string' || typeof source.resultValue === 'number' || source.resultValue === null
           ? source.resultValue
-          : result,
+          : result) as ProtocolResultValue,
       primaryReading: firstString(source.primaryReading, values.primaryReading, result),
       normative,
       normativeValue: firstString(source.normativeValue, normative),
@@ -1231,7 +1231,13 @@ export async function saveProtocolDraftResults(
   protocolId: string,
   request: SaveProtocolDraftResultsRequest,
 ): Promise<Protocol> {
-  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/draft-results`, request);
+  const payload: SaveProtocolDraftResultsRequest = {
+    version: request.version,
+    added: request.added,
+    updated: request.updated,
+    deletedIds: request.deletedIds,
+  };
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/draft-results`, payload);
   return protocolFromActionResponse(protocolId, response);
 }
 
@@ -1309,7 +1315,7 @@ export async function bulkAssignDevice(
   const current = await currentDraftForVersion(protocolId, version);
   const selected = new Set(resultIds);
   return saveProtocolDraftResults(protocolId, {
-    version,
+    version: current.version,
     added: [],
     updated: current.results.filter((row) => selected.has(row.id)).map((row) => ({
       ...persistedResultRequest(row),
@@ -1329,7 +1335,7 @@ export async function bulkUpdatePlace(
   const current = await currentDraftForVersion(protocolId, version);
   const selected = new Set(resultIds);
   return saveProtocolDraftResults(protocolId, {
-    version,
+    version: current.version,
     added: [],
     updated: current.results.filter((row) => selected.has(row.id)).map((row) => {
       const request = persistedResultRequest(row);
@@ -1358,8 +1364,27 @@ export async function checkNormatives(protocolId: string, version: number): Prom
 }
 
 export async function readyForApproval(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/ready-for-approval`, request);
-  return protocolFromActionResponse(protocolId, response);
+  try {
+    const response = await api.post<ApiResponse<unknown> | unknown>(
+      `/protocols/${protocolId}/ready-for-approval`,
+      request,
+      { timeout: 60_000 },
+    );
+    return protocolFromActionResponse(protocolId, response);
+  } catch (error) {
+    const code = asString(asRecord(error).code).toUpperCase();
+    if (code !== 'ECONNABORTED' && code !== 'ETIMEDOUT') throw error;
+
+    // The server can commit the transition after the client timeout. Re-read
+    // before offering a retry so the same versioned command is not sent twice.
+    try {
+      const current = await getProtocol(protocolId);
+      if (['READY', 'READY_FOR_APPROVAL'].includes(normalizeProtocolStatus(current.status))) return current;
+    } catch {
+      // Preserve the original timeout when reconciliation is unavailable.
+    }
+    throw error;
+  }
 }
 
 export const markReadyForApproval = readyForApproval;

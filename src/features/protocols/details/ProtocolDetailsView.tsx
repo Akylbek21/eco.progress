@@ -50,11 +50,16 @@ const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErr
   const [activeTab, setActiveTab] = useState<ProtocolDetailsTab>('results');
   const tabs = permissions.canViewAudit ? baseTabs : baseTabs.filter((tab) => tab.key !== 'history');
   const primary = resolveProtocolPrimaryAction(protocol, role);
+  const nextStepMissing = Array.from(new Set([
+    ...missing.map((item) => item.label),
+    ...(protocol.blockingReasons || []).map((item) => String(item).trim()).filter(Boolean),
+  ])).map((label) => ({ label }));
   const runPrimary = () => {
     if (primary.key === 'edit') onEdit('results');
     else if (primary.key === 'ready') onReady();
     else if (primary.key === 'approve') onApprove();
     else if (primary.key === 'sign') onSign();
+    else if (primary.key === 'preview') onPreview();
     else if (primary.key === 'publish') onPublish();
     else if (primary.key === 'pdf') onPdf();
     else if (primary.key === 'replacement') onReplacement();
@@ -64,7 +69,7 @@ const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErr
     <div className="space-y-4 pb-24">
       <ProtocolHeader protocol={protocol} permissions={permissions} busy={busy} primaryLabel={primary.label} onBack={onBack} onPrimary={runPrimary} onDocx={onDocx} onGenerateDocx={onGenerateDocx} onGeneratePdf={onGeneratePdf} onCorrection={onCorrection} onCancel={onCancel} onArchive={onArchive} onHistory={() => setActiveTab('history')} />
       <ProtocolProgress status={protocol.status} />
-      <ProtocolNextStepCard protocol={protocol} missing={missing} />
+      <ProtocolNextStepCard protocol={protocol} missing={nextStepMissing} />
       <ProtocolContextLinks protocol={protocol} />
       <ProtocolImmutableBanner protocol={protocol} />
       <ProtocolSignaturesCard protocol={protocol} permissions={permissions} signing={signing} onSign={onSign} />

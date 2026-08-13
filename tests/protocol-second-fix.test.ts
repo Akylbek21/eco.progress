@@ -106,7 +106,12 @@ describe('server draft boundary and idempotency', () => {
       return draftProtocol();
     });
     const saveProtocolDraftResults = vi.fn(async () => draftProtocol(2));
-    const service = { createProtocolDraft, saveProtocolDraftResults } as unknown as ProtocolService;
+    const service = {
+      createProtocolDraft,
+      updateProtocolDraft: vi.fn(async () => draftProtocol(1)),
+      saveProtocolDraftResults,
+      getProtocol: vi.fn(async () => draftProtocol(2)),
+    } as unknown as ProtocolService;
     const key = 'protocol-draft-stable';
     await expect(saveProtocolWizardDraft(form, null, key, service)).rejects.toThrow('timeout');
     await saveProtocolWizardDraft(form, null, key, service);

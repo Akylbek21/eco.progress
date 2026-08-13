@@ -74,14 +74,26 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
   };
 };
 
-export const mapWizardToUpdateDraft = (form: ProtocolWizardForm, protocol: Protocol): UpdateProtocolDraftRequest => ({
+export const mapWizardToUpdateDraft = (form: ProtocolWizardForm, protocol: Protocol): UpdateProtocolDraftRequest => {
+  const laboratory = protocol.laboratory ?? {
+    laboratoryName: '', laboratoryAddress: '', accreditationNumber: '', accreditationValidUntil: '',
+    director: '', laboratoryHead: '', executor: '',
+  };
+  const organization = protocol.organization ?? {
+    organizationName: '', organizationAddress: '', objectName: '', productName: '', testingBasis: '',
+  };
+  const testing = protocol.testing ?? {
+    productNormativeDocument: '', samplingMethodDocument: '', testingMethodDocument: '', samplingDate: '',
+    testingStartDate: '', testingEndDate: '', testingDate: '', testingPurpose: '', environmentConditions: '',
+  };
+  return ({
   version: protocol.version,
   number: protocol.number || protocol.protocolNumber || '',
   protocolDate: form.protocolDate,
   objectId: numericId(form.objectId),
   laboratoryId: numericId(form.laboratoryId),
   executorId: form.executorId || undefined,
-  executor: protocol.executor || protocol.laboratory.executor || '',
+  executor: protocol.executor || laboratory.executor || '',
   approver: protocol.approver || '',
   measurementDate: form.measurementDate || undefined,
   measurementTime: form.measurementTime || undefined,
@@ -94,18 +106,18 @@ export const mapWizardToUpdateDraft = (form: ProtocolWizardForm, protocol: Proto
   basis: nullableText(form.basis) ?? undefined,
   formCode: form.formCode || undefined,
   appendixNumber: form.appendixNumber || undefined,
-  laboratory: protocol.laboratory,
+  laboratory,
   organization: {
-    ...protocol.organization,
+    ...organization,
     testingBasis: nullableText(form.basis) ?? '',
   },
   testing: {
-    ...protocol.testing,
-    samplingDate: form.sampleDate || protocol.testing.samplingDate,
-    testingStartDate: form.testingStartDate || protocol.testing.testingStartDate,
-    testingEndDate: form.testingEndDate || protocol.testing.testingEndDate,
-    testingMethodDocument: form.testingMethodNd || protocol.testing.testingMethodDocument,
-    samplingMethodDocument: form.samplingMethodNd || protocol.testing.samplingMethodDocument,
+    ...testing,
+    samplingDate: form.sampleDate || testing.samplingDate,
+    testingStartDate: form.testingStartDate || testing.testingStartDate,
+    testingEndDate: form.testingEndDate || testing.testingEndDate,
+    testingMethodDocument: form.testingMethodNd || testing.testingMethodDocument,
+    samplingMethodDocument: form.samplingMethodNd || testing.samplingMethodDocument,
   },
   environment: {
     ...protocol.environment,
@@ -134,7 +146,8 @@ export const mapWizardToUpdateDraft = (form: ProtocolWizardForm, protocol: Proto
     samplingPlace: form.results[0]?.samplingPlace || form.measurementPlace || null,
     factorType: form.results.find((row) => row.factorType)?.factorType || null,
   },
-});
+  });
+};
 
 export const mapWizardResultToDraftRequest = (
   row: ProtocolWizardResult,
