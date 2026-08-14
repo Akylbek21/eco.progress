@@ -1,21 +1,24 @@
 import type { ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
-import { canViewPek } from '../permissions/pekAccess';
+import { canUsePekPermission, canViewPek } from '../permissions/pekAccess';
 
 const navigation = [
   { to: '/staff/pek', label: 'Обзор', end: true },
   { to: '/staff/pek/programs', label: 'Программы' },
+  { to: '/staff/pek/permits', label: 'Разрешения' },
   { to: '/staff/pek/reports', label: 'Отчёты' },
 ];
 
 const labels: Record<string, string> = {
   programs: 'Программы',
+  permits: 'Разрешения',
   reports: 'Отчёты',
   new: 'Создание',
   edit: 'Редактирование',
   workspace: 'Рабочая область',
   settings: 'Настройки',
+  access: 'Сотрудники / Доступ ПЭК',
   history: 'История',
   preview: 'Предпросмотр',
 };
@@ -40,6 +43,7 @@ const PekLayout = ({ children }: { children: ReactNode }) => {
       </div>
       <nav aria-label="Разделы ПЭК" className="mt-3 flex max-w-full gap-1 overflow-x-auto">
         {navigation.map((item) => <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => `whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold ${isActive ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{item.label}</NavLink>)}
+        {canUsePekPermission(user, 'PEK_SETTINGS_EDIT') && <NavLink to="/staff/pek/access" className={({ isActive }) => `whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold ${isActive ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Сотрудники / Доступ ПЭК</NavLink>}
         {canViewPek(user) && <NavLink to="/staff/pek/settings" className={({ isActive }) => `whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold ${isActive ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Настройки</NavLink>}
       </nav>
     </div>

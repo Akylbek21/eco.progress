@@ -3,6 +3,7 @@ import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import protocolService from '../../services/protocolService';
 import { getApiErrorCode, getApiErrorMessage, getApiStatus } from '../../services/apiHelpers';
+import { isProtocolVersionConflict, protocolVersionConflictMessage } from '../../features/protocols/utils/protocolVersionConflict';
 import type {
   ProtocolMeasurementDevice,
   ProtocolResultRow,
@@ -191,6 +192,12 @@ const RawMeasurementsModal = ({
       else await onReload?.();
       onNotify('Результат рассчитан', 'success');
     } catch (saveError) {
+      if (isProtocolVersionConflict(saveError)) {
+        await onReload?.();
+        setError(protocolVersionConflictMessage);
+        onNotify(protocolVersionConflictMessage, 'warning');
+        return;
+      }
       const message = saveError instanceof Error ? saveError.message : 'Не удалось сохранить исходные данные';
       setError(message);
       onNotify(message, 'error');

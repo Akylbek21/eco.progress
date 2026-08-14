@@ -13,13 +13,14 @@ test('laboratory feature is separated into API, hooks, schemas, components, page
   ]) await access(new URL(`../${path}`, import.meta.url));
 });
 
-test('list state is URL-backed, debounced, cancellable and uses client filters', async () => {
+test('list state is URL-backed, debounced, cancellable and requests inactive rows only when needed', async () => {
   const page = await read('src/pages/LaboratorySettingsPage.tsx');
   const service = await read('src/features/laboratories/api/laboratoryService.ts');
   const mapper = await read('src/features/laboratories/api/laboratoryMappers.ts');
   assert.match(page, /useSearchParams/);
   assert.match(page, /window\.setTimeout[\s\S]*450/);
-  assert.match(service, /'\/laboratories', \{ signal \}/);
+  assert.match(service, /const includeInactive = query\.status !== 'ACTIVE'/);
+  assert.match(service, /'\/laboratories', \{ params: \{ includeInactive \}, signal \}/);
   assert.match(mapper, /query\.status === 'INACTIVE'/);
   assert.match(mapper, /rows\.slice\(page \* query\.size/);
 });

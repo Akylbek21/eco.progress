@@ -69,7 +69,7 @@ const LaboratorySettingsPage = () => {
   const permissions = getLaboratoryPermissions(user, laboratory);
   const employeesQuery = useQuery({ queryKey: ['laboratory-employees', selected, employeeFilter], queryFn: ({ signal }) => getLaboratoryEmployees(selected, { includeInactive: employeeFilter !== 'ACTIVE', signal }).then((items) => employeeFilter === 'INACTIVE' ? items.filter((item) => !item.active) : employeeFilter === 'ACTIVE' ? items.filter((item) => item.active) : items), enabled: selected > 0 });
   const employees = employeesQuery.data || [];
-  const eligibleQuery = useQuery({ queryKey: ['eligible-employees', selected], queryFn: ({ signal }) => getEligibleLaboratoryEmployees(selected, signal).then((items) => items.filter((item) => !employees.some((existing) => existing.userId === item.userId))), enabled: eligibleOpen && permissions.canManageEmployees && selected > 0 });
+  const eligibleQuery = useQuery({ queryKey: ['eligible-employees', selected], queryFn: ({ signal }) => getEligibleLaboratoryEmployees(selected, signal), enabled: eligibleOpen && permissions.canManageEmployees && selected > 0 });
 
   const invalidateLaboratory = async () => {
     await Promise.all([

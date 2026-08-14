@@ -12,7 +12,8 @@ const details = (raw: unknown): LaboratoryDetails => {
 };
 
 export async function getLaboratories(query: LaboratoriesQuery, signal?: AbortSignal): Promise<PageResponse<LaboratoryListItem>> {
-  const response = await api.get<ApiResponse<unknown> | unknown>('/laboratories', { signal });
+  const includeInactive = query.status !== 'ACTIVE';
+  const response = await api.get<ApiResponse<unknown> | unknown>('/laboratories', { params: { includeInactive }, signal });
   return mapLaboratoriesResponse(response, query);
 }
 export async function getActiveLaboratories(signal?: AbortSignal): Promise<LaboratoryListItem[]> {
@@ -42,7 +43,7 @@ export async function getLaboratoryEmployees(id: string | number, options: { inc
 }
 export async function getEligibleLaboratoryEmployees(laboratoryId: string | number, signal?: AbortSignal): Promise<LaboratoryEmployee[]> {
   const response = await api.get<ApiResponse<unknown> | unknown>('/laboratories/eligible-employees', { params: { laboratoryId: requireId(laboratoryId) }, signal });
-  return extractList(response, ['employees', 'users', 'items']).map(mapLaboratoryEmployeeDto).filter((employee) => employee.active);
+  return extractList(response, ['employees', 'users', 'items']).map(mapLaboratoryEmployeeDto);
 }
 const employeePayload = (values: LaboratoryEmployeeFormValues) => ({ userId: values.userId, version: values.version, fullName: values.fullName.trim() || null, position: values.position.trim() || null, email: values.email.trim() || null, phone: values.phone.trim() || null, employeeNumber: values.employeeNumber.trim() || null, qualification: values.qualification.trim() || null, role: values.role.trim() || null, canExecuteMeasurements: values.canExecuteMeasurements, canApproveProtocols: values.canApproveProtocols, canSignProtocols: values.canSignProtocols, active: values.active });
 export async function addLaboratoryEmployee(laboratoryId: string | number, values: LaboratoryEmployeeFormValues): Promise<LaboratoryEmployee> {

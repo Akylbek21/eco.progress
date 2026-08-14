@@ -23,9 +23,10 @@ test('default, active state and employee removal use supported contracts only', 
   assert.doesNotMatch(source, /\/archive|\/restore|\/deactivate`|\/activate`/);
 });
 
-test('list uses no ignored server params and reads accept AbortSignal', async () => {
+test('list sends the supported includeInactive parameter and reads accept AbortSignal', async () => {
   const source = await read(servicePath);
-  assert.match(source, /api\.get<ApiResponse<unknown> \| unknown>\('\/laboratories', \{ signal \}\)/);
+  assert.match(source, /const includeInactive = query\.status !== 'ACTIVE'/);
+  assert.match(source, /api\.get<ApiResponse<unknown> \| unknown>\('\/laboratories', \{ params: \{ includeInactive \}, signal \}\)/);
   assert.match(source, /getLaboratory\(id: string \| number, signal\?: AbortSignal\)/);
   assert.match(source, /getEligibleLaboratoryEmployees\(laboratoryId: string \| number, signal\?: AbortSignal\)/);
   assert.match(source, /signal: options\.signal/);

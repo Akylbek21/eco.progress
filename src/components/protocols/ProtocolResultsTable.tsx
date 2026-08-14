@@ -22,6 +22,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { protocolQueryKeys, protocolScope } from '../../features/protocols/hooks/queryKeys';
 import { mapProtocolResultFormToRequest } from '../../features/protocols/api/protocolMappers';
 import { resolveMeasurementDeviceId } from '../../utils/protocolResultAliases';
+import { isProtocolVersionConflict, protocolVersionConflictMessage } from '../../features/protocols/utils/protocolVersionConflict';
 import type { NormativeSearchParams } from '../../types/normativeSearch';
 import type {
   CalculationDetails,
@@ -858,6 +859,12 @@ const ProtocolResultsTable = ({
         if (calculation.row) latestRow = calculation.row;
       } catch (calculationError) {
         recalculated = false;
+        if (isProtocolVersionConflict(calculationError)) {
+          await onImported();
+          setEditing(null);
+          onNotify(protocolVersionConflictMessage, 'warning');
+          return;
+        }
         console.warn(`Result ${editing.id} was updated but could not be recalculated automatically.`, calculationError);
       }
       onChange(rows.map((row) => row.id === editing.id ? latestRow : row));
@@ -1062,7 +1069,10 @@ const ProtocolResultsTable = ({
       await onImported();
       onNotify('Результат рассчитан', 'success');
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать строку', 'error');
+      if (isProtocolVersionConflict(error)) {
+        await onImported();
+        onNotify(protocolVersionConflictMessage, 'warning');
+      } else onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать строку', 'error');
     } finally {
       setSaving(false);
     }
@@ -1092,8 +1102,13 @@ const ProtocolResultsTable = ({
       await onImported();
       onNotify('Результаты рассчитаны', summary.errors || summary.waitingInputs ? 'warning' : 'success');
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать результаты', 'error');
-      await onCheckNormatives();
+      if (isProtocolVersionConflict(error)) {
+        await onImported();
+        onNotify(protocolVersionConflictMessage, 'warning');
+      } else {
+        onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать результаты', 'error');
+        await onCheckNormatives();
+      }
     } finally {
       setSaving(false);
     }

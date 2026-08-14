@@ -1,8 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { getCompanies, getCompanyObjects } from '../../../../services/companyService';
-import { useAuth } from '../../../../contexts/AuthContext';
-import { retryPekQuery } from '../../utils/pekQueryPolicy';
+import { usePekScope } from '../../hooks/usePekScope';
+import { mapPekError } from '../../utils/pekErrorMapper';
 
 type Props = {
   companyId?: number;
@@ -19,20 +17,8 @@ const PekCompanyObjectFilters = ({
   onObjectChange,
   required,
 }: Props) => {
-  const { user } = useAuth();
-  const companies = useQuery({
-    queryKey: ['pek', `user:${user?.id ?? 'anonymous'}`, 'filters', 'companies'],
-    queryFn: ({ signal }) => getCompanies({ page: 0, size: 100, status: 'ACTIVE' }, signal),
-    retry: retryPekQuery,
-    staleTime: 60_000,
-  });
-  const objects = useQuery({
-    queryKey: ['pek', `user:${user?.id ?? 'anonymous'}`, 'filters', 'objects', companyId],
-    queryFn: ({ signal }) => getCompanyObjects(String(companyId), false, signal),
-    enabled: Boolean(companyId),
-    retry: retryPekQuery,
-    staleTime: 60_000,
-  });
+  const scope = usePekScope(companyId);
+  const objects = scope.objects;
   const realObjects = (objects.data || []).filter((item) =>
     item.status !== 'ARCHIVED'
     && item.persisted !== false
@@ -40,15 +26,9 @@ const PekCompanyObjectFilters = ({
     && Number(item.id) > 0);
 
   useEffect(() => {
-    if (!companies.data) return;
-    const available = companies.data.items;
-    if (companyId && !available.some((item) => Number(item.id) === companyId)) {
-      onCompanyChange('');
-      onObjectChange('');
-      return;
-    }
+    const available = scope.companies;
     if (!companyId && available.length === 1) onCompanyChange(String(available[0].id));
-  }, [companies.data, companyId, onCompanyChange, onObjectChange]);
+  }, [scope.companies, companyId, onCompanyChange]);
 
   useEffect(() => {
     if (!companyId || !objects.data) return;
@@ -62,33 +42,30 @@ const PekCompanyObjectFilters = ({
   return <>
     <label className="text-xs font-bold text-slate-600">
       Компания{required ? ' *' : ''}
-      <select
+      <input
+        type="number"
+        min="1"
+        list="pek-company-options"
         aria-label="Компания"
         value={companyId || ''}
-        disabled={companies.isLoading || companies.isError}
         onChange={(event) => {
           onCompanyChange(event.target.value);
           onObjectChange('');
         }}
+        placeholder={scope.scopedPrograms.isLoading ? 'Загрузка PEK scope…' : 'Выберите или укажите ID компании'}
         className="mt-1 w-full rounded-xl border px-3 py-2 text-sm disabled:bg-slate-100"
-      >
-        <option value="">{companies.isLoading ? 'Загрузка…' : 'Выберите компанию'}</option>
-        {companies.data?.items.map((item) => (
-          <option key={item.id} value={item.id}>{item.name} · БИН {item.bin}</option>
-        ))}
-      </select>
-      {companies.isError && (
-        <button type="button" onClick={() => void companies.refetch()} className="mt-1 text-xs text-rose-700 underline">
-          Повторить загрузку
-        </button>
-      )}
+      />
+      <datalist id="pek-company-options">{scope.companies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</datalist>
+      {companyId && scope.companyAccess.isFetching && <span className="mt-1 block text-xs text-slate-500">Проверяем PEK-доступ…</span>}
+      {companyId && scope.companyAccess.isError && <span className="mt-1 block text-xs text-rose-700">{mapPekError(scope.companyAccess.error).message}</span>}
+      {scope.scopedPrograms.isError && <button type="button" onClick={() => void scope.scopedPrograms.refetch()} className="mt-1 text-xs text-rose-700 underline">Повторить загрузку PEK scope</button>}
     </label>
     <label className="text-xs font-bold text-slate-600">
       Объект{required ? ' *' : ''}
       <select
         aria-label="Объект"
         value={objectId || ''}
-        disabled={!companyId || objects.isLoading || objects.isError}
+        disabled={!scope.companyAllowed || objects.isLoading || objects.isError}
         onChange={(event) => onObjectChange(event.target.value)}
         className="mt-1 w-full rounded-xl border px-3 py-2 text-sm disabled:bg-slate-100"
       >

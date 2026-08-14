@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import dayjs from 'dayjs';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, type FieldPath } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -8,7 +7,6 @@ import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../hooks/useToast';
-import { getCompanies, getCompanyObjects } from '../../../services/companyService';
 import type { PekControlItem, PekIndicator, PekMeasure, PekProgramForm } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
 import { commitPekProgramMutation } from '../api/pekProgramCache';
@@ -16,6 +14,7 @@ import { pekApi } from '../api/pekService';
 import PekLookupSelect from '../components/common/PekLookupSelect';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
+import { usePekScope } from '../hooks/usePekScope';
 import { pekProgramDefaults } from '../forms/programDefaults';
 import {
   mapProgramAutosaveToRequest,
@@ -104,15 +103,8 @@ const PekProgramCreatePage = () => {
     queryFn: ({ signal }) => pekApi.getProgram(id, signal),
     enabled: edit && Number.isFinite(id),
   });
-  const companies = useQuery({
-    queryKey: ['pek', `user:${user?.id ?? 'anonymous'}`, 'program-form', 'companies'],
-    queryFn: ({ signal }) => getCompanies({ page: 0, size: 100, status: 'ACTIVE' }, signal),
-  });
-  const objects = useQuery({
-    queryKey: ['pek', `user:${user?.id ?? 'anonymous'}`, 'program-form', 'objects', companyId],
-    queryFn: ({ signal }) => getCompanyObjects(String(companyId), false, signal),
-    enabled: companyId > 0,
-  });
+  const scope = usePekScope(companyId || undefined);
+  const objects = scope.objects;
   const assignees = useQuery({
     queryKey: pekKeys.assignees(['PEK_RESPONSIBLE'], user?.id),
     queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal),
@@ -120,28 +112,20 @@ const PekProgramCreatePage = () => {
   });
   const permits = useQuery({
     queryKey: pekKeys.permits(objectId, user?.id),
-    queryFn: ({ signal }) => pekApi.getObjectPermits(objectId, signal),
+    queryFn: ({ signal }) => pekApi.getPermits(objectId, signal),
     enabled: objectId > 0,
   });
   const draftKey = useMemo(
     () => pekDraftKey('program', user?.id, programId, edit ? program.data?.version ?? 'loading' : 'new', companyId || 'none'),
     [companyId, edit, program.data?.version, programId, user?.id],
   );
-  const activePermits = useMemo(() => (permits.data || []).filter((permit) =>
-    permit.status !== 'EXPIRED'
-    && permit.status !== 'ARCHIVED'
-    && (!permit.validUntil || !dayjs(permit.validUntil).isBefore(dayjs(), 'day'))), [permits.data]);
+  const activePermits = useMemo(() => (permits.data || []).filter((permit) => permit.effectivelyActive), [permits.data]);
 
   useEffect(() => {
-    if (!companies.data || edit) return;
-    const available = companies.data.items;
-    if (companyId && !available.some((company) => Number(company.id) === companyId)) {
-      setValue('companyId', 0, { shouldDirty: true });
-      setValue('objectId', 0, { shouldDirty: true });
-      return;
-    }
+    if (edit) return;
+    const available = scope.companies;
     if (!companyId && available.length === 1) setValue('companyId', Number(available[0].id), { shouldDirty: true });
-  }, [companies.data, companyId, edit, setValue]);
+  }, [scope.companies, companyId, edit, setValue]);
 
   useEffect(() => {
     if (!objects.data || edit || !companyId) return;
@@ -375,7 +359,7 @@ const PekProgramCreatePage = () => {
       <section className="rounded-2xl border bg-white p-5">
         {Object.keys(formState.errors).length > 0 && <div role="alert" aria-live="assertive" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">Проверьте заполнение текущего раздела. Первая ошибка: {String(Object.values(formState.errors)[0]?.message || 'некорректные данные')}</div>}
         {step === 0 && <div className="grid gap-4 md:grid-cols-2">
-          <label>Компания *<select {...register('companyId', { valueAsNumber: true })} disabled={edit} onChange={(event) => { setValue('companyId', Number(event.target.value), { shouldDirty: true }); setValue('objectId', 0); }} className={inputClass}><option value={0}>Выберите компанию</option>{companies.data?.items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label>Компания *<input type="number" min="1" list="pek-program-company-options" {...register('companyId', { valueAsNumber: true })} disabled={edit} onChange={(event) => { setValue('companyId', Number(event.target.value), { shouldDirty: true }); setValue('objectId', 0); }} className={inputClass} placeholder="Выберите или укажите ID компании" /><datalist id="pek-program-company-options">{scope.companies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</datalist>{scope.companyAccess.isError && <span className="mt-1 block text-xs text-rose-700">Нет PEK-доступа к выбранной компании</span>}</label>
           <label>Объект *<select {...register('objectId', { valueAsNumber: true })} className={inputClass} disabled={edit || !companyId}><option value={0}>Выберите объект</option>{objects.data?.filter((item) => item.status !== 'ARCHIVED' && item.persisted !== false && item.isVirtual !== true).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label>Номер *<input {...register('number')} disabled={edit} className={inputClass} /></label>
           <label>Название *<input {...register('name')} className={inputClass} /></label>
@@ -384,7 +368,7 @@ const PekProgramCreatePage = () => {
           <label>Действует до *<input type="date" {...register('validUntil')} className={inputClass} /></label>
           <PekLookupSelect label="Ответственный" value={watch('responsibleUserId')} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => setValue('responsibleUserId', value, { shouldDirty: true })} />
           {edit && <p className="text-xs text-slate-500 md:col-span-2">Компания, объект и номер фиксируются при создании программы.</p>}
-          <div className="text-sm text-slate-600"><strong>Действующие разрешительные документы</strong><p className="mt-2">{permits.isLoading ? 'Загрузка…' : activePermits.length ? activePermits.map((item) => item.name).join(', ') : 'Для объекта нет действующих разрешительных документов'}</p></div>
+          <div className="text-sm text-slate-600"><strong>Действующие разрешительные документы</strong><p className="mt-2">{permits.isLoading ? 'Загрузка…' : activePermits.length ? activePermits.map((item) => `${item.type} № ${item.number}`).join(', ') : 'Для объекта нет действующих разрешительных документов'}</p></div>
           {Object.values(formState.errors).length > 0 && <p role="alert" className="md:col-span-2 text-sm text-rose-700">Проверьте обязательные поля программы.</p>}
         </div>}
         {step === 1 && <div className="space-y-4">

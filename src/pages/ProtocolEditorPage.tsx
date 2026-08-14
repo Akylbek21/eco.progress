@@ -35,6 +35,7 @@ import { isProtocolStatusEditable } from '../config/protocolStatus';
 import { isWaterProtocolType } from '../config/protocolWater';
 import { collectProtocolDevices, isDeviceValidForDate } from '../utils/protocolDevices';
 import { normalizeProtocolError } from '../utils/protocolError';
+import { isProtocolVersionConflict, protocolVersionConflictMessage } from '../features/protocols/utils/protocolVersionConflict';
 import ProtocolDetailsView from '../features/protocols/details/ProtocolDetailsView';
 import type { ProtocolEditSection } from '../features/protocols/details/protocolDetailsModel';
 import { useSignProtocolMutation } from '../features/protocols/hooks/useSignProtocolMutation';
@@ -1194,7 +1195,11 @@ const ProtocolEditorPage = () => {
         `Всего: ${summary.total}; рассчитано: ${summary.calculated}; ручной ввод: ${summary.manual}; ошибки: ${summary.errors}; повторный анализ: ${summary.needsRepeat}; не соответствует: ${summary.exceeded}`,
       );
     } catch (calculationError) {
-      toast.error('Не удалось рассчитать результаты', getApiErrorMessage(calculationError, 'Не удалось рассчитать результаты'));
+      if (isProtocolVersionConflict(calculationError)) {
+        const latest = await protocolService.getProtocol(protocol.id);
+        applyServerProtocol(latest);
+        toast.warning(protocolVersionConflictMessage);
+      } else toast.error('Не удалось рассчитать результаты', getApiErrorMessage(calculationError, 'Не удалось рассчитать результаты'));
     } finally {
       setBusy(false);
     }

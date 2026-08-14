@@ -344,16 +344,16 @@ describe('PEK backend contract', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
     expect(source).toContain("item.status === 'RETURNED'");
     expect(source).toContain('Отчёт возвращён на доработку');
-    expect(source).toContain('Устаревшая связь · системно исключён');
+    expect(source).toContain("source.matchStatus === 'STALE' ? 'Устаревшая связь'");
     expect(source).toContain('getReportReadiness(id)');
     expect(source).toContain('Данные были изменены другим пользователем');
   });
 
-  it('does not expose a fake program versions route or report history endpoint', () => {
+  it('does not expose a fake program versions route and uses the real report history endpoint', () => {
     const app = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
     const service = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
     expect(app).not.toContain('/staff/pek/programs/:programId/versions');
-    expect(service).not.toContain('/pek/reports/${id}/history');
+    expect(service).toContain('/pek/reports/${id}/history');
   });
 
   it('maps Java ProgramResponse string actions without deriving status', () => {
@@ -455,6 +455,8 @@ describe('PEK backend contract', () => {
     expect(canCreateProgram(unknown)).toBe(false);
     expect(canCreateReport(unknown)).toBe(false);
     expect(canSignReport({ role: 'ADMIN' }, { availableActions: { sign: false } })).toBe(false);
+    expect(canSignReport({ role: 'ECOLOGIST' }, undefined)).toBe(true);
+    expect(canSubmitPekReport({ role: 'ECOLOGIST' }, undefined)).toBe(true);
     expect(canArchiveReport({ role: 'ADMIN' }, { canArchive: false })).toBe(false);
     expect(canTransitionExceedance({ allowedTransitions: ['IN_REVIEW'] }, 'CLOSED')).toBe(false);
     expect(canTransitionExceedance({ allowedTransitions: ['CLOSED'] }, 'CLOSED')).toBe(true);
@@ -670,8 +672,10 @@ describe('PEK backend contract', () => {
     expect(documents).toContain('const actual = await pekApi.getReport(report.id)');
     expect(documents).toContain('Скачать DOCX');
     expect(documents).toContain('Скачать PDF');
-    expect(documents).not.toContain('getReportDocumentVersions');
-    expect(documents).not.toContain('getReportSignatures');
+    expect(documents).toContain('getReportDocumentVersions');
+    expect(documents).toContain('getReportSignatures');
+    expect(documents).toContain('report.availableActions.downloadDocx === true');
+    expect(documents).toContain('report.availableActions.downloadPdf === true');
     expect(exceedances).toContain('pekApi.getExceedance(id)');
     expect(exceedances).toContain('pekApi.getReportExceedances(report.id)');
     expect(exceedances).toContain("transitionMutation.mutate('CLOSED')");
@@ -726,5 +730,61 @@ describe('PEK backend contract', () => {
   it('treats empty permits as a valid state', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramCreatePage.tsx'), 'utf8');
     expect(source).toContain('Для объекта нет действующих разрешительных документов');
+  });
+
+  it('uses the full permit CRUD API and server-authoritative actions', () => {
+    const service = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
+    const page = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekPermitsPage.tsx'), 'utf8');
+    const programForm = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramCreatePage.tsx'), 'utf8');
+    expect(service).toContain("get<PekPermit[]>('/pek/permits', { objectId }, signal)");
+    expect(service).toContain("api.post('/pek/permits', body)");
+    expect(service).toContain("api.patch(`/pek/permits/${id}`, body)");
+    expect(service).toContain("api.post(`/pek/permits/${id}/status`");
+    expect(service).toContain("get<PekPermitHistoryEntry[]>(`/pek/permits/${id}/history`");
+    expect(service).not.toContain('/pek/lookups/objects/${objectId}/permits');
+    expect(page).toContain('permit.availableActions.edit');
+    expect(page).toContain('permit.availableActions.markExpired');
+    expect(page).toContain('permit.availableActions.revoke');
+    expect(programForm).toContain('permit.effectivelyActive');
+  });
+
+  it('uses the contracted PEK membership endpoints and refreshes their cache', () => {
+    const service = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
+    const page = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekMembershipsPage.tsx'), 'utf8');
+    expect(service).toContain('`/pek/companies/${companyId}/members`');
+    expect(service).toContain('api.patch(`/pek/companies/${companyId}/members/${membershipId}`');
+    expect(service).toContain('api.delete(`/pek/companies/${companyId}/members/${membershipId}`');
+    expect(page).toContain('pekKeys.memberships(companyId');
+    expect(page).toContain('invalidateQueries');
+    expect(page).toContain('userFullName');
+    expect(page).toContain('roleCode');
+  });
+
+  it('derives company choices from PEK scope and stops retrying forbidden requests', () => {
+    const scope = readFileSync(resolve(process.cwd(), 'src/features/pek/hooks/usePekScope.ts'), 'utf8');
+    expect(scope).toContain('pekApi.getPrograms');
+    expect(scope).toContain('pekApi.getDashboard');
+    expect(scope).not.toContain('getCompanies');
+    expect(scope).toContain('retry: retryPekQuery');
+  });
+
+  it('renders backend source DTO fields, report history and capability-gated automatic collection', () => {
+    const workspace = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
+    const settings = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekSettingsPage.tsx'), 'utf8');
+    for (const field of ['protocolDate', 'protocolStatus', 'indicatorCode', 'valueText', 'normativeValue', 'comparisonType', 'isExceedance', 'samplingPlace', 'measurementDate', 'methodology', 'laboratoryName', 'controlItemName', 'programIndicatorName']) {
+      expect(workspace).toContain(`source.${field}`);
+    }
+    expect(workspace).toContain('pekApi.getReportHistory');
+    expect(settings).toContain('form.autoCollectProtocols');
+    expect(settings).toContain('automaticCollectionSupported !== true');
+  });
+
+  it('uploads exceedance evidence before attaching it and has no manual fileId field', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/features/pek/components/exceedances/PekReportExceedances.tsx'), 'utf8');
+    expect(source).toContain('uploadStaffRepositoryDocument');
+    expect(source).toContain('pekApi.attachExceedanceEvidence');
+    expect(source.indexOf('uploadStaffRepositoryDocument')).toBeLessThan(source.indexOf('pekApi.attachExceedanceEvidence'));
+    expect(source).not.toContain('ID файла подтверждения');
+    expect(source).toContain('selectedActions.attachEvidence === true');
   });
 });

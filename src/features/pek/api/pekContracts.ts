@@ -65,6 +65,68 @@ export type PekLookupOption = PekNamedRef & {
   validUntil?: string;
 };
 
+export type PekPermitStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED';
+export type PekPermit = {
+  id: PekId;
+  companyId: PekId;
+  objectId: PekId;
+  type: string;
+  number: string;
+  issuedAt: string | null;
+  validFrom: string;
+  validTo: string;
+  authority: string;
+  status: PekPermitStatus;
+  effectivelyActive: boolean;
+  fileId: string | null;
+  note: string | null;
+  pekProgramId: PekId | null;
+  version: number;
+  availableActions: {
+    edit: boolean;
+    markExpired: boolean;
+    revoke: boolean;
+  };
+};
+export type PekPermitCreateRequest = {
+  companyId: PekId;
+  objectId: PekId;
+  type: string;
+  number: string;
+  issuedAt?: string | null;
+  validFrom: string;
+  validTo: string;
+  authority?: string | null;
+  fileId?: string | null;
+  note?: string | null;
+  pekProgramId?: PekId | null;
+};
+export type PekPermitUpdateRequest = Partial<Omit<PekPermitCreateRequest, 'companyId' | 'objectId'>> & {
+  version: number;
+};
+export type PekPermitHistoryEntry = {
+  fromStatus: PekPermitStatus | null;
+  toStatus: PekPermitStatus;
+  comment: string | null;
+  performedBy: { id: PekId; name: string; email: string; position: string | null } | null;
+  performedAt: string;
+};
+
+export type PekMembershipStatus = 'ACTIVE' | 'INVITED' | 'REMOVED';
+export type PekCompanyMembership = {
+  id: PekId;
+  companyId: PekId;
+  userId: PekId;
+  userFullName: string | null;
+  userEmail: string | null;
+  roleCode: string;
+  status: PekMembershipStatus;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+export type PekAddMembershipRequest = { email: string; roleCode: string };
+export type PekUpdateMembershipRequest = { roleCode?: string; status?: PekMembershipStatus };
+
 export type PekAvailableActionCode =
   | 'EDIT'
   | 'SUBMIT_REVIEW'
@@ -400,6 +462,31 @@ export interface PekReportSource {
   matchReason?: string | null;
   matchedAt?: string | null;
   updatedAt?: string | null;
+  protocolDate?: string | null;
+  protocolStatus?: string | null;
+  indicatorCode?: string | null;
+  value?: number | null;
+  valueText?: string | null;
+  normativeValue?: number | null;
+  comparisonType?: string | null;
+  isExceedance?: boolean | null;
+  samplingPlace?: string | null;
+  measurementDate?: string | null;
+  methodology?: string | null;
+  laboratoryName?: string | null;
+  controlItemName?: string | null;
+  programIndicatorName?: string | null;
+  createdAt?: string | null;
+}
+
+export interface PekReportHistoryEntry {
+  action: string;
+  fromStatus: string | null;
+  toStatus: string;
+  comment: string | null;
+  performedBy: { id: number; name?: string; fullName?: string; email?: string; position?: string } | null;
+  performedAt: string;
+  version: number;
 }
 
 export interface PekReportSourceSummary {
@@ -453,6 +540,9 @@ export interface PekReportDocumentVersion {
   contentHash?: string | null;
   generatedAt?: string | null;
   generatedBy?: number | null;
+  generatedByName?: string | null;
+  status?: string | null;
+  stale?: boolean | null;
 }
 
 export interface PekReportSignature {
@@ -468,6 +558,7 @@ export interface PekReportSignature {
   certificateSerial?: string | null;
   certificateOrganization?: string | null;
   verified: boolean;
+  cmsFileId?: string | null;
 }
 
 export interface PekExceedance {

@@ -4711,10 +4711,7 @@ export const StaffDocumentsPage = () => {
     try {
       await uploadStaffRepositoryDocument({ file, name: title, category, comment });
       toast.success('Документ загружен', 'Файл добавлен в общее хранилище документов.');
-      setUploadOpen(false);
-      event.currentTarget.reset();
-      if (page !== 0) setPage(0);
-      else setRefreshKey((value) => value + 1);
+      window.location.reload();
     } catch (err) {
       const message = getApiErrorMessage(err, 'Не удалось загрузить документ.');
       setUploadError(message);

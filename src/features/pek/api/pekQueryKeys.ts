@@ -34,7 +34,12 @@ export const pekKeys = {
   settings: (companyId?: string | number | null, userId?: PekUserScope) => ['pek', userScope(userId), 'settings', companyScope(companyId)] as const,
   creationContext: (params: PekReportCreationParams, userId?: PekUserScope) => ['pek', userScope(userId), 'creation-context', params] as const,
   assignees: (roles: string[] = [], userId?: PekUserScope) => ['pek', userScope(userId), 'lookups', 'assignees', roles] as const,
-  permits: (objectId: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'lookups', 'permits', String(objectId)] as const,
+  permits: (objectId: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'permits', 'object', String(objectId)] as const,
+  permitHistory: (id: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'permit', String(id), 'history'] as const,
+  scope: (userId?: PekUserScope) => ['pek', userScope(userId), 'scope'] as const,
+  scopeCompany: (companyId: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'scope', 'company', String(companyId)] as const,
+  memberships: (companyId: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'memberships', String(companyId)] as const,
+  reportHistory: (id: string | number, companyId?: string | number | null, userId?: PekUserScope) => ['pek', userScope(userId), 'report', companyScope(companyId), String(id), 'history'] as const,
 };
 
 export const pekQueryKeys = pekKeys;

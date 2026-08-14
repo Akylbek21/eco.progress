@@ -10,6 +10,14 @@ import type {
   PekDashboardFilters,
   PekHistoryItem,
   PekLookupOption,
+  PekPermit,
+  PekPermitCreateRequest,
+  PekPermitHistoryEntry,
+  PekPermitStatus,
+  PekPermitUpdateRequest,
+  PekCompanyMembership,
+  PekAddMembershipRequest,
+  PekUpdateMembershipRequest,
   PekMutationBody,
   PekProgram,
   PekProgramCreateRequest,
@@ -29,6 +37,7 @@ import type {
   PekAssignExceedanceRequest,
   PekReportDocumentVersion,
   PekReportSignature,
+  PekReportHistoryEntry,
   PekTransitionExceedanceRequest,
 } from './pekContracts';
 import {
@@ -149,8 +158,26 @@ export const pekApi = {
 
   getAssignees: (roles: string[], signal?: AbortSignal) =>
     get<PekLookupOption[]>('/pek/lookups/assignees', { roles: roles.join(',') }, signal),
-  getObjectPermits: (objectId: number, signal?: AbortSignal) =>
-    get<PekLookupOption[]>(`/pek/lookups/objects/${objectId}/permits`, {}, signal),
+  getPermits: (objectId: number, signal?: AbortSignal) =>
+    get<PekPermit[]>('/pek/permits', { objectId }, signal),
+  getPermit: (id: number, signal?: AbortSignal) =>
+    get<PekPermit>(`/pek/permits/${id}`, {}, signal),
+  createPermit: async (body: PekPermitCreateRequest) =>
+    unwrapPekData<PekPermit>((await api.post('/pek/permits', body)).data),
+  updatePermit: async (id: number, body: PekPermitUpdateRequest) =>
+    unwrapPekData<PekPermit>((await api.patch(`/pek/permits/${id}`, body)).data),
+  changePermitStatus: async (id: number, version: number, status: PekPermitStatus, comment: string) =>
+    unwrapPekData<PekPermit>((await api.post(`/pek/permits/${id}/status`, { version, status, comment })).data),
+  getPermitHistory: (id: number, signal?: AbortSignal) =>
+    get<PekPermitHistoryEntry[]>(`/pek/permits/${id}/history`, {}, signal),
+  getPekMemberships: (companyId: number, signal?: AbortSignal) =>
+    get<PekCompanyMembership[]>(`/pek/companies/${companyId}/members`, {}, signal),
+  addPekMembership: async (companyId: number, body: PekAddMembershipRequest) =>
+    unwrapPekData<PekCompanyMembership>((await api.post(`/pek/companies/${companyId}/members`, body)).data),
+  updatePekMembership: async (companyId: number, membershipId: number, body: PekUpdateMembershipRequest) =>
+    unwrapPekData<PekCompanyMembership>((await api.patch(`/pek/companies/${companyId}/members/${membershipId}`, body)).data),
+  deactivatePekMembership: async (companyId: number, membershipId: number) =>
+    unwrapPekData<null>((await api.delete(`/pek/companies/${companyId}/members/${membershipId}`)).data),
 
   async getReports(filters: PekReportFilters, signal?: AbortSignal): Promise<PageResponse<PekReport>> {
     const page = mapPekPage<unknown>(
@@ -182,6 +209,8 @@ export const pekApi = {
     unwrapPekData<PekReportSource>((await api.post(`/pek/reports/${reportId}/sources/${sourceId}/restore`, { version, reason })).data),
   getReportReadiness: (id: number, signal?: AbortSignal) =>
     get<PekReadinessResponse>(`/pek/reports/${id}/readiness`, {}, signal),
+  getReportHistory: (id: number, signal?: AbortSignal) =>
+    get<PekReportHistoryEntry[]>(`/pek/reports/${id}/history`, {}, signal),
   submitReportReview: (id: number, version: number) => reportAction(id, 'submit-review', version),
   returnReport: async (id: number, version: number, reason: string) =>
     mapReportResponse(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/return`, { version, reason })).data)),

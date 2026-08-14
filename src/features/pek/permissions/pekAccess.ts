@@ -12,7 +12,7 @@ const VIEW_ROLES: readonly UserRole[] = [
 const EDIT_PROGRAM_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'];
 export const REPORT_EDIT_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY'];
 export const REPORT_COLLECT_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY'];
-export const REPORT_SUBMIT_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD'];
+export const REPORT_SUBMIT_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'];
 export const REPORT_APPROVE_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD'];
 const REVIEW_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD'];
 const ADMIN_ROLES: readonly UserRole[] = ['ADMIN', 'DIRECTOR'];
@@ -108,14 +108,18 @@ const resourceFlag = (
   return undefined;
 };
 
-const actionAllowed = (report: PekReportAccess, action: string) => resourceFlag(report, action) === true;
-
-export const canEditPekReport = (_user: PekUser, report: PekReportAccess) => actionAllowed(report, 'edit');
-export const canCollectPekReport = (_user: PekUser, report: PekReportAccess) => actionAllowed(report, 'collect');
-export const canSubmitPekReport = (_user: PekUser, report: PekReportAccess) => actionAllowed(report, 'submitReview');
-export const canApprovePekReport = (_user: PekUser, report: PekReportAccess) => actionAllowed(report, 'approve');
-export const canReturnPekReport = (_user: PekUser, report: PekReportAccess) => actionAllowed(report, 'returnForRevision');
-export const canArchivePekReport = (_user: PekUser, report: PekReportAccess) => actionAllowed(report, 'archive');
+export const canEditPekReport = (user: PekUser, report: PekReportAccess) =>
+  resourceFlag(report, 'edit', 'canEdit') ?? canUsePekPermission(user, 'PEK_REPORT_EDIT');
+export const canCollectPekReport = (user: PekUser, report: PekReportAccess) =>
+  resourceFlag(report, 'collect') ?? canUsePekPermission(user, 'PEK_REPORT_COLLECT');
+export const canSubmitPekReport = (user: PekUser, report: PekReportAccess) =>
+  resourceFlag(report, 'submitReview', 'canSubmit') ?? canUsePekPermission(user, 'PEK_REPORT_SUBMIT');
+export const canApprovePekReport = (user: PekUser, report: PekReportAccess) =>
+  resourceFlag(report, 'approve', 'canApprove') ?? canUsePekPermission(user, 'PEK_REPORT_APPROVE');
+export const canReturnPekReport = (user: PekUser, report: PekReportAccess) =>
+  resourceFlag(report, 'returnForRevision') ?? canUsePekPermission(user, 'PEK_REPORT_RETURN');
+export const canArchivePekReport = (user: PekUser, report: PekReportAccess) =>
+  resourceFlag(report, 'archive', 'canArchive') ?? canUsePekPermission(user, 'PEK_REPORT_APPROVE');
 
 // Central PEK access surface. Resource-level flags are authoritative whenever
 // the response contains them; role fallback is used only when no such field is
@@ -127,13 +131,13 @@ export const canCreateReport = (user: PekUser) => canUsePekPermission(user, 'PEK
 export const canCollectResults = (user: PekUser, resource?: PekResourceAccess) =>
   resourceFlag(resource, 'collect') ?? canUsePekPermission(user, 'PEK_REPORT_COLLECT');
 export const canManageExceedance = (user: PekUser, resource?: PekResourceAccess) =>
-  resourceFlag(resource, 'manageExceedance', 'canEdit') ?? false;
+  resourceFlag(resource, 'manageExceedance', 'canEdit') ?? canUsePekPermission(user, 'PEK_REPORT_EDIT');
 export const canReviewExceedance = (user: PekUser, resource?: PekResourceAccess) =>
-  resourceFlag(resource, 'reviewExceedance', 'canApprove') ?? false;
+  resourceFlag(resource, 'reviewExceedance', 'canApprove') ?? canUsePekPermission(user, 'PEK_REPORT_REVIEW');
 export const canGenerateDocument = (user: PekUser, resource?: PekResourceAccess) =>
-  resourceFlag(resource, 'generateDocument') ?? false;
+  resourceFlag(resource, 'generateDocument') ?? canUsePekPermission(user, 'PEK_REPORT_EDIT');
 export const canSignReport = (user: PekUser, resource?: PekResourceAccess) =>
-  resourceFlag(resource, 'sign', 'canSign') ?? false;
+  resourceFlag(resource, 'sign', 'canSign') ?? canUsePekPermission(user, 'PEK_REPORT_SIGN');
 export const canArchiveReport = (user: PekUser, resource?: PekResourceAccess) =>
   resourceFlag(resource, 'archive', 'canArchive') ?? canUsePekPermission(user, 'PEK_REPORT_APPROVE');
 

@@ -10,7 +10,9 @@ import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { parseApiError } from '../../../services/apiHelpers';
 import { useAuth } from '../../../contexts/AuthContext';
-import { getActiveCompanies } from '../../../services/companyService';
+import { usePekScope } from '../hooks/usePekScope';
+import { mapPekError } from '../utils/pekErrorMapper';
+import { retryPekQuery } from '../utils/pekQueryPolicy';
 
 const booleanFields: Array<[keyof PekSettingsUpdateRequest, string]> = [
   ['includeOnlySignedProtocols', 'Учитывать только подписанные протоколы'],
@@ -35,22 +37,23 @@ const PekSettingsPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const companies = useQuery({ queryKey: ['companies', 'pek-settings', `user:${user?.id ?? 'anonymous'}`], queryFn: ({ signal }) => getActiveCompanies(signal) });
   const selectedCompanyId = Number(searchParams.get('companyId')) || 0;
+  const scope = usePekScope(selectedCompanyId || undefined);
   const settingsKey = pekKeys.settings(selectedCompanyId || null, user?.id);
   const settings = useQuery({
     queryKey: settingsKey,
     queryFn: ({ signal }) => pekApi.getSettings(selectedCompanyId, signal),
-    enabled: selectedCompanyId > 0,
+    enabled: selectedCompanyId > 0 && scope.companyAllowed,
+    retry: retryPekQuery,
   });
   const assignees = useQuery({ queryKey: pekKeys.assignees(['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal) });
   const laboratories = useQuery({ queryKey: ['laboratories', 'pek-settings', `user:${user?.id ?? 'anonymous'}`], queryFn: ({ signal }) => getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }, signal) });
   const [form, setForm] = useState<PekSettingsUpdateRequest | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   useEffect(() => {
-    if (!companies.data?.length || selectedCompanyId) return;
-    if (companies.data.length === 1) setSearchParams({ companyId: String(companies.data[0].id) }, { replace: true });
-  }, [companies.data, selectedCompanyId, setSearchParams]);
+    if (selectedCompanyId || scope.companies.length !== 1) return;
+    setSearchParams({ companyId: String(scope.companies[0].id) }, { replace: true });
+  }, [scope.companies, selectedCompanyId, setSearchParams]);
   useEffect(() => {
     if (!settings.data) return;
     setForm(toRequest(settings.data));
@@ -69,14 +72,17 @@ const PekSettingsPage = () => {
       setMessage('Настройки ПЭК сохранены.');
     },
     onError: async (error) => {
-      setMessage(parseApiError(error, 'Не удалось сохранить настройки ПЭК.').message);
+      const mapped = mapPekError(error);
+      const fields = Object.entries(mapped.fieldErrors).map(([field, value]) => `${field}: ${value}`).join('; ');
+      setMessage(`${mapped.message || parseApiError(error, 'Не удалось сохранить настройки ПЭК.').message}${mapped.code ? ` (${mapped.code})` : ''}${fields ? `. ${fields}` : ''}`);
       await settings.refetch();
     },
   });
-  const showCompanySelector = user?.role === 'ADMIN' || user?.role === 'DIRECTOR' || (companies.data?.length ?? 0) > 1;
-  if (companies.isLoading || (selectedCompanyId > 0 && settings.isLoading)) return <PekLoading />;
-  if (companies.isError) return <PekQueryError error={companies.error} resource="компании для настроек ПЭК" retry={() => void companies.refetch()} />;
-  if (!selectedCompanyId) return <div className="space-y-5"><PekPageHeader title="Настройки ПЭК" description="Выберите компанию, настройки которой нужно открыть" />{showCompanySelector && <TextField select fullWidth label="Компания" value="" onChange={(event) => setSearchParams({ companyId: event.target.value }, { replace: true })}><MenuItem value="">Выберите компанию</MenuItem>{companies.data?.map((company) => <MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>)}</TextField>}<PekState title="Выберите компанию" message="Для загрузки настроек ПЭК требуется companyId." /></div>;
+  const companyInput = <><TextField fullWidth type="number" label="Компания (PEK scope)" value={selectedCompanyId || ''} inputProps={{ min: 1, list: 'pek-settings-companies' }} onChange={(event) => { setForm(null); setMessage(null); setSearchParams(event.target.value ? { companyId: event.target.value } : {}, { replace: true }); }} /><datalist id="pek-settings-companies">{scope.companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</datalist></>;
+  if (!selectedCompanyId) return <div className="space-y-5"><PekPageHeader title="Настройки ПЭК" description="Выберите компанию, настройки которой нужно открыть" />{companyInput}<PekState title="Выберите компанию" message="Компании предлагаются из PEK scope backend; ID можно указать вручную для серверной проверки." /></div>;
+  if (scope.companyAccess.isFetching) return <div className="space-y-5"><PekPageHeader title="Настройки ПЭК" description="Проверка доступа к компании" />{companyInput}<PekLoading /></div>;
+  if (scope.companyAccess.isError) return <div className="space-y-5"><PekPageHeader title="Настройки ПЭК" description="Проверка доступа к компании" />{companyInput}<PekQueryError error={scope.companyAccess.error} resource="PEK scope компании" retry={() => void scope.companyAccess.refetch()} /></div>;
+  if (settings.isLoading) return <PekLoading />;
   if (settings.isError) return <PekQueryError error={settings.error} resource="настройки ПЭК" retry={() => void settings.refetch()} />;
   if (!settings.data || !form) return <PekState title="Настройки ПЭК не получены" message="Сервис не вернул данные настроек." />;
   const editable = settings.data?.availableActions.edit === true;
@@ -84,7 +90,7 @@ const PekSettingsPage = () => {
   const set = <K extends keyof PekSettingsUpdateRequest>(key: K, value: PekSettingsUpdateRequest[K]) => setForm((current) => current ? { ...current, [key]: value } : current);
   return <div className="space-y-5">
     <PekPageHeader title="Настройки ПЭК" description="Правила сбора данных и проверки готовности отчётов" />
-    {showCompanySelector && <TextField select fullWidth label="Компания" value={selectedCompanyId} onChange={(event) => { setForm(null); setMessage(null); setSearchParams({ companyId: event.target.value }, { replace: true }); }}>{companies.data?.map((company) => <MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>)}</TextField>}
+    {companyInput}
     {!editable && <Alert severity="info">Настройки доступны только для просмотра</Alert>}
     {message && <Alert severity={save.isError ? 'error' : 'success'}>{message}</Alert>}
     {settings.data?.capabilities.automaticCollectionSupported === false && <Alert severity="info">Автоматический сбор по расписанию backend пока не поддерживает. Доступен ручной сбор из отчёта.</Alert>}
@@ -95,6 +101,7 @@ const PekSettingsPage = () => {
         <TextField select label="Лаборатория по умолчанию" value={form.defaultLaboratoryId ?? ''} disabled={!editable || laboratories.isLoading} onChange={(event) => set('defaultLaboratoryId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбрана</MenuItem>{laboratories.data?.content.map((laboratory) => <MenuItem key={laboratory.id} value={laboratory.id}>{laboratory.name}</MenuItem>)}</TextField>
         <TextField type="number" label="Уведомлять до срока, дней" value={form.notifyBeforeDeadlineDays} disabled={!editable} inputProps={{ min: 0, max: 365 }} onChange={(event) => set('notifyBeforeDeadlineDays', Number(event.target.value))} />
       </div>
+      <FormControlLabel control={<Checkbox checked={form.autoCollectProtocols} disabled={!editable || settings.data.capabilities.automaticCollectionSupported !== true} onChange={(event) => set('autoCollectProtocols', event.target.checked)} />} label="Автоматически собирать протоколы" />
       <div className="grid gap-2 md:grid-cols-2">{booleanFields.map(([key, label]) => <FormControlLabel key={key} control={<Checkbox checked={Boolean(form[key])} disabled={!editable} onChange={(event) => set(key, event.target.checked)} />} label={label} />)}</div>
       {editable && <div className="flex justify-end gap-3"><Button variant="outlined" disabled={!dirty || save.isPending} onClick={() => settings.data && setForm(toRequest(settings.data))}>Сбросить</Button><Button variant="contained" disabled={!dirty || save.isPending} onClick={() => save.mutate(form)}>{save.isPending ? 'Сохранение…' : 'Сохранить'}</Button></div>}
     </section>

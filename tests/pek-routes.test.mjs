@@ -16,6 +16,8 @@ test('required PEK routes are registered once', () => {
     '/staff/pek/reports',
     '/staff/pek/reports/new',
     '/staff/pek/reports/:reportId',
+    '/staff/pek/permits',
+    '/staff/pek/access',
     '/staff/pek/settings',
   ].forEach((route) => assert.match(app, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))));
   assert.doesNotMatch(app, /\/staff\/pek\/programs\/:programId\/versions/);
@@ -27,14 +29,14 @@ test('production PEK transport contains only backend-implemented report contract
   [
     'unmatched-sources',
     'collection-runs/latest',
-    'reports/${id}/history',
-    'exceedances',
     'review-comments',
     'prepare-signing',
     'exports/',
     'submission',
     'revision',
   ].forEach((unsupported) => assert.doesNotMatch(service, new RegExp(unsupported)));
+  assert.match(service, /reports\/\$\{id\}\/history/);
+  assert.match(service, /reports\/\$\{reportId\}\/exceedances/);
 });
 
 test('report workspace does not synthesize polling or protocol links', () => {
