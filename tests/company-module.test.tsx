@@ -154,4 +154,24 @@ describe('companies frontend contract', () => {
     expect(await screen.findByText('Укажите руководителя')).toBeTruthy();
     expect(screen.getByRole('textbox', { name: /Руководитель/ }).getAttribute('aria-invalid')).toBe('true');
   });
+
+  it('creates a company without bank requisites and treats whitespace as empty', async () => {
+    let submitted: unknown;
+    render(<CompanyForm onSubmit={async (payload) => { submitted = payload; }} />);
+
+    fireEvent.change(screen.getByLabelText('Наименование *'), { target: { value: 'ТОО Без реквизитов' } });
+    fireEvent.change(screen.getByLabelText('БИН *'), { target: { value: '123456789012' } });
+    fireEvent.change(screen.getByLabelText('БИК'), { target: { value: '   ' } });
+    fireEvent.change(screen.getByLabelText('IBAN'), { target: { value: '   ' } });
+    fireEvent.change(screen.getByLabelText('КБЕ'), { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    await waitFor(() => expect(submitted).toMatchObject({
+      bankName: null,
+      bik: null,
+      iban: null,
+      kbe: null,
+      notes: null,
+    }));
+  });
 });

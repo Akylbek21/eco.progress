@@ -267,6 +267,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     return saveMutation.mutateAsync(form.getValues());
   };
   const next = async () => {
+    setGeneralError('');
     // The next screen is the validation summary. Let the user open it even
     // when result rows are incomplete; completion remains blocked there.
     if (step === 2) {
@@ -281,6 +282,10 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     }
     if (currentStepErrors.length) {
       const first = currentStepErrors[0];
+      currentStepErrors.forEach((item) => {
+        if (item.field) form.setError(item.field as FieldPath<ProtocolWizardForm>, { type: 'required', message: item.message });
+      });
+      setGeneralError(first.message);
       goToIssue(first.step, first.field as FieldPath<ProtocolWizardForm>);
       return;
     }
@@ -390,7 +395,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
           {generalError && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><p className="font-black">Проверьте данные</p><p className="mt-1 font-semibold">{generalError}</p></div>}
           {content}
         </main>
-        <ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue={step === 2 || (currentStepErrors.length === 0 && (step < steps.length - 1 || blockingIssues.length === 0))} canSaveDraft={canSaveServerDraft} saveState={saveState === 'local' ? 'Локальная копия сохранена' : saveState === 'creating' ? 'Создание серверного черновика…' : saveState === 'created' ? 'Черновик сохранён на сервере' : saveState === 'saving' ? 'Сохранение изменений…' : saveState === 'saved' ? 'Изменения сохранены' : saveState === 'conflict' ? 'Конфликт версий' : saveState === 'error' ? 'Не удалось сохранить' : undefined} nextLabel={step === 0 ? 'К условиям' : step === 1 ? 'К результатам' : step === 2 ? 'Проверить данные' : 'К завершению'} createLabel="Создать и открыть" onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />
+        <ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue={step <= 2 || (currentStepErrors.length === 0 && (step < steps.length - 1 || blockingIssues.length === 0))} canSaveDraft={canSaveServerDraft} saveState={saveState === 'local' ? 'Локальная копия сохранена' : saveState === 'creating' ? 'Создание серверного черновика…' : saveState === 'created' ? 'Черновик сохранён на сервере' : saveState === 'saving' ? 'Сохранение изменений…' : saveState === 'saved' ? 'Изменения сохранены' : saveState === 'conflict' ? 'Конфликт версий' : saveState === 'error' ? 'Не удалось сохранить' : undefined} nextLabel={step === 0 ? 'К условиям' : step === 1 ? 'К результатам' : step === 2 ? 'Проверить данные' : 'К завершению'} createLabel="Создать и открыть" onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />
       </div>
     </Modal>
     <Modal open={conflict} onClose={() => setConflict(false)} closeOnBackdrop={false} size="sm" title="Протокол изменён другим сотрудником" footer={<><Button type="button" variant="secondary" onClick={() => { writeLocalProtocolDraft(sessionStorage, { schemaVersion: LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION, userId: String(user?.id ?? 'anonymous'), protocolId: serverDraft?.id ?? null, backendVersion: serverDraft?.version ?? null, idempotencyKey: idempotencyKeyRef.current, currentStep: step, formValues: form.getValues(), savedAt: new Date().toISOString(), hasUnsavedChanges: true }); setConflict(false); }}>Сохранить локальную копию</Button><Button type="button" onClick={() => void loadLatest()}>Загрузить актуальную версию</Button></>}><p className="text-sm text-slate-700">Данные не были перезаписаны. Выберите, сохранить ли введённые данные локально или загрузить актуальную серверную версию.</p></Modal>

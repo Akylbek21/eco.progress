@@ -217,7 +217,7 @@ describe('signature card states and locking', () => {
     expect(screen.getByText('У вас нет доступа к подписанию протокола')).toBeTruthy();
   });
 
-  it('uses backend permissions without local status or role aliases', () => {
+  it('keeps signed protocol content read-only even if backend returns canEdit', () => {
     const item = protocol({
       status: 'SIGNED',
       signatureCount: 1,
@@ -230,7 +230,7 @@ describe('signature card states and locking', () => {
       },
     });
     expect(getProtocolPermissions(item, 'MANAGER')).toMatchObject({
-      canEdit: true,
+      canEdit: false,
       canCalculate: true,
       canGenerateDocuments: true,
       canReplace: true,

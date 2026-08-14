@@ -129,12 +129,13 @@ const CompanyForm = ({ initialValue, loading = false, submitText = 'Сохран
         </div>
       </section>
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900">Реквизиты</h2>
+        <h2 className="text-lg font-bold text-slate-900">Реквизиты <span className="text-sm font-medium text-slate-500">(необязательно)</span></h2>
+        <p className="mt-1 text-sm text-slate-500">Банк, БИК, IBAN, КБЕ и примечание можно заполнить позже.</p>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <Field name="bankName" label="Банк" />
-          <Field name="bik" label="БИК" rules={{ validate: (value) => !value || bikPattern.test(value.replace(/\s/g, '').toUpperCase()) || 'БИК должен содержать 8 или 11 латинских букв и цифр' }} />
-          <Field name="iban" label="IBAN" rules={{ validate: (value) => !value || ibanPattern.test(value.replace(/\s/g, '').toUpperCase()) || 'IBAN Казахстана должен начинаться с KZ и содержать 20 символов' }} />
-          <Field name="kbe" label="КБЕ" rules={{ validate: (value) => !value || /^\d{2}$/.test(value.trim()) || 'КБЕ должен содержать 2 цифры' }} />
+          <Field name="bik" label="БИК" rules={{ validate: (value) => !value.trim() || bikPattern.test(value.replace(/\s/g, '').toUpperCase()) || 'БИК должен содержать 8 или 11 латинских букв и цифр' }} />
+          <Field name="iban" label="IBAN" rules={{ validate: (value) => !value.trim() || ibanPattern.test(value.replace(/\s/g, '').toUpperCase()) || 'IBAN Казахстана должен начинаться с KZ и содержать 20 символов' }} />
+          <Field name="kbe" label="КБЕ" rules={{ validate: (value) => !value.trim() || /^\d{2}$/.test(value.trim()) || 'КБЕ должен содержать 2 цифры' }} />
           <label className="block text-sm font-semibold text-slate-700 md:col-span-2">
             <span>Примечание</span>
             <textarea rows={4} className={`${inputClass} mt-1.5`} {...register('notes')} />

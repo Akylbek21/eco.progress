@@ -31,7 +31,8 @@ const ProtocolResultRow = ({
 }: Props) => {
   const { register, control, watch, formState: { errors } } = useFormContext<ProtocolWizardForm>();
   const row = watch(`results.${index}`);
-  const manual = row?.normativeSource !== 'DIRECTORY';
+  const directoryNormative = row?.normativeSource === 'DIRECTORY';
+  const manual = row?.normativeSource === 'MANUAL';
   const rowErrors = errors.results?.[index];
 
   return (
@@ -51,8 +52,8 @@ const ProtocolResultRow = ({
           <h4 className="text-sm font-black text-slate-900">
             Показатель №{index + 1}
           </h4>
-          <p className={`mt-1 text-xs font-bold ${manual ? 'text-amber-700' : 'text-emerald-700'}`}>
-            {manual ? 'Норматив не выбран' : row?.normativeStatus === 'REVIEW' ? 'Требуется проверка' : 'Норматив выбран'}
+          <p className={`mt-1 text-xs font-bold ${directoryNormative ? 'text-emerald-700' : 'text-amber-700'}`}>
+            {manual ? 'Ручной норматив' : !directoryNormative ? 'Норматив не выбран' : row?.normativeStatus === 'REVIEW' ? 'Требуется проверка' : 'Норматив выбран'}
           </p>
         </div>
         <div className="flex items-center gap-1">
@@ -72,11 +73,10 @@ const ProtocolResultRow = ({
         <label className={`${labelClass} sm:col-span-2 lg:col-span-5`}>
           Наименование показателя
           <input
-            readOnly={!manual}
             aria-label={`Показатель строки ${index + 1}`}
-            placeholder="Выберите норматив через поиск"
+            placeholder="Выберите норматив через поиск или введите вручную"
             {...register(`results.${index}.indicatorName`)}
-            className={`${inputClass} font-semibold text-slate-700 ${!manual ? 'cursor-default bg-slate-50' : ''} ${rowErrors?.indicatorName ? 'border-rose-400' : ''}`}
+            className={`${inputClass} font-semibold text-slate-700 ${rowErrors?.indicatorName ? 'border-rose-400' : ''}`}
           />
           {rowErrors?.indicatorName?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.indicatorName.message}</span>}
         </label>
@@ -84,16 +84,14 @@ const ProtocolResultRow = ({
         <label className={`${labelClass} lg:col-span-3`}>
           {chemical ? 'Код загрязняющего вещества' : 'Тип фактора'}
           {chemical ? <input
-            readOnly={!manual}
             aria-label="Код загрязняющего вещества"
-            placeholder="Код из норматива"
+            placeholder="Введите код показателя"
             {...register(`results.${index}.pollutantCode`)}
-            className={`${inputClass} text-slate-700 ${!manual ? 'cursor-default bg-slate-50' : ''} ${rowErrors?.pollutantCode ? 'border-rose-400' : ''}`}
+            className={`${inputClass} text-slate-700 ${rowErrors?.pollutantCode ? 'border-rose-400' : ''}`}
           /> : <select
             aria-label="Тип фактора"
-            disabled={!manual}
             {...register(`results.${index}.factorType`)}
-            className={`${inputClass} text-slate-700 ${!manual ? 'cursor-default bg-slate-50' : ''} ${rowErrors?.factorType ? 'border-rose-400' : ''}`}
+            className={`${inputClass} text-slate-700 ${rowErrors?.factorType ? 'border-rose-400' : ''}`}
           >
             <option value="">Выберите тип фактора</option>
             {protocolFactorTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -117,11 +115,10 @@ const ProtocolResultRow = ({
         <label className={`${labelClass} lg:col-span-2`}>
           Единица измерения
           <input
-            readOnly={!manual}
             aria-label="Единица измерения"
-            placeholder="Из норматива"
+            placeholder="Введите единицу измерения"
             {...register(`results.${index}.unit`)}
-            className={`${inputClass} text-slate-700 ${!manual ? 'cursor-default bg-slate-50' : ''} ${rowErrors?.unit ? 'border-rose-400' : ''}`}
+            className={`${inputClass} text-slate-700 ${rowErrors?.unit ? 'border-rose-400' : ''}`}
           />
           {rowErrors?.unit?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.unit.message}</span>}
         </label>
@@ -164,21 +161,11 @@ const ProtocolResultRow = ({
         <label className={`${labelClass} lg:col-span-2`}>
           Норматив
           <input
-            readOnly
             aria-label="Норматив"
-            value={
-              row?.comparisonType === 'RANGE'
-                ? [row.normativeMin, row.normativeMax].filter((value) => value !== '').join(' — ')
-                : row?.comparisonType === 'GREATER_OR_EQUAL'
-                  ? `≥ ${row.normativeMin || row.normativeValue || ''}`.trim()
-                  : row?.normativeMax
-                    ? `≤ ${row.normativeMax}`
-                    : row?.normativeValue !== ''
-                      ? `≤ ${row.normativeValue}`
-                      : ''
-            }
-            placeholder="Не выбран"
-            className={`${inputClass} cursor-default bg-eco-50 font-bold text-eco-900`}
+            inputMode="decimal"
+            placeholder="Введите норматив"
+            {...register(`results.${index}.normativeValue`)}
+            className={`${inputClass} font-bold text-eco-900`}
           />
         </label>
 

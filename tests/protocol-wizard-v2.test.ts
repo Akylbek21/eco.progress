@@ -323,26 +323,41 @@ describe('protocol wizard validation and backend errors', () => {
     expect(editor).toContain('onTestingBasisChange={(testingBasis)');
   });
 
-  it('keeps Continue enabled on results so validation details open on the Review step', () => {
+  it('keeps Continue clickable and reveals missing fields instead of silently disabling it', () => {
     const wizard = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/CreateProtocolWizardModalV2.tsx'), 'utf8');
     const results = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/steps/ResultsStep.tsx'), 'utf8');
     const table = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/components/ProtocolResultTable.tsx'), 'utf8');
 
-    expect(wizard).toContain('canContinue={step === 2 ||');
+    expect(wizard).toContain('canContinue={step <= 2 ||');
+    expect(wizard).toContain("form.setError(item.field as FieldPath<ProtocolWizardForm>");
+    expect(wizard).toContain('setGeneralError(first.message)');
     expect(wizard).toContain('if (step === 2)');
     expect(wizard).toContain('setStep(3)');
     expect(results).toContain('Для завершения заполните:');
     expect(table).toContain("rowIssue ? 'Нужно заполнить' : 'Заполнено'");
   });
 
-  it('keeps additional result fields editable through autosave rerenders', () => {
+  it('keeps additional result fields registered as editable inputs', () => {
     const details = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/components/ProtocolResultDetails.tsx'), 'utf8');
 
-    expect(details).toContain('register: registerField');
-    expect(details).toContain("value: String(watch(field) ?? '')");
+    expect(details).toContain('const { register, watch');
+    expect(details).not.toContain("value: String(watch(field) ?? '')");
     expect(details).not.toMatch(/disabled=|readOnly/);
     for (const field of ['testingMethodNd', 'methodName', 'cas', 'formula', 'samplingSpeed', 'sampleVolume', 'sampleNumber', 'samplingDepth', 'samplingDate']) {
       expect(details).toContain(`results.\${index}.${field}`);
+    }
+  });
+
+  it('keeps draft result fields editable with or without a selected normative', () => {
+    const row = readFileSync(resolve(process.cwd(), 'src/features/protocols/components/components/ProtocolResultRow.tsx'), 'utf8');
+
+    expect(row).toContain("const directoryNormative = row?.normativeSource === 'DIRECTORY'");
+    expect(row).not.toContain('readOnly={directoryNormative}');
+    expect(row).not.toContain('disabled={directoryNormative}');
+    expect(row).toContain('placeholder="Введите норматив"');
+    expect(row).toContain("register(`results.${index}.normativeValue`)");
+    for (const field of ['indicatorName', 'factorType', 'value', 'samplingPlace', 'unit']) {
+      expect(row).toContain(`results.\${index}.${field}`);
     }
   });
 

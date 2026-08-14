@@ -16,7 +16,8 @@ const isProtocolDocumentRole = (role?: string | null): role is ProtocolDocumentR
 export const isInternalProtocolUser = (_user: ProtocolUser | string): boolean => false;
 export const canViewProtocol = (_user: ProtocolUser, protocol?: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canView');
 export const canCreateProtocol = (user: ProtocolUser) => isProtocolDocumentRole(user?.role);
-export const canEditProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canEdit');
+export const canEditProtocol = (_user: ProtocolUser, protocol: ProtocolLike) =>
+  isProtocolStatusEditable(protocol?.status) && hasProtocolPermission(protocol || undefined, 'canEdit');
 export const canEditResults = canEditProtocol;
 export const canSendForApproval = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canSendToApproval');
 export const canReturnForRevision = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolPermission(protocol || undefined, 'canReturnForRevision');
@@ -42,12 +43,13 @@ export type ProtocolPermissions = Required<BackendProtocolPermissions> & {
 export const getProtocolPermissions = (protocol: ProtocolLike, role?: string, _allowAll = false): ProtocolPermissions => {
   const backend = protocol?.permissions;
   const unknownStatus = Boolean(protocol?.status) && normalizeProtocolStatus(protocol?.status) === 'UNKNOWN';
+  const statusEditable = isProtocolStatusEditable(protocol?.status);
   const flag = (key: keyof BackendProtocolPermissions) => {
     if (unknownStatus && key !== 'canView') return false;
     return backend?.[key] === true;
   };
   return {
-    canView: flag('canView'), canEdit: flag('canEdit'), canDelete: flag('canDelete'),
+    canView: flag('canView'), canEdit: statusEditable && flag('canEdit'), canDelete: flag('canDelete'),
     canCalculate: flag('canCalculate'), canCheckNormatives: flag('canCheckNormatives'),
     canGeneratePreview: flag('canGeneratePreview'), canSendToApproval: flag('canSendToApproval'),
     canReturnForRevision: flag('canReturnForRevision'), canApprove: hasProtocolAction(protocol || undefined, 'APPROVE'),
@@ -55,7 +57,7 @@ export const getProtocolPermissions = (protocol: ProtocolLike, role?: string, _a
     canCancel: flag('canCancel'), canArchive: flag('canArchive'), canPublish: flag('canPublish'),
     canGenerateDocuments: flag('canGenerateDocuments'), canRegenerateDocuments: flag('canRegenerateDocuments'),
     canReadyForApproval: flag('canSendToApproval'), canReplace: flag('canCreateCorrection'),
-    canDownload: canDownloadProtocolDocument(protocol, role), canManageResults: flag('canEdit'), canManageDevices: flag('canEdit'),
+    canDownload: canDownloadProtocolDocument(protocol, role), canManageResults: statusEditable && flag('canEdit'), canManageDevices: statusEditable && flag('canEdit'),
     canViewAudit: flag('canView'),
   };
 };

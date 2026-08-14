@@ -1,5 +1,5 @@
 import { ChevronDown } from 'lucide-react';
-import { useFormContext, type FieldPath } from 'react-hook-form';
+import { useFormContext } from 'react-hook-form';
 import { CHEMICAL_TYPES, type ProtocolWizardForm } from '../wizardTypes';
 
 const inputClass =
@@ -7,11 +7,7 @@ const inputClass =
 const labelClass = 'block text-xs font-bold text-slate-600';
 
 const ProtocolResultDetails = ({ index }: { index: number }) => {
-  const { register: registerField, watch, formState: { errors } } = useFormContext<ProtocolWizardForm>();
-  const register = (field: FieldPath<ProtocolWizardForm>) => ({
-    ...registerField(field),
-    value: String(watch(field) ?? ''),
-  });
+  const { register, watch, formState: { errors } } = useFormContext<ProtocolWizardForm>();
   const type = watch('templateId');
   const chemical = Boolean(type && CHEMICAL_TYPES.has(type));
   const rowErrors = errors.results?.[index];

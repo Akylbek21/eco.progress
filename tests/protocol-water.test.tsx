@@ -3,12 +3,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { FormProvider, useForm } from 'react-hook-form';
 import { describe, expect, it, vi } from 'vitest';
 import EnvironmentStep from '../src/features/protocols/components/steps/EnvironmentStep';
+import ProtocolResultRow from '../src/features/protocols/components/components/ProtocolResultRow';
 import {
   backendWizardIssues,
   resolveWizardStepByField,
   WATER_CONDITIONS_STEP_INDEX,
 } from '../src/features/protocols/components/CreateProtocolWizardModal';
-import { createWizardDefaults, type ProtocolWizardForm } from '../src/features/protocols/components/wizardTypes';
+import { createWizardDefaults, emptyWizardResult, type ProtocolWizardForm } from '../src/features/protocols/components/wizardTypes';
 import { mapConditions } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
 import { mapProtocolFormToUpdateRequest } from '../src/features/protocols/api/protocolMappers';
 import { normalizeProtocol } from '../src/services/apiProtocolService';
@@ -23,7 +24,42 @@ const EnvironmentHarness = ({ templateId }: { templateId: ProtocolWizardForm['te
   );
 };
 
+const DirectoryNormativeResultHarness = () => {
+  const defaults = createWizardDefaults();
+  defaults.templateId = 'noise_vibration';
+  defaults.results = [{
+    ...emptyWizardResult(),
+    clientRowId: 'directory-row',
+    normativeId: '12',
+    normativeSource: 'DIRECTORY',
+    indicatorName: 'Шум',
+    factorType: 'NOISE',
+    value: '1',
+    unit: 'дБА',
+    normativeValue: '80',
+  }];
+  const form = useForm<ProtocolWizardForm>({ defaultValues: defaults });
+  return (
+    <FormProvider {...form}>
+      <ProtocolResultRow index={0} chemical={false} devices={[]} measurementDate="2026-08-14" laboratoryId="" invalidDevice={false} onRemove={() => undefined} />
+    </FormProvider>
+  );
+};
+
 describe('water protocol wizard and editor contract', () => {
+  it('does not lock draft result fields after selecting a directory normative', () => {
+    const markup = renderToStaticMarkup(<DirectoryNormativeResultHarness />);
+    expect(markup).not.toContain('readonly=""');
+    expect(markup).not.toContain('disabled=""');
+    expect(markup).toContain('name="results.0.indicatorName"');
+    expect(markup).toContain('name="results.0.factorType"');
+    expect(markup).toContain('name="results.0.normativeValue"');
+    expect(markup).toContain('name="results.0.minimumValue"');
+    expect(markup).toContain('name="results.0.maximumValue"');
+    expect(markup).toContain('name="results.0.averageValue"');
+    expect(markup).toContain('name="results.0.duration"');
+  });
+
   it('shows two required water selectors only for a water protocol', () => {
     const water = renderToStaticMarkup(<EnvironmentHarness templateId="water" />);
     expect(water).toContain('Характеристики воды');
