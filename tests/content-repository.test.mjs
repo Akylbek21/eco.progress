@@ -53,14 +53,21 @@ test('unverified trust data and case drafts are never presented as approved', ()
   assert.equal(publishedCaseStudies.length, 0);
 });
 
-test('thin service-city templates are excluded from the public SEO registry', () => {
+test('waste utilization is exposed only for Shymkent, Taraz and Turkestan', () => {
   const serviceCityPages = seoPages.filter((page) => page.type === 'service-city');
-  assert.deepEqual(serviceCityPages.map((page) => page.slug), ['utilizaciya-othodov-shymkent']);
-  const citySlugs = new Set(seoPages.filter((page) => page.type === 'city').map((page) => page.slug.replace('ecologicheskie-uslugi-', '')));
-  assert.ok(regionContent.every((region) => citySlugs.has(region.regionSlug)));
+  const wasteUtilizationPages = serviceCityPages.filter((page) => page.slug.startsWith('utilizaciya-othodov-'));
+  assert.deepEqual(wasteUtilizationPages.map((page) => page.slug), [
+    'utilizaciya-othodov-shymkent',
+    'utilizaciya-othodov-taraz',
+    'utilizaciya-othodov-turkestan',
+  ]);
   const publicUrls = new Set(getAllPublicUrls().map((item) => item.loc));
-  assert.ok(publicUrls.has('https://ecoprogress.kz/ecologicheskie-uslugi-karaganda'));
-  assert.ok(!publicUrls.has('https://ecoprogress.kz/ecologicheskie-uslugi-kostanay'));
+  for (const city of ['shymkent', 'taraz', 'turkestan']) {
+    assert.ok(publicUrls.has(`https://ecoprogress.kz/utilizaciya-othodov-${city}`));
+  }
+  for (const city of ['almaty', 'astana', 'kyzylorda', 'aktobe', 'atyrau', 'karaganda', 'pavlodar']) {
+    assert.ok(!publicUrls.has(`https://ecoprogress.kz/utilizaciya-othodov-${city}`));
+  }
 });
 
 test('service and article templates render mandatory structured content blocks', async () => {

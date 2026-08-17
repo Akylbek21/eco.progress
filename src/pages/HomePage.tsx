@@ -14,7 +14,7 @@ import { featuredSeoLinks } from '../data/featuredSeoLinks';
 import { trackEvent } from '../services/analytics';
 import { activeServices } from '../content/serviceCatalog';
 
-const benefits = ['Экологическое проектирование', 'Лабораторные исследования', 'Вывоз и утилизация в Шымкенте', 'Полигон ТБО', 'Работаем по Казахстану', 'Документы и сопровождение'];
+const benefits = ['Экологическое проектирование', 'Лабораторные исследования', 'Утилизация: Шымкент, Тараз, Туркестан', 'Полигон ТБО', 'Работаем по Казахстану', 'Документы и сопровождение'];
 
 const processSteps = [
   {
@@ -118,7 +118,7 @@ const HomePage = () => (
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">О компании</p>
             <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">ecoprogress.kz — комплексные экологические решения</h2>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
-              ecoprogress.kz помогает бизнесу с проектированием, лабораторными исследованиями и сопровождением по Казахстану. Вывоз и утилизация отходов доступны в Шымкенте.
+              ecoprogress.kz помогает бизнесу с проектированием, лабораторными исследованиями и сопровождением по Казахстану. Утилизация отходов доступна в Шымкенте, Таразе и Туркестане; вывоз — в Шымкенте.
             </p>
             <Button asChild className="mt-7"><Link to="/about">Подробнее о компании</Link></Button>
           </div>

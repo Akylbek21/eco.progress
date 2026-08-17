@@ -213,7 +213,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 ecoprogress.kz
               </h3>
               <p className="mt-4 max-w-md text-sm leading-6 text-white/75">
-                Экологические документы и лаборатория по Казахстану, вывоз и утилизация отходов в Шымкенте.
+                Экологические документы и лаборатория по Казахстану. Утилизация отходов — Шымкент, Тараз и Туркестан; вывоз — Шымкент.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <WhatsAppButton label="WhatsApp" className="bg-accent px-4 py-2 text-eco-900 hover:bg-accent/90" />
@@ -226,7 +226,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 <li><Link to="/services/environmental-design" className="hover:text-white">Экологическое проектирование</Link></li>
                 <li><Link to="/services/laboratory-tests" className="hover:text-white">Лабораторные замеры</Link></li>
                 <li><Link to="/services/industrial-control" className="hover:text-white">Производственный контроль</Link></li>
-                <li><Link to="/services/waste-management" className="hover:text-white">Утилизация отходов в Шымкенте</Link></li>
+                <li><Link to="/services/waste-recycling" className="hover:text-white">Утилизация: Шымкент, Тараз, Туркестан</Link></li>
                 <li><Link to="/passport-othodov-kazakhstan" className="hover:text-white">Паспорт отходов</Link></li>
                 <li><Link to="/otchet-pek-kazakhstan" className="hover:text-white">Отчет ПЭК</Link></li>
                 <li><Link to="/services/environmental-permits" className="hover:text-white">Разрешения</Link></li>

@@ -1,13 +1,14 @@
 import { frontendServices } from './service-catalog.mjs';
 import { articleContent } from '../src/content/articles/articleContent.ts';
 import { regionContentMap } from '../src/content/regions/regionContent.ts';
-import { activeServices } from '../src/content/serviceCatalog.ts';
+import { activeServices, wasteRecyclingRegionSlugs } from '../src/content/serviceCatalog.ts';
 import { serviceContentMap } from '../src/content/services/serviceContent.ts';
 import { aboutPublicContent } from '../src/content/aboutPublicContent.ts';
 
 const SITE_URL = 'https://ecoprogress.kz';
 const LASTMOD = '2026-07-17';
 const OG_IMAGE = `${SITE_URL}/media/social/ecoprogress-og-1200x630.jpg`;
+const wasteRecyclingRegions = new Set(wasteRecyclingRegionSlugs);
 
 const cityProfiles = [
   ['almaty', 'Алматы', 'Алматы и Алматинская область', 'офисы, клиники, рестораны, склады, торговые центры и пищевые производства', 'Высокая плотность объектов и частые проверки требуют аккуратного ведения экологических документов и лабораторных протоколов.', ['astana', 'shymkent', 'taldykorgan']],
@@ -195,7 +196,7 @@ const baseServices = [
   ['ecological-documents', 'Экологические документы', '/services/environmental-design'],
   ['laboratory-tests', 'Лабораторные замеры', '/services/laboratory-tests'],
   ['industrial-control', 'Производственный контроль СЭС', '/services/industrial-control'],
-  ['waste-management', 'Утилизация отходов в Шымкенте', '/services/waste-management'],
+  ['waste-recycling', 'Утилизация отходов: Шымкент, Тараз, Туркестан', '/services/waste-recycling'],
   ['environmental-permits', 'Разрешения и декларации', '/services/environmental-permits'],
   ['ecological-support', 'Экологическое сопровождение', '/services/ecological-support'],
 ];
@@ -224,7 +225,7 @@ const serviceFaq = (service, city) => [
   [`Можно ли начать дистанционно из ${city.name}?`, `Да. Первичный аудит, расчет и подготовку документов для ${city.regionGenitive} можно начать дистанционно. Замеры или выезд согласуются по адресу и заданию отдельно.`],
   [`Что получает клиент по итогам работы в ${city.namePrepositional}?`, `По задаче в ${city.namePrepositional} клиент получает ${service.result}, рекомендации по недостающим документам и сопровождение в согласованном составе.`],
   ['Подходит ли услуга для проверки СЭС или экологии?', 'Да, если перечень работ подобран под фактическую проверку. Мы заранее уточняем, какие документы и протоколы могут запросить контролирующие органы.'],
-  ['Можно ли заказать комплексное сопровождение?', 'Да. К услуге можно подключить экологическое проектирование, лабораторные замеры, ПЭК, паспорта отходов и сопровождение проверок. Утилизация доступна только в Шымкенте.'],
+  ['Можно ли заказать комплексное сопровождение?', 'Да. К услуге можно подключить экологическое проектирование, лабораторные замеры, ПЭК, паспорта отходов и сопровождение проверок. Утилизация доступна в Шымкенте, Таразе и Туркестане.'],
 ].map(([question, answer]) => ({ question, answer }));
 
 const cityLinks = (city) => {
@@ -239,15 +240,19 @@ const cityLinks = (city) => {
 };
 
 const activeCityProfiles = cityProfiles.filter((city) => city.name && city.region && city.objects && city.localNote);
+const isServiceAvailableInCity = (service, city) => service.key !== 'waste-utilization' || wasteRecyclingRegions.has(city.slug);
 const serviceCityLink = (service, city) => link(`${service.titleName} в ${city.namePrepositional}`, `/${service.slugPrefix}-${city.slug}`);
 const relatedServiceCityLinks = (service, city) => {
   const current = serviceProfiles.findIndex((item) => item.key === service.key);
-  return [1, 2, 3, 4].map((offset) => serviceProfiles[(current + offset) % serviceProfiles.length]).map((item) => serviceCityLink(item, city));
+  return [1, 2, 3, 4]
+    .map((offset) => serviceProfiles[(current + offset) % serviceProfiles.length])
+    .filter((item) => isServiceAvailableInCity(item, city))
+    .map((item) => serviceCityLink(item, city));
 };
 
 const citySections = (city) => [
   { title: 'Какие документы нужны', body: `Для бизнеса в ${city.namePrepositional} чаще всего нужны документы по отходам, протоколы лабораторных замеров, программа и отчет ПЭК, разрешительные материалы и договоры по отходам. Точный перечень зависит от категории объекта, источников воздействия и вида деятельности.` },
-  { title: 'Что входит в экологические услуги', body: `Для предприятий ${city.regionGenitive} доступны экологическое проектирование, лабораторные замеры, производственный контроль, документы по отходам, отчеты ПЭК, разрешительные материалы и сопровождение проверок.${city.slug === 'shymkent' ? ' В Шымкенте также доступны вывоз и утилизация отходов.' : ' Возможность выезда согласуется отдельно; это не означает наличие местного офиса.'}` },
+  { title: 'Что входит в экологические услуги', body: `Для предприятий ${city.regionGenitive} доступны экологическое проектирование, лабораторные замеры, производственный контроль, документы по отходам, отчеты ПЭК, разрешительные материалы и сопровождение проверок.${wasteRecyclingRegions.has(city.slug) ? ` В ${city.namePrepositional} также доступна утилизация отходов.` : ' Возможность выезда согласуется отдельно; это не означает наличие местного офиса.'}` },
   { title: 'Для каких объектов', body: `В ${city.namePrepositional} мы работаем с такими объектами: ${city.objects}. Также помогаем компаниям, которые открывают новый объект, меняют деятельность или готовятся к проверке.` },
   { title: 'Как проходит работа', body: `По задаче в ${city.namePrepositional} сначала уточняем объект, деятельность и текущие документы. Затем формируем список материалов, рассчитываем стоимость, согласуем дистанционный этап или выезд и передаем результат.` },
   { title: 'Что получает клиент', body: `Клиент из ${city.regionGenitive} получает ${clientResults.join(', ')}. Состав результата фиксируется договором и зависит от исходных данных конкретного объекта.` },
@@ -261,7 +266,7 @@ const createCityPage = (city) => ({
   city: city.name,
   type: 'city',
   title: `Экологические услуги в ${city.namePrepositional} | ECOPROGRESS`,
-  description: `ECOPROGRESS оказывает экологические услуги в ${city.namePrepositional}: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.${city.slug === 'shymkent' ? ' Доступна утилизация.' : ''}`,
+  description: `ECOPROGRESS оказывает экологические услуги в ${city.namePrepositional}: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.${wasteRecyclingRegions.has(city.slug) ? ' Доступна утилизация отходов.' : ''}`,
   h1: `Экологические услуги в ${city.namePrepositional}`,
   canonical: canonical(`ecologicheskie-uslugi-${city.slug}`),
   keywords: ['экологические услуги Казахстан', `экологические услуги ${city.name}`, 'ПЭК', 'паспорт отходов', 'лабораторные замеры'],
@@ -272,7 +277,7 @@ const createCityPage = (city) => ({
     { title: 'Региональная логистика', body: regionContentMap.get(city.slug).logisticsNote },
     { title: 'Типовые задачи региона', body: regionContentMap.get(city.slug).commonTasks.join('. ') },
   ] : [])],
-  services: serviceProfiles.map((service) => serviceCityLink(service, city)),
+  services: serviceProfiles.filter((service) => isServiceAvailableInCity(service, city)).map((service) => serviceCityLink(service, city)),
   audience: objectList,
   outcomes: clientResults,
   faq: [...cityFaq(city), ...(regionContentMap.get(city.slug)?.faq || [])],
@@ -296,7 +301,7 @@ const createServiceCityPage = (service, city) => {
     ? `${region.onSiteConditions.join('. ')}. ${region.logisticsNote}`
     : `Документальные этапы выполняются дистанционно. Обследование, отбор проб или выезд в ${city.name} подтверждаются только после проверки адреса, задания и доступности специалистов; местный офис не заявляется.`;
   const regionalTask = region?.commonTasks.join(', ') || city.localNote;
-  const operationalNote = service.key === 'waste-utilization' && city.slug !== 'shymkent'
+  const operationalNote = service.key === 'waste-utilization' && !wasteRecyclingRegions.has(city.slug)
     ? `ECOPROGRESS не заявляет собственный вывоз или прием отходов в ${city.namePrepositional}. Для такой заявки сначала проверяются вид отхода, маршрут и наличие подходящего оператора; до подтверждения это консультация и документальная подготовка, а не обещание оказать операционную услугу.`
     : '';
   return ({
@@ -306,7 +311,7 @@ const createServiceCityPage = (service, city) => {
   type: 'service-city',
   indexable: true,
   title: `${service.titleName} в ${city.namePrepositional} для бизнеса | ECOPROGRESS`,
-  description: service.key === 'waste-utilization' && city.slug !== 'shymkent'
+  description: service.key === 'waste-utilization' && !wasteRecyclingRegions.has(city.slug)
     ? `Утилизация отходов в ${city.namePrepositional}: проверка партии, документов и доступности оператора без заявления местного офиса или собственного вывоза.`
     : `${service.titleName} в ${city.namePrepositional}: аудит исходных данных, подготовка документов для предприятий ${city.regionGenitive} и согласование выезда.`,
   h1: `${service.h1} в ${city.namePrepositional}`,
@@ -531,23 +536,23 @@ export const seoArticles = articleContent.filter((article) => article.status ===
 
 export const seoPages = [
   ...activeCityProfiles.map(createCityPage),
-  ...serviceProfiles.flatMap((service) => activeCityProfiles.map((city) => createServiceCityPage(service, city))),
+  ...serviceProfiles.flatMap((service) => activeCityProfiles.filter((city) => isServiceAvailableInCity(service, city)).map((city) => createServiceCityPage(service, city))),
   ...specialPages.map(enrichSpecialPage),
 ].filter((page) => page.slug !== 'shtrafy-za-ekologiyu-kazakhstan');
 
 const legacyStaticPages = [
   { path: '/', title: 'Экологические услуги в Казахстане | ECOPROGRESS', description: 'ECOPROGRESS оказывает экологические услуги для бизнеса в Казахстане: лабораторные замеры, ПЭК, отходы, разрешения и сопровождение.', h1: 'Экологические услуги и лабораторные замеры в Казахстане', priority: 1.0, changefreq: 'weekly', type: 'main' },
-  { path: '/services', title: 'Экологические услуги ECOPROGRESS | Казахстан', description: 'Экологические документы и лабораторные услуги по Казахстану. Вывоз, утилизация отходов и полигон ТБО доступны в Шымкенте.', h1: 'Экологические услуги полного цикла', priority: 0.9, changefreq: 'weekly', type: 'service' },
+  { path: '/services', title: 'Экологические услуги ECOPROGRESS | Казахстан', description: 'Экологические документы и лабораторные услуги по Казахстану. Утилизация отходов доступна в Шымкенте, Таразе и Туркестане; вывоз и полигон ТБО — в Шымкенте.', h1: 'Экологические услуги полного цикла', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/regions', title: 'Города и регионы обслуживания | ECOPROGRESS', description: 'Условия оказания экологических услуг ECOPROGRESS по городам Казахстана: дистанционная подготовка документов, выезд специалистов и услуги в Шымкенте.', h1: 'Города и регионы обслуживания', priority: 0.8, changefreq: 'monthly', type: 'main' },
   { path: '/services/ecological-documents', title: 'Экологические документы для бизнеса | ECOPROGRESS', description: 'Разработка экологических документов для предприятий Казахстана: аудит исходных данных, проекты, отчетность и сопровождение согласования.', h1: 'Экологические документы для предприятий', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/services/waste-transportation', title: 'Вывоз отходов для бизнеса в Шымкенте | ECOPROGRESS', description: 'Организация разового и регулярного вывоза отходов в Шымкенте: подбор транспорта и оформление сопроводительных документов.', h1: 'Вывоз отходов в Шымкенте', priority: 0.9, changefreq: 'weekly', type: 'service' },
-  { path: '/services/waste-recycling', title: 'Утилизация и переработка отходов в Шымкенте | ECOPROGRESS', description: 'Передача отходов на утилизацию и переработку в Шымкенте с классификацией, актами и подтверждающими документами.', h1: 'Утилизация отходов в Шымкенте', priority: 0.9, changefreq: 'weekly', type: 'service' },
+  { path: '/services/waste-recycling', title: 'Утилизация отходов: Шымкент, Тараз, Туркестан | ECOPROGRESS', description: 'Передача отходов на утилизацию и переработку в Шымкенте, Таразе и Туркестане с классификацией, актами и подтверждающими документами.', h1: 'Утилизация отходов в Шымкенте, Таразе и Туркестане', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/services/poligon-tbo', title: 'Приём и размещение отходов на полигоне ТБО | ECOPROGRESS', description: 'Законное размещение отходов на полигоне ТБО: проверка состава, расчет объема, прием и комплект закрывающих документов.', h1: 'Приём отходов на полигоне ТБО', priority: 0.8, changefreq: 'weekly', type: 'service' },
   { path: '/services/environmental-audit', title: 'Экологический аудит предприятия | ECOPROGRESS', description: 'Проверка экологических документов, разрешений, ПЭК и обращения с отходами с планом устранения рисков перед инспекцией.', h1: 'Экологический аудит предприятия', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/services/ndv', title: 'Разработка проекта НДВ в Казахстане | ECOPROGRESS', description: 'Разработка проекта нормативов допустимых выбросов для предприятий Казахстана: инвентаризация источников, расчеты и сопровождение.', h1: 'Разработка проекта нормативов допустимых выбросов', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/services/puo', title: 'Разработка программы управления отходами | ECOPROGRESS', description: 'Разработка программы управления отходами для предприятий: анализ образования отходов, мероприятия, показатели и сопровождение по РК.', h1: 'Разработка программы управления отходами', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/services/ovos', title: 'Разработка ОВОС для проекта в Казахстане | ECOPROGRESS', description: 'Подготовка ОВОС и материалов экологической оценки для строительства, реконструкции и запуска объектов в Казахстане.', h1: 'Разработка оценки воздействия на окружающую среду', priority: 0.9, changefreq: 'weekly', type: 'service' },
-  ...serviceProfiles.map((service) => ({ path: `/services/${service.key}`, title: service.key === 'waste-utilization' ? 'Заказать утилизацию отходов в Шымкенте | ECOPROGRESS' : `Заказать ${service.name.toLowerCase()} в Казахстане | ECOPROGRESS`, description: service.key === 'waste-utilization' ? 'Вывоз, передача на утилизацию, переработка и закрывающие документы по отходам для организаций Шымкента.' : `Закажите ${service.descriptionNoun}: консультация, расчет стоимости, документы и сопровождение по Казахстану.`, h1: service.key === 'waste-utilization' ? 'Утилизация отходов в Шымкенте' : service.name, priority: 0.9, changefreq: 'weekly', type: 'service' })),
+  ...serviceProfiles.map((service) => ({ path: `/services/${service.key}`, title: service.key === 'waste-utilization' ? 'Утилизация отходов: Шымкент, Тараз, Туркестан | ECOPROGRESS' : `Заказать ${service.name.toLowerCase()} в Казахстане | ECOPROGRESS`, description: service.key === 'waste-utilization' ? 'Передача на утилизацию, переработка и закрывающие документы по отходам для организаций Шымкента, Тараза и Туркестана.' : `Закажите ${service.descriptionNoun}: консультация, расчет стоимости, документы и сопровождение по Казахстану.`, h1: service.key === 'waste-utilization' ? 'Утилизация отходов в Шымкенте, Таразе и Туркестане' : service.name, priority: 0.9, changefreq: 'weekly', type: 'service' })),
   { path: '/services/waste-management', title: 'Вывоз и утилизация отходов в Шымкенте | ECOPROGRESS', description: 'Утилизация отходов для бизнеса в Шымкенте: вывоз, переработка, акты, закрывающие документы и экологическое сопровождение.', h1: 'Вывоз и утилизация отходов в Шымкенте', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/services/environmental-permits', title: 'Экологические разрешения | ECOPROGRESS', description: 'Разрешение на эмиссии, декларация воздействия, ОВОС, скрининг и экологические документы для бизнеса.', h1: 'Экологические разрешения', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/services/ecological-support', title: 'Экологическое сопровождение бизнеса | ECOPROGRESS', description: 'Экологическое сопровождение бизнеса: аудит, документы, ПЭК, замеры, отходы, проверки и консультации.', h1: 'Экологическое сопровождение бизнеса', priority: 0.9, changefreq: 'weekly', type: 'service' },
