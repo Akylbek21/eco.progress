@@ -33,6 +33,7 @@ export type PekUiError = {
   resourceId?: string;
   details?: unknown;
   issues: PekValidationIssue[];
+  missingFields: string[];
 };
 
 export const mapPekError = (error: unknown): PekUiError => {
@@ -41,6 +42,7 @@ export const mapPekError = (error: unknown): PekUiError => {
     code: error.code,
     fieldErrors: {},
     issues: [],
+    missingFields: [],
   };
   const parsed = normalizeApiError(error, 'Не удалось выполнить действие. Повторите попытку.');
   const raw = axios.isAxiosError(error) && error.response?.data && typeof error.response.data === 'object'
@@ -48,6 +50,8 @@ export const mapPekError = (error: unknown): PekUiError => {
     : {};
   const nested = raw.data && typeof raw.data === 'object' ? raw.data as Record<string, unknown> : {};
   const details = { ...raw, ...nested };
+  const nestedDetails = details.details && typeof details.details === 'object' ? details.details as Record<string, unknown> : {};
+  const missingFields = Array.isArray(details.missingFields) ? details.missingFields : Array.isArray(nestedDetails.missingFields) ? nestedDetails.missingFields : [];
   const status = parsed.status;
   const statusMessage = status === 401 ? 'Сессия истекла. Войдите снова.'
     : status === 403 ? 'У вас нет доступа к этой компании или операции ПЭК. Обратитесь к администратору.'
@@ -66,6 +70,7 @@ export const mapPekError = (error: unknown): PekUiError => {
     resourceId: parsed.resourceId || (details.resourceId ? String(details.resourceId) : undefined),
     details: import.meta.env.DEV ? details.details : undefined,
     issues: Array.isArray(details.issues) ? details.issues as PekValidationIssue[] : [],
+    missingFields: missingFields.map((item) => typeof item === 'string' ? item : String((item as Record<string, unknown>).label ?? (item as Record<string, unknown>).field ?? (item as Record<string, unknown>).message ?? 'обязательные данные')),
   };
 };
 

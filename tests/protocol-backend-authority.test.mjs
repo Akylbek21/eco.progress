@@ -4,30 +4,6 @@ import test from 'node:test';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('quick-create is idempotent, reloads persisted data and keeps canonical ids', async () => {
-  const wizard = await read('src/features/protocols/components/CreateProtocolWizardModal.tsx');
-  const submission = await read('src/features/protocols/utils/quickCreateSubmission.ts');
-  const mapper = await read('src/features/protocols/mappers/mapProtocolWizardToRequest.ts');
-  const api = await read('src/services/apiProtocolService.ts');
-  assert.match(submission, /crypto\.randomUUID\(\)/);
-  assert.match(wizard, /acquireQuickCreateLock\(submittingRef\)/);
-  assert.match(api, /'Idempotency-Key'/);
-  assert.match(api, /const persisted = await getProtocol\(protocol\.id\)/);
-  assert.match(mapper, /requirePositiveIntegerId\(form\.companyId/);
-  assert.doesNotMatch(mapper, /deviceId:/);
-  assert.match(mapper, /measurementDeviceId:/);
-  assert.match(wizard, /retry: false/);
-  assert.match(submission, /stableStringify/);
-});
-
-test('available devices are scoped and invalid statuses are filtered', async () => {
-  const wizard = await read('src/features/protocols/components/CreateProtocolWizardModal.tsx');
-  assert.match(wizard, /laboratoryId: values\.laboratoryId/);
-  assert.match(wizard, /measurementDate: values\.measurementDate/);
-  assert.match(wizard, /templateId: values\.templateId/);
-  for (const status of ['EXPIRED', 'ARCHIVED', 'INACTIVE', 'OUT_OF_SERVICE']) assert.match(wizard, new RegExp(status));
-});
-
 test('workflow keeps version in body, one revision reason and backend permissions', async () => {
   const api = await read('src/services/apiProtocolService.ts');
   const client = await read('src/services/api.ts');
@@ -39,7 +15,8 @@ test('workflow keeps version in body, one revision reason and backend permission
   assert.doesNotMatch(api, /\{ comment, reason:/);
   assert.match(permissions, /protocol\?\.permissions/);
   assert.match(api, /cmsSignatureBase64/);
-  assert.match(permissions, /flag\('canPublish'\)/);
+  assert.match(permissions, /action\('publish'\)/);
+  assert.match(permissions, /action\('returnForRevision'\)/);
 });
 
 test('all result changes use the single atomic draft-results endpoint', async () => {

@@ -19,6 +19,7 @@ type Props = {
   onGenerateDocx: () => void;
   onGeneratePdf: () => void;
   onCorrection: () => void;
+  onReturnForRevision: () => void;
   onCancel: () => void;
   onArchive: () => void;
   onHistory: () => void;

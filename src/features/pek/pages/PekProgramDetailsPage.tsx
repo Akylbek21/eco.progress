@@ -12,6 +12,7 @@ import { pekApi } from '../api/pekService';
 import { PekLoading, PekPageHeader, PekPrimaryAction, PekReadiness, PekStatusBadge } from '../components/common/PekUi';
 import PekQueryError from '../components/common/PekQueryError';
 import PekProgramDocuments from '../components/documents/PekProgramDocuments';
+import PekProgramMonitoring from '../components/monitoring/PekProgramMonitoring';
 import PekActionModal from '../components/workflow/PekActionModal';
 import { mapPekError } from '../utils/pekErrorMapper';
 
@@ -103,6 +104,7 @@ const PekProgramDetailsPage = () => {
       <PekReadiness value={item.readinessPercent} />
       <Info label="Режим" value={item.readOnly ? 'Только чтение' : 'Редактирование разрешено'} />
     </section>
+    <PekProgramMonitoring program={item} />
     <nav className="flex gap-1 overflow-x-auto border-b">
       {tabs.map((label, index) => <button key={label} type="button" onClick={() => setTab(index)} className={`whitespace-nowrap px-4 py-3 font-bold ${tab === index ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}
     </nav>

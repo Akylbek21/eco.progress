@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, ChevronLeft, ClipboardCheck, Eye, FileCheck2, History, MoreHorizontal, Plus, RotateCw, Save, Search, SearchCheck, Trash2 } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, ClipboardCheck, FileCheck2, History, MoreHorizontal, Plus, RotateCw, Search, SearchCheck, Trash2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
@@ -29,9 +29,8 @@ import { getApiErrorMessage, getApiStatus, normalizeApiError, parseApiError } fr
 import protocolService from '../services/protocolService';
 import type { CompanyObject } from '../types/companies';
 import type { LaboratoryEmployee, MeasurementDevice, Protocol, ProtocolCompanySnapshot, ProtocolMeasurementDevice, WeatherConditions } from '../types/protocols';
-import { getProtocolPermissions, type ProtocolPermissions } from '../utils/protocolPermissions';
+import { getProtocolPermissions } from '../utils/protocolPermissions';
 import { parseLaboratoryApiError } from '../utils/laboratoryApiError';
-import { isProtocolStatusEditable } from '../config/protocolStatus';
 import { isWaterProtocolType } from '../config/protocolWater';
 import { collectProtocolDevices, isDeviceValidForDate } from '../utils/protocolDevices';
 import { normalizeProtocolError } from '../utils/protocolError';
@@ -114,50 +113,6 @@ const editableState = (protocol: Protocol) => ({
 
 const editableSignature = (protocol: Protocol) => JSON.stringify(editableState(protocol));
 
-const rebaseEditableProtocol = (base: Protocol, local: Protocol, remote: Protocol) => {
-  const baseState = editableState(base);
-  const localState = editableState(local);
-  const remoteState = editableState(remote);
-  const mergedState = { ...remoteState };
-  const conflicts: string[] = [];
-
-  (Object.keys(localState) as Array<keyof typeof localState>).forEach((key) => {
-    const baseValue = JSON.stringify(baseState[key] ?? null);
-    const localValue = JSON.stringify(localState[key] ?? null);
-    const remoteValue = JSON.stringify(remoteState[key] ?? null);
-    const localChanged = localValue !== baseValue;
-    const remoteChanged = remoteValue !== baseValue;
-    if (localChanged && remoteChanged && localValue !== remoteValue) conflicts.push(String(key));
-    else if (localChanged) (mergedState as Record<string, unknown>)[key] = localState[key];
-  });
-
-  return {
-    conflicts,
-    protocol: {
-      ...remote,
-      protocolNumber: mergedState.number,
-      number: mergedState.number,
-      protocolDate: mergedState.protocolDate,
-      formCode: mergedState.formCode,
-      appendixNumber: mergedState.appendixNumber,
-      sourceNumber: mergedState.sourceNumber,
-      executor: mergedState.executor,
-      executorId: mergedState.executorId,
-      approver: mergedState.approver,
-      laboratory: mergedState.laboratory,
-      organization: mergedState.organization,
-      testing: mergedState.testing,
-      environment: mergedState.environment,
-      objectId: mergedState.objectId,
-      measurementDate: mergedState.measurementDate,
-      measurementTime: mergedState.measurementTime,
-      measurementPlace: mergedState.measurementPlace,
-      explanatoryNote: mergedState.explanatoryNote,
-      printVisibility: mergedState.printVisibility,
-    } as Protocol,
-  };
-};
-
 const SnapshotSection = ({ snapshot }: { snapshot: ProtocolCompanySnapshot }) => {
   const rows: Array<[string, string | undefined]> = [
     ['Название', snapshot.companyName],
@@ -220,53 +175,7 @@ const DeviceStatus = ({ status }: { status: MeasurementDevice['status'] }) => (
 );
 
 type ProtocolStepKey = 'general' | 'organization' | 'environment' | 'results' | 'instruments' | 'review';
-type StepStatus = 'empty' | 'partial' | 'complete' | 'error';
-
-const protocolSteps: Array<{ key: ProtocolStepKey; label: string }> = [
-  { key: 'general', label: 'Основные данные' },
-  { key: 'organization', label: 'Организация' },
-  { key: 'environment', label: 'Условия замера' },
-  { key: 'results', label: 'Результаты' },
-  { key: 'instruments', label: 'Приборы' },
-  { key: 'review', label: 'Проверка и выпуск' },
-];
-
-const lifecycleSteps = ['Черновик', 'Результаты', 'Готов к подписи', 'Подписан'];
-const lifecycleIndexByStatus: Record<Protocol['status'], number> = {
-  DRAFT: 0,
-  NEEDS_REVISION: 1,
-  CALCULATED: 2,
-  READY: 2,
-  READY_FOR_APPROVAL: 2,
-  APPROVED: 2,
-  SIGNED: 3,
-  UNKNOWN: 0,
-  REPLACED: 3,
-  CANCELLED: 0,
-  ARCHIVED: 3,
-};
-
-const stepStatusLabels: Record<StepStatus, string> = {
-  empty: 'Не заполнено',
-  partial: 'Заполнено частично',
-  complete: 'Готово',
-  error: 'Ошибка',
-};
-
-const stepStatusClasses: Record<StepStatus, string> = {
-  empty: 'bg-slate-100 text-slate-600 ring-slate-200',
-  partial: 'bg-amber-50 text-amber-800 ring-amber-200',
-  complete: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
-  error: 'bg-rose-50 text-rose-800 ring-rose-200',
-};
-
 type MissingField = { label: string; stepKey: ProtocolStepKey };
-
-const READONLY_STATUSES = new Set<string>(['READY_FOR_APPROVAL', 'APPROVED', 'SIGNED', 'ARCHIVED', 'CANCELLED', 'REPLACED']);
-const TERMINAL_STATUSES = new Set<string>(['SIGNED', 'ARCHIVED', 'CANCELLED', 'REPLACED']);
-const isProtocolEditable = (status?: string) => isProtocolStatusEditable(status);
-const isProtocolReadonly = (status?: string) => READONLY_STATUSES.has(String(status || '').toUpperCase()) || !isProtocolEditable(status);
-const isEditableProtocol = (protocol?: Protocol | null) => Boolean(protocol && isProtocolEditable(protocol.status));
 
 const userProtocolError = (error: unknown) => {
   const apiError = parseApiError(error);
@@ -380,56 +289,6 @@ const getApprovalBlockers = (protocol: Protocol): string[] => {
   });
   return blockers;
 };
-
-const getStepStatus = (protocol: Protocol, stepKey: ProtocolStepKey): StepStatus => {
-  const missing = getMissingFields(protocol).filter((item) => item.stepKey === stepKey);
-  if (stepKey === 'review') return getMissingFields(protocol).length ? 'error' : 'complete';
-  if (!missing.length) return 'complete';
-  const hasAny = {
-    general: hasText(protocol.protocolNumber || protocol.number) || hasText(protocol.protocolDate) || hasText(protocol.measurementDate || protocol.testing?.samplingDate) || hasLaboratory(protocol),
-    organization: hasText(protocol.organization?.organizationName) || hasText(protocol.organization?.objectName || protocol.companySnapshot?.objectName),
-    environment: Boolean(protocol.environment && Object.values(protocol.environment).some(hasText)),
-    results: protocol.results.length > 0,
-    instruments: protocol.measurementDevices.length > 0,
-    review: false,
-  }[stepKey];
-  return hasAny ? 'partial' : 'empty';
-};
-
-const ProtocolStepWizard = ({
-  activeStep,
-  protocol,
-  onSelect,
-}: {
-  activeStep: ProtocolStepKey;
-  protocol: Protocol;
-  onSelect: (step: ProtocolStepKey) => void;
-}) => (
-  <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-    <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
-      {protocolSteps.map((step, index) => {
-        const status = getStepStatus(protocol, step.key);
-        const active = activeStep === step.key;
-        return (
-          <button
-            key={step.key}
-            type="button"
-            onClick={() => onSelect(step.key)}
-            className={`rounded-xl border px-3 py-3 text-left transition ${active ? 'border-eco-500 bg-eco-50 shadow-sm' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-black uppercase tracking-wide text-slate-400">Шаг {index + 1}</span>
-              {status === 'complete' && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
-              {status === 'error' && <AlertCircle className="h-4 w-4 text-rose-600" />}
-            </div>
-            <p className="mt-1 font-bold text-slate-900">{step.label}</p>
-            <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${stepStatusClasses[status]}`}>{stepStatusLabels[status]}</span>
-          </button>
-        );
-      })}
-    </div>
-  </section>
-);
 
 const DevicePickerModal = ({
   open,
@@ -627,110 +486,6 @@ const ReviewChecklist = ({
 
 type SaveStatus = 'saved' | 'dirty' | 'saving' | 'error' | 'conflict';
 
-const ProtocolStepFooter = ({
-  protocol,
-  activeStep,
-  busy,
-  readOnly,
-  actions,
-  saveStatus,
-  missingFields,
-  onPrevious,
-  onNext,
-  onSave,
-  onCalculate,
-  onPreview,
-  onReady,
-  onApprove,
-  onReturn,
-  onGenerateDocx,
-  onGeneratePdf,
-  onSign,
-  onDownloadDocx,
-  onDownloadPdf,
-  onReplace,
-  onOpenReplacement,
-}: {
-  protocol: Protocol;
-  activeStep: ProtocolStepKey;
-  busy: boolean;
-  readOnly: boolean;
-  actions: ProtocolPermissions;
-  saveStatus: SaveStatus;
-  missingFields: MissingField[];
-  onPrevious: () => void;
-  onNext: () => void;
-  onSave: () => void | Promise<void>;
-  onCalculate: () => void | Promise<void>;
-  onPreview: () => void | Promise<void>;
-  onReady: () => void | Promise<void>;
-  onApprove: () => void | Promise<void>;
-  onReturn: () => void | Promise<void>;
-  onGenerateDocx: () => void | Promise<void>;
-  onGeneratePdf: () => void | Promise<void>;
-  onSign: () => void;
-  onDownloadDocx: () => void | Promise<void>;
-  onDownloadPdf: () => void | Promise<void>;
-  onReplace: () => void;
-  onOpenReplacement?: () => void;
-}) => {
-  const activeIndex = protocolSteps.findIndex((step) => step.key === activeStep);
-  const saveText = {
-    saved: 'Сохранено',
-    dirty: 'Есть несохраненные изменения',
-    saving: 'Сохранение...',
-    error: 'Ошибка сохранения',
-    conflict: 'Конфликт версии',
-  }[saveStatus];
-
-  return (
-    <div className="sticky bottom-0 z-20 -mx-4 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:-mx-8 sm:px-8">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className={`text-sm font-semibold ${saveStatus === 'error' || saveStatus === 'conflict' ? 'text-rose-700' : saveStatus === 'dirty' ? 'text-amber-700' : 'text-slate-500'}`}>{saveText}</div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {actions.canEdit && (
-            <>
-              {activeIndex > 0 && <Button type="button" variant="secondary" disabled={busy} onClick={onPrevious}><ChevronLeft className="h-4 w-4" /> Назад</Button>}
-              {activeStep !== 'review' && activeStep !== 'results' && <Button type="button" variant="secondary" disabled={busy || readOnly} onClick={onSave}><Save className="h-4 w-4" /> Сохранить</Button>}
-              {activeStep === 'results' && actions.canCalculate && <Button type="button" disabled={busy || readOnly} onClick={onCalculate}><Save className="h-4 w-4" /> Сохранить результаты</Button>}
-              {activeStep !== 'review' && <Button type="button" variant={activeStep === 'results' ? 'secondary' : 'primary'} disabled={busy} onClick={onNext}>Далее <ArrowRight className="h-4 w-4" /></Button>}
-              {activeStep === 'review' && (
-                <>
-                  <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
-                  <Button type="button" disabled={busy || missingFields.length > 0} title={missingFields.length ? `Нельзя открыть предпросмотр: ${missingFields[0]?.label}` : undefined} onClick={onSign}>Открыть предварительный просмотр</Button>
-                </>
-              )}
-            </>
-          )}
-          {['READY', 'READY_FOR_APPROVAL', 'APPROVED'].includes(String(protocol.status).toUpperCase()) && (
-            <>
-              <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
-              {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadDocx}>DOCX</Button>}
-              {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadPdf}>PDF</Button>}
-              {actions.canSign && <Button type="button" disabled={busy} onClick={onSign}>Подписать</Button>}
-            </>
-          )}
-          {String(protocol.status).toUpperCase() === 'SIGNED' && (
-            <>
-              <Button type="button" variant="secondary" disabled={busy} onClick={onPreview}><Eye className="h-4 w-4" /> Посмотреть документ</Button>
-              {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadDocx}>Скачать DOCX</Button>}
-              {actions.canDownload && <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadPdf}>Скачать PDF</Button>}
-              {actions.canReplace && <Button type="button" disabled={busy} onClick={onReplace}>Создать исправленную версию</Button>}
-            </>
-          )}
-          {String(protocol.status).trim().toUpperCase() === 'REPLACED' && (
-            <>
-              <Button type="button" variant="secondary" disabled={busy} onClick={onDownloadPdf}>Скачать архивный PDF</Button>
-              {onOpenReplacement && <Button type="button" onClick={onOpenReplacement}>Открыть новую версию</Button>}
-            </>
-          )}
-          {String(protocol.status).trim().toUpperCase() === 'CANCELLED' && <span className="text-sm font-semibold text-slate-500">Протокол аннулирован. Доступен только просмотр.</span>}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const ProtocolEditorPage = () => {
   const queryClient = useQueryClient();
   const { protocolId } = useParams();
@@ -749,6 +504,7 @@ const ProtocolEditorPage = () => {
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [signOpen, setSignOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [revisionOpen, setRevisionOpen] = useState(false);
   const [workflowErrors, setWorkflowErrors] = useState<string[]>([]);
   const [conflictOpen, setConflictOpen] = useState(false);
   const [conflictLatest, setConflictLatest] = useState<Protocol | null>(null);
@@ -756,7 +512,6 @@ const ProtocolEditorPage = () => {
   const [devicePickerOpen, setDevicePickerOpen] = useState(false);
   const [laboratoryEmployees, setLaboratoryEmployees] = useState<LaboratoryEmployee[]>([]);
   const [companyObjects, setCompanyObjects] = useState<CompanyObject[]>([]);
-  const [activeStep, setActiveStep] = useState<ProtocolStepKey>('general');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [moreOpen, setMoreOpen] = useState(false);
   const [editSection, setEditSection] = useState<ProtocolEditSection | null>(null);
@@ -819,7 +574,7 @@ const ProtocolEditorPage = () => {
 
   const signCurrentProtocol = () => {
     if (!protocol || signMutation.isPending) return;
-    if (!hasProtocolAction(protocol, 'SIGN')) {
+    if (!hasProtocolAction(protocol, 'sign')) {
       toast.warning(protocol.blockingReasons?.[0] || 'Нельзя подписать: заполните обязательные данные и выберите действующий прибор');
       return;
     }
@@ -1043,31 +798,19 @@ const ProtocolEditorPage = () => {
         setSaveStatus('dirty');
         return protocolRef.current;
       } catch (saveError) {
-        if (getApiStatus(saveError) === 409) {
+        if (isProtocolVersionConflict(saveError)) {
+          conflictDetected = true;
+          saveQueuedRef.current = false;
+          setSaveStatus('conflict');
           try {
             const fresh = await protocolService.getProtocol(snapshot.id);
-            const rebased = rebaseEditableProtocol(serverProtocolRef.current || snapshot, snapshot, fresh);
-            if (!rebased.conflicts.length) {
-              const saved = await updateSnapshot(rebased.protocol);
-              const refreshed = await protocolService.getProtocol(saved.id);
-              const updated = refreshed;
-              applyServerProtocol(updated);
-              sessionStorage.removeItem(protocolBackupKey(user?.id, updated.id));
-              toast.success('Протокол сохранён');
-              return updated;
-            }
-            conflictDetected = true;
-            saveQueuedRef.current = false;
-            setSaveStatus('conflict');
             setConflictLatest(fresh);
             setConflictOpen(true);
           } catch {
-            conflictDetected = true;
-            saveQueuedRef.current = false;
-            setSaveStatus('conflict');
             setConflictLatest(null);
             setConflictOpen(true);
           }
+          toast.warning(protocolVersionConflictMessage);
         } else {
           failedSaveSignatureRef.current = editableSignature(snapshot);
           setSaveStatus('error');
@@ -1114,8 +857,9 @@ const ProtocolEditorPage = () => {
   }, [user?.id]);
 
   const ensureSavedProtocol = async (message: string): Promise<Protocol | null> => {
-    if (!protocol) return null;
-    if (!dirty) return protocol;
+    const current = protocolRef.current;
+    if (!current) return null;
+    if (editableSignature(current) === savedSignatureRef.current) return current;
     toast.info(message);
     return save();
   };
@@ -1148,12 +892,13 @@ const ProtocolEditorPage = () => {
   }, [protocol?.id, protocol?.laboratory?.laboratoryId, readOnly]);
 
   const checkSavedNormatives = async () => {
-    if (!protocol) return;
+    const initial = protocolRef.current;
+    if (!initial) return;
     if (!protocolActions.canCheckNormatives) {
       toast.warning('Проверка нормативов сейчас недоступна');
       return;
     }
-    if (protocol.signatureCount > 0) {
+    if (initial.signatureCount > 0) {
       toast.warning('Протокол уже подписан. Для изменения создайте исправленную версию');
       return;
     }
@@ -1162,33 +907,36 @@ const ProtocolEditorPage = () => {
       const saved = await save();
       if (!saved) return;
     }
-    await run(async () => {
-      await protocolService.checkNormatives(protocol.id, protocol.version);
-      return protocolService.getProtocol(protocol.id);
+    await run(async (latest) => {
+      await protocolService.checkNormatives(latest.id, latest.version);
+      return protocolService.getProtocol(latest.id);
     }, 'Расчёт выполнен');
   };
 
   const calculateProtocolResults = async () => {
-    if (!protocol) return;
+    const initial = protocolRef.current;
+    if (!initial) return;
     if (!protocolActions.canCalculate) {
       toast.warning('Расчёт результатов сейчас недоступен');
       return;
     }
-    if (protocol.signatureCount > 0) {
+    if (initial.signatureCount > 0) {
       toast.warning('Протокол уже подписан. Для изменения создайте исправленную версию');
       return;
     }
+    let current = initial;
     if (dirty) {
       toast.info('Сначала сохраняю данные, затем запускаю расчет.');
       const saved = await save();
       if (!saved) return;
+      current = saved;
     }
     setBusy(true);
     try {
-      const summary = await protocolService.calculateProtocolSummary(protocol.id, protocol.version);
-      const calculated = await protocolService.getProtocol(protocol.id);
+      const summary = await protocolService.calculateProtocolSummary(current.id, current.version);
+      const calculated = await protocolService.getProtocol(current.id);
       await protocolService.checkNormatives(calculated.id, calculated.version);
-      const updated = await protocolService.getProtocol(protocol.id);
+      const updated = await protocolService.getProtocol(current.id);
       applyServerProtocol(updated);
       toast.success(
         'Результаты сохранены',
@@ -1196,7 +944,7 @@ const ProtocolEditorPage = () => {
       );
     } catch (calculationError) {
       if (isProtocolVersionConflict(calculationError)) {
-        const latest = await protocolService.getProtocol(protocol.id);
+        const latest = await protocolService.getProtocol(current.id);
         applyServerProtocol(latest);
         toast.warning(protocolVersionConflictMessage);
       } else toast.error('Не удалось рассчитать результаты', getApiErrorMessage(calculationError, 'Не удалось рассчитать результаты'));
@@ -1247,11 +995,15 @@ const ProtocolEditorPage = () => {
     });
   };
 
-  const run = async (action: () => Promise<Protocol>, success: string): Promise<boolean> => {
+  const run = async (action: (current: Protocol) => Promise<Protocol>, success: string): Promise<boolean> => {
     setBusy(true);
     setWorkflowErrors([]);
     try {
-      const updated = await action();
+      const current = protocolRef.current;
+      if (!current) return false;
+      const targetId = current.id;
+      await action(current);
+      const updated = await protocolService.getProtocol(targetId);
       applyServerProtocol(updated);
       void queryClient.invalidateQueries({ queryKey: protocolQueryKeys.all(protocolCacheScope) });
       void queryClient.invalidateQueries({ queryKey: protocolQueryKeys.detail(protocolCacheScope, updated.id) });
@@ -1266,7 +1018,7 @@ const ProtocolEditorPage = () => {
     } catch (actionError) {
       const parsed = normalizeProtocolError(actionError);
       const status = getApiStatus(actionError);
-      if (status === 409) {
+      if (isProtocolVersionConflict(actionError)) {
         setConflictOpen(true);
         try {
           setConflictLatest(await protocolService.getProtocol(protocolRef.current?.id || protocolId || ''));
@@ -1316,7 +1068,7 @@ const ProtocolEditorPage = () => {
   const downloadGeneratedFile = async (kind: 'pdf' | 'docx') => {
     const current = protocolRef.current;
     if (!current) return;
-    if (!hasProtocolAction(current, kind === 'pdf' ? 'DOWNLOAD_PDF' : 'DOWNLOAD_DOCX')) {
+    if (!hasProtocolAction(current, kind === 'pdf' ? 'downloadPdf' : 'downloadDocx')) {
       toast.warning(`Скачивание ${kind.toUpperCase()} недоступно для текущего состояния протокола`);
       return;
     }
@@ -1335,66 +1087,59 @@ const ProtocolEditorPage = () => {
   const generateDocument = async (kind: 'docx' | 'pdf') => {
     const current = await ensureSavedProtocol(`Сначала сохраняю изменения, затем формирую ${kind.toUpperCase()}.`);
     if (!current) return;
-    if (current.signatureCount > 0 || ['SIGNED', 'REPLACED', 'CANCELLED', 'ARCHIVED'].includes(String(current.status).toUpperCase())) {
-      toast.warning('Протокол уже подписан. Для изменения создайте исправленную версию');
+    const generationAction = current.hasDocx || current.hasPdf ? 'regenerateDocuments' : 'generateDocuments';
+    if (!hasProtocolAction(current, generationAction)) {
+      toast.warning(`Формирование ${kind.toUpperCase()} не разрешено backend`);
       return;
     }
-    setBusy(true);
-    try {
-      const updated = kind === 'docx'
-        ? await protocolService.generateDocx(current.id, Number(current.version))
-        : await protocolService.generatePdf(current.id, Number(current.version));
-      applyServerProtocol(updated);
-      toast.success(`${kind.toUpperCase()} сформирован`);
-    } catch (generateError) {
-      toast.error(`Не удалось сформировать ${kind.toUpperCase()}`, userProtocolError(generateError));
-    } finally {
-      setBusy(false);
-    }
+    await run(
+      (latest) => kind === 'docx'
+        ? protocolService.generateDocx(latest.id, Number(latest.version))
+        : protocolService.generatePdf(latest.id, Number(latest.version)),
+      `${kind.toUpperCase()} сформирован`,
+    );
   };
 
   const addDevice = async (device: MeasurementDevice) => {
-    if (!protocol || !protocolActions.canManageDevices) return;
-    setBusy(true);
-    try {
-      const updated = await protocolService.addProtocolMeasurementDevice(protocol.id, device, Number(protocol.version));
-      applyServerProtocol(updated);
+    if (!protocolRef.current || !protocolActions.canManageDevices) return;
+    if (await run(
+      (current) => protocolService.addProtocolMeasurementDevice(current.id, device, Number(current.version)),
+      'Средство измерения добавлено',
+    )) {
       setDevicePickerOpen(false);
-      toast.success('Средство измерения добавлено');
-    } catch (addError) {
-      toast.error('Не удалось добавить средство измерения', addError instanceof Error ? addError.message : undefined);
-    } finally {
-      setBusy(false);
     }
   };
 
   const removeDevice = async (deviceId: string) => {
-    if (!protocol || !protocolActions.canManageDevices) return;
-    setBusy(true);
-    try {
-      const updated = await protocolService.removeProtocolMeasurementDevice(protocol.id, deviceId, Number(protocol.version));
-      applyServerProtocol(updated);
+    if (!protocolRef.current || !protocolActions.canManageDevices) return;
+    if (await run(
+      (current) => protocolService.removeProtocolMeasurementDevice(current.id, deviceId, Number(current.version)),
+      'Средство измерения удалено',
+    )) {
       setDeviceToRemove(null);
-      toast.success('Средство измерения удалено');
-    } catch (removeError) {
-      toast.error('Не удалось удалить средство измерения', removeError instanceof Error ? removeError.message : undefined);
-    } finally {
-      setBusy(false);
     }
   };
 
   const deleteCurrentProtocol = async () => {
-    if (!protocol) return;
+    const current = protocolRef.current;
+    if (!current) return;
     setBusy(true);
     try {
-      await protocolService.deleteProtocol(protocol.id, protocol.version);
+      await protocolService.deleteProtocol(current.id, current.version);
       savedSignatureRef.current = '';
       setMoreOpen(false);
       setDeleteProtocolOpen(false);
       toast.success('Протокол удалён');
       navigate('/staff/protocols');
     } catch (deleteError) {
-      toast.error(getApiErrorMessage(deleteError, 'Не удалось удалить протокол'));
+      if (isProtocolVersionConflict(deleteError)) {
+        try {
+          applyServerProtocol(await protocolService.getProtocol(current.id));
+        } catch {
+          // Keep the conflict message when reconciliation is unavailable.
+        }
+        toast.warning(protocolVersionConflictMessage);
+      } else toast.error(getApiErrorMessage(deleteError, 'Не удалось удалить протокол'));
     } finally {
       setBusy(false);
     }
@@ -1410,7 +1155,7 @@ const ProtocolEditorPage = () => {
       return;
     }
     await run(
-      () => protocolService.readyForApproval(current.id, { version: Number(current.version) }),
+      (latest) => protocolService.readyForApproval(latest.id, { version: Number(latest.version) }),
       'Протокол отправлен на утверждение',
     );
   };
@@ -1443,11 +1188,7 @@ const ProtocolEditorPage = () => {
   }
 
   const missingFields = getMissingFields(protocol);
-  const completedSteps = protocolSteps.filter((step) => getStepStatus(protocol, step.key) === 'complete').length;
-  const activeStepIndex = protocolSteps.findIndex((step) => step.key === activeStep);
   const firstMissingStep = missingFields[0]?.stepKey;
-  const goPreviousStep = () => setActiveStep(protocolSteps[Math.max(0, activeStepIndex - 1)].key);
-  const goNextStep = () => setActiveStep(protocolSteps[Math.min(protocolSteps.length - 1, activeStepIndex + 1)].key);
   const generatedExplanation = protocol.templateId === 'industrial_emissions'
     ? `В рамках производственного экологического контроля проведены инструментальные замеры на источниках выбросов объекта «${protocol.companySnapshot.objectName}». В период обследования выполнены измерения параметров газовоздушной смеси и концентраций определяемых веществ. Работающие источники: ${Array.from(new Set(protocol.results.map((row) => String(row.values.sourceNumber || row.values.samplingPlace || '')).filter(Boolean))).join(', ') || 'не указаны'}. Неработавшие источники на момент обследования не выявлены. Определяемые вещества: ${Array.from(new Set(protocol.results.map((row) => String(row.values.indicator || row.indicator || '')).filter(Boolean))).join(', ') || 'не указаны'}. Использованные приборы: ${protocol.measurementDevices.map((item) => item.deviceSnapshot.name).join(', ') || 'не указаны'}. Измерения выполнены в соответствии с нормативными документами и областью аккредитации испытательной лаборатории.`
     : 'Испытания проведены в соответствии с областью аккредитации лаборатории. Полученные результаты приведены в таблице протокола и относятся только к исследованным пробам и объектам.';
@@ -1455,9 +1196,10 @@ const ProtocolEditorPage = () => {
   return (
     <>
     {protocol.status === 'UNKNOWN' && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900">Статус протокола пока не поддерживается. Данные доступны только для чтения.</div>}
-    {pekReportContext > 0 && ['READY', 'APPROVED', 'SIGNED'].includes(protocol.status) && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><span>Протокол завершён. Можно повторно собрать связанный отчёт ПЭК.</span><Button type="button" disabled={busy} onClick={() => { void recollectPekReport(); }}>Повторно собрать отчёт ПЭК</Button></div>}
+    {pekReportContext > 0 && ['APPROVED', 'SIGNED'].includes(protocol.status) && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><span>Протокол завершён. Можно повторно собрать связанный отчёт ПЭК.</span><Button type="button" disabled={busy} onClick={() => { void recollectPekReport(); }}>Повторно собрать отчёт ПЭК</Button></div>}
     <ProtocolDetailsView
       protocol={protocol}
+      initialTab={new URLSearchParams(location.search).get('tab') === 'history' ? 'history' : 'results'}
       role={user?.role}
       permissions={protocolActions}
       missing={missingFields}
@@ -1466,20 +1208,23 @@ const ProtocolEditorPage = () => {
       signing={signMutation.isPending}
       onBack={() => navigateSafely('/staff/protocols')}
       onEdit={setEditSection}
+      onCalculate={() => { void calculateProtocolResults(); }}
+      onCheckNormatives={() => { void checkSavedNormatives(); }}
       onReady={() => { void sendForApproval(); }}
-      onApprove={() => { void run(() => protocolService.approveProtocol(protocol.id, { version: Number(protocol.version) }), 'Протокол утверждён'); }}
+      onApprove={() => { void run((current) => protocolService.approveProtocol(current.id, { version: Number(current.version) }), 'Протокол утверждён'); }}
       onSign={signCurrentProtocol}
-      onPublish={() => { void run(() => protocolService.publishToClient(protocol.id, { version: Number(protocol.version) }), 'Протокол отправлен клиенту'); }}
+      onPublish={() => { void run((current) => protocolService.publishToClient(current.id, { version: Number(current.version) }), 'Протокол отправлен клиенту'); }}
       onPreview={() => { void preview(); }}
       onGenerateDocx={() => { void generateDocument('docx'); }}
       onGeneratePdf={() => { void generateDocument('pdf'); }}
       onDocx={() => { void downloadGeneratedFile('docx'); }}
       onPdf={() => { void downloadGeneratedFile('pdf'); }}
       onCorrection={() => setReplaceOpen(true)}
+      onReturnForRevision={() => setRevisionOpen(true)}
       onCancel={() => setCancelOpen(true)}
       onArchive={() => {
         if (!window.confirm('Архивировать протокол?')) return;
-        void run(() => protocolService.archiveProtocol(protocol.id, { version: Number(protocol.version) }), 'Протокол перемещён в архив');
+        void run((current) => protocolService.archiveProtocol(current.id, { version: Number(current.version) }), 'Протокол перемещён в архив');
       }}
       onReplacement={() => { if (protocol.replacedByProtocolId) navigateSafely(`/staff/protocols/${protocol.replacedByProtocolId}`); }}
     />
@@ -1494,7 +1239,7 @@ const ProtocolEditorPage = () => {
         size="xl"
         closeOnBackdrop={false}
         title={({ general: 'Изменить даты и сведения протокола', organization: 'Изменить данные заказчика', laboratory: 'Изменить лабораторию и исполнителя', environment: 'Изменить условия измерения', results: 'Изменить результаты', methods: 'Изменить методику' } as Record<ProtocolEditSection, string>)[editSection || 'general']}
-        footer={<><Button type="button" variant="secondary" disabled={busy} onClick={() => setEditSection(null)}>Закрыть</Button>{editSection === 'results' ? <Button type="button" disabled={busy} onClick={() => { void calculateProtocolResults(); }}>Сохранить результаты</Button> : <Button type="button" disabled={busy} onClick={async () => { const saved = await save(); if (saved) setEditSection(null); }}>Сохранить</Button>}</>}
+        footer={<><Button type="button" variant="secondary" disabled={busy} onClick={() => setEditSection(null)}>Закрыть</Button>{editSection === 'results' ? <Button type="button" disabled={busy} onClick={() => { void calculateProtocolResults(); }}>Сохранить и рассчитать</Button> : <Button type="button" disabled={busy} onClick={async () => { const saved = await save(); if (saved) setEditSection(null); }}>Сохранить</Button>}</>}
       >
         {editSection === 'general' && <div className="space-y-5"><ProtocolGeneralForm protocol={protocol} readOnly={!protocolActions.canEdit} onChange={patchProtocol} /><ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} measurementDate={protocol.measurementDate || protocol.testing.samplingDate} readOnly={!protocolActions.canEdit} onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })} onChange={(testing) => patchProtocol({ testing })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'organization' && <div className="space-y-5"><ProtocolOrganizationForm value={protocol.organization} readOnly={!protocolActions.canEdit} onChange={(organization) => patchProtocol({ organization })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
@@ -1511,7 +1256,7 @@ const ProtocolEditorPage = () => {
         protocol={protocol}
         draft={false}
         onClose={() => setPreviewOpen(false)}
-        onConfirmSign={hasProtocolAction(protocol, 'SIGN') ? () => {
+        onConfirmSign={hasProtocolAction(protocol, 'sign') ? () => {
           setPreviewOpen(false);
           setSignOpen(true);
         } : undefined}
@@ -1570,17 +1315,27 @@ const ProtocolEditorPage = () => {
         loading={busy}
         onClose={() => setReplaceOpen(false)}
         onConfirm={async (reason) => {
-          setBusy(true);
-          try {
-            const replacement = await protocolService.createCorrection(protocol.id, { version: Number(protocol.version), reason });
-            toast.success('Создана исправленная версия');
+          let replacementId = '';
+          const completed = await run(async (current) => {
+            const replacement = await protocolService.createCorrection(current.id, { version: Number(current.version), reason });
+            replacementId = replacement.id;
+            return protocolService.getProtocol(current.id);
+          }, 'Создана исправленная версия');
+          if (completed && replacementId) {
             savedSignatureRef.current = '';
-            navigate(`/staff/protocols/${replacement.id}`);
-          } catch (replaceError) {
-            toast.error('Не удалось создать исправленную версию', replaceError instanceof Error ? replaceError.message : undefined);
-          } finally {
-            setBusy(false);
+            navigate(`/staff/protocols/${replacementId}`);
           }
+        }}
+      />
+      <ReturnForRevisionModal
+        open={revisionOpen}
+        loading={busy}
+        title="Вернуть на доработку"
+        description="Укажите причину возврата. После возврата протокол снова станет доступен для исправления."
+        confirmText="Вернуть на доработку"
+        onClose={() => setRevisionOpen(false)}
+        onConfirm={async (reason) => {
+          if (await run((current) => protocolService.returnForRevision(current.id, { version: Number(current.version), reason }), 'Протокол возвращён на доработку')) setRevisionOpen(false);
         }}
       />
       <ReturnForRevisionModal
@@ -1591,7 +1346,7 @@ const ProtocolEditorPage = () => {
         confirmText="Отменить протокол"
         onClose={() => setCancelOpen(false)}
         onConfirm={async (reason) => {
-          if (await run(() => protocolService.cancelProtocol(protocol.id, { version: Number(protocol.version), reason }), 'Протокол отменён')) setCancelOpen(false);
+          if (await run((current) => protocolService.cancelProtocol(current.id, { version: Number(current.version), reason }), 'Протокол отменён')) setCancelOpen(false);
         }}
       />
       <SignProtocolModal

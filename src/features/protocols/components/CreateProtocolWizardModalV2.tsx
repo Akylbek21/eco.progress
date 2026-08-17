@@ -25,7 +25,6 @@ import MethodsStep from './steps/MethodsStep';
 import ResultsStep from './steps/ResultsStep';
 import ProtocolCheckStep from './steps/ProtocolCheckStep';
 import ProtocolSigningStep from './steps/ProtocolSigningStep';
-import type { CreateProtocolWizardModalProps } from './CreateProtocolWizardModal';
 import {
   createWizardDefaults,
   normalizeProtocolWizardForm,
@@ -44,11 +43,14 @@ import {
   type LocalProtocolDraftEnvelope,
 } from '../utils/protocolDraftRecovery';
 
+export type ProtocolPekPrefill = Partial<Pick<ProtocolWizardForm, 'companyId' | 'objectId' | 'pekProgramId' | 'pekControlItemId' | 'pekControlEventId' | 'pekReportId' | 'monitoringPointId' | 'emissionSourceId' | 'waterOutletId' | 'measurementDate' | 'measurementPlace'>>;
+export type CreateProtocolWizardModalV2Props = { open: boolean; onClose: () => void; onCreated: (protocol: Protocol) => void; orderId?: string; orderServiceItemId?: string; pekPrefill?: ProtocolPekPrefill };
+
 const steps = ['Клиент и протокол', 'Условия измерения', 'Результаты', 'Проверка', 'Готово'];
 type SaveState = 'idle' | 'local' | 'creating' | 'created' | 'saving' | 'saved' | 'error' | 'conflict';
 const unavailableLaboratoryMessage = 'Выбранная лаборатория не найдена или больше не активна. Выберите лабораторию повторно.';
 
-const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', orderServiceItemId = '', pekPrefill }: CreateProtocolWizardModalProps) => {
+const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', orderServiceItemId = '', pekPrefill }: CreateProtocolWizardModalV2Props) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const scope = protocolScope(user?.id);

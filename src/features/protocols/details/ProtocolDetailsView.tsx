@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Protocol } from '../../../types/protocols';
 import type { ProtocolPermissions } from '../../../utils/protocolPermissions';
 import ProtocolDocumentsTab from './ProtocolDocumentsTab';
@@ -24,6 +24,8 @@ type Props = {
   signing: boolean;
   onBack: () => void;
   onEdit: (section: ProtocolEditSection) => void;
+  onCalculate: () => void;
+  onCheckNormatives: () => void;
   onReady: () => void;
   onApprove: () => void;
   onSign: () => void;
@@ -34,9 +36,11 @@ type Props = {
   onDocx: () => void;
   onPdf: () => void;
   onCorrection: () => void;
+  onReturnForRevision: () => void;
   onCancel: () => void;
   onArchive: () => void;
   onReplacement: () => void;
+  initialTab?: ProtocolDetailsTab;
 };
 
 const baseTabs: Array<{ key: ProtocolDetailsTab; label: string }> = [
@@ -46,9 +50,12 @@ const baseTabs: Array<{ key: ProtocolDetailsTab; label: string }> = [
   { key: 'history', label: 'История' },
 ];
 
-const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErrors, busy, signing, onBack, onEdit, onReady, onApprove, onSign, onPublish, onPreview, onGenerateDocx, onGeneratePdf, onDocx, onPdf, onCorrection, onCancel, onArchive, onReplacement }: Props) => {
-  const [activeTab, setActiveTab] = useState<ProtocolDetailsTab>('results');
+const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErrors, busy, signing, onBack, onEdit, onCalculate, onCheckNormatives, onReady, onApprove, onSign, onPublish, onPreview, onGenerateDocx, onGeneratePdf, onDocx, onPdf, onCorrection, onReturnForRevision, onCancel, onArchive, onReplacement, initialTab = 'results' }: Props) => {
+  const [activeTab, setActiveTab] = useState<ProtocolDetailsTab>(initialTab);
   const tabs = permissions.canViewAudit ? baseTabs : baseTabs.filter((tab) => tab.key !== 'history');
+  useEffect(() => {
+    setActiveTab(initialTab === 'history' && !permissions.canViewAudit ? 'results' : initialTab);
+  }, [initialTab, permissions.canViewAudit]);
   const primary = resolveProtocolPrimaryAction(protocol, role);
   const nextStepMissing = Array.from(new Set([
     ...missing.map((item) => item.label),
@@ -56,10 +63,11 @@ const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErr
   ])).map((label) => ({ label }));
   const runPrimary = () => {
     if (primary.key === 'edit') onEdit('results');
+    else if (primary.key === 'calculate') onCalculate();
+    else if (primary.key === 'checkNormatives') onCheckNormatives();
     else if (primary.key === 'ready') onReady();
     else if (primary.key === 'approve') onApprove();
     else if (primary.key === 'sign') onSign();
-    else if (primary.key === 'preview') onPreview();
     else if (primary.key === 'publish') onPublish();
     else if (primary.key === 'pdf') onPdf();
     else if (primary.key === 'replacement') onReplacement();
@@ -67,13 +75,13 @@ const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErr
   };
   return (
     <div className="space-y-4 pb-24">
-      <ProtocolHeader protocol={protocol} permissions={permissions} busy={busy} primaryLabel={primary.label} onBack={onBack} onPrimary={runPrimary} onDocx={onDocx} onGenerateDocx={onGenerateDocx} onGeneratePdf={onGeneratePdf} onCorrection={onCorrection} onCancel={onCancel} onArchive={onArchive} onHistory={() => setActiveTab('history')} />
+      <ProtocolHeader protocol={protocol} permissions={permissions} busy={busy} primaryLabel={primary.label} onBack={onBack} onPrimary={runPrimary} onDocx={onDocx} onGenerateDocx={onGenerateDocx} onGeneratePdf={onGeneratePdf} onCorrection={onCorrection} onReturnForRevision={onReturnForRevision} onCancel={onCancel} onArchive={onArchive} onHistory={() => setActiveTab('history')} />
       <ProtocolProgress status={protocol.status} />
       <ProtocolNextStepCard protocol={protocol} missing={nextStepMissing} />
       <ProtocolContextLinks protocol={protocol} />
       <ProtocolImmutableBanner protocol={protocol} />
       <ProtocolSignaturesCard protocol={protocol} permissions={permissions} signing={signing} onSign={onSign} />
-      {protocol.status === 'SIGNED' && permissions.canPublish && !(protocol.publishedAt || protocol.publishedToClientAt) && (
+      {permissions.canPublish && (
         <div className="flex justify-end">
           <button type="button" disabled={busy} onClick={onPublish} className="min-h-11 rounded-xl bg-eco-600 px-4 text-sm font-bold text-white disabled:opacity-50">
             Опубликовать для клиента
@@ -86,7 +94,7 @@ const ProtocolDetailsView = ({ protocol, role, permissions, missing, workflowErr
       </nav>
       {activeTab === 'results' && <ProtocolResultsTab protocol={protocol} editable={permissions.canManageResults} onEdit={() => onEdit('results')} />}
       {activeTab === 'main' && <ProtocolMainDataTab protocol={protocol} editable={permissions.canEdit} onEdit={onEdit} />}
-      {activeTab === 'documents' && <ProtocolDocumentsTab protocol={protocol} busy={busy} canGenerate={permissions.canGenerateDocuments} canRegenerate={permissions.canRegenerateDocuments} canDownload={permissions.canDownload} canSign={permissions.canSign} onPreview={onPreview} onGenerateDocx={onGenerateDocx} onGeneratePdf={onGeneratePdf} onDocx={onDocx} onPdf={onPdf} onSign={onSign} />}
+      {activeTab === 'documents' && <ProtocolDocumentsTab protocol={protocol} busy={busy} canGenerate={permissions.canGenerateDocuments} canRegenerate={permissions.canRegenerateDocuments} canPreview={permissions.canGeneratePreview} canDownloadPdf={permissions.canDownloadPdf} canDownloadDocx={permissions.canDownloadDocx} canSign={permissions.canSign} onPreview={onPreview} onGenerateDocx={onGenerateDocx} onGeneratePdf={onGeneratePdf} onDocx={onDocx} onPdf={onPdf} onSign={onSign} />}
       {activeTab === 'history' && permissions.canViewAudit && <ProtocolHistoryTab protocol={protocol} />}
       {primary.label && <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:hidden"><button type="button" disabled={busy} onClick={runPrimary} className="min-h-12 w-full rounded-xl bg-eco-600 px-4 font-bold text-white disabled:opacity-50">{primary.label}</button></div>}
     </div>

@@ -8,7 +8,7 @@ import { createWizardDefaults, emptyWizardResult } from '../src/features/protoco
 import { buildQuickCreatePayload } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
 import { normalizeProtocolStatus } from '../src/config/protocolStatus';
 import { getProtocolPermissions } from '../src/utils/protocolPermissions';
-import { addProtocolResult, normalizeProtocol, readyForApproval, removeProtocolMeasurementDevice, saveProtocolDraftResults, signProtocol } from '../src/services/apiProtocolService';
+import { addProtocolResult, importExcel, normalizeProtocol, readyForApproval, removeProtocolMeasurementDevice, returnForRevision, saveProtocolDraftResults, signProtocol } from '../src/services/apiProtocolService';
 import { normalizeApiError } from '../src/services/apiHelpers';
 
 const server = setupServer();
@@ -57,12 +57,12 @@ describe('current protocol backend contract', () => {
     expect(getProtocolPermissions({
       status: 'CALCULATED',
       permissions: { canSendToApproval: true },
-      availableActions: [],
+      availableActions: { sendToApproval: true },
     }, 'LABORATORY').canReadyForApproval).toBe(true);
     expect(getProtocolPermissions({
       status: 'CALCULATED',
       permissions: { canSendToApproval: false },
-      availableActions: ['COMPLETE'],
+      availableActions: { sendToApproval: false },
     }, 'LABORATORY').canReadyForApproval).toBe(false);
   });
 
@@ -75,8 +75,9 @@ describe('current protocol backend contract', () => {
   });
 
   it('uses availableActions only when the backend DTO contains them', () => {
-    expect(normalizeProtocol({ ...protocol, availableActions: ['SIGN'] }).availableActions).toEqual(['SIGN']);
-    expect(normalizeProtocol(protocol).availableActions).toEqual([]);
+    expect(normalizeProtocol({ ...protocol, availableActions: { sign: true, approve: false } }).availableActions).toEqual({ sign: true, approve: false });
+    expect(normalizeProtocol({ ...protocol, availableActions: ['SIGN'] }).availableActions).toEqual({});
+    expect(normalizeProtocol(protocol).availableActions).toEqual({});
   });
 
   it('preserves zero as a string in quick-create conditions and never sends clientRowId', () => {
@@ -160,6 +161,46 @@ describe('current protocol backend contract', () => {
     expect(body).toBe('');
   });
 
+  it('returns a protocol for revision with a reason and reloads the authoritative version', async () => {
+    let body: unknown;
+    let getCount = 0;
+    server.use(
+      http.post('http://localhost/api/protocols/42/return-for-revision', async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ data: { ...protocol, status: 'NEEDS_REVISION', version: 9 } });
+      }),
+      http.get('http://localhost/api/protocols/42', () => {
+        getCount += 1;
+        return HttpResponse.json({ data: { ...protocol, status: 'NEEDS_REVISION', version: 9, availableActions: { edit: true, sendToApproval: true } } });
+      }),
+    );
+    const revised = await returnForRevision('42', { version: 8, reason: 'Исправить результаты' });
+    expect(body).toEqual({ version: 8, reason: 'Исправить результаты' });
+    expect(getCount).toBe(1);
+    expect(revised).toMatchObject({ status: 'NEEDS_REVISION', version: 9, availableActions: { edit: true, sendToApproval: true } });
+  });
+
+  it('imports xls/xlsx with file and version and reloads protocol results', async () => {
+    let form: FormData | null = null;
+    let getCount = 0;
+    server.use(
+      http.post('http://localhost/api/protocols/42/import-excel', async ({ request }) => {
+        form = await request.formData();
+        return HttpResponse.json({ data: { ...protocol, version: 9 } });
+      }),
+      http.get('http://localhost/api/protocols/42', () => {
+        getCount += 1;
+        return HttpResponse.json({ data: { ...protocol, version: 9, results: [{ id: 'excel-1', values: { resultValue: 1 } }] } });
+      }),
+    );
+    const imported = await importExcel('42', new File(['sheet'], 'results.xls', { type: 'application/vnd.ms-excel' }), 8);
+    expect(form?.get('version')).toBe('8');
+    expect((form?.get('file') as File).name).toBe('results.xls');
+    expect(getCount).toBe(1);
+    expect(imported).toMatchObject({ version: 9, results: [{ id: 'excel-1' }] });
+    await expect(importExcel('42', new File(['bad'], 'results.csv'), 9)).rejects.toThrow('.xls');
+  });
+
   it('uses the single backend sign contract', async () => {
     let body: unknown;
     server.use(
@@ -176,10 +217,12 @@ describe('current protocol backend contract', () => {
 
   it('adds draft results with the backend delta contract and preserves zero', async () => {
     let body: unknown;
+    let idempotencyKey = '';
     let savedResults: Array<Record<string, unknown>> = [];
     server.use(
       http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: { ...protocol, version: savedResults.length ? 9 : 8, results: savedResults } })),
       http.patch('http://localhost/api/protocols/42/draft-results', async ({ request }) => {
+        idempotencyKey = request.headers.get('Idempotency-Key') || '';
         body = await request.json();
         const requestBody = body as { added: Array<Record<string, unknown>> };
         savedResults = requestBody.added.map((row) => ({
@@ -192,6 +235,7 @@ describe('current protocol backend contract', () => {
     );
     const saved = await addProtocolResult('42', { values: { resultValue: 0 }, measurementDeviceId: 7 }, 8);
     expect(saved.values.resultValue).toBe(0);
+    expect(idempotencyKey).toMatch(/^[\w-]+$/);
     expect(body).toMatchObject({
       version: 8,
       added: [{ clientRowId: expect.any(String), values: { resultValue: 0 }, measurementDeviceId: 7, normativeId: null }],

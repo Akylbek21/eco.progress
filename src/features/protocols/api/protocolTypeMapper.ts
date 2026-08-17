@@ -13,8 +13,13 @@ const supportedTypes = new Set<FrontendProtocolType>([
   'uv_emf_laser',
 ]);
 
+const backendAliases: Record<string, FrontendProtocolType> = {
+  ambient_air_szz: 'ambient_air',
+};
+
 export const mapBackendProtocolType = (value: string): FrontendProtocolType => {
   const normalized = String(value || '').trim().toLowerCase();
+  if (backendAliases[normalized]) return backendAliases[normalized];
   if (!supportedTypes.has(normalized as FrontendProtocolType)) {
     throw new Error(`Backend вернул неизвестный тип протокола: ${value || 'пустое значение'}`);
   }

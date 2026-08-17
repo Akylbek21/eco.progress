@@ -5,7 +5,6 @@ export type ProtocolStatusColor = 'neutral' | 'info' | 'warning' | 'success' | '
 export const protocolStatusConfig: Record<ProtocolStatus, { label: string; editable: boolean; color: ProtocolStatusColor }> = {
   DRAFT: { label: 'Черновик', editable: true, color: 'neutral' },
   CALCULATED: { label: 'Расчёт выполнен', editable: true, color: 'info' },
-  READY: { label: 'Готов (устаревший статус)', editable: true, color: 'info' },
   READY_FOR_APPROVAL: { label: 'На утверждении', editable: false, color: 'warning' },
   NEEDS_REVISION: { label: 'Нужно исправить', editable: true, color: 'warning' },
   APPROVED: { label: 'Утверждён', editable: false, color: 'info' },
@@ -18,6 +17,8 @@ export const protocolStatusConfig: Record<ProtocolStatus, { label: string; edita
 
 export const normalizeProtocolStatus = (status?: string | null): ProtocolStatus => {
   const value = String(status || '').trim().toUpperCase();
+  // Legacy READY is folded into the current DRAFT -> CALCULATED workflow.
+  if (value === 'READY') return 'CALCULATED';
   if (value in protocolStatusConfig) return value as ProtocolStatus;
   console.error('[Protocols] Unsupported backend status', { status });
   return 'UNKNOWN';

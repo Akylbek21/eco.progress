@@ -12,6 +12,7 @@ import PekReportActions from '../components/workflow/PekReportActions';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 import PekReportDocuments from '../components/documents/PekReportDocuments';
+import PekReportPackageCard from '../components/documents/PekReportPackageCard';
 import PekReportExceedances from '../components/exceedances/PekReportExceedances';
 
 const tabs = [
@@ -100,6 +101,7 @@ const PekReportWorkspacePage = () => {
       queryClient.invalidateQueries({ queryKey: pekKeys.reportsRoot(report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportHistory(id, report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportDocuments(id, report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportPackage(id, report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportSignatures(id, report.data?.companyId, user?.id) }),
     ]);
   };
@@ -245,7 +247,7 @@ const PekReportWorkspacePage = () => {
 
     {tab === 'plan-fact' && <PlanFactContent loading={planFact.isLoading} error={planFact.error} data={planFact.data} retry={() => void planFact.refetch()} />}
     {tab === 'exceedances' && <PekReportExceedances report={item} />}
-    {tab === 'documents' && <PekReportDocuments report={item} />}
+    {tab === 'documents' && <div className="space-y-4"><PekReportPackageCard report={item} /><PekReportDocuments report={item} /></div>}
     {tab === 'history' && <section className="space-y-4 rounded-2xl border bg-white p-5"><h2 className="font-black">История отчёта</h2>{history.isLoading ? <PekLoading /> : history.isError ? <PekQueryError error={history.error} resource="историю отчёта" retry={() => void history.refetch()} /> : !history.data?.length ? <PekState title="История пока пуста" /> : <ol className="space-y-3">{history.data.map((entry, index) => <li key={`${entry.performedAt}-${index}`} className="rounded-xl border p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold">{entry.action}</p><span className="text-xs text-slate-500">Версия {entry.version}</span></div><p className="mt-1 text-sm">{entry.fromStatus || '—'} → {entry.toStatus}</p><p className="mt-1 text-sm text-slate-600">{entry.performedBy?.name || entry.performedBy?.fullName || 'Сотрудник'} · {new Date(entry.performedAt).toLocaleString('ru-RU')}</p>{entry.comment && <p className="mt-2 text-sm">{entry.comment}</p>}</li>)}</ol>}</section>}
     <Dialog open={collectConfirmOpen} onClose={() => !collect.isPending && setCollectConfirmOpen(false)} fullWidth maxWidth="sm">
       <DialogTitle>{item.lastCollectedAt ? 'Повторить сбор протоколов?' : 'Собрать протоколы?'}</DialogTitle>

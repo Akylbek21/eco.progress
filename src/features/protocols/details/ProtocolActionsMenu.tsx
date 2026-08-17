@@ -11,12 +11,13 @@ type Props = {
   onGenerateDocx: () => void;
   onGeneratePdf: () => void;
   onCorrection: () => void;
+  onReturnForRevision: () => void;
   onCancel: () => void;
   onArchive: () => void;
   onHistory: () => void;
 };
 
-const ProtocolActionsMenu = ({ protocol, permissions, busy, onDocx, onGenerateDocx, onGeneratePdf, onCorrection, onCancel, onArchive, onHistory }: Props) => {
+const ProtocolActionsMenu = ({ protocol, permissions, busy, onDocx, onGenerateDocx, onGeneratePdf, onCorrection, onReturnForRevision, onCancel, onArchive, onHistory }: Props) => {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -35,8 +36,9 @@ const ProtocolActionsMenu = ({ protocol, permissions, busy, onDocx, onGenerateDo
         <div className="absolute right-0 top-full z-30 mt-2 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-sm shadow-xl">
           {((protocol.hasDocx && permissions.canRegenerateDocuments) || (!protocol.hasDocx && permissions.canGenerateDocuments)) && <button type="button" onClick={() => run(onGenerateDocx)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">{protocol.hasDocx ? 'Перегенерировать DOCX' : 'Сгенерировать DOCX'}</button>}
           {((protocol.hasPdf && permissions.canRegenerateDocuments) || (!protocol.hasPdf && permissions.canGenerateDocuments)) && <button type="button" onClick={() => run(onGeneratePdf)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">{protocol.hasPdf ? 'Перегенерировать PDF' : 'Сгенерировать PDF'}</button>}
-          {permissions.canDownload && protocol.hasDocx && <button type="button" onClick={() => run(onDocx)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Скачать DOCX</button>}
+          {permissions.canDownloadDocx && <button type="button" onClick={() => run(onDocx)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Скачать DOCX</button>}
           {permissions.canReplace && <button type="button" onClick={() => run(onCorrection)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Создать исправленную версию</button>}
+          {permissions.canReturnForRevision && <button type="button" onClick={() => run(onReturnForRevision)} className="w-full rounded-lg px-3 py-2 text-left font-semibold text-amber-800 hover:bg-amber-50">Вернуть на доработку</button>}
           {permissions.canViewAudit && <button type="button" onClick={() => run(onHistory)} className="w-full rounded-lg px-3 py-2 text-left font-semibold hover:bg-slate-50">Посмотреть историю</button>}
           {permissions.canCancel && <button type="button" onClick={() => run(onCancel)} className="w-full rounded-lg px-3 py-2 text-left font-semibold text-rose-700 hover:bg-rose-50">Отменить протокол</button>}
           {permissions.canArchive && <button type="button" onClick={() => run(onArchive)} className="w-full rounded-lg px-3 py-2 text-left font-semibold text-rose-700 hover:bg-rose-50">Архивировать</button>}

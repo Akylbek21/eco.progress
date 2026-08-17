@@ -1,11 +1,10 @@
 import { normalizeProtocolStatus, protocolStatusConfig } from '../../../config/protocolStatus';
 import type { Protocol, ProtocolHistoryItem, ProtocolInternalStatus, ProtocolResult } from '../../../types/protocols';
-import { getProtocolPermissions } from '../../../utils/protocolPermissions';
-import { hasProtocolAction, hasProtocolPermission } from '../utils/protocolActions';
+import { hasProtocolAction } from '../utils/protocolActions';
 
 export type ProtocolDetailsTab = 'results' | 'main' | 'documents' | 'history';
 export type ProtocolEditSection = 'general' | 'organization' | 'laboratory' | 'environment' | 'results' | 'methods';
-export type ProtocolPrimaryActionKey = 'edit' | 'ready' | 'approve' | 'sign' | 'preview' | 'publish' | 'pdf' | 'replacement' | 'review' | null;
+export type ProtocolPrimaryActionKey = 'edit' | 'calculate' | 'checkNormatives' | 'ready' | 'approve' | 'sign' | 'publish' | 'pdf' | 'replacement' | 'review' | null;
 
 export const formatProtocolDate = (value?: string | null) => {
   if (!value) return 'Не заполнено';
@@ -23,10 +22,14 @@ export const protocolStatusLabel = (status?: string | null) => protocolStatusCon
 
 export const lifecycleStage = (status?: string | null) => {
   const normalized = normalizeProtocolStatus(status);
-  if (normalized === 'SIGNED' || normalized === 'REPLACED' || normalized === 'ARCHIVED') return 4;
-  if (['APPROVED', 'READY_FOR_APPROVAL', 'READY'].includes(normalized)) return 3;
-  if (['CALCULATED', 'READY', 'NEEDS_REVISION'].includes(normalized)) return 1;
-  return 0;
+  const stages = {
+    DRAFT: 0,
+    CALCULATED: 1,
+    READY_FOR_APPROVAL: 2,
+    APPROVED: 3,
+    SIGNED: 4,
+  } as const;
+  return normalized in stages ? stages[normalized as keyof typeof stages] : null;
 };
 
 export const complianceLabel = (status?: ProtocolInternalStatus | string | null) => {
@@ -67,7 +70,6 @@ export const humanHistoryAction = (item: ProtocolHistoryItem) => {
     RESULT_ADDED: 'Добавлен результат измерения',
     RESULT_UPDATED: 'Изменены результаты измерений',
     CALCULATED: 'Результаты рассчитаны',
-    READY: 'Протокол подготовлен',
     READY_FOR_APPROVAL: 'Протокол передан на проверку',
     MARKED_READY_FOR_APPROVAL: 'Протокол передан на проверку',
     NEEDS_REVISION: 'Возвращён на исправление',
@@ -81,24 +83,15 @@ export const humanHistoryAction = (item: ProtocolHistoryItem) => {
   return labels[action] || (/READY_FOR_APPROVAL/.test(action) ? labels.READY_FOR_APPROVAL : /REVISION/.test(action) ? labels.NEEDS_REVISION : /APPROV/.test(action) ? labels.APPROVED : /SIGN/.test(action) ? labels.SIGNED : 'Данные протокола изменены');
 };
 
-export const resolveProtocolPrimaryAction = (protocol: Protocol, role?: string): { key: ProtocolPrimaryActionKey; label: string } => {
-  const status = normalizeProtocolStatus(protocol.status);
-  const permissions = getProtocolPermissions(protocol, role);
-  if (permissions.canApprove) return { key: 'approve', label: 'Утвердить' };
-  if (permissions.canReadyForApproval) return { key: 'ready', label: 'Отправить на утверждение' };
-  if (status === 'DRAFT') return { key: hasProtocolPermission(protocol, 'canEdit') ? 'edit' : null, label: 'Продолжить' };
-  if (['CALCULATED', 'READY', 'READY_FOR_APPROVAL', 'APPROVED'].includes(status)) {
-    if (hasProtocolAction(protocol, 'SIGN')) return { key: 'sign', label: 'Подписать' };
-    if (hasProtocolPermission(protocol, 'canGeneratePreview')) return { key: 'preview', label: 'Открыть предварительный просмотр' };
-    return protocol.hasPdf && hasProtocolAction(protocol, 'DOWNLOAD_PDF') ? { key: 'pdf', label: 'Скачать PDF' } : { key: null, label: '' };
-  }
-  if (status === 'NEEDS_REVISION') return { key: permissions.canEdit ? 'edit' : null, label: 'Исправить протокол' };
-  if (status === 'SIGNED' && permissions.canSign) return { key: 'sign', label: 'Подписать' };
-  if (status === 'SIGNED' && !permissions.canSign && !(permissions.canPublish && !(protocol.publishedAt || protocol.publishedToClientAt)) && !permissions.canDownload) return { key: null, label: '' };
-  if (status === 'SIGNED') return permissions.canPublish && !(protocol.publishedAt || protocol.publishedToClientAt)
-    ? { key: 'publish', label: 'Отправить клиенту' }
-    : { key: 'pdf', label: 'Скачать PDF' };
-  if (status === 'REPLACED' && protocol.replacedByProtocolId) return { key: 'replacement', label: 'Открыть новую версию' };
-  if (permissions.canDownload && protocol.hasPdf) return { key: 'pdf', label: 'Скачать PDF' };
+export const resolveProtocolPrimaryAction = (protocol: Protocol, _role?: string): { key: ProtocolPrimaryActionKey; label: string } => {
+  if (hasProtocolAction(protocol, 'approve')) return { key: 'approve', label: 'Утвердить' };
+  if (hasProtocolAction(protocol, 'sendToApproval')) return { key: 'ready', label: 'Отправить на утверждение' };
+  if (hasProtocolAction(protocol, 'sign')) return { key: 'sign', label: 'Подписать ЭЦП' };
+  if (hasProtocolAction(protocol, 'calculate')) return { key: 'calculate', label: 'Рассчитать результаты' };
+  if (hasProtocolAction(protocol, 'checkNormatives')) return { key: 'checkNormatives', label: 'Проверить нормативы' };
+  if (hasProtocolAction(protocol, 'edit')) return { key: 'edit', label: 'Продолжить' };
+  if (hasProtocolAction(protocol, 'publish')) return { key: 'publish', label: 'Отправить клиенту' };
+  if (hasProtocolAction(protocol, 'downloadPdf')) return { key: 'pdf', label: 'Скачать PDF' };
+  if (protocol.replacedByProtocolId) return { key: 'replacement', label: 'Открыть новую версию' };
   return { key: null, label: '' };
 };

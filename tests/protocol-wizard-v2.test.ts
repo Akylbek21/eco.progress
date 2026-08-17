@@ -445,10 +445,10 @@ describe('backend permissions authority', () => {
   });
 
   it('uses availableActions for completion, signing and download', () => {
-    const item = { availableActions: ['COMPLETE', 'SIGN', 'DOWNLOAD_PDF'] } as Protocol;
-    expect(hasProtocolAction(item, 'COMPLETE')).toBe(true);
-    expect(hasProtocolAction(item, 'SIGN')).toBe(true);
-    expect(hasProtocolAction(item, 'DOWNLOAD_PDF')).toBe(true);
-    expect(hasProtocolAction({ availableActions: [] } as Protocol, 'SIGN')).toBe(false);
+    const item = { availableActions: { sendToApproval: true, sign: true, downloadPdf: true } } as Protocol;
+    expect(hasProtocolAction(item, 'sendToApproval')).toBe(true);
+    expect(hasProtocolAction(item, 'sign')).toBe(true);
+    expect(hasProtocolAction(item, 'downloadPdf')).toBe(true);
+    expect(hasProtocolAction({ availableActions: {} } as Protocol, 'sign')).toBe(false);
   });
 });

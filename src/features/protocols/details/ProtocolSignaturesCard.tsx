@@ -24,11 +24,6 @@ export const protocolSignUnavailableReason = (
   if (signatureCount >= maxSignatures) {
     return `Достигнуто максимальное количество подписей: ${maxSignatures}`;
   }
-  if (!['READY', 'READY_FOR_APPROVAL', 'APPROVED', 'SIGNED'].includes(protocol.status)) {
-    return ['ARCHIVED', 'REPLACED', 'CANCELLED'].includes(protocol.status)
-      ? 'Подписание недоступно для текущего статуса'
-      : 'Подписание будет доступно после утверждения протокола';
-  }
   if (!permissions.canSign) return 'У вас нет доступа к подписанию протокола';
   return '';
 };
@@ -51,8 +46,6 @@ const ProtocolSignaturesCard = ({
   const signatures = sortedProtocolSignatures(protocol.signatures || []);
   const signatureCount = protocol.signatureCount;
   const maxSignatures = protocol.maxSignatures;
-  const reason = protocolSignUnavailableReason(protocol, permissions);
-  const canSign = permissions.canSign && !reason;
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="protocol-signatures-title">
@@ -67,14 +60,13 @@ const ProtocolSignaturesCard = ({
           <p className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-emerald-50 px-4 text-sm font-bold text-emerald-800">
             <CheckCircle2 className="h-4 w-4" /> Вы подписали этот протокол
           </p>
-        ) : (
+        ) : permissions.canSign ? (
           <div className="text-right">
-            <Button type="button" onClick={onSign} disabled={!canSign || signing}>
-              {signing ? 'Подписание…' : 'Подписать'}
+            <Button type="button" onClick={onSign} disabled={signing}>
+              {signing ? 'Подписание…' : 'Подписать ЭЦП'}
             </Button>
-            {reason && <p className="mt-2 max-w-sm text-sm text-slate-600">{reason}</p>}
           </div>
-        )}
+        ) : null}
       </div>
 
       {loading ? (

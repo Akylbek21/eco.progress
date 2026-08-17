@@ -242,6 +242,72 @@ export interface PekProgram {
   documents?: PekProgramDocument[];
 }
 
+export type PekMonitoringType =
+  | 'AMBIENT_AIR'
+  | 'EMISSION_SOURCE'
+  | 'SURFACE_WATER'
+  | 'GROUNDWATER'
+  | 'WASTEWATER'
+  | 'SOIL'
+  | 'WASTE'
+  | 'PHYSICAL_FACTOR';
+export interface PekMonitoringTypeOption {
+  code: PekMonitoringType;
+  label: string;
+  enabled: boolean;
+}
+export interface PekMonitoringProtocolRef {
+  id: number;
+  number: string;
+  protocolType?: string | null;
+  protocolTypeLabel?: string | null;
+  status?: string | null;
+  date?: string | null;
+}
+export interface PekMonitoringDirection {
+  id: number;
+  version: number;
+  monitoringType: PekMonitoringType;
+  typeLabel: string;
+  controlPoints: Array<Record<string, unknown>>;
+  indicators: Array<Record<string, unknown>>;
+  normatives: Array<Record<string, unknown>>;
+  units: string[];
+  periodicity?: string | null;
+  plannedResearchCount: number;
+  actualResearchCount: number;
+  methodology?: string | null;
+  laboratory?: PekNamedRef | null;
+  linkedProtocols: PekMonitoringProtocolRef[];
+  compatibleProtocols: PekMonitoringProtocolRef[];
+  results: Array<Record<string, unknown>>;
+  exceedances: Array<Record<string, unknown>>;
+  measures: Array<Record<string, unknown>>;
+  availableActions: Record<string, boolean>;
+  missingFields: string[];
+}
+export interface PekProgramMonitoringResponse {
+  programId: number;
+  version: number;
+  items: PekMonitoringDirection[];
+  availableTypes: PekMonitoringTypeOption[];
+  availableActions: Record<string, boolean>;
+  missingFields: string[];
+}
+export interface PekMonitoringMutationRequest {
+  version: number;
+  monitoringType: PekMonitoringType;
+  controlPoints: Array<Record<string, unknown>>;
+  indicators: Array<Record<string, unknown>>;
+  normatives: Array<Record<string, unknown>>;
+  units: string[];
+  periodicity?: string | null;
+  plannedResearchCount: number;
+  methodology?: string | null;
+  laboratoryId?: number | null;
+  protocolIds: number[];
+}
+
 export type PekProgramHeaderFields = {
   companyId: number;
   objectId: number;
@@ -390,6 +456,38 @@ export interface PekHistoryItem {
 }
 export type PekMutationBody = Record<string, unknown> & { version?: number };
 export type PekBlobResult = { blob: Blob; filename: string };
+export type PekPackageDocumentStatus = 'NOT_READY' | 'READY' | 'GENERATING' | 'ERROR';
+export type PekPackageFileFormat = 'XLSX' | 'DOCX' | 'PDF';
+export interface PekPackageFile {
+  id?: number | string;
+  format: PekPackageFileFormat;
+  status: PekPackageDocumentStatus;
+  filename?: string | null;
+  downloadUrl?: string | null;
+  availableActions: Record<string, boolean>;
+}
+export interface PekPackageDocument {
+  code: string;
+  name: string;
+  status: PekPackageDocumentStatus;
+  formats: PekPackageFileFormat[];
+  files: PekPackageFile[];
+  protocolId?: number | null;
+  protocolNumber?: string | null;
+  errorMessage?: string | null;
+  availableActions: Record<string, boolean>;
+}
+export interface PekReportPackage {
+  status: PekPackageDocumentStatus;
+  version?: number | null;
+  generatedAt?: string | null;
+  generatedBy?: PekNamedRef | null;
+  generatedByName?: string | null;
+  missingFields: string[];
+  documents: PekPackageDocument[];
+  availableActions: Record<string, boolean>;
+  downloadAvailable: boolean;
+}
 export type PekResultValue = {
   numericValue?: number | null;
   textValue?: string | null;

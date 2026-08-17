@@ -3,7 +3,6 @@ import type { LaboratoryDetails as CanonicalLaboratoryDetails, LaboratoryEmploye
 export type ProtocolStatus =
   | 'DRAFT'
   | 'CALCULATED'
-  | 'READY'
   | 'READY_FOR_APPROVAL'
   | 'NEEDS_REVISION'
   | 'APPROVED'
@@ -32,15 +31,7 @@ export interface ProtocolPermissions {
   canRegenerateDocuments?: boolean;
 }
 
-export type ProtocolAvailableAction =
-  | 'COMPLETE'
-  | 'READY_FOR_APPROVAL'
-  | 'SEND_TO_APPROVAL'
-  | 'SIGN'
-  | 'DOWNLOAD'
-  | 'DOWNLOAD_PDF'
-  | 'DOWNLOAD_DOCX'
-  | string;
+export type ProtocolAvailableActions = Record<string, boolean>;
 
 export type ProtocolResultValue = string | number | null | undefined | Array<string | number | null>;
 
@@ -442,7 +433,7 @@ export interface Protocol {
   emissionSourceId?: string | number;
   waterOutletId?: string | number;
   permissions?: ProtocolPermissions;
-  availableActions: ProtocolAvailableAction[];
+  availableActions: ProtocolAvailableActions;
   canComplete?: boolean;
   blockingReasons?: string[];
   publishedToClientAt?: string;

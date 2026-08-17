@@ -29,7 +29,7 @@ const friendlyRules: Array<{ pattern: RegExp; message: string }> = [
   { pattern: /verification.*expired|срок.*поверк.*ист[её]к/i, message: 'Срок поверки выбранного прибора истёк.' },
   { pattern: /executor.*does not belong.*laboratory|исполнитель.*не относится.*лаборатор/i, message: 'Выбранный сотрудник не относится к этой лаборатории.' },
   { pattern: /normative.*(record )?not found|норматив.*не найден/i, message: 'Для показателя не найден норматив.' },
-  { pattern: /invalid transition.*READY.*APPROVED|недопустим.*READY.*APPROVED/i, message: 'Протокол пока нельзя утвердить. Сначала передайте его на проверку.' },
+  { pattern: /invalid transition.*READY_FOR_APPROVAL.*APPROVED|недопустим.*READY_FOR_APPROVAL.*APPROVED/i, message: 'Протокол пока нельзя утвердить. Сначала передайте его на проверку.' },
   { pattern: /pollutantCode|pollutant code/i, message: 'Укажите код загрязняющего вещества.' },
   { pattern: /factorType|factor type/i, message: 'Укажите вид измерения.' },
   { pattern: /unit.*required|укажите.*единиц/i, message: 'Укажите единицу измерения.' },

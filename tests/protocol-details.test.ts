@@ -10,7 +10,7 @@ const protocol = (status: ProtocolStatus, extra: Partial<Protocol> = {}): Protoc
   organization: { organizationName: '', organizationAddress: '', objectName: '', productName: '', testingBasis: '' },
   laboratory: { laboratoryName: '', laboratoryAddress: '', accreditationNumber: '', accreditationValidUntil: '', director: '', laboratoryHead: '', executor: '' },
   testing: { productNormativeDocument: '', samplingMethodDocument: '', testingMethodDocument: '', samplingDate: '', testingStartDate: '', testingEndDate: '', testingDate: '', testingPurpose: '', environmentConditions: '' },
-  results: [], measurementDevices: [], history: [], availableActions: [], createdAt: '', updatedAt: '', ...extra,
+  results: [], measurementDevices: [], history: [], availableActions: {}, createdAt: '', updatedAt: '', ...extra,
 });
 
 describe('simplified protocol details', () => {
@@ -32,20 +32,23 @@ describe('simplified protocol details', () => {
   });
 
   it('shows one backend-permission-aware primary action', () => {
-    expect(resolveProtocolPrimaryAction(protocol('DRAFT', { permissions: { canEdit: true } }), 'LABORATORY')).toEqual({ key: 'edit', label: 'Продолжить' });
+    expect(resolveProtocolPrimaryAction(protocol('DRAFT', { availableActions: { edit: true } }), 'LABORATORY')).toEqual({ key: 'edit', label: 'Продолжить' });
     expect(resolveProtocolPrimaryAction(protocol('READY_FOR_APPROVAL'), 'LABORATORY').key).toBeNull();
-    expect(resolveProtocolPrimaryAction(protocol('CALCULATED', { permissions: { canSendToApproval: true } }), 'LABORATORY')).toEqual({ key: 'ready', label: 'Отправить на утверждение' });
-    expect(resolveProtocolPrimaryAction(protocol('READY_FOR_APPROVAL', { permissions: { canApprove: true }, availableActions: ['APPROVE'] }), 'DIRECTOR')).toEqual({ key: 'approve', label: 'Утвердить' });
-    expect(resolveProtocolPrimaryAction(protocol('APPROVED', { permissions: { canSign: true }, availableActions: ['SIGN'] }), 'LABORATORY')).toEqual({ key: 'sign', label: 'Подписать' });
-    expect(resolveProtocolPrimaryAction(protocol('READY', { permissions: { canGeneratePreview: true } }), 'LABORATORY')).toEqual({ key: 'preview', label: 'Открыть предварительный просмотр' });
+    expect(resolveProtocolPrimaryAction(protocol('CALCULATED', { availableActions: { sendToApproval: true } }), 'LABORATORY')).toEqual({ key: 'ready', label: 'Отправить на утверждение' });
+    expect(resolveProtocolPrimaryAction(protocol('READY_FOR_APPROVAL', { availableActions: { approve: true } }), 'DIRECTOR')).toEqual({ key: 'approve', label: 'Утвердить' });
+    expect(resolveProtocolPrimaryAction(protocol('APPROVED', { availableActions: { sign: true } }), 'LABORATORY')).toEqual({ key: 'sign', label: 'Подписать ЭЦП' });
   });
 
   it('maps the lifecycle to five employee-facing stages', () => {
     expect(lifecycleStage('DRAFT')).toBe(0);
     expect(lifecycleStage('CALCULATED')).toBe(1);
-    expect(lifecycleStage('READY_FOR_APPROVAL')).toBe(3);
+    expect(lifecycleStage('READY_FOR_APPROVAL')).toBe(2);
     expect(lifecycleStage('APPROVED')).toBe(3);
     expect(lifecycleStage('SIGNED')).toBe(4);
+    expect(lifecycleStage('NEEDS_REVISION')).toBeNull();
+    expect(lifecycleStage('REPLACED')).toBeNull();
+    expect(lifecycleStage('CANCELLED')).toBeNull();
+    expect(lifecycleStage('ARCHIVED')).toBeNull();
   });
 
   it('turns technical history events into human phrases', () => {

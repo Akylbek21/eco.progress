@@ -52,12 +52,12 @@ test('protocol permission matrix is backend-authoritative and immutable-safe', a
   const source = await read('src/utils/protocolPermissions.ts');
   assert.match(source, /protocol\?\.permissions/);
   assert.match(source, /availableActions/);
-  assert.match(source, /flag\('canEdit'\)/);
-  assert.match(source, /canReadyForApproval: flag\('canSendToApproval'\)/);
-  assert.match(source, /canReplace: flag\('canCreateCorrection'\)/);
-  assert.match(source, /canApprove: hasProtocolAction\(protocol \|\| undefined, 'APPROVE'\)/);
-  assert.match(source, /canSign: hasProtocolAction\(protocol \|\| undefined, 'SIGN'\)/);
-  assert.match(source, /backend\?\.\[key\] === true/);
+  assert.match(source, /canEdit: action\('edit'\)/);
+  assert.match(source, /canReadyForApproval: action\('sendToApproval'\)/);
+  assert.match(source, /canReplace: action\('createCorrection'\)/);
+  assert.match(source, /canApprove: action\('approve'\)/);
+  assert.match(source, /canSign: action\('sign'\)/);
+  assert.doesNotMatch(source, /status === 'APPROVED'/);
 });
 
 test('protocol normative display keeps zero values', async () => {

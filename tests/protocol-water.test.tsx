@@ -4,11 +4,6 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { describe, expect, it, vi } from 'vitest';
 import EnvironmentStep from '../src/features/protocols/components/steps/EnvironmentStep';
 import ProtocolResultRow from '../src/features/protocols/components/components/ProtocolResultRow';
-import {
-  backendWizardIssues,
-  resolveWizardStepByField,
-  WATER_CONDITIONS_STEP_INDEX,
-} from '../src/features/protocols/components/CreateProtocolWizardModal';
 import { createWizardDefaults, emptyWizardResult, type ProtocolWizardForm } from '../src/features/protocols/components/wizardTypes';
 import { mapConditions } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
 import { mapProtocolFormToUpdateRequest } from '../src/features/protocols/api/protocolMappers';
@@ -91,18 +86,6 @@ describe('water protocol wizard and editor contract', () => {
     air.templateId = 'ambient_air';
     expect(mapConditions(air).waterType).toBeUndefined();
     expect(mapConditions(air).waterUseCategory).toBeUndefined();
-  });
-
-  it('routes all backend water paths to conditions and hides raw keys', () => {
-    for (const path of ['header.conditions.waterType', 'conditions.waterUseCategory', 'waterType', 'waterUseCategory']) {
-      expect(resolveWizardStepByField(path)).toBe(WATER_CONDITIONS_STEP_INDEX);
-    }
-    const issues = backendWizardIssues({
-      'header.conditions.waterType': 'Укажите тип воды (waterType)',
-      'conditions.waterUseCategory': 'Укажите категорию (waterUseCategory)',
-    });
-    expect(issues.map((issue) => issue.message)).toEqual(['Выберите тип воды', 'Выберите категорию водопользования']);
-    expect(issues.map((issue) => issue.field)).toEqual(['waterType', 'waterUseCategory']);
   });
 
   it('hydrates nested backend environment conditions and preserves them in PATCH', () => {

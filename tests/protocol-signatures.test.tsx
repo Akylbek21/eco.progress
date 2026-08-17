@@ -60,7 +60,7 @@ const protocol = (extra: Partial<Protocol> = {}): Protocol => ({
   hasPdf: true,
   pdfFileId: 'pdf-42',
   permissions: { canSign: true, canEdit: true, canGenerateDocuments: true },
-  availableActions: ['SIGN', 'DOWNLOAD_PDF'],
+  availableActions: { sign: true, downloadPdf: true },
   companySnapshot: { companyName: 'Eco', objectName: 'Object' },
   protocolDate: '2026-07-27',
   organization: { organizationName: '', organizationAddress: '', objectName: '', productName: '', testingBasis: '' },
@@ -147,7 +147,7 @@ describe('collective protocol signing API and mutation', () => {
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     render(<QueryClientProvider client={queryClient}><SigningHarness /></QueryClientProvider>);
 
-    const button = screen.getByRole('button', { name: 'Подписать' });
+    const button = screen.getByRole('button', { name: 'Подписать ЭЦП' });
     fireEvent.click(button);
     fireEvent.click(button);
 
@@ -180,7 +180,7 @@ describe('signature card states and locking', () => {
         onSign={vi.fn()}
       />,
     );
-    expect((screen.getByRole('button', { name: 'Подписать' }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole('button', { name: 'Подписать ЭЦП' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('prevents repeat signing, enforces the limit and fails closed without SIGN action', () => {
@@ -193,9 +193,9 @@ describe('signature card states and locking', () => {
       />,
     );
     expect(screen.getByText('Вы подписали этот протокол')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Подписать' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Подписать ЭЦП' })).toBeNull();
 
-    const limit = protocol({ status: 'SIGNED', signatureCount: 5, signedByCurrentUser: false });
+    const limit = protocol({ status: 'SIGNED', signatureCount: 5, signedByCurrentUser: false, availableActions: { sign: false } });
     rerender(
       <ProtocolSignaturesCard
         protocol={limit}
@@ -203,18 +203,16 @@ describe('signature card states and locking', () => {
         onSign={vi.fn()}
       />,
     );
-    expect(screen.getByText('Достигнуто максимальное количество подписей: 5')).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'Подписать' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Подписать ЭЦП' })).toBeNull();
 
     rerender(
       <ProtocolSignaturesCard
-        protocol={protocol({ permissions: {}, availableActions: [] })}
-        permissions={getProtocolPermissions(protocol({ permissions: {}, availableActions: [] }), 'CLIENT')}
+        protocol={protocol({ permissions: {}, availableActions: {} })}
+        permissions={getProtocolPermissions(protocol({ permissions: {}, availableActions: {} }), 'CLIENT')}
         onSign={vi.fn()}
       />,
     );
-    expect((screen.getByRole('button', { name: 'Подписать' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText('У вас нет доступа к подписанию протокола')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Подписать ЭЦП' })).toBeNull();
   });
 
   it('keeps signed protocol content read-only even if backend returns canEdit', () => {
@@ -227,6 +225,13 @@ describe('signature card states and locking', () => {
         canGenerateDocuments: true,
         canCreateCorrection: true,
         canSign: true,
+      },
+      availableActions: {
+        edit: false,
+        calculate: true,
+        generateDocuments: true,
+        createCorrection: true,
+        sign: true,
       },
     });
     expect(getProtocolPermissions(item, 'MANAGER')).toMatchObject({

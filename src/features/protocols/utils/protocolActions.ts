@@ -1,21 +1,18 @@
-import type { Protocol, ProtocolPermissions } from '../../../types/protocols';
+import type { Protocol, ProtocolAvailableActions, ProtocolPermissions } from '../../../types/protocols';
 
-const actionAliases = {
-  COMPLETE: ['COMPLETE', 'READY_FOR_APPROVAL', 'SEND_TO_APPROVAL'],
-  APPROVE: ['APPROVE'],
-  SIGN: ['SIGN'],
-  DOWNLOAD: ['DOWNLOAD', 'DOWNLOAD_PDF', 'DOWNLOAD_DOCX'],
-  DOWNLOAD_PDF: ['DOWNLOAD', 'DOWNLOAD_PDF'],
-  DOWNLOAD_DOCX: ['DOWNLOAD', 'DOWNLOAD_DOCX'],
-} as const;
+export const normalizeProtocolAvailableActions = (input: unknown): ProtocolAvailableActions => {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  return Object.fromEntries(
+    Object.entries(input as Record<string, unknown>)
+      .filter(([, enabled]) => typeof enabled === 'boolean')
+      .map(([action, enabled]) => [action, enabled === true]),
+  );
+};
 
 export const hasProtocolAction = (
   protocol: Pick<Protocol, 'availableActions'> | undefined,
-  action: keyof typeof actionAliases,
-): boolean => {
-  const available = new Set((protocol?.availableActions || []).map((item) => String(item).trim().toUpperCase()));
-  return actionAliases[action].some((candidate) => available.has(candidate));
-};
+  action: string,
+): boolean => protocol?.availableActions?.[action] === true;
 
 export const hasProtocolPermission = (
   protocol: Pick<Protocol, 'permissions'> | undefined,

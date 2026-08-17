@@ -136,24 +136,6 @@ const valueOf = (row: ProtocolResultRow, keys: string[]) => {
   }
   return '';
 };
-const resultKeyOf = (row: ProtocolResultRow) => {
-  if (row.id && !String(row.id).startsWith('tmp_')) return `id:${row.id}`;
-  return [
-    pollutantCode(row),
-    indicator(row),
-    valueOf(row, ['samplingPlace', 'measurementPlace']),
-  ].join('|').toLowerCase();
-};
-const mergeProtocolResults = (currentRows: ProtocolResultRow[], importedRows: ProtocolResultRow[]) => {
-  const map = new Map<string, ProtocolResultRow>();
-  currentRows.forEach((row) => map.set(resultKeyOf(row), row));
-  importedRows.forEach((row) => {
-    const key = resultKeyOf(row);
-    const existing = map.get(key);
-    map.set(key, existing ? { ...existing, ...row, values: { ...existing.values, ...row.values } } : row);
-  });
-  return Array.from(map.values());
-};
 const officialResult = (row: ProtocolResultRow, templateId: ProtocolTemplateKey) => {
   if (row.result) return row.result;
   if (templateId === 'industrial_emissions') return valueOf(row, ['resultMg', 'calculatedConcentration', 'resultValue']);
@@ -366,6 +348,18 @@ const ProtocolResultsTable = ({
       queryClient.invalidateQueries({ queryKey: protocolQueryKeys.all(cacheScope) }),
     ]);
   };
+  const handleMutationError = async (error: unknown, fallback: string) => {
+    if (isProtocolVersionConflict(error)) {
+      try {
+        await onImported();
+      } catch {
+        // Preserve the original conflict message when the reconciliation GET fails.
+      }
+      onNotify(protocolVersionConflictMessage, 'warning');
+      return;
+    }
+    onNotify(error instanceof Error ? error.message : fallback, 'error');
+  };
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<NormativeSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
@@ -572,7 +566,7 @@ const ProtocolResultsTable = ({
       setAddOpen(false);
       onNotify('Результат сохранён', 'success');
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Backend не вернул сохранённый результат с id', 'error');
+      await handleMutationError(error, 'Backend не вернул сохранённый результат с id');
     } finally {
       setSaving(false);
     }
@@ -673,7 +667,7 @@ const ProtocolResultsTable = ({
       onNotify('Введите результат измерения перед сохранением показателя', 'info');
       return null;
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось добавить вещество', 'error');
+      await handleMutationError(error, 'Не удалось добавить вещество');
       return null;
     } finally {
       setSaving(false);
@@ -807,7 +801,7 @@ const ProtocolResultsTable = ({
       setSearchState('idle');
       onNotify('Показатель добавлен вручную без норматива. Выберите норматив позже или добавьте его в справочник.', 'warning');
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось добавить показатель вручную', 'error');
+      await handleMutationError(error, 'Не удалось добавить показатель вручную');
     } finally {
       setSaving(false);
     }
@@ -875,7 +869,7 @@ const ProtocolResultsTable = ({
         recalculated ? 'success' : 'warning',
       );
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось сохранить показания', 'error');
+      await handleMutationError(error, 'Не удалось сохранить показания');
     } finally {
       setSaving(false);
     }
@@ -922,7 +916,7 @@ const ProtocolResultsTable = ({
       await onImported();
       onNotify('Норматив выбран', 'success');
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось сохранить норматив', 'error');
+      await handleMutationError(error, 'Не удалось сохранить норматив');
     } finally {
       setSaving(false);
     }
@@ -977,7 +971,7 @@ const ProtocolResultsTable = ({
       await onImported();
       onNotify('Строка дублирована', 'success');
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось дублировать строку', 'error');
+      await handleMutationError(error, 'Не удалось дублировать строку');
     } finally {
       setSaving(false);
     }
@@ -993,7 +987,7 @@ const ProtocolResultsTable = ({
       setDeleteRow(null);
       onNotify('Строка удалена', 'success');
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось удалить строку', 'error');
+      await handleMutationError(error, 'Не удалось удалить строку');
     } finally {
       setSaving(false);
     }
@@ -1006,11 +1000,12 @@ const ProtocolResultsTable = ({
     try {
       const updated = await protocolService.bulkDeleteResults(protocolId, selectedRows.map((row) => row.id), version);
       onChange(updated.results);
+      await onImported();
       await invalidateProtocolQueries();
       onNotify('Выбранные строки удалены', 'success');
       setSelected([]);
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось удалить выбранные строки', 'error');
+      await handleMutationError(error, 'Не удалось удалить выбранные строки');
     } finally {
       setSaving(false);
     }
@@ -1025,10 +1020,11 @@ const ProtocolResultsTable = ({
         ? await protocolService.bulkAssignDevice(protocolId, resultIds, patch.measurementDeviceId, version)
         : await protocolService.bulkUpdatePlace(protocolId, resultIds, patch.measurementPlace || '', version);
       onChange(updated.results);
+      await onImported();
       await invalidateProtocolQueries();
       onNotify('Значение применено к выбранным строкам', 'success');
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Массовое изменение не выполнено', 'error');
+      await handleMutationError(error, 'Массовое изменение не выполнено');
     } finally {
       setSaving(false);
     }
@@ -1036,18 +1032,20 @@ const ProtocolResultsTable = ({
 
   const importFile = async (file?: File) => {
     if (!file) return;
+    if (!/\.(xlsx|xls)$/i.test(file.name)) {
+      onNotify('Поддерживаются только файлы .xls и .xlsx', 'warning');
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
     setSaving(true);
     try {
-      const imported = await protocolService.importExcel(protocolId, file, Number(version));
-      const importedRows = imported.results || [];
-      if (importedRows.length) {
-        onChange(mergeProtocolResults(rows, importedRows));
-      } else {
-        await onImported();
-      }
+      await protocolService.importExcel(protocolId, file, Number(version));
+      // GET is authoritative for rows and the incremented protocol version.
+      // Do not merge the response into stale local rows: that can duplicate data.
+      await onImported();
       onNotify('Показания импортированы из Excel', 'success');
     } catch (error) {
-      onNotify(error instanceof Error ? error.message : 'Не удалось импортировать Excel', 'error');
+      await handleMutationError(error, 'Не удалось импортировать Excel');
     } finally {
       setSaving(false);
       if (fileRef.current) fileRef.current.value = '';

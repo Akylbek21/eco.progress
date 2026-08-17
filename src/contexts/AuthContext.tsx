@@ -167,7 +167,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     queryClient.removeQueries({ queryKey: ['document-flow'] });
     queryClient.removeQueries({ queryKey: ['protocols'] });
     queryClient.removeQueries({ queryKey: ['protocol'] });
-    queryClient.removeQueries({ queryKey: ['protocol-results'] });
     queryClient.removeQueries({ queryKey: ['pek'] });
     clearCompanyQueries(queryClient);
     setToken(null);

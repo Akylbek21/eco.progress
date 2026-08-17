@@ -24,6 +24,8 @@ import type {
   PekProgramCloneRequest,
   PekProgramFilters,
   PekProgramUpdateRequest,
+  PekProgramMonitoringResponse,
+  PekMonitoringMutationRequest,
   PekReport,
   PekReportCreateRequest,
   PekReportCreationParams,
@@ -38,6 +40,7 @@ import type {
   PekReportDocumentVersion,
   PekReportSignature,
   PekReportHistoryEntry,
+  PekReportPackage,
   PekTransitionExceedanceRequest,
 } from './pekContracts';
 import {
@@ -47,6 +50,8 @@ import {
   mapProgramResponse,
   mapReportResponse,
 } from '../mappers/responseMappers';
+import { mapReportPackage } from '../mappers/packageMapper';
+import { mapProgramMonitoring } from '../mappers/monitoringMapper';
 
 const cleanParams = (input: Record<string, unknown>) => Object.fromEntries(
   Object.entries(input).filter(([, value]) => value !== '' && value !== undefined && value !== null),
@@ -125,6 +130,17 @@ export const pekApi = {
     mapProgramResponse(unwrapPekData<unknown>((await api.post(`/pek/programs/${id}/clone`, body)).data)),
   getProgramHistory: (id: number, signal?: AbortSignal) =>
     get<PekHistoryItem[]>(`/pek/programs/${id}/history`, {}, signal),
+  getProgramMonitoring: async (id: number, signal?: AbortSignal): Promise<PekProgramMonitoringResponse> =>
+    mapProgramMonitoring((await api.get(`/pek/programs/${id}/monitoring`, { signal })).data, id),
+  createProgramMonitoring: async (id: number, body: PekMonitoringMutationRequest): Promise<void> => {
+    await api.post(`/pek/programs/${id}/monitoring`, body);
+  },
+  updateProgramMonitoring: async (id: number, monitoringId: number, body: PekMonitoringMutationRequest): Promise<void> => {
+    await api.put(`/pek/programs/${id}/monitoring/${monitoringId}`, body);
+  },
+  deleteProgramMonitoring: async (id: number, monitoringId: number, version: number): Promise<void> => {
+    await api.delete(`/pek/programs/${id}/monitoring/${monitoringId}`, { data: { version } });
+  },
   uploadProgramDocument: async (
     id: number,
     file: File,
@@ -233,6 +249,35 @@ export const pekApi = {
     unwrapPekData<PekReportSignature>((await api.post(`/pek/reports/${id}/document/sign`, { cms })).data),
   getReportSignatures: (id: number, signal?: AbortSignal) =>
     get<PekReportSignature[]>(`/pek/reports/${id}/document/signatures`, {}, signal),
+  getReportPackage: async (id: number, signal?: AbortSignal): Promise<PekReportPackage> =>
+    mapReportPackage((await api.get(`/pek/reports/${id}/package`, { signal })).data),
+  generateReportPackage: async (id: number): Promise<void> => {
+    await api.post(`/pek/reports/${id}/package/generate`);
+  },
+  downloadReportPackage: async (id: number): Promise<PekBlobResult> => {
+    const response = await api.get<Blob>(`/pek/reports/${id}/package/download`, { responseType: 'blob' });
+    return {
+      blob: response.data,
+      filename: filenameFromDisposition(response.headers['content-disposition'], `pek-package-${id}.zip`),
+    };
+  },
+  downloadReportPackageFile: async (id: number, downloadUrl: string, fallbackFilename: string): Promise<PekBlobResult> => {
+    const trimmed = downloadUrl.trim();
+    if (!trimmed || trimmed.startsWith('//')) throw new Error('Backend не вернул безопасный адрес файла комплекта.');
+    let requestUrl = trimmed;
+    if (/^https?:\/\//i.test(requestUrl)) {
+      const locationOrigin = typeof window === 'undefined' ? '' : window.location.origin;
+      const parsed = new URL(requestUrl, locationOrigin || undefined);
+      if (!locationOrigin || parsed.origin !== locationOrigin) throw new Error('Скачивание файла с внешнего адреса запрещено.');
+      requestUrl = `${parsed.pathname}${parsed.search}`;
+    }
+    requestUrl = requestUrl.replace(/^\/api(?=\/)/, '');
+    const response = await api.get<Blob>(requestUrl, { responseType: 'blob' });
+    return {
+      blob: response.data,
+      filename: filenameFromDisposition(response.headers['content-disposition'], fallbackFilename || `pek-package-${id}-document`),
+    };
+  },
   getReportExceedances: async (reportId: number, signal?: AbortSignal) =>
     (await get<unknown[]>(`/pek/reports/${reportId}/exceedances`, {}, signal)).map(mapExceedanceResponse),
   getExceedance: async (id: number, signal?: AbortSignal) =>

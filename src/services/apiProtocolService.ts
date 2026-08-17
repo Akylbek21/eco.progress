@@ -61,6 +61,7 @@ import {
 import { mapBackendProtocolType, mapFrontendProtocolType } from '../features/protocols/api/protocolTypeMapper';
 import { mapFormToCreateProtocolRequest } from '../features/protocols/mappers/mapFormToCreateProtocolRequest';
 import { mapProtocolPermissions } from '../features/protocols/mappers/protocolPermissionMapper';
+import { normalizeProtocolAvailableActions } from '../features/protocols/utils/protocolActions';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -857,9 +858,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     emissionSourceId: pick(pekContext, ['emissionSourceId', 'emission_source_id']) || pick(source, ['emissionSourceId', 'emission_source_id']),
     waterOutletId: pick(pekContext, ['waterOutletId', 'water_outlet_id']) || pick(source, ['waterOutletId', 'water_outlet_id']),
     permissions: mapProtocolPermissions(source.permissions),
-    availableActions: Array.isArray(source.availableActions)
-      ? source.availableActions.filter((action): action is string => typeof action === 'string').map((action) => action.trim().toUpperCase()).filter(Boolean)
-      : [],
+    availableActions: normalizeProtocolAvailableActions(source.availableActions),
     canComplete: source.canComplete === true,
     blockingReasons: Array.isArray(source.blockingReasons) ? source.blockingReasons.map(String) : [],
     publishedToClientAt: pick(source, ['publishedAt', 'publishedToClientAt', 'published_to_client_at']),
@@ -1231,13 +1230,19 @@ export async function saveProtocolDraftResults(
   protocolId: string,
   request: SaveProtocolDraftResultsRequest,
 ): Promise<Protocol> {
+  // The key is created once per function invocation and is therefore reused by
+  // any transport-level retry of this logical PATCH.
+  const idempotencyKey = globalThis.crypto?.randomUUID?.()
+    || `draft-results-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const payload: SaveProtocolDraftResultsRequest = {
     version: request.version,
     added: request.added,
     updated: request.updated,
     deletedIds: request.deletedIds,
   };
-  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/draft-results`, payload);
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/draft-results`, payload, {
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
   return protocolFromActionResponse(protocolId, response);
 }
 
@@ -1379,7 +1384,7 @@ export async function readyForApproval(protocolId: string, request: ProtocolVers
     // before offering a retry so the same versioned command is not sent twice.
     try {
       const current = await getProtocol(protocolId);
-      if (['READY', 'READY_FOR_APPROVAL'].includes(normalizeProtocolStatus(current.status))) return current;
+      if (normalizeProtocolStatus(current.status) === 'READY_FOR_APPROVAL') return current;
     } catch {
       // Preserve the original timeout when reconciliation is unavailable.
     }
@@ -1511,6 +1516,9 @@ const normalizeBlobError = async (error: unknown): Promise<Error> => {
 };
 
 export async function importExcel(protocolId: string, file: File, version: number): Promise<Protocol> {
+  if (!/\.(xlsx|xls)$/i.test(file.name)) {
+    throw new Error('Поддерживаются только файлы .xls и .xlsx.');
+  }
   const formData = new FormData();
   formData.append('file', file);
   formData.append('version', String(version));

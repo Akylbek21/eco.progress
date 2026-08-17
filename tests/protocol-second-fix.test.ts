@@ -30,7 +30,7 @@ const memoryStorage = () => {
 const draftProtocol = (version = 1): Protocol => ({
   id: 'draft-1', version, status: 'DRAFT', results: [], protocolDate: '2026-08-06',
   templateId: 'ambient_air', number: '', protocolNumber: '', laboratory: {}, organization: {},
-  companySnapshot: { companyId: 10, companyName: 'Eco Test' }, testing: {}, permissions: { canView: true, canEdit: true }, availableActions: [],
+  companySnapshot: { companyId: 10, companyName: 'Eco Test' }, testing: {}, permissions: { canView: true, canEdit: true }, availableActions: {},
 } as Protocol);
 
 describe('protocol role matrix v18', () => {
@@ -156,12 +156,12 @@ describe('local protocol draft recovery', () => {
 
 describe('protocol document download guard', () => {
   it('fails closed without a backend download action regardless of role', () => {
-    const protocol = { status: 'SIGNED', permissions: { canView: true }, availableActions: [] } as Protocol;
+    const protocol = { status: 'SIGNED', permissions: { canView: true }, availableActions: {} } as Protocol;
     expect(canDownloadProtocolDocument(protocol, 'HEAD')).toBe(false);
     expect(canDownloadProtocolDocument(protocol, undefined)).toBe(false);
   });
   it('allows download only when backend exposes a matching action', () => {
-    const protocol = { status: 'SIGNED', availableActions: ['DOWNLOAD_PDF'] } as Protocol;
+    const protocol = { status: 'SIGNED', availableActions: { downloadPdf: true } } as Protocol;
     expect(canDownloadProtocolDocument(protocol, 'MANAGER')).toBe(true);
   });
 });
