@@ -438,13 +438,13 @@ describe('PEK backend contract', () => {
     expect(valid.success).toBe(true);
   });
 
-  it('uses the current backend PEK role contract when auth permissions are absent', () => {
-    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(true);
-    expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(true);
-    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_CREATE')).toBe(true);
-    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_REPORT_CREATE')).toBe(true);
+  it('uses backend membership permissions instead of the global auth role', () => {
+    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(false);
+    expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(false);
+    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_CREATE')).toBe(false);
+    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_REPORT_CREATE')).toBe(false);
     expect(hasPermission({ role: 'LABORATORY' }, 'PEK_PROGRAM_CREATE')).toBe(false);
-    expect(hasPermission({ role: 'LABORATORY' }, 'PEK_REPORT_CREATE')).toBe(true);
+    expect(hasPermission({ role: 'LABORATORY' }, 'PEK_REPORT_CREATE')).toBe(false);
     expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_REPORT_CREATE')).toBe(false);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: ['PEK_VIEW'] }, 'PEK_VIEW')).toBe(true);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: [] }, 'PEK_PROGRAM_CREATE')).toBe(false);
@@ -455,8 +455,9 @@ describe('PEK backend contract', () => {
     expect(canCreateProgram(unknown)).toBe(false);
     expect(canCreateReport(unknown)).toBe(false);
     expect(canSignReport({ role: 'ADMIN' }, { availableActions: { sign: false } })).toBe(false);
-    expect(canSignReport({ role: 'ECOLOGIST' }, undefined)).toBe(true);
-    expect(canSubmitPekReport({ role: 'ECOLOGIST' }, undefined)).toBe(true);
+    expect(canSignReport({ role: 'ECOLOGIST' }, undefined)).toBe(false);
+    expect(canSubmitPekReport({ role: 'ECOLOGIST' }, undefined)).toBe(false);
+    expect(canSignReport({ role: 'ECOLOGIST', permissions: ['PEK_REPORT_SIGN'] }, undefined)).toBe(true);
     expect(canArchiveReport({ role: 'ADMIN' }, { canArchive: false })).toBe(false);
     expect(canTransitionExceedance({ allowedTransitions: ['IN_REVIEW'] }, 'CLOSED')).toBe(false);
     expect(canTransitionExceedance({ allowedTransitions: ['CLOSED'] }, 'CLOSED')).toBe(true);
@@ -781,10 +782,11 @@ describe('PEK backend contract', () => {
 
   it('uploads exceedance evidence before attaching it and has no manual fileId field', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/components/exceedances/PekReportExceedances.tsx'), 'utf8');
-    expect(source).toContain('uploadStaffRepositoryDocument');
-    expect(source).toContain('pekApi.attachExceedanceEvidence');
-    expect(source.indexOf('uploadStaffRepositoryDocument')).toBeLessThan(source.indexOf('pekApi.attachExceedanceEvidence'));
+    const flow = readFileSync(resolve(process.cwd(), 'src/features/pek/components/exceedances/evidenceFlow.ts'), 'utf8');
+    expect(source).toContain('uploadAndAttachExceedanceEvidence');
+    expect(flow.indexOf('dependencies.upload')).toBeLessThan(flow.indexOf('dependencies.attach'));
+    expect(flow).toContain('uploaded.id');
     expect(source).not.toContain('ID файла подтверждения');
-    expect(source).toContain('selectedActions.attachEvidence === true');
+    expect(source).toContain('selectedActions.addEvidence === true');
   });
 });

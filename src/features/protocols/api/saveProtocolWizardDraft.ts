@@ -49,10 +49,6 @@ export const saveProtocolWizardDraft = async (
     deletedIds: previousResults.flatMap((row) => retainedIds.has(String(row.id)) ? [] : [row.id]),
   });
 
-  // draft-results may return a compact response. GET is authoritative for the
-  // next optimistic-lock version and persisted result identifiers.
-  protocol = await service.getProtocol(protocol.id);
-
   const resultIdsByClientRowId = new Map<string, string>();
   results.forEach(({ row }) => {
     if (row.serverResultId) resultIdsByClientRowId.set(row.clientRowId, String(row.serverResultId));

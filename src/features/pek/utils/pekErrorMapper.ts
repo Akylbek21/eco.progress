@@ -4,6 +4,11 @@ import type { PekValidationIssue } from '../api/pekContracts';
 import { PekContractError } from '../api/pekContractSchemas';
 
 const messages: Record<string, string> = {
+  PEK_PROGRAM_NOT_EDITABLE: 'Программа находится в финальном статусе. Изменение документов запрещено.',
+  PEK_EVIDENCE_FILE_NOT_FOUND: 'Выбранный файл доказательства не найден. Загрузите файл заново.',
+  PEK_EVIDENCE_FILE_FORBIDDEN: 'У вас нет доступа к выбранному файлу доказательства.',
+  PEK_EVIDENCE_FILE_SCOPE_MISMATCH: 'Файл доказательства относится к другой компании или области доступа.',
+  PEK_DOCUMENT_STALE: 'Документ устарел. Сформируйте его заново.',
   PEK_REPORT_DUPLICATE: 'Отчёт за этот период уже существует',
   PEK_REPORT_ALREADY_EXISTS: 'Отчёт за этот период уже существует',
   PEK_ACTIVE_PROGRAM_MISSING: 'Для выбранного объекта нет действующей программы ПЭК',
@@ -53,6 +58,14 @@ export const mapPekError = (error: unknown): PekUiError => {
   const nestedDetails = details.details && typeof details.details === 'object' ? details.details as Record<string, unknown> : {};
   const missingFields = Array.isArray(details.missingFields) ? details.missingFields : Array.isArray(nestedDetails.missingFields) ? nestedDetails.missingFields : [];
   const status = parsed.status;
+  const conflictMessage = status === 409 || status === 412
+    ? 'Данные были изменены другим пользователем. Обновите страницу.'
+    : undefined;
+  const businessMessage = parsed.code && (
+    parsed.code === 'PEK_DOCUMENT_STALE'
+    || parsed.code === 'PEK_PROGRAM_NOT_EDITABLE'
+    || parsed.code.startsWith('PEK_EVIDENCE_FILE_')
+  ) ? messages[parsed.code] : undefined;
   const statusMessage = status === 401 ? 'Сессия истекла. Войдите снова.'
     : status === 403 ? 'У вас нет доступа к этой компании или операции ПЭК. Обратитесь к администратору.'
       : status === 404 ? 'Программа или отчёт не найден.'
@@ -62,7 +75,7 @@ export const mapPekError = (error: unknown): PekUiError => {
             : (status || 0) >= 500 ? 'Внутренняя ошибка сервиса. Повторите позже.'
               : undefined;
   return {
-    message: parsed.code && messages[parsed.code] ? messages[parsed.code] : statusMessage || parsed.message,
+    message: businessMessage || conflictMessage || (parsed.code && messages[parsed.code] ? messages[parsed.code] : statusMessage || parsed.message),
     code: parsed.code,
     status,
     fieldErrors: parsed.fieldErrors,

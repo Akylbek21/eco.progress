@@ -27,6 +27,9 @@ describe('simplified protocol details', () => {
     expect(protocolStatusLabel('READY_FOR_APPROVAL')).toBe('На утверждении');
     expect(protocolStatusLabel('UNDER_REVIEW')).toBe('Неизвестный статус');
     expect(protocolStatusLabel('NEEDS_REVISION')).toBe('Нужно исправить');
+    expect(protocolStatusLabel('APPROVED')).toBe('Утверждён, ожидает подписи');
+    expect(protocolStatusLabel('SIGNED')).toBe('Подписан / завершён');
+    expect(protocolStatusLabel('PUBLISHED')).toBe('Опубликован клиенту');
     expect(complianceLabel('NORMATIVE_NOT_FOUND')).toBe('Норматив не найден');
     expect(complianceLabel('EXCEEDED')).toBe('Есть превышение');
   });
@@ -45,6 +48,7 @@ describe('simplified protocol details', () => {
     expect(lifecycleStage('READY_FOR_APPROVAL')).toBe(2);
     expect(lifecycleStage('APPROVED')).toBe(3);
     expect(lifecycleStage('SIGNED')).toBe(4);
+    expect(lifecycleStage('PUBLISHED')).toBe(5);
     expect(lifecycleStage('NEEDS_REVISION')).toBeNull();
     expect(lifecycleStage('REPLACED')).toBeNull();
     expect(lifecycleStage('CANCELLED')).toBeNull();
@@ -54,5 +58,8 @@ describe('simplified protocol details', () => {
   it('turns technical history events into human phrases', () => {
     expect(humanHistoryAction({ id: '1', action: 'READY_FOR_APPROVAL', createdAt: '' })).toBe('Протокол передан на проверку');
     expect(humanHistoryAction({ id: '2', action: 'RESULT_UPDATED', createdAt: '' })).toBe('Изменены результаты измерений');
+    expect(humanHistoryAction({ id: '3', action: 'DOCUMENT_REGENERATED', createdAt: '' })).toBe('Документ сформирован заново');
+    expect(humanHistoryAction({ id: '4', action: 'RETURNED_TO_DRAFT', createdAt: '' })).toBe('Возвращён в черновик');
+    expect(humanHistoryAction({ id: '5', action: 'PUBLISHED', createdAt: '' })).toBe('Протокол опубликован клиенту');
   });
 });

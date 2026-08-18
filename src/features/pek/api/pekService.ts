@@ -42,6 +42,10 @@ import type {
   PekReportHistoryEntry,
   PekReportPackage,
   PekTransitionExceedanceRequest,
+  PekAccessContext,
+  PekPermitContext,
+  PekSchedulerRun,
+  PekSchedulerStatus,
 } from './pekContracts';
 import {
   mapCollectionResult,
@@ -99,6 +103,8 @@ export type PekUploadOptions = {
 };
 
 export const pekApi = {
+  getAccessContext: (companyId: number, signal?: AbortSignal) =>
+    get<PekAccessContext>('/pek/access-context', { companyId }, signal),
   async getDashboard(filters: PekDashboardFilters, signal?: AbortSignal) {
     return mapDashboardResponse(await get<unknown>('/pek/dashboard', filters, signal));
   },
@@ -135,11 +141,11 @@ export const pekApi = {
   createProgramMonitoring: async (id: number, body: PekMonitoringMutationRequest): Promise<void> => {
     await api.post(`/pek/programs/${id}/monitoring`, body);
   },
-  updateProgramMonitoring: async (id: number, monitoringId: number, body: PekMonitoringMutationRequest): Promise<void> => {
-    await api.put(`/pek/programs/${id}/monitoring/${monitoringId}`, body);
+  updateProgramMonitoring: async (id: number, monitoringId: number, body: PekMonitoringMutationRequest, version: number): Promise<void> => {
+    await api.put(`/pek/programs/${id}/monitoring/${monitoringId}`, body, { headers: { 'If-Match': String(version) } });
   },
   deleteProgramMonitoring: async (id: number, monitoringId: number, version: number): Promise<void> => {
-    await api.delete(`/pek/programs/${id}/monitoring/${monitoringId}`, { data: { version } });
+    await api.delete(`/pek/programs/${id}/monitoring/${monitoringId}`, { headers: { 'If-Match': String(version) } });
   },
   uploadProgramDocument: async (
     id: number,
@@ -176,6 +182,8 @@ export const pekApi = {
     get<PekLookupOption[]>('/pek/lookups/assignees', { roles: roles.join(',') }, signal),
   getPermits: (objectId: number, signal?: AbortSignal) =>
     get<PekPermit[]>('/pek/permits', { objectId }, signal),
+  getPermitContext: (companyId: number, signal?: AbortSignal) =>
+    get<PekPermitContext>('/pek/permits/context', { companyId }, signal),
   getPermit: (id: number, signal?: AbortSignal) =>
     get<PekPermit>(`/pek/permits/${id}`, {}, signal),
   createPermit: async (body: PekPermitCreateRequest) =>
@@ -249,6 +257,14 @@ export const pekApi = {
     unwrapPekData<PekReportSignature>((await api.post(`/pek/reports/${id}/document/sign`, { cms })).data),
   getReportSignatures: (id: number, signal?: AbortSignal) =>
     get<PekReportSignature[]>(`/pek/reports/${id}/document/signatures`, {}, signal),
+  downloadReportDocumentVersion: async (reportId: number, versionId: number, format: 'docx' | 'pdf'): Promise<PekBlobResult> => {
+    const response = await api.get<Blob>(`/pek/reports/${reportId}/document/versions/${versionId}/download/${format}`, { responseType: 'blob' });
+    return { blob: response.data, filename: filenameFromDisposition(response.headers['content-disposition'], `pek-report-${reportId}-v${versionId}.${format}`) };
+  },
+  downloadReportSignatureCms: async (reportId: number, signatureId: number): Promise<PekBlobResult> => {
+    const response = await api.get<Blob>(`/pek/reports/${reportId}/document/signatures/${signatureId}/cms`, { responseType: 'blob' });
+    return { blob: response.data, filename: filenameFromDisposition(response.headers['content-disposition'], `pek-report-${reportId}-signature-${signatureId}.cms`) };
+  },
   getReportPackage: async (id: number, signal?: AbortSignal): Promise<PekReportPackage> =>
     mapReportPackage((await api.get(`/pek/reports/${id}/package`, { signal })).data),
   generateReportPackage: async (id: number): Promise<void> => {
@@ -259,23 +275,6 @@ export const pekApi = {
     return {
       blob: response.data,
       filename: filenameFromDisposition(response.headers['content-disposition'], `pek-package-${id}.zip`),
-    };
-  },
-  downloadReportPackageFile: async (id: number, downloadUrl: string, fallbackFilename: string): Promise<PekBlobResult> => {
-    const trimmed = downloadUrl.trim();
-    if (!trimmed || trimmed.startsWith('//')) throw new Error('Backend не вернул безопасный адрес файла комплекта.');
-    let requestUrl = trimmed;
-    if (/^https?:\/\//i.test(requestUrl)) {
-      const locationOrigin = typeof window === 'undefined' ? '' : window.location.origin;
-      const parsed = new URL(requestUrl, locationOrigin || undefined);
-      if (!locationOrigin || parsed.origin !== locationOrigin) throw new Error('Скачивание файла с внешнего адреса запрещено.');
-      requestUrl = `${parsed.pathname}${parsed.search}`;
-    }
-    requestUrl = requestUrl.replace(/^\/api(?=\/)/, '');
-    const response = await api.get<Blob>(requestUrl, { responseType: 'blob' });
-    return {
-      blob: response.data,
-      filename: filenameFromDisposition(response.headers['content-disposition'], fallbackFilename || `pek-package-${id}-document`),
     };
   },
   getReportExceedances: async (reportId: number, signal?: AbortSignal) =>
@@ -291,6 +290,12 @@ export const pekApi = {
   getSettings: (companyId: number, signal?: AbortSignal) => get<PekSettings>('/pek/settings', { companyId }, signal),
   updateSettings: async (companyId: number, body: PekSettingsUpdateRequest) =>
     unwrapPekData<PekSettings>((await api.put('/pek/settings', body, { params: { companyId } })).data),
+  getSchedulerStatus: (companyId: number, signal?: AbortSignal) =>
+    get<PekSchedulerStatus>('/pek/settings/automation/status', { companyId }, signal),
+  getSchedulerHistory: (companyId: number, signal?: AbortSignal) =>
+    get<PekSchedulerRun[]>('/pek/settings/automation/history', { companyId }, signal),
+  runSchedulerNow: async (companyId: number) =>
+    unwrapPekData<PekSchedulerRun>((await api.post('/pek/settings/automation/run', null, { params: { companyId } })).data),
 };
 
 // Compatibility alias: there is still only one PEK transport implementation.

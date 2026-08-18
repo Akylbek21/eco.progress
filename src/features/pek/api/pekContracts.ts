@@ -12,6 +12,7 @@ export type PekReportStatus =
   | 'READY_FOR_REVIEW'
   | 'RETURNED'
   | 'APPROVED'
+  | 'SIGNED'
   | 'ARCHIVED';
 export type PekPeriodType = 'QUARTER' | 'YEAR';
 export type ComparisonType =
@@ -126,6 +127,32 @@ export type PekCompanyMembership = {
 };
 export type PekAddMembershipRequest = { email: string; roleCode: string };
 export type PekUpdateMembershipRequest = { roleCode?: string; status?: PekMembershipStatus };
+export interface PekAccessContext {
+  companyId: number;
+  membership: PekCompanyMembership | null;
+  permissions: string[];
+  availableActions: Record<string, boolean>;
+}
+
+export interface PekPermitContext {
+  companyId: number;
+  programs: Array<Pick<PekProgram, 'id' | 'number' | 'name' | 'status'>>;
+  files: Array<{ id: string; name: string }>;
+}
+
+export interface PekSchedulerStatus {
+  lastRunAt: string | null;
+  status: string;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  nextRunAt: string | null;
+  availableActions: Record<string, boolean>;
+}
+
+export interface PekSchedulerRun extends PekSchedulerStatus {
+  id: number;
+}
 
 export type PekAvailableActionCode =
   | 'EDIT'
@@ -251,61 +278,36 @@ export type PekMonitoringType =
   | 'SOIL'
   | 'WASTE'
   | 'PHYSICAL_FACTOR';
-export interface PekMonitoringTypeOption {
-  code: PekMonitoringType;
-  label: string;
-  enabled: boolean;
-}
-export interface PekMonitoringProtocolRef {
-  id: number;
-  number: string;
-  protocolType?: string | null;
-  protocolTypeLabel?: string | null;
-  status?: string | null;
-  date?: string | null;
-}
 export interface PekMonitoringDirection {
   id: number;
+  programId: number;
   version: number;
   monitoringType: PekMonitoringType;
-  typeLabel: string;
-  controlPoints: Array<Record<string, unknown>>;
-  indicators: Array<Record<string, unknown>>;
-  normatives: Array<Record<string, unknown>>;
-  units: string[];
-  periodicity?: string | null;
-  plannedResearchCount: number;
-  actualResearchCount: number;
+  name: string;
   methodology?: string | null;
-  laboratory?: PekNamedRef | null;
-  linkedProtocols: PekMonitoringProtocolRef[];
-  compatibleProtocols: PekMonitoringProtocolRef[];
-  results: Array<Record<string, unknown>>;
-  exceedances: Array<Record<string, unknown>>;
-  measures: Array<Record<string, unknown>>;
+  laboratoryId?: number | null;
+  frequencyType: PekPeriodicity;
+  plannedCount: number;
+  controlItemIds: number[];
+  protocolTypes: string[];
+  active: boolean;
   availableActions: Record<string, boolean>;
-  missingFields: string[];
 }
 export interface PekProgramMonitoringResponse {
   programId: number;
-  version: number;
   items: PekMonitoringDirection[];
-  availableTypes: PekMonitoringTypeOption[];
   availableActions: Record<string, boolean>;
-  missingFields: string[];
 }
 export interface PekMonitoringMutationRequest {
-  version: number;
   monitoringType: PekMonitoringType;
-  controlPoints: Array<Record<string, unknown>>;
-  indicators: Array<Record<string, unknown>>;
-  normatives: Array<Record<string, unknown>>;
-  units: string[];
-  periodicity?: string | null;
-  plannedResearchCount: number;
+  name: string;
   methodology?: string | null;
   laboratoryId?: number | null;
-  protocolIds: number[];
+  frequencyType: PekPeriodicity;
+  plannedCount: number;
+  controlItemIds: number[];
+  protocolTypes: string[];
+  active: boolean;
 }
 
 export type PekProgramHeaderFields = {
@@ -388,6 +390,8 @@ export interface PekReport {
 export type PekReportFilters = {
   companyId: number;
   objectId: number;
+  status?: PekReportStatus;
+  issue?: 'OPEN_EXCEEDANCE' | 'UNMATCHED_SOURCE' | 'MISSING_PROTOCOL';
   page?: number;
   size?: number;
 };
@@ -412,6 +416,8 @@ export interface PekCreationContext {
   duplicateReportId?: number | null;
   warnings: string[];
   blockingReasons: string[];
+  availableActions: Record<string, boolean>;
+  permissions: string[];
 }
 
 export interface PekDashboardDeadline {
@@ -430,6 +436,8 @@ export interface PekDashboard {
   overdueActionCount?: number;
   missingProtocolCount?: number;
   returnedReportCount?: number;
+  signedReportCount?: number;
+  draftReportCount?: number;
   unmatchedSourceCount?: number;
   ambiguousSourceCount?: number;
   staleSourceCount?: number;
@@ -456,37 +464,18 @@ export interface PekHistoryItem {
 }
 export type PekMutationBody = Record<string, unknown> & { version?: number };
 export type PekBlobResult = { blob: Blob; filename: string };
-export type PekPackageDocumentStatus = 'NOT_READY' | 'READY' | 'GENERATING' | 'ERROR';
-export type PekPackageFileFormat = 'XLSX' | 'DOCX' | 'PDF';
-export interface PekPackageFile {
-  id?: number | string;
-  format: PekPackageFileFormat;
-  status: PekPackageDocumentStatus;
-  filename?: string | null;
-  downloadUrl?: string | null;
-  availableActions: Record<string, boolean>;
-}
-export interface PekPackageDocument {
-  code: string;
-  name: string;
-  status: PekPackageDocumentStatus;
-  formats: PekPackageFileFormat[];
-  files: PekPackageFile[];
-  protocolId?: number | null;
-  protocolNumber?: string | null;
-  errorMessage?: string | null;
-  availableActions: Record<string, boolean>;
-}
 export interface PekReportPackage {
-  status: PekPackageDocumentStatus;
-  version?: number | null;
+  id: number;
+  reportId: number;
+  documentVersion: number;
+  sourceContentRevision: number;
+  files: string[];
+  missingFields: string[];
   generatedAt?: string | null;
   generatedBy?: PekNamedRef | null;
-  generatedByName?: string | null;
-  missingFields: string[];
-  documents: PekPackageDocument[];
-  availableActions: Record<string, boolean>;
   downloadAvailable: boolean;
+  availableActions: Record<string, boolean>;
+  version: number;
 }
 export type PekResultValue = {
   numericValue?: number | null;
@@ -641,6 +630,7 @@ export interface PekReportDocumentVersion {
   generatedByName?: string | null;
   status?: string | null;
   stale?: boolean | null;
+  availableActions: Record<string, boolean>;
 }
 
 export interface PekReportSignature {
@@ -657,6 +647,7 @@ export interface PekReportSignature {
   certificateOrganization?: string | null;
   verified: boolean;
   cmsFileId?: string | null;
+  availableActions: Record<string, boolean>;
 }
 
 export interface PekExceedance {

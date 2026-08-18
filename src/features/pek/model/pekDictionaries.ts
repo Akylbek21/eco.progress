@@ -45,6 +45,7 @@ export const pekReportStatusLabels: Record<PekReportStatus, string> = {
   READY_FOR_REVIEW: 'На проверке',
   RETURNED: 'Возвращён на доработку',
   APPROVED: 'Утверждён',
+  SIGNED: 'Подписан',
   ARCHIVED: 'В архиве',
 };
 
@@ -62,4 +63,3 @@ export const migrateComparisonType = (value: unknown): ComparisonType | null => 
   if (value === 'INFORMATIONAL') return 'INFO';
   return typeof value === 'string' && value in comparisonTypeLabels ? value as ComparisonType : null;
 };
-

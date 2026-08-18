@@ -12,6 +12,7 @@ type Props = {
   protocol: Protocol;
   permissions: ProtocolPermissions;
   busy: boolean;
+  primaryDisabled?: boolean;
   primaryLabel: string;
   onBack: () => void;
   onPrimary: () => void;
@@ -25,7 +26,7 @@ type Props = {
   onHistory: () => void;
 };
 
-const ProtocolHeader = ({ protocol, permissions, busy, primaryLabel, onBack, onPrimary, ...menuActions }: Props) => (
+const ProtocolHeader = ({ protocol, permissions, busy, primaryDisabled = false, primaryLabel, onBack, onPrimary, ...menuActions }: Props) => (
   <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <button type="button" onClick={onBack} className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-eco-700"><ArrowLeft className="h-4 w-4" /> К протоколам</button>
     <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -39,7 +40,7 @@ const ProtocolHeader = ({ protocol, permissions, busy, primaryLabel, onBack, onP
         {protocol.orderId && <p className="mt-2 text-sm"><span className="text-slate-500">Заявка № {protocol.orderNumber || protocol.orderId}</span> · <Link className="font-bold text-eco-700" to={`/staff/orders/${protocol.orderId}`}>Открыть заявку</Link></p>}
       </div>
       <div className="flex flex-wrap gap-2 lg:justify-end">
-        {primaryLabel && <Button type="button" className="hidden md:inline-flex" disabled={busy} onClick={onPrimary}>{primaryLabel}</Button>}
+        {primaryLabel && <Button type="button" className="hidden md:inline-flex" disabled={busy || primaryDisabled} onClick={onPrimary}>{primaryLabel}</Button>}
         <ProtocolActionsMenu protocol={protocol} permissions={permissions} busy={busy} {...menuActions} />
       </div>
     </div>

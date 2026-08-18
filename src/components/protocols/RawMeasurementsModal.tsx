@@ -4,6 +4,7 @@ import Modal from '../ui/Modal';
 import protocolService from '../../services/protocolService';
 import { getApiErrorCode, getApiErrorMessage, getApiStatus } from '../../services/apiHelpers';
 import { isProtocolVersionConflict, protocolVersionConflictMessage } from '../../features/protocols/utils/protocolVersionConflict';
+import { mapProtocolResultFormToRequest } from '../../features/protocols/api/protocolMappers';
 import type {
   ProtocolMeasurementDevice,
   ProtocolResultRow,
@@ -163,10 +164,13 @@ const RawMeasurementsModal = ({
     setError('');
     try {
       let savedRow: ProtocolResultRow | undefined;
+      let savedVersion: number;
       if (hasMethodTemplate) {
-        savedRow = await protocolService.saveRawMeasurements(protocolId, row.id, payload(), data.methodTemplate?.id, version);
+        const saved = await protocolService.saveRawMeasurements(protocolId, row.id, payload(), data.methodTemplate?.id, version);
+        savedRow = saved.row;
+        savedVersion = saved.version;
       } else {
-        savedRow = await protocolService.updateProtocolResult(protocolId, row.id, {
+        const request = mapProtocolResultFormToRequest({
           measurementDeviceId: deviceId || row.measurementDeviceId || valueOf(row, ['measurementDeviceId']) || undefined,
           normativeId: valueOf(row, ['normativeId']) || row.normativeReference?.id,
           values: {
@@ -176,7 +180,15 @@ const RawMeasurementsModal = ({
             measurementReadings: manualResult,
             measurementDeviceId: deviceId,
           },
-        }, version);
+        });
+        const saved = await protocolService.saveProtocolDraftResults(protocolId, {
+          version,
+          added: [],
+          updated: [{ ...request, id: row.id }],
+          deletedIds: [],
+        });
+        savedRow = saved.results.find((item) => item.id === row.id);
+        savedVersion = saved.version;
       }
       if (!calculate) {
         if (savedRow) await onCalculated(savedRow);
@@ -185,17 +197,16 @@ const RawMeasurementsModal = ({
         onClose();
         return;
       }
-      const current = await protocolService.getProtocol(protocolId);
-      const calculated = await protocolService.calculateResult(protocolId, row.id, current.version);
+      const calculated = await protocolService.calculateResult(protocolId, row.id, savedVersion);
       onClose();
       if (calculated.row) await onCalculated(calculated.row);
       else await onReload?.();
       onNotify('Результат рассчитан', 'success');
     } catch (saveError) {
       if (isProtocolVersionConflict(saveError)) {
-        await onReload?.();
         setError(protocolVersionConflictMessage);
         onNotify(protocolVersionConflictMessage, 'warning');
+        if (window.confirm(`${protocolVersionConflictMessage}\nПерезагрузить данные?`)) await onReload?.();
         return;
       }
       const message = saveError instanceof Error ? saveError.message : 'Не удалось сохранить исходные данные';

@@ -4,6 +4,7 @@ import ProtocolStatusBadge from './ProtocolStatusBadge';
 import type { Protocol } from '../../types/protocols';
 import { templateName } from '../../data/protocolTemplates';
 import { hasProtocolAction } from '../../features/protocols/utils/protocolActions';
+import { normalizeProtocolStatus } from '../../config/protocolStatus';
 
 type Props = {
   protocols: Protocol[];
@@ -25,7 +26,7 @@ const formatDate = (value?: string) => value && !Number.isNaN(new Date(value).ge
 
 const primaryLabel = (protocol: Protocol) => {
   if (hasProtocolAction(protocol, 'sign')) return 'Подписать ЭЦП';
-  if (hasProtocolAction(protocol, 'edit')) return 'Продолжить';
+  if (normalizeProtocolStatus(protocol.status) !== 'APPROVED' && hasProtocolAction(protocol, 'edit')) return 'Продолжить';
   if (hasProtocolAction(protocol, 'downloadPdf')) return 'Скачать PDF';
   return 'Открыть';
 };
@@ -47,7 +48,7 @@ const ProtocolRowActions = ({ protocol, busy, onOpen, onHistory, onSign, onEdit,
     <div className="relative">
       <button type="button" aria-label={`Дополнительные действия ${protocol.protocolNumber || ''}`} aria-expanded={open} onClick={() => setOpen((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white"><MoreHorizontal className="h-5 w-5" /></button>
       {open && <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-        {hasProtocolAction(protocol, 'edit') && <button type="button" onClick={() => { setOpen(false); onEdit(protocol); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">Изменить</button>}
+        {normalizeProtocolStatus(protocol.status) !== 'APPROVED' && hasProtocolAction(protocol, 'edit') && <button type="button" onClick={() => { setOpen(false); onEdit(protocol); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">Изменить</button>}
         {hasProtocolAction(protocol, 'downloadPdf') && <button type="button" onClick={() => { setOpen(false); onDownload(protocol, 'pdf'); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">Скачать PDF</button>}
         {hasProtocolAction(protocol, 'downloadDocx') && <button type="button" onClick={() => { setOpen(false); onDownload(protocol, 'docx'); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">Скачать DOCX</button>}
         {hasProtocolAction(protocol, 'createCorrection') && <button type="button" onClick={() => { setOpen(false); onReplace(protocol); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">Создать исправленную версию</button>}

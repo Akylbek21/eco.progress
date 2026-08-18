@@ -10,13 +10,14 @@ import type {
   PekPermitCreateRequest,
   PekPermitStatus,
   PekPermitUpdateRequest,
+  PekPermitContext,
 } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import PekCompanyObjectFilters from '../components/common/PekCompanyObjectFilters';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
-import { canUsePekPermission } from '../permissions/pekAccess';
+import { usePekAccessContext } from '../hooks/usePekAccessContext';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { retryPekQuery } from '../utils/pekQueryPolicy';
 
@@ -42,9 +43,10 @@ type PermitEditorProps = {
   error: string;
   onClose: () => void;
   onSubmit: (body: PekPermitCreateRequest | PekPermitUpdateRequest) => void;
+  context: PekPermitContext;
 };
 
-const PermitEditor = ({ permit, companyId, objectId, pending, error, onClose, onSubmit }: PermitEditorProps) => {
+const PermitEditor = ({ permit, companyId, objectId, pending, error, onClose, onSubmit, context }: PermitEditorProps) => {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -99,11 +101,11 @@ const PermitEditor = ({ permit, companyId, objectId, pending, error, onClose, on
       <label className="text-sm font-semibold text-slate-700">Действует до *
         <input name="validTo" type="date" required defaultValue={permit?.validTo || ''} min={permit?.validFrom || undefined} onInput={(event) => event.currentTarget.setCustomValidity('')} className={fieldClass} />
       </label>
-      <label className="text-sm font-semibold text-slate-700">ID файла
-        <input name="fileId" defaultValue={permit?.fileId || ''} className={fieldClass} />
+      <label className="text-sm font-semibold text-slate-700">Файл/документ
+        <select name="fileId" defaultValue={permit?.fileId || ''} className={fieldClass}><option value="">Удалить файл</option>{context.files.map((file) => <option key={file.id} value={file.id}>{file.name}</option>)}</select>
       </label>
-      <label className="text-sm font-semibold text-slate-700">ID программы ПЭК
-        <input name="pekProgramId" type="number" min="1" defaultValue={permit?.pekProgramId || ''} className={fieldClass} />
+      <label className="text-sm font-semibold text-slate-700">Программа ПЭК
+        <select name="pekProgramId" defaultValue={permit?.pekProgramId || ''} className={fieldClass}><option value="">Очистить программу</option>{context.programs.map((program) => <option key={program.id} value={program.id}>{program.number} · {program.name}</option>)}</select>
       </label>
       <label className="text-sm font-semibold text-slate-700 md:col-span-2">Примечание
         <textarea name="note" rows={3} defaultValue={permit?.note || ''} className={fieldClass} />
@@ -125,7 +127,8 @@ const PekPermitsPage = () => {
   const [editing, setEditing] = useState<PekPermit | 'new' | null>(null);
   const [historyPermit, setHistoryPermit] = useState<PekPermit | null>(null);
   const [mutationError, setMutationError] = useState('');
-  const canEdit = canUsePekPermission(user, 'PEK_PROGRAM_EDIT');
+  const access = usePekAccessContext(companyId || undefined);
+  const canCreate = access.data?.availableActions.createPermit === true || access.data?.permissions.includes('PEK_PROGRAM_EDIT') === true;
   const listKey = pekKeys.permits(objectId, user?.id);
 
   const updateFilter = (key: 'companyId' | 'objectId', value: string) => {
@@ -139,6 +142,12 @@ const PekPermitsPage = () => {
     queryKey: listKey,
     queryFn: ({ signal }) => pekApi.getPermits(objectId, signal),
     enabled: objectId > 0,
+    retry: retryPekQuery,
+  });
+  const permitContext = useQuery({
+    queryKey: pekKeys.permitContext(companyId || 0, user?.id),
+    queryFn: ({ signal }) => pekApi.getPermitContext(companyId, signal),
+    enabled: companyId > 0,
     retry: retryPekQuery,
   });
 
@@ -186,7 +195,7 @@ const PekPermitsPage = () => {
     <PekPageHeader
       title="Разрешительные документы"
       description="Реестр разрешений объектов, сроки действия, статусы и история изменений"
-      actions={canEdit && companyId > 0 && objectId > 0
+      actions={canCreate && companyId > 0 && objectId > 0 && permitContext.isSuccess
         ? <Button type="button" onClick={() => { setMutationError(''); setEditing('new'); }}><Plus size={16} /> Добавить разрешение</Button>
         : undefined}
     />
@@ -207,7 +216,7 @@ const PekPermitsPage = () => {
         : permits.isError
           ? <PekQueryError error={permits.error} resource="разрешительные документы" retry={() => void permits.refetch()} />
           : !permits.data?.length
-            ? <PekState title="Разрешений пока нет" message={canEdit ? 'Добавьте первый разрешительный документ для выбранного объекта.' : 'Для выбранного объекта разрешительные документы не найдены.'} />
+            ? <PekState title="Разрешений пока нет" message={canCreate ? 'Добавьте первый разрешительный документ для выбранного объекта.' : 'Для выбранного объекта разрешительные документы не найдены.'} />
             : <div className="overflow-x-auto rounded-2xl border bg-white">
               <table className="w-full min-w-[1050px] text-sm">
                 <thead className="bg-slate-50 text-left"><tr>{['Тип и номер', 'Орган выдачи', 'Дата выдачи', 'Срок действия', 'Статус', 'Связи', 'Действия'].map((label) => <th key={label} className="px-4 py-3">{label}</th>)}</tr></thead>
@@ -219,16 +228,16 @@ const PekPermitsPage = () => {
                   <td className="px-4 py-3"><span className={`rounded-full px-3 py-1 text-xs font-bold ${statusClasses[permit.status]}`}>{statusLabels[permit.status]}</span></td>
                   <td className="px-4 py-3 text-xs text-slate-600"><p>Файл: {permit.fileId || '—'}</p><p className="mt-1">Программа: {permit.pekProgramId || '—'}</p></td>
                   <td className="px-4 py-3"><div className="flex flex-wrap gap-2">
-                    {canEdit && permit.availableActions.edit && <Button type="button" variant="secondary" onClick={() => { setMutationError(''); setEditing(permit); }}><Pencil size={14} /> Изменить</Button>}
-                    {canEdit && permit.availableActions.markExpired && <Button type="button" variant="secondary" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'EXPIRED')}><ShieldAlert size={14} /> Истёк</Button>}
-                    {canEdit && permit.availableActions.revoke && <Button type="button" variant="danger" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'REVOKED')}><ShieldAlert size={14} /> Отозвать</Button>}
+                    {permit.availableActions.edit && <Button type="button" variant="secondary" onClick={() => { setMutationError(''); setEditing(permit); }}><Pencil size={14} /> Изменить</Button>}
+                    {permit.availableActions.markExpired && <Button type="button" variant="secondary" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'EXPIRED')}><ShieldAlert size={14} /> Истёк</Button>}
+                    {permit.availableActions.revoke && <Button type="button" variant="danger" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'REVOKED')}><ShieldAlert size={14} /> Отозвать</Button>}
                     <Button type="button" variant="secondary" onClick={() => setHistoryPermit(permit)}><History size={14} /> История</Button>
                   </div></td>
                 </tr>)}</tbody>
               </table>
             </div>}
 
-    {editing && <PermitEditor
+    {editing && permitContext.data && <PermitEditor
       permit={editing === 'new' ? null : editing}
       companyId={companyId}
       objectId={objectId}
@@ -236,6 +245,7 @@ const PekPermitsPage = () => {
       error={mutationError}
       onClose={() => { if (!save.isPending) setEditing(null); }}
       onSubmit={(body) => save.mutate(body)}
+      context={permitContext.data}
     />}
 
     {historyPermit && <Modal isOpen title={`История разрешения № ${historyPermit.number}`} onClose={() => setHistoryPermit(null)}>

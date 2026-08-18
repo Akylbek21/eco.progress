@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
-import { hasPermission } from '../../../config/permissions';
 import { useAuth } from '../../../contexts/AuthContext';
 import type { PekProgramFilters, PekProgramStatus } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
@@ -11,6 +10,7 @@ import PekLookupSelect from '../components/common/PekLookupSelect';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekReadiness, PekState, PekStatusBadge } from '../components/common/PekUi';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { usePekAccessContext } from '../hooks/usePekAccessContext';
 import { pekStatusLabels } from '../utils/pekLabels';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 
@@ -54,12 +54,13 @@ const PekProgramsPage = () => {
     retry: retryPekQuery,
   });
   const hasFilters = Boolean(rawSearch || filters.companyId || filters.objectId || filters.status || filters.activeOn || filters.responsibleUserId);
+  const access = usePekAccessContext(filters.companyId);
 
   return <div className="space-y-5">
     <PekPageHeader
       title="Программы ПЭК"
       description="Программы производственного экологического контроля"
-      actions={hasPermission(user, 'PEK_PROGRAM_CREATE')
+      actions={access.data?.availableActions.createProgram === true || access.data?.permissions.includes('PEK_PROGRAM_CREATE') === true
         ? <Link to="/staff/pek/programs/new" className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white">Создать программу</Link>
         : undefined}
     />

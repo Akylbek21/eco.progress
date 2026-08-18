@@ -28,6 +28,7 @@ export const lifecycleStage = (status?: string | null) => {
     READY_FOR_APPROVAL: 2,
     APPROVED: 3,
     SIGNED: 4,
+    PUBLISHED: 5,
   } as const;
   return normalized in stages ? stages[normalized as keyof typeof stages] : null;
 };
@@ -74,8 +75,16 @@ export const humanHistoryAction = (item: ProtocolHistoryItem) => {
     MARKED_READY_FOR_APPROVAL: 'Протокол передан на проверку',
     NEEDS_REVISION: 'Возвращён на исправление',
     RETURN_FOR_REVISION: 'Возвращён на исправление',
+    RETURNED_FOR_REVISION: 'Возвращён на доработку',
+    RETURNED_TO_DRAFT: 'Возвращён в черновик',
     APPROVED: 'Протокол утверждён',
     SIGNED: 'Протокол подписан',
+    DOCUMENT_GENERATED: 'Документ сформирован',
+    DOCUMENT_REGENERATED: 'Документ сформирован заново',
+    PDF_GENERATED: 'PDF сформирован',
+    DOCX_GENERATED: 'DOCX сформирован',
+    DOWNLOADED: 'Документ скачан',
+    PUBLISHED: 'Протокол опубликован клиенту',
     CANCELLED: 'Протокол отменён',
     ARCHIVED: 'Протокол перемещён в архив',
     CORRECTION_CREATED: 'Создана исправленная версия',
@@ -89,7 +98,7 @@ export const resolveProtocolPrimaryAction = (protocol: Protocol, _role?: string)
   if (hasProtocolAction(protocol, 'sign')) return { key: 'sign', label: 'Подписать ЭЦП' };
   if (hasProtocolAction(protocol, 'calculate')) return { key: 'calculate', label: 'Рассчитать результаты' };
   if (hasProtocolAction(protocol, 'checkNormatives')) return { key: 'checkNormatives', label: 'Проверить нормативы' };
-  if (hasProtocolAction(protocol, 'edit')) return { key: 'edit', label: 'Продолжить' };
+  if (normalizeProtocolStatus(protocol.status) !== 'APPROVED' && hasProtocolAction(protocol, 'edit')) return { key: 'edit', label: 'Продолжить' };
   if (hasProtocolAction(protocol, 'publish')) return { key: 'publish', label: 'Отправить клиенту' };
   if (hasProtocolAction(protocol, 'downloadPdf')) return { key: 'pdf', label: 'Скачать PDF' };
   if (protocol.replacedByProtocolId) return { key: 'replacement', label: 'Открыть новую версию' };

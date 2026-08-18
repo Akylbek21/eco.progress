@@ -40,6 +40,8 @@ const PekReportDocuments = ({ report }: { report: PekReport }) => {
   const [staleVersionIds, setStaleVersionIds] = useState<number[]>([]);
   const sortedVersions = [...(versions.data || [])].sort((left, right) => right.version - left.version);
   const latestVersionId = sortedVersions[0]?.id;
+  const latestVersion = sortedVersions[0];
+  const documentIsStale = latestVersion?.stale === true || latestVersion?.status === 'STALE' || (latestVersionId != null && staleVersionIds.includes(latestVersionId));
 
   const refreshReport = async () => {
     const actual = await pekApi.getReport(report.id);
@@ -47,6 +49,7 @@ const PekReportDocuments = ({ report }: { report: PekReport }) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: versionsKey }),
       queryClient.invalidateQueries({ queryKey: signaturesKey }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportPackage(report.id, report.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportsRoot(report.companyId, user?.id) }),
     ]);
     return actual;
@@ -58,6 +61,7 @@ const PekReportDocuments = ({ report }: { report: PekReport }) => {
       else await pekApi.generateReportPdf(report.id);
       return refreshReport();
     },
+    onSuccess: () => setStaleVersionIds([]),
     onError: (failure) => {
       const mapped = mapPekError(failure);
       if (mapped.status === 409 || mapped.status === 412) void refreshReport();
@@ -68,11 +72,19 @@ const PekReportDocuments = ({ report }: { report: PekReport }) => {
     onSuccess: saveBlob,
     onError: (failure) => {
       const mapped = mapPekError(failure);
-      if (/STALE|OUTDATED/i.test(mapped.code || '') && latestVersionId) {
+      if (mapped.code === 'PEK_DOCUMENT_STALE' && latestVersionId) {
         setStaleVersionIds((current) => current.includes(latestVersionId) ? current : [...current, latestVersionId]);
       }
       if (mapped.status === 409 || mapped.status === 412) void refreshReport();
     },
+  });
+  const downloadVersion = useMutation({
+    mutationFn: ({ versionId, format }: { versionId: number; format: 'docx' | 'pdf' }) => pekApi.downloadReportDocumentVersion(report.id, versionId, format),
+    onSuccess: saveBlob,
+  });
+  const downloadCms = useMutation({
+    mutationFn: (signatureId: number) => pekApi.downloadReportSignatureCms(report.id, signatureId),
+    onSuccess: saveBlob,
   });
   const sign = useMutation({
     mutationFn: async () => {
@@ -83,6 +95,9 @@ const PekReportDocuments = ({ report }: { report: PekReport }) => {
     },
     onError: (failure) => {
       const mapped = mapPekError(failure);
+      if (mapped.code === 'PEK_DOCUMENT_STALE' && latestVersionId) {
+        setStaleVersionIds((current) => current.includes(latestVersionId) ? current : [...current, latestVersionId]);
+      }
       if (mapped.status === 409 || mapped.status === 412) void refreshReport();
     },
   });
@@ -93,8 +108,8 @@ const PekReportDocuments = ({ report }: { report: PekReport }) => {
   const canDownloadPdf = report.availableActions.downloadPdf === true;
   const canSign = report.availableActions.sign === true;
   const hasActions = canGenerateDocx || canGeneratePdf || canDownloadDocx || canDownloadPdf || canSign;
-  const busy = generate.isPending || download.isPending || sign.isPending;
-  const error = generate.error || download.error || sign.error;
+  const busy = generate.isPending || download.isPending || downloadVersion.isPending || downloadCms.isPending || sign.isPending;
+  const error = generate.error || download.error || downloadVersion.error || downloadCms.error || sign.error;
   const failure = error ? mapPekError(error) : null;
 
   return <section className="space-y-5 rounded-2xl border bg-white p-5">
@@ -102,27 +117,28 @@ const PekReportDocuments = ({ report }: { report: PekReport }) => {
       <h2 className="font-black">Документы отчёта ПЭК</h2>
       <p className="text-sm text-slate-500">Формирование, скачивание и подписание выполняются на сервере.</p>
     </div>
+    {documentIsStale && <Alert severity="warning">Документ устарел. Сформируйте его заново.</Alert>}
     {failure && <Alert severity="error"><strong>{failure.code}</strong>: {failure.message}{Object.entries(failure.fieldErrors).map(([field, message]) => <div key={field}>{field}: {message}</div>)}</Alert>}
     {versions.isError && <Alert severity="error" action={<Button size="small" onClick={() => void versions.refetch()}>Повторить</Button>}>Не удалось загрузить версии документов.</Alert>}
     {signatures.isError && <Alert severity="error" action={<Button size="small" onClick={() => void signatures.refetch()}>Повторить</Button>}>Не удалось загрузить подписи.</Alert>}
     <div className="flex flex-wrap gap-2">
-      {canGenerateDocx && <Button variant="outlined" disabled={busy} onClick={() => generate.mutate('docx')}>Сформировать DOCX</Button>}
-      {canGeneratePdf && <Button variant="contained" disabled={busy} onClick={() => generate.mutate('pdf')}>Сформировать PDF</Button>}
-      {canDownloadDocx && <Button variant="outlined" disabled={busy} onClick={() => download.mutate('docx')}>Скачать DOCX</Button>}
-      {canDownloadPdf && <Button variant="outlined" disabled={busy} onClick={() => download.mutate('pdf')}>Скачать PDF</Button>}
-      {canSign && <Button color="success" variant="contained" disabled={busy} onClick={() => sign.mutate()}>Подписать</Button>}
+      {canGenerateDocx && <Button variant="outlined" disabled={busy} onClick={() => generate.mutate('docx')}>{documentIsStale ? 'Пересформировать DOCX' : 'Сформировать DOCX'}</Button>}
+      {canGeneratePdf && <Button variant="contained" disabled={busy} onClick={() => generate.mutate('pdf')}>{documentIsStale ? 'Пересформировать PDF' : 'Сформировать PDF'}</Button>}
+      {canDownloadDocx && <Button variant="outlined" disabled={busy || documentIsStale} onClick={() => download.mutate('docx')}>Скачать DOCX</Button>}
+      {canDownloadPdf && <Button variant="outlined" disabled={busy || documentIsStale} onClick={() => download.mutate('pdf')}>Скачать PDF</Button>}
+      {canSign && <Button color="success" variant="contained" disabled={busy || documentIsStale} onClick={() => sign.mutate()}>Подписать</Button>}
     </div>
     {!hasActions && <Alert severity="info">Для текущего статуса отчёта backend не разрешил действий с документами.</Alert>}
     <div className="overflow-x-auto rounded-xl border">
       <table className="w-full min-w-[720px] text-sm">
         <thead className="bg-slate-50 text-left"><tr><th className="p-3">Версия</th><th>Дата генерации</th><th>Автор</th><th>Статус</th><th>DOCX</th><th>PDF</th><th>Скачивание</th></tr></thead>
-        <tbody>{versions.isLoading ? <tr><td className="p-4 text-slate-500" colSpan={7}>Загрузка версий…</td></tr> : sortedVersions.map((version) => { const stale = version.stale === true || /STALE|OUTDATED/i.test(version.status || '') || staleVersionIds.includes(version.id); return <tr key={version.id} className="border-t"><td className="p-3 font-bold">v{version.version}</td><td>{version.generatedAt || '—'}</td><td>{version.generatedByName || (version.generatedBy ? `Сотрудник №${version.generatedBy}` : '—')}</td><td>{stale ? 'Устарел' : version.status || (version.id === latestVersionId ? 'Актуальная' : 'Архивная')}</td><td>{version.hasDocx ? 'Есть' : 'Нет'}</td><td>{version.hasPdf ? 'Есть' : 'Нет'}</td><td><div className="flex gap-2">{version.id === latestVersionId && !stale && version.hasDocx && canDownloadDocx && <Button size="small" disabled={busy} onClick={() => download.mutate('docx')}>Скачать DOCX</Button>}{version.id === latestVersionId && !stale && version.hasPdf && canDownloadPdf && <Button size="small" disabled={busy} onClick={() => download.mutate('pdf')}>Скачать PDF</Button>}</div></td></tr>; })}</tbody>
+        <tbody>{versions.isLoading ? <tr><td className="p-4 text-slate-500" colSpan={7}>Загрузка версий…</td></tr> : sortedVersions.map((version) => { const stale = version.stale === true || version.status === 'STALE' || staleVersionIds.includes(version.id); return <tr key={version.id} className="border-t"><td className="p-3 font-bold">v{version.version}</td><td>{version.generatedAt || '—'}</td><td>{version.generatedByName || (version.generatedBy ? `Сотрудник №${version.generatedBy}` : '—')}</td><td>{stale ? 'Устарел' : version.status || '—'}</td><td>{version.hasDocx ? 'Есть' : 'Нет'}</td><td>{version.hasPdf ? 'Есть' : 'Нет'}</td><td><div className="flex gap-2">{version.hasDocx && version.availableActions?.downloadDocx === true && <Button size="small" disabled={busy || stale} onClick={() => downloadVersion.mutate({ versionId: version.id, format: 'docx' })}>Скачать DOCX</Button>}{version.hasPdf && version.availableActions?.downloadPdf === true && <Button size="small" disabled={busy || stale} onClick={() => downloadVersion.mutate({ versionId: version.id, format: 'pdf' })}>Скачать PDF</Button>}</div></td></tr>; })}</tbody>
       </table>
       {!versions.isLoading && !versions.isError && !sortedVersions.length && <p className="p-4 text-sm text-slate-500">Документы ещё не сформированы.</p>}
     </div>
     <div>
       <h3 className="font-bold">Подписи</h3>
-      {signatures.isLoading ? <p className="mt-2 text-sm text-slate-500">Загрузка подписей…</p> : !signatures.data?.length ? <p className="mt-2 text-sm text-slate-500">Подписей пока нет.</p> : <div className="mt-2 overflow-x-auto rounded-xl border"><table className="w-full min-w-[820px] text-sm"><thead className="bg-slate-50 text-left"><tr><th className="p-3">Подписант</th><th>Дата подписания</th><th>Сертификат</th><th>Организация</th><th>Статус</th></tr></thead><tbody>{signatures.data.map((signature) => <tr key={signature.id} className="border-t"><td className="p-3 font-semibold">{signature.certificateCn || signature.certificateSubject || `Сотрудник №${signature.signerUserId}`}</td><td>{signature.signedAt || '—'}</td><td>{signature.certificateSerial || signature.certificateSubject || '—'}</td><td>{signature.certificateOrganization || '—'}</td><td>{signature.verified ? 'Подпись проверена' : 'Не подтверждена'}</td></tr>)}</tbody></table></div>}
+      {signatures.isLoading ? <p className="mt-2 text-sm text-slate-500">Загрузка подписей…</p> : !signatures.data?.length ? <p className="mt-2 text-sm text-slate-500">Подписей пока нет.</p> : <div className="mt-2 overflow-x-auto rounded-xl border"><table className="w-full min-w-[820px] text-sm"><thead className="bg-slate-50 text-left"><tr><th className="p-3">Подписант</th><th>Дата подписания</th><th>Сертификат</th><th>Организация</th><th>Статус</th><th>Файл</th></tr></thead><tbody>{signatures.data.map((signature) => <tr key={signature.id} className="border-t"><td className="p-3 font-semibold">{signature.certificateCn || signature.certificateSubject || `Сотрудник №${signature.signerUserId}`}</td><td>{signature.signedAt || '—'}</td><td>{signature.certificateSerial || signature.certificateSubject || '—'}</td><td>{signature.certificateOrganization || '—'}</td><td>{signature.verified ? 'Подпись проверена' : 'Не подтверждена'}</td><td>{signature.availableActions?.downloadCms === true && <Button size="small" disabled={busy} onClick={() => downloadCms.mutate(signature.id)}>Скачать CMS / ЭЦП</Button>}</td></tr>)}</tbody></table></div>}
     </div>
   </section>;
 };

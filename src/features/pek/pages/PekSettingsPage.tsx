@@ -13,6 +13,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { usePekScope } from '../hooks/usePekScope';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { retryPekQuery } from '../utils/pekQueryPolicy';
+import { usePekAccessContext } from '../hooks/usePekAccessContext';
 
 const booleanFields: Array<[keyof PekSettingsUpdateRequest, string]> = [
   ['includeOnlySignedProtocols', 'Учитывать только подписанные протоколы'],
@@ -39,6 +40,7 @@ const PekSettingsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCompanyId = Number(searchParams.get('companyId')) || 0;
   const scope = usePekScope(selectedCompanyId || undefined);
+  const access = usePekAccessContext(selectedCompanyId || undefined);
   const settingsKey = pekKeys.settings(selectedCompanyId || null, user?.id);
   const settings = useQuery({
     queryKey: settingsKey,
@@ -48,6 +50,23 @@ const PekSettingsPage = () => {
   });
   const assignees = useQuery({ queryKey: pekKeys.assignees(['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal) });
   const laboratories = useQuery({ queryKey: ['laboratories', 'pek-settings', `user:${user?.id ?? 'anonymous'}`], queryFn: ({ signal }) => getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }, signal) });
+  const schedulerStatus = useQuery({
+    queryKey: pekKeys.schedulerStatus(selectedCompanyId || 0, user?.id),
+    queryFn: ({ signal }) => pekApi.getSchedulerStatus(selectedCompanyId, signal),
+    enabled: selectedCompanyId > 0 && scope.companyAllowed,
+    retry: retryPekQuery,
+  });
+  const schedulerHistory = useQuery({
+    queryKey: pekKeys.schedulerHistory(selectedCompanyId || 0, user?.id),
+    queryFn: ({ signal }) => pekApi.getSchedulerHistory(selectedCompanyId, signal),
+    enabled: selectedCompanyId > 0 && scope.companyAllowed,
+    retry: retryPekQuery,
+  });
+  const runScheduler = useMutation({
+    mutationFn: () => pekApi.runSchedulerNow(selectedCompanyId),
+    onSuccess: async () => { await Promise.all([schedulerStatus.refetch(), schedulerHistory.refetch()]); },
+    onError: (error) => setMessage(mapPekError(error).message),
+  });
   const [form, setForm] = useState<PekSettingsUpdateRequest | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   useEffect(() => {
@@ -85,7 +104,7 @@ const PekSettingsPage = () => {
   if (settings.isLoading) return <PekLoading />;
   if (settings.isError) return <PekQueryError error={settings.error} resource="настройки ПЭК" retry={() => void settings.refetch()} />;
   if (!settings.data || !form) return <PekState title="Настройки ПЭК не получены" message="Сервис не вернул данные настроек." />;
-  const editable = settings.data?.availableActions.edit === true;
+  const editable = settings.data?.availableActions.edit === true || access.data?.permissions.includes('PEK_SETTINGS_EDIT') === true;
   const dirty = settings.data ? JSON.stringify(form) !== JSON.stringify(toRequest(settings.data)) : false;
   const set = <K extends keyof PekSettingsUpdateRequest>(key: K, value: PekSettingsUpdateRequest[K]) => setForm((current) => current ? { ...current, [key]: value } : current);
   return <div className="space-y-5">
@@ -104,6 +123,13 @@ const PekSettingsPage = () => {
       <FormControlLabel control={<Checkbox checked={form.autoCollectProtocols} disabled={!editable || settings.data.capabilities.automaticCollectionSupported !== true} onChange={(event) => set('autoCollectProtocols', event.target.checked)} />} label="Автоматически собирать протоколы" />
       <div className="grid gap-2 md:grid-cols-2">{booleanFields.map(([key, label]) => <FormControlLabel key={key} control={<Checkbox checked={Boolean(form[key])} disabled={!editable} onChange={(event) => set(key, event.target.checked)} />} label={label} />)}</div>
       {editable && <div className="flex justify-end gap-3"><Button variant="outlined" disabled={!dirty || save.isPending} onClick={() => settings.data && setForm(toRequest(settings.data))}>Сбросить</Button><Button variant="contained" disabled={!dirty || save.isPending} onClick={() => save.mutate(form)}>{save.isPending ? 'Сохранение…' : 'Сохранить'}</Button></div>}
+    </section>
+    <section className="space-y-4 rounded-2xl border bg-white p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-black">Автоматизация</h2><p className="text-sm text-slate-500">Состояние планировщика ПЭК для выбранной компании</p></div>{schedulerStatus.data?.availableActions.runNow === true && <Button variant="contained" disabled={runScheduler.isPending} onClick={() => runScheduler.mutate()}>{runScheduler.isPending ? 'Запуск…' : 'Запустить сейчас'}</Button>}</div>
+      {schedulerStatus.isLoading ? <PekLoading /> : schedulerStatus.isError ? <PekQueryError error={schedulerStatus.error} resource="статус автоматизации ПЭК" retry={() => void schedulerStatus.refetch()} /> : schedulerStatus.data && <div className="grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
+        {[['Последний запуск', schedulerStatus.data.lastRunAt || '—'], ['Статус', schedulerStatus.data.status], ['Обработано', schedulerStatus.data.processed], ['Успешно', schedulerStatus.data.succeeded], ['Ошибки', schedulerStatus.data.failed], ['Следующий запуск', schedulerStatus.data.nextRunAt || '—']].map(([label, value]) => <div key={String(label)} className="rounded-xl bg-slate-50 p-3"><span className="text-slate-500">{label}</span><p className="mt-1 font-bold">{value}</p></div>)}
+      </div>}
+      {schedulerHistory.data?.length ? <div><h3 className="font-bold">История запусков</h3><ul className="mt-2 space-y-2 text-sm">{schedulerHistory.data.map((run) => <li key={run.id} className="rounded-xl border p-3">{run.lastRunAt || '—'} · {run.status} · {run.succeeded}/{run.processed}, ошибок: {run.failed}</li>)}</ul></div> : null}
     </section>
   </div>;
 };

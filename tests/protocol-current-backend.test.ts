@@ -8,7 +8,7 @@ import { createWizardDefaults, emptyWizardResult } from '../src/features/protoco
 import { buildQuickCreatePayload } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
 import { normalizeProtocolStatus } from '../src/config/protocolStatus';
 import { getProtocolPermissions } from '../src/utils/protocolPermissions';
-import { addProtocolResult, importExcel, normalizeProtocol, readyForApproval, removeProtocolMeasurementDevice, returnForRevision, saveProtocolDraftResults, signProtocol } from '../src/services/apiProtocolService';
+import { addProtocolResult, importExcel, normalizeProtocol, readyForApproval, removeProtocolMeasurementDevice, returnForRevision, returnToDraft, saveProtocolDraftResults, signProtocol } from '../src/services/apiProtocolService';
 import { normalizeApiError } from '../src/services/apiHelpers';
 
 const server = setupServer();
@@ -178,6 +178,20 @@ describe('current protocol backend contract', () => {
     expect(body).toEqual({ version: 8, reason: 'Исправить результаты' });
     expect(getCount).toBe(1);
     expect(revised).toMatchObject({ status: 'NEEDS_REVISION', version: 9, availableActions: { edit: true, sendToApproval: true } });
+  });
+
+  it('returns an approved protocol to draft with the edited version and reason', async () => {
+    let body: unknown;
+    server.use(
+      http.post('http://localhost/api/protocols/42/return-to-draft', async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ data: { ...protocol, status: 'DRAFT', version: 9 } });
+      }),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: { ...protocol, status: 'DRAFT', version: 9 } })),
+    );
+    const revised = await returnToDraft('42', { version: 8, reason: 'Исправить документ' });
+    expect(body).toEqual({ version: 8, reason: 'Исправить документ' });
+    expect(revised).toMatchObject({ status: 'DRAFT', version: 9 });
   });
 
   it('imports xls/xlsx with file and version and reloads protocol results', async () => {

@@ -7,7 +7,7 @@
         "templateId": "workplace_air",
         "templateName": "Воздух рабочей зоны",
         "subtype": null,
-        "status": "READY",
+        "status": "CALCULATED",
         "protocolDate": "2026-07-13",
         "companyId": 1,
         "companyName": "Тестовая компания",
@@ -29,6 +29,9 @@
           "canSendToApproval": true,
           "canCreateCorrection": false
         },
+        "availableActions": {
+          "sendToApproval": true
+        },
         "signatureCount": 0,
         "maxSignatures": 5,
         "hasDocx": true,
@@ -42,7 +45,7 @@
         "templateId": "ambient_air_szz",
         "templateName": "Атмосферный воздух / СЗЗ",
         "subtype": null,
-        "status": "READY",
+        "status": "CALCULATED",
         "protocolDate": "2026-07-13",
         "companyId": 1,
         "companyName": "Тестовая компания",
@@ -60,6 +63,9 @@
           "canGeneratePreview": true,
           "canSendToApproval": true,
           "canCreateCorrection": false
+        },
+        "availableActions": {
+          "sendToApproval": true
         },
         "signatureCount": 0,
         "maxSignatures": 5,

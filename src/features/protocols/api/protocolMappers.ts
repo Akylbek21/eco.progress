@@ -138,6 +138,10 @@ export const mapProtocolResultFormToRequest = (payload: ProtocolResultPayload): 
       .filter(([key]) => !legacyResultKeys.has(key))
       .map(([key, value]) => [key, normalizeResultValue(value)]),
   );
+  const normativeSource = String(values.normativeSource || '').trim().toUpperCase();
+  if (normativeSource === 'MANUAL' && !String(values.manualNormativeReason || '').trim()) {
+    throw new Error('Укажите причину использования ручного норматива.');
+  }
 
   return { values, measurementDeviceId, normativeId };
 };

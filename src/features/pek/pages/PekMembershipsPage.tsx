@@ -9,7 +9,7 @@ import { pekApi } from '../api/pekService';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { usePekScope } from '../hooks/usePekScope';
-import { canUsePekPermission } from '../permissions/pekAccess';
+import { usePekAccessContext } from '../hooks/usePekAccessContext';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { retryPekQuery } from '../utils/pekQueryPolicy';
 
@@ -23,7 +23,8 @@ const PekMembershipsPage = () => {
   const companyId = Number(params.get('companyId')) || 0;
   const scope = usePekScope(companyId || undefined);
   const company = scope.companies.find((item) => item.id === companyId);
-  const canManage = canUsePekPermission(user, 'PEK_SETTINGS_EDIT');
+  const access = usePekAccessContext(companyId || undefined);
+  const canManage = access.data?.availableActions.manageMemberships === true || access.data?.permissions.includes('PEK_SETTINGS_EDIT') === true;
   const key = pekKeys.memberships(companyId, user?.id);
   const memberships = useQuery({
     queryKey: key,

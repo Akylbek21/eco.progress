@@ -10,7 +10,7 @@ import { getAvailableMeasurementDevices } from '../../../services/measurementDev
 import protocolService from '../../../services/protocolService';
 import { normalizeApiError } from '../../../services/apiHelpers';
 import type { Protocol } from '../../../types/protocols';
-import { hasProtocolPermission } from '../utils/protocolActions';
+import { hasProtocolAction } from '../utils/protocolActions';
 import { saveProtocolWizardDraft } from '../api/saveProtocolWizardDraft';
 import { mapProtocolToWizardForm } from '../mappers/protocolWizardDraftMapper';
 import { applyProtocolApiErrorsToForm } from '../utils/protocolFormErrors';
@@ -291,7 +291,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
       goToIssue(first.step, first.field as FieldPath<ProtocolWizardForm>);
       return;
     }
-    if (step === 3 && serverDraft && hasProtocolPermission(serverDraft, 'canCheckNormatives')) {
+    if (step === 3 && serverDraft && hasProtocolAction(serverDraft, 'checkNormatives')) {
       try {
         const saved = await save();
         if (saved) setServerDraft(await protocolService.checkNormatives(saved.protocol.id, saved.protocol.version));

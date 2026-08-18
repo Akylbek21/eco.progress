@@ -6,6 +6,7 @@ import Modal from '../ui/Modal';
 import NormativeStatusBadge, { normativeStatusLabels } from './NormativeStatusBadge';
 import RawMeasurementsModal from './RawMeasurementsModal';
 import protocolService from '../../services/protocolService';
+import { normalizeApiError } from '../../services/apiHelpers';
 import { getMeasurementDevices } from '../../services/measurementDeviceService';
 import { getPhysicalFactorIndicators } from '../../data/physicalFactors';
 import { subtypeName } from '../../data/protocolTemplates';
@@ -350,15 +351,11 @@ const ProtocolResultsTable = ({
   };
   const handleMutationError = async (error: unknown, fallback: string) => {
     if (isProtocolVersionConflict(error)) {
-      try {
-        await onImported();
-      } catch {
-        // Preserve the original conflict message when the reconciliation GET fails.
-      }
       onNotify(protocolVersionConflictMessage, 'warning');
+      if (window.confirm(`${protocolVersionConflictMessage}\nПерезагрузить данные?`)) await onImported();
       return;
     }
-    onNotify(error instanceof Error ? error.message : fallback, 'error');
+    onNotify(normalizeApiError(error, fallback).message, 'error');
   };
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<NormativeSuggestion[]>([]);
@@ -826,7 +823,7 @@ const ProtocolResultsTable = ({
     setSaving(true);
     try {
       const resultValue = form.primaryReading.trim() || null;
-      const saved = await protocolService.updateProtocolResult(protocolId, editing.id, {
+      const request = mapProtocolResultFormToRequest({
         measurementDeviceId: form.measurementDeviceId || undefined,
         normativeId: valueOf(editing, ['normativeId']) || editing.normativeReference?.id,
         values: {
@@ -844,19 +841,24 @@ const ProtocolResultsTable = ({
           externalLaboratory: form.externalLaboratory,
           externalLaboratoryDocument: form.externalLaboratoryDocument,
         },
-      }, version);
-      let latestRow = saved;
+      });
+      const updatedProtocol = await protocolService.saveProtocolDraftResults(protocolId, {
+        version,
+        added: [],
+        updated: [{ ...request, id: editing.id }],
+        deletedIds: [],
+      });
+      let latestRow = updatedProtocol.results.find((row) => row.id === editing.id) || editing;
       let recalculated = true;
       try {
-        const current = await protocolService.getProtocol(protocolId);
-        const calculation = await protocolService.calculateResult(protocolId, editing.id, current.version);
+        const calculation = await protocolService.calculateResult(protocolId, editing.id, updatedProtocol.version);
         if (calculation.row) latestRow = calculation.row;
       } catch (calculationError) {
         recalculated = false;
         if (isProtocolVersionConflict(calculationError)) {
-          await onImported();
           setEditing(null);
           onNotify(protocolVersionConflictMessage, 'warning');
+          if (window.confirm(`${protocolVersionConflictMessage}\nПерезагрузить данные?`)) await onImported();
           return;
         }
         console.warn(`Result ${editing.id} was updated but could not be recalculated automatically.`, calculationError);
@@ -1015,10 +1017,9 @@ const ProtocolResultsTable = ({
     if (!selectedRows.length) return onNotify('Выберите строки', 'warning');
     setSaving(true);
     try {
-      const resultIds = selectedRows.map((row) => row.id);
       const updated = patch.measurementDeviceId
-        ? await protocolService.bulkAssignDevice(protocolId, resultIds, patch.measurementDeviceId, version)
-        : await protocolService.bulkUpdatePlace(protocolId, resultIds, patch.measurementPlace || '', version);
+        ? await protocolService.bulkAssignDevice(protocolId, selectedRows, patch.measurementDeviceId, version)
+        : await protocolService.bulkUpdatePlace(protocolId, selectedRows, patch.measurementPlace || '', version);
       onChange(updated.results);
       await onImported();
       await invalidateProtocolQueries();
@@ -1068,8 +1069,8 @@ const ProtocolResultsTable = ({
       onNotify('Результат рассчитан', 'success');
     } catch (error) {
       if (isProtocolVersionConflict(error)) {
-        await onImported();
         onNotify(protocolVersionConflictMessage, 'warning');
+        if (window.confirm(`${protocolVersionConflictMessage}\nПерезагрузить данные?`)) await onImported();
       } else onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать строку', 'error');
     } finally {
       setSaving(false);
@@ -1101,11 +1102,10 @@ const ProtocolResultsTable = ({
       onNotify('Результаты рассчитаны', summary.errors || summary.waitingInputs ? 'warning' : 'success');
     } catch (error) {
       if (isProtocolVersionConflict(error)) {
-        await onImported();
         onNotify(protocolVersionConflictMessage, 'warning');
+        if (window.confirm(`${protocolVersionConflictMessage}\nПерезагрузить данные?`)) await onImported();
       } else {
-        onNotify(error instanceof Error ? error.message : 'Не удалось рассчитать результаты', 'error');
-        await onCheckNormatives();
+        onNotify(normalizeApiError(error, 'Не удалось рассчитать результаты').message, 'error');
       }
     } finally {
       setSaving(false);

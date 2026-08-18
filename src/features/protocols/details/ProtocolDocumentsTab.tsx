@@ -4,8 +4,10 @@ import { formatProtocolDateTime } from './protocolDetailsModel';
 type Props = {
   protocol: Protocol;
   busy: boolean;
-  canGenerate: boolean;
-  canRegenerate: boolean;
+  canGenerateDocx: boolean;
+  canRegenerateDocx: boolean;
+  canGeneratePdf: boolean;
+  canRegeneratePdf: boolean;
   canPreview: boolean;
   canDownloadPdf: boolean;
   canDownloadDocx: boolean;
@@ -21,8 +23,10 @@ type Props = {
 const ProtocolDocumentsTab = ({
   protocol,
   busy,
-  canGenerate,
-  canRegenerate,
+  canGenerateDocx,
+  canRegenerateDocx,
+  canGeneratePdf,
+  canRegeneratePdf,
   canPreview,
   canDownloadPdf,
   canDownloadDocx,
@@ -42,11 +46,11 @@ const ProtocolDocumentsTab = ({
         <p className="mt-1 text-sm text-slate-500">Версия документа: {protocol.version}</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        {canPreview && <button type="button" disabled={busy} onClick={onPreview} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold disabled:opacity-50">Предварительный просмотр</button>}
-        {!protocol.hasDocx && canGenerate && <button type="button" disabled={busy} onClick={onGenerateDocx} className="rounded-xl bg-eco-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Сгенерировать DOCX</button>}
-        {protocol.hasDocx && canRegenerate && <button type="button" disabled={busy} onClick={onGenerateDocx} className="rounded-xl border border-eco-600 px-4 py-2 text-sm font-bold text-eco-700 disabled:opacity-50">Перегенерировать DOCX</button>}
-        {!protocol.hasPdf && canGenerate && <button type="button" disabled={busy} onClick={onGeneratePdf} className="rounded-xl bg-eco-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Сгенерировать PDF</button>}
-        {protocol.hasPdf && canRegenerate && <button type="button" disabled={busy} onClick={onGeneratePdf} className="rounded-xl border border-eco-600 px-4 py-2 text-sm font-bold text-eco-700 disabled:opacity-50">Перегенерировать PDF</button>}
+        {canPreview && <button type="button" disabled={busy} onClick={onPreview} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold disabled:opacity-50">{protocol.status === 'SIGNED' ? 'Просмотр' : 'Предварительный просмотр'}</button>}
+        {!protocol.hasDocx && canGenerateDocx && <button type="button" disabled={busy} onClick={onGenerateDocx} className="rounded-xl bg-eco-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Сгенерировать DOCX</button>}
+        {protocol.hasDocx && canRegenerateDocx && <button type="button" disabled={busy} onClick={onGenerateDocx} className="rounded-xl border border-eco-600 px-4 py-2 text-sm font-bold text-eco-700 disabled:opacity-50">Перегенерировать DOCX</button>}
+        {!protocol.hasPdf && canGeneratePdf && <button type="button" disabled={busy} onClick={onGeneratePdf} className="rounded-xl bg-eco-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Сгенерировать PDF</button>}
+        {protocol.hasPdf && canRegeneratePdf && <button type="button" disabled={busy} onClick={onGeneratePdf} className="rounded-xl border border-eco-600 px-4 py-2 text-sm font-bold text-eco-700 disabled:opacity-50">Перегенерировать PDF</button>}
       </div>
     </div>
     <div className="mt-5 divide-y divide-slate-100">

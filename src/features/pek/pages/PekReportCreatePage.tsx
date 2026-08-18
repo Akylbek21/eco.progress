@@ -30,7 +30,7 @@ const PekReportCreatePage = () => {
   const [periodType, setPeriodType] = useState<PekPeriodType>(initial.get('periodType') === 'YEAR' ? 'YEAR' : 'QUARTER');
   const [year, setYear] = useState(Number(initial.get('year')) || new Date().getFullYear());
   const [quarter, setQuarter] = useState(Number(initial.get('quarter')) || currentQuarter());
-  const [programId, setProgramId] = useState(0);
+  const [programId, setProgramId] = useState<number | null>(null);
   const [collectImmediately, setCollectImmediately] = useState(false);
   const params: PekReportCreationParams = {
     companyId,
@@ -55,8 +55,8 @@ const PekReportCreatePage = () => {
     staleTime: PEK_STALE_TIME_MS,
   });
   useEffect(() => {
-    if (context.data?.selectedProgramId) setProgramId(context.data.selectedProgramId);
-  }, [context.data?.selectedProgramId]);
+    setProgramId(null);
+  }, [companyId, objectId, year, periodType, quarter]);
   const create = useMutation({
     mutationFn: (request: PekReportCreateRequest) => pekApi.createReport(request),
     retry: false,
@@ -76,12 +76,14 @@ const PekReportCreatePage = () => {
     },
   });
   const availablePrograms = context.data?.programs || [];
-  const selectedProgramId = programId || context.data?.selectedProgramId || (availablePrograms.length === 1 ? availablePrograms[0].id : 0);
+  const selectedProgramId = programId;
+  const selectedProgramAvailable = selectedProgramId != null && availablePrograms.some((program) => program.id === selectedProgramId);
   const blocked = Boolean(
     !context.data
     || context.data.blockingReasons.length
     || context.data.duplicateReportId
-    || !selectedProgramId,
+    || !selectedProgramAvailable
+    || !(context.data.availableActions?.createReport === true || context.data.permissions?.includes('PEK_REPORT_CREATE'))
   );
 
   return <div className="space-y-5">
@@ -111,7 +113,7 @@ const PekReportCreatePage = () => {
               <Summary label="Начало периода" value={context.data.periodStart} />
               <Summary label="Окончание периода" value={context.data.periodEnd} />
             </div>
-            {availablePrograms.length > 0 && <label>Программа<select value={selectedProgramId} onChange={(event) => setProgramId(Number(event.target.value))} className={inputClass}><option value={0}>Выберите программу</option>{availablePrograms.map((program) => <option key={program.id} value={program.id}>{program.number} · {program.name}</option>)}</select></label>}
+            {availablePrograms.length > 0 && <label>Программа<select value={selectedProgramId ?? ''} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : null)} className={inputClass}><option value="">Выберите программу</option>{availablePrograms.map((program) => <option key={program.id} value={program.id}>{program.number} · {program.name}</option>)}</select></label>}
             {!availablePrograms.length && programsInScope.isLoading && <PekLoading />}
             {!availablePrograms.length && programsInScope.isError && (
               <PekQueryError error={programsInScope.error} resource="Программы выбранного объекта" retry={() => void programsInScope.refetch()} />
@@ -139,9 +141,12 @@ const PekReportCreatePage = () => {
             {context.data.warnings.map((warning) => <p key={warning} className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{warning}</p>)}
             {context.data.blockingReasons.map((reason) => <p key={reason} className="rounded-xl bg-rose-50 p-3 text-sm text-rose-900">{reason}</p>)}
             {context.data.duplicateReportId && <p className="rounded-xl bg-amber-50 p-3 text-sm">Отчёт за период уже существует. <Link className="font-bold underline" to={`/staff/pek/reports/${context.data.duplicateReportId}`}>Открыть отчёт №{context.data.duplicateReportId}</Link></p>}
-            <label className="flex items-center gap-2"><input type="checkbox" checked={collectImmediately} onChange={(event) => setCollectImmediately(event.target.checked)} />Сразу собрать подходящие протоколы</label>
+            {(context.data.availableActions?.collect === true || context.data.permissions?.includes('PEK_REPORT_COLLECT')) && <label className="flex items-center gap-2"><input type="checkbox" checked={collectImmediately} onChange={(event) => setCollectImmediately(event.target.checked)} />Сразу собрать подходящие протоколы</label>}
             <PekState title="Ответственный будет назначен автоматически" message="После создания назначение отобразится в рабочей области отчёта." />
-            <Button disabled={blocked || create.isPending} aria-busy={create.isPending} onClick={() => create.mutate(mapReportCreateRequest(params, selectedProgramId, collectImmediately))}>
+            <Button disabled={blocked || create.isPending} aria-busy={create.isPending} onClick={() => {
+              if (!selectedProgramAvailable || selectedProgramId == null) return toast.error('Выбранная программа больше недоступна для этого отчёта.');
+              create.mutate(mapReportCreateRequest(params, selectedProgramId, collectImmediately));
+            }}>
               {create.isPending ? 'Создание…' : 'Создать отчёт'}
             </Button>
           </section>}

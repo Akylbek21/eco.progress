@@ -46,30 +46,15 @@ export const useSignProtocolMutation = (
   const mutation = useMutation({
     mutationKey: ['sign-protocol', String(protocolId ?? '')],
     mutationFn: async ({ protocol }: SignVariables) => {
-      let fresh = await protocolService.getProtocol(String(protocol.id));
-      if (!hasProtocolAction(fresh, 'sign')) {
+      const current = protocol;
+      if (!hasProtocolAction(current, 'sign')) {
         throw new Error('У вас нет права подписывать протокол. Передайте его руководителю.');
       }
-      if (!fresh.hasPdf) {
-        await protocolService.generatePdf(fresh.id, fresh.version);
-        fresh = await protocolService.getProtocol(String(fresh.id));
-      }
-      if (!fresh.hasPdf) throw new Error('Финальный PDF протокола не сформирован.');
-      const file = await protocolService.downloadPdf(fresh.id);
+      if (!current.hasPdf) throw new Error('Финальный PDF протокола не сформирован.');
+      const file = await protocolService.downloadPdf(current.id);
       const cmsSignatureBase64 = await createProtocolCmsSignature(file.blob, setPhase);
       setPhase('VERIFYING_SIGNATURE');
-      try {
-        await protocolService.signProtocol(fresh.id, { cmsSignatureBase64, version: fresh.version });
-        return await protocolService.getProtocol(String(fresh.id));
-      } catch (error) {
-        const actual = await protocolService.getProtocol(String(fresh.id)).catch(() => null);
-        if (actual && (
-          actual.version > fresh.version
-          || actual.signatureCount > fresh.signatureCount
-          || actual.signedByCurrentUser
-        )) return actual;
-        throw error;
-      }
+      return protocolService.signProtocol(current.id, { cmsSignatureBase64, version: current.version });
     },
     retry: false,
     onSuccess: async (updatedProtocol, variables) => {
@@ -82,14 +67,7 @@ export const useSignProtocolMutation = (
       ]);
       setPhase('SIGNED');
     },
-    onError: async (error, variables) => {
-      const normalized = normalizeApiError(error);
-      if (normalized.code === 'OPTIMISTIC_LOCK_CONFLICT' || normalized.code === 'PROTOCOL_VERSION_CONFLICT' || normalized.code === 'VERSION_CONFLICT') {
-        const actual = await protocolService.getProtocol(String(variables.protocol.id)).catch(() => null);
-        if (actual) {
-          queryClient.setQueryData(protocolQueryKeys.detail(scope, variables.protocol.id), actual);
-        }
-      }
+    onError: async (error) => {
       await options.onError?.(protocolSignErrorMessage(error), error);
     },
     onSettled: () => {

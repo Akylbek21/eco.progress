@@ -1,8 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
-import { hasPermission } from '../../../config/permissions';
 import { useAuth } from '../../../contexts/AuthContext';
-import type { PekReportFilters } from '../api/pekContracts';
+import type { PekReportFilters, PekReportStatus } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import EntityName from '../components/common/EntityName';
@@ -10,6 +9,7 @@ import PekCompanyObjectFilters from '../components/common/PekCompanyObjectFilter
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState, PekStatusBadge } from '../components/common/PekUi';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
+import { usePekAccessContext } from '../hooks/usePekAccessContext';
 
 const PekReportsPage = () => {
   const { user } = useAuth();
@@ -17,9 +17,12 @@ const PekReportsPage = () => {
   const [params, setParams] = useSearchParams();
   const companyId = Number(params.get('companyId')) || 0;
   const objectId = Number(params.get('objectId')) || 0;
+  const access = usePekAccessContext(companyId || undefined);
   const filters: PekReportFilters = {
     companyId,
     objectId,
+    status: (params.get('status') || undefined) as PekReportStatus | undefined,
+    issue: (params.get('issue') || undefined) as PekReportFilters['issue'],
     page: Math.max(0, Number(params.get('page')) || 0),
     size: [10, 20, 50].includes(Number(params.get('size'))) ? Number(params.get('size')) : 20,
   };
@@ -39,9 +42,11 @@ const PekReportsPage = () => {
     setParams(next, { replace: true });
   };
   return <div className="space-y-5">
-    <PekPageHeader title="Отчёты ПЭК" description="Отчёты и связанные с ними протоколы по выбранному объекту" actions={hasPermission(user, 'PEK_REPORT_CREATE') ? <Link to="/staff/pek/reports/new" className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white">Создать отчёт</Link> : undefined} />
-    <section className="grid gap-3 rounded-2xl border bg-white p-4 md:grid-cols-3">
+    <PekPageHeader title="Отчёты ПЭК" description="Отчёты и связанные с ними протоколы по выбранному объекту" actions={access.data?.availableActions.createReport === true || access.data?.permissions.includes('PEK_REPORT_CREATE') === true ? <Link to="/staff/pek/reports/new" className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white">Создать отчёт</Link> : undefined} />
+    <section className="grid gap-3 rounded-2xl border bg-white p-4 md:grid-cols-4">
       <PekCompanyObjectFilters companyId={companyId || undefined} objectId={objectId || undefined} onCompanyChange={(value) => update('companyId', value)} onObjectChange={(value) => update('objectId', value)} />
+      <label className="text-xs font-bold text-slate-600">Статус<select value={filters.status || ''} onChange={(event) => update('status', event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2"><option value="">Все</option>{(['DRAFT', 'COLLECTING', 'READY_FOR_REVIEW', 'RETURNED', 'APPROVED', 'SIGNED', 'ARCHIVED'] as PekReportStatus[]).map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
+      {filters.issue && <button type="button" onClick={() => update('issue', '')} className="rounded-xl border border-amber-300 px-3 py-2 text-sm font-bold">Фильтр: {filters.issue} ×</button>}
       <button type="button" onClick={() => setParams({}, { replace: true })} className="rounded-xl border px-3 py-2 text-sm font-bold">Сбросить</button>
     </section>
     {!companyId || !objectId ? <PekState title="Выберите компанию и объект" message="После выбора будет загружен список отчётов ПЭК." /> : reports.isLoading ? <PekLoading /> : reports.isError ? <PekQueryError error={reports.error} resource="Отчёты ПЭК" retry={() => void reports.refetch()} /> : !reports.data?.content.length ? <PekState title="Для выбранного объекта отчётов нет" /> : <>

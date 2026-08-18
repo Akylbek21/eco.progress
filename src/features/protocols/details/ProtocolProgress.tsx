@@ -2,7 +2,7 @@ import { Check } from 'lucide-react';
 import { normalizeProtocolStatus } from '../../../config/protocolStatus';
 import { lifecycleStage } from './protocolDetailsModel';
 
-const stages = ['Создан', 'Рассчитан', 'На утверждении', 'Утверждён', 'Подписан'];
+const stages = ['Создан', 'Рассчитан', 'На утверждении', 'Утверждён, ожидает подписи', 'Подписан / завершён', 'Опубликован клиенту'];
 const exceptionalStatuses = {
   NEEDS_REVISION: { label: 'На доработке', className: 'border-amber-200 bg-amber-50 text-amber-900' },
   REPLACED: { label: 'Заменён', className: 'border-slate-300 bg-slate-100 text-slate-800' },

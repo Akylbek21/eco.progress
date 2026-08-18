@@ -76,8 +76,7 @@ describe('protocol wizard HTTP boundary', () => {
     const persisted = { id: 'draft-1', version: 2, status: 'DRAFT', results: [] } as Protocol;
     const updateProtocolDraft = vi.fn(async () => ({ ...persisted, version: 1 }) as Protocol);
     const saveProtocolDraftResults = vi.fn(async () => persisted);
-    const getProtocol = vi.fn(async () => persisted);
-    const service = { createProtocolDraft, updateProtocolDraft, saveProtocolDraftResults, getProtocol } as unknown as ProtocolService;
+    const service = { createProtocolDraft, updateProtocolDraft, saveProtocolDraftResults } as unknown as ProtocolService;
 
     const saved = await saveProtocolWizardDraft(form, null, 'protocol-draft-test-key', service);
 
@@ -86,7 +85,6 @@ describe('protocol wizard HTTP boundary', () => {
     expect(saveProtocolDraftResults).toHaveBeenCalledWith('draft-1', {
       version: 1, added: [], updated: [], deletedIds: [],
     });
-    expect(getProtocol).toHaveBeenCalledWith('draft-1');
     expect([...saved.resultIdsByClientRowId]).toEqual([]);
   });
 });
@@ -292,12 +290,12 @@ describe('protocol wizard validation and backend errors', () => {
     expect(wizard).not.toContain('quickCreateProtocol');
   });
 
-  it('uses the canonical draft, header, delta and GET sequence', () => {
+  it('uses the canonical versioned draft, header and delta sequence without a fresh-version GET', () => {
     const saveDraft = readFileSync(resolve(process.cwd(), 'src/features/protocols/api/saveProtocolWizardDraft.ts'), 'utf8');
 
     expect(saveDraft.indexOf('service.createProtocolDraft')).toBeLessThan(saveDraft.indexOf('service.updateProtocolDraft'));
     expect(saveDraft.indexOf('service.updateProtocolDraft')).toBeLessThan(saveDraft.indexOf('service.saveProtocolDraftResults'));
-    expect(saveDraft.indexOf('service.saveProtocolDraftResults')).toBeLessThan(saveDraft.indexOf('service.getProtocol'));
+    expect(saveDraft).not.toContain('service.getProtocol');
     expect(saveDraft).toContain('added: results.flatMap');
     expect(saveDraft).toContain('updated: results.flatMap');
     expect(saveDraft).toContain('deletedIds: previousResults.flatMap');

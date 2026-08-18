@@ -7,6 +7,7 @@ export const pekStatusLabels: Record<PekProgramStatus | PekReportStatus, string>
   UNDER_REVIEW: 'На проверке',
   RETURNED: 'Возвращён',
   APPROVED: 'Утверждён',
+  SIGNED: 'Подписан',
   ACTIVE: 'Действует',
   ARCHIVED: 'Архив',
 };

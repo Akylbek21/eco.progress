@@ -9,4 +9,4 @@ const VERSION_CONFLICT_CODES = new Set([
 export const isProtocolVersionConflict = (error: unknown) =>
   getApiStatus(error) === 409 && VERSION_CONFLICT_CODES.has(getApiErrorCode(error) || 'VERSION_CONFLICT');
 
-export const protocolVersionConflictMessage = 'Протокол изменён другим сотрудником. Данные обновлены с сервера — повторите расчёт.';
+export const protocolVersionConflictMessage = 'Протокол был изменён другим пользователем. Обновите данные.';

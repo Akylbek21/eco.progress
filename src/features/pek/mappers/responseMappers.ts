@@ -190,6 +190,8 @@ export const mapDashboardResponse = (value: unknown): PekDashboard => {
     overdueActionCount: optionalNumber(source.overdueActionCount),
     missingProtocolCount: optionalNumber(source.missingProtocolCount),
     returnedReportCount: optionalNumber(source.returnedReportCount),
+    signedReportCount: optionalNumber(source.signedReportCount),
+    draftReportCount: optionalNumber(source.draftReportCount),
     unmatchedSourceCount: optionalNumber(source.unmatchedSourceCount),
     ambiguousSourceCount: optionalNumber(source.ambiguousSourceCount),
     staleSourceCount: optionalNumber(source.staleSourceCount),

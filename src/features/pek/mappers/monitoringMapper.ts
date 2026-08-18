@@ -1,75 +1,41 @@
 import type {
   PekMonitoringDirection,
-  PekMonitoringProtocolRef,
   PekMonitoringType,
-  PekMonitoringTypeOption,
+  PekPeriodicity,
   PekProgramMonitoringResponse,
 } from '../api/pekContracts';
 import { asPekRecord, unwrapPekData } from '../api/pekMappers';
 
-const monitoringTypes = new Set<PekMonitoringType>(['AMBIENT_AIR', 'EMISSION_SOURCE', 'SURFACE_WATER', 'GROUNDWATER', 'WASTEWATER', 'SOIL', 'WASTE', 'PHYSICAL_FACTOR']);
-const rows = (value: unknown) => Array.isArray(value) ? value.filter((item) => item && typeof item === 'object').map((item) => item as Record<string, unknown>) : [];
-const actions = (value: unknown) => Object.fromEntries(Object.entries(asPekRecord(value)).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean'));
-const strings = (value: unknown) => Array.isArray(value) ? value.map(String).filter(Boolean) : [];
-const monitoringType = (value: unknown): PekMonitoringType => {
-  const type = String(value || '').toUpperCase() as PekMonitoringType;
-  if (!monitoringTypes.has(type)) throw new Error(`Backend вернул неизвестное направление ПЭК: ${String(value || 'пусто')}`);
-  return type;
-};
-const protocol = (value: unknown): PekMonitoringProtocolRef => {
-  const source = asPekRecord(value);
-  return {
-    id: Number(source.id ?? source.protocolId),
-    number: String(source.number ?? source.protocolNumber ?? ''),
-    protocolType: source.protocolType == null ? null : String(source.protocolType),
-    protocolTypeLabel: source.protocolTypeLabel == null ? null : String(source.protocolTypeLabel),
-    status: source.status == null ? null : String(source.status),
-    date: source.date == null && source.protocolDate == null ? null : String(source.date ?? source.protocolDate),
-  };
-};
-const direction = (value: unknown): PekMonitoringDirection => {
+const actions = (value: unknown): Record<string, boolean> => Object.fromEntries(
+  Object.entries(asPekRecord(value)).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean'),
+);
+const numberIds = (value: unknown): number[] => Array.isArray(value) ? value.map(Number).filter(Number.isFinite) : [];
+const strings = (value: unknown): string[] => Array.isArray(value) ? value.map(String) : [];
+
+const mapMonitoring = (value: unknown): PekMonitoringDirection => {
   const source = asPekRecord(value);
   return {
     id: Number(source.id),
-    version: Number(source.version ?? 0),
-    monitoringType: monitoringType(source.monitoringType),
-    typeLabel: String(source.typeLabel ?? source.monitoringTypeLabel ?? source.name ?? source.monitoringType),
-    controlPoints: rows(source.controlPoints ?? source.monitoringPoints ?? source.sources),
-    indicators: rows(source.indicators),
-    normatives: rows(source.normatives),
-    units: strings(source.units),
-    periodicity: source.periodicity == null ? null : String(source.periodicity),
-    plannedResearchCount: Number(source.plannedResearchCount ?? source.plannedCount ?? 0),
-    actualResearchCount: Number(source.actualResearchCount ?? source.actualCount ?? 0),
+    programId: Number(source.programId),
+    monitoringType: String(source.monitoringType) as PekMonitoringType,
+    name: String(source.name),
     methodology: source.methodology == null ? null : String(source.methodology),
-    laboratory: Object.keys(asPekRecord(source.laboratory)).length ? { id: Number(asPekRecord(source.laboratory).id), name: String(asPekRecord(source.laboratory).name ?? '') } : null,
-    linkedProtocols: (Array.isArray(source.linkedProtocols) ? source.linkedProtocols : Array.isArray(source.protocols) ? source.protocols : []).map(protocol),
-    compatibleProtocols: (Array.isArray(source.compatibleProtocols) ? source.compatibleProtocols : Array.isArray(source.availableProtocols) ? source.availableProtocols : []).map(protocol),
-    results: rows(source.results),
-    exceedances: rows(source.exceedances),
-    measures: rows(source.measures),
+    laboratoryId: source.laboratoryId == null ? null : Number(source.laboratoryId),
+    frequencyType: String(source.frequencyType) as PekPeriodicity,
+    plannedCount: Number(source.plannedCount),
+    controlItemIds: numberIds(source.controlItemIds),
+    protocolTypes: strings(source.protocolTypes),
+    active: source.active === true,
+    version: Number(source.version),
     availableActions: actions(source.availableActions),
-    missingFields: strings(source.missingFields),
   };
-};
-const typeOption = (value: unknown): PekMonitoringTypeOption => {
-  if (typeof value === 'string') return { code: monitoringType(value), label: value, enabled: true };
-  const source = asPekRecord(value);
-  const code = monitoringType(source.code ?? source.value ?? source.monitoringType);
-  return { code, label: String(source.label ?? source.name ?? code), enabled: source.enabled !== false };
 };
 
 export const mapProgramMonitoring = (value: unknown, programId: number): PekProgramMonitoringResponse => {
-  const unwrapped = unwrapPekData<unknown>(value);
-  if (Array.isArray(unwrapped)) return { programId, version: 0, items: unwrapped.map(direction), availableTypes: [], availableActions: {}, missingFields: [] };
-  const source = asPekRecord(unwrapped);
-  const rawItems = Array.isArray(source.items) ? source.items : Array.isArray(source.monitoring) ? source.monitoring : Array.isArray(source.directions) ? source.directions : [];
+  const source = asPekRecord(unwrapPekData<unknown>(value));
   return {
     programId: Number(source.programId ?? programId),
-    version: Number(source.version ?? source.programVersion ?? 0),
-    items: rawItems.map(direction),
-    availableTypes: (Array.isArray(source.availableTypes) ? source.availableTypes : Array.isArray(source.availableMonitoringTypes) ? source.availableMonitoringTypes : Array.isArray(source.monitoringTypes) ? source.monitoringTypes : []).map(typeOption),
+    items: (Array.isArray(source.items) ? source.items : []).map(mapMonitoring),
     availableActions: actions(source.availableActions),
-    missingFields: strings(source.missingFields),
   };
 };

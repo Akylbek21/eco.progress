@@ -14,6 +14,7 @@ import type {
   ProtocolTemplate,
   RawMeasurementRequest,
   RawMeasurementsResponse,
+  SaveRawMeasurementsResponse,
   UpdateProtocolPayload,
   WeatherConditions,
 } from '../types/protocols';
@@ -55,8 +56,8 @@ export interface ProtocolService {
   addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow>;
   updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow>;
   deleteProtocolResult(protocolId: string, resultId: string, version: number): Promise<void>;
-  bulkAssignDevice(protocolId: string, resultIds: string[], measurementDeviceId: string | number, version: number): Promise<Protocol>;
-  bulkUpdatePlace(protocolId: string, resultIds: string[], measurementPlace: string, version: number): Promise<Protocol>;
+  bulkAssignDevice(protocolId: string, rows: ProtocolResultRow[], measurementDeviceId: string | number, version: number): Promise<Protocol>;
+  bulkUpdatePlace(protocolId: string, rows: ProtocolResultRow[], measurementPlace: string, version: number): Promise<Protocol>;
   bulkDeleteResults(protocolId: string, resultIds: string[], version: number): Promise<Protocol>;
   getRawMeasurements(protocolId: string, resultId: string): Promise<RawMeasurementsResponse>;
   saveRawMeasurements(
@@ -65,7 +66,7 @@ export interface ProtocolService {
     payload: RawMeasurementRequest[],
     methodTemplateId: string | number | null | undefined,
     version: number,
-  ): Promise<ProtocolResultRow | undefined>;
+  ): Promise<SaveRawMeasurementsResponse>;
   calculateResult(protocolId: string, resultId: string, version: number): Promise<CalculationResultResponse>;
   calculateProtocolSummary(protocolId: string, version: number): Promise<ProtocolCalculationSummaryResponse>;
   getCalculationHistory(protocolId: string, resultId: string): Promise<CalculationResultResponse[]>;
@@ -74,6 +75,7 @@ export interface ProtocolService {
   markReadyForApproval(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
   approveProtocol(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
   returnForRevision(protocolId: string, request: ReturnForRevisionRequest): Promise<Protocol>;
+  returnToDraft(protocolId: string, request: ReturnForRevisionRequest): Promise<Protocol>;
   signProtocol(protocolId: string | number, request: SignProtocolRequest): Promise<Protocol>;
   publishToClient(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
   replaceProtocol(protocolId: string, request: ReplaceProtocolRequest): Promise<Protocol>;
@@ -130,8 +132,8 @@ const protocolService: ProtocolService = {
   addProtocolResult: async (protocolId, payload, version) => (await implementation()).addProtocolResult(protocolId, payload, version),
   updateProtocolResult: async (protocolId, resultId, payload, version) => (await implementation()).updateProtocolResult(protocolId, resultId, payload, version),
   deleteProtocolResult: async (protocolId, resultId, version) => (await implementation()).deleteProtocolResult(protocolId, resultId, version),
-  bulkAssignDevice: async (protocolId, resultIds, measurementDeviceId, version) => (await implementation()).bulkAssignDevice(protocolId, resultIds, measurementDeviceId, version),
-  bulkUpdatePlace: async (protocolId, resultIds, measurementPlace, version) => (await implementation()).bulkUpdatePlace(protocolId, resultIds, measurementPlace, version),
+  bulkAssignDevice: async (protocolId, rows, measurementDeviceId, version) => (await implementation()).bulkAssignDevice(protocolId, rows, measurementDeviceId, version),
+  bulkUpdatePlace: async (protocolId, rows, measurementPlace, version) => (await implementation()).bulkUpdatePlace(protocolId, rows, measurementPlace, version),
   bulkDeleteResults: async (protocolId, resultIds, version) => (await implementation()).bulkDeleteResults(protocolId, resultIds, version),
   getRawMeasurements: async (protocolId, resultId) => (await implementation()).getRawMeasurements(protocolId, resultId),
   saveRawMeasurements: async (protocolId, resultId, payload, methodTemplateId, version) =>
@@ -144,6 +146,7 @@ const protocolService: ProtocolService = {
   markReadyForApproval: async (protocolId, request) => (await implementation()).markReadyForApproval(protocolId, request),
   approveProtocol: async (protocolId, request) => (await implementation()).approveProtocol(protocolId, request),
   returnForRevision: async (protocolId, request) => (await implementation()).returnForRevision(protocolId, request),
+  returnToDraft: async (protocolId, request) => (await implementation()).returnToDraft(protocolId, request),
   signProtocol: async (protocolId, request) => (await implementation()).signProtocol(protocolId, request),
   publishToClient: async (protocolId, request) => (await implementation()).publishToClient(protocolId, request),
   replaceProtocol: async (protocolId, request) => (await implementation()).replaceProtocol(protocolId, request),

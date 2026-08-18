@@ -57,7 +57,7 @@ test('protocol permission matrix is backend-authoritative and immutable-safe', a
   assert.match(source, /canReplace: action\('createCorrection'\)/);
   assert.match(source, /canApprove: action\('approve'\)/);
   assert.match(source, /canSign: action\('sign'\)/);
-  assert.doesNotMatch(source, /status === 'APPROVED'/);
+  assert.match(source, /normalizeProtocolStatus\(protocol\?\.status\) !== 'APPROVED'/);
 });
 
 test('protocol normative display keeps zero values', async () => {

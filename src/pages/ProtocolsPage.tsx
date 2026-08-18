@@ -17,13 +17,15 @@ import type { Protocol, ProtocolListQuery, ProtocolStatus, ProtocolTemplateId } 
 import { hasPermission } from '../config/permissions';
 import { protocolStatusConfig } from '../config/protocolStatus';
 import { protocolQueryKeys, protocolScope } from '../features/protocols/hooks/queryKeys';
+import { hasProtocolAction } from '../features/protocols/utils/protocolActions';
+import { isProtocolVersionConflict, protocolVersionConflictMessage } from '../features/protocols/utils/protocolVersionConflict';
 
 const sizes = [10, 20, 50, 100];
 const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100';
 const integer = (value: string | null, fallback: number) => { const parsed = Number(value); return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback; };
 const positiveInteger = (value: string | null) => { const parsed = Number(value); return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined; };
-const protocolStatuses = new Set<ProtocolStatus>(['DRAFT', 'CALCULATED', 'READY_FOR_APPROVAL', 'NEEDS_REVISION', 'APPROVED', 'SIGNED', 'REPLACED', 'CANCELLED', 'ARCHIVED']);
-const visibleStatusFilters: ProtocolStatus[] = ['DRAFT', 'CALCULATED', 'READY_FOR_APPROVAL', 'NEEDS_REVISION', 'APPROVED', 'SIGNED', 'REPLACED', 'CANCELLED', 'ARCHIVED'];
+const protocolStatuses = new Set<ProtocolStatus>(['DRAFT', 'CALCULATED', 'READY_FOR_APPROVAL', 'NEEDS_REVISION', 'APPROVED', 'SIGNED', 'PUBLISHED', 'REPLACED', 'CANCELLED', 'ARCHIVED']);
+const visibleStatusFilters: ProtocolStatus[] = ['DRAFT', 'CALCULATED', 'READY_FOR_APPROVAL', 'NEEDS_REVISION', 'APPROVED', 'SIGNED', 'PUBLISHED', 'REPLACED', 'CANCELLED', 'ARCHIVED'];
 const protocolTemplates = new Set<ProtocolTemplateId>(['ambient_air', 'workplace_air', 'soil', 'water', 'microclimate', 'lighting', 'noise_vibration', 'uv_emf_laser']);
 const saveBlob = (blob: Blob, name: string) => { const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); };
 
@@ -39,7 +41,11 @@ const ProtocolsPage = () => {
   const signMutation = useSignProtocolMutation(undefined, {
     currentUserId: user?.id,
     onSigned: () => { setSignTargetId(''); toast.success('Протокол подписан'); },
-    onError: (message) => { setSignTargetId(''); toast.error(message); },
+    onError: async (message, error) => {
+      setSignTargetId('');
+      toast.error(message);
+      if (isProtocolVersionConflict(error) && window.confirm(`${protocolVersionConflictMessage}\nПерезагрузить список?`)) await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) });
+    },
   });
   const update = (changes: Record<string, string | number | boolean | undefined>) => { const next = new URLSearchParams(params); Object.entries(changes).forEach(([key, value]) => { if (value === undefined || value === '') next.delete(key); else next.set(key, String(value)); }); setParams(next, { replace: true }); };
   useEffect(() => {
@@ -81,11 +87,17 @@ const ProtocolsPage = () => {
   const data = protocolsQuery.data; const protocols = data?.items || [];
   useEffect(() => { if (data && data.totalPages > 0 && page >= data.totalPages) update({ page: data.totalPages - 1 }); }, [data?.totalPages, page]);
 
-  const download = async (protocol: Protocol, kind: 'pdf' | 'docx') => { if (busyId) return; setBusyId(protocol.id); try { const file = kind === 'pdf' ? await protocolService.downloadPdf(protocol.id) : await protocolService.downloadDocx(protocol.id); saveBlob(file.blob, file.fileName || `${protocol.protocolNumber}.${kind}`); } catch (error) { const parsed = parseApiError(error, `Не удалось скачать ${kind.toUpperCase()}`); toast.error(parsed.message); } finally { setBusyId(''); } };
+  const offerConflictReload = async (error: unknown) => {
+    if (!isProtocolVersionConflict(error)) return false;
+    toast.warning(protocolVersionConflictMessage);
+    if (window.confirm(`${protocolVersionConflictMessage}\nПерезагрузить список?`)) await protocolsQuery.refetch();
+    return true;
+  };
+  const download = async (protocol: Protocol, kind: 'pdf' | 'docx') => { if (busyId || !hasProtocolAction(protocol, kind === 'pdf' ? 'downloadPdf' : 'downloadDocx')) return; setBusyId(protocol.id); try { const file = kind === 'pdf' ? await protocolService.downloadPdf(protocol.id) : await protocolService.downloadDocx(protocol.id); saveBlob(file.blob, file.fileName || `${protocol.protocolNumber}.${kind}`); } catch (error) { const parsed = parseApiError(error, `Не удалось скачать ${kind.toUpperCase()}`); toast.error(parsed.message); } finally { setBusyId(''); } };
   const sign = (protocol: Protocol) => { if (busyId || signMutation.isPending) return; setSignTargetId(protocol.id); signMutation.sign({ protocol }); };
-  const remove = async () => { if (!deleteTarget || busyId) return; setBusyId(deleteTarget.id); try { await protocolService.deleteProtocol(deleteTarget.id, Number(deleteTarget.version)); setDeleteTarget(null); toast.success('Протокол удалён'); await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) }); } catch (error) { toast.error(parseApiError(error, 'Не удалось удалить протокол').message); } finally { setBusyId(''); } };
-  const archive = async () => { if (!archiveTarget || busyId) return; setBusyId(archiveTarget.id); try { await protocolService.archiveProtocol(archiveTarget.id, { version: Number(archiveTarget.version) }); await protocolService.getProtocol(archiveTarget.id); setArchiveTarget(null); toast.success('Протокол архивирован'); await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) }); } catch (error) { toast.error(parseApiError(error, 'Не удалось архивировать протокол').message); } finally { setBusyId(''); } };
-  const replace = async (reason: string) => { if (!replaceTarget || busyId) return; setBusyId(replaceTarget.id); try { const originalId = replaceTarget.id; const created = await protocolService.createCorrection(originalId, { version: Number(replaceTarget.version), reason: reason.trim() }); await protocolService.getProtocol(originalId); setReplaceTarget(null); navigate(`/staff/protocols/${created.id}`); } catch (error) { toast.error(parseApiError(error, 'Не удалось создать исправленную версию').message); } finally { setBusyId(''); } };
+  const remove = async () => { if (!deleteTarget || busyId || !hasProtocolAction(deleteTarget, 'delete')) return; setBusyId(deleteTarget.id); try { await protocolService.deleteProtocol(deleteTarget.id, Number(deleteTarget.version)); setDeleteTarget(null); toast.success('Протокол удалён'); await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) }); } catch (error) { if (!await offerConflictReload(error)) toast.error(parseApiError(error, 'Не удалось удалить протокол').message); } finally { setBusyId(''); } };
+  const archive = async () => { if (!archiveTarget || busyId || !hasProtocolAction(archiveTarget, 'archive')) return; setBusyId(archiveTarget.id); try { await protocolService.archiveProtocol(archiveTarget.id, { version: Number(archiveTarget.version) }); setArchiveTarget(null); toast.success('Протокол архивирован'); await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) }); } catch (error) { if (!await offerConflictReload(error)) toast.error(parseApiError(error, 'Не удалось архивировать протокол').message); } finally { setBusyId(''); } };
+  const replace = async (reason: string) => { if (!replaceTarget || busyId || !hasProtocolAction(replaceTarget, 'createCorrection')) return; setBusyId(replaceTarget.id); try { const originalId = replaceTarget.id; const created = await protocolService.createCorrection(originalId, { version: Number(replaceTarget.version), reason: reason.trim() }); setReplaceTarget(null); navigate(`/staff/protocols/${created.id}`); } catch (error) { if (!await offerConflictReload(error)) toast.error(parseApiError(error, 'Не удалось создать исправленную версию').message); } finally { setBusyId(''); } };
   const hasFilters = ['search', 'status', 'templateId', 'subtype', 'companyId', 'objectId', 'laboratoryId', 'executorId', 'compliance', 'dateFrom', 'dateTo', 'sort', 'includeArchived'].some((key) => params.has(key));
   const from = data && protocols.length ? data.page * data.size + 1 : 0; const to = data ? data.page * data.size + protocols.length : 0;
 

@@ -56,23 +56,12 @@ describe('protocol access and draft compatibility', () => {
     expect(requestBody).toEqual({ version: 0, protocolDate: '2026-07-13' });
   });
 
-  it.each(['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'])(
-    'allows protocol creation for backend laboratory role %s without inferring resource view permission',
-    (role) => {
-      const user = { id: 10, role };
-      expect(canViewProtocol(user)).toBe(false);
-      expect(canCreateProtocol(user)).toBe(true);
-    },
-  );
-
-  it.each(['MANAGER', 'ACCOUNTANT', 'ECOLOGIST', 'WASTE_SPECIALIST', 'STAFF', 'AUDITOR'])(
-    'does not infer protocol creation for read-only role %s',
-    (role) => {
-      const user = { id: 10, role };
-      expect(canViewProtocol(user)).toBe(false);
-      expect(canCreateProtocol(user)).toBe(false);
-    },
-  );
+  it('uses an explicit backend permission for protocol creation without inferring resource view permission', () => {
+    const user = { id: 10, role: 'LABORATORY', permissions: ['create_protocols'] };
+    expect(canViewProtocol(user)).toBe(false);
+    expect(canCreateProtocol(user)).toBe(true);
+    expect(canCreateProtocol({ id: 11, role: 'ADMIN', permissions: [] })).toBe(false);
+  });
 
   it('keeps CLIENT out of the internal editor', () => {
     const client = { id: 11, role: 'CLIENT' };
@@ -178,8 +167,8 @@ describe('protocol mutation HTTP contracts', () => {
       http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: draft })),
     );
 
-    await bulkAssignDevice('42', ['1', '2'], 9, 14);
-    await bulkUpdatePlace('42', ['1'], 'Точка №1', 14);
+    await bulkAssignDevice('42', draft.results as never, 9, 14);
+    await bulkUpdatePlace('42', [draft.results[0]] as never, 'Точка №1', 14);
     await bulkDeleteResults('42', ['2'], 14);
 
     expect(calls).toEqual([

@@ -11,20 +11,22 @@ import { PekLoading, PekPageHeader, PekState, PekStatusBadge } from '../componen
 import { pekStatusLabels } from '../utils/pekLabels';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 
-const statuses: PekReportStatus[] = ['DRAFT', 'COLLECTING', 'READY_FOR_REVIEW', 'RETURNED', 'APPROVED', 'ARCHIVED'];
+const statuses: PekReportStatus[] = ['DRAFT', 'COLLECTING', 'READY_FOR_REVIEW', 'RETURNED', 'APPROVED', 'SIGNED', 'ARCHIVED'];
 const metricDefinitions = [
-  ['criticalIssueCount', 'Требуют внимания', '', '/staff/pek/reports'],
-  ['overdueRiskCount', 'Срок заканчивается в ближайшие 30 дней', '', '/staff/pek/programs'],
-  ['missingProtocolCount', 'Отсутствующие протоколы', '', '/staff/pek/reports'],
-  ['openExceedanceCount', 'Открытые превышения', '', '/staff/pek/reports'],
-  ['overdueActionCount', 'Просроченные мероприятия', '', '/staff/pek/programs'],
-  ['readinessPercent', 'Отчёты на проверке и утверждённые', '%', '/staff/pek/reports'],
-  ['programExecutionPercent', 'Доля активных программ', '%', '/staff/pek/programs'],
-  ['returnedReportCount', 'Возвращённые отчёты', '', '/staff/pek/reports'],
-  ['unmatchedSourceCount', 'Несопоставленные результаты', '', '/staff/pek/reports'],
-  ['ambiguousSourceCount', 'Неоднозначные результаты', '', '/staff/pek/reports'],
-  ['staleSourceCount', 'Устаревшие связи', '', '/staff/pek/reports'],
-  ['totalReportCount', 'Отчёты за период', '', '/staff/pek/reports'],
+  ['criticalIssueCount', 'Требуют внимания', '', '/staff/pek/reports', {}],
+  ['overdueRiskCount', 'Срок заканчивается в ближайшие 30 дней', '', '/staff/pek/programs', {}],
+  ['missingProtocolCount', 'Отсутствующие протоколы', '', '/staff/pek/reports', { issue: 'MISSING_PROTOCOL' }],
+  ['openExceedanceCount', 'Открытые превышения', '', '/staff/pek/reports', { issue: 'OPEN_EXCEEDANCE' }],
+  ['overdueActionCount', 'Просроченные мероприятия', '', '/staff/pek/programs', {}],
+  ['readinessPercent', 'Отчёты на проверке и утверждённые', '%', '/staff/pek/reports', {}],
+  ['programExecutionPercent', 'Доля активных программ', '%', '/staff/pek/programs', {}],
+  ['returnedReportCount', 'Возвращённые отчёты', '', '/staff/pek/reports', { status: 'RETURNED' }],
+  ['signedReportCount', 'Подписанные отчёты', '', '/staff/pek/reports', { status: 'SIGNED' }],
+  ['draftReportCount', 'Черновики', '', '/staff/pek/reports', { status: 'DRAFT' }],
+  ['unmatchedSourceCount', 'Несопоставленные протоколы', '', '/staff/pek/reports', { issue: 'UNMATCHED_SOURCE' }],
+  ['ambiguousSourceCount', 'Неоднозначные результаты', '', '/staff/pek/reports', {}],
+  ['staleSourceCount', 'Устаревшие связи', '', '/staff/pek/reports', {}],
+  ['totalReportCount', 'Отчёты за период', '', '/staff/pek/reports', {}],
 ] as const;
 const PekDashboardPage = () => {
   const { user } = useAuth();
@@ -114,11 +116,11 @@ const PekDashboardPage = () => {
           ? <PekState title="Сводка пока недоступна" />
           : <>
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {metricDefinitions.map(([key, label, suffix, path]) => (
+              {metricDefinitions.map(([key, label, suffix, path, drillDown]) => (
                 <article key={key} className="rounded-2xl border bg-white p-5">
                   <p className="text-sm text-slate-500">{label}</p>
                   <p className="mt-2 text-3xl font-black text-eco-900">{dashboard.data[key] == null ? <span className="text-lg text-slate-500">—</span> : `${dashboard.data[key]}${suffix}`}</p>
-                  {dashboard.data[key] != null && <Link className="mt-3 inline-block text-xs font-bold text-eco-700" to={`${path}?${new URLSearchParams({ ...(filters.companyId ? { companyId: String(filters.companyId) } : {}), ...(filters.objectId ? { objectId: String(filters.objectId) } : {}), ...(filters.year ? { year: String(filters.year) } : {}) })}`}>Открыть</Link>}
+                  {dashboard.data[key] != null && <Link className="mt-3 inline-block text-xs font-bold text-eco-700" to={`${path}?${new URLSearchParams({ ...(filters.companyId ? { companyId: String(filters.companyId) } : {}), ...(filters.objectId ? { objectId: String(filters.objectId) } : {}), ...(filters.year ? { year: String(filters.year) } : {}), ...drillDown })}`}>Открыть</Link>}
                 </article>
               ))}
             </section>

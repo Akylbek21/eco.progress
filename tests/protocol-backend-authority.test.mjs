@@ -11,9 +11,9 @@ test('workflow keeps version in body, one revision reason and backend permission
   assert.doesNotMatch(api, /'If-Match'/);
   assert.doesNotMatch(client, /'If-Match'/);
   assert.doesNotMatch(client, /version: bodyVersion, \.\.\.body/);
-  assert.match(api, /\{ version: request\.version, reason \}/);
+  assert.match(api, /\{ version: requireProtocolVersion\(request\.version\), reason \}/);
   assert.doesNotMatch(api, /\{ comment, reason:/);
-  assert.match(permissions, /protocol\?\.permissions/);
+  assert.match(permissions, /hasProtocolAction/);
   assert.match(api, /cmsSignatureBase64/);
   assert.match(permissions, /action\('publish'\)/);
   assert.match(permissions, /action\('returnForRevision'\)/);

@@ -10,7 +10,7 @@ describe('captured production protocol list contract (2026-07-30)', () => {
     expect(protocols[1].version).toBe(0);
   });
 
-  it('normalizes legacy list-only values without leaking them into the domain', () => {
+  it('uses current backend statuses without legacy READY mapping', () => {
     expect(protocols[0]).toMatchObject({
       id: '49',
       status: 'CALCULATED',
@@ -28,7 +28,7 @@ describe('captured production protocol list contract (2026-07-30)', () => {
     });
   });
 
-  it('adapts the two captured permission aliases and otherwise fails closed', () => {
+  it('uses backend availableActions and otherwise fails closed', () => {
     const permissions = getProtocolPermissions(protocols[0]);
     expect(permissions.canReadyForApproval).toBe(true);
     expect(permissions.canReplace).toBe(false);

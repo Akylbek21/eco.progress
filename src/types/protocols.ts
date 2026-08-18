@@ -7,6 +7,7 @@ export type ProtocolStatus =
   | 'NEEDS_REVISION'
   | 'APPROVED'
   | 'SIGNED'
+  | 'PUBLISHED'
   | 'REPLACED'
   | 'CANCELLED'
   | 'ARCHIVED'
@@ -21,6 +22,7 @@ export interface ProtocolPermissions {
   canGeneratePreview?: boolean;
   canSendToApproval?: boolean;
   canReturnForRevision?: boolean;
+  canReturnToDraft?: boolean;
   canApprove?: boolean;
   canSign?: boolean;
   canCreateCorrection?: boolean;
@@ -29,9 +31,19 @@ export interface ProtocolPermissions {
   canPublish?: boolean;
   canGenerateDocuments?: boolean;
   canRegenerateDocuments?: boolean;
+  canGeneratePdf?: boolean;
+  canRegeneratePdf?: boolean;
+  canGenerateDocx?: boolean;
+  canRegenerateDocx?: boolean;
 }
 
 export type ProtocolAvailableActions = Record<string, boolean>;
+
+export type ProtocolWorkflowBlocker = {
+  code: string;
+  message: string;
+  actions?: string[];
+};
 
 export type ProtocolResultValue = string | number | null | undefined | Array<string | number | null>;
 
@@ -435,7 +447,7 @@ export interface Protocol {
   permissions?: ProtocolPermissions;
   availableActions: ProtocolAvailableActions;
   canComplete?: boolean;
-  blockingReasons?: string[];
+  blockingReasons?: ProtocolWorkflowBlocker[];
   publishedToClientAt?: string;
   publishedAt?: string;
   publishedBy?: string;
@@ -676,6 +688,11 @@ export type RawMeasurementsResponse = {
   calculationMessage?: string;
 };
 
+export type SaveRawMeasurementsResponse = {
+  version: number;
+  row?: ProtocolResultRow;
+};
+
 export type CalculationResultResponse = {
   protocolId: string;
   resultId: string;
@@ -687,10 +704,12 @@ export type CalculationResultResponse = {
   calculationMessage?: string;
   warnings?: string[];
   row?: ProtocolResultRow;
+  version?: number;
 };
 
 export type ProtocolCalculationSummaryResponse = {
   protocolId: string;
+  version?: number;
   total: number;
   calculated: number;
   manual: number;

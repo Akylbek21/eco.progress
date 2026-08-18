@@ -40,7 +40,7 @@ import type { ProtocolEditSection } from '../features/protocols/details/protocol
 import { useSignProtocolMutation } from '../features/protocols/hooks/useSignProtocolMutation';
 import { protocolQueryKeys, protocolScope } from '../features/protocols/hooks/queryKeys';
 import { pekApi } from '../features/pek/api/pekApi';
-import { hasProtocolAction } from '../features/protocols/utils/protocolActions';
+import { hasProtocolAction, protocolTransitionBlockers } from '../features/protocols/utils/protocolActions';
 import { hasUsableProtocolResultNormative } from '../features/protocols/utils/protocolResultNormative';
 
 const emptyLaboratory = {
@@ -529,7 +529,7 @@ const ProtocolEditorPage = () => {
   const failedSaveSignatureRef = useRef('');
 
   const dirty = useMemo(() => Boolean(protocol && savedSignatureRef.current && editableSignature(protocol) !== savedSignatureRef.current), [protocol]);
-  const protocolActions = useMemo(() => getProtocolPermissions(protocol, user?.role), [protocol, user?.role]);
+  const protocolActions = useMemo(() => getProtocolPermissions(protocol), [protocol]);
   const readOnly = !protocolActions.canEdit;
   const applyServerProtocol = (item: Protocol) => {
     const normalized = {
@@ -563,11 +563,8 @@ const ProtocolEditorPage = () => {
     onError: async (message, signError) => {
       toast.error('Не удалось подписать протокол', message);
       if (['OPTIMISTIC_LOCK_CONFLICT', 'PROTOCOL_VERSION_CONFLICT', 'VERSION_CONFLICT'].includes(normalizeApiError(signError).code || '') && protocol?.id) {
-        try {
-          applyServerProtocol(await protocolService.getProtocol(protocol.id));
-        } catch {
-          // Query invalidation will refresh the active detail query when available.
-        }
+        setConflictLatest(null);
+        setConflictOpen(true);
       }
     },
   });
@@ -575,7 +572,13 @@ const ProtocolEditorPage = () => {
   const signCurrentProtocol = () => {
     if (!protocol || signMutation.isPending) return;
     if (!hasProtocolAction(protocol, 'sign')) {
-      toast.warning(protocol.blockingReasons?.[0] || 'Нельзя подписать: заполните обязательные данные и выберите действующий прибор');
+      toast.warning(protocol.blockingReasons?.[0]?.message || 'Нельзя подписать: заполните обязательные данные и выберите действующий прибор');
+      return;
+    }
+    const blockers = protocolTransitionBlockers(protocol, 'sign');
+    if (blockers.length) {
+      setWorkflowErrors(blockers.map((blocker) => blocker.message));
+      toast.warning(blockers[0].message);
       return;
     }
     if (protocol.version === undefined || !Number.isFinite(protocol.version)) {
@@ -735,7 +738,7 @@ const ProtocolEditorPage = () => {
     }
     const snapshot = protocolRef.current || protocol;
     if (!snapshot) return null;
-    if (!getProtocolPermissions(snapshot, user?.role).canEdit) {
+    if (!getProtocolPermissions(snapshot).canEdit) {
       toast.warning('Редактирование протокола закрыто для текущего статуса');
       return null;
     }
@@ -802,14 +805,8 @@ const ProtocolEditorPage = () => {
           conflictDetected = true;
           saveQueuedRef.current = false;
           setSaveStatus('conflict');
-          try {
-            const fresh = await protocolService.getProtocol(snapshot.id);
-            setConflictLatest(fresh);
-            setConflictOpen(true);
-          } catch {
-            setConflictLatest(null);
-            setConflictOpen(true);
-          }
+          setConflictLatest(null);
+          setConflictOpen(true);
           toast.warning(protocolVersionConflictMessage);
         } else {
           failedSaveSignatureRef.current = editableSignature(snapshot);
@@ -934,8 +931,6 @@ const ProtocolEditorPage = () => {
     setBusy(true);
     try {
       const summary = await protocolService.calculateProtocolSummary(current.id, current.version);
-      const calculated = await protocolService.getProtocol(current.id);
-      await protocolService.checkNormatives(calculated.id, calculated.version);
       const updated = await protocolService.getProtocol(current.id);
       applyServerProtocol(updated);
       toast.success(
@@ -944,8 +939,8 @@ const ProtocolEditorPage = () => {
       );
     } catch (calculationError) {
       if (isProtocolVersionConflict(calculationError)) {
-        const latest = await protocolService.getProtocol(current.id);
-        applyServerProtocol(latest);
+        setConflictLatest(null);
+        setConflictOpen(true);
         toast.warning(protocolVersionConflictMessage);
       } else toast.error('Не удалось рассчитать результаты', getApiErrorMessage(calculationError, 'Не удалось рассчитать результаты'));
     } finally {
@@ -1019,12 +1014,8 @@ const ProtocolEditorPage = () => {
       const parsed = normalizeProtocolError(actionError);
       const status = getApiStatus(actionError);
       if (isProtocolVersionConflict(actionError)) {
+        setConflictLatest(null);
         setConflictOpen(true);
-        try {
-          setConflictLatest(await protocolService.getProtocol(protocolRef.current?.id || protocolId || ''));
-        } catch {
-          setConflictLatest(null);
-        }
       }
       if (status === 403) {
         try {
@@ -1049,12 +1040,21 @@ const ProtocolEditorPage = () => {
   };
 
   const preview = async () => {
-    const current = await ensureSavedProtocol('Сначала сохраняю изменения, затем открываю предпросмотр.');
+    const snapshot = protocolRef.current;
+    const current = snapshot?.status === 'SIGNED'
+      ? snapshot
+      : await ensureSavedProtocol('Сначала сохраняю изменения, затем открываю предпросмотр.');
     if (!current) return;
+    if (current.status === 'SIGNED' && !hasProtocolAction(current, 'downloadPdf')) {
+      toast.warning('Просмотр подписанного PDF недоступен');
+      return;
+    }
     setPreviewOpen(true);
     setPreviewLoading(true);
     try {
-      const blob = await protocolService.previewProtocol(current.id);
+      const blob = current.status === 'SIGNED'
+        ? (await protocolService.downloadPdf(current.id)).blob
+        : await protocolService.previewProtocol(current.id);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(blob));
     } catch (previewError) {
@@ -1087,7 +1087,10 @@ const ProtocolEditorPage = () => {
   const generateDocument = async (kind: 'docx' | 'pdf') => {
     const current = await ensureSavedProtocol(`Сначала сохраняю изменения, затем формирую ${kind.toUpperCase()}.`);
     if (!current) return;
-    const generationAction = current.hasDocx || current.hasPdf ? 'regenerateDocuments' : 'generateDocuments';
+    const alreadyGenerated = kind === 'docx' ? current.hasDocx : current.hasPdf;
+    const generationAction = kind === 'docx'
+      ? (alreadyGenerated ? 'regenerateDocx' : 'generateDocx')
+      : (alreadyGenerated ? 'regeneratePdf' : 'generatePdf');
     if (!hasProtocolAction(current, generationAction)) {
       toast.warning(`Формирование ${kind.toUpperCase()} не разрешено backend`);
       return;
@@ -1133,11 +1136,8 @@ const ProtocolEditorPage = () => {
       navigate('/staff/protocols');
     } catch (deleteError) {
       if (isProtocolVersionConflict(deleteError)) {
-        try {
-          applyServerProtocol(await protocolService.getProtocol(current.id));
-        } catch {
-          // Keep the conflict message when reconciliation is unavailable.
-        }
+        setConflictLatest(null);
+        setConflictOpen(true);
         toast.warning(protocolVersionConflictMessage);
       } else toast.error(getApiErrorMessage(deleteError, 'Не удалось удалить протокол'));
     } finally {
@@ -1148,7 +1148,7 @@ const ProtocolEditorPage = () => {
   const sendForApproval = async () => {
     const current = await ensureSavedProtocol('Сначала сохраняю изменения, затем отправляю протокол на утверждение.');
     if (!current) return;
-    const blockers = getApprovalBlockers(current);
+    const blockers = protocolTransitionBlockers(current, 'sendToApproval').map((blocker) => blocker.message);
     if (blockers.length) {
       setWorkflowErrors(blockers);
       toast.warning('Протокол пока нельзя отправить на утверждение', blockers[0]);
@@ -1157,6 +1157,21 @@ const ProtocolEditorPage = () => {
     await run(
       (latest) => protocolService.readyForApproval(latest.id, { version: Number(latest.version) }),
       'Протокол отправлен на утверждение',
+    );
+  };
+
+  const approveCurrentProtocol = async () => {
+    const current = protocolRef.current;
+    if (!current) return;
+    const blockers = protocolTransitionBlockers(current, 'approve').map((blocker) => blocker.message);
+    if (blockers.length) {
+      setWorkflowErrors(blockers);
+      toast.warning(blockers[0]);
+      return;
+    }
+    await run(
+      (item) => protocolService.approveProtocol(item.id, { version: Number(item.version) }),
+      'Протокол утверждён',
     );
   };
 
@@ -1196,11 +1211,10 @@ const ProtocolEditorPage = () => {
   return (
     <>
     {protocol.status === 'UNKNOWN' && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900">Статус протокола пока не поддерживается. Данные доступны только для чтения.</div>}
-    {pekReportContext > 0 && ['APPROVED', 'SIGNED'].includes(protocol.status) && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><span>Протокол завершён. Можно повторно собрать связанный отчёт ПЭК.</span><Button type="button" disabled={busy} onClick={() => { void recollectPekReport(); }}>Повторно собрать отчёт ПЭК</Button></div>}
+    {pekReportContext > 0 && ['SIGNED', 'PUBLISHED'].includes(protocol.status) && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><span>Протокол подписан и завершён. Можно повторно собрать связанный отчёт ПЭК.</span><Button type="button" disabled={busy} onClick={() => { void recollectPekReport(); }}>Повторно собрать отчёт ПЭК</Button></div>}
     <ProtocolDetailsView
       protocol={protocol}
       initialTab={new URLSearchParams(location.search).get('tab') === 'history' ? 'history' : 'results'}
-      role={user?.role}
       permissions={protocolActions}
       missing={missingFields}
       workflowErrors={workflowErrors}
@@ -1211,7 +1225,7 @@ const ProtocolEditorPage = () => {
       onCalculate={() => { void calculateProtocolResults(); }}
       onCheckNormatives={() => { void checkSavedNormatives(); }}
       onReady={() => { void sendForApproval(); }}
-      onApprove={() => { void run((current) => protocolService.approveProtocol(current.id, { version: Number(current.version) }), 'Протокол утверждён'); }}
+      onApprove={() => { void approveCurrentProtocol(); }}
       onSign={signCurrentProtocol}
       onPublish={() => { void run((current) => protocolService.publishToClient(current.id, { version: Number(current.version) }), 'Протокол отправлен клиенту'); }}
       onPreview={() => { void preview(); }}
@@ -1261,8 +1275,8 @@ const ProtocolEditorPage = () => {
           setSignOpen(true);
         } : undefined}
       />
-      <Modal open={conflictOpen} onClose={() => setConflictOpen(false)} title="Протокол был изменён. Обновляем актуальные данные">
-        <p className="text-sm text-slate-600">Мы загрузили последнюю версию. Проверьте изменения и повторите действие.</p>
+      <Modal open={conflictOpen} onClose={() => setConflictOpen(false)} title="Протокол был изменён другим пользователем">
+        <p className="text-sm text-slate-600">Текущая операция не повторялась. Обновите данные, чтобы продолжить с актуальной версией.</p>
         <div className="mt-5 flex justify-end gap-3">
           <Button type="button" variant="secondary" onClick={() => setConflictOpen(false)}>Закрыть</Button>
           <Button
@@ -1335,7 +1349,12 @@ const ProtocolEditorPage = () => {
         confirmText="Вернуть на доработку"
         onClose={() => setRevisionOpen(false)}
         onConfirm={async (reason) => {
-          if (await run((current) => protocolService.returnForRevision(current.id, { version: Number(current.version), reason }), 'Протокол возвращён на доработку')) setRevisionOpen(false);
+          if (await run((current) => {
+            const request = { version: Number(current.version), reason };
+            return hasProtocolAction(current, 'returnToDraft')
+              ? protocolService.returnToDraft(current.id, request)
+              : protocolService.returnForRevision(current.id, request);
+          }, 'Протокол возвращён на доработку')) setRevisionOpen(false);
         }}
       />
       <ReturnForRevisionModal
