@@ -46,7 +46,6 @@ const requestFromForm = (form: FormState): PekMonitoringMutationRequest => ({
   frequencyType: form.frequencyType as PekPeriodicity,
   plannedCount: Number(form.plannedCount),
   controlItemIds: numberCsv(form.controlItemIds),
-  protocolTypes: csv(form.protocolTypes),
   active: form.active,
 });
 
@@ -65,10 +64,18 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
       else if (editing) await pekApi.updateProgramMonitoring(program.id, editing.id, body, editing.version);
     },
     onSuccess: async () => { setEditing(null); await monitoring.refetch(); },
+    onError: async (error) => {
+      const mapped = mapPekError(error);
+      if (mapped.status === 409 || mapped.status === 412) await monitoring.refetch();
+    },
   });
   const remove = useMutation({
     mutationFn: async () => { if (deleting) await pekApi.deleteProgramMonitoring(program.id, deleting.id, deleting.version); },
     onSuccess: async () => { setDeleting(null); await monitoring.refetch(); },
+    onError: async (error) => {
+      const mapped = mapPekError(error);
+      if (mapped.status === 409 || mapped.status === 412) await monitoring.refetch();
+    },
   });
 
   if (monitoring.isLoading) return <p className="text-sm text-slate-500">Загрузка направлений мониторинга…</p>;
@@ -113,7 +120,7 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
         <TextField select label="Периодичность *" value={form.frequencyType} onChange={(event) => setForm((value) => ({ ...value, frequencyType: event.target.value as PekPeriodicity }))}>{frequencyTypes.map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}</TextField>
         <TextField label="Плановое количество *" type="number" value={form.plannedCount} onChange={(event) => setForm((value) => ({ ...value, plannedCount: event.target.value }))} />
         <TextField label="ID объектов контроля через запятую" value={form.controlItemIds} onChange={(event) => setForm((value) => ({ ...value, controlItemIds: event.target.value }))} />
-        <TextField label="Типы протоколов через запятую" value={form.protocolTypes} onChange={(event) => setForm((value) => ({ ...value, protocolTypes: event.target.value }))} />
+        <TextField label="Типы протоколов (только чтение)" value={form.protocolTypes} disabled helperText="Значение рассчитывает backend" />
         <FormControlLabel control={<Checkbox checked={form.active} onChange={(event) => setForm((value) => ({ ...value, active: event.target.checked }))} />} label="Активно" />
       </div></DialogContent>
       <DialogActions><Button onClick={() => setEditing(null)}>Отмена</Button><Button variant="contained" disabled={save.isPending || !form.monitoringType || !form.name.trim() || !form.frequencyType} onClick={() => save.mutate()}>Сохранить</Button></DialogActions>

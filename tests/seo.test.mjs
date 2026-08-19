@@ -48,20 +48,60 @@ test('nginx normalizes www, slash and legacy penalty URLs with 301', async () =>
   assert.match(redirects, /otchet-pek-\(\[a-z-\]\+\).*return 301 \/pek-\$1/);
   assert.match(redirects, /ekologicheskoe-proektirovanie-\(\[a-z-\]\+\).*return 301 \/roos-\$1/);
   assert.match(redirects, /razreshenie-na-emissii-\(\[a-z-\]\+\).*return 301 \/ekologicheskoe-razreshenie-\$1/);
+  assert.match(redirects, /proizvodstvennyy-kontrol-ses-\(\[a-z-\]\+\).*return 301 \/szz-\$1/);
+  assert.match(redirects, /programma-pek\|razrabotka-pek\|proizvodstvennyy-ekologicheskiy-kontrol.*return 301 \/pek-\$1/);
+  assert.match(redirects, /passport-othodov-kazakhstan \{ return 301 \/services\/ecological-documents;/);
+  assert.match(redirects, /otchet-pek-kazakhstan \{ return 301 \/services\/report-pek;/);
+  for (const legacy of ['/passport-othodov-kazakhstan', '/otchet-pek-kazakhstan']) assert.ok(!registry.some((item) => item.path === legacy));
 });
 
 test('every active SEO city has every core service landing', () => {
   const cityPages = seoPages.filter((page) => page.type === 'city' && page.indexable !== false);
   const servicePages = seoPages.filter((page) => page.type === 'service-city' && page.indexable !== false);
   const prefixes = ['ndv', 'pek', 'ovos', 'szz', 'puo', 'roos', 'pasport-othodov', 'ekologicheskoe-razreshenie', 'laboratornye-zamery', 'utilizaciya-othodov'];
-  assert.equal(servicePages.length, cityPages.length * prefixes.length);
+  assert.equal(servicePages.length, cityPages.length * (prefixes.length - 1) + 3);
   for (const cityPage of cityPages) {
     const citySlug = cityPage.slug.replace('ecologicheskie-uslugi-', '');
-    for (const prefix of prefixes) assert.ok(servicePages.some((page) => page.slug === `${prefix}-${citySlug}`), `${prefix}-${citySlug}`);
+    for (const prefix of prefixes.filter((item) => item !== 'utilizaciya-othodov')) assert.ok(servicePages.some((page) => page.slug === `${prefix}-${citySlug}`), `${prefix}-${citySlug}`);
+    assert.equal(servicePages.some((page) => page.slug === `utilizaciya-othodov-${citySlug}`), ['shymkent', 'taraz', 'turkestan'].includes(citySlug));
   }
   for (const page of servicePages) {
     assert.ok(page.relatedLinks.some((item) => item.path === `/ecologicheskie-uslugi-${page.slug.split('-').slice(-1)[0]}`) || page.relatedLinks.some((item) => item.label.startsWith('Экологические услуги')));
     assert.ok(page.relatedLinks.filter((item) => servicePages.some((candidate) => `/${candidate.slug}` === item.path)).length >= 4);
+  }
+});
+
+test('service-city commercial content is unique and contains all required blocks', () => {
+  const pages = seoPages.filter((page) => page.type === 'service-city' && page.indexable !== false);
+  for (const field of ['title', 'description', 'h1', 'intro', 'ctaTitle', 'ctaText']) {
+    assert.equal(new Set(pages.map((page) => page[field])).size, pages.length, `duplicate ${field}`);
+  }
+  assert.equal(new Set(pages.map((page) => JSON.stringify(page.sections))).size, pages.length, 'duplicate service sections');
+  assert.equal(new Set(pages.map((page) => JSON.stringify(page.faq))).size, pages.length, 'duplicate FAQ');
+  for (const page of pages) {
+    const sectionText = page.sections.map((section) => `${section.title} ${section.body}`).join(' ');
+    for (const label of ['Этапы', 'Документы', 'Сроки', 'Что получает']) assert.match(sectionText, new RegExp(label, 'i'), `${page.slug}: ${label}`);
+    assert.ok(page.relatedLinks.some((item) => item.path.startsWith('/news/')), `${page.slug}: article link`);
+  }
+});
+
+test('city grammar and PEK keyword cluster use explicit backend-independent forms', () => {
+  const shymkent = seoPages.find((page) => page.slug === 'ecologicheskie-uslugi-shymkent');
+  assert.equal(shymkent?.h1, 'Экологические услуги в Шымкенте');
+  const pek = seoPages.find((page) => page.slug === 'pek-shymkent');
+  assert.equal(pek?.h1, 'Производственный экологический контроль в Шымкенте');
+  assert.match(pek?.description || '', /Программа ПЭК для Шымкента/);
+  for (const phrase of ['производственный экологический контроль Шымкент', 'программа ПЭК Шымкент', 'разработка ПЭК Шымкент', 'отчет ПЭК Шымкент']) assert.ok(pek?.keywords?.includes(phrase));
+  assert.match(pek?.ctaTitle || '', /для Шымкента/);
+});
+
+test('service-city registry exposes Service schema and Shymkent UI adds LocalBusiness', async () => {
+  const shymkentService = registry.find((item) => item.path === '/pek-shymkent');
+  const serviceSchema = shymkentService?.schema.find((item) => item['@type'] === 'Service');
+  assert.equal(serviceSchema?.areaServed?.name, 'Шымкент');
+  for (const type of ['Organization', 'LocalBusiness', 'Service', 'BreadcrumbList', 'FAQPage']) {
+    const source = await readFile(new URL('../src/pages/SeoLandingPage.tsx', import.meta.url), 'utf8');
+    assert.match(source, new RegExp(type));
   }
 });
 

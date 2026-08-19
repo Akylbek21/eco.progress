@@ -16,6 +16,7 @@ import { labelPekStatus } from '../utils/pekLabels';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 import { currentQuarter } from '../utils/pekPeriod';
 import { useAuth } from '../../../contexts/AuthContext';
+import { canCollectResults } from '../permissions/pekAccess';
 
 const inputClass = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2';
 
@@ -76,14 +77,13 @@ const PekReportCreatePage = () => {
     },
   });
   const availablePrograms = context.data?.programs || [];
-  const selectedProgramId = programId;
+  const selectedProgramId = programId ?? context.data?.selectedProgramId ?? null;
   const selectedProgramAvailable = selectedProgramId != null && availablePrograms.some((program) => program.id === selectedProgramId);
   const blocked = Boolean(
     !context.data
     || context.data.blockingReasons.length
     || context.data.duplicateReportId
     || !selectedProgramAvailable
-    || !(context.data.availableActions?.createReport === true || context.data.permissions?.includes('PEK_REPORT_CREATE'))
   );
 
   return <div className="space-y-5">
@@ -141,7 +141,7 @@ const PekReportCreatePage = () => {
             {context.data.warnings.map((warning) => <p key={warning} className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{warning}</p>)}
             {context.data.blockingReasons.map((reason) => <p key={reason} className="rounded-xl bg-rose-50 p-3 text-sm text-rose-900">{reason}</p>)}
             {context.data.duplicateReportId && <p className="rounded-xl bg-amber-50 p-3 text-sm">Отчёт за период уже существует. <Link className="font-bold underline" to={`/staff/pek/reports/${context.data.duplicateReportId}`}>Открыть отчёт №{context.data.duplicateReportId}</Link></p>}
-            {(context.data.availableActions?.collect === true || context.data.permissions?.includes('PEK_REPORT_COLLECT')) && <label className="flex items-center gap-2"><input type="checkbox" checked={collectImmediately} onChange={(event) => setCollectImmediately(event.target.checked)} />Сразу собрать подходящие протоколы</label>}
+            {canCollectResults(user) && <label className="flex items-center gap-2"><input type="checkbox" checked={collectImmediately} onChange={(event) => setCollectImmediately(event.target.checked)} />Сразу собрать подходящие протоколы</label>}
             <PekState title="Ответственный будет назначен автоматически" message="После создания назначение отобразится в рабочей области отчёта." />
             <Button disabled={blocked || create.isPending} aria-busy={create.isPending} onClick={() => {
               if (!selectedProgramAvailable || selectedProgramId == null) return toast.error('Выбранная программа больше недоступна для этого отчёта.');

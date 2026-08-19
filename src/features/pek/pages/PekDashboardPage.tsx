@@ -116,7 +116,7 @@ const PekDashboardPage = () => {
           ? <PekState title="Сводка пока недоступна" />
           : <>
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {metricDefinitions.map(([key, label, suffix, path, drillDown]) => (
+              {metricDefinitions.filter(([key]) => dashboard.data[key] != null).map(([key, label, suffix, path, drillDown]) => (
                 <article key={key} className="rounded-2xl border bg-white p-5">
                   <p className="text-sm text-slate-500">{label}</p>
                   <p className="mt-2 text-3xl font-black text-eco-900">{dashboard.data[key] == null ? <span className="text-lg text-slate-500">—</span> : `${dashboard.data[key]}${suffix}`}</p>

@@ -14,6 +14,7 @@ import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 import PekReportDocuments from '../components/documents/PekReportDocuments';
 import PekReportPackageCard from '../components/documents/PekReportPackageCard';
 import PekReportExceedances from '../components/exceedances/PekReportExceedances';
+import { canUsePekPermission } from '../permissions/pekAccess';
 
 const tabs = [
   { key: 'overview', label: 'Обзор' },
@@ -133,7 +134,7 @@ const PekReportWorkspacePage = () => {
 
   const collect = useMutation({
     mutationFn: async () => {
-      const result = await pekApi.collectReport(id);
+      const result = await pekApi.collectReport(id, report.data!.version);
       const actual = await pekApi.getReport(id);
       if (actual.linkedProtocolCount !== result.linkedProtocolCount) {
         throw new Error('Сбор завершён, но повторный GET не подтвердил пересчёт связанных протоколов.');
@@ -202,8 +203,8 @@ const PekReportWorkspacePage = () => {
   if (report.isLoading) return <PekLoading />;
   if (report.isError || !report.data) return <PekQueryError error={report.error} resource="отчёт ПЭК" retry={() => void report.refetch()} />;
   const item = report.data;
-  const actions = item.availableActions || {};
-  const canMutateSources = actions.matchSources === true;
+  const canMutateSources = ['DRAFT', 'COLLECTING', 'RETURNED'].includes(item.status)
+    && canUsePekPermission(user, 'PEK_REPORT_EDIT');
   const pending = collect.isPending || submitReview.isPending || returnReport.isPending || approve.isPending || archive.isPending;
   const setTab = (nextTab: TabKey) => { const next = new URLSearchParams(params); nextTab === 'overview' ? next.delete('tab') : next.set('tab', nextTab); setParams(next, { replace: true }); };
 

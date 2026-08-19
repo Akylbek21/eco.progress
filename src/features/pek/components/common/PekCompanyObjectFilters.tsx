@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { usePekScope } from '../../hooks/usePekScope';
-import { mapPekError } from '../../utils/pekErrorMapper';
 
 type Props = {
   companyId?: number;
@@ -52,13 +51,11 @@ const PekCompanyObjectFilters = ({
           onCompanyChange(event.target.value);
           onObjectChange('');
         }}
-        placeholder={scope.scopedPrograms.isLoading ? 'Загрузка PEK scope…' : 'Выберите или укажите ID компании'}
+        placeholder={scope.availableCompanies.isLoading ? 'Загрузка компаний…' : 'Выберите компанию'}
         className="mt-1 w-full rounded-xl border px-3 py-2 text-sm disabled:bg-slate-100"
       />
       <datalist id="pek-company-options">{scope.companies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</datalist>
-      {companyId && scope.companyAccess.isFetching && <span className="mt-1 block text-xs text-slate-500">Проверяем PEK-доступ…</span>}
-      {companyId && scope.companyAccess.isError && <span className="mt-1 block text-xs text-rose-700">{mapPekError(scope.companyAccess.error).message}</span>}
-      {scope.scopedPrograms.isError && <button type="button" onClick={() => void scope.scopedPrograms.refetch()} className="mt-1 text-xs text-rose-700 underline">Повторить загрузку PEK scope</button>}
+      {scope.availableCompanies.isError && <button type="button" onClick={() => void scope.availableCompanies.refetch()} className="mt-1 text-xs text-rose-700 underline">Повторить загрузку компаний</button>}
     </label>
     <label className="text-xs font-bold text-slate-600">
       Объект{required ? ' *' : ''}

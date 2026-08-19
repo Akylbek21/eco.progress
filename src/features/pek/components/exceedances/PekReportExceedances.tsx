@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from '@mui/material';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { downloadStaffRepositoryDocument } from '../../../../services/staffDocumentRepositoryService';
 import type { PekAssignExceedanceRequest, PekExceedance, PekReport } from '../../api/pekContracts';
 import { pekKeys } from '../../api/pekQueryKeys';
 import { pekApi } from '../../api/pekService';
@@ -93,9 +92,9 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
     mutationFn: async () => {
       if (!evidenceFile) throw new Error('Выберите файл подтверждения.');
       const uploaded = await uploadAndAttachExceedanceEvidence({ file: evidenceFile, exceedanceId: selected!.id, reportId: report.id, version: selected!.version });
-      const fileId = uploaded.id;
+      const fileId = uploaded.fileId;
       const actual = await refreshAfterMutation(selected!.id);
-      return { actual, fileId, fileName: uploaded.originalFileName || uploaded.name };
+      return { actual, fileId, fileName: uploaded.fileName || evidenceFile.name };
     },
     onSuccess: ({ fileId, fileName }) => {
       setEvidenceNames((current) => ({ ...current, [fileId]: fileName }));
@@ -141,22 +140,6 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
   const pending = assign.isPending || evidence.isPending || transitionMutation.isPending;
   const mutationError = assign.error || evidence.error || transitionMutation.error;
   const mutationFailure = mutationError ? mapPekError(mutationError) : null;
-  const staffDocumentId = (fileId: string) => {
-    const match = fileId.match(/\/staff\/documents\/([^/]+)\/download(?:$|\?)/);
-    if (match?.[1]) return decodeURIComponent(match[1]);
-    return fileId && !fileId.includes('/') ? fileId : null;
-  };
-  const downloadEvidence = async (fileId: string) => {
-    const documentId = staffDocumentId(fileId);
-    if (!documentId) return;
-    const blob = await downloadStaffRepositoryDocument(documentId);
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = evidenceNames[fileId] || `Подтверждение-${documentId}`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
 
   return <section className="space-y-4 rounded-2xl border bg-white p-5">
     <div><h2 className="font-black">Превышения и корректирующие мероприятия</h2><p className="text-sm text-slate-500">Ответственные, сроки, подтверждения и закрытие превышений</p></div>
@@ -168,7 +151,7 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
       {mutationFailure && <Alert severity={mutationFailure.status === 403 ? 'warning' : 'error'}>{mutationFailure.code && <strong>{mutationFailure.code}: </strong>}{mutationFailure.message}{Object.entries(mutationFailure.fieldErrors).map(([field, message]) => <div key={field}>{field}: {message}</div>)}</Alert>}
       {(canAssign || canEdit) && <section className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2"><TextField select label="Ответственный" value={responsibleUserId} onChange={(event) => setResponsibleUserId(event.target.value)}><MenuItem value="">Не выбран</MenuItem>{assignees.data?.map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}</TextField><TextField type="date" label="Срок устранения" InputLabelProps={{ shrink: true }} value={dueDate} onChange={(event) => setDueDate(event.target.value)} /><TextField className="sm:col-span-2" multiline minRows={3} label="Корректирующее мероприятие" value={correctiveAction} onChange={(event) => setCorrectiveAction(event.target.value)} /><div className="sm:col-span-2"><Button variant="contained" disabled={pending || !responsibleUserId || !dueDate || !correctiveAction.trim()} onClick={() => assign.mutate()}>{canEdit ? 'Изменить' : 'Назначить ответственного'}</Button></div></section>}
       {canAddEvidence && <section className="rounded-xl border p-4">{!evidenceOpen ? <Button variant="outlined" onClick={() => setEvidenceOpen(true)}>Добавить доказательство</Button> : <><label className="block text-sm font-semibold">Файл подтверждения</label><input className="mt-2 block w-full rounded-lg border p-2 text-sm" type="file" onChange={(event) => setEvidenceFile(event.target.files?.[0] || null)} /><p className="mt-2 text-xs text-slate-500">{evidenceFile ? evidenceFile.name : 'Файл не выбран'}</p><div className="mt-3 flex gap-2"><Button variant="contained" disabled={pending || !evidenceFile} onClick={() => evidence.mutate()}>Загрузить и прикрепить</Button><Button variant="outlined" disabled={pending} onClick={() => { setEvidenceFile(null); setEvidenceOpen(false); }}>Отмена</Button></div></>}</section>}
-      <div><strong>Прикреплённые файлы:</strong>{!selected.evidenceFileIds?.length ? <span className="ml-2 text-slate-500">нет</span> : <ul className="mt-2 space-y-2">{selected.evidenceFileIds.map((fileId, index) => { const downloadable = Boolean(staffDocumentId(fileId)); return <li key={fileId} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm"><span>{evidenceNames[fileId] || `Подтверждение ${index + 1}`}</span>{downloadable && <Button size="small" onClick={() => void downloadEvidence(fileId)}>Скачать</Button>}</li>; })}</ul>}</div>
+      <div><strong>Прикреплённые файлы:</strong>{!selected.evidenceFileIds?.length ? <span className="ml-2 text-slate-500">нет</span> : <ul className="mt-2 space-y-2">{selected.evidenceFileIds.map((fileId, index) => <li key={fileId} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">{evidenceNames[fileId] || `Подтверждение ${index + 1}`}</li>)}</ul>}</div>
       {(canChangeStatus || canClose || canReopen) && <section className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2">
         {canChangeStatus && ordinaryTransitions.length > 0 && <TextField select label="Новый статус" value={transition} onChange={(event) => setTransition(event.target.value)}>{ordinaryTransitions.map((status) => <MenuItem key={status} value={status}>{statusLabels[status] || status}</MenuItem>)}</TextField>}
         <TextField label="Комментарий" value={comment} onChange={(event) => setComment(event.target.value)} />

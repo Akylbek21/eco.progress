@@ -9,7 +9,7 @@ import { pekApi } from '../api/pekService';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { usePekScope } from '../hooks/usePekScope';
-import { usePekAccessContext } from '../hooks/usePekAccessContext';
+import { canManagePekMemberships } from '../permissions/pekAccess';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { retryPekQuery } from '../utils/pekQueryPolicy';
 
@@ -23,13 +23,12 @@ const PekMembershipsPage = () => {
   const companyId = Number(params.get('companyId')) || 0;
   const scope = usePekScope(companyId || undefined);
   const company = scope.companies.find((item) => item.id === companyId);
-  const access = usePekAccessContext(companyId || undefined);
-  const canManage = access.data?.availableActions.manageMemberships === true || access.data?.permissions.includes('PEK_SETTINGS_EDIT') === true;
+  const canManage = canManagePekMemberships(user);
   const key = pekKeys.memberships(companyId, user?.id);
   const memberships = useQuery({
     queryKey: key,
     queryFn: ({ signal }) => pekApi.getPekMemberships(companyId, signal),
-    enabled: companyId > 0 && scope.companyAllowed && canManage,
+    enabled: companyId > 0 && scope.companyAllowed,
     retry: retryPekQuery,
   });
   const [editing, setEditing] = useState<PekCompanyMembership | null>(null);
@@ -78,24 +77,21 @@ const PekMembershipsPage = () => {
 
   return <div className="space-y-5">
     <PekPageHeader title="Сотрудники / Доступ ПЭК" description="Управление членством сотрудников в PEK scope компании" />
-    {!canManage && <PekState title="Недостаточно прав" message="Управление PEK memberships доступно пользователям с разрешением PEK_SETTINGS_EDIT." />}
-    {canManage && <>
+    <>
       <section className="rounded-2xl border bg-white p-4">
         <label className="block max-w-xl text-sm font-semibold">Компания
           <input type="number" min="1" list="pek-membership-companies" value={companyId || ''} onChange={(event) => setParams(event.target.value ? { companyId: event.target.value } : {}, { replace: true })} placeholder="Выберите или укажите ID компании" className="mt-1 w-full rounded-xl border p-3" />
           <datalist id="pek-membership-companies">{scope.companies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</datalist>
         </label>
-        {companyId > 0 && scope.companyAccess.isFetching && <p className="mt-2 text-sm text-slate-500">Проверяем PEK-доступ к компании…</p>}
-        {companyId > 0 && scope.companyAccess.isError && <p className="mt-2 text-sm font-semibold text-rose-700">{mapPekError(scope.companyAccess.error).message}</p>}
       </section>
       {!companyId
-        ? <PekState title="Выберите компанию" message="Список доступных компаний формируется из PEK scope backend. Также можно указать ID для серверной проверки доступа." />
+        ? <PekState title="Выберите компанию" message="Список доступных компаний загружается из общего CRM-справочника." />
         : !scope.companyAllowed
           ? null
           : <section className="space-y-4 rounded-2xl border bg-white p-5">
             <div><h2 className="font-black">{company?.name || `Компания №${companyId}`}</h2><p className="text-sm text-slate-500">Сотрудники, роли и статус доступа к ПЭК</p></div>
             {error && <div className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800"><p>{error}</p>{Object.entries(fieldErrors).map(([field, message]) => <p key={field} className="mt-1">{field}: {message}</p>)}</div>}
-            <form key={editing?.id || 'new'} onSubmit={submit} className="grid gap-3 rounded-xl border p-4 md:grid-cols-4">
+            {canManage && <form key={editing?.id || 'new'} onSubmit={submit} className="grid gap-3 rounded-xl border p-4 md:grid-cols-4">
               <label className="text-sm font-semibold">Email сотрудника
                 <input name="email" type="email" required={!editing} disabled={Boolean(editing)} defaultValue={editing?.userEmail || ''} className="mt-1 w-full rounded-lg border p-2 disabled:bg-slate-100" />
               </label>
@@ -106,10 +102,10 @@ const PekMembershipsPage = () => {
                 <select name="status" defaultValue={editing.status} className="mt-1 w-full rounded-lg border p-2"><option value="ACTIVE">Активен</option><option value="INVITED">Приглашён</option><option value="REMOVED">Деактивирован</option></select>
               </label> : <div />}
               <div className="flex items-end gap-2"><Button type="submit" disabled={pending}>{editing ? 'Сохранить' : 'Добавить'}</Button>{editing && <Button type="button" variant="secondary" onClick={() => setEditing(null)}>Отмена</Button>}</div>
-            </form>
-            {memberships.isLoading ? <PekLoading /> : memberships.isError ? <PekQueryError error={memberships.error} resource="PEK memberships" retry={() => void memberships.refetch()} /> : <div className="overflow-x-auto rounded-xl border"><table className="w-full min-w-[820px] text-sm"><thead className="bg-slate-50 text-left"><tr><th className="p-3">Компания</th><th>Сотрудник</th><th>Email</th><th>Роль</th><th>Статус</th><th>Действия</th></tr></thead><tbody>{memberships.data?.map((item) => <tr key={item.id} className="border-t"><td className="p-3">{company?.name || `№${item.companyId}`}</td><td className="font-semibold">{item.userFullName || `Сотрудник №${item.userId}`}</td><td>{item.userEmail || '—'}</td><td>{item.roleCode}</td><td>{statusLabels[item.status]}</td><td><div className="flex gap-2"><Button type="button" variant="secondary" disabled={pending} onClick={() => setEditing(item)}>Изменить</Button>{item.status !== 'REMOVED' && <Button type="button" variant="danger" disabled={pending} onClick={() => { if (window.confirm(`Деактивировать доступ ${item.userFullName || item.userEmail || item.userId}?`)) deactivate.mutate(item.id); }}>Деактивировать</Button>}</div></td></tr>)}{!memberships.data?.length && <tr><td colSpan={6} className="p-6 text-center text-slate-500">Сотрудники не добавлены</td></tr>}</tbody></table></div>}
+            </form>}
+            {memberships.isLoading ? <PekLoading /> : memberships.isError ? <PekQueryError error={memberships.error} resource="PEK memberships" retry={() => void memberships.refetch()} /> : <div className="overflow-x-auto rounded-xl border"><table className="w-full min-w-[820px] text-sm"><thead className="bg-slate-50 text-left"><tr><th className="p-3">Компания</th><th>Сотрудник</th><th>Email</th><th>Роль</th><th>Статус</th><th>Действия</th></tr></thead><tbody>{memberships.data?.map((item) => <tr key={item.id} className="border-t"><td className="p-3">{company?.name || `№${item.companyId}`}</td><td className="font-semibold">{item.userFullName || `Сотрудник №${item.userId}`}</td><td>{item.userEmail || '—'}</td><td>{item.roleCode}</td><td>{statusLabels[item.status]}</td><td>{canManage && <div className="flex gap-2"><Button type="button" variant="secondary" disabled={pending} onClick={() => setEditing(item)}>Изменить</Button>{item.status !== 'REMOVED' && <Button type="button" variant="danger" disabled={pending} onClick={() => { if (window.confirm(`Деактивировать доступ ${item.userFullName || item.userEmail || item.userId}?`)) deactivate.mutate(item.id); }}>Деактивировать</Button>}</div>}</td></tr>)}{!memberships.data?.length && <tr><td colSpan={6} className="p-6 text-center text-slate-500">Сотрудники не добавлены</td></tr>}</tbody></table></div>}
           </section>}
-    </>}
+    </>
   </div>;
 };
 

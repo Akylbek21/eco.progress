@@ -41,10 +41,6 @@ export const pekKeys = {
   scope: (userId?: PekUserScope) => ['pek', userScope(userId), 'scope'] as const,
   scopeCompany: (companyId: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'scope', 'company', String(companyId)] as const,
   memberships: (companyId: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'memberships', String(companyId)] as const,
-  accessContext: (companyId: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'access-context', String(companyId)] as const,
-  permitContext: (companyId: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'permit-context', String(companyId)] as const,
-  schedulerStatus: (companyId: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'scheduler', String(companyId), 'status'] as const,
-  schedulerHistory: (companyId: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'scheduler', String(companyId), 'history'] as const,
   reportHistory: (id: string | number, companyId?: string | number | null, userId?: PekUserScope) => ['pek', userScope(userId), 'report', companyScope(companyId), String(id), 'history'] as const,
 };
 

@@ -39,6 +39,13 @@ const cityProfiles = [
     kostanay: 'Костанае', aktau: 'Актау', petropavlovsk: 'Петропавловске', oral: 'Уральске',
     kokshetau: 'Кокшетау', taldykorgan: 'Талдыкоргане', semey: 'Семее',
   })[slug],
+  nameGenitive: ({
+    almaty: 'Алматы', astana: 'Астаны', shymkent: 'Шымкента', taraz: 'Тараза',
+    turkestan: 'Туркестана', kyzylorda: 'Кызылорды', aktobe: 'Актобе', atyrau: 'Атырау',
+    karaganda: 'Караганды', pavlodar: 'Павлодара', 'ust-kamenogorsk': 'Усть-Каменогорска',
+    kostanay: 'Костаная', aktau: 'Актау', petropavlovsk: 'Петропавловска', oral: 'Уральска',
+    kokshetau: 'Кокшетау', taldykorgan: 'Талдыкоргана', semey: 'Семея',
+  })[slug],
   regionGenitive: ({
     almaty: 'Алматы и Алматинской области', astana: 'Астаны и Акмолинской области', shymkent: 'Шымкента и Туркестанской области',
     taraz: 'Тараза и Жамбылской области', turkestan: 'Туркестана и Туркестанской области', kyzylorda: 'Кызылорды и Кызылординской области',
@@ -190,6 +197,119 @@ const serviceLegalBasis = {
   puo: 'ПУО разрабатывается по Экологическому кодексу Республики Казахстан и правилам разработки программы управления отходами.',
 };
 
+const commercialServiceContent = {
+  'laboratory-tests': {
+    title: 'Лабораторные замеры', h1: 'Лабораторные замеры',
+    meta: 'Воздух, вода, почва, шум и микроклимат: измерения и протоколы.',
+    promise: 'Организуем отбор проб и измерения воздуха, воды, почвы, шума, освещённости и микроклимата с оформлением протоколов.',
+    scope: 'Составляем программу исследований, определяем точки и показатели, согласуем выезд, выполняем измерения и проверяем комплектность протоколов.',
+    steps: ['разбор цели исследований и требований к протоколу', 'подбор показателей, методик и точек контроля', 'согласование выезда и условий доступа', 'измерения или отбор проб', 'лабораторная обработка и выпуск протоколов'],
+    deadline: 'Срок зависит от числа точек, перечня показателей, длительности анализа и логистики выезда.',
+    faq: 'Можно ли использовать протоколы для ПЭК и проверки?',
+    faqAnswer: 'Назначение протоколов фиксируем до отбора проб: программа, показатели и методы должны соответствовать задаче ПЭК, санитарного контроля или проверки.',
+    articles: ['kakie-laboratornye-zamery-nuzhny-predpriyatiyu', 'kak-prohodit-laboratornyy-zamer-vozduha'],
+  },
+  'industrial-control': {
+    title: 'Проект СЗЗ', seoTitle: 'Проект санитарно-защитной зоны', h1: 'Проект санитарно-защитной зоны (СЗЗ)',
+    meta: 'Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ.',
+    promise: 'Обосновываем границу санитарно-защитной зоны по источникам выбросов, шума и фактической планировке площадки.',
+    scope: 'Анализируем генплан и технологию, выявляем источники воздействия, собираем расчётные и измерительные данные и формируем материалы проекта СЗЗ.',
+    steps: ['проверка назначения объекта и исходного генплана', 'инвентаризация источников химического и физического воздействия', 'расчёт и анализ границы СЗЗ', 'проверка ограничений и ближайшей застройки', 'подготовка проекта и маршрута дальнейших процедур'],
+    deadline: 'Продолжительность определяется полнотой генплана, количеством источников, необходимостью замеров и процедурой рассмотрения материалов.',
+    faq: 'Когда нужно разрабатывать или пересматривать СЗЗ?',
+    faqAnswer: 'Проект проверяют при создании объекта, реконструкции, изменении технологии, состава источников или границ воздействия.',
+    articles: ['podgotovka-k-ekologicheskoy-proverke'],
+  },
+  'waste-passport': {
+    title: 'Паспорт отходов', h1: 'Паспорт отходов',
+    meta: 'Классификация, проверка состава и паспорта для учёта отходов.',
+    promise: 'Классифицируем отход, проверяем происхождение и состав и готовим паспорт для экологического учёта и передачи оператору.',
+    scope: 'Сопоставляем технологический процесс и состав отхода, проверяем код и опасные свойства, формируем паспорт и рекомендации по учёту.',
+    steps: ['инвентаризация вида и места образования отхода', 'сбор сведений о составе и технологии', 'определение классификационных признаков', 'подготовка и проверка паспорта', 'передача файла и рекомендаций по движению отхода'],
+    deadline: 'Срок зависит от количества видов отходов и наличия достоверных данных о составе; при необходимости исследования планируются отдельно.',
+    faq: 'Нужен ли отдельный паспорт на каждый отход?',
+    faqAnswer: 'Перечень паспортов определяют по самостоятельным видам отходов, их происхождению и составу, а не только по внутренним названиям предприятия.',
+    articles: ['dokumenty-peredachi-othodov'],
+  },
+  'waste-utilization': {
+    title: 'Утилизация отходов', h1: 'Утилизация отходов',
+    meta: 'Передача оператору, организация вывоза и закрывающие документы.',
+    promise: 'Подбираем допустимый маршрут передачи отходов и оформляем документы, подтверждающие вывоз, приём, утилизацию или переработку.',
+    scope: 'Проверяем вид, состояние и объём партии, требования к погрузке, доступность оператора и комплект закрывающих документов.',
+    steps: ['идентификация отхода по фото и документам', 'проверка объёма, упаковки и условий погрузки', 'согласование оператора и маршрута', 'организация передачи в подтверждённом регионе', 'получение актов и документов приёма'],
+    deadline: 'График зависит от вида и объёма отходов, транспорта, требований площадки и подтверждённой доступности принимающего оператора.',
+    faq: 'Какие документы подтверждают утилизацию?',
+    faqAnswer: 'Состав закрывающих документов зависит от договора и операции: обычно фиксируются передача, приём, объём и дальнейший способ обращения с отходами.',
+    articles: ['dokumenty-peredachi-othodov'],
+  },
+  'pek-report': {
+    title: 'Производственный экологический контроль', h1: 'Производственный экологический контроль',
+    meta: 'Программа, мероприятия и отчётность ПЭК по данным предприятия.',
+    promise: 'Разрабатываем программу ПЭК, организуем контрольные мероприятия и готовим отчёт ПЭК по фактическим данным предприятия.',
+    scope: 'Сверяем разрешительные документы, источники воздействия и программу контроля, собираем протоколы и журналы и формируем отчётный комплект.',
+    steps: ['аудит разрешения, программы ПЭК и объектов контроля', 'проверка календаря мониторинга и обязательных показателей', 'сбор лабораторных протоколов и производственных данных', 'контроль полноты и сопоставимости сведений', 'подготовка отчёта ПЭК и перечня следующих мероприятий'],
+    deadline: 'Срок зависит от готовности программы ПЭК, полноты протоколов за период и количества источников выбросов, сбросов и отходов.',
+    faq: 'Чем программа ПЭК отличается от отчёта ПЭК?',
+    faqAnswer: 'Программа задаёт объекты, показатели и периодичность контроля, а отчёт ПЭК подтверждает выполнение программы фактическими данными за период.',
+    articles: ['chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol', 'kak-formiruetsya-otchet-pek'],
+  },
+  'environmental-design': {
+    title: 'Разработка РООС', h1: 'Разработка раздела охраны окружающей среды (РООС)',
+    meta: 'Оценка воздействий, расчёты и природоохранные решения в РООС.',
+    promise: 'Готовим РООС для проектной документации: оцениваем воздействия строительства и эксплуатации и обосновываем природоохранные решения.',
+    scope: 'Изучаем проект и генплан, рассчитываем воздействия, описываем обращение с ресурсами и отходами и формируем природоохранные мероприятия.',
+    steps: ['аудит проектных и технологических решений', 'определение источников воздействия на этапах работ', 'расчёты выбросов, отходов и ресурсопотребления', 'формирование мер снижения воздействия', 'комплектование РООС для состава проекта'],
+    deadline: 'Срок связан со стадией проекта, полнотой инженерных решений, количеством расчётных разделов и изменениями со стороны проектировщиков.',
+    faq: 'На какой стадии проекта нужен РООС?',
+    faqAnswer: 'РООС готовят в составе проектной документации, когда уже известны площадка, технология, строительные решения и основные источники воздействия.',
+    articles: ['ekologicheskie-dokumenty-too-kazakhstan'],
+  },
+  'emission-permit': {
+    title: 'Экологическое разрешение', h1: 'Экологическое разрешение',
+    meta: 'Проверка категории, разрешительные материалы и сопровождение подачи.',
+    promise: 'Проверяем категорию объекта и комплект оснований, готовим разрешительные материалы и сопровождаем подачу экологического разрешения.',
+    scope: 'Сопоставляем проектные нормативы, экологическую оценку и фактические источники, устраняем пробелы и собираем комплект для процедуры.',
+    steps: ['определение категории объекта и вида разрешения', 'проверка действующих проектов и решений', 'сверка источников и нормативов эмиссий', 'формирование разрешительного комплекта', 'сопровождение замечаний в согласованном объёме'],
+    deadline: 'Продолжительность зависит от категории объекта, готовности НДВ и экологической оценки, а также официальных процедур рассмотрения.',
+    faq: 'Какие проекты нужны до подачи на разрешение?',
+    faqAnswer: 'Комплект определяется категорией и воздействиями объекта; обычно сначала проверяют экологическую оценку, нормативы эмиссий и связанные программы.',
+    articles: ['ekologicheskie-dokumenty-too-kazakhstan'],
+  },
+  'eia-screening': {
+    title: 'ОВОС', seoTitle: 'ОВОС и экологический скрининг', h1: 'Оценка воздействия на окружающую среду (ОВОС)',
+    meta: 'Скрининг, оценка воздействий и подготовка материалов ОВОС.',
+    promise: 'Определяем применимую процедуру экологической оценки и готовим материалы ОВОС или скрининга для намечаемой деятельности.',
+    scope: 'Анализируем площадку, технологию и альтернативы, выявляем значимые воздействия и оформляем материалы для установленной процедуры.',
+    steps: ['описание намечаемой деятельности и альтернатив', 'проверка критериев скрининга и категории', 'анализ компонентов окружающей среды', 'оценка воздействий и мер управления', 'подготовка материалов для дальнейшей процедуры'],
+    deadline: 'Срок зависит от масштаба деятельности, качества проектных данных, необходимости исследований и обязательных стадий экологической оценки.',
+    faq: 'Всегда ли проекту требуется полная ОВОС?',
+    faqAnswer: 'Нет. Применимая процедура определяется характеристиками намечаемой деятельности и результатами предусмотренного законодательством скрининга.',
+    articles: ['ekologicheskie-dokumenty-too-kazakhstan'],
+  },
+  ndv: {
+    title: 'Проект НДВ', seoTitle: 'Проект нормативов выбросов (НДВ)', h1: 'Проект нормативов допустимых выбросов (НДВ)',
+    meta: 'Инвентаризация источников, расчёт выбросов и проект НДВ.',
+    promise: 'Инвентаризируем источники и рассчитываем нормативы допустимых выбросов для разрешительных и производственных задач предприятия.',
+    scope: 'Проверяем оборудование и вентиляцию, рассчитываем выбросы и рассеивание, формируем перечень источников и проект нормативов.',
+    steps: ['инвентаризация стационарных источников', 'сбор режимов работы и характеристик сырья', 'расчёт валовых и максимальных выбросов', 'оценка рассеивания и нормативов', 'оформление проекта НДВ и исходных таблиц'],
+    deadline: 'Срок определяется количеством источников, полнотой технологических данных, необходимостью инвентаризационного выезда и расчётной сложностью.',
+    faq: 'Когда проект НДВ нужно корректировать?',
+    faqAnswer: 'Корректировку оценивают при изменении оборудования, топлива, режима работы, состава источников или разрешительных условий объекта.',
+    articles: ['kogda-nuzhen-proekt-ndv'],
+  },
+  puo: {
+    title: 'Программа управления отходами', h1: 'Программа управления отходами (ПУО)',
+    meta: 'Потоки отходов, целевые показатели и мероприятия в программе ПУО.',
+    promise: 'Разрабатываем ПУО по фактическим потокам отходов, целевым показателям и мероприятиям предприятия.',
+    scope: 'Проверяем инвентаризацию и договоры, анализируем образование и передачу отходов, задаём цели, показатели и ответственные мероприятия.',
+    steps: ['сверка видов и объёмов образования отходов', 'анализ текущего обращения и договоров', 'определение целей и показателей управления', 'подготовка мероприятий и мониторинга', 'оформление ПУО и рекомендаций по исполнению'],
+    deadline: 'Срок зависит от количества площадок и видов отходов, качества учётных данных и согласования производственных целей предприятия.',
+    faq: 'Чем ПУО отличается от паспортов отходов?',
+    faqAnswer: 'Паспорта описывают отдельные виды отходов, а ПУО устанавливает систему целей, показателей и мероприятий по всем значимым потокам предприятия.',
+    articles: ['dokumenty-peredachi-othodov'],
+  },
+};
+
 const priorityCities = ['almaty', 'astana', 'shymkent', 'taraz', 'turkestan', 'kyzylorda', 'aktobe', 'atyrau', 'karaganda'];
 
 const baseServices = [
@@ -229,24 +349,26 @@ const serviceFaq = (service, city) => [
 ].map(([question, answer]) => ({ question, answer }));
 
 const cityLinks = (city) => {
+  const region = regionContentMap.get(city.slug);
   const nearby = city.nearby.map((slug) => byCity(slug)).filter((item) => item && regionContentMap.has(item.slug));
   return [
     link('Все услуги', '/services'),
     link('Лабораторные замеры', '/services/laboratory-tests'),
     link('Экологическое проектирование', '/services/environmental-design'),
-    link('Контакты', '/contacts'),
+    ...(region?.relatedArticleSlugs || []).map((slug) => link(articleContent.find((article) => article.slug === slug)?.title || 'Статья об экологических требованиях', `/news/${slug}`)),
     ...nearby.map((item) => link(`Экологические услуги в ${item.namePrepositional}`, `/ecologicheskie-uslugi-${item.slug}`)),
   ];
 };
 
-const activeCityProfiles = cityProfiles.filter((city) => city.name && city.region && city.objects && city.localNote);
+const activeCityProfiles = cityProfiles.filter((city) => city.name && city.namePrepositional && city.nameGenitive && city.region && city.objects && city.localNote);
 const isServiceAvailableInCity = (service, city) => service.key !== 'waste-utilization' || wasteRecyclingRegions.has(city.slug);
 const serviceCityLink = (service, city) => link(`${service.titleName} в ${city.namePrepositional}`, `/${service.slugPrefix}-${city.slug}`);
 const relatedServiceCityLinks = (service, city) => {
   const current = serviceProfiles.findIndex((item) => item.key === service.key);
-  return [1, 2, 3, 4]
+  return Array.from({ length: serviceProfiles.length - 1 }, (_, index) => index + 1)
     .map((offset) => serviceProfiles[(current + offset) % serviceProfiles.length])
     .filter((item) => isServiceAvailableInCity(item, city))
+    .slice(0, 4)
     .map((item) => serviceCityLink(item, city));
 };
 
@@ -295,52 +417,73 @@ const createCityPage = (city) => ({
 
 const createServiceCityPage = (service, city) => {
   const region = regionContentMap.get(city.slug);
+  const content = commercialServiceContent[service.key];
+  const cityIndex = activeCityProfiles.findIndex((item) => item.slug === city.slug);
   const documents = serviceDocuments[service.key];
   const mainPath = `/services/${mainServiceSlug[service.key]}`;
   const visitText = region
     ? `${region.onSiteConditions.join('. ')}. ${region.logisticsNote}`
     : `Документальные этапы выполняются дистанционно. Обследование, отбор проб или выезд в ${city.name} подтверждаются только после проверки адреса, задания и доступности специалистов; местный офис не заявляется.`;
   const regionalTask = region?.commonTasks.join(', ') || city.localNote;
+  const industries = region?.industries.join(', ') || city.objects;
+  const remoteWork = region?.remoteConditions.join(', ') || 'аудит исходных данных и подготовка документов';
+  const articleSlugs = [...new Set([...(content.articles || []), ...(region?.relatedArticleSlugs || [])])];
+  const articleLinks = articleSlugs.map((slug) => link(articleContent.find((article) => article.slug === slug)?.title || 'Материал по теме', `/news/${slug}`));
+  const workflowLead = [
+    `Для площадки в ${city.namePrepositional} порядок начинаем с ${content.steps[0]}, затем выполняем ${content.steps.slice(1, -1).join(', ')} и завершаем этапом «${content.steps.at(-1)}».`,
+    `Маршрут работ для ${city.nameGenitive}: ${content.steps.map((step, index) => `${index + 1}) ${step}`).join('; ')}. До полевого этапа отдельно подтверждаем адрес и доступ на объект.`,
+    `По объекту в ${city.namePrepositional} фиксируем последовательность: ${content.steps.join(' → ')}. Ответственных и формат передачи материалов согласуем в задании.`,
+  ][cityIndex % 3];
   const operationalNote = service.key === 'waste-utilization' && !wasteRecyclingRegions.has(city.slug)
     ? `ECOPROGRESS не заявляет собственный вывоз или прием отходов в ${city.namePrepositional}. Для такой заявки сначала проверяются вид отхода, маршрут и наличие подходящего оператора; до подтверждения это консультация и документальная подготовка, а не обещание оказать операционную услугу.`
     : '';
+  const isPek = service.key === 'pek-report';
+  const seoTitle = isPek
+    ? `Производственный экологический контроль в ${city.namePrepositional} | ПЭК`
+    : `${content.seoTitle || content.title} в ${city.namePrepositional} | ECOPROGRESS`;
+  const seoDescription = isPek
+    ? `Программа ПЭК для ${city.nameGenitive}, разработка ПЭК, производственный экологический контроль и отчет ПЭК по данным предприятия. Аудит и сопровождение.`
+    : `${content.title} в ${city.namePrepositional}: ${content.meta} Срок и стоимость для ${city.nameGenitive} — после аудита.`;
   return ({
   slug: `${service.slugPrefix}-${city.slug}`,
   city: city.name,
   service: service.name,
   type: 'service-city',
   indexable: true,
-  title: `${service.titleName} в ${city.namePrepositional} для бизнеса | ECOPROGRESS`,
+  title: seoTitle,
   description: service.key === 'waste-utilization' && !wasteRecyclingRegions.has(city.slug)
     ? `Утилизация отходов в ${city.namePrepositional}: проверка партии, документов и доступности оператора без заявления местного офиса или собственного вывоза.`
-    : `${service.titleName} в ${city.namePrepositional}: аудит исходных данных, подготовка документов для предприятий ${city.regionGenitive} и согласование выезда.`,
-  h1: `${service.h1} в ${city.namePrepositional}`,
+    : seoDescription,
+  h1: `${content.h1} в ${city.namePrepositional}`,
   canonical: canonical(`${service.slugPrefix}-${city.slug}`),
-  keywords: [service.name, `${service.name} ${city.name}`, 'экологические услуги Казахстан', 'документы для проверки'],
-  intro: `Для предприятий ${city.regionGenitive} рассматриваем задачу по направлению «${service.titleName}». Работу начинаем с проверки применимости услуги к объекту, исходных документов и фактической деятельности, а полевые этапы согласуем отдельно. ${operationalNote}`,
+  keywords: isPek
+    ? [`производственный экологический контроль ${city.name}`, `программа ПЭК ${city.name}`, `разработка ПЭК ${city.name}`, `отчет ПЭК ${city.name}`]
+    : [service.name, `${service.name} ${city.name}`, `${content.title.toLowerCase()} в ${city.namePrepositional}`, 'экологические услуги Казахстан'],
+  intro: `${content.promise} Для ${city.nameGenitive} учитываем типовые отрасли: ${industries}. ${city.localNote} Документальные этапы (${remoteWork}) можно начать после получения исходных файлов. ${operationalNote}`,
   sections: [
-    { title: `Кому нужен ${service.titleName} в ${city.namePrepositional}`, body: `${service.name} рассматривают при запуске, реконструкции, изменении технологии или устранении пробелов в документах. В региональном профиле указаны ${city.objects}; применимость всегда проверяется по конкретной площадке.` },
-    { title: 'Что входит в работу', body: `Для объекта в ${city.namePrepositional} проверяем исходные данные и границы задачи, формируем техническое задание, выполняем ${service.descriptionNoun}, проводим внутреннюю проверку материалов и передаем результат с пояснением дальнейших действий.` },
-    { title: 'Необходимые документы', body: `Для площадки в ${city.namePrepositional} запрашиваются реквизиты и адрес, а по направлению «${service.titleName}» — ${documents.join(', ')}. Если части данных нет, сначала составляем перечень пробелов без подмены фактических сведений.` },
-    { title: 'Примеры объектов', body: `Услуга подходит для таких ситуаций: ${service.examples}. Для предприятий ${city.regionGenitive} состав работ согласуется по фактическому объекту и требованиям проверяющих.` },
-    { title: 'Этапы выполнения', body: `Маршрут включает первичную консультацию, аудит исходных файлов, согласование состава и сроков, подготовку материалов, контроль качества и передачу результата. Для ${city.name} формат выезда фиксируется до начала полевых работ.` },
-    { title: 'Сроки', body: `Срок рассчитывается после аудита: на него влияют полнота исходных данных, число источников или площадок, необходимость измерений и маршрут до объекта в ${city.namePrepositional}. Необоснованные фиксированные сроки до анализа не обещаются.` },
-    { title: `Региональные условия для ${city.name}`, body: `${city.localNote} Для направления «${service.titleName}» типовой региональный контекст: ${regionalTask}. ${visitText} ${operationalNote}` },
-    { title: 'Результат', body: `По объекту в ${city.namePrepositional} клиент получает ${service.result}, реестр использованных исходных данных и список следующих шагов. Состав результата закрепляется в задании и договоре.` },
+    { title: `${content.title}: состав услуги для ${city.nameGenitive}`, body: `${content.scope} Для местных задач «${regionalTask}» границы работы уточняем по фактической деятельности и категории конкретной площадки.` },
+    { title: `Кому подходит услуга в ${city.namePrepositional}`, body: `Основные ситуации: ${service.examples}. Среди характерных объектов ${city.nameGenitive} — ${industries}; наличие объекта в списке не заменяет проверку применимости требований.` },
+    { title: `Этапы работ для объекта в ${city.namePrepositional}`, body: `${workflowLead} ${visitText}` },
+    { title: `Документы для ${content.title.toLowerCase()}`, body: `Запрашиваем реквизиты, адрес и описание деятельности, затем профильные материалы: ${documents.join(', ')}. Для ${city.nameGenitive} перечень дополняем сведениями о региональной логистике и фактическом режиме площадки.` },
+    { title: `Сроки выполнения в ${city.namePrepositional}`, body: `${content.deadline} Дополнительно учитываем условия для ${city.nameGenitive}: ${region?.logisticsNote || 'маршрут и возможность выезда подтверждаются после проверки адреса'}` },
+    { title: `Особенности работ для ${city.nameGenitive}`, body: `${city.localNote} По направлению «${content.title}» региональный фокус — ${regionalTask}. ${operationalNote}` },
+    { title: `Что получает заказчик из ${city.nameGenitive}`, body: `Итог — ${service.result}. Вместе с материалами передаём реестр использованных исходных данных, отмечаем ограничения и объясняем следующий обязательный шаг для объекта в ${city.namePrepositional}.` },
     { title: 'Нормативная база', body: `${serviceLegalBasis[service.key]} Регион не меняет применимое республиканское регулирование; требования проверяются по объекту в ${city.namePrepositional}.` },
   ],
   services: baseServices.map(([_, label, path]) => link(label, path)),
   audience: objectList.slice(0, 12),
   outcomes: clientResults,
   faq: [
-    ...serviceFaq(service, city).slice(0, 4),
-    { question: `Как организована работа по ${service.titleName} для ${city.name}?`, answer: `${city.localNote} ${visitText}` },
-    { question: `Какие особенности объекта в ${city.namePrepositional} нужно сообщить?`, answer: `Нужно указать адрес, режим и вид деятельности, оборудование и источники воздействия. Для региона характерны ${city.objects}, но решение принимается только по данным конкретного объекта.` },
+    { question: `${content.faq.replace(/\?$/, '')} в ${city.namePrepositional}?`, answer: `${content.faqAnswer} Для объекта в ${city.namePrepositional} дополнительно учитываем ${regionalTask}.` },
+    ...serviceFaq(service, city).slice(0, 3),
+    { question: `Как организована работа по направлению «${content.title}» для ${city.nameGenitive}?`, answer: `${city.localNote} ${visitText}` },
+    { question: `Какие особенности площадки в ${city.namePrepositional} сообщить до расчёта?`, answer: `Укажите адрес, режим, вид деятельности, оборудование и источники воздействия. Для региона характерны ${city.objects}, но состав работ определяем только по данным конкретного объекта.` },
   ],
   relatedLinks: [
     link(`Экологические услуги в ${city.namePrepositional}`, `/ecologicheskie-uslugi-${city.slug}`),
     link(`Основная страница «${service.name}»`, mainPath),
     ...relatedServiceCityLinks(service, city),
+    ...articleLinks,
   ],
   breadcrumbs: [link('Главная', '/'), link('Услуги', '/services'), link(`${service.name} в ${city.namePrepositional}`, `/${service.slugPrefix}-${city.slug}`)],
   schemaType: 'Service',
@@ -348,8 +491,8 @@ const createServiceCityPage = (service, city) => {
   priority: priorityCities.includes(city.slug) ? 0.8 : 0.7,
   changefreq: 'weekly',
   lastmod: LASTMOD,
-  ctaTitle: `Рассчитать ${service.titleName} для объекта в ${city.namePrepositional}`,
-  ctaText: `Опишите площадку и текущие документы. Специалист проверит задачу для ${city.regionGenitive}, назовет недостающие данные и предложит обоснованный порядок работ без обещания неподтвержденных сроков или выезда.`,
+  ctaTitle: `Рассчитать работы по услуге «${content.title}» для ${city.nameGenitive}`,
+  ctaText: `Для расчёта услуги «${content.title}» опишите площадку в ${city.namePrepositional}, укажите ${regionalTask} и приложите доступные документы. Специалист обозначит пробелы и рассчитает этапы с учётом условий выезда для ${city.nameGenitive}.`,
   });
 };
 
@@ -534,11 +677,13 @@ export const seoArticles = articleContent.filter((article) => article.status ===
   ],
 }));
 
+const redirectedLegacySeoSlugs = new Set(['shtrafy-za-ekologiyu-kazakhstan', 'passport-othodov-kazakhstan', 'otchet-pek-kazakhstan']);
+
 export const seoPages = [
   ...activeCityProfiles.map(createCityPage),
   ...serviceProfiles.flatMap((service) => activeCityProfiles.filter((city) => isServiceAvailableInCity(service, city)).map((city) => createServiceCityPage(service, city))),
   ...specialPages.map(enrichSpecialPage),
-].filter((page) => page.slug !== 'shtrafy-za-ekologiyu-kazakhstan');
+].filter((page) => !redirectedLegacySeoSlugs.has(page.slug));
 
 const legacyStaticPages = [
   { path: '/', title: 'Экологические услуги в Казахстане | ECOPROGRESS', description: 'ECOPROGRESS оказывает экологические услуги для бизнеса в Казахстане: лабораторные замеры, ПЭК, отходы, разрешения и сопровождение.', h1: 'Экологические услуги и лабораторные замеры в Казахстане', priority: 1.0, changefreq: 'weekly', type: 'main' },

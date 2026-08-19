@@ -11,6 +11,15 @@ export const buildOrganizationSchema = (): Schema => ({
   address: { '@type': 'PostalAddress', streetAddress: company.address, addressLocality: 'Шымкент', addressCountry: 'KZ' },
 });
 
+export const buildLocalBusinessSchema = (): Schema => ({
+  '@context': 'https://schema.org', '@type': 'LocalBusiness', '@id': `${company.siteUrl}/#local-business`,
+  name: company.name, url: company.siteUrl, image: `${company.siteUrl}/media/social/ecoprogress-og-1200x630.jpg`,
+  email: company.email, telephone: company.phone,
+  address: { '@type': 'PostalAddress', streetAddress: company.address, addressLocality: 'Шымкент', addressCountry: 'KZ' },
+  areaServed: { '@type': 'City', name: 'Шымкент' },
+  openingHours: 'Mo-Fr 09:00-18:00',
+});
+
 export const buildServiceSchema = (service: ServiceCatalogItem, url = `${company.siteUrl}/services/${service.slug}`): Schema => {
   const schema: Schema = {
     '@context': 'https://schema.org', '@type': 'Service', name: service.title, description: service.fullDescription,

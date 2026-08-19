@@ -7,7 +7,7 @@ import Button from '../components/ui/Button';
 import { company, getWhatsAppUrl } from '../config/company';
 import { seoPageMap, type SeoFaqItem, type SeoPageConfig } from '../data/seoPages';
 import NotFoundPage from './NotFoundPage';
-import { buildOrganizationSchema } from '../utils/schema';
+import { buildLocalBusinessSchema, buildOrganizationSchema } from '../utils/schema';
 import { regionContentMap } from '../content/regions/regionContent';
 import { RelatedArticles, RelatedServices } from '../components/content/ContentBlocks';
 
@@ -17,11 +17,14 @@ const buildPrimarySchema = (page: SeoPageConfig) => page.type === 'city' ? {
   '@context': 'https://schema.org', '@type': 'WebPage', name: page.h1, description: page.description, url: page.canonical, dateModified: page.lastmod,
 } : {
   '@context': 'https://schema.org', '@type': 'Service', name: page.h1, description: page.description, url: page.canonical,
-  provider: { '@type': 'Organization', name: company.name, url: company.siteUrl }, areaServed: page.city || 'Казахстан', serviceType: page.service || 'Экологические услуги',
+  provider: { '@type': 'Organization', name: company.name, url: company.siteUrl },
+  areaServed: page.city ? { '@type': 'City', name: page.city } : { '@type': 'Country', name: 'Казахстан' },
+  serviceType: page.service || 'Экологические услуги',
 };
 
 const buildSchema = (page: SeoPageConfig) => [
   buildOrganizationSchema(),
+  ...(page.city === 'Шымкент' ? [buildLocalBusinessSchema()] : []),
   buildPrimarySchema(page),
   {
     '@context': 'https://schema.org',
@@ -83,6 +86,24 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
   const audience = page.audience ?? [];
   const outcomes = page.outcomes ?? [];
   const regionDetails = page.type === 'city' ? regionContentMap.get(page.slug.replace('ecologicheskie-uslugi-', '')) : undefined;
+  const startText = page.type === 'service-city'
+    ? `Проверим задачу «${page.service}» для объекта в ${page.city}: исходные документы, применимость требований, состав результата и необходимость выезда. После аудита дадим перечень недостающих данных и расчёт этапов.`
+    : page.type === 'city'
+      ? `Разберём деятельность объекта в городе ${page.city}, сопоставим её с экологическими документами, ПЭК, лабораторными исследованиями и обращением с отходами. Вы получите приоритетный план работ.`
+      : 'Проверим объект, исходные документы и применимые требования. После консультации подготовим расчёт стоимости и понятный план работ.';
+  const trustPoints = page.type === 'service-city'
+    ? [
+      `учитываем отрасли и условия работы для города ${page.city}`,
+      `фиксируем состав услуги «${page.service}» до начала работ`,
+      'не обещаем выезд и срок до проверки адреса и исходных данных',
+      'передаём результат, реестр исходных данных и следующий обязательный шаг',
+    ]
+    : [
+      'работаем по Казахстану и ведём документальные этапы дистанционно',
+      'объединяем проектирование, замеры, ПЭК и документы по отходам',
+      'проверяем применимость требований к фактической деятельности',
+      'объясняем состав результата, сроки и следующий шаг',
+    ];
 
   return (
     <div className="bg-[#F7FBFD]">
@@ -118,7 +139,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
               <ShieldCheck className="text-accent" size={34} />
               <h2 className="mt-5 text-2xl font-bold">Что сделаем на старте</h2>
               <p className="mt-4 text-sm leading-6 text-white/75">
-                Проверим объект, список документов, лабораторные точки, отходы и риски перед проверкой. После консультации подготовим расчет стоимости и понятный план работ.
+                {startText}
               </p>
             </div>
           </div>
@@ -167,12 +188,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
           <div className="rounded-[8px] border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-3xl font-bold text-eco-900">Почему выбирают ECOPROGRESS</h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              {[
-                'работаем по Казахстану и ведем часть задач дистанционно',
-                'закрываем документы, замеры, отходы и сопровождение в одном процессе',
-                'помогаем подготовиться к проверкам и снизить риск замечаний',
-                'передаем готовые материалы в PDF/Word и объясняем следующий шаг',
-              ].map((item) => (
+              {trustPoints.map((item) => (
                 <div key={item} className="rounded-[8px] bg-eco-50 p-4 text-sm font-semibold leading-6 text-eco-900">{item}</div>
               ))}
             </div>

@@ -123,7 +123,7 @@ for (const url of urls) {
     }
     if (schema['@type'] === 'LocalBusiness') {
       if (schema.address?.addressLocality !== 'Шымкент') errors.push(`LocalBusiness uses a non-office locality: ${parsed.pathname}`);
-      if (parsed.pathname.startsWith('/ecologicheskie-uslugi-')) errors.push(`Regional page must not claim LocalBusiness: ${parsed.pathname}`);
+      if (!/(?:^|-)shymkent$/.test(parsed.pathname)) errors.push(`Non-Shymkent page must not claim LocalBusiness: ${parsed.pathname}`);
     }
   }
   for (const phrase of [/для Алматы и Алматинская область/iu, /в Караганда и Карагандинская область/iu, /для Астана и Акмолинская область/iu]) if (phrase.test(html)) errors.push(`Invalid region form at ${parsed.pathname}: ${phrase}`);

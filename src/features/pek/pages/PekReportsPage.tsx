@@ -9,7 +9,7 @@ import PekCompanyObjectFilters from '../components/common/PekCompanyObjectFilter
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState, PekStatusBadge } from '../components/common/PekUi';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
-import { usePekAccessContext } from '../hooks/usePekAccessContext';
+import { canCreateReport } from '../permissions/pekAccess';
 
 const PekReportsPage = () => {
   const { user } = useAuth();
@@ -17,7 +17,6 @@ const PekReportsPage = () => {
   const [params, setParams] = useSearchParams();
   const companyId = Number(params.get('companyId')) || 0;
   const objectId = Number(params.get('objectId')) || 0;
-  const access = usePekAccessContext(companyId || undefined);
   const filters: PekReportFilters = {
     companyId,
     objectId,
@@ -42,7 +41,7 @@ const PekReportsPage = () => {
     setParams(next, { replace: true });
   };
   return <div className="space-y-5">
-    <PekPageHeader title="Отчёты ПЭК" description="Отчёты и связанные с ними протоколы по выбранному объекту" actions={access.data?.availableActions.createReport === true || access.data?.permissions.includes('PEK_REPORT_CREATE') === true ? <Link to="/staff/pek/reports/new" className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white">Создать отчёт</Link> : undefined} />
+    <PekPageHeader title="Отчёты ПЭК" description="Отчёты и связанные с ними протоколы по выбранному объекту" actions={canCreateReport(user) ? <Link to="/staff/pek/reports/new" className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white">Создать отчёт</Link> : undefined} />
     <section className="grid gap-3 rounded-2xl border bg-white p-4 md:grid-cols-4">
       <PekCompanyObjectFilters companyId={companyId || undefined} objectId={objectId || undefined} onCompanyChange={(value) => update('companyId', value)} onObjectChange={(value) => update('objectId', value)} />
       <label className="text-xs font-bold text-slate-600">Статус<select value={filters.status || ''} onChange={(event) => update('status', event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2"><option value="">Все</option>{(['DRAFT', 'COLLECTING', 'READY_FOR_REVIEW', 'RETURNED', 'APPROVED', 'SIGNED', 'ARCHIVED'] as PekReportStatus[]).map((status) => <option key={status} value={status}>{status}</option>)}</select></label>

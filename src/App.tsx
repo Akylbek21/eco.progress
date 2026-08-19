@@ -11,7 +11,7 @@ import type { UserRole } from './types';
 import { hasPermission } from './config/permissions';
 import { publicRouteLoaders } from './utils/publicRoutePreload';
 import PekLayout from './features/pek/routes/PekLayout';
-import { canUsePekPermission, canViewPek, pekViewRoles } from './features/pek/permissions/pekAccess';
+import { canUsePekPermission, canViewPek } from './features/pek/permissions/pekAccess';
 import { hasCompanyPermission, type CompanyPermissionAction } from './features/companies/companyPermissions';
 
 const lazyNamed = <T extends Record<string, unknown>, K extends keyof T>(loader: () => Promise<T>, key: K) =>
@@ -96,7 +96,7 @@ const StaffUserRolesPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffU
 const allStaffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST', 'STAFF'];
 const protocolRoles: UserRole[] = allStaffRoles;
 const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
-const pekRoles: UserRole[] = [...pekViewRoles];
+const pekRoles: UserRole[] = [...allStaffRoles];
 
 const PekAccess = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();

@@ -7,7 +7,7 @@ import { canAccess, hasPermission } from '../config/permissions';
 import type { UserRole } from '../types';
 import type { Permission } from '../config/permissions';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { canViewPek, pekViewRoles } from '../features/pek/permissions/pekAccess';
+import { canViewPek } from '../features/pek/permissions/pekAccess';
 import { hasCompanyPermission, type CompanyPermissionAction } from '../features/companies/companyPermissions';
 
 const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER', 'ACCOUNTANT', 'ECOLOGIST', 'WASTE_SPECIALIST', 'STAFF'];
@@ -25,7 +25,7 @@ const links: Array<{ label: string; path: string; icon: typeof ClipboardList; pa
   { label: 'Оплаты', path: '/staff/payments', icon: CreditCard, paymentsOnly: true, allowedRoles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Календарь', path: '/staff/calendar', icon: CalendarDays, allowedRoles: ['ADMIN', 'MANAGER', 'ECOLOGIST', 'LABORATORY'] },
   { label: 'Протоколы', path: '/staff/protocols', icon: FlaskConical, allowedRoles: protocolRoles },
-  { label: 'ПЭК', path: '/staff/pek', icon: Leaf, allowedRoles: [...pekViewRoles], permission: 'PEK_VIEW' },
+  { label: 'ПЭК', path: '/staff/pek', icon: Leaf, permission: 'PEK_VIEW' },
   { label: 'Журналы', path: '/staff/journals', icon: BookOpenCheck, allowedRoles: ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'] },
   { label: 'Нормативы', path: '/staff/normatives', icon: BookOpenCheck, allowedRoles: normativeRoles },
   { label: 'Средства измерений', path: '/staff/measurement-devices', icon: Gauge, allowedRoles: protocolRoles },

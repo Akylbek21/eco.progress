@@ -16,7 +16,9 @@ export const mapReportPackage = (value: unknown): PekReportPackage => {
     files: Array.isArray(source.files) ? source.files.map(String) : [],
     missingFields: Array.isArray(source.missingFields) ? source.missingFields.map(String) : [],
     generatedAt: source.generatedAt == null ? null : String(source.generatedAt),
-    generatedBy: Object.keys(generatedBy).length
+    generatedBy: typeof source.generatedBy === 'string' || typeof source.generatedBy === 'number'
+      ? source.generatedBy
+      : Object.keys(generatedBy).length
       ? { id: Number(generatedBy.id), name: String(generatedBy.name ?? generatedBy.fullName ?? '') }
       : null,
     downloadAvailable: source.downloadAvailable === true,

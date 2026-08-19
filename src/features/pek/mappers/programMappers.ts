@@ -61,7 +61,6 @@ export const mapProgramEditFormToRequest = (
     'measures',
   ]),
 ): PekProgramUpdateRequest => ({
-  version: form.version,
   name: form.name.trim(),
   description: form.description?.trim() || null,
   validFrom: form.validFrom,
@@ -73,7 +72,6 @@ export const mapProgramEditFormToRequest = (
 });
 
 export const mapProgramAutosaveToRequest = (form: PekProgramForm): PekProgramUpdateRequest => ({
-  version: form.version,
   name: form.name.trim(),
   description: form.description?.trim() || null,
   validFrom: form.validFrom,

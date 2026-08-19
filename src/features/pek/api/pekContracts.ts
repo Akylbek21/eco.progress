@@ -83,7 +83,7 @@ export type PekPermit = {
   note: string | null;
   pekProgramId: PekId | null;
   version: number;
-  availableActions: {
+  availableActions?: {
     edit: boolean;
     markExpired: boolean;
     revoke: boolean;
@@ -127,33 +127,6 @@ export type PekCompanyMembership = {
 };
 export type PekAddMembershipRequest = { email: string; roleCode: string };
 export type PekUpdateMembershipRequest = { roleCode?: string; status?: PekMembershipStatus };
-export interface PekAccessContext {
-  companyId: number;
-  membership: PekCompanyMembership | null;
-  permissions: string[];
-  availableActions: Record<string, boolean>;
-}
-
-export interface PekPermitContext {
-  companyId: number;
-  programs: Array<Pick<PekProgram, 'id' | 'number' | 'name' | 'status'>>;
-  files: Array<{ id: string; name: string }>;
-}
-
-export interface PekSchedulerStatus {
-  lastRunAt: string | null;
-  status: string;
-  processed: number;
-  succeeded: number;
-  failed: number;
-  nextRunAt: string | null;
-  availableActions: Record<string, boolean>;
-}
-
-export interface PekSchedulerRun extends PekSchedulerStatus {
-  id: number;
-}
-
 export type PekAvailableActionCode =
   | 'EDIT'
   | 'SUBMIT_REVIEW'
@@ -306,7 +279,6 @@ export interface PekMonitoringMutationRequest {
   frequencyType: PekPeriodicity;
   plannedCount: number;
   controlItemIds: number[];
-  protocolTypes: string[];
   active: boolean;
 }
 
@@ -332,14 +304,10 @@ export type PekProgramCloneRequest = {
   validUntil?: string;
 };
 export type PekProgramUpdateRequest = Partial<PekProgramHeaderFields> & {
-  version?: number;
   controlItems?: Omit<PekControlItem, 'clientId'>[] | null;
   indicators?: Omit<PekIndicator, 'clientId' | 'controlItemClientId'>[] | null;
   measures?: Omit<PekMeasure, 'clientId'>[] | null;
 };
-/** @deprecated use PekProgramCreateRequest/PekProgramUpdateRequest */
-export type PekProgramRequest = PekProgramCreateRequest & { version?: number };
-
 export type PekProgramForm = PekProgramHeaderFields & {
   version?: number;
   controlItems: PekControlItem[];
@@ -385,7 +353,6 @@ export interface PekReport {
       name?: string;
     };
   } | null;
-  availableActions: Record<string, boolean>;
 }
 export type PekReportFilters = {
   companyId: number;
@@ -416,8 +383,6 @@ export interface PekCreationContext {
   duplicateReportId?: number | null;
   warnings: string[];
   blockingReasons: string[];
-  availableActions: Record<string, boolean>;
-  permissions: string[];
 }
 
 export interface PekDashboardDeadline {
@@ -472,7 +437,7 @@ export interface PekReportPackage {
   files: string[];
   missingFields: string[];
   generatedAt?: string | null;
-  generatedBy?: PekNamedRef | null;
+  generatedBy?: string | number | PekNamedRef | null;
   downloadAvailable: boolean;
   availableActions: Record<string, boolean>;
   version: number;
@@ -630,7 +595,6 @@ export interface PekReportDocumentVersion {
   generatedByName?: string | null;
   status?: string | null;
   stale?: boolean | null;
-  availableActions: Record<string, boolean>;
 }
 
 export interface PekReportSignature {
@@ -646,8 +610,7 @@ export interface PekReportSignature {
   certificateSerial?: string | null;
   certificateOrganization?: string | null;
   verified: boolean;
-  cmsFileId?: string | null;
-  availableActions: Record<string, boolean>;
+  signatureFileId?: string | number | null;
 }
 
 export interface PekExceedance {
@@ -714,11 +677,9 @@ export interface PekSettings {
   notifyExceedances: boolean;
   notifyReportReturned: boolean;
   version: number;
-  availableActions: Record<string, boolean>;
-  capabilities: Record<string, boolean>;
 }
 
-export type PekSettingsUpdateRequest = Omit<PekSettings, 'companyId' | 'defaultResponsibleUser' | 'defaultLaboratory' | 'availableActions' | 'capabilities'>;
+export type PekSettingsUpdateRequest = Omit<PekSettings, 'companyId' | 'defaultResponsibleUser' | 'defaultLaboratory' | 'version'>;
 
 export type PekProgramListItem = PekProgram;
 export type PekProgramDetails = PekProgram;

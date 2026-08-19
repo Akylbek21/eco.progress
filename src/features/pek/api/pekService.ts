@@ -1,4 +1,4 @@
-import type { AxiosProgressEvent } from 'axios';
+import axios, { type AxiosProgressEvent } from 'axios';
 import { pekApiClient as api } from './pekApiClient';
 import { filenameFromDisposition, mapPekPage, unwrapPekData } from './pekMappers';
 import { createIfMatch } from '../../../services/apiHelpers';
@@ -42,10 +42,6 @@ import type {
   PekReportHistoryEntry,
   PekReportPackage,
   PekTransitionExceedanceRequest,
-  PekAccessContext,
-  PekPermitContext,
-  PekSchedulerRun,
-  PekSchedulerStatus,
 } from './pekContracts';
 import {
   mapCollectionResult,
@@ -94,17 +90,12 @@ const reportAction = async (
   (await api.post(`/pek/reports/${id}/${action}`, {}, { headers: withEntityVersion(version) })).data,
 ));
 
-const getDocumentMutation = async <T>(url: string): Promise<T> =>
-  unwrapPekData<T>((await api.post(url)).data);
-
 export type PekUploadOptions = {
   signal?: AbortSignal;
   onUploadProgress?: (event: AxiosProgressEvent) => void;
 };
 
 export const pekApi = {
-  getAccessContext: (companyId: number, signal?: AbortSignal) =>
-    get<PekAccessContext>('/pek/access-context', { companyId }, signal),
   async getDashboard(filters: PekDashboardFilters, signal?: AbortSignal) {
     return mapDashboardResponse(await get<unknown>('/pek/dashboard', filters, signal));
   },
@@ -121,11 +112,11 @@ export const pekApi = {
     mapProgramResponse(unwrapPekData<unknown>((await api.post('/pek/programs', body)).data)),
   updateProgram: async (id: number, version: number, body: PekProgramUpdateRequest) =>
     mapProgramResponse(unwrapPekData<unknown>(
-      (await api.patch(`/pek/programs/${id}`, { ...body, version })).data,
+      (await api.patch(`/pek/programs/${id}`, body, { headers: withEntityVersion(version) })).data,
     )),
   saveProgramDraft: async (id: number, version: number, body: PekProgramUpdateRequest, signal?: AbortSignal) =>
     mapProgramResponse(unwrapPekData<unknown>(
-      (await api.patch(`/pek/programs/${id}/draft`, { ...body, version }, { signal })).data,
+      (await api.patch(`/pek/programs/${id}/draft`, body, { signal, headers: withEntityVersion(version) })).data,
     )),
   submitProgramReview: (id: number, body: PekMutationBody) => programAction(id, 'submit-review', body),
   returnProgram: (id: number, body: PekMutationBody) => programAction(id, 'return', body),
@@ -182,16 +173,16 @@ export const pekApi = {
     get<PekLookupOption[]>('/pek/lookups/assignees', { roles: roles.join(',') }, signal),
   getPermits: (objectId: number, signal?: AbortSignal) =>
     get<PekPermit[]>('/pek/permits', { objectId }, signal),
-  getPermitContext: (companyId: number, signal?: AbortSignal) =>
-    get<PekPermitContext>('/pek/permits/context', { companyId }, signal),
   getPermit: (id: number, signal?: AbortSignal) =>
     get<PekPermit>(`/pek/permits/${id}`, {}, signal),
   createPermit: async (body: PekPermitCreateRequest) =>
     unwrapPekData<PekPermit>((await api.post('/pek/permits', body)).data),
-  updatePermit: async (id: number, body: PekPermitUpdateRequest) =>
-    unwrapPekData<PekPermit>((await api.patch(`/pek/permits/${id}`, body)).data),
+  updatePermit: async (id: number, body: PekPermitUpdateRequest) => {
+    const { version, ...request } = body;
+    return unwrapPekData<PekPermit>((await api.patch(`/pek/permits/${id}`, request, { headers: withEntityVersion(version) })).data);
+  },
   changePermitStatus: async (id: number, version: number, status: PekPermitStatus, comment: string) =>
-    unwrapPekData<PekPermit>((await api.post(`/pek/permits/${id}/status`, { version, status, comment })).data),
+    unwrapPekData<PekPermit>((await api.post(`/pek/permits/${id}/status`, { status, comment }, { headers: withEntityVersion(version) })).data),
   getPermitHistory: (id: number, signal?: AbortSignal) =>
     get<PekPermitHistoryEntry[]>(`/pek/permits/${id}/history`, {}, signal),
   getPekMemberships: (companyId: number, signal?: AbortSignal) =>
@@ -204,21 +195,30 @@ export const pekApi = {
     unwrapPekData<null>((await api.delete(`/pek/companies/${companyId}/members/${membershipId}`)).data),
 
   async getReports(filters: PekReportFilters, signal?: AbortSignal): Promise<PageResponse<PekReport>> {
+    const { status, issue: _issue, ...backendFilters } = filters;
     const page = mapPekPage<unknown>(
-      (await api.get('/pek/reports', { params: cleanParams(filters), signal })).data,
+      (await api.get('/pek/reports', { params: cleanParams(backendFilters), signal })).data,
     );
-    return { ...page, content: page.content.map((item) => mapReportResponse(item)) };
+    // TODO(backend): pass status/issue when GET /pek/reports supports those filters.
+    const mapped = page.content.map((item) => mapReportResponse(item));
+    const content = mapped.filter((report) => !status || report.status === status);
+    return { ...page, content };
   },
   getReport: async (id: number, signal?: AbortSignal) =>
     mapReportResponse(await get<unknown>(`/pek/reports/${id}`, {}, signal)),
   getReportCreationContext: async (params: PekReportCreationParams, signal?: AbortSignal) => {
     const context = await get<PekCreationContext>('/pek/reports/creation-context', params, signal);
-    return { ...context, programs: (context.programs || []).map(mapProgramResponse) };
+    return {
+      ...context,
+      programs: (context.programs || []).map(mapProgramResponse),
+      warnings: context.warnings || [],
+      blockingReasons: context.blockingReasons || [],
+    };
   },
   createReport: async (body: PekReportCreateRequest) =>
     mapReportResponse(unwrapPekData<unknown>((await api.post('/pek/reports', body)).data)),
-  collectReport: async (id: number) =>
-    mapCollectionResult(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/collect`)).data)),
+  collectReport: async (id: number, version: number) =>
+    mapCollectionResult(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/collect`, {}, { headers: withEntityVersion(version) })).data)),
   getReportPlanFact: (id: number, signal?: AbortSignal) =>
     get<PekPlanFactResponse>(`/pek/reports/${id}/plan-fact`, {}, signal),
   getReportSources: (id: number, filters: Record<string, unknown> = {}, signal?: AbortSignal) =>
@@ -226,24 +226,24 @@ export const pekApi = {
   getReportSourcesSummary: (id: number, signal?: AbortSignal) =>
     get<PekReportSourceSummary>(`/pek/reports/${id}/sources/summary`, {}, signal),
   matchReportSource: async (reportId: number, sourceId: number, indicatorId: number, version: number) =>
-    unwrapPekData<PekReportSource>((await api.post(`/pek/reports/${reportId}/sources/${sourceId}/match`, { indicatorId, version })).data),
+    unwrapPekData<PekReportSource>((await api.post(`/pek/reports/${reportId}/sources/${sourceId}/match`, { indicatorId }, { headers: withEntityVersion(version) })).data),
   excludeReportSource: async (reportId: number, sourceId: number, reason: string, version: number) =>
-    unwrapPekData<PekReportSource>((await api.post(`/pek/reports/${reportId}/sources/${sourceId}/exclude`, { version, reason })).data),
+    unwrapPekData<PekReportSource>((await api.post(`/pek/reports/${reportId}/sources/${sourceId}/exclude`, { reason }, { headers: withEntityVersion(version) })).data),
   restoreReportSource: async (reportId: number, sourceId: number, version: number, reason = 'Источник восстановлен сотрудником') =>
-    unwrapPekData<PekReportSource>((await api.post(`/pek/reports/${reportId}/sources/${sourceId}/restore`, { version, reason })).data),
+    unwrapPekData<PekReportSource>((await api.post(`/pek/reports/${reportId}/sources/${sourceId}/restore`, { reason }, { headers: withEntityVersion(version) })).data),
   getReportReadiness: (id: number, signal?: AbortSignal) =>
     get<PekReadinessResponse>(`/pek/reports/${id}/readiness`, {}, signal),
   getReportHistory: (id: number, signal?: AbortSignal) =>
     get<PekReportHistoryEntry[]>(`/pek/reports/${id}/history`, {}, signal),
   submitReportReview: (id: number, version: number) => reportAction(id, 'submit-review', version),
   returnReport: async (id: number, version: number, reason: string) =>
-    mapReportResponse(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/return`, { version, reason })).data)),
+    mapReportResponse(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/return`, { reason }, { headers: withEntityVersion(version) })).data)),
   approveReport: (id: number, version: number) => reportAction(id, 'approve', version),
   archiveReport: (id: number, version: number) => reportAction(id, 'archive', version),
-  generateReportDocx: (id: number) =>
-    getDocumentMutation<PekReportDocumentVersion>(`/pek/reports/${id}/document/generate-docx`),
-  generateReportPdf: (id: number) =>
-    getDocumentMutation<PekReportDocumentVersion>(`/pek/reports/${id}/document/generate-pdf`),
+  generateReportDocx: async (id: number, version: number) =>
+    unwrapPekData<PekReportDocumentVersion>((await api.post(`/pek/reports/${id}/document/generate-docx`, {}, { headers: withEntityVersion(version) })).data),
+  generateReportPdf: async (id: number, version: number) =>
+    unwrapPekData<PekReportDocumentVersion>((await api.post(`/pek/reports/${id}/document/generate-pdf`, {}, { headers: withEntityVersion(version) })).data),
   getReportDocumentVersions: (id: number, signal?: AbortSignal) =>
     get<PekReportDocumentVersion[]>(`/pek/reports/${id}/document/versions`, {}, signal),
   downloadReportDocument: async (id: number, format: 'docx' | 'pdf'): Promise<PekBlobResult> => {
@@ -253,22 +253,24 @@ export const pekApi = {
       filename: filenameFromDisposition(response.headers['content-disposition'], `pek-report-${id}.${format}`),
     };
   },
-  signReportDocument: async (id: number, cms: string) =>
-    unwrapPekData<PekReportSignature>((await api.post(`/pek/reports/${id}/document/sign`, { cms })).data),
+  signReportDocument: async (id: number, version: number, cms: string) =>
+    unwrapPekData<PekReportSignature>((await api.post(`/pek/reports/${id}/document/sign`, { cms }, { headers: withEntityVersion(version) })).data),
   getReportSignatures: (id: number, signal?: AbortSignal) =>
     get<PekReportSignature[]>(`/pek/reports/${id}/document/signatures`, {}, signal),
-  downloadReportDocumentVersion: async (reportId: number, versionId: number, format: 'docx' | 'pdf'): Promise<PekBlobResult> => {
-    const response = await api.get<Blob>(`/pek/reports/${reportId}/document/versions/${versionId}/download/${format}`, { responseType: 'blob' });
-    return { blob: response.data, filename: filenameFromDisposition(response.headers['content-disposition'], `pek-report-${reportId}-v${versionId}.${format}`) };
+  downloadReportSignature: async (reportId: number, signatureFileId: string | number): Promise<PekBlobResult> => {
+    const response = await api.get<Blob>(`/pek/reports/${reportId}/document/signatures/${encodeURIComponent(signatureFileId)}/download`, { responseType: 'blob' });
+    return { blob: response.data, filename: filenameFromDisposition(response.headers['content-disposition'], `pek-report-${reportId}-signature.cms`) };
   },
-  downloadReportSignatureCms: async (reportId: number, signatureId: number): Promise<PekBlobResult> => {
-    const response = await api.get<Blob>(`/pek/reports/${reportId}/document/signatures/${signatureId}/cms`, { responseType: 'blob' });
-    return { blob: response.data, filename: filenameFromDisposition(response.headers['content-disposition'], `pek-report-${reportId}-signature-${signatureId}.cms`) };
+  getReportPackage: async (id: number, signal?: AbortSignal): Promise<PekReportPackage | null> => {
+    try {
+      return mapReportPackage((await api.get(`/pek/reports/${id}/package`, { signal })).data);
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) return null;
+      throw error;
+    }
   },
-  getReportPackage: async (id: number, signal?: AbortSignal): Promise<PekReportPackage> =>
-    mapReportPackage((await api.get(`/pek/reports/${id}/package`, { signal })).data),
-  generateReportPackage: async (id: number): Promise<void> => {
-    await api.post(`/pek/reports/${id}/package/generate`);
+  generateReportPackage: async (id: number, version: number): Promise<void> => {
+    await api.post(`/pek/reports/${id}/package/generate`, {}, { headers: withEntityVersion(version) });
   },
   downloadReportPackage: async (id: number): Promise<PekBlobResult> => {
     const response = await api.get<Blob>(`/pek/reports/${id}/package/download`, { responseType: 'blob' });
@@ -281,24 +283,27 @@ export const pekApi = {
     (await get<unknown[]>(`/pek/reports/${reportId}/exceedances`, {}, signal)).map(mapExceedanceResponse),
   getExceedance: async (id: number, signal?: AbortSignal) =>
     mapExceedanceResponse(await get<unknown>(`/pek/exceedances/${id}`, {}, signal)),
-  assignExceedance: async (id: number, body: PekAssignExceedanceRequest) =>
-    mapExceedanceResponse(unwrapPekData<unknown>((await api.post(`/pek/exceedances/${id}/assign`, body)).data)),
+  assignExceedance: async (id: number, body: PekAssignExceedanceRequest) => {
+    const { version, ...request } = body;
+    return mapExceedanceResponse(unwrapPekData<unknown>((await api.post(`/pek/exceedances/${id}/assign`, request, { headers: withEntityVersion(version) })).data));
+  },
+  uploadExceedanceEvidence: async (id: number, file: File): Promise<{ fileId: string; fileName?: string }> => {
+    const form = new FormData();
+    form.append('file', file);
+    return unwrapPekData<{ fileId: string; fileName?: string }>((await api.post(`/pek/exceedances/${id}/evidence-files`, form)).data);
+  },
   attachExceedanceEvidence: async (id: number, version: number, fileId: string) =>
-    mapExceedanceResponse(unwrapPekData<unknown>((await api.post(`/pek/exceedances/${id}/evidence`, { version, fileId })).data)),
-  transitionExceedance: async (id: number, body: PekTransitionExceedanceRequest) =>
-    mapExceedanceResponse(unwrapPekData<unknown>((await api.post(`/pek/exceedances/${id}/transition`, body)).data)),
+    mapExceedanceResponse(unwrapPekData<unknown>((await api.post(`/pek/exceedances/${id}/evidence`, { fileId }, { headers: withEntityVersion(version) })).data)),
+  transitionExceedance: async (id: number, body: PekTransitionExceedanceRequest) => {
+    const { version, ...request } = body;
+    return mapExceedanceResponse(unwrapPekData<unknown>((await api.post(`/pek/exceedances/${id}/transition`, request, { headers: withEntityVersion(version) })).data));
+  },
   getSettings: (companyId: number, signal?: AbortSignal) => get<PekSettings>('/pek/settings', { companyId }, signal),
-  updateSettings: async (companyId: number, body: PekSettingsUpdateRequest) =>
-    unwrapPekData<PekSettings>((await api.put('/pek/settings', body, { params: { companyId } })).data),
-  getSchedulerStatus: (companyId: number, signal?: AbortSignal) =>
-    get<PekSchedulerStatus>('/pek/settings/automation/status', { companyId }, signal),
-  getSchedulerHistory: (companyId: number, signal?: AbortSignal) =>
-    get<PekSchedulerRun[]>('/pek/settings/automation/history', { companyId }, signal),
-  runSchedulerNow: async (companyId: number) =>
-    unwrapPekData<PekSchedulerRun>((await api.post('/pek/settings/automation/run', null, { params: { companyId } })).data),
+  updateSettings: async (companyId: number, version: number, body: PekSettingsUpdateRequest) =>
+    unwrapPekData<PekSettings>((await api.patch('/pek/settings', body, { params: { companyId }, headers: withEntityVersion(version) })).data),
+  runSchedulerNow: async (companyId: number): Promise<void> => {
+    await api.post('/pek/scheduler/run', null, { params: { companyId } });
+  },
 };
 
-// Compatibility alias: there is still only one PEK transport implementation.
-export const pekService = pekApi;
-export type PekService = typeof pekApi;
 export { cleanParams };

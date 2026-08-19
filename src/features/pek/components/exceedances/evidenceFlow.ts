@@ -1,34 +1,28 @@
-import { uploadStaffRepositoryDocument, type StaffRepositoryDocument } from '../../../../services/staffDocumentRepositoryService';
 import { pekApi } from '../../api/pekService';
 
+type UploadedEvidence = { fileId: string; fileName?: string };
 type EvidenceFlowDependencies = {
-  upload: typeof uploadStaffRepositoryDocument;
+  upload: typeof pekApi.uploadExceedanceEvidence;
   attach: typeof pekApi.attachExceedanceEvidence;
 };
 
 const defaultDependencies: EvidenceFlowDependencies = {
-  upload: uploadStaffRepositoryDocument,
+  upload: pekApi.uploadExceedanceEvidence,
   attach: pekApi.attachExceedanceEvidence,
 };
 
 export const uploadAndAttachExceedanceEvidence = async ({
   file,
   exceedanceId,
-  reportId,
   version,
 }: {
   file: File;
   exceedanceId: number;
   reportId: number;
   version: number;
-}, dependencies: EvidenceFlowDependencies = defaultDependencies): Promise<StaffRepositoryDocument> => {
-  const uploaded = await dependencies.upload({
-    file,
-    name: file.name,
-    category: 'pek-exceedance-evidence',
-    comment: `Подтверждение превышения №${exceedanceId} отчёта ПЭК №${reportId}`,
-  });
-  if (!uploaded.id) throw new Error('Backend не вернул идентификатор загруженного файла.');
-  await dependencies.attach(exceedanceId, version, uploaded.id);
+}, dependencies: EvidenceFlowDependencies = defaultDependencies): Promise<UploadedEvidence> => {
+  const uploaded = await dependencies.upload(exceedanceId, file);
+  if (!uploaded.fileId) throw new Error('Backend не вернул fileId загруженного доказательства.');
+  await dependencies.attach(exceedanceId, version, uploaded.fileId);
   return uploaded;
 };

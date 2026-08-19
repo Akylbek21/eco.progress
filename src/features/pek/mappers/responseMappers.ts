@@ -131,7 +131,6 @@ export const mapReportResponse = (
     linkedProtocolNumbers,
     lastCollectedAt: source.lastCollectedAt == null ? null : String(source.lastCollectedAt),
     returnInfo: returnInfo(source.returnInfo),
-    availableActions: availableActionFlags(source.availableActions),
   };
 };
 

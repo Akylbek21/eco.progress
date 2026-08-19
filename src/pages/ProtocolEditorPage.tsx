@@ -39,7 +39,6 @@ import ProtocolDetailsView from '../features/protocols/details/ProtocolDetailsVi
 import type { ProtocolEditSection } from '../features/protocols/details/protocolDetailsModel';
 import { useSignProtocolMutation } from '../features/protocols/hooks/useSignProtocolMutation';
 import { protocolQueryKeys, protocolScope } from '../features/protocols/hooks/queryKeys';
-import { pekApi } from '../features/pek/api/pekApi';
 import { hasProtocolAction, protocolTransitionBlockers } from '../features/protocols/utils/protocolActions';
 import { hasUsableProtocolResultNormative } from '../features/protocols/utils/protocolResultNormative';
 
@@ -1176,22 +1175,6 @@ const ProtocolEditorPage = () => {
   };
 
   const pekReportContext = Number(new URLSearchParams(location.search).get('pekReportId'));
-  const recollectPekReport = async () => {
-    if (!Number.isInteger(pekReportContext) || pekReportContext <= 0) return;
-    setBusy(true);
-    try {
-      const currentPekReport = await pekApi.getReport(pekReportContext);
-      await pekApi.collectReport(pekReportContext);
-      await queryClient.invalidateQueries({ queryKey: ['pek', 'report', pekReportContext] });
-      toast.success('Отчёт ПЭК повторно собран с учётом финализированных протоколов');
-      navigate(`/staff/pek/reports/${pekReportContext}`);
-    } catch (collectError) {
-      toast.error(getApiErrorMessage(collectError, 'Не удалось повторно собрать отчёт ПЭК'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   if (loading) return <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm font-semibold text-slate-500 shadow-sm">Загрузка протокола...</div>;
   if (error || !protocol) {
     return (
@@ -1211,7 +1194,7 @@ const ProtocolEditorPage = () => {
   return (
     <>
     {protocol.status === 'UNKNOWN' && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-900">Статус протокола пока не поддерживается. Данные доступны только для чтения.</div>}
-    {pekReportContext > 0 && ['SIGNED', 'PUBLISHED'].includes(protocol.status) && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><span>Протокол подписан и завершён. Можно повторно собрать связанный отчёт ПЭК.</span><Button type="button" disabled={busy} onClick={() => { void recollectPekReport(); }}>Повторно собрать отчёт ПЭК</Button></div>}
+    {pekReportContext > 0 && ['SIGNED', 'PUBLISHED'].includes(protocol.status) && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><span>Протокол подписан и завершён. Сбор связанного отчёта запускается из его рабочей области с версией, открытой пользователем.</span><Button type="button" onClick={() => navigate(`/staff/pek/reports/${pekReportContext}`)}>Открыть отчёт ПЭК</Button></div>}
     <ProtocolDetailsView
       protocol={protocol}
       initialTab={new URLSearchParams(location.search).get('tab') === 'history' ? 'history' : 'results'}

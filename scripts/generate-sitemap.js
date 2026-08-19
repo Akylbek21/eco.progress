@@ -75,14 +75,18 @@ const breadcrumbSchema = (pathName, h1) => ({
   ],
 });
 
-const schemasFor = ({ path: pathName, h1, description, type, canonical, image, datePublished, dateModified, faq }) => {
+const schemasFor = ({ path: pathName, h1, description, type, canonical, image, datePublished, dateModified, faq, city, service }) => {
   const schemas = [];
   if (pathName === '/' || pathName === '/contacts') {
     schemas.push(organizationSchema);
     if (pathName === '/') schemas.push({ '@context': 'https://schema.org', '@type': 'WebSite', '@id': `${SITE_URL}/#website`, url: SITE_URL, name: COMPANY.brandName, publisher: { '@id': `${SITE_URL}/#organization` } });
   }
-  if (type === 'service') {
-    schemas.push({ '@context': 'https://schema.org', '@type': 'Service', name: h1, serviceType: h1, description, url: canonical, provider: { '@id': `${SITE_URL}/#organization` }, areaServed: { '@type': 'Country', name: 'Казахстан' } });
+  if (type === 'service' || type === 'service-city') {
+    schemas.push({
+      '@context': 'https://schema.org', '@type': 'Service', name: h1, serviceType: service || h1, description, url: canonical,
+      provider: { '@id': `${SITE_URL}/#organization` },
+      areaServed: city ? { '@type': 'City', name: city } : { '@type': 'Country', name: 'Казахстан' },
+    });
   }
   if (type === 'article' && pathName !== '/news') {
     schemas.push({

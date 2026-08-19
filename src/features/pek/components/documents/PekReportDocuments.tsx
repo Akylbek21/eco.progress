@@ -7,6 +7,7 @@ import type { PekBlobResult, PekReport } from '../../api/pekContracts';
 import { pekKeys } from '../../api/pekQueryKeys';
 import { pekApi } from '../../api/pekService';
 import { mapPekError } from '../../utils/pekErrorMapper';
+import { canGenerateDocument, canSignReport, canUsePekPermission } from '../../permissions/pekAccess';
 
 const saveBlob = ({ blob, filename }: PekBlobResult) => {
   const url = URL.createObjectURL(blob);
@@ -25,9 +26,6 @@ const blobToBase64 = (blob: Blob): Promise<string> => new Promise((resolve, reje
   reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
   reader.readAsDataURL(blob);
 });
-
-const actionEnabled = (report: PekReport, ...names: string[]) =>
-  names.some((name) => report.availableActions[name] === true);
 
 const PekReportDocuments = ({ report }: { report: PekReport }) => {
   const { user } = useAuth();
@@ -57,8 +55,8 @@ const PekReportDocuments = ({ report }: { report: PekReport }) => {
 
   const generate = useMutation({
     mutationFn: async (format: 'docx' | 'pdf') => {
-      if (format === 'docx') await pekApi.generateReportDocx(report.id);
-      else await pekApi.generateReportPdf(report.id);
+      if (format === 'docx') await pekApi.generateReportDocx(report.id, report.version);
+      else await pekApi.generateReportPdf(report.id, report.version);
       return refreshReport();
     },
     onSuccess: () => setStaleVersionIds([]),
@@ -78,19 +76,15 @@ const PekReportDocuments = ({ report }: { report: PekReport }) => {
       if (mapped.status === 409 || mapped.status === 412) void refreshReport();
     },
   });
-  const downloadVersion = useMutation({
-    mutationFn: ({ versionId, format }: { versionId: number; format: 'docx' | 'pdf' }) => pekApi.downloadReportDocumentVersion(report.id, versionId, format),
-    onSuccess: saveBlob,
-  });
   const downloadCms = useMutation({
-    mutationFn: (signatureId: number) => pekApi.downloadReportSignatureCms(report.id, signatureId),
+    mutationFn: (signatureFileId: string | number) => pekApi.downloadReportSignature(report.id, signatureFileId),
     onSuccess: saveBlob,
   });
   const sign = useMutation({
     mutationFn: async () => {
       const pdf = await pekApi.downloadReportDocument(report.id, 'pdf');
       const cms = await createCmsSignatureWithNCALayer(await blobToBase64(pdf.blob));
-      await pekApi.signReportDocument(report.id, cms);
+      await pekApi.signReportDocument(report.id, report.version, cms);
       return refreshReport();
     },
     onError: (failure) => {
@@ -102,14 +96,14 @@ const PekReportDocuments = ({ report }: { report: PekReport }) => {
     },
   });
 
-  const canGenerateDocx = actionEnabled(report, 'generateDocx', 'generateDocument');
-  const canGeneratePdf = actionEnabled(report, 'generatePdf', 'generateDocument');
-  const canDownloadDocx = report.availableActions.downloadDocx === true;
-  const canDownloadPdf = report.availableActions.downloadPdf === true;
-  const canSign = report.availableActions.sign === true;
+  const canGenerateDocx = canGenerateDocument(user, report);
+  const canGeneratePdf = canGenerateDocument(user, report);
+  const canDownloadDocx = canUsePekPermission(user, 'PEK_VIEW') && latestVersion?.hasDocx === true;
+  const canDownloadPdf = canUsePekPermission(user, 'PEK_VIEW') && latestVersion?.hasPdf === true;
+  const canSign = canSignReport(user, report) && latestVersion?.hasPdf === true;
   const hasActions = canGenerateDocx || canGeneratePdf || canDownloadDocx || canDownloadPdf || canSign;
-  const busy = generate.isPending || download.isPending || downloadVersion.isPending || downloadCms.isPending || sign.isPending;
-  const error = generate.error || download.error || downloadVersion.error || downloadCms.error || sign.error;
+  const busy = generate.isPending || download.isPending || downloadCms.isPending || sign.isPending;
+  const error = generate.error || download.error || downloadCms.error || sign.error;
   const failure = error ? mapPekError(error) : null;
 
   return <section className="space-y-5 rounded-2xl border bg-white p-5">
@@ -132,13 +126,13 @@ const PekReportDocuments = ({ report }: { report: PekReport }) => {
     <div className="overflow-x-auto rounded-xl border">
       <table className="w-full min-w-[720px] text-sm">
         <thead className="bg-slate-50 text-left"><tr><th className="p-3">Версия</th><th>Дата генерации</th><th>Автор</th><th>Статус</th><th>DOCX</th><th>PDF</th><th>Скачивание</th></tr></thead>
-        <tbody>{versions.isLoading ? <tr><td className="p-4 text-slate-500" colSpan={7}>Загрузка версий…</td></tr> : sortedVersions.map((version) => { const stale = version.stale === true || version.status === 'STALE' || staleVersionIds.includes(version.id); return <tr key={version.id} className="border-t"><td className="p-3 font-bold">v{version.version}</td><td>{version.generatedAt || '—'}</td><td>{version.generatedByName || (version.generatedBy ? `Сотрудник №${version.generatedBy}` : '—')}</td><td>{stale ? 'Устарел' : version.status || '—'}</td><td>{version.hasDocx ? 'Есть' : 'Нет'}</td><td>{version.hasPdf ? 'Есть' : 'Нет'}</td><td><div className="flex gap-2">{version.hasDocx && version.availableActions?.downloadDocx === true && <Button size="small" disabled={busy || stale} onClick={() => downloadVersion.mutate({ versionId: version.id, format: 'docx' })}>Скачать DOCX</Button>}{version.hasPdf && version.availableActions?.downloadPdf === true && <Button size="small" disabled={busy || stale} onClick={() => downloadVersion.mutate({ versionId: version.id, format: 'pdf' })}>Скачать PDF</Button>}</div></td></tr>; })}</tbody>
+        <tbody>{versions.isLoading ? <tr><td className="p-4 text-slate-500" colSpan={7}>Загрузка версий…</td></tr> : sortedVersions.map((version) => { const stale = version.stale === true || version.status === 'STALE' || staleVersionIds.includes(version.id); return <tr key={version.id} className="border-t"><td className="p-3 font-bold">v{version.version}</td><td>{version.generatedAt || '—'}</td><td>{version.generatedByName || (version.generatedBy ? `Сотрудник №${version.generatedBy}` : '—')}</td><td>{stale ? 'Устарел' : version.status || '—'}</td><td>{version.hasDocx ? 'Есть' : 'Нет'}</td><td>{version.hasPdf ? 'Есть' : 'Нет'}</td><td><span className="text-slate-500">Скачивание исторической версии не поддерживается backend</span></td></tr>; })}</tbody>
       </table>
       {!versions.isLoading && !versions.isError && !sortedVersions.length && <p className="p-4 text-sm text-slate-500">Документы ещё не сформированы.</p>}
     </div>
     <div>
       <h3 className="font-bold">Подписи</h3>
-      {signatures.isLoading ? <p className="mt-2 text-sm text-slate-500">Загрузка подписей…</p> : !signatures.data?.length ? <p className="mt-2 text-sm text-slate-500">Подписей пока нет.</p> : <div className="mt-2 overflow-x-auto rounded-xl border"><table className="w-full min-w-[820px] text-sm"><thead className="bg-slate-50 text-left"><tr><th className="p-3">Подписант</th><th>Дата подписания</th><th>Сертификат</th><th>Организация</th><th>Статус</th><th>Файл</th></tr></thead><tbody>{signatures.data.map((signature) => <tr key={signature.id} className="border-t"><td className="p-3 font-semibold">{signature.certificateCn || signature.certificateSubject || `Сотрудник №${signature.signerUserId}`}</td><td>{signature.signedAt || '—'}</td><td>{signature.certificateSerial || signature.certificateSubject || '—'}</td><td>{signature.certificateOrganization || '—'}</td><td>{signature.verified ? 'Подпись проверена' : 'Не подтверждена'}</td><td>{signature.availableActions?.downloadCms === true && <Button size="small" disabled={busy} onClick={() => downloadCms.mutate(signature.id)}>Скачать CMS / ЭЦП</Button>}</td></tr>)}</tbody></table></div>}
+      {signatures.isLoading ? <p className="mt-2 text-sm text-slate-500">Загрузка подписей…</p> : !signatures.data?.length ? <p className="mt-2 text-sm text-slate-500">Подписей пока нет.</p> : <div className="mt-2 overflow-x-auto rounded-xl border"><table className="w-full min-w-[820px] text-sm"><thead className="bg-slate-50 text-left"><tr><th className="p-3">Подписант</th><th>Дата подписания</th><th>Сертификат</th><th>Организация</th><th>Статус</th><th>Файл</th></tr></thead><tbody>{signatures.data.map((signature) => <tr key={signature.id} className="border-t"><td className="p-3 font-semibold">{signature.certificateCn || signature.certificateSubject || `Сотрудник №${signature.signerUserId}`}</td><td>{signature.signedAt || '—'}</td><td>{signature.certificateSerial || signature.certificateSubject || '—'}</td><td>{signature.certificateOrganization || '—'}</td><td>{signature.verified ? 'Подпись проверена' : 'Не подтверждена'}</td><td>{signature.signatureFileId && <Button size="small" disabled={busy} onClick={() => downloadCms.mutate(signature.signatureFileId!)}>Скачать CMS / ЭЦП</Button>}</td></tr>)}</tbody></table></div>}
     </div>
   </section>;
 };
