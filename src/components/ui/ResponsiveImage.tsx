@@ -23,7 +23,7 @@ const ResponsiveImage = ({
   avifSrcSet,
   webpSrcSet,
   fallbackSrcSet,
-  sizes = '100vw',
+  sizes = '(max-width: 640px) 100vw, 50vw',
   priority = false,
   fill = false,
   wrapperClassName = '',
@@ -39,6 +39,8 @@ const ResponsiveImage = ({
     '/pexels-jan-van.jpg': 'otbor-prob-vody',
     '/para.jpg': 'ecoprogress-og-cover',
     '/images (1).jpg': 'ekologicheskoe-soprovozhdenie',
+    '/utilizacija-othodov-3.jpg': 'utilizaciya-othodov',
+    '/poligon-tbo-2.jpg': 'poligon-tbo',
   };
   const responsiveMatch = src.match(/^\/media\/(.+)-(?:480|768|1024|1280|1920)\.(?:jpg|jpeg|png|webp|avif)$/);
   const responsiveName = responsiveMatch?.[1] || legacyResponsiveNames[src];
@@ -48,6 +50,8 @@ const ResponsiveImage = ({
   const resolvedAvifSrcSet = avifSrcSet || autoSet('avif');
   const resolvedWebpSrcSet = webpSrcSet || autoSet('webp');
   const resolvedFallbackSrcSet = fallbackSrcSet || autoSet('jpg');
+  const resolvedSrc = responsiveName ? `/media/${responsiveName}-1280.jpg` : src;
+  const fetchPriorityAttribute = priority ? { fetchpriority: 'high' } : {};
 
   return (
     <div className={`${fill ? 'absolute inset-0' : 'relative'} overflow-hidden bg-slate-200 ${wrapperClassName}`}>
@@ -57,14 +61,14 @@ const ResponsiveImage = ({
           {resolvedAvifSrcSet && <source type="image/avif" srcSet={resolvedAvifSrcSet} sizes={sizes} />}
           {resolvedWebpSrcSet && <source type="image/webp" srcSet={resolvedWebpSrcSet} sizes={sizes} />}
           <img
-            src={src}
+            src={resolvedSrc}
             srcSet={resolvedFallbackSrcSet}
             sizes={resolvedFallbackSrcSet ? sizes : undefined}
             alt={alt}
             width={width}
             height={height}
             loading={priority ? 'eager' : 'lazy'}
-            fetchPriority={priority ? 'high' : 'auto'}
+            {...fetchPriorityAttribute}
             decoding="async"
             onLoad={() => setLoaded(true)}
             onError={() => setFailed(true)}

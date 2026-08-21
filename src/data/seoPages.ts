@@ -1,4 +1,5 @@
 import seoPagesJson from './seoPages.generated.json';
+import type { Expert } from '../content/types';
 
 export interface RelatedLink {
   label: string;
@@ -18,7 +19,17 @@ export interface SeoFaqItem {
 export interface SeoPageConfig {
   slug: string;
   city?: string;
+  cityNominative?: string;
+  cityGenitive?: string;
+  cityDative?: string;
+  cityAccusative?: string;
+  cityInstrumental?: string;
+  cityPrepositional?: string;
+  regionNominative?: string;
+  regionGenitive?: string;
+  regionPrepositional?: string;
   service?: string;
+  serviceSlug?: string;
   type: 'city' | 'service-city' | 'article' | 'service' | 'main';
   title: string;
   description: string;
@@ -39,6 +50,14 @@ export interface SeoPageConfig {
   changefreq?: string;
   lastmod?: string;
   indexable?: boolean;
+  reviewStatus?: 'approved' | 'requires-specialist-review' | 'draft' | 'rejected';
+  authorSlug?: string;
+  reviewerSlug?: string;
+  author?: Expert;
+  reviewer?: Expert;
+  datePublished?: string;
+  lastReviewedAt?: string;
+  sources?: Array<{ title: string; url: string; accessedAt?: string; claimStatus: 'verified' | 'requires-review' | 'general-information' }>;
   ctaTitle?: string;
   ctaText?: string;
 }

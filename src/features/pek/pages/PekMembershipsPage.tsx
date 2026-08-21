@@ -9,7 +9,6 @@ import { pekApi } from '../api/pekService';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { usePekScope } from '../hooks/usePekScope';
-import { canManagePekMemberships } from '../permissions/pekAccess';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { retryPekQuery } from '../utils/pekQueryPolicy';
 
@@ -23,7 +22,6 @@ const PekMembershipsPage = () => {
   const companyId = Number(params.get('companyId')) || 0;
   const scope = usePekScope(companyId || undefined);
   const company = scope.companies.find((item) => item.id === companyId);
-  const canManage = canManagePekMemberships(user);
   const key = pekKeys.memberships(companyId, user?.id);
   const memberships = useQuery({
     queryKey: key,
@@ -31,6 +29,12 @@ const PekMembershipsPage = () => {
     enabled: companyId > 0 && scope.companyAllowed,
     retry: retryPekQuery,
   });
+  const canManage = memberships.data?.some((membership) =>
+    membership.availableActions?.add === true
+    || membership.availableActions?.edit === true
+    || membership.availableActions?.deactivate === true
+    || membership.companyPermissions?.PEK_MEMBERS_MANAGE === true
+  ) === true;
   const [editing, setEditing] = useState<PekCompanyMembership | null>(null);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -58,7 +62,7 @@ const PekMembershipsPage = () => {
     retry: false,
   });
   const deactivate = useMutation({
-    mutationFn: (id: number) => pekApi.deactivatePekMembership(companyId, id),
+    mutationFn: ({ id, version }: { id: number; version: number }) => pekApi.deactivatePekMembership(companyId, id, version),
     onSuccess: refresh,
     onError: onMutationError,
     retry: false,
@@ -71,7 +75,7 @@ const PekMembershipsPage = () => {
     setFieldErrors({});
     const form = new FormData(event.currentTarget);
     const roleCode = String(form.get('roleCode') || '');
-    if (editing) update.mutate({ id: editing.id, body: { roleCode, status: String(form.get('status')) as PekMembershipStatus } });
+    if (editing) update.mutate({ id: editing.id, body: { version: editing.version, roleCode, status: String(form.get('status')) as PekMembershipStatus } });
     else add.mutate({ email: String(form.get('email') || '').trim(), roleCode });
   };
 
@@ -103,7 +107,7 @@ const PekMembershipsPage = () => {
               </label> : <div />}
               <div className="flex items-end gap-2"><Button type="submit" disabled={pending}>{editing ? 'Сохранить' : 'Добавить'}</Button>{editing && <Button type="button" variant="secondary" onClick={() => setEditing(null)}>Отмена</Button>}</div>
             </form>}
-            {memberships.isLoading ? <PekLoading /> : memberships.isError ? <PekQueryError error={memberships.error} resource="PEK memberships" retry={() => void memberships.refetch()} /> : <div className="overflow-x-auto rounded-xl border"><table className="w-full min-w-[820px] text-sm"><thead className="bg-slate-50 text-left"><tr><th className="p-3">Компания</th><th>Сотрудник</th><th>Email</th><th>Роль</th><th>Статус</th><th>Действия</th></tr></thead><tbody>{memberships.data?.map((item) => <tr key={item.id} className="border-t"><td className="p-3">{company?.name || `№${item.companyId}`}</td><td className="font-semibold">{item.userFullName || `Сотрудник №${item.userId}`}</td><td>{item.userEmail || '—'}</td><td>{item.roleCode}</td><td>{statusLabels[item.status]}</td><td>{canManage && <div className="flex gap-2"><Button type="button" variant="secondary" disabled={pending} onClick={() => setEditing(item)}>Изменить</Button>{item.status !== 'REMOVED' && <Button type="button" variant="danger" disabled={pending} onClick={() => { if (window.confirm(`Деактивировать доступ ${item.userFullName || item.userEmail || item.userId}?`)) deactivate.mutate(item.id); }}>Деактивировать</Button>}</div>}</td></tr>)}{!memberships.data?.length && <tr><td colSpan={6} className="p-6 text-center text-slate-500">Сотрудники не добавлены</td></tr>}</tbody></table></div>}
+            {memberships.isLoading ? <PekLoading /> : memberships.isError ? <PekQueryError error={memberships.error} resource="PEK memberships" retry={() => void memberships.refetch()} /> : <div className="overflow-x-auto rounded-xl border"><table className="w-full min-w-[820px] text-sm"><thead className="bg-slate-50 text-left"><tr><th className="p-3">Компания</th><th>Сотрудник</th><th>Email</th><th>Роль</th><th>Статус</th><th>Действия</th></tr></thead><tbody>{memberships.data?.map((item) => <tr key={item.id} className="border-t"><td className="p-3">{company?.name || `№${item.companyId}`}</td><td className="font-semibold">{item.userFullName || `Сотрудник №${item.userId}`}</td><td>{item.userEmail || '—'}</td><td>{item.roleCode}</td><td>{statusLabels[item.status]}</td><td>{canManage && <div className="flex gap-2"><Button type="button" variant="secondary" disabled={pending} onClick={() => setEditing(item)}>Изменить</Button>{item.status !== 'REMOVED' && <Button type="button" variant="danger" disabled={pending} onClick={() => { if (window.confirm(`Деактивировать доступ ${item.userFullName || item.userEmail || item.userId}?`)) deactivate.mutate({ id: item.id, version: item.version }); }}>Деактивировать</Button>}</div>}</td></tr>)}{!memberships.data?.length && <tr><td colSpan={6} className="p-6 text-center text-slate-500">Сотрудники не добавлены</td></tr>}</tbody></table></div>}
           </section>}
     </>
   </div>;

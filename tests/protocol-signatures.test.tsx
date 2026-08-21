@@ -7,7 +7,10 @@ import { delay, http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import ProtocolSignaturesCard from '../src/features/protocols/details/ProtocolSignaturesCard';
+import ProtocolActionsMenu from '../src/features/protocols/details/ProtocolActionsMenu';
+import ProtocolDocumentsTab from '../src/features/protocols/details/ProtocolDocumentsTab';
 import {
+  PROTOCOL_STALE_PDF_MESSAGE,
   protocolSignErrorMessage,
   useSignProtocolMutation,
 } from '../src/features/protocols/hooks/useSignProtocolMutation';
@@ -15,7 +18,7 @@ import api from '../src/services/api';
 import protocolService from '../src/services/protocolService';
 import { signProtocol } from '../src/services/apiProtocolService';
 import type { Protocol } from '../src/types/protocols';
-import { getProtocolPermissions } from '../src/utils/protocolPermissions';
+import { hasProtocolAction } from '../src/features/protocols/utils/protocolActions';
 
 vi.mock('../src/features/protocols/utils/protocolSigning', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/features/protocols/utils/protocolSigning')>();
@@ -59,7 +62,6 @@ const protocol = (extra: Partial<Protocol> = {}): Protocol => ({
   signatures: [],
   hasPdf: true,
   pdfFileId: 'pdf-42',
-  permissions: { canSign: true, canEdit: true, canGenerateDocuments: true },
   availableActions: { sign: true, downloadPdf: true },
   companySnapshot: { companyName: 'Eco', objectName: 'Object' },
   protocolDate: '2026-07-27',
@@ -100,7 +102,7 @@ const SigningHarness = () => {
     <>
       <ProtocolSignaturesCard
         protocol={item}
-        permissions={getProtocolPermissions(item, 'STAFF')}
+        actions={item.availableActions}
         signing={mutation.isPending}
         onSign={() => mutation.sign({ protocol: item })}
       />
@@ -135,7 +137,7 @@ describe('collective protocol signing API and mutation', () => {
     let requestCount = 0;
     let signed = false;
     server.use(
-      http.get('http://localhost/api/protocols/42', () => HttpResponse.json(signed ? successResponse : { data: protocol({ permissions: { canSign: true } }) })),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json(signed ? successResponse : { data: protocol() })),
       http.post('http://localhost/api/protocols/42/sign', async () => {
         requestCount += 1;
         await delay(100);
@@ -176,7 +178,7 @@ describe('signature card states and locking', () => {
     render(
       <ProtocolSignaturesCard
         protocol={item}
-        permissions={getProtocolPermissions(item, 'LABORATORY')}
+        actions={item.availableActions}
         onSign={vi.fn()}
       />,
     );
@@ -188,7 +190,7 @@ describe('signature card states and locking', () => {
     const { rerender } = render(
       <ProtocolSignaturesCard
         protocol={alreadySigned}
-        permissions={getProtocolPermissions(alreadySigned, 'STAFF')}
+        actions={alreadySigned.availableActions}
         onSign={vi.fn()}
       />,
     );
@@ -199,7 +201,7 @@ describe('signature card states and locking', () => {
     rerender(
       <ProtocolSignaturesCard
         protocol={limit}
-        permissions={getProtocolPermissions(limit, 'STAFF')}
+        actions={limit.availableActions}
         onSign={vi.fn()}
       />,
     );
@@ -207,40 +209,31 @@ describe('signature card states and locking', () => {
 
     rerender(
       <ProtocolSignaturesCard
-        protocol={protocol({ permissions: {}, availableActions: {} })}
-        permissions={getProtocolPermissions(protocol({ permissions: {}, availableActions: {} }), 'CLIENT')}
+        protocol={protocol({ availableActions: {} })}
+        actions={{}}
         onSign={vi.fn()}
       />,
     );
     expect(screen.queryByRole('button', { name: 'Подписать ЭЦП' })).toBeNull();
   });
 
-  it('keeps signed protocol content read-only even if backend returns canEdit', () => {
+  it('uses canonical actions without deriving them from signed status', () => {
     const item = protocol({
       status: 'SIGNED',
       signatureCount: 1,
-      permissions: {
-        canEdit: true,
-        canCalculate: true,
-        canGenerateDocuments: true,
-        canCreateCorrection: true,
-        canSign: true,
-      },
       availableActions: {
-        edit: false,
+        edit: true,
         calculate: true,
-        generateDocuments: true,
+        generateDocx: true,
         createCorrection: true,
         sign: true,
       },
     });
-    expect(getProtocolPermissions(item, 'MANAGER')).toMatchObject({
-      canEdit: false,
-      canCalculate: true,
-      canGenerateDocuments: true,
-      canReplace: true,
-      canSign: true,
-    });
+    expect(hasProtocolAction(item, 'edit')).toBe(true);
+    expect(hasProtocolAction(item, 'calculate')).toBe(true);
+    expect(hasProtocolAction(item, 'generateDocx')).toBe(true);
+    expect(hasProtocolAction(item, 'createCorrection')).toBe(true);
+    expect(hasProtocolAction(item, 'sign')).toBe(true);
   });
 
   it('sorts signatures by signedAt and omits an absent position', () => {
@@ -261,7 +254,7 @@ describe('signature card states and locking', () => {
     render(
       <ProtocolSignaturesCard
         protocol={item}
-        permissions={getProtocolPermissions(item, 'STAFF')}
+        actions={item.availableActions}
         onSign={vi.fn()}
       />,
     );
@@ -275,7 +268,7 @@ describe('signature card states and locking', () => {
     const { rerender } = render(
       <ProtocolSignaturesCard
         protocol={item}
-        permissions={getProtocolPermissions(item, 'STAFF')}
+        actions={item.availableActions}
         loading
         onSign={vi.fn()}
       />,
@@ -284,12 +277,49 @@ describe('signature card states and locking', () => {
     rerender(
       <ProtocolSignaturesCard
         protocol={item}
-        permissions={getProtocolPermissions(item, 'STAFF')}
+        actions={item.availableActions}
         onSign={vi.fn()}
       />,
     );
     expect(screen.getByText('Протокол ещё не подписан')).toBeTruthy();
     expect(screen.queryByText('42')).toBeNull();
+  });
+});
+
+describe('canonical protocol document and workflow actions', () => {
+  const callbacks = {
+    onDocx: vi.fn(), onGenerateDocx: vi.fn(), onGeneratePdf: vi.fn(), onCorrection: vi.fn(),
+    onReturnForRevision: vi.fn(), onCancel: vi.fn(), onArchive: vi.fn(), onHistory: vi.fn(),
+  };
+
+  it('connects returnToDraft, viewAudit and format-specific initial generation actions', () => {
+    const item = protocol({ hasDocx: false, hasPdf: false });
+    render(<ProtocolActionsMenu protocol={item} actions={{ returnToDraft: true, viewAudit: true, generateDocx: true, generatePdf: true } as never} busy={false} {...callbacks} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ещё' }));
+    expect(screen.getByRole('button', { name: 'Вернуть в черновик' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Посмотреть историю' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Сгенерировать DOCX' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Сгенерировать PDF' })).toBeTruthy();
+  });
+
+  it('shows correction for SIGNED and hides history when viewAudit is false', () => {
+    const item = protocol({ status: 'SIGNED' });
+    render(<ProtocolActionsMenu protocol={item} actions={{ createCorrection: true, viewAudit: false } as never} busy={false} {...callbacks} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ещё' }));
+    expect(screen.getByRole('button', { name: 'Создать исправленную версию' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Посмотреть историю' })).toBeNull();
+  });
+
+  it('does not regenerate APPROVED documents unless backend explicitly allows each action', () => {
+    const item = protocol({ status: 'APPROVED', hasDocx: true, hasPdf: true });
+    const documentCallbacks = { onPreview: vi.fn(), onGenerateDocx: vi.fn(), onGeneratePdf: vi.fn(), onDocx: vi.fn(), onPdf: vi.fn(), onSign: vi.fn() };
+    const { rerender } = render(<ProtocolDocumentsTab protocol={item} busy={false} actions={{} as never} {...documentCallbacks} />);
+    expect(screen.queryByRole('button', { name: 'Перегенерировать DOCX' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Перегенерировать PDF' })).toBeNull();
+
+    rerender(<ProtocolDocumentsTab protocol={item} busy={false} actions={{ regenerateDocx: true, regeneratePdf: true } as never} {...documentCallbacks} />);
+    expect(screen.getByRole('button', { name: 'Перегенерировать DOCX' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Перегенерировать PDF' })).toBeTruthy();
   });
 });
 
@@ -304,4 +334,11 @@ describe('collective signing errors', () => {
       response: { status: 409, data: { code } },
     })).toBe(message);
   });
+
+  it.each(['PROTOCOL_CONTENT_CHANGED', 'PDF_STALE', 'PDF_CONTENT_VERSION_MISMATCH', 'APPROVED_PDF_HASH_MISMATCH'])(
+    'blocks SIGN with the stale PDF message for %s',
+    (code) => {
+      expect(protocolSignErrorMessage({ isAxiosError: true, response: { status: 409, data: { code } } })).toBe(PROTOCOL_STALE_PDF_MESSAGE);
+    },
+  );
 });

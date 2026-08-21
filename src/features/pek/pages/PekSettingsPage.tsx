@@ -12,8 +12,8 @@ import { parseApiError } from '../../../services/apiHelpers';
 import { useAuth } from '../../../contexts/AuthContext';
 import { usePekScope } from '../hooks/usePekScope';
 import { mapPekError } from '../utils/pekErrorMapper';
+import { handlePekMutationError } from '../utils/pekMutationError';
 import { retryPekQuery } from '../utils/pekQueryPolicy';
-import { canManagePekSettings, canRunPekScheduler } from '../permissions/pekAccess';
 
 const booleanFields: Array<[keyof PekSettingsUpdateRequest, string]> = [
   ['includeOnlySignedProtocols', 'Учитывать только подписанные протоколы'],
@@ -30,7 +30,7 @@ const booleanFields: Array<[keyof PekSettingsUpdateRequest, string]> = [
 ];
 
 const toRequest = (value: NonNullable<Awaited<ReturnType<typeof pekApi.getSettings>>>): PekSettingsUpdateRequest => {
-  const { companyId: _companyId, defaultResponsibleUser: _user, defaultLaboratory: _laboratory, version: _version, ...request } = value;
+  const { companyId: _companyId, defaultResponsibleUser: _user, defaultLaboratory: _laboratory, version: _version, availableActions: _actions, ...request } = value;
   return request;
 };
 
@@ -50,9 +50,13 @@ const PekSettingsPage = () => {
   const assignees = useQuery({ queryKey: pekKeys.assignees(['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal) });
   const laboratories = useQuery({ queryKey: ['laboratories', 'pek-settings', `user:${user?.id ?? 'anonymous'}`], queryFn: ({ signal }) => getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }, signal) });
   const runScheduler = useMutation({
-    mutationFn: () => pekApi.runSchedulerNow(selectedCompanyId),
+    mutationFn: () => pekApi.runSchedulerNow(selectedCompanyId, settings.data!.version),
     onSuccess: () => setMessage('Ручной запуск планировщика ПЭК запущен.'),
-    onError: (error) => setMessage(mapPekError(error).message),
+    onError: async (error) => {
+      const mapped = await handlePekMutationError(error, () => settings.refetch());
+      setMessage(mapped.message);
+    },
+    retry: false,
   });
   const [form, setForm] = useState<PekSettingsUpdateRequest | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -78,10 +82,10 @@ const PekSettingsPage = () => {
       setMessage('Настройки ПЭК сохранены.');
     },
     onError: async (error) => {
-      const mapped = mapPekError(error);
+      const mapped = await handlePekMutationError(error, () => settings.refetch());
       const fields = Object.entries(mapped.fieldErrors).map(([field, value]) => `${field}: ${value}`).join('; ');
       setMessage(`${mapped.message || parseApiError(error, 'Не удалось сохранить настройки ПЭК.').message}${mapped.code ? ` (${mapped.code})` : ''}${fields ? `. ${fields}` : ''}`);
-      await settings.refetch();
+      if (mapped.message !== 'Данные были изменены другим пользователем') await settings.refetch();
     },
   });
   const companyInput = <><TextField fullWidth type="number" label="Компания (PEK scope)" value={selectedCompanyId || ''} inputProps={{ min: 1, list: 'pek-settings-companies' }} onChange={(event) => { setForm(null); setMessage(null); setSearchParams(event.target.value ? { companyId: event.target.value } : {}, { replace: true }); }} /><datalist id="pek-settings-companies">{scope.companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</datalist></>;
@@ -89,8 +93,8 @@ const PekSettingsPage = () => {
   if (settings.isLoading) return <PekLoading />;
   if (settings.isError) return <PekQueryError error={settings.error} resource="настройки ПЭК" retry={() => void settings.refetch()} />;
   if (!settings.data || !form) return <PekState title="Настройки ПЭК не получены" message="Сервис не вернул данные настроек." />;
-  const editable = canManagePekSettings(user);
-  const canRunScheduler = canRunPekScheduler(user);
+  const editable = settings.data.availableActions?.edit === true;
+  const canRunScheduler = settings.data.availableActions?.runScheduler === true;
   const dirty = settings.data ? JSON.stringify(form) !== JSON.stringify(toRequest(settings.data)) : false;
   const set = <K extends keyof PekSettingsUpdateRequest>(key: K, value: PekSettingsUpdateRequest[K]) => setForm((current) => current ? { ...current, [key]: value } : current);
   return <div className="space-y-5">
@@ -110,7 +114,7 @@ const PekSettingsPage = () => {
       {editable && <div className="flex justify-end gap-3"><Button variant="outlined" disabled={!dirty || save.isPending} onClick={() => settings.data && setForm(toRequest(settings.data))}>Сбросить</Button><Button variant="contained" disabled={!dirty || save.isPending} onClick={() => save.mutate(form)}>{save.isPending ? 'Сохранение…' : 'Сохранить'}</Button></div>}
     </section>
     <section className="space-y-4 rounded-2xl border bg-white p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-black">Автоматизация</h2><p className="text-sm text-slate-500">Параметры берутся из настроек ПЭК выбранной компании.</p></div>{canRunScheduler && <Button variant="contained" disabled={runScheduler.isPending} onClick={() => runScheduler.mutate()}>{runScheduler.isPending ? 'Запуск…' : 'Запустить сейчас'}</Button>}</div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-black">Автоматизация</h2><p className="text-sm text-slate-500">Параметры берутся из настроек ПЭК выбранной компании.</p></div>{canRunScheduler && <Button variant="contained" disabled={runScheduler.isPending} onClick={() => runScheduler.mutate()}>{runScheduler.isPending ? 'Запуск…' : 'Запустить для выбранной компании'}</Button>}</div>
       <p className="text-sm text-slate-600">Автосбор протоколов: <strong>{settings.data.autoCollectProtocols ? 'включён' : 'выключен'}</strong>. Период отчёта: <strong>{settings.data.defaultReportType === 'YEARLY' ? 'год' : 'квартал'}</strong>.</p>
     </section>
   </div>;

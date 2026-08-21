@@ -1,4 +1,3 @@
-import { fetcher } from './api';
 import type { ServiceItem } from '../types';
 import {
   activeServices,
@@ -9,6 +8,7 @@ import {
 } from '../content/serviceCatalog';
 import type { ServiceContent } from '../content/types';
 import { trackEvent } from './analytics';
+import { publicContentRepository } from '../content/apiRepository';
 
 export interface ServiceCatalogResult {
   items: ServiceItem[];
@@ -30,7 +30,7 @@ export const catalogItemToServiceItem = (service: ServiceCatalogItem): ServiceIt
   icon: service.icon,
 });
 
-export const fallbackServices: ServiceItem[] = activeServices.map(catalogItemToServiceItem);
+export const fallbackServices: ServiceItem[] = import.meta.env.DEV ? activeServices.map(catalogItemToServiceItem) : [];
 
 const canonicalizeApiServices = (items: ServiceContent[]): ServiceItem[] => {
   return items.flatMap((apiItem) => {
@@ -58,12 +58,13 @@ const devLog = (message: string, error?: unknown) => {
 
 export const getServiceCatalog = async (): Promise<ServiceCatalogResult> => {
   try {
-    const services = await fetcher<ServiceContent[]>('/public/content/services');
+    const services = await publicContentRepository.getServices();
     if (Array.isArray(services)) {
       return { items: canonicalizeApiServices(services), source: 'api' };
     }
     throw new Error('Public services API returned an invalid payload.');
   } catch (error) {
+    if (!import.meta.env.DEV) throw error;
     devLog('API request failed; the complete local catalog is used.', error);
     trackEvent('content_fallback_usage', { collection: 'services' });
   }
@@ -77,9 +78,11 @@ export const getServiceById = async (id: string): Promise<ServiceItem | undefine
   const catalogItem = getCatalogService(slug);
   if (!catalogItem) return undefined;
   try {
-    const apiItem = await fetcher<ServiceContent>(`/public/content/services/${encodeURIComponent(slug)}`);
+    const apiItem = await publicContentRepository.getServiceBySlug(slug);
+    if (!apiItem) return undefined;
     return canonicalizeApiServices([apiItem])[0] ?? catalogItemToServiceItem(catalogItem);
   } catch (error) {
+    if (!import.meta.env.DEV) throw error;
     devLog(`Service ${slug} loaded from the local catalog.`, error);
     trackEvent('content_fallback_usage', { collection: 'service', slug });
     return catalogItemToServiceItem(catalogItem);

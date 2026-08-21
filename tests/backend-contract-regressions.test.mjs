@@ -21,7 +21,8 @@ test('protocol revision and normative confirm use supported contracts', async ()
   const protocols = await read('src/services/apiProtocolService.ts');
   const normatives = await read('src/services/normativeService.ts');
   assert.match(protocols, /return-for-revision/);
-  assert.doesNotMatch(protocols, /return-to-draft/);
+  assert.match(protocols, /return-to-draft/);
+  assert.match(protocols, /returnToDraft[\s\S]+reason\.trim\(\)/);
   assert.match(normatives, /formData\.append\('file', originalFile\)/);
   assert.match(normatives, /'\/normatives\/import\/confirm'/);
   assert.doesNotMatch(normatives, /\/normatives\/import\/\$\{encodeURIComponent\(importId\)\}\/confirm/);

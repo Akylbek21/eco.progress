@@ -87,6 +87,7 @@ export type PekPermit = {
     edit: boolean;
     markExpired: boolean;
     revoke: boolean;
+    delete?: boolean;
   };
 };
 export type PekPermitCreateRequest = {
@@ -105,6 +106,8 @@ export type PekPermitCreateRequest = {
 export type PekPermitUpdateRequest = Partial<Omit<PekPermitCreateRequest, 'companyId' | 'objectId'>> & {
   version: number;
 };
+export type PekPermitStatusRequest = { version: number; status: PekPermitStatus; comment: string };
+export type PekPermitDeleteRequest = { version: number };
 export type PekPermitHistoryEntry = {
   fromStatus: PekPermitStatus | null;
   toStatus: PekPermitStatus;
@@ -124,9 +127,16 @@ export type PekCompanyMembership = {
   status: PekMembershipStatus;
   createdAt: string | null;
   updatedAt: string | null;
+  version: number;
+  companyPermissions?: Record<string, boolean>;
+  availableActions?: {
+    add?: boolean;
+    edit?: boolean;
+    deactivate?: boolean;
+  };
 };
 export type PekAddMembershipRequest = { email: string; roleCode: string };
-export type PekUpdateMembershipRequest = { roleCode?: string; status?: PekMembershipStatus };
+export type PekUpdateMembershipRequest = { version: number; roleCode?: string; status?: PekMembershipStatus };
 export type PekAvailableActionCode =
   | 'EDIT'
   | 'SUBMIT_REVIEW'
@@ -144,6 +154,17 @@ export type PekAvailableAction = {
   requiresComment?: boolean;
 };
 export type PekAvailableActions = readonly PekAvailableAction[];
+
+export type PekProgramAvailableActions = {
+  edit: boolean;
+  submit: boolean;
+  approve: boolean;
+  returnForRevision: boolean;
+  activate: boolean;
+  archive: boolean;
+  clone: boolean;
+  uploadDocument: boolean;
+};
 
 export interface PekControlItem {
   id?: PekId;
@@ -234,8 +255,9 @@ export interface PekProgram {
   responsibleUserId?: PekId | null;
   readinessPercent?: number;
   updatedAt?: string;
-  availableActions: PekAvailableAction[];
+  availableActions: PekProgramAvailableActions;
   readOnly: boolean;
+  readiness?: PekReadiness | null;
   controlItems?: PekControlItem[];
   indicators?: PekIndicator[];
   measures?: PekMeasure[];
@@ -269,7 +291,9 @@ export interface PekMonitoringDirection {
 export interface PekProgramMonitoringResponse {
   programId: number;
   items: PekMonitoringDirection[];
-  availableActions: Record<string, boolean>;
+  availableActions: {
+    create: boolean;
+  };
 }
 export interface PekMonitoringMutationRequest {
   monitoringType: PekMonitoringType;
@@ -344,6 +368,7 @@ export interface PekReport {
   linkedProtocolCount: number;
   linkedProtocolNumbers: string[];
   lastCollectedAt?: string | null;
+  availableActions: Record<string, boolean>;
   returnInfo?: {
     reason?: string;
     comment?: string;
@@ -357,10 +382,12 @@ export interface PekReport {
 export type PekReportFilters = {
   companyId: number;
   objectId: number;
+  programId?: number;
   status?: PekReportStatus;
   issue?: 'OPEN_EXCEEDANCE' | 'UNMATCHED_SOURCE' | 'MISSING_PROTOCOL';
   page?: number;
   size?: number;
+  sort?: string;
 };
 export type PekReportCreationParams = {
   companyId: number;
@@ -427,7 +454,6 @@ export interface PekHistoryItem {
   newValue?: unknown;
   createdAt: string;
 }
-export type PekMutationBody = Record<string, unknown> & { version?: number };
 export type PekBlobResult = { blob: Blob; filename: string };
 export interface PekReportPackage {
   id: number;
@@ -529,6 +555,11 @@ export interface PekReportSource {
   controlItemName?: string | null;
   programIndicatorName?: string | null;
   createdAt?: string | null;
+  availableActions?: {
+    match?: boolean;
+    exclude?: boolean;
+    restore?: boolean;
+  };
 }
 
 export interface PekReportHistoryEntry {
@@ -583,18 +614,18 @@ export interface PekReadinessResponse {
   issues: Array<{ code: string; section: string; severity: string; message: string; blocking: boolean }>;
 }
 
-export interface PekReportDocumentVersion {
+export interface PekDocumentVersion {
   id: number;
-  reportId: number;
   version: number;
+  generatedAt: string;
+  generatedById?: number;
+  generatedByName?: string;
+  sourceContentRevision: number;
+  currentContentRevision: number;
+  stale: boolean;
   hasDocx: boolean;
   hasPdf: boolean;
-  contentHash?: string | null;
-  generatedAt?: string | null;
-  generatedBy?: number | null;
-  generatedByName?: string | null;
-  status?: string | null;
-  stale?: boolean | null;
+  sha256?: string;
 }
 
 export interface PekReportSignature {
@@ -610,7 +641,6 @@ export interface PekReportSignature {
   certificateSerial?: string | null;
   certificateOrganization?: string | null;
   verified: boolean;
-  signatureFileId?: string | number | null;
 }
 
 export interface PekExceedance {
@@ -656,6 +686,21 @@ export interface PekTransitionExceedanceRequest {
   resolutionComment?: string;
 }
 
+export interface PekCorrectiveAction {
+  id: number;
+  exceedanceId: number;
+  description: string;
+  responsibleUserId?: number | null;
+  dueDate?: string | null;
+  status: string;
+  version: number;
+  availableActions: Record<string, boolean>;
+}
+
+export type PekCorrectiveActionCreateRequest = Omit<PekCorrectiveAction, 'id' | 'exceedanceId' | 'status' | 'version' | 'availableActions'>;
+export type PekCorrectiveActionUpdateRequest = Partial<PekCorrectiveActionCreateRequest> & { version: number };
+export type PekCorrectiveActionStatusRequest = { version: number; status: string; comment?: string };
+
 export interface PekSettings {
   companyId: number;
   defaultResponsibleUserId?: number | null;
@@ -677,9 +722,14 @@ export interface PekSettings {
   notifyExceedances: boolean;
   notifyReportReturned: boolean;
   version: number;
+  availableActions?: {
+    edit?: boolean;
+    runScheduler?: boolean;
+    runSchedulerGlobal?: boolean;
+  };
 }
 
-export type PekSettingsUpdateRequest = Omit<PekSettings, 'companyId' | 'defaultResponsibleUser' | 'defaultLaboratory' | 'version'>;
+export type PekSettingsUpdateRequest = Omit<PekSettings, 'companyId' | 'defaultResponsibleUser' | 'defaultLaboratory' | 'version' | 'availableActions'>;
 
 export type PekProgramListItem = PekProgram;
 export type PekProgramDetails = PekProgram;

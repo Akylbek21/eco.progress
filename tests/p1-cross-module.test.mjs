@@ -4,23 +4,23 @@ import test from 'node:test';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('protocol calculation sends version and refreshes on a version conflict', async () => {
+test('protocol calculation sends version and surfaces a version conflict without retrying', async () => {
   const api = await read('src/services/apiProtocolService.ts');
   const table = await read('src/components/protocols/ProtocolResultsTable.tsx');
   const editor = await read('src/pages/ProtocolEditorPage.tsx');
-  assert.match(api, /results\/\$\{resultId\}\/calculate`[\s\S]*\{ version \}/);
-  assert.match(api, /\$\{protocolId\}\/calculate`, \{ version \}/);
+  assert.match(api, /results\/\$\{resultId\}\/calculate`[\s\S]*\{ version: requireProtocolVersion\(version\) \}/);
+  assert.match(api, /\$\{protocolId\}\/calculate`, \{ version: requireProtocolVersion\(version\) \}/);
   assert.match(table, /isProtocolVersionConflict[\s\S]*await onImported\(\)/);
-  assert.match(editor, /isProtocolVersionConflict[\s\S]*protocolService\.getProtocol\(protocol\.id\)/);
+  assert.match(editor, /isProtocolVersionConflict[\s\S]*setConflictOpen\(true\)/);
 });
 
 test('PEK documents use versions, signatures and exact backend download/sign actions', async () => {
   const source = await read('src/features/pek/components/documents/PekReportDocuments.tsx');
   assert.match(source, /getReportDocumentVersions/);
   assert.match(source, /getReportSignatures/);
-  assert.match(source, /availableActions\.downloadDocx === true/);
-  assert.match(source, /availableActions\.downloadPdf === true/);
-  assert.match(source, /availableActions\.sign === true/);
+  assert.match(source, /latestVersion\?\.hasDocx === true/);
+  assert.match(source, /latestVersion\?\.hasPdf === true/);
+  assert.match(source, /downloadCms\.mutate\(signature\.id\)/);
 });
 
 test('company and PEK memberships use only the confirmed CRUD endpoints and reload after mutations', async () => {
@@ -39,8 +39,8 @@ test('company and PEK memberships use only the confirmed CRUD endpoints and relo
   assert.match(companies, /hasCompanyPermission\(user, 'COMPANY_EDIT'\)/);
   assert.match(pekService, /getPekMemberships:[\s\S]*`\/pek\/companies\/\$\{companyId\}\/members`/);
   assert.match(pekService, /addPekMembership:[\s\S]*api\.post\(`\/pek\/companies\/\$\{companyId\}\/members`, body\)/);
-  assert.match(pekService, /updatePekMembership:[\s\S]*api\.patch\(`\/pek\/companies\/\$\{companyId\}\/members\/\$\{membershipId\}`, body\)/);
-  assert.match(pekService, /deactivatePekMembership:[\s\S]*api\.delete\(`\/pek\/companies\/\$\{companyId\}\/members\/\$\{membershipId\}`\)/);
+  assert.match(pekService, /updatePekMembership:[\s\S]*api\.patch\(`\/pek\/companies\/\$\{companyId\}\/members\/\$\{membershipId\}`, payload, pekMutationOptions\(version\)\)/);
+  assert.match(pekService, /deactivatePekMembership:[\s\S]*api\.delete\(`\/pek\/companies\/\$\{companyId\}\/members\/\$\{membershipId\}`, pekMutationOptions\(version\)\)/);
   assert.match(pek, /invalidateQueries/);
 });
 

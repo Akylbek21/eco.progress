@@ -17,10 +17,11 @@
     "seo:generate": "npm run generate:sitemap",
     "seo:validate": "npm run seo:audit",
     "build:seo": "npm run build && npm run seo:audit",
-    "build": "npm run generate:sitemap && tsc && vite build && npm run test:production-no-msw && npm run test:production-api-base && npm run prerender && npm run seo:audit",
+    "build": "npm run images:optimize && npm run generate:sitemap && tsc && vite build && npm run test:production-no-msw && npm run test:production-api-base && npm run prerender && npm run seo:audit && npm run test:public-performance",
     "test:production-no-msw": "node scripts/verify-production-no-msw.mjs",
     "test:production-api-base": "node scripts/verify-production-api-base.mjs",
-    "test": "node --test tests/*.test.mjs && vitest run --maxWorkers=1 tests/company-module.test.tsx tests/staff-document-repository.test.ts tests/lab-journal-api.test.ts tests/laboratory-api.test.ts tests/laboratory-components.test.tsx tests/normative-search-api.test.tsx tests/protocol-domain.test.ts tests/protocol-details.test.ts tests/protocol-water.test.tsx tests/protocol-overhaul.test.ts tests/protocol-signatures.test.tsx tests/protocol-current-backend.test.ts tests/protocol-wizard-v2.test.ts tests/protocol-second-fix.test.ts tests/pek-module.test.tsx tests/pek-package.test.ts tests/pek-monitoring.test.ts tests/signature-documents.test.ts",
+    "test:public-performance": "node scripts/verify-public-performance.mjs",
+    "test": "node --test tests/*.test.mjs && vitest run --maxWorkers=1 tests/company-module.test.tsx tests/staff-document-repository.test.ts tests/lab-journal-api.test.ts tests/laboratory-api.test.ts tests/laboratory-components.test.tsx tests/normative-search-api.test.tsx tests/protocol-domain.test.ts tests/protocol-details.test.ts tests/protocol-water.test.tsx tests/protocol-overhaul.test.ts tests/protocol-signatures.test.tsx tests/protocol-current-backend.test.ts tests/protocol-wizard-v2.test.ts tests/protocol-second-fix.test.ts tests/pek-module.test.tsx tests/pek-package.test.ts tests/pek-monitoring.test.ts tests/pek-p0-if-match.test.ts tests/pek-p1-frontend.test.ts tests/pek-p2-documents.test.ts tests/signature-documents.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

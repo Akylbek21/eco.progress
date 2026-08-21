@@ -14,10 +14,12 @@ const classes = {
   danger: 'bg-rose-50 text-rose-800 ring-rose-200',
 };
 
-const ProtocolStatusBadge = ({ status }: { status: ProtocolStatus | string }) => {
+const ProtocolStatusBadge = ({ status, publishedAt }: { status: ProtocolStatus | string; publishedAt?: string | null }) => {
   const normalized = normalizeProtocolStatus(status);
   const config = protocolStatusConfig[normalized];
-  const label = normalized === 'UNKNOWN' ? `Неизвестный статус: ${String(status || '—')}` : config.label;
+  const label = normalized === 'UNKNOWN'
+    ? `Неизвестный статус: ${String(status || '—')}`
+    : normalized === 'SIGNED' && publishedAt ? 'Опубликован' : config.label;
   return <span className={clsx('inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1', classes[config.color])}>{label}</span>;
 };
 

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Button from '../../../../components/ui/Button';
 import { useToast } from '../../../../hooks/useToast';
-import type { PekProgramDocument, PekProgramStatus } from '../../api/pekContracts';
+import type { PekProgramDocument } from '../../api/pekContracts';
 import { pekKeys } from '../../api/pekQueryKeys';
 import { pekApi } from '../../api/pekService';
 import { mapPekError } from '../../utils/pekErrorMapper';
@@ -19,15 +19,12 @@ const saveBlob = (blob: Blob, filename: string) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
-const FINAL_PROGRAM_STATUSES = new Set<PekProgramStatus>(['APPROVED', 'ACTIVE', 'ARCHIVED']);
-
-const PekProgramDocuments = ({ companyId, programId, version, status, documents, readOnly }: {
+const PekProgramDocuments = ({ companyId, programId, version, documents, canUpload }: {
   companyId?: number;
   programId: number;
   version: number;
-  status: PekProgramStatus | string;
   documents: PekProgramDocument[];
-  readOnly: boolean;
+  canUpload: boolean;
 }) => {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -36,7 +33,6 @@ const PekProgramDocuments = ({ companyId, programId, version, status, documents,
   const [documentType, setDocumentType] = useState('OTHER');
   const [progress, setProgress] = useState(0);
   const [validationError, setValidationError] = useState('');
-  const documentsReadOnly = readOnly || FINAL_PROGRAM_STATUSES.has(status as PekProgramStatus);
 
   const refetchProgramAndDocuments = async () => {
     const actual = await pekApi.getProgram(programId);
@@ -66,10 +62,10 @@ const PekProgramDocuments = ({ companyId, programId, version, status, documents,
   };
   const upload = useMutation({
     mutationFn: async () => {
-      if (documentsReadOnly) throw new Error('Программа находится в финальном статусе. Изменение документов запрещено.');
+      if (!canUpload) throw new Error('Backend не разрешил загрузку документа.');
       if (!file) throw new Error('Выберите файл.');
       controller.current = new AbortController();
-      return pekApi.uploadProgramDocument(programId, file, documentType, {
+      return pekApi.uploadProgramDocument(programId, file, documentType, version, {
         signal: controller.current.signal,
         onUploadProgress: (event) => setProgress(event.total ? Math.round(event.loaded * 100 / event.total) : 0),
       });
@@ -93,7 +89,7 @@ const PekProgramDocuments = ({ companyId, programId, version, status, documents,
   });
 
   return <div className="space-y-4">
-    {!documentsReadOnly && <div
+    {canUpload && <div
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => { event.preventDefault(); selectFile(event.dataTransfer.files[0] || null); }}
       className="rounded-2xl border-2 border-dashed border-slate-300 p-5"

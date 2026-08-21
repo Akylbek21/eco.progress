@@ -5,6 +5,8 @@ import { COMPANY } from '../src/config/companyData.ts';
 import { activeServices, formatKztPrice, PRELIMINARY_PRICE_NOTICE } from '../src/content/serviceCatalog.ts';
 import { serviceContentMap } from '../src/content/services/serviceContent.ts';
 import { aboutPublicContent } from '../src/content/aboutPublicContent.ts';
+import { expertMap, isCompleteExpert } from '../src/content/experts/experts.ts';
+import { createSchemaGraph } from '../src/seo/schemaGraph.ts';
 
 const root = process.cwd();
 const distDir = path.join(root, 'dist');
@@ -77,16 +79,6 @@ const buildBreadcrumbSchema = (items) => ({
   })),
 });
 
-const buildFaqSchema = (faq = []) => ({
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: faq.map((item) => ({
-    '@type': 'Question',
-    name: item.question,
-    acceptedAnswer: { '@type': 'Answer', text: item.answer },
-  })),
-});
-
 const webSiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
@@ -107,31 +99,54 @@ const buildServiceSchema = (page) => ({
     ...(page.type === 'service-city' ? { availableChannel: { '@type': 'ServiceChannel', serviceUrl: page.canonical } } : {}),
 });
 
+const articleExperts = (article) => {
+  if (article.reviewStatus !== 'approved') return {};
+  const authorCandidate = article.author || expertMap.get(article.authorSlug);
+  const reviewerCandidate = article.reviewer || expertMap.get(article.reviewerSlug);
+  return {
+    author: isCompleteExpert(authorCandidate) ? authorCandidate : undefined,
+    reviewer: isCompleteExpert(reviewerCandidate) ? reviewerCandidate : undefined,
+  };
+};
+
+const personSchema = (expert, id) => ({
+  '@context': 'https://schema.org', '@type': 'Person', '@id': id, name: expert.fullName,
+  jobTitle: expert.position, description: expert.bio, image: expert.photo, url: expert.profileUrl,
+  knowsAbout: expert.specialization,
+});
+
+const articleSchemaNodes = (article, canonical, modified = article.dateModified || article.lastmod) => {
+  const { author, reviewer } = articleExperts(article);
+  const authorId = author ? `${canonical}#person` : undefined;
+  const reviewerId = reviewer ? `${canonical}#person-reviewer` : undefined;
+  return [
+    {
+      '@context': 'https://schema.org', '@type': 'Article', headline: article.h1, description: article.description,
+      image: `${SITE_URL}${article.image || '/og-cover.jpg'}`,
+      author: authorId ? { '@id': authorId } : { '@type': 'Organization', '@id': `${SITE_URL}/#organization` },
+      ...(reviewerId ? { reviewedBy: { '@id': reviewerId } } : {}),
+      publisher: { '@type': 'Organization', '@id': `${SITE_URL}/#organization` },
+      datePublished: article.datePublished, dateModified: modified, mainEntityOfPage: canonical,
+    },
+    ...(author ? [personSchema(author, authorId)] : []),
+    ...(reviewer ? [personSchema(reviewer, reviewerId)] : []),
+  ];
+};
+
 const schemaForSeoPage = (page) => [
   buildOrganizationSchema(),
-  page.type === 'service-city' || page.type === 'service'
-    ? buildServiceSchema(page)
-    : { '@context': 'https://schema.org', '@type': 'WebPage', name: page.h1, description: page.description, url: page.canonical, dateModified: page.lastmod || LASTMOD },
+  ...(page.type === 'article'
+    ? articleSchemaNodes(page, page.canonical, page.lastmod || LASTMOD)
+    : page.type === 'service-city' || page.type === 'service'
+    ? [buildServiceSchema(page)]
+    : [{ '@context': 'https://schema.org', '@type': 'WebPage', name: page.h1, description: page.description, url: page.canonical, dateModified: page.lastmod || LASTMOD }]),
   buildBreadcrumbSchema(page.breadcrumbs),
-  buildFaqSchema(page.faq),
 ];
 
 const schemaForArticle = (article) => [
   buildOrganizationSchema(),
-  {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: article.h1,
-    description: article.description,
-    image: `${SITE_URL}${article.image}`,
-    author: { '@type': 'Organization', name: 'ECOPROGRESS GROUP' },
-    publisher: { '@type': 'Organization', name: 'ECOPROGRESS GROUP' },
-    datePublished: article.datePublished,
-    dateModified: article.dateModified,
-    mainEntityOfPage: `${SITE_URL}${article.slug}`,
-  },
+  ...articleSchemaNodes(article, `${SITE_URL}${article.slug}`),
   buildBreadcrumbSchema([{ label: 'Главная', path: '/' }, { label: 'Статьи', path: '/news' }, { label: article.h1, path: article.slug }]),
-  buildFaqSchema(article.faq),
 ];
 
 const renderHeadBlock = ({ title, description, canonical, type = 'website', schema, robots = 'index,follow', ogImage = OG_IMAGE, ogImageWidth = 1200, ogImageHeight = 630, datePublished, dateModified }) => {
@@ -159,7 +174,7 @@ const renderHeadBlock = ({ title, description, canonical, type = 'website', sche
     `<meta name="twitter:description" content="${escapeHtml(description)}" />`,
     `<meta name="twitter:image" content="${escapeHtml(ogImage)}" />`,
     verification,
-    `<script id="page-schema-json-ld" type="application/ld+json">${JSON.stringify(schema)}</script>`,
+    `<script id="page-schema-json-ld" data-ecoprogress-schema="true" type="application/ld+json">${JSON.stringify(createSchemaGraph(schema, canonical))}</script>`,
   ].join('\n    ');
 };
 
@@ -175,6 +190,18 @@ const renderLinks = (links = []) => links.map((item) => `<a href="${escapeHtml(i
 const renderList = (items = []) => `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
 const renderCards = (items = [], title = (item) => item.title, body = (item) => item.description) =>
   items.map((item) => `<article><h3>${escapeHtml(title(item))}</h3>${body(item) ? `<p>${escapeHtml(body(item))}</p>` : ''}</article>`).join('');
+const renderVisibleFaq = (faq = []) => faq.map((item) => {
+  const explanation = String(item.explanation || item.answer || '').trim();
+  const shortAnswer = String(item.shortAnswer || explanation.match(/^.*?[.!?](?:\s|$)/)?.[0] || explanation).trim();
+  return `<article><h3>${escapeHtml(item.question)}</h3><p><strong>Короткий ответ:</strong> ${escapeHtml(shortAnswer)}</p><p><strong>Подробнее:</strong> ${escapeHtml(explanation)}</p></article>`;
+}).join('');
+const expertName = (slug) => expertMap.get(slug)?.fullName || 'Редакция EcoProgress';
+const renderArticleTrust = (article) => `
+  <section><h2>Официальные источники</h2><ul>${(article.sources || []).map((source) => `<li><a href="${escapeHtml(source.url)}" rel="noopener noreferrer">${escapeHtml(source.title)}</a></li>`).join('')}</ul></section>
+  <aside><h2>Автор</h2><p>${escapeHtml(expertName(article.authorSlug))}</p></aside>
+  <aside><h2>Экспертная проверка</h2><p>${article.reviewerSlug ? escapeHtml(expertName(article.reviewerSlug)) : 'Экспертная проверка не завершена'}</p></aside>
+  <p>Дата публикации: <time datetime="${escapeHtml(article.datePublished || '')}">${escapeHtml(article.datePublished || '')}</time></p>
+  <p>Последняя экспертная проверка: ${article.lastReviewedAt ? `<time datetime="${escapeHtml(article.lastReviewedAt)}">${escapeHtml(article.lastReviewedAt)}</time>` : 'не завершена'}</p>`;
 
 const renderServicePage = (page) => {
   const slug = page.path.replace('/services/', '');
@@ -208,7 +235,7 @@ const renderServicePage = (page) => {
     <section><h2>Этапы работы</h2>${renderCards(service.workflow)}</section>
     <section><h2>Сроки</h2><p>${escapeHtml(service.duration.text)}</p></section>
     <section><h2>Нормативная база</h2>${renderCards(service.legalBasis || [], (item) => item.title, (item) => item.documentNumber || '')}</section>`}
-    <section><h2>Частые вопросы</h2>${faq.map((item) => `<article><h3>${escapeHtml(item.question)}</h3><p>${escapeHtml(item.answer)}</p></article>`).join('')}</section>
+    <section><h2>Частые вопросы</h2>${renderVisibleFaq(faq)}</section>
     <section><h2>Связанные услуги</h2>${renderLinks(related)}</section>
     <section id="lead"><h2>Получить консультацию по услуге</h2><p>Опишите задачу, и специалист подскажет сроки, документы и порядок работы.</p><p><a href="/contacts">Оставить заявку</a> <a href="${whatsappUrl}">WhatsApp</a></p></section>
   </main>`)}`;
@@ -239,7 +266,7 @@ const renderAboutPage = (hero) => `${hero}
   <section><h2>Сроки</h2><p>${escapeHtml(aboutPublicContent.timing)}</p></section>
   <section><h2>Результат</h2><p>${escapeHtml(aboutPublicContent.result)}</p></section>
   <section><h2>Нормативная база</h2><p>${escapeHtml(aboutPublicContent.legalBasis)}</p></section>
-  <section><h2>Частые вопросы</h2>${aboutPublicContent.faq.map((item) => `<article><h3>${escapeHtml(item.question)}</h3><p>${escapeHtml(item.answer)}</p></article>`).join('')}</section>
+  <section><h2>Частые вопросы</h2>${renderVisibleFaq(aboutPublicContent.faq)}</section>
   <section><h2>Связанные услуги и разделы</h2>${renderLinks(aboutPublicContent.relatedLinks)}</section>
   <section><h2>Нужна помощь с экологическими документами или отходами?</h2><p>Опишите объект и задачу — специалист подскажет следующий шаг.</p><p><a href="/contacts">Получить консультацию</a> <a href="${whatsappUrl}">WhatsApp</a></p></section>`;
 
@@ -279,7 +306,8 @@ const renderSeoPage = (page) => layout(`
   <section><h2>Кому нужно</h2>${renderList(page.audience)}</section>
   <section><h2>Что получает клиент</h2>${renderList(page.outcomes)}</section>
   ${page.sections.map((section) => `<section><h2>${escapeHtml(section.title)}</h2><p>${escapeHtml(section.body)}</p></section>`).join('')}
-  <section><h2>Частые вопросы</h2>${page.faq.map((item) => `<article><h3>${escapeHtml(item.question)}</h3><p>${escapeHtml(item.answer)}</p></article>`).join('')}</section>
+  ${page.type === 'article' ? renderArticleTrust(page) : ''}
+  <section><h2>Частые вопросы</h2>${renderVisibleFaq(page.faq)}</section>
   <section><h2>Связанные услуги и страницы</h2>${renderLinks(page.relatedLinks)}</section>
   <section id="lead-form"><h2>${escapeHtml(page.ctaTitle || 'Заказать расчет стоимости')}</h2><p>${escapeHtml(page.ctaText || 'Опишите объект и текущие документы — специалист уточнит состав, сроки и порядок работы.')}</p><p><a href="/contacts">Оставить заявку</a> <a href="${whatsappUrl}">Написать в WhatsApp</a></p></section>
 </main>`);
@@ -294,9 +322,8 @@ const renderArticle = (article) => layout(`
     <aside><strong>Короткий ответ</strong><p>${escapeHtml(article.shortAnswer)}</p></aside>
     ${article.tableOfContents ? `<nav aria-label="Содержание"><h2>Содержание</h2><ol>${article.sections.map((section) => `<li><a href="#${escapeHtml(section.id)}">${escapeHtml(section.title)}</a></li>`).join('')}</ol></nav>` : ''}
     ${article.sections.map((section) => `<section id="${escapeHtml(section.id)}"><h2>${escapeHtml(section.title)}</h2>${section.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}${section.bullets?.length ? renderList(section.bullets) : ''}${section.checklist?.length ? `<h3>Практический чек-лист</h3>${renderList(section.checklist)}` : ''}${section.warning ? `<aside><strong>Важно:</strong> ${escapeHtml(section.warning)}</aside>` : ''}</section>`).join('')}
-    <section><h2>Частые вопросы</h2>${article.faq.map((item) => `<h3>${escapeHtml(item.question)}</h3><p>${escapeHtml(item.answer)}</p>`).join('')}</section>
-    <section><h2>Источники</h2><ul>${article.sources.map((source) => `<li><a href="${escapeHtml(source.url)}" rel="noopener noreferrer">${escapeHtml(source.title)}</a></li>`).join('')}</ul></section>
-    <aside><h2>Автор</h2><p>Редакция EcoProgress</p><p>${article.reviewStatus === 'approved' ? 'Материал проверен' : 'Материал требует проверки профильным экологом'}</p></aside>
+    <section><h2>Частые вопросы</h2>${renderVisibleFaq(article.faq)}</section>
+    ${renderArticleTrust(article)}
     <section><h2>Полезные ссылки</h2>${renderLinks(article.relatedLinks)}</section>
   </article>
 </main>`);

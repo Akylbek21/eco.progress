@@ -40,11 +40,14 @@ test('article dates are normalized and generated articles are valid', () => {
 });
 
 test('manual region forms do not produce known invalid phrases', () => {
-  const text = regions.map((item) => `Для предприятий ${item.regionGenitive}. Работаем в ${item.regionPrepositional}.`).join('\n');
+  const text = regions.map((item) => `Для предприятий ${item.cityGenitive} и ${item.regionGenitive}. Работаем в ${item.cityPrepositional} и ${item.regionPrepositional}.`).join('\n');
   assert.doesNotMatch(text, /для Алматы и Алматинская область/iu);
   assert.doesNotMatch(text, /в Караганда и Карагандинская область/iu);
   assert.doesNotMatch(text, /для Астана и Акмолинская область/iu);
-  assert.equal(regions.find((item) => item.slug === 'karaganda')?.regionPrepositional, 'Караганде и Карагандинской области');
+  assert.equal(regions.find((item) => item.slug === 'karaganda')?.regionPrepositional, 'Карагандинской области');
+  assert.deepEqual(regions.find((item) => item.slug === 'semey'), {
+    slug: 'semey', city: 'Семей', cityNominative: 'Семей', cityGenitive: 'Семея', cityDative: 'Семею', cityAccusative: 'Семей', cityInstrumental: 'Семеем', cityPrepositional: 'Семее', regionNominative: 'область Абай', regionGenitive: 'области Абай', regionPrepositional: 'области Абай',
+  });
 });
 
 test('regions route and canonical alias redirect are wired before catch-all route', async () => {
@@ -56,12 +59,15 @@ test('regions route and canonical alias redirect are wired before catch-all rout
   assert.match(route, /<Navigate to=\{`\/services\/\$\{canonicalSlug\}`\} replace/);
 });
 
-test('news distinguishes API success, empty response and real fallback errors', async () => {
+test('news delegates to the canonical repository and fallback is dev-only', async () => {
   const source = await readFile(new URL('../src/services/newsService.ts', import.meta.url), 'utf8');
-  assert.match(source, /fetcher<ArticleContent\[]>\('\/public\/content\/articles'\)/);
+  assert.match(source, /publicContentRepository\.getArticles\(\)/);
   assert.match(source, /Array\.isArray\(items\).*source: 'api'/s);
-  assert.match(source, /items: fallbackNews, source: 'fallback', stale: true/);
-  assert.doesNotMatch(source, /getNews\s*=\s*async[^\n]+fallbackNews/);
+  assert.match(source, /items: await getDevFallbackNews\(\), source: 'fallback', stale: true/);
+  assert.match(source, /if \(!import\.meta\.env\.DEV\) throw error/);
+  assert.match(source, /if \(!import\.meta\.env\.DEV\) return \[\]/);
+  assert.match(source, /await import\('\.\.\/data\/seoArticles'\)/);
+  assert.doesNotMatch(source, /^import \{ seoArticles \}/m);
 });
 
 test('schema generators are separated by content type', async () => {

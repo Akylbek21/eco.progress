@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
@@ -7,20 +8,21 @@ import Reveal from '../components/animations/Reveal';
 import WhatsAppButton from '../components/WhatsAppButton';
 import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
-import OrderChoiceModal from '../components/OrderChoiceModal';
 import { fallbackServices, getServiceCatalog } from '../services/serviceService';
 import { activeServices, formatKztPrice, PRELIMINARY_PRICE_NOTICE } from '../content/serviceCatalog';
 import { getBusinessCompanyById } from '../utils/crm';
 import type { ServiceCategory } from '../types';
 
+const OrderChoiceModal = lazy(() => import('../components/OrderChoiceModal'));
+
 const categories: Array<'Все' | ServiceCategory> = ['Все', 'Проектирование', 'Разрешения', 'Лаборатория', 'Отходы', 'Предприятия'];
 const calculatorCatalogServices = activeServices.filter((service) => service.showInCalculator && service.pricing.calculatorBasePrice !== undefined);
 
 const ServicesPage = () => {
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ['services'],
     queryFn: getServiceCatalog,
-    initialData: { items: fallbackServices, source: 'fallback' },
+    initialData: import.meta.env.DEV ? { items: fallbackServices, source: 'fallback' } : undefined,
     initialDataUpdatedAt: 0,
   });
   const services = data?.items ?? [];
@@ -78,7 +80,7 @@ const ServicesPage = () => {
   if (!selectedService) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-5 text-center text-sm font-semibold text-slate-600">
-        Услуги временно недоступны. Попробуйте обновить страницу.
+        {isError ? 'Не удалось загрузить услуги с сервера.' : 'Услуги временно недоступны. Попробуйте обновить страницу.'}
       </div>
     );
   }
@@ -276,7 +278,7 @@ const ServicesPage = () => {
           </Reveal>
         </div>
       </section>
-      <OrderChoiceModal open={orderModal !== null} onClose={() => setOrderModal(null)} preSelectedService={orderModal ?? undefined} />
+      {orderModal !== null && <Suspense fallback={null}><OrderChoiceModal open onClose={() => setOrderModal(null)} preSelectedService={orderModal} /></Suspense>}
     </div>
   );
 };

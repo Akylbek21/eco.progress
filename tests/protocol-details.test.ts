@@ -28,8 +28,9 @@ describe('simplified protocol details', () => {
     expect(protocolStatusLabel('UNDER_REVIEW')).toBe('Неизвестный статус');
     expect(protocolStatusLabel('NEEDS_REVISION')).toBe('Нужно исправить');
     expect(protocolStatusLabel('APPROVED')).toBe('Утверждён, ожидает подписи');
-    expect(protocolStatusLabel('SIGNED')).toBe('Подписан / завершён');
-    expect(protocolStatusLabel('PUBLISHED')).toBe('Опубликован клиенту');
+    expect(protocolStatusLabel('SIGNED')).toBe('Подписан');
+    expect(protocolStatusLabel('SIGNED', '2026-08-21T10:00:00Z')).toBe('Опубликован');
+    expect(protocolStatusLabel('PUBLISHED')).toContain('Неизвестный');
     expect(complianceLabel('NORMATIVE_NOT_FOUND')).toBe('Норматив не найден');
     expect(complianceLabel('EXCEEDED')).toBe('Есть превышение');
   });
@@ -48,7 +49,7 @@ describe('simplified protocol details', () => {
     expect(lifecycleStage('READY_FOR_APPROVAL')).toBe(2);
     expect(lifecycleStage('APPROVED')).toBe(3);
     expect(lifecycleStage('SIGNED')).toBe(4);
-    expect(lifecycleStage('PUBLISHED')).toBe(5);
+    expect(lifecycleStage('PUBLISHED')).toBeNull();
     expect(lifecycleStage('NEEDS_REVISION')).toBeNull();
     expect(lifecycleStage('REPLACED')).toBeNull();
     expect(lifecycleStage('CANCELLED')).toBeNull();

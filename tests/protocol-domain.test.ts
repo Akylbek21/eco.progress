@@ -7,7 +7,7 @@ import { mapBackendProtocolType, mapFrontendProtocolType } from '../src/features
 import { unwrapApiData } from '../src/services/apiHelpers';
 import { isDeviceValidForDate } from '../src/utils/protocolDevices';
 import { createWizardDefaults, emptyWizardResult } from '../src/features/protocols/components/wizardTypes';
-import { mapProtocolWizardToRequest } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
+import { mapWizardResultToDraftRequest, mapWizardToCreateDraft } from '../src/features/protocols/mappers/protocolWizardDraftMapper';
 
 describe('protocol domain contract', () => {
   it('exposes all backend-supported templates including uv/emf/laser', () => {
@@ -36,16 +36,27 @@ describe('protocol domain contract', () => {
     expect(isDeviceValidForDate({ status: 'INACTIVE', verificationValidUntil: '2027-01-01' }, '2026-07-22')).toBe(false);
   });
 
-  it('maps a water wizard draft to one compact quick-create request', () => {
+  it('maps a water wizard to the V2 draft and result requests', () => {
     const form = createWizardDefaults();
     form.templateId = 'water'; form.companyId = '15'; form.objectId = '38'; form.laboratoryId = '2'; form.executorId = '17'; form.measurementPlace = 'Точка отбора'; form.sourceNumber = 'W-1'; form.testingMethodNd = 'ГОСТ'; form.temperature = '20'; form.waterType = 'DRINKING_WATER'; form.waterUseCategory = 'I';
     form.results = [{ ...emptyWizardResult(), indicatorName: 'Хлориды', pollutantCode: 'CL', unit: 'мг/л', value: '12', measurementDeviceId: '5' }];
-    const request = mapProtocolWizardToRequest(form);
-    expect(request).toMatchObject({ templateId: 'water', companyId: 15, objectId: 38, laboratoryId: 2, executorId: 17, conditions: { waterType: 'DRINKING_WATER', waterUseCategory: 'I', temperature: '20', weatherSource: 'MANUAL' } });
-    expect(request.measurements).toHaveLength(1);
-    expect(request.measurements[0].testingMethodNd).toBe('ГОСТ');
-    expect(request.measurements[0].unit).toBe('мг/дм³');
-    expect(request).not.toHaveProperty('environment');
+    const draft = mapWizardToCreateDraft(form);
+    const result = mapWizardResultToDraftRequest(form.results[0], form, 0);
+    expect(draft).toMatchObject({
+      templateId: 'water',
+      companyId: 15,
+      objectId: 38,
+      laboratoryId: 2,
+      executorId: 17,
+      environment: {
+        temperatureC: 20,
+        source: 'MANUAL',
+        conditions: { waterType: 'DRINKING_WATER', waterUseCategory: 'I' },
+      },
+    });
+    expect(result.values.testingMethodNd).toBe('ГОСТ');
+    expect(result.values.unit).toBe('мг/дм³');
+    expect(draft).not.toHaveProperty('measurements');
   });
 
   it('maps editable fields to the canonical top-level PATCH DTO', () => {

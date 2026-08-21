@@ -6,7 +6,7 @@ const EmployeeCard = ({ employee }: { employee: Employee }) => {
   return (
     <article className="overflow-hidden rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-2xl">
       <div className="mb-5 flex items-center gap-4">
-        <ResponsiveImage src={employee.avatar} alt={employee.name} width={160} height={160} wrapperClassName="h-20 w-20 shrink-0 rounded-3xl" className="object-cover" />
+        <ResponsiveImage sizes="80px" src={employee.avatar} alt={employee.name} width={160} height={160} wrapperClassName="h-20 w-20 shrink-0 rounded-3xl" className="object-cover" />
         <div>
           <h3 className="text-xl font-semibold text-slate-900">{employee.name}</h3>
           <p className="text-sm text-eco-700">{employee.position}</p>

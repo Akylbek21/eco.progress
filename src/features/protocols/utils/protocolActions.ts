@@ -1,4 +1,4 @@
-import type { Protocol, ProtocolAvailableActions, ProtocolPermissions, ProtocolWorkflowBlocker } from '../../../types/protocols';
+import { protocolActionKeys, type Protocol, type ProtocolAction, type ProtocolAvailableActions, type ProtocolWorkflowBlocker } from '../../../types/protocols';
 
 const blockerMessages: Record<string, string> = {
   NORMATIVE_NOT_SELECTED: 'Не выбран норматив.',
@@ -46,27 +46,13 @@ export const protocolTransitionBlockers = (
 );
 
 export const normalizeProtocolAvailableActions = (input: unknown): ProtocolAvailableActions => {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
-  return Object.fromEntries(
-    Object.entries(input as Record<string, unknown>)
-      .filter(([, enabled]) => typeof enabled === 'boolean')
-      .map(([action, enabled]) => [action, enabled === true]),
-  );
+  const source = input && typeof input === 'object' && !Array.isArray(input)
+    ? input as Record<string, unknown>
+    : {};
+  return Object.fromEntries(protocolActionKeys.map((action) => [action, source[action] === true])) as ProtocolAvailableActions;
 };
 
 export const hasProtocolAction = (
   protocol: Pick<Protocol, 'availableActions'> | undefined,
-  action: string,
+  action: ProtocolAction,
 ): boolean => protocol?.availableActions?.[action] === true;
-
-export const hasProtocolPermission = (
-  protocol: Pick<Protocol, 'permissions'> | undefined,
-  permission: keyof ProtocolPermissions,
-): boolean => protocol?.permissions?.[permission] === true;
-
-export const protocolPermissionReason = (
-  protocol: Pick<Protocol, 'permissions'> | undefined,
-  permission: keyof ProtocolPermissions,
-): string | null => hasProtocolPermission(protocol, permission)
-  ? null
-  : 'Действие недоступно для текущего состояния протокола или вашей роли.';

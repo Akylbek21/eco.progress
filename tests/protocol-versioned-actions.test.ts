@@ -4,31 +4,52 @@ import { describe, expect, it } from 'vitest';
 import { mapProtocolResultFormToRequest } from '../src/features/protocols/api/protocolMappers';
 import {
   hasProtocolAction,
+  normalizeProtocolAvailableActions,
   normalizeProtocolWorkflowBlockers,
   protocolTransitionBlockers,
 } from '../src/features/protocols/utils/protocolActions';
-import { getProtocolPermissions } from '../src/utils/protocolPermissions';
 import type { Protocol } from '../src/types/protocols';
+import { protocolActionKeys } from '../src/types/protocols';
+import { normalizeProtocolStatus } from '../src/config/protocolStatus';
 
 const source = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 
 describe('protocol backend actions and optimistic-lock contracts', () => {
+  it('defines one canonical action contract and rejects removed aggregate flags', () => {
+    expect(protocolActionKeys).toEqual(expect.arrayContaining([
+      'view', 'edit', 'delete', 'calculate', 'checkNormatives', 'sendToApproval',
+      'returnForRevision', 'returnToDraft', 'approve', 'sign', 'generateDocx', 'generatePdf',
+      'regenerateDocx', 'regeneratePdf', 'downloadDocx', 'downloadPdf', 'viewAudit',
+      'createCorrection', 'publish', 'cancel', 'archive',
+    ]));
+    const actions = normalizeProtocolAvailableActions({ generateDocuments: true, regenerateDocuments: true });
+    expect(Object.values(actions).some(Boolean)).toBe(false);
+    expect(actions).not.toHaveProperty('generateDocuments');
+    expect(actions).not.toHaveProperty('regenerateDocuments');
+  });
+
+  it('removes PUBLISHED and READY from FE statuses while preserving only READY migration input', () => {
+    const types = source('src/types/protocols.ts');
+    const page = source('src/pages/ProtocolsPage.tsx');
+    expect(types).not.toMatch(/\|\s*'PUBLISHED'/);
+    expect(types).not.toMatch(/\|\s*'READY'/);
+    expect(page).not.toContain("'PUBLISHED'");
+    expect(page).not.toMatch(/['"]READY['"]/);
+    expect(page).toContain("published: params.get('published')");
+    expect(normalizeProtocolStatus('READY')).toBe('READY_FOR_APPROVAL');
+    expect(normalizeProtocolStatus('PUBLISHED')).toBe('UNKNOWN');
+  });
   it('uses availableActions as the only source for protocol action buttons', () => {
     const protocol = {
       status: 'APPROVED',
-      permissions: { canSign: true, canEdit: true },
       availableActions: { downloadPdf: true, downloadDocx: false, sign: false, edit: true, returnToDraft: true },
     } as unknown as Protocol;
 
     expect(hasProtocolAction(protocol, 'downloadPdf')).toBe(true);
     expect(hasProtocolAction(protocol, 'downloadDocx')).toBe(false);
-    expect(getProtocolPermissions(protocol, 'ADMIN')).toMatchObject({
-      canEdit: false,
-      canSign: false,
-      canDownloadPdf: true,
-      canDownloadDocx: false,
-      canReturnToDraft: true,
-    });
+    expect(hasProtocolAction(protocol, 'edit')).toBe(true);
+    expect(hasProtocolAction(protocol, 'sign')).toBe(false);
+    expect(hasProtocolAction(protocol, 'returnToDraft')).toBe(true);
   });
 
   it('normalizes and exposes backend approval/sign blockers', () => {
@@ -122,12 +143,22 @@ describe('protocol backend actions and optimistic-lock contracts', () => {
     expect(signing).not.toContain('generatePdf(');
   });
 
+  it('navigates corrections to the backend-created protocol and refreshes the list', () => {
+    const editor = source('src/pages/ProtocolEditorPage.tsx');
+    expect(editor).toContain('const replacement = await protocolService.createCorrection');
+    expect(editor).toContain('protocolQueryKeys.lists(protocolCacheScope)');
+    expect(editor).toContain('navigate(`/staff/protocols/${replacement.id}`)');
+    expect(editor).not.toContain('return protocolService.getProtocol(current.id)');
+  });
+
   it('shows document generation only for format-specific backend actions', () => {
     const documents = source('src/features/protocols/details/ProtocolDocumentsTab.tsx');
     const menu = source('src/features/protocols/details/ProtocolActionsMenu.tsx');
-    for (const flag of ['canGeneratePdf', 'canRegeneratePdf', 'canGenerateDocx', 'canRegenerateDocx']) {
+    for (const flag of ['generatePdf', 'regeneratePdf', 'generateDocx', 'regenerateDocx']) {
       expect(documents).toContain(flag);
       expect(menu).toContain(flag);
     }
+    expect(documents).not.toContain('generateDocuments');
+    expect(menu).not.toContain('regenerateDocuments');
   });
 });

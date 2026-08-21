@@ -1,20 +1,32 @@
 import { Link, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, CheckCircle2, FileText, MessageCircle, ShieldCheck } from 'lucide-react';
 import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import LeadForm from '../components/LeadForm';
 import Button from '../components/ui/Button';
 import { company, getWhatsAppUrl } from '../config/company';
-import { seoPageMap, type SeoFaqItem, type SeoPageConfig } from '../data/seoPages';
+import { seoPageMap, type SeoPageConfig } from '../data/seoPages';
 import NotFoundPage from './NotFoundPage';
-import { buildLocalBusinessSchema, buildOrganizationSchema } from '../utils/schema';
+import { buildLocalBusinessSchema, buildOrganizationSchema, buildPersonSchema } from '../utils/schema';
 import { regionContentMap } from '../content/regions/regionContent';
-import { RelatedArticles, RelatedServices } from '../components/content/ContentBlocks';
+import { ArticleAuthorCard, ArticleOrganizationAuthorCard, ArticleReviewerCard, ArticleSources, RelatedArticles, RelatedServices } from '../components/content/ContentBlocks';
+import { expertMap, experts, isCompleteExpert } from '../content/experts/experts';
+import type { Expert } from '../content/types';
+import { publicContentRepository } from '../content/apiRepository';
+import { articleRobotsForReviewStatus } from '../content/articleReview';
+import { AeoFaqList, RelatedCaseStudies } from '../components/content/AeoContent';
 
-const buildPrimarySchema = (page: SeoPageConfig) => page.type === 'city' ? {
+const buildPrimarySchema = (page: SeoPageConfig, author?: Expert, reviewer?: Expert) => page.type === 'city' ? {
   '@context': 'https://schema.org', '@type': 'WebPage', name: page.h1, description: page.description, url: page.canonical, dateModified: page.lastmod,
 } : page.type === 'article' ? {
-  '@context': 'https://schema.org', '@type': 'WebPage', name: page.h1, description: page.description, url: page.canonical, dateModified: page.lastmod,
+  '@context': 'https://schema.org', '@type': 'Article', headline: page.h1, description: page.description, url: page.canonical,
+  datePublished: page.datePublished, dateModified: page.lastmod,
+  author: author ? { '@id': `${page.canonical}#person` } : { '@type': 'Organization', name: company.name, url: company.siteUrl },
+  ...(reviewer ? { reviewedBy: { '@id': `${page.canonical}#person-reviewer` } } : {}),
+  publisher: { '@type': 'Organization', name: company.name, url: company.siteUrl },
+  mainEntityOfPage: page.canonical,
+  image: `${company.siteUrl}${page.image || '/og-cover.jpg'}`,
 } : {
   '@context': 'https://schema.org', '@type': 'Service', name: page.h1, description: page.description, url: page.canonical,
   provider: { '@type': 'Organization', name: company.name, url: company.siteUrl },
@@ -22,10 +34,12 @@ const buildPrimarySchema = (page: SeoPageConfig) => page.type === 'city' ? {
   serviceType: page.service || 'Экологические услуги',
 };
 
-const buildSchema = (page: SeoPageConfig) => [
+const buildSchema = (page: SeoPageConfig, author?: Expert, reviewer?: Expert) => [
   buildOrganizationSchema(),
   ...(page.city === 'Шымкент' ? [buildLocalBusinessSchema()] : []),
-  buildPrimarySchema(page),
+  buildPrimarySchema(page, author, reviewer),
+  ...(author ? [buildPersonSchema(author, `${page.canonical}#person`)] : []),
+  ...(reviewer ? [buildPersonSchema(reviewer, `${page.canonical}#person-reviewer`)] : []),
   {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -34,18 +48,6 @@ const buildSchema = (page: SeoPageConfig) => [
       position: index + 1,
       name: item.label,
       item: `${company.siteUrl}${item.path}`,
-    })),
-  },
-  {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: page.faq.map((item) => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.answer,
-      },
     })),
   },
 ];
@@ -64,21 +66,17 @@ const ListBlock = ({ title, items }: { title: string; items: string[] }) => (
   </section>
 );
 
-const FaqGrid = ({ faq }: { faq: SeoFaqItem[] }) => (
-  <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-    {faq.map((item) => (
-      <article key={item.question} className="rounded-[8px] border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 className="font-bold leading-6 text-eco-900">{item.question}</h3>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{item.answer}</p>
-      </article>
-    ))}
-  </div>
-);
-
 const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
   const { seoSlug } = useParams();
   const slug = slugProp || seoSlug || '';
   const page = seoPageMap.get(slug);
+  const { data: apiExperts = [] } = useQuery({
+    queryKey: ['public-content', 'experts'],
+    queryFn: () => publicContentRepository.getExperts(),
+    initialData: import.meta.env.DEV ? experts : undefined,
+    staleTime: 5 * 60 * 1000,
+    enabled: page?.type === 'article',
+  });
   if (!page) return <NotFoundPage />;
 
   const whatsAppUrl = getWhatsAppUrl(`Здравствуйте! Хочу получить консультацию: ${page.h1}.`);
@@ -86,14 +84,24 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
   const audience = page.audience ?? [];
   const outcomes = page.outcomes ?? [];
   const regionDetails = page.type === 'city' ? regionContentMap.get(page.slug.replace('ecologicheskie-uslugi-', '')) : undefined;
+  const backendExpertMap = new Map(apiExperts.map((expert) => [expert.id, expert]));
+  const authorCandidate = page.author ?? (page.authorSlug ? backendExpertMap.get(page.authorSlug) ?? expertMap.get(page.authorSlug) : undefined);
+  const reviewerCandidate = page.reviewer ?? (page.reviewerSlug ? backendExpertMap.get(page.reviewerSlug) ?? expertMap.get(page.reviewerSlug) : undefined);
+  const articleAuthor = isCompleteExpert(authorCandidate) ? authorCandidate : undefined;
+  const articleReviewer = isCompleteExpert(reviewerCandidate) ? reviewerCandidate : undefined;
+  const approvedArticleAuthor = page.reviewStatus === 'approved' ? articleAuthor : undefined;
+  const approvedArticleReviewer = page.reviewStatus === 'approved' ? articleReviewer : undefined;
+  const robots = page.type === 'article'
+    ? articleRobotsForReviewStatus(page.reviewStatus)
+    : page.indexable === false ? 'noindex,follow' : 'index,follow';
   const startText = page.type === 'service-city'
-    ? `Проверим задачу «${page.service}» для объекта в ${page.city}: исходные документы, применимость требований, состав результата и необходимость выезда. После аудита дадим перечень недостающих данных и расчёт этапов.`
+    ? `Проверим задачу «${page.service}» для объекта в ${page.cityPrepositional}: исходные документы, применимость требований, состав результата и необходимость выезда. После аудита дадим перечень недостающих данных и расчёт этапов.`
     : page.type === 'city'
-      ? `Разберём деятельность объекта в городе ${page.city}, сопоставим её с экологическими документами, ПЭК, лабораторными исследованиями и обращением с отходами. Вы получите приоритетный план работ.`
+      ? `Разберём деятельность объекта в ${page.cityPrepositional}, сопоставим её с экологическими документами, ПЭК, лабораторными исследованиями и обращением с отходами. Вы получите приоритетный план работ.`
       : 'Проверим объект, исходные документы и применимые требования. После консультации подготовим расчёт стоимости и понятный план работ.';
   const trustPoints = page.type === 'service-city'
     ? [
-      `учитываем отрасли и условия работы для города ${page.city}`,
+      `учитываем отрасли и условия работы для ${page.cityGenitive}`,
       `фиксируем состав услуги «${page.service}» до начала работ`,
       'не обещаем выезд и срок до проверки адреса и исходных данных',
       'передаём результат, реестр исходных данных и следующий обязательный шаг',
@@ -107,10 +115,10 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
 
   return (
     <div className="bg-[#F7FBFD]">
-      <SEO title={page.title} description={page.description} canonical={page.canonical} robots={page.indexable === false ? 'noindex,follow' : 'index,follow'} schema={buildSchema(page)} />
+      <SEO title={page.title} description={page.description} canonical={page.canonical} robots={robots} type={page.type === 'article' ? 'article' : 'website'} schema={buildSchema(page, approvedArticleAuthor, approvedArticleReviewer)} datePublished={page.datePublished} dateModified={page.lastmod} />
 
       <section className="relative isolate overflow-hidden bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-20">
-        <ResponsiveImage fill src={page.image || '/para.jpg'} alt={page.h1} width={1600} height={900} wrapperClassName="-z-20" className="object-cover" />
+        <ResponsiveImage fill priority sizes="100vw" src={page.image || '/para.jpg'} alt={page.h1} width={1600} height={900} wrapperClassName="-z-20" className="object-cover" />
         <div className="absolute inset-0 -z-10 bg-eco-900/84" />
         <div className="mx-auto max-w-7xl">
           <nav className="flex flex-wrap gap-2 text-sm text-white/72" aria-label="Хлебные крошки">
@@ -176,9 +184,25 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
         </div>
       </section>
 
+      {page.type === 'article' && (
+        <section className="px-4 py-14 sm:px-8">
+          <div className="mx-auto max-w-7xl space-y-8">
+            <ArticleSources sources={page.sources ?? []} />
+            <div className="grid gap-4 md:grid-cols-2">
+              {articleAuthor ? <ArticleAuthorCard expert={articleAuthor} /> : <ArticleOrganizationAuthorCard />}
+              <ArticleReviewerCard expert={articleReviewer} />
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-white p-5 text-sm text-slate-600">
+              <p>Дата публикации: <time dateTime={page.datePublished}>{page.datePublished}</time></p>
+              <p className="mt-2">Последняя экспертная проверка: {page.lastReviewedAt ? <time dateTime={page.lastReviewedAt}>{page.lastReviewedAt}</time> : 'не завершена'}</p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {regionDetails && <section className="px-4 py-14 sm:px-8"><div className="mx-auto max-w-7xl space-y-12">
-        <section className="rounded-[22px] border border-slate-200 bg-white p-6"><h2 className="text-3xl font-bold text-eco-900">Условия работы в регионе</h2><p className="mt-4 leading-7 text-slate-600">{regionDetails.introduction}</p><p className="mt-4 text-sm leading-6 text-slate-600"><strong>Логистика:</strong> {regionDetails.logisticsNote}</p></section>
-        <div className="grid gap-5 lg:grid-cols-2"><ListBlock title="Что делаем дистанционно" items={regionDetails.remoteConditions} /><ListBlock title="Когда нужен выезд" items={regionDetails.onSiteConditions} /><ListBlock title="Типовые задачи" items={regionDetails.commonTasks} /><ListBlock title="Отрасли региона" items={regionDetails.industries} /></div>
+        <section className="rounded-[22px] border border-slate-200 bg-white p-6"><h2 className="text-3xl font-bold text-eco-900">Условия работы в регионе</h2><p className="mt-4 leading-7 text-slate-600">{regionDetails.introduction}</p><p className="mt-4 text-sm leading-6 text-slate-600"><strong>Логистика:</strong> {regionDetails.logisticsNote}</p>{regionDetails.estimatedTimeline && <p className="mt-4 text-sm leading-6 text-slate-600"><strong>Сроки:</strong> {regionDetails.estimatedTimeline}</p>}</section>
+        <div className="grid gap-5 lg:grid-cols-2">{regionDetails.regionalFeatures?.length ? <ListBlock title="Особенности региона" items={regionDetails.regionalFeatures} /> : null}<ListBlock title="Что делаем дистанционно" items={regionDetails.remoteConditions} /><ListBlock title="Когда нужен выезд" items={regionDetails.onSiteConditions} /><ListBlock title="Типовые задачи" items={regionDetails.commonTasks} /><ListBlock title="Отрасли региона" items={regionDetails.industries} />{regionDetails.completedWorkExamples?.length ? <ListBlock title="Примеры выполненных работ" items={regionDetails.completedWorkExamples} /> : null}</div>
         <RelatedServices slugs={regionDetails.availableServiceSlugs} title="Доступные услуги" />
         {regionDetails.relatedArticleSlugs.length > 0 && <RelatedArticles slugs={regionDetails.relatedArticleSlugs} />}
       </div></section>}
@@ -207,7 +231,8 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">FAQ</p>
           <h2 className="mt-3 text-3xl font-bold text-eco-900">Частые вопросы</h2>
-          <FaqGrid faq={page.faq} />
+          <AeoFaqList faq={page.faq} />
+              {(page.type === 'city' || page.type === 'service-city') && <div className="mt-14"><RelatedCaseStudies service={page.type === 'service-city' ? page.serviceSlug : undefined} city={page.cityNominative ?? page.city} /></div>}
         </div>
       </section>
 

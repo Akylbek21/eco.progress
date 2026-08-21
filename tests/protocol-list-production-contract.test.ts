@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import productionFixture from './fixtures/protocol-list-production-2026-07-30.json';
 import { normalizeProtocol } from '../src/services/apiProtocolService';
-import { getProtocolPermissions } from '../src/utils/protocolPermissions';
+import { hasProtocolAction } from '../src/features/protocols/utils/protocolActions';
 
 describe('captured production protocol list contract (2026-07-30)', () => {
   const protocols = productionFixture.data.items.map(normalizeProtocol);
@@ -29,10 +29,9 @@ describe('captured production protocol list contract (2026-07-30)', () => {
   });
 
   it('uses backend availableActions and otherwise fails closed', () => {
-    const permissions = getProtocolPermissions(protocols[0]);
-    expect(permissions.canReadyForApproval).toBe(true);
-    expect(permissions.canReplace).toBe(false);
-    expect(permissions.canDownload).toBe(false);
-    expect(permissions.canGenerateDocuments).toBe(false);
+    expect(hasProtocolAction(protocols[0], 'sendToApproval')).toBe(true);
+    expect(hasProtocolAction(protocols[0], 'createCorrection')).toBe(false);
+    expect(hasProtocolAction(protocols[0], 'downloadPdf')).toBe(false);
+    expect(hasProtocolAction(protocols[0], 'generatePdf')).toBe(false);
   });
 });

@@ -119,14 +119,6 @@
         "path": "/services/ecological-support"
       },
       {
-        "label": "Что предприятие сдаёт по экологии каждый год",
-        "path": "/news/chto-sdavat-po-ekologii-kazhdyy-god"
-      },
-      {
-        "label": "Как определить категорию объекта экологического воздействия",
-        "path": "/news/kak-opredelit-kategoriyu-obekta"
-      },
-      {
         "label": "Получить консультацию EcoProgress",
         "path": "/contacts"
       }
@@ -249,14 +241,6 @@
       {
         "label": "Экологические документы",
         "path": "/services/ecological-documents"
-      },
-      {
-        "label": "Какие экологические документы должны быть у предприятия",
-        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
-      },
-      {
-        "label": "Как подготовить отчёт ПЭК по данным контроля",
-        "path": "/news/kak-formiruetsya-otchet-pek"
       },
       {
         "label": "Получить консультацию EcoProgress",
@@ -384,14 +368,6 @@
         "path": "/services/ecological-documents"
       },
       {
-        "label": "Какие экологические документы должны быть у предприятия",
-        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
-      },
-      {
-        "label": "Чем отличаются ОВОС, отчёт о возможных воздействиях и РООС",
-        "path": "/news/otlichiya-ovos-oovv-roos"
-      },
-      {
         "label": "Получить консультацию EcoProgress",
         "path": "/contacts"
       }
@@ -514,14 +490,6 @@
       {
         "label": "Отчёт производственного экологического контроля",
         "path": "/services/report-pek"
-      },
-      {
-        "label": "Как подготовить отчёт ПЭК по данным контроля",
-        "path": "/news/kak-formiruetsya-otchet-pek"
-      },
-      {
-        "label": "Какие лабораторные замеры нужны предприятию",
-        "path": "/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu"
       },
       {
         "label": "Получить консультацию EcoProgress",
@@ -648,14 +616,6 @@
         "path": "/services/laboratory-tests"
       },
       {
-        "label": "Что такое программа производственного экологического контроля",
-        "path": "/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol"
-      },
-      {
-        "label": "Что предприятие сдаёт по экологии каждый год",
-        "path": "/news/chto-sdavat-po-ekologii-kazhdyy-god"
-      },
-      {
         "label": "Получить консультацию EcoProgress",
         "path": "/contacts"
       }
@@ -779,14 +739,6 @@
         "path": "/services/program-pek"
       },
       {
-        "label": "Как проходит лабораторный замер воздуха",
-        "path": "/news/kak-prohodit-laboratornyy-zamer-vozduha"
-      },
-      {
-        "label": "Что такое программа производственного экологического контроля",
-        "path": "/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol"
-      },
-      {
         "label": "Получить консультацию EcoProgress",
         "path": "/contacts"
       }
@@ -896,14 +848,6 @@
       {
         "label": "Производственный контроль СЭС",
         "path": "/services/industrial-control"
-      },
-      {
-        "label": "Какие лабораторные замеры нужны предприятию",
-        "path": "/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu"
-      },
-      {
-        "label": "Что такое программа производственного экологического контроля",
-        "path": "/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol"
       },
       {
         "label": "Получить консультацию EcoProgress",
@@ -1024,14 +968,6 @@
         "path": "/services/ecological-documents"
       },
       {
-        "label": "Какие экологические документы должны быть у предприятия",
-        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
-      },
-      {
-        "label": "Какие риски и штрафы возможны за экологические нарушения",
-        "path": "/news/shtrafy-za-ekologicheskie-narusheniya"
-      },
-      {
         "label": "Получить консультацию EcoProgress",
         "path": "/contacts"
       }
@@ -1147,14 +1083,6 @@
       {
         "label": "Утилизация отходов",
         "path": "/services/waste-recycling"
-      },
-      {
-        "label": "Какие документы подтверждают передачу отходов",
-        "path": "/news/dokumenty-peredachi-othodov"
-      },
-      {
-        "label": "Как организовать вывоз и утилизацию отходов",
-        "path": "/news/vyvoz-i-utilizaciya-othodov"
       },
       {
         "label": "Получить консультацию EcoProgress",
@@ -1275,14 +1203,6 @@
         "path": "/services/puo"
       },
       {
-        "label": "Как организовать вывоз и утилизацию отходов",
-        "path": "/news/vyvoz-i-utilizaciya-othodov"
-      },
-      {
-        "label": "Как разработать программу управления отходами",
-        "path": "/news/kak-razrabotat-programmu-upravleniya-othodami"
-      },
-      {
         "label": "Получить консультацию EcoProgress",
         "path": "/contacts"
       }
@@ -1398,14 +1318,6 @@
       {
         "label": "Комплексное обращение с отходами",
         "path": "/services/waste-management"
-      },
-      {
-        "label": "Какие документы подтверждают передачу отходов",
-        "path": "/news/dokumenty-peredachi-othodov"
-      },
-      {
-        "label": "Как разработать программу управления отходами",
-        "path": "/news/kak-razrabotat-programmu-upravleniya-othodami"
       },
       {
         "label": "Получить консультацию EcoProgress",
@@ -1531,14 +1443,6 @@
         "path": "/services/laboratory-tests"
       },
       {
-        "label": "Как определить категорию объекта экологического воздействия",
-        "path": "/news/kak-opredelit-kategoriyu-obekta"
-      },
-      {
-        "label": "Какие экологические документы должны быть у предприятия",
-        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
-      },
-      {
         "label": "Получить консультацию EcoProgress",
         "path": "/contacts"
       }
@@ -1655,14 +1559,6 @@
       {
         "label": "Экологические разрешения и декларации",
         "path": "/services/environmental-permits"
-      },
-      {
-        "label": "Как определить категорию объекта экологического воздействия",
-        "path": "/news/kak-opredelit-kategoriyu-obekta"
-      },
-      {
-        "label": "Какие экологические документы должны быть у предприятия",
-        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
       },
       {
         "label": "Получить консультацию EcoProgress",
@@ -1782,14 +1678,6 @@
       {
         "label": "Экологическое сопровождение предприятия",
         "path": "/services/ecological-support"
-      },
-      {
-        "label": "Как подготовиться к экологической проверке",
-        "path": "/news/podgotovka-k-ekologicheskoy-proverke"
-      },
-      {
-        "label": "Какие экологические документы должны быть у предприятия",
-        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
       },
       {
         "label": "Получить консультацию EcoProgress",

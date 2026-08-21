@@ -46,7 +46,7 @@ const inferStep = (field: string) => {
 const friendlyMessage = (message: string) => {
   if (/OPTIMISTIC_LOCK_CONFLICT|PROTOCOL_VERSION_CONFLICT|VERSION_CONFLICT|optimistic|version conflict/i.test(message)) return 'Протокол изменён другим сотрудником. Обновите данные перед продолжением.';
   if (/403|forbidden|canSign|sign permission/i.test(message)) return 'У вас нет права подписывать протокол. Передайте его руководителю.';
-  if (/INTERNAL_SCHEMA_ERROR|schema mismatch|DTO|quick-create|unknown enum/i.test(message)) return 'Не удалось сохранить протокол. Проверьте выделенные поля.';
+  if (/INTERNAL_SCHEMA_ERROR|schema mismatch|DTO|unknown enum/i.test(message)) return 'Не удалось сохранить протокол. Проверьте выделенные поля.';
   return message.trim() || 'Проверьте значение поля.';
 };
 

@@ -85,7 +85,7 @@ const ReviewStep = ({
   return (
     <section>
       <h3 id="wizard-step-title" tabIndex={-1} className="text-xl font-black">{final ? 'Создание протокола' : 'Проверка данных'}</h3>
-      <p className="mt-2 text-sm text-slate-500">{final ? 'После нажатия будет отправлен один запрос POST /api/protocols/quick-create.' : 'Проверьте сводку перед созданием.'}</p>
+      <p className="mt-2 text-sm text-slate-500">{final ? 'После нажатия будет создан серверный черновик протокола и сохранены результаты.' : 'Проверьте сводку перед созданием.'}</p>
       {final && apiPayloadValid && issues.length === 0 && (
         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
           Все обязательные данные заполнены. Можно переходить к созданию.

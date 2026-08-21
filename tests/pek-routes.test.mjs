@@ -40,7 +40,8 @@ test('production PEK transport contains only backend-implemented report contract
 });
 
 test('report workspace does not synthesize polling or protocol links', () => {
-  assert.match(workspace, /availableActions/);
+  assert.match(workspace, /item\.availableActions\.manageSources === true/);
+  assert.doesNotMatch(workspace, /canUsePekPermission\(user, 'PEK_REPORT_EDIT'\)/);
   assert.doesNotMatch(workspace, /setInterval|polling|collection-runs/);
   assert.doesNotMatch(workspace, /\/staff\/protocols\?/);
 });

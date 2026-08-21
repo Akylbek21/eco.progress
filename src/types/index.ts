@@ -448,6 +448,7 @@ export type Order = {
     id: string;
     number?: string;
     status: string;
+    availableActions: Record<string, boolean>;
   };
   canComplete?: boolean;
   blockingReasons?: string[];

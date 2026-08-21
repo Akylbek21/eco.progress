@@ -1,15 +1,18 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import api from '../src/services/api';
-import { mapProtocolPermissions } from '../src/features/protocols/mappers/protocolPermissionMapper';
-import { mapFormToCreateProtocolRequest } from '../src/features/protocols/mappers/mapFormToCreateProtocolRequest';
 import { createWizardDefaults, emptyWizardResult } from '../src/features/protocols/components/wizardTypes';
-import { buildQuickCreatePayload } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
+import { mapWizardResultToDraftRequest, mapWizardToCreateDraft } from '../src/features/protocols/mappers/protocolWizardDraftMapper';
 import { normalizeProtocolStatus } from '../src/config/protocolStatus';
-import { getProtocolPermissions } from '../src/utils/protocolPermissions';
-import { addProtocolResult, importExcel, normalizeProtocol, readyForApproval, removeProtocolMeasurementDevice, returnForRevision, returnToDraft, saveProtocolDraftResults, signProtocol } from '../src/services/apiProtocolService';
+import { hasProtocolAction, normalizeProtocolAvailableActions } from '../src/features/protocols/utils/protocolActions';
+import { addProtocolResult, calculateResult, createCorrection, getProtocol, importExcel, normalizeProtocol, readyForApproval, removeProtocolMeasurementDevice, returnForRevision, returnToDraft, saveProtocolDraftResults, saveRawMeasurements, signProtocol } from '../src/services/apiProtocolService';
 import { normalizeApiError } from '../src/services/apiHelpers';
+import { isProtocolVersionConflict } from '../src/features/protocols/utils/protocolVersionConflict';
+import { protocolAccessErrorMessage } from '../src/utils/protocolError';
+import ProtocolList from '../src/components/protocols/ProtocolList';
 
 const server = setupServer();
 const originalBaseUrl = api.defaults.baseURL;
@@ -21,7 +24,7 @@ const protocol = {
   version: 8,
   testing: {},
   results: [],
-  permissions: { canView: true, canEdit: true, canSendToApproval: true },
+  availableActions: { view: true, edit: true, sendToApproval: true },
 };
 
 beforeAll(() => {
@@ -37,50 +40,56 @@ afterAll(() => {
 });
 
 describe('current protocol backend contract', () => {
-  it('maps only the exact real backend permission fields', () => {
-    const mapped = mapProtocolPermissions({
-      canView: true,
-      canEdit: false,
-      canSendToApproval: true,
-      canCreateCorrection: false,
+  it('normalizes only canonical backend availableActions', () => {
+    const mapped = normalizeProtocolAvailableActions({
+      view: true,
+      edit: false,
+      sendToApproval: true,
+      generateDocuments: true,
       canDownload: true,
     });
-    expect(mapped.canSendToApproval).toBe(true);
-    expect(mapped.canCreateCorrection).toBe(false);
-    expect(mapped.canEdit).toBe(false);
-    expect(mapped).not.toHaveProperty('canReadyForApproval');
-    expect(mapped).not.toHaveProperty('canReplace');
+    expect(mapped.sendToApproval).toBe(true);
+    expect(mapped.edit).toBe(false);
+    expect(mapped.generateDocx).toBe(false);
+    expect(mapped.generatePdf).toBe(false);
+    expect(mapped).not.toHaveProperty('generateDocuments');
     expect(mapped).not.toHaveProperty('canDownload');
   });
 
   it('uses canSendToApproval as the backend authority for protocol submission', () => {
-    expect(getProtocolPermissions({
-      status: 'CALCULATED',
-      permissions: { canSendToApproval: true },
-      availableActions: { sendToApproval: true },
-    }, 'LABORATORY').canReadyForApproval).toBe(true);
-    expect(getProtocolPermissions({
-      status: 'CALCULATED',
-      permissions: { canSendToApproval: false },
-      availableActions: { sendToApproval: false },
-    }, 'LABORATORY').canReadyForApproval).toBe(false);
+    expect(hasProtocolAction({ availableActions: { sendToApproval: true } } as never, 'sendToApproval')).toBe(true);
+    expect(hasProtocolAction({ availableActions: { sendToApproval: false } } as never, 'sendToApproval')).toBe(false);
   });
 
   it('keeps unknown status read-only', () => {
     expect(normalizeProtocolStatus('FUTURE_STATUS')).toBe('UNKNOWN');
-    expect(getProtocolPermissions({
-      status: 'UNKNOWN',
-      permissions: { canView: true, canEdit: true, canSendToApproval: true },
-    }, 'ADMIN')).toMatchObject({ canView: true, canEdit: false, canReadyForApproval: false });
+    expect(hasProtocolAction({ status: 'UNKNOWN', availableActions: {} } as never, 'edit')).toBe(false);
   });
 
   it('uses availableActions only when the backend DTO contains them', () => {
-    expect(normalizeProtocol({ ...protocol, availableActions: { sign: true, approve: false } }).availableActions).toEqual({ sign: true, approve: false });
-    expect(normalizeProtocol({ ...protocol, availableActions: ['SIGN'] }).availableActions).toEqual({});
-    expect(normalizeProtocol(protocol).availableActions).toEqual({});
+    expect(normalizeProtocol({ ...protocol, availableActions: { sign: true, approve: false } }).availableActions).toMatchObject({ sign: true, approve: false, edit: false });
+    expect(Object.values(normalizeProtocol({ ...protocol, availableActions: ['SIGN'] }).availableActions).some(Boolean)).toBe(false);
+    expect(normalizeProtocol(protocol).availableActions).toMatchObject({ view: true, edit: true, sendToApproval: true });
   });
 
-  it('preserves zero as a string in quick-create conditions and never sends clientRowId', () => {
+  it('maps document-version fields without deciding PDF freshness on the client', () => {
+    expect(normalizeProtocol({
+      ...protocol,
+      contentVersion: 14,
+      pdfSourceContentVersion: 13,
+      pdfHash: 'pdf-hash',
+      approvedPdfHash: 'approved-hash',
+      approvedContentVersion: 12,
+    })).toMatchObject({
+      contentVersion: 14,
+      pdfSourceContentVersion: 13,
+      pdfHash: 'pdf-hash',
+      approvedPdfHash: 'approved-hash',
+      approvedContentVersion: 12,
+    });
+  });
+
+  it('preserves zero values in the V2 draft and result requests', () => {
     const form = createWizardDefaults();
     Object.assign(form, {
       templateId: 'water',
@@ -98,24 +107,13 @@ describe('current protocol backend contract', () => {
       waterUseCategory: 'I',
     });
     form.results = [{ ...emptyWizardResult(), indicatorName: 'pH', pollutantCode: 'PH', value: '0', unit: 'ед.', measurementDeviceId: '5', samplingPlace: 'Точка' }];
-    const request = buildQuickCreatePayload(form);
-    expect(request.executorId).toBe(4);
-    expect(request).not.toHaveProperty('laboratoryEmployeeId');
-    expect(request.conditions).toMatchObject({ temperature: '0', humidity: '0', windSpeed: '0' });
-    expect(request.measurements[0].value).toBe(0);
-    expect(request.measurements[0]).not.toHaveProperty('clientRowId');
-  });
-
-  it('keeps full-create environment separate from quick-create conditions', () => {
-    const request = mapFormToCreateProtocolRequest({
-      companyId: 1,
-      objectId: 2,
-      templateId: 'water',
-      protocolDate: '2026-07-31',
-      environment: { temperature: '0', pressureHpa: '1013', source: 'MANUAL' },
-    });
-    expect(request.environment).toMatchObject({ temperatureC: 0, pressureHpa: 1013, source: 'MANUAL' });
-    expect(request).not.toHaveProperty('conditions');
+    const draft = mapWizardToCreateDraft(form);
+    const result = mapWizardResultToDraftRequest(form.results[0], form, 0);
+    expect(draft.executorId).toBe(4);
+    expect(draft).not.toHaveProperty('laboratoryEmployeeId');
+    expect(draft.environment).toMatchObject({ temperatureC: 0, humidityPercent: 0, windSpeedMs: 0 });
+    expect(result.values.resultValue).toBe(0);
+    expect(result).not.toHaveProperty('clientRowId');
   });
 
   it('sends workflow version in JSON body without If-Match', async () => {
@@ -182,16 +180,43 @@ describe('current protocol backend contract', () => {
 
   it('returns an approved protocol to draft with the edited version and reason', async () => {
     let body: unknown;
+    let getCount = 0;
     server.use(
       http.post('http://localhost/api/protocols/42/return-to-draft', async ({ request }) => {
         body = await request.json();
         return HttpResponse.json({ data: { ...protocol, status: 'DRAFT', version: 9 } });
       }),
-      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: { ...protocol, status: 'DRAFT', version: 9 } })),
+      http.get('http://localhost/api/protocols/42', () => {
+        getCount += 1;
+        return HttpResponse.json({ data: { ...protocol, status: 'DRAFT', version: 10 } });
+      }),
     );
-    const revised = await returnToDraft('42', { version: 8, reason: 'Исправить документ' });
+    const revised = await returnToDraft('42', { version: 8, reason: '  Исправить документ  ' });
     expect(body).toEqual({ version: 8, reason: 'Исправить документ' });
     expect(revised).toMatchObject({ status: 'DRAFT', version: 9 });
+    expect(getCount).toBe(0);
+    await expect(returnToDraft('42', { version: 9, reason: '   ' })).rejects.toThrow('Причина');
+  });
+
+  it('uses the backend correction id and does not fetch or clone the original on the client', async () => {
+    let body: unknown;
+    let getCount = 0;
+    server.use(
+      http.post('http://localhost/api/protocols/42/corrections', async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ data: { ...protocol, id: '99', status: 'DRAFT', version: 1, replacesProtocolId: '42' } });
+      }),
+      http.get('http://localhost/api/protocols/42', () => {
+        getCount += 1;
+        return HttpResponse.json({ data: protocol });
+      }),
+    );
+
+    const correction = await createCorrection('42', { version: 8, reason: '  Исправить измерения  ' });
+
+    expect(body).toEqual({ version: 8, reason: 'Исправить измерения' });
+    expect(correction).toMatchObject({ id: '99', status: 'DRAFT', replacesProtocolId: '42' });
+    expect(getCount).toBe(0);
   });
 
   it('imports xls/xlsx with file and version and reloads protocol results', async () => {
@@ -284,5 +309,69 @@ describe('current protocol backend contract', () => {
       version: 8, added: [], updated: [], deletedIds: [],
     }).catch((value: unknown) => value);
     expect(normalizeApiError(error)).toMatchObject({ status: 409, code: 'OPTIMISTIC_LOCK_CONFLICT', currentVersion: 9 });
+  });
+
+  it('uses raw measurements response.version for the following calculation without a GET', async () => {
+    let calculationBody: unknown;
+    let getCount = 0;
+    server.use(
+      http.post('http://localhost/api/protocols/42/results/7/raw-measurements', () => HttpResponse.json({
+        data: { version: 9, row: { id: '7', protocolId: '42', values: { result: 1 } } },
+      })),
+      http.post('http://localhost/api/protocols/42/results/7/calculate', async ({ request }) => {
+        calculationBody = await request.json();
+        return HttpResponse.json({ data: { version: 10, row: { id: '7', protocolId: '42', values: { result: 2 } } } });
+      }),
+      http.get('http://localhost/api/protocols/42', () => {
+        getCount += 1;
+        return HttpResponse.json({ data: protocol });
+      }),
+    );
+
+    const saved = await saveRawMeasurements('42', '7', [{ variableKey: 'x', variableValue: 1 }], 'method-1', 8);
+    const calculated = await calculateResult('42', '7', saved.version);
+
+    expect(saved.version).toBe(9);
+    expect(calculationBody).toEqual({ version: 9 });
+    expect(calculated.version).toBe(10);
+    expect(getCount).toBe(0);
+  });
+
+  it('rejects legacy protocolVersion and preserves a raw measurements VERSION_CONFLICT', async () => {
+    server.use(http.post('http://localhost/api/protocols/42/results/7/raw-measurements', () => HttpResponse.json({
+      data: { protocolVersion: 9, row: { id: '7', values: {} } },
+    })));
+    await expect(saveRawMeasurements('42', '7', [], 'method-1', 8)).rejects.toThrow('response.version');
+
+    server.resetHandlers();
+    server.use(http.post('http://localhost/api/protocols/42/results/7/raw-measurements', () => HttpResponse.json({
+      code: 'VERSION_CONFLICT', message: 'Protocol was changed', currentVersion: 9,
+    }, { status: 409 })));
+    const error = await saveRawMeasurements('42', '7', [], 'method-1', 8).catch((value: unknown) => value);
+    expect(isProtocolVersionConflict(error)).toBe(true);
+    expect(normalizeApiError(error)).toMatchObject({ status: 409, code: 'VERSION_CONFLICT', currentVersion: 9 });
+  });
+
+  it('maps a foreign protocol 403 to the protocol access message', async () => {
+    server.use(http.get('http://localhost/api/protocols/foreign', () => HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 })));
+    const error = await getProtocol('foreign').catch((value: unknown) => value);
+    expect(protocolAccessErrorMessage(error)).toBe('Нет доступа к протоколу');
+  });
+
+  it('hides detail, history and downloads when backend actions are absent', () => {
+    const item = normalizeProtocol({
+      ...protocol,
+      availableActions: { view: false, viewAudit: false, downloadPdf: false, downloadDocx: false },
+    });
+    const noop = vi.fn();
+    const markup = renderToStaticMarkup(createElement(ProtocolList, {
+      protocols: [item], onOpen: noop, onHistory: noop, onSign: noop, onEdit: noop,
+      onDelete: noop, onArchive: noop, onReplace: noop, onDownload: noop,
+    }));
+    expect(markup).not.toContain('Открыть');
+    expect(markup).not.toContain('История');
+    expect(markup).not.toContain('Скачать PDF');
+    expect(markup).not.toContain('Скачать DOCX');
+    expect(markup).not.toContain('role="link"');
   });
 });

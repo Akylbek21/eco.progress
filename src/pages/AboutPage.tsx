@@ -15,15 +15,19 @@ import {
   Truck,
   type LucideIcon,
 } from 'lucide-react';
+import { lazy, Suspense } from 'react';
 import { FaWhatsapp } from 'react-icons/fa';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
 import LeadForm from '../components/LeadForm';
-import OrderChoiceModal from '../components/OrderChoiceModal';
+import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { getWhatsAppUrl } from '../config/company';
 import { trackWhatsAppClick } from '../services/analytics';
+
+const OrderChoiceModal = lazy(() => import('../components/OrderChoiceModal'));
 import { aboutPublicContent } from '../content/aboutPublicContent';
+import { AeoFaqList } from '../components/content/AeoContent';
 
 type CardItem = {
   title: string;
@@ -216,7 +220,7 @@ const AboutPage = () => {
     <SEO />
 
     <section className="relative isolate overflow-hidden px-4 py-20 text-white sm:px-8 sm:py-28">
-      <img src="/media/ecoprogress-og-cover-1280.jpg" alt="" width="1280" height="720" loading="eager" fetchPriority="high" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="absolute inset-0 -z-30 h-full w-full bg-eco-900 object-cover" />
+      <ResponsiveImage fill priority sizes="100vw" src="/media/ecoprogress-og-cover-1280.jpg" alt="" width={1280} height={720} wrapperClassName="-z-30" className="bg-eco-900 object-cover" />
       <div className="absolute inset-0 -z-20 bg-eco-900/78" />
       <div className="mx-auto max-w-7xl">
         <Reveal>
@@ -269,7 +273,7 @@ const AboutPage = () => {
       <div className="mx-auto max-w-7xl">
         <Reveal>
           <div className="relative isolate overflow-hidden rounded-[28px] bg-eco-900 p-6 text-white shadow-2xl shadow-eco-900/15 sm:p-10">
-            <img src="/media/ecoprogress-og-cover-1280.jpg" alt="" width="1280" height="720" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="absolute inset-0 -z-20 h-full w-full bg-eco-900 object-cover" />
+            <ResponsiveImage fill sizes="(max-width: 1279px) 100vw, 1280px" src="/media/ecoprogress-og-cover-1280.jpg" alt="" width={1280} height={720} wrapperClassName="-z-20" className="bg-eco-900 object-cover" />
             <div className="absolute inset-0 -z-10 bg-eco-900/80" />
             <div className="grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-center">
               <div className="flex h-20 w-20 items-center justify-center rounded-[24px] bg-white/10 text-accent">
@@ -296,7 +300,7 @@ const AboutPage = () => {
             <Reveal key={title} delay={index * 0.04}>
               <div className="card-hover flex h-full flex-col rounded-[20px] border border-slate-200 bg-white shadow-lg shadow-eco-900/5">
                 <div className="relative h-40 overflow-hidden">
-                  <img src={image} alt="" width="800" height="600" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="h-full w-full bg-slate-200 object-cover transition duration-500 hover:scale-105" />
+                  {image && <ResponsiveImage fill sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw" src={image} alt="" width={800} height={600} className="bg-slate-200 object-cover transition duration-500 hover:scale-105" />}
                   <div className="absolute inset-0 bg-gradient-to-t from-eco-900/70 to-transparent" />
                   <div className="absolute bottom-4 left-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/92 text-eco-700 shadow-sm">
                     <Icon size={22} />
@@ -423,7 +427,7 @@ const AboutPage = () => {
           <AboutText title="Результат" text={aboutPublicContent.result} />
           <AboutText title="Нормативная база" text={aboutPublicContent.legalBasis} />
         </div>
-        <section><h2 className="text-3xl font-bold text-eco-900">Частые вопросы</h2><div className="mt-6 grid gap-4 md:grid-cols-2">{aboutPublicContent.faq.map((item) => <article key={item.question} className="rounded-[8px] border border-slate-200 p-5"><h3 className="font-bold text-eco-900">{item.question}</h3><p className="mt-3 text-sm leading-6 text-slate-600">{item.answer}</p></article>)}</div></section>
+        <section><h2 className="text-3xl font-bold text-eco-900">Частые вопросы</h2><AeoFaqList faq={aboutPublicContent.faq} /></section>
         <section><h2 className="text-3xl font-bold text-eco-900">Связанные услуги и разделы</h2><div className="mt-5 flex flex-wrap gap-3">{aboutPublicContent.relatedLinks.map((item) => <a key={item.path} href={item.path} className="rounded-full border border-eco-200 bg-eco-50 px-4 py-2 text-sm font-semibold text-eco-800">{item.label}</a>)}</div></section>
       </div>
     </section>
@@ -450,7 +454,7 @@ const AboutPage = () => {
         </Reveal>
       </div>
     </section>
-    <OrderChoiceModal open={orderModalOpen} onClose={() => setOrderModalOpen(false)} />
+    {orderModalOpen && <Suspense fallback={null}><OrderChoiceModal open onClose={() => setOrderModalOpen(false)} /></Suspense>}
   </div>
   );
 };

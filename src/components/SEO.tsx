@@ -1,13 +1,9 @@
 import { useEffect } from 'react';
 import { company } from '../config/company';
 import { appConfig } from '../config/app';
-import seoRegistryJson from '../data/seoRegistry.generated.json';
-import type { SeoRobots, SeoRouteConfig } from '../seo/types';
+import type { SeoRobots } from '../seo/types';
 import { absoluteUrl, normalizePathname } from '../seo/url';
-
-const registry = new Map(
-  (seoRegistryJson as SeoRouteConfig[]).map((entry) => [normalizePathname(entry.path), entry]),
-);
+import { createSchemaGraph } from '../seo/schemaGraph';
 
 type SEOProps = {
   title?: string;
@@ -83,18 +79,22 @@ const SEO = ({
 }: SEOProps) => {
   useEffect(() => {
     const path = normalizePathname(window.location.pathname);
-    const route = registry.get(path);
+    const currentDescription = document.head.querySelector<HTMLMetaElement>('meta[name="description"]')?.content;
+    const currentRobots = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]')?.content as SeoRobots | undefined;
+    const currentCanonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href;
+    const currentOgImage = document.head.querySelector<HTMLMetaElement>('meta[property="og:image"]')?.content;
+    const currentOgType = document.head.querySelector<HTMLMetaElement>('meta[property="og:type"]')?.content as SEOProps['type'] | undefined;
 
     // Explicit values are entity/page overrides. They intentionally win over route data.
-    const resolvedTitle = title?.trim() || route?.title || `${company.name} | Экологические услуги`;
-    const resolvedDescription = description?.trim() || route?.description || 'Экологические услуги и сопровождение бизнеса в Казахстане.';
-    const resolvedCanonical = absoluteUrl(canonical || route?.canonical || path);
-    const resolvedRobots = robots || route?.robots || 'noindex,follow';
-    const resolvedType = type || route?.ogType || 'website';
-    const resolvedImage = absoluteUrl(ogImage || route?.ogImage || '/media/social/ecoprogress-og-1200x630.jpg');
-    const resolvedSchema = schema
-      ? (Array.isArray(schema) ? schema : [schema])
-      : route?.schema;
+    const resolvedTitle = title?.trim() || document.title || `${company.name} | Экологические услуги`;
+    const resolvedDescription = description?.trim() || currentDescription || 'Экологические услуги и сопровождение бизнеса в Казахстане.';
+    const currentCanonicalPath = currentCanonical ? normalizePathname(new URL(currentCanonical, window.location.origin).pathname) : undefined;
+    const samePrerenderedRoute = currentCanonicalPath === path;
+    const resolvedCanonical = absoluteUrl(canonical || (samePrerenderedRoute ? currentCanonical : undefined) || path);
+    const resolvedRobots = robots || currentRobots || 'index,follow';
+    const resolvedType = type || currentOgType || 'website';
+    const resolvedImage = absoluteUrl(ogImage || currentOgImage || '/media/social/ecoprogress-og-1200x630.jpg');
+    const resolvedSchema = schema ? (Array.isArray(schema) ? schema : [schema]) : undefined;
 
     document.title = resolvedTitle;
     setUniqueHeadValue('meta[name="description"]', 'content', resolvedDescription);
@@ -102,14 +102,14 @@ const SEO = ({
     setUniqueHeadValue('link[rel="canonical"]', 'href', resolvedCanonical);
     setUniqueHeadValue('meta[property="og:type"]', 'content', resolvedType);
     setUniqueHeadValue('meta[property="og:url"]', 'content', resolvedCanonical);
-    setUniqueHeadValue('meta[property="og:title"]', 'content', title?.trim() || route?.ogTitle || resolvedTitle);
-    setUniqueHeadValue('meta[property="og:description"]', 'content', description?.trim() || route?.ogDescription || resolvedDescription);
+    setUniqueHeadValue('meta[property="og:title"]', 'content', resolvedTitle);
+    setUniqueHeadValue('meta[property="og:description"]', 'content', resolvedDescription);
     setUniqueHeadValue('meta[property="og:image"]', 'content', resolvedImage);
-    setUniqueHeadValue('meta[property="og:image:width"]', 'content', String(route?.ogImageWidth || 1200));
-    setUniqueHeadValue('meta[property="og:image:height"]', 'content', String(route?.ogImageHeight || 630));
+    setUniqueHeadValue('meta[property="og:image:width"]', 'content', '1200');
+    setUniqueHeadValue('meta[property="og:image:height"]', 'content', '630');
     setUniqueHeadValue('meta[property="og:locale"]', 'content', 'ru_KZ');
     setUniqueHeadValue('meta[property="og:site_name"]', 'content', company.name);
-    setUniqueHeadValue('meta[name="twitter:card"]', 'content', route?.twitterCard || 'summary_large_image');
+    setUniqueHeadValue('meta[name="twitter:card"]', 'content', 'summary_large_image');
     setUniqueHeadValue('meta[name="twitter:title"]', 'content', resolvedTitle);
     setUniqueHeadValue('meta[name="twitter:description"]', 'content', resolvedDescription);
     setUniqueHeadValue('meta[name="twitter:image"]', 'content', resolvedImage);
@@ -136,21 +136,21 @@ const SEO = ({
     if (appConfig.googleSiteVerification) setUniqueHeadValue('meta[name="google-site-verification"]', 'content', appConfig.googleSiteVerification);
     else document.head.querySelectorAll('meta[name="google-site-verification"]').forEach((node) => node.remove());
 
-    document.querySelectorAll('script[data-ecoprogress-schema]').forEach((node) => node.remove());
-    if (resolvedSchema?.length) {
-      const script = document.createElement('script');
-      script.type = 'application/ld+json';
-      script.dataset.ecoprogressSchema = 'true';
-      script.textContent = safeJson(resolvedSchema);
-      document.head.appendChild(script);
-    }
+    const schemaScripts = [...document.head.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]')];
+    const script = schemaScripts.find((node) => node.id === 'page-schema-json-ld') ?? document.createElement('script');
+    schemaScripts.filter((node) => node !== script).forEach((node) => node.remove());
+    script.id = 'page-schema-json-ld';
+    script.type = 'application/ld+json';
+    script.dataset.ecoprogressSchema = 'true';
+    if (resolvedSchema || !script.parentNode || !samePrerenderedRoute) script.textContent = safeJson(createSchemaGraph(resolvedSchema, resolvedCanonical));
+    if (!script.parentNode) document.head.appendChild(script);
 
     const warningFrame = window.requestAnimationFrame(() => warnInDevelopment({
       title: resolvedTitle,
       description: resolvedDescription,
       canonical: resolvedCanonical,
       robots: resolvedRobots,
-      expectedH1: h1 || route?.h1,
+      expectedH1: h1,
     }));
     return () => window.cancelAnimationFrame(warningFrame);
   }, [title, description, h1, canonical, ogImage, type, robots, schema, datePublished, dateModified, alternates]);

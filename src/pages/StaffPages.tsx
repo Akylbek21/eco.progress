@@ -2454,7 +2454,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                     <p className="text-xs font-bold uppercase tracking-wide text-eco-700">Связанный протокол</p>
                     <p className="mt-1 font-black text-slate-950">Протокол № {order.linkedProtocol.number || order.linkedProtocol.id}</p>
                     <p className="mt-1 text-sm text-slate-600">Статус: {order.linkedProtocol.status}</p>
-                    <Link className="mt-3 inline-flex font-bold text-eco-800" to={`/staff/protocols/${order.linkedProtocol.id}`}>Открыть протокол</Link>
+                    {order.linkedProtocol.availableActions.view === true && <Link className="mt-3 inline-flex font-bold text-eco-800" to={`/staff/protocols/${order.linkedProtocol.id}`}>Открыть протокол</Link>}
                   </section>
                 )}
                 {currentTab !== 'Протокол' && (

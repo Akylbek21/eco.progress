@@ -8,6 +8,7 @@ test('workflow keeps version in body, one revision reason and backend permission
   const api = await read('src/services/apiProtocolService.ts');
   const client = await read('src/services/api.ts');
   const permissions = await read('src/utils/protocolPermissions.ts');
+  const types = await read('src/types/protocols.ts');
   assert.doesNotMatch(api, /'If-Match'/);
   assert.doesNotMatch(client, /'If-Match'/);
   assert.doesNotMatch(client, /version: bodyVersion, \.\.\.body/);
@@ -15,8 +16,8 @@ test('workflow keeps version in body, one revision reason and backend permission
   assert.doesNotMatch(api, /\{ comment, reason:/);
   assert.match(permissions, /hasProtocolAction/);
   assert.match(api, /cmsSignatureBase64/);
-  assert.match(permissions, /action\('publish'\)/);
-  assert.match(permissions, /action\('returnForRevision'\)/);
+  assert.match(types, /'publish'/);
+  assert.match(permissions, /hasProtocolAction\(protocol \|\| undefined, 'returnForRevision'\)/);
 });
 
 test('all result changes use the single atomic draft-results endpoint', async () => {

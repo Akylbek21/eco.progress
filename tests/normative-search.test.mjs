@@ -74,7 +74,7 @@ test('API service performs a bounded staged search without crossing protocol con
   assert.match(source, /if \(normalized\.items\.length\) cache\.set/);
 });
 
-test('quick-create normative picker uses the shared debounced search', async () => {
+test('V2 creation wizard normative picker uses the shared debounced search', async () => {
   const source = await read('src/features/protocols/components/components/NormativeSelectorModal.tsx');
   const service = await read('src/services/normativeSearchService.ts');
   assert.match(source, /normativeSearchQueryKey\(request\)/);

@@ -5,17 +5,18 @@ import Button from '../components/ui/Button';
 import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { company, getWhatsAppUrl } from '../config/company';
-import { seoArticleMap, type SeoArticleConfig } from '../data/seoArticles';
-import { buildArticleSchema, buildBreadcrumbSchema, buildFaqSchema } from '../utils/schema';
+import type { SeoArticleConfig } from '../data/seoArticles';
+import { buildArticleSchema, buildBreadcrumbSchema, buildPersonSchema } from '../utils/schema';
 import { normalizeArticleDates } from '../utils/articleDates';
-import { expertMap } from '../content/experts/experts';
-import { ArticleAuthorCard, ArticleChecklist, ArticleReviewerCard, ArticleSources, ArticleTableOfContents, ArticleWarning, ContentLastUpdated, RelatedArticles, RelatedServices } from '../components/content/ContentBlocks';
-import { normalizeArticleSlug } from '../content/articles/articleContent';
-import { articleContentMap } from '../content/articles/articleContent';
+import { expertMap, experts, isCompleteExpert } from '../content/experts/experts';
+import { ArticleAuthorCard, ArticleChecklist, ArticleOrganizationAuthorCard, ArticleReviewerCard, ArticleSources, ArticleTableOfContents, ArticleWarning, ContentLastUpdated, RelatedArticles, RelatedServices } from '../components/content/ContentBlocks';
+import { normalizeArticleSlug } from '../content/articles/articleSlugs';
 import { publicContentRepository } from '../content/apiRepository';
 import type { ArticleContent } from '../content/types';
+import { articleRobotsForReviewStatus } from '../content/articleReview';
+import { AeoFaqList } from '../components/content/AeoContent';
 
-const toSeoArticle = (article: ArticleContent, fallback?: SeoArticleConfig): SeoArticleConfig => ({
+const toSeoArticle = (article: ArticleContent): SeoArticleConfig => ({
   id: article.slug,
   slug: `/news/${article.slug}`,
   title: article.title,
@@ -25,38 +26,48 @@ const toSeoArticle = (article: ArticleContent, fallback?: SeoArticleConfig): Seo
   shortAnswer: article.shortAnswer,
   intent: article.intent,
   targetAudience: article.targetAudience,
-  category: fallback?.category || 'Полезные материалы',
+  category: 'Полезные материалы',
   datePublished: article.datePublished,
   dateModified: article.dateModified,
-  image: article.heroImage || fallback?.image || '/og-cover.jpg',
+  image: article.heroImage || '/og-cover.jpg',
   imageAlt: article.heroImageAlt,
   tableOfContents: article.tableOfContents,
   authorSlug: article.authorSlug,
   reviewerSlug: article.reviewerSlug,
+  author: article.author,
+  reviewer: article.reviewer,
+  lastReviewedAt: article.lastReviewedAt,
   reviewStatus: article.reviewStatus,
   relatedServiceSlugs: article.relatedServiceSlugs,
   relatedArticleSlugs: article.relatedArticleSlugs,
   sources: article.sources,
   sections: article.sections.map((section) => ({ ...section, body: section.paragraphs.join(' ') })),
   faq: article.faq,
-  relatedLinks: fallback?.relatedLinks || [],
+  relatedLinks: [],
 });
 
 const NewsDetailsPage = () => {
   const { id } = useParams();
   const canonicalId = id ? normalizeArticleSlug(id) : '';
-  const staticItem = canonicalId ? seoArticleMap.get(canonicalId) : undefined;
-  const staticContent = canonicalId ? articleContentMap.get(canonicalId) : undefined;
-  const { data: apiContent } = useQuery({
+  const { data: apiContent, isLoading, isError } = useQuery({
     queryKey: ['public-content', 'article', canonicalId],
     queryFn: () => publicContentRepository.getArticleBySlug(canonicalId),
     enabled: Boolean(canonicalId),
-    initialData: staticContent,
     staleTime: 5 * 60 * 1000,
   });
-  const item = apiContent ? toSeoArticle(apiContent, staticItem) : staticItem;
+  const { data: apiExperts = [] } = useQuery({
+    queryKey: ['public-content', 'experts'],
+    queryFn: () => publicContentRepository.getExperts(),
+    initialData: import.meta.env.DEV ? experts : undefined,
+    staleTime: 5 * 60 * 1000,
+  });
+  const item = apiContent ? toSeoArticle(apiContent) : undefined;
 
   if (id && canonicalId !== id) return <Navigate to={`/news/${canonicalId}`} replace />;
+
+  if (isLoading) return <div className="bg-eco-50 px-5 py-20 text-center text-slate-600">Загрузка статьи…</div>;
+
+  if (isError) return <div className="bg-eco-50 px-5 py-20 text-center text-rose-800">Не удалось загрузить статью с сервера.</div>;
 
   if (!item) {
     return (
@@ -75,19 +86,26 @@ const NewsDetailsPage = () => {
 
   const canonical = `${company.siteUrl}${item.slug}`;
   const dates = normalizeArticleDates(item.datePublished, item.dateModified);
-  const author = expertMap.get(item.authorSlug);
-  const reviewer = item.reviewerSlug ? expertMap.get(item.reviewerSlug) : undefined;
+  const backendExpertMap = new Map(apiExperts.map((expert) => [expert.id, expert]));
+  const authorCandidate = item.author ?? backendExpertMap.get(item.authorSlug) ?? expertMap.get(item.authorSlug);
+  const reviewerCandidate = item.reviewer ?? (item.reviewerSlug ? backendExpertMap.get(item.reviewerSlug) ?? expertMap.get(item.reviewerSlug) : undefined);
+  const author = isCompleteExpert(authorCandidate) ? authorCandidate : undefined;
+  const reviewer = isCompleteExpert(reviewerCandidate) ? reviewerCandidate : undefined;
+  const approved = item.reviewStatus === 'approved';
+  const authorId = approved && author ? `${canonical}#person` : undefined;
+  const reviewerId = approved && reviewer ? `${canonical}#person-reviewer` : undefined;
   const schema = [
-    buildArticleSchema({ headline: item.h1, description: item.description, image: `${company.siteUrl}${item.image}`, datePublished: dates.datePublished, dateModified: dates.dateModified, url: canonical }),
+    buildArticleSchema({ headline: item.h1, description: item.description, image: `${company.siteUrl}${item.image}`, datePublished: dates.datePublished, dateModified: dates.dateModified, url: canonical, authorId, reviewerId }),
+    ...(authorId && author ? [buildPersonSchema(author, authorId)] : []),
+    ...(reviewerId && reviewer ? [buildPersonSchema(reviewer, reviewerId)] : []),
     buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Статьи', url: `${company.siteUrl}/news` }, { name: item.h1, url: canonical }]),
-    buildFaqSchema(item.faq),
   ];
 
   return (
     <article className="bg-white">
-      <SEO title={`${item.title} | ECOPROGRESS`} description={item.description} canonical={canonical} type="article" schema={schema} datePublished={dates.datePublished} dateModified={dates.dateModified} />
+      <SEO title={`${item.title} | ECOPROGRESS`} description={item.description} canonical={canonical} robots={articleRobotsForReviewStatus(item.reviewStatus)} type="article" schema={schema} datePublished={dates.datePublished} dateModified={dates.dateModified} />
       <section className="relative overflow-hidden px-5 py-24 text-white sm:px-8">
-        <ResponsiveImage fill src={item.image} alt={item.imageAlt} priority width={1600} height={900} className="object-cover" />
+        <ResponsiveImage fill sizes="100vw" src={item.image} alt={item.imageAlt} priority width={1600} height={900} className="object-cover" />
         <div className="absolute inset-0 bg-eco-900/78" />
         <div className="relative mx-auto max-w-4xl">
           <nav className="flex flex-wrap gap-2 text-sm text-white/72" aria-label="Хлебные крошки">
@@ -122,14 +140,7 @@ const NewsDetailsPage = () => {
         </section>
         <section className="mt-12">
           <h2 className="text-2xl font-bold text-eco-900">Частые вопросы</h2>
-          <div className="mt-5 grid gap-4">
-            {item.faq.map((faq) => (
-              <div key={faq.question} className="rounded-[8px] border border-slate-200 bg-[#F7FBFD] p-5">
-                <h3 className="font-bold text-eco-900">{faq.question}</h3>
-                <p className="mt-2 text-base leading-7 text-slate-600">{faq.answer}</p>
-              </div>
-            ))}
-          </div>
+          <AeoFaqList faq={item.faq} />
         </section>
         <section className="mt-12">
           <h2 className="text-2xl font-bold text-eco-900">Полезные ссылки</h2>
@@ -145,7 +156,11 @@ const NewsDetailsPage = () => {
           {item.relatedServiceSlugs.length > 0 && <RelatedServices slugs={item.relatedServiceSlugs} title="Услуги по теме материала" />}
           {item.relatedArticleSlugs.length > 0 && <RelatedArticles slugs={item.relatedArticleSlugs} />}
           <ArticleSources sources={item.sources} />
-          <div className="grid gap-4 md:grid-cols-2">{author && <ArticleAuthorCard expert={author} />}<ArticleReviewerCard expert={reviewer} /></div>
+          <div className="grid gap-4 md:grid-cols-2">{author ? <ArticleAuthorCard expert={author} /> : <ArticleOrganizationAuthorCard />}<ArticleReviewerCard expert={reviewer} /></div>
+          <div className="rounded-[22px] border border-slate-200 bg-white p-5 text-sm text-slate-600">
+            <p>Дата публикации: <time dateTime={dates.datePublished}>{dates.datePublished}</time></p>
+            <p className="mt-2">Последняя экспертная проверка: {item.lastReviewedAt ? <time dateTime={item.lastReviewedAt}>{item.lastReviewedAt}</time> : 'не завершена'}</p>
+          </div>
           <ContentLastUpdated date={dates.dateModified} requiresReview={item.reviewStatus !== 'approved'} />
         </div>
       </section>

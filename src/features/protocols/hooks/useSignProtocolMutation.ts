@@ -10,6 +10,21 @@ import {
 } from '../utils/protocolSigning';
 import { hasProtocolAction } from '../utils/protocolActions';
 
+export const PROTOCOL_STALE_PDF_MESSAGE = 'PDF не соответствует согласованной версии протокола';
+const STALE_PDF_ERROR_CODES = new Set([
+  'PROTOCOL_CONTENT_CHANGED',
+  'PDF_STALE',
+  'STALE_PDF',
+  'STALE_DOCUMENT',
+  'PROTOCOL_DOCUMENT_STALE',
+  'PROTOCOL_PDF_STALE',
+  'PDF_NOT_CURRENT',
+  'PDF_NOT_MATCH_APPROVED_CONTENT',
+  'PDF_CONTENT_VERSION_MISMATCH',
+  'DOCUMENT_VERSION_MISMATCH',
+  'APPROVED_PDF_HASH_MISMATCH',
+]);
+
 const SIGN_ERROR_MESSAGES: Record<string, string> = {
   PROTOCOL_ALREADY_SIGNED: 'Вы уже подписали эту версию протокола',
   SIGNATURE_LIMIT_REACHED: 'Достигнуто максимальное количество подписей: 5',
@@ -17,12 +32,17 @@ const SIGN_ERROR_MESSAGES: Record<string, string> = {
   PROTOCOL_VERSION_CONFLICT: 'Протокол был изменён другим сотрудником. Обновите данные',
   OPTIMISTIC_LOCK_CONFLICT: 'Протокол был изменён другим сотрудником. Обновите данные',
   FINAL_DOCUMENT_NOT_FOUND: 'Финальный документ не сформирован',
-  PROTOCOL_CONTENT_CHANGED: 'Документ изменился. Необходимо сформировать финальную версию заново',
   ACCESS_DENIED: 'У вас нет доступа к подписанию протокола',
+};
+
+export const isProtocolStalePdfError = (error: unknown): boolean => {
+  const code = normalizeApiError(error).code;
+  return Boolean(code && STALE_PDF_ERROR_CODES.has(code));
 };
 
 export const protocolSignErrorMessage = (error: unknown): string => {
   const parsed = normalizeApiError(error, 'Не удалось подписать протокол');
+  if (parsed.code && STALE_PDF_ERROR_CODES.has(parsed.code)) return PROTOCOL_STALE_PDF_MESSAGE;
   return parsed.code && SIGN_ERROR_MESSAGES[parsed.code]
     ? SIGN_ERROR_MESSAGES[parsed.code]
     : parsed.message;

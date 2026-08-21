@@ -28,16 +28,3 @@ export const protocolNormativeDisplayValue = (normative?: NormativeRecord) => {
     .find((value) => value !== undefined && value !== null && String(value).trim() !== '');
   return fallback === undefined ? '' : String(fallback);
 };
-
-export const protocolNormativeConditionLabel = (item: NormativeRecord) => [
-  item.season,
-  item.workCategory,
-  item.workplaceType,
-  item.roomType,
-  item.normLevel,
-  item.waterType,
-  item.waterUseCategory,
-  item.categoryName || item.categoryCode,
-  item.appendixNo ? `приложение ${item.appendixNo}` : '',
-  item.tableNo ? `таблица ${item.tableNo}` : '',
-].filter(Boolean).join(' · ') || item.conditionJson || '';

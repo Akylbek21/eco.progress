@@ -14,10 +14,10 @@ import { searchNormatives } from '../src/services/normativeSearchService';
 import {
   canCreateProtocol,
   canViewProtocol,
-  getProtocolPermissions,
 } from '../src/utils/protocolPermissions';
+import { hasProtocolAction } from '../src/features/protocols/utils/protocolActions';
 import { createWizardDefaults } from '../src/features/protocols/components/wizardTypes';
-import { buildQuickCreatePayload } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
+import { mapWizardToCreateDraft } from '../src/features/protocols/mappers/protocolWizardDraftMapper';
 
 const server = setupServer();
 const originalBaseUrl = api.defaults.baseURL;
@@ -67,18 +67,16 @@ describe('protocol access and draft compatibility', () => {
     const client = { id: 11, role: 'CLIENT' };
     expect(canViewProtocol(client)).toBe(false);
     expect(canCreateProtocol(client)).toBe(false);
-    expect(getProtocolPermissions({ status: 'DRAFT' }, client.role).canEdit).toBe(false);
+    expect(hasProtocolAction({ availableActions: {} } as never, 'edit')).toBe(false);
   });
 
   it('fails closed when a draft has no backend permissions', () => {
-    const permissions = getProtocolPermissions({ status: 'DRAFT' }, 'STAFF');
-    expect(permissions).toMatchObject({
-      canView: false,
-      canEdit: false,
-      canCalculate: false,
-      canCheckNormatives: false,
-      canReadyForApproval: false,
-    });
+    const protocol = { availableActions: {} } as never;
+    expect(hasProtocolAction(protocol, 'view')).toBe(false);
+    expect(hasProtocolAction(protocol, 'edit')).toBe(false);
+    expect(hasProtocolAction(protocol, 'calculate')).toBe(false);
+    expect(hasProtocolAction(protocol, 'checkNormatives')).toBe(false);
+    expect(hasProtocolAction(protocol, 'sendToApproval')).toBe(false);
   });
 
   it('creates a draft payload from only template and company, without weather or results', () => {
@@ -91,22 +89,23 @@ describe('protocol access and draft compatibility', () => {
     form.results = [];
     Object.assign(form, { temperature: '', humidity: '', pressure: '', windSpeed: '' });
 
-    const payload = buildQuickCreatePayload(form, { validationMode: 'draft' });
+    const payload = mapWizardToCreateDraft(form);
 
     expect(payload).toMatchObject({
       templateId: 'ambient_air',
       companyId: 77,
-      measurements: [],
+      objectId: null,
+      executorId: null,
+      laboratoryId: null,
     });
-    expect(payload).not.toHaveProperty('objectId');
-    expect(payload).not.toHaveProperty('executorId');
+    expect(payload).not.toHaveProperty('measurements');
     expect(payload).not.toHaveProperty('laboratoryEmployeeId');
   });
 
   it('does not synthesize correction permission for a signed protocol', () => {
-    const permissions = getProtocolPermissions({ status: 'SIGNED' }, 'MANAGER');
-    expect(permissions.canEdit).toBe(false);
-    expect(permissions.canReplace).toBe(false);
+    const protocol = { status: 'SIGNED', availableActions: {} } as never;
+    expect(hasProtocolAction(protocol, 'edit')).toBe(false);
+    expect(hasProtocolAction(protocol, 'createCorrection')).toBe(false);
   });
 });
 

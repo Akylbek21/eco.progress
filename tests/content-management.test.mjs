@@ -53,12 +53,14 @@ test('database migration contains versioning, workflow, audit and attribution co
   assert.match(sql, /status <> 'PUBLISHED' OR published_version_id IS NOT NULL/);
 });
 
-test('public repository falls back only after API and stale cache and search uses public repository', async () => {
+test('public repository uses backend in production and enables cache/static fallback only in dev', async () => {
   const [repository, search] = await Promise.all([read('src/content/apiRepository.ts'), read('src/services/publicContentSearch.ts')]);
   const apiPosition = repository.indexOf('await fetcher');
   const cachePosition = repository.indexOf('readCache<T>(name, true)');
   const fallbackPosition = repository.indexOf('return fallback()');
   assert.ok(apiPosition >= 0 && cachePosition > apiPosition && fallbackPosition > cachePosition);
+  assert.match(repository, /if \(!import\.meta\.env\.DEV \|\| !this\.devFallback\) throw error/);
+  assert.match(repository, /import\.meta\.env\.DEV \? new LocalContentRepository\(\) : undefined/);
   assert.match(search, /publicContentRepository\.getServices\(\)/);
   assert.match(search, /publicContentRepository\.getArticles\(\)/);
   assert.match(search, /publicContentRepository\.getRegions\(\)/);
@@ -117,14 +119,19 @@ test('content editor exposes structured blocks, files, comments, diff and respon
   assert.match(service, /FormData/);
 });
 
-test('public service and article pages use public content API with published fallback', async () => {
-  const [services, news, servicePage, articlePage] = await Promise.all([
+test('public service and article pages use one repository without production static fallback', async () => {
+  const [services, news, repository, servicePage, articlePage] = await Promise.all([
     read('src/services/serviceService.ts'), read('src/services/newsService.ts'),
+    read('src/content/apiRepository.ts'),
     read('src/pages/ServiceLandingPage.tsx'), read('src/pages/NewsDetailsPage.tsx'),
   ]);
-  assert.match(services, /\/public\/content\/services/);
-  assert.match(news, /\/public\/content\/articles/);
+  assert.match(repository, /`\/public\/content\/\$\{name\}`/);
+  assert.match(services, /publicContentRepository\.getServices/);
+  assert.match(news, /publicContentRepository\.getArticles/);
+  assert.match(services, /if \(!import\.meta\.env\.DEV\) throw error/);
+  assert.match(news, /if \(!import\.meta\.env\.DEV\) throw error/);
   assert.match(servicePage, /publicContentRepository\.getServiceBySlug/);
   assert.match(articlePage, /publicContentRepository\.getArticleBySlug/);
-  assert.doesNotMatch(services, /length > 0[\s\S]*source: 'api'/);
+  assert.doesNotMatch(services, /fetcher/);
+  assert.doesNotMatch(news, /fetcher/);
 });

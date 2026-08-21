@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import EnvironmentStep from '../src/features/protocols/components/steps/EnvironmentStep';
 import ProtocolResultRow from '../src/features/protocols/components/components/ProtocolResultRow';
 import { createWizardDefaults, emptyWizardResult, type ProtocolWizardForm } from '../src/features/protocols/components/wizardTypes';
-import { mapConditions } from '../src/features/protocols/mappers/mapProtocolWizardToRequest';
+import { mapWizardToCreateDraft } from '../src/features/protocols/mappers/protocolWizardDraftMapper';
 import { mapProtocolFormToUpdateRequest } from '../src/features/protocols/api/protocolMappers';
 import { normalizeProtocol } from '../src/services/apiProtocolService';
 import { getWaterTypeLabel, WATER_TYPE_OPTIONS, WATER_USE_CATEGORY_OPTIONS } from '../src/config/protocolWater';
@@ -76,16 +76,18 @@ describe('water protocol wizard and editor contract', () => {
     expect(restored.form).toMatchObject({ waterType: 'DRINKING_WATER', waterUseCategory: 'I' });
   });
 
-  it('puts water characteristics in quick-create conditions and omits them for air', () => {
+  it('puts water characteristics in the V2 draft environment and clears them for air', () => {
     const water = createWizardDefaults();
     water.templateId = 'water';
     water.waterType = 'DRINKING_WATER';
     water.waterUseCategory = 'I';
-    expect(mapConditions(water)).toMatchObject({ waterType: 'DRINKING_WATER', waterUseCategory: 'I' });
+    water.companyId = '1';
+    expect(mapWizardToCreateDraft(water).environment.conditions).toMatchObject({ waterType: 'DRINKING_WATER', waterUseCategory: 'I' });
     const air = createWizardDefaults();
     air.templateId = 'ambient_air';
-    expect(mapConditions(air).waterType).toBeUndefined();
-    expect(mapConditions(air).waterUseCategory).toBeUndefined();
+    air.companyId = '1';
+    expect(mapWizardToCreateDraft(air).environment.conditions.waterType).toBeNull();
+    expect(mapWizardToCreateDraft(air).environment.conditions.waterUseCategory).toBeNull();
   });
 
   it('hydrates nested backend environment conditions and preserves them in PATCH', () => {

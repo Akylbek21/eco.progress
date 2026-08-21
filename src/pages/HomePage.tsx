@@ -1,18 +1,35 @@
 ﻿import { Link } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowRight, Beaker, Building2, FileText, MapPinned, Recycle, ShieldCheck, Truck } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import WhatsAppButton from '../components/WhatsAppButton';
 import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
-import ServiceSelector from '../components/ServiceSelector';
-import CaseStudies from '../components/CaseStudies';
 import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
-import { DocumentsSection, TrustSection } from '../components/TrustBlocks';
 import { company } from '../config/company';
 import { featuredSeoLinks } from '../data/featuredSeoLinks';
 import { trackEvent } from '../services/analytics';
 import { activeServices } from '../content/serviceCatalog';
+
+const ServiceSelector = lazy(() => import('../components/ServiceSelector'));
+const HomeCaseStudies = lazy(() => import('../components/home/HomeCaseStudies'));
+const HomeTrustSections = lazy(() => import('../components/home/HomeTrustSections'));
+
+const DeferredSection = ({ children, minHeight = 320 }: { children: ReactNode; minHeight?: number }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || !('IntersectionObserver' in window)) { setVisible(true); return; }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setVisible(true); observer.disconnect(); }
+    }, { rootMargin: '600px 0px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  return <div ref={ref} style={visible ? undefined : { minHeight }}>{visible ? children : null}</div>;
+};
 
 const benefits = ['Экологическое проектирование', 'Лабораторные исследования', 'Утилизация: Шымкент, Тараз, Туркестан', 'Полигон ТБО', 'Работаем по Казахстану', 'Документы и сопровождение'];
 
@@ -74,7 +91,7 @@ const HomePage = () => (
   <div className="min-h-screen bg-white">
     <SEO />
     <section id="lead" className="relative isolate overflow-hidden px-4 py-20 text-white sm:px-8 sm:py-28 lg:min-h-[760px]">
-      <div className="hero-zoom absolute inset-0 -z-30 bg-windmill bg-cover bg-center" />
+      <ResponsiveImage fill priority sizes="100vw" src="/media/otbor-prob-vody-1280.jpg" alt="" width={1920} height={1280} wrapperClassName="-z-30" className="hero-zoom object-cover object-center" />
       <div className="absolute inset-0 -z-20 bg-eco-900/88" />
       <div className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-white to-transparent" />
       <div className="mx-auto grid max-w-7xl gap-10 lg:min-h-[600px] lg:grid-cols-[1.05fr_0.78fr] lg:items-center">
@@ -109,7 +126,7 @@ const HomePage = () => (
       </div>
     </section>
 
-    <ServiceSelector />
+    <Suspense fallback={null}><ServiceSelector /></Suspense>
 
     <section id="about-company" className="bg-white px-4 py-16 sm:px-8 sm:py-20">
       <div className="mx-auto grid max-w-7xl gap-8 overflow-hidden rounded-[28px] border border-eco-100 bg-gradient-to-br from-white to-eco-50/70 p-5 shadow-xl shadow-eco-900/6 sm:p-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-center lg:gap-12">
@@ -127,7 +144,7 @@ const HomePage = () => (
           <div className="grid grid-cols-2 gap-3 lg:h-[430px] lg:grid-cols-[1.18fr_0.82fr] lg:grid-rows-2">
             {visualHighlights.map((item) => (
               <div key={item.title} className={`group relative min-h-[145px] overflow-hidden rounded-[20px] bg-eco-900 shadow-sm ${item.className}`}>
-                <ResponsiveImage fill src={item.image} alt={item.title} width={900} height={506} className="object-cover transition duration-500 group-hover:scale-105" />
+                <ResponsiveImage fill sizes="(max-width: 1023px) 50vw, 33vw" src={item.image} alt={item.title} width={900} height={506} className="object-cover transition duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-eco-900/90 via-eco-900/10 to-transparent" />
                 <div className="relative flex h-full min-h-[145px] items-end p-4 sm:p-5">
                   <span className="inline-flex items-center gap-2 text-sm font-bold text-white">
@@ -158,7 +175,7 @@ const HomePage = () => (
             <Reveal key={title} delay={index * 0.04}>
               <Link to={href} className="group card-hover flex h-full flex-col rounded-[20px] border border-slate-200 bg-white shadow-lg shadow-eco-900/5">
                 <div className="relative h-44 overflow-hidden">
-                  <ResponsiveImage src={image} alt={title} width={900} height={506} wrapperClassName="h-44 w-full" className="object-cover transition duration-500 group-hover:scale-105" />
+                  <ResponsiveImage sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw" src={image} alt={title} width={900} height={506} wrapperClassName="h-44 w-full" className="object-cover transition duration-500 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-eco-900/70 to-transparent" />
                   <div className="absolute bottom-4 left-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/92 text-eco-700 shadow-sm">
                     <Icon size={24} />
@@ -223,9 +240,8 @@ const HomePage = () => (
       </div>
     </section>
 
-    <TrustSection />
-    <DocumentsSection />
-    <CaseStudies />
+    <DeferredSection minHeight={560}><Suspense fallback={null}><HomeTrustSections /></Suspense></DeferredSection>
+    <DeferredSection minHeight={420}><Suspense fallback={null}><HomeCaseStudies /></Suspense></DeferredSection>
 
   </div>
 );

@@ -9,7 +9,7 @@ const ProtocolGeneralForm = ({ protocol, readOnly, onChange }: Props) => (
   <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
     <div className="mb-4 flex items-center justify-between gap-3">
       <h2 className="text-lg font-bold text-slate-900">Общие данные</h2>
-      <ProtocolStatusBadge status={protocol.status} />
+      <ProtocolStatusBadge status={protocol.status} publishedAt={protocol.publishedAt} />
     </div>
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <label className="space-y-1.5 text-sm font-semibold text-slate-700"><span>Номер протокола</span><input className={inputClass} disabled={readOnly} value={protocol.protocolNumber || ''} onChange={(e) => onChange({ protocolNumber: e.target.value, number: e.target.value })} /></label>

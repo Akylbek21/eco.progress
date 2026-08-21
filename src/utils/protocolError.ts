@@ -1,4 +1,7 @@
-import { normalizeApiError } from '../services/apiHelpers';
+import { getApiStatus, normalizeApiError } from '../services/apiHelpers';
+
+export const protocolAccessErrorMessage = (error: unknown): string | null =>
+  getApiStatus(error) === 403 ? 'Нет доступа к протоколу' : null;
 
 export type NormalizedProtocolError = {
   message: string;

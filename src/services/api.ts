@@ -49,7 +49,8 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (import.meta.env.DEV) {
+    const requestPath = String(error.config?.url || '').replace(/^\/api/, '').split('?')[0];
+    if (import.meta.env.DEV && !requestPath.startsWith('/public/')) {
       const parsed = normalizeApiError(error);
       console.error('[API error]', {
         url: error.config?.url,
@@ -67,7 +68,6 @@ api.interceptors.response.use(
       });
     }
     error.message = getApiErrorMessage(error, error.message);
-    const requestPath = String(error.config?.url || '').replace(/^\/api/, '').split('?')[0];
     if (error.response?.status === 401 && !requestPath.startsWith('/public/')) {
       localStorage.removeItem('eco-progress-token');
       localStorage.removeItem('eco-progress-user');

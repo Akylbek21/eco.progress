@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { regions } from '../content/regions';
 import { activeServices } from '../content/serviceCatalog';
-import { regionContentMap } from '../content/regions/regionContent';
+import { regionContent, regionContentMap } from '../content/regions/regionContent';
+import { isRegionContentIndexable } from '../content/regions/regionContentQuality';
 
 const RegionsPage = () => {
   const [query, setQuery] = useState('');
-  const filtered = useMemo(() => regions.filter((region) => `${region.city} ${region.regionNominative}`.toLowerCase().includes(query.trim().toLowerCase())), [query]);
+  const filtered = useMemo(() => regions.filter((region) => `${region.cityNominative} ${region.regionNominative}`.toLowerCase().includes(query.trim().toLowerCase())), [query]);
   const groups = [
     ['Доступны по Казахстану дистанционно', activeServices.filter((item) => item.areaServed.type === 'KAZAKHSTAN' && item.areaServed.remote)],
     ['Требуют выезда специалиста', activeServices.filter((item) => item.areaServed.onSite)],
@@ -22,7 +23,8 @@ const RegionsPage = () => {
       <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">{filtered.map((region) => {
         const available = activeServices.filter((service) => service.areaServed.type === 'KAZAKHSTAN' || service.areaServed.regions?.includes(region.slug));
         const details = regionContentMap.get(region.slug);
-        return <article key={region.slug} className="rounded-[22px] border border-slate-200 bg-white p-6"><h2 className="text-xl font-bold text-eco-900">{region.city}</h2><p className="mt-2 text-sm text-slate-600">{region.regionNominative}</p>{details && <><p className="mt-4 text-sm leading-6 text-slate-600">{details.introduction}</p><p className="mt-3 text-xs font-semibold text-eco-700">Отрасли: {details.industries.join(', ')}</p></>}<p className="mt-4 text-sm"><strong>Дистанционно:</strong> {available.some((item) => item.areaServed.remote) ? 'да' : 'нет'}</p><p className="mt-1 text-sm"><strong>Выезд:</strong> {available.some((item) => item.areaServed.onSite) ? 'по согласованию' : 'не предусмотрен'}</p><p className="mt-4 text-sm text-slate-600">Доступно услуг: {details?.availableServiceSlugs.length ?? available.length}</p><Link to={`/ecologicheskie-uslugi-${region.slug}`} className="mt-5 inline-flex text-sm font-bold text-eco-700">Условия работы в регионе →</Link></article>;
+        const indexed = isRegionContentIndexable(details, regionContent);
+        return <article key={region.slug} className="rounded-[22px] border border-slate-200 bg-white p-6"><h2 className="text-xl font-bold text-eco-900">{region.cityNominative}</h2><p className="mt-2 text-sm text-slate-600">{region.regionNominative}</p>{details && <><p className="mt-4 text-sm leading-6 text-slate-600">{details.introduction}</p><p className="mt-3 text-xs font-semibold text-eco-700">Отрасли: {details.industries.join(', ')}</p></>}<p className="mt-4 text-sm"><strong>Дистанционно:</strong> {available.some((item) => item.areaServed.remote) ? 'да' : 'нет'}</p><p className="mt-1 text-sm"><strong>Выезд:</strong> {available.some((item) => item.areaServed.onSite) ? 'по согласованию' : 'не предусмотрен'}</p><p className="mt-4 text-sm text-slate-600">Доступно услуг: {details?.availableServiceSlugs.length ?? available.length}</p>{indexed ? <Link to={`/ecologicheskie-uslugi-${region.slug}`} className="mt-5 inline-flex text-sm font-bold text-eco-700">Условия работы в регионе →</Link> : <p className="mt-5 text-xs text-slate-500">Региональная страница проходит проверку фактических кейсов.</p>}</article>;
       })}</div>
       {!filtered.length && <p className="mt-8 rounded-2xl bg-white p-6 text-slate-600">Город не найден. Уточните возможность работы у специалиста.</p>}
       <div className="mt-14 grid gap-5 lg:grid-cols-2">{groups.map(([title, services]) => <section key={title} className="rounded-[22px] bg-white p-6"><h2 className="text-xl font-bold text-eco-900">{title}</h2><ul className="mt-4 space-y-2 text-sm text-slate-700">{services.map((service) => <li key={service.slug}><Link to={`/services/${service.slug}`} className="hover:text-eco-700">{service.title}</Link></li>)}</ul></section>)}</div>

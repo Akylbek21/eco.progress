@@ -1,30 +1,40 @@
 export interface RegionNameForms {
   slug: string;
-  city: string;
+  /** Compatibility display alias; SEO generation must use the explicit grammatical form. */
+  readonly city: string;
+  cityNominative: string;
+  cityGenitive: string;
+  cityDative: string;
+  cityAccusative: string;
+  cityInstrumental: string;
+  cityPrepositional: string;
   regionNominative: string;
   regionGenitive: string;
   regionPrepositional: string;
-  cityGenitive?: string;
-  cityPrepositional?: string;
 }
 
+type RegionNameFormsInput = Omit<RegionNameForms, 'city'>;
+const forms = (value: RegionNameFormsInput): RegionNameForms => ({ ...value, city: value.cityNominative });
+
 export const regions: RegionNameForms[] = [
-  { slug: 'almaty', city: 'Алматы', regionNominative: 'Алматы и Алматинская область', regionGenitive: 'Алматы и Алматинской области', regionPrepositional: 'Алматы и Алматинской области', cityGenitive: 'Алматы', cityPrepositional: 'Алматы' },
-  { slug: 'astana', city: 'Астана', regionNominative: 'Астана и Акмолинская область', regionGenitive: 'Астаны и Акмолинской области', regionPrepositional: 'Астане и Акмолинской области', cityGenitive: 'Астаны', cityPrepositional: 'Астане' },
-  { slug: 'shymkent', city: 'Шымкент', regionNominative: 'Шымкент и Туркестанская область', regionGenitive: 'Шымкента и Туркестанской области', regionPrepositional: 'Шымкенте и Туркестанской области', cityGenitive: 'Шымкента', cityPrepositional: 'Шымкенте' },
-  { slug: 'taraz', city: 'Тараз', regionNominative: 'Тараз и Жамбылская область', regionGenitive: 'Тараза и Жамбылской области', regionPrepositional: 'Таразе и Жамбылской области', cityGenitive: 'Тараза', cityPrepositional: 'Таразе' },
-  { slug: 'turkestan', city: 'Туркестан', regionNominative: 'Туркестан и Туркестанская область', regionGenitive: 'Туркестана и Туркестанской области', regionPrepositional: 'Туркестане и Туркестанской области', cityGenitive: 'Туркестана', cityPrepositional: 'Туркестане' },
-  { slug: 'kyzylorda', city: 'Кызылорда', regionNominative: 'Кызылорда и Кызылординская область', regionGenitive: 'Кызылорды и Кызылординской области', regionPrepositional: 'Кызылорде и Кызылординской области', cityGenitive: 'Кызылорды', cityPrepositional: 'Кызылорде' },
-  { slug: 'aktobe', city: 'Актобе', regionNominative: 'Актобе и Актюбинская область', regionGenitive: 'Актобе и Актюбинской области', regionPrepositional: 'Актобе и Актюбинской области', cityGenitive: 'Актобе', cityPrepositional: 'Актобе' },
-  { slug: 'atyrau', city: 'Атырау', regionNominative: 'Атырау и Атырауская область', regionGenitive: 'Атырау и Атырауской области', regionPrepositional: 'Атырау и Атырауской области', cityGenitive: 'Атырау', cityPrepositional: 'Атырау' },
-  { slug: 'karaganda', city: 'Караганда', regionNominative: 'Караганда и Карагандинская область', regionGenitive: 'Караганды и Карагандинской области', regionPrepositional: 'Караганде и Карагандинской области', cityGenitive: 'Караганды', cityPrepositional: 'Караганде' },
-  { slug: 'pavlodar', city: 'Павлодар', regionNominative: 'Павлодар и Павлодарская область', regionGenitive: 'Павлодара и Павлодарской области', regionPrepositional: 'Павлодаре и Павлодарской области', cityGenitive: 'Павлодара', cityPrepositional: 'Павлодаре' },
-  { slug: 'ust-kamenogorsk', city: 'Усть-Каменогорск', regionNominative: 'Усть-Каменогорск и Восточно-Казахстанская область', regionGenitive: 'Усть-Каменогорска и Восточно-Казахстанской области', regionPrepositional: 'Усть-Каменогорске и Восточно-Казахстанской области', cityGenitive: 'Усть-Каменогорска', cityPrepositional: 'Усть-Каменогорске' },
-  { slug: 'kostanay', city: 'Костанай', regionNominative: 'Костанай и Костанайская область', regionGenitive: 'Костаная и Костанайской области', regionPrepositional: 'Костанае и Костанайской области', cityGenitive: 'Костаная', cityPrepositional: 'Костанае' },
-  { slug: 'aktau', city: 'Актау', regionNominative: 'Актау и Мангистауская область', regionGenitive: 'Актау и Мангистауской области', regionPrepositional: 'Актау и Мангистауской области', cityGenitive: 'Актау', cityPrepositional: 'Актау' },
-  { slug: 'petropavlovsk', city: 'Петропавловск', regionNominative: 'Петропавловск и Северо-Казахстанская область', regionGenitive: 'Петропавловска и Северо-Казахстанской области', regionPrepositional: 'Петропавловске и Северо-Казахстанской области', cityGenitive: 'Петропавловска', cityPrepositional: 'Петропавловске' },
-  { slug: 'oral', city: 'Уральск', regionNominative: 'Уральск и Западно-Казахстанская область', regionGenitive: 'Уральска и Западно-Казахстанской области', regionPrepositional: 'Уральске и Западно-Казахстанской области', cityGenitive: 'Уральска', cityPrepositional: 'Уральске' },
-  { slug: 'kokshetau', city: 'Кокшетау', regionNominative: 'Кокшетау и Акмолинская область', regionGenitive: 'Кокшетау и Акмолинской области', regionPrepositional: 'Кокшетау и Акмолинской области', cityGenitive: 'Кокшетау', cityPrepositional: 'Кокшетау' },
-  { slug: 'taldykorgan', city: 'Талдыкорган', regionNominative: 'Талдыкорган и область Жетісу', regionGenitive: 'Талдыкоргана и области Жетісу', regionPrepositional: 'Талдыкоргане и области Жетісу', cityGenitive: 'Талдыкоргана', cityPrepositional: 'Талдыкоргане' },
-  { slug: 'semey', city: 'Семей', regionNominative: 'Семей и область Абай', regionGenitive: 'Семея и области Абай', regionPrepositional: 'Семее и области Абай', cityGenitive: 'Семея', cityPrepositional: 'Семее' },
+  forms({ slug: 'almaty', cityNominative: 'Алматы', cityGenitive: 'Алматы', cityDative: 'Алматы', cityAccusative: 'Алматы', cityInstrumental: 'Алматы', cityPrepositional: 'Алматы', regionNominative: 'Алматинская область', regionGenitive: 'Алматинской области', regionPrepositional: 'Алматинской области' }),
+  forms({ slug: 'astana', cityNominative: 'Астана', cityGenitive: 'Астаны', cityDative: 'Астане', cityAccusative: 'Астану', cityInstrumental: 'Астаной', cityPrepositional: 'Астане', regionNominative: 'Акмолинская область', regionGenitive: 'Акмолинской области', regionPrepositional: 'Акмолинской области' }),
+  forms({ slug: 'shymkent', cityNominative: 'Шымкент', cityGenitive: 'Шымкента', cityDative: 'Шымкенту', cityAccusative: 'Шымкент', cityInstrumental: 'Шымкентом', cityPrepositional: 'Шымкенте', regionNominative: 'Туркестанская область', regionGenitive: 'Туркестанской области', regionPrepositional: 'Туркестанской области' }),
+  forms({ slug: 'taraz', cityNominative: 'Тараз', cityGenitive: 'Тараза', cityDative: 'Таразу', cityAccusative: 'Тараз', cityInstrumental: 'Таразом', cityPrepositional: 'Таразе', regionNominative: 'Жамбылская область', regionGenitive: 'Жамбылской области', regionPrepositional: 'Жамбылской области' }),
+  forms({ slug: 'turkestan', cityNominative: 'Туркестан', cityGenitive: 'Туркестана', cityDative: 'Туркестану', cityAccusative: 'Туркестан', cityInstrumental: 'Туркестаном', cityPrepositional: 'Туркестане', regionNominative: 'Туркестанская область', regionGenitive: 'Туркестанской области', regionPrepositional: 'Туркестанской области' }),
+  forms({ slug: 'kyzylorda', cityNominative: 'Кызылорда', cityGenitive: 'Кызылорды', cityDative: 'Кызылорде', cityAccusative: 'Кызылорду', cityInstrumental: 'Кызылордой', cityPrepositional: 'Кызылорде', regionNominative: 'Кызылординская область', regionGenitive: 'Кызылординской области', regionPrepositional: 'Кызылординской области' }),
+  forms({ slug: 'aktobe', cityNominative: 'Актобе', cityGenitive: 'Актобе', cityDative: 'Актобе', cityAccusative: 'Актобе', cityInstrumental: 'Актобе', cityPrepositional: 'Актобе', regionNominative: 'Актюбинская область', regionGenitive: 'Актюбинской области', regionPrepositional: 'Актюбинской области' }),
+  forms({ slug: 'atyrau', cityNominative: 'Атырау', cityGenitive: 'Атырау', cityDative: 'Атырау', cityAccusative: 'Атырау', cityInstrumental: 'Атырау', cityPrepositional: 'Атырау', regionNominative: 'Атырауская область', regionGenitive: 'Атырауской области', regionPrepositional: 'Атырауской области' }),
+  forms({ slug: 'karaganda', cityNominative: 'Караганда', cityGenitive: 'Караганды', cityDative: 'Караганде', cityAccusative: 'Караганду', cityInstrumental: 'Карагандой', cityPrepositional: 'Караганде', regionNominative: 'Карагандинская область', regionGenitive: 'Карагандинской области', regionPrepositional: 'Карагандинской области' }),
+  forms({ slug: 'pavlodar', cityNominative: 'Павлодар', cityGenitive: 'Павлодара', cityDative: 'Павлодару', cityAccusative: 'Павлодар', cityInstrumental: 'Павлодаром', cityPrepositional: 'Павлодаре', regionNominative: 'Павлодарская область', regionGenitive: 'Павлодарской области', regionPrepositional: 'Павлодарской области' }),
+  forms({ slug: 'ust-kamenogorsk', cityNominative: 'Усть-Каменогорск', cityGenitive: 'Усть-Каменогорска', cityDative: 'Усть-Каменогорску', cityAccusative: 'Усть-Каменогорск', cityInstrumental: 'Усть-Каменогорском', cityPrepositional: 'Усть-Каменогорске', regionNominative: 'Восточно-Казахстанская область', regionGenitive: 'Восточно-Казахстанской области', regionPrepositional: 'Восточно-Казахстанской области' }),
+  forms({ slug: 'kostanay', cityNominative: 'Костанай', cityGenitive: 'Костаная', cityDative: 'Костанаю', cityAccusative: 'Костанай', cityInstrumental: 'Костанаем', cityPrepositional: 'Костанае', regionNominative: 'Костанайская область', regionGenitive: 'Костанайской области', regionPrepositional: 'Костанайской области' }),
+  forms({ slug: 'aktau', cityNominative: 'Актау', cityGenitive: 'Актау', cityDative: 'Актау', cityAccusative: 'Актау', cityInstrumental: 'Актау', cityPrepositional: 'Актау', regionNominative: 'Мангистауская область', regionGenitive: 'Мангистауской области', regionPrepositional: 'Мангистауской области' }),
+  forms({ slug: 'petropavlovsk', cityNominative: 'Петропавловск', cityGenitive: 'Петропавловска', cityDative: 'Петропавловску', cityAccusative: 'Петропавловск', cityInstrumental: 'Петропавловском', cityPrepositional: 'Петропавловске', regionNominative: 'Северо-Казахстанская область', regionGenitive: 'Северо-Казахстанской области', regionPrepositional: 'Северо-Казахстанской области' }),
+  forms({ slug: 'oral', cityNominative: 'Уральск', cityGenitive: 'Уральска', cityDative: 'Уральску', cityAccusative: 'Уральск', cityInstrumental: 'Уральском', cityPrepositional: 'Уральске', regionNominative: 'Западно-Казахстанская область', regionGenitive: 'Западно-Казахстанской области', regionPrepositional: 'Западно-Казахстанской области' }),
+  forms({ slug: 'kokshetau', cityNominative: 'Кокшетау', cityGenitive: 'Кокшетау', cityDative: 'Кокшетау', cityAccusative: 'Кокшетау', cityInstrumental: 'Кокшетау', cityPrepositional: 'Кокшетау', regionNominative: 'Акмолинская область', regionGenitive: 'Акмолинской области', regionPrepositional: 'Акмолинской области' }),
+  forms({ slug: 'taldykorgan', cityNominative: 'Талдыкорган', cityGenitive: 'Талдыкоргана', cityDative: 'Талдыкоргану', cityAccusative: 'Талдыкорган', cityInstrumental: 'Талдыкорганом', cityPrepositional: 'Талдыкоргане', regionNominative: 'область Жетісу', regionGenitive: 'области Жетісу', regionPrepositional: 'области Жетісу' }),
+  forms({ slug: 'semey', cityNominative: 'Семей', cityGenitive: 'Семея', cityDative: 'Семею', cityAccusative: 'Семей', cityInstrumental: 'Семеем', cityPrepositional: 'Семее', regionNominative: 'область Абай', regionGenitive: 'области Абай', regionPrepositional: 'области Абай' }),
 ];
+
+export const regionNameMap = new Map(regions.map((region) => [region.slug, region]));

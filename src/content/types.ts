@@ -1,6 +1,27 @@
 export type ContentStatus = 'draft' | 'specialist-review' | 'legal-review' | 'approved' | 'published' | 'outdated' | 'archived';
 export type LegalClaimStatus = 'verified' | 'requires-review' | 'general-information';
-export type ReviewStatus = 'approved' | 'requires-specialist-review' | 'draft';
+export type ReviewStatus = 'approved' | 'requires-specialist-review' | 'draft' | 'rejected';
+
+export interface AeoFaqItem {
+  question: string;
+  shortAnswer?: string;
+  explanation?: string;
+  /** Compatibility with content created before the AEO migration. */
+  answer: string;
+}
+
+export interface ServiceAeoContent {
+  shortAnswer: string;
+  targetAudience: string;
+  whenRequired: string;
+  whenNotRequired: string;
+  requiredDocuments: string;
+  deliverables: string;
+  duration: string;
+  pricing: string;
+  legalBasis: string;
+  commonMistakes: string;
+}
 
 export interface ContentAuditItem {
   url: string;
@@ -37,7 +58,8 @@ export interface ServiceContent {
   notIncluded: string[];
   pricingFactors: Array<{ title: string; description: string }>;
   risks: Array<{ risk: string; prevention: string }>;
-  faq: Array<{ question: string; answer: string }>;
+  faq: AeoFaqItem[];
+  aeo?: ServiceAeoContent;
   relatedServices: string[];
   relatedArticles: string[];
   contentReview: { preparedBy?: string; reviewedBy?: string; lastReviewedAt?: string; reviewStatus: ReviewStatus };
@@ -67,13 +89,16 @@ export interface ArticleContent {
   dateModified: string;
   authorSlug: string;
   reviewerSlug?: string;
+  author?: Expert;
+  reviewer?: Expert;
+  lastReviewedAt?: string;
   heroImage?: string;
   heroImageAlt: string;
   imageRequiresReplacement?: boolean;
   tableOfContents: boolean;
   sections: ArticleSection[];
   sources: Array<{ title: string; url: string; accessedAt?: string; claimStatus: LegalClaimStatus }>;
-  faq: Array<{ question: string; answer: string }>;
+  faq: AeoFaqItem[];
   reviewStatus: ReviewStatus;
 }
 
@@ -100,14 +125,25 @@ export interface RegionContent {
   logisticsNote: string;
   availableServiceSlugs: string[];
   relatedArticleSlugs: string[];
-  faq: Array<{ question: string; answer: string }>;
+  faq: AeoFaqItem[];
+  regionalFeatures?: string[];
+  estimatedTimeline?: string;
+  confirmedCaseSlugs?: string[];
+  completedWorkExamples?: string[];
 }
 
-export interface ExpertProfile {
-  slug: string; fullName: string; position: string; specialization: string[]; experienceYears?: number;
-  education?: string[]; certificates?: string[]; photo?: string; bio: string; articles: string[];
-  verificationStatus: 'verified' | 'requires-verification';
+export interface Expert {
+  id: string;
+  fullName: string;
+  position: string;
+  specialization: string[];
+  experienceYears: number;
+  bio: string;
+  photo: string;
+  profileUrl: string;
 }
+
+export type ExpertProfile = Expert;
 
 export interface TrustDocument {
   id: string; title: string; documentType: 'accreditation' | 'license' | 'permit' | 'certificate' | 'protocol' | 'other';
@@ -116,11 +152,28 @@ export interface TrustDocument {
 }
 
 export interface CaseStudy {
-  slug: string; title: string; industry: string; region: string; serviceSlugs: string[]; clientDescription: string;
-  initialSituation: string; problem: string; projectFacts: Array<{ label: string; value: string }>;
-  workCompleted: string[]; result: string[]; duration?: string;
-  clientQuote?: { text: string; author?: string; position?: string };
-  verificationStatus: 'approved' | 'requires-client-approval' | 'draft';
+  id: string;
+  slug: string;
+  title: string;
+  service: string;
+  industry: string;
+  city: string;
+  region: string;
+  objectType: string;
+  objectCategory: string;
+  problem: string;
+  initialData: string;
+  workPerformed: string[];
+  regulations: Array<{ title: string; url?: string }>;
+  result: string;
+  completedAt: string;
+  expert: Expert;
+  reviewer: Expert;
+  clientName?: string;
+  clientAnonymous: boolean;
+  status: 'draft' | 'review' | 'approved' | 'published' | 'rejected' | 'archived';
+  publishedAt?: string;
+  updatedAt: string;
 }
 
 export interface ContentRepository {
@@ -130,6 +183,10 @@ export interface ContentRepository {
   getArticleBySlug(slug: string): Promise<ArticleContent | null>;
   getRegions(): Promise<RegionContent[]>;
   getRegionBySlug(slug: string): Promise<RegionContent | null>;
+  getExperts(): Promise<Expert[]>;
+  getTrustDocuments(): Promise<TrustDocument[]>;
+  getCases(): Promise<CaseStudy[]>;
+  getCaseBySlug(slug: string): Promise<CaseStudy | null>;
 }
 
 export const isPublicContent = (status: ContentStatus) => status === 'published' || status === 'outdated';

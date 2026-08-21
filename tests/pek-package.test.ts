@@ -16,7 +16,7 @@ describe('PEK report package backend contract', () => {
       generatedAt: '2026-08-17T09:00:00Z',
       generatedBy: { id: 7, fullName: 'Эколог' },
       downloadAvailable: true,
-      availableActions: { regeneratePackage: true, downloadPackage: true },
+      availableActions: { generatePackage: true, downloadPackage: true },
       version: 6,
     } });
 
@@ -30,7 +30,7 @@ describe('PEK report package backend contract', () => {
       generatedAt: '2026-08-17T09:00:00Z',
       generatedBy: { id: 7, name: 'Эколог' },
       downloadAvailable: true,
-      availableActions: { regeneratePackage: true, downloadPackage: true },
+      availableActions: { generatePackage: true, downloadPackage: true },
       version: 6,
     });
     expect(result).not.toHaveProperty('status');
@@ -40,7 +40,7 @@ describe('PEK report package backend contract', () => {
   it('uses package actions only and refetches report/document/package after generation', () => {
     const component = readFileSync(resolve(process.cwd(), 'src/features/pek/components/documents/PekReportPackageCard.tsx'), 'utf8');
     expect(component).toContain('data.availableActions.generatePackage === true');
-    expect(component).toContain('data.availableActions.regeneratePackage === true');
+    expect(component).not.toContain('regeneratePackage');
     expect(component).toContain('data.availableActions.downloadPackage === true');
     expect(component).toContain('packageQuery.refetch()');
     expect(component).toContain('pekKeys.reportDocuments');
@@ -51,10 +51,11 @@ describe('PEK report package backend contract', () => {
 
   it('shows the backend stale-document error and exact conflict copy', () => {
     expect(mapPekError({ isAxiosError: true, response: { status: 409, data: { code: 'PEK_DOCUMENT_STALE' } } }).message).toBe('Документ устарел. Сформируйте его заново.');
-    expect(mapPekError({ isAxiosError: true, response: { status: 412, data: {} } }).message).toBe('Данные были изменены другим пользователем. Обновите страницу.');
+    expect(mapPekError({ isAxiosError: true, response: { status: 412, data: {} } }).message).toBe('Данные были изменены другим пользователем');
     const component = readFileSync(resolve(process.cwd(), 'src/features/pek/components/documents/PekReportDocuments.tsx'), 'utf8');
-    expect(component).toContain("mapped.code === 'PEK_DOCUMENT_STALE'");
-    expect(component).toContain('disabled={busy || documentIsStale}');
+    expect(component).toContain('latestVersion?.stale === true');
+    expect(component).toContain('report.availableActions.downloadPdf === true');
+    expect(component).toContain('&& !documentIsStale');
     expect(component).toContain('Пересформировать PDF');
     expect(component).not.toContain('/STALE|OUTDATED/i');
   });

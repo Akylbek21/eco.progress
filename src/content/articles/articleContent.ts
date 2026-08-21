@@ -1,4 +1,7 @@
 import type { ArticleContent } from '../types';
+import { normalizeArticleSlug } from './articleSlugs.ts';
+
+export { articleSlugAliases, normalizeArticleSlug } from './articleSlugs.ts';
 
 const officialCode = { title: 'Экологический кодекс Республики Казахстан — ИПС «Әділет»', url: 'https://adilet.zan.kz/rus/docs/K2100000400/info', accessedAt: '2026-07-17', claimStatus: 'verified' as const };
 const editorial = (value: Omit<ArticleContent, 'status' | 'authorSlug' | 'heroImage' | 'heroImageAlt' | 'tableOfContents' | 'sources' | 'reviewStatus'> & Partial<Pick<ArticleContent, 'sources' | 'heroImage' | 'heroImageAlt'>>): ArticleContent => ({
@@ -52,14 +55,3 @@ export const articleContentMap = new Map([
   ...articleContent.map((item) => [item.slug, item] as const),
   ...(penaltiesArticle ? [['shtrafy-za-ekologicheskie-narusheniya', { ...penaltiesArticle, slug: 'shtrafy-za-ekologicheskie-narusheniya' }] as const] : []),
 ]);
-
-export const articleSlugAliases: Record<string, string> = {
-  'kakie-shtrafy-za-ekologiyu-v-kazakhstane': 'shtrafy-za-ekologicheskie-narusheniya',
-  'komu-nuzhen-proizvodstvennyy-kontrol-ses': 'chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol',
-  'kak-poluchit-razreshenie-na-emissii': 'ekologicheskie-dokumenty-too-kazakhstan',
-  'chto-takoe-pasport-othodov': 'dokumenty-peredachi-othodov',
-  'kakie-dokumenty-proveryaet-ses': 'podgotovka-k-ekologicheskoy-proverke',
-  'ekologicheskoe-soprovozhdenie-biznesa': 'chto-sdavat-po-ekologii-kazhdyy-god',
-};
-
-export const normalizeArticleSlug = (slug: string) => articleSlugAliases[slug] ?? slug;

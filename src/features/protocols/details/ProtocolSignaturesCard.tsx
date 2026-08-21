@@ -1,7 +1,6 @@
 import { CheckCircle2 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
-import type { Protocol, ProtocolSignature } from '../../../types/protocols';
-import type { ProtocolPermissions } from '../../../utils/protocolPermissions';
+import type { Protocol, ProtocolAvailableActions, ProtocolSignature } from '../../../types/protocols';
 
 const signatureTime = (value: string) => {
   const date = new Date(value);
@@ -16,7 +15,7 @@ export const sortedProtocolSignatures = (signatures: ProtocolSignature[]) =>
 
 export const protocolSignUnavailableReason = (
   protocol: Protocol,
-  permissions: ProtocolPermissions,
+  actions: ProtocolAvailableActions,
 ): string => {
   if (protocol.signedByCurrentUser) return '✓ Вы подписали этот протокол';
   const signatureCount = protocol.signatureCount;
@@ -24,13 +23,13 @@ export const protocolSignUnavailableReason = (
   if (signatureCount >= maxSignatures) {
     return `Достигнуто максимальное количество подписей: ${maxSignatures}`;
   }
-  if (!permissions.canSign) return 'У вас нет доступа к подписанию протокола';
+  if (!actions.sign) return 'У вас нет доступа к подписанию протокола';
   return '';
 };
 
 type Props = {
   protocol: Protocol;
-  permissions: ProtocolPermissions;
+  actions: ProtocolAvailableActions;
   loading?: boolean;
   signing?: boolean;
   onSign: () => void;
@@ -38,7 +37,7 @@ type Props = {
 
 const ProtocolSignaturesCard = ({
   protocol,
-  permissions,
+  actions,
   loading = false,
   signing = false,
   onSign,
@@ -60,7 +59,7 @@ const ProtocolSignaturesCard = ({
           <p className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-emerald-50 px-4 text-sm font-bold text-emerald-800">
             <CheckCircle2 className="h-4 w-4" /> Вы подписали этот протокол
           </p>
-        ) : permissions.canSign ? (
+        ) : actions.sign ? (
           <div className="text-right">
             <Button type="button" onClick={onSign} disabled={signing}>
               {signing ? 'Подписание…' : 'Подписать ЭЦП'}

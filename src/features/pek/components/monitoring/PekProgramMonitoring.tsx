@@ -6,6 +6,7 @@ import type { PekMonitoringDirection, PekMonitoringMutationRequest, PekMonitorin
 import { pekKeys } from '../../api/pekQueryKeys';
 import { pekApi } from '../../api/pekService';
 import { mapPekError } from '../../utils/pekErrorMapper';
+import { handlePekMutationError } from '../../utils/pekMutationError';
 import PekQueryError from '../common/PekQueryError';
 
 type FormState = {
@@ -60,21 +61,19 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
   const save = useMutation({
     mutationFn: async () => {
       const body = requestFromForm(form);
-      if (editing === 'new') await pekApi.createProgramMonitoring(program.id, body);
+      if (editing === 'new') await pekApi.createProgramMonitoring(program.id, program.version, body);
       else if (editing) await pekApi.updateProgramMonitoring(program.id, editing.id, body, editing.version);
     },
     onSuccess: async () => { setEditing(null); await monitoring.refetch(); },
     onError: async (error) => {
-      const mapped = mapPekError(error);
-      if (mapped.status === 409 || mapped.status === 412) await monitoring.refetch();
+      await handlePekMutationError(error, () => monitoring.refetch());
     },
   });
   const remove = useMutation({
     mutationFn: async () => { if (deleting) await pekApi.deleteProgramMonitoring(program.id, deleting.id, deleting.version); },
     onSuccess: async () => { setDeleting(null); await monitoring.refetch(); },
     onError: async (error) => {
-      const mapped = mapPekError(error);
-      if (mapped.status === 409 || mapped.status === 412) await monitoring.refetch();
+      await handlePekMutationError(error, () => monitoring.refetch());
     },
   });
 

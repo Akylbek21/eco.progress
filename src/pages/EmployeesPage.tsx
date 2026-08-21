@@ -154,7 +154,7 @@ const EmployeesPage = () => {
           {employees.map((employee, index) => (
             <Reveal key={employee.id} delay={index * 0.05}>
               <div className="card-hover h-full overflow-hidden rounded-[22px] bg-white shadow-sm">
-                <ResponsiveImage src={employee.avatar} alt={employee.name} width={640} height={360} wrapperClassName="aspect-[16/9] w-full" className="object-cover" />
+                <ResponsiveImage sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw" src={employee.avatar} alt={employee.name} width={640} height={360} wrapperClassName="aspect-[16/9] w-full" className="object-cover" />
                 <div className="p-5">
                   <h2 className="text-lg font-bold text-eco-900">{employee.name}</h2>
                   <p className="mt-1 text-sm font-semibold text-eco-500">{employee.position}</p>

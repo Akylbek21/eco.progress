@@ -33,9 +33,12 @@ const mapMonitoring = (value: unknown): PekMonitoringDirection => {
 
 export const mapProgramMonitoring = (value: unknown, programId: number): PekProgramMonitoringResponse => {
   const source = asPekRecord(unwrapPekData<unknown>(value));
+  const availableActions = actions(source.availableActions);
   return {
     programId: Number(source.programId ?? programId),
     items: (Array.isArray(source.items) ? source.items : []).map(mapMonitoring),
-    availableActions: actions(source.availableActions),
+    availableActions: {
+      create: availableActions.create === true,
+    },
   };
 };

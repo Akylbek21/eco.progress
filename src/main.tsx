@@ -1,48 +1,41 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/ui/ToastProvider';
-import App from './App';
 import './index.css';
-import axios from 'axios';
-
-export const shouldRetry = (failureCount: number, error: unknown) => {
-  if (!axios.isAxiosError(error)) return failureCount < 2;
-  const status = error.response?.status;
-  if ([400, 401, 403, 404, 409, 412, 422].includes(status ?? 0)) return false;
-  return failureCount < 2;
-};
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 30_000,
-      retry: shouldRetry,
-    },
-  },
-});
 
 console.info('[EcoProgress build]', __BUILD_INFO__);
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element not found');
 
-// The build-time snapshot is crawler content, not React server markup.
-// Remove it before mounting so React never attempts to hydrate incompatible HTML.
-if (root.dataset.prerendered === 'true') root.replaceChildren();
+const privatePrefixes = ['/cabinet', '/client', '/staff', '/admin', '/dashboard', '/login', '/register', '/reset-password', '/internal', '/crm'];
+const isPrivateRuntime = privatePrefixes.some((prefix) => window.location.pathname === prefix || window.location.pathname.startsWith(`${prefix}/`));
 
-ReactDOM.createRoot(root).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
-        </AuthProvider>
+const bootstrap = async () => {
+  let runtime: React.ReactNode;
+  if (isPrivateRuntime) {
+    const [{ default: App }, { AuthProvider }, { default: QueryRuntime }] = await Promise.all([
+      import('./App'),
+      import('./contexts/AuthContext'),
+      import('./runtime/QueryRuntime'),
+    ]);
+    runtime = <QueryRuntime><AuthProvider><App /></AuthProvider></QueryRuntime>;
+  } else {
+    const { default: PublicApp } = await import('./PublicApp');
+    runtime = <PublicApp />;
+  }
+
+  const application = (
+    <React.StrictMode>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ToastProvider>{runtime}</ToastProvider>
       </BrowserRouter>
-    </QueryClientProvider>
-  </React.StrictMode>,
-);
+    </React.StrictMode>
+  );
+
+  if (root.dataset.prerendered === 'true' && root.hasChildNodes()) hydrateRoot(root, application);
+  else createRoot(root).render(application);
+};
+
+void bootstrap();

@@ -217,7 +217,9 @@ export const mapOrder = (raw: UnknownRecord): Order => {
     linkedProtocol: (() => {
       const protocol = asRecord(raw.linkedProtocol || raw.protocol);
       const id = asString(protocol.id || raw.protocolId);
-      return id ? { id, number: asString(protocol.number || protocol.protocolNumber || raw.protocolNumber), status: asString(protocol.status || raw.protocolStatus) } : undefined;
+      const actions = asRecord(protocol.availableActions);
+      const availableActions = Object.fromEntries(Object.entries(actions).filter(([, value]) => typeof value === 'boolean')) as Record<string, boolean>;
+      return id ? { id, number: asString(protocol.number || protocol.protocolNumber || raw.protocolNumber), status: asString(protocol.status || raw.protocolStatus), availableActions } : undefined;
     })(),
     canComplete: raw.canComplete === true,
     blockingReasons: Array.isArray(raw.blockingReasons) ? raw.blockingReasons.map(String) : [],

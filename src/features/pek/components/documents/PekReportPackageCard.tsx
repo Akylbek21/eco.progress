@@ -6,7 +6,6 @@ import { pekKeys } from '../../api/pekQueryKeys';
 import { pekApi } from '../../api/pekService';
 import { mapPekError } from '../../utils/pekErrorMapper';
 import PekQueryError from '../common/PekQueryError';
-import { canGenerateDocument } from '../../permissions/pekAccess';
 
 const saveBlob = ({ blob, filename }: PekBlobResult) => {
   const url = URL.createObjectURL(blob);
@@ -56,7 +55,7 @@ const PekReportPackageCard = ({ report }: { report: PekReport }) => {
   if (packageQuery.isError) return <section className="rounded-2xl border bg-white p-5"><PekQueryError error={packageQuery.error} resource="комплект ПЭК" retry={() => void packageQuery.refetch()} /></section>;
 
   if (!packageQuery.data) {
-    const canGenerate = canGenerateDocument(user, report);
+    const canGenerate = report.availableActions.generatePackage === true;
     return <section className="space-y-4 rounded-2xl border bg-white p-5">
       <div><h2 className="text-lg font-black">Комплект документов ПЭК</h2><p className="text-sm text-slate-500">Комплект ещё не сформирован.</p></div>
       {generate.error && <Alert severity="error">{mapPekError(generate.error).message}</Alert>}

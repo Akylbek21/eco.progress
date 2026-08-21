@@ -1,13 +1,16 @@
 ﻿import { ReactNode, useEffect, useState } from 'react';
+import { lazy, Suspense } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { ChevronDown, HelpCircle, LogIn, Menu, Search, UserPlus, X } from 'lucide-react';
 import { FaInstagram, FaTelegramPlane, FaTiktok, FaWhatsapp } from 'react-icons/fa';
 import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
-import OrderChoiceModal from '../components/OrderChoiceModal';
+import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { company, getWhatsAppUrl } from '../config/company';
 import { trackEmailClick, trackPhoneClick } from '../services/analytics';
 import { preloadPublicRoute } from '../utils/publicRoutePreload';
+
+const OrderChoiceModal = lazy(() => import('../components/OrderChoiceModal'));
 
 const footerCities = [
   ['Алматы', 'almaty'], ['Астана', 'astana'], ['Шымкент', 'shymkent'],
@@ -19,6 +22,7 @@ const navItems = [
   { label: 'Услуги', path: '/services' },
   { label: 'Города', path: '/regions' },
   { label: 'Статьи', path: '/news' },
+  { label: 'Кейсы', path: '/cases' },
   { label: 'О компании', path: '/about' },
   { label: 'Контакты', path: '/contacts' },
   { label: 'WhatsApp', path: getWhatsAppUrl() },
@@ -191,18 +195,9 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
       </header>
       <main className="route-page-enter min-h-[70vh]">{children}</main>
       <WhatsAppButton floating />
-      <OrderChoiceModal open={orderModal} onClose={() => setOrderModal(false)} />
+      {orderModal && <Suspense fallback={null}><OrderChoiceModal open onClose={() => setOrderModal(false)} /></Suspense>}
       <footer className="relative isolate overflow-hidden bg-eco-900 text-white">
-        <img
-          src="/media/ecoprogress-og-cover-1280.jpg"
-          alt=""
-          width="1280"
-          height="720"
-          loading="lazy"
-          decoding="async"
-          onError={(event) => { event.currentTarget.style.display = 'none'; }}
-          className="absolute inset-0 -z-20 h-full w-full bg-eco-900 object-cover"
-        />
+        <ResponsiveImage fill sizes="100vw" src="/media/ecoprogress-og-cover-1280.jpg" alt="" width={1280} height={720} wrapperClassName="-z-20" className="bg-eco-900 object-cover" />
         <div className="absolute inset-0 -z-10 bg-eco-900/86" />
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-[5] h-40 bg-gradient-to-b from-[#F7FBFD] via-[#F7FBFD]/88 to-transparent backdrop-blur-xl" />
         <div className="pointer-events-none absolute inset-x-0 top-12 -z-[5] h-24 bg-[#F7FBFD]/45 blur-2xl" />
@@ -258,7 +253,8 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 <Link to="/contacts" className="block hover:text-white">Контакты</Link>
                 <Link to="/partners" className="block hover:text-white">Партнеры</Link>
                 <Link to="/employees" className="block hover:text-white">Сотрудники</Link>
-                <Link to="/news" className="block hover:text-white">Новости</Link>
+                <Link to="/news" className="block hover:text-white">Статьи</Link>
+                <Link to="/cases" className="block hover:text-white">Кейсы</Link>
                 <Link to="/faq" className="block hover:text-white">FAQ</Link>
               </div>
               <h4 className="mt-7 text-sm font-semibold uppercase text-eco-200">Личный кабинет</h4>

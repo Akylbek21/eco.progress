@@ -32,6 +32,8 @@ const PartnersPage = lazy(() => import('./pages/PartnersPage'));
 const TariffsPage = lazy(() => import('./pages/TariffsPage'));
 const NewsPage = lazy(publicRouteLoaders.news);
 const NewsDetailsPage = lazy(() => import('./pages/NewsDetailsPage'));
+const CasesPage = lazy(() => import('./pages/CasesPage'));
+const CaseDetailsPage = lazy(() => import('./pages/CaseDetailsPage'));
 const LoginPage = lazy(publicRouteLoaders.login);
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const FaqPage = lazy(() => import('./pages/FaqPage'));
@@ -110,12 +112,6 @@ const PekPermissionAccess = ({ permission, children }: { permission: string; chi
     ? <>{children}</>
     : <ForbiddenPage message="У вас нет права для выполнения этого действия в ПЭК." />;
 };
-const ProtocolAccess = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
-  return hasPermission(user, 'view_protocols')
-    ? <>{children}</>
-    : <ForbiddenPage message="Недостаточно прав для просмотра протоколов." />;
-};
 const ProtocolCreateAccess = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   return hasPermission(user, 'create_protocols')
@@ -144,7 +140,7 @@ const ForbiddenPage = ({ message = 'У вашей роли нет прав дл�
   </div>
 );
 
-const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/partners', '/news', '/faq', '/contacts'];
+const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/partners', '/news', '/cases', '/faq', '/contacts'];
 
 const RouteFallback = () => {
   const { pathname } = useLocation();
@@ -224,6 +220,8 @@ function App() {
         <Route path="/partners" element={<PublicLayout><PartnersPage /></PublicLayout>} />
         <Route path="/news" element={<PublicLayout><NewsPage /></PublicLayout>} />
         <Route path="/news/:id" element={<PublicLayout><NewsDetailsPage /></PublicLayout>} />
+        <Route path="/cases" element={<PublicLayout><CasesPage /></PublicLayout>} />
+        <Route path="/cases/:slug" element={<PublicLayout><CaseDetailsPage /></PublicLayout>} />
         <Route path="/faq" element={<PublicLayout><FaqPage /></PublicLayout>} />
         <Route path="/contacts" element={<PublicLayout><ContactsPage /></PublicLayout>} />
         <Route path="/regions" element={<PublicLayout><RegionsPage /></PublicLayout>} />
@@ -285,11 +283,11 @@ function App() {
         <Route path="/staff/document-flow" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><SignatureDocumentsPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/calendar" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']}><StaffCalendarPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/protocols" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ProtocolAccess><ErrorBoundary fallbackTitle="Не удалось открыть протоколы"><ProtocolsPage /></ErrorBoundary></ProtocolAccess></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/protocols" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть протоколы"><ProtocolsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols/create" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><ProtocolCreateAccess><Navigate to="/staff/protocols?create=1" replace /></ProtocolCreateAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols/new" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><ProtocolCreateAccess><Navigate to="/staff/protocols?create=1" replace /></ProtocolCreateAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/protocols/:protocolId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ProtocolAccess><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></ProtocolAccess></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/protocols/:protocolId/edit" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ProtocolAccess><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></ProtocolAccess></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/protocols/:protocolId" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/protocols/:protocolId/edit" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть редактор протокола"><ProtocolEditorPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть ПЭК"><PekDashboardPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/dashboard" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть ПЭК"><PekDashboardPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/programs" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть программы ПЭК"><PekProgramsPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />

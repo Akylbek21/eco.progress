@@ -1,6 +1,6 @@
 import type { Protocol } from '../../../types/protocols';
 
-const immutableStatuses = new Set(['SIGNED', 'PUBLISHED', 'REPLACED', 'CANCELLED', 'ARCHIVED']);
+const immutableStatuses = new Set(['SIGNED', 'REPLACED', 'CANCELLED', 'ARCHIVED']);
 
 export const isProtocolImmutable = (protocol: Protocol) =>
   immutableStatuses.has(String(protocol.status).toUpperCase()) || Boolean(protocol.publishedAt || protocol.publishedToClientAt);

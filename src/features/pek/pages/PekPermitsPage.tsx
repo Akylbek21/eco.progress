@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
-import { History, Pencil, Plus, ShieldAlert } from 'lucide-react';
+import { History, Pencil, Plus, ShieldAlert, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
@@ -18,6 +18,7 @@ import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { canUsePekPermission } from '../permissions/pekAccess';
 import { mapPekError } from '../utils/pekErrorMapper';
+import { handlePekMutationError } from '../utils/pekMutationError';
 import { retryPekQuery } from '../utils/pekQueryPolicy';
 
 const statusLabels: Record<PekPermitStatus, string> = {
@@ -158,19 +159,29 @@ const PekPermitsPage = () => {
       await queryClient.invalidateQueries({ queryKey: listKey });
     },
     onError: async (error) => {
-      setMutationError(mapPekError(error).message);
-      await queryClient.invalidateQueries({ queryKey: listKey });
+      const mapped = await handlePekMutationError(error, () => queryClient.invalidateQueries({ queryKey: listKey }));
+      setMutationError(mapped.message);
     },
     retry: false,
   });
 
   const changeStatus = useMutation({
     mutationFn: ({ permit, status, comment }: { permit: PekPermit; status: PekPermitStatus; comment: string }) =>
-      pekApi.changePermitStatus(permit.id, permit.version, status, comment),
+      pekApi.changePermitStatus(permit.id, { version: permit.version, status, comment }),
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: listKey }),
     onError: async (error) => {
-      window.alert(mapPekError(error).message);
-      await queryClient.invalidateQueries({ queryKey: listKey });
+      const mapped = await handlePekMutationError(error, () => queryClient.invalidateQueries({ queryKey: listKey }));
+      window.alert(mapped.message);
+    },
+    retry: false,
+  });
+
+  const remove = useMutation({
+    mutationFn: (permit: PekPermit) => pekApi.deletePermit(permit.id, { version: permit.version }),
+    onSuccess: async () => queryClient.invalidateQueries({ queryKey: listKey }),
+    onError: async (error) => {
+      const mapped = await handlePekMutationError(error, () => queryClient.invalidateQueries({ queryKey: listKey }));
+      window.alert(mapped.message);
     },
     retry: false,
   });
@@ -228,6 +239,7 @@ const PekPermitsPage = () => {
                     {(permit.availableActions?.edit ?? canCreate) && <Button type="button" variant="secondary" disabled={openPermit.isPending} onClick={() => openPermit.mutate(permit.id)}><Pencil size={14} /> Изменить</Button>}
                     {(permit.availableActions?.markExpired ?? canChangePermitStatus) && <Button type="button" variant="secondary" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'EXPIRED')}><ShieldAlert size={14} /> Истёк</Button>}
                     {(permit.availableActions?.revoke ?? canChangePermitStatus) && <Button type="button" variant="danger" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'REVOKED')}><ShieldAlert size={14} /> Отозвать</Button>}
+                    {permit.availableActions?.delete === true && <Button type="button" variant="danger" disabled={remove.isPending} onClick={() => { if (window.confirm(`Удалить разрешение № ${permit.number}?`)) remove.mutate(permit); }}><Trash2 size={14} /> Удалить</Button>}
                     <Button type="button" variant="secondary" onClick={() => setHistoryPermit(permit)}><History size={14} /> История</Button>
                   </div></td>
                 </tr>)}</tbody>

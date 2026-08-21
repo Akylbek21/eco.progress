@@ -1,9 +1,18 @@
-import type { ExpertProfile } from '../types';
+import type { Expert } from '../types';
 
-export const experts: ExpertProfile[] = [{
-  slug: 'ecoprogress-editorial', fullName: 'Редакция EcoProgress', position: 'Редакция материалов',
-  specialization: ['структурирование экологической документации', 'практические материалы для бизнеса'],
-  bio: 'Организационный автор. Материалы со статусом requires-specialist-review требуют проверки профильным экологом и не отображаются как проверенные экспертом.',
-  articles: [], verificationStatus: 'verified',
-}];
-export const expertMap = new Map(experts.map((item) => [item.slug, item]));
+// Production expert profiles arrive with the published article DTO from the CMS.
+// Keep this list empty until real names and qualifications are independently confirmed.
+export const experts: Expert[] = [];
+export const expertMap = new Map(experts.map((item) => [item.id, item]));
+
+export const isCompleteExpert = (expert: Expert | null | undefined): expert is Expert => Boolean(
+  expert?.id.trim()
+  && expert.fullName.trim()
+  && expert.position.trim()
+  && expert.specialization.length
+  && Number.isFinite(expert.experienceYears)
+  && expert.experienceYears >= 0
+  && expert.bio.trim()
+  && expert.photo.trim()
+  && expert.profileUrl.trim(),
+);

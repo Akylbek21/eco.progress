@@ -5,6 +5,8 @@ import { PekContractError } from '../api/pekContractSchemas';
 
 const messages: Record<string, string> = {
   PEK_PROGRAM_NOT_EDITABLE: 'Программа находится в финальном статусе. Изменение документов запрещено.',
+  PEK_PROGRAM_NOT_READY: 'Программа не готова к выполнению действия.',
+  MAKER_CHECKER_VIOLATION: 'Автор записи не может самостоятельно её согласовать.',
   PEK_EVIDENCE_FILE_NOT_FOUND: 'Выбранный файл доказательства не найден. Загрузите файл заново.',
   PEK_EVIDENCE_FILE_FORBIDDEN: 'У вас нет доступа к выбранному файлу доказательства.',
   PEK_EVIDENCE_FILE_SCOPE_MISMATCH: 'Файл доказательства относится к другой компании или области доступа.',
@@ -13,8 +15,9 @@ const messages: Record<string, string> = {
   PEK_REPORT_ALREADY_EXISTS: 'Отчёт за этот период уже существует',
   PEK_ACTIVE_PROGRAM_MISSING: 'Для выбранного объекта нет действующей программы ПЭК',
   PEK_OBJECT_COMPANY_MISMATCH: 'Выбранный объект не относится к компании',
-  VERSION_CONFLICT: 'Сущность изменена другим сотрудником',
-  PEK_VERSION_CONFLICT: 'Сущность изменена другим сотрудником',
+  VERSION_REQUIRED: 'Для изменения данных требуется актуальная версия',
+  VERSION_CONFLICT: 'Данные были изменены другим пользователем',
+  PEK_VERSION_CONFLICT: 'Данные были изменены другим пользователем',
   PEK_PERMIT_VERSION_CONFLICT: 'Разрешение изменено другим сотрудником. Данные списка обновлены.',
   PEK_PERMIT_TRANSITION_INVALID: 'Этот переход статуса разрешения недоступен.',
   PERMIT_INVALID_RANGE: 'Дата окончания разрешения должна быть не раньше даты начала.',
@@ -41,6 +44,13 @@ export type PekUiError = {
   missingFields: string[];
 };
 
+const VERSION_CONFLICT_CODES = new Set(['VERSION_CONFLICT', 'PEK_VERSION_CONFLICT', 'PEK_PERMIT_VERSION_CONFLICT', 'OPTIMISTIC_LOCK_CONFLICT']);
+
+export const isPekVersionConflict = (error: Pick<PekUiError, 'code' | 'status'>) =>
+  VERSION_CONFLICT_CODES.has(error.code || '') || error.status === 412;
+
+export const isPekVersionRequired = (error: Pick<PekUiError, 'code'>) => error.code === 'VERSION_REQUIRED';
+
 export const mapPekError = (error: unknown): PekUiError => {
   if (error instanceof PekContractError) return {
     message: 'Получены неполные данные. Обновите страницу или обратитесь в поддержку.',
@@ -58,8 +68,9 @@ export const mapPekError = (error: unknown): PekUiError => {
   const nestedDetails = details.details && typeof details.details === 'object' ? details.details as Record<string, unknown> : {};
   const missingFields = Array.isArray(details.missingFields) ? details.missingFields : Array.isArray(nestedDetails.missingFields) ? nestedDetails.missingFields : [];
   const status = parsed.status;
-  const conflictMessage = status === 409 || status === 412
-    ? 'Данные были изменены другим пользователем. Обновите страницу.'
+  const versionConflict = VERSION_CONFLICT_CODES.has(parsed.code || '') || status === 412;
+  const conflictMessage = versionConflict
+    ? 'Данные были изменены другим пользователем'
     : undefined;
   const businessMessage = parsed.code && (
     parsed.code === 'PEK_DOCUMENT_STALE'

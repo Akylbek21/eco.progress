@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Monitor, X } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
 import Button from './ui/Button';
-import { useAuth } from '../contexts/AuthContext';
 import { trackWhatsAppClick } from '../services/analytics';
 import { getServices } from '../services/serviceService';
 import { createBlankWhatsAppRequestMessage, createWhatsAppUrl } from '../utils/whatsapp';
@@ -18,7 +17,9 @@ type EcoService = { id: string; title: string };
 
 const OrderChoiceModal = ({ open, onClose, preSelectedService }: Props) => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  // Public runtime intentionally has no AuthProvider. The private cabinet
+  // validates the stored session after navigation.
+  const isAuthenticated = typeof window !== 'undefined' && Boolean(localStorage.getItem('eco-progress-token'));
   const [services, setServices] = useState<EcoService[]>([]);
 
   useEffect(() => {

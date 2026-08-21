@@ -1,15 +1,17 @@
 ﻿import { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
 import { PageSkeleton } from '../components/loading/PageLoader';
 import ErrorState from '../components/ui/ErrorState';
-import OrderChoiceModal from '../components/OrderChoiceModal';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { getServiceById } from '../services/serviceService';
 import { createBlankWhatsAppRequestMessage } from '../utils/whatsapp';
+
+const OrderChoiceModal = lazy(() => import('../components/OrderChoiceModal'));
 
 const ServiceDetailsPage = () => {
   const { id } = useParams();
@@ -61,7 +63,7 @@ const ServiceDetailsPage = () => {
           ))}
         </div>
       </section>
-      <OrderChoiceModal open={orderModal} onClose={() => setOrderModal(false)} preSelectedService={id} />
+      {orderModal && <Suspense fallback={null}><OrderChoiceModal open onClose={() => setOrderModal(false)} preSelectedService={id} /></Suspense>}
     </div>
   );
 };

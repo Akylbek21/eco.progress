@@ -9,7 +9,6 @@ import {
   unwrapApiResponse,
 } from './apiHelpers';
 import type {
-  CreateProtocolPayload,
   CalculationResultResponse,
   CalculationDetails,
   MeasurementDevice,
@@ -39,7 +38,6 @@ import type {
 } from '../types/protocols';
 import type {
   CancelProtocolRequest,
-  QuickCreateProtocolRequest,
   ReplaceProtocolRequest,
   ReturnForRevisionRequest,
   SignProtocolRequest,
@@ -51,7 +49,6 @@ import type {
 import { normalizeProtocolStatus } from '../config/protocolStatus';
 import { canonicalProtocolResultAliases } from '../utils/protocolResultAliases';
 import { canSearchNormative, normativeSearchItemToRecord, searchNormatives } from './normativeSearchService';
-import { debugProtocolPayload } from '../utils/protocolDebug';
 import type { NormativeSearchRequest } from './normativeSearchService';
 import { normalizeProtocolPrintVisibility } from '../utils/protocolPrintVisibility';
 import {
@@ -59,9 +56,7 @@ import {
   mapProtocolResultFormToRequest,
   mapProtocolsQuery,
 } from '../features/protocols/api/protocolMappers';
-import { mapBackendProtocolType, mapFrontendProtocolType } from '../features/protocols/api/protocolTypeMapper';
-import { mapFormToCreateProtocolRequest } from '../features/protocols/mappers/mapFormToCreateProtocolRequest';
-import { mapProtocolPermissions } from '../features/protocols/mappers/protocolPermissionMapper';
+import { mapBackendProtocolType } from '../features/protocols/api/protocolTypeMapper';
 import { normalizeProtocolAvailableActions, normalizeProtocolWorkflowBlockers } from '../features/protocols/utils/protocolActions';
 
 type UnknownRecord = Record<string, unknown>;
@@ -92,10 +87,10 @@ const numberOrNull = (value: unknown): number | null => {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 };
-const requireProtocolVersion = (value: unknown): number => {
+const requireProtocolVersion = (value: unknown, field = 'protocol.version'): number => {
   const version = Number(value);
   if (!Number.isInteger(version) || version < 0) {
-    throw new Error('Backend contract error: protocol.version must be a non-negative integer.');
+    throw new Error(`Backend contract error: ${field} must be a non-negative integer.`);
   }
   return version;
 };
@@ -790,6 +785,11 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     pdfFileId: pick(source, ['pdfFileId', 'pdfDocumentId']),
     finalPdfFileId: pick(source, ['finalPdfFileId', 'pdfFileId', 'pdfDocumentId']),
     finalPdfHash: pick(source, ['finalPdfHash', 'pdfFileHash', 'pdfHash']),
+    contentVersion: numberOrNull(source.contentVersion) ?? undefined,
+    pdfSourceContentVersion: numberOrNull(source.pdfSourceContentVersion) ?? undefined,
+    pdfHash: pick(source, ['pdfHash']),
+    approvedPdfHash: pick(source, ['approvedPdfHash']),
+    approvedContentVersion: numberOrNull(source.approvedContentVersion) ?? undefined,
     printVisibility,
     organization: {
       organizationName: pick(organization, ['organizationName', 'companyName', 'name']) || snapshot.companyName,
@@ -860,7 +860,6 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     monitoringPointId: pick(pekContext, ['monitoringPointId', 'monitoring_point_id']) || pick(source, ['monitoringPointId', 'monitoring_point_id']),
     emissionSourceId: pick(pekContext, ['emissionSourceId', 'emission_source_id']) || pick(source, ['emissionSourceId', 'emission_source_id']),
     waterOutletId: pick(pekContext, ['waterOutletId', 'water_outlet_id']) || pick(source, ['waterOutletId', 'water_outlet_id']),
-    permissions: mapProtocolPermissions(source.permissions),
     availableActions: normalizeProtocolAvailableActions(source.availableActions),
     canComplete: source.canComplete === true,
     blockingReasons: normalizeProtocolWorkflowBlockers(source.blockingReasons ?? source.workflowBlockers ?? source.blockers),
@@ -1007,173 +1006,12 @@ export async function getProtocolTypes(): Promise<ProtocolTemplate[]> {
   return templates.filter((template) => template.active !== false);
 }
 
-/**
- * Runtime API boundary for POST /protocols/quick-create.
- *
- * TypeScript's structural typing permits an object with additional form-only
- * properties to be passed as a QuickCreateProtocolRequest. Pick every DTO
- * field explicitly so aliases used by the wizard or legacy protocol editor can
- * never leak into the JSON request.
- */
-export const toQuickCreateProtocolApiPayload = (
-  payload: QuickCreateProtocolRequest,
-): QuickCreateProtocolRequest => ({
-  templateId: payload.templateId,
-  sourceDocumentCode: payload.sourceDocumentCode,
-  docxTemplateCode: payload.docxTemplateCode,
-  subtype: payload.subtype,
-  protocolDate: payload.protocolDate,
-  sampleDate: payload.sampleDate,
-  measurementDate: payload.measurementDate,
-  testingStartDate: payload.testingStartDate,
-  testingEndDate: payload.testingEndDate,
-  companyId: payload.companyId,
-  objectId: payload.objectId,
-  laboratoryId: payload.laboratoryId,
-  executorId: payload.executorId,
-  measurementTime: payload.measurementTime,
-  measurementPlace: payload.measurementPlace,
-  sourceNumber: payload.sourceNumber,
-  conditions: payload.conditions
-    ? {
-        sampleNumber: payload.conditions.sampleNumber,
-        samplingDepth: payload.conditions.samplingDepth,
-        samplingPlace: payload.conditions.samplingPlace,
-        season: payload.conditions.season,
-        workCategory: payload.conditions.workCategory,
-        workplaceType: payload.conditions.workplaceType,
-        roomType: payload.conditions.roomType,
-        normLevel: payload.conditions.normLevel,
-        lightingType: payload.conditions.lightingType,
-        noiseType: payload.conditions.noiseType,
-        visualWorkCategory: payload.conditions.visualWorkCategory,
-        waterType: payload.conditions.waterType,
-        waterUseCategory: payload.conditions.waterUseCategory,
-        temperature: payload.conditions.temperature,
-        humidity: payload.conditions.humidity,
-        pressure: payload.conditions.pressure,
-        windSpeed: payload.conditions.windSpeed,
-        weatherSource: payload.conditions.weatherSource,
-        weatherDataSource: payload.conditions.weatherDataSource,
-        manualChangeReason: payload.conditions.manualChangeReason,
-        weatherObservedAt: payload.conditions.weatherObservedAt,
-      }
-    : payload.conditions,
-  measurements: payload.measurements.map((measurement) => ({
-    indicatorName: measurement.indicatorName,
-    pollutantCode: measurement.pollutantCode,
-    factorType: measurement.factorType,
-    factorCode: measurement.factorCode,
-    value: measurement.value,
-    unit: measurement.unit,
-    measurementDeviceId: measurement.measurementDeviceId,
-    deviceId: measurement.measurementDeviceId === undefined ? measurement.deviceId : undefined,
-    normativeId: measurement.normativeId,
-    normativeValue: measurement.normativeValue,
-    testingMethodNd: measurement.testingMethodNd,
-    samplingMethodNd: measurement.samplingMethodNd,
-    values: measurement.values,
-  })),
-  printVisibility: {
-    organizationName: payload.printVisibility.organizationName,
-    organizationAddress: payload.printVisibility.organizationAddress,
-    testObjectName: payload.printVisibility.testObjectName,
-    productName: payload.printVisibility.productName,
-    testBasis: payload.printVisibility.testBasis,
-    samplingDate: payload.printVisibility.samplingDate,
-    testStartDate: payload.printVisibility.testStartDate,
-    testEndDate: payload.printVisibility.testEndDate,
-    productNormativeDocument: payload.printVisibility.productNormativeDocument,
-    samplingMethodDocument: payload.printVisibility.samplingMethodDocument,
-    testMethodDocument: payload.printVisibility.testMethodDocument,
-    testPurpose: payload.printVisibility.testPurpose,
-    samplingPlace: payload.printVisibility.samplingPlace,
-    measurementDate: payload.printVisibility.measurementDate,
-    environmentalConditions: payload.printVisibility.environmentalConditions,
-    temperature: payload.printVisibility.temperature,
-    humidity: payload.printVisibility.humidity,
-    pressure: payload.printVisibility.pressure,
-    windSpeed: payload.printVisibility.windSpeed,
-  },
-  orderId: payload.orderId,
-  orderServiceItemId: payload.orderServiceItemId,
-});
-
-export async function createProtocol(payload: CreateProtocolPayload): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown>>(
-    '/protocols',
-    mapFormToCreateProtocolRequest(payload)
-  );
-
-  const result = response.data?.data ?? response.data;
-  const protocol = requireProtocol(result, 'создание');
-  return { ...protocol, printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility) };
-}
-
 export async function createProtocolDraft(payload: CreateProtocolDraftRequest, idempotencyKey: string): Promise<Protocol> {
   if (!idempotencyKey.trim()) throw new Error('Не удалось сформировать ключ безопасного сохранения черновика.');
   const response = await api.post<ApiResponse<unknown> | unknown>('/protocols/drafts', payload, {
     headers: { 'Idempotency-Key': idempotencyKey },
   });
   return requireProtocol(unwrapData(response), 'создание черновика');
-}
-
-export async function quickCreateProtocol(params: {
-  payload: QuickCreateProtocolRequest;
-  idempotencyKey: string;
-}): Promise<Protocol> {
-  const { payload, idempotencyKey } = params;
-  if (!idempotencyKey) {
-    throw new Error('Не удалось сформировать ключ безопасной отправки запроса');
-  }
-  const apiPayload = toQuickCreateProtocolApiPayload(payload);
-  debugProtocolPayload('quick-create', {
-    templateId: apiPayload.templateId,
-    measurementCount: apiPayload.measurements.length,
-    payloadKeys: Object.keys(apiPayload).sort(),
-    measurementKeys: [...new Set(apiPayload.measurements.flatMap((item) => Object.keys(item)))].sort(),
-  }, {
-    idempotencyKeyPrefix: `${idempotencyKey.slice(0, 8)}…`,
-  });
-  const response = await api.post<ApiResponse<unknown> | unknown>(
-    '/protocols/quick-create',
-    apiPayload,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'Idempotency-Key': idempotencyKey,
-      },
-    },
-  );
-  const result = unwrapData(response);
-  const protocol = requireProtocol(result, 'быстрое создание');
-  const warning = 'Протокол создан, но часть полей требует повторной синхронизации.';
-  try {
-    const persisted = await getProtocol(protocol.id);
-    const persistedChecks: Array<[string, unknown, unknown]> = [
-      ['protocolDate', payload.protocolDate, persisted.protocolDate],
-      ['sampleDate', payload.sampleDate, persisted.samplingDate || persisted.testing?.samplingDate],
-      ['measurementDate', payload.measurementDate, persisted.measurementDate],
-      ['testingStartDate', payload.testingStartDate, persisted.testingStartDate || persisted.testing?.testingStartDate],
-      ['testingEndDate', payload.testingEndDate, persisted.testingEndDate || persisted.testing?.testingEndDate],
-      ['sourceNumber', payload.sourceNumber, persisted.sourceNumber],
-      ['conditions.waterType', payload.conditions?.waterType, persisted.conditions?.waterType || persisted.waterType],
-      ['conditions.waterUseCategory', payload.conditions?.waterUseCategory, persisted.conditions?.waterUseCategory || persisted.waterUseCategory],
-    ];
-    const ignored = persistedChecks.find(([, expected, actual]) =>
-      expected !== undefined && expected !== null && String(expected) !== String(actual ?? ''));
-    if (ignored) {
-      console.warn('[Protocols] quick-create post-check mismatch', { protocolId: protocol.id, field: ignored[0] });
-      return { ...protocol, syncWarning: warning, printVisibility: normalizeProtocolPrintVisibility(protocol.printVisibility ?? payload.printVisibility) };
-    }
-    return { ...persisted, printVisibility: normalizeProtocolPrintVisibility(persisted.printVisibility ?? payload.printVisibility) };
-  } catch (postCheckError) {
-    console.warn('[Protocols] quick-create post-check failed', {
-      protocolId: protocol.id,
-      error: postCheckError instanceof Error ? postCheckError.name : 'UnknownError',
-    });
-    return { ...protocol, syncWarning: warning, printVisibility: normalizeProtocolPrintVisibility(protocol.printVisibility ?? payload.printVisibility) };
-  }
 }
 
 export async function refreshLaboratoryData(protocolId: string, version: number): Promise<Protocol> {
@@ -1674,12 +1512,14 @@ export async function saveRawMeasurements(
   );
   const responsePayload = unwrapApiResponse<unknown>(response.data);
   const responseSource = asRecord(responsePayload);
-  const item = extractItem(responsePayload, ['result', 'row']);
-  const source = asRecord(item);
-  const row = Object.keys(source).length ? normalizeResult(item) : undefined;
+  const newVersion = requireProtocolVersion(responseSource.version, 'raw measurements response.version');
+  const source = asRecord(responseSource.row);
+  if (!Object.keys(source).length) {
+    throw new Error('Backend contract error: raw measurements response.row must be an object.');
+  }
   return {
-    version: requireProtocolVersion(responseSource.version ?? responseSource.protocolVersion),
-    row: row?.id ? row : undefined,
+    version: newVersion,
+    row: normalizeResult(source),
   };
 }
 
@@ -1687,7 +1527,7 @@ export async function returnToDraft(protocolId: string, request: ReturnForRevisi
   const reason = request.reason.trim();
   if (reason.length < 3 || reason.length > 1000) throw new Error('Причина должна содержать от 3 до 1000 символов.');
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/return-to-draft`, { version: requireProtocolVersion(request.version), reason });
-  return protocolFromActionResponse(protocolId, response);
+  return requireProtocol(unwrapData(response), 'возврат в черновик');
 }
 
 export async function calculateResult(protocolId: string, resultId: string, version: number): Promise<CalculationResultResponse> {

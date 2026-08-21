@@ -57,10 +57,11 @@ const report = {
   linkedProtocolCount: 2,
   linkedProtocolNumbers: ['P-READY', 'P-SIGNED'],
   lastCollectedAt: '2026-07-31T10:00:00Z',
+  availableActions: { collect: true, submitReview: true },
 };
 const programResponse = {
   id: 1, version: 8, number: 'PEK-1', name: 'Program', status: 'DRAFT',
-  validFrom: '2026-01-01', validUntil: '2026-12-31', availableActions: ['EDIT'], readOnly: false,
+  validFrom: '2026-01-01', validUntil: '2026-12-31', availableActions: { edit: true }, readOnly: false,
 };
 const server = setupServer(
   http.get('*/api/pek/programs', ({ request }) => {
@@ -113,10 +114,12 @@ const server = setupServer(
   http.get('*/api/pek/reports/:id/readiness', () => HttpResponse.json({ data: { ready: false, progressPercent: 0, summary: { planned: 1, completed: 0, missing: 1, unmatched: 1, ambiguous: 0, stale: 0, openExceedances: 0, overdueActions: 0 }, issues: [{ code: 'UNMATCHED_SOURCES', section: 'SOURCES', severity: 'ERROR', message: 'Есть несопоставленные результаты: 1', blocking: true }] } })),
   http.post('*/api/pek/reports/:reportId/sources/:sourceId/match', async ({ request }) => {
     body = await request.json();
+    ifMatch = request.headers.get('If-Match');
     return HttpResponse.json({ data: { id: 31, protocolId: 4, protocolNumber: 'P-4', protocolResultId: 8, matchStatus: 'MANUALLY_MATCHED', manual: true, excluded: false, sourceVersion: 1, version: 3 } });
   }),
   http.post('*/api/pek/reports/:id/return', async ({ request }) => {
     body = await request.json();
+    ifMatch = request.headers.get('If-Match');
     return HttpResponse.json({ data: { ...report, status: 'RETURNED', version: 14 } });
   }),
   http.get('*/api/pek/settings', () => HttpResponse.json({ data: { companyId: 1, defaultResponsibleUserId: null, defaultLaboratoryId: null, defaultReportType: 'QUARTERLY', autoCollectProtocols: false, includeOnlySignedProtocols: true, allowFallbackMatching: true, requireManualAmbiguousConfirmation: true, requireAllPlanFactItems: true, blockSubmitWithUnmatchedResults: true, blockSubmitWithAmbiguousResults: true, blockSubmitWithStaleSources: true, blockSubmitWithOpenExceedances: true, notifyBeforeDeadlineDays: 7, notifyMissingProtocols: true, notifyExceedances: true, notifyReportReturned: true, version: 0, availableActions: { view: true, edit: true }, capabilities: { automaticCollectionSupported: false } } })),
@@ -202,29 +205,28 @@ describe('PEK backend contract', () => {
     expect(body).not.toHaveProperty('controlItems');
     expect(body).not.toHaveProperty('indicators');
     expect(body).not.toHaveProperty('measures');
-    expect(body).toHaveProperty('version', 7);
-    expect(ifMatch).toBeNull();
+    expect(body).not.toHaveProperty('version');
+    expect(ifMatch).toBe('7');
   });
 
-  it('sends empty arrays and version in the full PATCH body', async () => {
+  it('sends empty arrays and version only in If-Match for full PATCH', async () => {
     const request = mapProgramEditFormToRequest({ ...form, controlItems: [], indicators: [], measures: [] });
     await pekApi.updateProgram(1, 12, request);
     expect(body).toMatchObject({ controlItems: [], indicators: [], measures: [] });
-    expect(body).toHaveProperty('version', 12);
-    expect(ifMatch).toBeNull();
+    expect(body).not.toHaveProperty('version');
+    expect(ifMatch).toBe('12');
   });
 
-  it('keeps return version in body and If-Match header', async () => {
-    await pekApi.returnProgram(1, { version: 12, reason: 'Исправить период' });
+  it('keeps return version only in If-Match header', async () => {
+    await pekApi.returnProgram(1, 12, 'Исправить период');
     expect(body).toEqual({ reason: 'Исправить период' });
     expect(ifMatch).toBe('12');
   });
 
-  it('uses report availableActions together with permissions and status', () => {
+  it('uses report availableActions without status or role fallbacks', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
-    expect(source).toContain('availableActions');
-    expect(source).toContain('canMutateSources');
-    expect(source).toContain('actions.matchSources === true');
+    expect(source).toContain('item.availableActions.manageSources === true');
+    expect(source).not.toContain("['DRAFT', 'COLLECTING', 'RETURNED'].includes(item.status)");
   });
 
   it('uses backend report actions without overriding them from a local role matrix', () => {
@@ -235,26 +237,11 @@ describe('PEK backend contract', () => {
     expect(canCollectPekReport({ role: 'ADMIN' }, { ...item, availableActions: { collect: false } })).toBe(false);
   });
 
-  it('preserves every literal backend report action and fails closed for missing or non-boolean values', () => {
-    const availableActions = {
-      edit: true,
-      collect: true,
-      submitReview: true,
-      approve: false,
-      returnForRevision: true,
-      archive: false,
-      matchSources: true,
-      manageExceedance: true,
-      reviewExceedance: false,
-      generateDocument: true,
-      sign: false,
-    };
-    expect(mapReportResponse({ ...report, availableActions }).availableActions).toEqual(availableActions);
-    expect(mapReportResponse(report).availableActions).toEqual({});
-    expect(mapReportResponse({ ...report, availableActions: { collect: { enabled: true }, archive: null } }).availableActions).toEqual({});
+  it('does not invent report actions when backend omits them', () => {
+    expect(mapReportResponse({ ...report, availableActions: undefined }).availableActions).toEqual({});
   });
 
-  it('renders report buttons only for backend actions set to true', () => {
+  it('renders report buttons from permissions and valid statuses', () => {
     const callbacks = {
       onCollect: () => undefined,
       onSubmit: () => undefined,
@@ -262,38 +249,25 @@ describe('PEK backend contract', () => {
       onApprove: () => undefined,
       onArchive: () => undefined,
     };
-    const enabled = mapReportResponse({
-      ...report,
-      availableActions: {
-        collect: true,
-        submitReview: true,
-        returnForRevision: true,
-        approve: true,
-        archive: true,
-      },
-    });
-    const view = render(<PekReportActions report={enabled} user={{ role: 'ADMIN' }} isPending={false} {...callbacks} />);
+    const enabled = mapReportResponse({ ...report, status: 'DRAFT', availableActions: { collect: true, submitReview: true } });
+    const view = render(<PekReportActions report={enabled} isPending={false} {...callbacks} />);
     expect(screen.getByRole('button', { name: 'Повторить сбор' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Отправить на проверку' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Вернуть на доработку' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Утвердить' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Архивировать' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Вернуть на доработку' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Утвердить' })).toBeNull();
 
     view.rerender(<PekReportActions
-      report={{ ...enabled, availableActions: { collect: false, submitReview: false, returnForRevision: false, approve: false, archive: false } }}
-      user={{ role: 'ADMIN' }}
+      report={{ ...enabled, status: 'ARCHIVED', availableActions: {} }}
       isPending={false}
       {...callbacks}
     />);
     expect(screen.queryByRole('button')).toBeNull();
 
-    view.rerender(<PekReportActions report={{ ...enabled, availableActions: {} }} user={{ role: 'ADMIN' }} isPending={false} {...callbacks} />);
-    expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('closed report and false availableActions hide source mutations', () => {
+  it('backend action hides source mutations', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
-    expect(source).toContain("const canMutateSources = actions.matchSources === true");
+    expect(source).toContain('const canMutateSources = item.availableActions.manageSources === true');
     expect(source).toContain("source.matchStatus !== 'STALE'");
     expect(source).not.toContain('actions.matchSources ||');
   });
@@ -337,7 +311,7 @@ describe('PEK backend contract', () => {
     expect(source).toContain('pekKeys.reportSourcesRoot');
     expect(source).toContain('pekKeys.planFact');
     expect(source).toContain('pekKeys.readiness');
-    expect(source).toContain('mapped.status === 409');
+    expect(source).toContain('handleVersionedPekError(error, invalidateReportData)');
   });
 
   it('RETURNED, STALE, readiness and version conflict have explicit UI states', () => {
@@ -345,7 +319,7 @@ describe('PEK backend contract', () => {
     expect(source).toContain("item.status === 'RETURNED'");
     expect(source).toContain('Отчёт возвращён на доработку');
     expect(source).toContain("source.matchStatus === 'STALE' ? 'Устаревшая связь'");
-    expect(source).toContain('getReportReadiness(id)');
+    expect(source).toContain('getReportReadiness(id, signal)');
     expect(source).toContain('Данные были изменены другим пользователем');
   });
 
@@ -356,7 +330,7 @@ describe('PEK backend contract', () => {
     expect(service).toContain('/pek/reports/${id}/history');
   });
 
-  it('maps Java ProgramResponse string actions without deriving status', () => {
+  it('maps ProgramResponse action flags without deriving status', () => {
     const program = mapProgramResponse({
       id: 1,
       number: 'PEK-1',
@@ -366,11 +340,11 @@ describe('PEK backend contract', () => {
       validFrom: '2026-01-01',
       validUntil: '2026-12-31',
       responsibleUser: { id: 7, name: 'Ecologist' },
-      availableActions: ['EDIT', 'SUBMIT_REVIEW', 'CLONE'],
+      availableActions: { edit: true, submit: true, clone: true },
       readOnly: false,
     });
     expect(program.responsible?.id).toBe(7);
-    expect(program.availableActions.map((item) => item.code)).toEqual(['EDIT', 'SUBMIT_REVIEW', 'CLONE']);
+    expect(program.availableActions).toMatchObject({ edit: true, submit: true, clone: true });
   });
 
   it('maps Java reportYear/reportQuarter and dashboard deadline fields exactly', () => {
@@ -439,7 +413,7 @@ describe('PEK backend contract', () => {
   });
 
   it('uses backend membership permissions instead of the global auth role', () => {
-    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(false);
+    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(true);
     expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(false);
     expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_CREATE')).toBe(false);
     expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_REPORT_CREATE')).toBe(false);
@@ -454,10 +428,10 @@ describe('PEK backend contract', () => {
     const unknown = { role: 'UNKNOWN_ROLE' as never };
     expect(canCreateProgram(unknown)).toBe(false);
     expect(canCreateReport(unknown)).toBe(false);
-    expect(canSignReport({ role: 'ADMIN' }, { availableActions: { sign: false } })).toBe(false);
+    expect(canSignReport({ role: 'ADMIN' }, { status: 'SIGNED', availableActions: { sign: false } })).toBe(false);
     expect(canSignReport({ role: 'ECOLOGIST' }, undefined)).toBe(false);
     expect(canSubmitPekReport({ role: 'ECOLOGIST' }, undefined)).toBe(false);
-    expect(canSignReport({ role: 'ECOLOGIST', permissions: ['PEK_REPORT_SIGN'] }, undefined)).toBe(true);
+    expect(canSignReport({ role: 'ECOLOGIST', permissions: ['PEK_REPORT_SIGN'] }, { status: 'APPROVED' })).toBe(false);
     expect(canArchiveReport({ role: 'ADMIN' }, { canArchive: false })).toBe(false);
     expect(canTransitionExceedance({ allowedTransitions: ['IN_REVIEW'] }, 'CLOSED')).toBe(false);
     expect(canTransitionExceedance({ allowedTransitions: ['CLOSED'] }, 'CLOSED')).toBe(true);
@@ -510,9 +484,9 @@ describe('PEK backend contract', () => {
     expect(() => mapReportResponse({ id: 0, version: 1, status: 'DRAFT' })).toThrow(/контракт/);
   });
 
-  it('collect is synchronous, unversioned and returns real protocol numbers', async () => {
-    const collected = await pekApi.collectReport(9);
-    expect(ifMatch).toBeNull();
+  it('collect is synchronous, versioned and returns real protocol numbers', async () => {
+    const collected = await pekApi.collectReport(9, 13);
+    expect(ifMatch).toBe('13');
     expect(body).toEqual({});
     expect(collected.linkedProtocolNumbers).toEqual(['P-READY', 'P-SIGNED']);
     expect(collected.linkedProtocolNumbers).not.toContain('P-DRAFT');
@@ -531,11 +505,13 @@ describe('PEK backend contract', () => {
     expect(readiness.issues[0]).toMatchObject({ section: 'SOURCES', blocking: true });
   });
 
-  it('sends source and report versions in the body where backend requires them', async () => {
+  it('sends source and report versions only in If-Match', async () => {
     await pekApi.matchReportSource(9, 31, 77, 2);
-    expect(body).toEqual({ indicatorId: 77, version: 2 });
+    expect(body).toEqual({ indicatorId: 77 });
+    expect(ifMatch).toBe('2');
     await pekApi.returnReport(9, 13, 'Исправить сопоставление');
-    expect(body).toEqual({ version: 13, reason: 'Исправить сопоставление' });
+    expect(body).toEqual({ reason: 'Исправить сопоставление' });
+    expect(ifMatch).toBe('13');
   });
 
   it('uses the contracted HTTP methods and URLs for report reconciliation', async () => {
@@ -590,7 +566,7 @@ describe('PEK backend contract', () => {
     queryClient.setQueryData(firstListKey, { content: [] });
     queryClient.setQueryData(secondListKey, { content: [] });
 
-    const saved = await pekApi.approveProgram(9, { version: 8 });
+    const saved = await pekApi.approveProgram(9, 8);
     await commitPekProgramMutation(queryClient, 1, saved);
 
     expect(workflowRequest).toEqual({ method: 'POST', pathname: '/api/pek/programs/9/approve' });
@@ -613,12 +589,12 @@ describe('PEK backend contract', () => {
       }),
     );
     const settings = await pekApi.getSettings(17);
-    await pekApi.updateSettings(17, {
+    await pekApi.updateSettings(17, 0, {
       defaultResponsibleUserId: null, defaultLaboratoryId: null, defaultReportType: 'QUARTERLY', autoCollectProtocols: false,
       includeOnlySignedProtocols: true, allowFallbackMatching: true, requireManualAmbiguousConfirmation: true,
       requireAllPlanFactItems: true, blockSubmitWithUnmatchedResults: true, blockSubmitWithAmbiguousResults: true,
       blockSubmitWithStaleSources: true, blockSubmitWithOpenExceedances: true, notifyBeforeDeadlineDays: 7,
-      notifyMissingProtocols: true, notifyExceedances: true, notifyReportReturned: true, version: 0,
+      notifyMissingProtocols: true, notifyExceedances: true, notifyReportReturned: true,
     });
     expect(settings.defaultReportType).toBe('QUARTERLY');
     expect(settings.availableActions.edit).toBe(true);
@@ -642,10 +618,10 @@ describe('PEK backend contract', () => {
       http.post('*/api/pek/exceedances/4/evidence', async ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname} ${JSON.stringify(await request.json())}`); return HttpResponse.json({ data: { ...exceedance, version: 3 } }); }),
       http.post('*/api/pek/exceedances/4/transition', async ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname} ${JSON.stringify(await request.json())}`); return HttpResponse.json({ data: { ...exceedance, version: 3, status: 'CLOSED' } }); }),
     );
-    await pekApi.generateReportDocx(9);
-    await pekApi.generateReportPdf(9);
+    await pekApi.generateReportDocx(9, 2);
+    await pekApi.generateReportPdf(9, 2);
     await pekApi.getReportDocumentVersions(9);
-    await pekApi.signReportDocument(9, 'cms');
+    await pekApi.signReportDocument(9, 2, 'cms');
     await pekApi.getReportSignatures(9);
     await pekApi.getReportExceedances(9);
     await pekApi.getExceedance(4);
@@ -656,8 +632,8 @@ describe('PEK backend contract', () => {
       'POST /api/pek/reports/9/document/generate-docx', 'POST /api/pek/reports/9/document/generate-pdf',
       'GET /api/pek/reports/9/document/versions', 'POST /api/pek/reports/9/document/sign {"cms":"cms"}',
       'GET /api/pek/reports/9/document/signatures', 'GET /api/pek/reports/9/exceedances', 'GET /api/pek/exceedances/4',
-      'POST /api/pek/exceedances/4/evidence {"version":3,"fileId":"file-1"}',
-      'POST /api/pek/exceedances/4/transition {"version":3,"status":"CLOSED","resolutionComment":"Устранено"}',
+      'POST /api/pek/exceedances/4/evidence {"fileId":"file-1"}',
+      'POST /api/pek/exceedances/4/transition {"status":"CLOSED","resolutionComment":"Устранено"}',
     ]));
     const serviceSource = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
     expect(serviceSource).toContain('/document/download/${format}');
@@ -668,15 +644,15 @@ describe('PEK backend contract', () => {
   it('refreshes PEK server state after document and exceedance mutations', () => {
     const documents = readFileSync(resolve(process.cwd(), 'src/features/pek/components/documents/PekReportDocuments.tsx'), 'utf8');
     const exceedances = readFileSync(resolve(process.cwd(), 'src/features/pek/components/exceedances/PekReportExceedances.tsx'), 'utf8');
-    expect(documents).toContain('await pekApi.generateReportDocx(report.id)');
-    expect(documents).toContain('await pekApi.signReportDocument(report.id, cms)');
+    expect(documents).toContain('await pekApi.generateReportDocx(report.id, report.version)');
+    expect(documents).toContain('await pekApi.signReportDocument(report.id, report.version, cms)');
     expect(documents).toContain('const actual = await pekApi.getReport(report.id)');
     expect(documents).toContain('Скачать DOCX');
     expect(documents).toContain('Скачать PDF');
     expect(documents).toContain('getReportDocumentVersions');
     expect(documents).toContain('getReportSignatures');
-    expect(documents).toContain('report.availableActions.downloadDocx === true');
-    expect(documents).toContain('report.availableActions.downloadPdf === true');
+    expect(documents).toContain('latestVersion?.hasDocx === true');
+    expect(documents).toContain('latestVersion?.hasPdf === true');
     expect(exceedances).toContain('pekApi.getExceedance(id)');
     expect(exceedances).toContain('pekApi.getReportExceedances(report.id)');
     expect(exceedances).toContain("transitionMutation.mutate('CLOSED')");
@@ -715,10 +691,10 @@ describe('PEK backend contract', () => {
     expect(source).toContain('to={`/staff/pek/programs/${program.id}?companyId=');
   });
 
-  it('uses backend readOnly and editable statuses for autosave', () => {
+  it('uses backend edit action for autosave', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramCreatePage.tsx'), 'utf8');
-    expect(source).toContain("['DRAFT', 'RETURNED'].includes(program.data.status)");
-    expect(source).toContain('program.data?.readOnly');
+    expect(source).toContain('program.data.availableActions.edit === true');
+    expect(source).not.toContain("['DRAFT', 'RETURNED'].includes(program.data.status)");
     expect(source).toContain('mapProgramAutosaveToRequest');
   });
 
@@ -739,13 +715,14 @@ describe('PEK backend contract', () => {
     const programForm = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramCreatePage.tsx'), 'utf8');
     expect(service).toContain("get<PekPermit[]>('/pek/permits', { objectId }, signal)");
     expect(service).toContain("api.post('/pek/permits', body)");
-    expect(service).toContain("api.patch(`/pek/permits/${id}`, body)");
+    expect(service).toContain("api.patch(`/pek/permits/${id}`, payload, pekMutationOptions(version))");
     expect(service).toContain("api.post(`/pek/permits/${id}/status`");
+    expect(service).toContain("api.delete(`/pek/permits/${id}`, pekMutationOptions(version))");
     expect(service).toContain("get<PekPermitHistoryEntry[]>(`/pek/permits/${id}/history`");
     expect(service).not.toContain('/pek/lookups/objects/${objectId}/permits');
-    expect(page).toContain('permit.availableActions.edit');
-    expect(page).toContain('permit.availableActions.markExpired');
-    expect(page).toContain('permit.availableActions.revoke');
+    expect(page).toContain('permit.availableActions?.edit');
+    expect(page).toContain('permit.availableActions?.markExpired');
+    expect(page).toContain('permit.availableActions?.revoke');
     expect(programForm).toContain('permit.effectivelyActive');
   });
 
@@ -763,9 +740,8 @@ describe('PEK backend contract', () => {
 
   it('derives company choices from PEK scope and stops retrying forbidden requests', () => {
     const scope = readFileSync(resolve(process.cwd(), 'src/features/pek/hooks/usePekScope.ts'), 'utf8');
-    expect(scope).toContain('pekApi.getPrograms');
-    expect(scope).toContain('pekApi.getDashboard');
-    expect(scope).not.toContain('getCompanies');
+    expect(scope).toContain('getActiveCompanies');
+    expect(scope).not.toContain('pekApi.getPrograms');
     expect(scope).toContain('retry: retryPekQuery');
   });
 
@@ -777,7 +753,7 @@ describe('PEK backend contract', () => {
     }
     expect(workspace).toContain('pekApi.getReportHistory');
     expect(settings).toContain('form.autoCollectProtocols');
-    expect(settings).toContain('automaticCollectionSupported !== true');
+    expect(settings).toContain('form.autoCollectProtocols');
   });
 
   it('uploads exceedance evidence before attaching it and has no manual fileId field', () => {
@@ -785,7 +761,7 @@ describe('PEK backend contract', () => {
     const flow = readFileSync(resolve(process.cwd(), 'src/features/pek/components/exceedances/evidenceFlow.ts'), 'utf8');
     expect(source).toContain('uploadAndAttachExceedanceEvidence');
     expect(flow.indexOf('dependencies.upload')).toBeLessThan(flow.indexOf('dependencies.attach'));
-    expect(flow).toContain('uploaded.id');
+    expect(flow).toContain('uploaded.fileId');
     expect(source).not.toContain('ID файла подтверждения');
     expect(source).toContain('selectedActions.addEvidence === true');
   });

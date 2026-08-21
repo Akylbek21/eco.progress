@@ -8,6 +8,7 @@ import { pekApi } from '../../api/pekService';
 import PekQueryError from '../common/PekQueryError';
 import { PekLoading, PekState } from '../common/PekUi';
 import { mapPekError } from '../../utils/pekErrorMapper';
+import { handlePekMutationError } from '../../utils/pekMutationError';
 import { uploadAndAttachExceedanceEvidence } from './evidenceFlow';
 
 const statusLabels: Record<string, string> = {
@@ -84,8 +85,7 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
       return refreshAfterMutation(selected!.id);
     },
     onError: (error) => {
-      const failure = mapPekError(error);
-      if (failure.status === 409 || failure.status === 412) void refreshAfterMutation(selected!.id);
+      void handlePekMutationError(error, () => refreshAfterMutation(selected!.id));
     },
   });
   const evidence = useMutation({
@@ -102,23 +102,27 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
       setEvidenceOpen(false);
     },
     onError: (error) => {
-      const failure = mapPekError(error);
-      if (failure.status === 409 || failure.status === 412) void refreshAfterMutation(selected!.id);
+      void handlePekMutationError(error, () => refreshAfterMutation(selected!.id));
     },
   });
   const transitionMutation = useMutation({
     mutationFn: async (targetStatus: string) => {
-      await pekApi.transitionExceedance(selected!.id, {
-        version: selected!.version,
-        status: targetStatus,
-        comment: comment.trim() || undefined,
-        resolutionComment: resolutionComment.trim() || undefined,
-      });
+      if (targetStatus === 'CLOSED') {
+        await pekApi.closeExceedance(selected!.id, selected!.version, resolutionComment.trim());
+      } else if (targetStatus === 'OPEN') {
+        await pekApi.reopenExceedance(selected!.id, selected!.version, comment.trim() || undefined);
+      } else {
+        await pekApi.transitionExceedance(selected!.id, {
+          version: selected!.version,
+          status: targetStatus,
+          comment: comment.trim() || undefined,
+          resolutionComment: resolutionComment.trim() || undefined,
+        });
+      }
       return refreshAfterMutation(selected!.id);
     },
     onError: (error) => {
-      const failure = mapPekError(error);
-      if (failure.status === 409 || failure.status === 412) void refreshAfterMutation(selected!.id);
+      void handlePekMutationError(error, () => refreshAfterMutation(selected!.id));
     },
   });
 

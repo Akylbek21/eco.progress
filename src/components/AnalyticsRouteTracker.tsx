@@ -6,7 +6,19 @@ const AnalyticsRouteTracker = () => {
   const location = useLocation();
 
   useEffect(() => {
-    initializeAnalytics();
+    let cancelled = false;
+    const start = () => {
+      if (cancelled) return;
+      initializeAnalytics();
+      trackPageView(`${window.location.pathname}${window.location.search}`);
+    };
+    const onLoad = () => {
+      if ('requestIdleCallback' in window) window.requestIdleCallback(start, { timeout: 2500 });
+      else setTimeout(start, 1200);
+    };
+    if (document.readyState === 'complete') onLoad();
+    else window.addEventListener('load', onLoad, { once: true });
+    return () => { cancelled = true; window.removeEventListener('load', onLoad); };
   }, []);
 
   useEffect(() => {

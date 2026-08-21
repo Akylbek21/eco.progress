@@ -5,7 +5,7 @@ import { createWizardDefaults, emptyWizardResult } from '../src/features/protoco
 import { mapProtocolToWizardForm, mapWizardResultToDraftRequest, mapWizardToCreateDraft } from '../src/features/protocols/mappers/protocolWizardDraftMapper';
 import { saveProtocolWizardDraft } from '../src/features/protocols/api/saveProtocolWizardDraft';
 import { mapProtocolApiErrorsToForm } from '../src/features/protocols/utils/protocolFormErrors';
-import { hasProtocolAction, hasProtocolPermission } from '../src/features/protocols/utils/protocolActions';
+import { hasProtocolAction } from '../src/features/protocols/utils/protocolActions';
 import { validateForApproval } from '../src/features/protocols/utils/protocolWizardValidation';
 import type { Protocol } from '../src/types/protocols';
 import type { ProtocolService } from '../src/services/protocolService';
@@ -430,16 +430,16 @@ describe('protocol wizard validation and backend errors', () => {
 });
 
 describe('backend permissions authority', () => {
-  const protocol = (permissions?: Protocol['permissions']) => ({ permissions }) as Protocol;
+  const protocol = (availableActions: Protocol['availableActions'] = {} as Protocol['availableActions']) => ({ availableActions }) as Protocol;
 
   it('does not infer edit or sign from status', () => {
-    expect(hasProtocolPermission(protocol(), 'canEdit')).toBe(false);
-    expect(hasProtocolPermission(protocol(), 'canSign')).toBe(false);
+    expect(hasProtocolAction(protocol(), 'edit')).toBe(false);
+    expect(hasProtocolAction(protocol(), 'sign')).toBe(false);
   });
 
   it('allows only explicitly returned actions and fails closed for an unknown status', () => {
-    expect(hasProtocolPermission(protocol({ canEdit: true }), 'canEdit')).toBe(true);
-    expect(hasProtocolPermission(protocol({ canEdit: true }), 'canSign')).toBe(false);
+    expect(hasProtocolAction(protocol({ edit: true } as Protocol['availableActions']), 'edit')).toBe(true);
+    expect(hasProtocolAction(protocol({ edit: true } as Protocol['availableActions']), 'sign')).toBe(false);
   });
 
   it('uses availableActions for completion, signing and download', () => {

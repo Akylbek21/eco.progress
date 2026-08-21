@@ -14,7 +14,8 @@ import PekQueryError from '../components/common/PekQueryError';
 import PekProgramDocuments from '../components/documents/PekProgramDocuments';
 import PekProgramMonitoring from '../components/monitoring/PekProgramMonitoring';
 import PekActionModal from '../components/workflow/PekActionModal';
-import { mapPekError } from '../utils/pekErrorMapper';
+import PekReadinessPanel from '../components/common/PekReadinessPanel';
+import { handlePekMutationError } from '../utils/pekMutationError';
 
 const tabs = ['Обзор', 'Объекты контроля', 'Показатели', 'Мероприятия', 'Документы', 'История изменений', 'Отчёты'];
 
@@ -30,6 +31,7 @@ const PekProgramDetailsPage = () => {
   const [cloneName, setCloneName] = useState('');
   const [cloneValidFrom, setCloneValidFrom] = useState('');
   const [cloneValidUntil, setCloneValidUntil] = useState('');
+  const [workflowErrors, setWorkflowErrors] = useState<string[]>([]);
   const client = useQueryClient();
   const toast = useToast();
   const navigate = useNavigate();
@@ -42,12 +44,12 @@ const PekProgramDetailsPage = () => {
   const workflow = useMutation({
     mutationFn: async ({ item, comment }: { item: PekAvailableAction; comment: string }) => {
       const version = program.data!.version;
-      if (item.code === 'SUBMIT_REVIEW') return pekApi.submitProgramReview(id, { version });
-      if (item.code === 'RETURN') return pekApi.returnProgram(id, { version, reason: comment });
-      if (item.code === 'APPROVE') return pekApi.approveProgram(id, { version });
-      if (item.code === 'ACTIVATE') return pekApi.activateProgram(id, { version });
-      if (item.code === 'ARCHIVE') return pekApi.archiveProgram(id, { version });
-      if (item.code === 'CLONE') return pekApi.cloneProgram(id, {
+      if (item.code === 'SUBMIT_REVIEW') return pekApi.submitProgramReview(id, version);
+      if (item.code === 'RETURN') return pekApi.returnProgram(id, version, comment);
+      if (item.code === 'APPROVE') return pekApi.approveProgram(id, version);
+      if (item.code === 'ACTIVATE') return pekApi.activateProgram(id, version);
+      if (item.code === 'ARCHIVE') return pekApi.archiveProgram(id, version);
+      if (item.code === 'CLONE') return pekApi.cloneProgram(id, program.data!.version, {
         number: cloneNumber.trim(),
         name: cloneName.trim() || undefined,
         validFrom: cloneValidFrom || undefined,
@@ -57,6 +59,7 @@ const PekProgramDetailsPage = () => {
     },
     retry: false,
     onSuccess: async (saved) => {
+      setWorkflowErrors([]);
       setAction(null);
       setCloneAction(null);
       await commitPekProgramMutation(client, saved.id === id ? companyId : saved.company?.id, saved);
@@ -68,19 +71,26 @@ const PekProgramDetailsPage = () => {
       if (saved.id !== id) navigate(`/staff/pek/programs/${saved.id}?companyId=${saved.company?.id || companyId || ''}`);
     },
     onError: async (error) => {
-      const mapped = mapPekError(error);
-      const conflict = mapped.status === 409 || mapped.status === 412 || mapped.code === 'PEK_VERSION_CONFLICT';
-      const message = conflict ? 'Программа была изменена другим пользователем. Обновите данные.' : mapped.message;
-      toast.error(message);
-      if (conflict && window.confirm(`${message}\nОбновить данные сейчас?`)) await program.refetch();
+      const mapped = await handlePekMutationError(error, () => program.refetch());
+      toast.error(mapped.message);
+      setWorkflowErrors([
+        ...mapped.issues.map((issue) => issue.message),
+        ...mapped.missingFields,
+      ]);
     },
   });
 
   if (program.isLoading) return <PekLoading />;
   if (program.isError || !program.data) return <PekQueryError error={program.error} resource="Программа ПЭК" retry={() => void program.refetch()} />;
   const item = program.data;
-  const workflowActions = item.availableActions.filter((candidate) => candidate.code !== 'EDIT');
-  const editAction = item.availableActions.find((candidate) => candidate.code === 'EDIT');
+  const workflowActions: PekAvailableAction[] = [
+    item.availableActions.submit && { code: 'SUBMIT_REVIEW', label: 'Отправить на согласование', enabled: true },
+    item.availableActions.returnForRevision && { code: 'RETURN', label: 'Вернуть на доработку', enabled: true, requiresComment: true },
+    item.availableActions.approve && { code: 'APPROVE', label: 'Согласовать', enabled: true },
+    item.availableActions.activate && { code: 'ACTIVATE', label: 'Активировать', enabled: true },
+    item.availableActions.archive && { code: 'ARCHIVE', label: 'Архивировать', enabled: true },
+    item.availableActions.clone && { code: 'CLONE', label: 'Клонировать', enabled: true },
+  ].filter((candidate): candidate is PekAvailableAction => Boolean(candidate));
 
   return <div className="space-y-5">
     <PekPageHeader
@@ -91,11 +101,13 @@ const PekProgramDetailsPage = () => {
         {workflowActions.map((candidate) => (
           <PekPrimaryAction key={candidate.code} action={candidate} pending={workflow.isPending} onClick={(selected) => selected.code === 'CLONE' ? setCloneAction(selected) : setAction(selected)} />
         ))}
-        {!item.readOnly && editAction?.enabled && (
+        {item.availableActions.edit && (
           <button type="button" onClick={() => navigate(`/staff/pek/programs/${id}/edit?companyId=${companyId || item.company?.id || ''}`)} className="rounded-full border px-5 py-2 font-bold">Изменить</button>
         )}
       </>}
     />
+    {workflowErrors.length > 0 && <section role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900"><strong>Программа не готова к выполнению действия:</strong><ul className="mt-2 list-disc pl-5">{workflowErrors.map((message) => <li key={message}>{message}</li>)}</ul></section>}
+    {item.readiness && <PekReadinessPanel readiness={item.readiness} />}
     <section className="grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-5">
       <Info label="Версия" value={item.version} />
       <Info label="Период" value={`${item.validFrom} — ${item.validUntil}`} />
@@ -112,7 +124,7 @@ const PekProgramDetailsPage = () => {
       {tab === 1 && <DataRows rows={item.controlItems || []} />}
       {tab === 2 && <DataRows rows={item.indicators || []} />}
       {tab === 3 && <DataRows rows={item.measures || []} />}
-      {tab === 4 && <PekProgramDocuments companyId={companyId} programId={id} version={item.version} status={item.status} documents={item.documents || []} readOnly={item.readOnly} />}
+      {tab === 4 && <PekProgramDocuments companyId={companyId} programId={id} version={item.version} documents={item.documents || []} canUpload={item.availableActions.uploadDocument} />}
       {tab === 5 && <Link className="font-bold text-eco-700" to={`/staff/pek/programs/${id}/history`}>Открыть историю программы</Link>}
       {tab === 6 && <Link className="font-bold text-eco-700" to={`/staff/pek/reports?companyId=${item.company?.id || ''}&objectId=${item.object?.id || ''}`}>Открыть отчёты объекта</Link>}
     </section>

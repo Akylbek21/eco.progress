@@ -21,6 +21,7 @@ type Props = {
   readOnly?: boolean;
   onClose: () => void;
   onCalculated: (row?: ProtocolResultRow) => void | Promise<void>;
+  onVersionChange: (version: number) => void | Promise<void>;
   onReload?: () => void | Promise<void>;
   onNotify: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
 };
@@ -51,6 +52,7 @@ const RawMeasurementsModal = ({
   readOnly = false,
   onClose,
   onCalculated,
+  onVersionChange,
   onReload,
   onNotify,
 }: Props) => {
@@ -190,6 +192,7 @@ const RawMeasurementsModal = ({
         savedRow = saved.results.find((item) => item.id === row.id);
         savedVersion = saved.version;
       }
+      await onVersionChange(savedVersion);
       if (!calculate) {
         if (savedRow) await onCalculated(savedRow);
         else await onReload?.();
@@ -198,6 +201,7 @@ const RawMeasurementsModal = ({
         return;
       }
       const calculated = await protocolService.calculateResult(protocolId, row.id, savedVersion);
+      if (calculated.version !== undefined) await onVersionChange(calculated.version);
       onClose();
       if (calculated.row) await onCalculated(calculated.row);
       else await onReload?.();

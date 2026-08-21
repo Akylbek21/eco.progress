@@ -171,43 +171,10 @@ export interface ProtocolsQueryRequest {
   dateTo?: string;
   sort?: string;
   includeArchived?: boolean;
+  published?: boolean;
 }
 
-export type QuickCreateProtocolTemplateId =
-  | 'ambient_air'
-  | 'workplace_air'
-  | 'soil'
-  | 'microclimate'
-  | 'lighting'
-  | 'noise_vibration'
-  | 'uv_emf_laser'
-  | 'water';
-
-export interface QuickCreateProtocolConditions {
-  waterType?: string;
-  waterUseCategory?: string;
-  sampleNumber?: string;
-  samplingPlace?: string;
-  samplingDepth?: string;
-  season?: string;
-  workCategory?: string;
-  workplaceType?: string;
-  roomType?: string;
-  normLevel?: string;
-  lightingType?: string;
-  noiseType?: string;
-  visualWorkCategory?: string;
-  temperature?: string;
-  humidity?: string;
-  pressure?: string;
-  windSpeed?: string;
-  weatherSource?: string;
-  weatherDataSource?: string;
-  manualChangeReason?: string;
-  weatherObservedAt?: string;
-}
-
-export interface QuickCreateProtocolMeasurement {
+export interface ProtocolWizardMeasurementRequest {
   indicatorName: string;
   pollutantCode?: string;
   factorType?: string;
@@ -227,30 +194,6 @@ export interface QuickCreateProtocolMeasurement {
   values?: Record<string, ProtocolResultValue>;
 }
 
-export interface QuickCreateProtocolRequest {
-  templateId: QuickCreateProtocolTemplateId;
-  sourceDocumentCode?: string;
-  docxTemplateCode?: string;
-  subtype?: string;
-  protocolDate: string;
-  sampleDate: string;
-  measurementDate: string;
-  testingStartDate: string;
-  testingEndDate: string;
-  companyId: number;
-  objectId: number;
-  laboratoryId: number;
-  executorId: number;
-  measurementTime?: string;
-  measurementPlace: string;
-  sourceNumber: string;
-  measurements: QuickCreateProtocolMeasurement[];
-  conditions?: QuickCreateProtocolConditions;
-  printVisibility: ProtocolPrintVisibility;
-  orderId?: string;
-  orderServiceItemId?: string;
-}
-
 export interface ProtocolVersionRequest {
   version: number;
 }
@@ -264,8 +207,4 @@ export type CancelProtocolRequest = ReturnForRevisionRequest;
 
 export interface SignProtocolRequest extends ProtocolVersionRequest {
   cmsSignatureBase64: string;
-}
-
-export interface QuickCreateProtocolResponse {
-  id: string;
 }

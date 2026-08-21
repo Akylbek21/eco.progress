@@ -11,24 +11,14 @@ const explicitPermission = (user: PekUser, permission: string): boolean | undefi
   return user.permissions.includes(permission);
 };
 
-const ROLE_PERMISSIONS: Partial<Record<UserRole, readonly string[]>> = {
-  ADMIN: ['PEK_VIEW', 'PEK_PROGRAM_CREATE', 'PEK_PROGRAM_EDIT', 'PEK_PROGRAM_ACTIVATE', 'PEK_PROGRAM_ARCHIVE', 'PEK_REPORT_CREATE', 'PEK_REPORT_EDIT', 'PEK_REPORT_COLLECT', 'PEK_REPORT_VALIDATE', 'PEK_REPORT_REVIEW', 'PEK_REPORT_RETURN', 'PEK_REPORT_APPROVE', 'PEK_REPORT_SIGN', 'PEK_REPORT_SUBMIT', 'PEK_REPORT_EXPORT', 'PEK_ADMIN', 'PEK_SETTINGS_EDIT'],
-  DIRECTOR: ['PEK_VIEW', 'PEK_PROGRAM_CREATE', 'PEK_PROGRAM_EDIT', 'PEK_PROGRAM_ACTIVATE', 'PEK_PROGRAM_ARCHIVE', 'PEK_REPORT_CREATE', 'PEK_REPORT_EDIT', 'PEK_REPORT_COLLECT', 'PEK_REPORT_VALIDATE', 'PEK_REPORT_REVIEW', 'PEK_REPORT_RETURN', 'PEK_REPORT_APPROVE', 'PEK_REPORT_SIGN', 'PEK_REPORT_SUBMIT', 'PEK_REPORT_EXPORT', 'PEK_ADMIN', 'PEK_SETTINGS_EDIT'],
-  HEAD: ['PEK_VIEW', 'PEK_PROGRAM_CREATE', 'PEK_PROGRAM_EDIT', 'PEK_PROGRAM_ACTIVATE', 'PEK_PROGRAM_ARCHIVE', 'PEK_REPORT_CREATE', 'PEK_REPORT_EDIT', 'PEK_REPORT_COLLECT', 'PEK_REPORT_VALIDATE', 'PEK_REPORT_REVIEW', 'PEK_REPORT_RETURN', 'PEK_REPORT_APPROVE', 'PEK_REPORT_SIGN', 'PEK_REPORT_SUBMIT', 'PEK_REPORT_EXPORT'],
-  ECOLOGIST: ['PEK_VIEW', 'PEK_PROGRAM_CREATE', 'PEK_PROGRAM_EDIT', 'PEK_REPORT_CREATE', 'PEK_REPORT_EDIT', 'PEK_REPORT_COLLECT', 'PEK_REPORT_VALIDATE', 'PEK_REPORT_SIGN', 'PEK_REPORT_EXPORT'],
-  LABORATORY: ['PEK_VIEW', 'PEK_REPORT_CREATE', 'PEK_REPORT_EDIT', 'PEK_REPORT_COLLECT', 'PEK_REPORT_VALIDATE', 'PEK_REPORT_EXPORT'],
-  MANAGER: ['PEK_VIEW', 'PEK_REPORT_EXPORT'],
-  ACCOUNTANT: ['PEK_VIEW', 'PEK_REPORT_EXPORT'],
-  WASTE_SPECIALIST: ['PEK_VIEW', 'PEK_REPORT_EXPORT'],
-};
-
-const roleHasPermission = (user: PekUser, permission: string) =>
-  Boolean(user?.role && ROLE_PERMISSIONS[user.role]?.includes(permission));
-
 export const canUsePekPermission = (user: PekUser, permission: string) => {
   const explicit = explicitPermission(user, permission);
-  if (explicit === true || roleHasPermission(user, permission)) return true;
-  if (permission === 'PEK_VIEW') return user?.companyPermissions?.COMPANY_VIEW === true;
+  if (explicit === true) return true;
+  if (permission === 'PEK_VIEW') {
+    return user?.companyPermissions?.COMPANY_VIEW === true
+      || user?.role === 'ADMIN'
+      || user?.role === 'DIRECTOR';
+  }
   return false;
 };
 
@@ -67,17 +57,17 @@ const resourceFlag = (
 };
 
 export const canEditPekReport = (user: PekUser, report: PekReportAccess) =>
-  resourceFlag(report, 'edit', 'canEdit') ?? canUsePekPermission(user, 'PEK_REPORT_EDIT');
+  resourceFlag(report, 'edit', 'canEdit') === true;
 export const canCollectPekReport = (user: PekUser, report: PekReportAccess) =>
-  resourceFlag(report, 'collect') ?? (['DRAFT', 'COLLECTING', 'RETURNED'].includes(report?.status || '') && canUsePekPermission(user, 'PEK_REPORT_COLLECT'));
+  resourceFlag(report, 'collect') === true;
 export const canSubmitPekReport = (user: PekUser, report: PekReportAccess) =>
-  resourceFlag(report, 'submitReview', 'canSubmit') ?? (['DRAFT', 'RETURNED'].includes(report?.status || '') && canUsePekPermission(user, 'PEK_REPORT_SUBMIT'));
+  resourceFlag(report, 'submitReview', 'canSubmit') === true;
 export const canApprovePekReport = (user: PekUser, report: PekReportAccess) =>
-  resourceFlag(report, 'approve', 'canApprove') ?? (report?.status === 'READY_FOR_REVIEW' && canUsePekPermission(user, 'PEK_REPORT_APPROVE'));
+  resourceFlag(report, 'approve', 'canApprove') === true;
 export const canReturnPekReport = (user: PekUser, report: PekReportAccess) =>
-  resourceFlag(report, 'returnForRevision') ?? (report?.status === 'READY_FOR_REVIEW' && canUsePekPermission(user, 'PEK_REPORT_RETURN'));
+  resourceFlag(report, 'returnForRevision') === true;
 export const canArchivePekReport = (user: PekUser, report: PekReportAccess) =>
-  resourceFlag(report, 'archive', 'canArchive') ?? (['APPROVED', 'SIGNED'].includes(report?.status || '') && canUsePekPermission(user, 'PEK_REPORT_APPROVE'));
+  resourceFlag(report, 'archive', 'canArchive') === true;
 
 // Central PEK access surface. Resource-level flags are authoritative whenever
 // the response contains them; role fallback is used only when no such field is
@@ -95,11 +85,11 @@ export const canManageExceedance = (user: PekUser, resource?: PekResourceAccess)
 export const canReviewExceedance = (user: PekUser, resource?: PekResourceAccess) =>
   resourceFlag(resource, 'reviewExceedance', 'canApprove') ?? canUsePekPermission(user, 'PEK_REPORT_REVIEW');
 export const canGenerateDocument = (user: PekUser, resource?: PekResourceAccess) =>
-  resourceFlag(resource, 'generateDocument') ?? (!['SIGNED', 'ARCHIVED'].includes(resource?.status || '') && canUsePekPermission(user, 'PEK_REPORT_EDIT'));
+  resourceFlag(resource, 'generateDocument') === true;
 export const canSignReport = (user: PekUser, resource?: PekResourceAccess) =>
-  resourceFlag(resource, 'sign', 'canSign') ?? (['APPROVED', 'READY_FOR_SIGNING', 'PARTIALLY_SIGNED'].includes(resource?.status || '') && canUsePekPermission(user, 'PEK_REPORT_SIGN'));
+  resourceFlag(resource, 'sign', 'canSign') === true;
 export const canArchiveReport = (user: PekUser, resource?: PekResourceAccess) =>
-  resourceFlag(resource, 'archive', 'canArchive') ?? canUsePekPermission(user, 'PEK_REPORT_APPROVE');
+  resourceFlag(resource, 'archive', 'canArchive') === true;
 
 export const canTransitionExceedance = (resource: PekResourceAccess, transition: string) =>
   Array.isArray(resource?.allowedTransitions) && resource.allowedTransitions.includes(transition);

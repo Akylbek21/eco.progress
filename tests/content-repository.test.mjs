@@ -43,13 +43,13 @@ test('priority content has structured service, article and regional fields', () 
     assert.ok(article.heroImageAlt);
     assert.ok(new Date(article.dateModified) >= new Date(article.datePublished));
   }
-  assert.equal(regionContent.length, 10);
+  assert.equal(regionContent.length, 18);
   assert.ok(regionContent.every((region) => region.remoteConditions.length && region.onSiteConditions.length));
 });
 
 test('unverified trust data and case drafts are never presented as approved', () => {
   assert.ok(trustDocuments.every((document) => document.verificationStatus !== 'verified' || (document.number && document.issuedBy)));
-  assert.ok(caseStudies.every((item) => item.verificationStatus !== 'approved'));
+  assert.ok(caseStudies.every((item) => item.status !== 'published' || !item.publishedAt));
   assert.equal(publishedCaseStudies.length, 0);
 });
 
@@ -62,12 +62,10 @@ test('waste utilization is exposed only for Shymkent, Taraz and Turkestan', () =
     'utilizaciya-othodov-turkestan',
   ]);
   const publicUrls = new Set(getAllPublicUrls().map((item) => item.loc));
-  for (const city of ['shymkent', 'taraz', 'turkestan']) {
-    assert.ok(publicUrls.has(`https://ecoprogress.kz/utilizaciya-othodov-${city}`));
-  }
-  for (const city of ['almaty', 'astana', 'kyzylorda', 'aktobe', 'atyrau', 'karaganda', 'pavlodar']) {
+  for (const city of ['shymkent', 'taraz', 'turkestan', 'almaty', 'astana', 'kyzylorda', 'aktobe', 'atyrau', 'karaganda', 'pavlodar']) {
     assert.ok(!publicUrls.has(`https://ecoprogress.kz/utilizaciya-othodov-${city}`));
   }
+  assert.ok(wasteUtilizationPages.every((page) => page.indexable === false));
 });
 
 test('service and article templates render mandatory structured content blocks', async () => {
@@ -76,8 +74,9 @@ test('service and article templates render mandatory structured content blocks',
     readFile(new URL('../src/pages/NewsDetailsPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/data/seoRegistry.generated.json', import.meta.url), 'utf8'),
   ]);
-  for (const block of ['ServiceDeliverables', 'ServiceWorkflow', 'ServiceRequiredDocuments', 'ServicePricingFactors', 'ServiceLegalBasis', 'RelatedServices']) assert.match(servicePage, new RegExp(block));
+  for (const block of ['ServiceAeoContent', 'RelatedServices']) assert.match(servicePage, new RegExp(block));
   for (const block of ['ArticleTableOfContents', 'ArticleChecklist', 'ArticleSources', 'ArticleAuthorCard', 'ArticleReviewerCard', 'RelatedArticles']) assert.match(articlePage, new RegExp(block));
+  for (const label of ['Дата публикации', 'Последняя экспертная проверка', 'articleRobotsForReviewStatus']) assert.match(articlePage, new RegExp(label));
   assert.match(articlePage, /normalizeArticleSlug/);
   assert.match(generatedRegistry, /"path": "\/ecologicheskie-uslugi-kostanay"[\s\S]*?"robots": "noindex,follow"/);
 });

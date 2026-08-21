@@ -9,12 +9,12 @@ import { pekApi } from '../api/pekService';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState, PekStatusBadge } from '../components/common/PekUi';
 import PekReportActions from '../components/workflow/PekReportActions';
-import { mapPekError } from '../utils/pekErrorMapper';
+import { isPekVersionConflict, mapPekError } from '../utils/pekErrorMapper';
+import { handlePekMutationError as handleVersionedPekError } from '../utils/pekMutationError';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 import PekReportDocuments from '../components/documents/PekReportDocuments';
 import PekReportPackageCard from '../components/documents/PekReportPackageCard';
 import PekReportExceedances from '../components/exceedances/PekReportExceedances';
-import { canUsePekPermission } from '../permissions/pekAccess';
 
 const tabs = [
   { key: 'overview', label: 'Обзор' },
@@ -54,7 +54,6 @@ const PekReportWorkspacePage = () => {
   const [actionError, setActionError] = useState<string | null>(null);
   const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
-  const [readinessBlockers, setReadinessBlockers] = useState<string[]>([]);
   const [conflictOpen, setConflictOpen] = useState(false);
   const [collectConfirmOpen, setCollectConfirmOpen] = useState(false);
 
@@ -106,8 +105,19 @@ const PekReportWorkspacePage = () => {
       queryClient.invalidateQueries({ queryKey: pekKeys.reportSignatures(id, report.data?.companyId, user?.id) }),
     ]);
   };
+  const invalidateWorkflowData = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: pekKeys.report(id, undefined, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportsRoot(report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.readiness(id, report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportDocuments(id, report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportPackage(id, report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportSignatures(id, report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportHistory(id, report.data?.companyId, user?.id) }),
+    ]);
+  };
   const handleMutationError = async (error: unknown, fallback: string) => {
-    const mapped = mapPekError(error);
+    const mapped = await handleVersionedPekError(error, invalidateReportData);
     const diagnostics = [mapped.code && `код ${mapped.code}`, mapped.traceId && `traceId ${mapped.traceId}`]
       .filter(Boolean)
       .join(', ');
@@ -117,7 +127,7 @@ const PekReportWorkspacePage = () => {
       setActionError(`${message}. Отчёт уже перешёл в статус, в котором изменения запрещены.`);
       return;
     }
-    if (mapped.status === 409 || mapped.status === 412 || mapped.code === 'OPTIMISTIC_LOCK_CONFLICT' || mapped.code === 'PEK_VERSION_CONFLICT') {
+    if (mapped.message === 'Данные были изменены другим пользователем') {
       setConflictOpen(true);
       setActionError(message);
       return;
@@ -128,7 +138,7 @@ const PekReportWorkspacePage = () => {
     const actual = await pekApi.getReport(id);
     queryClient.setQueryData(pekKeys.report(id, undefined, user?.id), actual);
     if (!expected.includes(actual.status)) throw new Error(`Операция выполнена, но сервер вернул статус ${actual.status}. Обновите данные.`);
-    await invalidateReportData();
+    await invalidateWorkflowData();
     return actual;
   };
 
@@ -143,10 +153,20 @@ const PekReportWorkspacePage = () => {
       return { ...result, report: actual };
     },
     onSuccess: async (result) => { setCollectConfirmOpen(false); setCollectionSummary(result); setActionError(null); await invalidateReportData(); },
-    onError: (error) => void handleMutationError(error, 'Не удалось собрать данные из протоколов.'),
+    onError: async (error) => {
+      const mapped = mapPekError(error);
+      if (isPekVersionConflict(mapped)) {
+        await invalidateReportData();
+        setActionError('Отчёт был изменён другим пользователем. Данные обновлены.');
+        setCollectConfirmOpen(false);
+        return;
+      }
+      await handleMutationError(error, 'Не удалось собрать данные из протоколов.');
+    },
+    retry: false,
   });
   const submitReview = useMutation({
-    mutationFn: async (item: PekReport) => { await pekApi.getReportReadiness(id).then((value) => { if (!value.ready) throw new Error('Отчёт пока не готов к отправке. Исправьте блокирующие ошибки.'); }); await pekApi.submitReportReview(id, item.version); return refreshAfterWorkflow(['READY_FOR_REVIEW']); },
+    mutationFn: async (item: PekReport) => { await pekApi.submitReportReview(id, item.version); return refreshAfterWorkflow(['READY_FOR_REVIEW']); },
     onError: (error) => void handleMutationError(error, 'Не удалось отправить отчёт на проверку.'),
   });
   const returnReport = useMutation({
@@ -203,15 +223,14 @@ const PekReportWorkspacePage = () => {
   if (report.isLoading) return <PekLoading />;
   if (report.isError || !report.data) return <PekQueryError error={report.error} resource="отчёт ПЭК" retry={() => void report.refetch()} />;
   const item = report.data;
-  const canMutateSources = ['DRAFT', 'COLLECTING', 'RETURNED'].includes(item.status)
-    && canUsePekPermission(user, 'PEK_REPORT_EDIT');
+  const canMutateSources = item.availableActions.manageSources === true;
   const pending = collect.isPending || submitReview.isPending || returnReport.isPending || approve.isPending || archive.isPending;
   const setTab = (nextTab: TabKey) => { const next = new URLSearchParams(params); nextTab === 'overview' ? next.delete('tab') : next.set('tab', nextTab); setParams(next, { replace: true }); };
 
   return <div className="space-y-5">
     <PekPageHeader title={`Отчёт ПЭК за ${item.periodStart} — ${item.periodEnd}`} description={`${item.company?.name || 'Компания не указана'} · ${item.object?.name || 'Объект не указан'} · версия ${item.version}`} actions={<PekStatusBadge status={item.status} />} />
     {actionError && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void report.refetch()}>Обновить данные</MuiButton>}>{actionError}</Alert>}
-    <PekReportActions report={item} user={user} isPending={pending} readinessPending={readiness.isFetching} readinessBlocked={readiness.data?.ready === false} onCollect={() => setCollectConfirmOpen(true)} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => void pekApi.getReportReadiness(id).then((latest) => { queryClient.setQueryData(pekKeys.readiness(id, item.companyId, user?.id), latest); const blockers = latest.issues.filter((issue) => issue.blocking).map((issue) => issue.message); setReadinessBlockers(blockers); if (!blockers.length) setApproveConfirmOpen(true); }).catch((error) => void handleMutationError(error, 'Не удалось проверить готовность отчёта.'))} onArchive={() => setArchiveConfirmOpen(true)} />
+    <PekReportActions report={item} isPending={pending} onCollect={() => setCollectConfirmOpen(true)} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => setApproveConfirmOpen(true)} onArchive={() => setArchiveConfirmOpen(true)} />
     {item.status === 'RETURNED' && <Alert severity="warning">
       <strong>Отчёт возвращён на доработку</strong>
       {item.returnInfo ? <div className="mt-2 space-y-1">
@@ -221,7 +240,6 @@ const PekReportWorkspacePage = () => {
         <div><strong>Дата возврата:</strong> {item.returnInfo.returnedAt || 'не указана'}</div>
       </div> : <div className="mt-2">Причина, автор и дата возврата отсутствуют в ответе сервиса. Текущая версия: {item.version}.</div>}
     </Alert>}
-    {readinessBlockers.length > 0 && <Alert severity="error"><strong>Отчёт содержит блокирующие проблемы:</strong><ul className="mt-2 list-disc pl-5">{readinessBlockers.map((message) => <li key={message}>{message}</li>)}</ul></Alert>}
     {collectionSummary && <Alert severity={collectionSummary.warnings.length ? 'warning' : 'success'}>
       Найдено протоколов: {collectionSummary.linkedProtocolCount}. Сопоставлено: {collectionSummary.matchedCount}. Не сопоставлено: {collectionSummary.unmatchedCount}. Неоднозначно: {collectionSummary.ambiguousCount}. Устаревших связей удалено: {collectionSummary.removedStaleSourceCount}.
       {collectionSummary.warnings.length > 0 && <ul className="mt-2 list-disc pl-5">{collectionSummary.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { COMPANY } from '../src/config/companyData.ts';
+import { isApprovedArticleReview } from '../src/content/articleReview.ts';
 import { OG_IMAGE, publicStaticPages, seoArticles, seoPages, SITE_URL } from './seo-data.mjs';
 
 const root = process.cwd();
@@ -18,6 +19,8 @@ const optimizedImagePaths = {
   '/pexels-jan-van.jpg': '/media/otbor-prob-vody-1280.jpg',
   '/para.jpg': '/media/ecoprogress-og-cover-1280.jpg',
   '/images (1).jpg': '/media/ekologicheskoe-soprovozhdenie-1280.jpg',
+  '/utilizacija-othodov-3.jpg': '/media/utilizaciya-othodov-1280.jpg',
+  '/poligon-tbo-2.jpg': '/media/poligon-tbo-1280.jpg',
   '/og-cover.jpg': '/media/social/ecoprogress-og-1200x630.jpg',
 };
 const optimizedImage = (image) => optimizedImagePaths[image] || image;
@@ -97,7 +100,6 @@ const schemasFor = ({ path: pathName, h1, description, type, canonical, image, d
     });
   }
   if (pathName !== '/') schemas.push(breadcrumbSchema(pathName, h1));
-  if (Array.isArray(faq) && faq.length) schemas.push({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map((item) => ({ '@type': 'Question', name: item.question, acceptedAnswer: { '@type': 'Answer', text: item.answer } })) });
   return schemas;
 };
 
@@ -106,7 +108,7 @@ const normalizeEntry = (source) => {
   const canonical = source.canonical || canonicalForPath(pathName);
   const robots = source.indexable === false
     || pathName === '/employees'
-    || (source.type === 'article' && source.reviewStatus && source.reviewStatus !== 'approved')
+    || (source.type === 'article' && pathName !== '/news' && !isApprovedArticleReview(source.reviewStatus))
     ? 'noindex,follow'
     : 'index,follow';
   const lastModified = source.lastModified || source.lastmod || gitDate(pageSource(pathName), isoDate(new Date()));
@@ -119,6 +121,7 @@ const normalizeEntry = (source) => {
     h1: source.h1,
     canonical,
     robots,
+    ...(source.type === 'article' && pathName !== '/news' ? { reviewStatus: source.reviewStatus ?? null } : {}),
     ogType,
     ogTitle: source.title,
     ogDescription: source.description,

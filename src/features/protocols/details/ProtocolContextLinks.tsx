@@ -14,6 +14,8 @@ const ProtocolContextLinks = ({ protocol }: { protocol: Protocol }) => {
   add('Точка мониторинга', protocol.monitoringPointId, protocol.pekReportId && protocol.monitoringPointId ? `/staff/pek/reports/${protocol.pekReportId}?section=PROGRAM_EXECUTION&monitoringPointId=${protocol.monitoringPointId}` : undefined);
   add('Источник выброса', protocol.emissionSourceId, protocol.pekReportId && protocol.emissionSourceId ? `/staff/pek/reports/${protocol.pekReportId}?section=EMISSIONS&emissionSourceId=${protocol.emissionSourceId}` : undefined);
   add('Выпуск воды', protocol.waterOutletId, protocol.pekReportId && protocol.waterOutletId ? `/staff/pek/reports/${protocol.pekReportId}?section=WATER&waterOutletId=${protocol.waterOutletId}` : undefined);
+  add('Исправление протокола №', protocol.replacesProtocolId);
+  add('Заменён исправлением №', protocol.replacedByProtocolId);
   if (!rows.length) return null;
   return (
     <section className="rounded-2xl border border-eco-200 bg-eco-50/50 p-5">

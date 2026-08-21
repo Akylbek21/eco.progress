@@ -18,8 +18,8 @@ export default {
         accent: '#38C7BA',
       },
       backgroundImage: {
-        windmill: "url('/pexels-jan-van.jpg')",
-        sea: "url('/pexels-enginakyurt.jpg')",
+        windmill: "url('/media/otbor-prob-vody-1280.webp')",
+        sea: "url('/media/ekologicheskiy-monitoring-1280.webp')",
       },
     },
   },

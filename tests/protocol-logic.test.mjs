@@ -48,16 +48,13 @@ test('result aliases resolve device ids from nested backend objects and values a
   );
 });
 
-test('protocol permission matrix is backend-authoritative and immutable-safe', async () => {
+test('protocol actions are backend-authoritative and do not use role/status fallbacks', async () => {
   const source = await read('src/utils/protocolPermissions.ts');
-  assert.match(source, /protocol\?\.permissions/);
   assert.match(source, /availableActions/);
-  assert.match(source, /canEdit: action\('edit'\)/);
-  assert.match(source, /canReadyForApproval: action\('sendToApproval'\)/);
-  assert.match(source, /canReplace: action\('createCorrection'\)/);
-  assert.match(source, /canApprove: action\('approve'\)/);
-  assert.match(source, /canSign: action\('sign'\)/);
-  assert.match(source, /normalizeProtocolStatus\(protocol\?\.status\) !== 'APPROVED'/);
+  for (const action of ['edit', 'sendToApproval', 'createCorrection', 'approve', 'sign']) {
+    assert.match(source, new RegExp(`hasProtocolAction\\(protocol \\|\\| undefined, '${action}'\\)`));
+  }
+  assert.doesNotMatch(source, /protocol\?\.permissions|ADMIN|DIRECTOR|HEAD|status\).*APPROVED/);
 });
 
 test('protocol normative display keeps zero values', async () => {

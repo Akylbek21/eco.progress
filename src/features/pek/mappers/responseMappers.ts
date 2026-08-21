@@ -1,13 +1,10 @@
 import type {
-  PekAvailableAction,
-  PekAvailableActionCode,
   PekDashboard,
   PekCollectResponse,
   PekExceedance,
   PekProgram,
   PekReport,
 } from '../api/pekContracts';
-import { pekActionLabels } from '../utils/pekLabels';
 import { pekProgramContractSchema, pekReportContractSchema, validatePekContract } from '../api/pekContractSchemas';
 
 type Row = Record<string, unknown>;
@@ -51,27 +48,6 @@ const availableActionFlags = (value: unknown): Record<string, boolean> => Object
   Object.entries(row(value)).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean'),
 );
 
-const action = (value: unknown): PekAvailableAction | null => {
-  if (typeof value === 'string') {
-    const code = value as PekAvailableActionCode;
-    return {
-      code,
-      label: pekActionLabels[code] || value,
-      enabled: true,
-    };
-  }
-  const valueRow = row(value);
-  if (!valueRow.code) return null;
-  return {
-    code: String(valueRow.code) as PekAvailableActionCode,
-    label: String(valueRow.label || valueRow.code),
-    enabled: valueRow.enabled !== false,
-    disabledReason: valueRow.disabledReason ? String(valueRow.disabledReason) : null,
-    confirmationRequired: Boolean(valueRow.confirmationRequired),
-    requiresComment: Boolean(valueRow.requiresComment),
-  };
-};
-
 export const mapProgramResponse = (value: unknown): PekProgram => {
   const source = row(validatePekContract(pekProgramContractSchema, value, 'программы ПЭК'));
   const responsible = named(source.responsibleUser || source.responsible);
@@ -92,10 +68,18 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
     responsibleUserId: source.responsibleUserId == null ? null : numberValue(source.responsibleUserId),
     readinessPercent: source.readinessPercent == null ? undefined : numberValue(source.readinessPercent),
     updatedAt: source.updatedAt == null ? undefined : String(source.updatedAt),
-    availableActions: (Array.isArray(source.availableActions) ? source.availableActions : [])
-      .map(action)
-      .filter((item): item is PekAvailableAction => item !== null),
+    availableActions: {
+      edit: availableActionFlags(source.availableActions).edit === true,
+      submit: availableActionFlags(source.availableActions).submit === true,
+      approve: availableActionFlags(source.availableActions).approve === true,
+      returnForRevision: availableActionFlags(source.availableActions).returnForRevision === true,
+      activate: availableActionFlags(source.availableActions).activate === true,
+      archive: availableActionFlags(source.availableActions).archive === true,
+      clone: availableActionFlags(source.availableActions).clone === true,
+      uploadDocument: availableActionFlags(source.availableActions).uploadDocument === true,
+    },
     readOnly: Boolean(source.readOnly),
+    readiness: Object.keys(row(source.readiness)).length ? source.readiness as PekProgram['readiness'] : null,
     controlItems: Array.isArray(source.controlItems) ? source.controlItems as PekProgram['controlItems'] : [],
     indicators: Array.isArray(source.indicators) ? source.indicators as PekProgram['indicators'] : [],
     measures: Array.isArray(source.measures) ? source.measures as PekProgram['measures'] : [],
@@ -130,6 +114,7 @@ export const mapReportResponse = (
     linkedProtocolCount: numberValue(source.linkedProtocolCount),
     linkedProtocolNumbers,
     lastCollectedAt: source.lastCollectedAt == null ? null : String(source.lastCollectedAt),
+    availableActions: availableActionFlags(source.availableActions),
     returnInfo: returnInfo(source.returnInfo),
   };
 };

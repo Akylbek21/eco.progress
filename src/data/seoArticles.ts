@@ -1,4 +1,5 @@
 import seoArticlesJson from './seoArticles.generated.json';
+import type { Expert } from '../content/types';
 
 export interface SeoArticleSection {
   id: string;
@@ -28,7 +29,10 @@ export interface SeoArticleConfig {
   tableOfContents: boolean;
   authorSlug: string;
   reviewerSlug?: string;
-  reviewStatus: 'approved' | 'requires-specialist-review' | 'draft';
+  author?: Expert;
+  reviewer?: Expert;
+  reviewStatus: 'approved' | 'requires-specialist-review' | 'draft' | 'rejected';
+  lastReviewedAt?: string;
   relatedServiceSlugs: string[];
   relatedArticleSlugs: string[];
   sources: Array<{ title: string; url: string; accessedAt?: string; claimStatus: 'verified' | 'requires-review' | 'general-information' }>;

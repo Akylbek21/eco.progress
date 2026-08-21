@@ -44,8 +44,8 @@ describe('PEK monitoring backend contract', () => {
 
   it('uses If-Match for PUT and DELETE and never sends a DELETE body', () => {
     const service = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
-    expect(service).toContain("api.put(`/pek/programs/${id}/monitoring/${monitoringId}`, body, { headers: { 'If-Match': String(version) } })");
-    expect(service).toContain("api.delete(`/pek/programs/${id}/monitoring/${monitoringId}`, { headers: { 'If-Match': String(version) } })");
+    expect(service).toContain("api.put(`/pek/programs/${id}/monitoring/${monitoringId}`, body, pekMutationOptions(version))");
+    expect(service).toContain("api.delete(`/pek/programs/${id}/monitoring/${monitoringId}`, pekMutationOptions(version))");
     expect(service).not.toContain("api.delete(`/pek/programs/${id}/monitoring/${monitoringId}`, { data:");
   });
 

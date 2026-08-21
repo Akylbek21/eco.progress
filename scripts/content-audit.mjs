@@ -34,7 +34,7 @@ unique(regionContent.map((item) => item.regionSlug), 'regionContent.regionSlug')
 
 const serviceSlugs = new Set(serviceCatalog.map((item) => item.slug));
 const articleSlugs = new Set(articleContent.map((item) => item.slug));
-const expertSlugs = new Set(experts.map((item) => item.slug));
+const expertIds = new Set(experts.map((item) => item.id));
 for (const [alias, canonical] of Object.entries(serviceSlugAliases)) if (!serviceSlugs.has(canonical)) add('ERROR', 'alias-target', alias, `Каноническая услуга ${canonical} не существует`);
 
 for (const content of serviceContent) {
@@ -56,8 +56,8 @@ for (const article of articleContent) {
   const count = wordCount(articleText(article));
   if (count < 800) add('WARNING', 'word-count', target, `${count} слов; рекомендовано не менее 800 для экспертного материала`);
   if (new Date(article.dateModified) < new Date(article.datePublished)) add('ERROR', 'article-dates', target, 'dateModified раньше datePublished');
-  if (!expertSlugs.has(article.authorSlug)) add('ERROR', 'author', target, `Не найден автор ${article.authorSlug}`);
-  if (article.reviewerSlug && !expertSlugs.has(article.reviewerSlug)) add('ERROR', 'reviewer', target, `Не найден reviewer ${article.reviewerSlug}`);
+  if (article.reviewStatus === 'approved' && !article.author && !expertIds.has(article.authorSlug)) add('ERROR', 'author', target, `Для approved-статьи не найден подтверждённый автор ${article.authorSlug}`);
+  if (article.reviewStatus === 'approved' && !article.reviewer && (!article.reviewerSlug || !expertIds.has(article.reviewerSlug))) add('ERROR', 'reviewer', target, 'Для approved-статьи не найден подтверждённый reviewer');
   if (!article.heroImageAlt.trim()) add('ERROR', 'image-alt', target, 'Пустой alt изображения');
   if (article.sources.length === 0) add('ERROR', 'sources', target, 'Нет источников');
   for (const source of article.sources) if (!/^https:\/\//.test(source.url)) add('ERROR', 'source-url', target, `Некорректный URL источника ${source.url}`);
@@ -86,7 +86,7 @@ for (const document of trustDocuments) {
   if (document.validUntil && new Date(document.validUntil) < new Date()) add('WARNING', 'expired-document', document.id, 'Истёк срок действия');
   if (document.fileUrl && !fs.existsSync(path.join(root, 'public', document.fileUrl.replace(/^\//, '')))) add('ERROR', 'trust-file', document.id, `Файл не найден: ${document.fileUrl}`);
 }
-for (const item of caseStudies) if (item.verificationStatus === 'approved' && (item.result.length === 0 || item.workCompleted.length === 0)) add('ERROR', 'case-verification', item.slug, 'Одобренный кейс не содержит проверяемого результата');
+for (const item of caseStudies) if (item.status === 'published' && (!item.publishedAt || !item.result || item.workPerformed.length === 0 || item.regulations.length === 0)) add('ERROR', 'case-verification', item.slug, 'Опубликованный кейс не содержит проверяемого результата или нормативной базы');
 
 const forbidden = ['для Алматы и Алматинская область', 'в Караганда и Карагандинская область', 'для Астана и Акмолинская область'];
 const contentFiles = ['src/content', 'src/pages', 'src/components'].flatMap((directory) => {

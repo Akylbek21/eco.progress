@@ -21,7 +21,7 @@ export const uploadAndAttachExceedanceEvidence = async ({
   reportId: number;
   version: number;
 }, dependencies: EvidenceFlowDependencies = defaultDependencies): Promise<UploadedEvidence> => {
-  const uploaded = await dependencies.upload(exceedanceId, file);
+  const uploaded = await dependencies.upload(exceedanceId, version, file);
   if (!uploaded.fileId) throw new Error('Backend не вернул fileId загруженного доказательства.');
   await dependencies.attach(exceedanceId, version, uploaded.fileId);
   return uploaded;

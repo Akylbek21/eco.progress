@@ -1,6 +1,7 @@
 import { company } from '../config/company';
 import { normalizeArticleDates } from './articleDates';
 import type { ServiceCatalogItem } from '../content/serviceCatalog';
+import type { Expert } from '../content/types';
 
 type Schema = Record<string, unknown>;
 const organizationRef = { '@type': 'Organization', name: company.name, url: company.siteUrl };
@@ -33,10 +34,18 @@ export const buildServiceSchema = (service: ServiceCatalogItem, url = `${company
   return schema;
 };
 
-export const buildArticleSchema = (article: { headline: string; description: string; datePublished: string; dateModified?: string; url: string; image: string }): Schema => {
+export const buildPersonSchema = (expert: Expert, id: string): Schema => ({
+  '@context': 'https://schema.org', '@type': 'Person', '@id': id, name: expert.fullName,
+  jobTitle: expert.position, description: expert.bio, image: expert.photo, url: expert.profileUrl,
+  knowsAbout: expert.specialization,
+});
+
+export const buildArticleSchema = (article: { headline: string; description: string; datePublished: string; dateModified?: string; url: string; image: string; authorId?: string; reviewerId?: string }): Schema => {
   const dates = normalizeArticleDates(article.datePublished, article.dateModified);
   return { '@context': 'https://schema.org', '@type': 'Article', headline: article.headline, description: article.description,
-    ...dates, author: organizationRef, publisher: organizationRef, mainEntityOfPage: article.url, image: article.image };
+    ...dates, author: article.authorId ? { '@id': article.authorId } : organizationRef,
+    ...(article.reviewerId ? { reviewedBy: { '@id': article.reviewerId } } : {}),
+    publisher: organizationRef, mainEntityOfPage: article.url, image: article.image };
 };
 
 export const buildFaqSchema = (faq: Array<{ question: string; answer: string }>): Schema => ({

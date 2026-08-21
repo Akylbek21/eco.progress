@@ -55,6 +55,7 @@ type Props = {
   waterUseCategory?: string;
   allowManualIndicator?: boolean;
   onChange: (rows: ProtocolResultRow[]) => void;
+  onVersionChange: (version: number) => void;
   onCheckNormatives: () => void | Promise<void>;
   onImported: () => void | Promise<void>;
   onNotify: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
@@ -336,7 +337,7 @@ const exceededText = (row: ProtocolResultRow, templateId: ProtocolTemplateKey) =
 
 const ProtocolResultsTable = ({
   protocolId, version, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '', objectId, measurementPlace: defaultMeasurementPlace = '', waterType = '', waterUseCategory = '',
-  onChange, onCheckNormatives, onImported, onNotify, onGoToInstruments,
+  onChange, onVersionChange, onCheckNormatives, onImported, onNotify, onGoToInstruments,
 }: Props) => {
   const { user } = useAuth();
   const cacheScope = protocolScope(user?.id);
@@ -1056,6 +1057,7 @@ const ProtocolResultsTable = ({
   const applyCalculatedRow = async (row?: ProtocolResultRow) => {
     if (row?.id) {
       onChange(rows.map((item) => item.id === row.id ? row : item));
+      return;
     }
     await onImported();
   };
@@ -1529,6 +1531,7 @@ const ProtocolResultsTable = ({
         readOnly={readOnly}
         onClose={() => setRawRow(null)}
         onCalculated={applyCalculatedRow}
+        onVersionChange={onVersionChange}
         onReload={onImported}
         onNotify={onNotify}
       />

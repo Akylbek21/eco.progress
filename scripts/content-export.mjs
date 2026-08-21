@@ -52,9 +52,8 @@ for (const item of regionContent) {
   for (const slug of item.relatedArticleSlugs) if (!articleSlugs.has(slug)) missingRelations.push({ from: `region:${item.regionSlug}`, to: `article:${slug}` });
 }
 
-for (const item of experts) if (item.verificationStatus !== 'verified') requiresVerification.push({ entity: `expert:${item.slug}`, field: 'profile' });
 for (const item of trustDocuments) if (item.verificationStatus !== 'verified') requiresVerification.push({ entity: `trust-document:${item.id}`, field: 'document' });
-for (const item of caseStudies) if (item.verificationStatus !== 'approved') requiresVerification.push({ entity: `case:${item.slug}`, field: 'client-approval' });
+for (const item of caseStudies) if (item.status !== 'published' || !item.publishedAt) requiresVerification.push({ entity: `case:${item.slug}`, field: 'publication-review' });
 
 const exported = {
   schemaVersion: 1,

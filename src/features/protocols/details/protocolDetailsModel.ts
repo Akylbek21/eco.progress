@@ -18,7 +18,10 @@ export const formatProtocolDateTime = (value?: string | null) => {
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(date);
 };
 
-export const protocolStatusLabel = (status?: string | null) => protocolStatusConfig[normalizeProtocolStatus(status)].label;
+export const protocolStatusLabel = (status?: string | null, publishedAt?: string | null) => {
+  const normalized = normalizeProtocolStatus(status);
+  return normalized === 'SIGNED' && publishedAt ? 'Опубликован' : protocolStatusConfig[normalized].label;
+};
 
 export const lifecycleStage = (status?: string | null) => {
   const normalized = normalizeProtocolStatus(status);
@@ -28,7 +31,6 @@ export const lifecycleStage = (status?: string | null) => {
     READY_FOR_APPROVAL: 2,
     APPROVED: 3,
     SIGNED: 4,
-    PUBLISHED: 5,
   } as const;
   return normalized in stages ? stages[normalized as keyof typeof stages] : null;
 };
@@ -98,7 +100,7 @@ export const resolveProtocolPrimaryAction = (protocol: Protocol, _role?: string)
   if (hasProtocolAction(protocol, 'sign')) return { key: 'sign', label: 'Подписать ЭЦП' };
   if (hasProtocolAction(protocol, 'calculate')) return { key: 'calculate', label: 'Рассчитать результаты' };
   if (hasProtocolAction(protocol, 'checkNormatives')) return { key: 'checkNormatives', label: 'Проверить нормативы' };
-  if (normalizeProtocolStatus(protocol.status) !== 'APPROVED' && hasProtocolAction(protocol, 'edit')) return { key: 'edit', label: 'Продолжить' };
+  if (hasProtocolAction(protocol, 'edit')) return { key: 'edit', label: 'Продолжить' };
   if (hasProtocolAction(protocol, 'publish')) return { key: 'publish', label: 'Отправить клиенту' };
   if (hasProtocolAction(protocol, 'downloadPdf')) return { key: 'pdf', label: 'Скачать PDF' };
   if (protocol.replacedByProtocolId) return { key: 'replacement', label: 'Открыть новую версию' };

@@ -7,37 +7,21 @@ export type ProtocolStatus =
   | 'NEEDS_REVISION'
   | 'APPROVED'
   | 'SIGNED'
-  | 'PUBLISHED'
   | 'REPLACED'
   | 'CANCELLED'
   | 'ARCHIVED'
   | 'UNKNOWN';
 
-export interface ProtocolPermissions {
-  canView?: boolean;
-  canEdit?: boolean;
-  canDelete?: boolean;
-  canCalculate?: boolean;
-  canCheckNormatives?: boolean;
-  canGeneratePreview?: boolean;
-  canSendToApproval?: boolean;
-  canReturnForRevision?: boolean;
-  canReturnToDraft?: boolean;
-  canApprove?: boolean;
-  canSign?: boolean;
-  canCreateCorrection?: boolean;
-  canCancel?: boolean;
-  canArchive?: boolean;
-  canPublish?: boolean;
-  canGenerateDocuments?: boolean;
-  canRegenerateDocuments?: boolean;
-  canGeneratePdf?: boolean;
-  canRegeneratePdf?: boolean;
-  canGenerateDocx?: boolean;
-  canRegenerateDocx?: boolean;
-}
+export const protocolActionKeys = [
+  'view', 'edit', 'delete', 'calculate', 'checkNormatives', 'sendToApproval',
+  'returnForRevision', 'returnToDraft', 'approve', 'sign', 'generatePreview',
+  'generateDocx', 'generatePdf', 'regenerateDocx', 'regeneratePdf',
+  'downloadDocx', 'downloadPdf', 'viewAudit', 'createCorrection', 'publish',
+  'cancel', 'archive',
+] as const;
 
-export type ProtocolAvailableActions = Record<string, boolean>;
+export type ProtocolAction = typeof protocolActionKeys[number];
+export type ProtocolAvailableActions = { [Action in ProtocolAction]: boolean };
 
 export type ProtocolWorkflowBlocker = {
   code: string;
@@ -421,6 +405,11 @@ export interface Protocol {
   pdfFileId?: string;
   finalPdfFileId?: string;
   finalPdfHash?: string;
+  contentVersion?: number;
+  pdfSourceContentVersion?: number;
+  pdfHash?: string;
+  approvedPdfHash?: string;
+  approvedContentVersion?: number;
   printVisibility?: ProtocolPrintVisibility;
   organization: ProtocolOrganizationData;
   laboratory: ProtocolLaboratorySnapshot;
@@ -444,7 +433,6 @@ export interface Protocol {
   monitoringPointId?: string | number;
   emissionSourceId?: string | number;
   waterOutletId?: string | number;
-  permissions?: ProtocolPermissions;
   availableActions: ProtocolAvailableActions;
   canComplete?: boolean;
   blockingReasons?: ProtocolWorkflowBlocker[];
@@ -498,7 +486,7 @@ export interface ProtocolListItem {
   orderId?: string | number;
   pekProgramId?: string | number;
   pekReportId?: string | number;
-  permissions: Record<string, boolean>;
+  availableActions: ProtocolAvailableActions;
 }
 
 export interface ProtocolListQuery {
@@ -517,6 +505,7 @@ export interface ProtocolListQuery {
   dateTo?: string;
   sort?: string;
   includeArchived?: boolean;
+  published?: boolean;
 }
 
 export type ProtocolHistoryItem = {
@@ -527,43 +516,6 @@ export type ProtocolHistoryItem = {
   comment?: string;
   reason?: string;
 };
-
-export interface CreateProtocolPayload {
-  companyId: string | number;
-  objectId: string | number;
-  templateId: ProtocolTemplateId;
-  subtype?: ProtocolSubtype;
-  protocolNumber?: string;
-  protocolDate: string;
-  sampleDate?: string;
-  testingStartDate?: string;
-  testingEndDate?: string;
-  productName?: string;
-  testingBasis?: string;
-  productNormativeDocument?: string;
-  samplingMethodDocument?: string;
-  testingMethodDocument?: string;
-  purpose?: string;
-  measurementDate?: string;
-  measurementTime?: string;
-  measurementPlace?: string;
-  sourceNumber?: string;
-  formCode?: string;
-  appendixNumber?: string;
-  laboratoryId?: string;
-  executorId?: string;
-  sourceDocumentCode?: string | null;
-  docxTemplateCode?: string;
-  normativeTemplateId?: ProtocolTemplateId;
-  environmentType?: string;
-  defaultUnit?: string;
-  waterType?: string;
-  waterUseCategory?: string;
-  environment?: ProtocolEnvironmentalConditions;
-  printVisibility?: ProtocolPrintVisibility;
-  orderId?: string | number;
-  orderServiceItemId?: string | number;
-}
 
 export type UpdateProtocolPayload = {
   version: number;
@@ -634,7 +586,6 @@ export interface ProtocolResultForm {
 
 export type EntityId = number;
 
-export type QuickCreateComparisonType = 'LE' | 'LT' | 'GE' | 'GT' | 'EQ' | 'RANGE';
 
 export type MethodVariableResponse = {
   id: string | number;
@@ -690,7 +641,7 @@ export type RawMeasurementsResponse = {
 
 export type SaveRawMeasurementsResponse = {
   version: number;
-  row?: ProtocolResultRow;
+  row: ProtocolResultRow;
 };
 
 export type CalculationResultResponse = {

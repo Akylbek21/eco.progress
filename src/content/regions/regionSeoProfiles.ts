@@ -1,5 +1,6 @@
 import { regions } from '../regions';
-import { regionContentMap } from './regionContent';
+import { regionContent, regionContentMap } from './regionContent';
+import { isRegionContentIndexable } from './regionContentQuality';
 
 export interface RegionSeoProfile {
   slug: string;
@@ -22,11 +23,11 @@ export const regionSeoProfiles: RegionSeoProfile[] = regions.map((name) => {
   const content = regionContentMap.get(name.slug);
   return {
     slug: name.slug,
-    nominative: name.city,
-    prepositional: name.cityPrepositional || name.city,
-    genitive: name.cityGenitive || name.city,
+    nominative: name.cityNominative,
+    prepositional: name.cityPrepositional,
+    genitive: name.cityGenitive,
     regionName: name.regionNominative,
-    indexed: Boolean(content && content.status === 'published'),
+    indexed: isRegionContentIndexable(content, regionContent),
     industries: content?.industries || [],
     serviceAreas: content?.availableServiceSlugs || [],
     intro: content?.introduction || '',

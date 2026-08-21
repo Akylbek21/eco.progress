@@ -1,11 +1,11 @@
 import { fetcher } from '../services/api';
 import { LocalContentRepository } from './repository';
-import type { ArticleContent, ContentRepository, RegionContent, ServiceContent } from './types';
-import { normalizeArticleSlug } from './articles/articleContent';
+import type { ArticleContent, CaseStudy, ContentRepository, Expert, RegionContent, ServiceContent, TrustDocument } from './types';
+import { normalizeArticleSlug } from './articles/articleSlugs';
 import { normalizeServiceSlug } from './serviceCatalog';
 import { trackEvent } from '../services/analytics';
 
-type PublicCollection = 'services' | 'articles' | 'regions';
+type PublicCollection = 'services' | 'articles' | 'regions' | 'experts' | 'trust-documents' | 'cases';
 type CacheRecord<T> = { storedAt: number; version: string; items: T[] };
 export type PublicContentSource = 'api' | 'cache' | 'fallback';
 
@@ -29,9 +29,9 @@ const writeCache = <T>(collection: PublicCollection, items: T[], version = 'unkn
 };
 
 export class ApiContentRepository implements ContentRepository {
-  private readonly fallback: ContentRepository;
+  private readonly devFallback?: ContentRepository;
   private source: PublicContentSource = 'api';
-  constructor(fallback: ContentRepository = new LocalContentRepository()) { this.fallback = fallback; }
+  constructor(devFallback?: ContentRepository) { this.devFallback = devFallback; }
   getLastSource() { return this.source; }
 
   private async collection<T>(name: PublicCollection, fallback: () => Promise<T[]>): Promise<T[]> {
@@ -44,32 +44,47 @@ export class ApiContentRepository implements ContentRepository {
       trackEvent('content_cache_miss', { collection: name });
       return items;
     } catch (error) {
+      if (!import.meta.env.DEV || !this.devFallback) throw error;
       const cached = readCache<T>(name, true);
       if (cached) { this.source = 'cache'; trackEvent('content_cache_hit', { collection: name }); return cached; }
       this.source = 'fallback';
       trackEvent('content_fallback_usage', { collection: name });
-      if (import.meta.env.DEV) console.info(`[content] ${name} loaded from static fallback`, error);
+      if (import.meta.env.DEV) {
+        const status = typeof error === 'object' && error !== null && 'response' in error
+          ? (error as { response?: { status?: number } }).response?.status
+          : undefined;
+        console.warn(`[content] ${name}: public API unavailable${status ? ` (HTTP ${status})` : ''}; using dev fallback.`);
+      }
       return fallback();
     }
   }
 
-  getServices() { return this.collection<ServiceContent>('services', () => this.fallback.getServices()); }
+  getServices() { return this.collection<ServiceContent>('services', () => this.devFallback!.getServices()); }
   async getServiceBySlug(slug: string) {
     const canonical = normalizeServiceSlug(slug);
     const items = await this.getServices();
     return items.find((item) => item.serviceSlug === canonical) ?? null;
   }
-  getArticles() { return this.collection<ArticleContent>('articles', () => this.fallback.getArticles()); }
+  getArticles() { return this.collection<ArticleContent>('articles', () => this.devFallback!.getArticles()); }
   async getArticleBySlug(slug: string) {
     const canonical = normalizeArticleSlug(slug);
     const items = await this.getArticles();
     return items.find((item) => item.slug === canonical) ?? null;
   }
-  getRegions() { return this.collection<RegionContent>('regions', () => this.fallback.getRegions()); }
+  getRegions() { return this.collection<RegionContent>('regions', () => this.devFallback!.getRegions()); }
   async getRegionBySlug(slug: string) {
     const items = await this.getRegions();
     return items.find((item) => item.regionSlug === slug) ?? null;
   }
+  getExperts() { return this.collection<Expert>('experts', () => this.devFallback!.getExperts()); }
+  getTrustDocuments() { return this.collection<TrustDocument>('trust-documents', () => this.devFallback!.getTrustDocuments()); }
+  getCases() { return this.collection<CaseStudy>('cases', () => this.devFallback!.getCases()); }
+  async getCaseBySlug(slug: string) {
+    const items = await this.getCases();
+    return items.find((item) => item.slug === slug) ?? null;
+  }
 }
 
-export const publicContentRepository = new ApiContentRepository();
+export const publicContentRepository = new ApiContentRepository(
+  import.meta.env.DEV ? new LocalContentRepository() : undefined,
+);

@@ -201,7 +201,7 @@ const PekProgramCreatePage = () => {
         if (
           edit
           && program.data
-          && ['DRAFT', 'RETURNED'].includes(program.data.status)
+          && program.data.availableActions.edit === true
           && !autosave.isPending
         ) {
           autosave.mutate(value);
@@ -287,7 +287,7 @@ const PekProgramCreatePage = () => {
 
   if (program.isLoading) return <PekLoading />;
   if (program.isError) return <PekQueryError error={program.error} resource="Программа ПЭК" retry={() => void program.refetch()} />;
-  if (edit && (program.data?.readOnly || !program.data?.availableActions.some((action) => action.code === 'EDIT' && action.enabled))) {
+  if (edit && program.data?.availableActions.edit !== true) {
     return <PekState title="Программа доступна только для просмотра" message="Изменение этой программы сейчас недоступно." />;
   }
 

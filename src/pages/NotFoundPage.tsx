@@ -1,8 +1,10 @@
 ﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import Button from '../components/ui/Button';
-import OrderChoiceModal from '../components/OrderChoiceModal';
 import SEO from '../components/SEO';
+
+const OrderChoiceModal = lazy(() => import('../components/OrderChoiceModal'));
 
 const NotFoundPage = () => {
   const [orderModalOpen, setOrderModalOpen] = useState(false);
@@ -19,7 +21,7 @@ const NotFoundPage = () => {
           <Button type="button" variant="secondary" onClick={() => setOrderModalOpen(true)}>Оставить заявку</Button>
         </div>
       </div>
-      <OrderChoiceModal open={orderModalOpen} onClose={() => setOrderModalOpen(false)} />
+      {orderModalOpen && <Suspense fallback={null}><OrderChoiceModal open onClose={() => setOrderModalOpen(false)} /></Suspense>}
     </section>
   );
 };
