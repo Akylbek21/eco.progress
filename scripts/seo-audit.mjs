@@ -19,6 +19,34 @@ const pageFile = (pathname) => pathname === '/'
 if (!fs.existsSync(sitemapPath)) throw new Error('SEO audit: dist/sitemap.xml not found');
 const sitemap = read(sitemapPath);
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+const sitemapBaseline = JSON.parse(read(path.join(root, 'scripts', 'seo-sitemap-baseline.json')));
+const baselineUrlCount = Number(sitemapBaseline.indexableUrlCount);
+const maximumDropPercent = Number(sitemapBaseline.maximumDropPercent);
+if (!Number.isInteger(baselineUrlCount) || baselineUrlCount <= 0) {
+  errors.push('Invalid sitemap baseline: indexableUrlCount must be a positive integer');
+} else if (!Number.isFinite(maximumDropPercent) || maximumDropPercent < 0 || maximumDropPercent >= 100) {
+  errors.push('Invalid sitemap baseline: maximumDropPercent must be between 0 and 100');
+} else {
+  const dropPercent = ((baselineUrlCount - urls.length) / baselineUrlCount) * 100;
+  if (dropPercent > maximumDropPercent) {
+    errors.push(
+      `Indexable sitemap regression: ${urls.length} URLs vs ${baselineUrlCount} in ${sitemapBaseline.source} `
+      + `(${dropPercent.toFixed(1)}% drop; allowed ${maximumDropPercent}%)`,
+    );
+  }
+}
+const cmsSnapshot = JSON.parse(read(path.join(root, 'src', 'data', 'seoCmsSnapshot.generated.json')));
+const snapshotExperts = Array.isArray(cmsSnapshot.experts) ? cmsSnapshot.experts : [];
+const snapshotCases = Array.isArray(cmsSnapshot.cases) ? cmsSnapshot.cases : [];
+const snapshotArticleReviews = Array.isArray(cmsSnapshot.articleReviews) ? cmsSnapshot.articleReviews : [];
+if (snapshotExperts.length < 2) errors.push(`Deployment blocked: SEO CMS snapshot contains ${snapshotExperts.length} confirmed experts (minimum 2)`);
+if (!snapshotCases.some((item) => item.status === 'published' && item.publishedAt)) errors.push('Deployment blocked: SEO CMS snapshot contains no verified published case studies');
+const snapshotExpertIds = new Set(snapshotExperts.map((item) => item.id));
+for (const review of snapshotArticleReviews.filter((item) => item.reviewStatus === 'approved')) {
+  if (!snapshotExpertIds.has(review.authorSlug) || !snapshotExpertIds.has(review.reviewerSlug) || !review.lastReviewedAt) {
+    errors.push(`Approved article review is not linked to confirmed author/reviewer data: ${review.slug || 'unknown slug'}`);
+  }
+}
 if (!/^<\?xml[^>]+>\s*<urlset[\s\S]*<\/urlset>\s*$/i.test(sitemap)) errors.push('Invalid sitemap XML document');
 if (new Set(urls).size !== urls.length) errors.push('Duplicate URLs in sitemap');
 const registry = JSON.parse(read(path.join(root, 'src', 'data', 'seoRegistry.generated.json')));

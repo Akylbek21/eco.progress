@@ -1,4 +1,4 @@
-﻿import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowRight, Beaker, Building2, FileText, MapPinned, Recycle, ShieldCheck, Truck } from 'lucide-react';
 import Button from '../components/ui/Button';
@@ -83,7 +83,7 @@ const services = activeServices.filter((service) => service.showOnHome).map((ser
 
 const visualHighlights = [
   { title: 'Лабораторный контроль', image: '/edward.jpg', className: 'col-span-2 aspect-[16/9] lg:col-span-1 lg:row-span-2 lg:aspect-auto' },
-  { title: 'Документы и сопровождение', image: '/images (1).jpg', className: 'aspect-[4/3] lg:aspect-auto' },
+  { title: 'Документы и сопровождение', image: '/ekologicheskoe-soprovozhdenie.jpg', className: 'aspect-[4/3] lg:aspect-auto' },
   { title: 'Вывоз и утилизация', image: '/jose.jpg', className: 'aspect-[4/3] lg:aspect-auto' },
 ];
 

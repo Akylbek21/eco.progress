@@ -18,7 +18,7 @@ const optimizedImagePaths = {
   '/pexels-enginakyurt.jpg': '/media/ekologicheskiy-monitoring-1280.jpg',
   '/pexels-jan-van.jpg': '/media/otbor-prob-vody-1280.jpg',
   '/para.jpg': '/media/ecoprogress-og-cover-1280.jpg',
-  '/images (1).jpg': '/media/ekologicheskoe-soprovozhdenie-1280.jpg',
+  '/ekologicheskoe-soprovozhdenie.jpg': '/media/ekologicheskoe-soprovozhdenie-1280.jpg',
   '/utilizacija-othodov-3.jpg': '/media/utilizaciya-othodov-1280.jpg',
   '/poligon-tbo-2.jpg': '/media/poligon-tbo-1280.jpg',
   '/og-cover.jpg': '/media/social/ecoprogress-og-1200x630.jpg',
@@ -66,7 +66,7 @@ const organizationSchema = {
   },
   areaServed: { '@type': 'Country', name: 'Казахстан' },
   openingHours: 'Mo-Fr 09:00-18:00',
-  sameAs: [COMPANY.instagramUrl],
+  sameAs: [COMPANY.instagramUrl, COMPANY.tiktokUrl, COMPANY.mapsUrl],
 };
 
 const breadcrumbSchema = (pathName, h1) => ({

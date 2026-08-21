@@ -27,7 +27,7 @@
         "url": "https://ecoprogress.kz",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://ecoprogress.kz/икон.png"
+          "url": "https://ecoprogress.kz/favicon.png"
         },
         "telephone": "+7 778 121 11 58",
         "email": "eco.progresss@gmail.com",
@@ -43,7 +43,9 @@
         },
         "openingHours": "Mo-Fr 09:00-18:00",
         "sameAs": [
-          "https://www.instagram.com/ecoprogress.group"
+          "https://www.instagram.com/ecoprogress.group",
+          "https://www.tiktok.com/@ecoprogress.group",
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
         ]
       },
       {
@@ -60,7 +62,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-17"
+    "lastModified": "2026-08-21"
   },
   {
     "path": "/services",
@@ -114,7 +116,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-17"
+    "lastModified": "2026-08-21"
   },
   {
     "path": "/regions",
@@ -153,7 +155,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "monthly",
-    "lastModified": "2026-07-28"
+    "lastModified": "2026-08-21"
   },
   {
     "path": "/about",
@@ -192,7 +194,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-17"
+    "lastModified": "2026-08-21"
   },
   {
     "path": "/contacts",
@@ -222,7 +224,7 @@
         "url": "https://ecoprogress.kz",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://ecoprogress.kz/икон.png"
+          "url": "https://ecoprogress.kz/favicon.png"
         },
         "telephone": "+7 778 121 11 58",
         "email": "eco.progresss@gmail.com",
@@ -238,7 +240,9 @@
         },
         "openingHours": "Mo-Fr 09:00-18:00",
         "sameAs": [
-          "https://www.instagram.com/ecoprogress.group"
+          "https://www.instagram.com/ecoprogress.group",
+          "https://www.tiktok.com/@ecoprogress.group",
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
         ]
       },
       {
@@ -302,7 +306,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-28"
+    "lastModified": "2026-08-21"
   },
   {
     "path": "/cases",
@@ -341,7 +345,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-19"
+    "lastModified": "2026-08-21"
   },
   {
     "path": "/employees",
@@ -380,7 +384,7 @@
     "includeInSitemap": false,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-07-28"
+    "lastModified": "2026-08-21"
   },
   {
     "path": "/partners",
@@ -419,7 +423,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-07-28"
+    "lastModified": "2026-08-21"
   },
   {
     "path": "/tariffs",
@@ -512,7 +516,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-07-28"
+    "lastModified": "2026-08-21"
   },
   {
     "path": "/services/ecological-documents",

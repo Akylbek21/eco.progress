@@ -9,6 +9,7 @@ const organizationRef = { '@type': 'Organization', name: company.name, url: comp
 export const buildOrganizationSchema = (): Schema => ({
   '@context': 'https://schema.org', '@type': 'Organization', name: company.name, url: company.siteUrl,
   logo: `${company.siteUrl}/favicon.png`, email: company.email, telephone: company.phone,
+  sameAs: [company.instagramUrl, company.tiktokUrl, company.mapsUrl],
   address: { '@type': 'PostalAddress', streetAddress: company.address, addressLocality: 'Шымкент', addressCountry: 'KZ' },
 });
 

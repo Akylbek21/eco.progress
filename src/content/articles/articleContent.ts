@@ -1,5 +1,6 @@
 import type { ArticleContent } from '../types';
 import { normalizeArticleSlug } from './articleSlugs.ts';
+import cmsSnapshot from '../../data/seoCmsSnapshot.generated.json' with { type: 'json' };
 
 export { articleSlugAliases, normalizeArticleSlug } from './articleSlugs.ts';
 
@@ -11,7 +12,7 @@ const editorial = (value: Omit<ArticleContent, 'status' | 'authorSlug' | 'heroIm
 });
 const dates = { datePublished: '2026-07-01', dateModified: '2026-07-17' };
 
-export const articleContent: ArticleContent[] = [
+const baseArticleContent: ArticleContent[] = [
   editorial({ slug: 'ekologicheskie-dokumenty-too-kazakhstan', ...dates, title: 'Какие экологические документы должны быть у предприятия', description: 'Практический порядок проверки экологических документов предприятия без универсального списка, который не учитывает объект.', excerpt: 'Как собрать карту документов по процессам, источникам воздействия и фактическим операциям предприятия.', shortAnswer: 'Единого комплекта для всех предприятий нет. Список формируют по объектам, технологическим процессам, источникам воздействия, отходам, воде, действующим разрешениям и фактически выполняемому контролю.', intent: 'checklist', targetAudience: ['руководители', 'экологи предприятий', 'производственные компании'], relatedServiceSlugs: ['ecological-documents', 'environmental-audit', 'ecological-support'], relatedArticleSlugs: ['chto-sdavat-po-ekologii-kazhdyy-god', 'kak-opredelit-kategoriyu-obekta'],
     sections: [
       { id: 'start', title: 'С чего начинать проверку', paragraphs: ['Начинайте не с названий документов, а с карты объектов и процессов. Для каждой площадки зафиксируйте оборудование, сырьё, источники выбросов и сбросов, места образования отходов, водопользование и операции, переданные подрядчикам.', 'После этого сопоставьте фактическую деятельность с имеющимися проектами, разрешительными материалами, программами контроля, протоколами и договорами. Такой подход показывает не только отсутствующие файлы, но и противоречия между документами.'], bullets: ['перечень площадок и ответственных', 'описание процессов и оборудования', 'реестр действующих документов', 'договоры и акты по отходам', 'протоколы и отчётность'] },
@@ -48,6 +49,25 @@ export const articleContent: ArticleContent[] = [
   editorial({ slug: 'kakie-shtrafy-za-ekologiyu-v-kazakhstane', ...dates, title: 'Какие риски и штрафы возможны за экологические нарушения', description: 'Как проводить проверку экологических рисков без публикации устаревших сумм штрафов и универсальных выводов.', excerpt: 'Размер и основание ответственности зависят от состава нарушения и актуальной редакции законодательства.', shortAnswer: 'Нельзя назвать корректную сумму без квалификации нарушения, статуса лица и актуальной нормы. Практический первый шаг — зафиксировать факт, документы, период и получить юридическую оценку.', intent: 'legal-update', targetAudience: ['руководители', 'юристы', 'экологи'], relatedServiceSlugs: ['environmental-audit', 'ecological-support'], relatedArticleSlugs: ['podgotovka-k-ekologicheskoy-proverke', 'ekologicheskie-dokumenty-too-kazakhstan'], sections: [{ id: 'no-table', title: 'Почему здесь нет таблицы сумм', paragraphs: ['Суммы, коэффициенты и составы могут меняться. Кроме того, одинаковое бытовое описание ситуации не означает одинаковую юридическую квалификацию.', 'Публикация суммы без контекста создаёт ложную уверенность, поэтому конкретные санкции должен проверить юрист по актуальной норме.'] }, { id: 'facts', title: 'Какие факты собрать', paragraphs: ['Сохраните документы, даты, описание объекта, переписку, результаты измерений и сведения о принятых действиях. Отделите подтверждённые факты от предположений.', 'Не исправляйте записи задним числом и не уничтожайте исходные версии.'], bullets: ['что произошло', 'где и когда', 'какие документы действовали', 'кто отвечал', 'какие меры уже приняты'] }, { id: 'response', title: 'Порядок первичных действий', paragraphs: ['Назначьте координатора, подключите юриста и профильного эколога, оцените необходимость немедленных безопасных мер и подготовьте план устранения причин.', 'Ответы государственным органам должны основываться на проверенных данных и полномочиях.'] }, { id: 'prevention', title: 'Как снижать риск', paragraphs: ['Поддерживайте реестр документов, календарь, фактический контроль и договорную цепочку по отходам. Регулярный аудит полезнее разовой подготовки перед проверкой.', 'Материал является общей информацией и не заменяет юридическую консультацию.'], checklist: ['факты сохранены', 'юрист подключён', 'норма проверена', 'причина определена', 'план действий зафиксирован'] }], faq: [{ question: 'Почему не указаны суммы?', answer: 'Без актуальной нормы и квалификации они могут ввести в заблуждение.' }, { question: 'Эколог может дать юридическое заключение?', answer: 'Техническую часть оценивает эколог, юридическую квалификацию — юрист.' }, { question: 'Можно сначала устранить проблему?', answer: 'Безопасные меры важны, но порядок действий и фиксацию следует согласовать со специалистами.' }],
   }),
 ];
+
+type ArticleReviewOverride = Pick<ArticleContent, 'slug' | 'reviewStatus'>
+  & Partial<Pick<ArticleContent, 'authorSlug' | 'reviewerSlug' | 'lastReviewedAt'>>;
+const articleReviewOverrides = new Map(
+  ((cmsSnapshot as { articleReviews?: ArticleReviewOverride[] }).articleReviews ?? [])
+    .map((item) => [item.slug, item] as const),
+);
+
+export const articleContent: ArticleContent[] = baseArticleContent.map((article) => {
+  const review = articleReviewOverrides.get(article.slug);
+  if (!review) return article;
+  return {
+    ...article,
+    reviewStatus: review.reviewStatus,
+    ...(review.authorSlug ? { authorSlug: review.authorSlug } : {}),
+    ...(review.reviewerSlug ? { reviewerSlug: review.reviewerSlug } : {}),
+    ...(review.lastReviewedAt ? { lastReviewedAt: review.lastReviewedAt } : {}),
+  };
+});
 
 const penaltiesArticle = articleContent.find((item) => item.slug === 'kakie-shtrafy-za-ekologiyu-v-kazakhstane');
 

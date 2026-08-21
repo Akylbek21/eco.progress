@@ -1,4 +1,4 @@
-﻿import { useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
 import { PageSkeleton } from '../components/loading/PageLoader';
@@ -98,7 +98,7 @@ const addedEmployees: Employee[] = [
     experience: 'Команда ECOPROGRESS',
     specialty: 'Экологическая документация',
     summary: 'Работает с экологическими материалами, исходными данными и подготовкой документов по заявкам.',
-    avatar: '/images (1).jpg',
+    avatar: '/ekologicheskoe-soprovozhdenie.jpg',
   },
   {
     id: 'employee-ortay-saniya',

@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import {
   Beaker,
   Building2,
@@ -95,7 +95,7 @@ const directions: CardItem[] = [
     title: 'Сопровождение бизнеса',
     text: 'Помогаем подготовиться к проверкам, собрать документы и снизить экологические риски.',
     Icon: ShieldCheck,
-    image: '/images (1).jpg',
+    image: '/ekologicheskoe-soprovozhdenie.jpg',
   },
 ];
 
@@ -108,7 +108,7 @@ const companies = [
   {
     title: 'Tumar Partners',
     text: 'Полигон ТБО и услуги по законному размещению твердых бытовых отходов.',
-    logo: '/tumar partners.jpeg',
+    logo: '/tumar-partners.jpeg',
   },
   {
     title: 'EcoTrans',

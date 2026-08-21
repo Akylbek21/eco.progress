@@ -20,9 +20,10 @@ export const COMPANY = {
     display: '+7 777 185 80 88',
   },
   workingHours: 'Пн-Пт, 09:00-18:00',
-  logo: 'https://ecoprogress.kz/икон.png',
+  logo: 'https://ecoprogress.kz/favicon.png',
   defaultOgImage: 'https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg',
   instagram: '@ecoprogress.group',
   instagramUrl: 'https://www.instagram.com/ecoprogress.group',
+  tiktokUrl: 'https://www.tiktok.com/@ecoprogress.group',
   mapsUrl: 'https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16',
 } as const;

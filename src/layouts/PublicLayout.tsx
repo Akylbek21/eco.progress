@@ -37,7 +37,7 @@ const accountMenuItems = [
 ];
 
 const socialLinks = [
-  { label: 'TikTok', href: 'https://www.tiktok.com/@ecoprogress.group', Icon: FaTiktok },
+  { label: 'TikTok', href: company.tiktokUrl, Icon: FaTiktok },
   { label: 'Instagram', href: company.instagramUrl, Icon: FaInstagram },
   { label: 'Telegram', href: 'https://t.me/ecoprogress_group', Icon: FaTelegramPlane },
 ];

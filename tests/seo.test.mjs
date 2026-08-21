@@ -210,8 +210,8 @@ test('expert model is strict and approved article schema links author and review
     readFile(new URL('../src/utils/schema.ts', import.meta.url), 'utf8'),
   ]);
   for (const field of ['id', 'fullName', 'position', 'specialization', 'experienceYears', 'bio', 'photo', 'profileUrl']) assert.match(types, new RegExp(`${field}:`));
-  assert.match(experts, /export const experts: Expert\[] = \[]/);
-  assert.doesNotMatch(experts, /verificationStatus: 'verified'|experienceYears:\s*\d/);
+  assert.match(experts, /seoCmsSnapshot\.generated\.json/);
+  assert.doesNotMatch(experts, /fullName:\s*['"][^'"]+|experienceYears:\s*\d/);
   assert.match(articlePage, /item\.reviewStatus === 'approved'/);
   assert.match(articlePage, /#person/);
   assert.match(articlePage, /#person-reviewer/);

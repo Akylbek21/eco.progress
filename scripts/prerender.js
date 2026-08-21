@@ -48,7 +48,11 @@ const buildOrganizationSchema = () => ({
   name: 'ECOPROGRESS GROUP',
   url: SITE_URL,
   logo: `${SITE_URL}/favicon.png`,
-  sameAs: ['https://www.instagram.com/ecoprogress.group'],
+  sameAs: [
+    'https://www.instagram.com/ecoprogress.group',
+    'https://www.tiktok.com/@ecoprogress.group',
+    'https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16',
+  ],
 });
 
 const localBusinessSchema = {

@@ -59,6 +59,19 @@ Required deployment secrets:
 
 - `FRONTEND_BUILD_HOOK_URL` — stored only on the backend.
 - `VITE_API_URL` — public API base path, normally `/api`.
-- `SEO_CONTENT_API_URL` — optional build-only endpoint or exported snapshot.
+- `SEO_CONTENT_API_URL` — build-only endpoint returning `{ experts, cases, articleReviews }` (or the same object under `data`).
+- `SEO_CONTENT_API_TOKEN` — optional bearer token for the private build-time endpoint.
 - `VITE_COMPANY_EMAIL`, `VITE_COMPANY_STREET`, `VITE_COMPANY_POSTAL_CODE` —
   confirmed organization data.
+
+`npm run build` first runs `seo:content:sync`. A build without the endpoint may
+reuse only a previously generated, deployment-safe snapshot containing at least
+two complete expert profiles and one verified published case. An empty or
+incomplete snapshot fails the build so that the previous production release
+stays active; it must never silently publish a mass `noindex` regression.
+
+`articleReviews` contains only review decisions confirmed in the CMS. Each item has
+`slug`, `reviewStatus`, and, for `approved`, mandatory `authorSlug`, `reviewerSlug`
+and `lastReviewedAt`. Both slugs must reference complete expert profiles from the
+same response. Static article copy remains `requires-specialist-review` until that
+record arrives; the frontend never promotes it based on a name or job title alone.

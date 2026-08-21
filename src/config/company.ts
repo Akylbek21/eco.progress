@@ -14,6 +14,7 @@ export const company = {
   schedule: COMPANY.workingHours,
   instagram: COMPANY.instagram,
   instagramUrl: COMPANY.instagramUrl,
+  tiktokUrl: COMPANY.tiktokUrl,
   mapsUrl: COMPANY.mapsUrl,
   siteLabel: 'ecoprogress.kz',
   siteUrl: appConfig.siteUrl,

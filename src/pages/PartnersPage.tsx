@@ -12,7 +12,7 @@ const partners = [
   {
     title: 'Tumar Partners',
     description: 'Партнерское направление по размещению, сопровождению и работе с объектами обращения отходов.',
-    logo: '/tumar partners.jpeg',
+    logo: '/tumar-partners.jpeg',
   },
   {
     title: 'EcoTrans',

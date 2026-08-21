@@ -13,7 +13,7 @@ const sources = {
   'pexels-enginakyurt.jpg': 'ekologicheskiy-monitoring',
   'pexels-jan-van.jpg': 'otbor-prob-vody',
   'para.jpg': 'ecoprogress-og-cover',
-  'images (1).jpg': 'ekologicheskoe-soprovozhdenie',
+  'ekologicheskoe-soprovozhdenie.jpg': 'ekologicheskoe-soprovozhdenie',
   'utilizacija-othodov-3.jpg': 'utilizaciya-othodov',
   'poligon-tbo-2.jpg': 'poligon-tbo',
 };
