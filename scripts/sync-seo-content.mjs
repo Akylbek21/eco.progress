@@ -40,9 +40,10 @@ const validate = (snapshot) => {
   const cases = Array.isArray(snapshot?.cases) ? snapshot.cases : [];
   const articleReviews = Array.isArray(snapshot?.articleReviews) ? snapshot.articleReviews : [];
   const problems = [];
-  if (experts.length < 2) problems.push(`expected at least 2 confirmed experts, received ${experts.length}`);
   if (!experts.every(completeExpert)) problems.push('one or more expert profiles are incomplete');
-  if (!cases.some(publishedCase)) problems.push('no verified published case study received');
+  if (cases.some((item) => item?.status === 'published' && !publishedCase(item))) {
+    problems.push('one or more published case studies are incomplete or unverified');
+  }
   const expertIds = new Set(experts.map((item) => item.id));
   if (!articleReviews.every((item) => validArticleReview(item, expertIds))) {
     problems.push('one or more article review records are incomplete or reference an unknown expert');

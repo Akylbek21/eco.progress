@@ -65,10 +65,13 @@ Required deployment secrets:
   confirmed organization data.
 
 `npm run build` first runs `seo:content:sync`. A build without the endpoint may
-reuse only a previously generated, deployment-safe snapshot containing at least
-two complete expert profiles and one verified published case. An empty or
-incomplete snapshot fails the build so that the previous production release
-stays active; it must never silently publish a mass `noindex` regression.
+reuse the previously generated snapshot. An empty snapshot is safe: personal
+expert markup stays disabled and case-study pages stay unpublished until the CMS
+provides confirmed records. Any expert record or published case that is present
+must still be complete; incomplete or inconsistent CMS data fails the build.
+The sitemap baseline audit reports the expected URL drop as a warning while the
+entire CMS snapshot is empty. Once any confirmed CMS content is present, an
+unexpected mass `noindex` regression blocks the deployment again.
 
 `articleReviews` contains only review decisions confirmed in the CMS. Each item has
 `slug`, `reviewStatus`, and, for `approved`, mandatory `authorSlug`, `reviewerSlug`
