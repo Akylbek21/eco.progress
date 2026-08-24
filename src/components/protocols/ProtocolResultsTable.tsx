@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Calculator, Copy, FileSpreadsheet, History, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, Calculator, ChevronDown, Copy, FileSpreadsheet, History, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import NormativeStatusBadge, { normativeStatusLabels } from './NormativeStatusBadge';
@@ -54,6 +54,7 @@ type Props = {
   waterType?: string;
   waterUseCategory?: string;
   allowManualIndicator?: boolean;
+  embedded?: boolean;
   onChange: (rows: ProtocolResultRow[]) => void;
   onVersionChange: (version: number) => void;
   onCheckNormatives: () => void | Promise<void>;
@@ -337,7 +338,7 @@ const exceededText = (row: ProtocolResultRow, templateId: ProtocolTemplateKey) =
 
 const ProtocolResultsTable = ({
   protocolId, version, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '', objectId, measurementPlace: defaultMeasurementPlace = '', waterType = '', waterUseCategory = '',
-  onChange, onVersionChange, onCheckNormatives, onImported, onNotify, onGoToInstruments,
+  onChange, onVersionChange, onCheckNormatives, onImported, onNotify, onGoToInstruments, embedded = false,
 }: Props) => {
   const { user } = useAuth();
   const cacheScope = protocolScope(user?.id);
@@ -1115,17 +1116,17 @@ const ProtocolResultsTable = ({
   };
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Результаты испытаний</h2>
-          <p className="mt-1 text-sm text-slate-500">Добавьте показатели, введите показания и запустите расчет результатов.</p>
+    <section className={embedded ? 'bg-white' : 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5'}>
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-lg font-bold text-slate-950">Результаты испытаний</h2>
+          <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">Добавьте показатели и внесите фактические значения. Расчёт сопоставит их с выбранными нормативами.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
-          <Button type="button" variant="secondary" disabled={readOnly || busy || saving} onClick={() => openAddDialog()}><Plus className="h-4 w-4" /> Добавить показатель</Button>
-          <Button type="button" variant="secondary" disabled={readOnly || busy || saving} onClick={() => fileRef.current?.click()}><FileSpreadsheet className="h-4 w-4" /> Импорт из Excel</Button>
-          <Button type="button" disabled={readOnly || busy || saving || !rows.length} onClick={calculateAll}><Calculator className="h-4 w-4" /> Рассчитать результаты</Button>
+          <Button type="button" variant="secondary" className="gap-2" disabled={readOnly || busy || saving} onClick={() => fileRef.current?.click()}><FileSpreadsheet className="h-4 w-4" /> Импорт Excel</Button>
+          <Button type="button" variant="secondary" className="gap-2" disabled={readOnly || busy || saving} onClick={() => openAddDialog()}><Plus className="h-4 w-4" /> Добавить показатель</Button>
+          <Button type="button" className="gap-2" disabled={readOnly || busy || saving || !rows.length} onClick={calculateAll}><Calculator className="h-4 w-4" /> Рассчитать</Button>
         </div>
       </div>
 
@@ -1138,16 +1139,16 @@ const ProtocolResultsTable = ({
         <div><span className="text-slate-500">Не соответствует</span><p className="font-black text-slate-900">{calculationSummary.exceeded}</p></div>
       </div>}
 
-      {devices.length === 0 && <div className="mb-4 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900 sm:flex-row sm:items-center sm:justify-between">
-        <p>К протоколу не прикреплены средства измерений. Сначала добавьте прибор на шаге «Средства измерений».</p>
+      {devices.length === 0 && <div className="mb-4 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" /><div><p className="font-bold">Не добавлены средства измерений</p><p className="mt-0.5 text-amber-800">Добавьте прибор перед вводом результатов, чтобы расчёт был доступен.</p></div></div>
         {onGoToInstruments && (
-          <Button type="button" variant="secondary" onClick={onGoToInstruments}>
-            Перейти к средствам измерений
+          <Button type="button" variant="secondary" className="shrink-0 border-amber-300 text-amber-900 hover:bg-amber-100" onClick={onGoToInstruments}>
+            Добавить прибор
           </Button>
         )}
       </div>}
 
-      {!readOnly && <div className="mb-4 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+      {!readOnly && <div className="mb-4 space-y-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
           <input value={query} onChange={(event) => search(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addBulk(); } }} placeholder={isPhysicalFactors ? 'Показатель: освещённость, шум, температура…' : 'Код или название вещества: 0301, азот…'} className={`${inputClass} pl-10`} />
@@ -1236,7 +1237,8 @@ const ProtocolResultsTable = ({
         </div>}
       </div>}
 
-      <div className="overflow-x-auto">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className={rows.length ? 'overflow-x-auto' : 'hidden'}>
         {isPhysicalFactors ? (
           <table className="min-w-[1180px] w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>
@@ -1280,18 +1282,16 @@ const ProtocolResultsTable = ({
             })}</tbody>
           </table>
         ) : isWaterProtocol ? (
-        <table className="min-w-[1180px] w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>
+        <table className="min-w-[1050px] w-full text-left text-sm">
+          <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wide text-slate-500"><tr className="whitespace-nowrap">
             {!readOnly && <th className="px-3 py-3"><input type="checkbox" checked={rows.length > 0 && selected.length === rows.length} onChange={(event) => setSelected(event.target.checked ? rows.map((row) => row.id) : [])} /></th>}
             <th className="px-3 py-3">№</th>
-            <th className="px-3 py-3">Показатель / вещество</th>
+            <th className="px-3 py-3">Показатель</th>
             <th className="bg-slate-100 px-3 py-3">Фактическое значение</th>
-            <th className="px-3 py-3">Единица измерения</th>
+            <th className="px-3 py-3">Ед. изм.</th>
             <th className="bg-slate-100 px-3 py-3">Норматив</th>
             <th className="bg-slate-100 px-3 py-3">Результат</th>
-            <th className="px-3 py-3">Документ</th>
-            <th className="px-3 py-3">Приложение</th>
-            <th className="px-3 py-3">Таблица</th>
+            <th className="px-3 py-3">Нормативный документ</th>
             <th className="px-3 py-3 text-right">Действия</th>
           </tr></thead>
           <tbody className="divide-y divide-slate-100">{rows.map((row, index) => (
@@ -1303,9 +1303,7 @@ const ProtocolResultsTable = ({
               <td className="px-3 py-3">{unit(row) || '—'}</td>
               <td className="bg-slate-50 px-3 py-3">{renderNormativeCell(row)}</td>
               <td className="bg-slate-50 px-3 py-3"><NormativeStatusBadge status={statusOf(row, templateId)} /></td>
-              <td className="px-3 py-3"><div className="max-w-56 text-xs font-semibold text-slate-700">{valueOf(row, ['sourceDocumentCode']) || normativeDocumentLabel(row) || 'DSM_138'}</div></td>
-              <td className="px-3 py-3">{valueOf(row, ['appendixNo']) || '—'}</td>
-              <td className="px-3 py-3">{valueOf(row, ['tableNo']) || '—'}</td>
+              <td className="px-3 py-3"><div className="max-w-64 text-xs font-semibold leading-5 text-slate-700">{normativeDocumentLabel(row) || valueOf(row, ['sourceDocumentCode']) || 'DSM_138'}</div></td>
               <td className="px-3 py-3"><div className="flex flex-wrap justify-end gap-1">
                 <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => setRawRow(row)}>Ввести данные</Button>
                 <Button type="button" variant="secondary" className="px-3" disabled={readOnly || saving} onClick={() => calculateRow(row)}>Рассчитать</Button>
@@ -1399,7 +1397,8 @@ const ProtocolResultsTable = ({
         </table>
         )}
       </div>
-      {!rows.length && <div className="border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">Показания ещё не добавлены.</div>}
+      {!rows.length && <div className="flex min-h-40 flex-col items-center justify-center border-t border-slate-100 bg-slate-50/30 px-6 py-10 text-center"><div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-eco-50 text-eco-700"><Plus className="h-5 w-5" /></div><p className="font-semibold text-slate-800">Показатели ещё не добавлены</p><p className="mt-1 max-w-md text-sm text-slate-500">Добавьте показатель вручную или импортируйте готовый список из Excel.</p>{!readOnly && <Button type="button" variant="ghost" className="mt-3 gap-2" disabled={busy || saving} onClick={() => openAddDialog()}><Plus className="h-4 w-4" /> Добавить первый показатель</Button>}</div>}
+      </div>
       {reviewRow && <div className="mt-3 inline-block max-w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
         <button type="button" onClick={() => setExtraActionsOpen((value) => !value)} className="text-sm font-bold text-amber-900">
           Дополнительные действия
@@ -1410,7 +1409,7 @@ const ProtocolResultsTable = ({
           <Button type="button" variant="secondary" disabled={readOnly || saving} onClick={() => duplicate(reviewRow)}>Добавить повторный замер</Button>
         </div>}
       </div>}
-      {canUseAdvanced && <button type="button" onClick={() => setAdvanced((value) => !value)} className="mt-4 text-sm font-bold text-eco-700">{advanced ? 'Скрыть расширенные данные' : 'Расширенный режим'}</button>}
+      {canUseAdvanced && <button type="button" onClick={() => setAdvanced((value) => !value)} className="mt-4 inline-flex items-center gap-2 rounded-lg px-1 py-2 text-sm font-bold text-eco-700 hover:text-eco-900"><ChevronDown className={`h-4 w-4 transition-transform ${advanced ? 'rotate-180' : ''}`} />{advanced ? 'Скрыть расширенные данные' : 'Расширенный режим'}</button>}
 
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Добавить показатель" description="Выберите конкретный норматив, затем введите результат измерения." size="xl" loading={saving}>
         <div className="space-y-4">

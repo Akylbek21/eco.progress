@@ -46,7 +46,8 @@ describe('protocol role matrix v18', () => {
 describe('server draft boundary and idempotency', () => {
   it('requires a template and company before the modal starts a server draft', async () => {
     const source = await import('node:fs/promises').then((fs) => fs.readFile('src/features/protocols/components/CreateProtocolWizardModalV2.tsx', 'utf8'));
-    expect(source).toContain('values.templateId && values.companyId');
+    expect(source).toContain('templateSelectionValid && companySelectionValid');
+    expect(source).toContain('objectSelectionValid');
     expect(source).toContain('companyLocked={Boolean(serverDraft)}');
     expect(source).toContain("setSaveState('conflict')");
   });
@@ -120,6 +121,14 @@ describe('server draft boundary and idempotency', () => {
 
   it('generates a different key for a new master lifecycle', () => {
     expect(createProtocolDraftIdempotencyKey('one')).not.toBe(createProtocolDraftIdempotencyKey('two'));
+  });
+
+  it('does not detach recovery on transient errors and exposes reference retries', async () => {
+    const source = await import('node:fs/promises').then((fs) => fs.readFile('src/features/protocols/components/CreateProtocolWizardModalV2.tsx', 'utf8'));
+    expect(source).toContain('apiError.status === 404');
+    expect(source).toContain('setRecoveryError(apiError.message)');
+    expect(source).toContain('referenceFailures');
+    expect(source).toContain('ariaLabel="Новый протокол"');
   });
 });
 

@@ -412,16 +412,17 @@ describe('PEK backend contract', () => {
     expect(valid.success).toBe(true);
   });
 
-  it('uses backend membership permissions instead of the global auth role', () => {
+  it('uses backend permissions when present and documented legacy role fallbacks otherwise', () => {
     expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(true);
     expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(false);
-    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_CREATE')).toBe(false);
-    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_REPORT_CREATE')).toBe(false);
+    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_CREATE')).toBe(true);
+    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_REPORT_CREATE')).toBe(true);
     expect(hasPermission({ role: 'LABORATORY' }, 'PEK_PROGRAM_CREATE')).toBe(false);
     expect(hasPermission({ role: 'LABORATORY' }, 'PEK_REPORT_CREATE')).toBe(false);
     expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_REPORT_CREATE')).toBe(false);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: ['PEK_VIEW'] }, 'PEK_VIEW')).toBe(true);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: [] }, 'PEK_PROGRAM_CREATE')).toBe(false);
+    expect(hasPermission({ role: 'ADMIN', permissions: [] }, 'PEK_VIEW')).toBe(false);
   });
 
   it('fails closed for an unknown role and prioritizes resource-level actions', () => {

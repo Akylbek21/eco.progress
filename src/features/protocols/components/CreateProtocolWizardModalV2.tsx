@@ -64,6 +64,8 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   const [conflict, setConflict] = useState(false);
   const [recoveryCandidate, setRecoveryCandidate] = useState<{ key: string; envelope: LocalProtocolDraftEnvelope } | null>(null);
   const [recoveryServer, setRecoveryServer] = useState<Protocol | null>(null);
+  const [recoveryError, setRecoveryError] = useState('');
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [newProtocolConfirm, setNewProtocolConfirm] = useState(false);
   const [serverIssues, setServerIssues] = useState<Array<{ code: string; step: number; field?: FieldPath<ProtocolWizardForm>; fieldPath: string; severity: 'ERROR'; message: string }>>([]);
   const initialCreateStarted = useRef(false);
@@ -109,6 +111,11 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     fullName: item.fullName, laboratoryId: item.laboratoryId, active: item.active,
   })), [employeesQuery.data]);
   const devices = (devicesQuery.data ?? []).filter((item) => !['EXPIRED', 'ARCHIVED', 'INACTIVE', 'OUT_OF_SERVICE'].includes(String(item.status ?? '').toUpperCase()));
+  const templateSelectionValid = typesQuery.isSuccess && templates.some((item) => String(item.id) === String(values.templateId));
+  const companySelectionValid = companiesQuery.isSuccess && companies.some((item) => String(item.id) === String(values.companyId));
+  const objectSelectionValid = objectsQuery.isSuccess && objects.some((item) => String(item.id) === String(values.objectId));
+  const laboratorySelectionValid = !values.laboratoryId
+    || (laboratoriesQuery.isSuccess && laboratories.some((item) => String(item.id) === String(values.laboratoryId)));
   const waterTemplate = templates.find((item) => isWaterProtocolType(item.id));
   const waterOptions = useMemo(() => getWaterProtocolOptions(waterTemplate), [waterTemplate]);
 
@@ -121,6 +128,11 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     setServerDraft(null);
     setSaveState('idle');
     setGeneralError('');
+    setConflict(false);
+    setServerIssues([]);
+    setRecoveryError('');
+    setRecoveryLoading(false);
+    setNewProtocolConfirm(false);
     setStep(0);
     setMaxVisited(0);
     form.reset(normalizeProtocolWizardForm({ ...(pekPrefill ?? {}), orderId, orderServiceItemId }));
@@ -216,12 +228,16 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     },
   });
 
-  const canSaveServerDraft = Boolean(values.templateId && values.companyId);
+  const canSaveServerDraft = Boolean(
+    values.templateId
+    && values.companyId
+    && (serverDraft || (templateSelectionValid && companySelectionValid)),
+  );
   const canAutoCreateDraft = Boolean(
     canSaveServerDraft
-    && values.objectId
+    && objectSelectionValid
     && !invalidLaboratorySelection
-    && (!values.laboratoryId || laboratoriesQuery.isSuccess),
+    && laboratorySelectionValid,
   );
   useEffect(() => {
     if (!open || recoveryCandidate || serverDraft || !canAutoCreateDraft || initialCreateStarted.current || saveMutation.isPending || conflict) return;
@@ -337,6 +353,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     setSaveState(pauseAutosave ? 'conflict' : current ? 'saved' : 'local');
     setRecoveryCandidate(null);
     setRecoveryServer(null);
+    setRecoveryError('');
   };
   const restoreRecovery = async () => {
     if (!recoveryCandidate) return;
@@ -345,6 +362,8 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
       applyRecoveredDraft(envelope, null);
       return;
     }
+    setRecoveryLoading(true);
+    setRecoveryError('');
     try {
       const current = await protocolService.getProtocol(envelope.protocolId);
       if (envelope.backendVersion !== null && current.version > envelope.backendVersion) {
@@ -352,15 +371,23 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
         return;
       }
       applyRecoveredDraft(envelope, current);
-    } catch {
-      applyRecoveredDraft(envelope, null);
-      setGeneralError('Серверный черновик не найден. Открыта локальная аварийная копия.');
+    } catch (error) {
+      const apiError = normalizeApiError(error, 'Не удалось проверить серверный черновик. Проверьте соединение и повторите попытку.');
+      if (apiError.status === 404) {
+        applyRecoveredDraft(envelope, null);
+        setGeneralError('Серверный черновик не найден. Открыта локальная аварийная копия.');
+      } else {
+        setRecoveryError(apiError.message);
+      }
+    } finally {
+      setRecoveryLoading(false);
     }
   };
   const deleteRecovery = () => {
     if (recoveryCandidate) sessionStorage.removeItem(recoveryCandidate.key);
     setRecoveryCandidate(null);
     setRecoveryServer(null);
+    setRecoveryError('');
   };
   const startNewProtocol = () => {
     sessionStorage.removeItem(bufferKey);
@@ -377,10 +404,22 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     setNewProtocolConfirm(false);
   };
 
+  const referenceFailures: Array<{ key: string; message: string; retry: () => unknown }> = [];
+  if (step === 0) {
+    if (typesQuery.isError) referenceFailures.push({ key: 'types', message: 'Не удалось загрузить типы протоколов.', retry: () => typesQuery.refetch() });
+    if (companiesQuery.isError) referenceFailures.push({ key: 'companies', message: 'Не удалось загрузить доступные компании.', retry: () => companiesQuery.refetch() });
+    if (values.companyId && objectsQuery.isError) referenceFailures.push({ key: 'objects', message: 'Не удалось загрузить объекты выбранной компании.', retry: () => objectsQuery.refetch() });
+  }
+  if (step === 1) {
+    if (laboratoriesQuery.isError) referenceFailures.push({ key: 'laboratories', message: 'Не удалось загрузить лаборатории.', retry: () => laboratoriesQuery.refetch() });
+    if (values.laboratoryId && employeesQuery.isError) referenceFailures.push({ key: 'employees', message: 'Не удалось загрузить сотрудников лаборатории.', retry: () => employeesQuery.refetch() });
+    if (values.laboratoryId && values.measurementDate && values.templateId && devicesQuery.isError) referenceFailures.push({ key: 'devices', message: 'Не удалось загрузить доступные приборы.', retry: () => devicesQuery.refetch() });
+  }
+
   const content = step === 0
-    ? <BasicDataStep templates={templates} companies={companies} objects={objects} companyLocked={Boolean(serverDraft)} onStartNew={() => setNewProtocolConfirm(true)} onCompanyChange={(id) => { form.setValue('companyId', id, { shouldDirty: true }); form.setValue('objectId', '', { shouldDirty: true }); }} />
+    ? <BasicDataStep templates={templates} companies={companies} objects={objects} templatesLoading={typesQuery.isLoading} companiesLoading={companiesQuery.isLoading} objectsLoading={objectsQuery.isLoading} companyLocked={Boolean(serverDraft)} onStartNew={() => setNewProtocolConfirm(true)} onCompanyChange={(id) => { form.setValue('companyId', id, { shouldDirty: true }); form.setValue('objectId', '', { shouldDirty: true }); }} />
     : step === 1
-      ? <div className="space-y-7"><div className="rounded-2xl border border-eco-200 bg-eco-50/60 p-4 text-sm text-eco-950"><p className="font-black">На этом шаге</p><p className="mt-1">Проверьте исполнителя, условия на объекте и методику. Прибор можно выбрать сейчас для всех показателей или позже отдельно в каждой строке.</p></div><ExecutorDeviceStep laboratories={laboratories} employees={employees} devices={devices} onLaboratoryChange={(id) => { form.setValue('laboratoryId', id, { shouldDirty: true }); form.setValue('executorId', '', { shouldDirty: true }); }} /><EnvironmentStep weatherLoading={weather.loading} weatherMessage={weather.message} onRefresh={() => void weather.refresh()} waterTypeOptions={waterOptions.waterTypes} waterUseCategoryOptions={waterOptions.waterUseCategories} /><MethodsStep /></div>
+      ? <div className="space-y-7"><div className="rounded-2xl border border-eco-200 bg-eco-50/60 p-4 text-sm text-eco-950"><p className="font-black">На этом шаге</p><p className="mt-1">Проверьте исполнителя, условия на объекте и методику. Прибор можно выбрать сейчас для всех показателей или позже отдельно в каждой строке.</p></div><ExecutorDeviceStep laboratories={laboratories} employees={employees} devices={devices} laboratoriesLoading={laboratoriesQuery.isLoading} employeesLoading={employeesQuery.isLoading} devicesLoading={devicesQuery.isLoading} onLaboratoryChange={(id) => { form.setValue('laboratoryId', id, { shouldDirty: true }); form.setValue('executorId', '', { shouldDirty: true }); }} /><EnvironmentStep weatherLoading={weather.loading} weatherMessage={weather.message} onRefresh={() => void weather.refresh()} waterTypeOptions={waterOptions.waterTypes} waterUseCategoryOptions={waterOptions.waterUseCategories} /><MethodsStep /></div>
       : step === 2
         ? <ResultsStep devices={devices} onSuggestChangeType={() => setStep(0)} />
         : step === 3
@@ -388,20 +427,21 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
           : <ProtocolSigningStep companies={companies} objects={objects} employees={employees} />;
 
   return <FormProvider {...form}>
-    <Modal open={open} onClose={() => !saveMutation.isPending && onClose()} size="wizard" closeOnBackdrop={false} loading={saveMutation.isPending} contentClassName="!overflow-hidden !p-0 sm:!p-0">
+    <Modal open={open} onClose={() => !saveMutation.isPending && onClose()} ariaLabel="Новый протокол" size="wizardAuto" closeOnBackdrop={false} loading={saveMutation.isPending} contentClassName="!overflow-hidden !p-0 sm:!p-0">
       <div className="flex h-full min-h-0 flex-col">
         <ProtocolWizardHeader step={step} total={steps.length} title={steps[step]} submitting={saveMutation.isPending} onClose={onClose} />
         <ProtocolWizardSteps steps={steps} current={step} maxVisited={maxVisited} onSelect={setStep} />
-        <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="min-h-0 flex-1 overflow-y-auto bg-slate-50/40 p-4 sm:px-7 sm:py-6">
           {serverDraft && <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">Черновик протокола №{serverDraft.protocolNumber || serverDraft.id} создан. Автосохранение включено.</div>}
           {generalError && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><p className="font-black">Проверьте данные</p><p className="mt-1 font-semibold">{generalError}</p></div>}
+          {referenceFailures.length > 0 && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p className="font-black">Не удалось загрузить справочники</p><div className="mt-2 space-y-2">{referenceFailures.map((failure) => <div key={failure.key} className="flex flex-wrap items-center justify-between gap-2"><span>{failure.message}</span><Button type="button" variant="secondary" onClick={() => void failure.retry()}>Повторить</Button></div>)}</div></div>}
           {content}
         </main>
         <ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue={step <= 2 || (currentStepErrors.length === 0 && (step < steps.length - 1 || blockingIssues.length === 0))} canSaveDraft={canSaveServerDraft} saveState={saveState === 'local' ? 'Локальная копия сохранена' : saveState === 'creating' ? 'Создание серверного черновика…' : saveState === 'created' ? 'Черновик сохранён на сервере' : saveState === 'saving' ? 'Сохранение изменений…' : saveState === 'saved' ? 'Изменения сохранены' : saveState === 'conflict' ? 'Конфликт версий' : saveState === 'error' ? 'Не удалось сохранить' : undefined} nextLabel={step === 0 ? 'К условиям' : step === 1 ? 'К результатам' : step === 2 ? 'Проверить данные' : 'К завершению'} createLabel="Создать и открыть" onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />
       </div>
     </Modal>
     <Modal open={conflict} onClose={() => setConflict(false)} closeOnBackdrop={false} size="sm" title="Протокол изменён другим сотрудником" footer={<><Button type="button" variant="secondary" onClick={() => { writeLocalProtocolDraft(sessionStorage, { schemaVersion: LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION, userId: String(user?.id ?? 'anonymous'), protocolId: serverDraft?.id ?? null, backendVersion: serverDraft?.version ?? null, idempotencyKey: idempotencyKeyRef.current, currentStep: step, formValues: form.getValues(), savedAt: new Date().toISOString(), hasUnsavedChanges: true }); setConflict(false); }}>Сохранить локальную копию</Button><Button type="button" onClick={() => void loadLatest()}>Загрузить актуальную версию</Button></>}><p className="text-sm text-slate-700">Данные не были перезаписаны. Выберите, сохранить ли введённые данные локально или загрузить актуальную серверную версию.</p></Modal>
-    <Modal open={Boolean(recoveryCandidate) && !recoveryServer} onClose={() => {}} closeOnBackdrop={false} size="sm" title="Найдена несохранённая копия протокола" footer={<><Button type="button" variant="secondary" onClick={deleteRecovery}>Удалить копию</Button><Button type="button" onClick={() => void restoreRecovery()}>Восстановить</Button></>}><p className="text-sm text-slate-700">Сохранено: {recoveryCandidate ? new Date(recoveryCandidate.envelope.savedAt).toLocaleString('ru-RU') : '—'}</p></Modal>
+    <Modal open={Boolean(recoveryCandidate) && !recoveryServer} loading={recoveryLoading} onClose={() => {}} closeOnBackdrop={false} size="sm" title="Найдена несохранённая копия протокола" footer={<><Button type="button" variant="secondary" disabled={recoveryLoading} onClick={deleteRecovery}>Удалить копию</Button><Button type="button" disabled={recoveryLoading} onClick={() => void restoreRecovery()}>{recoveryLoading ? 'Проверяем сервер…' : 'Восстановить'}</Button></>}><p className="text-sm text-slate-700">Сохранено: {recoveryCandidate ? new Date(recoveryCandidate.envelope.savedAt).toLocaleString('ru-RU') : '—'}</p>{recoveryError && <p role="alert" className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-900">{recoveryError}</p>}</Modal>
     <Modal open={Boolean(recoveryCandidate && recoveryServer)} onClose={() => {}} closeOnBackdrop={false} size="sm" title="Черновик был изменён на сервере" footer={<><Button type="button" variant="secondary" onClick={deleteRecovery}>Удалить локальную копию</Button><Button type="button" variant="secondary" onClick={() => { if (recoveryCandidate && recoveryServer) applyRecoveredDraft(recoveryCandidate.envelope, recoveryServer, true); }}>Открыть локальную копию для сравнения</Button><Button type="button" onClick={() => { if (recoveryServer) { if (recoveryCandidate) sessionStorage.removeItem(recoveryCandidate.key); setServerDraft(recoveryServer); form.reset(mapProtocolToWizardForm(recoveryServer)); setRecoveryCandidate(null); setRecoveryServer(null); } }}>Загрузить серверную версию</Button></>}><p className="text-sm text-slate-700">Серверная версия новее локальной. Автоматическое объединение результатов не выполняется.</p></Modal>
     <Modal open={newProtocolConfirm} onClose={() => setNewProtocolConfirm(false)} closeOnBackdrop={false} size="sm" title="Начать новый протокол?" footer={<><Button type="button" variant="secondary" onClick={() => setNewProtocolConfirm(false)}>Отмена</Button><Button type="button" onClick={startNewProtocol}>Начать новый протокол</Button></>}><p className="text-sm text-slate-700">Текущий серверный черновик останется в списке. Локальная аварийная копия этого мастера будет удалена.</p></Modal>
   </FormProvider>;

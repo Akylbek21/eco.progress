@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { X } from 'lucide-react';
@@ -10,12 +10,15 @@ type ModalProps = {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'wizard';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'wizard' | 'wizardAuto';
   closeOnBackdrop?: boolean;
   loading?: boolean;
   contentClassName?: string;
+  ariaLabel?: string;
   onClose: () => void;
 };
+
+const openModalStack: symbol[] = [];
 
 const sizeClass: Record<NonNullable<ModalProps['size']>, string> = {
   sm: 'max-w-md',
@@ -23,6 +26,7 @@ const sizeClass: Record<NonNullable<ModalProps['size']>, string> = {
   lg: 'max-w-4xl',
   xl: 'max-w-6xl',
   wizard: 'h-dvh max-h-dvh max-w-none rounded-none sm:h-[92vh] sm:max-h-[92vh] sm:w-[94vw] sm:max-w-[1400px] sm:rounded-[24px]',
+  wizardAuto: 'h-dvh max-h-dvh max-w-none rounded-none sm:h-auto sm:max-h-[92vh] sm:w-[94vw] sm:max-w-[1280px] sm:rounded-[24px]',
 };
 
 const Modal = ({
@@ -36,12 +40,16 @@ const Modal = ({
   closeOnBackdrop = true,
   loading = false,
   contentClassName,
+  ariaLabel,
   onClose,
 }: ModalProps) => {
   const visible = isOpen ?? open ?? false;
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const loadingRef = useRef(loading);
+  const modalInstance = useRef(Symbol('modal'));
+  const titleId = useId();
+  const descriptionId = useId();
   onCloseRef.current = onClose;
   loadingRef.current = loading;
 
@@ -50,12 +58,15 @@ const Modal = ({
 
     const originalOverflow = document.body.style.overflow;
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const instance = modalInstance.current;
+    openModalStack.push(instance);
     document.body.style.overflow = 'hidden';
 
     const focusable = () => Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])') || []);
     window.requestAnimationFrame(() => (focusable()[0] || dialogRef.current)?.focus());
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (openModalStack[openModalStack.length - 1] !== instance) return;
       if (event.key === 'Escape' && !loadingRef.current) onCloseRef.current();
       if (event.key === 'Tab') {
         const items = focusable();
@@ -69,6 +80,8 @@ const Modal = ({
 
     window.addEventListener('keydown', onKeyDown);
     return () => {
+      const stackIndex = openModalStack.lastIndexOf(instance);
+      if (stackIndex >= 0) openModalStack.splice(stackIndex, 1);
       document.body.style.overflow = originalOverflow;
       window.removeEventListener('keydown', onKeyDown);
       previouslyFocused?.focus();
@@ -90,8 +103,9 @@ const Modal = ({
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? 'modal-title' : undefined}
-        aria-describedby={description ? 'modal-description' : undefined}
+        aria-label={title ? undefined : ariaLabel}
+        aria-labelledby={title ? titleId : undefined}
+        aria-describedby={description ? descriptionId : undefined}
         className={clsx(
           'flex max-h-[92vh] w-full flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl shadow-eco-900/15',
           'animate-[modal-in_160ms_ease-out]',
@@ -102,8 +116,8 @@ const Modal = ({
         {(title || description) && (
           <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6 sm:py-5">
             <div className="min-w-0">
-              {title && <h2 id="modal-title" className="text-lg font-bold text-eco-900 sm:text-xl">{title}</h2>}
-              {description && <p id="modal-description" className="mt-1 text-sm leading-6 text-slate-600">{description}</p>}
+              {title && <h2 id={titleId} className="text-lg font-bold text-eco-900 sm:text-xl">{title}</h2>}
+              {description && <p id={descriptionId} className="mt-1 text-sm leading-6 text-slate-600">{description}</p>}
             </div>
             <button
               type="button"

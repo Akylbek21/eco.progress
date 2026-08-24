@@ -11,13 +11,18 @@ const explicitPermission = (user: PekUser, permission: string): boolean | undefi
   return user.permissions.includes(permission);
 };
 
+const legacyCreateRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'];
+
 export const canUsePekPermission = (user: PekUser, permission: string) => {
   const explicit = explicitPermission(user, permission);
-  if (explicit === true) return true;
+  if (explicit !== undefined) return explicit;
   if (permission === 'PEK_VIEW') {
     return user?.companyPermissions?.COMPANY_VIEW === true
       || user?.role === 'ADMIN'
       || user?.role === 'DIRECTOR';
+  }
+  if (permission === 'PEK_PROGRAM_CREATE' || permission === 'PEK_REPORT_CREATE') {
+    return Boolean(user?.role && legacyCreateRoles.includes(user.role));
   }
   return false;
 };
