@@ -8,7 +8,7 @@ import { createWizardDefaults, emptyWizardResult } from '../src/features/protoco
 import { mapWizardResultToDraftRequest, mapWizardToCreateDraft } from '../src/features/protocols/mappers/protocolWizardDraftMapper';
 import { normalizeProtocolStatus } from '../src/config/protocolStatus';
 import { hasProtocolAction, normalizeProtocolAvailableActions } from '../src/features/protocols/utils/protocolActions';
-import { addProtocolResult, calculateResult, createCorrection, getProtocol, importExcel, normalizeProtocol, readyForApproval, removeProtocolMeasurementDevice, returnForRevision, returnToDraft, saveProtocolDraftResults, saveRawMeasurements, signProtocol } from '../src/services/apiProtocolService';
+import { calculateResult, createCorrection, getProtocol, importExcel, normalizeProtocol, readyForApproval, removeProtocolMeasurementDevice, returnForRevision, returnToDraft, saveProtocolDraftResults, saveRawMeasurements, signProtocol } from '../src/services/apiProtocolService';
 import { normalizeApiError } from '../src/services/apiHelpers';
 import { isProtocolVersionConflict } from '../src/features/protocols/utils/protocolVersionConflict';
 import { protocolAccessErrorMessage } from '../src/utils/protocolError';
@@ -159,13 +159,13 @@ describe('current protocol backend contract', () => {
     expect(body).toBe('');
   });
 
-  it('returns a protocol for revision with a reason and reloads the authoritative version', async () => {
+  it('uses the authoritative mutation response for revision without fetching a fresh version', async () => {
     let body: unknown;
     let getCount = 0;
     server.use(
       http.post('http://localhost/api/protocols/42/return-for-revision', async ({ request }) => {
         body = await request.json();
-        return HttpResponse.json({ data: { ...protocol, status: 'NEEDS_REVISION', version: 9 } });
+        return HttpResponse.json({ data: { ...protocol, status: 'NEEDS_REVISION', version: 9, availableActions: { edit: true, sendToApproval: true } } });
       }),
       http.get('http://localhost/api/protocols/42', () => {
         getCount += 1;
@@ -174,7 +174,7 @@ describe('current protocol backend contract', () => {
     );
     const revised = await returnForRevision('42', { version: 8, reason: 'Исправить результаты' });
     expect(body).toEqual({ version: 8, reason: 'Исправить результаты' });
-    expect(getCount).toBe(1);
+    expect(getCount).toBe(0);
     expect(revised).toMatchObject({ status: 'NEEDS_REVISION', version: 9, availableActions: { edit: true, sendToApproval: true } });
   });
 
@@ -219,13 +219,13 @@ describe('current protocol backend contract', () => {
     expect(getCount).toBe(0);
   });
 
-  it('imports xls/xlsx with file and version and reloads protocol results', async () => {
+  it('imports xls/xlsx with file and version and uses returned protocol results', async () => {
     let form: FormData | null = null;
     let getCount = 0;
     server.use(
       http.post('http://localhost/api/protocols/42/import-excel', async ({ request }) => {
         form = await request.formData();
-        return HttpResponse.json({ data: { ...protocol, version: 9 } });
+        return HttpResponse.json({ data: { ...protocol, version: 9, results: [{ id: 'excel-1', values: { resultValue: 1 } }] } });
       }),
       http.get('http://localhost/api/protocols/42', () => {
         getCount += 1;
@@ -235,7 +235,7 @@ describe('current protocol backend contract', () => {
     const imported = await importExcel('42', new File(['sheet'], 'results.xls', { type: 'application/vnd.ms-excel' }), 8);
     expect(form?.get('version')).toBe('8');
     expect((form?.get('file') as File).name).toBe('results.xls');
-    expect(getCount).toBe(1);
+    expect(getCount).toBe(0);
     expect(imported).toMatchObject({ version: 9, results: [{ id: 'excel-1' }] });
     await expect(importExcel('42', new File(['bad'], 'results.csv'), 9)).rejects.toThrow('.xls');
   });
@@ -272,12 +272,18 @@ describe('current protocol backend contract', () => {
         return HttpResponse.json({ data: { ...protocol, version: 9, results: savedResults } });
       }),
     );
-    const saved = await addProtocolResult('42', { values: { resultValue: 0 }, measurementDeviceId: 7 }, 8);
-    expect(saved.values.resultValue).toBe(0);
+    const clientRowId = globalThis.crypto.randomUUID();
+    const saved = await saveProtocolDraftResults('42', {
+      version: 8,
+      added: [{ clientRowId, values: { resultValue: 0 }, measurementDeviceId: 7, normativeId: null }],
+      updated: [],
+      deletedIds: [],
+    });
+    expect(saved.results[0].values.resultValue).toBe(0);
     expect(idempotencyKey).toMatch(/^[\w-]+$/);
     expect(body).toMatchObject({
       version: 8,
-      added: [{ clientRowId: expect.any(String), values: { resultValue: 0 }, measurementDeviceId: 7, normativeId: null }],
+      added: [{ clientRowId, values: { resultValue: 0 }, measurementDeviceId: 7, normativeId: null }],
       updated: [],
       deletedIds: [],
     });

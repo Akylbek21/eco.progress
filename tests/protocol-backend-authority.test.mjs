@@ -35,6 +35,21 @@ test('all result changes use the single atomic draft-results endpoint', async ()
   assert.doesNotMatch(api, /results\/bulk-place/);
   assert.doesNotMatch(api, /results\/bulk-update/);
   assert.doesNotMatch(api, /results\/bulk-delete/);
+  assert.doesNotMatch(api, /export async function (?:add|update|delete)ProtocolResult/);
+  assert.doesNotMatch(api, /export async function bulk(?:AssignDevice|UpdatePlace|DeleteResults)/);
+});
+
+test('documents use one canonical download and immutable signed preview', async () => {
+  const api = await read('src/services/apiProtocolService.ts');
+  const editor = await read('src/pages/ProtocolEditorPage.tsx');
+  const documents = await read('src/features/protocols/details/ProtocolDocumentsTab.tsx');
+  assert.match(api, /`\/protocols\/\$\{protocolId\}\/download`/);
+  assert.match(api, /params: \{ format: kind\.toUpperCase\(\) \}/);
+  assert.doesNotMatch(api, /download-(?:pdf|docx)|download\/(?:pdf|docx)/);
+  assert.match(api, /`\/protocols\/\$\{protocolId\}\/preview-signed`/);
+  assert.match(editor, /current\.status === 'SIGNED'\s*\?\s*await protocolService\.previewSignedProtocol\(current\.id\)\s*:\s*await protocolService\.previewProtocol\(current\.id\)/);
+  assert.match(documents, /actions\.previewSigned/);
+  assert.match(api, /json\|text\|problem/);
 });
 
 test('orders use linked protocols and backend completion decision', async () => {

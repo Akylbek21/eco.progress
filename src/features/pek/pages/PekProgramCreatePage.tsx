@@ -12,9 +12,9 @@ import { pekKeys } from '../api/pekQueryKeys';
 import { commitPekProgramMutation } from '../api/pekProgramCache';
 import { pekApi } from '../api/pekService';
 import PekLookupSelect from '../components/common/PekLookupSelect';
+import PekCompanyObjectFilters from '../components/common/PekCompanyObjectFilters';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
-import { usePekScope } from '../hooks/usePekScope';
 import { pekProgramDefaults } from '../forms/programDefaults';
 import {
   mapProgramAutosaveToRequest,
@@ -33,7 +33,22 @@ import {
 } from '../model/pekDictionaries';
 import type { ComparisonType, PekActionStatus, PekControlType, PekPeriodicity } from '../api/pekContracts';
 
-const steps = ['Основные сведения', 'План контроля', 'Мероприятия', 'Документы', 'Проверка'];
+const steps = [
+  'Сведения об объекте',
+  'КАТО / БИН / ОКЭД',
+  'Категория и мощность',
+  'Характеристика производства',
+  'Производственный мониторинг',
+  'Точки контроля',
+  'Показатели',
+  'Методы и периодичность',
+  'Внутренние проверки',
+  'QA измерений',
+  'Аварийные процедуры',
+  'Ответственность',
+  'Разрешительные документы',
+  'Readiness',
+];
 const inputClass = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2';
 const clientId = (prefix: string) =>
   `${prefix}-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`}`;
@@ -60,9 +75,18 @@ const newMeasure = (): PekMeasure => ({
   completionPercent: 0,
   currency: 'KZT',
 });
-const stepForField = (field: string) => field.startsWith('controlItems') || field.startsWith('indicators') ? 1
-  : field.startsWith('measures') ? 2
-    : field.startsWith('documents') ? 3 : 0;
+const stepForField = (field: string) => field.startsWith('controlItems') ? 5
+  : field.startsWith('indicators') ? 6
+    : field.startsWith('measures') || field.startsWith('responsibilityMatrix') ? 11
+      : field.startsWith('kato') || field.startsWith('bin') || field.startsWith('oked') ? 1
+        : field.startsWith('environmentalCategory') || field.startsWith('designCapacity') ? 2
+          : field.startsWith('productionCharacteristics') ? 3
+            : field.startsWith('monitoringScope') ? 4
+              : field.startsWith('internalInspectionProcedure') ? 8
+                : field.startsWith('measurementQualityAssurance') ? 9
+                  : field.startsWith('emergencyProcedures') ? 10
+                    : field.startsWith('permitIds') ? 12
+                      : field.startsWith('readinessNotes') ? 13 : 0;
 
 const PekProgramCreatePage = () => {
   const { programId } = useParams();
@@ -103,11 +127,9 @@ const PekProgramCreatePage = () => {
     queryFn: ({ signal }) => pekApi.getProgram(id, signal),
     enabled: edit && Number.isFinite(id),
   });
-  const scope = usePekScope(companyId || undefined);
-  const objects = scope.objects;
   const assignees = useQuery({
-    queryKey: pekKeys.assignees(['PEK_RESPONSIBLE'], user?.id),
-    queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal),
+    queryKey: pekKeys.assignees(companyId, ['PEK_RESPONSIBLE'], user?.id),
+    queryFn: ({ signal }) => pekApi.getAssignees(companyId, ['PEK_RESPONSIBLE'], signal),
     enabled: companyId > 0,
   });
   const permits = useQuery({
@@ -120,22 +142,6 @@ const PekProgramCreatePage = () => {
     [companyId, edit, program.data?.version, programId, user?.id],
   );
   const activePermits = useMemo(() => (permits.data || []).filter((permit) => permit.effectivelyActive), [permits.data]);
-
-  useEffect(() => {
-    if (edit) return;
-    const available = scope.companies;
-    if (!companyId && available.length === 1) setValue('companyId', Number(available[0].id), { shouldDirty: true });
-  }, [scope.companies, companyId, edit, setValue]);
-
-  useEffect(() => {
-    if (!objects.data || edit || !companyId) return;
-    const available = objects.data.filter((item) => item.status !== 'ARCHIVED' && item.persisted !== false && item.isVirtual !== true);
-    if (objectId && !available.some((object) => Number(object.id) === objectId)) {
-      setValue('objectId', 0, { shouldDirty: true });
-      return;
-    }
-    if (!objectId && available.length === 1) setValue('objectId', Number(available[0].id), { shouldDirty: true });
-  }, [companyId, edit, objectId, objects.data, setValue]);
 
   useEffect(() => {
     if (!program.data) return;
@@ -329,9 +335,10 @@ const PekProgramCreatePage = () => {
     const value = getValues();
     let message = '';
     if (step === 0) message = validateHeader(value);
-    else if (step === 1 && value.controlItems.some((row) => !row.code.trim() || !row.name.trim() || !row.controlType || !row.frequencyType || (row.frequencyType === 'PER_EVENT' && !row.plannedCount))) message = 'Заполните обязательные поля каждой контрольной позиции';
-    else if (step === 1 && value.indicators.some((row) => !row.controlItemClientId || !row.indicatorName.trim() || !row.unit || !row.comparisonType)) message = 'Заполните обязательные сведения каждого показателя';
-    else if (step === 2 && value.measures.some((row) => !row.code?.trim() || !row.name.trim() || !row.responsibleUserId || !row.plannedEndDate)) message = 'Заполните код, название, ответственного и срок каждого мероприятия';
+    else if (step === 5 && value.controlItems.some((row) => !row.code.trim() || !row.name.trim() || !row.controlType)) message = 'Заполните обязательные поля каждой точки контроля';
+    else if (step === 6 && value.indicators.some((row) => !row.controlItemClientId || !row.indicatorName.trim() || !row.unit || !row.comparisonType)) message = 'Заполните обязательные сведения каждого показателя';
+    else if (step === 7 && value.controlItems.some((row) => !row.frequencyType || (row.frequencyType === 'PER_EVENT' && !row.plannedCount))) message = 'Укажите методы и периодичность для каждой точки контроля';
+    else if (step === 11 && value.measures.some((row) => !row.code?.trim() || !row.name.trim() || !row.responsibleUserId || !row.plannedEndDate)) message = 'Заполните код, название, ответственного и срок каждого мероприятия';
     if (message) { toast.error(message); return; }
     if (!edit && step === 0) {
       createServerDraft.mutate(value);
@@ -352,18 +359,31 @@ const PekProgramCreatePage = () => {
         {autosaveState === 'conflict' && <span className="text-rose-700">Программа изменена другим сотрудником</span>}
       </span>}
     />
-    <ol className="grid gap-2 md:grid-cols-5">
+    <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
       {steps.map((label, index) => <li key={label} className={`rounded-xl p-3 text-center text-xs font-bold ${index === step ? 'bg-eco-700 text-white' : 'bg-white'}`}>{index + 1}. {label}</li>)}
     </ol>
     <form onSubmit={submit}>
       <section className="rounded-2xl border bg-white p-5">
         {Object.keys(formState.errors).length > 0 && <div role="alert" aria-live="assertive" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">Проверьте заполнение текущего раздела. Первая ошибка: {String(Object.values(formState.errors)[0]?.message || 'некорректные данные')}</div>}
         {step === 0 && <div className="grid gap-4 md:grid-cols-2">
-          <label>Компания *<input type="number" min="1" list="pek-program-company-options" {...register('companyId', { valueAsNumber: true })} disabled={edit} onChange={(event) => { setValue('companyId', Number(event.target.value), { shouldDirty: true }); setValue('objectId', 0); }} className={inputClass} placeholder="Выберите компанию" /><datalist id="pek-program-company-options">{scope.companies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</datalist>{scope.availableCompanies.isError && <span className="mt-1 block text-xs text-rose-700">Не удалось загрузить список компаний</span>}</label>
-          <label>Объект *<select {...register('objectId', { valueAsNumber: true })} className={inputClass} disabled={edit || !companyId}><option value={0}>Выберите объект</option>{objects.data?.filter((item) => item.status !== 'ARCHIVED' && item.persisted !== false && item.isVirtual !== true).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <input type="hidden" {...register('companyId', { valueAsNumber: true })} />
+          <input type="hidden" {...register('objectId', { valueAsNumber: true })} />
+          <PekCompanyObjectFilters
+            companyId={companyId || undefined}
+            objectId={objectId || undefined}
+            companyDisabled={edit}
+            objectDisabled={edit}
+            required
+            onCompanyChange={(value) => {
+              setValue('companyId', Number(value) || 0, { shouldDirty: true, shouldValidate: true });
+              setValue('objectId', 0, { shouldDirty: true, shouldValidate: true });
+            }}
+            onObjectChange={(value) => setValue('objectId', Number(value) || 0, { shouldDirty: true, shouldValidate: true })}
+          />
           <label>Номер *<input {...register('number')} disabled={edit} className={inputClass} /></label>
           <label>Название *<input {...register('name')} className={inputClass} /></label>
           <label className="md:col-span-2">Описание<textarea {...register('description')} rows={3} className={inputClass} /></label>
+          <label className="md:col-span-2">Сведения об объекте и его местоположении *<textarea {...register('facilityInformation')} rows={5} className={inputClass} placeholder="Назначение объекта, адрес, границы площадки, режим работы и основные источники воздействия" /></label>
           <label>Действует с *<input type="date" {...register('validFrom')} className={inputClass} /></label>
           <label>Действует до *<input type="date" {...register('validUntil')} className={inputClass} /></label>
           <PekLookupSelect label="Ответственный" value={watch('responsibleUserId')} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => setValue('responsibleUserId', value, { shouldDirty: true })} />
@@ -371,7 +391,19 @@ const PekProgramCreatePage = () => {
           <div className="text-sm text-slate-600"><strong>Действующие разрешительные документы</strong><p className="mt-2">{permits.isLoading ? 'Загрузка…' : activePermits.length ? activePermits.map((item) => `${item.type} № ${item.number}`).join(', ') : 'Для объекта нет действующих разрешительных документов'}</p></div>
           {Object.values(formState.errors).length > 0 && <p role="alert" className="md:col-span-2 text-sm text-rose-700">Проверьте обязательные поля программы.</p>}
         </div>}
-        {step === 1 && <div className="space-y-4">
+        {step === 1 && <div className="grid gap-4 md:grid-cols-3">
+          <label>КАТО *<input {...register('kato')} className={inputClass} inputMode="numeric" /></label>
+          <label>БИН оператора *<input {...register('bin')} className={inputClass} inputMode="numeric" maxLength={12} /></label>
+          <label>ОКЭД *<input {...register('oked')} className={inputClass} /></label>
+          <p className="md:col-span-3 text-sm text-slate-500">Реквизиты относятся к оператору и конкретному объекту, для которого разрабатывается программа.</p>
+        </div>}
+        {step === 2 && <div className="grid gap-4 md:grid-cols-2">
+          <label>Категория объекта *<select {...register('environmentalCategory')} className={inputClass}><option value="">Выберите категорию</option><option value="I">I категория</option><option value="II">II категория</option><option value="III">III категория</option><option value="IV">IV категория</option></select></label>
+          <label>Проектная / фактическая мощность *<textarea {...register('designCapacity')} rows={4} className={inputClass} placeholder="Единицы мощности, проектное и фактическое значение, режим загрузки" /></label>
+        </div>}
+        {step === 3 && <label className="block">Характеристика производственных и технологических процессов *<textarea {...register('productionCharacteristics')} rows={12} className={inputClass} placeholder="Технологические линии, сырьё, продукция, оборудование, источники эмиссий, водопользование и образование отходов" /></label>}
+        {step === 4 && <label className="block">Организация производственного мониторинга *<textarea {...register('monitoringScope')} rows={12} className={inputClass} placeholder="Компоненты среды, наблюдения, лаборатории, сбор и хранение результатов мониторинга" /></label>}
+        {step === 5 && <div className="space-y-4">
           <Button type="button" onClick={() => setValue('controlItems', [...controlItems, newControl(controlItems.length)], { shouldDirty: true })}>Добавить позицию</Button>
           {controlItems.map((row, index) => <article key={row.clientId} className="rounded-xl border p-4">
             <div className="mb-3 flex justify-between"><strong>Позиция {index + 1}</strong><button type="button" className="text-rose-700" onClick={() => setValue('controlItems', controlItems.filter((_, i) => i !== index), { shouldDirty: true })}>Удалить</button></div>
@@ -396,7 +428,7 @@ const PekProgramCreatePage = () => {
           </article>)}
           {!controlItems.length && <PekState title="Позиции контроля не добавлены" />}
         </div>}
-        {step === 1 && <div className="mt-6 space-y-4 border-t pt-5">
+        {step === 6 && <div className="space-y-4">
           <h2 className="text-lg font-black">Показатели</h2>
           <Button type="button" disabled={!controlItems.length} onClick={() => setValue('indicators', [...indicators, newIndicator(indicators.length, controlItems[0]?.clientId)], { shouldDirty: true })}>Добавить показатель</Button>
           {indicators.map((row, index) => <article key={row.clientId} className="rounded-xl border p-4">
@@ -416,7 +448,16 @@ const PekProgramCreatePage = () => {
           </article>)}
           {!indicators.length && <PekState title="Показатели не добавлены" />}
         </div>}
-        {step === 2 && <div className="space-y-4">
+        {step === 7 && <div className="space-y-4">
+          <p className="text-sm text-slate-600">Для каждой точки задайте методику отбора и измерений, периодичность и плановое число контролей.</p>
+          {controlItems.map((row, index) => <article key={row.clientId} className="rounded-xl border p-4"><strong>{row.code || `Точка ${index + 1}`} · {row.name || 'Без названия'}</strong><div className="mt-3 grid gap-3 md:grid-cols-3"><SelectField label="Периодичность *" value={row.frequencyType} options={pekPeriodicityOptions} onChange={(value) => updateControl(index, { frequencyType: value as PekPeriodicity })} /><NumberField label="Значение периодичности" value={row.frequencyValue} onChange={(value) => updateControl(index, { frequencyValue: value })} /><NumberField label="Плановое количество" value={row.plannedCount} onChange={(value) => updateControl(index, { plannedCount: value })} /><TextField label="Метод измерения" value={row.measurementMethod} onChange={(value) => updateControl(index, { measurementMethod: value })} /><TextField label="Метод отбора" value={row.samplingMethod} onChange={(value) => updateControl(index, { samplingMethod: value })} /></div></article>)}
+          {!controlItems.length && <PekState title="Сначала добавьте точки контроля" />}
+        </div>}
+        {step === 8 && <label className="block">Порядок внутренних проверок *<textarea {...register('internalInspectionProcedure')} rows={12} className={inputClass} placeholder="Планирование, чек-листы, документирование несоответствий, корректирующие действия и контроль исполнения" /></label>}
+        {step === 9 && <label className="block">Обеспечение качества измерений (QA/QC) *<textarea {...register('measurementQualityAssurance')} rows={12} className={inputClass} placeholder="Аккредитация лабораторий, поверка средств измерений, отбор и транспортировка проб, контроль качества данных" /></label>}
+        {step === 10 && <label className="block">Процедуры при аварийных ситуациях *<textarea {...register('emergencyProcedures')} rows={12} className={inputClass} placeholder="Выявление, оповещение, локализация, внеплановый контроль, документирование и уведомление уполномоченных органов" /></label>}
+        {step === 11 && <div className="space-y-4">
+          <label className="block">Распределение ответственности *<textarea {...register('responsibilityMatrix')} rows={6} className={inputClass} placeholder="Ответственные за мониторинг, внутренние проверки, QA, аварийное реагирование и отчётность" /></label>
           <Button type="button" onClick={() => setValue('measures', [...measures, newMeasure()], { shouldDirty: true })}>Добавить мероприятие</Button>
           {measures.map((row, index) => <article key={row.clientId} className="rounded-xl border p-4">
             <div className="mb-3 flex justify-between"><strong>Мероприятие {index + 1}</strong><button type="button" className="text-rose-700" onClick={() => setValue('measures', measures.filter((_, i) => i !== index), { shouldDirty: true })}>Удалить</button></div>
@@ -436,14 +477,16 @@ const PekProgramCreatePage = () => {
           </article>)}
           {!measures.length && <PekState title="Мероприятия не добавлены" />}
         </div>}
-        {step === 3 && <PekState title={edit ? 'Документы загружаются в карточке программы' : 'Сначала сохраните программу'} message="После сохранения программы откроется карточка, где можно загрузить документы." />}
-        {step === 4 && <div className="space-y-3">
-          <h2 className="text-lg font-black">Проверка</h2>
+        {step === 12 && <div className="space-y-4"><h2 className="text-lg font-black">Разрешительные документы объекта</h2>{permits.isLoading ? <PekLoading /> : !activePermits.length ? <PekState title="Действующие документы не найдены" message="Добавьте разрешительные документы в соответствующем разделе ПЭК, затем вернитесь к программе." /> : <div className="space-y-2">{activePermits.map((permit) => <label key={permit.id} className="flex items-start gap-3 rounded-xl border p-3"><input type="checkbox" checked={(watch('permitIds') || []).includes(permit.id)} onChange={(event) => { const current = watch('permitIds') || []; setValue('permitIds', event.target.checked ? [...current, permit.id] : current.filter((id) => id !== permit.id), { shouldDirty: true }); }} /><span><strong>{permit.type} № {permit.number}</strong><span className="block text-sm text-slate-500">Действует до {permit.validTo}</span></span></label>)}</div>}<p className="text-sm text-slate-500">Файлы документов загружаются в карточке программы после её сохранения.</p></div>}
+        {step === 13 && <div className="space-y-3">
+          <h2 className="text-lg font-black">Проверка готовности программы</h2>
           <p>Программа: <strong>{watch('number')} · {watch('name')}</strong></p>
           <p>Позиции контроля: <strong>{controlItems.length}</strong></p>
           <p>Показатели: <strong>{indicators.length}</strong></p>
           <p>Мероприятия: <strong>{measures.length}</strong></p>
-          <p className="text-sm text-slate-500">Проверьте сведения перед сохранением. Пустые разделы будут сохранены без записей.</p>
+          <p>Разрешительных документов: <strong>{watch('permitIds')?.length || 0}</strong></p>
+          <label className="block">Примечание к готовности<textarea {...register('readinessNotes')} rows={4} className={inputClass} /></label>
+          <p className="text-sm text-slate-500">Readiness окончательно рассчитывает backend. Сохранение черновика не означает готовность к согласованию.</p>
         </div>}
       </section>
       <footer className="mt-4 flex flex-wrap justify-between gap-3">

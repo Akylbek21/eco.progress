@@ -7,6 +7,7 @@ import type { PekSettingsUpdateRequest } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import PekQueryError from '../components/common/PekQueryError';
+import PekCompanyObjectFilters from '../components/common/PekCompanyObjectFilters';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { parseApiError } from '../../../services/apiHelpers';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -47,11 +48,15 @@ const PekSettingsPage = () => {
     enabled: selectedCompanyId > 0 && scope.companyAllowed,
     retry: retryPekQuery,
   });
-  const assignees = useQuery({ queryKey: pekKeys.assignees(['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal) });
+  const assignees = useQuery({ queryKey: pekKeys.assignees(selectedCompanyId, ['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(selectedCompanyId, ['PEK_RESPONSIBLE'], signal), enabled: selectedCompanyId > 0 });
   const laboratories = useQuery({ queryKey: ['laboratories', 'pek-settings', `user:${user?.id ?? 'anonymous'}`], queryFn: ({ signal }) => getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }, signal) });
   const runScheduler = useMutation({
     mutationFn: () => pekApi.runSchedulerNow(selectedCompanyId, settings.data!.version),
-    onSuccess: () => setMessage('Ручной запуск планировщика ПЭК запущен.'),
+    onSuccess: async () => {
+      const actual = await pekApi.getSettings(selectedCompanyId);
+      queryClient.setQueryData(settingsKey, actual);
+      setMessage('Ручной запуск планировщика ПЭК запущен.');
+    },
     onError: async (error) => {
       const mapped = await handlePekMutationError(error, () => settings.refetch());
       setMessage(mapped.message);
@@ -60,10 +65,6 @@ const PekSettingsPage = () => {
   });
   const [form, setForm] = useState<PekSettingsUpdateRequest | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  useEffect(() => {
-    if (selectedCompanyId || scope.companies.length !== 1) return;
-    setSearchParams({ companyId: String(scope.companies[0].id) }, { replace: true });
-  }, [scope.companies, selectedCompanyId, setSearchParams]);
   useEffect(() => {
     if (!settings.data) return;
     setForm(toRequest(settings.data));
@@ -87,9 +88,18 @@ const PekSettingsPage = () => {
       setMessage(`${mapped.message || parseApiError(error, 'Не удалось сохранить настройки ПЭК.').message}${mapped.code ? ` (${mapped.code})` : ''}${fields ? `. ${fields}` : ''}`);
       if (mapped.message !== 'Данные были изменены другим пользователем') await settings.refetch();
     },
+    retry: false,
   });
-  const companyInput = <><TextField fullWidth type="number" label="Компания (PEK scope)" value={selectedCompanyId || ''} inputProps={{ min: 1, list: 'pek-settings-companies' }} onChange={(event) => { setForm(null); setMessage(null); setSearchParams(event.target.value ? { companyId: event.target.value } : {}, { replace: true }); }} /><datalist id="pek-settings-companies">{scope.companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</datalist></>;
-  if (!selectedCompanyId) return <div className="space-y-5"><PekPageHeader title="Настройки ПЭК" description="Выберите компанию, настройки которой нужно открыть" />{companyInput}<PekState title="Выберите компанию" message="Компании предлагаются из PEK scope backend; ID можно указать вручную для серверной проверки." /></div>;
+  const companyInput = <PekCompanyObjectFilters
+    companyId={selectedCompanyId || undefined}
+    showObject={false}
+    onCompanyChange={(value) => {
+      setForm(null);
+      setMessage(null);
+      setSearchParams(value ? { companyId: value } : {}, { replace: true });
+    }}
+  />;
+  if (!selectedCompanyId) return <div className="space-y-5"><PekPageHeader title="Настройки ПЭК" description="Выберите компанию, настройки которой нужно открыть" />{companyInput}<PekState title="Выберите компанию" message="Выберите доступную компанию по названию из PEK scope." /></div>;
   if (settings.isLoading) return <PekLoading />;
   if (settings.isError) return <PekQueryError error={settings.error} resource="настройки ПЭК" retry={() => void settings.refetch()} />;
   if (!settings.data || !form) return <PekState title="Настройки ПЭК не получены" message="Сервис не вернул данные настроек." />;

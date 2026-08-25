@@ -112,6 +112,8 @@ const PekReportCreatePage = () => {
               <Summary label="Объект" value={context.data.object?.name || '—'} />
               <Summary label="Начало периода" value={context.data.periodStart} />
               <Summary label="Окончание периода" value={context.data.periodEnd} />
+              <Summary label="Срок сдачи" value={context.data.submissionDueDate || 'Не установлен'} />
+              <Summary label="Форма / НПА" value={`${context.data.templateVersion || '—'} / ${context.data.regulationVersion || '—'}`} />
             </div>
             {availablePrograms.length > 0 && <label>Программа<select value={selectedProgramId ?? ''} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : null)} className={inputClass}><option value="">Выберите программу</option>{availablePrograms.map((program) => <option key={program.id} value={program.id}>{program.number} · {program.name}</option>)}</select></label>}
             {!availablePrograms.length && programsInScope.isLoading && <PekLoading />}
@@ -145,7 +147,7 @@ const PekReportCreatePage = () => {
             <PekState title="Ответственный будет назначен автоматически" message="После создания назначение отобразится в рабочей области отчёта." />
             <Button disabled={blocked || create.isPending} aria-busy={create.isPending} onClick={() => {
               if (!selectedProgramAvailable || selectedProgramId == null) return toast.error('Выбранная программа больше недоступна для этого отчёта.');
-              create.mutate(mapReportCreateRequest(params, selectedProgramId, collectImmediately));
+              create.mutate(mapReportCreateRequest(params, selectedProgramId, collectImmediately, context.data));
             }}>
               {create.isPending ? 'Создание…' : 'Создать отчёт'}
             </Button>

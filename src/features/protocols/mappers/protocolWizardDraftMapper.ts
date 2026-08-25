@@ -1,4 +1,4 @@
-import type { Protocol, ProtocolResultPayload, UpdateProtocolPayload } from '../../../types/protocols';
+import type { Protocol, ProtocolResultFormInput, UpdateProtocolPayload } from '../../../types/protocols';
 import type { CreateProtocolDraftRequest, UpdateProtocolDraftRequest } from '../api/protocolContracts';
 import { mapFrontendProtocolType } from '../api/protocolTypeMapper';
 import { mapMeasurementToRequest } from './mapProtocolWizardToRequest';
@@ -19,6 +19,18 @@ const nullableDecimal = (value: string): number | null => {
   const parsed = Number(value.replace(',', '.'));
   return value.trim() && Number.isFinite(parsed) ? parsed : null;
 };
+
+const mapWizardSamplingPoints = (form: ProtocolWizardForm) => form.templateId === 'ambient_air'
+  ? form.samplingPoints.map((point, index) => ({
+      id: point.serverPointId || undefined,
+      clientPointId: point.clientPointId,
+      name: point.name.trim(),
+      description: nullableText(point.description),
+      latitude: nullableDecimal(point.latitude),
+      longitude: nullableDecimal(point.longitude),
+      sortOrder: index,
+    }))
+  : [];
 
 export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocolDraftRequest => {
   const companyId = nullableNumber(form.companyId);
@@ -56,7 +68,7 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
       visualWorkCategory: nullableText(form.visualWorkCategory), normLevel: nullableText(form.normLevel),
       sampleNumber: form.templateId === 'soil' ? nullableText(firstSample?.sampleNumber || '') : null,
       samplingDepth: form.templateId === 'soil' ? nullableText(firstSample?.samplingDepth || '') : null,
-      samplingPlace: nullableText(firstSample?.samplingPlace || form.measurementPlace),
+      samplingPlace: form.templateId === 'ambient_air' ? null : nullableText(firstSample?.samplingPlace || form.measurementPlace),
       waterType: nullableText(form.waterType), waterUseCategory: nullableText(form.waterUseCategory),
       factorType: nullableText(form.results.find((row) => row.factorType)?.factorType || ''),
     },
@@ -70,6 +82,7 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
     emissionSourceId: nullableNumber(form.emissionSourceId),
     waterOutletId: nullableNumber(form.waterOutletId),
   } : null,
+  samplingPoints: mapWizardSamplingPoints(form).map((point) => ({ ...point, id: point.id ?? null })),
   printVisibility: form.printVisibility,
   };
 };
@@ -97,10 +110,10 @@ export const mapWizardToUpdateDraft = (form: ProtocolWizardForm, protocol: Proto
   approver: protocol.approver || '',
   measurementDate: form.measurementDate || undefined,
   measurementTime: form.measurementTime || undefined,
-  measurementPlace: form.measurementPlace || undefined,
+  measurementPlace: form.templateId === 'ambient_air' ? undefined : form.measurementPlace || undefined,
   sampleDate: form.sampleDate || undefined,
   sampleNumber: form.templateId === 'soil' ? form.results[0]?.sampleNumber || undefined : undefined,
-  samplingPlace: form.results[0]?.samplingPlace || form.measurementPlace || undefined,
+  samplingPlace: form.templateId === 'ambient_air' ? undefined : form.results[0]?.samplingPlace || form.measurementPlace || undefined,
   samplingDepth: form.templateId === 'soil' ? form.results[0]?.samplingDepth || undefined : undefined,
   sourceNumber: nullableText(form.sourceNumber) ?? undefined,
   basis: nullableText(form.basis) ?? undefined,
@@ -135,6 +148,7 @@ export const mapWizardToUpdateDraft = (form: ProtocolWizardForm, protocol: Proto
   printVisibility: form.printVisibility,
   orderId: form.orderId || undefined,
   orderServiceItemId: form.orderServiceItemId || undefined,
+  samplingPoints: mapWizardSamplingPoints(form),
   conditions: {
     season: form.season || null, workCategory: form.workCategory || null,
     workplaceType: form.workplaceType || null, roomType: form.roomType || null,
@@ -143,7 +157,7 @@ export const mapWizardToUpdateDraft = (form: ProtocolWizardForm, protocol: Proto
     waterType: form.waterType || null, waterUseCategory: form.waterUseCategory || null,
     sampleNumber: form.templateId === 'soil' ? form.results[0]?.sampleNumber || null : null,
     samplingDepth: form.templateId === 'soil' ? form.results[0]?.samplingDepth || null : null,
-    samplingPlace: form.results[0]?.samplingPlace || form.measurementPlace || null,
+    samplingPlace: form.templateId === 'ambient_air' ? null : form.results[0]?.samplingPlace || form.measurementPlace || null,
     factorType: form.results.find((row) => row.factorType)?.factorType || null,
   },
   });
@@ -153,10 +167,11 @@ export const mapWizardResultToDraftRequest = (
   row: ProtocolWizardResult,
   form: ProtocolWizardForm,
   index: number,
-): ProtocolResultPayload => {
+): ProtocolResultFormInput => {
   const measurement = mapMeasurementToRequest(row, form, index, false);
   const { sampleName: _legacySampleName, ...measurementValues } = measurement.values ?? {};
   return {
+    samplingPointId: form.templateId === 'ambient_air' ? row.samplingPointId || null : null,
     normativeId: measurement.normativeId ?? null,
     measurementDeviceId: measurement.measurementDeviceId ?? numericId(form.defaultMeasurementDeviceId) ?? null,
     values: {
@@ -172,8 +187,8 @@ export const mapWizardResultToDraftRequest = (
       textValue: nullableText(row.textValue),
       cas: nullableText(row.cas),
       formula: nullableText(row.formula),
-      measurementPlace: nullableText(row.samplingPlace || form.measurementPlace),
-      samplingPlace: nullableText(row.samplingPlace || form.measurementPlace),
+      measurementPlace: form.templateId === 'ambient_air' ? null : nullableText(row.samplingPlace || form.measurementPlace),
+      samplingPlace: form.templateId === 'ambient_air' ? null : nullableText(row.samplingPlace || form.measurementPlace),
       samplingDate: nullableText(row.samplingDate || form.sampleDate),
       samplingSpeed: nullableText(row.samplingSpeed),
       sampleVolume: nullableText(row.sampleVolume),
@@ -244,6 +259,15 @@ export const mapProtocolToWizardForm = (protocol: Protocol): ProtocolWizardForm 
     pekControlItemId: textValue(protocol.pekControlItemId), pekControlEventId: textValue(protocol.pekControlEventId),
     monitoringPointId: textValue(protocol.monitoringPointId), emissionSourceId: textValue(protocol.emissionSourceId),
     waterOutletId: textValue(protocol.waterOutletId), printVisibility: protocol.printVisibility,
+    samplingPoints: (protocol.samplingPoints ?? []).map((point, index) => ({
+      clientPointId: textValue(point.clientPointId || point.id),
+      serverPointId: textValue(point.id) || undefined,
+      name: point.name,
+      description: textValue(point.description),
+      latitude: textValue(point.latitude),
+      longitude: textValue(point.longitude),
+      sortOrder: point.sortOrder ?? index,
+    })),
     results: protocol.results.map((row) => ({
       clientRowId: textValue(row.values.clientRowId) || undefined,
       serverResultId: row.id, indicatorName: textValue(row.values.indicatorName ?? row.indicatorName),
@@ -251,6 +275,7 @@ export const mapProtocolToWizardForm = (protocol: Protocol): ProtocolWizardForm 
       factorCode: textValue(row.values.factorCode), cas: textValue(row.values.cas ?? row.values.casNumber),
       formula: textValue(row.values.formula), unit: textValue(row.values.unit ?? row.unit),
       value: textValue(row.values.resultValue ?? row.resultValue ?? row.result ?? row.values.value),
+      samplingPointId: textValue(row.samplingPointId),
       textValue: textValue(row.values.textValue), samplingPlace: textValue(row.values.samplingPlace ?? row.measurementPlace),
       samplingDate: textValue(row.values.samplingDate), sampleNumber: textValue(row.values.sampleNumber),
       samplingDepth: textValue(row.values.samplingDepth), measurementDeviceId: textValue(row.measurementDeviceId),

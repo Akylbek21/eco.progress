@@ -37,7 +37,7 @@ const resultValue = (protocol: Protocol, row: Protocol['results'][number], key: 
 const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, draft = false, onClose, onConfirmSign }: Props) => {
   if (!open) return null;
   const landscape = protocol?.templateId === 'industrial_emissions';
-  const columns = protocol ? getProtocolResultColumns(protocol.templateId, protocol.subtype) : [];
+  const columns = protocol ? getProtocolResultColumns(protocol.templateId, protocol.subtype).filter((column) => protocol.templateId !== 'ambient_air' || column.key !== 'samplingPlace') : [];
   const visible = (field: ProtocolPrintField) => protocol ? isProtocolFieldVisible(protocol.printVisibility, field) : true;
   const environmentFields = protocol ? ([
     ['temperature', 'Температура', protocol.environment?.temperature, '°C'],
@@ -47,6 +47,22 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
   ] as Array<[ProtocolPrintField, string, unknown, string]>).filter(
     ([field, , content]) => visible(field) && content !== undefined && content !== null && String(content).trim() !== '',
   ) : [];
+  const resultGroups = protocol
+    ? protocol.templateId === 'ambient_air'
+      ? [
+          ...(protocol.samplingPoints ?? []).map((point) => ({
+            id: String(point.id ?? point.clientPointId ?? point.sortOrder),
+            name: point.name,
+            rows: protocol.results.filter((row) => String(row.samplingPointId ?? '') === String(point.id ?? '')),
+          })),
+          {
+            id: 'unassigned',
+            name: 'Место отбора не указано',
+            rows: protocol.results.filter((row) => !row.samplingPointId || !(protocol.samplingPoints ?? []).some((point) => String(point.id) === String(row.samplingPointId))),
+          },
+        ].filter((group) => group.rows.length > 0)
+      : [{ id: 'all', name: '', rows: protocol.results }]
+    : [];
 
   return createPortal(
     <div className="fixed inset-0 z-[120] flex flex-col bg-slate-950/80">
@@ -114,9 +130,10 @@ const ProtocolPreviewModal = ({ open, loading = false, previewUrl, protocol, dra
                   <tr>{columns.map((column) => <th key={column.key} className="border border-slate-800 bg-slate-100 px-1.5 py-2 font-bold">{column.label}</th>)}</tr>
                 </thead>
                 <tbody>
-                  {protocol.results.map((row) => (
-                    <tr key={row.id}>{columns.map((column) => <td key={column.key} className="border border-slate-700 px-1.5 py-2 text-center">{value(resultValue(protocol, row, column.key))}</td>)}</tr>
-                  ))}
+                  {resultGroups.flatMap((group) => [
+                    ...(group.name ? [<tr key={`${group.id}-heading`}><th colSpan={columns.length || 1} className="border border-slate-800 bg-eco-50 px-2 py-2 text-left text-xs font-black">{group.name}</th></tr>] : []),
+                    ...group.rows.map((row) => <tr key={row.id}>{columns.map((column) => <td key={column.key} className="border border-slate-700 px-1.5 py-2 text-center">{value(resultValue(protocol, row, column.key))}</td>)}</tr>),
+                  ])}
                   {!protocol.results.length && <tr><td colSpan={columns.length || 1} className="border border-slate-700 p-8 text-center text-slate-500">Результаты не внесены</td></tr>}
                 </tbody>
               </table>

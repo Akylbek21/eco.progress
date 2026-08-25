@@ -23,25 +23,13 @@ test('PEK documents use versions, signatures and exact backend download/sign act
   assert.match(source, /downloadCms\.mutate\(signature\.id\)/);
 });
 
-test('company and PEK memberships use only the confirmed CRUD endpoints and reload after mutations', async () => {
-  const service = await read('src/services/membershipService.ts');
-  const panel = await read('src/components/memberships/MembershipAccessPanel.tsx');
+test('client-company employee management and PEK memberships are not exposed', async () => {
   const companies = await read('src/pages/CompaniesPage.tsx');
-  const pek = await read('src/features/pek/pages/PekMembershipsPage.tsx');
   const pekService = await read('src/features/pek/api/pekService.ts');
-  assert.match(service, /`\/pek\/companies\/\$\{companyId\}\/members`/);
-  assert.match(service, /`\/companies\/\$\{companyId\}\/members`/);
-  assert.match(service, /api\.post\(base\(scope, companyId\), body\)/);
-  assert.match(service, /api\.patch\(`\$\{base\(scope, companyId\)\}\/\$\{membershipId\}`, body\)/);
-  assert.match(service, /api\.delete\(`\$\{base\(scope, companyId\)\}\/\$\{membershipId\}`\)/);
-  assert.match(panel, /await reload\(\)/);
-  assert.match(companies, /Сотрудники \/ Доступ/);
-  assert.match(companies, /hasCompanyPermission\(user, 'COMPANY_EDIT'\)/);
-  assert.match(pekService, /getPekMemberships:[\s\S]*`\/pek\/companies\/\$\{companyId\}\/members`/);
-  assert.match(pekService, /addPekMembership:[\s\S]*api\.post\(`\/pek\/companies\/\$\{companyId\}\/members`, body\)/);
-  assert.match(pekService, /updatePekMembership:[\s\S]*api\.patch\(`\/pek\/companies\/\$\{companyId\}\/members\/\$\{membershipId\}`, payload, pekMutationOptions\(version\)\)/);
-  assert.match(pekService, /deactivatePekMembership:[\s\S]*api\.delete\(`\/pek\/companies\/\$\{companyId\}\/members\/\$\{membershipId\}`, pekMutationOptions\(version\)\)/);
-  assert.match(pek, /invalidateQueries/);
+  assert.doesNotMatch(companies, /Сотрудники \/ Доступ/);
+  assert.doesNotMatch(companies, /MembershipAccessPanel/);
+  assert.doesNotMatch(pekService, /\/pek\/companies\/\$\{companyId\}\/members/);
+  assert.match(pekService, /'\/pek\/lookups\/assignees'/);
 });
 
 test('laboratory list maps status to includeInactive and eligible users trust the scoped endpoint', async () => {

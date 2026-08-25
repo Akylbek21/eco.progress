@@ -24,9 +24,13 @@ describe('PEK P1 frontend protections', () => {
 
   it('takes every exceedance mutation button from availableActions without role checks', () => {
     const component = readFileSync(resolve(process.cwd(), 'src/features/pek/components/exceedances/PekReportExceedances.tsx'), 'utf8');
-    for (const action of ['assignResponsible', 'addEvidence', 'edit', 'changeStatus', 'close', 'reopen']) {
+    for (const action of ['assignResponsible', 'addEvidence', 'edit']) {
       expect(component).toContain(`selectedActions.${action} === true`);
     }
+    expect(component).toContain('selected?.allowedTransitions');
+    expect(component).toContain('pekApi.transitionExceedance');
+    expect(component).not.toContain('closeExceedance');
+    expect(component).not.toContain('reopenExceedance');
     expect(component).not.toMatch(/role\s*===\s*['"](?:ADMIN|ECOLOGIST|LABORATORY)['"]/);
     expect(component).toContain('enabled: selected?.availableActions.assignResponsible === true');
 
@@ -38,7 +42,7 @@ describe('PEK P1 frontend protections', () => {
     const order: string[] = [];
     const upload = vi.fn(async () => {
       order.push('upload');
-      return { fileId: 'file-42', fileName: 'proof.pdf' };
+      return { fileId: 'file-42', fileName: 'proof.pdf', version: 4 };
     });
     const attach = vi.fn(async (_id: number, _version: number, fileId: string) => {
       order.push(`attach:${fileId}`);
@@ -47,11 +51,11 @@ describe('PEK P1 frontend protections', () => {
 
     await uploadAndAttachExceedanceEvidence({ file: { name: 'proof.pdf' } as File, exceedanceId: 4, reportId: 9, version: 3 }, { upload, attach });
     expect(order).toEqual(['upload', 'attach:file-42']);
-    expect(attach).toHaveBeenCalledWith(4, 3, 'file-42');
+    expect(attach).toHaveBeenCalledWith(4, 4, 'file-42');
   });
 
   it('keeps evidence out of local state when attach is forbidden or scope-mismatched', async () => {
-    const uploaded = { fileId: 'file-42', fileName: 'proof.pdf' };
+    const uploaded = { fileId: 'file-42', fileName: 'proof.pdf', version: 4 };
     const upload = vi.fn(async () => uploaded);
     const attach = vi.fn(async () => { throw axiosError(403, 'PEK_EVIDENCE_FILE_FORBIDDEN'); });
     await expect(uploadAndAttachExceedanceEvidence({ file: { name: 'proof.pdf' } as File, exceedanceId: 4, reportId: 9, version: 3 }, { upload, attach })).rejects.toMatchObject({ response: { status: 403 } });

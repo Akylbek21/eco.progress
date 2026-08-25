@@ -27,6 +27,7 @@ import ProtocolCheckStep from './steps/ProtocolCheckStep';
 import ProtocolSigningStep from './steps/ProtocolSigningStep';
 import {
   createWizardDefaults,
+  createDefaultAmbientSamplingPoints,
   normalizeProtocolWizardForm,
   type LaboratoryExecutorOption,
   type ProtocolWizardForm,
@@ -69,6 +70,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   const [newProtocolConfirm, setNewProtocolConfirm] = useState(false);
   const [serverIssues, setServerIssues] = useState<Array<{ code: string; step: number; field?: FieldPath<ProtocolWizardForm>; fieldPath: string; severity: 'ERROR'; message: string }>>([]);
   const initialCreateStarted = useRef(false);
+  const ambientSamplingPointsInitialized = useRef(false);
   const idempotencyKeyRef = useRef(createProtocolDraftIdempotencyKey());
   const lastSavedFingerprintRef = useRef('');
   const lastFailedFingerprintRef = useRef('');
@@ -118,6 +120,19 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     || (laboratoriesQuery.isSuccess && laboratories.some((item) => String(item.id) === String(values.laboratoryId)));
   const waterTemplate = templates.find((item) => isWaterProtocolType(item.id));
   const waterOptions = useMemo(() => getWaterProtocolOptions(waterTemplate), [waterTemplate]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (values.templateId === 'ambient_air') {
+      if (!ambientSamplingPointsInitialized.current && form.getValues('samplingPoints').length === 0) {
+        ambientSamplingPointsInitialized.current = true;
+        form.setValue('samplingPoints', createDefaultAmbientSamplingPoints(), { shouldDirty: true });
+      }
+      return;
+    }
+    ambientSamplingPointsInitialized.current = false;
+    if (form.getValues('samplingPoints').length) form.setValue('samplingPoints', [], { shouldDirty: true });
+  }, [form, open, values.templateId]);
 
   useEffect(() => {
     if (!open) return;
@@ -183,7 +198,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
   const saveMutation = useMutation({
     mutationFn: (snapshot: ProtocolWizardForm) => saveProtocolWizardDraft(snapshot, serverDraft, idempotencyKeyRef.current),
     onMutate: () => { setSaveState(serverDraft ? 'saving' : 'creating'); setGeneralError(''); setServerIssues([]); },
-    onSuccess: async ({ protocol, resultIdsByClientRowId }, snapshot) => {
+    onSuccess: async ({ protocol, resultIdsByClientRowId, pointIdsByClientPointId }, snapshot) => {
       const created = !serverDraft;
       if (created) sessionStorage.removeItem(localProtocolDraftKey(user?.id ?? 'anonymous', null));
       setServerDraft(protocol);
@@ -192,8 +207,17 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
         const serverResultId = resultIdsByClientRowId.get(row.clientRowId);
         if (serverResultId) form.setValue(`results.${index}.serverResultId`, serverResultId, { shouldDirty: false });
       });
+      const livePoints = form.getValues('samplingPoints');
+      livePoints.forEach((point, index) => {
+        const serverPointId = pointIdsByClientPointId.get(point.clientPointId);
+        if (serverPointId) form.setValue(`samplingPoints.${index}.serverPointId`, serverPointId, { shouldDirty: false });
+      });
       const savedSnapshot: ProtocolWizardForm = {
         ...snapshot,
+        samplingPoints: snapshot.samplingPoints.map((point) => {
+          const serverPointId = pointIdsByClientPointId.get(point.clientPointId);
+          return serverPointId ? { ...point, serverPointId } : point;
+        }),
         results: snapshot.results.map((row) => {
           const serverResultId = resultIdsByClientRowId.get(row.clientRowId);
           return serverResultId ? { ...row, serverResultId } : row;

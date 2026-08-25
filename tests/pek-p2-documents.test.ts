@@ -17,7 +17,7 @@ Object.defineProperty(globalThis, 'localStorage', {
   },
 });
 const server = setupServer(
-  http.get('*/api/pek/reports/9/document/versions/:versionId/download/:format', ({ request }) => {
+  http.get('*/api/pek/reports/9/documents/:kind/versions/:versionId/download/:format', ({ request }) => {
     const url = new URL(request.url);
     calls.push({ path: url.pathname, authorization: request.headers.get('Authorization') });
     const format = url.pathname.endsWith('/pdf') ? 'pdf' : 'docx';
@@ -46,12 +46,12 @@ const service = () => readFileSync(resolve(process.cwd(), 'src/features/pek/api/
 
 describe('PEK P2 historical documents', () => {
   it('downloads historical DOCX and PDF through authenticated API by version.id', async () => {
-    const docx = await pekApi.downloadReportDocumentVersion(9, 41, 'docx');
-    const pdf = await pekApi.downloadReportDocumentVersion(9, 42, 'pdf');
+    const docx = await pekApi.downloadReportDocumentVersion(9, 'OFFICIAL', 41, 'docx');
+    const pdf = await pekApi.downloadReportDocumentVersion(9, 'INTERNAL_ANALYTICAL', 42, 'pdf');
 
     expect(calls).toEqual([
-      { path: '/api/pek/reports/9/document/versions/41/download/docx', authorization: 'Bearer document-token' },
-      { path: '/api/pek/reports/9/document/versions/42/download/pdf', authorization: 'Bearer document-token' },
+      { path: '/api/pek/reports/9/documents/official/versions/41/download/docx', authorization: 'Bearer document-token' },
+      { path: '/api/pek/reports/9/documents/internal-analytical/versions/42/download/pdf', authorization: 'Bearer document-token' },
     ]);
     expect(docx.filename).toBe('history.docx');
     expect(pdf.filename).toBe('history.pdf');
@@ -61,16 +61,15 @@ describe('PEK P2 historical documents', () => {
 
   it('shows historical buttons only from hasDocx/hasPdf and passes version.id', () => {
     const source = component();
-    expect(source).toContain('version.hasDocx === true');
-    expect(source).toContain("onDownload(version.id, 'docx')");
-    expect(source).toContain('version.hasPdf === true');
-    expect(source).toContain("onDownload(version.id, 'pdf')");
+    expect(source).toContain("format === 'docx' ? version.hasDocx");
+    expect(source).toContain('versionId: version.id, format');
+    expect(source).toContain("format === 'pdf' ? version.hasPdf");
     expect(source).not.toContain('latestVersion.id');
   });
 
   it('uses backend stale label without blocking historical files', () => {
     const source = component();
-    expect(source).toContain("version.stale ? 'Устаревшая версия' : 'Актуальная версия'");
+    expect(source).toContain("version.stale ? 'Устарел' : 'Актуален'");
     expect(source).not.toMatch(/version\.status|version\.isActual/);
     expect(source).not.toContain('version.stale &&');
     expect(source).not.toContain('!version.stale');

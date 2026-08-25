@@ -2,13 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import api from '../src/services/api';
-import {
-  bulkAssignDevice,
-  bulkDeleteResults,
-  bulkUpdatePlace,
-  getWeatherConditions,
-  normalizeWeatherConditions,
-} from '../src/services/apiProtocolService';
+import { getWeatherConditions, normalizeWeatherConditions, saveProtocolDraftResults } from '../src/services/apiProtocolService';
 import { normalizeApiError } from '../src/services/apiHelpers';
 import { searchNormatives } from '../src/services/normativeSearchService';
 import {
@@ -92,7 +86,7 @@ describe('protocol access and draft compatibility', () => {
     const payload = mapWizardToCreateDraft(form);
 
     expect(payload).toMatchObject({
-      templateId: 'ambient_air',
+      templateId: 'AMBIENT_AIR_SZZ',
       companyId: 77,
       objectId: null,
       executorId: null,
@@ -166,9 +160,9 @@ describe('protocol mutation HTTP contracts', () => {
       http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: draft })),
     );
 
-    await bulkAssignDevice('42', draft.results as never, 9, 14);
-    await bulkUpdatePlace('42', [draft.results[0]] as never, 'Точка №1', 14);
-    await bulkDeleteResults('42', ['2'], 14);
+    await saveProtocolDraftResults('42', { version: 14, added: [], updated: [{ id: '1', values: { indicatorName: 'A' }, measurementDeviceId: 9, normativeId: null }, { id: '2', values: { indicatorName: 'B' }, measurementDeviceId: 9, normativeId: null }], deletedIds: [] });
+    await saveProtocolDraftResults('42', { version: 14, added: [], updated: [{ id: '1', values: { indicatorName: 'A', measurementPlace: 'Точка №1' }, measurementDeviceId: null, normativeId: null }], deletedIds: [] });
+    await saveProtocolDraftResults('42', { version: 14, added: [], updated: [], deletedIds: ['2'] });
 
     expect(calls).toEqual([
       {

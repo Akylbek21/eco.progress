@@ -1,8 +1,8 @@
 export {
   previewProtocol,
+  previewSignedProtocol,
   generateDocx,
   generatePdf,
-  downloadDocx,
-  downloadPdf,
+  downloadProtocolDocument,
 } from '../../../services/apiProtocolService';
-export type { DownloadedProtocolFile } from '../../../services/apiProtocolService';
+export type { DownloadedProtocolFile, ProtocolDocumentFormat } from '../../../services/apiProtocolService';

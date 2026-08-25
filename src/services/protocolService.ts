@@ -8,7 +8,6 @@ import type {
   ProtocolCalculationSummaryResponse,
   ProtocolPage,
   ProtocolListQuery,
-  ProtocolResultPayload,
   ProtocolResultRow,
   ProtocolTemplate,
   RawMeasurementRequest,
@@ -33,6 +32,8 @@ export type DownloadedProtocolFile = {
   fileName?: string;
 };
 
+export type ProtocolDocumentFormat = 'pdf' | 'docx';
+
 export interface ProtocolService {
   getProtocols(params?: Record<string, string>): Promise<Protocol[]>;
   getProtocolsPage(params: ProtocolListQuery, signal?: AbortSignal): Promise<ProtocolPage>;
@@ -49,12 +50,6 @@ export interface ProtocolService {
   refreshLaboratoryData(protocolId: string, version: number): Promise<Protocol>;
   updateProtocol(protocolId: string, payload: UpdateProtocolPayload): Promise<Protocol>;
   deleteProtocol(protocolId: string, version: number): Promise<void>;
-  addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow>;
-  updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow>;
-  deleteProtocolResult(protocolId: string, resultId: string, version: number): Promise<void>;
-  bulkAssignDevice(protocolId: string, rows: ProtocolResultRow[], measurementDeviceId: string | number, version: number): Promise<Protocol>;
-  bulkUpdatePlace(protocolId: string, rows: ProtocolResultRow[], measurementPlace: string, version: number): Promise<Protocol>;
-  bulkDeleteResults(protocolId: string, resultIds: string[], version: number): Promise<Protocol>;
   getRawMeasurements(protocolId: string, resultId: string): Promise<RawMeasurementsResponse>;
   saveRawMeasurements(
     protocolId: string,
@@ -79,10 +74,10 @@ export interface ProtocolService {
   cancelProtocol(protocolId: string, request: CancelProtocolRequest): Promise<Protocol>;
   archiveProtocol(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
   previewProtocol(protocolId: string): Promise<Blob>;
+  previewSignedProtocol(protocolId: string): Promise<Blob>;
   generateDocx(protocolId: string, version: number): Promise<Protocol>;
   generatePdf(protocolId: string, version: number): Promise<Protocol>;
-  downloadDocx(protocolId: string): Promise<DownloadedProtocolFile>;
-  downloadPdf(protocolId: string): Promise<DownloadedProtocolFile>;
+  downloadProtocolDocument(protocolId: string, format: ProtocolDocumentFormat): Promise<DownloadedProtocolFile>;
   importExcel(protocolId: string, file: File, version: number): Promise<Protocol>;
   addProtocolMeasurementDevice(protocolId: string, device: MeasurementDevice, version: number): Promise<Protocol>;
   removeProtocolMeasurementDevice(protocolId: string, deviceId: string, version: number): Promise<Protocol>;
@@ -123,12 +118,6 @@ const protocolService: ProtocolService = {
   refreshLaboratoryData: async (protocolId, version) => (await import('./apiProtocolService')).refreshLaboratoryData(protocolId, version),
   updateProtocol: async (protocolId, payload) => (await implementation()).updateProtocol(protocolId, payload),
   deleteProtocol: async (protocolId, version) => (await implementation()).deleteProtocol(protocolId, version),
-  addProtocolResult: async (protocolId, payload, version) => (await implementation()).addProtocolResult(protocolId, payload, version),
-  updateProtocolResult: async (protocolId, resultId, payload, version) => (await implementation()).updateProtocolResult(protocolId, resultId, payload, version),
-  deleteProtocolResult: async (protocolId, resultId, version) => (await implementation()).deleteProtocolResult(protocolId, resultId, version),
-  bulkAssignDevice: async (protocolId, rows, measurementDeviceId, version) => (await implementation()).bulkAssignDevice(protocolId, rows, measurementDeviceId, version),
-  bulkUpdatePlace: async (protocolId, rows, measurementPlace, version) => (await implementation()).bulkUpdatePlace(protocolId, rows, measurementPlace, version),
-  bulkDeleteResults: async (protocolId, resultIds, version) => (await implementation()).bulkDeleteResults(protocolId, resultIds, version),
   getRawMeasurements: async (protocolId, resultId) => (await implementation()).getRawMeasurements(protocolId, resultId),
   saveRawMeasurements: async (protocolId, resultId, payload, methodTemplateId, version) =>
     (await implementation()).saveRawMeasurements(protocolId, resultId, payload, methodTemplateId, version),
@@ -148,10 +137,10 @@ const protocolService: ProtocolService = {
   cancelProtocol: async (protocolId, request) => (await implementation()).cancelProtocol(protocolId, request),
   archiveProtocol: async (protocolId, request) => (await implementation()).archiveProtocol(protocolId, request),
   previewProtocol: async (protocolId) => (await implementation()).previewProtocol(protocolId),
+  previewSignedProtocol: async (protocolId) => (await implementation()).previewSignedProtocol(protocolId),
   generateDocx: async (protocolId, version) => (await implementation()).generateDocx(protocolId, version),
   generatePdf: async (protocolId, version) => (await implementation()).generatePdf(protocolId, version),
-  downloadDocx: async (protocolId) => (await implementation()).downloadDocx(protocolId),
-  downloadPdf: async (protocolId) => (await implementation()).downloadPdf(protocolId),
+  downloadProtocolDocument: async (protocolId, format) => (await implementation()).downloadProtocolDocument(protocolId, format),
   importExcel: async (protocolId, file, version) => (await implementation()).importExcel(protocolId, file, version),
   addProtocolMeasurementDevice: async (protocolId, device, version) => (await implementation()).addProtocolMeasurementDevice(protocolId, device, version),
   removeProtocolMeasurementDevice: async (protocolId, deviceId, version) => (await implementation()).removeProtocolMeasurementDevice(protocolId, deviceId, version),

@@ -12,7 +12,7 @@ const actions = (value: unknown): Record<string, boolean> => Object.fromEntries(
 const numberIds = (value: unknown): number[] => Array.isArray(value) ? value.map(Number).filter(Number.isFinite) : [];
 const strings = (value: unknown): string[] => Array.isArray(value) ? value.map(String) : [];
 
-const mapMonitoring = (value: unknown): PekMonitoringDirection => {
+export const mapMonitoringDirection = (value: unknown): PekMonitoringDirection => {
   const source = asPekRecord(value);
   return {
     id: Number(source.id),
@@ -26,7 +26,6 @@ const mapMonitoring = (value: unknown): PekMonitoringDirection => {
     controlItemIds: numberIds(source.controlItemIds),
     protocolTypes: strings(source.protocolTypes),
     active: source.active === true,
-    version: Number(source.version),
     availableActions: actions(source.availableActions),
   };
 };
@@ -36,7 +35,13 @@ export const mapProgramMonitoring = (value: unknown, programId: number): PekProg
   const availableActions = actions(source.availableActions);
   return {
     programId: Number(source.programId ?? programId),
-    items: (Array.isArray(source.items) ? source.items : []).map(mapMonitoring),
+    programVersion: Number(source.programVersion ?? source.version),
+    contentRevision: Number(source.contentRevision),
+    readiness: source.readiness && typeof source.readiness === 'object'
+      ? source.readiness as PekProgramMonitoringResponse['readiness']
+      : null,
+    readinessPercent: source.readinessPercent == null ? undefined : Number(source.readinessPercent),
+    items: (Array.isArray(source.items) ? source.items : []).map(mapMonitoringDirection),
     availableActions: {
       create: availableActions.create === true,
     },

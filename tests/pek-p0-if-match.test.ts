@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { pekApi } from '../src/features/pek/api/pekService';
+import { mapProgramResponse } from '../src/features/pek/mappers/responseMappers';
 import { handlePekMutationError, PEK_VERSION_CONFLICT_MESSAGE } from '../src/features/pek/utils/pekMutationError';
 
 type CapturedRequest = { method: string; path: string; ifMatch: string | null; body: unknown };
@@ -45,12 +46,10 @@ const server = setupServer(
   http.post('*/api/pek/exceedances/4/assign', async ({ request }) => { await capture(request); return HttpResponse.json({ data: exceedance }); }),
   http.post('*/api/pek/exceedances/4/evidence', async ({ request }) => { await capture(request); return HttpResponse.json({ data: exceedance }); }),
   http.post('*/api/pek/exceedances/4/transition', async ({ request }) => { await capture(request); return HttpResponse.json({ data: exceedance }); }),
-  http.post('*/api/pek/exceedances/4/close', async ({ request }) => { await capture(request); return HttpResponse.json({ data: exceedance }); }),
-  http.post('*/api/pek/exceedances/4/reopen', async ({ request }) => { await capture(request); return HttpResponse.json({ data: exceedance }); }),
   http.post('*/api/pek/exceedances/4/corrective-actions', async ({ request }) => { await capture(request); return HttpResponse.json({ data: { id: 2, exceedanceId: 4, description: 'Фильтр', status: 'OPEN', version: 1, availableActions: {} } }); }),
   http.put('*/api/pek/exceedances/4/corrective-actions/2', async ({ request }) => { await capture(request); return HttpResponse.json({ data: { id: 2, exceedanceId: 4, description: 'Новый фильтр', status: 'OPEN', version: 3, availableActions: {} } }); }),
   http.delete('*/api/pek/exceedances/4/corrective-actions/2', async ({ request }) => { await capture(request); return new HttpResponse(null, { status: 204 }); }),
-  http.post('*/api/pek/exceedances/4/corrective-actions/2/status', async ({ request }) => { await capture(request); return HttpResponse.json({ data: { id: 2, exceedanceId: 4, description: 'Фильтр', status: 'DONE', version: 4, availableActions: {} } }); }),
+  http.post('*/api/pek/exceedances/4/corrective-actions/2/transition', async ({ request }) => { await capture(request); return HttpResponse.json({ data: { id: 2, exceedanceId: 4, description: 'Фильтр', status: 'DONE', version: 4, availableActions: {} } }); }),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -64,12 +63,18 @@ const expectVersioned = (call: CapturedRequest, version: number, body: unknown) 
 };
 
 describe('PEK P0 If-Match contracts', () => {
-  it('maps monitoring object response without dropping items', async () => {
-    const result = await pekApi.getProgramMonitoring(3);
-    expect(result.programId).toBe(3);
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0].name).toBe('Почва');
-    expect(result.availableActions.create).toBe(true);
+  it('maps monitoring inside the program aggregate', () => {
+    const result = mapProgramResponse({
+      id: 3, version: 7, contentRevision: 11, regulationVersion: '250/2026', templateVersion: 'program-v2',
+      number: 'PEK-3', name: 'Program', status: 'DRAFT', validFrom: '2026-01-01', validUntil: '2026-12-31',
+      monitoring: { items: [{ id: 11, programId: 3, monitoringType: 'SOIL', name: 'Почва', frequencyType: 'ANNUAL', plannedCount: 1, controlItemIds: [], protocolTypes: ['SOIL'], active: true, availableActions: { edit: true } }], availableActions: { create: true } },
+    });
+    expect(result.monitoring?.programId).toBe(3);
+    expect(result.monitoring?.programVersion).toBe(7);
+    expect(result.monitoring?.contentRevision).toBe(11);
+    expect(result.monitoring?.items).toHaveLength(1);
+    expect(result.monitoring?.items[0].name).toBe('Почва');
+    expect(result.monitoring?.availableActions.create).toBe(true);
   });
 
   it('updates settings with PUT, companyId query and no version in body', async () => {
@@ -96,18 +101,18 @@ describe('PEK P0 If-Match contracts', () => {
     await pekApi.assignExceedance(4, { version: 6, responsibleUserId: 3, dueDate: '2026-09-01', correctiveAction: 'Фильтр' });
     await pekApi.attachExceedanceEvidence(4, 7, 'file-1');
     await pekApi.transitionExceedance(4, { version: 8, status: 'IN_PROGRESS', comment: 'Начато' });
-    await pekApi.closeExceedance(4, 9, 'Устранено');
-    await pekApi.reopenExceedance(4, 10, 'Повторное превышение');
+    await pekApi.transitionExceedance(4, { version: 9, status: 'CLOSED', resolutionComment: 'Устранено' });
+    await pekApi.transitionExceedance(4, { version: 10, status: 'OPEN', comment: 'Повторное превышение' });
     await pekApi.createCorrectiveAction(4, 11, { description: 'Фильтр', responsibleUserId: 3, dueDate: '2026-09-01' });
     await pekApi.updateCorrectiveAction(4, 2, { version: 2, description: 'Новый фильтр' });
     await pekApi.deleteCorrectiveAction(4, 2, 3);
-    await pekApi.changeCorrectiveActionStatus(4, 2, { version: 4, status: 'DONE', comment: 'Готово' });
+    await pekApi.transitionCorrectiveAction(4, 2, { version: 4, status: 'DONE', comment: 'Готово' });
 
     expectVersioned(calls[0], 6, { responsibleUserId: 3, dueDate: '2026-09-01', correctiveAction: 'Фильтр' });
     expectVersioned(calls[1], 7, { fileId: 'file-1' });
     expectVersioned(calls[2], 8, { status: 'IN_PROGRESS', comment: 'Начато' });
-    expectVersioned(calls[3], 9, { resolutionComment: 'Устранено' });
-    expectVersioned(calls[4], 10, { comment: 'Повторное превышение' });
+    expectVersioned(calls[3], 9, { status: 'CLOSED', resolutionComment: 'Устранено' });
+    expectVersioned(calls[4], 10, { status: 'OPEN', comment: 'Повторное превышение' });
     expectVersioned(calls[5], 11, { description: 'Фильтр', responsibleUserId: 3, dueDate: '2026-09-01' });
     expectVersioned(calls[6], 2, { description: 'Новый фильтр' });
     expect(calls[7].ifMatch).toBe('3');
@@ -118,7 +123,7 @@ describe('PEK P0 If-Match contracts', () => {
   it('downloads CMS by signature.id', () => {
     const service = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
     const component = readFileSync(resolve(process.cwd(), 'src/features/pek/components/documents/PekReportDocuments.tsx'), 'utf8');
-    expect(service).toContain('/document/signatures/${signatureId}/download');
+    expect(service).toContain("${reportDocumentPath(reportId, 'OFFICIAL')}/signatures/${signatureId}/download");
     expect(component).toContain('downloadCms.mutate(signature.id)');
     expect(service).not.toContain('signatureFileId');
     expect(component).not.toContain('signatureFileId');

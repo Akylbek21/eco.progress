@@ -20,6 +20,7 @@ import { protocolQueryKeys, protocolScope } from '../features/protocols/hooks/qu
 import { hasProtocolAction } from '../features/protocols/utils/protocolActions';
 import { isProtocolVersionConflict, protocolVersionConflictMessage } from '../features/protocols/utils/protocolVersionConflict';
 import { protocolAccessErrorMessage } from '../utils/protocolError';
+import { openProtocolDownload } from '../features/protocols/utils/protocolFiles';
 
 const sizes = [10, 20, 50, 100];
 const inputClass = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-eco-500 focus:ring-4 focus:ring-eco-100';
@@ -28,8 +29,6 @@ const positiveInteger = (value: string | null) => { const parsed = Number(value)
 const protocolStatuses = new Set<ProtocolStatus>(['DRAFT', 'CALCULATED', 'READY_FOR_APPROVAL', 'NEEDS_REVISION', 'APPROVED', 'SIGNED', 'REPLACED', 'CANCELLED', 'ARCHIVED']);
 const visibleStatusFilters: ProtocolStatus[] = ['DRAFT', 'CALCULATED', 'READY_FOR_APPROVAL', 'NEEDS_REVISION', 'APPROVED', 'SIGNED', 'REPLACED', 'CANCELLED', 'ARCHIVED'];
 const protocolTemplates = new Set<ProtocolTemplateId>(['ambient_air', 'workplace_air', 'soil', 'water', 'microclimate', 'lighting', 'noise_vibration', 'uv_emf_laser']);
-const saveBlob = (blob: Blob, name: string) => { const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); };
-
 const ProtocolsPage = () => {
   const navigate = useNavigate(); const toast = useToast(); const { user } = useAuth(); const queryClient = useQueryClient();
   const scope = protocolScope(user?.id);
@@ -97,7 +96,7 @@ const ProtocolsPage = () => {
   };
   const protocolErrorMessage = (error: unknown, fallback: string) =>
     protocolAccessErrorMessage(error) || parseApiError(error, fallback).message;
-  const download = async (protocol: Protocol, kind: 'pdf' | 'docx') => { if (busyId || !hasProtocolAction(protocol, kind === 'pdf' ? 'downloadPdf' : 'downloadDocx')) return; setBusyId(protocol.id); try { const file = kind === 'pdf' ? await protocolService.downloadPdf(protocol.id) : await protocolService.downloadDocx(protocol.id); saveBlob(file.blob, file.fileName || `${protocol.protocolNumber}.${kind}`); } catch (error) { const parsed = parseApiError(error, `Не удалось скачать ${kind.toUpperCase()}`); toast.error(parsed.status === 403 ? 'Нет доступа к протоколу' : parsed.message); } finally { setBusyId(''); } };
+  const download = async (protocol: Protocol, kind: 'pdf' | 'docx') => { if (busyId || !hasProtocolAction(protocol, kind === 'pdf' ? 'downloadPdf' : 'downloadDocx')) return; setBusyId(protocol.id); try { const file = await protocolService.downloadProtocolDocument(protocol.id, kind); openProtocolDownload(file, `${protocol.protocolNumber}.${kind}`); } catch (error) { const parsed = parseApiError(error, `Не удалось скачать ${kind.toUpperCase()}`); toast.error(parsed.status === 403 ? 'Нет доступа к протоколу' : parsed.message); } finally { setBusyId(''); } };
   const sign = (protocol: Protocol) => { if (busyId || signMutation.isPending) return; setSignTargetId(protocol.id); signMutation.sign({ protocol }); };
   const remove = async () => { if (!deleteTarget || busyId || !hasProtocolAction(deleteTarget, 'delete')) return; setBusyId(deleteTarget.id); try { await protocolService.deleteProtocol(deleteTarget.id, Number(deleteTarget.version)); setDeleteTarget(null); toast.success('Протокол удалён'); await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) }); } catch (error) { if (!await offerConflictReload(error)) toast.error(protocolErrorMessage(error, 'Не удалось удалить протокол')); } finally { setBusyId(''); } };
   const archive = async () => { if (!archiveTarget || busyId || !hasProtocolAction(archiveTarget, 'archive')) return; setBusyId(archiveTarget.id); try { await protocolService.archiveProtocol(archiveTarget.id, { version: Number(archiveTarget.version) }); setArchiveTarget(null); toast.success('Протокол архивирован'); await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) }); } catch (error) { if (!await offerConflictReload(error)) toast.error(protocolErrorMessage(error, 'Не удалось архивировать протокол')); } finally { setBusyId(''); } };

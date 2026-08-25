@@ -8,49 +8,33 @@ import Button from '../components/ui/Button';
 import { company, getWhatsAppUrl } from '../config/company';
 import { seoPageMap, type SeoPageConfig } from '../data/seoPages';
 import NotFoundPage from './NotFoundPage';
-import { buildLocalBusinessSchema, buildOrganizationSchema, buildPersonSchema } from '../utils/schema';
+import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, buildServiceEntity, entityIds } from '../seo/entityBuilders';
 import { regionContentMap } from '../content/regions/regionContent';
 import { ArticleAuthorCard, ArticleOrganizationAuthorCard, ArticleReviewerCard, ArticleSources, RelatedArticles, RelatedServices } from '../components/content/ContentBlocks';
 import { expertMap, experts, isCompleteExpert } from '../content/experts/experts';
-import type { Expert } from '../content/types';
+import type { CaseStudy, Expert } from '../content/types';
 import { publicContentRepository } from '../content/apiRepository';
 import { articleRobotsForReviewStatus } from '../content/articleReview';
-import { AeoFaqList, RelatedCaseStudies } from '../components/content/AeoContent';
+import { AeoFaqList, RelatedCaseStudies, VerifiedExperts } from '../components/content/AeoContent';
 
-const buildPrimarySchema = (page: SeoPageConfig, author?: Expert, reviewer?: Expert) => page.type === 'city' ? {
-  '@context': 'https://schema.org', '@type': 'WebPage', name: page.h1, description: page.description, url: page.canonical, dateModified: page.lastmod,
-} : page.type === 'article' ? {
-  '@context': 'https://schema.org', '@type': 'Article', headline: page.h1, description: page.description, url: page.canonical,
-  datePublished: page.datePublished, dateModified: page.lastmod,
-  author: author ? { '@id': `${page.canonical}#person` } : { '@type': 'Organization', name: company.name, url: company.siteUrl },
-  ...(reviewer ? { reviewedBy: { '@id': `${page.canonical}#person-reviewer` } } : {}),
-  publisher: { '@type': 'Organization', name: company.name, url: company.siteUrl },
-  mainEntityOfPage: page.canonical,
-  image: `${company.siteUrl}${page.image || '/og-cover.jpg'}`,
-} : {
-  '@context': 'https://schema.org', '@type': 'Service', name: page.h1, description: page.description, url: page.canonical,
-  provider: { '@type': 'Organization', name: company.name, url: company.siteUrl },
-  areaServed: page.city ? { '@type': 'City', name: page.city } : { '@type': 'Country', name: 'Казахстан' },
-  serviceType: page.service || 'Экологические услуги',
+const buildSchema = (page: SeoPageConfig, author?: Expert, reviewer?: Expert, experts: Expert[] = [], cases: CaseStudy[] = []) => {
+  const ids = entityIds(page.canonical);
+  const expertNodes = experts.map((expert, index) => buildPersonSchema(expert, `${page.canonical}#expert-${index + 1}`));
+  const caseUrls = cases.map((item) => `${company.siteUrl}/cases/${item.slug}`);
+  const primary = page.type === 'article'
+    ? buildArticleSchema({ canonical: page.canonical, headline: page.h1, description: page.description, datePublished: page.datePublished!, dateModified: page.lastmod, image: `${company.siteUrl}${page.image || '/og-cover.jpg'}`, authorId: author ? ids.author : undefined, reviewerId: reviewer ? ids.reviewer : undefined, caseUrls })
+    : page.type === 'service-city' || page.type === 'service'
+      ? buildServiceEntity({ canonical: page.canonical, name: page.h1, description: page.description, serviceType: page.service, areaServed: page.cityNominative ?? page.city, expertIds: expertNodes.map((node) => String(node['@id'])), caseUrls })
+      : undefined;
+  return [
+    ...buildCorePageEntities({ canonical: page.canonical, name: page.h1, description: page.description, dateModified: page.lastmod, localBusiness: page.cityNominative === 'Шымкент' }),
+    ...(primary ? [primary] : []),
+    ...(author ? [buildPersonSchema(author, ids.author)] : []),
+    ...(reviewer ? [buildPersonSchema(reviewer, ids.reviewer)] : []),
+    ...expertNodes,
+    buildBreadcrumbSchema(page.breadcrumbs.map((item) => ({ name: item.label, url: item.path })), page.canonical),
+  ];
 };
-
-const buildSchema = (page: SeoPageConfig, author?: Expert, reviewer?: Expert) => [
-  buildOrganizationSchema(),
-  ...(page.city === 'Шымкент' ? [buildLocalBusinessSchema()] : []),
-  buildPrimarySchema(page, author, reviewer),
-  ...(author ? [buildPersonSchema(author, `${page.canonical}#person`)] : []),
-  ...(reviewer ? [buildPersonSchema(reviewer, `${page.canonical}#person-reviewer`)] : []),
-  {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: page.breadcrumbs.map((item, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      name: item.label,
-      item: `${company.siteUrl}${item.path}`,
-    })),
-  },
-];
 
 const ListBlock = ({ title, items }: { title: string; items: string[] }) => (
   <section className="rounded-[8px] border border-slate-200 bg-white p-6 shadow-sm">
@@ -75,8 +59,9 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
     queryFn: () => publicContentRepository.getExperts(),
     initialData: import.meta.env.DEV ? experts : undefined,
     staleTime: 5 * 60 * 1000,
-    enabled: page?.type === 'article',
+    enabled: Boolean(page),
   });
+  const { data: apiCases = [] } = useQuery({ queryKey: ['public-content', 'cases'], queryFn: () => publicContentRepository.getCases(), staleTime: 5 * 60 * 1000, enabled: Boolean(page) });
   if (!page) return <NotFoundPage />;
 
   const whatsAppUrl = getWhatsAppUrl(`Здравствуйте! Хочу получить консультацию: ${page.h1}.`);
@@ -91,6 +76,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
   const articleReviewer = isCompleteExpert(reviewerCandidate) ? reviewerCandidate : undefined;
   const approvedArticleAuthor = page.reviewStatus === 'approved' ? articleAuthor : undefined;
   const approvedArticleReviewer = page.reviewStatus === 'approved' ? articleReviewer : undefined;
+  const relatedCases = apiCases.filter((item) => (!page.serviceSlug || item.service === page.serviceSlug) && (!page.cityNominative || item.city === page.cityNominative));
   const robots = page.type === 'article'
     ? articleRobotsForReviewStatus(page.reviewStatus)
     : page.indexable === false ? 'noindex,follow' : 'index,follow';
@@ -115,7 +101,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
 
   return (
     <div className="bg-[#F7FBFD]">
-      <SEO title={page.title} description={page.description} canonical={page.canonical} robots={robots} type={page.type === 'article' ? 'article' : 'website'} schema={buildSchema(page, approvedArticleAuthor, approvedArticleReviewer)} datePublished={page.datePublished} dateModified={page.lastmod} />
+      <SEO title={page.title} description={page.description} canonical={page.canonical} robots={robots} type={page.type === 'article' ? 'article' : 'website'} schema={buildSchema(page, approvedArticleAuthor, approvedArticleReviewer, apiExperts, relatedCases)} datePublished={page.datePublished} dateModified={page.lastmod} />
 
       <section className="relative isolate overflow-hidden bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-20">
         <ResponsiveImage fill priority sizes="100vw" src={page.image || '/para.jpg'} alt={page.h1} width={1600} height={900} wrapperClassName="-z-20" className="object-cover" />
@@ -233,6 +219,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
           <h2 className="mt-3 text-3xl font-bold text-eco-900">Частые вопросы</h2>
           <AeoFaqList faq={page.faq} />
               {(page.type === 'city' || page.type === 'service-city') && <div className="mt-14"><RelatedCaseStudies service={page.type === 'service-city' ? page.serviceSlug : undefined} city={page.cityNominative ?? page.city} /></div>}
+              {(page.type === 'city' || page.type === 'service-city') && <div className="mt-14"><VerifiedExperts /></div>}
         </div>
       </section>
 

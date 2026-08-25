@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "node --test tests/interactive-markup.test.mjs",
     "prerender": "node --loader ./scripts/ts-loader.mjs scripts/prerender.js",
-    "seo:audit": "node scripts/seo-audit.mjs",
+    "seo:audit": "node scripts/linguistic-content-audit.mjs && node scripts/seo-audit.mjs",
     "content:audit": "node --loader ./scripts/ts-loader.mjs scripts/content-audit.mjs",
     "content:export": "node --loader ./scripts/ts-loader.mjs scripts/content-export.mjs",
     "content:migrate:dry-run": "node --loader ./scripts/ts-loader.mjs scripts/content-export.mjs --dry-run",
@@ -22,7 +22,7 @@
     "test:production-no-msw": "node scripts/verify-production-no-msw.mjs",
     "test:production-api-base": "node scripts/verify-production-api-base.mjs",
     "test:public-performance": "node scripts/verify-public-performance.mjs",
-    "test": "node --test tests/*.test.mjs && vitest run --maxWorkers=1 tests/company-module.test.tsx tests/staff-document-repository.test.ts tests/lab-journal-api.test.ts tests/laboratory-api.test.ts tests/laboratory-components.test.tsx tests/modal-stack.test.tsx tests/normative-search-api.test.tsx tests/protocol-domain.test.ts tests/protocol-details.test.ts tests/protocol-water.test.tsx tests/protocol-overhaul.test.ts tests/protocol-signatures.test.tsx tests/protocol-current-backend.test.ts tests/protocol-wizard-v2.test.ts tests/protocol-second-fix.test.ts tests/pek-module.test.tsx tests/pek-package.test.ts tests/pek-monitoring.test.ts tests/pek-p0-if-match.test.ts tests/pek-p1-frontend.test.ts tests/pek-p2-documents.test.ts tests/signature-documents.test.ts",
+    "test": "node --test tests/*.test.mjs && vitest run --maxWorkers=1 tests/company-module.test.tsx tests/staff-document-repository.test.ts tests/lab-journal-api.test.ts tests/laboratory-api.test.ts tests/laboratory-components.test.tsx tests/modal-stack.test.tsx tests/normative-search-api.test.tsx tests/protocol-domain.test.ts tests/protocol-details.test.ts tests/protocol-water.test.tsx tests/protocol-overhaul.test.ts tests/protocol-signatures.test.tsx tests/protocol-current-backend.test.ts tests/protocol-wizard-v2.test.ts tests/protocol-second-fix.test.ts tests/pek-module.test.tsx tests/pek-package.test.ts tests/pek-monitoring.test.ts tests/pek-p0-if-match.test.ts tests/pek-p1-frontend.test.ts tests/pek-p2-documents.test.ts tests/pek-scope-selector.test.tsx tests/signature-documents.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

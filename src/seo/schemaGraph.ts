@@ -1,14 +1,11 @@
-type SchemaNode = Record<string, unknown>;
+import {
+  buildOrganizationSchema,
+  buildWebPageSchema,
+  buildWebSiteSchema,
+  entityIds,
+} from './entityBuilders.ts';
 
-const typeId: Record<string, string> = {
-  Organization: '#organization',
-  WebSite: '#website',
-  WebPage: '#webpage',
-  Service: '#service',
-  Article: '#article',
-  BreadcrumbList: '#breadcrumb',
-  FAQPage: '#faq',
-};
+type SchemaNode = Record<string, unknown>;
 
 const withoutContext = (node: SchemaNode): SchemaNode => {
   const { '@context': _context, ...rest } = node;
@@ -19,7 +16,7 @@ export const createSchemaGraph = (
   schema: SchemaNode | SchemaNode[] | undefined,
   canonical: string,
 ): { '@context': 'https://schema.org'; '@graph': SchemaNode[] } => {
-  const origin = new URL(canonical).origin;
+  const ids = entityIds(canonical);
   const input = (Array.isArray(schema) ? schema : schema ? [schema] : []).map(withoutContext);
   let personIndex = 0;
   const graph = input.map((node) => {
@@ -28,29 +25,34 @@ export const createSchemaGraph = (
       ? node['@id']
       : type === 'Person'
         ? `${canonical}${++personIndex === 1 ? '#person' : `#person-${personIndex}`}`
-        : typeId[type]
-          ? `${canonical}${typeId[type]}`
-          : undefined;
+        : type === 'Organization' ? ids.organization
+          : type === 'WebSite' ? ids.website
+            : type === 'WebPage' ? ids.webpage
+              : type === 'Service' ? ids.service
+                : type === 'Article' ? ids.article
+                  : type === 'BreadcrumbList' ? ids.breadcrumb
+                    : type === 'FAQPage' ? `${canonical}#faq`
+                      : undefined;
     return id ? { ...node, '@id': id } : node;
   });
 
-  const organizationId = `${origin}/#organization`;
-  const websiteId = `${origin}/#website`;
-  const webpageId = `${canonical}#webpage`;
+  const organizationId = ids.organization;
+  const websiteId = ids.website;
+  const webpageId = ids.webpage;
   if (!graph.some((node) => node['@type'] === 'Organization')) {
-    graph.unshift({ '@type': 'Organization', '@id': organizationId, name: 'ECOPROGRESS GROUP', url: origin });
+    graph.unshift(withoutContext(buildOrganizationSchema()));
   } else {
     const organization = graph.find((node) => node['@type'] === 'Organization');
     if (organization) organization['@id'] = organizationId;
   }
   if (!graph.some((node) => node['@type'] === 'WebSite')) {
-    graph.push({ '@type': 'WebSite', '@id': websiteId, name: 'ECOPROGRESS', url: origin, publisher: { '@id': organizationId } });
+    graph.push(withoutContext(buildWebSiteSchema()));
   } else {
     const website = graph.find((node) => node['@type'] === 'WebSite');
     if (website) website['@id'] = websiteId;
   }
   if (!graph.some((node) => node['@type'] === 'WebPage')) {
-    graph.push({ '@type': 'WebPage', '@id': webpageId, url: canonical, isPartOf: { '@id': websiteId } });
+    graph.push(withoutContext(buildWebPageSchema({ canonical, name: canonical })));
   }
 
   for (const node of graph) {

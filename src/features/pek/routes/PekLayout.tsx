@@ -16,7 +16,6 @@ const labels: Record<string, string> = {
   edit: 'Редактирование',
   workspace: 'Рабочая область',
   settings: 'Настройки',
-  access: 'Сотрудники / Доступ ПЭК',
   history: 'История',
   preview: 'Предпросмотр',
 };
@@ -40,7 +39,6 @@ const PekLayout = ({ children }: { children: ReactNode }) => {
       </div>
       <nav aria-label="Разделы ПЭК" className="mt-3 flex max-w-full gap-1 overflow-x-auto">
         {navigation.map((item) => <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => `whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold ${isActive ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{item.label}</NavLink>)}
-        <NavLink to="/staff/pek/access" className={({ isActive }) => `whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold ${isActive ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Сотрудники / Доступ ПЭК</NavLink>
         <NavLink to="/staff/pek/settings" className={({ isActive }) => `whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold ${isActive ? 'bg-eco-700 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Настройки</NavLink>
       </nav>
     </div>

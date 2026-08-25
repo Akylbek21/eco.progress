@@ -1,13 +1,12 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, TextField } from '@mui/material';
 import { useState } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
-import type { PekMonitoringDirection, PekMonitoringMutationRequest, PekMonitoringType, PekPeriodicity, PekProgram } from '../../api/pekContracts';
+import type { PekDocumentVersion, PekMonitoringDirection, PekMonitoringMutationRequest, PekMonitoringType, PekPeriodicity, PekProgram } from '../../api/pekContracts';
 import { pekKeys } from '../../api/pekQueryKeys';
 import { pekApi } from '../../api/pekService';
 import { mapPekError } from '../../utils/pekErrorMapper';
 import { handlePekMutationError } from '../../utils/pekMutationError';
-import PekQueryError from '../common/PekQueryError';
 
 type FormState = {
   monitoringType: PekMonitoringType | '';
@@ -52,36 +51,67 @@ const requestFromForm = (form: FormState): PekMonitoringMutationRequest => ({
 
 const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
   const { user } = useAuth();
-  const queryKey = pekKeys.programMonitoring(program.id, program.company?.id, user?.id);
-  const monitoring = useQuery({ queryKey, queryFn: ({ signal }) => pekApi.getProgramMonitoring(program.id, signal) });
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState<PekMonitoringDirection | 'new' | null>(null);
   const [deleting, setDeleting] = useState<PekMonitoringDirection | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
 
+  const commitAggregate = async (actualProgram: PekProgram) => {
+    const companyScope = String(program.company?.id ?? 'current-company');
+    queryClient.setQueryData(pekKeys.programDetail(program.company?.id, program.id), actualProgram);
+    queryClient.setQueriesData<PekDocumentVersion[]>({
+      predicate: ({ queryKey }) => queryKey[0] === 'pek' && queryKey[3] === companyScope && queryKey.includes('documents'),
+    }, (versions) => versions?.map((document) => ({
+      ...document,
+      stale: true,
+    })));
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: pekKeys.programsRoot() }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.programHistory(program.id, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportsRoot(program.company?.id, user?.id) }),
+      queryClient.invalidateQueries({ predicate: ({ queryKey }) => queryKey[0] === 'pek' && queryKey[3] === companyScope && (queryKey.includes('readiness') || queryKey.includes('package')) }),
+    ]);
+  };
+  const refreshProgram = async () => {
+    const actual = await pekApi.getProgram(program.id);
+    queryClient.setQueryData(pekKeys.programDetail(program.company?.id, program.id), actual);
+    return actual;
+  };
+
   const save = useMutation({
     mutationFn: async () => {
       const body = requestFromForm(form);
-      if (editing === 'new') await pekApi.createProgramMonitoring(program.id, program.version, body);
-      else if (editing) await pekApi.updateProgramMonitoring(program.id, editing.id, body, editing.version);
+      if (editing === 'new') return pekApi.createProgramMonitoring(program.id, program.version, body);
+      if (editing) return pekApi.updateProgramMonitoring(program.id, editing.id, body, program.version);
+      throw new Error('Monitoring item is not selected.');
     },
-    onSuccess: async () => { setEditing(null); await monitoring.refetch(); },
+    retry: false,
+    onSuccess: async (actualProgram) => {
+      setEditing(null);
+      await commitAggregate(actualProgram);
+    },
     onError: async (error) => {
-      await handlePekMutationError(error, () => monitoring.refetch());
+      await handlePekMutationError(error, refreshProgram);
     },
   });
   const remove = useMutation({
-    mutationFn: async () => { if (deleting) await pekApi.deleteProgramMonitoring(program.id, deleting.id, deleting.version); },
-    onSuccess: async () => { setDeleting(null); await monitoring.refetch(); },
+    mutationFn: async () => {
+      if (!deleting) throw new Error('Monitoring item is not selected.');
+      return pekApi.deleteProgramMonitoring(program.id, deleting.id, program.version);
+    },
+    retry: false,
+    onSuccess: async (actualProgram) => {
+      setDeleting(null);
+      await commitAggregate(actualProgram);
+    },
     onError: async (error) => {
-      await handlePekMutationError(error, () => monitoring.refetch());
+      await handlePekMutationError(error, refreshProgram);
     },
   });
 
-  if (monitoring.isLoading) return <p className="text-sm text-slate-500">Загрузка направлений мониторинга…</p>;
-  if (monitoring.isError || !monitoring.data) return <PekQueryError error={monitoring.error} resource="направления мониторинга" retry={() => void monitoring.refetch()} />;
-
   const mutationError = save.error || remove.error;
-  const canCreate = monitoring.data.availableActions.create === true;
+  const items = program.monitoring?.items || [];
+  const canCreate = program.monitoring?.availableActions.create === true;
   const openCreate = () => { setForm(emptyForm); setEditing('new'); };
   const openEdit = (item: PekMonitoringDirection) => { setForm(formFromItem(item)); setEditing(item); };
 
@@ -91,8 +121,8 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
       {canCreate && <Button variant="contained" onClick={openCreate}>Добавить направление</Button>}
     </div>
     {mutationError && <Alert severity="error">{mapPekError(mutationError).message}</Alert>}
-    {!monitoring.data.items.length ? <Alert severity="info">Направления мониторинга пока не добавлены.</Alert> : <div className="grid gap-3">
-      {monitoring.data.items.map((item) => <article key={item.id} className="rounded-xl border p-4">
+    {!items.length ? <Alert severity="info">Направления мониторинга пока не добавлены.</Alert> : <div className="grid gap-3">
+      {items.map((item) => <article key={item.id} className="rounded-xl border p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><h3 className="font-black">{item.name}</h3><p className="text-sm text-slate-500">{item.monitoringType} · {item.frequencyType} · план: {item.plannedCount}</p></div>
           <div className="flex gap-2">

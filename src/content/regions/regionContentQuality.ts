@@ -1,7 +1,4 @@
-import { publishedCaseStudies } from '../cases/caseStudies.ts';
 import type { RegionContent } from '../types.ts';
-
-const approvedCaseSlugs = new Set(publishedCaseStudies.map((item) => item.slug));
 
 const contentSignature = (content: RegionContent): string => [
   content.introduction,
@@ -11,21 +8,30 @@ const contentSignature = (content: RegionContent): string => [
   content.logisticsNote,
 ].join('|').trim().toLocaleLowerCase('ru-RU');
 
+const regionalContentWordCount = (content: RegionContent): number => [
+  content.introduction,
+  ...content.regionalFeatures ?? [],
+  ...content.industries,
+  ...content.commonTasks,
+  ...content.remoteConditions,
+  ...content.onSiteConditions,
+  content.logisticsNote,
+  content.estimatedTimeline ?? '',
+  ...content.faq.flatMap((item) => [item.question, item.answer]),
+].join(' ').trim().split(/\s+/u).filter(Boolean).length;
+
 export const hasCompleteRegionContent = (content: RegionContent | undefined): content is RegionContent => Boolean(
   content
   && content.status === 'published'
-  && content.introduction.trim()
-  && (content.regionalFeatures?.length ?? 0) >= 2
+  && content.introduction.trim().length >= 140
   && content.industries.length >= 3
   && content.commonTasks.length >= 3
   && content.remoteConditions.length >= 2
   && content.onSiteConditions.length >= 1
-  && content.logisticsNote.trim()
-  && content.estimatedTimeline?.trim()
+  && content.logisticsNote.trim().length >= 40
   && content.faq.length >= 2
-  && (content.completedWorkExamples?.length ?? 0) > 0
-  && (content.confirmedCaseSlugs?.length ?? 0) > 0
-  && content.confirmedCaseSlugs?.every((slug) => approvedCaseSlugs.has(slug)),
+  && content.faq.every((item) => item.question.trim() && item.answer.trim())
+  && regionalContentWordCount(content) >= 65
 );
 
 export const hasUniqueRegionContent = (content: RegionContent, allRegions: RegionContent[]): boolean => {

@@ -7,7 +7,6 @@ export { normalizeProtocolStatus };
 type ProtocolUser = { id?: string | number | null; role?: string | null; permissions?: string[] | null } | null | undefined;
 type ProtocolLike = Pick<Protocol, 'status' | 'availableActions'> | null | undefined;
 
-export const isInternalProtocolUser = (_user: ProtocolUser | string): boolean => false;
 export const canViewProtocol = (_user: ProtocolUser, protocol?: ProtocolLike) => hasProtocolAction(protocol || undefined, 'view');
 export const canCreateProtocol = (user: ProtocolUser) => user?.permissions?.includes('create_protocols') === true;
 export const canEditProtocol = (_user: ProtocolUser, protocol: ProtocolLike) => hasProtocolAction(protocol || undefined, 'edit');

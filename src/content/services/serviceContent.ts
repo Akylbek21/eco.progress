@@ -1,4 +1,5 @@
 import type { ServiceContent } from '../types';
+import { serviceAeoBySlug, type ServiceAeoSlug } from './serviceAeo.ts';
 
 const codeBasis: ServiceContent['legalBasis'][number] = {
   title: 'Экологический кодекс Республики Казахстан', number: '№ 400-VI ЗРК', date: '2021-01-02',
@@ -7,7 +8,14 @@ const codeBasis: ServiceContent['legalBasis'][number] = {
   verificationStatus: 'requires-review', claimStatus: 'requires-review',
 };
 const review: ServiceContent['contentReview'] = { preparedBy: 'Редакция EcoProgress', lastReviewedAt: '2026-07-17', reviewStatus: 'requires-specialist-review' };
-const define = (content: Omit<ServiceContent, 'status' | 'legalBasis' | 'contentReview'>): ServiceContent => ({ status: 'published', legalBasis: [codeBasis], contentReview: review, ...content });
+type ServiceDefinition = Omit<ServiceContent, 'status' | 'legalBasis' | 'contentReview' | 'aeo' | 'serviceSlug'> & { serviceSlug: ServiceAeoSlug };
+const define = (content: ServiceDefinition): ServiceContent => ({
+  status: 'published',
+  legalBasis: [codeBasis],
+  contentReview: review,
+  ...content,
+  aeo: { ...serviceAeoBySlug[content.serviceSlug], faq: content.faq },
+});
 
 export const serviceContent: ServiceContent[] = [
   define({

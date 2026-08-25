@@ -40,6 +40,7 @@ import { isProtocolStalePdfError, PROTOCOL_STALE_PDF_MESSAGE, useSignProtocolMut
 import { protocolQueryKeys, protocolScope } from '../features/protocols/hooks/queryKeys';
 import { hasProtocolAction, protocolTransitionBlockers } from '../features/protocols/utils/protocolActions';
 import { hasUsableProtocolResultNormative } from '../features/protocols/utils/protocolResultNormative';
+import { openProtocolDownload } from '../features/protocols/utils/protocolFiles';
 
 const emptyLaboratory = {
   laboratoryName: '',
@@ -77,17 +78,6 @@ const DEFAULT_WEATHER_TIME = '12:00';
 const PROTOCOL_BACKUP_SCHEMA_VERSION = 1;
 const protocolBackupKey = (userId: string | undefined, protocolId: string) => `protocol-draft-backup:${userId || 'anonymous'}:${protocolId}:${PROTOCOL_BACKUP_SCHEMA_VERSION}`;
 
-const saveBlob = (blob: Blob, name: string) => {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-};
-
 const editableState = (protocol: Protocol) => ({
   number: protocol.protocolNumber || protocol.number || '',
   protocolDate: protocol.protocolDate || '',
@@ -107,6 +97,7 @@ const editableState = (protocol: Protocol) => ({
   measurementPlace: protocol.measurementPlace,
   explanatoryNote: protocol.explanatoryNote,
   printVisibility: protocol.printVisibility,
+  samplingPoints: protocol.samplingPoints ?? [],
 });
 
 const editableSignature = (protocol: Protocol) => JSON.stringify(editableState(protocol));
@@ -538,6 +529,7 @@ const ProtocolEditorPage = () => {
       organization: item.organization || emptyOrganization,
       testing: item.testing || emptyTesting,
       results: item.results || [],
+      samplingPoints: item.samplingPoints || [],
       measurementDevices: collectProtocolDevices(item),
       history: item.history || [],
       environment: item.environment || {},
@@ -775,6 +767,7 @@ const ProtocolEditorPage = () => {
     let conflictDetected = false;
     const operation = (async (): Promise<Protocol | null> => {
       const updateSnapshot = (item: Protocol) => protocolService.updateProtocol(item.id, {
+        templateId: item.templateId,
         version: Number(item.version || 0),
         number: item.protocolNumber || item.number || '',
         protocolDate: item.protocolDate || '',
@@ -808,12 +801,15 @@ const ProtocolEditorPage = () => {
         testingMethodDocument: item.testingMethodDocument || item.testing.testingMethodDocument,
         complianceDocument: item.complianceDocument,
         printVisibility: item.printVisibility,
+        samplingPoints: item.samplingPoints,
       });
       try {
         const draftProtocol = await ensureDraftProtocol(snapshot);
         const saved = await updateSnapshot(draftProtocol);
-        const refreshed = await protocolService.getProtocol(saved.id);
-        const updated = refreshed;
+        // The mutation response is authoritative: in particular, it contains the
+        // next optimistic-lock version. Do not hide a conflict by fetching a fresh
+        // version and retrying with it.
+        const updated = saved;
         if (requestId === saveRequestRef.current && startedVersion === editVersionRef.current) {
           applyServerProtocol(updated);
           sessionStorage.removeItem(protocolBackupKey(user?.id, updated.id));
@@ -1061,7 +1057,7 @@ const ProtocolEditorPage = () => {
       ? snapshot
       : await ensureSavedProtocol('Сначала сохраняю изменения, затем открываю предпросмотр.');
     if (!current) return;
-    if (current.status === 'SIGNED' && !hasProtocolAction(current, 'downloadPdf')) {
+    if (current.status === 'SIGNED' && !hasProtocolAction(current, 'previewSigned')) {
       toast.warning('Просмотр подписанного PDF недоступен');
       return;
     }
@@ -1069,7 +1065,7 @@ const ProtocolEditorPage = () => {
     setPreviewLoading(true);
     try {
       const blob = current.status === 'SIGNED'
-        ? (await protocolService.downloadPdf(current.id)).blob
+        ? await protocolService.previewSignedProtocol(current.id)
         : await protocolService.previewProtocol(current.id);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(blob));
@@ -1090,9 +1086,8 @@ const ProtocolEditorPage = () => {
     }
     setBusy(true);
     try {
-      const downloaded = kind === 'pdf' ? await protocolService.downloadPdf(current.id) : await protocolService.downloadDocx(current.id);
-      if (!downloaded?.blob.size) throw new Error('Не удалось получить сформированный файл.');
-      saveBlob(downloaded.blob, downloaded.fileName || fileName(current, kind));
+      const downloaded = await protocolService.downloadProtocolDocument(current.id, kind);
+      openProtocolDownload(downloaded, fileName(current, kind));
     } catch (downloadError) {
       toast.error('Не удалось скачать файл', userProtocolError(downloadError));
     } finally {
@@ -1261,7 +1256,7 @@ const ProtocolEditorPage = () => {
         {editSection === 'laboratory' && <ProtocolLaboratoryForm value={protocol.laboratory} employees={laboratoryEmployees} readOnly={!protocol.availableActions.edit} loading={busy} canOpenSettings={protocol.availableActions.edit} onExecutorChange={(employee) => patchProtocol({ executorId: employee.id, executor: employee.fullName, laboratory: { ...protocol.laboratory, executorId: String(employee.id), executor: employee.fullName } })} onRefresh={refreshLaboratorySnapshot} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
         {editSection === 'environment' && <div className="space-y-5">{isWaterProtocolType(protocol.templateId) && <ProtocolWaterCharacteristicsForm waterType={protocol.waterType || String(protocol.environment?.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.environment?.conditions?.waterUseCategory || '')} readOnly={!protocol.availableActions.edit} onChange={({ waterType, waterUseCategory }) => patchProtocol({ conditions: { ...(protocol.environment?.conditions || {}), waterType, waterUseCategory } })} />}<ProtocolEnvironmentForm value={protocol.environment || {}} measurementDate={protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate} measurementTime={protocol.measurementTime || ''} objectId={String(protocol.objectId || '')} objectName={companyObjects.find((item) => item.id === String(protocol.objectId))?.name || protocol.companySnapshot.objectName || ''} objectOptions={companyObjects.map((item) => ({ id: item.id, name: item.name }))} readOnly={!protocol.availableActions.edit} loading={busy} onSelectionChange={changeWeatherSelection} onRequestConditions={refreshWeather} onChange={(environment) => patchProtocol({ environment })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'methods' && <ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} measurementDate={protocol.measurementDate || protocol.testing.samplingDate} readOnly={!protocol.availableActions.edit} onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })} onChange={(testing) => patchProtocol({ testing })} testingBasis={protocol.organization.testingBasis} onTestingBasisChange={(testingBasis) => patchProtocol({ organization: { ...protocol.organization, testingBasis } })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
-        {editSection === 'results' && <ProtocolResultsTable embedded protocolId={protocol.id} version={protocol.version} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} devices={protocol.measurementDevices} readOnly={!protocol.availableActions.edit} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onVersionChange={applyServerVersion} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />}
+        {editSection === 'results' && <ProtocolResultsTable embedded protocolId={protocol.id} version={protocol.version} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} samplingPoints={protocol.samplingPoints} devices={protocol.measurementDevices} readOnly={!protocol.availableActions.edit} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onVersionChange={applyServerVersion} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />}
       </Modal>
 
       <ProtocolPreviewModal

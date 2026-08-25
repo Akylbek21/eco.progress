@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createWizardDefaults, emptyWizardResult } from '../src/features/protocols/components/wizardTypes';
+import { createDefaultAmbientSamplingPoints, createWizardDefaults, createWizardSamplingPoint, emptyWizardResult, type ProtocolWizardForm } from '../src/features/protocols/components/wizardTypes';
 import { mapProtocolToWizardForm, mapWizardResultToDraftRequest, mapWizardToCreateDraft } from '../src/features/protocols/mappers/protocolWizardDraftMapper';
 import { saveProtocolWizardDraft } from '../src/features/protocols/api/saveProtocolWizardDraft';
 import { mapProtocolApiErrorsToForm } from '../src/features/protocols/utils/protocolFormErrors';
@@ -10,7 +10,40 @@ import { validateForApproval } from '../src/features/protocols/utils/protocolWiz
 import type { Protocol } from '../src/types/protocols';
 import type { ProtocolService } from '../src/services/protocolService';
 
+const attachAmbientPoint = (form: ProtocolWizardForm) => {
+  const point = { ...createWizardSamplingPoint('Север'), clientPointId: 'client-point', serverPointId: '101', sortOrder: 0 };
+  form.samplingPoints = [point];
+  return point;
+};
+
+const persistedAmbientPoint = { id: '101', clientPointId: 'client-point', name: 'Север', description: '', latitude: null, longitude: null, sortOrder: 0 };
+
 describe('protocol wizard HTTP boundary', () => {
+  it('offers four editable ambient sampling points and accepts custom points', () => {
+    const points = createDefaultAmbientSamplingPoints();
+    expect(points.map((point) => point.name)).toEqual(['Север', 'Юг', 'Восток', 'Запад']);
+    points[0].name = 'Северная граница СЗЗ';
+    points.push(createWizardSamplingPoint('Жилая зона'));
+    expect(points.map((point) => point.name)).toContain('Жилая зона');
+  });
+
+  it('maps ambient places structurally and never writes them to legacy samplingPlace', () => {
+    const form = createWizardDefaults();
+    Object.assign(form, { templateId: 'ambient_air', companyId: '10', measurementPlace: 'Север / Юг / Восток / Запад' });
+    const point = attachAmbientPoint(form);
+    const row = { ...emptyWizardResult(), samplingPointId: point.clientPointId, indicatorName: 'NO2', value: '0.1', unit: 'мг/м3' };
+    form.results = [row];
+
+    const draft = mapWizardToCreateDraft(form);
+    const result = mapWizardResultToDraftRequest(row, form, 0);
+
+    expect(draft.templateId).toBe('AMBIENT_AIR_SZZ');
+    expect(draft.samplingPoints).toEqual([expect.objectContaining({ clientPointId: point.clientPointId, name: 'Север' })]);
+    expect(draft.environment.conditions.samplingPlace).toBeNull();
+    expect(result.samplingPointId).toBe(point.clientPointId);
+    expect(result.values).toMatchObject({ samplingPlace: null, measurementPlace: null });
+  });
+
   it('preserves zero and confirmed type-specific values in a result request', () => {
     const form = createWizardDefaults();
     form.templateId = 'noise_vibration';
@@ -167,8 +200,9 @@ describe('result reconciliation', () => {
   it('saves all rows with one atomic draft-results request and reconciles clientRowId', async () => {
     const form = createWizardDefaults();
     Object.assign(form, { templateId: 'ambient_air', companyId: '10' });
-    const first = { ...emptyWizardResult(), clientRowId: 'client-a', indicatorName: 'A', pollutantCode: 'A', value: '1', unit: 'мг' };
-    const second = { ...emptyWizardResult(), clientRowId: 'client-b', indicatorName: 'B', pollutantCode: 'B', value: '2', unit: 'мг' };
+    const point = attachAmbientPoint(form);
+    const first = { ...emptyWizardResult(), clientRowId: 'client-a', samplingPointId: point.clientPointId, indicatorName: 'A', pollutantCode: 'A', value: '1', unit: 'мг' };
+    const second = { ...emptyWizardResult(), clientRowId: 'client-b', samplingPointId: point.clientPointId, indicatorName: 'B', pollutantCode: 'B', value: '2', unit: 'мг' };
     form.results = [second, first];
     const saveProtocolDraftResults = vi.fn(async (_id, request: { version: number; added: Array<{ clientRowId: string; values: Record<string, unknown> }> }) => ({
       id: 'draft-1', version: 2, status: 'DRAFT', results: request.added.map((row) => ({
@@ -183,7 +217,7 @@ describe('result reconciliation', () => {
     } as Protocol;
     const service = {
       createProtocolDraft: vi.fn(async () => ({ id: 'draft-1', version: 1, status: 'DRAFT', results: [] }) as Protocol),
-      updateProtocolDraft: vi.fn(async () => ({ id: 'draft-1', version: 2, status: 'DRAFT', results: [] }) as Protocol),
+      updateProtocolDraft: vi.fn(async () => ({ id: 'draft-1', version: 2, status: 'DRAFT', results: [], samplingPoints: [persistedAmbientPoint] }) as Protocol),
       saveProtocolDraftResults,
       getProtocol: vi.fn(async () => persisted),
     } as unknown as ProtocolService;
@@ -201,9 +235,10 @@ describe('result reconciliation', () => {
   it('sends existing, new and removed wizard rows in separate delta collections', async () => {
     const form = createWizardDefaults();
     Object.assign(form, { templateId: 'ambient_air', companyId: '10' });
+    const point = attachAmbientPoint(form);
     form.results = [
-      { ...emptyWizardResult(), clientRowId: 'existing-client', serverResultId: '11', indicatorName: 'A', value: '2', unit: 'mg' },
-      { ...emptyWizardResult(), clientRowId: 'new-client', indicatorName: 'C', value: '3', unit: 'mg' },
+      { ...emptyWizardResult(), clientRowId: 'existing-client', serverResultId: '11', samplingPointId: point.clientPointId, indicatorName: 'A', value: '2', unit: 'mg' },
+      { ...emptyWizardResult(), clientRowId: 'new-client', samplingPointId: point.clientPointId, indicatorName: 'C', value: '3', unit: 'mg' },
     ];
     const current = {
       id: 'draft-1', version: 4, status: 'DRAFT', laboratory: {}, organization: {}, testing: {}, results: [
@@ -213,7 +248,7 @@ describe('result reconciliation', () => {
     } as Protocol;
     const saveProtocolDraftResults = vi.fn(async () => ({ ...current, version: 6, results: [] }) as Protocol);
     const service = {
-      updateProtocolDraft: vi.fn(async () => ({ ...current, version: 5 }) as Protocol),
+      updateProtocolDraft: vi.fn(async () => ({ ...current, version: 5, samplingPoints: [persistedAmbientPoint] }) as Protocol),
       saveProtocolDraftResults,
       getProtocol: vi.fn(async () => ({ ...current, version: 6, results: [] }) as Protocol),
     } as unknown as ProtocolService;
@@ -234,28 +269,24 @@ describe('result reconciliation', () => {
     form.results = [{ ...emptyWizardResult(), indicatorName: 'NO2', value: '1', unit: 'мг/м3', measurementDeviceId: 'invalid-id' }];
     const service = {
       createProtocolDraft: vi.fn(), updateProtocolDraft: vi.fn(), saveProtocolDraftResults: vi.fn(),
-      addProtocolResult: vi.fn(), updateProtocolResult: vi.fn(), deleteProtocolResult: vi.fn(),
     } as unknown as ProtocolService;
 
     await expect(saveProtocolWizardDraft(form, null, 'stable-key', service)).rejects.toThrow();
     expect(service.createProtocolDraft).not.toHaveBeenCalled();
     expect(service.saveProtocolDraftResults).not.toHaveBeenCalled();
-    expect(service.addProtocolResult).not.toHaveBeenCalled();
-    expect(service.updateProtocolResult).not.toHaveBeenCalled();
-    expect(service.deleteProtocolResult).not.toHaveBeenCalled();
   });
 
   it.each([400, 409])('keeps an atomic save failure (%s) intact and never retries rows separately', async (status) => {
     const form = createWizardDefaults();
     Object.assign(form, { templateId: 'ambient_air', companyId: '10' });
-    form.results = [{ ...emptyWizardResult(), clientRowId: 'stable-row', indicatorName: 'NO2', pollutantCode: 'NO2', value: '1', unit: 'мг/м3' }];
+    const point = attachAmbientPoint(form);
+    form.results = [{ ...emptyWizardResult(), clientRowId: 'stable-row', samplingPointId: point.clientPointId, indicatorName: 'NO2', pollutantCode: 'NO2', value: '1', unit: 'мг/м3' }];
     const failure = Object.assign(new Error(status === 409 ? 'Конфликт версии' : 'Ошибка валидации'), { response: { status } });
     const saveProtocolDraftResults = vi.fn(async () => { throw failure; });
     const service = {
       createProtocolDraft: vi.fn(async () => ({ id: 'draft-1', version: 3, status: 'DRAFT', results: [] }) as Protocol),
-      updateProtocolDraft: vi.fn(async () => ({ id: 'draft-1', version: 4, status: 'DRAFT', results: [] }) as Protocol),
+      updateProtocolDraft: vi.fn(async () => ({ id: 'draft-1', version: 4, status: 'DRAFT', results: [], samplingPoints: [persistedAmbientPoint] }) as Protocol),
       saveProtocolDraftResults,
-      addProtocolResult: vi.fn(), updateProtocolResult: vi.fn(), deleteProtocolResult: vi.fn(),
     } as unknown as ProtocolService;
 
     await expect(saveProtocolWizardDraft(form, null, 'same-idempotency-key', service)).rejects.toBe(failure);
@@ -266,9 +297,6 @@ describe('result reconciliation', () => {
       updated: [],
       deletedIds: [],
     }));
-    expect(service.addProtocolResult).not.toHaveBeenCalled();
-    expect(service.updateProtocolResult).not.toHaveBeenCalled();
-    expect(service.deleteProtocolResult).not.toHaveBeenCalled();
   });
 });
 
@@ -387,8 +415,10 @@ describe('protocol wizard validation and backend errors', () => {
     Object.assign(form, {
       templateId: 'ambient_air', companyId: '1', objectId: '2', laboratoryId: '3', executorId: '4', measurementPlace: 'Пост 1',
     });
+    const point = attachAmbientPoint(form);
     form.results = [{
       ...emptyWizardResult(), indicatorName: 'NO2', pollutantCode: 'NO2', value: '0.1', unit: 'мг/м3',
+      samplingPointId: point.clientPointId,
       measurementDeviceId: 'device-1', normativeSource: 'MANUAL', normativeValue: '0.2', manualNormativeReason: 'Нет норматива в справочнике',
     }];
     const issues = validateForApproval(form);
@@ -404,10 +434,11 @@ describe('protocol wizard validation and backend errors', () => {
       Object.assign(form, {
         templateId, companyId: '1', objectId: '2', laboratoryId: '3', executorId: '4', measurementPlace: 'Точка 1',
       });
+      const point = templateId === 'ambient_air' ? attachAmbientPoint(form) : null;
       if (templateId === 'water') Object.assign(form, { waterType: 'DRINKING_WATER', waterUseCategory: 'I' });
       const chemical = ['ambient_air', 'workplace_air', 'soil', 'water'].includes(templateId);
       form.results = [{
-        ...emptyWizardResult(), indicatorName: 'Показатель', pollutantCode: chemical ? 'CODE' : '', factorType: chemical ? '' : 'FACTOR',
+        ...emptyWizardResult(), indicatorName: 'Показатель', pollutantCode: chemical ? 'CODE' : '', factorType: chemical ? '' : 'FACTOR', samplingPointId: point?.clientPointId || '',
         value: '0', unit: 'ед.', measurementDeviceId: '7', normativeId: '9', normativeSource: 'DIRECTORY', normativeStatus: 'ACTIVE',
         sampleNumber: templateId === 'soil' || templateId === 'water' ? 'S-1' : '',
         samplingDepth: templateId === 'soil' ? '0.5' : '', samplingPlace: templateId === 'soil' || templateId === 'water' ? 'Точка 1' : '',

@@ -1,16 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { COMPANY } from '../src/config/companyData.ts';
-import { isApprovedArticleReview } from '../src/content/articleReview.ts';
 import { OG_IMAGE, publicStaticPages, seoArticles, seoPages, SITE_URL } from './seo-data.mjs';
+import { canonicalForPublicPath, robotsForPublicPage } from '../src/seo/indexingPolicy.ts';
+import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, buildServiceEntity, entityIds } from '../src/seo/entityBuilders.ts';
+import { expertMap, experts, isCompleteExpert } from '../src/content/experts/experts.ts';
+import { caseStudies } from '../src/content/cases/caseStudies.ts';
+import { isPublishableCaseStudy } from '../src/content/cases/caseStudyPolicy.ts';
 
 const root = process.cwd();
 const publicDir = path.join(root, 'public');
 const dataDir = path.join(root, 'src', 'data');
 const isoDate = (value) => new Date(value).toISOString().slice(0, 10);
 const escapeXml = (value) => value.replace(/[<>&'"]/g, (char) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[char]);
-const canonicalForPath = (routePath) => routePath === '/' ? SITE_URL : `${SITE_URL}${routePath.replace(/\/+$/, '')}`;
 const optimizedImagePaths = {
   '/cottonbro.jpg': '/media/ekologicheskoe-proektirovanie-1280.jpg',
   '/edward.jpg': '/media/laboratornye-izmereniya-1280.jpg',
@@ -24,6 +26,8 @@ const optimizedImagePaths = {
   '/og-cover.jpg': '/media/social/ecoprogress-og-1200x630.jpg',
 };
 const optimizedImage = (image) => optimizedImagePaths[image] || image;
+const verifiedExperts = experts.filter(isCompleteExpert);
+const verifiedCases = caseStudies.filter(isPublishableCaseStudy);
 
 const pageSource = (routePath) => {
   if (routePath === '/') return 'src/pages/HomePage.tsx';
@@ -47,70 +51,34 @@ const gitDate = (source, fallback) => {
   }
 };
 
-const organizationSchema = {
-  '@context': 'https://schema.org',
-  '@type': ['Organization', 'LocalBusiness', 'ProfessionalService'],
-  '@id': `${SITE_URL}/#organization`,
-  name: COMPANY.name,
-  alternateName: COMPANY.brandName,
-  url: SITE_URL,
-  logo: { '@type': 'ImageObject', url: COMPANY.logo },
-  telephone: COMPANY.phone.display,
-  email: COMPANY.email,
-  address: {
-    '@type': 'PostalAddress',
-    addressCountry: COMPANY.address.country,
-    addressLocality: COMPANY.address.city,
-    streetAddress: COMPANY.address.street,
-    ...(COMPANY.address.postalCode ? { postalCode: COMPANY.address.postalCode } : {}),
-  },
-  areaServed: { '@type': 'Country', name: 'Казахстан' },
-  openingHours: 'Mo-Fr 09:00-18:00',
-  sameAs: [COMPANY.instagramUrl, COMPANY.tiktokUrl, COMPANY.mapsUrl],
-};
-
-const breadcrumbSchema = (pathName, h1) => ({
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Главная', item: SITE_URL },
-    ...(pathName === '/' ? [] : [{ '@type': 'ListItem', position: 2, name: h1, item: canonicalForPath(pathName) }]),
-  ],
-});
-
-const schemasFor = ({ path: pathName, h1, description, type, canonical, image, datePublished, dateModified, faq, city, service }) => {
-  const schemas = [];
-  if (pathName === '/' || pathName === '/contacts') {
-    schemas.push(organizationSchema);
-    if (pathName === '/') schemas.push({ '@context': 'https://schema.org', '@type': 'WebSite', '@id': `${SITE_URL}/#website`, url: SITE_URL, name: COMPANY.brandName, publisher: { '@id': `${SITE_URL}/#organization` } });
-  }
+const schemasFor = (source) => {
+  const { path: pathName, h1, description, type, canonical, image, datePublished, dateModified, cityNominative, city, service } = source;
+  const schemas = buildCorePageEntities({ canonical, name: h1, description, dateModified, localBusiness: cityNominative === 'Шымкент' });
   if (type === 'service' || type === 'service-city') {
-    schemas.push({
-      '@context': 'https://schema.org', '@type': 'Service', name: h1, serviceType: service || h1, description, url: canonical,
-      provider: { '@id': `${SITE_URL}/#organization` },
-      areaServed: city ? { '@type': 'City', name: city } : { '@type': 'Country', name: 'Казахстан' },
-    });
+    const expertNodes = verifiedExperts.map((expert, index) => buildPersonSchema(expert, `${canonical}#expert-${index + 1}`));
+    const caseUrls = verifiedCases.filter((item) => !source.serviceSlug || item.service === source.serviceSlug).map((item) => `${SITE_URL}/cases/${item.slug}`);
+    schemas.push(buildServiceEntity({ canonical, name: h1, serviceType: service || h1, description, areaServed: cityNominative || city || 'Казахстан', image, expertIds: expertNodes.map((node) => node['@id']), caseUrls }), ...expertNodes);
   }
   if (type === 'article' && pathName !== '/news') {
-    schemas.push({
-      '@context': 'https://schema.org', '@type': 'Article', headline: h1, description, url: canonical,
-      image: { '@type': 'ImageObject', url: image || OG_IMAGE },
-      datePublished, dateModified, author: { '@type': 'Organization', name: COMPANY.name, url: SITE_URL },
-      publisher: { '@id': `${SITE_URL}/#organization` }, mainEntityOfPage: canonical,
-    });
+    const author = source.reviewStatus === 'approved' ? expertMap.get(source.authorSlug) : undefined;
+    const reviewer = source.reviewStatus === 'approved' ? expertMap.get(source.reviewerSlug) : undefined;
+    const ids = entityIds(canonical);
+    const caseUrls = verifiedCases.filter((item) => source.relatedServiceSlugs?.includes(item.service)).map((item) => `${SITE_URL}/cases/${item.slug}`);
+    schemas.push(buildArticleSchema({ canonical, headline: h1, description, image: image || OG_IMAGE, datePublished, dateModified, authorId: isCompleteExpert(author) ? ids.author : undefined, reviewerId: isCompleteExpert(reviewer) ? ids.reviewer : undefined, caseUrls }));
+    if (isCompleteExpert(author)) schemas.push(buildPersonSchema(author, ids.author));
+    if (isCompleteExpert(reviewer)) schemas.push(buildPersonSchema(reviewer, ids.reviewer));
   }
-  if (pathName !== '/') schemas.push(breadcrumbSchema(pathName, h1));
+  if (pathName !== '/') schemas.push(buildBreadcrumbSchema([{ name: 'Главная', url: SITE_URL }, { name: h1, url: canonical }], canonical));
   return schemas;
 };
 
 const normalizeEntry = (source) => {
   const pathName = source.path;
-  const canonical = source.canonical || canonicalForPath(pathName);
-  const robots = source.indexable === false
-    || pathName === '/employees'
-    || (source.type === 'article' && pathName !== '/news' && !isApprovedArticleReview(source.reviewStatus))
-    ? 'noindex,follow'
-    : 'index,follow';
+  const canonical = canonicalForPublicPath(pathName);
+  if (source.canonical && source.canonical !== canonical) {
+    throw new Error(`Canonical mismatch for ${pathName}: ${source.canonical} !== ${canonical}`);
+  }
+  const robots = robotsForPublicPage({ ...source, path: pathName });
   const lastModified = source.lastModified || source.lastmod || gitDate(pageSource(pathName), isoDate(new Date()));
   const ogImage = source.ogImage || (source.image ? `${SITE_URL}${optimizedImage(source.image)}` : OG_IMAGE);
   const ogType = source.type === 'article' && pathName !== '/news' ? 'article' : 'website';

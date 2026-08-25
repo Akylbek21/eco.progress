@@ -18,13 +18,13 @@ import type {
   NormativeSearchResult,
   Pollutant,
   Protocol,
+  ProtocolAccessScope,
   ProtocolCalculationSummaryResponse,
   ProtocolCompanySnapshot,
   ProtocolEnvironmentalConditions,
   ProtocolMeasurementDevice,
   ProtocolPage,
   ProtocolListQuery,
-  ProtocolResultPayload,
   ProtocolResultValue,
   ProtocolResultRow,
   ProtocolTemplate,
@@ -137,7 +137,7 @@ export const normalizeProtocolResult = (raw: unknown): ProtocolResultRow => {
   };
   const dynamicValues = Object.fromEntries(
     Object.entries(source).filter(([key, value]) =>
-      !['id', '_id', 'resultId', 'protocolId', 'protocol_id', 'internalStatus', 'checkStatus', 'status', 'values'].includes(key)
+      !['id', '_id', 'resultId', 'protocolId', 'protocol_id', 'internalStatus', 'checkStatus', 'status', 'samplingPointId', 'sampling_point_id', 'values'].includes(key)
       && (typeof value === 'string' || typeof value === 'number' || value === null),
     ),
   );
@@ -170,6 +170,7 @@ export const normalizeProtocolResult = (raw: unknown): ProtocolResultRow => {
     indicatorName,
     code,
     samplingPoint: pick(source, ['samplingPoint', 'sampling_point']) || asString(values.samplingPoint),
+    samplingPointId: pick(source, ['samplingPointId', 'sampling_point_id']) || null,
     indicator: firstString(source.indicator, indicatorName),
     unit,
     result,
@@ -660,6 +661,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     || (typeof source.environmentalConditions === 'object' ? source.environmentalConditions : {}),
   );
   const resultsSource = Array.isArray(source.results) ? source.results : [];
+  const samplingPointsSource = Array.isArray(source.samplingPoints) ? source.samplingPoints : [];
   const signaturesSource = Array.isArray(source.signatures)
     ? source.signatures
     : Array.isArray(source.protocolSignatures)
@@ -838,6 +840,18 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
       physicalFactorType: pick(testing, ['physicalFactorType']) || pick(source, ['physicalFactorType', 'physical_factor_type']),
     },
     results: resultsSource.map(normalizeResult),
+    samplingPoints: samplingPointsSource.map((item, index) => {
+      const point = asRecord(item);
+      return {
+        id: pick(point, ['id', 'samplingPointId', 'sampling_point_id']) || undefined,
+        clientPointId: pick(point, ['clientPointId', 'client_point_id']) || undefined,
+        name: pick(point, ['name']),
+        description: pick(point, ['description']) || null,
+        latitude: numberOrNull(point.latitude),
+        longitude: numberOrNull(point.longitude),
+        sortOrder: numberOrNull(point.sortOrder ?? point.sort_order) ?? index,
+      };
+    }).sort((left, right) => left.sortOrder - right.sortOrder),
     measurementDevices: devicesSource.map(normalizeMeasurementDevice),
     instruments: devicesSource.map((item) => normalizeMeasurementDevice(item).deviceSnapshot as MeasurementDevice),
     history: Array.isArray(source.history)
@@ -861,6 +875,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     emissionSourceId: pick(pekContext, ['emissionSourceId', 'emission_source_id']) || pick(source, ['emissionSourceId', 'emission_source_id']),
     waterOutletId: pick(pekContext, ['waterOutletId', 'water_outlet_id']) || pick(source, ['waterOutletId', 'water_outlet_id']),
     availableActions: normalizeProtocolAvailableActions(source.availableActions),
+    scope: source.scope as ProtocolAccessScope | undefined,
     canComplete: source.canComplete === true,
     blockingReasons: normalizeProtocolWorkflowBlockers(source.blockingReasons ?? source.workflowBlockers ?? source.blockers),
     publishedToClientAt: pick(source, ['publishedAt', 'publishedToClientAt', 'published_to_client_at']),
@@ -891,8 +906,8 @@ const isProtocolLike = (value: unknown) => {
   );
 };
 
-const protocolFromActionResponse = async (protocolId: string, _response: unknown): Promise<Protocol> =>
-  getProtocol(protocolId);
+const protocolFromActionResponse = async (_protocolId: string, response: unknown): Promise<Protocol> =>
+  requireProtocol(response, 'mutation');
 
 const requireProtocol = (input: unknown, action: string): Protocol => {
   const direct = asRecord(input);
@@ -1092,51 +1107,6 @@ export async function deleteProtocol(protocolId: string, version: number): Promi
   await api.delete<ApiResponse<null>>(`/protocols/${protocolId}`, { params: { version: requireProtocolVersion(version) } });
 }
 
-const persistedResultRequest = (row: ProtocolResultRow) => mapProtocolResultFormToRequest({
-  values: { ...row.values },
-  measurementDeviceId: row.measurementDeviceId ?? row.deviceId ?? null,
-  normativeId: row.normativeReference?.id ?? (
-    Array.isArray(row.values.normativeId) ? row.values.normativeId[0] : row.values.normativeId
-  ) ?? null,
-});
-
-const draftResultCreateRequest = (payload: ProtocolResultPayload, clientRowId: string | null = null) => ({
-  ...mapProtocolResultFormToRequest(payload),
-  clientRowId,
-});
-
-export async function addProtocolResult(protocolId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow> {
-  const clientRowId = `atomic-${globalThis.crypto?.randomUUID?.() || Date.now()}`;
-  const updated = await saveProtocolDraftResults(protocolId, {
-    version: requireProtocolVersion(version),
-    added: [draftResultCreateRequest(payload, clientRowId)],
-    updated: [],
-    deletedIds: [],
-  });
-  const saved = updated.results.find((row) => row.values.clientRowId === clientRowId) || updated.results[updated.results.length - 1];
-  if (!saved) throw new Error('Backend не вернул сохранённую строку результата.');
-  return saved;
-}
-
-export async function updateProtocolResult(protocolId: string, resultId: string, payload: ProtocolResultPayload, version: number): Promise<ProtocolResultRow> {
-  const updated = await saveProtocolDraftResults(protocolId, {
-    version: requireProtocolVersion(version),
-    added: [],
-    updated: [{ ...mapProtocolResultFormToRequest(payload), id: resultId }],
-    deletedIds: [],
-  });
-  return updated.results.find((row) => row.id === resultId) || { id: resultId, values: payload.values };
-}
-
-export async function deleteProtocolResult(protocolId: string, resultId: string, version: number): Promise<void> {
-  await saveProtocolDraftResults(protocolId, {
-    version: requireProtocolVersion(version),
-    added: [],
-    updated: [],
-    deletedIds: [resultId],
-  });
-}
-
 export async function getProtocolAudit(protocolId: string): Promise<Protocol['history']> {
   const response = await api.get<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/audit`);
   return extractList(response, ['history', 'audit', 'items']).map((item) => {
@@ -1148,54 +1118,6 @@ export async function getProtocolAudit(protocolId: string): Promise<Protocol['hi
       createdAt: pick(source, ['createdAt']),
       comment: pick(source, ['comment']),
     };
-  });
-}
-
-export async function bulkAssignDevice(
-  protocolId: string,
-  rows: ProtocolResultRow[],
-  measurementDeviceId: string | number,
-  version: number,
-): Promise<Protocol> {
-  return saveProtocolDraftResults(protocolId, {
-    version: requireProtocolVersion(version),
-    added: [],
-    updated: rows.map((row) => ({
-      ...persistedResultRequest(row),
-      id: row.id,
-      measurementDeviceId,
-    })),
-    deletedIds: [],
-  });
-}
-
-export async function bulkUpdatePlace(
-  protocolId: string,
-  rows: ProtocolResultRow[],
-  measurementPlace: string,
-  version: number,
-): Promise<Protocol> {
-  return saveProtocolDraftResults(protocolId, {
-    version: requireProtocolVersion(version),
-    added: [],
-    updated: rows.map((row) => {
-      const request = persistedResultRequest(row);
-      return { ...request, id: row.id, values: { ...request.values, measurementPlace } };
-    }),
-    deletedIds: [],
-  });
-}
-
-export async function bulkDeleteResults(
-  protocolId: string,
-  resultIds: string[],
-  version: number,
-): Promise<Protocol> {
-  return saveProtocolDraftResults(protocolId, {
-    version: requireProtocolVersion(version),
-    added: [],
-    updated: [],
-    deletedIds: resultIds,
   });
 }
 
@@ -1281,8 +1203,17 @@ export async function archiveProtocol(protocolId: string, request: ProtocolVersi
 export async function previewProtocol(protocolId: string): Promise<Blob> {
   try {
     const response = await api.get<Blob>(`/protocols/${protocolId}/preview`, { responseType: 'blob' });
-    if (!response.data.size) throw new Error('Backend вернул пустой файл предпросмотра.');
-    return response.data;
+    return validateProtocolFileBlob(response.data, 'pdf');
+  } catch (error) {
+    throw await normalizeBlobError(error);
+  }
+}
+
+/** Reads the immutable PDF persisted at signing time; this endpoint never renders a document. */
+export async function previewSignedProtocol(protocolId: string): Promise<Blob> {
+  try {
+    const response = await api.get<Blob>(`/protocols/${protocolId}/preview-signed`, { responseType: 'blob' });
+    return validateProtocolFileBlob(response.data, 'pdf');
   } catch (error) {
     throw await normalizeBlobError(error);
   }
@@ -1314,29 +1245,54 @@ const ensureFileExtension = (fileName: string | undefined, extension: 'pdf' | 'd
   return normalized.toLowerCase().endsWith(`.${extension}`) ? normalized : `${normalized}.${extension}`;
 };
 
-const normalizeDownloadedProtocolBlob = (blob: Blob, kind: 'pdf' | 'docx') =>
-  blob.type === protocolFileMimeTypes[kind] ? blob : new Blob([blob], { type: protocolFileMimeTypes[kind] });
+export type ProtocolDocumentFormat = 'pdf' | 'docx';
 
-export async function downloadDocx(protocolId: string): Promise<DownloadedProtocolFile> {
-  return downloadProtocolFile(protocolId, 'docx');
-}
-
-export async function downloadPdf(protocolId: string): Promise<DownloadedProtocolFile> {
-  return downloadProtocolFile(protocolId, 'pdf');
-}
-
-const downloadProtocolFile = async (protocolId: string, kind: 'pdf' | 'docx'): Promise<DownloadedProtocolFile> => {
+const errorFromBlobPayload = async (blob: Blob): Promise<Error | null> => {
+  const text = await blob.text();
   try {
-    const response = await api.get<Blob>(`/protocols/${protocolId}/download-${kind}`, { responseType: 'blob' });
-    if (!response.data.size) throw new Error(`Backend вернул пустой ${kind.toUpperCase()} файл.`);
+    const payload = JSON.parse(text) as { message?: string; error?: string; code?: string };
+    const message = payload.message || payload.error;
+    if (message || payload.code) return new Error(message || payload.code);
+  } catch {
+    if (/^(?:\s*\{)|(integrity|hash|storage|error|ошиб)/i.test(text.trim())) {
+      return new Error(text.trim() || 'Backend вернул ошибку вместо файла.');
+    }
+  }
+  return null;
+};
+
+const validateProtocolFileBlob = async (blob: Blob, kind: ProtocolDocumentFormat): Promise<Blob> => {
+  if (!blob.size) throw new Error(`Backend вернул пустой ${kind.toUpperCase()} файл.`);
+  if (/json|text|problem/i.test(blob.type)) {
+    throw (await errorFromBlobPayload(blob)) || new Error('Backend вернул ошибку вместо файла.');
+  }
+  const signature = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
+  const valid = kind === 'pdf'
+    ? signature[0] === 0x25 && signature[1] === 0x50 && signature[2] === 0x44 && signature[3] === 0x46
+    : signature[0] === 0x50 && signature[1] === 0x4b;
+  if (!valid) {
+    throw (await errorFromBlobPayload(blob)) || new Error(`Backend вернул повреждённый ${kind.toUpperCase()} файл.`);
+  }
+  return blob.type === protocolFileMimeTypes[kind]
+    ? blob
+    : new Blob([blob], { type: protocolFileMimeTypes[kind] });
+};
+
+/** The sole protocol download contract. Format is a backend query parameter, not a path alias. */
+export async function downloadProtocolDocument(protocolId: string, kind: ProtocolDocumentFormat): Promise<DownloadedProtocolFile> {
+  try {
+    const response = await api.get<Blob>(`/protocols/${protocolId}/download`, {
+      params: { format: kind.toUpperCase() },
+      responseType: 'blob',
+    });
     return {
-      blob: normalizeDownloadedProtocolBlob(response.data, kind),
+      blob: await validateProtocolFileBlob(response.data, kind),
       fileName: ensureFileExtension(getContentDispositionFileName(response.headers['content-disposition']), kind),
     };
   } catch (error) {
     throw await normalizeBlobError(error);
   }
-};
+}
 
 const normalizeBlobError = async (error: unknown): Promise<Error> => {
   const blob = (error as { response?: { data?: unknown } })?.response?.data;

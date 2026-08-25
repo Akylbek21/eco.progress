@@ -21,6 +21,7 @@ export interface ServiceAeoContent {
   pricing: string;
   legalBasis: string;
   commonMistakes: string;
+  faq: AeoFaqItem[];
 }
 
 export interface ContentAuditItem {
@@ -59,7 +60,7 @@ export interface ServiceContent {
   pricingFactors: Array<{ title: string; description: string }>;
   risks: Array<{ risk: string; prevention: string }>;
   faq: AeoFaqItem[];
-  aeo?: ServiceAeoContent;
+  aeo: ServiceAeoContent;
   relatedServices: string[];
   relatedArticles: string[];
   contentReview: { preparedBy?: string; reviewedBy?: string; lastReviewedAt?: string; reviewStatus: ReviewStatus };

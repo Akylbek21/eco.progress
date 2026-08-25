@@ -96,8 +96,7 @@ describe('protocol backend actions and optimistic-lock contracts', () => {
     const api = source('src/services/apiProtocolService.ts');
     const mutationFunctions = [
       'refreshLaboratoryData', 'updateProtocol', 'updateProtocolDraft', 'saveProtocolDraftResults',
-      'deleteProtocol', 'addProtocolResult', 'updateProtocolResult', 'deleteProtocolResult',
-      'bulkAssignDevice', 'bulkUpdatePlace', 'bulkDeleteResults', 'checkNormatives',
+      'deleteProtocol', 'checkNormatives',
       'readyForApproval', 'approveProtocol', 'returnForRevision', 'returnToDraft', 'signProtocol',
       'publishToClient', 'createCorrection', 'cancelProtocol', 'archiveProtocol',
       'generateDocx', 'generatePdf', 'importExcel', 'addProtocolMeasurementDevice',
@@ -139,7 +138,8 @@ describe('protocol backend actions and optimistic-lock contracts', () => {
     expect(editor).toContain("hasProtocolAction(current, 'returnToDraft')");
     expect(editor).toContain('protocolService.returnToDraft(current.id, request)');
     expect(api).toContain('`/protocols/${protocolId}/return-to-draft`');
-    expect(editor).toMatch(/current\.status === 'SIGNED'[\s\S]{0,120}protocolService\.downloadPdf/);
+    expect(editor).toMatch(/current\.status === 'SIGNED'\s*\?\s*await protocolService\.previewSignedProtocol/);
+    expect(api).toContain('`/protocols/${protocolId}/preview-signed`');
     expect(signing).not.toContain('generatePdf(');
   });
 

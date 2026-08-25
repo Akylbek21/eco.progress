@@ -63,11 +63,11 @@ describe('PEK P1 backend-authoritative frontend logic', () => {
 
   it('uses backend stale and hides forbidden document actions', () => {
     const documents = source('src/features/pek/components/documents/PekReportDocuments.tsx');
-    expect(documents).toContain('latestVersion?.stale === true');
+    expect(documents).toContain('latest?.stale');
     expect(documents).toContain('Документ устарел');
     expect(documents).not.toContain("status === 'STALE'");
-    expect(documents).toContain('report.availableActions.sign === true');
-    expect(documents).toContain('report.availableActions.downloadPdf === true');
+    expect(documents).toContain('report.availableActions.signOfficialDocument === true');
+    expect(documents).toContain('report.availableActions[config.downloadAction] === true');
   });
 
   it('sends filters to API and preserves server pagination', async () => {
@@ -104,11 +104,11 @@ describe('PEK P1 backend-authoritative frontend logic', () => {
     expect(mapPekError({ isAxiosError: true, response: { status: 409, data: { code: 'MAKER_CHECKER_VIOLATION' } } }).message).toBe('Автор записи не может самостоятельно её согласовать.');
   });
 
-  it('uses membership backend permissions instead of global role', () => {
-    const memberships = source('src/features/pek/pages/PekMembershipsPage.tsx');
-    expect(memberships).toContain('membership.availableActions?.edit === true');
-    expect(memberships).toContain('membership.companyPermissions?.PEK_MEMBERS_MANAGE === true');
-    expect(memberships).not.toContain('canManagePekMemberships(user)');
-    expect(memberships).not.toMatch(/user\.role\s*===/);
+  it('uses only internal assignee lookups and has no PEK membership management', () => {
+    const service = source('src/features/pek/api/pekService.ts');
+    const layout = source('src/features/pek/routes/PekLayout.tsx');
+    expect(service).toContain("'/pek/lookups/assignees'");
+    expect(service).not.toContain('/pek/companies/${companyId}/members');
+    expect(layout).not.toContain('Сотрудники / Доступ ПЭК');
   });
 });

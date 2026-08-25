@@ -26,4 +26,5 @@ export const mapBackendProtocolType = (value: string): FrontendProtocolType => {
   return normalized as FrontendProtocolType;
 };
 
-export const mapFrontendProtocolType = (value: FrontendProtocolType): string => value;
+export const mapFrontendProtocolType = (value: FrontendProtocolType): string =>
+  value === 'ambient_air' ? 'AMBIENT_AIR_SZZ' : value;

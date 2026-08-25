@@ -14,6 +14,7 @@ export type ProtocolWizardResult = {
   value: string;
   textValue: string;
   samplingPlace: string;
+  samplingPointId: string;
   samplingDate: string;
   sampleNumber: string;
   samplingDepth: string;
@@ -42,6 +43,16 @@ export type ProtocolWizardResult = {
   methodName: string;
   methodDocument: string;
   note: string;
+};
+
+export type ProtocolWizardSamplingPoint = {
+  clientPointId: string;
+  serverPointId?: string;
+  name: string;
+  description: string;
+  latitude: string;
+  longitude: string;
+  sortOrder: number;
 };
 
 export type MeasurementFormRow = ProtocolWizardResult;
@@ -110,6 +121,7 @@ export type ProtocolWizardForm = {
   emissionSourceId: string;
   waterOutletId: string;
   printVisibility: ProtocolPrintVisibility;
+  samplingPoints: ProtocolWizardSamplingPoint[];
   results: ProtocolWizardResult[];
 };
 
@@ -118,10 +130,22 @@ const createClientRowId = () =>
 
 export const emptyWizardResult = (): ProtocolWizardResult => ({
   clientRowId: createClientRowId(),
-  indicatorName: '', pollutantCode: '', factorType: '', factorCode: '', cas: '', formula: '', unit: '', value: '', textValue: '', samplingPlace: '', samplingDate: '', sampleNumber: '', samplingDepth: '', samplingSpeed: '', sampleVolume: '', waterType: '', direction: '', minimumValue: '', maximumValue: '', averageValue: '', duration: '',
+  indicatorName: '', pollutantCode: '', factorType: '', factorCode: '', cas: '', formula: '', unit: '', value: '', textValue: '', samplingPlace: '', samplingPointId: '', samplingDate: '', sampleNumber: '', samplingDepth: '', samplingSpeed: '', sampleVolume: '', waterType: '', direction: '', minimumValue: '', maximumValue: '', averageValue: '', duration: '',
   measurementDeviceId: '', normativeId: '', normativeSource: 'NONE', normativeStatus: '', normativeValue: '', normativeValueRaw: '', normativeMin: '', normativeMax: '', comparisonType: 'LESS_OR_EQUAL', normativeDocument: '', manualNormativeReason: '', sourceDocumentCode: '', testingMethodNd: '', samplingMethodNd: '',
   methodName: '', methodDocument: '', note: '',
 });
+
+export const createWizardSamplingPoint = (name = ''): ProtocolWizardSamplingPoint => ({
+  clientPointId: globalThis.crypto?.randomUUID?.() || `point-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  name,
+  description: '',
+  latitude: '',
+  longitude: '',
+  sortOrder: 0,
+});
+
+export const createDefaultAmbientSamplingPoints = (): ProtocolWizardSamplingPoint[] =>
+  ['Север', 'Юг', 'Восток', 'Запад'].map((name, sortOrder) => ({ ...createWizardSamplingPoint(name), sortOrder }));
 
 export const createWizardDefaults = (): ProtocolWizardForm => {
   const now = new Date();
@@ -134,7 +158,7 @@ export const createWizardDefaults = (): ProtocolWizardForm => {
     season: '', workCategory: '', workplaceType: '', roomType: '', normLevel: '', lightingType: '', noiseType: '', visualWorkCategory: '', waterType: '', waterUseCategory: '',
     testingMethodNd: '', samplingMethodNd: '', formCode: '', appendixNumber: '', applicationNumber: '', contractNumber: '', note: '',
     orderId: '', orderServiceItemId: '', pekProgramId: '', pekControlItemId: '', pekControlEventId: '', pekReportId: '',
-    monitoringPointId: '', emissionSourceId: '', waterOutletId: '', printVisibility: { ...DEFAULT_PROTOCOL_PRINT_VISIBILITY }, results: [],
+    monitoringPointId: '', emissionSourceId: '', waterOutletId: '', printVisibility: { ...DEFAULT_PROTOCOL_PRINT_VISIBILITY }, samplingPoints: [], results: [],
   };
 };
 
@@ -163,6 +187,7 @@ export const normalizeProtocolWizardForm = (value?: unknown): ProtocolWizardForm
   const defaults = createWizardDefaults();
   const source = asRecord(value);
   const sourceRows = Array.isArray(source.results) ? source.results : [];
+  const sourcePoints = Array.isArray(source.samplingPoints) ? source.samplingPoints : [];
   const results = sourceRows.map((row) => {
     const rowDefaults = emptyWizardResult();
     const rowSource = asRecord(row);
@@ -193,6 +218,20 @@ export const normalizeProtocolWizardForm = (value?: unknown): ProtocolWizardForm
       ...defaults.printVisibility,
       ...asRecord(source.printVisibility),
     },
+    samplingPoints: sourcePoints.map((point, index) => {
+      const item = asRecord(point);
+      return {
+        ...createWizardSamplingPoint(),
+        ...item,
+        clientPointId: String(item.clientPointId || item.serverPointId || item.id || createWizardSamplingPoint().clientPointId),
+        serverPointId: item.serverPointId == null && item.id == null ? undefined : String(item.serverPointId ?? item.id),
+        name: typeof item.name === 'string' ? item.name : '',
+        description: typeof item.description === 'string' ? item.description : '',
+        latitude: item.latitude == null ? '' : String(item.latitude),
+        longitude: item.longitude == null ? '' : String(item.longitude),
+        sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index,
+      };
+    }).sort((left, right) => left.sortOrder - right.sortOrder),
     results,
   } as ProtocolWizardForm;
 };

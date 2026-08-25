@@ -49,8 +49,9 @@ const PekProgramsPage = () => {
     staleTime: PEK_STALE_TIME_MS,
   });
   const assignees = useQuery({
-    queryKey: pekKeys.assignees(['PEK_RESPONSIBLE'], user?.id),
-    queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal),
+    queryKey: pekKeys.assignees(filters.companyId || 0, ['PEK_RESPONSIBLE'], user?.id),
+    queryFn: ({ signal }) => pekApi.getAssignees(filters.companyId!, ['PEK_RESPONSIBLE'], signal),
+    enabled: Boolean(filters.companyId),
     retry: retryPekQuery,
   });
   const hasFilters = Boolean(rawSearch || filters.companyId || filters.objectId || filters.status || filters.activeOn || filters.responsibleUserId);

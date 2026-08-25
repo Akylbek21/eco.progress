@@ -65,6 +65,7 @@ export interface UpdateProtocolRequest {
   printVisibility: ProtocolPrintVisibility;
   orderId: string | null;
   orderServiceItemId: string | null;
+  samplingPoints: ProtocolSamplingPointRequest[];
 }
 
 export interface ProtocolPekContextRequest {
@@ -129,13 +130,25 @@ export interface CreateProtocolDraftRequest {
   testingEndDate: string | null;
   environment: ProtocolEnvironmentRequest | null;
   pekContext?: ProtocolPekContextRequest | null;
+  samplingPoints: ProtocolSamplingPointRequest[];
 }
+
+export type ProtocolSamplingPointRequest = {
+  id: string | number | null;
+  clientPointId: string | null;
+  name: string;
+  description: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  sortOrder: number;
+};
 
 /** PATCH /protocols/{id}/draft. Company is immutable after draft creation and is intentionally absent. */
 export type UpdateProtocolDraftRequest = Omit<UpdateProtocolPayload, 'companyId'>;
 
 export interface ProtocolResultRequest {
   values: Record<string, ProtocolResultValue>;
+  samplingPointId: string | number | null;
   measurementDeviceId: string | number | null;
   normativeId: string | number | null;
 }

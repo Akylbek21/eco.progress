@@ -4,6 +4,8 @@ import type { ArticleContent, CaseStudy, ContentRepository, Expert, RegionConten
 import { normalizeArticleSlug } from './articles/articleSlugs';
 import { normalizeServiceSlug } from './serviceCatalog';
 import { trackEvent } from '../services/analytics';
+import { isCompleteExpert } from './experts/experts';
+import { isPublishableCaseStudy } from './cases/caseStudyPolicy';
 
 type PublicCollection = 'services' | 'articles' | 'regions' | 'experts' | 'trust-documents' | 'cases';
 type CacheRecord<T> = { storedAt: number; version: string; items: T[] };
@@ -76,9 +78,9 @@ export class ApiContentRepository implements ContentRepository {
     const items = await this.getRegions();
     return items.find((item) => item.regionSlug === slug) ?? null;
   }
-  getExperts() { return this.collection<Expert>('experts', () => this.devFallback!.getExperts()); }
+  async getExperts() { return (await this.collection<Expert>('experts', () => this.devFallback!.getExperts())).filter(isCompleteExpert); }
   getTrustDocuments() { return this.collection<TrustDocument>('trust-documents', () => this.devFallback!.getTrustDocuments()); }
-  getCases() { return this.collection<CaseStudy>('cases', () => this.devFallback!.getCases()); }
+  async getCases() { return (await this.collection<CaseStudy>('cases', () => this.devFallback!.getCases())).filter(isPublishableCaseStudy); }
   async getCaseBySlug(slug: string) {
     const items = await this.getCases();
     return items.find((item) => item.slug === slug) ?? null;

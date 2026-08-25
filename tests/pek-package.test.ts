@@ -53,10 +53,10 @@ describe('PEK report package backend contract', () => {
     expect(mapPekError({ isAxiosError: true, response: { status: 409, data: { code: 'PEK_DOCUMENT_STALE' } } }).message).toBe('Документ устарел. Сформируйте его заново.');
     expect(mapPekError({ isAxiosError: true, response: { status: 412, data: {} } }).message).toBe('Данные были изменены другим пользователем');
     const component = readFileSync(resolve(process.cwd(), 'src/features/pek/components/documents/PekReportDocuments.tsx'), 'utf8');
-    expect(component).toContain('latestVersion?.stale === true');
-    expect(component).toContain('report.availableActions.downloadPdf === true');
-    expect(component).toContain('&& !documentIsStale');
-    expect(component).toContain('Пересформировать PDF');
+    expect(component).toContain('latest?.stale');
+    expect(component).toContain('report.availableActions[config.downloadAction] === true');
+    expect(component).toContain('!latest.stale');
+    expect(component).toContain('Сформируйте новую версию');
     expect(component).not.toContain('/STALE|OUTDATED/i');
   });
 });

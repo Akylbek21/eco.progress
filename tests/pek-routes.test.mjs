@@ -17,9 +17,9 @@ test('required PEK routes are registered once', () => {
     '/staff/pek/reports/new',
     '/staff/pek/reports/:reportId',
     '/staff/pek/permits',
-    '/staff/pek/access',
     '/staff/pek/settings',
   ].forEach((route) => assert.match(app, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))));
+  assert.doesNotMatch(app, /\/staff\/pek\/access/);
   assert.doesNotMatch(app, /\/staff\/pek\/programs\/:programId\/versions/);
 });
 

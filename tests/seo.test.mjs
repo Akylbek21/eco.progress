@@ -10,6 +10,23 @@ import { createSchemaGraph } from '../src/seo/schemaGraph.ts';
 
 const registry = JSON.parse(await readFile(new URL('../src/data/seoRegistry.generated.json', import.meta.url), 'utf8'));
 
+test('production SEO build fails closed on empty CMS and sitemap regression', async () => {
+  const [sync, audit, dockerfile, compose, quality] = await Promise.all([
+    readFile(new URL('../scripts/sync-seo-content.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../scripts/seo-audit.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../Dockerfile', import.meta.url), 'utf8'),
+    readFile(new URL('../docker-compose.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../src/content/regions/regionContentQuality.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.match(sync, /experts, cases and articleReviews are all empty/);
+  assert.match(sync, /process\.env\.SEO_CONTENT_API_URL/);
+  assert.match(audit, /errors\.push\('SEO CMS snapshot is empty/);
+  assert.doesNotMatch(audit, /if \(cmsContentUnavailable\) warnings\.push\(`\$\{message\}/);
+  assert.match(dockerfile, /ARG SEO_CONTENT_API_URL/);
+  assert.match(compose, /SEO_CONTENT_API_URL is required for production build/);
+  assert.doesNotMatch(quality, /publishedCaseStudies|confirmedCaseSlugs/);
+});
+
 test('SEO registry has unique canonical URLs, titles and descriptions', () => {
   const records = registry.filter((record) => record.robots === 'index,follow');
   assert.equal(new Set(records.map((record) => record.canonical)).size, records.length);
@@ -23,8 +40,11 @@ test('SEO registry has unique canonical URLs, titles and descriptions', () => {
   }
 });
 
-test('sitemap excludes private, auth and 404 routes', () => {
+test('sitemap is derived exactly from the unified SEO registry', async () => {
   const urls = registry.filter((item) => item.includeInSitemap).map((item) => item.canonical);
+  const sitemap = await readFile(new URL('../public/sitemap.xml', import.meta.url), 'utf8');
+  const sitemapUrls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/gu)].map((match) => match[1]);
+  assert.deepEqual(sitemapUrls, urls);
   assert.equal(new Set(urls).size, urls.length);
   for (const url of urls) assert.doesNotMatch(url, /\/(?:staff|cabinet|client|admin|dashboard|internal|login|register|reset-password|api|404)(?:\/|$)/);
 });
@@ -118,10 +138,10 @@ test('service-city commercial content is unique and contains all required blocks
   }
 });
 
-test('regional pages fail closed and topic clusters expose only approved published articles', () => {
+test('regional pages use unique content quality and topic clusters expose only approved published articles', () => {
   const regionalPages = seoPages.filter((page) => page.type === 'city' || page.type === 'service-city');
   assert.equal(regionalPages.filter((page) => page.type === 'city').length, 18, 'existing cities must be retained');
-  assert.ok(regionalPages.every((page) => page.indexable === false), 'unconfirmed cases must keep regional pages out of the index');
+  assert.ok(regionalPages.every((page) => page.indexable === true), 'complete unique regional content must be indexable without a case study');
   assert.ok(regionalPages.every((page) => page.relatedLinks.every((link) => !link.path.startsWith('/news/'))));
 
   assert.equal(isArticleEligibleForSeoLinks({ status: 'published', reviewStatus: 'approved' }), true);
@@ -141,6 +161,12 @@ test('regional pages fail closed and topic clusters expose only approved publish
     assert.ok(content?.estimatedTimeline, slug);
     assert.ok(content?.faq.length >= 2, slug);
   }
+});
+
+test('CMS sync normalizes the backend APPROVED expert-review enum before publication checks', async () => {
+  const syncSource = await readFile(new URL('../scripts/sync-seo-content.mjs', import.meta.url), 'utf8');
+  assert.match(syncSource, /APPROVED: 'approved'/);
+  assert.match(syncSource, /\.map\(normalizeArticleReview\)/);
 });
 
 test('city grammar and PEK keyword cluster use explicit backend-independent forms', () => {
@@ -207,14 +233,14 @@ test('expert model is strict and approved article schema links author and review
     readFile(new URL('../src/content/types.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/content/experts/experts.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/NewsDetailsPage.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('../src/utils/schema.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/seo/entityBuilders.ts', import.meta.url), 'utf8'),
   ]);
   for (const field of ['id', 'fullName', 'position', 'specialization', 'experienceYears', 'bio', 'photo', 'profileUrl']) assert.match(types, new RegExp(`${field}:`));
   assert.match(experts, /seoCmsSnapshot\.generated\.json/);
   assert.doesNotMatch(experts, /fullName:\s*['"][^'"]+|experienceYears:\s*\d/);
   assert.match(articlePage, /item\.reviewStatus === 'approved'/);
-  assert.match(articlePage, /#person/);
-  assert.match(articlePage, /#person-reviewer/);
+  assert.match(articlePage, /entityIds\(canonical\)\.author/);
+  assert.match(articlePage, /entityIds\(canonical\)\.reviewer/);
   assert.match(schema, /reviewedBy/);
 });
 
@@ -222,10 +248,8 @@ test('service-city registry exposes Service schema and Shymkent UI adds LocalBus
   const shymkentService = registry.find((item) => item.path === '/pek-shymkent');
   const serviceSchema = shymkentService?.schema.find((item) => item['@type'] === 'Service');
   assert.equal(serviceSchema?.areaServed?.name, 'Шымкент');
-  for (const type of ['Organization', 'LocalBusiness', 'Service', 'BreadcrumbList']) {
-    const source = await readFile(new URL('../src/pages/SeoLandingPage.tsx', import.meta.url), 'utf8');
-    assert.match(source, new RegExp(type));
-  }
+  const builders = await readFile(new URL('../src/seo/entityBuilders.ts', import.meta.url), 'utf8');
+  for (const type of ['Organization', 'LocalBusiness', 'Service', 'BreadcrumbList']) assert.match(builders, new RegExp(type));
   const source = await readFile(new URL('../src/pages/SeoLandingPage.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /'@type': 'FAQPage'/);
 });
@@ -245,8 +269,8 @@ test('AEO content is visible and cases use verified backend records', async () =
   assert.match(app, /path="\/cases"/);
   assert.match(app, /path="\/cases\/:slug"/);
   assert.match(casePage, /isPublishableCaseStudy/);
-  assert.match(details, /'@type': 'Article'/);
-  assert.match(details, /'@type': 'Service'/);
+  assert.match(details, /buildArticleSchema/);
+  assert.match(details, /buildServiceEntity/);
   assert.match(details, /buildPersonSchema/);
 });
 

@@ -24,11 +24,24 @@ const validDate = (value: unknown) => {
 
 export const validateDraft = (form: ProtocolWizardForm): ProtocolValidationIssue[] => {
   const issues: ProtocolValidationIssue[] = [];
+  if (form.templateId === 'ambient_air') {
+    if (!form.samplingPoints.length) issues.push(issue('SAMPLING_POINT_REQUIRED', 'Добавьте хотя бы одно место отбора.', 'samplingPoints', 2));
+    const names = new Set<string>();
+    form.samplingPoints.forEach((point, index) => {
+      const name = text(point.name);
+      if (!name) issues.push(issue('SAMPLING_POINT_NAME_REQUIRED', 'Укажите название места отбора.', `samplingPoints.${index}.name`, 2));
+      if (name && names.has(name.toLocaleLowerCase('ru-RU'))) issues.push(issue('SAMPLING_POINT_NAME_DUPLICATE', `Название места отбора «${name}» повторяется.`, `samplingPoints.${index}.name`, 2));
+      names.add(name.toLocaleLowerCase('ru-RU'));
+      if (hasValue(point.latitude) && (!Number.isFinite(Number(point.latitude)) || Number(point.latitude) < -90 || Number(point.latitude) > 90)) issues.push(issue('SAMPLING_POINT_LATITUDE_INVALID', 'Широта должна быть от −90 до 90.', `samplingPoints.${index}.latitude`, 2));
+      if (hasValue(point.longitude) && (!Number.isFinite(Number(point.longitude)) || Number(point.longitude) < -180 || Number(point.longitude) > 180)) issues.push(issue('SAMPLING_POINT_LONGITUDE_INVALID', 'Долгота должна быть от −180 до 180.', `samplingPoints.${index}.longitude`, 2));
+    });
+  }
   const populatedRows = form.results.filter((row) => text(row.indicatorName) || hasValue(row.value) || hasValue(row.textValue));
   if (!populatedRows.length) return [issue('RESULT_REQUIRED', 'Добавьте минимум одну строку результата.', 'results', 2)];
   form.results.forEach((row, index) => {
     if (!text(row.indicatorName) && !hasValue(row.value) && !hasValue(row.textValue)) return;
     const prefix = `results.${index}`;
+    if (form.templateId === 'ambient_air' && !text(row.samplingPointId)) issues.push(issue('RESULT_SAMPLING_POINT_REQUIRED', 'Выберите место отбора для результата.', `${prefix}.samplingPointId`, 2, 'ERROR', row.clientRowId));
     if (!text(row.indicatorName)) issues.push(issue('RESULT_INDICATOR_REQUIRED', 'Укажите показатель.', `${prefix}.indicatorName`, 2, 'ERROR', row.clientRowId));
     if (!hasValue(row.value) && !hasValue(row.textValue)) issues.push(issue('RESULT_VALUE_REQUIRED', 'Укажите результат.', `${prefix}.value`, 2, 'ERROR', row.clientRowId));
     if (!text(row.unit)) issues.push(issue('RESULT_UNIT_REQUIRED', 'Укажите единицу измерения.', `${prefix}.unit`, 2, 'ERROR', row.clientRowId));

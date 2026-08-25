@@ -6,7 +6,7 @@ import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { company, getWhatsAppUrl } from '../config/company';
 import type { SeoArticleConfig } from '../data/seoArticles';
-import { buildArticleSchema, buildBreadcrumbSchema, buildPersonSchema } from '../utils/schema';
+import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, entityIds } from '../seo/entityBuilders';
 import { normalizeArticleDates } from '../utils/articleDates';
 import { expertMap, experts, isCompleteExpert } from '../content/experts/experts';
 import { ArticleAuthorCard, ArticleChecklist, ArticleOrganizationAuthorCard, ArticleReviewerCard, ArticleSources, ArticleTableOfContents, ArticleWarning, ContentLastUpdated, RelatedArticles, RelatedServices } from '../components/content/ContentBlocks';
@@ -14,7 +14,7 @@ import { normalizeArticleSlug } from '../content/articles/articleSlugs';
 import { publicContentRepository } from '../content/apiRepository';
 import type { ArticleContent } from '../content/types';
 import { articleRobotsForReviewStatus } from '../content/articleReview';
-import { AeoFaqList } from '../components/content/AeoContent';
+import { AeoFaqList, RelatedCaseStudies, VerifiedExperts } from '../components/content/AeoContent';
 
 const toSeoArticle = (article: ArticleContent): SeoArticleConfig => ({
   id: article.slug,
@@ -92,10 +92,11 @@ const NewsDetailsPage = () => {
   const author = isCompleteExpert(authorCandidate) ? authorCandidate : undefined;
   const reviewer = isCompleteExpert(reviewerCandidate) ? reviewerCandidate : undefined;
   const approved = item.reviewStatus === 'approved';
-  const authorId = approved && author ? `${canonical}#person` : undefined;
-  const reviewerId = approved && reviewer ? `${canonical}#person-reviewer` : undefined;
+  const authorId = approved && author ? entityIds(canonical).author : undefined;
+  const reviewerId = approved && reviewer ? entityIds(canonical).reviewer : undefined;
   const schema = [
-    buildArticleSchema({ headline: item.h1, description: item.description, image: `${company.siteUrl}${item.image}`, datePublished: dates.datePublished, dateModified: dates.dateModified, url: canonical, authorId, reviewerId }),
+    ...buildCorePageEntities({ canonical, name: item.h1, description: item.description, dateModified: dates.dateModified }),
+    buildArticleSchema({ headline: item.h1, description: item.description, image: `${company.siteUrl}${item.image}`, datePublished: dates.datePublished, dateModified: dates.dateModified, canonical, authorId, reviewerId }),
     ...(authorId && author ? [buildPersonSchema(author, authorId)] : []),
     ...(reviewerId && reviewer ? [buildPersonSchema(reviewer, reviewerId)] : []),
     buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Статьи', url: `${company.siteUrl}/news` }, { name: item.h1, url: canonical }]),
@@ -162,6 +163,8 @@ const NewsDetailsPage = () => {
             <p className="mt-2">Последняя экспертная проверка: {item.lastReviewedAt ? <time dateTime={item.lastReviewedAt}>{item.lastReviewedAt}</time> : 'не завершена'}</p>
           </div>
           <ContentLastUpdated date={dates.dateModified} requiresReview={item.reviewStatus !== 'approved'} />
+          <VerifiedExperts />
+          <RelatedCaseStudies service={item.relatedServiceSlugs[0]} />
         </div>
       </section>
     </article>

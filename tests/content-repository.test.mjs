@@ -7,7 +7,8 @@ import { regionContent } from '../src/content/regions/regionContent.ts';
 import { caseStudies, publishedCaseStudies } from '../src/content/cases/caseStudies.ts';
 import { trustDocuments } from '../src/content/trust-documents/trustDocuments.ts';
 import { FallbackContentRepository, LocalContentRepository } from '../src/content/repository.ts';
-import { getAllPublicUrls, seoPages } from '../scripts/seo-data.mjs';
+import { seoPages } from '../scripts/seo-data.mjs';
+import seoRegistry from '../src/data/seoRegistry.generated.json' with { type: 'json' };
 
 test('local content repository exposes only public content and normalizes service aliases', async () => {
   const repository = new LocalContentRepository();
@@ -34,6 +35,15 @@ test('priority content has structured service, article and regional fields', () 
     assert.ok(item.deliverables.length > 0);
     assert.ok(item.faq.length >= 5);
     assert.ok(item.contentReview.reviewStatus);
+    assert.ok(item.aeo);
+    for (const [field, value] of Object.entries(item.aeo)) {
+      if (field === 'faq') assert.ok(value.length >= 5);
+      else assert.ok(value.trim());
+    }
+  }
+  for (const field of Object.keys(serviceContent[0].aeo)) {
+    const values = serviceContent.map((item) => field === 'faq' ? JSON.stringify(item.aeo.faq) : item.aeo[field]);
+    assert.equal(new Set(values).size, serviceContent.length, `AEO field ${field} must be unique per service`);
   }
   assert.ok(articleContent.length >= 10);
   for (const article of articleContent) {
@@ -61,11 +71,14 @@ test('waste utilization is exposed only for Shymkent, Taraz and Turkestan', () =
     'utilizaciya-othodov-taraz',
     'utilizaciya-othodov-turkestan',
   ]);
-  const publicUrls = new Set(getAllPublicUrls().map((item) => item.loc));
-  for (const city of ['shymkent', 'taraz', 'turkestan', 'almaty', 'astana', 'kyzylorda', 'aktobe', 'atyrau', 'karaganda', 'pavlodar']) {
+  const publicUrls = new Set(seoRegistry.filter((item) => item.includeInSitemap).map((item) => item.canonical));
+  for (const city of ['shymkent', 'taraz', 'turkestan']) {
+    assert.ok(publicUrls.has(`https://ecoprogress.kz/utilizaciya-othodov-${city}`));
+  }
+  for (const city of ['almaty', 'astana', 'kyzylorda', 'aktobe', 'atyrau', 'karaganda', 'pavlodar']) {
     assert.ok(!publicUrls.has(`https://ecoprogress.kz/utilizaciya-othodov-${city}`));
   }
-  assert.ok(wasteUtilizationPages.every((page) => page.indexable === false));
+  assert.ok(wasteUtilizationPages.every((page) => page.indexable === true));
 });
 
 test('service and article templates render mandatory structured content blocks', async () => {
@@ -78,5 +91,5 @@ test('service and article templates render mandatory structured content blocks',
   for (const block of ['ArticleTableOfContents', 'ArticleChecklist', 'ArticleSources', 'ArticleAuthorCard', 'ArticleReviewerCard', 'RelatedArticles']) assert.match(articlePage, new RegExp(block));
   for (const label of ['Дата публикации', 'Последняя экспертная проверка', 'articleRobotsForReviewStatus']) assert.match(articlePage, new RegExp(label));
   assert.match(articlePage, /normalizeArticleSlug/);
-  assert.match(generatedRegistry, /"path": "\/ecologicheskie-uslugi-kostanay"[\s\S]*?"robots": "noindex,follow"/);
+  assert.match(generatedRegistry, /"path": "\/ecologicheskie-uslugi-kostanay"[\s\S]*?"robots": "index,follow"/);
 });

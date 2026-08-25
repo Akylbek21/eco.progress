@@ -45,6 +45,9 @@ export const pekReportStatusLabels: Record<PekReportStatus, string> = {
   READY_FOR_REVIEW: 'На проверке',
   RETURNED: 'Возвращён на доработку',
   APPROVED: 'Утверждён',
+  SUBMITTED: 'Сдан',
+  ACCEPTED: 'Принят',
+  REJECTED: 'Отклонён',
   SIGNED: 'Подписан',
   ARCHIVED: 'В архиве',
 };

@@ -6,6 +6,7 @@ import type {
   PekReport,
 } from '../api/pekContracts';
 import { pekProgramContractSchema, pekReportContractSchema, validatePekContract } from '../api/pekContractSchemas';
+import { mapProgramMonitoring } from './monitoringMapper';
 
 type Row = Record<string, unknown>;
 const row = (value: unknown): Row =>
@@ -58,6 +59,9 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
     name: String(source.name || ''),
     description: source.description == null ? null : String(source.description),
     version: numberValue(source.version),
+    contentRevision: numberValue(source.contentRevision),
+    regulationVersion: source.regulationVersion == null ? null : String(source.regulationVersion),
+    templateVersion: source.templateVersion == null ? null : String(source.templateVersion),
     status: String(source.status || ''),
     validFrom: String(source.validFrom || ''),
     validUntil: String(source.validUntil || ''),
@@ -83,6 +87,21 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
     controlItems: Array.isArray(source.controlItems) ? source.controlItems as PekProgram['controlItems'] : [],
     indicators: Array.isArray(source.indicators) ? source.indicators as PekProgram['indicators'] : [],
     measures: Array.isArray(source.measures) ? source.measures as PekProgram['measures'] : [],
+    monitoring: mapProgramMonitoring({
+      programId: source.id,
+      programVersion: source.version,
+      contentRevision: source.contentRevision,
+      readiness: source.readiness,
+      readinessPercent: source.readinessPercent,
+      items: Array.isArray(source.monitoring)
+        ? source.monitoring
+        : Array.isArray(row(source.monitoring).items)
+          ? row(source.monitoring).items
+          : Array.isArray(source.monitoringDirections)
+            ? source.monitoringDirections
+            : [],
+      availableActions: row(source.monitoring).availableActions,
+    }, numberValue(source.id)),
     documents: Array.isArray(source.documents) ? source.documents as PekProgram['documents'] : [],
   };
 };
@@ -97,6 +116,9 @@ export const mapReportResponse = (
     ...source,
     id: numberValue(source.id),
     version: numberValue(source.version),
+    contentRevision: numberValue(source.contentRevision),
+    regulationVersion: source.regulationVersion == null ? null : String(source.regulationVersion),
+    templateVersion: source.templateVersion == null ? null : String(source.templateVersion),
     status: String(source.status || ''),
     periodType: String(source.periodType || 'QUARTER') as PekReport['periodType'],
     year: numberValue(source.reportYear ?? source.year),
@@ -105,6 +127,11 @@ export const mapReportResponse = (
       : numberValue(source.reportQuarter ?? source.quarter),
     periodStart: String(source.periodStart || ''),
     periodEnd: String(source.periodEnd || ''),
+    submissionDueDate: source.submissionDueDate == null ? null : String(source.submissionDueDate),
+    submittedAt: source.submittedAt == null ? null : String(source.submittedAt),
+    acceptedAt: source.acceptedAt == null ? null : String(source.acceptedAt),
+    rejectedAt: source.rejectedAt == null ? null : String(source.rejectedAt),
+    rejectionReason: source.rejectionReason == null ? null : String(source.rejectionReason),
     companyId: numberValue(source.companyId),
     objectId: numberValue(source.objectId),
     programId: numberValue(source.programId),
@@ -114,7 +141,7 @@ export const mapReportResponse = (
     linkedProtocolCount: numberValue(source.linkedProtocolCount),
     linkedProtocolNumbers,
     lastCollectedAt: source.lastCollectedAt == null ? null : String(source.lastCollectedAt),
-    availableActions: availableActionFlags(source.availableActions),
+    availableActions: availableActionFlags(source.availableActions) as PekReport['availableActions'],
     returnInfo: returnInfo(source.returnInfo),
   };
 };
@@ -140,6 +167,7 @@ export const mapExceedanceResponse = (value: unknown): PekExceedance => {
     evidenceFileIds: Array.isArray(source.evidenceFileIds) ? source.evidenceFileIds.map(String) : [],
     version: numberValue(source.version),
     availableActions: availableActionFlags(source.availableActions),
+    allowedTransitions: Array.isArray(source.allowedTransitions) ? source.allowedTransitions.map(String) : [],
   };
 };
 

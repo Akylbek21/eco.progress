@@ -89,7 +89,7 @@ describe('protocol domain contract', () => {
       deviceId: 8,
       normativeId: 9,
       values: { indicator: 'NO2', unit: 'mg/m3', deviceId: 8, measurementDeviceId: 8, normativeId: 9 },
-    })).toEqual({ values: { indicator: 'NO2', unit: 'mg/m3' }, measurementDeviceId: 8, normativeId: 9 });
+    })).toEqual({ values: { indicator: 'NO2', unit: 'mg/m3' }, measurementDeviceId: 8, normativeId: 9, samplingPointId: null });
   });
 
   it('omits empty query values', () => {

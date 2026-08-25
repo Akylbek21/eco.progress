@@ -46,7 +46,7 @@ test('manual region forms do not produce known invalid phrases', () => {
   assert.doesNotMatch(text, /для Астана и Акмолинская область/iu);
   assert.equal(regions.find((item) => item.slug === 'karaganda')?.regionPrepositional, 'Карагандинской области');
   assert.deepEqual(regions.find((item) => item.slug === 'semey'), {
-    slug: 'semey', city: 'Семей', cityNominative: 'Семей', cityGenitive: 'Семея', cityDative: 'Семею', cityAccusative: 'Семей', cityInstrumental: 'Семеем', cityPrepositional: 'Семее', regionNominative: 'область Абай', regionGenitive: 'области Абай', regionPrepositional: 'области Абай',
+    slug: 'semey', city: 'Семей', cityNominative: 'Семей', cityGenitive: 'Семея', cityDative: 'Семею', cityAccusative: 'Семей', cityInstrumental: 'Семеем', cityPrepositional: 'Семее', regionNominative: 'область Абай', regionGenitive: 'области Абай', regionDative: 'области Абай', regionInstrumental: 'областью Абай', regionPrepositional: 'области Абай',
   });
 });
 
@@ -70,11 +70,12 @@ test('news delegates to the canonical repository and fallback is dev-only', asyn
   assert.doesNotMatch(source, /^import \{ seoArticles \}/m);
 });
 
-test('schema generators are separated by content type', async () => {
-  const source = await readFile(new URL('../src/utils/schema.ts', import.meta.url), 'utf8');
-  for (const name of ['buildOrganizationSchema', 'buildServiceSchema', 'buildArticleSchema', 'buildFaqSchema', 'buildBreadcrumbSchema']) assert.match(source, new RegExp(`export const ${name}`));
-  const articleStart = source.indexOf('export const buildArticleSchema');
-  const faqStart = source.indexOf('export const buildFaqSchema');
-  const articleBuilder = source.slice(articleStart, faqStart);
-  assert.doesNotMatch(articleBuilder, /serviceType|areaServed/);
+test('all required schema entities come from one builder module', async () => {
+  const source = await readFile(new URL('../src/seo/entityBuilders.ts', import.meta.url), 'utf8');
+  for (const name of ['buildOrganizationSchema', 'buildLocalBusinessSchema', 'buildWebSiteSchema', 'buildWebPageSchema', 'buildServiceEntity', 'buildPersonSchema', 'buildArticleSchema', 'buildBreadcrumbSchema']) assert.match(source, new RegExp(`export const ${name}`));
+  const prerender = await readFile(new URL('../scripts/prerender.js', import.meta.url), 'utf8');
+  const generator = await readFile(new URL('../scripts/generate-sitemap.js', import.meta.url), 'utf8');
+  assert.match(prerender, /seo\/entityBuilders\.ts/);
+  assert.match(generator, /seo\/entityBuilders\.ts/);
+  assert.doesNotMatch(prerender, /const build(?:Organization|Service|Breadcrumb)Schema/);
 });

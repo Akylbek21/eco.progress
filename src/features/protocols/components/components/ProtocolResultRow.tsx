@@ -31,6 +31,8 @@ const ProtocolResultRow = ({
 }: Props) => {
   const { register, control, watch, formState: { errors } } = useFormContext<ProtocolWizardForm>();
   const row = watch(`results.${index}`);
+  const ambient = watch('templateId') === 'ambient_air';
+  const samplingPoints = watch('samplingPoints');
   const directoryNormative = row?.normativeSource === 'DIRECTORY';
   const manual = row?.normativeSource === 'MANUAL';
   const rowErrors = errors.results?.[index];
@@ -76,6 +78,7 @@ const ProtocolResultRow = ({
             aria-label={`Показатель строки ${index + 1}`}
             placeholder="Выберите норматив через поиск или введите вручную"
             {...register(`results.${index}.indicatorName`)}
+            readOnly={ambient && directoryNormative}
             className={`${inputClass} font-semibold text-slate-700 ${rowErrors?.indicatorName ? 'border-rose-400' : ''}`}
           />
           {rowErrors?.indicatorName?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.indicatorName.message}</span>}
@@ -87,6 +90,7 @@ const ProtocolResultRow = ({
             aria-label="Код загрязняющего вещества"
             placeholder="Введите код показателя"
             {...register(`results.${index}.pollutantCode`)}
+            readOnly={ambient && directoryNormative}
             className={`${inputClass} text-slate-700 ${rowErrors?.pollutantCode ? 'border-rose-400' : ''}`}
           /> : <select
             aria-label="Тип фактора"
@@ -118,12 +122,22 @@ const ProtocolResultRow = ({
             aria-label="Единица измерения"
             placeholder="Введите единицу измерения"
             {...register(`results.${index}.unit`)}
+            readOnly={ambient && directoryNormative}
             className={`${inputClass} text-slate-700 ${rowErrors?.unit ? 'border-rose-400' : ''}`}
           />
           {rowErrors?.unit?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.unit.message}</span>}
         </label>
 
-        <label className={`${labelClass} lg:col-span-4`}>
+        {ambient && <label className={`${labelClass} lg:col-span-4`}>
+          Место отбора *
+          <select {...register(`results.${index}.samplingPointId`, { required: true })} className={`${inputClass} ${rowErrors?.samplingPointId ? 'border-rose-400' : ''}`}>
+            <option value="">Выберите место отбора</option>
+            {samplingPoints.map((point) => <option key={point.clientPointId} value={point.clientPointId}>{point.name || 'Без названия'}</option>)}
+          </select>
+          {rowErrors?.samplingPointId?.message && <span className="mt-1 block text-xs text-rose-700">{rowErrors.samplingPointId.message}</span>}
+        </label>}
+
+        <label className={`${labelClass} lg:col-span-4 ${ambient ? 'hidden' : ''}`}>
           Место отбора
           <input
             aria-label="Место отбора"
@@ -165,6 +179,7 @@ const ProtocolResultRow = ({
             inputMode="decimal"
             placeholder="Введите норматив"
             {...register(`results.${index}.normativeValue`)}
+            readOnly={ambient && directoryNormative}
             className={`${inputClass} font-bold text-eco-900`}
           />
         </label>
@@ -175,6 +190,12 @@ const ProtocolResultRow = ({
             После расчёта
           </div>
         </div>
+
+        {ambient && directoryNormative && <dl className="grid gap-3 rounded-xl border border-eco-100 bg-eco-50/60 p-3 text-sm sm:col-span-2 sm:grid-cols-3 lg:col-span-12">
+          <div><dt className="text-xs font-bold text-slate-500">Единица измерения</dt><dd className="mt-1 font-black text-slate-900">{row?.unit || '—'}</dd></div>
+          <div><dt className="text-xs font-bold text-slate-500">Норматив</dt><dd className="mt-1 font-black text-slate-900">{row?.normativeValue || row?.normativeValueRaw || '—'}</dd></div>
+          <div><dt className="text-xs font-bold text-slate-500">Нормативный документ</dt><dd className="mt-1 font-black text-slate-900">{row?.normativeDocument || row?.sourceDocumentCode || '—'}</dd></div>
+        </dl>}
       </div>
 
       <ProtocolResultDetails index={index} />

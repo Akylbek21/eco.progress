@@ -71,7 +71,7 @@ export const useSignProtocolMutation = (
         throw new Error('У вас нет права подписывать протокол. Передайте его руководителю.');
       }
       if (!current.hasPdf) throw new Error('Финальный PDF протокола не сформирован.');
-      const file = await protocolService.downloadPdf(current.id);
+      const file = await protocolService.downloadProtocolDocument(current.id, 'pdf');
       const cmsSignatureBase64 = await createProtocolCmsSignature(file.blob, setPhase);
       setPhase('VERIFYING_SIGNATURE');
       return protocolService.signProtocol(current.id, { cmsSignatureBase64, version: current.version });

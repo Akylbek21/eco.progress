@@ -5,13 +5,18 @@ import { COMPANY } from '../src/config/companyData.ts';
 import { activeServices, formatKztPrice, PRELIMINARY_PRICE_NOTICE } from '../src/content/serviceCatalog.ts';
 import { serviceContentMap } from '../src/content/services/serviceContent.ts';
 import { aboutPublicContent } from '../src/content/aboutPublicContent.ts';
-import { expertMap, isCompleteExpert } from '../src/content/experts/experts.ts';
+import { expertMap, experts, isCompleteExpert } from '../src/content/experts/experts.ts';
+import { caseStudies } from '../src/content/cases/caseStudies.ts';
+import { isPublishableCaseStudy } from '../src/content/cases/caseStudyPolicy.ts';
 import { createSchemaGraph } from '../src/seo/schemaGraph.ts';
+import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, buildServiceEntity, entityIds } from '../src/seo/entityBuilders.ts';
 
 const root = process.cwd();
 const distDir = path.join(root, 'dist');
 const templatePath = path.join(distDir, 'index.html');
 const whatsappUrl = 'https://wa.me/77771858088';
+const verifiedExperts = experts.filter(isCompleteExpert);
+const verifiedCases = caseStudies.filter(isPublishableCaseStudy);
 
 if (!fs.existsSync(templatePath)) {
   throw new Error('dist/index.html not found. Run vite build before prerender.');
@@ -42,67 +47,6 @@ const stripSeoHead = (html) => html
   .replace(/\s*<meta\s+name=["']twitter:[^"']+["'][^>]*>\s*/gi, '')
   .replace(/\s*<script[^>]+application\/ld\+json[^>]*>[\s\S]*?<\/script>\s*/gi, '');
 
-const buildOrganizationSchema = () => ({
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: 'ECOPROGRESS GROUP',
-  url: SITE_URL,
-  logo: `${SITE_URL}/favicon.png`,
-  sameAs: [
-    'https://www.instagram.com/ecoprogress.group',
-    'https://www.tiktok.com/@ecoprogress.group',
-    'https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16',
-  ],
-});
-
-const localBusinessSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'LocalBusiness',
-  name: 'ECOPROGRESS GROUP',
-  url: SITE_URL,
-  image: OG_IMAGE,
-  description: 'Экологические услуги для бизнеса в Казахстане',
-  areaServed: ['Казахстан', 'Шымкент', 'Алматы', 'Астана', 'Тараз', 'Туркестан', 'Кызылорда'],
-  serviceType: ['Экологическое проектирование', 'Лабораторные замеры', 'Производственный контроль', 'Паспорт отходов', 'Отчет ПЭК'],
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: 'г. Шымкент, Алимбетова 199/2а',
-    addressLocality: 'Шымкент',
-    addressCountry: 'KZ',
-  },
-};
-
-const buildBreadcrumbSchema = (items) => ({
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: items.map((item, index) => ({
-    '@type': 'ListItem',
-    position: index + 1,
-    name: item.label,
-    item: `${SITE_URL}${item.path}`,
-  })),
-});
-
-const webSiteSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'WebSite',
-  name: 'ECOPROGRESS',
-  url: SITE_URL,
-};
-
-const buildServiceSchema = (page) => ({
-    '@context': 'https://schema.org',
-    '@type': 'Service',
-    name: page.h1,
-    description: page.description,
-    url: page.canonical,
-    image: `${SITE_URL}${page.image || '/og-cover.jpg'}`,
-    provider: { '@type': 'Organization', name: 'ECOPROGRESS GROUP', url: SITE_URL },
-    areaServed: page.city || 'Казахстан',
-    serviceType: page.service || 'Экологические услуги',
-    ...(page.type === 'service-city' ? { availableChannel: { '@type': 'ServiceChannel', serviceUrl: page.canonical } } : {}),
-});
-
 const articleExperts = (article) => {
   if (article.reviewStatus !== 'approved') return {};
   const authorCandidate = article.author || expertMap.get(article.authorSlug);
@@ -113,44 +57,36 @@ const articleExperts = (article) => {
   };
 };
 
-const personSchema = (expert, id) => ({
-  '@context': 'https://schema.org', '@type': 'Person', '@id': id, name: expert.fullName,
-  jobTitle: expert.position, description: expert.bio, image: expert.photo, url: expert.profileUrl,
-  knowsAbout: expert.specialization,
-});
-
 const articleSchemaNodes = (article, canonical, modified = article.dateModified || article.lastmod) => {
   const { author, reviewer } = articleExperts(article);
-  const authorId = author ? `${canonical}#person` : undefined;
-  const reviewerId = reviewer ? `${canonical}#person-reviewer` : undefined;
+  const ids = entityIds(canonical);
+  const authorId = author ? ids.author : undefined;
+  const reviewerId = reviewer ? ids.reviewer : undefined;
   return [
-    {
-      '@context': 'https://schema.org', '@type': 'Article', headline: article.h1, description: article.description,
-      image: `${SITE_URL}${article.image || '/og-cover.jpg'}`,
-      author: authorId ? { '@id': authorId } : { '@type': 'Organization', '@id': `${SITE_URL}/#organization` },
-      ...(reviewerId ? { reviewedBy: { '@id': reviewerId } } : {}),
-      publisher: { '@type': 'Organization', '@id': `${SITE_URL}/#organization` },
-      datePublished: article.datePublished, dateModified: modified, mainEntityOfPage: canonical,
-    },
-    ...(author ? [personSchema(author, authorId)] : []),
-    ...(reviewer ? [personSchema(reviewer, reviewerId)] : []),
+    buildArticleSchema({ canonical, headline: article.h1, description: article.description, image: `${SITE_URL}${article.image || '/og-cover.jpg'}`, datePublished: article.datePublished, dateModified: modified, authorId, reviewerId }),
+    ...(author ? [buildPersonSchema(author, authorId)] : []),
+    ...(reviewer ? [buildPersonSchema(reviewer, reviewerId)] : []),
   ];
 };
 
 const schemaForSeoPage = (page) => [
-  buildOrganizationSchema(),
+  ...buildCorePageEntities({ canonical: page.canonical, name: page.h1, description: page.description, dateModified: page.lastmod || LASTMOD, localBusiness: page.cityNominative === 'Шымкент' }),
   ...(page.type === 'article'
     ? articleSchemaNodes(page, page.canonical, page.lastmod || LASTMOD)
     : page.type === 'service-city' || page.type === 'service'
-    ? [buildServiceSchema(page)]
-    : [{ '@context': 'https://schema.org', '@type': 'WebPage', name: page.h1, description: page.description, url: page.canonical, dateModified: page.lastmod || LASTMOD }]),
-  buildBreadcrumbSchema(page.breadcrumbs),
+    ? (() => {
+      const expertNodes = verifiedExperts.map((expert, index) => buildPersonSchema(expert, `${page.canonical}#expert-${index + 1}`));
+      const caseUrls = verifiedCases.filter((item) => !page.serviceSlug || item.service === page.serviceSlug).map((item) => `${SITE_URL}/cases/${item.slug}`);
+      return [buildServiceEntity({ canonical: page.canonical, name: page.h1, description: page.description, image: `${SITE_URL}${page.image || '/og-cover.jpg'}`, areaServed: page.cityNominative || page.city || 'Казахстан', serviceType: page.service || 'Экологические услуги', expertIds: expertNodes.map((node) => node['@id']), caseUrls }), ...expertNodes];
+    })()
+    : []),
+  buildBreadcrumbSchema(page.breadcrumbs.map((item) => ({ name: item.label, url: item.path })), page.canonical),
 ];
 
 const schemaForArticle = (article) => [
-  buildOrganizationSchema(),
+  ...buildCorePageEntities({ canonical: `${SITE_URL}${article.slug}`, name: article.h1, description: article.description, dateModified: article.dateModified }),
   ...articleSchemaNodes(article, `${SITE_URL}${article.slug}`),
-  buildBreadcrumbSchema([{ label: 'Главная', path: '/' }, { label: 'Статьи', path: '/news' }, { label: article.h1, path: article.slug }]),
+  buildBreadcrumbSchema([{ name: 'Главная', url: '/' }, { name: 'Статьи', url: '/news' }, { name: article.h1, url: article.slug }], `${SITE_URL}${article.slug}`),
 ];
 
 const renderHeadBlock = ({ title, description, canonical, type = 'website', schema, robots = 'index,follow', ogImage = OG_IMAGE, ogImageWidth = 1200, ogImageHeight = 630, datePublished, dateModified }) => {
@@ -399,7 +335,7 @@ const notFoundHtml = pageShell({
   description: 'Запрошенная страница не найдена. Перейдите на главную страницу ECOPROGRESS.',
   canonical: `${SITE_URL}/404`,
   robots: 'noindex,follow',
-  schema: [buildOrganizationSchema()],
+  schema: buildCorePageEntities({ canonical: `${SITE_URL}/404`, name: 'Страница не найдена', description: 'Запрошенная страница не найдена.' }),
 }, layout(`
   <main class="seo-static-page">
     <section><p>Ошибка 404</p><h1>Страница не найдена</h1><p>Возможно, адрес изменился или был введен неверно.</p><p><a href="/">Перейти на главную</a> <a href="/contacts">Связаться с нами</a></p></section>

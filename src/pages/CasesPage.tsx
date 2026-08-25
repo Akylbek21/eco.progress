@@ -4,14 +4,14 @@ import SEO from '../components/SEO';
 import { company } from '../config/company';
 import { publicContentRepository } from '../content/apiRepository';
 import { isPublishableCaseStudy } from '../content/cases/caseStudyPolicy';
-import { buildBreadcrumbSchema, buildOrganizationSchema } from '../utils/schema';
+import { buildBreadcrumbSchema, buildCorePageEntities } from '../seo/entityBuilders';
 
 const CasesPage = () => {
   const { data = [], isLoading, isError } = useQuery({ queryKey: ['public-content', 'cases'], queryFn: () => publicContentRepository.getCases(), staleTime: 5 * 60 * 1000 });
   const cases = data.filter(isPublishableCaseStudy);
   const canonical = `${company.siteUrl}/cases`;
   return <main className="bg-eco-50 px-5 py-16 sm:px-8">
-    <SEO title="Подтверждённые экологические кейсы | ECOPROGRESS" description="Опубликованные проекты EcoProgress с проверенными исходными данными, выполненными работами, нормативной базой и результатами." canonical={canonical} schema={[buildOrganizationSchema(), { '@context': 'https://schema.org', '@type': 'WebPage', name: 'Подтверждённые экологические кейсы', description: 'Реальные опубликованные проекты EcoProgress.', url: canonical }, buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Кейсы', url: canonical }])]} />
+    <SEO title="Подтверждённые экологические кейсы | ECOPROGRESS" description="Опубликованные проекты EcoProgress с проверенными исходными данными, выполненными работами, нормативной базой и результатами." canonical={canonical} schema={[...buildCorePageEntities({ canonical, name: 'Подтверждённые экологические кейсы', description: 'Реальные опубликованные проекты EcoProgress.' }), buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Кейсы', url: canonical }])]} />
     <div className="mx-auto max-w-7xl">
       <h1 className="text-4xl font-bold text-eco-900 sm:text-5xl">Подтверждённые экологические кейсы</h1>
       <p className="mt-5 max-w-4xl text-lg leading-8 text-slate-600">Раздел содержит только опубликованные проекты, для которых подтверждены исходные данные, выполненные работы, результат, нормативная база, специалист и reviewer. Название клиента скрывается, если раскрытие запрещено.</p>

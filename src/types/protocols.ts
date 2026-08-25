@@ -14,7 +14,7 @@ export type ProtocolStatus =
 
 export const protocolActionKeys = [
   'view', 'edit', 'delete', 'calculate', 'checkNormatives', 'sendToApproval',
-  'returnForRevision', 'returnToDraft', 'approve', 'sign', 'generatePreview',
+  'returnForRevision', 'returnToDraft', 'approve', 'sign', 'generatePreview', 'previewSigned',
   'generateDocx', 'generatePdf', 'regenerateDocx', 'regeneratePdf',
   'downloadDocx', 'downloadPdf', 'viewAudit', 'createCorrection', 'publish',
   'cancel', 'archive',
@@ -22,6 +22,13 @@ export const protocolActionKeys = [
 
 export type ProtocolAction = typeof protocolActionKeys[number];
 export type ProtocolAvailableActions = { [Action in ProtocolAction]: boolean };
+
+export type ProtocolAccessScope = string | string[] | {
+  companyId?: string | number | null;
+  laboratoryId?: string | number | null;
+  executorId?: string | number | null;
+  reasons?: string[];
+};
 
 export type ProtocolWorkflowBlocker = {
   code: string;
@@ -127,6 +134,7 @@ export type ProtocolResult = {
   indicatorName?: string;
   code?: string;
   samplingPoint?: string;
+  samplingPointId?: string | number | null;
   indicator?: string;
   unit?: string;
   result?: string;
@@ -274,6 +282,16 @@ export type ProtocolEnvironmentalConditions = {
   conditions?: Record<string, ProtocolResultValue> | null;
 };
 
+export type ProtocolSamplingPoint = {
+  id?: string | number;
+  clientPointId?: string;
+  name: string;
+  description?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  sortOrder: number;
+};
+
 export type WeatherConditionsStatus =
   | 'IDLE'
   | 'LOADING'
@@ -415,6 +433,7 @@ export interface Protocol {
   laboratory: ProtocolLaboratorySnapshot;
   testing: ProtocolTestingData;
   results: ProtocolResult[];
+  samplingPoints: ProtocolSamplingPoint[];
   measurementDevices: ProtocolMeasurementDevice[];
   instruments?: MeasurementDevice[];
   history?: ProtocolHistoryItem[];
@@ -434,6 +453,7 @@ export interface Protocol {
   emissionSourceId?: string | number;
   waterOutletId?: string | number;
   availableActions: ProtocolAvailableActions;
+  scope?: ProtocolAccessScope;
   canComplete?: boolean;
   blockingReasons?: ProtocolWorkflowBlocker[];
   publishedToClientAt?: string;
@@ -487,6 +507,7 @@ export interface ProtocolListItem {
   pekProgramId?: string | number;
   pekReportId?: string | number;
   availableActions: ProtocolAvailableActions;
+  scope?: ProtocolAccessScope;
 }
 
 export interface ProtocolListQuery {
@@ -518,6 +539,7 @@ export type ProtocolHistoryItem = {
 };
 
 export type UpdateProtocolPayload = {
+  templateId?: ProtocolTemplateKey;
   version: number;
   number: string;
   protocolDate: string;
@@ -550,10 +572,13 @@ export type UpdateProtocolPayload = {
   printVisibility?: ProtocolPrintVisibility;
   orderId?: string | number;
   orderServiceItemId?: string | number;
+  samplingPoints?: ProtocolSamplingPoint[];
 };
 
-export type ProtocolResultPayload = {
+/** Client-side form input; persisted rows are sent only as draft-results requests. */
+export type ProtocolResultFormInput = {
   values: Record<string, ProtocolResultValue>;
+  samplingPointId?: string | number | null;
   measurementDeviceId?: string | number | null;
   deviceId?: string | number | null;
   normativeId?: string | number | null;

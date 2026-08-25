@@ -6,6 +6,29 @@ const snapshotPath = path.join(root, 'src', 'data', 'seoCmsSnapshot.generated.js
 const endpoint = process.env.SEO_CONTENT_API_URL?.trim();
 const token = process.env.SEO_CONTENT_API_TOKEN?.trim();
 
+const collection = (value) => Array.isArray(value)
+  ? value
+  : Array.isArray(value?.items)
+    ? value.items
+    : [];
+
+const reviewStatusMap = {
+  APPROVED: 'approved',
+  REQUIRES_SPECIALIST_REVIEW: 'requires-specialist-review',
+  'REQUIRES-SPECIALIST-REVIEW': 'requires-specialist-review',
+  DRAFT: 'draft',
+  REJECTED: 'rejected',
+};
+
+const normalizeArticleReview = (item) => {
+  if (!item || typeof item !== 'object') return item;
+  const rawStatus = String(item.reviewStatus ?? '').trim();
+  return {
+    ...item,
+    reviewStatus: reviewStatusMap[rawStatus.toUpperCase()] ?? rawStatus.toLowerCase(),
+  };
+};
+
 const completeExpert = (item) => Boolean(
   item && typeof item.id === 'string' && item.id.trim()
   && typeof item.fullName === 'string' && item.fullName.trim()
@@ -36,10 +59,13 @@ const validArticleReview = (item, expertIds) => Boolean(
 );
 
 const validate = (snapshot) => {
-  const experts = Array.isArray(snapshot?.experts) ? snapshot.experts : [];
-  const cases = Array.isArray(snapshot?.cases) ? snapshot.cases : [];
-  const articleReviews = Array.isArray(snapshot?.articleReviews) ? snapshot.articleReviews : [];
+  const experts = collection(snapshot?.experts);
+  const cases = collection(snapshot?.cases);
+  const articleReviews = collection(snapshot?.articleReviews ?? snapshot?.article_reviews).map(normalizeArticleReview);
   const problems = [];
+  if (!experts.length && !cases.length && !articleReviews.length) {
+    problems.push('experts, cases and articleReviews are all empty');
+  }
   if (!experts.every(completeExpert)) problems.push('one or more expert profiles are incomplete');
   if (cases.some((item) => item?.status === 'published' && !publishedCase(item))) {
     problems.push('one or more published case studies are incomplete or unverified');
@@ -56,6 +82,7 @@ let snapshot;
 if (endpoint) {
   const response = await fetch(endpoint, {
     headers: { accept: 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    signal: AbortSignal.timeout(30_000),
   });
   if (!response.ok) throw new Error(`SEO content API returned HTTP ${response.status} for ${endpoint}`);
   const body = await response.json();
@@ -75,6 +102,6 @@ if (endpoint) {
   console.log(`SEO CMS snapshot updated: ${snapshot.experts.length} experts, ${snapshot.cases.length} cases, ${snapshot.articleReviews.length} article reviews.`);
 } else {
   snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
-  validate(snapshot);
-  console.log(`SEO CMS snapshot validated: ${snapshot.experts.length} experts, ${snapshot.cases.length} cases.`);
+  const verified = validate(snapshot);
+  console.log(`SEO CMS snapshot validated: ${verified.experts.length} experts, ${verified.cases.length} cases, ${verified.articleReviews.length} article reviews.`);
 }

@@ -36,10 +36,10 @@ if (!Number.isInteger(baselineUrlCount) || baselineUrlCount <= 0) {
   if (dropPercent > maximumDropPercent) {
     const message = `Indexable sitemap regression: ${urls.length} URLs vs ${baselineUrlCount} in ${sitemapBaseline.source} `
       + `(${dropPercent.toFixed(1)}% drop; allowed ${maximumDropPercent}%)`;
-    if (cmsContentUnavailable) warnings.push(`${message}; CMS snapshot is empty, so unreviewed pages remain noindex`);
-    else errors.push(message);
+    errors.push(message);
   }
 }
+if (cmsContentUnavailable) errors.push('SEO CMS snapshot is empty: experts, cases and articleReviews are all empty');
 if (!snapshotExperts.length) warnings.push('SEO CMS snapshot contains no confirmed experts; personal expert markup remains disabled');
 if (!snapshotCases.some((item) => item.status === 'published' && item.publishedAt)) warnings.push('SEO CMS snapshot contains no verified published case studies; case-study pages remain unpublished');
 const snapshotExpertIds = new Set(snapshotExperts.map((item) => item.id));

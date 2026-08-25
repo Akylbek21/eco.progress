@@ -39,8 +39,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 beforeEach(() => {
-  vi.spyOn(protocolService, 'downloadPdf').mockResolvedValue({
-    blob: new Blob(['pdf-bytes'], { type: 'application/pdf' }),
+  vi.spyOn(protocolService, 'downloadProtocolDocument').mockResolvedValue({
+    blob: new Blob(['%PDF-bytes'], { type: 'application/pdf' }),
     fileName: 'protocol.pdf',
   });
 });

@@ -20,7 +20,6 @@ describe('PEK monitoring backend contract', () => {
         controlItemIds: [101, 102],
         protocolTypes: ['WATER'],
         active: true,
-        version: 3,
         availableActions: { edit: true, delete: false },
       }],
     } }, 5);
@@ -37,24 +36,25 @@ describe('PEK monitoring backend contract', () => {
       controlItemIds: [101, 102],
       protocolTypes: ['WATER'],
       active: true,
-      version: 3,
       availableActions: { edit: true, delete: false },
     });
   });
 
   it('uses If-Match for PUT and DELETE and never sends a DELETE body', () => {
     const service = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
-    expect(service).toContain("api.put(`/pek/programs/${id}/monitoring/${monitoringId}`, body, pekMutationOptions(version))");
-    expect(service).toContain("api.delete(`/pek/programs/${id}/monitoring/${monitoringId}`, pekMutationOptions(version))");
+    expect(service).toContain("api.put(`/pek/programs/${id}/monitoring/${monitoringId}`, body, pekMutationOptions(programVersion))");
+    expect(service).toContain("api.delete(`/pek/programs/${id}/monitoring/${monitoringId}`, pekMutationOptions(programVersion))");
     expect(service).not.toContain("api.delete(`/pek/programs/${id}/monitoring/${monitoringId}`, { data:");
   });
 
   it('renders CRUD buttons only from backend availableActions and refetches after mutations', () => {
     const component = readFileSync(resolve(process.cwd(), 'src/features/pek/components/monitoring/PekProgramMonitoring.tsx'), 'utf8');
-    expect(component).toContain('monitoring.data.availableActions.create === true');
+    expect(component).toContain('program.monitoring?.availableActions.create === true');
     expect(component).toContain('item.availableActions.edit === true');
     expect(component).toContain('item.availableActions.delete === true');
-    expect(component).toContain('await monitoring.refetch()');
+    expect(component).toContain('await commitAggregate(actualProgram)');
+    expect(component).toContain('program.version');
+    expect(component).not.toContain('editing.version');
     expect(component).not.toMatch(/user\?\.role|ADMIN|ECOLOGIST/);
   });
 });

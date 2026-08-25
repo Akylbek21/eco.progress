@@ -11,7 +11,7 @@ import { PekLoading, PekPageHeader, PekState, PekStatusBadge } from '../componen
 import { pekStatusLabels } from '../utils/pekLabels';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 
-const statuses: PekReportStatus[] = ['DRAFT', 'COLLECTING', 'READY_FOR_REVIEW', 'RETURNED', 'APPROVED', 'SIGNED', 'ARCHIVED'];
+const statuses: PekReportStatus[] = ['DRAFT', 'COLLECTING', 'READY_FOR_REVIEW', 'RETURNED', 'APPROVED', 'SIGNED', 'SUBMITTED', 'ACCEPTED', 'REJECTED', 'ARCHIVED'];
 const metricDefinitions = [
   ['criticalIssueCount', 'Требуют внимания', '', '/staff/pek/reports', {}],
   ['overdueRiskCount', 'Срок заканчивается в ближайшие 30 дней', '', '/staff/pek/programs', {}],
@@ -56,11 +56,13 @@ const PekDashboardPage = () => {
     staleTime: PEK_STALE_TIME_MS,
   });
   const assignees = useQuery({
-    queryKey: pekKeys.assignees(['PEK_RESPONSIBLE', 'PEK_REVIEWER', 'PEK_APPROVER'], user?.id),
+    queryKey: pekKeys.assignees(filters.companyId || 0, ['PEK_RESPONSIBLE', 'PEK_REVIEWER', 'PEK_APPROVER'], user?.id),
     queryFn: ({ signal }) => pekApi.getAssignees(
+      filters.companyId!,
       ['PEK_RESPONSIBLE', 'PEK_REVIEWER', 'PEK_APPROVER'],
       signal,
     ),
+    enabled: Boolean(filters.companyId),
     retry: retryPekQuery,
     staleTime: PEK_STALE_TIME_MS,
   });

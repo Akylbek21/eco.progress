@@ -608,20 +608,20 @@ describe('PEK backend contract', () => {
     const calls: string[] = [];
     const exceedance = { id: 4, reportId: 9, version: 2, status: 'OPEN', evidenceFileIds: [], availableActions: { assignResponsible: true } };
     server.use(
-      http.post('*/api/pek/reports/9/document/generate-docx', ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname}`); return HttpResponse.json({ data: { id: 1, reportId: 9, version: 1, hasDocx: true, hasPdf: false } }); }),
-      http.post('*/api/pek/reports/9/document/generate-pdf', ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname}`); return HttpResponse.json({ data: { id: 1, reportId: 9, version: 1, hasDocx: true, hasPdf: true } }); }),
-      http.get('*/api/pek/reports/9/document/versions', ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname}`); return HttpResponse.json({ data: [] }); }),
-      http.post('*/api/pek/reports/9/document/sign', async ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname} ${JSON.stringify(await request.json())}`); return HttpResponse.json({ data: { id: 2, reportId: 9, verified: true } }); }),
-      http.get('*/api/pek/reports/9/document/signatures', ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname}`); return HttpResponse.json({ data: [] }); }),
+      http.post('*/api/pek/reports/9/documents/official/generate/docx', ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname}`); return HttpResponse.json({ data: { id: 1, reportId: 9, version: 1, documentKind: 'OFFICIAL', regulationVersion: '250', templateVersion: '1', hasDocx: true, hasPdf: false } }); }),
+      http.post('*/api/pek/reports/9/documents/internal-analytical/generate/pdf', ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname}`); return HttpResponse.json({ data: { id: 2, reportId: 9, version: 1, documentKind: 'INTERNAL_ANALYTICAL', regulationVersion: '250', templateVersion: 'crm-1', hasDocx: false, hasPdf: true } }); }),
+      http.get('*/api/pek/reports/9/documents/official/versions', ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname}`); return HttpResponse.json({ data: [] }); }),
+      http.post('*/api/pek/reports/9/documents/official/sign', async ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname} ${JSON.stringify(await request.json())}`); return HttpResponse.json({ data: { id: 2, reportId: 9, verified: true } }); }),
+      http.get('*/api/pek/reports/9/documents/official/signatures', ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname}`); return HttpResponse.json({ data: [] }); }),
       http.get('*/api/pek/reports/9/exceedances', ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname}`); return HttpResponse.json({ data: [exceedance] }); }),
       http.get('*/api/pek/exceedances/4', ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname}`); return HttpResponse.json({ data: exceedance }); }),
       http.post('*/api/pek/exceedances/4/assign', async ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname} ${JSON.stringify(await request.json())}`); return HttpResponse.json({ data: { ...exceedance, version: 3 } }); }),
       http.post('*/api/pek/exceedances/4/evidence', async ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname} ${JSON.stringify(await request.json())}`); return HttpResponse.json({ data: { ...exceedance, version: 3 } }); }),
       http.post('*/api/pek/exceedances/4/transition', async ({ request }) => { calls.push(`${request.method} ${new URL(request.url).pathname} ${JSON.stringify(await request.json())}`); return HttpResponse.json({ data: { ...exceedance, version: 3, status: 'CLOSED' } }); }),
     );
-    await pekApi.generateReportDocx(9, 2);
-    await pekApi.generateReportPdf(9, 2);
-    await pekApi.getReportDocumentVersions(9);
+    await pekApi.generateReportDocument(9, 'OFFICIAL', 'docx', 2);
+    await pekApi.generateReportDocument(9, 'INTERNAL_ANALYTICAL', 'pdf', 2);
+    await pekApi.getReportDocumentVersions(9, 'OFFICIAL');
     await pekApi.signReportDocument(9, 2, 'cms');
     await pekApi.getReportSignatures(9);
     await pekApi.getReportExceedances(9);
@@ -630,34 +630,35 @@ describe('PEK backend contract', () => {
     await pekApi.attachExceedanceEvidence(4, 3, 'file-1');
     await pekApi.transitionExceedance(4, { version: 3, status: 'CLOSED', resolutionComment: 'Устранено' });
     expect(calls).toEqual(expect.arrayContaining([
-      'POST /api/pek/reports/9/document/generate-docx', 'POST /api/pek/reports/9/document/generate-pdf',
-      'GET /api/pek/reports/9/document/versions', 'POST /api/pek/reports/9/document/sign {"cms":"cms"}',
-      'GET /api/pek/reports/9/document/signatures', 'GET /api/pek/reports/9/exceedances', 'GET /api/pek/exceedances/4',
+      'POST /api/pek/reports/9/documents/official/generate/docx', 'POST /api/pek/reports/9/documents/internal-analytical/generate/pdf',
+      'GET /api/pek/reports/9/documents/official/versions', 'POST /api/pek/reports/9/documents/official/sign {"cms":"cms"}',
+      'GET /api/pek/reports/9/documents/official/signatures', 'GET /api/pek/reports/9/exceedances', 'GET /api/pek/exceedances/4',
       'POST /api/pek/exceedances/4/evidence {"fileId":"file-1"}',
       'POST /api/pek/exceedances/4/transition {"status":"CLOSED","resolutionComment":"Устранено"}',
     ]));
     const serviceSource = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
-    expect(serviceSource).toContain('/document/download/${format}');
-    expect(serviceSource).toContain("format: 'docx' | 'pdf'");
+    expect(serviceSource).toContain("/${preview ? 'preview' : 'download'}/${format}");
+    expect(serviceSource).toContain('format: PekReportDocumentFormat');
     expect(serviceSource).toContain("responseType: 'blob'");
   });
 
   it('refreshes PEK server state after document and exceedance mutations', () => {
     const documents = readFileSync(resolve(process.cwd(), 'src/features/pek/components/documents/PekReportDocuments.tsx'), 'utf8');
     const exceedances = readFileSync(resolve(process.cwd(), 'src/features/pek/components/exceedances/PekReportExceedances.tsx'), 'utf8');
-    expect(documents).toContain('await pekApi.generateReportDocx(report.id, report.version)');
-    expect(documents).toContain('await pekApi.signReportDocument(report.id, report.version, cms)');
+    expect(documents).toContain('pekApi.generateReportDocument(report.id, config.kind, format, report.version)');
+    expect(documents).toContain('pekApi.signReportDocument(report.id, report.version, cms)');
     expect(documents).toContain('const actual = await pekApi.getReport(report.id)');
-    expect(documents).toContain('Скачать DOCX');
-    expect(documents).toContain('Скачать PDF');
+    expect(documents).toContain('Скачать {format.toUpperCase()}');
     expect(documents).toContain('getReportDocumentVersions');
     expect(documents).toContain('getReportSignatures');
-    expect(documents).toContain('latestVersion?.hasDocx === true');
-    expect(documents).toContain('latestVersion?.hasPdf === true');
+    expect(documents).toContain("format === 'docx' ? version.hasDocx");
+    expect(documents).toContain("format === 'pdf' ? version.hasPdf");
     expect(exceedances).toContain('pekApi.getExceedance(id)');
     expect(exceedances).toContain('pekApi.getReportExceedances(report.id)');
-    expect(exceedances).toContain("transitionMutation.mutate('CLOSED')");
-    expect(exceedances).toContain('Закрыть превышение');
+    expect(exceedances).toContain('pekApi.transitionExceedance');
+    expect(exceedances).toContain('selected?.allowedTransitions');
+    expect(exceedances).not.toContain('closeExceedance');
+    expect(exceedances).not.toContain('reopenExceedance');
   });
 
   it('downloads a program document through the authorized PEK API client', () => {
@@ -727,23 +728,30 @@ describe('PEK backend contract', () => {
     expect(programForm).toContain('permit.effectivelyActive');
   });
 
-  it('uses the contracted PEK membership endpoints and refreshes their cache', () => {
+  it('does not expose PEK client-company membership management', () => {
     const service = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
-    const page = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekMembershipsPage.tsx'), 'utf8');
-    expect(service).toContain('`/pek/companies/${companyId}/members`');
-    expect(service).toContain('api.patch(`/pek/companies/${companyId}/members/${membershipId}`');
-    expect(service).toContain('api.delete(`/pek/companies/${companyId}/members/${membershipId}`');
-    expect(page).toContain('pekKeys.memberships(companyId');
-    expect(page).toContain('invalidateQueries');
-    expect(page).toContain('userFullName');
-    expect(page).toContain('roleCode');
+    const layout = readFileSync(resolve(process.cwd(), 'src/features/pek/routes/PekLayout.tsx'), 'utf8');
+    expect(service).toContain("'/pek/lookups/assignees'");
+    expect(service).not.toContain('/pek/companies/${companyId}/members');
+    expect(layout).not.toContain('/staff/pek/access');
   });
 
   it('derives company choices from PEK scope and stops retrying forbidden requests', () => {
     const scope = readFileSync(resolve(process.cwd(), 'src/features/pek/hooks/usePekScope.ts'), 'utf8');
-    expect(scope).toContain('getActiveCompanies');
+    const filters = readFileSync(resolve(process.cwd(), 'src/features/pek/components/common/PekCompanyObjectFilters.tsx'), 'utf8');
+    const service = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
+    expect(scope).toContain('pekApi.getScopeCompanies');
+    expect(scope).toContain('pekApi.getScopeCompanyObjects');
+    expect(scope).not.toContain('getActiveCompanies');
+    expect(scope).not.toContain('getCompanyObjects');
     expect(scope).not.toContain('pekApi.getPrograms');
     expect(scope).toContain('retry: retryPekQuery');
+    expect(service).toContain("'/pek/scope/companies'");
+    expect(service).toContain('`/pek/scope/companies/${companyId}/objects`');
+    expect(filters).toContain('<Autocomplete');
+    expect(filters).toContain('options={scope.companies}');
+    expect(filters).not.toContain('type="number"');
+    expect(filters).not.toContain('<datalist');
   });
 
   it('renders backend source DTO fields, report history and capability-gated automatic collection', () => {

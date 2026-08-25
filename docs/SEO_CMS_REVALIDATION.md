@@ -65,16 +65,13 @@ Required deployment secrets:
   confirmed organization data.
 
 `npm run build` first runs `seo:content:sync`. A build without the endpoint may
-reuse the previously generated snapshot. An empty snapshot is safe: personal
-expert markup stays disabled and case-study pages stay unpublished until the CMS
-provides confirmed records. Any expert record or published case that is present
-must still be complete; incomplete or inconsistent CMS data fails the build.
-The sitemap baseline audit reports the expected URL drop as a warning while the
-entire CMS snapshot is empty. Once any confirmed CMS content is present, an
-unexpected mass `noindex` regression blocks the deployment again.
+reuse a previously generated non-empty snapshot. An empty snapshot, incomplete
+CMS records, or a sitemap drop beyond the committed baseline threshold fails the
+build and must keep the previous production deployment active. Docker deployment
+requires `SEO_CONTENT_API_URL` explicitly and passes it only to the build stage.
 
 `articleReviews` contains only review decisions confirmed in the CMS. Each item has
-`slug`, `reviewStatus`, and, for `approved`, mandatory `authorSlug`, `reviewerSlug`
+`slug`, `reviewStatus`, and, for backend `APPROVED` (normalized to `approved`), mandatory `authorSlug`, `reviewerSlug`
 and `lastReviewedAt`. Both slugs must reference complete expert profiles from the
 same response. Static article copy remains `requires-specialist-review` until that
 record arrives; the frontend never promotes it based on a name or job title alone.

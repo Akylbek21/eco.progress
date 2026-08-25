@@ -1,5 +1,5 @@
 import type { CaseStudy } from '../types';
-import { isCompleteExpert } from '../experts/experts';
+import { isCompleteExpert } from '../experts/experts.ts';
 
 const containsPlaceholder = (value: string) => /\[.*(?:ДОБАВИТЬ|TODO|PLACEHOLDER).*\]/i.test(value);
 

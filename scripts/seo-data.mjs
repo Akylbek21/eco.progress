@@ -5,10 +5,11 @@ import { isRegionContentIndexable } from '../src/content/regions/regionContentQu
 import { activeServices, wasteRecyclingRegionSlugs } from '../src/content/serviceCatalog.ts';
 import { serviceContentMap } from '../src/content/services/serviceContent.ts';
 import { aboutPublicContent } from '../src/content/aboutPublicContent.ts';
-import { isApprovedArticleReview, isArticleEligibleForSeoLinks } from '../src/content/articleReview.ts';
+import { isArticleEligibleForSeoLinks } from '../src/content/articleReview.ts';
 import { regionNameMap } from '../src/content/regions.ts';
+import { PUBLIC_SITE_URL, canonicalForPublicPath, isPublicPageIndexable } from '../src/seo/indexingPolicy.ts';
 
-const SITE_URL = 'https://ecoprogress.kz';
+const SITE_URL = PUBLIC_SITE_URL;
 const LASTMOD = '2026-07-17';
 const OG_IMAGE = `${SITE_URL}/media/social/ecoprogress-og-1200x630.jpg`;
 const wasteRecyclingRegions = new Set(wasteRecyclingRegionSlugs);
@@ -63,6 +64,7 @@ const hasIndexableRegionContent = (regionSlug) =>
   isRegionContentIndexable(regionContentMap.get(regionSlug), regionContent);
 
 const cityAndRegionGenitive = (city) => `${city.cityGenitive} и ${city.regionGenitive}`;
+const lowerFirst = (value) => value ? `${value[0].toLowerCase()}${value.slice(1)}` : value;
 
 const serviceProfiles = [
   {
@@ -329,14 +331,14 @@ const objectList = ['заводы', 'склады', 'медицинские це
 const clientResults = ['консультацию', 'список необходимых документов', 'расчет стоимости', 'подготовку экологических документов', 'протоколы лабораторных замеров', 'сопровождение до результата', 'готовые документы в PDF/Word', 'помощь при проверках'];
 
 const link = (label, path) => ({ label, path });
-const canonical = (slug) => `${SITE_URL}/${slug}`;
+const canonical = (slug) => canonicalForPublicPath(slug);
 const serviceSeoTitle = (title) => `${title} | ECOPROGRESS`.length < 35 ? `${title} для бизнеса | ECOPROGRESS` : `${title} | ECOPROGRESS`;
 const serviceSeoDescription = (description) => description.length >= 100 ? description : `${description} Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.`;
 const byCity = (slug) => cityProfiles.find((city) => city.slug === slug);
 
 const cityFaq = (city) => [
   ['Какие экологические документы нужны бизнесу в ' + city.cityPrepositional + '?', `Для объекта в ${city.cityPrepositional} перечень зависит от источников выбросов, отходов, воды, рабочих зон и деятельности. Проверяют применимые документы ПЭК, протоколы, разрешения и договоры по отходам.`],
-  ['Кому нужен производственный контроль?', `Производственный контроль нужен объектам, где есть рабочие зоны, санитарные требования, отходы, выбросы, вода, пищевое производство, медицинская или образовательная деятельность. Для предприятий ${cityAndRegionGenitive(city)} перечень замеров подбирается по фактическому объекту.`],
+  ['Кому нужен производственный контроль?', `Для объектов ${city.cityGenitive} производственный контроль нужен при наличии рабочих зон, санитарных требований, отходов, выбросов, воды, пищевой, медицинской или образовательной деятельности. Для предприятий ${cityAndRegionGenitive(city)} перечень замеров подбирается по фактическому объекту.`],
   ['Сколько стоит экологическое сопровождение?', `Для объекта в ${city.cityPrepositional} стоимость зависит от количества площадок, состава документов, лабораторных точек и срочности. После консультации формируется расчет и список работ.`],
   ['Какие лабораторные замеры можно заказать?', `Для предприятий ${cityAndRegionGenitive(city)} перечень может включать воздух рабочей зоны, микроклимат, освещенность, шум, воду, почву, выбросы и другие показатели по задаче объекта.`],
   ['Можно ли работать дистанционно по Казахстану?', `Да. Документы и консультации для ${cityAndRegionGenitive(city)} можно выполнять дистанционно, а выезды и лабораторные работы согласуются по объекту и графику.`],
@@ -348,8 +350,8 @@ const serviceFaq = (service, city) => [
   [`Какие данные нужны для услуги «${service.name}» в ${city.cityPrepositional}?`, `Для объекта в ${city.cityPrepositional} нужны реквизиты компании, адрес, описание деятельности, схема площадки и применимые сведения об отходах, источниках воздействия и текущих документах.`],
   [`Можно ли начать дистанционно из ${city.cityGenitive}?`, `Да. Первичный аудит, расчет и подготовку документов для ${cityAndRegionGenitive(city)} можно начать дистанционно. Замеры или выезд согласуются по адресу и заданию отдельно.`],
   [`Что получает клиент по итогам работы в ${city.cityPrepositional}?`, `По задаче в ${city.cityPrepositional} клиент получает ${service.result}, рекомендации по недостающим документам и сопровождение в согласованном составе.`],
-  ['Подходит ли услуга для проверки СЭС или экологии?', 'Да, если перечень работ подобран под фактическую проверку. Мы заранее уточняем, какие документы и протоколы могут запросить контролирующие органы.'],
-  ['Можно ли заказать комплексное сопровождение?', 'Да. К услуге можно подключить экологическое проектирование, лабораторные замеры, ПЭК, паспорта отходов и сопровождение проверок. Утилизация доступна в Шымкенте, Таразе и Туркестане.'],
+  ['Подходит ли услуга для проверки СЭС или экологии?', `Для объекта в ${city.cityPrepositional} — да, если перечень работ подобран под фактическую проверку. Заранее уточняем, какие документы и протоколы могут запросить контролирующие органы.`],
+  ['Можно ли заказать комплексное сопровождение?', `Для предприятия из ${city.cityGenitive} можно объединить проектирование, замеры, ПЭК, паспорта отходов и сопровождение проверок. Операционные услуги отдельно проверяются по региону.`],
 ].map(([question, answer]) => ({ question, answer }));
 
 const cityLinks = (city) => {
@@ -364,7 +366,7 @@ const cityLinks = (city) => {
   ];
 };
 
-const activeCityProfiles = cityProfiles.filter((city) => city.cityNominative && city.cityGenitive && city.cityDative && city.cityAccusative && city.cityInstrumental && city.cityPrepositional && city.regionNominative && city.regionGenitive && city.regionPrepositional && city.objects && city.localNote);
+const activeCityProfiles = cityProfiles.filter((city) => city.cityNominative && city.cityGenitive && city.cityDative && city.cityInstrumental && city.cityPrepositional && city.regionNominative && city.regionGenitive && city.regionDative && city.regionInstrumental && city.regionPrepositional && city.objects && city.localNote);
 const isServiceAvailableInCity = (service, city) => service.key !== 'waste-utilization' || wasteRecyclingRegions.has(city.slug);
 const serviceCityLink = (service, city) => link(`${service.titleName} в ${city.cityPrepositional}`, `/${service.slugPrefix}-${city.slug}`);
 const relatedServiceCityLinks = (service, city) => {
@@ -398,6 +400,8 @@ const createCityPage = (city) => ({
   cityPrepositional: city.cityPrepositional,
   regionNominative: city.regionNominative,
   regionGenitive: city.regionGenitive,
+  regionDative: city.regionDative,
+  regionInstrumental: city.regionInstrumental,
   regionPrepositional: city.regionPrepositional,
   type: 'city',
   title: `Экологические услуги в ${city.cityPrepositional} | ECOPROGRESS`,
@@ -471,6 +475,8 @@ const createServiceCityPage = (service, city) => {
   cityPrepositional: city.cityPrepositional,
   regionNominative: city.regionNominative,
   regionGenitive: city.regionGenitive,
+  regionDative: city.regionDative,
+  regionInstrumental: city.regionInstrumental,
   regionPrepositional: city.regionPrepositional,
   service: service.name,
   serviceSlug: mainServiceSlug[service.key],
@@ -503,10 +509,10 @@ const createServiceCityPage = (service, city) => {
   audience: objectList.slice(0, 12),
   outcomes: clientResults,
   faq: [
-    { question: `${content.faq.replace(/\?$/, '')} в ${city.cityPrepositional}?`, answer: `${content.faqAnswer} Для объекта в ${city.cityPrepositional} дополнительно учитываем ${regionalTask}.` },
+    { question: `${content.faq.replace(/\?$/, '')} в ${city.cityPrepositional}?`, answer: `Для объекта в ${city.cityPrepositional} ${lowerFirst(content.faqAnswer)} Дополнительно учитываем ${regionalTask}.` },
     ...serviceFaq(service, city).slice(0, 3),
     { question: `Как организована работа по направлению «${content.title}» для ${city.cityGenitive}?`, answer: `${city.localNote} ${visitText}` },
-    { question: `Какие особенности площадки в ${city.cityPrepositional} сообщить до расчёта?`, answer: `Укажите адрес, режим, вид деятельности, оборудование и источники воздействия. Для региона характерны ${city.objects}, но состав работ определяем только по данным конкретного объекта.` },
+    { question: `Какие особенности площадки в ${city.cityPrepositional} сообщить до расчёта?`, answer: `Для расчёта в ${city.cityPrepositional} укажите адрес, режим, вид деятельности, оборудование и источники воздействия. Для региона характерны ${city.objects}, но состав работ определяем только по данным конкретного объекта.` },
   ],
   relatedLinks: [
     link(`Экологические услуги в ${city.cityPrepositional}`, `/ecologicheskie-uslugi-${city.slug}`),
@@ -630,7 +636,7 @@ const enrichSpecialPage = (page) => ({
   breadcrumbs: [link('Главная', '/'), link(page.type === 'article' ? 'Статьи' : 'Услуги', page.type === 'article' ? '/news' : '/services'), link(page.h1, `/${page.slug}`)],
   schemaType: page.type === 'article' ? 'Article' : 'Service',
   priority: page.type === 'article' ? 0.7 : 0.85,
-  indexable: page.type !== 'article' || isApprovedArticleReview(page.reviewStatus),
+  indexable: isPublicPageIndexable({ path: `/${page.slug}`, type: page.type, reviewStatus: page.reviewStatus }),
   changefreq: 'weekly',
   lastmod: LASTMOD,
 });
@@ -718,7 +724,9 @@ const redirectedLegacySeoSlugs = new Set(['shtrafy-za-ekologiyu-kazakhstan', 'pa
 export const seoPages = [
   ...activeCityProfiles.map(createCityPage),
   ...serviceProfiles.flatMap((service) => activeCityProfiles.filter((city) => isServiceAvailableInCity(service, city)).map((city) => createServiceCityPage(service, city))),
-  ...specialPages.map(enrichSpecialPage),
+  ...specialPages
+    .filter((page) => !page.slug.startsWith('utilizaciya-othodov-') || wasteRecyclingRegions.has(page.slug.replace('utilizaciya-othodov-', '')))
+    .map(enrichSpecialPage),
 ].filter((page) => !redirectedLegacySeoSlugs.has(page.slug));
 
 const legacyStaticPages = [
@@ -759,12 +767,6 @@ export const publicStaticPages = [
     changefreq: 'weekly',
     type: 'service',
   })),
-];
-
-export const getAllPublicUrls = () => [
-  ...publicStaticPages.map((page) => ({ loc: `${SITE_URL}${page.path === '/' ? '/' : page.path}`, priority: page.priority, changefreq: page.changefreq, lastmod: LASTMOD })),
-  ...seoPages.filter((page) => page.indexable !== false).map((page) => ({ loc: page.canonical, priority: page.priority, changefreq: page.changefreq, lastmod: page.lastmod })),
-  ...seoArticles.filter((article) => isApprovedArticleReview(article.reviewStatus)).map((article) => ({ loc: `${SITE_URL}${article.slug}`, priority: 0.7, changefreq: 'weekly', lastmod: article.dateModified })),
 ];
 
 export { SITE_URL, LASTMOD, OG_IMAGE };

@@ -10,7 +10,7 @@ import { company } from '../config/company';
 import { trackServiceView } from '../services/analytics';
 import { createBlankWhatsAppRequestMessage } from '../utils/whatsapp';
 import { activeServices, formatKztPrice, getCatalogService } from '../content/serviceCatalog';
-import { buildBreadcrumbSchema, buildOrganizationSchema, buildServiceSchema } from '../utils/schema';
+import { buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, buildServiceEntity } from '../seo/entityBuilders';
 import { serviceContentMap } from '../content/services/serviceContent';
 import { publicContentRepository } from '../content/apiRepository';
 import { ServiceAeoContent } from '../components/content/AeoContent';
@@ -26,6 +26,8 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
     queryFn: () => publicContentRepository.getServiceBySlug(service?.slug || ''),
     enabled: Boolean(service?.slug), initialData: staticContent, staleTime: 5 * 60 * 1000,
   });
+  const { data: confirmedExperts = [] } = useQuery({ queryKey: ['public-content', 'experts'], queryFn: () => publicContentRepository.getExperts(), staleTime: 5 * 60 * 1000 });
+  const { data: confirmedCases = [] } = useQuery({ queryKey: ['public-content', 'cases'], queryFn: () => publicContentRepository.getCases(), staleTime: 5 * 60 * 1000 });
 
   useEffect(() => { if (service) trackServiceView({ slug: service.slug, title: service.title }); }, [service]);
 
@@ -34,8 +36,12 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
   if (isError || !content) return <div className="px-5 py-20 text-center text-rose-800">Не удалось загрузить описание услуги с сервера.</div>;
 
   const canonical = `${company.siteUrl}/services/${service.slug}`;
+  const expertNodes = confirmedExperts.map((expert, index) => buildPersonSchema(expert, `${canonical}#expert-${index + 1}`));
+  const caseUrls = confirmedCases.filter((item) => item.service === service.slug).map((item) => `${company.siteUrl}/cases/${item.slug}`);
   const schema = [
-    buildOrganizationSchema(), buildServiceSchema(service, canonical),
+    ...buildCorePageEntities({ canonical, name: service.title, description: service.seo.description }),
+    buildServiceEntity({ canonical, name: service.title, description: service.fullDescription, serviceType: service.category, areaServed: service.areaServed.type === 'KAZAKHSTAN' ? 'Казахстан' : service.areaServed.regions, expertIds: expertNodes.map((node) => String(node['@id'])), caseUrls }),
+    ...expertNodes,
     buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Услуги', url: `${company.siteUrl}/services` }, { name: service.title, url: canonical }]),
   ];
 

@@ -63,7 +63,6 @@ const PekReportCreatePage = lazy(() => import('./features/pek/pages/PekReportCre
 const PekReportWorkspacePage = lazy(() => import('./features/pek/pages/PekReportWorkspacePage'));
 const PekHistoryPage = lazy(() => import('./features/pek/pages/PekHistoryPage'));
 const PekSettingsPage = lazy(() => import('./features/pek/pages/PekSettingsPage'));
-const PekMembershipsPage = lazy(() => import('./features/pek/pages/PekMembershipsPage'));
 const ContentDashboardPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentDashboardPage');
 const ContentListPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentListPage');
 const ContentEditorPage = lazyNamed(() => import('./pages/content/ContentManagementPages'), 'ContentEditorPage');
@@ -300,7 +299,6 @@ function App() {
         <Route path="/staff/pek/reports/new" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><PekPermissionAccess permission="PEK_REPORT_CREATE"><ErrorBoundary fallbackTitle="Не удалось создать отчёт ПЭК"><PekReportCreatePage /></ErrorBoundary></PekPermissionAccess></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/reports/:reportId" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть отчёт ПЭК"><PekReportWorkspacePage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/settings" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть настройки ПЭК"><PekSettingsPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/pek/access" element={<RoleAccess roles={pekRoles} loginPath="/staff/login"><StaffLayout><PekAccess><ErrorBoundary fallbackTitle="Не удалось открыть доступ ПЭК"><PekMembershipsPage /></ErrorBoundary></PekAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/pek/*" element={<Navigate to="/staff/pek" replace />} />
         <Route path="/staff/normatives" element={<RoleAccess roles={normativeRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={normativeRoles}><NormativeDirectoryPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/measurement-devices" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><MeasurementDevicesPage /></StaffAccess></StaffLayout></RoleAccess>} />

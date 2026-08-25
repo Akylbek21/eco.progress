@@ -111,6 +111,9 @@ const PekProgramDetailsPage = () => {
     <section className="grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-5">
       <Info label="Версия" value={item.version} />
       <Info label="Период" value={`${item.validFrom} — ${item.validUntil}`} />
+      <Info label="Версия формы" value={item.templateVersion || '—'} />
+      <Info label="Версия НПА" value={item.regulationVersion || '—'} />
+      <Info label="Ревизия данных" value={item.contentRevision} />
       <Info label="Ответственный" value={item.responsible?.name || '—'} />
       <PekReadiness value={item.readinessPercent} />
       <Info label="Режим" value={item.readOnly ? 'Только чтение' : 'Редактирование разрешено'} />

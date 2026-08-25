@@ -81,7 +81,6 @@ export const canCreateProgram = (user: PekUser) => canUsePekPermission(user, 'PE
 export const canEditProgram = (user: PekUser, resource?: PekResourceAccess) =>
   resourceFlag(resource, 'edit', 'canEdit') ?? canUsePekPermission(user, 'PEK_PROGRAM_EDIT');
 export const canCreateReport = (user: PekUser) => canUsePekPermission(user, 'PEK_REPORT_CREATE');
-export const canManagePekMemberships = (user: PekUser) => canUsePekPermission(user, 'PEK_ADMIN');
 export const canRunPekScheduler = (user: PekUser) => canUsePekPermission(user, 'PEK_ADMIN');
 export const canCollectResults = (user: PekUser, resource?: PekResourceAccess) =>
   resourceFlag(resource, 'collect') ?? canUsePekPermission(user, 'PEK_REPORT_COLLECT');

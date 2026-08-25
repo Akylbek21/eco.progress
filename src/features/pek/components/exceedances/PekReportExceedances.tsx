@@ -35,8 +35,8 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
   });
   const selected = detail.data;
   const assignees = useQuery({
-    queryKey: pekKeys.assignees(['PEK_RESPONSIBLE'], user?.id),
-    queryFn: ({ signal }) => pekApi.getAssignees(['PEK_RESPONSIBLE'], signal),
+    queryKey: pekKeys.assignees(report.companyId, ['PEK_RESPONSIBLE'], user?.id),
+    queryFn: ({ signal }) => pekApi.getAssignees(report.companyId, ['PEK_RESPONSIBLE'], signal),
     enabled: selected?.availableActions.assignResponsible === true || selected?.availableActions.edit === true,
   });
   const [responsibleUserId, setResponsibleUserId] = useState('');
@@ -74,16 +74,24 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
     return actual;
   };
 
+  const storeMutationResult = (actual: PekExceedance) => {
+    queryClient.setQueryData(pekKeys.exceedance(actual.id, user?.id), actual);
+    queryClient.setQueryData<PekExceedance[]>(listKey, (current) => current?.map((item) => item.id === actual.id ? actual : item));
+    void queryClient.invalidateQueries({ queryKey: pekKeys.readiness(report.id, report.companyId, user?.id) });
+    void queryClient.invalidateQueries({ queryKey: reportKey });
+  };
+
   const assign = useMutation({
     mutationFn: async () => {
-      await pekApi.assignExceedance(selected!.id, {
+      return pekApi.assignExceedance(selected!.id, {
         version: selected!.version,
         responsibleUserId: Number(responsibleUserId),
         dueDate,
         correctiveAction: correctiveAction.trim(),
       } satisfies PekAssignExceedanceRequest);
-      return refreshAfterMutation(selected!.id);
     },
+    onSuccess: storeMutationResult,
+    retry: false,
     onError: (error) => {
       void handlePekMutationError(error, () => refreshAfterMutation(selected!.id));
     },
@@ -93,34 +101,31 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
       if (!evidenceFile) throw new Error('Выберите файл подтверждения.');
       const uploaded = await uploadAndAttachExceedanceEvidence({ file: evidenceFile, exceedanceId: selected!.id, reportId: report.id, version: selected!.version });
       const fileId = uploaded.fileId;
-      const actual = await refreshAfterMutation(selected!.id);
+      const actual = uploaded.exceedance;
       return { actual, fileId, fileName: uploaded.fileName || evidenceFile.name };
     },
-    onSuccess: ({ fileId, fileName }) => {
+    onSuccess: ({ actual, fileId, fileName }) => {
+      storeMutationResult(actual);
       setEvidenceNames((current) => ({ ...current, [fileId]: fileName }));
       setEvidenceFile(null);
       setEvidenceOpen(false);
     },
+    retry: false,
     onError: (error) => {
       void handlePekMutationError(error, () => refreshAfterMutation(selected!.id));
     },
   });
   const transitionMutation = useMutation({
     mutationFn: async (targetStatus: string) => {
-      if (targetStatus === 'CLOSED') {
-        await pekApi.closeExceedance(selected!.id, selected!.version, resolutionComment.trim());
-      } else if (targetStatus === 'OPEN') {
-        await pekApi.reopenExceedance(selected!.id, selected!.version, comment.trim() || undefined);
-      } else {
-        await pekApi.transitionExceedance(selected!.id, {
-          version: selected!.version,
-          status: targetStatus,
-          comment: comment.trim() || undefined,
-          resolutionComment: resolutionComment.trim() || undefined,
-        });
-      }
-      return refreshAfterMutation(selected!.id);
+      return pekApi.transitionExceedance(selected!.id, {
+        version: selected!.version,
+        status: targetStatus,
+        comment: comment.trim() || undefined,
+        resolutionComment: resolutionComment.trim() || undefined,
+      });
     },
+    onSuccess: storeMutationResult,
+    retry: false,
     onError: (error) => {
       void handlePekMutationError(error, () => refreshAfterMutation(selected!.id));
     },
@@ -131,16 +136,14 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
   if (!list.data?.length) return <PekState title="Превышения не обнаружены" message="Backend не вернул превышений для этого отчёта." />;
 
   const selectedActions = selected?.availableActions || {};
-  const allowedTransitions = selected ? Object.entries(selectedActions)
+  const actionTransitions = selected ? Object.entries(selectedActions)
     .filter(([key, enabled]) => key.startsWith('transitionTo') && enabled === true)
     .map(([key]) => transitionStatus(key)) : [];
-  const ordinaryTransitions = allowedTransitions.filter((status) => status !== 'CLOSED' && status !== 'OPEN');
+  const allowedTransitions = selected?.allowedTransitions?.length ? selected.allowedTransitions : actionTransitions;
   const canAssign = selectedActions.assignResponsible === true;
   const canEdit = selectedActions.edit === true;
   const canAddEvidence = selectedActions.addEvidence === true;
-  const canChangeStatus = selectedActions.changeStatus === true;
-  const canClose = selectedActions.close === true;
-  const canReopen = selectedActions.reopen === true;
+  const canChangeStatus = allowedTransitions.length > 0 && (selectedActions.transition === true || selectedActions.changeStatus === true || actionTransitions.length > 0);
   const pending = assign.isPending || evidence.isPending || transitionMutation.isPending;
   const mutationError = assign.error || evidence.error || transitionMutation.error;
   const mutationFailure = mutationError ? mapPekError(mutationError) : null;
@@ -156,14 +159,12 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
       {(canAssign || canEdit) && <section className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2"><TextField select label="Ответственный" value={responsibleUserId} onChange={(event) => setResponsibleUserId(event.target.value)}><MenuItem value="">Не выбран</MenuItem>{assignees.data?.map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}</TextField><TextField type="date" label="Срок устранения" InputLabelProps={{ shrink: true }} value={dueDate} onChange={(event) => setDueDate(event.target.value)} /><TextField className="sm:col-span-2" multiline minRows={3} label="Корректирующее мероприятие" value={correctiveAction} onChange={(event) => setCorrectiveAction(event.target.value)} /><div className="sm:col-span-2"><Button variant="contained" disabled={pending || !responsibleUserId || !dueDate || !correctiveAction.trim()} onClick={() => assign.mutate()}>{canEdit ? 'Изменить' : 'Назначить ответственного'}</Button></div></section>}
       {canAddEvidence && <section className="rounded-xl border p-4">{!evidenceOpen ? <Button variant="outlined" onClick={() => setEvidenceOpen(true)}>Добавить доказательство</Button> : <><label className="block text-sm font-semibold">Файл подтверждения</label><input className="mt-2 block w-full rounded-lg border p-2 text-sm" type="file" onChange={(event) => setEvidenceFile(event.target.files?.[0] || null)} /><p className="mt-2 text-xs text-slate-500">{evidenceFile ? evidenceFile.name : 'Файл не выбран'}</p><div className="mt-3 flex gap-2"><Button variant="contained" disabled={pending || !evidenceFile} onClick={() => evidence.mutate()}>Загрузить и прикрепить</Button><Button variant="outlined" disabled={pending} onClick={() => { setEvidenceFile(null); setEvidenceOpen(false); }}>Отмена</Button></div></>}</section>}
       <div><strong>Прикреплённые файлы:</strong>{!selected.evidenceFileIds?.length ? <span className="ml-2 text-slate-500">нет</span> : <ul className="mt-2 space-y-2">{selected.evidenceFileIds.map((fileId, index) => <li key={fileId} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">{evidenceNames[fileId] || `Подтверждение ${index + 1}`}</li>)}</ul>}</div>
-      {(canChangeStatus || canClose || canReopen) && <section className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2">
-        {canChangeStatus && ordinaryTransitions.length > 0 && <TextField select label="Новый статус" value={transition} onChange={(event) => setTransition(event.target.value)}>{ordinaryTransitions.map((status) => <MenuItem key={status} value={status}>{statusLabels[status] || status}</MenuItem>)}</TextField>}
+      {canChangeStatus && <section className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2">
+        <TextField select label="Новый статус" value={transition} onChange={(event) => setTransition(event.target.value)}>{allowedTransitions.map((status) => <MenuItem key={status} value={status}>{statusLabels[status] || status}</MenuItem>)}</TextField>
         <TextField label="Комментарий" value={comment} onChange={(event) => setComment(event.target.value)} />
         <TextField className="sm:col-span-2" multiline minRows={2} label="Комментарий об устранении / закрытии" value={resolutionComment} onChange={(event) => setResolutionComment(event.target.value)} />
         <div className="sm:col-span-2 flex flex-wrap gap-2">
-          {canChangeStatus && ordinaryTransitions.length > 0 && <Button variant="contained" disabled={pending || !transition || (transition === 'RESOLVED' && !resolutionComment.trim())} onClick={() => transitionMutation.mutate(transition)}>Изменить статус</Button>}
-          {canClose && <Button color="success" variant="contained" disabled={pending || !resolutionComment.trim()} onClick={() => transitionMutation.mutate('CLOSED')}>Закрыть превышение</Button>}
-          {canReopen && <Button variant="outlined" disabled={pending} onClick={() => transitionMutation.mutate('OPEN')}>Переоткрыть</Button>}
+          <Button variant="contained" disabled={pending || !transition || (['RESOLVED', 'CLOSED'].includes(transition) && !resolutionComment.trim())} onClick={() => transitionMutation.mutate(transition)}>Изменить статус</Button>
         </div>
       </section>}
     </>}</DialogContent><DialogActions><Button disabled={pending} onClick={() => setSelectedId(null)}>Закрыть окно</Button></DialogActions></Dialog>

@@ -1,7 +1,7 @@
 import { normalizeProtocolPrintVisibility } from '../../../utils/protocolPrintVisibility';
 import type {
   ProtocolListQuery,
-  ProtocolResultPayload,
+  ProtocolResultFormInput,
   ProtocolResultValue,
   UpdateProtocolPayload,
 } from '../../../types/protocols';
@@ -30,6 +30,16 @@ const decimalOrNull = (value: unknown): number | null => {
   const parsed = Number(text.replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : null;
 };
+
+const mapSamplingPoints = (points: UpdateProtocolPayload['samplingPoints'] = []) => points.map((point, index) => ({
+  id: idOrNull(point.id),
+  clientPointId: optionalText(point.clientPointId),
+  name: String(point.name || '').trim(),
+  description: optionalText(point.description),
+  latitude: decimalOrNull(point.latitude),
+  longitude: decimalOrNull(point.longitude),
+  sortOrder: Number.isFinite(point.sortOrder) ? point.sortOrder : index,
+}));
 
 export const mapProtocolEnvironmentToRequest = (
   environment: UpdateProtocolPayload['environment'],
@@ -71,7 +81,9 @@ export const mapProtocolEnvironmentToRequest = (
 export const mapProtocolFormToPatchRequest = (
   payload: UpdateProtocolPayload,
   version = payload.version,
-): UpdateProtocolRequest => ({
+): UpdateProtocolRequest => {
+  const ambient = payload.templateId === 'ambient_air';
+  return ({
   version,
   number: optionalText(payload.number),
   protocolDate: payload.protocolDate,
@@ -80,7 +92,7 @@ export const mapProtocolFormToPatchRequest = (
   executorId: idOrNull(payload.executorId),
   measurementDate: optionalText(payload.measurementDate),
   measurementTime: optionalText(payload.measurementTime),
-  measurementPlace: optionalText(payload.measurementPlace),
+  measurementPlace: ambient ? null : optionalText(payload.measurementPlace),
   sourceNumber: optionalText(payload.sourceNumber),
   testingStartDate: optionalText(payload.testing.testingStartDate),
   testingEndDate: optionalText(payload.testing.testingEndDate ?? payload.testing.testingDate),
@@ -103,7 +115,7 @@ export const mapProtocolFormToPatchRequest = (
   testing: {
     samplingDate: optionalText(payload.sampleDate ?? payload.testing.samplingDate),
     sampleNumber: optionalText(payload.sampleNumber),
-    samplingPlace: optionalText(payload.samplingPlace ?? payload.measurementPlace),
+    samplingPlace: ambient ? null : optionalText(payload.samplingPlace ?? payload.measurementPlace),
     samplingDepth: optionalText(payload.samplingDepth),
     productNormativeDocument: optionalText(payload.testing.productNormativeDocument),
     samplingMethodDocument: optionalText(payload.testing.samplingMethodDocument),
@@ -111,24 +123,26 @@ export const mapProtocolFormToPatchRequest = (
     testingPurpose: optionalText(payload.testing.testingPurpose),
     environmentConditions: optionalText(payload.testing.environmentConditions),
   },
-  environment: mapProtocolEnvironmentToRequest(payload.environment, payload.conditions),
+  environment: mapProtocolEnvironmentToRequest(payload.environment, ambient ? { ...(payload.conditions ?? {}), samplingPlace: null } : payload.conditions),
   testingMethodDocument: optionalText(payload.testingMethodDocument ?? payload.testing.testingMethodDocument),
   complianceDocument: optionalText(payload.complianceDocument),
   explanatoryNote: optionalText(payload.explanatoryNote ?? payload.notes),
   printVisibility: normalizeProtocolPrintVisibility(payload.printVisibility),
   orderId: optionalText(payload.orderId),
   orderServiceItemId: optionalText(payload.orderServiceItemId),
-});
+  samplingPoints: mapSamplingPoints(payload.samplingPoints),
+  });
+};
 
 /** @deprecated Use mapProtocolFormToPatchRequest(form, version). */
 export const mapProtocolFormToUpdateRequest = mapProtocolFormToPatchRequest;
 
-const legacyResultKeys = new Set(['deviceId', 'measurementDeviceId', 'normativeId']);
+const legacyResultKeys = new Set(['deviceId', 'measurementDeviceId', 'normativeId', 'samplingPointId']);
 
 const normalizeResultValue = (value: ProtocolResultValue): ProtocolResultValue =>
   typeof value === 'string' && value.trim() === '' ? null : value;
 
-export const mapProtocolResultFormToRequest = (payload: ProtocolResultPayload): ProtocolResultRequest => {
+export const mapProtocolResultFormToRequest = (payload: ProtocolResultFormInput): ProtocolResultRequest => {
   const measurementDeviceId = idOrNull(
     payload.measurementDeviceId ?? payload.deviceId ?? payload.values.measurementDeviceId ?? payload.values.deviceId,
   );
@@ -143,7 +157,7 @@ export const mapProtocolResultFormToRequest = (payload: ProtocolResultPayload): 
     throw new Error('Укажите причину использования ручного норматива.');
   }
 
-  return { values, measurementDeviceId, normativeId };
+  return { values, samplingPointId: idOrNull(payload.samplingPointId ?? payload.values.samplingPointId), measurementDeviceId, normativeId };
 };
 
 export const mapProtocolsQuery = (query: ProtocolListQuery): ProtocolsQueryRequest => Object.fromEntries(

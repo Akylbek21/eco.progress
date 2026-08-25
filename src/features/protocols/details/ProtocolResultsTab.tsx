@@ -5,6 +5,20 @@ type Props = { protocol: Protocol; editable: boolean; onEdit: () => void };
 const unit = (row: ProtocolResult) => String(row.unit || row.values.unit || '');
 const comparison = (row: ProtocolResult) => ({ LESS_OR_EQUAL: '≤', GREATER_OR_EQUAL: '≥', EQUAL: '=', RANGE: '' }[String(row.comparisonType || row.values.comparisonType || '')] || '');
 const status = (row: ProtocolResult) => row.internalStatus || row.checkStatus || row.calculationStatus;
+const resultGroups = (protocol: Protocol) => protocol.templateId === 'ambient_air'
+  ? [
+      ...(protocol.samplingPoints ?? []).map((point) => ({
+        id: String(point.id ?? point.clientPointId ?? point.sortOrder),
+        name: point.name,
+        rows: protocol.results.filter((row) => String(row.samplingPointId ?? '') === String(point.id ?? '')),
+      })),
+      {
+        id: 'unassigned',
+        name: 'Место отбора не указано',
+        rows: protocol.results.filter((row) => !row.samplingPointId || !(protocol.samplingPoints ?? []).some((point) => String(point.id) === String(row.samplingPointId))),
+      },
+    ].filter((group) => group.rows.length)
+  : [{ id: 'all', name: '', rows: protocol.results }];
 
 const Details = ({ row }: { row: ProtocolResult }) => (
   <details className="mt-2 text-xs text-slate-600">
@@ -33,10 +47,13 @@ const ProtocolResultsTab = ({ protocol, editable, onEdit }: Props) => (
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[850px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3">№</th><th className="px-4 py-3">Показатель</th><th className="px-4 py-3 text-right">Результат</th><th className="px-4 py-3 text-right">Норматив</th><th className="px-4 py-3">Статус</th><th className="px-4 py-3">Прибор</th></tr></thead>
-            <tbody className="divide-y divide-slate-100">{protocol.results.map((row, index) => <tr key={row.id || index} className="align-top"><td className="px-4 py-4 font-bold">{index + 1}</td><td className="px-4 py-4 font-semibold">{resultIndicator(row)}<Details row={row} /></td><td className="px-4 py-4 text-right font-bold">{resultValue(row)} {unit(row)}</td><td className="px-4 py-4 text-right">{comparison(row)} {resultNormative(row)} {unit(row)}</td><td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${complianceClass(status(row))}`}>{complianceLabel(status(row))}</span></td><td className="px-4 py-4">{resultDeviceName(protocol, row)}</td></tr>)}</tbody>
+            <tbody className="divide-y divide-slate-100">{resultGroups(protocol).flatMap((group) => [
+              ...(group.name ? [<tr key={`${group.id}-heading`}><th colSpan={6} className="bg-eco-50 px-4 py-3 text-left font-black text-eco-950">{group.name}</th></tr>] : []),
+              ...group.rows.map((row, index) => <tr key={row.id || `${group.id}-${index}`} className="align-top"><td className="px-4 py-4 font-bold">{index + 1}</td><td className="px-4 py-4 font-semibold">{resultIndicator(row)}<Details row={row} /></td><td className="px-4 py-4 text-right font-bold">{resultValue(row)} {unit(row)}</td><td className="px-4 py-4 text-right">{comparison(row)} {resultNormative(row)} {unit(row)}</td><td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${complianceClass(status(row))}`}>{complianceLabel(status(row))}</span></td><td className="px-4 py-4">{resultDeviceName(protocol, row)}</td></tr>),
+            ])}</tbody>
           </table>
         </div>
-        <div className="space-y-3 p-4 md:hidden">{protocol.results.map((row, index) => <article key={row.id || index} className="rounded-xl border border-slate-200 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold text-slate-400">Показатель {index + 1}</p><h3 className="mt-1 font-black">{resultIndicator(row)}</h3></div><span className={`rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${complianceClass(status(row))}`}>{complianceLabel(status(row))}</span></div><dl className="mt-4 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-slate-500">Результат</dt><dd className="font-bold">{resultValue(row)} {unit(row)}</dd></div><div><dt className="text-slate-500">Норматив</dt><dd className="font-semibold">{comparison(row)} {resultNormative(row)} {unit(row)}</dd></div><div className="col-span-2"><dt className="text-slate-500">Прибор</dt><dd className="font-semibold">{resultDeviceName(protocol, row)}</dd></div></dl><Details row={row} /></article>)}</div>
+        <div className="space-y-5 p-4 md:hidden">{resultGroups(protocol).map((group) => <section key={group.id} className="space-y-3">{group.name && <h3 className="rounded-xl bg-eco-50 px-4 py-3 font-black text-eco-950">{group.name}</h3>}{group.rows.map((row, index) => <article key={row.id || index} className="rounded-xl border border-slate-200 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold text-slate-400">Показатель {index + 1}</p><h3 className="mt-1 font-black">{resultIndicator(row)}</h3></div><span className={`rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${complianceClass(status(row))}`}>{complianceLabel(status(row))}</span></div><dl className="mt-4 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-slate-500">Результат</dt><dd className="font-bold">{resultValue(row)} {unit(row)}</dd></div><div><dt className="text-slate-500">Норматив</dt><dd className="font-semibold">{comparison(row)} {resultNormative(row)} {unit(row)}</dd></div><div className="col-span-2"><dt className="text-slate-500">Прибор</dt><dd className="font-semibold">{resultDeviceName(protocol, row)}</dd></div></dl><Details row={row} /></article>)}</section>)}</div>
       </>
     )}
   </section>

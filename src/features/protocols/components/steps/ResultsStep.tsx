@@ -3,6 +3,7 @@ import { useFieldArray, useFormContext } from 'react-hook-form';
 import type { MeasurementDevice, NormativeRecord } from '../../../../types/protocols';
 import NormativeSelectorModal from '../components/NormativeSelectorModal';
 import ProtocolResultTable from '../components/ProtocolResultTable';
+import SamplingPointsEditor from '../components/SamplingPointsEditor';
 import { emptyWizardResult, type ProtocolWizardForm } from '../wizardTypes';
 import { validateProtocolWizardStep } from '../../utils/protocolWizardValidation';
 
@@ -12,10 +13,15 @@ const text = (value: unknown) => value == null ? '' : String(value);
 
 const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
   const [selector, setSelector] = useState(false);
+  const [activeSamplingPointId, setActiveSamplingPointId] = useState('');
   const { control, watch, setValue } = useFormContext<ProtocolWizardForm>();
   const fieldArray = useFieldArray({ control, name: 'results' });
   const { append, update } = fieldArray;
   const form = watch();
+  const ambient = form.templateId === 'ambient_air';
+  const effectiveSamplingPointId = ambient
+    ? activeSamplingPointId || form.samplingPoints[0]?.clientPointId || ''
+    : '';
   const resultErrors = validateProtocolWizardStep(form, 2).filter((item) => item.severity === 'ERROR');
   const automaticCommonMethodRef = useRef('');
 
@@ -34,9 +40,20 @@ const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
     }
   }, [form.results, form.testingMethodNd, setValue]);
 
+  useEffect(() => {
+    if (!ambient) {
+      setActiveSamplingPointId('');
+      return;
+    }
+    if (!form.samplingPoints.some((point) => point.clientPointId === activeSamplingPointId)) {
+      setActiveSamplingPointId(form.samplingPoints[0]?.clientPointId || '');
+    }
+  }, [activeSamplingPointId, ambient, form.samplingPoints]);
+
   const addNormatives = (items: NormativeRecord[]) => {
     const existingIds = new Set(
       form.results
+        .filter((row) => !ambient || row.samplingPointId === effectiveSamplingPointId)
         .map((row) => row.normativeId)
         .filter(Boolean),
     );
@@ -46,6 +63,7 @@ const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
       existingIds.add(String(item.id));
       return [{
         ...emptyWizardResult(),
+        samplingPointId: effectiveSamplingPointId,
         indicatorName:
           item.indicator || item.indicatorName || item.name || '',
         pollutantCode: item.pollutantCode || item.code || '',
@@ -89,14 +107,40 @@ const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
   const addManual = () => {
     append({
       ...emptyWizardResult(),
+      samplingPointId: effectiveSamplingPointId,
       normativeSource: 'MANUAL',
       measurementDeviceId: form.defaultMeasurementDeviceId || '',
     });
     setSelector(false);
   };
 
+  const copyIndicatorsToAllPoints = () => {
+    if (!effectiveSamplingPointId) return;
+    const sourceRows = form.results.filter((row) => row.samplingPointId === effectiveSamplingPointId);
+    const copies = form.samplingPoints.flatMap((point) => {
+      if (point.clientPointId === effectiveSamplingPointId) return [];
+      const existing = new Set(form.results.filter((row) => row.samplingPointId === point.clientPointId).map((row) => row.normativeId || `${row.pollutantCode}:${row.indicatorName}`));
+      return sourceRows.flatMap((row) => {
+        const key = row.normativeId || `${row.pollutantCode}:${row.indicatorName}`;
+        if (existing.has(key)) return [];
+        return [{ ...row, clientRowId: emptyWizardResult().clientRowId, serverResultId: undefined, samplingPointId: point.clientPointId, value: '', textValue: '' }];
+      });
+    });
+    if (copies.length) append(copies);
+  };
+
   return (
     <section>
+      {ambient && <div className="mb-6 space-y-4">
+        <SamplingPointsEditor />
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <p className="text-sm font-black text-slate-900">Точка для добавления показателей</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {form.samplingPoints.map((point) => <button key={point.clientPointId} type="button" onClick={() => setActiveSamplingPointId(point.clientPointId)} className={`rounded-full px-4 py-2 text-sm font-bold ${effectiveSamplingPointId === point.clientPointId ? 'bg-eco-700 text-white' : 'border border-slate-200 bg-white text-slate-700'}`}>{point.name || 'Без названия'}</button>)}
+          </div>
+          <button type="button" disabled={!effectiveSamplingPointId || !form.results.some((row) => row.samplingPointId === effectiveSamplingPointId)} onClick={copyIndicatorsToAllPoints} className="mt-3 rounded-xl border border-eco-300 px-4 py-2.5 text-sm font-bold text-eco-800 disabled:opacity-40">Скопировать показатели во все точки</button>
+        </div>
+      </div>}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3
@@ -126,6 +170,7 @@ const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
           devices={devices}
           onSelectNormatives={() => setSelector(true)}
           onAddManual={addManual}
+          activeSamplingPointId={effectiveSamplingPointId}
         />
       </div>
 

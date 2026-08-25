@@ -27,6 +27,8 @@ export interface SeoPageConfig {
   cityPrepositional?: string;
   regionNominative?: string;
   regionGenitive?: string;
+  regionDative?: string;
+  regionInstrumental?: string;
   regionPrepositional?: string;
   service?: string;
   serviceSlug?: string;

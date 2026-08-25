@@ -31,10 +31,12 @@ import type {
   NormativeRecord,
   MeasurementDevice,
   Pollutant,
+  Protocol,
   ProtocolCalculationSummaryResponse,
   ProtocolMeasurementDevice,
-  ProtocolResultPayload,
+  ProtocolResultFormInput,
   ProtocolResultRow,
+  ProtocolSamplingPoint,
   ProtocolSubtype,
   ProtocolTemplateKey,
 } from '../../types/protocols';
@@ -61,6 +63,7 @@ type Props = {
   onImported: () => void | Promise<void>;
   onNotify: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
   onGoToInstruments?: () => void;
+  samplingPoints?: ProtocolSamplingPoint[];
 };
 
 type NormativeSuggestion = Pollutant & {
@@ -337,12 +340,24 @@ const exceededText = (row: ProtocolResultRow, templateId: ProtocolTemplateKey) =
 };
 
 const ProtocolResultsTable = ({
-  protocolId, version, templateId, subtype, rows, devices = [], readOnly, busy = false, testingDate = '', objectId, measurementPlace: defaultMeasurementPlace = '', waterType = '', waterUseCategory = '',
+  protocolId, version, templateId, subtype, rows, devices = [], samplingPoints = [], readOnly, busy = false, testingDate = '', objectId, measurementPlace: defaultMeasurementPlace = '', waterType = '', waterUseCategory = '',
   onChange, onVersionChange, onCheckNormatives, onImported, onNotify, onGoToInstruments, embedded = false,
 }: Props) => {
   const { user } = useAuth();
   const cacheScope = protocolScope(user?.id);
   const queryClient = useQueryClient();
+  const applyDraftResults = (updated: Protocol) => {
+    onChange(updated.results);
+    onVersionChange(updated.version);
+  };
+  const persistedDraftRow = (row: ProtocolResultRow) => mapProtocolResultFormToRequest({
+    values: { ...row.values },
+    samplingPointId: row.samplingPointId ?? null,
+    measurementDeviceId: row.measurementDeviceId ?? row.deviceId ?? null,
+    normativeId: row.normativeReference?.id ?? (
+      Array.isArray(row.values.normativeId) ? row.values.normativeId[0] : row.values.normativeId
+    ) ?? null,
+  });
   const invalidateProtocolQueries = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: protocolQueryKeys.detail(cacheScope, protocolId) }),
@@ -391,6 +406,7 @@ const ProtocolResultsTable = ({
   const [selectedNormative, setSelectedNormative] = useState<NormativeRecord | null>(null);
   const [resultValue, setResultValue] = useState('');
   const [resultDeviceId, setResultDeviceId] = useState('');
+  const [resultSamplingPointId, setResultSamplingPointId] = useState('');
   const [physicalConditions, setPhysicalConditions] = useState(defaultPhysicalConditions);
   const [availableDevices, setAvailableDevices] = useState<MeasurementDevice[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -402,11 +418,22 @@ const ProtocolResultsTable = ({
   const isPhysicalFactors = searchContext.sourceDocumentCode === 'DSM_15' || physicalFactorTemplateIds.includes(templateId);
   const isSoilProtocol = templateId === 'soil';
   const isChemicalProtocol = chemicalTemplateIds.includes(templateId);
+  const isAmbientAirProtocol = templateId === 'ambient_air';
   const physicalSubtype = physicalSubtypeForTemplate(templateId, subtype);
   const normalizedTemplateId = contextTemplateId;
   const sourceDocumentCode = searchContext.sourceDocumentCode || sourceDocumentCodeForTemplate(templateId, isPhysicalFactors);
   const isWaterProtocol = normalizedTemplateId === 'water';
   const effectiveWaterType = waterType || valueOf(rows[0] || ({ values: {} } as ProtocolResultRow), ['waterType']) || 'DRINKING_WATER';
+
+  useEffect(() => {
+    if (!isAmbientAirProtocol) {
+      setResultSamplingPointId('');
+      return;
+    }
+    if (!samplingPoints.some((point) => String(point.id) === resultSamplingPointId)) {
+      setResultSamplingPointId(String(samplingPoints[0]?.id ?? ''));
+    }
+  }, [isAmbientAirProtocol, resultSamplingPointId, samplingPoints]);
 
   const buildNormativeSearchParams = (value: string, page = 0, mode: NormativeSearchMode = normativeSearchMode): NormativeSearchParams => ({
       query: value.trim(),
@@ -463,6 +490,10 @@ const ProtocolResultsTable = ({
   } : {};
 
   const selectedRows = useMemo(() => rows.filter((row) => selected.includes(row.id)), [rows, selected]);
+  const samplingPointGroups = useMemo(() => isAmbientAirProtocol ? [
+    ...samplingPoints.map((point) => ({ point, rows: rows.filter((row) => String(row.samplingPointId ?? '') === String(point.id ?? '')) })),
+    { point: { id: 'unassigned', name: 'Место отбора не указано', sortOrder: samplingPoints.length }, rows: rows.filter((row) => !row.samplingPointId || !samplingPoints.some((point) => String(point.id) === String(row.samplingPointId))) },
+  ].filter((group) => group.rows.length > 0 || group.point.id !== 'unassigned') : [], [isAmbientAirProtocol, rows, samplingPoints]);
   const reviewRow = rows.find((row) => ['EXCEEDED', 'BELOW_REQUIRED', 'UNIT_MISMATCH', 'NEEDS_REVIEW', 'MANUAL_NORMATIVE'].includes(String(statusOf(row, templateId))));
 
   useEffect(() => {
@@ -519,6 +550,7 @@ const ProtocolResultsTable = ({
   };
 
   const saveDialogResult = async () => {
+    if (isAmbientAirProtocol && !resultSamplingPointId) return onNotify('Выберите место отбора', 'warning');
     if (!selectedNormative) return onNotify('Выберите показатель', 'warning');
     if (!normativeDisplayValue(selectedNormative)) return onNotify('Выберите норматив', 'warning');
     if (!resultValue.trim()) return onNotify('Введите результат измерения', 'warning');
@@ -534,9 +566,10 @@ const ProtocolResultsTable = ({
       const code = selectedNormative.factorCode || selectedNormative.pollutantCode || selectedNormative.code || '';
       const name = selectedNormative.indicator || selectedNormative.indicatorName || selectedNormative.pollutantName || '';
       const normativeValues = normativeValuesFromRecord(selectedNormative, templateId, selectedUnit);
-      const saved = await protocolService.addProtocolResult(protocolId, {
+      const request = mapProtocolResultFormToRequest({
         normativeId: selectedNormative.id,
         measurementDeviceId: resultDeviceId || undefined,
+        samplingPointId: isAmbientAirProtocol ? resultSamplingPointId : null,
         values: {
           ...normativeValues,
           ...physicalConditionValues(),
@@ -554,13 +587,19 @@ const ProtocolResultsTable = ({
           resultValue: savedResult,
           deviceId: resultDeviceId || null,
           measurementDeviceId: resultDeviceId || null,
-          measurementPlace: defaultMeasurementPlace || '',
-          samplingPlace: defaultMeasurementPlace || '',
+          measurementPlace: isAmbientAirProtocol ? null : defaultMeasurementPlace || '',
+          samplingPlace: isAmbientAirProtocol ? null : defaultMeasurementPlace || '',
           waterType: isWaterProtocol ? selectedNormative.waterType || effectiveWaterType : '',
           waterUseCategory: isWaterProtocol ? waterUseCategory : '',
         },
-      }, version);
-      onChange([...rows, saved]);
+      });
+      const updated = await protocolService.saveProtocolDraftResults(protocolId, {
+        version,
+        added: [{ ...request, clientRowId: globalThis.crypto?.randomUUID?.() || `row-${Date.now()}` }],
+        updated: [],
+        deletedIds: [],
+      });
+      applyDraftResults(updated);
       await onImported();
       setAddOpen(false);
       onNotify('Результат сохранён', 'success');
@@ -673,13 +712,14 @@ const ProtocolResultsTable = ({
     }
   };
 
-  const createResultPayloadFromNormative = (normative: NormativeRecord): ProtocolResultPayload => {
+  const createResultPayloadFromNormative = (normative: NormativeRecord): ProtocolResultFormInput => {
     const resolvedUnit = normative.unit || fallbackUnitForEnvironment(templateId, normative);
     const code = normative.factorCode || normative.pollutantCode || normative.code || '';
     const name = normative.indicator || normative.indicatorName || normative.pollutantName || '';
     const normativeValues = normativeValuesFromRecord(normative, templateId, resolvedUnit);
     return {
       normativeId: normative.id,
+      samplingPointId: isAmbientAirProtocol ? resultSamplingPointId : null,
       values: {
         ...normativeValues,
         ...physicalConditionValues(),
@@ -696,8 +736,8 @@ const ProtocolResultsTable = ({
         resultValue: null,
         primaryReading: null,
         measurementReadings: null,
-        measurementPlace: defaultMeasurementPlace || '',
-        samplingPlace: defaultMeasurementPlace || '',
+        measurementPlace: isAmbientAirProtocol ? null : defaultMeasurementPlace || '',
+        samplingPlace: isAmbientAirProtocol ? null : defaultMeasurementPlace || '',
         waterType: isWaterProtocol ? normative.waterType || effectiveWaterType : '',
         waterUseCategory: isWaterProtocol ? waterUseCategory : '',
         sourceDocumentCode: normative.sourceDocumentCode || sourceDocumentCode,
@@ -708,6 +748,10 @@ const ProtocolResultsTable = ({
   };
 
   const addBulk = async () => {
+    if (isAmbientAirProtocol && !resultSamplingPointId) {
+      onNotify('Выберите место отбора', 'warning');
+      return;
+    }
     const tokens = query.split(/[,;]+/).map((item) => item.trim()).filter(Boolean);
     if (!tokens.length) {
       if (isPhysicalFactors) {
@@ -724,7 +768,7 @@ const ProtocolResultsTable = ({
     setSearching(true);
     setSaving(true);
     try {
-      const created: ProtocolResultPayload[] = [];
+      const created: ProtocolResultFormInput[] = [];
       for (const token of tokens) {
         const candidates = await searchNormativeCandidates(token, { code: token, name: token }).catch((error) => {
           if (isNormativeSearchCanceled(error)) return [];
@@ -739,7 +783,7 @@ const ProtocolResultsTable = ({
           continue;
         }
         const normativeCode = normative.pollutantCode || normative.code || normative.factorCode || token;
-        const exists = rows.some((row) => pollutantCode(row).toLowerCase() === normativeCode.toLowerCase())
+        const exists = rows.some((row) => pollutantCode(row).toLowerCase() === normativeCode.toLowerCase() && (!isAmbientAirProtocol || String(row.samplingPointId) === resultSamplingPointId))
           || created.some((row) => String(row.values.pollutantCode || row.values.code || '').toLowerCase() === normativeCode.toLowerCase());
         if (!exists) {
           created.push(createResultPayloadFromNormative(normative));
@@ -765,6 +809,10 @@ const ProtocolResultsTable = ({
   };
 
   const addManualIndicator = async () => {
+    if (isAmbientAirProtocol && !resultSamplingPointId) {
+      onNotify('Выберите место отбора', 'warning');
+      return;
+    }
     const value = query.trim();
     if (!canSearchNormative(value)) {
       onNotify('Введите минимум 3 символа для поиска', 'warning');
@@ -772,7 +820,8 @@ const ProtocolResultsTable = ({
     }
     setSaving(true);
     try {
-      const saved = await protocolService.addProtocolResult(protocolId, {
+      const request = mapProtocolResultFormToRequest({
+        samplingPointId: isAmbientAirProtocol ? resultSamplingPointId : null,
         values: {
           code: value,
           pollutantCode: value,
@@ -787,13 +836,19 @@ const ProtocolResultsTable = ({
           ...physicalConditionValues(),
           result: null,
           resultValue: null,
-          measurementPlace: defaultMeasurementPlace || '',
-          samplingPlace: defaultMeasurementPlace || '',
+          measurementPlace: isAmbientAirProtocol ? null : defaultMeasurementPlace || '',
+          samplingPlace: isAmbientAirProtocol ? null : defaultMeasurementPlace || '',
           subtype: subtype || null,
           factorType: isPhysicalFactors ? physicalSubtype : null,
         },
-      }, version);
-      onChange([...rows, saved]);
+      });
+      const updated = await protocolService.saveProtocolDraftResults(protocolId, {
+        version,
+        added: [{ ...request, clientRowId: globalThis.crypto?.randomUUID?.() || `row-${Date.now()}` }],
+        updated: [],
+        deletedIds: [],
+      });
+      applyDraftResults(updated);
       await onImported();
       setQuery('');
       setSuggestions([]);
@@ -812,6 +867,7 @@ const ProtocolResultsTable = ({
       primaryReading: primaryReading(row),
       measurementDeviceId: String(row.measurementDeviceId ?? valueOf(row, ['measurementDeviceId'])),
       measurementPlace: valueOf(row, ['measurementPlace', 'samplingPlace']),
+      samplingPointId: String(row.samplingPointId ?? ''),
       sourceNumber: valueOf(row, ['sourceNumber']),
       readings: valueOf(row, ['readings', 'measurementReadings']),
       externalLaboratory: valueOf(row, ['externalLaboratory']),
@@ -821,6 +877,7 @@ const ProtocolResultsTable = ({
 
   const save = async () => {
     if (!editing) return;
+    if (isAmbientAirProtocol && !form.samplingPointId) return onNotify('Выберите место отбора', 'warning');
     if (!form.primaryReading.trim() && !form.readings.trim()) return onNotify('Введите первичные показания', 'warning');
     setSaving(true);
     try {
@@ -828,6 +885,7 @@ const ProtocolResultsTable = ({
       const request = mapProtocolResultFormToRequest({
         measurementDeviceId: form.measurementDeviceId || undefined,
         normativeId: valueOf(editing, ['normativeId']) || editing.normativeReference?.id,
+        samplingPointId: isAmbientAirProtocol ? form.samplingPointId : null,
         values: {
           ...editing.values,
           primaryReading: form.primaryReading,
@@ -837,8 +895,8 @@ const ProtocolResultsTable = ({
           resultValue,
           ...(templateId === 'industrial_emissions' ? { resultMg: resultValue } : {}),
           measurementDeviceId: form.measurementDeviceId,
-          measurementPlace: form.measurementPlace,
-          samplingPlace: form.measurementPlace,
+          measurementPlace: isAmbientAirProtocol ? null : form.measurementPlace,
+          samplingPlace: isAmbientAirProtocol ? null : form.measurementPlace,
           sourceNumber: form.sourceNumber,
           externalLaboratory: form.externalLaboratory,
           externalLaboratoryDocument: form.externalLaboratoryDocument,
@@ -891,9 +949,10 @@ const ProtocolResultsTable = ({
     const normativeValues = normativeValuesFromRecord(normative, templateId, resolvedUnit);
     setSaving(true);
     try {
-      const saved = await protocolService.updateProtocolResult(protocolId, row.id, {
+      const request = mapProtocolResultFormToRequest({
         measurementDeviceId: row.measurementDeviceId || valueOf(row, ['measurementDeviceId']),
         normativeId: normative.id,
+        samplingPointId: row.samplingPointId ?? null,
         values: {
           ...row.values,
           ...normativeValues,
@@ -910,13 +969,19 @@ const ProtocolResultsTable = ({
           normativeSelectionRequired: '',
           normativeSearchWarning: '',
         },
-      }, version);
+      });
+      const updated = await protocolService.saveProtocolDraftResults(protocolId, {
+        version,
+        added: [],
+        updated: [{ ...request, id: row.id }],
+        deletedIds: [],
+      });
       setNormativeChoices((current) => {
         const next = { ...current };
         delete next[row.id];
         return next;
       });
-      onChange(rows.map((item) => item.id === row.id ? saved : item));
+      applyDraftResults(updated);
       await onImported();
       onNotify('Норматив выбран', 'success');
     } catch (error) {
@@ -966,12 +1031,19 @@ const ProtocolResultsTable = ({
   const duplicate = async (row: ProtocolResultRow) => {
     setSaving(true);
     try {
-      const saved = await protocolService.addProtocolResult(protocolId, {
+      const request = mapProtocolResultFormToRequest({
         measurementDeviceId: row.measurementDeviceId,
         normativeId: row.normativeReference?.id || valueOf(row, ['normativeId']),
+        samplingPointId: row.samplingPointId ?? null,
         values: { ...row.values },
-      }, version);
-      onChange([...rows, saved]);
+      });
+      const updated = await protocolService.saveProtocolDraftResults(protocolId, {
+        version,
+        added: [{ ...request, clientRowId: globalThis.crypto?.randomUUID?.() || `row-${Date.now()}` }],
+        updated: [],
+        deletedIds: [],
+      });
+      applyDraftResults(updated);
       await onImported();
       onNotify('Строка дублирована', 'success');
     } catch (error) {
@@ -985,8 +1057,13 @@ const ProtocolResultsTable = ({
     if (!deleteRow) return;
     setSaving(true);
     try {
-      await protocolService.deleteProtocolResult(protocolId, deleteRow.id, version);
-      onChange(rows.filter((item) => item.id !== deleteRow.id));
+      const updated = await protocolService.saveProtocolDraftResults(protocolId, {
+        version,
+        added: [],
+        updated: [],
+        deletedIds: [deleteRow.id],
+      });
+      applyDraftResults(updated);
       await onImported();
       setDeleteRow(null);
       onNotify('Строка удалена', 'success');
@@ -1002,8 +1079,13 @@ const ProtocolResultsTable = ({
     if (!window.confirm(`Удалить выбранные строки: ${selectedRows.length}?`)) return;
     setSaving(true);
     try {
-      const updated = await protocolService.bulkDeleteResults(protocolId, selectedRows.map((row) => row.id), version);
-      onChange(updated.results);
+      const updated = await protocolService.saveProtocolDraftResults(protocolId, {
+        version,
+        added: [],
+        updated: [],
+        deletedIds: selectedRows.map((row) => row.id),
+      });
+      applyDraftResults(updated);
       await onImported();
       await invalidateProtocolQueries();
       onNotify('Выбранные строки удалены', 'success');
@@ -1019,10 +1101,18 @@ const ProtocolResultsTable = ({
     if (!selectedRows.length) return onNotify('Выберите строки', 'warning');
     setSaving(true);
     try {
-      const updated = patch.measurementDeviceId
-        ? await protocolService.bulkAssignDevice(protocolId, selectedRows, patch.measurementDeviceId, version)
-        : await protocolService.bulkUpdatePlace(protocolId, selectedRows, patch.measurementPlace || '', version);
-      onChange(updated.results);
+      const updated = await protocolService.saveProtocolDraftResults(protocolId, {
+        version,
+        added: [],
+        updated: selectedRows.map((row) => {
+          const request = persistedDraftRow(row);
+          return patch.measurementDeviceId
+            ? { ...request, id: row.id, measurementDeviceId: patch.measurementDeviceId }
+            : { ...request, id: row.id, values: { ...request.values, measurementPlace: patch.measurementPlace || '' } };
+        }),
+        deletedIds: [],
+      });
+      applyDraftResults(updated);
       await onImported();
       await invalidateProtocolQueries();
       onNotify('Значение применено к выбранным строкам', 'success');
@@ -1115,6 +1205,38 @@ const ProtocolResultsTable = ({
     }
   };
 
+  const copyIndicatorsToAllSamplingPoints = async () => {
+    if (!isAmbientAirProtocol || !resultSamplingPointId) return;
+    const sourceRows = rows.filter((row) => String(row.samplingPointId) === resultSamplingPointId);
+    const added = samplingPoints.flatMap((point) => {
+      const pointId = String(point.id ?? '');
+      if (!pointId || pointId === resultSamplingPointId) return [];
+      const existing = new Set(rows.filter((row) => String(row.samplingPointId) === pointId).map((row) => String(row.normativeReference?.id ?? row.values.normativeId ?? pollutantCode(row))));
+      return sourceRows.flatMap((row) => {
+        const key = String(row.normativeReference?.id ?? row.values.normativeId ?? pollutantCode(row));
+        if (existing.has(key)) return [];
+        const request = persistedDraftRow(row);
+        return [{
+          ...request,
+          clientRowId: globalThis.crypto?.randomUUID?.() || `row-${Date.now()}-${pointId}`,
+          samplingPointId: point.id ?? null,
+          values: { ...request.values, result: null, resultValue: null, primaryReading: null, textValue: null, measurementPlace: null, samplingPlace: null },
+        }];
+      });
+    });
+    if (!added.length) return onNotify('Во всех точках уже есть выбранные показатели', 'info');
+    setSaving(true);
+    try {
+      const updated = await protocolService.saveProtocolDraftResults(protocolId, { version, added, updated: [], deletedIds: [] });
+      applyDraftResults(updated);
+      onNotify(`Показатели скопированы: ${added.length}`, 'success');
+    } catch (error) {
+      await handleMutationError(error, 'Не удалось скопировать показатели');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <section className={embedded ? 'bg-white' : 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5'}>
       <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -1129,6 +1251,17 @@ const ProtocolResultsTable = ({
           <Button type="button" className="gap-2" disabled={readOnly || busy || saving || !rows.length} onClick={calculateAll}><Calculator className="h-4 w-4" /> Рассчитать</Button>
         </div>
       </div>
+
+      {isAmbientAirProtocol && <div className="mb-4 rounded-xl border border-eco-200 bg-eco-50/60 p-4">
+        <label className="text-sm font-bold text-slate-800">Место отбора для новых показателей
+          <select value={resultSamplingPointId} onChange={(event) => setResultSamplingPointId(event.target.value)} className={`${inputClass} mt-2`}>
+            <option value="">Выберите место отбора</option>
+            {samplingPoints.map((point) => <option key={String(point.id)} value={String(point.id)}>{point.name}</option>)}
+          </select>
+        </label>
+        <Button type="button" variant="secondary" className="mt-3" disabled={readOnly || saving || !resultSamplingPointId || !rows.some((row) => String(row.samplingPointId) === resultSamplingPointId)} onClick={copyIndicatorsToAllSamplingPoints}>Скопировать показатели во все точки</Button>
+        {!samplingPoints.length && <p role="alert" className="mt-2 text-sm font-semibold text-amber-800">В протоколе нет мест отбора. Добавьте их в данные протокола перед результатами.</p>}
+      </div>}
 
       {calculationSummary && <div className="mb-4 grid gap-2 rounded-xl border border-eco-100 bg-eco-50 p-3 text-sm sm:grid-cols-3 xl:grid-cols-6">
         <div><span className="text-slate-500">Всего</span><p className="font-black text-slate-900">{calculationSummary.total}</p></div>
@@ -1237,7 +1370,14 @@ const ProtocolResultsTable = ({
         </div>}
       </div>}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      {isAmbientAirProtocol && <div className="space-y-4">
+        {samplingPointGroups.map((group) => <section key={String(group.point.id)} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <header className="flex items-center justify-between bg-eco-50 px-4 py-3"><h3 className="font-black text-eco-950">{group.point.name}</h3><span className="text-xs font-bold text-slate-600">Показателей: {group.rows.length}</span></header>
+          {group.rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-3 py-2">Показатель</th><th className="px-3 py-2">Фактическое значение</th><th className="px-3 py-2">Единица</th><th className="px-3 py-2">Норматив</th><th className="px-3 py-2">Нормативный документ</th><th className="px-3 py-2 text-right">Действия</th></tr></thead><tbody className="divide-y divide-slate-100">{group.rows.map((row) => <tr key={row.id}><td className="px-3 py-3 font-bold">{indicator(row) || '—'}</td><td className="px-3 py-3">{officialResult(row, templateId) || '—'}</td><td className="px-3 py-3">{unit(row) || '—'}</td><td className="px-3 py-3">{normativeValue(row) || '—'}</td><td className="px-3 py-3 text-xs">{normativeDocumentLabel(row) || '—'}</td><td className="px-3 py-3"><div className="flex justify-end gap-1"><Button type="button" variant="secondary" disabled={readOnly || saving} onClick={() => openEdit(row)}>Изменить</Button><Button type="button" variant="secondary" className="text-rose-700" disabled={readOnly || saving} onClick={() => setDeleteRow(row)}>Удалить</Button></div></td></tr>)}</tbody></table></div> : <p className="p-4 text-sm text-slate-500">Показатели не добавлены.</p>}
+        </section>)}
+      </div>}
+
+      <div className={`${isAmbientAirProtocol ? 'hidden' : ''} overflow-hidden rounded-xl border border-slate-200 bg-white`}>
       <div className={rows.length ? 'overflow-x-auto' : 'hidden'}>
         {isPhysicalFactors ? (
           <table className="min-w-[1180px] w-full text-left text-sm">
@@ -1514,9 +1654,11 @@ const ProtocolResultsTable = ({
             </div>
           )}
 
+          {isAmbientAirProtocol && <label className="block text-sm font-bold text-slate-700">Место отбора *<select value={resultSamplingPointId} onChange={(event) => setResultSamplingPointId(event.target.value)} className={`${inputClass} mt-1.5`}><option value="">Выберите место отбора</option>{samplingPoints.map((point) => <option key={String(point.id)} value={String(point.id)}>{point.name}</option>)}</select></label>}
+
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setAddOpen(false)}>Отмена</Button>
-            <Button type="button" disabled={readOnly || saving || !selectedNormative || !resultValue.trim()} onClick={saveDialogResult}>Сохранить результат</Button>
+            <Button type="button" disabled={readOnly || saving || !selectedNormative || !resultValue.trim() || (isAmbientAirProtocol && !resultSamplingPointId)} onClick={saveDialogResult}>Сохранить результат</Button>
           </div>
         </div>
       </Modal>
@@ -1540,7 +1682,8 @@ const ProtocolResultsTable = ({
           <label className="space-y-1.5 text-sm font-bold text-slate-700">Показание / концентрация<input autoFocus value={form.primaryReading || ''} onChange={(event) => setForm({ ...form, primaryReading: event.target.value })} className={inputClass} /></label>
           <label className="space-y-1.5 text-sm font-bold text-slate-700">Серия показаний<textarea rows={2} value={form.readings || ''} onChange={(event) => setForm({ ...form, readings: event.target.value })} placeholder="Через запятую: 418, 421, 416" className={inputClass} /></label>
           <label className="space-y-1.5 text-sm font-bold text-slate-700">Прибор<select value={form.measurementDeviceId || ''} onChange={(event) => setForm({ ...form, measurementDeviceId: event.target.value })} className={inputClass}><option value="">Не выбран</option>{devices.map((item) => <option key={item.deviceId} value={item.deviceId}>{item.deviceSnapshot.name} · {item.deviceSnapshot.serialNumber}</option>)}</select></label>
-          <label className="space-y-1.5 text-sm font-bold text-slate-700">Место замера<input value={form.measurementPlace || ''} onChange={(event) => setForm({ ...form, measurementPlace: event.target.value })} className={inputClass} /></label>
+          {!isAmbientAirProtocol && <label className="space-y-1.5 text-sm font-bold text-slate-700">Место замера<input value={form.measurementPlace || ''} onChange={(event) => setForm({ ...form, measurementPlace: event.target.value })} className={inputClass} /></label>}
+          {isAmbientAirProtocol && <label className="space-y-1.5 text-sm font-bold text-slate-700">Место отбора *<select value={form.samplingPointId || ''} onChange={(event) => setForm({ ...form, samplingPointId: event.target.value })} className={inputClass}><option value="">Выберите место отбора</option>{samplingPoints.map((point) => <option key={String(point.id)} value={String(point.id)}>{point.name}</option>)}</select></label>}
           {templateId === 'industrial_emissions' && <label className="space-y-1.5 text-sm font-bold text-slate-700">Источник<input value={form.sourceNumber || ''} onChange={(event) => setForm({ ...form, sourceNumber: event.target.value })} className={inputClass} /></label>}
           {(templateId === 'water' || templateId === 'soil') && <>
             <label className="space-y-1.5 text-sm font-bold text-slate-700">Внешняя лаборатория<input value={form.externalLaboratory || ''} onChange={(event) => setForm({ ...form, externalLaboratory: event.target.value })} className={inputClass} /></label>

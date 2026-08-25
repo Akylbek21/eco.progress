@@ -32,11 +32,14 @@ const PekReportPackageCard = ({ report }: { report: PekReport }) => {
   const packageQuery = useQuery({ queryKey, queryFn: ({ signal }) => pekApi.getReportPackage(report.id, signal) });
   const generate = useMutation({
     mutationFn: () => pekApi.generateReportPackage(report.id, report.version),
+    retry: false,
     onSuccess: async () => {
+      const actualReport = await pekApi.getReport(report.id);
+      queryClient.setQueryData(pekKeys.report(report.id, undefined, user?.id), actualReport);
       await Promise.all([
         packageQuery.refetch(),
         queryClient.invalidateQueries({ queryKey: pekKeys.report(report.id, undefined, user?.id) }),
-        queryClient.invalidateQueries({ queryKey: pekKeys.reportDocuments(report.id, report.companyId, user?.id) }),
+        queryClient.invalidateQueries({ queryKey: pekKeys.reportDocuments(report.id, undefined, report.companyId, user?.id) }),
       ]);
     },
     onError: async (error) => {

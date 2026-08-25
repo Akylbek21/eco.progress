@@ -54,6 +54,10 @@ const PekReportWorkspacePage = () => {
   const [actionError, setActionError] = useState<string | null>(null);
   const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [acceptConfirmOpen, setAcceptConfirmOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
   const [conflictOpen, setConflictOpen] = useState(false);
   const [collectConfirmOpen, setCollectConfirmOpen] = useState(false);
 
@@ -100,7 +104,7 @@ const PekReportWorkspacePage = () => {
       queryClient.invalidateQueries({ queryKey: pekKeys.dashboardRoot(report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportsRoot(report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportHistory(id, report.data?.companyId, user?.id) }),
-      queryClient.invalidateQueries({ queryKey: pekKeys.reportDocuments(id, report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportDocuments(id, undefined, report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportPackage(id, report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportSignatures(id, report.data?.companyId, user?.id) }),
     ]);
@@ -110,7 +114,7 @@ const PekReportWorkspacePage = () => {
       queryClient.invalidateQueries({ queryKey: pekKeys.report(id, undefined, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportsRoot(report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.readiness(id, report.data?.companyId, user?.id) }),
-      queryClient.invalidateQueries({ queryKey: pekKeys.reportDocuments(id, report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: pekKeys.reportDocuments(id, undefined, report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportPackage(id, report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportSignatures(id, report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportHistory(id, report.data?.companyId, user?.id) }),
@@ -168,19 +172,41 @@ const PekReportWorkspacePage = () => {
   const submitReview = useMutation({
     mutationFn: async (item: PekReport) => { await pekApi.submitReportReview(id, item.version); return refreshAfterWorkflow(['READY_FOR_REVIEW']); },
     onError: (error) => void handleMutationError(error, 'Не удалось отправить отчёт на проверку.'),
+    retry: false,
   });
   const returnReport = useMutation({
     mutationFn: async (item: PekReport) => { await pekApi.returnReport(id, item.version, returnReason.trim()); return refreshAfterWorkflow(['RETURNED']); },
     onSuccess: () => { setReturnOpen(false); setReturnReason(''); setActionError(null); },
     onError: (error) => void handleMutationError(error, 'Не удалось вернуть отчёт.'),
+    retry: false,
   });
   const approve = useMutation({
     mutationFn: async (item: PekReport) => { await pekApi.approveReport(id, item.version); return refreshAfterWorkflow(['APPROVED']); },
     onError: (error) => void handleMutationError(error, 'Не удалось утвердить отчёт.'),
+    retry: false,
+  });
+  const submitAuthority = useMutation({
+    mutationFn: async (item: PekReport) => { await pekApi.submitReport(id, item.version); return refreshAfterWorkflow(['SUBMITTED']); },
+    onSuccess: () => { setSubmitConfirmOpen(false); setActionError(null); },
+    onError: (error) => void handleMutationError(error, 'Не удалось сдать официальный отчёт.'),
+    retry: false,
+  });
+  const accept = useMutation({
+    mutationFn: async (item: PekReport) => { await pekApi.acceptReport(id, item.version); return refreshAfterWorkflow(['ACCEPTED']); },
+    onSuccess: () => { setAcceptConfirmOpen(false); setActionError(null); },
+    onError: (error) => void handleMutationError(error, 'Не удалось принять отчёт.'),
+    retry: false,
+  });
+  const reject = useMutation({
+    mutationFn: async (item: PekReport) => { await pekApi.rejectReport(id, item.version, rejectionReason.trim()); return refreshAfterWorkflow(['REJECTED']); },
+    onSuccess: () => { setRejectOpen(false); setRejectionReason(''); setActionError(null); },
+    onError: (error) => void handleMutationError(error, 'Не удалось отклонить отчёт.'),
+    retry: false,
   });
   const archive = useMutation({
     mutationFn: async (item: PekReport) => { await pekApi.archiveReport(id, item.version); return refreshAfterWorkflow(['ARCHIVED']); },
     onError: (error) => void handleMutationError(error, 'Не удалось архивировать отчёт.'),
+    retry: false,
   });
   const match = useMutation({
     mutationFn: async () => {
@@ -194,6 +220,7 @@ const PekReportWorkspacePage = () => {
     },
     onSuccess: async () => { setSelectedSource(null); setIndicatorId(''); setActionError(null); await invalidateReportData(); },
     onError: (error) => void handleMutationError(error, 'Не удалось сопоставить результат.'),
+    retry: false,
   });
   const exclude = useMutation({
     mutationFn: async () => {
@@ -205,6 +232,7 @@ const PekReportWorkspacePage = () => {
     },
     onSuccess: async () => { setExcludeSource(null); setExcludeReason(''); setActionError(null); await invalidateReportData(); },
     onError: (error) => void handleMutationError(error, 'Не удалось исключить источник.'),
+    retry: false,
   });
   const restore = useMutation({
     mutationFn: async (source: PekReportSource) => {
@@ -215,6 +243,7 @@ const PekReportWorkspacePage = () => {
     },
     onSuccess: invalidateReportData,
     onError: (error) => void handleMutationError(error, 'Не удалось восстановить источник.'),
+    retry: false,
   });
 
   const indicators = useMemo(() => program.data?.indicators || [], [program.data?.indicators]);
@@ -224,13 +253,14 @@ const PekReportWorkspacePage = () => {
   if (report.isError || !report.data) return <PekQueryError error={report.error} resource="отчёт ПЭК" retry={() => void report.refetch()} />;
   const item = report.data;
   const canMutateSources = item.availableActions.manageSources === true;
-  const pending = collect.isPending || submitReview.isPending || returnReport.isPending || approve.isPending || archive.isPending;
+  const pending = collect.isPending || submitReview.isPending || returnReport.isPending || approve.isPending || submitAuthority.isPending || accept.isPending || reject.isPending || archive.isPending;
   const setTab = (nextTab: TabKey) => { const next = new URLSearchParams(params); nextTab === 'overview' ? next.delete('tab') : next.set('tab', nextTab); setParams(next, { replace: true }); };
 
   return <div className="space-y-5">
     <PekPageHeader title={`Отчёт ПЭК за ${item.periodStart} — ${item.periodEnd}`} description={`${item.company?.name || 'Компания не указана'} · ${item.object?.name || 'Объект не указан'} · версия ${item.version}`} actions={<PekStatusBadge status={item.status} />} />
     {actionError && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void report.refetch()}>Обновить данные</MuiButton>}>{actionError}</Alert>}
-    <PekReportActions report={item} isPending={pending} onCollect={() => setCollectConfirmOpen(true)} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => setApproveConfirmOpen(true)} onArchive={() => setArchiveConfirmOpen(true)} />
+    <PekReportActions report={item} isPending={pending} onCollect={() => setCollectConfirmOpen(true)} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => setApproveConfirmOpen(true)} onSubmitAuthority={() => setSubmitConfirmOpen(true)} onAccept={() => setAcceptConfirmOpen(true)} onReject={() => setRejectOpen(true)} onArchive={() => setArchiveConfirmOpen(true)} />
+    {item.status === 'REJECTED' && <Alert severity="error"><strong>Официальный отчёт отклонён.</strong><div className="mt-1">Причина: {item.rejectionReason || 'не указана'} · дата: {item.rejectedAt || 'не указана'}</div></Alert>}
     {item.status === 'RETURNED' && <Alert severity="warning">
       <strong>Отчёт возвращён на доработку</strong>
       {item.returnInfo ? <div className="mt-2 space-y-1">
@@ -248,7 +278,7 @@ const PekReportWorkspacePage = () => {
 
     {tab === 'overview' && <div className="space-y-4">
       <section className="grid gap-3 rounded-2xl border bg-white p-5 sm:grid-cols-2 lg:grid-cols-4">
-        <Info label="Период" value={`${item.periodStart} — ${item.periodEnd}`} /><Info label="Программа" value={program.data ? `${program.data.number} · ${program.data.name}` : 'Загрузка…'} /><Info label="Связано протоколов" value={item.linkedProtocolCount} /><Info label="Последний сбор" value={item.lastCollectedAt || 'Сбор ещё не выполнялся'} /><Info label="Ответственный" value={item.responsibleUser?.name || 'Не назначен'} /><Info label="Результатов" value={sourceSummary.data?.linkedResultCount ?? '—'} />
+        <Info label="Период" value={`${item.periodStart} — ${item.periodEnd}`} /><Info label="Срок сдачи" value={item.submissionDueDate || 'Не установлен'} /><Info label="Программа" value={program.data ? `${program.data.number} · ${program.data.name}` : 'Загрузка…'} /><Info label="Форма / НПА" value={`${item.templateVersion || '—'} / ${item.regulationVersion || '—'}`} /><Info label="Связано протоколов" value={item.linkedProtocolCount} /><Info label="Последний сбор" value={item.lastCollectedAt || 'Сбор ещё не выполнялся'} /><Info label="Сдан" value={item.submittedAt || '—'} /><Info label="Принят" value={item.acceptedAt || '—'} /><Info label="Ответственный" value={item.responsibleUser?.name || 'Не назначен'} /><Info label="Результатов" value={sourceSummary.data?.linkedResultCount ?? '—'} />
       </section>
       <section className="rounded-2xl border bg-white p-5"><h2 className="font-black">Готовность отчёта</h2>
         {readiness.isLoading ? <p className="mt-2">Проверяем…</p> : readiness.isError ? <PekQueryError error={readiness.error} resource="готовность отчёта" retry={() => void readiness.refetch()} /> : readiness.data && <>
@@ -277,6 +307,9 @@ const PekReportWorkspacePage = () => {
     <Dialog open={Boolean(excludeSource)} onClose={() => !exclude.isPending && setExcludeSource(null)} fullWidth maxWidth="sm"><DialogTitle>Исключить источник из отчёта</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина исключения *" value={excludeReason} onChange={(event) => setExcludeReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setExcludeSource(null)}>Отмена</MuiButton><MuiButton color="error" variant="contained" disabled={!excludeReason.trim() || exclude.isPending} onClick={() => exclude.mutate()}>Исключить</MuiButton></DialogActions></Dialog>
     <Dialog open={returnOpen} onClose={() => !returnReport.isPending && setReturnOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Вернуть отчёт на доработку</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина возврата *" value={returnReason} onChange={(event) => setReturnReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setReturnOpen(false)}>Отмена</MuiButton><MuiButton color="warning" variant="contained" disabled={!returnReason.trim() || returnReport.isPending} onClick={() => returnReport.mutate(item)}>Вернуть</MuiButton></DialogActions></Dialog>
     <Dialog open={approveConfirmOpen} onClose={() => !approve.isPending && setApproveConfirmOpen(false)}><DialogTitle>Утвердить отчёт?</DialogTitle><DialogContent><Alert severity="success">Актуальная проверка готовности не содержит блокирующих проблем.</Alert></DialogContent><DialogActions><MuiButton onClick={() => setApproveConfirmOpen(false)}>Отмена</MuiButton><MuiButton variant="contained" disabled={approve.isPending} onClick={() => { setApproveConfirmOpen(false); approve.mutate(item); }}>Утвердить</MuiButton></DialogActions></Dialog>
+    <Dialog open={submitConfirmOpen} onClose={() => !submitAuthority.isPending && setSubmitConfirmOpen(false)}><DialogTitle>Сдать официальный отчёт?</DialogTitle><DialogContent><Alert severity="info">Срок сдачи: {item.submissionDueDate || 'backend не установил срок'}. Будет отправлен официальный нормативный документ, не внутренний аналитический отчёт.</Alert></DialogContent><DialogActions><MuiButton onClick={() => setSubmitConfirmOpen(false)}>Отмена</MuiButton><MuiButton color="success" variant="contained" disabled={submitAuthority.isPending} onClick={() => submitAuthority.mutate(item)}>Сдать</MuiButton></DialogActions></Dialog>
+    <Dialog open={acceptConfirmOpen} onClose={() => !accept.isPending && setAcceptConfirmOpen(false)}><DialogTitle>Принять официальный отчёт?</DialogTitle><DialogActions><MuiButton onClick={() => setAcceptConfirmOpen(false)}>Отмена</MuiButton><MuiButton color="success" variant="contained" disabled={accept.isPending} onClick={() => accept.mutate(item)}>Принять</MuiButton></DialogActions></Dialog>
+    <Dialog open={rejectOpen} onClose={() => !reject.isPending && setRejectOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Отклонить официальный отчёт</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина отклонения *" value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setRejectOpen(false)}>Отмена</MuiButton><MuiButton color="error" variant="contained" disabled={!rejectionReason.trim() || reject.isPending} onClick={() => reject.mutate(item)}>Отклонить</MuiButton></DialogActions></Dialog>
     <Dialog open={archiveConfirmOpen} onClose={() => !archive.isPending && setArchiveConfirmOpen(false)}><DialogTitle>Архивировать отчёт?</DialogTitle><DialogContent><Alert severity="warning">После архивирования изменение отчёта и его источников будет недоступно.</Alert></DialogContent><DialogActions><MuiButton onClick={() => setArchiveConfirmOpen(false)}>Отмена</MuiButton><MuiButton variant="contained" disabled={archive.isPending} onClick={() => { setArchiveConfirmOpen(false); archive.mutate(item); }}>Архивировать</MuiButton></DialogActions></Dialog>
     <Dialog open={conflictOpen} onClose={() => setConflictOpen(false)}><DialogTitle>Данные были изменены другим пользователем</DialogTitle><DialogContent>Загрузите актуальную версию отчёта. Старый запрос не будет отправлен повторно автоматически.</DialogContent><DialogActions><MuiButton onClick={() => setConflictOpen(false)}>Отменить мои несохранённые изменения</MuiButton><MuiButton variant="contained" onClick={() => { setConflictOpen(false); void report.refetch(); }}>Обновить данные</MuiButton></DialogActions></Dialog>
   </div>;

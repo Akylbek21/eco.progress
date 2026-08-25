@@ -4,7 +4,7 @@ import SEO from '../components/SEO';
 import { company } from '../config/company';
 import { publicContentRepository } from '../content/apiRepository';
 import { isPublishableCaseStudy } from '../content/cases/caseStudyPolicy';
-import { buildBreadcrumbSchema, buildOrganizationSchema, buildPersonSchema } from '../utils/schema';
+import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, buildServiceEntity, entityIds } from '../seo/entityBuilders';
 import { ArticleAuthorCard, ArticleReviewerCard } from '../components/content/ContentBlocks';
 
 const CaseDetailsPage = () => {
@@ -15,12 +15,12 @@ const CaseDetailsPage = () => {
 
   const item = data;
   const canonical = `${company.siteUrl}/cases/${item.slug}`;
-  const authorId = `${canonical}#person`;
-  const reviewerId = `${canonical}#person-reviewer`;
+  const authorId = entityIds(canonical).author;
+  const reviewerId = entityIds(canonical).reviewer;
   const schema = [
-    buildOrganizationSchema(),
-    { '@context': 'https://schema.org', '@type': 'Article', headline: item.title, description: item.problem, url: canonical, datePublished: item.publishedAt, dateModified: item.updatedAt, author: { '@id': authorId }, reviewedBy: { '@id': reviewerId }, about: { '@id': `${canonical}#service` } },
-    { '@context': 'https://schema.org', '@type': 'Service', '@id': `${canonical}#service`, name: item.service, areaServed: { '@type': 'City', name: item.city } },
+    ...buildCorePageEntities({ canonical, name: item.title, description: item.problem, dateModified: item.updatedAt }),
+    buildArticleSchema({ canonical, headline: item.title, description: item.problem, datePublished: item.publishedAt!, dateModified: item.updatedAt, image: `${company.siteUrl}/media/social/ecoprogress-og-1200x630.jpg`, authorId, reviewerId, serviceId: entityIds(canonical).service }),
+    buildServiceEntity({ canonical, name: item.service, description: item.problem, areaServed: item.city }),
     buildPersonSchema(item.expert, authorId), buildPersonSchema(item.reviewer, reviewerId),
     buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Кейсы', url: `${company.siteUrl}/cases` }, { name: item.title, url: canonical }]),
   ];
