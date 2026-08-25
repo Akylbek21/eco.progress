@@ -91,7 +91,7 @@ test('content migration dry-run is read-only and reports clean relations', () =>
 
 test('SEO supports hreflang without publishing synthetic translations', async () => {
   const seo = await read('src/components/SEO.tsx');
-  assert.match(seo, /locale: 'ru' \| 'kk' \| 'x-default'/);
+  assert.match(seo, /locale: 'ru-KZ' \| 'kk-KZ' \| 'x-default'/);
   assert.match(seo, /link\.hreflang = alternate\.locale/);
   assert.doesNotMatch(seo, /translate|machineTranslation/i);
 });

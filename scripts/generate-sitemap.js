@@ -7,6 +7,7 @@ import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, build
 import { expertMap, experts, isCompleteExpert } from '../src/content/experts/experts.ts';
 import { caseStudies } from '../src/content/cases/caseStudies.ts';
 import { isPublishableCaseStudy } from '../src/content/cases/caseStudyPolicy.ts';
+import { alternatePathFor, localePairForPath } from '../src/seo/localeRoutePairs.ts';
 
 const root = process.cwd();
 const publicDir = path.join(root, 'public');
@@ -52,12 +53,12 @@ const gitDate = (source, fallback) => {
 };
 
 const schemasFor = (source) => {
-  const { path: pathName, h1, description, type, canonical, image, datePublished, dateModified, cityNominative, city, service } = source;
+  const { path: pathName, h1, description, type, canonical, image, datePublished, dateModified, cityNominative, city, service, locale = 'ru' } = source;
   const schemas = buildCorePageEntities({ canonical, name: h1, description, dateModified, localBusiness: cityNominative === 'Шымкент' });
   if (type === 'service' || type === 'service-city') {
     const expertNodes = verifiedExperts.map((expert, index) => buildPersonSchema(expert, `${canonical}#expert-${index + 1}`));
     const caseUrls = verifiedCases.filter((item) => !source.serviceSlug || item.service === source.serviceSlug).map((item) => `${SITE_URL}/cases/${item.slug}`);
-    schemas.push(buildServiceEntity({ canonical, name: h1, serviceType: service || h1, description, areaServed: cityNominative || city || 'Казахстан', image, expertIds: expertNodes.map((node) => node['@id']), caseUrls }), ...expertNodes);
+    schemas.push(buildServiceEntity({ canonical, name: h1, serviceType: service || h1, description, areaServed: cityNominative || city || (locale === 'kk' ? 'Қазақстан' : 'Казахстан'), image, expertIds: expertNodes.map((node) => node['@id']), caseUrls }), ...expertNodes);
   }
   if (type === 'article' && pathName !== '/news') {
     const author = source.reviewStatus === 'approved' ? expertMap.get(source.authorSlug) : undefined;
@@ -68,7 +69,11 @@ const schemasFor = (source) => {
     if (isCompleteExpert(author)) schemas.push(buildPersonSchema(author, ids.author));
     if (isCompleteExpert(reviewer)) schemas.push(buildPersonSchema(reviewer, ids.reviewer));
   }
-  if (pathName !== '/') schemas.push(buildBreadcrumbSchema([{ name: 'Главная', url: SITE_URL }, { name: h1, url: canonical }], canonical));
+  if (pathName !== '/') schemas.push(buildBreadcrumbSchema(
+    source.breadcrumbs?.map((item) => ({ name: item.label, url: item.path }))
+      || [{ name: locale === 'kk' ? 'Басты бет' : 'Главная', url: locale === 'kk' ? `${SITE_URL}/kk/` : SITE_URL }, { name: h1, url: canonical }],
+    canonical,
+  ));
   return schemas;
 };
 
@@ -82,8 +87,20 @@ const normalizeEntry = (source) => {
   const lastModified = source.lastModified || source.lastmod || gitDate(pageSource(pathName), isoDate(new Date()));
   const ogImage = source.ogImage || (source.image ? `${SITE_URL}${optimizedImage(source.image)}` : OG_IMAGE);
   const ogType = source.type === 'article' && pathName !== '/news' ? 'article' : 'website';
+  const locale = source.locale || (pathName === '/kk' || pathName.startsWith('/kk/') ? 'kk' : 'ru');
+  const localizedIdentity = localePairForPath(pathName);
+  const alternatePath = source.alternatePath || alternatePathFor(pathName);
+  const alternates = alternatePath ? [
+    { locale: 'ru-KZ', url: canonicalForPublicPath(locale === 'ru' ? pathName : alternatePath) },
+    { locale: 'kk-KZ', url: canonicalForPublicPath(locale === 'kk' ? pathName : alternatePath) },
+    { locale: 'x-default', url: canonicalForPublicPath(locale === 'ru' ? pathName : alternatePath) },
+  ] : [];
   return {
     path: pathName,
+    ...(localizedIdentity ? { pageId: localizedIdentity.pageId } : {}),
+    locale,
+    ...(alternatePath ? { alternatePath } : {}),
+    alternates,
     title: source.title,
     description: source.description,
     h1: source.h1,
@@ -97,7 +114,7 @@ const normalizeEntry = (source) => {
     ogImageWidth: 1200,
     ogImageHeight: 630,
     twitterCard: 'summary_large_image',
-    schema: schemasFor({ ...source, canonical, image: ogImage, dateModified: lastModified }),
+    schema: schemasFor({ ...source, locale, canonical, image: ogImage, dateModified: lastModified }),
     includeInSitemap: robots === 'index,follow',
     priority: source.priority ?? 0.7,
     changeFrequency: source.changefreq || 'monthly',
@@ -127,12 +144,13 @@ const sitemapEntries = registry.filter((entry) => entry.includeInSitemap && entr
 const body = sitemapEntries.map((entry) => [
   '  <url>',
   `    <loc>${escapeXml(entry.canonical)}</loc>`,
+  ...entry.alternates.map((alternate) => `    <xhtml:link rel="alternate" hreflang="${escapeXml(alternate.locale)}" href="${escapeXml(alternate.url)}" />`),
   `    <lastmod>${entry.lastModified}</lastmod>`,
   `    <changefreq>${entry.changeFrequency}</changefreq>`,
   `    <priority>${entry.priority.toFixed(1)}</priority>`,
   '  </url>',
 ].join('\n')).join('\n');
-const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
+const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${body}\n</urlset>\n`;
 fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), sitemapXml, 'utf8');
 const distDir = path.join(root, 'dist');
 if (fs.existsSync(distDir)) fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemapXml, 'utf8');

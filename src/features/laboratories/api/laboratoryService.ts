@@ -13,7 +13,9 @@ const details = (raw: unknown): LaboratoryDetails => {
 
 export async function getLaboratories(query: LaboratoriesQuery, signal?: AbortSignal): Promise<PageResponse<LaboratoryListItem>> {
   const includeInactive = query.status !== 'ACTIVE';
-  const response = await api.get<ApiResponse<unknown> | unknown>('/laboratories', { params: { includeInactive }, signal });
+  const response = includeInactive
+    ? await api.get<ApiResponse<unknown> | unknown>('/laboratories', { params: { includeInactive }, signal })
+    : await api.get<ApiResponse<unknown> | unknown>('/laboratories', { signal });
   return mapLaboratoriesResponse(response, query);
 }
 export async function getActiveLaboratories(signal?: AbortSignal): Promise<LaboratoryListItem[]> {

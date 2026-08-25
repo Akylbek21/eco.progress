@@ -4,6 +4,7 @@ import { Box, Button, Card, CardContent, CircularProgress, Stack, TextField, Typ
 import { useForm } from 'react-hook-form';
 import api from '../../../services/api';
 import { useToast } from '../../../hooks/useToast';
+import { getApiErrorMessage } from '../../../services/apiHelpers';
 
 interface ForgotPasswordFormValues {
   email: string;
@@ -27,8 +28,8 @@ export default function ForgotPasswordPage() {
       setSubmittedEmail(data.email.trim());
       setIsSubmitted(true);
       showSuccess('Письмо с инструкциями отправлено на почту');
-    } catch (err: any) {
-      showError(err.response?.data?.message || 'Не удалось отправить письмо');
+    } catch (error: unknown) {
+      showError(getApiErrorMessage(error, 'Не удалось отправить письмо'));
     } finally {
       setIsLoading(false);
     }
@@ -115,11 +116,9 @@ export default function ForgotPasswordPage() {
               </form>
 
               <Box sx={{ textAlign: 'center' }}>
-                <Link to="/login" style={{ textDecoration: 'none' }}>
-                  <Button variant="text" size="small">
-                    Вернуться к входу
-                  </Button>
-                </Link>
+                <Button component={Link} to="/login" variant="text" size="small">
+                  Вернуться к входу
+                </Button>
               </Box>
 
               <Alert severity="info">

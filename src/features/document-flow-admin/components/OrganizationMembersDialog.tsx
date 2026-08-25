@@ -96,7 +96,7 @@ export default function OrganizationMembersDialog({ open, organization, onClose 
   });
 
   const error = (addExistingMember.isError || inviteMember.isError) ? (addExistingMember.error || inviteMember.error) : null;
-  const mappedError = error ? mapDocumentFlowError(error as any) : null;
+  const mappedError = error ? mapDocumentFlowError(error) : null;
 
   return <Dialog open={open} onClose={() => !(addExistingMember.isPending || inviteMember.isPending) && onClose()} fullWidth maxWidth="md">
     <DialogTitle>Сотрудники · {organization?.name}</DialogTitle>
@@ -157,10 +157,10 @@ export default function OrganizationMembersDialog({ open, organization, onClose 
 
       <Typography variant="h6" fontWeight={800} mt={1}>Участники организации</Typography>
       {members.isLoading && <Stack alignItems="center" py={3}><CircularProgress /></Stack>}
-      {members.isError && <Alert severity="error">{mapDocumentFlowError(members.error as any).message}</Alert>}
+      {members.isError && <Alert severity="error">{mapDocumentFlowError(members.error).message}</Alert>}
       {members.isSuccess && members.data.items.length === 0 && <Alert severity="info">Участников пока нет.</Alert>}
       {members.isSuccess && members.data.items.length > 0 && <Table size="small"><TableHead><TableRow><TableCell>Сотрудник</TableCell><TableCell>Email</TableCell><TableCell>Роль</TableCell><TableCell>Статус</TableCell><TableCell align="right">Действие</TableCell></TableRow></TableHead><TableBody>{members.data.items.map((member) => <TableRow key={member.id}><TableCell>{member.fullName || `Пользователь #${member.userId}`}</TableCell><TableCell>{member.email || '—'}</TableCell><TableCell>{roleOptions.find((item) => item.value === member.role)?.label ?? member.role}</TableCell><TableCell><Chip size="small" label={member.status} color={member.status === 'ACTIVE' ? 'success' : member.status === 'INVITED' ? 'info' : 'default'} /></TableCell><TableCell align="right">{member.status !== 'ACTIVE' && <Button size="small" disabled={activate.isPending} onClick={() => activate.mutate(member)}>Активировать</Button>}</TableCell></TableRow>)}</TableBody></Table>}
-      {activate.isError && <Alert severity="error">{mapDocumentFlowError(activate.error as any).message}</Alert>}
+      {activate.isError && <Alert severity="error">{mapDocumentFlowError(activate.error).message}</Alert>}
     </Stack></DialogContent>
     <DialogActions>
       <Button disabled={addExistingMember.isPending || inviteMember.isPending} onClick={onClose}>Закрыть</Button>

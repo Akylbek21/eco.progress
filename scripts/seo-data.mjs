@@ -8,6 +8,7 @@ import { aboutPublicContent } from '../src/content/aboutPublicContent.ts';
 import { isArticleEligibleForSeoLinks } from '../src/content/articleReview.ts';
 import { regionNameMap } from '../src/content/regions.ts';
 import { PUBLIC_SITE_URL, canonicalForPublicPath, isPublicPageIndexable } from '../src/seo/indexingPolicy.ts';
+import { buildKkLocalizedPages } from '../src/content/kkSeoPages.ts';
 
 const SITE_URL = PUBLIC_SITE_URL;
 const LASTMOD = '2026-07-17';
@@ -79,7 +80,7 @@ const serviceProfiles = [
     image: '/edward.jpg',
   },
   {
-    key: 'industrial-control',
+    key: 'szz',
     slugPrefix: 'szz',
     name: 'Проект санитарно-защитной зоны',
     titleName: 'Проект СЗЗ',
@@ -112,15 +113,34 @@ const serviceProfiles = [
     image: '/jose.jpg',
   },
   {
-    key: 'pek-report',
+    key: 'program-pek',
     slugPrefix: 'pek',
-    name: 'Производственный экологический контроль',
-    titleName: 'ПЭК',
-    h1: 'Производственный экологический контроль (ПЭК)',
-    descriptionNoun: 'программу производственного экологического контроля, календарь наблюдений и отчетные материалы ПЭК',
+    name: 'Программа производственного экологического контроля',
+    titleName: 'Программа ПЭК',
+    h1: 'Программа производственного экологического контроля',
+    descriptionNoun: 'программу производственного экологического контроля, точки мониторинга, показатели и календарь наблюдений',
     examples: 'объекты с выбросами, отходами, сбросами, производственными площадками и разрешениями',
-    result: 'готовый отчет ПЭК и список действий для следующего отчетного периода',
+    result: 'готовую программу ПЭК с планом мониторинга и ответственными лицами',
     image: '/ekologicheskoe-soprovozhdenie.jpg',
+  },
+  {
+    key: 'report-pek', slugPrefix: 'otchet-pek', name: 'Отчёт производственного экологического контроля', titleName: 'Отчёт ПЭК',
+    h1: 'Отчёт производственного экологического контроля',
+    descriptionNoun: 'проверку первичных данных и официальный отчёт ПЭК за отчётный период',
+    examples: 'объекты с утверждённой программой ПЭК, лабораторными протоколами и разрешительными обязательствами',
+    result: 'официальный отчёт ПЭК и реестр использованных первичных данных', image: '/ekologicheskoe-soprovozhdenie.jpg',
+  },
+  {
+    key: 'water-analysis', slugPrefix: 'analiz-vody', name: 'Анализ воды', titleName: 'Анализ воды', h1: 'Лабораторный анализ воды',
+    descriptionNoun: 'отбор проб и лабораторный анализ питьевой, природной или сточной воды',
+    examples: 'скважины, водопроводы, производственные площадки, выпуски сточных вод и системы водоподготовки',
+    result: 'протокол исследований воды с фактическими значениями показателей', image: '/edward.jpg',
+  },
+  {
+    key: 'production-control', slugPrefix: 'proizvodstvennyy-kontrol', name: 'Производственный контроль СЭС', titleName: 'Производственный контроль', h1: 'Производственный контроль СЭС',
+    descriptionNoun: 'программу производственного контроля, лабораторные замеры и протоколы',
+    examples: 'производства, пищевые объекты, школы, клиники, склады и рабочие места',
+    result: 'программу контроля, график исследований и протоколы по согласованным показателям', image: '/edward.jpg',
   },
   {
     key: 'environmental-design',
@@ -172,17 +192,21 @@ const serviceProfiles = [
 ];
 
 const mainServiceSlug = {
-  'laboratory-tests': 'laboratory-tests', 'industrial-control': 'environmental-design', 'waste-passport': 'ecological-documents',
-  'waste-utilization': 'waste-recycling', 'pek-report': 'program-pek', 'environmental-design': 'environmental-design',
+  'laboratory-tests': 'laboratory-tests', szz: 'szz', 'waste-passport': 'waste-passport',
+  'waste-utilization': 'waste-recycling', 'program-pek': 'program-pek', 'report-pek': 'report-pek',
+  'water-analysis': 'water-analysis', 'production-control': 'industrial-control', 'environmental-design': 'environmental-design',
   'emission-permit': 'environmental-permits', 'eia-screening': 'ovos', ndv: 'ndv', puo: 'puo',
 };
 
 const serviceDocuments = {
   'laboratory-tests': ['задание и цель исследований', 'адрес и схема точек отбора', 'режим работы объекта', 'имеющиеся программы контроля'],
-  'industrial-control': ['генеральный план', 'описание технологии и оборудования', 'сведения об источниках воздействия', 'имеющиеся замеры и проектные материалы'],
+  szz: ['генеральный план', 'описание технологии и оборудования', 'сведения об источниках воздействия', 'имеющиеся замеры и проектные материалы'],
   'waste-passport': ['перечень и происхождение отходов', 'данные о составе или исследованиях', 'объемы образования', 'договоры и документы движения отходов'],
   'waste-utilization': ['перечень и фото отходов', 'объем и состояние партии', 'адрес и условия погрузки', 'реквизиты владельца отходов'],
-  'pek-report': ['экологическое разрешение или декларация', 'программа ПЭК', 'протоколы и журналы периода', 'данные по выбросам, сбросам и отходам'],
+  'program-pek': ['экологическое разрешение или декларация', 'сведения об источниках воздействия', 'проектные нормативы', 'схема точек мониторинга'],
+  'report-pek': ['экологическое разрешение или декларация', 'действующая программа ПЭК', 'протоколы и журналы периода', 'данные по выбросам, сбросам и отходам'],
+  'water-analysis': ['цель исследования', 'адрес и источник воды', 'предполагаемый перечень показателей', 'условия доступа к точке отбора'],
+  'production-control': ['описание деятельности и помещений', 'штат и режим работы', 'схема рабочих зон', 'действующая программа и протоколы при наличии'],
   'environmental-design': ['проектная документация', 'генеральный план', 'технологические решения', 'данные по ресурсам, выбросам и отходам'],
   'emission-permit': ['категория объекта', 'проектные нормативы', 'решения экологической оценки', 'действующие разрешительные документы'],
   'eia-screening': ['описание намечаемой деятельности', 'местоположение и генплан', 'технологические показатели', 'варианты реализации проекта'],
@@ -192,10 +216,13 @@ const serviceDocuments = {
 
 const serviceLegalBasis = {
   'laboratory-tests': 'Применимые санитарные правила, методики измерений и программа контроля определяются по объекту и показателям.',
-  'industrial-control': 'Состав проекта определяется санитарными требованиями Республики Казахстан и фактическими источниками воздействия.',
+  szz: 'Состав проекта определяется санитарными требованиями Республики Казахстан и фактическими источниками воздействия.',
   'waste-passport': 'Классификация и паспортирование выполняются по Экологическому кодексу Республики Казахстан и действующим правилам обращения с отходами.',
   'waste-utilization': 'Передача отходов оформляется по требованиям Экологического кодекса Республики Казахстан и применимым правилам учета движения отходов.',
-  'pek-report': 'Программа и отчетность ПЭК формируются по Экологическому кодексу Республики Казахстан и правилам производственного экологического контроля.',
+  'program-pek': 'Программа ПЭК формируется по Экологическому кодексу Республики Казахстан и правилам производственного экологического контроля.',
+  'report-pek': 'Отчётность ПЭК формируется по Экологическому кодексу Республики Казахстан и правилам производственного экологического контроля.',
+  'water-analysis': 'Показатели и методы определяются назначением воды, применимыми санитарными требованиями и областью аккредитации лаборатории.',
+  'production-control': 'Программа и исследования определяются санитарными правилами Республики Казахстан и фактической деятельностью объекта.',
   'environmental-design': 'РООС готовится в составе проектных материалов с учетом Экологического кодекса Республики Казахстан и применимых инструкций экологической оценки.',
   'emission-permit': 'Разрешительная процедура определяется Экологическим кодексом Республики Казахстан, категорией объекта и составом утвержденных нормативов.',
   'eia-screening': 'Экологическая оценка проводится по Экологическому кодексу Республики Казахстан и действующей инструкции по организации экологической оценки.',
@@ -215,7 +242,7 @@ const commercialServiceContent = {
     faqAnswer: 'Назначение протоколов фиксируем до отбора проб: программа, показатели и методы должны соответствовать задаче ПЭК, санитарного контроля или проверки.',
     articles: ['kakie-laboratornye-zamery-nuzhny-predpriyatiyu', 'kak-prohodit-laboratornyy-zamer-vozduha'],
   },
-  'industrial-control': {
+  szz: {
     title: 'Проект СЗЗ', seoTitle: 'Проект санитарно-защитной зоны', h1: 'Проект санитарно-защитной зоны (СЗЗ)',
     meta: 'Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ.',
     promise: 'Обосновываем границу санитарно-защитной зоны по источникам выбросов, шума и фактической планировке площадки.',
@@ -248,16 +275,47 @@ const commercialServiceContent = {
     faqAnswer: 'Состав закрывающих документов зависит от договора и операции: обычно фиксируются передача, приём, объём и дальнейший способ обращения с отходами.',
     articles: ['dokumenty-peredachi-othodov'],
   },
-  'pek-report': {
-    title: 'Производственный экологический контроль', h1: 'Производственный экологический контроль',
-    meta: 'Программа, мероприятия и отчётность ПЭК по данным предприятия.',
-    promise: 'Разрабатываем программу ПЭК, организуем контрольные мероприятия и готовим отчёт ПЭК по фактическим данным предприятия.',
-    scope: 'Сверяем разрешительные документы, источники воздействия и программу контроля, собираем протоколы и журналы и формируем отчётный комплект.',
-    steps: ['аудит разрешения, программы ПЭК и объектов контроля', 'проверка календаря мониторинга и обязательных показателей', 'сбор лабораторных протоколов и производственных данных', 'контроль полноты и сопоставимости сведений', 'подготовка отчёта ПЭК и перечня следующих мероприятий'],
-    deadline: 'Срок зависит от готовности программы ПЭК, полноты протоколов за период и количества источников выбросов, сбросов и отходов.',
+  'program-pek': {
+    title: 'Программа ПЭК', h1: 'Программа производственного экологического контроля',
+    meta: 'Объекты контроля, точки мониторинга, показатели и периодичность ПЭК.',
+    promise: 'Разрабатываем программу ПЭК по фактическим источникам воздействия, разрешительным условиям и процессам предприятия.',
+    scope: 'Сверяем разрешительные документы и источники, определяем точки контроля, показатели, методы, периодичность и ответственных исполнителей.',
+    steps: ['аудит объекта и разрешительных документов', 'инвентаризация источников и объектов контроля', 'определение точек, показателей и методов', 'формирование календаря мониторинга', 'подготовка программы ПЭК и рекомендаций по исполнению'],
+    deadline: 'Срок зависит от количества площадок и источников, полноты проектных данных и необходимости уточнять программу мониторинга.',
     faq: 'Чем программа ПЭК отличается от отчёта ПЭК?',
     faqAnswer: 'Программа задаёт объекты, показатели и периодичность контроля, а отчёт ПЭК подтверждает выполнение программы фактическими данными за период.',
-    articles: ['chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol', 'kak-formiruetsya-otchet-pek'],
+    articles: ['chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol'],
+  },
+  'report-pek': {
+    title: 'Отчёт ПЭК', seoTitle: 'Подготовка отчёта ПЭК', h1: 'Отчёт производственного экологического контроля',
+    meta: 'Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК.',
+    promise: 'Готовим официальный отчёт ПЭК за отчётный период по действующей программе и подтверждённым данным предприятия.',
+    scope: 'Проверяем программу ПЭК, лабораторные протоколы, журналы и сведения по выбросам, сбросам и отходам, затем формируем отчётный комплект.',
+    steps: ['проверка программы и отчётного периода', 'сбор протоколов и производственных данных', 'сверка полноты мониторинга', 'устранение расхождений в исходных сведениях', 'подготовка официального отчёта ПЭК'],
+    deadline: 'Срок подготовки зависит от полноты данных за период; дату сдачи определяют применимые требования, а не окончание программы ПЭК.',
+    faq: 'Можно ли подготовить отчёт ПЭК без лабораторных протоколов?',
+    faqAnswer: 'Отчёт должен отражать фактически выполненный контроль. Отсутствующие обязательные измерения нельзя заменять расчётным или шаблонным текстом.',
+    articles: ['kak-formiruetsya-otchet-pek', 'chto-sdavat-po-ekologii-kazhdyy-god'],
+  },
+  'water-analysis': {
+    title: 'Анализ воды', h1: 'Лабораторный анализ воды', meta: 'Отбор проб и анализ питьевой, природной или сточной воды.',
+    promise: 'Определяем подходящий перечень показателей, организуем отбор проб и выполняем лабораторный анализ воды для задачи заказчика.',
+    scope: 'Уточняем назначение воды и цель исследования, согласуем точку и условия отбора, методы, показатели и формат протокола.',
+    steps: ['уточнение цели и вида воды', 'подбор показателей и методов', 'согласование точки и отбора пробы', 'лабораторное исследование', 'выпуск протокола с фактическими значениями'],
+    deadline: 'Срок зависит от перечня показателей, методик, условий отбора и продолжительности лабораторного исследования.',
+    faq: 'Какие показатели воды нужно анализировать?',
+    faqAnswer: 'Перечень зависит от назначения воды и цели исследования; универсального набора для питьевой, природной и сточной воды нет.',
+    articles: ['kakie-laboratornye-zamery-nuzhny-predpriyatiyu'],
+  },
+  'production-control': {
+    title: 'Производственный контроль СЭС', h1: 'Производственный контроль СЭС', meta: 'Программа контроля, замеры рабочих зон и протоколы исследований.',
+    promise: 'Формируем программу производственного контроля по фактической деятельности объекта и организуем предусмотренные лабораторные исследования.',
+    scope: 'Описываем контролируемые процессы и помещения, определяем точки, факторы, периодичность, ответственных и состав подтверждающих протоколов.',
+    steps: ['аудит деятельности и помещений', 'определение факторов и точек контроля', 'подготовка программы и графика', 'организация измерений', 'передача протоколов и рекомендаций'],
+    deadline: 'Срок зависит от масштаба объекта, перечня факторов, количества точек и графика лабораторных выездов.',
+    faq: 'Всем ли предприятиям нужен одинаковый производственный контроль?',
+    faqAnswer: 'Нет. Программа и измерения зависят от деятельности, помещений, оборудования, персонала и применимых санитарных требований.',
+    articles: ['komu-nuzhen-proizvodstvennyy-kontrol-ses'],
   },
   'environmental-design': {
     title: 'Разработка РООС', h1: 'Разработка раздела охраны окружающей среды (РООС)',
@@ -367,7 +425,25 @@ const cityLinks = (city) => {
 };
 
 const activeCityProfiles = cityProfiles.filter((city) => city.cityNominative && city.cityGenitive && city.cityDative && city.cityInstrumental && city.cityPrepositional && city.regionNominative && city.regionGenitive && city.regionDative && city.regionInstrumental && city.regionPrepositional && city.objects && city.localNote);
-const isServiceAvailableInCity = (service, city) => service.key !== 'waste-utilization' || wasteRecyclingRegions.has(city.slug);
+const shymkentOnlyServiceKeys = new Set(['water-analysis', 'production-control']);
+const isServiceAvailableInCity = (service, city) => {
+  if (service.key === 'waste-utilization') return wasteRecyclingRegions.has(city.slug);
+  if (shymkentOnlyServiceKeys.has(service.key)) return city.slug === 'shymkent';
+  return true;
+};
+// Search demand alone does not publish a regional landing. Each pair is enabled
+// only after the commercial offer and region-specific content have been reviewed.
+const indexableServiceCityPairs = new Set([
+  'laboratory-tests:shymkent', 'szz:shymkent', 'waste-passport:shymkent',
+  'waste-utilization:shymkent', 'waste-utilization:taraz', 'waste-utilization:turkestan',
+  'program-pek:shymkent', 'report-pek:shymkent', 'water-analysis:shymkent',
+  'production-control:shymkent', 'environmental-design:shymkent',
+  'emission-permit:shymkent', 'eia-screening:shymkent', 'ndv:shymkent', 'puo:shymkent',
+]);
+const isServiceCityIndexable = (service, city) =>
+  isServiceAvailableInCity(service, city)
+  && hasIndexableRegionContent(city.slug)
+  && indexableServiceCityPairs.has(`${service.key}:${city.slug}`);
 const serviceCityLink = (service, city) => link(`${service.titleName} в ${city.cityPrepositional}`, `/${service.slugPrefix}-${city.slug}`);
 const relatedServiceCityLinks = (service, city) => {
   const current = serviceProfiles.findIndex((item) => item.key === service.key);
@@ -457,13 +533,8 @@ const createServiceCityPage = (service, city) => {
   const operationalNote = service.key === 'waste-utilization' && !wasteRecyclingRegions.has(city.slug)
     ? `ECOPROGRESS не заявляет собственный вывоз или прием отходов в ${city.cityPrepositional}. Для такой заявки сначала проверяются вид отхода, маршрут и наличие подходящего оператора; до подтверждения это консультация и документальная подготовка, а не обещание оказать операционную услугу.`
     : '';
-  const isPek = service.key === 'pek-report';
-  const seoTitle = isPek
-    ? `Производственный экологический контроль в ${city.cityPrepositional} | ПЭК`
-    : `${content.seoTitle || content.title} в ${city.cityPrepositional} | ECOPROGRESS`;
-  const seoDescription = isPek
-    ? `Программа ПЭК для ${city.cityGenitive}, разработка ПЭК, производственный экологический контроль и отчет ПЭК по данным предприятия. Аудит и сопровождение.`
-    : `${content.title} в ${city.cityPrepositional}: ${content.meta} Срок и стоимость для ${city.cityGenitive} — после аудита.`;
+  const seoTitle = `${content.seoTitle || content.title} в ${city.cityPrepositional} | ECOPROGRESS`;
+  const seoDescription = `${content.title} в ${city.cityPrepositional}: ${content.meta} Срок и стоимость для ${city.cityGenitive} — после аудита.`;
   return ({
   slug: `${service.slugPrefix}-${city.slug}`,
   city: city.cityNominative,
@@ -481,16 +552,14 @@ const createServiceCityPage = (service, city) => {
   service: service.name,
   serviceSlug: mainServiceSlug[service.key],
   type: 'service-city',
-  indexable: hasIndexableRegionContent(city.slug),
+  indexable: isServiceCityIndexable(service, city),
   title: seoTitle,
   description: service.key === 'waste-utilization' && !wasteRecyclingRegions.has(city.slug)
     ? `Утилизация отходов в ${city.cityPrepositional}: проверка партии, документов и доступности оператора без заявления местного офиса или собственного вывоза.`
     : seoDescription,
   h1: `${content.h1} в ${city.cityPrepositional}`,
   canonical: canonical(`${service.slugPrefix}-${city.slug}`),
-  keywords: isPek
-    ? [`производственный экологический контроль ${city.cityNominative}`, `программа ПЭК ${city.cityNominative}`, `разработка ПЭК ${city.cityNominative}`, `отчет ПЭК ${city.cityNominative}`]
-    : [service.name, `${service.name} ${city.cityNominative}`, `${content.title.toLowerCase()} в ${city.cityPrepositional}`, 'экологические услуги Казахстан'],
+  keywords: [service.name, `${service.name} ${city.cityNominative}`, `${content.title.toLowerCase()} в ${city.cityPrepositional}`, 'экологические услуги Казахстан'],
   intro: `${content.promise} Для ${city.cityGenitive} учитываем типовые отрасли: ${industries}. ${city.localNote} Документальные этапы (${remoteWork}) можно начать после получения исходных файлов. ${operationalNote}`,
   sections: [
     { title: `${content.title}: состав услуги для ${city.cityGenitive}`, body: `${content.scope} Для местных задач «${regionalTask}» границы работы уточняем по фактической деятельности и категории конкретной площадки.` },
@@ -520,7 +589,12 @@ const createServiceCityPage = (service, city) => {
     ...relatedServiceCityLinks(service, city),
     ...articleLinks,
   ],
-  breadcrumbs: [link('Главная', '/'), link('Услуги', '/services'), link(`${service.name} в ${city.cityPrepositional}`, `/${service.slugPrefix}-${city.slug}`)],
+  breadcrumbs: [
+    link('Главная', '/'),
+    link(city.cityNominative, `/ecologicheskie-uslugi-${city.slug}`),
+    link('Экологические услуги', '/services'),
+    link(`${service.name} в ${city.cityPrepositional}`, `/${service.slugPrefix}-${city.slug}`),
+  ],
   schemaType: 'Service',
   image: service.image,
   priority: priorityCities.includes(city.slug) ? 0.8 : 0.7,
@@ -721,7 +795,7 @@ export const seoArticles = articleContent.filter((article) => article.status ===
 
 const redirectedLegacySeoSlugs = new Set(['shtrafy-za-ekologiyu-kazakhstan', 'passport-othodov-kazakhstan', 'otchet-pek-kazakhstan']);
 
-export const seoPages = [
+const ruSeoPages = [
   ...activeCityProfiles.map(createCityPage),
   ...serviceProfiles.flatMap((service) => activeCityProfiles.filter((city) => isServiceAvailableInCity(service, city)).map((city) => createServiceCityPage(service, city))),
   ...specialPages
@@ -729,8 +803,10 @@ export const seoPages = [
     .map(enrichSpecialPage),
 ].filter((page) => !redirectedLegacySeoSlugs.has(page.slug));
 
+export const seoPages = [...ruSeoPages, ...buildKkLocalizedPages()];
+
 const legacyStaticPages = [
-  { path: '/', title: 'Экологические услуги в Казахстане | ECOPROGRESS', description: 'ECOPROGRESS оказывает экологические услуги для бизнеса в Казахстане: лабораторные замеры, ПЭК, отходы, разрешения и сопровождение.', h1: 'Экологические услуги и лабораторные замеры в Казахстане', priority: 1.0, changefreq: 'weekly', type: 'main' },
+  { path: '/', title: 'Экологические услуги для бизнеса в Казахстане | EcoProgress', description: 'Экологические услуги и лабораторные исследования для предприятий Казахстана: проектирование, ПЭК, отходы, разрешения и сопровождение.', h1: 'Экологические услуги и лабораторные исследования для бизнеса в Казахстане', priority: 1.0, changefreq: 'weekly', type: 'main' },
   { path: '/services', title: 'Экологические услуги ECOPROGRESS | Казахстан', description: 'Экологические документы и лабораторные услуги по Казахстану. Утилизация отходов доступна в Шымкенте, Таразе и Туркестане; вывоз и полигон ТБО — в Шымкенте.', h1: 'Экологические услуги полного цикла', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/regions', title: 'Города и регионы обслуживания | ECOPROGRESS', description: 'Условия оказания экологических услуг ECOPROGRESS по городам Казахстана: дистанционная подготовка документов, выезд специалистов и услуги в Шымкенте.', h1: 'Города и регионы обслуживания', priority: 0.8, changefreq: 'monthly', type: 'main' },
   { path: '/services/ecological-documents', title: 'Экологические документы для бизнеса | ECOPROGRESS', description: 'Разработка экологических документов для предприятий Казахстана: аудит исходных данных, проекты, отчетность и сопровождение согласования.', h1: 'Экологические документы для предприятий', priority: 0.9, changefreq: 'weekly', type: 'service' },

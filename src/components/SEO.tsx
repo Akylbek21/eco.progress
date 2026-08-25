@@ -4,6 +4,7 @@ import { appConfig } from '../config/app';
 import type { SeoRobots } from '../seo/types';
 import { absoluteUrl, normalizePathname } from '../seo/url';
 import { createSchemaGraph } from '../seo/schemaGraph';
+import { alternatePathFor } from '../seo/localeRoutePairs';
 
 type SEOProps = {
   title?: string;
@@ -16,7 +17,8 @@ type SEOProps = {
   schema?: Record<string, unknown> | Record<string, unknown>[];
   datePublished?: string;
   dateModified?: string;
-  alternates?: Array<{ locale: 'ru' | 'kk' | 'x-default'; url: string }>;
+  locale?: 'ru' | 'kk';
+  alternates?: Array<{ locale: 'ru-KZ' | 'kk-KZ' | 'x-default'; url: string }>;
 };
 
 const setUniqueHeadValue = (
@@ -75,10 +77,18 @@ const SEO = ({
   schema,
   datePublished,
   dateModified,
-  alternates = [],
+  locale,
+  alternates,
 }: SEOProps) => {
   useEffect(() => {
     const path = normalizePathname(window.location.pathname);
+    const resolvedLocale = locale || (path === '/kk' || path.startsWith('/kk/') ? 'kk' : 'ru');
+    const alternatePath = alternatePathFor(path);
+    const resolvedAlternates = alternates || (alternatePath ? [
+      { locale: 'ru-KZ' as const, url: resolvedLocale === 'ru' ? path : alternatePath },
+      { locale: 'kk-KZ' as const, url: resolvedLocale === 'kk' ? path : alternatePath },
+      { locale: 'x-default' as const, url: resolvedLocale === 'ru' ? path : alternatePath },
+    ] : []);
     const currentDescription = document.head.querySelector<HTMLMetaElement>('meta[name="description"]')?.content;
     const currentRobots = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]')?.content as SeoRobots | undefined;
     const currentCanonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href;
@@ -95,6 +105,7 @@ const SEO = ({
     const resolvedType = type || currentOgType || 'website';
     const resolvedImage = absoluteUrl(ogImage || currentOgImage || '/media/social/ecoprogress-og-1200x630.jpg');
     const resolvedSchema = schema ? (Array.isArray(schema) ? schema : [schema]) : undefined;
+    document.documentElement.lang = resolvedLocale;
 
     document.title = resolvedTitle;
     setUniqueHeadValue('meta[name="description"]', 'content', resolvedDescription);
@@ -107,7 +118,7 @@ const SEO = ({
     setUniqueHeadValue('meta[property="og:image"]', 'content', resolvedImage);
     setUniqueHeadValue('meta[property="og:image:width"]', 'content', '1200');
     setUniqueHeadValue('meta[property="og:image:height"]', 'content', '630');
-    setUniqueHeadValue('meta[property="og:locale"]', 'content', 'ru_KZ');
+    setUniqueHeadValue('meta[property="og:locale"]', 'content', resolvedLocale === 'kk' ? 'kk_KZ' : 'ru_KZ');
     setUniqueHeadValue('meta[property="og:site_name"]', 'content', company.name);
     setUniqueHeadValue('meta[name="twitter:card"]', 'content', 'summary_large_image');
     setUniqueHeadValue('meta[name="twitter:title"]', 'content', resolvedTitle);
@@ -124,7 +135,7 @@ const SEO = ({
     });
 
     document.head.querySelectorAll('link[data-ecoprogress-hreflang]').forEach((element) => element.remove());
-    alternates.forEach((alternate) => {
+    resolvedAlternates.forEach((alternate) => {
       const link = document.createElement('link');
       link.rel = 'alternate';
       link.hreflang = alternate.locale;
@@ -153,7 +164,7 @@ const SEO = ({
       expectedH1: h1,
     }));
     return () => window.cancelAnimationFrame(warningFrame);
-  }, [title, description, h1, canonical, ogImage, type, robots, schema, datePublished, dateModified, alternates]);
+  }, [title, description, h1, canonical, ogImage, type, robots, schema, datePublished, dateModified, locale, alternates]);
 
   return null;
 };

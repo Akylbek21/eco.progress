@@ -54,6 +54,7 @@ const registry = JSON.parse(read(path.join(root, 'src', 'data', 'seoRegistry.gen
 const seoPageContent = JSON.parse(read(path.join(root, 'src', 'data', 'seoPages.generated.json')));
 const seoPageByPath = new Map(seoPageContent.map((entry) => [`/${entry.slug}`, entry]));
 const registryByCanonical = new Map(registry.map((entry) => [entry.canonical, entry]));
+const registryByPath = new Map(registry.map((entry) => [entry.path === '/kk/' ? '/kk' : entry.path, entry]));
 const registryPaths = new Set(registry.map((entry) => entry.path));
 const titles = new Map();
 const descriptions = new Map();
@@ -102,11 +103,22 @@ for (const url of urls) {
   const h1 = normalizeText(one(html, /<h1(?:\s[^>]*)?>([\s\S]*?)<\/h1>/i));
   const pageSchemas = schemas(html);
   const words = visibleText(html).split(' ').filter(Boolean);
+  const htmlLang = one(html, /<html\s+[^>]*lang=["']([^"']+)["']/i);
+  const hreflangs = new Map([...html.matchAll(/<link\s+rel=["']alternate["'][^>]*hreflang=["']([^"']+)["'][^>]*href=["']([^"']+)["'][^>]*>/gi)].map((match) => [match[1], match[2]]));
 
   if (!title) errors.push(`Missing title: ${parsed.pathname}`);
   if (!description) errors.push(`Missing description: ${parsed.pathname}`);
   if (h1Count !== 1) errors.push(`Expected one H1, found ${h1Count}: ${parsed.pathname}`);
   if (canonical !== url) errors.push(`Canonical mismatch at ${parsed.pathname}: ${canonical || 'missing'}`);
+  if (htmlLang !== registryEntry?.locale) errors.push(`HTML lang mismatch at ${parsed.pathname}: ${htmlLang || 'missing'} !== ${registryEntry?.locale || 'missing locale'}`);
+  if (registryEntry?.alternatePath) {
+    const alternateEntry = registryByPath.get(registryEntry.alternatePath === '/kk/' ? '/kk' : registryEntry.alternatePath);
+    if (!alternateEntry || alternateEntry.alternatePath !== registryEntry.path) errors.push(`Non-reciprocal locale pair: ${parsed.pathname}`);
+    for (const alternate of registryEntry.alternates || []) {
+      if (hreflangs.get(alternate.locale) !== alternate.url) errors.push(`Missing or wrong ${alternate.locale} hreflang: ${parsed.pathname}`);
+      if (!sitemap.includes(`hreflang="${alternate.locale}" href="${alternate.url}"`)) errors.push(`Sitemap missing ${alternate.locale} alternate: ${parsed.pathname}`);
+    }
+  }
   if (ogUrl !== url) errors.push(`OG URL mismatch at ${parsed.pathname}: ${ogUrl || 'missing'}`);
   for (const property of ['og:type', 'og:title', 'og:description', 'og:image:width', 'og:image:height', 'og:locale', 'og:site_name']) {
     if (!new RegExp(`<meta\\s+property=["']${property}["']`, 'i').test(html)) errors.push(`Missing ${property}: ${parsed.pathname}`);
@@ -170,7 +182,8 @@ for (const url of urls) {
 }
 
 for (const entry of registry.filter((item) => item.robots === 'index,follow' && item.includeInSitemap)) {
-  if (!sitemapPaths.has(entry.path)) errors.push(`Indexable registry page missing from sitemap: ${entry.path}`);
+  const sitemapPath = entry.path === '/kk/' ? '/kk' : entry.path;
+  if (!sitemapPaths.has(sitemapPath)) errors.push(`Indexable registry page missing from sitemap: ${entry.path}`);
   if (!fs.existsSync(pageFile(entry.path))) errors.push(`Static HTTP status would be 404: ${entry.path}`);
 }
 

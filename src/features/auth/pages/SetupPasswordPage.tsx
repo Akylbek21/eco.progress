@@ -4,6 +4,7 @@ import { Box, Button, Card, CardContent, CircularProgress, Stack, TextField, Typ
 import { useForm } from 'react-hook-form';
 import api from '../../../services/api';
 import { useToast } from '../../../hooks/useToast';
+import { getApiErrorMessage } from '../../../services/apiHelpers';
 
 interface SetupPasswordFormValues {
   password: string;
@@ -60,8 +61,8 @@ export default function SetupPasswordPage() {
       await api.post('/auth/setup-password', { token, password: data.password });
       showSuccess('Пароль установлен успешно. Перенаправляем на страницу входа...');
       setTimeout(() => navigate('/login'), 2000);
-    } catch (err: any) {
-      showError(err.response?.data?.message || 'Не удалось установить пароль');
+    } catch (error: unknown) {
+      showError(getApiErrorMessage(error, 'Не удалось установить пароль'));
     } finally {
       setIsLoading(false);
     }

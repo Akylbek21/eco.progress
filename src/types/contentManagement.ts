@@ -146,6 +146,8 @@ export interface CmsPreviewToken {
 export type CmsWorkflowAction = 'submit-content-review' | 'approve-content' | 'submit-expert-review' | 'approve-expert' | 'submit-legal-review' | 'approve-legal' | 'submit-seo-review' | 'approve-seo' | 'schedule' | 'publish' | 'unpublish' | 'archive' | 'reject';
 
 export interface LeadContentAttribution {
+  locale?: 'ru' | 'kk';
+  pageUrl?: string;
   sourceType?: 'SERVICE' | 'ARTICLE' | 'REGIONAL_PAGE' | 'CASE' | 'HOME' | 'TARIFF' | 'CALCULATOR';
   sourceId?: string;
   sourceSlug?: string;

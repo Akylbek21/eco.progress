@@ -6,6 +6,7 @@ import { normalizeServiceSlug } from './serviceCatalog';
 import { trackEvent } from '../services/analytics';
 import { isCompleteExpert } from './experts/experts';
 import { isPublishableCaseStudy } from './cases/caseStudyPolicy';
+import { normalizePublicService, type PublicServiceDto } from './publicServiceNormalizer';
 
 type PublicCollection = 'services' | 'articles' | 'regions' | 'experts' | 'trust-documents' | 'cases';
 type CacheRecord<T> = { storedAt: number; version: string; items: T[] };
@@ -61,7 +62,10 @@ export class ApiContentRepository implements ContentRepository {
     }
   }
 
-  getServices() { return this.collection<ServiceContent>('services', () => this.devFallback!.getServices()); }
+  async getServices() {
+    const items = await this.collection<ServiceContent | PublicServiceDto>('services', () => this.devFallback!.getServices());
+    return items.map(normalizePublicService);
+  }
   async getServiceBySlug(slug: string) {
     const canonical = normalizeServiceSlug(slug);
     const items = await this.getServices();

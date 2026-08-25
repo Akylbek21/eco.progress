@@ -99,7 +99,7 @@ const HomePage = () => (
           <Reveal>
             <p className="text-sm font-bold uppercase tracking-[0.22em] text-accent">{company.name}</p>
             <h1 className="mt-5 max-w-5xl text-4xl font-bold leading-tight sm:text-6xl lg:text-[66px]">
-              Экологические услуги и лабораторные замеры в Казахстане
+              Экологические услуги и лабораторные исследования для бизнеса в Казахстане
             </h1>
           </Reveal>
           <Reveal delay={0.08}>

@@ -49,7 +49,10 @@ const ReportDocumentPanel = ({ report, config }: { report: PekReport; config: Do
   const versionsKey = pekKeys.reportDocuments(report.id, config.kind, report.companyId, user?.id);
   const versions = useQuery({ queryKey: versionsKey, queryFn: ({ signal }) => pekApi.getReportDocumentVersions(report.id, config.kind, signal) });
   const sortedVersions = [...(versions.data || [])].sort((left, right) => right.version - left.version);
-  const latest = sortedVersions[0];
+  const latestVersion = sortedVersions[0];
+  const latest = latestVersion;
+  const latestFormatAvailable = (format: PekReportDocumentFormat) =>
+    format === 'docx' ? latestVersion?.hasDocx === true : format === 'pdf' ? latestVersion?.hasPdf === true : latestVersion?.hasXlsx === true;
   const refresh = async () => {
     const actual = await pekApi.getReport(report.id);
     queryClient.setQueryData(pekKeys.report(report.id, undefined, user?.id), actual);
@@ -83,8 +86,8 @@ const ReportDocumentPanel = ({ report, config }: { report: PekReport; config: Do
     {failure && <Alert severity="error">{mapPekError(failure).message}</Alert>}
     <div className="flex flex-wrap gap-2">
       {config.formats.map((format) => canGenerate && <Button key={`generate-${format}`} variant={format === 'pdf' ? 'contained' : 'outlined'} disabled={busy} onClick={() => generate.mutate(format)}>Сформировать {format.toUpperCase()}</Button>)}
-      {config.previewFormats.map((format) => canPreview && latest && versionFormatAvailable(latest, format) && <Button key={`preview-${format}`} variant="outlined" disabled={busy} onClick={() => preview.mutate(format)}>Preview {format.toUpperCase()}</Button>)}
-      {config.formats.map((format) => canDownload && latest && versionFormatAvailable(latest, format) && <Button key={`download-${format}`} variant="outlined" disabled={busy} onClick={() => download.mutate(format)}>Скачать {format.toUpperCase()}</Button>)}
+      {config.previewFormats.map((format) => canPreview && latestFormatAvailable(format) && <Button key={`preview-${format}`} variant="outlined" disabled={busy} onClick={() => preview.mutate(format)}>Preview {format.toUpperCase()}</Button>)}
+      {config.formats.map((format) => canDownload && latestFormatAvailable(format) && <Button key={`download-${format}`} variant="outlined" disabled={busy} onClick={() => download.mutate(format)}>Скачать {format.toUpperCase()}</Button>)}
     </div>
     {!canGenerate && !canDownload && !canPreview && <Alert severity="info">Для текущего статуса backend не разрешил действия с этим типом документа.</Alert>}
     {versions.isError && <Alert severity="error" action={<Button size="small" onClick={() => void versions.refetch()}>Повторить</Button>}>Не удалось загрузить версии документа.</Alert>}

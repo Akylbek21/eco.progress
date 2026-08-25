@@ -53,6 +53,7 @@ const PublicRoutes = () => (
             <Route path="/search" element={<PublicRoute><SearchPage /></PublicRoute>} />
             <Route path="/shtrafy-za-ekologiyu-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
             <Route path="/shtrafy-za-ekologicheskie-narusheniya-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
+            <Route path="/kk/*" element={<PublicRoute><SeoLandingPage /></PublicRoute>} />
             <Route path="/:seoSlug" element={<PublicRoute><SeoLandingPage /></PublicRoute>} />
             <Route path="*" element={<PublicRoute><NotFoundPage /></PublicRoute>} />
   </Routes>

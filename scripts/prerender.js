@@ -43,6 +43,7 @@ const stripSeoHead = (html) => html
   .replace(/\s*<meta\s+name=["']description["'][^>]*>\s*/gi, '')
   .replace(/\s*<meta\s+name=["']robots["'][^>]*>\s*/gi, '')
   .replace(/\s*<link\s+rel=["']canonical["'][^>]*>\s*/gi, '')
+  .replace(/\s*<link\s+rel=["']alternate["'][^>]*>\s*/gi, '')
   .replace(/\s*<meta\s+property=["']og:[^"']+["'][^>]*>\s*/gi, '')
   .replace(/\s*<meta\s+name=["']twitter:[^"']+["'][^>]*>\s*/gi, '')
   .replace(/\s*<script[^>]+application\/ld\+json[^>]*>[\s\S]*?<\/script>\s*/gi, '');
@@ -89,7 +90,7 @@ const schemaForArticle = (article) => [
   buildBreadcrumbSchema([{ name: 'Главная', url: '/' }, { name: 'Статьи', url: '/news' }, { name: article.h1, url: article.slug }], `${SITE_URL}${article.slug}`),
 ];
 
-const renderHeadBlock = ({ title, description, canonical, type = 'website', schema, robots = 'index,follow', ogImage = OG_IMAGE, ogImageWidth = 1200, ogImageHeight = 630, datePublished, dateModified }) => {
+const renderHeadBlock = ({ title, description, canonical, type = 'website', schema, robots = 'index,follow', locale = 'ru', alternates = [], ogImage = OG_IMAGE, ogImageWidth = 1200, ogImageHeight = 630, datePublished, dateModified }) => {
   const verification = process.env.VITE_GOOGLE_SITE_VERIFICATION
     ? `\n<meta name="google-site-verification" content="${escapeHtml(process.env.VITE_GOOGLE_SITE_VERIFICATION)}" />`
     : '\n<!-- Google Search Console: set VITE_GOOGLE_SITE_VERIFICATION to render verification meta. -->';
@@ -99,6 +100,7 @@ const renderHeadBlock = ({ title, description, canonical, type = 'website', sche
     `<meta name="description" content="${escapeHtml(description)}" />`,
     `<meta name="robots" content="${escapeHtml(robots)}" />`,
     `<link rel="canonical" href="${escapeHtml(canonical)}" />`,
+    ...alternates.map((alternate) => `<link rel="alternate" hreflang="${escapeHtml(alternate.locale)}" href="${escapeHtml(alternate.url)}" />`),
     '<meta property="og:site_name" content="ECOPROGRESS GROUP" />',
     `<meta property="og:type" content="${type}" />`,
     `<meta property="og:title" content="${escapeHtml(title)}" />`,
@@ -107,7 +109,7 @@ const renderHeadBlock = ({ title, description, canonical, type = 'website', sche
     `<meta property="og:image" content="${escapeHtml(ogImage)}" />`,
     `<meta property="og:image:width" content="${ogImageWidth}" />`,
     `<meta property="og:image:height" content="${ogImageHeight}" />`,
-    '<meta property="og:locale" content="ru_KZ" />',
+    `<meta property="og:locale" content="${locale === 'kk' ? 'kk_KZ' : 'ru_KZ'}" />`,
     ...(type === 'article' && datePublished ? [`<meta property="article:published_time" content="${escapeHtml(datePublished)}" />`, `<meta property="article:modified_time" content="${escapeHtml(dateModified || datePublished)}" />`] : []),
     '<meta name="twitter:card" content="summary_large_image" />',
     `<meta name="twitter:title" content="${escapeHtml(title)}" />`,
@@ -122,6 +124,7 @@ const pageShell = (meta, body) => {
   const clean = stripSeoHead(template);
   const headBlock = renderHeadBlock(meta);
   return clean
+    .replace(/<html\s+lang=["'][^"']+["']/i, `<html lang="${meta.locale === 'kk' ? 'kk' : 'ru'}"`)
     .replace('</head>', `    ${headBlock}\n  </head>`)
     .replace('<div id="root"></div>', `<div id="root" data-prerendered="true">${body}</div>`);
 };
@@ -130,10 +133,10 @@ const renderLinks = (links = []) => links.map((item) => `<a href="${escapeHtml(i
 const renderList = (items = []) => `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
 const renderCards = (items = [], title = (item) => item.title, body = (item) => item.description) =>
   items.map((item) => `<article><h3>${escapeHtml(title(item))}</h3>${body(item) ? `<p>${escapeHtml(body(item))}</p>` : ''}</article>`).join('');
-const renderVisibleFaq = (faq = []) => faq.map((item) => {
+const renderVisibleFaq = (faq = [], locale = 'ru') => faq.map((item) => {
   const explanation = String(item.explanation || item.answer || '').trim();
   const shortAnswer = String(item.shortAnswer || explanation.match(/^.*?[.!?](?:\s|$)/)?.[0] || explanation).trim();
-  return `<article><h3>${escapeHtml(item.question)}</h3><p><strong>Короткий ответ:</strong> ${escapeHtml(shortAnswer)}</p><p><strong>Подробнее:</strong> ${escapeHtml(explanation)}</p></article>`;
+  return `<article><h3>${escapeHtml(item.question)}</h3><p><strong>${locale === 'kk' ? 'Қысқаша жауап' : 'Короткий ответ'}:</strong> ${escapeHtml(shortAnswer)}</p><p><strong>${locale === 'kk' ? 'Толығырақ' : 'Подробнее'}:</strong> ${escapeHtml(explanation)}</p></article>`;
 }).join('');
 const expertName = (slug) => expertMap.get(slug)?.fullName || 'Редакция EcoProgress';
 const renderArticleTrust = (article) => `
@@ -210,7 +213,13 @@ const renderAboutPage = (hero) => `${hero}
   <section><h2>Связанные услуги и разделы</h2>${renderLinks(aboutPublicContent.relatedLinks)}</section>
   <section><h2>Нужна помощь с экологическими документами или отходами?</h2><p>Опишите объект и задачу — специалист подскажет следующий шаг.</p><p><a href="/contacts">Получить консультацию</a> <a href="${whatsappUrl}">WhatsApp</a></p></section>`;
 
-const layout = (content) => `
+const layout = (content, locale = 'ru') => locale === 'kk' ? `
+<header class="seo-static-header">
+  <a href="/kk/">ecoprogress.kz</a>
+  <nav><a href="/kk/ekologiyalyq-qyzmetter">Қызметтер</a><a href="/kk/pek-bagdarlamasy">ПЭК бағдарламасы</a><a href="/kk/zerthanalyq-zertteuler">Зертханалық зерттеулер</a><a href="/">RU</a><a href="/kk/">ҚАЗ</a></nav>
+</header>
+${content}
+<footer class="seo-static-footer"><p>ECOPROGRESS GROUP: Қазақстандағы бизнеске арналған экологиялық құжаттар, зертханалық зерттеулер, ПЭК және қалдықтар бойынша қызметтер.</p><nav><a href="/kk/qaldyqtar-pasporty">Қалдықтар паспорты</a><a href="/kk/services/ndv">ШРШ жобасы</a><a href="/kk/ekologiyalyq-ruqsat">Экологиялық рұқсат</a><a href="/kk/qaldyqtardy-kadege-zharatu">Қалдықтарды кәдеге жарату</a></nav></footer>` : `
 <header class="seo-static-header">
   <a href="/">ecoprogress.kz</a>
   <nav>
@@ -233,24 +242,27 @@ ${content}
   </nav>
 </footer>`;
 
-const renderSeoPage = (page) => layout(`
+const renderSeoPage = (page) => {
+  const kk = page.locale === 'kk';
+  return layout(`
 <main class="seo-static-page">
   <nav class="seo-breadcrumbs">${renderLinks(page.breadcrumbs)}</nav>
   <section>
     <p>${escapeHtml(page.city || page.service || 'ECOPROGRESS')}</p>
     <h1>${escapeHtml(page.h1)}</h1>
     <p>${escapeHtml(page.intro)}</p>
-    <p><a href="/contacts">Получить консультацию</a> <a href="${whatsappUrl}">Написать в WhatsApp</a></p>
+    <p><a href="${kk ? '#lead-form' : '/contacts'}">${kk ? 'Кеңес алу' : 'Получить консультацию'}</a> <a href="${whatsappUrl}">${kk ? 'WhatsApp арқылы жазу' : 'Написать в WhatsApp'}</a></p>
   </section>
-  <section><h2>Услуги</h2>${renderLinks(page.services)}</section>
-  <section><h2>Кому нужно</h2>${renderList(page.audience)}</section>
-  <section><h2>Что получает клиент</h2>${renderList(page.outcomes)}</section>
+  <section><h2>${kk ? 'Қызметтер' : 'Услуги'}</h2>${renderLinks(page.services)}</section>
+  <section><h2>${kk ? 'Кімге қажет' : 'Кому нужно'}</h2>${renderList(page.audience)}</section>
+  <section><h2>${kk ? 'Клиент не алады' : 'Что получает клиент'}</h2>${renderList(page.outcomes)}</section>
   ${page.sections.map((section) => `<section><h2>${escapeHtml(section.title)}</h2><p>${escapeHtml(section.body)}</p></section>`).join('')}
   ${page.type === 'article' ? renderArticleTrust(page) : ''}
-  <section><h2>Частые вопросы</h2>${renderVisibleFaq(page.faq)}</section>
-  <section><h2>Связанные услуги и страницы</h2>${renderLinks(page.relatedLinks)}</section>
-  <section id="lead-form"><h2>${escapeHtml(page.ctaTitle || 'Заказать расчет стоимости')}</h2><p>${escapeHtml(page.ctaText || 'Опишите объект и текущие документы — специалист уточнит состав, сроки и порядок работы.')}</p><p><a href="/contacts">Оставить заявку</a> <a href="${whatsappUrl}">Написать в WhatsApp</a></p></section>
-</main>`);
+  <section><h2>${kk ? 'Жиі қойылатын сұрақтар' : 'Частые вопросы'}</h2>${renderVisibleFaq(page.faq, page.locale)}</section>
+  <section><h2>${kk ? 'Байланысты қызметтер мен беттер' : 'Связанные услуги и страницы'}</h2>${renderLinks(page.relatedLinks)}</section>
+  <section id="lead-form"><h2>${escapeHtml(page.ctaTitle || (kk ? 'Құнын есептеу' : 'Заказать расчет стоимости'))}</h2><p>${escapeHtml(page.ctaText || (kk ? 'Нысан мен қолда бар құжаттарды сипаттаңыз.' : 'Опишите объект и текущие документы — специалист уточнит состав, сроки и порядок работы.'))}</p><p><a href="${kk ? '/kk/ekologiyalyq-qyzmetter' : '/contacts'}">${kk ? 'Өтінім қалдыру' : 'Оставить заявку'}</a> <a href="${whatsappUrl}">${kk ? 'WhatsApp арқылы жазу' : 'Написать в WhatsApp'}</a></p></section>
+</main>`, page.locale);
+};
 
 const renderArticle = (article) => layout(`
 <main class="seo-static-page">

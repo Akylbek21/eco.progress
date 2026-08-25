@@ -2,7 +2,11 @@ export type SeoRobots = 'index,follow' | 'noindex,follow' | 'noindex,nofollow';
 export type SeoChangeFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface SeoRouteConfig {
+  pageId?: string;
+  locale: 'ru' | 'kk';
   path: string;
+  alternatePath?: string;
+  alternates: Array<{ locale: 'ru-KZ' | 'kk-KZ' | 'x-default'; url: string }>;
   title: string;
   description: string;
   h1: string;

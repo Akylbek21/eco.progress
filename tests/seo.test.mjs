@@ -49,6 +49,35 @@ test('sitemap is derived exactly from the unified SEO registry', async () => {
   for (const url of urls) assert.doesNotMatch(url, /\/(?:staff|cabinet|client|admin|dashboard|internal|login|register|reset-password|api|404)(?:\/|$)/);
 });
 
+test('priority Kazakh pages are reciprocal localized entries in the unified registry and sitemap', async () => {
+  const required = ['/kk/', '/kk/ekologiyalyq-qyzmetter', '/kk/qaldyqtar-pasporty', '/kk/services/ndv', '/kk/pek-bagdarlamasy', '/kk/pek-esebi', '/kk/ekologiyalyq-ruqsat', '/kk/sanitariyalyq-qorgau-aimagy', '/kk/zerthanalyq-zertteuler', '/kk/su-analizi', '/kk/qaldyqtardy-kadege-zharatu', '/kk/pek-bagdarlamasy-shymkent'];
+  const sitemap = await readFile(new URL('../public/sitemap.xml', import.meta.url), 'utf8');
+  for (const path of required) {
+    const entry = registry.find((item) => item.path === path);
+    assert.ok(entry, path);
+    assert.equal(entry.locale, 'kk');
+    assert.equal(entry.robots, 'index,follow');
+    assert.equal(entry.canonical, `https://ecoprogress.kz${path === '/kk/' ? '/kk' : path}`);
+    assert.ok(entry.alternatePath?.startsWith('/'));
+    const ru = registry.find((item) => item.path === entry.alternatePath);
+    assert.equal(ru?.alternatePath, path);
+    assert.ok(entry.pageId, `${path}: shared page identity`);
+    assert.equal(ru?.pageId, entry.pageId, `${path}: RU and KK are localizations of one page`);
+    assert.deepEqual(entry.alternates.map((item) => item.locale), ['ru-KZ', 'kk-KZ', 'x-default']);
+    assert.ok(sitemap.includes(`<loc>${entry.canonical}</loc>`));
+    for (const alternate of entry.alternates) assert.ok(sitemap.includes(`hreflang="${alternate.locale}" href="${alternate.url}"`));
+    const page = seoPages.find((item) => `/${item.slug}` === path);
+    assert.ok(page?.intro.length > 120, `${path}: useful intro`);
+    assert.ok((page?.sections.length || 0) >= 4, `${path}: structured content`);
+    assert.ok(page?.relatedLinks.every((link) => link.path.startsWith('/kk/')), `${path}: KK internal links`);
+  }
+  const [publicApp, layout] = await Promise.all([readFile(new URL('../src/PublicApp.tsx', import.meta.url), 'utf8'), readFile(new URL('../src/layouts/PublicLayout.tsx', import.meta.url), 'utf8')]);
+  assert.match(publicApp, /path="\/kk\/\*"/);
+  assert.match(layout, />RU<\/Link>/);
+  assert.match(layout, />ҚАЗ<\/Link>/);
+  assert.doesNotMatch(layout, /navigator\.language|location\.replace/);
+});
+
 test('article indexing follows reviewStatus and keeps a self canonical', async () => {
   assert.equal(articleRobotsForReviewStatus('approved'), 'index,follow');
   for (const status of ['draft', 'requires-specialist-review', 'rejected', 'unknown', undefined]) {
@@ -95,34 +124,43 @@ test('nginx normalizes www, slash and legacy penalty URLs with 301', async () =>
   assert.match(hostNginx, /location ~ \^\(\.\+\)\/\+\$/);
   assert.match(redirects, /shtrafy-za-ekologicheskie-narusheniya-kazakhstan \{ return 301 \/news\/shtrafy-za-ekologicheskie-narusheniya;/);
   assert.match(redirects, /passport-othodov-\(\[a-z-\]\+\).*return 301 \/pasport-othodov-\$1/);
-  assert.match(redirects, /otchet-pek-\(\[a-z-\]\+\).*return 301 \/pek-\$1/);
   assert.match(redirects, /ekologicheskoe-proektirovanie-\(\[a-z-\]\+\).*return 301 \/roos-\$1/);
   assert.match(redirects, /razreshenie-na-emissii-\(\[a-z-\]\+\).*return 301 \/ekologicheskoe-razreshenie-\$1/);
-  assert.match(redirects, /proizvodstvennyy-kontrol-ses-\(\[a-z-\]\+\).*return 301 \/szz-\$1/);
+  assert.match(redirects, /proizvodstvennyy-kontrol-ses-\(\[a-z-\]\+\).*return 301 \/proizvodstvennyy-kontrol-\$1/);
   assert.match(redirects, /programma-pek\|razrabotka-pek\|proizvodstvennyy-ekologicheskiy-kontrol.*return 301 \/pek-\$1/);
-  assert.match(redirects, /passport-othodov-kazakhstan \{ return 301 \/services\/ecological-documents;/);
+  assert.match(redirects, /passport-othodov-kazakhstan \{ return 301 \/services\/waste-passport;/);
   assert.match(redirects, /otchet-pek-kazakhstan \{ return 301 \/services\/report-pek;/);
   for (const legacy of ['/passport-othodov-kazakhstan', '/otchet-pek-kazakhstan']) assert.ok(!registry.some((item) => item.path === legacy));
 });
 
-test('every active SEO city has every core service landing', () => {
+test('existing regional routes remain available while only reviewed commercial pairs are indexable', () => {
   const cityPages = seoPages.filter((page) => page.type === 'city');
-  const servicePages = seoPages.filter((page) => page.type === 'service-city');
-  const prefixes = ['ndv', 'pek', 'ovos', 'szz', 'puo', 'roos', 'pasport-othodov', 'ekologicheskoe-razreshenie', 'laboratornye-zamery', 'utilizaciya-othodov'];
-  assert.equal(servicePages.length, cityPages.length * (prefixes.length - 1) + 3);
+  const servicePages = seoPages.filter((page) => page.type === 'service-city' && page.locale !== 'kk');
+  const prefixes = ['ndv', 'pek', 'otchet-pek', 'ovos', 'szz', 'puo', 'roos', 'pasport-othodov', 'ekologicheskoe-razreshenie', 'laboratornye-zamery', 'analiz-vody', 'proizvodstvennyy-kontrol', 'utilizaciya-othodov'];
+  assert.equal(servicePages.length, cityPages.length * (prefixes.length - 3) + 5);
   for (const cityPage of cityPages) {
     const citySlug = cityPage.slug.replace('ecologicheskie-uslugi-', '');
-    for (const prefix of prefixes.filter((item) => item !== 'utilizaciya-othodov')) assert.ok(servicePages.some((page) => page.slug === `${prefix}-${citySlug}`), `${prefix}-${citySlug}`);
+    for (const prefix of prefixes.filter((item) => !['utilizaciya-othodov', 'analiz-vody', 'proizvodstvennyy-kontrol'].includes(item))) assert.ok(servicePages.some((page) => page.slug === `${prefix}-${citySlug}`), `${prefix}-${citySlug}`);
     assert.equal(servicePages.some((page) => page.slug === `utilizaciya-othodov-${citySlug}`), ['shymkent', 'taraz', 'turkestan'].includes(citySlug));
+    assert.equal(servicePages.some((page) => page.slug === `analiz-vody-${citySlug}`), citySlug === 'shymkent');
+    assert.equal(servicePages.some((page) => page.slug === `proizvodstvennyy-kontrol-${citySlug}`), citySlug === 'shymkent');
   }
   for (const page of servicePages) {
     assert.ok(page.relatedLinks.some((item) => item.path === `/ecologicheskie-uslugi-${page.slug.split('-').slice(-1)[0]}`) || page.relatedLinks.some((item) => item.label.startsWith('Экологические услуги')));
     assert.ok(page.relatedLinks.filter((item) => servicePages.some((candidate) => `/${candidate.slug}` === item.path)).length >= 4);
   }
+  const indexableSlugs = servicePages.filter((page) => page.indexable).map((page) => page.slug).sort();
+  assert.deepEqual(indexableSlugs, [
+    'analiz-vody-shymkent', 'ekologicheskoe-razreshenie-shymkent', 'laboratornye-zamery-shymkent',
+    'ndv-shymkent', 'otchet-pek-shymkent', 'ovos-shymkent', 'pasport-othodov-shymkent',
+    'pek-shymkent', 'proizvodstvennyy-kontrol-shymkent', 'puo-shymkent', 'roos-shymkent',
+    'szz-shymkent', 'utilizaciya-othodov-shymkent', 'utilizaciya-othodov-taraz',
+    'utilizaciya-othodov-turkestan',
+  ]);
 });
 
 test('service-city commercial content is unique and contains all required blocks', () => {
-  const pages = seoPages.filter((page) => page.type === 'service-city');
+  const pages = seoPages.filter((page) => page.type === 'service-city' && page.locale !== 'kk');
   for (const field of ['title', 'description', 'h1', 'intro', 'ctaTitle', 'ctaText']) {
     assert.equal(new Set(pages.map((page) => page[field])).size, pages.length, `duplicate ${field}`);
   }
@@ -141,7 +179,9 @@ test('service-city commercial content is unique and contains all required blocks
 test('regional pages use unique content quality and topic clusters expose only approved published articles', () => {
   const regionalPages = seoPages.filter((page) => page.type === 'city' || page.type === 'service-city');
   assert.equal(regionalPages.filter((page) => page.type === 'city').length, 18, 'existing cities must be retained');
-  assert.ok(regionalPages.every((page) => page.indexable === true), 'complete unique regional content must be indexable without a case study');
+  assert.ok(regionalPages.filter((page) => page.type === 'city').every((page) => page.indexable === true));
+  assert.ok(regionalPages.some((page) => page.type === 'service-city' && page.indexable === false), 'unreviewed service/city pairs must stay out of the index');
+  assert.ok(regionalPages.some((page) => page.type === 'service-city' && page.indexable === true), 'reviewed service/city pairs must remain indexable without a case study');
   assert.ok(regionalPages.every((page) => page.relatedLinks.every((link) => !link.path.startsWith('/news/'))));
 
   assert.equal(isArticleEligibleForSeoLinks({ status: 'published', reviewStatus: 'approved' }), true);
@@ -173,9 +213,12 @@ test('city grammar and PEK keyword cluster use explicit backend-independent form
   const shymkent = seoPages.find((page) => page.slug === 'ecologicheskie-uslugi-shymkent');
   assert.equal(shymkent?.h1, 'Экологические услуги в Шымкенте');
   const pek = seoPages.find((page) => page.slug === 'pek-shymkent');
-  assert.equal(pek?.h1, 'Производственный экологический контроль в Шымкенте');
-  assert.match(pek?.description || '', /Программа ПЭК для Шымкента/);
-  for (const phrase of ['производственный экологический контроль Шымкент', 'программа ПЭК Шымкент', 'разработка ПЭК Шымкент', 'отчет ПЭК Шымкент']) assert.ok(pek?.keywords?.includes(phrase));
+  assert.equal(pek?.h1, 'Программа производственного экологического контроля в Шымкенте');
+  assert.match(pek?.description || '', /Программа ПЭК в Шымкенте/);
+  assert.ok(pek?.keywords?.includes('Программа производственного экологического контроля Шымкент'));
+  const report = seoPages.find((page) => page.slug === 'otchet-pek-shymkent');
+  assert.equal(report?.h1, 'Отчёт производственного экологического контроля в Шымкенте');
+  assert.ok(report?.keywords?.includes('Отчёт производственного экологического контроля Шымкент'));
   assert.match(pek?.ctaTitle || '', /для Шымкента/);
   const semey = seoPages.find((page) => page.slug === 'ecologicheskie-uslugi-semey');
   assert.equal(semey?.cityNominative, 'Семей');
@@ -190,7 +233,7 @@ test('city grammar and PEK keyword cluster use explicit backend-independent form
 
 test('every SEO city carries explicit cases and generated copy uses the required form', () => {
   for (const forms of regions) {
-    const pages = seoPages.filter((page) => page.slug === `ecologicheskie-uslugi-${forms.slug}` || page.slug.endsWith(`-${forms.slug}`));
+    const pages = seoPages.filter((page) => page.locale !== 'kk' && (page.slug === `ecologicheskie-uslugi-${forms.slug}` || page.slug.endsWith(`-${forms.slug}`)));
     assert.ok(pages.length >= 10, forms.slug);
     for (const page of pages) {
       assert.equal(page.cityNominative, forms.cityNominative);

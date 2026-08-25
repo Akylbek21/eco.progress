@@ -227,6 +227,7 @@ function App() {
         <Route path="/search" element={<PublicLayout><SearchPage /></PublicLayout>} />
         <Route path="/shtrafy-za-ekologiyu-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
         <Route path="/shtrafy-za-ekologicheskie-narusheniya-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
+        <Route path="/kk/*" element={<PublicLayout><SeoLandingPage /></PublicLayout>} />
         <Route path="/:seoSlug" element={<PublicLayout><SeoLandingPage /></PublicLayout>} />
         <Route path="/login" element={<LoginPage onSuccess={notify} />} />
         <Route path="/register" element={<RegisterPage onSuccess={notify} />} />

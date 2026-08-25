@@ -4,6 +4,8 @@ import path from 'node:path';
 const root = process.cwd();
 const pages = JSON.parse(fs.readFileSync(path.join(root, 'src', 'data', 'seoPages.generated.json'), 'utf8'));
 const regional = pages.filter((page) => page.type === 'city' || page.type === 'service-city');
+const russianRegional = regional.filter((page) => page.locale !== 'kk');
+const kazakhRegional = regional.filter((page) => page.locale === 'kk');
 const errors = [];
 const warnings = [];
 const add = (target, message) => errors.push(`${target}: ${message}`);
@@ -16,9 +18,9 @@ const similarity = (left, right) => {
 };
 const forms = ['cityNominative', 'cityGenitive', 'cityDative', 'cityInstrumental', 'cityPrepositional', 'regionNominative', 'regionGenitive', 'regionDative', 'regionInstrumental', 'regionPrepositional'];
 
-const cityPages = regional.filter((page) => page.type === 'city');
+const cityPages = russianRegional.filter((page) => page.type === 'city');
 const namesBySlug = new Map(cityPages.map((page) => [page.slug.replace('ecologicheskie-uslugi-', ''), page]));
-for (const page of regional) {
+for (const page of russianRegional) {
   const target = `/${page.slug}`;
   for (const field of forms) if (!String(page[field] ?? '').trim()) add(target, `не заполнена форма ${field}`);
   if (!page.h1.endsWith(`в ${page.cityPrepositional}`)) add(target, `H1 должен использовать предложный падеж «в ${page.cityPrepositional}»`);
@@ -30,6 +32,11 @@ for (const page of regional) {
     if (other.cityNominative === page.cityNominative) continue;
     if (new RegExp(`(?:^|\\s)${other.cityNominative}(?:\\s|[,.!?]|$)`, 'iu').test([page.title, page.h1].join(' '))) add(target, `title/H1 содержит другой город: ${other.cityNominative}`);
   }
+}
+for (const page of kazakhRegional) {
+  const target = `/${page.slug}`;
+  if (page.locale !== 'kk') add(target, 'KK өңірлік бетінде locale=kk көрсетілмеген');
+  if (page.city === 'Шымкент' && !`${page.title} ${page.h1}`.includes('Шымкенттегі')) add(target, 'қала атауы табиғи жатыс/қатыстық нысанда қолданылмаған: «Шымкенттегі»');
 }
 
 const metadata = ['title', 'description', 'h1'];

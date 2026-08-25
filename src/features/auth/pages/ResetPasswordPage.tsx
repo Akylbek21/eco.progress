@@ -4,6 +4,7 @@ import { Box, Button, Card, CardContent, CircularProgress, Stack, TextField, Typ
 import { useForm } from 'react-hook-form';
 import api from '../../../services/api';
 import { useToast } from '../../../hooks/useToast';
+import { getApiErrorMessage } from '../../../services/apiHelpers';
 
 interface ResetPasswordFormValues {
   password: string;
@@ -60,8 +61,8 @@ export default function ResetPasswordPage() {
       await api.post('/auth/reset-password', { token, password: data.password });
       showSuccess('Пароль изменен успешно. Перенаправляем на страницу входа...');
       setTimeout(() => navigate('/login'), 2000);
-    } catch (err: any) {
-      showError(err.response?.data?.message || 'Не удалось изменить пароль');
+    } catch (error: unknown) {
+      showError(getApiErrorMessage(error, 'Не удалось изменить пароль'));
     } finally {
       setIsLoading(false);
     }

@@ -17,7 +17,10 @@ export interface SeoFaqItem {
 }
 
 export interface SeoPageConfig {
+  pageId?: string;
   slug: string;
+  locale?: 'ru' | 'kk';
+  alternatePath?: string;
   city?: string;
   cityNominative?: string;
   cityGenitive?: string;

@@ -89,12 +89,12 @@ export async function getUsers(): Promise<AdminUserRecord[]> {
 
 export async function createUser(payload: CreateAdminUserPayload): Promise<AdminUserRecord> {
   const { data } = await api.post<ApiResponse<AdminUserRecord>>('/admin/users', payload);
-  return (data as any).data;
+  return unwrapApiResponse(data);
 }
 
 export async function updateUser(id: number, payload: UpdateAdminUserPayload): Promise<AdminUserRecord> {
   const { data } = await api.patch<ApiResponse<AdminUserRecord>>(`/admin/users/${id}`, payload);
-  return (data as any).data;
+  return unwrapApiResponse(data);
 }
 
 export async function deleteUser(id: number): Promise<void> {
@@ -103,7 +103,7 @@ export async function deleteUser(id: number): Promise<void> {
 
 export async function changeUserStatus(id: number, status: AdminUserStatus): Promise<AdminUserRecord> {
   const { data } = await api.patch<ApiResponse<AdminUserRecord>>(`/admin/users/${id}/status`, { status });
-  return (data as any).data;
+  return unwrapApiResponse(data);
 }
 
 export const getAdminUsers = getUsers;
