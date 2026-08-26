@@ -1,5 +1,7 @@
 FROM node:20-alpine AS build
 WORKDIR /app
+RUN apk add --no-cache chromium
+ENV CHROME_PATH=/usr/bin/chromium
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
