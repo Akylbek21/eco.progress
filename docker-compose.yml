@@ -2,10 +2,6 @@ services:
   frontend:
     build:
       context: .
-      network: eco-net
-      args:
-        SEO_CONTENT_API_URL: ${SEO_CONTENT_API_URL:-}
-        SEO_CONTENT_API_TOKEN: ${SEO_CONTENT_API_TOKEN:-}
     container_name: eco-frontend
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-3000}:80"

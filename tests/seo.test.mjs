@@ -10,21 +10,17 @@ import { createSchemaGraph } from '../src/seo/schemaGraph.ts';
 
 const registry = JSON.parse(await readFile(new URL('../src/data/seoRegistry.generated.json', import.meta.url), 'utf8'));
 
-test('production SEO build fails closed on empty CMS and sitemap regression', async () => {
-  const [sync, audit, dockerfile, compose, quality] = await Promise.all([
-    readFile(new URL('../scripts/sync-seo-content.mjs', import.meta.url), 'utf8'),
-    readFile(new URL('../scripts/seo-audit.mjs', import.meta.url), 'utf8'),
+test('production build is independent of the optional SEO CMS API', async () => {
+  const [packageJson, dockerfile, compose, quality] = await Promise.all([
+    readFile(new URL('../package.json', import.meta.url), 'utf8'),
     readFile(new URL('../Dockerfile', import.meta.url), 'utf8'),
     readFile(new URL('../docker-compose.yml', import.meta.url), 'utf8'),
     readFile(new URL('../src/content/regions/regionContentQuality.ts', import.meta.url), 'utf8'),
   ]);
-  assert.match(sync, /experts, cases and articleReviews are all empty/);
-  assert.match(sync, /process\.env\.SEO_CONTENT_API_URL/);
-  assert.match(audit, /errors\.push\('SEO CMS snapshot is empty/);
-  assert.doesNotMatch(audit, /if \(cmsContentUnavailable\) warnings\.push\(`\$\{message\}/);
-  assert.match(dockerfile, /ARG SEO_CONTENT_API_URL/);
-  assert.match(compose, /SEO_CONTENT_API_URL:-http:\/\/eco-app:8080\/api\/public\/content\/seo-snapshot/);
-  assert.match(compose, /network: eco-net/);
+  const scripts = JSON.parse(packageJson).scripts;
+  assert.doesNotMatch(scripts.build, /seo:content:sync|seo:audit/);
+  assert.doesNotMatch(dockerfile, /SEO_CONTENT_API_URL|SEO_CONTENT_API_TOKEN/);
+  assert.doesNotMatch(compose, /SEO_CONTENT_API_URL|SEO_CONTENT_API_TOKEN|network:\s*eco-net/);
   assert.doesNotMatch(quality, /publishedCaseStudies|confirmedCaseSlugs/);
 });
 
