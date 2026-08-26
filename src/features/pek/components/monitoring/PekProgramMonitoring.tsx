@@ -7,6 +7,7 @@ import { pekKeys } from '../../api/pekQueryKeys';
 import { pekApi } from '../../api/pekService';
 import { mapPekError } from '../../utils/pekErrorMapper';
 import { handlePekMutationError } from '../../utils/pekMutationError';
+import PekMonitoringPoints from './PekMonitoringPoints';
 
 type FormState = {
   monitoringType: PekMonitoringType | '';
@@ -115,7 +116,7 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
   const openCreate = () => { setForm(emptyForm); setEditing('new'); };
   const openEdit = (item: PekMonitoringDirection) => { setForm(formFromItem(item)); setEditing(item); };
 
-  return <section className="space-y-4 rounded-2xl border bg-white p-5">
+  return <section aria-label="Направления мониторинга" className="space-y-4 rounded-2xl border bg-white p-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h2 className="text-lg font-black">Направления мониторинга</h2><p className="text-sm text-slate-500">Настройки производственного экологического контроля.</p></div>
       {canCreate && <Button variant="contained" onClick={openCreate}>Добавить направление</Button>}
@@ -124,7 +125,7 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
     {!items.length ? <Alert severity="info">Направления мониторинга пока не добавлены.</Alert> : <div className="grid gap-3">
       {items.map((item) => <article key={item.id} className="rounded-xl border p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><h3 className="font-black">{item.name}</h3><p className="text-sm text-slate-500">{item.monitoringType} · {item.frequencyType} · план: {item.plannedCount}</p></div>
+          <div><h3 className="font-black">{item.name}</h3><p className="text-sm text-slate-500">Направление: {item.monitoringType} · {item.frequencyType} · план: {item.plannedCount}</p></div>
           <div className="flex gap-2">
             {item.availableActions.edit === true && <Button size="small" variant="outlined" onClick={() => openEdit(item)}>Изменить</Button>}
             {item.availableActions.delete === true && <Button size="small" color="error" onClick={() => setDeleting(item)}>Удалить</Button>}
@@ -132,10 +133,11 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
         </div>
         <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
           <div><dt className="text-slate-500">Методика</dt><dd>{item.methodology || '—'}</dd></div>
-          <div><dt className="text-slate-500">Лаборатория</dt><dd>{item.laboratoryId ?? '—'}</dd></div>
-          <div><dt className="text-slate-500">Объекты контроля</dt><dd>{item.controlItemIds.join(', ') || '—'}</dd></div>
+          <div><dt className="text-slate-500">Лаборатория</dt><dd>{item.laboratoryId ? 'Выбрана' : '—'}</dd></div>
+          <div><dt className="text-slate-500">Объекты контроля</dt><dd>{program.controlItems?.filter((control) => control.id && item.controlItemIds.includes(control.id)).map((control) => control.name).join(', ') || '—'}</dd></div>
           <div><dt className="text-slate-500">Типы протоколов</dt><dd>{item.protocolTypes.join(', ') || '—'}</dd></div>
         </dl>
+        <PekMonitoringPoints programId={program.id} monitoringId={item.id} editable={item.availableActions.edit === true} />
       </article>)}
     </div>}
 
@@ -145,10 +147,9 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
         <TextField select label="Тип мониторинга *" value={form.monitoringType} onChange={(event) => setForm((value) => ({ ...value, monitoringType: event.target.value as PekMonitoringType }))}>{monitoringTypes.map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}</TextField>
         <TextField label="Название *" value={form.name} onChange={(event) => setForm((value) => ({ ...value, name: event.target.value }))} />
         <TextField label="Методика" value={form.methodology} onChange={(event) => setForm((value) => ({ ...value, methodology: event.target.value }))} />
-        <TextField label="ID лаборатории" type="number" value={form.laboratoryId} onChange={(event) => setForm((value) => ({ ...value, laboratoryId: event.target.value }))} />
         <TextField select label="Периодичность *" value={form.frequencyType} onChange={(event) => setForm((value) => ({ ...value, frequencyType: event.target.value as PekPeriodicity }))}>{frequencyTypes.map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}</TextField>
         <TextField label="Плановое количество *" type="number" value={form.plannedCount} onChange={(event) => setForm((value) => ({ ...value, plannedCount: event.target.value }))} />
-        <TextField label="ID объектов контроля через запятую" value={form.controlItemIds} onChange={(event) => setForm((value) => ({ ...value, controlItemIds: event.target.value }))} />
+        <div className="space-y-2 sm:col-span-2"><p className="text-sm font-semibold">Объекты контроля</p>{program.controlItems?.map((control) => <FormControlLabel key={control.id || control.clientId} control={<Checkbox checked={Boolean(control.id && numberCsv(form.controlItemIds).includes(control.id))} onChange={(event) => { if (!control.id) return; const current = numberCsv(form.controlItemIds); setForm((value) => ({ ...value, controlItemIds: (event.target.checked ? [...current, control.id!] : current.filter((id) => id !== control.id)).join(', ') })); }} />} label={`${control.code} · ${control.name}`} />)}</div>
         <TextField label="Типы протоколов (только чтение)" value={form.protocolTypes} disabled helperText="Значение рассчитывает backend" />
         <FormControlLabel control={<Checkbox checked={form.active} onChange={(event) => setForm((value) => ({ ...value, active: event.target.checked }))} />} label="Активно" />
       </div></DialogContent>

@@ -37,7 +37,7 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
   if (companyId === null) throw new Error('Для создания серверного черновика выберите компанию.');
   const hasPekContext = [
     form.pekProgramId, form.pekReportId, form.pekControlItemId, form.pekControlEventId,
-    form.monitoringPointId, form.emissionSourceId, form.waterOutletId,
+    form.monitoringPointId, form.programIndicatorId, form.emissionSourceId, form.waterOutletId,
   ].some((value) => nullableNumber(value) !== null);
   const firstSample = form.results.find((row) => row.sampleNumber.trim() || row.samplingDepth.trim() || row.samplingPlace.trim());
   return {
@@ -79,6 +79,7 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
     pekControlItemId: nullableNumber(form.pekControlItemId),
     pekControlEventId: nullableNumber(form.pekControlEventId),
     monitoringPointId: nullableNumber(form.monitoringPointId),
+    programIndicatorId: nullableNumber(form.programIndicatorId),
     emissionSourceId: nullableNumber(form.emissionSourceId),
     waterOutletId: nullableNumber(form.waterOutletId),
   } : null,
@@ -257,7 +258,7 @@ export const mapProtocolToWizardForm = (protocol: Protocol): ProtocolWizardForm 
     note: protocol.explanatoryNote, orderId: textValue(protocol.orderId), orderServiceItemId: textValue(protocol.orderServiceItemId),
     pekProgramId: textValue(protocol.pekProgramId), pekReportId: textValue(protocol.pekReportId),
     pekControlItemId: textValue(protocol.pekControlItemId), pekControlEventId: textValue(protocol.pekControlEventId),
-    monitoringPointId: textValue(protocol.monitoringPointId), emissionSourceId: textValue(protocol.emissionSourceId),
+    monitoringPointId: textValue(protocol.monitoringPointId), programIndicatorId: textValue(protocol.programIndicatorId), emissionSourceId: textValue(protocol.emissionSourceId),
     waterOutletId: textValue(protocol.waterOutletId), printVisibility: protocol.printVisibility,
     samplingPoints: (protocol.samplingPoints ?? []).map((point, index) => ({
       clientPointId: textValue(point.clientPointId || point.id),

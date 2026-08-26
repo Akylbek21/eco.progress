@@ -94,8 +94,8 @@ const ReportDocumentPanel = ({ report, config }: { report: PekReport; config: Do
     <div className="overflow-x-auto rounded-xl border">
       <table className="w-full min-w-[900px] text-sm">
         <thead className="bg-slate-50 text-left"><tr><th className="p-3">Версия</th><th>Создан</th><th>Форма</th><th>НПА</th><th>Ревизия данных</th><th>Статус</th><th>Файлы</th></tr></thead>
-        <tbody>{sortedVersions.map((version) => <tr key={version.id} className="border-t">
-          <td className="p-3 font-bold">v{version.version}</td><td>{version.generatedAt || '—'}<div className="text-xs text-slate-500">{version.generatedByName || '—'}</div></td>
+        <tbody>{sortedVersions.map((version, index) => <tr key={version.id} className="border-t">
+          <td className="p-3 font-bold">v{version.version} <span className="block text-xs font-normal text-slate-500">{index === 0 ? 'текущая' : 'Историческая версия'}</span></td><td>{version.generatedAt || '—'}<div className="text-xs text-slate-500">{version.generatedByName || '—'}</div></td>
           <td>{version.templateVersion || '—'}</td><td>{version.regulationVersion || '—'}</td><td>{version.sourceContentRevision} / {version.currentContentRevision}</td>
           <td><Chip size="small" color={version.stale ? 'warning' : 'success'} label={version.stale ? 'Устарел' : 'Актуален'} /></td>
           <td><div className="flex flex-wrap gap-1">{config.formats.map((format) => versionFormatAvailable(version, format) && <Button key={format} size="small" disabled={busy} onClick={() => downloadVersion.mutate({ versionId: version.id, format })}>{format.toUpperCase()}</Button>)}</div></td>
@@ -111,6 +111,9 @@ const OfficialSignatures = ({ report }: { report: PekReport }) => {
   const queryClient = useQueryClient();
   const key = pekKeys.reportSignatures(report.id, report.companyId, user?.id);
   const signatures = useQuery({ queryKey: key, queryFn: ({ signal }) => pekApi.getReportSignatures(report.id, signal) });
+  const officialVersions = useQuery({ queryKey: pekKeys.reportDocuments(report.id, 'OFFICIAL', report.companyId, user?.id), queryFn: ({ signal }) => pekApi.getReportDocumentVersions(report.id, 'OFFICIAL', signal) });
+  const currentOfficial = [...(officialVersions.data || [])].sort((left, right) => right.version - left.version)[0];
+  const officialStale = currentOfficial?.stale === true;
   const downloadCms = useMutation({ mutationFn: (id: number) => pekApi.downloadReportSignature(report.id, id), onSuccess: saveBlob });
   const sign = useMutation({
     mutationFn: async () => {
@@ -121,7 +124,8 @@ const OfficialSignatures = ({ report }: { report: PekReport }) => {
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: key }); },
   });
   return <section className="space-y-3 rounded-2xl border bg-white p-5">
-    <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-black">Подписи официального отчёта</h2><p className="text-sm text-slate-500">ЭЦП относится только к нормативному документу.</p></div>{report.availableActions.signOfficialDocument === true && <Button color="success" variant="contained" disabled={sign.isPending} onClick={() => sign.mutate()}>Подписать официальный PDF</Button>}</div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-black">Подписи официального отчёта</h2><p className="text-sm text-slate-500">ЭЦП относится только к нормативному документу.</p></div>{report.availableActions.signOfficialDocument === true && !officialStale && <Button color="success" variant="contained" disabled={sign.isPending} onClick={() => sign.mutate()}>Подписать официальный PDF</Button>}</div>
+    {officialStale && <Alert severity="warning">Документ устарел после изменения данных отчёта. Сформируйте новую версию — подписать устаревший PDF нельзя.</Alert>}
     {sign.error && <Alert severity="error">{mapPekError(sign.error).message}</Alert>}
     {!signatures.data?.length ? <p className="text-sm text-slate-500">Подписей пока нет.</p> : <div className="space-y-2">{signatures.data.map((signature) => <div key={signature.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3"><span>{signature.certificateCn || signature.certificateSubject || `Сотрудник №${signature.signerUserId}`} · {signature.signedAt}</span><Button size="small" onClick={() => downloadCms.mutate(signature.id)}>Скачать CMS</Button></div>)}</div>}
   </section>;
@@ -130,7 +134,7 @@ const OfficialSignatures = ({ report }: { report: PekReport }) => {
 const PekReportDocuments = ({ report }: { report: PekReport }) => <div className="space-y-5">
   <Alert severity="info">Версии формы и НПА ниже зафиксированы при создании каждой версии документа и не заменяются текущими значениями отчёта.</Alert>
   <ReportDocumentPanel report={report} config={{ kind: 'OFFICIAL', title: 'Официальный отчёт ПЭК', description: 'Нормативный документ для представления в уполномоченный орган.', formats: ['docx', 'pdf'], previewFormats: ['pdf'], generateAction: 'generateOfficialDocument', downloadAction: 'downloadOfficialDocument', previewAction: 'previewOfficialDocument' }} />
-  <ReportDocumentPanel report={report} config={{ kind: 'INTERNAL_ANALYTICAL', title: 'Внутренний аналитический отчёт', description: 'CRM-аналитика для внутренней работы; не является официальной формой ПЭК.', formats: ['pdf', 'xlsx'], previewFormats: ['pdf'], generateAction: 'generateInternalAnalyticalReport', downloadAction: 'downloadInternalAnalyticalReport', previewAction: 'previewInternalAnalyticalReport' }} />
+  <ReportDocumentPanel report={report} config={{ kind: 'INTERNAL_ANALYTICAL', title: 'Внутренний аналитический отчёт', description: 'CRM-аналитика для внутренней работы; backend поддерживает DOCX и PDF.', formats: ['docx', 'pdf'], previewFormats: ['pdf'], generateAction: 'generateInternalAnalyticalReport', downloadAction: 'downloadInternalAnalyticalReport', previewAction: 'previewInternalAnalyticalReport' }} />
   <OfficialSignatures report={report} />
 </div>;
 

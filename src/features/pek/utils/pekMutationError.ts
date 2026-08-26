@@ -1,6 +1,6 @@
 import { isPekVersionConflict, mapPekError, type PekUiError } from './pekErrorMapper';
 
-export const PEK_VERSION_CONFLICT_MESSAGE = 'Данные были изменены другим пользователем';
+export const PEK_VERSION_CONFLICT_MESSAGE = 'Данные были изменены другим сотрудником.\nОбновите страницу и повторите действие.';
 
 export const handlePekMutationError = async (
   error: unknown,
@@ -12,4 +12,3 @@ export const handlePekMutationError = async (
   await refreshEntity();
   return { ...mapped, message: PEK_VERSION_CONFLICT_MESSAGE };
 };
-

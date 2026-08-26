@@ -450,8 +450,12 @@ export interface Protocol {
   pekControlItemId?: string | number;
   pekControlEventId?: string | number;
   monitoringPointId?: string | number;
+  programIndicatorId?: string | number;
   emissionSourceId?: string | number;
   waterOutletId?: string | number;
+  /** Canonical PEK relationships returned by backend. Legacy flat IDs are not used for display. */
+  pekLinks?: ProtocolPekLink[];
+  pekConnections?: ProtocolPekLink[];
   availableActions: ProtocolAvailableActions;
   scope?: ProtocolAccessScope;
   canComplete?: boolean;
@@ -462,6 +466,18 @@ export interface Protocol {
   publishedDocumentId?: string | number;
   syncWarning?: string;
 }
+
+export type ProtocolPekLink = {
+  programId: string | number;
+  programNumber?: string;
+  reportId: string | number;
+  reportName?: string;
+  reportPeriod?: string;
+  controlItemId?: string | number;
+  controlItemName?: string;
+  monitoringPointId?: string | number;
+  monitoringPointName?: string;
+};
 
 export type ProtocolPage = {
   items: Protocol[];

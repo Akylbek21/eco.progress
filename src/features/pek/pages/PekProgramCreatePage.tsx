@@ -32,6 +32,9 @@ import {
   pekPeriodicityOptions,
 } from '../model/pekDictionaries';
 import type { ComparisonType, PekActionStatus, PekControlType, PekPeriodicity } from '../api/pekContracts';
+import PekProgramStructuredSections from '../components/sections/PekProgramStructuredSections';
+import NormativeSelectorModal from '../../protocols/components/components/NormativeSelectorModal';
+import type { NormativeRecord, ProtocolTemplateId } from '../../../types/protocols';
 
 const steps = [
   'Сведения об объекте',
@@ -77,15 +80,12 @@ const newMeasure = (): PekMeasure => ({
 });
 const stepForField = (field: string) => field.startsWith('controlItems') ? 5
   : field.startsWith('indicators') ? 6
-    : field.startsWith('measures') || field.startsWith('responsibilityMatrix') ? 11
+    : field.startsWith('measures') ? 11
       : field.startsWith('kato') || field.startsWith('bin') || field.startsWith('oked') ? 1
-        : field.startsWith('environmentalCategory') || field.startsWith('designCapacity') ? 2
+          : field.startsWith('environmentalCategory') || field.startsWith('designCapacity') || field.startsWith('actualCapacity') ? 2
           : field.startsWith('productionCharacteristics') ? 3
             : field.startsWith('monitoringScope') ? 4
-              : field.startsWith('internalInspectionProcedure') ? 8
-                : field.startsWith('measurementQualityAssurance') ? 9
-                  : field.startsWith('emergencyProcedures') ? 10
-                    : field.startsWith('permitIds') ? 12
+              : field.startsWith('permitIds') ? 12
                       : field.startsWith('readinessNotes') ? 13 : 0;
 
 const PekProgramCreatePage = () => {
@@ -103,6 +103,7 @@ const PekProgramCreatePage = () => {
   const [autosaveState, setAutosaveState] = useState<'idle' | 'saving' | 'saved' | 'offline' | 'error' | 'conflict'>('idle');
   const [conflictOpen, setConflictOpen] = useState(false);
   const [draftToRestore, setDraftToRestore] = useState<PekStoredDraft<PekProgramForm> | null>(null);
+  const [normativeIndicatorIndex, setNormativeIndicatorIndex] = useState<number | null>(null);
   const versionRef = useRef<number>(0);
   const hydratedProgramId = useRef<number>();
   const autosaveTimer = useRef<number>();
@@ -141,7 +142,7 @@ const PekProgramCreatePage = () => {
     () => pekDraftKey('program', user?.id, programId, edit ? program.data?.version ?? 'loading' : 'new', companyId || 'none'),
     [companyId, edit, program.data?.version, programId, user?.id],
   );
-  const activePermits = useMemo(() => (permits.data || []).filter((permit) => permit.effectivelyActive), [permits.data]);
+  const activePermits = useMemo(() => (permits.data || []).filter((permit) => permit.effectivelyActive && permit.companyId === companyId && permit.objectId === objectId), [companyId, objectId, permits.data]);
 
   useEffect(() => {
     if (!program.data) return;
@@ -346,6 +347,32 @@ const PekProgramCreatePage = () => {
     }
     setStep((current) => current + 1);
   };
+  const normativeTemplate = (indicatorIndex: number): ProtocolTemplateId => {
+    const indicator = indicators[indicatorIndex];
+    const control = controlItems.find((item) => item.clientId === indicator?.controlItemClientId);
+    if (control?.controlType === 'SOIL') return 'soil';
+    if (control?.controlType === 'WATER_INTAKE' || control?.controlType === 'WASTEWATER') return 'water';
+    if (control?.controlType === 'PHYSICAL_FACTOR') return 'noise_vibration';
+    return 'ambient_air';
+  };
+  const chooseNormative = (records: NormativeRecord[]) => {
+    const record = records[0];
+    if (normativeIndicatorIndex == null || !record) return;
+    const rawValue = record.value ?? record.normativeValue ?? record.max ?? record.maxOneTimeValue;
+    const numericValue = rawValue == null || rawValue === '' ? null : Number(String(rawValue).replace(',', '.'));
+    updateIndicator(normativeIndicatorIndex, {
+      normativeId: Number(record.id),
+      indicatorId: Number(record.id),
+      indicatorCode: record.code || record.pollutantCode || '',
+      indicatorName: record.indicator || record.indicatorName || record.name || '',
+      unit: record.unit || '',
+      comparisonType: (record.comparisonType || 'LESS_OR_EQUAL') as ComparisonType,
+      normativeValue: Number.isFinite(numericValue) ? numericValue : null,
+      normativeDocument: record.normativeDocument || record.sourceDocumentName || record.sourceDocumentCode || null,
+      normativeRevision: record.documentDate || null,
+    });
+    setNormativeIndicatorIndex(null);
+  };
 
   return <div className="space-y-5">
     <PekPageHeader
@@ -399,7 +426,8 @@ const PekProgramCreatePage = () => {
         </div>}
         {step === 2 && <div className="grid gap-4 md:grid-cols-2">
           <label>Категория объекта *<select {...register('environmentalCategory')} className={inputClass}><option value="">Выберите категорию</option><option value="I">I категория</option><option value="II">II категория</option><option value="III">III категория</option><option value="IV">IV категория</option></select></label>
-          <label>Проектная / фактическая мощность *<textarea {...register('designCapacity')} rows={4} className={inputClass} placeholder="Единицы мощности, проектное и фактическое значение, режим загрузки" /></label>
+          <label>Проектная мощность *<textarea {...register('designCapacity')} rows={3} className={inputClass} placeholder="Значение и единицы мощности" /></label>
+          <label>Фактическая мощность *<textarea {...register('actualCapacity')} rows={3} className={inputClass} placeholder="Фактическое значение и режим загрузки" /></label>
         </div>}
         {step === 3 && <label className="block">Характеристика производственных и технологических процессов *<textarea {...register('productionCharacteristics')} rows={12} className={inputClass} placeholder="Технологические линии, сырьё, продукция, оборудование, источники эмиссий, водопользование и образование отходов" /></label>}
         {step === 4 && <label className="block">Организация производственного мониторинга *<textarea {...register('monitoringScope')} rows={12} className={inputClass} placeholder="Компоненты среды, наблюдения, лаборатории, сбор и хранение результатов мониторинга" /></label>}
@@ -435,11 +463,8 @@ const PekProgramCreatePage = () => {
             <div className="mb-3 flex justify-between"><strong>Показатель {index + 1}</strong><button type="button" className="text-rose-700" onClick={() => setValue('indicators', indicators.filter((_, i) => i !== index), { shouldDirty: true })}>Удалить</button></div>
             <div className="grid gap-3 md:grid-cols-3">
               <label>Позиция контроля<select value={row.controlItemClientId || ''} onChange={(event) => updateIndicator(index, { controlItemClientId: event.target.value, controlItemId: undefined })} className={inputClass}>{controlItems.map((item) => <option key={item.clientId} value={item.clientId}>{item.code || item.name || 'Без названия'}</option>)}</select></label>
-              <TextField label="Код показателя" value={row.indicatorCode} onChange={(value) => updateIndicator(index, { indicatorCode: value })} />
-              <TextField label="Название *" value={row.indicatorName} onChange={(value) => updateIndicator(index, { indicatorName: value })} />
-              <TextField label="Единица *" value={row.unit} onChange={(value) => updateIndicator(index, { unit: value })} />
-              <NumberField label="Норматив" value={row.normativeValue} onChange={(value) => updateIndicator(index, { normativeValue: value })} />
-              <SelectField label="Условие сравнения *" value={row.comparisonType} options={comparisonTypeOptions} onChange={(value) => updateIndicator(index, { comparisonType: value as ComparisonType })} />
+               <div className="md:col-span-2"><Button type="button" variant="secondary" onClick={() => setNormativeIndicatorIndex(index)}>Выбрать из справочника</Button></div>
+               {row.normativeId ? <div className="rounded-xl border bg-slate-50 p-3 md:col-span-3"><strong>{row.indicatorName}</strong><p>{row.comparisonType === 'LESS_OR_EQUAL' ? '≤ ' : ''}{row.normativeValue ?? '—'} {row.unit || ''}</p><p className="mt-2 text-xs text-slate-500">Документ: {row.normativeDocument || '—'}<br />Редакция: {row.normativeRevision || '—'}</p><p className="mt-2 text-xs font-semibold text-eco-800">После сохранения backend зафиксирует snapshot норматива; он отображается только для чтения.</p></div> : <p className="text-sm text-amber-700 md:col-span-3">Выберите показатель и норматив из справочника.</p>}
               <NumberField label="Минимум" value={row.minValue} onChange={(value) => updateIndicator(index, { minValue: value })} />
               <NumberField label="Максимум" value={row.maxValue} onChange={(value) => updateIndicator(index, { maxValue: value })} />
               <TextField label="Тип прибора" value={row.measurementDeviceType} onChange={(value) => updateIndicator(index, { measurementDeviceType: value })} />
@@ -453,11 +478,11 @@ const PekProgramCreatePage = () => {
           {controlItems.map((row, index) => <article key={row.clientId} className="rounded-xl border p-4"><strong>{row.code || `Точка ${index + 1}`} · {row.name || 'Без названия'}</strong><div className="mt-3 grid gap-3 md:grid-cols-3"><SelectField label="Периодичность *" value={row.frequencyType} options={pekPeriodicityOptions} onChange={(value) => updateControl(index, { frequencyType: value as PekPeriodicity })} /><NumberField label="Значение периодичности" value={row.frequencyValue} onChange={(value) => updateControl(index, { frequencyValue: value })} /><NumberField label="Плановое количество" value={row.plannedCount} onChange={(value) => updateControl(index, { plannedCount: value })} /><TextField label="Метод измерения" value={row.measurementMethod} onChange={(value) => updateControl(index, { measurementMethod: value })} /><TextField label="Метод отбора" value={row.samplingMethod} onChange={(value) => updateControl(index, { samplingMethod: value })} /></div></article>)}
           {!controlItems.length && <PekState title="Сначала добавьте точки контроля" />}
         </div>}
-        {step === 8 && <label className="block">Порядок внутренних проверок *<textarea {...register('internalInspectionProcedure')} rows={12} className={inputClass} placeholder="Планирование, чек-листы, документирование несоответствий, корректирующие действия и контроль исполнения" /></label>}
-        {step === 9 && <label className="block">Обеспечение качества измерений (QA/QC) *<textarea {...register('measurementQualityAssurance')} rows={12} className={inputClass} placeholder="Аккредитация лабораторий, поверка средств измерений, отбор и транспортировка проб, контроль качества данных" /></label>}
-        {step === 10 && <label className="block">Процедуры при аварийных ситуациях *<textarea {...register('emergencyProcedures')} rows={12} className={inputClass} placeholder="Выявление, оповещение, локализация, внеплановый контроль, документирование и уведомление уполномоченных органов" /></label>}
+        {step === 8 && program.data && <PekProgramStructuredSections program={program.data} section="internal-inspections" />}
+        {step === 9 && program.data && <PekProgramStructuredSections program={program.data} section="measurement-qa" />}
+        {step === 10 && program.data && <PekProgramStructuredSections program={program.data} section="emergency-procedures" />}
         {step === 11 && <div className="space-y-4">
-          <label className="block">Распределение ответственности *<textarea {...register('responsibilityMatrix')} rows={6} className={inputClass} placeholder="Ответственные за мониторинг, внутренние проверки, QA, аварийное реагирование и отчётность" /></label>
+          {program.data && <PekProgramStructuredSections program={program.data} section="responsibilities" />}
           <Button type="button" onClick={() => setValue('measures', [...measures, newMeasure()], { shouldDirty: true })}>Добавить мероприятие</Button>
           {measures.map((row, index) => <article key={row.clientId} className="rounded-xl border p-4">
             <div className="mb-3 flex justify-between"><strong>Мероприятие {index + 1}</strong><button type="button" className="text-rose-700" onClick={() => setValue('measures', measures.filter((_, i) => i !== index), { shouldDirty: true })}>Удалить</button></div>
@@ -477,7 +502,7 @@ const PekProgramCreatePage = () => {
           </article>)}
           {!measures.length && <PekState title="Мероприятия не добавлены" />}
         </div>}
-        {step === 12 && <div className="space-y-4"><h2 className="text-lg font-black">Разрешительные документы объекта</h2>{permits.isLoading ? <PekLoading /> : !activePermits.length ? <PekState title="Действующие документы не найдены" message="Добавьте разрешительные документы в соответствующем разделе ПЭК, затем вернитесь к программе." /> : <div className="space-y-2">{activePermits.map((permit) => <label key={permit.id} className="flex items-start gap-3 rounded-xl border p-3"><input type="checkbox" checked={(watch('permitIds') || []).includes(permit.id)} onChange={(event) => { const current = watch('permitIds') || []; setValue('permitIds', event.target.checked ? [...current, permit.id] : current.filter((id) => id !== permit.id), { shouldDirty: true }); }} /><span><strong>{permit.type} № {permit.number}</strong><span className="block text-sm text-slate-500">Действует до {permit.validTo}</span></span></label>)}</div>}<p className="text-sm text-slate-500">Файлы документов загружаются в карточке программы после её сохранения.</p></div>}
+        {step === 12 && <div className="space-y-4"><h2 className="text-lg font-black">Экологические разрешения</h2><p className="text-sm text-slate-600">Выбрать разрешения</p>{permits.isLoading ? <PekLoading /> : !activePermits.length ? <PekState title="Действующие документы не найдены" message="Добавьте разрешительные документы в соответствующем разделе ПЭК, затем вернитесь к программе." /> : <div className="space-y-2">{activePermits.map((permit) => <label key={permit.id} className="flex items-start gap-3 rounded-xl border p-3"><input type="checkbox" checked={(watch('permitIds') || []).includes(permit.id)} onChange={(event) => { const current = watch('permitIds') || []; setValue('permitIds', event.target.checked ? [...current, permit.id] : current.filter((id) => id !== permit.id), { shouldDirty: true }); }} /><span><strong>{permit.type} № {permit.number}</strong><span className="block text-sm text-slate-500">Выдано: {permit.issuedAt || '—'} · действует до {permit.validTo} · {permit.status}</span></span></label>)}</div>}<p className="text-sm text-slate-500">Показываются только разрешения выбранной компании и объекта.</p></div>}
         {step === 13 && <div className="space-y-3">
           <h2 className="text-lg font-black">Проверка готовности программы</h2>
           <p>Программа: <strong>{watch('number')} · {watch('name')}</strong></p>
@@ -489,6 +514,7 @@ const PekProgramCreatePage = () => {
           <p className="text-sm text-slate-500">Readiness окончательно рассчитывает backend. Сохранение черновика не означает готовность к согласованию.</p>
         </div>}
       </section>
+      <NormativeSelectorModal open={normativeIndicatorIndex != null} templateId={normativeIndicatorIndex == null ? '' : normativeTemplate(normativeIndicatorIndex)} onClose={() => setNormativeIndicatorIndex(null)} onAdd={chooseNormative} onManual={() => toast.error('Ручной норматив доступен только при поддержке причины backend-контрактом.')} />
       <footer className="mt-4 flex flex-wrap justify-between gap-3">
         <Button type="button" variant="secondary" disabled={step === 0 || save.isPending} onClick={() => setStep((value) => value - 1)}>Назад</Button>
         <Button type="button" variant="secondary" disabled={autosave.isPending || createServerDraft.isPending || save.isPending} onClick={saveDraftNow}>

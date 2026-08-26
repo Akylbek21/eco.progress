@@ -16,13 +16,13 @@ const messages: Record<string, string> = {
   PEK_ACTIVE_PROGRAM_MISSING: 'Для выбранного объекта нет действующей программы ПЭК',
   PEK_OBJECT_COMPANY_MISMATCH: 'Выбранный объект не относится к компании',
   VERSION_REQUIRED: 'Для изменения данных требуется актуальная версия',
-  VERSION_CONFLICT: 'Данные были изменены другим пользователем',
-  PEK_VERSION_CONFLICT: 'Данные были изменены другим пользователем',
+  VERSION_CONFLICT: 'Данные были изменены другим сотрудником.\nОбновите страницу и повторите действие.',
+  PEK_VERSION_CONFLICT: 'Данные были изменены другим сотрудником.\nОбновите страницу и повторите действие.',
   PEK_PERMIT_VERSION_CONFLICT: 'Разрешение изменено другим сотрудником. Данные списка обновлены.',
   PEK_PERMIT_TRANSITION_INVALID: 'Этот переход статуса разрешения недоступен.',
   PERMIT_INVALID_RANGE: 'Дата окончания разрешения должна быть не раньше даты начала.',
   PEK_PROGRAM_SCOPE_MISMATCH: 'Выбранная программа ПЭК относится к другому объекту.',
-  OPTIMISTIC_LOCK_CONFLICT: 'Данные были изменены другим пользователем',
+  OPTIMISTIC_LOCK_CONFLICT: 'Данные были изменены другим сотрудником.\nОбновите страницу и повторите действие.',
   PEK_REPORT_NOT_EDITABLE: 'Отчёт нельзя изменять в текущем статусе',
   PEK_REPORT_NOT_READY: 'Отчёт содержит блокирующие проблемы',
   PEK_PROTOCOL_NOT_ELIGIBLE: 'Протокол не соответствует условиям отчёта',
@@ -70,7 +70,7 @@ export const mapPekError = (error: unknown): PekUiError => {
   const status = parsed.status;
   const versionConflict = VERSION_CONFLICT_CODES.has(parsed.code || '') || status === 412;
   const conflictMessage = versionConflict
-    ? 'Данные были изменены другим пользователем'
+    ? 'Данные были изменены другим сотрудником.\nОбновите страницу и повторите действие.'
     : undefined;
   const businessMessage = parsed.code && (
     parsed.code === 'PEK_DOCUMENT_STALE'

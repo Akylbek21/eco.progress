@@ -116,15 +116,12 @@ export type PekPermitCreateRequest = {
   validFrom: string;
   validTo: string;
   authority?: string | null;
-  fileId?: string | null;
   note?: string | null;
-  pekProgramId?: PekId | null;
 };
 export type PekPermitUpdateRequest = Partial<Omit<PekPermitCreateRequest, 'companyId' | 'objectId'>> & {
   version: number;
 };
 export type PekPermitStatusRequest = { version: number; status: PekPermitStatus; comment: string };
-export type PekPermitDeleteRequest = { version: number };
 export type PekPermitHistoryEntry = {
   fromStatus: PekPermitStatus | null;
   toStatus: PekPermitStatus;
@@ -219,6 +216,8 @@ export interface PekIndicator {
   indicatorName: string;
   unit?: string | null;
   normativeId?: PekId | null;
+  normativeDocument?: string | null;
+  normativeRevision?: string | null;
   normativeValue?: number | null;
   comparisonType?: ComparisonType | null;
   minValue?: number | null;
@@ -288,12 +287,9 @@ export interface PekProgram {
   oked?: string | null;
   environmentalCategory?: string | null;
   designCapacity?: string | null;
+  actualCapacity?: string | null;
   productionCharacteristics?: string | null;
   monitoringScope?: string | null;
-  internalInspectionProcedure?: string | null;
-  measurementQualityAssurance?: string | null;
-  emergencyProcedures?: string | null;
-  responsibilityMatrix?: string | null;
   permitIds?: PekId[];
   readinessNotes?: string | null;
 }
@@ -360,12 +356,9 @@ export type PekProgramHeaderFields = {
   oked?: string | null;
   environmentalCategory?: string | null;
   designCapacity?: string | null;
+  actualCapacity?: string | null;
   productionCharacteristics?: string | null;
   monitoringScope?: string | null;
-  internalInspectionProcedure?: string | null;
-  measurementQualityAssurance?: string | null;
-  emergencyProcedures?: string | null;
-  responsibilityMatrix?: string | null;
   permitIds?: PekId[];
   readinessNotes?: string | null;
 };
@@ -585,6 +578,10 @@ export interface PekCollectResponse {
   ambiguousCount: number;
   removedStaleSourceCount: number;
   updatedSourceCount: number;
+  addedCount: number;
+  updatedCount: number;
+  reviewRequiredCount: number;
+  exceedanceCount: number;
   warnings: string[];
 }
 
@@ -667,6 +664,14 @@ export interface PekPlanFactItem {
   hasExceedance: boolean;
   exceedanceCount: number;
   status: string;
+  period?: string | null;
+  directionName?: string | null;
+  monitoringPointId?: number | null;
+  monitoringPointName?: string | null;
+  protocolId?: number | null;
+  protocolNumber?: string | null;
+  resultValue?: number | string | null;
+  measurementPlace?: string | null;
 }
 
 export interface PekPlanFactResponse {
@@ -803,7 +808,92 @@ export interface PekSettings {
 
 export type PekSettingsUpdateRequest = Omit<PekSettings, 'companyId' | 'defaultResponsibleUser' | 'defaultLaboratory' | 'version' | 'availableActions'>;
 
+export interface PekMonitoringPoint {
+  id: number;
+  monitoringId: number;
+  programId: number;
+  name: string;
+  coordinates?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  description: string | null;
+  version: number;
+}
+export type PekMonitoringPointRequest = Pick<PekMonitoringPoint, 'name' | 'description'> & {
+  latitude?: number | null;
+  longitude?: number | null;
+  coordinates?: string | null;
+};
+
+export interface PekInternalInspection {
+  id: number;
+  programId: number;
+  plannedDate: string | null;
+  actualDate: string | null;
+  inspectionType: string | null;
+  findings: string | null;
+  correctiveActionRequired: boolean;
+  responsibleUserId: number | null;
+  status: string;
+  version: number;
+}
+export type PekInternalInspectionRequest = Omit<PekInternalInspection, 'id' | 'programId' | 'version'>;
+
+export interface PekMeasurementQa {
+  id: number;
+  programId: number;
+  parameter: string;
+  qaProcedure: string | null;
+  frequency: string | null;
+  responsibleUserId: number | null;
+  lastCheckDate: string | null;
+  nextCheckDate: string | null;
+  version: number;
+}
+export type PekMeasurementQaRequest = Omit<PekMeasurementQa, 'id' | 'programId' | 'version'>;
+
+export interface PekEmergencyProcedure {
+  id: number;
+  programId: number;
+  scenario: string;
+  actions: string | null;
+  responsibleUserId: number | null;
+  contactPhone: string | null;
+  version: number;
+}
+export type PekEmergencyProcedureRequest = Omit<PekEmergencyProcedure, 'id' | 'programId' | 'version'>;
+
+export interface PekResponsibility {
+  id: number;
+  programId: number;
+  roleLabel: string;
+  userId: number | null;
+  duties: string | null;
+  version: number;
+}
+export type PekResponsibilityRequest = Omit<PekResponsibility, 'id' | 'programId' | 'version'>;
+
+export type PekStaffTier = 'VIEWER' | 'EDITOR' | 'REVIEWER';
+export type PekStaffStatus = 'ACTIVE' | 'INACTIVE';
+export interface PekStaffAssignment {
+  id: number;
+  companyId: number;
+  userId: number;
+  userFullName: string;
+  userEmail: string;
+  tier: PekStaffTier;
+  status: PekStaffStatus;
+  createdAt: string;
+  updatedAt: string;
+  version: number;
+}
+export type PekStaffAssignmentCreateRequest = { email: string; tier: PekStaffTier };
+export type PekStaffAssignmentUpdateRequest = { tier?: PekStaffTier; status?: PekStaffStatus };
+
 export type PekProgramListItem = PekProgram;
 export type PekProgramDetails = PekProgram;
+export type CreatePekProgramRequest = PekProgramCreateRequest;
+export type UpdatePekProgramRequest = PekProgramUpdateRequest;
+export type PekProgramResponse = PekProgram;
 export type PekReportListItem = PekReport;
 export type PekReportDetails = PekReport;

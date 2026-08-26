@@ -40,6 +40,8 @@ export const pekKeys = {
   permitHistory: (id: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'permit', String(id), 'history'] as const,
   scope: (userId?: PekUserScope) => ['pek', userScope(userId), 'scope', 'companies'] as const,
   scopeCompany: (companyId: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'scope', 'companies', String(companyId), 'objects'] as const,
+  programSection: (programId: string | number, section: string, parentId?: string | number) => ['pek', 'program', String(programId), 'sections', section, parentId ?? 'all'] as const,
+  companyStaff: (companyId: string | number, userId?: PekUserScope) => ['pek', userScope(userId), 'company-staff', String(companyId)] as const,
   reportHistory: (id: string | number, companyId?: string | number | null, userId?: PekUserScope) => ['pek', userScope(userId), 'report', companyScope(companyId), String(id), 'history'] as const,
 };
 

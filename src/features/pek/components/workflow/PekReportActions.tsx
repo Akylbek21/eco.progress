@@ -26,7 +26,7 @@ const PekReportActions = ({
   onReject,
   onArchive,
 }: Props) => <div className="flex flex-wrap gap-2">
-  {report.availableActions.collect === true && <Button variant="contained" disabled={isPending} onClick={onCollect}>{report.lastCollectedAt ? 'Повторить сбор' : 'Собрать протоколы'}</Button>}
+  {report.availableActions.collect === true && <Button variant="contained" disabled={isPending} onClick={onCollect}>Получить протоколы</Button>}
   {report.availableActions.submitReview === true && <Button variant="contained" disabled={isPending} onClick={onSubmit}>{report.status === 'RETURNED' ? 'Повторно отправить на проверку' : 'Отправить на проверку'}</Button>}
   {report.availableActions.returnForRevision === true && <Button color="warning" variant="outlined" disabled={isPending} onClick={onReturn}>Вернуть на доработку</Button>}
   {report.availableActions.approve === true && <Button variant="contained" disabled={isPending} onClick={onApprove}>Утвердить</Button>}

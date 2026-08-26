@@ -11,23 +11,27 @@ const explicitPermission = (user: PekUser, permission: string): boolean | undefi
   return user.permissions.includes(permission);
 };
 
-const legacyCreateRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'];
-const legacySupervisorRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD'];
+const viewRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
+const programEditorRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'];
+const reportEditorRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY'];
+const supervisorRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD'];
+const submitterRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'];
+const adminRoles: UserRole[] = ['ADMIN', 'DIRECTOR'];
 
 export const canUsePekPermission = (user: PekUser, permission: string) => {
   const explicit = explicitPermission(user, permission);
   if (explicit !== undefined) return explicit;
-  if (permission === 'PEK_VIEW') {
-    return user?.companyPermissions?.COMPANY_VIEW === true
-      || user?.role === 'ADMIN'
-      || user?.role === 'DIRECTOR';
+  const role = user?.role;
+  if (!role) return false;
+  if (permission === 'PEK_VIEW' || permission === 'PEK_SETTINGS_VIEW' || permission === 'PEK_REPORT_EXPORT') {
+    return user?.companyPermissions?.COMPANY_VIEW === true || viewRoles.includes(role);
   }
-  if (permission === 'PEK_PROGRAM_CREATE' || permission === 'PEK_PROGRAM_EDIT' || permission === 'PEK_REPORT_CREATE') {
-    return Boolean(user?.role && legacyCreateRoles.includes(user.role));
-  }
-  if (permission === 'PEK_PROGRAM_ACTIVATE') {
-    return Boolean(user?.role && legacySupervisorRoles.includes(user.role));
-  }
+  if (permission === 'PEK_PROGRAM_CREATE' || permission === 'PEK_PROGRAM_EDIT') return programEditorRoles.includes(role);
+  if (permission === 'PEK_REPORT_CREATE' || permission === 'PEK_REPORT_EDIT' || permission === 'PEK_REPORT_COLLECT' || permission === 'PEK_REPORT_VALIDATE') return reportEditorRoles.includes(role);
+  if (permission === 'PEK_PROGRAM_ACTIVATE' || permission === 'PEK_PROGRAM_ARCHIVE' || permission === 'PEK_PROGRAM_REVIEW' || permission === 'PEK_PROGRAM_APPROVE') return supervisorRoles.includes(role);
+  if (permission === 'PEK_REPORT_REVIEW' || permission === 'PEK_REPORT_RETURN' || permission === 'PEK_REPORT_APPROVE' || permission === 'PEK_SETTINGS_EDIT') return supervisorRoles.includes(role);
+  if (permission === 'PEK_REPORT_SIGN' || permission === 'PEK_REPORT_SUBMIT') return submitterRoles.includes(role);
+  if (permission === 'PEK_ADMIN') return adminRoles.includes(role);
   return false;
 };
 

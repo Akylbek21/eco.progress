@@ -24,10 +24,10 @@ let companyStatus = 200;
 const objectRequests: number[] = [];
 
 const server = setupServer(
-  http.get('*/api/pek/scope/companies', () => companyStatus === 200
-    ? HttpResponse.json({ data: scopeCompanies })
+  http.get('*/api/companies', () => companyStatus === 200
+    ? HttpResponse.json({ data: { content: scopeCompanies, page: 0, size: 100, totalElements: scopeCompanies.length, totalPages: 1, first: true, last: true } })
     : HttpResponse.json({ code: 'FORBIDDEN' }, { status: companyStatus })),
-  http.get('*/api/pek/scope/companies/:companyId/objects', ({ params }) => {
+  http.get('*/api/companies/:companyId/objects', ({ params }) => {
     const companyId = Number(params.companyId);
     objectRequests.push(companyId);
     return HttpResponse.json({ data: objects[companyId as keyof typeof objects] || [] });

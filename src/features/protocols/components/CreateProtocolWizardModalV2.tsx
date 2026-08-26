@@ -44,7 +44,7 @@ import {
   type LocalProtocolDraftEnvelope,
 } from '../utils/protocolDraftRecovery';
 
-export type ProtocolPekPrefill = Partial<Pick<ProtocolWizardForm, 'companyId' | 'objectId' | 'pekProgramId' | 'pekControlItemId' | 'pekControlEventId' | 'pekReportId' | 'monitoringPointId' | 'emissionSourceId' | 'waterOutletId' | 'measurementDate' | 'measurementPlace'>>;
+export type ProtocolPekPrefill = Partial<Pick<ProtocolWizardForm, 'companyId' | 'objectId' | 'pekProgramId' | 'pekControlItemId' | 'pekControlEventId' | 'pekReportId' | 'monitoringPointId' | 'programIndicatorId' | 'emissionSourceId' | 'waterOutletId' | 'measurementDate' | 'measurementPlace'>>;
 export type CreateProtocolWizardModalV2Props = { open: boolean; onClose: () => void; onCreated: (protocol: Protocol) => void; orderId?: string; orderServiceItemId?: string; pekPrefill?: ProtocolPekPrefill };
 
 const steps = ['Клиент и протокол', 'Условия измерения', 'Результаты', 'Проверка', 'Готово'];

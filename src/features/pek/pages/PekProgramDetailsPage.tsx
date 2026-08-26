@@ -15,9 +15,10 @@ import PekProgramDocuments from '../components/documents/PekProgramDocuments';
 import PekProgramMonitoring from '../components/monitoring/PekProgramMonitoring';
 import PekActionModal from '../components/workflow/PekActionModal';
 import PekReadinessPanel from '../components/common/PekReadinessPanel';
+import PekProgramStructuredSections from '../components/sections/PekProgramStructuredSections';
 import { handlePekMutationError } from '../utils/pekMutationError';
 
-const tabs = ['Обзор', 'Объекты контроля', 'Показатели', 'Мероприятия', 'Документы', 'История изменений', 'Отчёты'];
+const tabs = ['Обзор', 'Объекты контроля', 'Показатели', 'Мероприятия', 'Контроль и ответственность', 'Документы', 'История изменений', 'Отчёты'];
 
 const PekProgramDetailsPage = () => {
   const id = Number(useParams().programId);
@@ -40,6 +41,11 @@ const PekProgramDetailsPage = () => {
     queryKey: programDetailKey,
     queryFn: ({ signal }) => pekApi.getProgram(id, signal),
     enabled: Number.isFinite(id),
+  });
+  const permits = useQuery({
+    queryKey: pekKeys.permits(program.data?.object?.id || 0, user?.id),
+    queryFn: ({ signal }) => pekApi.getPermits(program.data!.object!.id, signal),
+    enabled: Boolean(program.data?.object?.id),
   });
   const workflow = useMutation({
     mutationFn: async ({ item, comment }: { item: PekAvailableAction; comment: string }) => {
@@ -107,7 +113,10 @@ const PekProgramDetailsPage = () => {
       </>}
     />
     {workflowErrors.length > 0 && <section role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900"><strong>Программа не готова к выполнению действия:</strong><ul className="mt-2 list-disc pl-5">{workflowErrors.map((message) => <li key={message}>{message}</li>)}</ul></section>}
-    {item.readiness && <PekReadinessPanel readiness={item.readiness} />}
+    {item.readiness && <PekReadinessPanel readiness={item.readiness} onIssueClick={(issue) => {
+      if (issue.code === 'ACTIVE_PERMIT_REQUIRED') navigate(`/staff/pek/programs/${id}/edit?companyId=${companyId || item.company?.id || ''}&step=12`);
+      if (issue.code === 'MONITORING_POINTS_REQUIRED') document.querySelector('[aria-label="Направления мониторинга"]')?.scrollIntoView({ behavior: 'smooth' });
+    }} />}
     <section className="grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-5">
       <Info label="Версия" value={item.version} />
       <Info label="Период" value={`${item.validFrom} — ${item.validUntil}`} />
@@ -123,13 +132,14 @@ const PekProgramDetailsPage = () => {
       {tabs.map((label, index) => <button key={label} type="button" onClick={() => setTab(index)} className={`whitespace-nowrap px-4 py-3 font-bold ${tab === index ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}
     </nav>
     <section className="rounded-2xl border bg-white p-5">
-      {tab === 0 && <div className="grid gap-3 md:grid-cols-2"><Info label="Компания" value={item.company?.name || '—'} /><Info label="Объект" value={item.object?.name || '—'} /><Info label="Описание" value={item.description || '—'} /><Info label="Последнее изменение" value={item.updatedAt || '—'} /></div>}
+      {tab === 0 && <div className="space-y-5"><div className="grid gap-3 md:grid-cols-2"><Info label="Компания" value={item.company?.name || '—'} /><Info label="Объект" value={item.object?.name || '—'} /><Info label="Описание" value={item.description || '—'} /><Info label="Последнее изменение" value={item.updatedAt || '—'} /><Info label="Проектная мощность" value={item.designCapacity || '—'} /><Info label="Фактическая мощность" value={item.actualCapacity || '—'} /></div><div><h3 className="font-black">Экологические разрешения</h3><div className="mt-3 grid gap-3 md:grid-cols-2">{permits.data?.filter((permit) => item.permitIds?.includes(permit.id)).map((permit) => <article key={permit.id} className="rounded-xl border p-4"><strong>{permit.type} № {permit.number}</strong><p className="mt-1 text-sm">Дата выдачи: {permit.issuedAt || '—'}</p><p className="text-sm">Срок действия: {permit.validFrom} — {permit.validTo}</p><p className="text-sm">Статус: {permit.status}</p></article>)}{!permits.isLoading && !permits.data?.some((permit) => item.permitIds?.includes(permit.id)) && <p className="text-sm text-slate-500">Разрешения не выбраны.</p>}</div></div></div>}
       {tab === 1 && <DataRows rows={item.controlItems || []} />}
       {tab === 2 && <DataRows rows={item.indicators || []} />}
       {tab === 3 && <DataRows rows={item.measures || []} />}
-      {tab === 4 && <PekProgramDocuments companyId={companyId} programId={id} version={item.version} documents={item.documents || []} canUpload={item.availableActions.uploadDocument} />}
-      {tab === 5 && <Link className="font-bold text-eco-700" to={`/staff/pek/programs/${id}/history`}>Открыть историю программы</Link>}
-      {tab === 6 && <Link className="font-bold text-eco-700" to={`/staff/pek/reports?companyId=${item.company?.id || ''}&objectId=${item.object?.id || ''}`}>Открыть отчёты объекта</Link>}
+      {tab === 4 && <PekProgramStructuredSections program={item} />}
+      {tab === 5 && <PekProgramDocuments companyId={companyId} programId={id} version={item.version} documents={item.documents || []} canUpload={item.availableActions.uploadDocument} />}
+      {tab === 6 && <Link className="font-bold text-eco-700" to={`/staff/pek/programs/${id}/history`}>Открыть историю программы</Link>}
+      {tab === 7 && <Link className="font-bold text-eco-700" to={`/staff/pek/reports?companyId=${item.company?.id || ''}&objectId=${item.object?.id || ''}`}>Открыть отчёты объекта</Link>}
     </section>
     <PekActionModal action={action} pending={workflow.isPending} onClose={() => setAction(null)} onConfirm={(comment) => action && workflow.mutate({ item: action, comment })} />
     <Modal

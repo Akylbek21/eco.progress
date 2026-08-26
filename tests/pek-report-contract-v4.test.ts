@@ -20,16 +20,16 @@ describe('PEK report and program aggregate contract', () => {
     expect(report).toMatchObject({ status: 'REJECTED', rejectionReason: 'Исправить расчёты' });
   });
 
-  it('uses distinct official and internal analytical document resources', () => {
+  it('maps official and internal generation onto the backend document resource', () => {
     const service = source('src/features/pek/api/pekService.ts');
     const component = source('src/features/pek/components/documents/PekReportDocuments.tsx');
-    expect(service).toContain("kind === 'OFFICIAL' ? 'official' : 'internal-analytical'");
-    expect(service).toContain("/${preview ? 'preview' : 'download'}/${format}");
+    expect(service).toContain("kind === 'OFFICIAL' ? `generate-official-${format}` : `generate-internal-${format}`");
+    expect(service).toContain("/download/${format}");
     expect(component).toContain("kind: 'OFFICIAL'");
     expect(component).toContain("kind: 'INTERNAL_ANALYTICAL'");
     expect(component).toContain('version.templateVersion');
     expect(component).toContain('version.regulationVersion');
-    expect(component).toContain('version.hasXlsx');
+    expect(component).toContain("formats: ['docx', 'pdf']");
   });
 
   it('versions monitoring by the program aggregate and marks derived data stale', () => {

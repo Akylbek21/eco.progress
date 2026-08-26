@@ -52,6 +52,8 @@ const availableActionFlags = (value: unknown): Record<string, boolean> => Object
 export const mapProgramResponse = (value: unknown): PekProgram => {
   const source = row(validatePekContract(pekProgramContractSchema, value, 'программы ПЭК'));
   const responsible = named(source.responsibleUser || source.responsible);
+  const company = named(source.company) || (source.companyId == null ? null : { id: numberValue(source.companyId), name: String(source.companyName || '') });
+  const object = named(source.object) || (source.objectId == null ? null : { id: numberValue(source.objectId), name: String(source.objectName || '') });
   return {
     ...source,
     id: numberValue(source.id),
@@ -65,8 +67,8 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
     status: String(source.status || ''),
     validFrom: String(source.validFrom || ''),
     validUntil: String(source.validUntil || ''),
-    company: named(source.company),
-    object: named(source.object),
+    company,
+    object,
     responsible,
     responsibleUser: responsible,
     responsibleUserId: source.responsibleUserId == null ? null : numberValue(source.responsibleUserId),
@@ -103,6 +105,15 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
       availableActions: row(source.monitoring).availableActions,
     }, numberValue(source.id)),
     documents: Array.isArray(source.documents) ? source.documents as PekProgram['documents'] : [],
+    facilityInformation: source.facilityInformation == null ? null : String(source.facilityInformation),
+    kato: source.kato == null ? null : String(source.kato),
+    bin: source.bin == null ? null : String(source.bin),
+    oked: source.oked == null ? null : String(source.oked),
+    environmentalCategory: source.environmentalCategory == null ? null : String(source.environmentalCategory),
+    designCapacity: source.designCapacity == null ? null : String(source.designCapacity),
+    actualCapacity: source.actualCapacity == null ? null : String(source.actualCapacity),
+    productionCharacteristics: source.productionCharacteristics == null ? null : String(source.productionCharacteristics),
+    permitIds: Array.isArray(source.permitIds) ? source.permitIds.map((id) => numberValue(id)).filter(Boolean) : [],
   };
 };
 
@@ -186,6 +197,10 @@ export const mapCollectionResult = (value: unknown): PekCollectResponse => {
     ambiguousCount: numberValue(source.ambiguousCount),
     removedStaleSourceCount: numberValue(source.removedStaleSourceCount),
     updatedSourceCount: numberValue(source.updatedSourceCount),
+    addedCount: numberValue(source.addedCount ?? source.addedProtocolCount),
+    updatedCount: numberValue(source.updatedCount ?? source.updatedSourceCount),
+    reviewRequiredCount: numberValue(source.reviewRequiredCount ?? source.ambiguousCount),
+    exceedanceCount: numberValue(source.exceedanceCount),
     warnings: Array.isArray(source.warnings) ? source.warnings.map(String) : [],
   };
 };

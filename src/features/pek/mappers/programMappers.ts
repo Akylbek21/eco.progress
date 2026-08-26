@@ -21,6 +21,8 @@ const mapIndicators = (form: PekProgramForm) => form.indicators.map((indicator) 
     clientId: _clientId,
     controlItemClientId,
     controlItemIndex: existingIndex,
+    normativeDocument: _normativeDocument,
+    normativeRevision: _normativeRevision,
     ...result
   } = indicator;
   if (result.controlItemId) return result;
@@ -52,12 +54,9 @@ const header = (form: PekProgramForm) => ({
   oked: form.oked?.trim() || null,
   environmentalCategory: form.environmentalCategory?.trim() || null,
   designCapacity: form.designCapacity?.trim() || null,
+  actualCapacity: form.actualCapacity?.trim() || null,
   productionCharacteristics: form.productionCharacteristics?.trim() || null,
   monitoringScope: form.monitoringScope?.trim() || null,
-  internalInspectionProcedure: form.internalInspectionProcedure?.trim() || null,
-  measurementQualityAssurance: form.measurementQualityAssurance?.trim() || null,
-  emergencyProcedures: form.emergencyProcedures?.trim() || null,
-  responsibilityMatrix: form.responsibilityMatrix?.trim() || null,
   permitIds: form.permitIds || [],
   readinessNotes: form.readinessNotes?.trim() || null,
 });
@@ -120,12 +119,9 @@ export const mapProgramToForm = (program: PekProgram): PekProgramForm => {
     oked: program.oked || '',
     environmentalCategory: program.environmentalCategory || '',
     designCapacity: program.designCapacity || '',
+    actualCapacity: program.actualCapacity || '',
     productionCharacteristics: program.productionCharacteristics || '',
     monitoringScope: program.monitoringScope || '',
-    internalInspectionProcedure: program.internalInspectionProcedure || '',
-    measurementQualityAssurance: program.measurementQualityAssurance || '',
-    emergencyProcedures: program.emergencyProcedures || '',
-    responsibilityMatrix: program.responsibilityMatrix || '',
     permitIds: program.permitIds || [],
     readinessNotes: program.readinessNotes || '',
     version: program.version,

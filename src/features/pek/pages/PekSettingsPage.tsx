@@ -15,19 +15,12 @@ import { usePekScope } from '../hooks/usePekScope';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { handlePekMutationError } from '../utils/pekMutationError';
 import { retryPekQuery } from '../utils/pekQueryPolicy';
+import PekCompanyStaff from '../components/settings/PekCompanyStaff';
 
-const booleanFields: Array<[keyof PekSettingsUpdateRequest, string]> = [
-  ['includeOnlySignedProtocols', 'Учитывать только подписанные протоколы'],
-  ['allowFallbackMatching', 'Разрешить дополнительное автоматическое сопоставление'],
-  ['requireManualAmbiguousConfirmation', 'Требовать ручное подтверждение неоднозначных результатов'],
-  ['requireAllPlanFactItems', 'Требовать выполнение всего плана контроля'],
-  ['blockSubmitWithUnmatchedResults', 'Блокировать отправку при несопоставленных результатах'],
-  ['blockSubmitWithAmbiguousResults', 'Блокировать отправку при неоднозначных результатах'],
-  ['blockSubmitWithStaleSources', 'Блокировать отправку при устаревших связях'],
-  ['blockSubmitWithOpenExceedances', 'Блокировать отправку при открытых превышениях'],
-  ['notifyMissingProtocols', 'Уведомлять об отсутствующих протоколах'],
-  ['notifyExceedances', 'Уведомлять о превышениях'],
-  ['notifyReportReturned', 'Уведомлять о возврате отчёта'],
+const settingsGroups: Array<{ title: string; fields: Array<[keyof PekSettingsUpdateRequest, string]> }> = [
+  { title: 'Сбор протоколов', fields: [['includeOnlySignedProtocols', 'Использовать только подписанные'], ['allowFallbackMatching', 'Дополнительное автоматическое сопоставление'], ['requireManualAmbiguousConfirmation', 'Требовать ручное подтверждение неоднозначных результатов']] },
+  { title: 'Проверка готовности', fields: [['requireAllPlanFactItems', 'Требовать выполнение плана'], ['blockSubmitWithUnmatchedResults', 'Блокировать при несопоставленных'], ['blockSubmitWithAmbiguousResults', 'Блокировать при неоднозначных'], ['blockSubmitWithStaleSources', 'Блокировать при устаревших'], ['blockSubmitWithOpenExceedances', 'Блокировать при открытых превышениях']] },
+  { title: 'Уведомления', fields: [['notifyMissingProtocols', 'Нет обязательных протоколов'], ['notifyExceedances', 'Обнаружено превышение'], ['notifyReportReturned', 'Отчёт возвращён']] },
 ];
 
 const toRequest = (value: NonNullable<Awaited<ReturnType<typeof pekApi.getSettings>>>): PekSettingsUpdateRequest => {
@@ -86,7 +79,7 @@ const PekSettingsPage = () => {
       const mapped = await handlePekMutationError(error, () => settings.refetch());
       const fields = Object.entries(mapped.fieldErrors).map(([field, value]) => `${field}: ${value}`).join('; ');
       setMessage(`${mapped.message || parseApiError(error, 'Не удалось сохранить настройки ПЭК.').message}${mapped.code ? ` (${mapped.code})` : ''}${fields ? `. ${fields}` : ''}`);
-      if (mapped.message !== 'Данные были изменены другим пользователем') await settings.refetch();
+      if (mapped.status !== 409) await settings.refetch();
     },
     retry: false,
   });
@@ -116,13 +109,15 @@ const PekSettingsPage = () => {
       <div className="grid gap-4 md:grid-cols-3">
         <TextField select label="Тип отчётного периода" value={form.defaultReportType} disabled={!editable} onChange={(event) => set('defaultReportType', event.target.value as 'QUARTERLY' | 'YEARLY')}><MenuItem value="QUARTERLY">Квартальный</MenuItem><MenuItem value="YEARLY">Годовой</MenuItem></TextField>
         <TextField select label="Ответственный по умолчанию" value={form.defaultResponsibleUserId ?? ''} disabled={!editable || assignees.isLoading} onChange={(event) => set('defaultResponsibleUserId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбран</MenuItem>{assignees.data?.map((user) => <MenuItem key={user.id} value={user.id}>{user.name}</MenuItem>)}</TextField>
-        <TextField select label="Лаборатория по умолчанию" value={form.defaultLaboratoryId ?? ''} disabled={!editable || laboratories.isLoading} onChange={(event) => set('defaultLaboratoryId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбрана</MenuItem>{laboratories.data?.content.map((laboratory) => <MenuItem key={laboratory.id} value={laboratory.id}>{laboratory.name}</MenuItem>)}</TextField>
+        <TextField select label="Лаборатория по умолчанию для создания протоколов" value={form.defaultLaboratoryId ?? ''} disabled={!editable || laboratories.isLoading} onChange={(event) => set('defaultLaboratoryId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбрана</MenuItem>{laboratories.data?.content.map((laboratory) => <MenuItem key={laboratory.id} value={laboratory.id}>{laboratory.name}</MenuItem>)}</TextField>
         <TextField type="number" label="Уведомлять до срока, дней" value={form.notifyBeforeDeadlineDays} disabled={!editable} inputProps={{ min: 0, max: 365 }} onChange={(event) => set('notifyBeforeDeadlineDays', Number(event.target.value))} />
       </div>
-      <FormControlLabel control={<Checkbox checked={form.autoCollectProtocols} disabled={!editable} onChange={(event) => set('autoCollectProtocols', event.target.checked)} />} label="Автоматически собирать протоколы" />
-      <div className="grid gap-2 md:grid-cols-2">{booleanFields.map(([key, label]) => <FormControlLabel key={key} control={<Checkbox checked={Boolean(form[key])} disabled={!editable} onChange={(event) => set(key, event.target.checked)} />} label={label} />)}</div>
+      <FormControlLabel control={<Checkbox checked={form.autoCollectProtocols} disabled={!editable} onChange={(event) => set('autoCollectProtocols', event.target.checked)} />} label="Автоматически получать протоколы" />
+      <div className="grid gap-4 lg:grid-cols-3">{settingsGroups.map((group) => <fieldset key={group.title} className="rounded-xl border p-4"><legend className="px-2 font-black">{group.title}</legend><div className="grid gap-2">{group.fields.map(([key, label]) => <FormControlLabel key={key} control={<Checkbox checked={Boolean(form[key])} disabled={!editable} onChange={(event) => set(key, event.target.checked)} />} label={label} />)}</div></fieldset>)}</div>
+      {canRunScheduler && <Button variant="outlined" disabled={runScheduler.isPending} onClick={() => runScheduler.mutate()}>{runScheduler.isPending ? 'Получаем протоколы…' : 'Получить протоколы сейчас'}</Button>}
       {editable && <div className="flex justify-end gap-3"><Button variant="outlined" disabled={!dirty || save.isPending} onClick={() => settings.data && setForm(toRequest(settings.data))}>Сбросить</Button><Button variant="contained" disabled={!dirty || save.isPending} onClick={() => save.mutate(form)}>{save.isPending ? 'Сохранение…' : 'Сохранить'}</Button></div>}
     </section>
+    <PekCompanyStaff companyId={selectedCompanyId} editable={editable} />
     <section className="space-y-4 rounded-2xl border bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-black">Автоматизация</h2><p className="text-sm text-slate-500">Параметры берутся из настроек ПЭК выбранной компании.</p></div>{canRunScheduler && <Button variant="contained" disabled={runScheduler.isPending} onClick={() => runScheduler.mutate()}>{runScheduler.isPending ? 'Запуск…' : 'Запустить для выбранной компании'}</Button>}</div>
       <p className="text-sm text-slate-600">Автосбор протоколов: <strong>{settings.data.autoCollectProtocols ? 'включён' : 'выключен'}</strong>. Период отчёта: <strong>{settings.data.defaultReportType === 'YEARLY' ? 'год' : 'квартал'}</strong>.</p>

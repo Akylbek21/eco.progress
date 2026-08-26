@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
-import { History, Pencil, Plus, ShieldAlert, Trash2 } from 'lucide-react';
+import { History, Pencil, Plus, ShieldAlert } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
@@ -64,9 +64,7 @@ const PermitEditor = ({ permit, companyId, objectId, pending, error, onClose, on
       validFrom,
       validTo,
       authority: String(form.get('authority') || '').trim(),
-      fileId: String(form.get('fileId') || '').trim() || null,
       note: String(form.get('note') || '').trim() || null,
-      pekProgramId: Number(form.get('pekProgramId')) || null,
     };
     onSubmit(permit
       ? { ...values, version: permit.version }
@@ -100,11 +98,9 @@ const PermitEditor = ({ permit, companyId, objectId, pending, error, onClose, on
       <label className="text-sm font-semibold text-slate-700">Действует до *
         <input name="validTo" type="date" required defaultValue={permit?.validTo || ''} min={permit?.validFrom || undefined} onInput={(event) => event.currentTarget.setCustomValidity('')} className={fieldClass} />
       </label>
-      <label className="text-sm font-semibold text-slate-700">Файл/документ
-        <input name="fileId" defaultValue={permit?.fileId || ''} placeholder="fileId (необязательно)" className={fieldClass} />
-      </label>
-      <label className="text-sm font-semibold text-slate-700">Программа ПЭК
-        <input name="pekProgramId" type="number" min="1" defaultValue={permit?.pekProgramId || ''} placeholder="ID программы (необязательно)" className={fieldClass} />
+      <label className="text-sm font-semibold text-slate-700 md:col-span-2">Файл разрешения
+        <input name="permitFile" type="file" accept=".pdf,.doc,.docx,image/*" className={fieldClass} />
+        <span className="mt-1 block text-xs font-normal text-slate-500">Файл выбирается с устройства; технический идентификатор документа пользователю не требуется.</span>
       </label>
       <label className="text-sm font-semibold text-slate-700 md:col-span-2">Примечание
         <textarea name="note" rows={3} defaultValue={permit?.note || ''} className={fieldClass} />
@@ -127,7 +123,7 @@ const PekPermitsPage = () => {
   const [historyPermit, setHistoryPermit] = useState<PekPermit | null>(null);
   const [mutationError, setMutationError] = useState('');
   const canCreate = canUsePekPermission(user, 'PEK_PROGRAM_EDIT');
-  const canChangePermitStatus = canUsePekPermission(user, 'PEK_PROGRAM_ACTIVATE');
+  const canChangePermitStatus = canUsePekPermission(user, 'PEK_PROGRAM_EDIT');
   const listKey = pekKeys.permits(objectId, user?.id);
 
   const updateFilter = (key: 'companyId' | 'objectId', value: string) => {
@@ -168,16 +164,6 @@ const PekPermitsPage = () => {
   const changeStatus = useMutation({
     mutationFn: ({ permit, status, comment }: { permit: PekPermit; status: PekPermitStatus; comment: string }) =>
       pekApi.changePermitStatus(permit.id, { version: permit.version, status, comment }),
-    onSuccess: async () => queryClient.invalidateQueries({ queryKey: listKey }),
-    onError: async (error) => {
-      const mapped = await handlePekMutationError(error, () => queryClient.invalidateQueries({ queryKey: listKey }));
-      window.alert(mapped.message);
-    },
-    retry: false,
-  });
-
-  const remove = useMutation({
-    mutationFn: (permit: PekPermit) => pekApi.deletePermit(permit.id, { version: permit.version }),
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: listKey }),
     onError: async (error) => {
       const mapped = await handlePekMutationError(error, () => queryClient.invalidateQueries({ queryKey: listKey }));
@@ -227,19 +213,18 @@ const PekPermitsPage = () => {
             ? <PekState title="Разрешений пока нет" message={canCreate ? 'Нажмите «Добавить разрешение» справа вверху и заполните данные документа.' : 'У вашей учётной записи нет права PEK_PROGRAM_EDIT для добавления разрешений. Обратитесь к администратору.'} />
             : <div className="overflow-x-auto rounded-2xl border bg-white">
               <table className="w-full min-w-[1050px] text-sm">
-                <thead className="bg-slate-50 text-left"><tr>{['Тип и номер', 'Орган выдачи', 'Дата выдачи', 'Срок действия', 'Статус', 'Связи', 'Действия'].map((label) => <th key={label} className="px-4 py-3">{label}</th>)}</tr></thead>
+                <thead className="bg-slate-50 text-left"><tr>{['Тип и номер', 'Орган выдачи', 'Дата выдачи', 'Срок действия', 'Статус', 'Документ', 'Действия'].map((label) => <th key={label} className="px-4 py-3">{label}</th>)}</tr></thead>
                 <tbody>{permits.data.map((permit) => <tr key={permit.id} className="border-t align-top">
                   <td className="px-4 py-3"><p className="font-bold text-slate-900">{permit.type}</p><p className="mt-1 text-slate-600">№ {permit.number}</p></td>
                   <td className="px-4 py-3">{permit.authority || '—'}</td>
                   <td className="px-4 py-3">{permit.issuedAt || '—'}</td>
                   <td className="px-4 py-3"><p>{permit.validFrom} — {permit.validTo}</p>{permit.status === 'ACTIVE' && !permit.effectivelyActive && <p className="mt-1 text-xs font-semibold text-amber-700">Вне срока действия</p>}</td>
                   <td className="px-4 py-3"><span className={`rounded-full px-3 py-1 text-xs font-bold ${statusClasses[permit.status]}`}>{statusLabels[permit.status]}</span></td>
-                  <td className="px-4 py-3 text-xs text-slate-600"><p>Файл: {permit.fileId || '—'}</p><p className="mt-1">Программа: {permit.pekProgramId || '—'}</p></td>
+                  <td className="px-4 py-3 text-xs text-slate-600">{permit.fileId ? 'Файл прикреплён' : 'Нет файла'}</td>
                   <td className="px-4 py-3"><div className="flex flex-wrap gap-2">
                     {(permit.availableActions?.edit ?? canCreate) && <Button type="button" variant="secondary" disabled={openPermit.isPending} onClick={() => openPermit.mutate(permit.id)}><Pencil size={14} /> Изменить</Button>}
                     {(permit.availableActions?.markExpired ?? canChangePermitStatus) && <Button type="button" variant="secondary" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'EXPIRED')}><ShieldAlert size={14} /> Истёк</Button>}
                     {(permit.availableActions?.revoke ?? canChangePermitStatus) && <Button type="button" variant="danger" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'REVOKED')}><ShieldAlert size={14} /> Отозвать</Button>}
-                    {permit.availableActions?.delete === true && <Button type="button" variant="danger" disabled={remove.isPending} onClick={() => { if (window.confirm(`Удалить разрешение № ${permit.number}?`)) remove.mutate(permit); }}><Trash2 size={14} /> Удалить</Button>}
                     <Button type="button" variant="secondary" onClick={() => setHistoryPermit(permit)}><History size={14} /> История</Button>
                   </div></td>
                 </tr>)}</tbody>

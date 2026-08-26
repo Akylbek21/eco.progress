@@ -74,6 +74,7 @@ export interface ProtocolPekContextRequest {
   pekControlItemId?: number | null;
   pekControlEventId?: number | null;
   monitoringPointId?: number | null;
+  programIndicatorId?: number | null;
   emissionSourceId?: number | null;
   waterOutletId?: number | null;
 }

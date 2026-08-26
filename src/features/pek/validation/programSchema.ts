@@ -20,12 +20,9 @@ export const pekProgramFormSchema = z.object({
   oked: z.string().nullish(),
   environmentalCategory: z.string().nullish(),
   designCapacity: z.string().nullish(),
+  actualCapacity: z.string().nullish(),
   productionCharacteristics: z.string().nullish(),
   monitoringScope: z.string().nullish(),
-  internalInspectionProcedure: z.string().nullish(),
-  measurementQualityAssurance: z.string().nullish(),
-  emergencyProcedures: z.string().nullish(),
-  responsibilityMatrix: z.string().nullish(),
   permitIds: z.array(z.number().int().positive()).optional(),
   readinessNotes: z.string().nullish(),
   controlItems: z.array(z.object({
