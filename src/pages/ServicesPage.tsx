@@ -9,7 +9,7 @@ import WhatsAppButton from '../components/WhatsAppButton';
 import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
 import { fallbackServices, getServiceCatalog } from '../services/serviceService';
-import { activeServices, formatKztPrice, PRELIMINARY_PRICE_NOTICE } from '../content/serviceCatalog';
+import { activeServices, formatKztPrice, GENERAL_PRIMARY_CTA_LABEL, getServicePrimaryCtaLabel, PRELIMINARY_PRICE_NOTICE } from '../content/serviceCatalog';
 import { getBusinessCompanyById } from '../utils/crm';
 import type { ServiceCategory } from '../types';
 
@@ -22,7 +22,7 @@ const ServicesPage = () => {
   const { data, isError } = useQuery({
     queryKey: ['services'],
     queryFn: getServiceCatalog,
-    initialData: import.meta.env.DEV ? { items: fallbackServices, source: 'fallback' } : undefined,
+    initialData: { items: fallbackServices, source: 'fallback' },
     initialDataUpdatedAt: 0,
   });
   const services = data?.items ?? [];
@@ -96,8 +96,8 @@ const ServicesPage = () => {
           <Reveal delay={0.1}><p className="mt-4 max-w-2xl text-base leading-7 text-white/78 sm:mt-5 sm:text-lg">Проектная документация и лабораторные исследования по Казахстану. Утилизация отходов — в Шымкенте, Таразе и Туркестане; транспортировка и размещение — в Шымкенте.</p></Reveal>
           <Reveal delay={0.16}>
             <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
-              <Button type="button" onClick={() => setOrderModal('')} className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Заказать услугу</Button>
-              <WhatsAppButton label="Оставить заявку через WhatsApp" className="w-full sm:w-auto" />
+              <Button type="button" onClick={() => setOrderModal('')} className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">{GENERAL_PRIMARY_CTA_LABEL}</Button>
+              <WhatsAppButton label="Написать в WhatsApp" className="w-full sm:w-auto" />
             </div>
           </Reveal>
         </div>
@@ -164,7 +164,7 @@ const ServicesPage = () => {
                   </div>
                   <div className="mt-5 grid gap-3 sm:mt-6 sm:flex sm:flex-wrap">
                     <Button asChild variant="secondary" className="w-full sm:w-auto"><Link to={`/services/${service.id}`}>Подробнее</Link></Button>
-                    <Button type="button" onClick={() => setOrderModal(service.id)} className="w-full sm:w-auto">{(selectedIncludes[service.id] ?? []).length > 0 ? 'Заказать выбранные' : 'Заказать услугу'}</Button>
+                    <Button type="button" onClick={() => setOrderModal(service.id)} className="w-full sm:w-auto">{(selectedIncludes[service.id] ?? []).length > 0 ? 'Заказать выбранные' : getServicePrimaryCtaLabel(service.id)}</Button>
                   </div>
                 </div>
               </Reveal>

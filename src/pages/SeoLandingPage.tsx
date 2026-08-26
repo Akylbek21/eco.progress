@@ -16,6 +16,7 @@ import type { CaseStudy, Expert } from '../content/types';
 import { publicContentRepository } from '../content/apiRepository';
 import { articleRobotsForReviewStatus } from '../content/articleReview';
 import { AeoFaqList, RelatedCaseStudies, VerifiedExperts } from '../components/content/AeoContent';
+import { GENERAL_PRIMARY_CTA_LABEL } from '../content/serviceCatalog';
 
 const buildSchema = (page: SeoPageConfig, author?: Expert, reviewer?: Expert, experts: Expert[] = [], cases: CaseStudy[] = []) => {
   const ids = entityIds(page.canonical);
@@ -53,7 +54,7 @@ const ListBlock = ({ title, items }: { title: string; items: string[] }) => (
 const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
   const { seoSlug } = useParams();
   const { pathname } = useLocation();
-  const slug = slugProp || (pathname === '/kk' ? 'kk/' : pathname.startsWith('/kk/') ? pathname.replace(/^\//, '') : seoSlug) || '';
+  const slug = slugProp || (pathname === '/kk' ? 'kk' : pathname.startsWith('/kk/') ? pathname.replace(/^\//, '') : seoSlug) || '';
   const page = seoPageMap.get(slug);
   const { data: apiExperts = [] } = useQuery({
     queryKey: ['public-content', 'experts'],
@@ -132,22 +133,32 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
               <p className="text-sm font-bold uppercase tracking-[0.22em] text-accent">{page.city || page.service || 'ECOPROGRESS'}</p>
               <h1 className="mt-5 max-w-5xl text-4xl font-bold leading-tight sm:text-5xl">{page.h1}</h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-white/84">{page.intro}</p>
+              {page.heroBenefits?.length ? (
+                <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-3" aria-label="Преимущества">
+                  {page.heroBenefits.map((benefit) => (
+                    <li key={benefit} className="inline-flex items-center gap-2 text-sm font-semibold text-white/90">
+                      <CheckCircle2 className="shrink-0 text-accent" size={19} aria-hidden="true" />
+                      <span>{benefit}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               <div className="mt-8 flex flex-wrap gap-3">
-                <Button asChild className="bg-accent px-6 py-4 text-eco-900 hover:bg-accent/90"><a href="#lead-form">{isKk ? 'Кеңес алу' : 'Получить консультацию'}</a></Button>
+                <Button asChild className="bg-accent px-6 py-4 text-eco-900 hover:bg-accent/90"><a href={page.heroBenefits?.length ? '#hero-lead-form' : '#lead-form'}>{page.primaryCtaLabel || (isKk ? 'Кеңес алу' : GENERAL_PRIMARY_CTA_LABEL)}</a></Button>
                 <Button asChild variant="secondary" className="gap-2 border-white/30 bg-white/10 px-6 py-4 text-white hover:bg-white/18">
                   <a href={whatsAppUrl} target="_blank" rel="noreferrer">
-                    <MessageCircle size={18} /> {isKk ? 'WhatsApp арқылы жазу' : 'Написать в WhatsApp'}
+                    <MessageCircle size={18} /> {page.secondaryCtaLabel || (isKk ? 'WhatsApp арқылы жазу' : 'Написать в WhatsApp')}
                   </a>
                 </Button>
               </div>
             </div>
-            <div className="rounded-[8px] border border-white/15 bg-white/10 p-6 backdrop-blur">
+            {page.heroBenefits?.length ? <div id="hero-lead-form"><LeadForm source={`seo_hero_${page.slug}`} formId={`seo_hero_${page.slug}`} ctaId="hero_calculate" sourcePage={`/${page.slug}`} serviceSlug={page.serviceSlug} defaultService={page.service || 'Экологические услуги'} title={isKk ? 'Қысқа өтінім' : 'Короткая заявка'} submitLabel={page.primaryCtaLabel || (isKk ? 'Құнын есептеу' : GENERAL_PRIMARY_CTA_LABEL)} locale={isKk ? 'kk' : 'ru'} compact /></div> : <div className="rounded-[8px] border border-white/15 bg-white/10 p-6 backdrop-blur">
               <ShieldCheck className="text-accent" size={34} />
               <h2 className="mt-5 text-2xl font-bold">{isKk ? 'Жұмысты неден бастаймыз' : 'Что сделаем на старте'}</h2>
               <p className="mt-4 text-sm leading-6 text-white/75">
                 {startText}
               </p>
-            </div>
+            </div>}
           </div>
         </div>
       </section>
@@ -175,7 +186,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
             {page.sections.map((section) => (
               <article key={section.title} className="rounded-[8px] border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-2xl font-bold text-eco-900">{section.title}</h2>
-                <p className="mt-4 text-sm leading-7 text-slate-600">{section.body}</p>
+                <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">{section.body}</p>
               </article>
             ))}
           </div>
@@ -227,6 +238,8 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
               defaultService={page.service || 'Экологические услуги'}
               locale={isKk ? 'kk' : 'ru'}
               title={isKk ? 'Өтінім қалдыру' : 'Получить расчёт'}
+              submitLabel={page.primaryCtaLabel || (isKk ? 'Құнын есептеу' : GENERAL_PRIMARY_CTA_LABEL)}
+              compact={Boolean(page.serviceSlug)}
             />
           </div>
         </div>

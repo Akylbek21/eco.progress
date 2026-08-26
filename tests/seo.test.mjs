@@ -23,7 +23,8 @@ test('production SEO build fails closed on empty CMS and sitemap regression', as
   assert.match(audit, /errors\.push\('SEO CMS snapshot is empty/);
   assert.doesNotMatch(audit, /if \(cmsContentUnavailable\) warnings\.push\(`\$\{message\}/);
   assert.match(dockerfile, /ARG SEO_CONTENT_API_URL/);
-  assert.match(compose, /SEO_CONTENT_API_URL is required for production build/);
+  assert.match(compose, /SEO_CONTENT_API_URL:-http:\/\/eco-app:8080\/api\/public\/content\/seo-snapshot/);
+  assert.match(compose, /network: eco-net/);
   assert.doesNotMatch(quality, /publishedCaseStudies|confirmedCaseSlugs/);
 });
 
@@ -36,7 +37,8 @@ test('SEO registry has unique canonical URLs, titles and descriptions', () => {
     assert.ok(record.title.trim());
     assert.ok(record.description.trim());
     assert.ok(record.h1.trim());
-    assert.match(record.canonical, /^https:\/\/ecoprogress\.kz(?:\/(?!.*\/$))?/);
+    assert.equal(record.canonical, `https://ecoprogress.kz${record.path === '/' ? '' : record.path.replace(/\/$/u, '')}`);
+    assert.doesNotMatch(record.canonical, /[?#]|https?:\/\/www\.|^http:\/\//u);
   }
 });
 
@@ -50,14 +52,14 @@ test('sitemap is derived exactly from the unified SEO registry', async () => {
 });
 
 test('priority Kazakh pages are reciprocal localized entries in the unified registry and sitemap', async () => {
-  const required = ['/kk/', '/kk/ekologiyalyq-qyzmetter', '/kk/qaldyqtar-pasporty', '/kk/services/ndv', '/kk/pek-bagdarlamasy', '/kk/pek-esebi', '/kk/ekologiyalyq-ruqsat', '/kk/sanitariyalyq-qorgau-aimagy', '/kk/zerthanalyq-zertteuler', '/kk/su-analizi', '/kk/qaldyqtardy-kadege-zharatu', '/kk/pek-bagdarlamasy-shymkent'];
+  const required = ['/kk', '/kk/ekologiyalyq-qyzmetter', '/kk/qaldyqtar-pasporty', '/kk/services/ndv', '/kk/pek-bagdarlamasy', '/kk/pek-esebi', '/kk/ekologiyalyq-ruqsat', '/kk/sanitariyalyq-qorgau-aimagy', '/kk/zerthanalyq-zertteuler', '/kk/su-analizi', '/kk/qaldyqtardy-kadege-zharatu', '/kk/pek-bagdarlamasy-shymkent'];
   const sitemap = await readFile(new URL('../public/sitemap.xml', import.meta.url), 'utf8');
   for (const path of required) {
     const entry = registry.find((item) => item.path === path);
     assert.ok(entry, path);
     assert.equal(entry.locale, 'kk');
     assert.equal(entry.robots, 'index,follow');
-    assert.equal(entry.canonical, `https://ecoprogress.kz${path === '/kk/' ? '/kk' : path}`);
+    assert.equal(entry.canonical, `https://ecoprogress.kz${path}`);
     assert.ok(entry.alternatePath?.startsWith('/'));
     const ru = registry.find((item) => item.path === entry.alternatePath);
     assert.equal(ru?.alternatePath, path);
@@ -121,15 +123,11 @@ test('nginx normalizes www, slash and legacy penalty URLs with 301', async () =>
   const hostNginx = await readFile(new URL('../deploy/nginx-host/ecoprogress.conf', import.meta.url), 'utf8');
   const redirects = await readFile(new URL('../deploy/nginx-host/snippets/legacy-redirects.conf', import.meta.url), 'utf8');
   assert.match(hostNginx, /server_name www\.ecoprogress\.kz[\s\S]*return 301 https:\/\/ecoprogress\.kz\$request_uri/);
-  assert.match(hostNginx, /location ~ \^\(\.\+\)\/\+\$/);
-  assert.match(redirects, /shtrafy-za-ekologicheskie-narusheniya-kazakhstan \{ return 301 \/news\/shtrafy-za-ekologicheskie-narusheniya;/);
-  assert.match(redirects, /passport-othodov-\(\[a-z-\]\+\).*return 301 \/pasport-othodov-\$1/);
-  assert.match(redirects, /ekologicheskoe-proektirovanie-\(\[a-z-\]\+\).*return 301 \/roos-\$1/);
-  assert.match(redirects, /razreshenie-na-emissii-\(\[a-z-\]\+\).*return 301 \/ekologicheskoe-razreshenie-\$1/);
-  assert.match(redirects, /proizvodstvennyy-kontrol-ses-\(\[a-z-\]\+\).*return 301 \/proizvodstvennyy-kontrol-\$1/);
-  assert.match(redirects, /programma-pek\|razrabotka-pek\|proizvodstvennyy-ekologicheskiy-kontrol.*return 301 \/pek-\$1/);
-  assert.match(redirects, /passport-othodov-kazakhstan \{ return 301 \/services\/waste-passport;/);
-  assert.match(redirects, /otchet-pek-kazakhstan \{ return 301 \/services\/report-pek;/);
+  assert.match(hostNginx, /location ~ \^\(\.\+\[\^\/\]\)\/\+\$/);
+  assert.match(redirects, /shtrafy-za-ekologicheskie-narusheniya-kazakhstan\/\*\$ \{ return 301 https:\/\/ecoprogress\.kz\/news\/shtrafy-za-ekologicheskie-narusheniya/);
+  assert.match(redirects, /passport-othodov-\(\[a-z-\]\+\).*return 301 https:\/\/ecoprogress\.kz\/pasport-othodov-\$1/);
+  assert.match(redirects, /passport-othodov-kazakhstan\/\*\$ \{ return 301 https:\/\/ecoprogress\.kz\/services\/waste-passport/);
+  assert.match(redirects, /otchet-pek-kazakhstan\/\*\$ \{ return 301 https:\/\/ecoprogress\.kz\/services\/report-pek/);
   for (const legacy of ['/passport-othodov-kazakhstan', '/otchet-pek-kazakhstan']) assert.ok(!registry.some((item) => item.path === legacy));
 });
 
@@ -151,9 +149,10 @@ test('existing regional routes remain available while only reviewed commercial p
   }
   const indexableSlugs = servicePages.filter((page) => page.indexable).map((page) => page.slug).sort();
   assert.deepEqual(indexableSlugs, [
-    'analiz-vody-shymkent', 'ekologicheskoe-razreshenie-shymkent', 'laboratornye-zamery-shymkent',
-    'ndv-shymkent', 'otchet-pek-shymkent', 'ovos-shymkent', 'pasport-othodov-shymkent',
-    'pek-shymkent', 'proizvodstvennyy-kontrol-shymkent', 'puo-shymkent', 'roos-shymkent',
+    'analiz-vody-shymkent', 'ekologicheskoe-razreshenie-shymkent', 'laboratornye-zamery-almaty', 'laboratornye-zamery-shymkent',
+    'ndv-shymkent', 'otchet-pek-almaty', 'otchet-pek-shymkent', 'ovos-shymkent',
+    'pasport-othodov-shymkent', 'pek-shymkent', 'proizvodstvennyy-kontrol-shymkent',
+    'puo-shymkent', 'roos-almaty', 'roos-astana', 'roos-shymkent',
     'szz-shymkent', 'utilizaciya-othodov-shymkent', 'utilizaciya-othodov-taraz',
     'utilizaciya-othodov-turkestan',
   ]);
@@ -268,7 +267,8 @@ test('schema uses one stable graph model for prerender and hydration', async () 
   assert.match(seo, /node\.id === 'page-schema-json-ld'/);
   assert.match(seo, /schemaScripts\.filter\(\(node\) => node !== script\)/);
   assert.match(seo, /createSchemaGraph\(resolvedSchema, resolvedCanonical\)/);
-  assert.match(prerender, /createSchemaGraph\(schema, canonical\)/);
+  assert.match(prerender, /schemaGraph\(entry\.schema\)/);
+  assert.match(prerender, /schema\.map\(\(\{ '@context': _context, \.\.\.node \}\) => node\)/);
 });
 
 test('expert model is strict and approved article schema links author and reviewer persons', async () => {

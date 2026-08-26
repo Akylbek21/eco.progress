@@ -2,7 +2,7 @@ export const searchIntentMap = {
   environmentalDesign: {
     commercial: '/services/environmental-design',
     category: '/services/ecological-documents',
-    regionalPattern: '/ekologicheskoe-proektirovanie-:city',
+    regionalPattern: '/roos-:city',
   },
   waste: {
     commercial: '/services/waste-management',
@@ -12,6 +12,6 @@ export const searchIntentMap = {
   },
   penalties: {
     canonicalArticle: '/news/shtrafy-za-ekologicheskie-narusheniya',
-    supportingLanding: '/shtrafy-za-ekologiyu-kazakhstan',
+    supportingLanding: '/news/shtrafy-za-ekologicheskie-narusheniya',
   },
 } as const;

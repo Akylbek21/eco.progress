@@ -18,7 +18,7 @@ const NotFoundPage = () => {
         <p className="mt-4 leading-7 text-slate-600">Возможно, ссылка изменилась. Перейдите на главную или оставьте заявку, если нужна консультация.</p>
         <div className="mt-8 grid gap-3 sm:flex sm:justify-center">
           <Button asChild><Link to="/">На главную</Link></Button>
-          <Button type="button" variant="secondary" onClick={() => setOrderModalOpen(true)}>Оставить заявку</Button>
+          <Button type="button" variant="secondary" onClick={() => setOrderModalOpen(true)}>Получить консультацию эколога</Button>
         </div>
       </div>
       {orderModalOpen && <Suspense fallback={null}><OrderChoiceModal open onClose={() => setOrderModalOpen(false)} /></Suspense>}

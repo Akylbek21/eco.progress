@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import AnalyticsRouteTracker from './components/AnalyticsRouteTracker';
 import PageLoader, { RouteProgressProvider } from './components/loading/PageLoader';
 import ScrollToTop from './components/ScrollToTop';
@@ -10,7 +10,6 @@ const HomePage = lazy(publicRouteLoaders.home);
 const AboutPage = lazy(publicRouteLoaders.about);
 const ServicesPage = lazy(publicRouteLoaders.services);
 const SeoLandingPage = lazy(() => import('./pages/SeoLandingPage'));
-const ServiceLandingPage = lazy(() => import('./pages/ServiceLandingPage'));
 const ServiceRoutePage = lazy(() => import('./pages/ServiceRoutePage'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
 const PartnersPage = lazy(() => import('./pages/PartnersPage'));
@@ -33,12 +32,6 @@ const PublicRoutes = () => (
             <Route path="/" element={<PublicRoute><HomePage /></PublicRoute>} />
             <Route path="/about" element={<PublicRoute><AboutPage /></PublicRoute>} />
             <Route path="/services" element={<PublicRoute><ServicesPage /></PublicRoute>} />
-            <Route path="/services/ecological-documents" element={<PublicRoute><ServiceLandingPage slug="ecological-documents" /></PublicRoute>} />
-            <Route path="/services/waste-transportation" element={<PublicRoute><ServiceLandingPage slug="waste-transportation" /></PublicRoute>} />
-            <Route path="/services/waste-recycling" element={<PublicRoute><ServiceLandingPage slug="waste-recycling" /></PublicRoute>} />
-            <Route path="/services/laboratory-tests" element={<PublicRoute><ServiceLandingPage slug="laboratory-tests" /></PublicRoute>} />
-            <Route path="/services/poligon-tbo" element={<PublicRoute><ServiceLandingPage slug="poligon-tbo" /></PublicRoute>} />
-            <Route path="/services/environmental-audit" element={<PublicRoute><ServiceLandingPage slug="environmental-audit" /></PublicRoute>} />
             <Route path="/services/:id" element={<PublicRoute><ServiceRoutePage /></PublicRoute>} />
             <Route path="/tariffs" element={<PublicRoute><TariffsPage /></PublicRoute>} />
             <Route path="/employees" element={<PublicRoute><EmployeesPage /></PublicRoute>} />
@@ -51,8 +44,6 @@ const PublicRoutes = () => (
             <Route path="/contacts" element={<PublicRoute><ContactsPage /></PublicRoute>} />
             <Route path="/regions" element={<PublicRoute><RegionsPage /></PublicRoute>} />
             <Route path="/search" element={<PublicRoute><SearchPage /></PublicRoute>} />
-            <Route path="/shtrafy-za-ekologiyu-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
-            <Route path="/shtrafy-za-ekologicheskie-narusheniya-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
             <Route path="/kk/*" element={<PublicRoute><SeoLandingPage /></PublicRoute>} />
             <Route path="/:seoSlug" element={<PublicRoute><SeoLandingPage /></PublicRoute>} />
             <Route path="*" element={<PublicRoute><NotFoundPage /></PublicRoute>} />

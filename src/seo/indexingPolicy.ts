@@ -1,12 +1,10 @@
 import { isApprovedArticleReview } from '../content/articleReview.ts';
 import type { SeoRobots } from './types.ts';
+import { absoluteUrl, SITE_ORIGIN } from './url.ts';
 
-export const PUBLIC_SITE_URL = 'https://ecoprogress.kz';
+export const PUBLIC_SITE_URL = SITE_ORIGIN;
 
-export const canonicalForPublicPath = (routePath: string): string => {
-  const normalized = routePath === '/' ? '/' : `/${routePath.replace(/^\/+|\/+$/gu, '')}`;
-  return normalized === '/' ? PUBLIC_SITE_URL : `${PUBLIC_SITE_URL}${normalized}`;
-};
+export const canonicalForPublicPath = (routePath: string): string => absoluteUrl(routePath);
 
 export interface PublicIndexingCandidate {
   path: string;

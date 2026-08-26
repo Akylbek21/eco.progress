@@ -68,7 +68,9 @@ Required deployment secrets:
 reuse a previously generated non-empty snapshot. An empty snapshot, incomplete
 CMS records, or a sitemap drop beyond the committed baseline threshold fails the
 build and must keep the previous production deployment active. Docker deployment
-requires `SEO_CONTENT_API_URL` explicitly and passes it only to the build stage.
+defaults `SEO_CONTENT_API_URL` to the `eco-app` backend on the external `eco-net`
+network and passes it only to the build stage. Override the variable when the
+backend uses another address.
 
 `articleReviews` contains only review decisions confirmed in the CMS. Each item has
 `slug`, `reviewStatus`, and, for backend `APPROVED` (normalized to `approved`), mandatory `authorSlug`, `reviewerSlug`

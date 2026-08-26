@@ -5,7 +5,7 @@ import { createLead } from '../services/leadService';
 import { getLeadAttribution, trackContentEvent, trackEvent, trackLeadSubmit } from '../services/analytics';
 import { useToast } from '../hooks/useToast';
 import { createWhatsAppLeadMessage, createWhatsAppUrl } from '../utils/whatsapp';
-import { activeServices } from '../content/serviceCatalog';
+import { activeServices, normalizeServiceSlug } from '../content/serviceCatalog';
 
 type LeadFormProps = {
   source?: string;
@@ -18,12 +18,10 @@ type LeadFormProps = {
   serviceSlug?: string;
   sourcePage?: string;
   locale?: 'ru' | 'kk';
+  submitLabel?: string;
 };
 
-const ruServiceOptions = [...activeServices.map((service) => service.title), 'Не знаю, нужна консультация'];
-const kkServiceOptions = ['Экологиялық қызметтер', 'Қалдықтар паспорты', 'ШРШ жобасы', 'ПЭК бағдарламасы', 'ПЭК есебі', 'Экологиялық рұқсат', 'СҚА жобасы', 'Зертханалық зерттеулер', 'Су анализі', 'Қалдықтарды кәдеге жарату', 'Қай қызмет керек екенін білмеймін'];
-
-const LeadForm = ({ source = 'site_form', title = 'Получить консультацию', compact = false, defaultService = 'Не знаю, нужна консультация', variant = 'light', formId = source, ctaId, serviceSlug, sourcePage, locale = 'ru' }: LeadFormProps) => {
+const LeadForm = ({ source = 'site_form', title = 'Получить консультацию', compact = false, defaultService = 'Не знаю, нужна консультация', variant = 'light', formId = source, ctaId, serviceSlug, sourcePage, locale = 'ru', submitLabel }: LeadFormProps) => {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -32,21 +30,38 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
   const [started, setStarted] = useState(false);
   const isBlue = variant === 'blue';
   const isKk = locale === 'kk';
-  const serviceOptions = isKk ? [...new Set([defaultService, ...kkServiceOptions])] : ruServiceOptions;
+  const normalizedServiceSlug = normalizeServiceSlug(serviceSlug || '');
+  const isLandingShortForm = compact && Boolean(serviceSlug);
+  const isWasteForm = normalizedServiceSlug === 'waste-recycling';
+  const isPekReportForm = normalizedServiceSlug === 'report-pek';
+  const isRoosForm = normalizedServiceSlug === 'roos';
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formEl = event.currentTarget;
     const form = new FormData(formEl);
-    const name = String(form.get('name') || '').trim();
     const phone = String(form.get('phone') || '').trim();
     const city = String(form.get('city') || '').trim();
     const serviceType = String(form.get('serviceType') || '').trim();
     const comment = String(form.get('comment') || '').trim();
+    const wasteType = String(form.get('wasteType') || '').trim();
+    const estimatedVolume = String(form.get('estimatedVolume') || '').trim();
+    const reportingPeriod = String(form.get('reportingPeriod') || '').trim();
+    const objectType = String(form.get('objectType') || '').trim();
+    const enrichedComment = [
+      wasteType && `Вид отходов: ${wasteType}`,
+      estimatedVolume && `Примерный объём: ${estimatedVolume}`,
+      reportingPeriod && `Отчётный период: ${reportingPeriod}`,
+      objectType && `Вид объекта / проектируемая деятельность: ${objectType}`,
+      comment && `Что нужно / комментарий: ${comment}`,
+    ].filter(Boolean).join('\n');
     const selectedService = activeServices.find((item) => item.title === serviceType);
     setWhatsAppFallbackUrl('');
-    if (!name || !phone || !serviceType) {
-      toast.error(isKk ? 'Міндетті жолдарды толтырыңыз' : 'Заполните обязательные поля', isKk ? 'Атыңызды, телефонды және қызмет түрін көрсетіңіз.' : 'Укажите имя, телефон и тип услуги.');
+    if (!phone || !serviceType || !comment) {
+      const validationMessage = isKk
+        ? 'Телефон немесе WhatsApp нөмірін және тапсырманы көрсетіңіз.'
+        : 'Укажите телефон или WhatsApp и кратко опишите, что вам нужно.';
+      toast.error(isKk ? 'Міндетті жолдарды толтырыңыз' : 'Заполните обязательные поля', validationMessage);
       return;
     }
     if (phone.replace(/\D/g, '').length < 7) {
@@ -72,7 +87,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
         formId,
         ctaId,
       };
-      await createLead({ name, phone, city, serviceType, comment, source, attribution });
+      await createLead({ name: 'Заявка с сайта', phone, city, serviceType, comment: enrichedComment, source, attribution });
       trackContentEvent({ eventName: 'form_submit', pageType: attribution.sourceType || 'UNKNOWN', contentSlug: attribution.sourceSlug, serviceId: attribution.serviceId, serviceSlug: attribution.serviceSlug, ctaId, position: formId });
       setSent(true);
       toast.success(isKk ? 'Өтінім қабылданды' : 'Заявка создана', isKk ? 'Менеджер өтінімді алды және сізбен байланысады.' : 'Менеджер получил вашу заявку и свяжется с вами.');
@@ -83,7 +98,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
       const attribution = getLeadAttribution();
       trackContentEvent({ eventName: 'form_error', pageType: attribution.sourceType || 'UNKNOWN', contentSlug: attribution.sourceSlug, serviceSlug: selectedService?.slug || attribution.serviceSlug, ctaId, position: formId });
       setError(true);
-      setWhatsAppFallbackUrl(createWhatsAppUrl(createWhatsAppLeadMessage({ service: serviceType, name, phone, city, comment })));
+      setWhatsAppFallbackUrl(createWhatsAppUrl(createWhatsAppLeadMessage({ service: serviceType, phone, city, comment: enrichedComment })));
       toast.error(isKk ? 'Өтінім жіберілмеді' : 'Не удалось создать заявку', isKk ? 'Деректерді тексеріп, қайталап көріңіз.' : 'Проверьте данные и попробуйте снова.');
     } finally {
       setLoading(false);
@@ -104,31 +119,40 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
     >
       <h2 className={`text-2xl font-bold ${isBlue ? 'text-white' : 'text-eco-900'}`}>{title}</h2>
       {!compact && <p className={`mt-3 text-sm leading-6 ${isBlue ? 'text-white/72' : 'text-slate-600'}`}>{isKk ? 'Байланыс деректерін қалдырыңыз. EcoProgress маманы келесі қадамды түсіндіреді.' : 'Оставьте контакты. Специалист ecoprogress.kz свяжется с вами и подскажет следующий шаг.'}</p>}
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
-          {isKk ? 'Аты-жөні' : 'Имя'} *
-          <input name="name" required className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" />
-        </label>
+      <div className="mt-6 grid gap-4">
         <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
           <span className="inline-flex items-center gap-1.5"><FaWhatsapp className="text-[#25D366]" size={15} aria-hidden="true" /> Телефон / WhatsApp *</span>
           <input name="phone" required inputMode="tel" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" />
         </label>
-        <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
+        <input type="hidden" name="serviceType" value={defaultService} />
+        {isLandingShortForm && <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
           {isKk ? 'Қала' : 'Город'}
           <input name="city" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" />
-        </label>
-        <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
-          {isKk ? 'Қандай қызмет керек?' : 'Что нужно?'} *
-          <select name="serviceType" required defaultValue={defaultService} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900">
-            {serviceOptions.map((option) => <option key={option}>{option}</option>)}
-          </select>
-        </label>
+        </label>}
+        {isLandingShortForm && isWasteForm && <>
+          <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
+            Вид отходов
+            <input name="wasteType" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" />
+          </label>
+          <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
+            Примерный объём
+            <input name="estimatedVolume" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" placeholder="Например, 2 тонны" />
+          </label>
+        </>}
+        {isLandingShortForm && isPekReportForm && <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
+          Отчётный период
+          <input name="reportingPeriod" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" placeholder="Например, II квартал 2026" />
+        </label>}
+        {isLandingShortForm && isRoosForm && <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
+          Вид объекта / проектируемая деятельность
+          <input name="objectType" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" />
+        </label>}
       </div>
       <label className={`mt-4 block text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
-        {isKk ? 'Түсініктеме' : 'Комментарий'}
-        <textarea name="comment" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" rows={compact ? 3 : 4} />
+        {isKk ? 'Сізге не қажет?' : 'Что вам нужно?'} *
+        <textarea name="comment" required className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" rows={3} />
       </label>
-      <Button disabled={loading} className={`mt-5 w-full ${isBlue ? 'bg-accent text-eco-900 hover:bg-accent/90' : ''}`}>{loading ? (isKk ? 'Жіберіліп жатыр...' : 'Отправляем...') : (isKk ? 'Өтінім жіберу' : 'Отправить заявку')}</Button>
+      <Button disabled={loading} className={`mt-5 w-full ${isBlue ? 'bg-accent text-eco-900 hover:bg-accent/90' : ''}`}>{loading ? (isKk ? 'Жіберіліп жатыр...' : 'Отправляем...') : submitLabel || (isKk ? 'Есеп алу' : 'Получить расчёт')}</Button>
       {sent && <p className="mt-4 rounded-2xl bg-eco-50 p-4 text-sm font-semibold text-eco-900">{isKk ? 'Рақмет! EcoProgress маманы жақын арада сізбен байланысады.' : 'Спасибо! Специалист ecoprogress.kz свяжется с вами в ближайшее время.'}</p>}
       {error && (
         <div className="mt-4 rounded-2xl bg-rose-50 p-4 text-sm font-semibold text-rose-800">

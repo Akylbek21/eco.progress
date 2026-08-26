@@ -56,6 +56,16 @@ const seoPageByPath = new Map(seoPageContent.map((entry) => [`/${entry.slug}`, e
 const registryByCanonical = new Map(registry.map((entry) => [entry.canonical, entry]));
 const registryByPath = new Map(registry.map((entry) => [entry.path === '/kk/' ? '/kk' : entry.path, entry]));
 const registryPaths = new Set(registry.map((entry) => entry.path));
+const redirectConfig = read(path.join(root, 'deploy', 'nginx-host', 'snippets', 'legacy-redirects.conf'));
+const redirectRules = [...redirectConfig.matchAll(/location\s+~\s+(\S+)\s*\{\s*return\s+301\s+([^;]+);/g)].map((match) => {
+  try {
+    return { source: match[1], destination: match[2], pattern: new RegExp(match[1]) };
+  } catch {
+    errors.push(`Invalid redirect regex in nginx config: ${match[1]}`);
+    return undefined;
+  }
+}).filter(Boolean);
+const redirectForPath = (pathname) => redirectRules.find((rule) => rule.pattern.test(pathname));
 const titles = new Map();
 const descriptions = new Map();
 const headings = new Map();
@@ -88,6 +98,7 @@ for (const url of urls) {
   else if (registryEntry.robots !== 'index,follow' || !registryEntry.includeInSitemap) errors.push(`Noindex/excluded registry URL in sitemap: ${url}`);
   if (parsed.pathname === '/404') errors.push('404 must not be in sitemap');
   if (parsed.pathname !== '/' && parsed.pathname.endsWith('/')) errors.push(`Trailing slash in sitemap: ${url}`);
+  if (redirectForPath(parsed.pathname)) errors.push(`Redirect URL present in sitemap: ${url}`);
 
   const file = pageFile(parsed.pathname);
   if (!fs.existsSync(file)) { errors.push(`Missing prerendered page: ${parsed.pathname}`); continue; }
@@ -95,6 +106,7 @@ for (const url of urls) {
   const title = one(html, /<title>([\s\S]*?)<\/title>/i);
   const description = one(html, /<meta\s+name=["']description["']\s+content=["']([^"']*)["']/i);
   const canonical = one(html, /<link\s+rel=["']canonical["']\s+href=["']([^"']+)["']/i);
+  const canonicalCount = [...html.matchAll(/<link\b[^>]*\brel=["']canonical["'][^>]*>/gi)].length;
   const robots = one(html, /<meta\s+name=["']robots["']\s+content=["']([^"']+)["']/i);
   const ogUrl = one(html, /<meta\s+property=["']og:url["']\s+content=["']([^"']+)["']/i);
   const ogImage = one(html, /<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
@@ -109,6 +121,7 @@ for (const url of urls) {
   if (!title) errors.push(`Missing title: ${parsed.pathname}`);
   if (!description) errors.push(`Missing description: ${parsed.pathname}`);
   if (h1Count !== 1) errors.push(`Expected one H1, found ${h1Count}: ${parsed.pathname}`);
+  if (canonicalCount !== 1) errors.push(`Expected one canonical, found ${canonicalCount}: ${parsed.pathname}`);
   if (canonical !== url) errors.push(`Canonical mismatch at ${parsed.pathname}: ${canonical || 'missing'}`);
   if (htmlLang !== registryEntry?.locale) errors.push(`HTML lang mismatch at ${parsed.pathname}: ${htmlLang || 'missing'} !== ${registryEntry?.locale || 'missing locale'}`);
   if (registryEntry?.alternatePath) {
@@ -139,7 +152,7 @@ for (const url of urls) {
   if (title.length < 35 || title.length > 75) warnings.push(`Title length ${title.length}: ${parsed.pathname}`);
   if (description.length < 100 || description.length > 180) warnings.push(`Description length ${description.length}: ${parsed.pathname}`);
   if (/(?:localhost|127\.0\.0\.1|example\.(?:com|org)|test\.)/i.test(html)) errors.push(`Development/test host found: ${parsed.pathname}`);
-  if (/\/(?:shtrafy-za-ekologiyu-kazakhstan|news\/kakie-shtrafy-za-ekologiyu-v-kazakhstane)(?:["'#?])/i.test(html)) errors.push(`Legacy URL used internally: ${parsed.pathname}`);
+  if (/href=["'](?:https:\/\/ecoprogress\.kz)?\/(?:services\/(?:eco-design|laboratory|permits|landfill|enterprise-support)(?=[/"'?#])|passport-othodov-kazakhstan|otchet-pek-kazakhstan|shtrafy-za-ekologiyu-kazakhstan|shtrafy-za-ekologicheskie-narusheniya-kazakhstan|news\/(?:kakie-shtrafy-za-ekologiyu-v-kazakhstane|komu-nuzhen-proizvodstvennyy-kontrol-ses|kak-poluchit-razreshenie-na-emissii|chto-takoe-pasport-othodov|kakie-dokumenty-proveryaet-ses|ekologicheskoe-soprovozhdenie-biznesa)|(?:passport-othodov|ovos-skrining-vozdeystviya|razreshenie-na-emissii|ekologicheskoe-proektirovanie|proizvodstvennyy-kontrol-ses|laboratornye-izmereniya|proekt-ndv|programma-pek|razrabotka-pek|proizvodstvennyy-ekologicheskiy-kontrol|proekt-szz|razdel-oos|programma-upravleniya-othodami|ekologicheskoe-razreshenie-na-vozdeystvie)-[^/"'#?]+)(?:["'#?])/i.test(html)) errors.push(`Legacy URL used internally: ${parsed.pathname}`);
 
   for (const image of html.matchAll(/<img\b([^>]*)>/gi)) {
     const attrs = image[1];
@@ -170,8 +183,17 @@ for (const url of urls) {
   for (const phrase of [/для Алматы и Алматинская область/iu, /в Караганда и Карагандинская область/iu, /для Астана и Акмолинская область/iu]) if (phrase.test(html)) errors.push(`Invalid region form at ${parsed.pathname}: ${phrase}`);
   for (const match of html.matchAll(/<a\s[^>]*href=["']([^"'#]+)["']/gi)) {
     const href = match[1];
-    if (!href.startsWith('/') || /^\/(?:cabinet|staff|login|register)/.test(href)) continue;
-    const target = href.replace(/\?.*$/, '').replace(/\/$/, '') || '/';
+    let internalUrl;
+    try { internalUrl = new URL(href, SITE_URL); } catch { continue; }
+    if (!['ecoprogress.kz', 'www.ecoprogress.kz'].includes(internalUrl.hostname)) continue;
+    if (/^\/(?:cabinet|staff|login|register)/.test(internalUrl.pathname)) continue;
+    const redirectsByOrigin = internalUrl.protocol !== 'https:' || internalUrl.hostname !== 'ecoprogress.kz';
+    const redirectsBySlash = internalUrl.pathname !== '/' && internalUrl.pathname.endsWith('/');
+    const redirectRule = redirectForPath(internalUrl.pathname);
+    if (redirectsByOrigin || redirectsBySlash || redirectRule) {
+      errors.push(`Internal link leads through 301: ${parsed.pathname} -> ${href}`);
+    }
+    const target = internalUrl.pathname.replace(/\/$/, '') || '/';
     if (!registryPaths.has(target) && !fs.existsSync(pageFile(target))) warnings.push(`Broken internal link: ${parsed.pathname} -> ${target}`);
   }
   for (const match of html.matchAll(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/gi)) {
@@ -181,16 +203,31 @@ for (const url of urls) {
   }
 }
 
-for (const entry of registry.filter((item) => item.robots === 'index,follow' && item.includeInSitemap)) {
+const indexableTitles = new Map();
+const indexableHeadings = new Map();
+for (const entry of registry.filter((item) => item.robots === 'index,follow')) {
   const sitemapPath = entry.path === '/kk/' ? '/kk' : entry.path;
+  const expectedCanonical = `${SITE_URL}${sitemapPath === '/' ? '' : sitemapPath}`;
+  if (!entry.includeInSitemap) errors.push(`Indexable registry page is excluded from sitemap: ${entry.path}`);
   if (!sitemapPaths.has(sitemapPath)) errors.push(`Indexable registry page missing from sitemap: ${entry.path}`);
-  if (!fs.existsSync(pageFile(entry.path))) errors.push(`Static HTTP status would be 404: ${entry.path}`);
-}
-
-const redirectConfig = read(path.join(root, 'deploy', 'nginx-host', 'snippets', 'legacy-redirects.conf'));
-for (const pathname of sitemapPaths) {
-  const escaped = pathname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  if (new RegExp(`location\\s+=\\s+${escaped}(?:\\s|\\{)`).test(redirectConfig)) errors.push(`Redirect URL present in sitemap: ${pathname}`);
+  const file = pageFile(entry.path);
+  if (!fs.existsSync(file)) {
+    errors.push(`Static HTTP status would be 404: ${entry.path}`);
+    continue;
+  }
+  const html = read(file);
+  const canonical = one(html, /<link\s+rel=["']canonical["']\s+href=["']([^"']+)["']/i);
+  const canonicalCount = count(html, /<link\b[^>]*\brel=["']canonical["'][^>]*>/gi);
+  const title = one(html, /<title>([\s\S]*?)<\/title>/i);
+  const h1 = normalizeText(one(html, /<h1(?:\s[^>]*)?>([\s\S]*?)<\/h1>/i));
+  if (entry.canonical !== expectedCanonical) errors.push(`Registry canonical is not final URL: ${entry.path} -> ${entry.canonical}`);
+  if (canonicalCount !== 1 || canonical !== expectedCanonical) errors.push(`Indexable page has no valid self-canonical: ${entry.path}`);
+  if (!title) errors.push(`Indexable page has no title: ${entry.path}`);
+  else if (indexableTitles.has(title)) errors.push(`Duplicate indexable title: ${entry.path} and ${indexableTitles.get(title)}`);
+  else indexableTitles.set(title, entry.path);
+  if (!h1) errors.push(`Indexable page has no H1: ${entry.path}`);
+  else if (indexableHeadings.has(h1)) errors.push(`Duplicate indexable H1: ${entry.path} and ${indexableHeadings.get(h1)}`);
+  else indexableHeadings.set(h1, entry.path);
 }
 
 for (const [paragraph, paths] of paragraphs) {

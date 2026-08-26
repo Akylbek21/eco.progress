@@ -3,7 +3,7 @@
     "path": "/",
     "pageId": "home",
     "locale": "ru",
-    "alternatePath": "/kk/",
+    "alternatePath": "/kk",
     "alternates": [
       {
         "locale": "ru-KZ",
@@ -73,7 +73,7 @@
         "url": "https://ecoprogress.kz",
         "name": "Экологические услуги и лабораторные исследования для бизнеса в Казахстане",
         "description": "Экологические услуги и лабораторные исследования для предприятий Казахстана: проектирование, ПЭК, отходы, разрешения и сопровождение.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -82,7 +82,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services",
@@ -1082,7 +1082,7 @@
         "url": "https://ecoprogress.kz/services/ecological-documents",
         "name": "Определим, какие экологические документы нужны вашему объекту, и подготовим согласованный комплект",
         "description": "Подготовка экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1127,7 +1127,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/environmental-design",
@@ -1188,7 +1188,7 @@
         "url": "https://ecoprogress.kz/services/environmental-design",
         "name": "Экологическое проектирование",
         "description": "Основная коммерческая услуга по разработке экологических проектов для строительства и действующих объектов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1233,7 +1233,113 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
+  },
+  {
+    "path": "/services/roos",
+    "locale": "ru",
+    "alternates": [],
+    "title": "РООС — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС для проектной документации в Казахстане. Проверим исходные данные, определим состав раздела и подготовим раздел охраны окружающей среды.",
+    "h1": "Разработка РООС в Казахстане",
+    "canonical": "https://ecoprogress.kz/services/roos",
+    "robots": "index,follow",
+    "ogType": "website",
+    "ogTitle": "РООС — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС для проектной документации в Казахстане. Проверим исходные данные, определим состав раздела и подготовим раздел охраны окружающей среды.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": "https://ecoprogress.kz/#organization",
+        "name": "ECOPROGRESS GROUP",
+        "alternateName": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/favicon.png"
+        },
+        "email": "eco.progresss@gmail.com",
+        "telephone": "+7 778 121 11 58",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Алимбетова 199/2а",
+          "addressLocality": "Шымкент",
+          "addressCountry": "KZ"
+        },
+        "sameAs": [
+          "https://www.instagram.com/ecoprogress.group",
+          "https://www.tiktok.com/@ecoprogress.group",
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "@id": "https://ecoprogress.kz/#website",
+        "name": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "publisher": {
+          "@id": "https://ecoprogress.kz/#organization"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": "https://ecoprogress.kz/services/roos#webpage",
+        "url": "https://ecoprogress.kz/services/roos",
+        "name": "Разработка РООС в Казахстане",
+        "description": "Разработка РООС для проектной документации в Казахстане. Проверим исходные данные, определим состав раздела и подготовим раздел охраны окружающей среды.",
+        "dateModified": "2026-08-25",
+        "isPartOf": {
+          "@id": "https://ecoprogress.kz/#website"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "@id": "https://ecoprogress.kz/services/roos#service",
+        "url": "https://ecoprogress.kz/services/roos",
+        "name": "Разработка РООС в Казахстане",
+        "description": "Разработка РООС для проектной документации в Казахстане. Проверим исходные данные, определим состав раздела и подготовим раздел охраны окружающей среды.",
+        "serviceType": "Разработка РООС в Казахстане",
+        "provider": {
+          "@id": "https://ecoprogress.kz/#organization"
+        },
+        "areaServed": {
+          "@type": "Place",
+          "name": "Казахстан"
+        },
+        "image": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "@id": "https://ecoprogress.kz/services/roos#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Разработка РООС в Казахстане",
+            "item": "https://ecoprogress.kz/services/roos"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.9,
+    "changeFrequency": "weekly",
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/waste-passport",
@@ -1309,7 +1415,7 @@
         "url": "https://ecoprogress.kz/services/waste-passport",
         "name": "Разработка паспорта отходов",
         "description": "Разрабатываем паспорта отходов для предприятий: проверяем происхождение и состав, классифицируем отход и готовим документы для учёта.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1354,7 +1460,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/szz",
@@ -1430,7 +1536,7 @@
         "url": "https://ecoprogress.kz/services/szz",
         "name": "Проект санитарно-защитной зоны",
         "description": "Разработка проекта СЗЗ: анализ площадки и источников, расчёты воздействия, проверка границы и подготовка проектных материалов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1475,7 +1581,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/ndv",
@@ -1551,7 +1657,7 @@
         "url": "https://ecoprogress.kz/services/ndv",
         "name": "Подготовим проект нормативов допустимых выбросов на основе проверенной инвентаризации источников",
         "description": "Инвентаризация источников, расчёты выбросов и подготовка проекта НДВ. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1596,7 +1702,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/puo",
@@ -1657,7 +1763,7 @@
         "url": "https://ecoprogress.kz/services/puo",
         "name": "Разработаем программу управления отходами по фактическим видам, объёмам и способам обращения",
         "description": "Анализ потоков отходов, целевые показатели и программа управления отходами. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1702,7 +1808,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/ovos",
@@ -1763,7 +1869,7 @@
         "url": "https://ecoprogress.kz/services/ovos",
         "name": "Подготовим материалы оценки воздействия для проекта и обозначим зависимости от исходных решений",
         "description": "Подготовка ОВОС и материалов экологической оценки для проектов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1808,7 +1914,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/environmental-permits",
@@ -1884,7 +1990,7 @@
         "url": "https://ecoprogress.kz/services/environmental-permits",
         "name": "Экологические разрешения и декларации",
         "description": "Подготовка разрешительных материалов и сопровождение процедур по требованиям РК. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1929,7 +2035,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/laboratory-tests",
@@ -2005,7 +2111,7 @@
         "url": "https://ecoprogress.kz/services/laboratory-tests",
         "name": "Организуем лабораторные исследования по согласованной программе и передадим протоколы результатов",
         "description": "Анализы воды, воздуха и почвы, замеры выбросов и протоколы исследований. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2050,7 +2156,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/water-analysis",
@@ -2126,7 +2232,7 @@
         "url": "https://ecoprogress.kz/services/water-analysis",
         "name": "Лабораторный анализ воды",
         "description": "Лабораторный анализ питьевой, природной и сточной воды: подберём показатели, согласуем отбор и оформим протокол исследования.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2171,7 +2277,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/industrial-control",
@@ -2232,7 +2338,7 @@
         "url": "https://ecoprogress.kz/services/industrial-control",
         "name": "Производственный контроль СЭС",
         "description": "Программа производственного контроля, замеры и протоколы для санитарных требований. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2277,7 +2383,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/program-pek",
@@ -2353,7 +2459,7 @@
         "url": "https://ecoprogress.kz/services/program-pek",
         "name": "Разработаем программу производственного экологического контроля под источники и процессы предприятия",
         "description": "Программа контроля по фактическим источникам, показателям и процессам предприятия. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2398,7 +2504,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/report-pek",
@@ -2419,14 +2525,14 @@
         "url": "https://ecoprogress.kz/services/report-pek"
       }
     ],
-    "title": "Отчёт производственного экологического контроля | ECOPROGRESS",
-    "description": "Проверка первичных данных и подготовка отчёта ПЭК за согласованный период. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-    "h1": "Соберём и проверим данные производственного экологического контроля и подготовим отчёт ПЭК",
+    "title": "Отчёт ПЭК — подготовка, сроки и стоимость | EcoProgress",
+    "description": "Подготовим отчёт ПЭК для предприятия: проверим данные мониторинга, протоколы и производственные показатели. Рассчитаем сроки и стоимость подготовки отчёта.",
+    "h1": "Подготовка отчёта ПЭК в Казахстане",
     "canonical": "https://ecoprogress.kz/services/report-pek",
     "robots": "index,follow",
     "ogType": "website",
-    "ogTitle": "Отчёт производственного экологического контроля | ECOPROGRESS",
-    "ogDescription": "Проверка первичных данных и подготовка отчёта ПЭК за согласованный период. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogTitle": "Отчёт ПЭК — подготовка, сроки и стоимость | EcoProgress",
+    "ogDescription": "Подготовим отчёт ПЭК для предприятия: проверим данные мониторинга, протоколы и производственные показатели. Рассчитаем сроки и стоимость подготовки отчёта.",
     "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -2472,9 +2578,9 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/services/report-pek#webpage",
         "url": "https://ecoprogress.kz/services/report-pek",
-        "name": "Соберём и проверим данные производственного экологического контроля и подготовим отчёт ПЭК",
-        "description": "Проверка первичных данных и подготовка отчёта ПЭК за согласованный период. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "name": "Подготовка отчёта ПЭК в Казахстане",
+        "description": "Подготовим отчёт ПЭК для предприятия: проверим данные мониторинга, протоколы и производственные показатели. Рассчитаем сроки и стоимость подготовки отчёта.",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2484,9 +2590,9 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/services/report-pek#service",
         "url": "https://ecoprogress.kz/services/report-pek",
-        "name": "Соберём и проверим данные производственного экологического контроля и подготовим отчёт ПЭК",
-        "description": "Проверка первичных данных и подготовка отчёта ПЭК за согласованный период. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "serviceType": "Соберём и проверим данные производственного экологического контроля и подготовим отчёт ПЭК",
+        "name": "Подготовка отчёта ПЭК в Казахстане",
+        "description": "Подготовим отчёт ПЭК для предприятия: проверим данные мониторинга, протоколы и производственные показатели. Рассчитаем сроки и стоимость подготовки отчёта.",
+        "serviceType": "Подготовка отчёта ПЭК в Казахстане",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
         },
@@ -2510,7 +2616,7 @@
           {
             "@type": "ListItem",
             "position": 2,
-            "name": "Соберём и проверим данные производственного экологического контроля и подготовим отчёт ПЭК",
+            "name": "Подготовка отчёта ПЭК в Казахстане",
             "item": "https://ecoprogress.kz/services/report-pek"
           }
         ]
@@ -2519,7 +2625,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/waste-transportation",
@@ -2580,7 +2686,7 @@
         "url": "https://ecoprogress.kz/services/waste-transportation",
         "name": "Организуем вывоз согласованных видов отходов с объекта и оформим комплект документов по выполненной перевозке",
         "description": "Сбор и транспортировка отходов с объекта с оформлением сопроводительных документов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2625,7 +2731,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/waste-recycling",
@@ -2701,7 +2807,7 @@
         "url": "https://ecoprogress.kz/services/waste-recycling",
         "name": "Проверим возможность приёма отходов, согласуем способ обращения и оформим документы по выполненной операции",
         "description": "Передача отходов на утилизацию или переработку и оформление подтверждающих документов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2746,7 +2852,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/waste-management",
@@ -2807,7 +2913,7 @@
         "url": "https://ecoprogress.kz/services/waste-management",
         "name": "Комплексное обращение с отходами",
         "description": "Коммерческая страница комплексного вывоза, утилизации и документального сопровождения отходов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2852,7 +2958,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/poligon-tbo",
@@ -2913,7 +3019,7 @@
         "url": "https://ecoprogress.kz/services/poligon-tbo",
         "name": "Полигон ТБО",
         "description": "Приём и законное размещение ТБО с документами для организаций. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2958,7 +3064,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/environmental-audit",
@@ -3019,7 +3125,7 @@
         "url": "https://ecoprogress.kz/services/environmental-audit",
         "name": "Сопровождение экологических проверок",
         "description": "Аудит документов, оценка рисков и подготовка предприятия к экологической проверке. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3064,7 +3170,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/services/ecological-support",
@@ -3125,7 +3231,7 @@
         "url": "https://ecoprogress.kz/services/ecological-support",
         "name": "Организуем экологическое сопровождение с календарём обязанностей, документами и контролем открытых вопросов",
         "description": "Регулярный контроль отчётности, документов, сроков и экологических рисков предприятия. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-25",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3170,7 +3276,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-25"
   },
   {
     "path": "/ecologicheskie-uslugi-almaty",
@@ -4917,7 +5023,7 @@
     "description": "Лабораторные замеры в Алматы: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Алматы — после аудита.",
     "h1": "Лабораторные замеры в Алматы",
     "canonical": "https://ecoprogress.kz/laboratornye-zamery-almaty",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "ogType": "website",
     "ogTitle": "Лабораторные замеры в Алматы | ECOPROGRESS",
     "ogDescription": "Лабораторные замеры в Алматы: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Алматы — после аудита.",
@@ -5022,7 +5128,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -11366,14 +11472,14 @@
     "path": "/utilizaciya-othodov-shymkent",
     "locale": "ru",
     "alternates": [],
-    "title": "Утилизация отходов в Шымкенте | ECOPROGRESS",
-    "description": "Утилизация отходов в Шымкенте: Передача оператору, организация вывоза и закрывающие документы. Срок и стоимость для Шымкента — после аудита.",
+    "title": "Утилизация отходов в Шымкенте — вывоз и документы | EcoProgress",
+    "description": "Утилизация промышленных отходов в Шымкенте. Проверим перечень отходов, организуем передачу и вывоз, предоставим закрывающие документы. Рассчитаем стоимость.",
     "h1": "Утилизация отходов в Шымкенте",
     "canonical": "https://ecoprogress.kz/utilizaciya-othodov-shymkent",
     "robots": "index,follow",
     "ogType": "website",
-    "ogTitle": "Утилизация отходов в Шымкенте | ECOPROGRESS",
-    "ogDescription": "Утилизация отходов в Шымкенте: Передача оператору, организация вывоза и закрывающие документы. Срок и стоимость для Шымкента — после аудита.",
+    "ogTitle": "Утилизация отходов в Шымкенте — вывоз и документы | EcoProgress",
+    "ogDescription": "Утилизация промышленных отходов в Шымкенте. Проверим перечень отходов, организуем передачу и вывоз, предоставим закрывающие документы. Рассчитаем стоимость.",
     "ogImage": "https://ecoprogress.kz/media/vyvoz-othodov-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -11447,7 +11553,7 @@
         "@id": "https://ecoprogress.kz/utilizaciya-othodov-shymkent#webpage",
         "url": "https://ecoprogress.kz/utilizaciya-othodov-shymkent",
         "name": "Утилизация отходов в Шымкенте",
-        "description": "Утилизация отходов в Шымкенте: Передача оператору, организация вывоза и закрывающие документы. Срок и стоимость для Шымкента — после аудита.",
+        "description": "Утилизация промышленных отходов в Шымкенте. Проверим перечень отходов, организуем передачу и вывоз, предоставим закрывающие документы. Рассчитаем стоимость.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -11459,7 +11565,7 @@
         "@id": "https://ecoprogress.kz/utilizaciya-othodov-shymkent#service",
         "url": "https://ecoprogress.kz/utilizaciya-othodov-shymkent",
         "name": "Утилизация отходов в Шымкенте",
-        "description": "Утилизация отходов в Шымкенте: Передача оператору, организация вывоза и закрывающие документы. Срок и стоимость для Шымкента — после аудита.",
+        "description": "Утилизация промышленных отходов в Шымкенте. Проверим перечень отходов, организуем передачу и вывоз, предоставим закрывающие документы. Рассчитаем стоимость.",
         "serviceType": "Утилизация отходов",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -11511,14 +11617,14 @@
     "path": "/utilizaciya-othodov-taraz",
     "locale": "ru",
     "alternates": [],
-    "title": "Утилизация отходов в Таразе | ECOPROGRESS",
-    "description": "Утилизация отходов в Таразе: Передача оператору, организация вывоза и закрывающие документы. Срок и стоимость для Тараза — после аудита.",
+    "title": "Утилизация отходов в Таразе — вывоз и документы | EcoProgress",
+    "description": "Утилизация промышленных отходов в Таразе. Проверим перечень отходов, рассчитаем способ передачи, стоимость и подготовим закрывающие документы.",
     "h1": "Утилизация отходов в Таразе",
     "canonical": "https://ecoprogress.kz/utilizaciya-othodov-taraz",
     "robots": "index,follow",
     "ogType": "website",
-    "ogTitle": "Утилизация отходов в Таразе | ECOPROGRESS",
-    "ogDescription": "Утилизация отходов в Таразе: Передача оператору, организация вывоза и закрывающие документы. Срок и стоимость для Тараза — после аудита.",
+    "ogTitle": "Утилизация отходов в Таразе — вывоз и документы | EcoProgress",
+    "ogDescription": "Утилизация промышленных отходов в Таразе. Проверим перечень отходов, рассчитаем способ передачи, стоимость и подготовим закрывающие документы.",
     "ogImage": "https://ecoprogress.kz/media/vyvoz-othodov-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -11565,7 +11671,7 @@
         "@id": "https://ecoprogress.kz/utilizaciya-othodov-taraz#webpage",
         "url": "https://ecoprogress.kz/utilizaciya-othodov-taraz",
         "name": "Утилизация отходов в Таразе",
-        "description": "Утилизация отходов в Таразе: Передача оператору, организация вывоза и закрывающие документы. Срок и стоимость для Тараза — после аудита.",
+        "description": "Утилизация промышленных отходов в Таразе. Проверим перечень отходов, рассчитаем способ передачи, стоимость и подготовим закрывающие документы.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -11577,7 +11683,7 @@
         "@id": "https://ecoprogress.kz/utilizaciya-othodov-taraz#service",
         "url": "https://ecoprogress.kz/utilizaciya-othodov-taraz",
         "name": "Утилизация отходов в Таразе",
-        "description": "Утилизация отходов в Таразе: Передача оператору, организация вывоза и закрывающие документы. Срок и стоимость для Тараза — после аудита.",
+        "description": "Утилизация промышленных отходов в Таразе. Проверим перечень отходов, рассчитаем способ передачи, стоимость и подготовим закрывающие документы.",
         "serviceType": "Утилизация отходов",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -11629,14 +11735,14 @@
     "path": "/utilizaciya-othodov-turkestan",
     "locale": "ru",
     "alternates": [],
-    "title": "Утилизация отходов в Туркестане | ECOPROGRESS",
-    "description": "Утилизация отходов в Туркестане: Передача оператору, организация вывоза и закрывающие документы. Срок и стоимость для Туркестана — после аудита.",
+    "title": "Утилизация отходов в Туркестане — вывоз и документы | EcoProgress",
+    "description": "Утилизация промышленных отходов в Туркестане. Проверим перечень отходов, организуем передачу и подготовим закрывающие документы. Расчёт стоимости по заявке.",
     "h1": "Утилизация отходов в Туркестане",
     "canonical": "https://ecoprogress.kz/utilizaciya-othodov-turkestan",
     "robots": "index,follow",
     "ogType": "website",
-    "ogTitle": "Утилизация отходов в Туркестане | ECOPROGRESS",
-    "ogDescription": "Утилизация отходов в Туркестане: Передача оператору, организация вывоза и закрывающие документы. Срок и стоимость для Туркестана — после аудита.",
+    "ogTitle": "Утилизация отходов в Туркестане — вывоз и документы | EcoProgress",
+    "ogDescription": "Утилизация промышленных отходов в Туркестане. Проверим перечень отходов, организуем передачу и подготовим закрывающие документы. Расчёт стоимости по заявке.",
     "ogImage": "https://ecoprogress.kz/media/vyvoz-othodov-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -11683,7 +11789,7 @@
         "@id": "https://ecoprogress.kz/utilizaciya-othodov-turkestan#webpage",
         "url": "https://ecoprogress.kz/utilizaciya-othodov-turkestan",
         "name": "Утилизация отходов в Туркестане",
-        "description": "Утилизация отходов в Туркестане: Передача оператору, организация вывоза и закрывающие документы. Срок и стоимость для Туркестана — после аудита.",
+        "description": "Утилизация промышленных отходов в Туркестане. Проверим перечень отходов, организуем передачу и подготовим закрывающие документы. Расчёт стоимости по заявке.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -11695,7 +11801,7 @@
         "@id": "https://ecoprogress.kz/utilizaciya-othodov-turkestan#service",
         "url": "https://ecoprogress.kz/utilizaciya-othodov-turkestan",
         "name": "Утилизация отходов в Туркестане",
-        "description": "Утилизация отходов в Туркестане: Передача оператору, организация вывоза и закрывающие документы. Срок и стоимость для Туркестана — после аудита.",
+        "description": "Утилизация промышленных отходов в Туркестане. Проверим перечень отходов, организуем передачу и подготовим закрывающие документы. Расчёт стоимости по заявке.",
         "serviceType": "Утилизация отходов",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -13917,7 +14023,7 @@
     "description": "Отчёт ПЭК в Алматы: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Алматы — после аудита.",
     "h1": "Отчёт производственного экологического контроля в Алматы",
     "canonical": "https://ecoprogress.kz/otchet-pek-almaty",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "ogType": "website",
     "ogTitle": "Подготовка отчёта ПЭК в Алматы | ECOPROGRESS",
     "ogDescription": "Отчёт ПЭК в Алматы: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Алматы — после аудита.",
@@ -14022,7 +14128,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -16354,14 +16460,14 @@
     "path": "/roos-almaty",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Алматы | ECOPROGRESS",
-    "description": "Разработка РООС в Алматы: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Алматы — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Алматы",
+    "title": "РООС в Алматы — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Алматы для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Алматы",
     "canonical": "https://ecoprogress.kz/roos-almaty",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Алматы | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Алматы: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Алматы — после аудита.",
+    "ogTitle": "РООС в Алматы — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Алматы для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -16407,8 +16513,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-almaty#webpage",
         "url": "https://ecoprogress.kz/roos-almaty",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Алматы",
-        "description": "Разработка РООС в Алматы: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Алматы — после аудита.",
+        "name": "Разработка РООС в Алматы",
+        "description": "Разработка РООС в Алматы для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -16419,8 +16525,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-almaty#service",
         "url": "https://ecoprogress.kz/roos-almaty",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Алматы",
-        "description": "Разработка РООС в Алматы: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Алматы — после аудита.",
+        "name": "Разработка РООС в Алматы",
+        "description": "Разработка РООС в Алматы для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -16463,7 +16569,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -16472,14 +16578,14 @@
     "path": "/roos-astana",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Астане | ECOPROGRESS",
-    "description": "Разработка РООС в Астане: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Астаны — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Астане",
+    "title": "РООС в Астане — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Астане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Астане",
     "canonical": "https://ecoprogress.kz/roos-astana",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Астане | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Астане: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Астаны — после аудита.",
+    "ogTitle": "РООС в Астане — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Астане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -16525,8 +16631,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-astana#webpage",
         "url": "https://ecoprogress.kz/roos-astana",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Астане",
-        "description": "Разработка РООС в Астане: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Астаны — после аудита.",
+        "name": "Разработка РООС в Астане",
+        "description": "Разработка РООС в Астане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -16537,8 +16643,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-astana#service",
         "url": "https://ecoprogress.kz/roos-astana",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Астане",
-        "description": "Разработка РООС в Астане: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Астаны — после аудита.",
+        "name": "Разработка РООС в Астане",
+        "description": "Разработка РООС в Астане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -16581,7 +16687,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -16590,14 +16696,14 @@
     "path": "/roos-shymkent",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Шымкенте | ECOPROGRESS",
-    "description": "Разработка РООС в Шымкенте: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Шымкента — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Шымкенте",
+    "title": "РООС в Шымкенте — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Шымкенте для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Шымкенте",
     "canonical": "https://ecoprogress.kz/roos-shymkent",
     "robots": "index,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Шымкенте | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Шымкенте: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Шымкента — после аудита.",
+    "ogTitle": "РООС в Шымкенте — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Шымкенте для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -16670,8 +16776,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-shymkent#webpage",
         "url": "https://ecoprogress.kz/roos-shymkent",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Шымкенте",
-        "description": "Разработка РООС в Шымкенте: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Шымкента — после аудита.",
+        "name": "Разработка РООС в Шымкенте",
+        "description": "Разработка РООС в Шымкенте для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -16682,8 +16788,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-shymkent#service",
         "url": "https://ecoprogress.kz/roos-shymkent",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Шымкенте",
-        "description": "Разработка РООС в Шымкенте: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Шымкента — после аудита.",
+        "name": "Разработка РООС в Шымкенте",
+        "description": "Разработка РООС в Шымкенте для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -16735,14 +16841,14 @@
     "path": "/roos-taraz",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Таразе | ECOPROGRESS",
-    "description": "Разработка РООС в Таразе: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Тараза — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Таразе",
+    "title": "РООС в Таразе — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Таразе для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Таразе",
     "canonical": "https://ecoprogress.kz/roos-taraz",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Таразе | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Таразе: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Тараза — после аудита.",
+    "ogTitle": "РООС в Таразе — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Таразе для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -16788,8 +16894,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-taraz#webpage",
         "url": "https://ecoprogress.kz/roos-taraz",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Таразе",
-        "description": "Разработка РООС в Таразе: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Тараза — после аудита.",
+        "name": "Разработка РООС в Таразе",
+        "description": "Разработка РООС в Таразе для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -16800,8 +16906,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-taraz#service",
         "url": "https://ecoprogress.kz/roos-taraz",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Таразе",
-        "description": "Разработка РООС в Таразе: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Тараза — после аудита.",
+        "name": "Разработка РООС в Таразе",
+        "description": "Разработка РООС в Таразе для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -16853,14 +16959,14 @@
     "path": "/roos-turkestan",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Туркестане | ECOPROGRESS",
-    "description": "Разработка РООС в Туркестане: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Туркестана — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Туркестане",
+    "title": "РООС в Туркестане — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Туркестане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Туркестане",
     "canonical": "https://ecoprogress.kz/roos-turkestan",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Туркестане | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Туркестане: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Туркестана — после аудита.",
+    "ogTitle": "РООС в Туркестане — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Туркестане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -16906,8 +17012,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-turkestan#webpage",
         "url": "https://ecoprogress.kz/roos-turkestan",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Туркестане",
-        "description": "Разработка РООС в Туркестане: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Туркестана — после аудита.",
+        "name": "Разработка РООС в Туркестане",
+        "description": "Разработка РООС в Туркестане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -16918,8 +17024,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-turkestan#service",
         "url": "https://ecoprogress.kz/roos-turkestan",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Туркестане",
-        "description": "Разработка РООС в Туркестане: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Туркестана — после аудита.",
+        "name": "Разработка РООС в Туркестане",
+        "description": "Разработка РООС в Туркестане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -16971,14 +17077,14 @@
     "path": "/roos-kyzylorda",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Кызылорде | ECOPROGRESS",
-    "description": "Разработка РООС в Кызылорде: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Кызылорды — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Кызылорде",
+    "title": "РООС в Кызылорде — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Кызылорде для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Кызылорде",
     "canonical": "https://ecoprogress.kz/roos-kyzylorda",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Кызылорде | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Кызылорде: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Кызылорды — после аудита.",
+    "ogTitle": "РООС в Кызылорде — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Кызылорде для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -17024,8 +17130,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-kyzylorda#webpage",
         "url": "https://ecoprogress.kz/roos-kyzylorda",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Кызылорде",
-        "description": "Разработка РООС в Кызылорде: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Кызылорды — после аудита.",
+        "name": "Разработка РООС в Кызылорде",
+        "description": "Разработка РООС в Кызылорде для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -17036,8 +17142,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-kyzylorda#service",
         "url": "https://ecoprogress.kz/roos-kyzylorda",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Кызылорде",
-        "description": "Разработка РООС в Кызылорде: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Кызылорды — после аудита.",
+        "name": "Разработка РООС в Кызылорде",
+        "description": "Разработка РООС в Кызылорде для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -17089,14 +17195,14 @@
     "path": "/roos-aktobe",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Актобе | ECOPROGRESS",
-    "description": "Разработка РООС в Актобе: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Актобе — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Актобе",
+    "title": "РООС в Актобе — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Актобе для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Актобе",
     "canonical": "https://ecoprogress.kz/roos-aktobe",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Актобе | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Актобе: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Актобе — после аудита.",
+    "ogTitle": "РООС в Актобе — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Актобе для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -17142,8 +17248,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-aktobe#webpage",
         "url": "https://ecoprogress.kz/roos-aktobe",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Актобе",
-        "description": "Разработка РООС в Актобе: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Актобе — после аудита.",
+        "name": "Разработка РООС в Актобе",
+        "description": "Разработка РООС в Актобе для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -17154,8 +17260,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-aktobe#service",
         "url": "https://ecoprogress.kz/roos-aktobe",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Актобе",
-        "description": "Разработка РООС в Актобе: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Актобе — после аудита.",
+        "name": "Разработка РООС в Актобе",
+        "description": "Разработка РООС в Актобе для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -17207,14 +17313,14 @@
     "path": "/roos-atyrau",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Атырау | ECOPROGRESS",
-    "description": "Разработка РООС в Атырау: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Атырау — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Атырау",
+    "title": "РООС в Атырау — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Атырау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Атырау",
     "canonical": "https://ecoprogress.kz/roos-atyrau",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Атырау | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Атырау: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Атырау — после аудита.",
+    "ogTitle": "РООС в Атырау — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Атырау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -17260,8 +17366,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-atyrau#webpage",
         "url": "https://ecoprogress.kz/roos-atyrau",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Атырау",
-        "description": "Разработка РООС в Атырау: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Атырау — после аудита.",
+        "name": "Разработка РООС в Атырау",
+        "description": "Разработка РООС в Атырау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -17272,8 +17378,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-atyrau#service",
         "url": "https://ecoprogress.kz/roos-atyrau",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Атырау",
-        "description": "Разработка РООС в Атырау: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Атырау — после аудита.",
+        "name": "Разработка РООС в Атырау",
+        "description": "Разработка РООС в Атырау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -17325,14 +17431,14 @@
     "path": "/roos-karaganda",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Караганде | ECOPROGRESS",
-    "description": "Разработка РООС в Караганде: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Караганды — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Караганде",
+    "title": "РООС в Караганде — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Караганде для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Караганде",
     "canonical": "https://ecoprogress.kz/roos-karaganda",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Караганде | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Караганде: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Караганды — после аудита.",
+    "ogTitle": "РООС в Караганде — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Караганде для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -17378,8 +17484,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-karaganda#webpage",
         "url": "https://ecoprogress.kz/roos-karaganda",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Караганде",
-        "description": "Разработка РООС в Караганде: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Караганды — после аудита.",
+        "name": "Разработка РООС в Караганде",
+        "description": "Разработка РООС в Караганде для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -17390,8 +17496,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-karaganda#service",
         "url": "https://ecoprogress.kz/roos-karaganda",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Караганде",
-        "description": "Разработка РООС в Караганде: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Караганды — после аудита.",
+        "name": "Разработка РООС в Караганде",
+        "description": "Разработка РООС в Караганде для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -17443,14 +17549,14 @@
     "path": "/roos-pavlodar",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Павлодаре | ECOPROGRESS",
-    "description": "Разработка РООС в Павлодаре: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Павлодара — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Павлодаре",
+    "title": "РООС в Павлодаре — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Павлодаре для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Павлодаре",
     "canonical": "https://ecoprogress.kz/roos-pavlodar",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Павлодаре | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Павлодаре: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Павлодара — после аудита.",
+    "ogTitle": "РООС в Павлодаре — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Павлодаре для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -17496,8 +17602,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-pavlodar#webpage",
         "url": "https://ecoprogress.kz/roos-pavlodar",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Павлодаре",
-        "description": "Разработка РООС в Павлодаре: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Павлодара — после аудита.",
+        "name": "Разработка РООС в Павлодаре",
+        "description": "Разработка РООС в Павлодаре для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -17508,8 +17614,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-pavlodar#service",
         "url": "https://ecoprogress.kz/roos-pavlodar",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Павлодаре",
-        "description": "Разработка РООС в Павлодаре: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Павлодара — после аудита.",
+        "name": "Разработка РООС в Павлодаре",
+        "description": "Разработка РООС в Павлодаре для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -17561,14 +17667,14 @@
     "path": "/roos-ust-kamenogorsk",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Усть-Каменогорске | ECOPROGRESS",
-    "description": "Разработка РООС в Усть-Каменогорске: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Усть-Каменогорска — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Усть-Каменогорске",
+    "title": "РООС в Усть-Каменогорске — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Усть-Каменогорске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Усть-Каменогорске",
     "canonical": "https://ecoprogress.kz/roos-ust-kamenogorsk",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Усть-Каменогорске | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Усть-Каменогорске: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Усть-Каменогорска — после аудита.",
+    "ogTitle": "РООС в Усть-Каменогорске — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Усть-Каменогорске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -17614,8 +17720,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-ust-kamenogorsk#webpage",
         "url": "https://ecoprogress.kz/roos-ust-kamenogorsk",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Усть-Каменогорске",
-        "description": "Разработка РООС в Усть-Каменогорске: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Усть-Каменогорска — после аудита.",
+        "name": "Разработка РООС в Усть-Каменогорске",
+        "description": "Разработка РООС в Усть-Каменогорске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -17626,8 +17732,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-ust-kamenogorsk#service",
         "url": "https://ecoprogress.kz/roos-ust-kamenogorsk",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Усть-Каменогорске",
-        "description": "Разработка РООС в Усть-Каменогорске: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Усть-Каменогорска — после аудита.",
+        "name": "Разработка РООС в Усть-Каменогорске",
+        "description": "Разработка РООС в Усть-Каменогорске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -17679,14 +17785,14 @@
     "path": "/roos-kostanay",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Костанае | ECOPROGRESS",
-    "description": "Разработка РООС в Костанае: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Костаная — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Костанае",
+    "title": "РООС в Костанае — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Костанае для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Костанае",
     "canonical": "https://ecoprogress.kz/roos-kostanay",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Костанае | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Костанае: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Костаная — после аудита.",
+    "ogTitle": "РООС в Костанае — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Костанае для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -17732,8 +17838,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-kostanay#webpage",
         "url": "https://ecoprogress.kz/roos-kostanay",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Костанае",
-        "description": "Разработка РООС в Костанае: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Костаная — после аудита.",
+        "name": "Разработка РООС в Костанае",
+        "description": "Разработка РООС в Костанае для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -17744,8 +17850,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-kostanay#service",
         "url": "https://ecoprogress.kz/roos-kostanay",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Костанае",
-        "description": "Разработка РООС в Костанае: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Костаная — после аудита.",
+        "name": "Разработка РООС в Костанае",
+        "description": "Разработка РООС в Костанае для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -17797,14 +17903,14 @@
     "path": "/roos-aktau",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Актау | ECOPROGRESS",
-    "description": "Разработка РООС в Актау: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Актау — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Актау",
+    "title": "РООС в Актау — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Актау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Актау",
     "canonical": "https://ecoprogress.kz/roos-aktau",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Актау | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Актау: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Актау — после аудита.",
+    "ogTitle": "РООС в Актау — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Актау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -17850,8 +17956,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-aktau#webpage",
         "url": "https://ecoprogress.kz/roos-aktau",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Актау",
-        "description": "Разработка РООС в Актау: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Актау — после аудита.",
+        "name": "Разработка РООС в Актау",
+        "description": "Разработка РООС в Актау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -17862,8 +17968,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-aktau#service",
         "url": "https://ecoprogress.kz/roos-aktau",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Актау",
-        "description": "Разработка РООС в Актау: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Актау — после аудита.",
+        "name": "Разработка РООС в Актау",
+        "description": "Разработка РООС в Актау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -17915,14 +18021,14 @@
     "path": "/roos-petropavlovsk",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Петропавловске | ECOPROGRESS",
-    "description": "Разработка РООС в Петропавловске: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Петропавловска — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Петропавловске",
+    "title": "РООС в Петропавловске — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Петропавловске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Петропавловске",
     "canonical": "https://ecoprogress.kz/roos-petropavlovsk",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Петропавловске | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Петропавловске: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Петропавловска — после аудита.",
+    "ogTitle": "РООС в Петропавловске — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Петропавловске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -17968,8 +18074,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-petropavlovsk#webpage",
         "url": "https://ecoprogress.kz/roos-petropavlovsk",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Петропавловске",
-        "description": "Разработка РООС в Петропавловске: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Петропавловска — после аудита.",
+        "name": "Разработка РООС в Петропавловске",
+        "description": "Разработка РООС в Петропавловске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -17980,8 +18086,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-petropavlovsk#service",
         "url": "https://ecoprogress.kz/roos-petropavlovsk",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Петропавловске",
-        "description": "Разработка РООС в Петропавловске: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Петропавловска — после аудита.",
+        "name": "Разработка РООС в Петропавловске",
+        "description": "Разработка РООС в Петропавловске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -18033,14 +18139,14 @@
     "path": "/roos-oral",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Уральске | ECOPROGRESS",
-    "description": "Разработка РООС в Уральске: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Уральска — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Уральске",
+    "title": "РООС в Уральске — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Уральске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Уральске",
     "canonical": "https://ecoprogress.kz/roos-oral",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Уральске | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Уральске: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Уральска — после аудита.",
+    "ogTitle": "РООС в Уральске — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Уральске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -18086,8 +18192,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-oral#webpage",
         "url": "https://ecoprogress.kz/roos-oral",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Уральске",
-        "description": "Разработка РООС в Уральске: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Уральска — после аудита.",
+        "name": "Разработка РООС в Уральске",
+        "description": "Разработка РООС в Уральске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -18098,8 +18204,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-oral#service",
         "url": "https://ecoprogress.kz/roos-oral",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Уральске",
-        "description": "Разработка РООС в Уральске: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Уральска — после аудита.",
+        "name": "Разработка РООС в Уральске",
+        "description": "Разработка РООС в Уральске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -18151,14 +18257,14 @@
     "path": "/roos-kokshetau",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Кокшетау | ECOPROGRESS",
-    "description": "Разработка РООС в Кокшетау: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Кокшетау — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Кокшетау",
+    "title": "РООС в Кокшетау — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Кокшетау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Кокшетау",
     "canonical": "https://ecoprogress.kz/roos-kokshetau",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Кокшетау | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Кокшетау: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Кокшетау — после аудита.",
+    "ogTitle": "РООС в Кокшетау — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Кокшетау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -18204,8 +18310,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-kokshetau#webpage",
         "url": "https://ecoprogress.kz/roos-kokshetau",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Кокшетау",
-        "description": "Разработка РООС в Кокшетау: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Кокшетау — после аудита.",
+        "name": "Разработка РООС в Кокшетау",
+        "description": "Разработка РООС в Кокшетау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -18216,8 +18322,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-kokshetau#service",
         "url": "https://ecoprogress.kz/roos-kokshetau",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Кокшетау",
-        "description": "Разработка РООС в Кокшетау: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Кокшетау — после аудита.",
+        "name": "Разработка РООС в Кокшетау",
+        "description": "Разработка РООС в Кокшетау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -18269,14 +18375,14 @@
     "path": "/roos-taldykorgan",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Талдыкоргане | ECOPROGRESS",
-    "description": "Разработка РООС в Талдыкоргане: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Талдыкоргана — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Талдыкоргане",
+    "title": "РООС в Талдыкоргане — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Талдыкоргане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Талдыкоргане",
     "canonical": "https://ecoprogress.kz/roos-taldykorgan",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Талдыкоргане | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Талдыкоргане: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Талдыкоргана — после аудита.",
+    "ogTitle": "РООС в Талдыкоргане — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Талдыкоргане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -18322,8 +18428,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-taldykorgan#webpage",
         "url": "https://ecoprogress.kz/roos-taldykorgan",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Талдыкоргане",
-        "description": "Разработка РООС в Талдыкоргане: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Талдыкоргана — после аудита.",
+        "name": "Разработка РООС в Талдыкоргане",
+        "description": "Разработка РООС в Талдыкоргане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -18334,8 +18440,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-taldykorgan#service",
         "url": "https://ecoprogress.kz/roos-taldykorgan",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Талдыкоргане",
-        "description": "Разработка РООС в Талдыкоргане: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Талдыкоргана — после аудита.",
+        "name": "Разработка РООС в Талдыкоргане",
+        "description": "Разработка РООС в Талдыкоргане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -18387,14 +18493,14 @@
     "path": "/roos-semey",
     "locale": "ru",
     "alternates": [],
-    "title": "Разработка РООС в Семее | ECOPROGRESS",
-    "description": "Разработка РООС в Семее: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Семея — после аудита.",
-    "h1": "Разработка раздела охраны окружающей среды (РООС) в Семее",
+    "title": "РООС в Семее — разработка раздела охраны окружающей среды | EcoProgress",
+    "description": "Разработка РООС в Семее для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
+    "h1": "Разработка РООС в Семее",
     "canonical": "https://ecoprogress.kz/roos-semey",
     "robots": "noindex,follow",
     "ogType": "website",
-    "ogTitle": "Разработка РООС в Семее | ECOPROGRESS",
-    "ogDescription": "Разработка РООС в Семее: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Семея — после аудита.",
+    "ogTitle": "РООС в Семее — разработка раздела охраны окружающей среды | EcoProgress",
+    "ogDescription": "Разработка РООС в Семее для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
     "ogImage": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -18440,8 +18546,8 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/roos-semey#webpage",
         "url": "https://ecoprogress.kz/roos-semey",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Семее",
-        "description": "Разработка РООС в Семее: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Семея — после аудита.",
+        "name": "Разработка РООС в Семее",
+        "description": "Разработка РООС в Семее для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -18452,8 +18558,8 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/roos-semey#service",
         "url": "https://ecoprogress.kz/roos-semey",
-        "name": "Разработка раздела охраны окружающей среды (РООС) в Семее",
-        "description": "Разработка РООС в Семее: Оценка воздействий, расчёты и природоохранные решения в РООС. Срок и стоимость для Семея — после аудита.",
+        "name": "Разработка РООС в Семее",
+        "description": "Разработка РООС в Семее для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
         "serviceType": "Раздел охраны окружающей среды",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
@@ -27222,7 +27328,7 @@
     "lastModified": "2026-07-17"
   },
   {
-    "path": "/kk/",
+    "path": "/kk",
     "pageId": "home",
     "locale": "kk",
     "alternatePath": "/",

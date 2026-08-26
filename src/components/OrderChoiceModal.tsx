@@ -55,7 +55,7 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService }: Props) => {
           <X size={20} />
         </button>
 
-        <h2 className="pr-10 text-2xl font-bold text-eco-900">Оставить заявку</h2>
+        <h2 className="pr-10 text-2xl font-bold text-eco-900">Получить консультацию эколога</h2>
         <p className="mt-3 flex max-w-xl items-start gap-2 text-sm leading-6 text-slate-600">
           <FaWhatsapp className="mt-1 shrink-0 text-[#25D366]" size={16} aria-hidden="true" />
           <span>Выберите удобный способ. Можно работать через личный кабинет или отправить заявку менеджеру в WhatsApp без регистрации.</span>
@@ -79,7 +79,7 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService }: Props) => {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#25D366] shadow-sm">
               <FaWhatsapp size={24} aria-hidden="true" />
             </div>
-            <h3 className="mt-4 inline-flex items-center gap-2 text-lg font-bold text-eco-900"><FaWhatsapp className="text-[#25D366]" size={18} aria-hidden="true" /> Оставить заявку через WhatsApp</h3>
+            <h3 className="mt-4 inline-flex items-center gap-2 text-lg font-bold text-eco-900"><FaWhatsapp className="text-[#25D366]" size={18} aria-hidden="true" /> Написать в WhatsApp</h3>
             <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">
               Без регистрации. Менеджер получит сообщение и свяжется с вами.
             </p>

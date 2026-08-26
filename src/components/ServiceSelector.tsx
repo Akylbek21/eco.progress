@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Beaker, Building2, ClipboardCheck, HelpCircle, MapPinned, ShieldAlert, Truck, type LucideIcon } from 'lucide-react';
 import Button from './ui/Button';
+import WhatsAppButton from './WhatsAppButton';
 
 type SelectorItem = {
   title: string;
@@ -52,8 +53,8 @@ const ServiceSelector = () => {
             <h3 className="mt-3 text-2xl font-bold text-eco-900">{selected.title}</h3>
             <p className="mt-4 leading-7 text-slate-700">{selected.recommendation}</p>
             <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
-              <Button asChild className="w-full bg-eco-600 text-white hover:bg-eco-700 sm:w-auto"><a href="#lead">Получить консультацию</a></Button>
-              <Button asChild variant="secondary" className="w-full border-eco-200 bg-white text-eco-800 hover:bg-eco-50 sm:w-auto"><a href="#lead">Оставить заявку</a></Button>
+              <Button asChild className="w-full bg-eco-600 text-white hover:bg-eco-700 sm:w-auto"><a href="#lead">Получить консультацию эколога</a></Button>
+              <WhatsAppButton label="Написать в WhatsApp" className="w-full sm:w-auto" />
             </div>
           </div>
         </div>

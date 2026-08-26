@@ -51,13 +51,16 @@ const socialLinks = [
   { label: 'Telegram', href: 'https://t.me/ecoprogress_group', Icon: FaTelegramPlane },
 ];
 
+const privateRuntimePrefixes = ['/login', '/register', '/staff', '/cabinet', '/client', '/admin', '/dashboard'];
+const opensPrivateRuntime = (path: string) => privateRuntimePrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+
 const PublicLayout = ({ children }: { children: ReactNode }) => {
   const { pathname } = useLocation();
   const isKk = pathname === '/kk' || pathname.startsWith('/kk/');
   const currentNavItems = isKk ? kkNavItems : navItems;
   const localePair = localePairForPath(pathname);
   const ruPath = localePair?.ruPath || '/';
-  const kkPath = localePair?.kkPath || '/kk/';
+  const kkPath = localePair?.kkPath || '/kk';
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -74,12 +77,12 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
     <div className="min-h-screen bg-[#F7FBFD] text-slate-900">
       <header className={`sticky top-0 z-40 border-b border-eco-200/45 bg-white/92 text-eco-900 backdrop-blur-xl transition-all duration-300 ${scrolled ? 'shadow-xl shadow-eco-900/8' : 'shadow-sm shadow-eco-900/5'}`}>
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
-          <Link to={isKk ? '/kk/' : '/'} className="inline-flex items-center text-xl font-bold text-eco-900">
-            <span className="leading-none">ecoprogress.kz</span>
+          <Link to={isKk ? '/kk' : '/'} className="inline-flex shrink-0 items-center text-xl font-bold text-eco-900">
+            <span className="whitespace-nowrap leading-none">ecoprogress.kz</span>
           </Link>
           <nav className="hidden items-center gap-4 xl:gap-5 lg:flex">
-            {currentNavItems.map((item) => item.path.startsWith('http') ? (
-              <a key={item.path} href={item.path} target="_blank" rel="noreferrer" className="relative text-sm font-medium text-slate-700 transition after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:bg-accent after:transition-all hover:text-eco-800 hover:after:w-full">
+            {currentNavItems.map((item) => item.path.startsWith('http') || opensPrivateRuntime(item.path) ? (
+              <a key={item.path} href={item.path} target={item.path.startsWith('http') ? '_blank' : undefined} rel={item.path.startsWith('http') ? 'noreferrer' : undefined} className="relative shrink-0 whitespace-nowrap text-sm font-medium text-slate-700 transition after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:bg-accent after:transition-all hover:text-eco-800 hover:after:w-full">
                 {item.label}
               </a>
             ) : (
@@ -91,7 +94,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 onFocus={() => preloadPublicRoute(item.path)}
                 onPointerDown={() => preloadPublicRoute(item.path)}
                 className={({ isActive }) =>
-                  `relative text-sm font-medium transition after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:bg-accent after:transition-all ${
+                  `relative shrink-0 whitespace-nowrap text-sm font-medium transition after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:bg-accent after:transition-all ${
                     isActive ? 'text-eco-800 after:w-full' : 'text-slate-700 hover:text-eco-800 after:w-0 hover:after:w-full'
                   }`
                 }
@@ -102,28 +105,28 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
           </nav>
           <div className="hidden items-center gap-3 lg:flex">
             <nav aria-label={isKk ? 'Тілді таңдау' : 'Выбор языка'} className="inline-flex rounded-full border border-eco-200 bg-white p-1 text-xs font-bold">
-              <Link to={ruPath} lang="ru" className={`rounded-full px-3 py-2 ${!isKk ? 'bg-eco-900 text-white' : 'text-eco-800'}`}>RU</Link>
-              <Link to={kkPath} lang="kk" className={`rounded-full px-3 py-2 ${isKk ? 'bg-eco-900 text-white' : 'text-eco-800'}`}>ҚАЗ</Link>
+              <Link to={ruPath} lang="ru" className={`whitespace-nowrap rounded-full px-3 py-2 ${!isKk ? 'bg-eco-900 text-white' : 'text-eco-800'}`}>RU</Link>
+              <Link to={kkPath} lang="kk" className={`whitespace-nowrap rounded-full px-3 py-2 ${isKk ? 'bg-eco-900 text-white' : 'text-eco-800'}`}>ҚАЗ</Link>
             </nav>
             <div className="relative">
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => setAccountMenuOpen((state) => !state)}
-                className="gap-2 border-eco-200 bg-white text-eco-800 hover:bg-eco-50"
+                className="shrink-0 gap-2 whitespace-nowrap border-eco-200 bg-white text-eco-800 hover:bg-eco-50"
                 aria-expanded={accountMenuOpen}
               >
                 {isKk ? 'Мәзір' : 'Меню'} <ChevronDown size={16} className={`transition ${accountMenuOpen ? 'rotate-180' : ''}`} />
               </Button>
               {accountMenuOpen && (
                 <div className="absolute right-0 top-[calc(100%+0.75rem)] w-72 overflow-hidden rounded-[20px] border border-eco-100 bg-white p-2 shadow-2xl shadow-eco-900/12">
-                  {accountMenuItems.map(({ label, path, Icon }) => (
-                    <Link
-                      key={path}
-                      to={path}
-                      onClick={() => setAccountMenuOpen(false)}
-                      className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-eco-900 hover:bg-eco-50"
-                    >
+                  {accountMenuItems.map(({ label, path, Icon }) => opensPrivateRuntime(path) ? (
+                    <a key={path} href={path} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-eco-900 hover:bg-eco-50">
+                      <Icon size={18} className="text-eco-600" />
+                      {label}
+                    </a>
+                  ) : (
+                    <Link key={path} to={path} onClick={() => setAccountMenuOpen(false)} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-eco-900 hover:bg-eco-50">
                       <Icon size={18} className="text-eco-600" />
                       {label}
                     </Link>
@@ -148,8 +151,8 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 </div>
               )}
             </div>
-            <Button type="button" onClick={() => setOrderModal(true)} className="bg-accent text-eco-900 hover:bg-accent/90">
-              {isKk ? 'Өтінім қалдыру' : 'Оставить заявку'}
+            <Button type="button" onClick={() => setOrderModal(true)} className="shrink-0 whitespace-nowrap bg-accent text-eco-900 hover:bg-accent/90">
+              {isKk ? 'Өтінім қалдыру' : 'Получить консультацию эколога'}
             </Button>
           </div>
           <button
@@ -164,8 +167,8 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
           <div className="border-t border-eco-100 bg-white px-5 py-5 shadow-xl lg:hidden">
             <div className="space-y-2">
               <div className="mb-3 flex gap-2"><Link to={ruPath} onClick={() => setMenuOpen(false)} className="rounded-full border px-4 py-2 text-sm font-bold">RU</Link><Link to={kkPath} onClick={() => setMenuOpen(false)} className="rounded-full border px-4 py-2 text-sm font-bold">ҚАЗ</Link></div>
-              {currentNavItems.map((item) => item.path.startsWith('http') ? (
-                <a key={item.path} href={item.path} target="_blank" rel="noreferrer" onClick={() => setMenuOpen(false)} className="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-eco-50">
+              {currentNavItems.map((item) => item.path.startsWith('http') || opensPrivateRuntime(item.path) ? (
+                <a key={item.path} href={item.path} target={item.path.startsWith('http') ? '_blank' : undefined} rel={item.path.startsWith('http') ? 'noreferrer' : undefined} onClick={() => setMenuOpen(false)} className="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-eco-50">
                   {item.label}
                 </a>
               ) : (
@@ -185,7 +188,12 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 </NavLink>
               ))}
               <div className="grid gap-2 border-t border-eco-100 pt-3">
-                {accountMenuItems.map(({ label, path, Icon }) => (
+                {accountMenuItems.map(({ label, path, Icon }) => opensPrivateRuntime(path) ? (
+                    <a key={path} href={path} className="flex items-center gap-3 rounded-2xl border border-eco-100 px-4 py-3 text-sm font-semibold text-eco-800">
+                    <Icon size={18} className="text-eco-600" />
+                    {label}
+                  </a>
+                ) : (
                     <Link key={path} to={path} onPointerEnter={() => preloadPublicRoute(path)} onFocus={() => preloadPublicRoute(path)} onPointerDown={() => preloadPublicRoute(path)} onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-2xl border border-eco-100 px-4 py-3 text-sm font-semibold text-eco-800">
                     <Icon size={18} className="text-eco-600" />
                     {label}
@@ -207,7 +215,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 </div>
               </div>
               <button type="button" onClick={() => { setMenuOpen(false); setOrderModal(true); }} className="block w-full rounded-2xl bg-accent px-4 py-3 text-left text-sm font-semibold text-eco-900">
-                Оставить заявку
+                Получить консультацию эколога
               </button>
             </div>
           </div>
@@ -232,7 +240,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <WhatsAppButton label="WhatsApp" className="bg-accent px-4 py-2 text-eco-900 hover:bg-accent/90" />
-                <button type="button" onClick={() => setOrderModal(true)} className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">{isKk ? 'Өтінім қалдыру' : 'Оставить заявку'}</button>
+                <button type="button" onClick={() => setOrderModal(true)} className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">{isKk ? 'Өтінім қалдыру' : 'Получить консультацию эколога'}</button>
               </div>
             </div>
             <div>
@@ -242,8 +250,8 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 <li><Link to={isKk ? '/kk/zerthanalyq-zertteuler' : '/services/laboratory-tests'} className="hover:text-white">{isKk ? 'Зертханалық зерттеулер' : 'Лабораторные замеры'}</Link></li>
                 <li><Link to={isKk ? '/kk/pek-bagdarlamasy' : '/services/industrial-control'} className="hover:text-white">{isKk ? 'Өндірістік экологиялық бақылау' : 'Производственный контроль'}</Link></li>
                 <li><Link to={isKk ? '/kk/qaldyqtardy-kadege-zharatu' : '/services/waste-recycling'} className="hover:text-white">{isKk ? 'Қалдықтарды кәдеге жарату' : 'Утилизация: Шымкент, Тараз, Туркестан'}</Link></li>
-                <li><Link to={isKk ? '/kk/qaldyqtar-pasporty' : '/passport-othodov-kazakhstan'} className="hover:text-white">{isKk ? 'Қалдықтар паспорты' : 'Паспорт отходов'}</Link></li>
-                <li><Link to={isKk ? '/kk/pek-esebi' : '/otchet-pek-kazakhstan'} className="hover:text-white">{isKk ? 'ПЭК есебі' : 'Отчет ПЭК'}</Link></li>
+                <li><Link to={isKk ? '/kk/qaldyqtar-pasporty' : '/services/waste-passport'} className="hover:text-white">{isKk ? 'Қалдықтар паспорты' : 'Паспорт отходов'}</Link></li>
+                <li><Link to={isKk ? '/kk/pek-esebi' : '/services/report-pek'} className="hover:text-white">{isKk ? 'ПЭК есебі' : 'Отчет ПЭК'}</Link></li>
                 <li><Link to={isKk ? '/kk/ekologiyalyq-ruqsat' : '/services/environmental-permits'} className="hover:text-white">{isKk ? 'Экологиялық рұқсат' : 'Разрешения'}</Link></li>
                 <li><Link to={isKk ? '/kk/sanitariyalyq-qorgau-aimagy' : '/ses-proverka-proizvodstvennyy-kontrol'} className="hover:text-white">{isKk ? 'Санитариялық-қорғау аймағы' : 'Сопровождение проверок'}</Link></li>
               </ul>
@@ -269,14 +277,14 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
             <div>
               <h4 className="text-sm font-semibold uppercase text-eco-200">{isKk ? 'Компания' : 'Компания'}</h4>
               <div className="mt-4 space-y-3 text-sm text-white/75">
-                <Link to={isKk ? '/kk/' : '/about'} className="block hover:text-white">{isKk ? 'Басты бет' : 'О компании'}</Link>
+                <Link to={isKk ? '/kk' : '/about'} className="block hover:text-white">{isKk ? 'Басты бет' : 'О компании'}</Link>
                 <Link to={isKk ? '/kk/ekologiyalyq-qyzmetter' : '/contacts'} className="block hover:text-white">{isKk ? 'Қызметтер' : 'Контакты'}</Link>
                 {!isKk && <><Link to="/partners" className="block hover:text-white">Партнеры</Link><Link to="/employees" className="block hover:text-white">Сотрудники</Link><Link to="/news" className="block hover:text-white">Статьи</Link><Link to="/cases" className="block hover:text-white">Кейсы</Link><Link to="/faq" className="block hover:text-white">FAQ</Link></>}
               </div>
               <h4 className="mt-7 text-sm font-semibold uppercase text-eco-200">{isKk ? 'Жеке кабинет' : 'Личный кабинет'}</h4>
               <div className="mt-4 space-y-3 text-sm text-white/75">
-                <Link to="/login" className="block hover:text-white">{isKk ? 'Клиент кабинеті' : 'Кабинет клиента'}</Link>
-                <Link to="/staff/login" className="block text-xs text-white/45 hover:text-white">{isKk ? 'Қызметкерлерге кіру' : 'Вход для сотрудников'}</Link>
+                <a href="/login" className="block hover:text-white">{isKk ? 'Клиент кабинеті' : 'Кабинет клиента'}</a>
+                <a href="/staff/login" className="block text-xs text-white/45 hover:text-white">{isKk ? 'Қызметкерлерге кіру' : 'Вход для сотрудников'}</a>
               </div>
             </div>
           </div>

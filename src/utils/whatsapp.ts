@@ -3,12 +3,9 @@
 export const defaultWhatsAppRequestMessage = `Здравствуйте! Хочу оставить заявку на экологические услуги.
 
 Услуга:
-Название компании:
-БИН:
 Город:
-Контактное лицо:
-Телефон:
-Комментарий:`;
+Телефон / WhatsApp:
+Что вам нужно:`;
 
 export const createWhatsAppUrl = (message: string) => {
   const phone = COMPANY_CONTACTS.whatsappPhone;
@@ -18,41 +15,29 @@ export const createWhatsAppUrl = (message: string) => {
 export const createBlankWhatsAppRequestMessage = (service = '') => `Здравствуйте! Хочу оставить заявку.
 
 Услуга: ${service}
-Название компании:
-БИН:
 Город:
-Контактное лицо:
-Телефон:
-Комментарий:`;
+Телефон / WhatsApp:
+Что вам нужно:`;
 
 type WhatsAppLeadValues = {
   service: string;
-  name: string;
   phone: string;
-  company?: string;
-  bin?: string;
   city?: string;
   comment?: string;
 };
 
 export const createWhatsAppLeadMessage = ({
   service,
-  name,
   phone,
-  company,
-  bin,
   city,
   comment,
 }: WhatsAppLeadValues) => `Здравствуйте! Хочу оставить заявку на услугу ecoprogress.kz.
 
 Услуга: ${service}
-Имя: ${name}
-Телефон: ${phone}
-Компания: ${company || 'не указано'}
-БИН: ${bin || 'не указано'}
+Телефон / WhatsApp: ${phone}
 Город: ${city || 'не указано'}
 
-Комментарий:
+Что вам нужно:
 ${comment || 'не указано'}
 
 Источник: сайт ecoprogress.kz`;

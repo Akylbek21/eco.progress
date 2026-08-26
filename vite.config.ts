@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv, type ProxyOptions } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, isSsrBuild }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const backendUrl = env.DEV_BACKEND_URL || env.BACKEND_URL || env.VITE_BACKEND_URL || 'http://localhost:8080';
   const publicApiBaseUrl = env.VITE_API_URL?.trim() || '/api';
@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => {
       }),
     },
     build: {
-      rollupOptions: {
+      rollupOptions: isSsrBuild ? {} : {
         output: {
           manualChunks: {
             react: ['react', 'react-dom', 'react-router-dom'],
@@ -49,6 +49,11 @@ export default defineConfig(({ mode }) => {
     preview: {
       port: 4173,
       proxy: apiProxy(),
+    },
+    ssr: {
+      // react-icons publishes an ESM directory import that native Node cannot
+      // resolve when Vite externalizes the package. Bundle it into the SSR entry.
+      noExternal: ['react-icons'],
     },
   };
 });

@@ -5,7 +5,7 @@ import Reveal from '../components/animations/Reveal';
 import Button from '../components/ui/Button';
 import SEO from '../components/SEO';
 import type { TariffItem } from '../types';
-import { activeServices, formatKztPrice, PRELIMINARY_PRICE_NOTICE } from '../content/serviceCatalog';
+import { activeServices, formatKztPrice, getServicePrimaryCtaLabel, PRELIMINARY_PRICE_NOTICE } from '../content/serviceCatalog';
 
 const modes = ['Все', 'Разовая задача', 'Ежемесячное сопровождение'] as const;
 
@@ -15,7 +15,7 @@ const catalogTariffs: TariffItem[] = activeServices.filter((service) => service.
   price: formatKztPrice(service.pricing),
   description: service.shortDescription,
   features: service.deliverables,
-  cta: 'Оставить заявку',
+  cta: getServicePrimaryCtaLabel(service.slug),
   mode: service.slug === 'ecological-support' ? 'Ежемесячное сопровождение' : 'Разовая задача',
   popular: service.slug === 'ecological-documents',
 }));

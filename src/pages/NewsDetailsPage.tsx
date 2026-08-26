@@ -15,6 +15,7 @@ import { publicContentRepository } from '../content/apiRepository';
 import type { ArticleContent } from '../content/types';
 import { articleRobotsForReviewStatus } from '../content/articleReview';
 import { AeoFaqList, RelatedCaseStudies, VerifiedExperts } from '../components/content/AeoContent';
+import { articleContentMap } from '../content/articles/articleContent';
 
 const toSeoArticle = (article: ArticleContent): SeoArticleConfig => ({
   id: article.slug,
@@ -49,10 +50,12 @@ const toSeoArticle = (article: ArticleContent): SeoArticleConfig => ({
 const NewsDetailsPage = () => {
   const { id } = useParams();
   const canonicalId = id ? normalizeArticleSlug(id) : '';
+  const staticContent = articleContentMap.get(canonicalId);
   const { data: apiContent, isLoading, isError } = useQuery({
     queryKey: ['public-content', 'article', canonicalId],
     queryFn: () => publicContentRepository.getArticleBySlug(canonicalId),
     enabled: Boolean(canonicalId),
+    initialData: staticContent,
     staleTime: 5 * 60 * 1000,
   });
   const { data: apiExperts = [] } = useQuery({
@@ -67,7 +70,7 @@ const NewsDetailsPage = () => {
 
   if (isLoading) return <div className="bg-eco-50 px-5 py-20 text-center text-slate-600">Загрузка статьи…</div>;
 
-  if (isError) return <div className="bg-eco-50 px-5 py-20 text-center text-rose-800">Не удалось загрузить статью с сервера.</div>;
+  if (isError && !item) return <div className="bg-eco-50 px-5 py-20 text-center text-rose-800">Не удалось загрузить статью с сервера.</div>;
 
   if (!item) {
     return (
@@ -133,7 +136,7 @@ const NewsDetailsPage = () => {
           <h2 className="text-2xl font-bold">Нужна консультация по экологии?</h2>
           <p className="mt-3 text-base leading-7 text-white/75">Отправьте город, объект и вопрос. Специалист подскажет документы, сроки и следующий шаг.</p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button asChild className="bg-accent text-eco-900 hover:bg-accent/90"><Link to="/contacts">Получить консультацию</Link></Button>
+            <Button asChild className="bg-accent text-eco-900 hover:bg-accent/90"><Link to="/contacts">Получить консультацию эколога</Link></Button>
             <a href={getWhatsAppUrl(`Здравствуйте! Хочу консультацию по статье: ${item.h1}`)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
               <MessageCircle size={18} /> WhatsApp
             </a>

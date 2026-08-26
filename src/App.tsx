@@ -24,8 +24,6 @@ const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 const AboutPage = lazy(publicRouteLoaders.about);
 const ServicesPage = lazy(publicRouteLoaders.services);
 const SeoLandingPage = lazy(() => import('./pages/SeoLandingPage'));
-const ServiceLandingPage = lazy(() => import('./pages/ServiceLandingPage'));
-const ServiceDetailsPage = lazy(() => import('./pages/ServiceDetailsPage'));
 const ServiceRoutePage = lazy(() => import('./pages/ServiceRoutePage'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
 const PartnersPage = lazy(() => import('./pages/PartnersPage'));
@@ -207,12 +205,6 @@ function App() {
         <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
         <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
         <Route path="/services" element={<PublicLayout><ServicesPage /></PublicLayout>} />
-        <Route path="/services/ecological-documents" element={<PublicLayout><ServiceLandingPage slug="ecological-documents" /></PublicLayout>} />
-        <Route path="/services/waste-transportation" element={<PublicLayout><ServiceLandingPage slug="waste-transportation" /></PublicLayout>} />
-        <Route path="/services/waste-recycling" element={<PublicLayout><ServiceLandingPage slug="waste-recycling" /></PublicLayout>} />
-        <Route path="/services/laboratory-tests" element={<PublicLayout><ServiceLandingPage slug="laboratory-tests" /></PublicLayout>} />
-        <Route path="/services/poligon-tbo" element={<PublicLayout><ServiceLandingPage slug="poligon-tbo" /></PublicLayout>} />
-        <Route path="/services/environmental-audit" element={<PublicLayout><ServiceLandingPage slug="environmental-audit" /></PublicLayout>} />
         <Route path="/services/:id" element={<PublicLayout><ServiceRoutePage /></PublicLayout>} />
         <Route path="/tariffs" element={<PublicLayout><TariffsPage /></PublicLayout>} />
         <Route path="/employees" element={<PublicLayout><EmployeesPage /></PublicLayout>} />
@@ -225,8 +217,6 @@ function App() {
         <Route path="/contacts" element={<PublicLayout><ContactsPage /></PublicLayout>} />
         <Route path="/regions" element={<PublicLayout><RegionsPage /></PublicLayout>} />
         <Route path="/search" element={<PublicLayout><SearchPage /></PublicLayout>} />
-        <Route path="/shtrafy-za-ekologiyu-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
-        <Route path="/shtrafy-za-ekologicheskie-narusheniya-kazakhstan" element={<Navigate to="/news/shtrafy-za-ekologicheskie-narusheniya" replace />} />
         <Route path="/kk/*" element={<PublicLayout><SeoLandingPage /></PublicLayout>} />
         <Route path="/:seoSlug" element={<PublicLayout><SeoLandingPage /></PublicLayout>} />
         <Route path="/login" element={<LoginPage onSuccess={notify} />} />

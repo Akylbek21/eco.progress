@@ -47,7 +47,8 @@ export interface ContentAuditItem {
 export interface ServiceContent {
   serviceSlug: string;
   status: ContentStatus;
-  hero: { eyebrow?: string; title: string; subtitle: string; primaryCta: string; secondaryCta?: string };
+  hero: { eyebrow?: string; title: string; subtitle: string; primaryCta: string; secondaryCta?: string; benefits?: string[] };
+  sections?: Array<{ title: string; body: string }>;
   summary: { shortDescription: string; clientResult: string; availability: string; durationText: string; priceText: string };
   whenRequired: Array<{ title: string; description: string }>;
   targetClients: Array<{ title: string; description?: string }>;

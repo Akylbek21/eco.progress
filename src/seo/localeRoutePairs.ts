@@ -1,5 +1,5 @@
 export const localeRoutePairs = [
-  { pageId: 'home', type: 'main', ruPath: '/', kkPath: '/kk/' },
+  { pageId: 'home', type: 'main', ruPath: '/', kkPath: '/kk' },
   { pageId: 'services', type: 'service', serviceSlug: 'ecological-documents', ruPath: '/services', kkPath: '/kk/ekologiyalyq-qyzmetter' },
   { pageId: 'service:waste-passport', type: 'service', serviceSlug: 'waste-passport', ruPath: '/services/waste-passport', kkPath: '/kk/qaldyqtar-pasporty' },
   { pageId: 'service:ndv', type: 'service', serviceSlug: 'ndv', ruPath: '/services/ndv', kkPath: '/kk/services/ndv' },

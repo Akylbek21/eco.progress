@@ -84,6 +84,7 @@ export const ServiceAeoContent = ({ content }: { content: ServiceContent }) => {
   const legalItems = content.legalBasis.map((item) => `${item.title}${item.number ? ` ${item.number}` : ''}`);
   const mistakeItems = content.risks.map((item) => `${item.risk}. Как избежать: ${item.prevention}`);
   return <div className="mx-auto max-w-7xl space-y-10">
+    {content.sections?.map((section) => <DirectSection key={section.title} title={section.title} answer={section.body} />)}
     <DirectSection title="Короткий ответ" answer={aeo.shortAnswer} />
     <DirectSection title="Кому нужна услуга" answer={aeo.targetAudience}>{bullets(targetItems)}</DirectSection>
     <DirectSection title="Когда она обязательна" answer={aeo.whenRequired}>{bullets(requiredItems)}</DirectSection>

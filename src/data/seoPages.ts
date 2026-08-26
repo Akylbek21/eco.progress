@@ -65,6 +65,9 @@ export interface SeoPageConfig {
   sources?: Array<{ title: string; url: string; accessedAt?: string; claimStatus: 'verified' | 'requires-review' | 'general-information' }>;
   ctaTitle?: string;
   ctaText?: string;
+  heroBenefits?: string[];
+  primaryCtaLabel?: string;
+  secondaryCtaLabel?: string;
 }
 
 export const seoPages = seoPagesJson as SeoPageConfig[];

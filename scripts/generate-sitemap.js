@@ -8,6 +8,7 @@ import { expertMap, experts, isCompleteExpert } from '../src/content/experts/exp
 import { caseStudies } from '../src/content/cases/caseStudies.ts';
 import { isPublishableCaseStudy } from '../src/content/cases/caseStudyPolicy.ts';
 import { alternatePathFor, localePairForPath } from '../src/seo/localeRoutePairs.ts';
+import { sitemapEligibilityErrors } from '../src/seo/sitemapPolicy.ts';
 
 const root = process.cwd();
 const publicDir = path.join(root, 'public');
@@ -71,7 +72,7 @@ const schemasFor = (source) => {
   }
   if (pathName !== '/') schemas.push(buildBreadcrumbSchema(
     source.breadcrumbs?.map((item) => ({ name: item.label, url: item.path }))
-      || [{ name: locale === 'kk' ? 'Басты бет' : 'Главная', url: locale === 'kk' ? `${SITE_URL}/kk/` : SITE_URL }, { name: h1, url: canonical }],
+      || [{ name: locale === 'kk' ? 'Басты бет' : 'Главная', url: locale === 'kk' ? `${SITE_URL}/kk` : SITE_URL }, { name: h1, url: canonical }],
     canonical,
   ));
   return schemas;
@@ -140,7 +141,16 @@ fs.writeFileSync(path.join(dataDir, 'seoPages.generated.json'), `${JSON.stringif
 fs.writeFileSync(path.join(dataDir, 'seoArticles.generated.json'), `${JSON.stringify(seoArticles, null, 2)}\n`, 'utf8');
 fs.writeFileSync(path.join(dataDir, 'seoRegistry.generated.json'), `${JSON.stringify(registry, null, 2)}\n`, 'utf8');
 
-const sitemapEntries = registry.filter((entry) => entry.includeInSitemap && entry.robots === 'index,follow');
+const omittedIndexableEntries = registry.filter((entry) => entry.robots === 'index,follow' && !entry.includeInSitemap);
+if (omittedIndexableEntries.length) {
+  throw new Error(`Indexable SEO registry entries omitted from sitemap: ${omittedIndexableEntries.map((entry) => entry.path).join(', ')}`);
+}
+
+const sitemapEntries = registry.filter((entry) => entry.includeInSitemap);
+for (const entry of sitemapEntries) {
+  const errors = sitemapEligibilityErrors(entry);
+  if (errors.length) throw new Error(`Invalid sitemap entry ${entry.path}: ${errors.join('; ')}`);
+}
 const body = sitemapEntries.map((entry) => [
   '  <url>',
   `    <loc>${escapeXml(entry.canonical)}</loc>`,

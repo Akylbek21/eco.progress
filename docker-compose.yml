@@ -2,8 +2,9 @@ services:
   frontend:
     build:
       context: .
+      network: eco-net
       args:
-        SEO_CONTENT_API_URL: ${SEO_CONTENT_API_URL:?SEO_CONTENT_API_URL is required for production build}
+        SEO_CONTENT_API_URL: ${SEO_CONTENT_API_URL:-http://eco-app:8080/api/public/content/seo-snapshot}
         SEO_CONTENT_API_TOKEN: ${SEO_CONTENT_API_TOKEN:-}
     container_name: eco-frontend
     ports:

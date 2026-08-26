@@ -100,8 +100,13 @@ const SEO = ({
     const resolvedDescription = description?.trim() || currentDescription || 'Экологические услуги и сопровождение бизнеса в Казахстане.';
     const currentCanonicalPath = currentCanonical ? normalizePathname(new URL(currentCanonical, window.location.origin).pathname) : undefined;
     const samePrerenderedRoute = currentCanonicalPath === path;
-    const resolvedCanonical = absoluteUrl(canonical || (samePrerenderedRoute ? currentCanonical : undefined) || path);
     const resolvedRobots = robots || currentRobots || 'index,follow';
+    const requestedCanonical = canonical || (samePrerenderedRoute ? currentCanonical : undefined) || path;
+    // An indexable route must always declare itself, regardless of stale CMS,
+    // prerendered or caller-provided canonical data.
+    const resolvedCanonical = resolvedRobots === 'index,follow'
+      ? absoluteUrl(path)
+      : absoluteUrl(requestedCanonical);
     const resolvedType = type || currentOgType || 'website';
     const resolvedImage = absoluteUrl(ogImage || currentOgImage || '/media/social/ecoprogress-og-1200x630.jpg');
     const resolvedSchema = schema ? (Array.isArray(schema) ? schema : [schema]) : undefined;

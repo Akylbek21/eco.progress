@@ -32,7 +32,7 @@ const ContactsPage = () => {
             <p className="mt-4 leading-7 text-slate-600">Свяжитесь с нами для консультации, расчета стоимости или быстрой проверки ситуации.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild><a href={company.phoneHref} onClick={() => trackPhoneClick({ placement: 'contacts_page' })}>Позвонить</a></Button>
-              <WhatsAppButton label="Оставить заявку через WhatsApp" />
+              <WhatsAppButton label="Написать в WhatsApp" />
             </div>
           </div>
         </Reveal>

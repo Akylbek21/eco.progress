@@ -30,7 +30,9 @@ export const catalogItemToServiceItem = (service: ServiceCatalogItem): ServiceIt
   icon: service.icon,
 });
 
-export const fallbackServices: ServiceItem[] = import.meta.env.DEV ? activeServices.map(catalogItemToServiceItem) : [];
+// Reviewed catalog data is also the deterministic SSR/hydration baseline.
+// Production still revalidates against the public CMS.
+export const fallbackServices: ServiceItem[] = activeServices.map(catalogItemToServiceItem);
 
 const canonicalizeApiServices = (items: ServiceContent[]): ServiceItem[] => {
   return items.flatMap((apiItem) => {

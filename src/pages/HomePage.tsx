@@ -109,9 +109,8 @@ const HomePage = () => (
           </Reveal>
           <Reveal delay={0.16}>
             <div className="mt-9 grid gap-3 sm:flex sm:flex-wrap">
-              <Button asChild className="w-full bg-accent px-7 py-4 text-eco-900 hover:bg-accent/90 sm:w-auto"><a href="#lead" onClick={() => trackEvent('consultation_click', { placement: 'hero' })}>Получить консультацию</a></Button>
-              <Button asChild variant="secondary" className="w-full border-white/35 bg-white/10 px-7 py-4 text-white hover:bg-white/18 sm:w-auto"><a href="#lead">Оставить заявку</a></Button>
-              <WhatsAppButton label="Оставить заявку через WhatsApp" className="w-full px-7 py-4 sm:w-auto" />
+              <Button asChild className="w-full bg-accent px-7 py-4 text-eco-900 hover:bg-accent/90 sm:w-auto"><a href="#lead" onClick={() => trackEvent('consultation_click', { placement: 'hero' })}>Получить консультацию эколога</a></Button>
+              <WhatsAppButton label="Написать в WhatsApp" className="w-full px-7 py-4 sm:w-auto" />
             </div>
           </Reveal>
           <Reveal delay={0.22}>

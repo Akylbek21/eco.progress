@@ -16,7 +16,7 @@ const WhatsAppButton = ({
   floating = false,
   className,
 }: WhatsAppButtonProps) => {
-  const text = label ?? (floating ? '' : 'Оставить заявку через WhatsApp');
+  const text = label ?? (floating ? '' : 'Написать в WhatsApp');
 
   return (
     <a

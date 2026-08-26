@@ -19,17 +19,13 @@ for (const marker of forbiddenPreloadMarkers) {
   }
 }
 
-const forbiddenInitialMarkers = [
-  'seoRegistry.generated',
-  '/pexels-jan-van.jpg',
-  '/pexels-enginakyurt.jpg',
-  '/cottonbro.jpg',
-  '/edward.jpg',
-  '/jose.jpg',
-];
+const forbiddenInitialMarkers = ['seoRegistry.generated'];
 
 for (const marker of forbiddenInitialMarkers) {
-  if (html.includes(marker) || initialSource.includes(marker)) {
+  // Route image URLs can legitimately occur in the shared SSR/client component
+  // code. A URL string does not preload the image, so keep this guard focused on
+  // build-only data that must never enter the browser graph.
+  if (initialSource.includes(marker)) {
     throw new Error(`Public bundle check: forbidden initial marker ${marker}.`);
   }
 }

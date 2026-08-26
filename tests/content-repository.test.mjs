@@ -29,7 +29,7 @@ test('fallback repository uses local content only after a real primary failure',
 });
 
 test('priority content has structured service, article and regional fields', () => {
-  assert.equal(serviceContent.length, 10);
+  assert.equal(serviceContent.length, 11);
   for (const item of serviceContent) {
     assert.ok(item.workflow.length >= 3);
     assert.ok(item.deliverables.length > 0);
@@ -57,6 +57,65 @@ test('priority content has structured service, article and regional fields', () 
   assert.ok(regionContent.every((region) => region.remoteConditions.length && region.onSiteConditions.length));
 });
 
+test('report PEK landing keeps its priority SEO, commercial sections and FAQ', () => {
+  const report = serviceContent.find((item) => item.serviceSlug === 'report-pek');
+  const registryEntry = seoRegistry.find((item) => item.path === '/services/report-pek');
+  assert.equal(registryEntry?.title, 'Отчёт ПЭК — подготовка, сроки и стоимость | EcoProgress');
+  assert.equal(registryEntry?.h1, 'Подготовка отчёта ПЭК в Казахстане');
+  assert.deepEqual(report?.sections?.map((section) => section.title), [
+    'Кто обязан сдавать отчёт ПЭК',
+    'Сроки предоставления отчёта ПЭК',
+    'Стоимость подготовки отчёта ПЭК',
+    'Какие данные нужны для отчёта',
+    'Что делать, если отсутствуют протоколы',
+    'Что получает предприятие',
+    'Частые ошибки при подготовке отчёта ПЭК',
+  ]);
+  assert.deepEqual(report?.faq.map((item) => item.question), [
+    'Когда сдаётся отчёт ПЭК?',
+    'Кто обязан сдавать отчёт ПЭК?',
+    'Сколько стоит подготовка?',
+    'Какие документы нужны?',
+    'Что делать, если часть замеров отсутствует?',
+    'Можно ли подготовить отчёт дистанционно?',
+    'Чем программа ПЭК отличается от отчёта ПЭК?',
+  ]);
+});
+
+test('ROOS has a dedicated canonical service landing and comparison section', () => {
+  const roos = serviceContent.find((item) => item.serviceSlug === 'roos');
+  const registryEntry = seoRegistry.find((item) => item.path === '/services/roos');
+  assert.equal(registryEntry?.canonical, 'https://ecoprogress.kz/services/roos');
+  assert.equal(registryEntry?.title, 'РООС — разработка раздела охраны окружающей среды | EcoProgress');
+  assert.equal(registryEntry?.h1, 'Разработка РООС в Казахстане');
+  assert.deepEqual(roos?.sections?.map((section) => section.title), [
+    'Когда требуется РООС',
+    'Что входит в разработку РООС',
+    'Какие исходные данные нужны',
+    'Срок разработки РООС',
+    'Стоимость РООС',
+    'Что получает заказчик',
+    'РООС и ОВОС — в чём разница',
+  ]);
+});
+
+test('priority ROOS city pages use concise metadata and substantial unique regional copy', () => {
+  const pages = ['almaty', 'astana', 'shymkent'].map((city) => seoPages.find((page) => page.slug === `roos-${city}`));
+  assert.ok(pages.every(Boolean));
+  assert.deepEqual(pages.map((page) => page.h1), ['Разработка РООС в Алматы', 'Разработка РООС в Астане', 'Разработка РООС в Шымкенте']);
+  assert.ok(pages.every((page) => page.indexable === true));
+  assert.ok(pages.every((page) => page.heroBenefits?.length === 3));
+  assert.ok(pages.every((page) => page.primaryCtaLabel === 'Получить расчёт РООС'));
+  const regionalSections = pages.map((page) => page.sections.find((section) => section.title.includes('особенности региона')));
+  assert.ok(regionalSections.every(Boolean));
+  for (const section of regionalSections) {
+    const wordCount = section.body.trim().split(/\s+/u).length;
+    assert.ok(wordCount >= 300 && wordCount <= 600, `${section.title}: ${wordCount} words`);
+    for (const topic of ['Особенности работы в регионе', 'Типичные объекты', 'Исходные данные', 'Как проходит работа', 'Статус регионального кейса', 'Сроки взаимодействия']) assert.match(section.body, new RegExp(topic));
+  }
+  assert.equal(new Set(regionalSections.map((section) => section.body)).size, 3);
+});
+
 test('unverified trust data and case drafts are never presented as approved', () => {
   assert.ok(trustDocuments.every((document) => document.verificationStatus !== 'verified' || (document.number && document.issuedBy)));
   assert.ok(caseStudies.every((item) => item.status !== 'published' || !item.publishedAt));
@@ -79,6 +138,14 @@ test('waste utilization is exposed only for Shymkent, Taraz and Turkestan', () =
     assert.ok(!publicUrls.has(`https://ecoprogress.kz/utilizaciya-othodov-${city}`));
   }
   assert.ok(wasteUtilizationPages.every((page) => page.indexable === true));
+  assert.ok(wasteUtilizationPages.every((page) => page.heroBenefits?.length === 3));
+  const taraz = wasteUtilizationPages.find((page) => page.slug === 'utilizaciya-othodov-taraz');
+  assert.equal(taraz?.title, 'Утилизация отходов в Таразе — вывоз и документы | EcoProgress');
+  assert.equal(taraz?.primaryCtaLabel, 'Рассчитать стоимость утилизации');
+  assert.equal(taraz?.secondaryCtaLabel, 'Отправить перечень отходов');
+  const turkestan = wasteUtilizationPages.find((page) => page.slug === 'utilizaciya-othodov-turkestan');
+  assert.equal(turkestan?.title, 'Утилизация отходов в Туркестане — вывоз и документы | EcoProgress');
+  assert.equal(turkestan?.primaryCtaLabel, 'Рассчитать стоимость утилизации');
 });
 
 test('service and article templates render mandatory structured content blocks', async () => {
@@ -92,4 +159,22 @@ test('service and article templates render mandatory structured content blocks',
   for (const label of ['Дата публикации', 'Последняя экспертная проверка', 'articleRobotsForReviewStatus']) assert.match(articlePage, new RegExp(label));
   assert.match(articlePage, /normalizeArticleSlug/);
   assert.match(generatedRegistry, /"path": "\/ecologicheskie-uslugi-kostanay"[\s\S]*?"robots": "index,follow"/);
+});
+
+test('short landing forms collect common and service-specific lead details', async () => {
+  const [leadForm, whatsAppForm, serviceLanding] = await Promise.all([
+    readFile(new URL('../src/components/LeadForm.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/WhatsAppLeadForm.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/ServiceLandingPage.tsx', import.meta.url), 'utf8'),
+  ]);
+  for (const source of [leadForm, whatsAppForm]) {
+    assert.match(source, /Телефон \/ WhatsApp \*/u);
+    assert.match(source, /Что нужно \/ комментарий/u);
+    assert.match(source, /name="city"/u);
+    assert.match(source, /name="wasteType"/u);
+    assert.match(source, /name="estimatedVolume"/u);
+    assert.match(source, /name="reportingPeriod"/u);
+    assert.match(source, /name="objectType"/u);
+  }
+  assert.match(serviceLanding, /serviceSlug=\{service\.slug\}/u);
 });

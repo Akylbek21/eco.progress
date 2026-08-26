@@ -140,6 +140,7 @@ const EmployeesPage = () => {
       }
       return addEmployeesToList(fallbackEmployees);
     },
+    initialData: addEmployeesToList(fallbackEmployees),
   });
 
   if (isLoading) return <PageSkeleton />;
