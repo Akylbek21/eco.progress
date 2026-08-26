@@ -47,6 +47,7 @@ export interface CompanyListItem {
 
 export interface CompanyObject {
   id: string;
+  version: number;
   companyId?: string;
   virtual?: boolean;
   isVirtual?: boolean;

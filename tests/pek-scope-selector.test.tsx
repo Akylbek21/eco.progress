@@ -61,6 +61,30 @@ const Harness = () => {
   </QueryClientProvider>;
 };
 
+const UrlHarness = () => {
+  const [params, setParams] = useState(() => new URLSearchParams());
+  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+  const update = (key: 'companyId' | 'objectId', value: string) => {
+    const next = new URLSearchParams(params);
+    value ? next.set(key, value) : next.delete(key);
+    if (key === 'companyId') next.delete('objectId');
+    setParams(next);
+  };
+  const companyId = Number(params.get('companyId')) || undefined;
+  const objectId = Number(params.get('objectId')) || undefined;
+  return <QueryClientProvider client={client}>
+    <PekCompanyObjectFilters
+      companyId={companyId}
+      objectId={objectId}
+      onCompanyChange={(value) => update('companyId', value)}
+      onObjectChange={(value) => update('objectId', value)}
+      required
+    />
+    <output data-testid="url-company-id">{companyId || ''}</output>
+    <output data-testid="url-object-id">{objectId || ''}</output>
+  </QueryClientProvider>;
+};
+
 const choose = async (label: string, option: string) => {
   const input = await screen.findByLabelText(label);
   fireEvent.mouseDown(input);
@@ -68,6 +92,15 @@ const choose = async (label: string, option: string) => {
 };
 
 describe('PEK scope company and object selector', () => {
+  it('keeps companyId when company and object filters are synchronized through URL params', async () => {
+    render(<UrlHarness />);
+    await choose('Компания *', 'ТОО «Eco Company» · БИН 123456789012');
+    expect(screen.getByTestId('url-company-id').textContent).toBe('10');
+    await waitFor(() => expect(objectRequests).toContain(10));
+    await choose('Объект *', 'Площадка Север · Шымкент');
+    expect(screen.getByTestId('url-object-id').textContent).toBe('101');
+  });
+
   it('shows named companies, stores companyId and loads only its objects', async () => {
     render(<Harness />);
     await choose('Компания *', 'ТОО «Eco Company» · БИН 123456789012');

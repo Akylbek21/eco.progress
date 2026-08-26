@@ -12,6 +12,7 @@ const explicitPermission = (user: PekUser, permission: string): boolean | undefi
 };
 
 const legacyCreateRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'];
+const legacySupervisorRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD'];
 
 export const canUsePekPermission = (user: PekUser, permission: string) => {
   const explicit = explicitPermission(user, permission);
@@ -21,8 +22,11 @@ export const canUsePekPermission = (user: PekUser, permission: string) => {
       || user?.role === 'ADMIN'
       || user?.role === 'DIRECTOR';
   }
-  if (permission === 'PEK_PROGRAM_CREATE' || permission === 'PEK_REPORT_CREATE') {
+  if (permission === 'PEK_PROGRAM_CREATE' || permission === 'PEK_PROGRAM_EDIT' || permission === 'PEK_REPORT_CREATE') {
     return Boolean(user?.role && legacyCreateRoles.includes(user.role));
+  }
+  if (permission === 'PEK_PROGRAM_ACTIVATE') {
+    return Boolean(user?.role && legacySupervisorRoles.includes(user.role));
   }
   return false;
 };

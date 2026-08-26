@@ -51,6 +51,7 @@ export const normalizeCompanyObject = (raw: unknown, companyId = ''): CompanyObj
   const isVirtual = source.virtual === true || source.isVirtual === true;
   return {
     id,
+    version: numberValue(source.version, 0),
     companyId: pick(source, ['companyId', 'company_id']) || companyId,
     virtual: isVirtual,
     isVirtual,
@@ -249,23 +250,29 @@ export async function createCompanyObject(companyId: string, payload: CompanyObj
   return object;
 }
 
-export async function updateCompanyObject(companyId: string, objectId: string, payload: CompanyObjectRequest): Promise<CompanyObject> {
-  const response = await api.patch<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}`, payload);
+export async function updateCompanyObject(companyId: string, objectId: string, payload: CompanyObjectRequest, version: number): Promise<CompanyObject> {
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}`, payload, {
+    headers: { 'If-Match': String(version) },
+  });
   const object = normalizeCompanyObject(unwrap(response), companyId);
   if (!object.id) throw new Error('Backend не вернул идентификатор объекта.');
   return object;
 }
 
-export async function archiveCompanyObject(companyId: string, objectId: string): Promise<CompanyObject> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}/archive`);
+export async function archiveCompanyObject(companyId: string, objectId: string, version: number): Promise<CompanyObject> {
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${companyId}/objects/${objectId}/archive`, undefined, {
+    params: { version },
+  });
   const object = normalizeCompanyObject(unwrap(response), companyId);
   return object.id ? object : { ...object, id: objectId, companyId, status: 'ARCHIVED' };
 }
 
-export async function restoreCompanyObject(companyId: string | number, objectId: string | number): Promise<CompanyObject> {
+export async function restoreCompanyObject(companyId: string | number, objectId: string | number, version: number): Promise<CompanyObject> {
   const companyKey = String(companyId);
   const objectKey = String(objectId);
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${companyKey}/objects/${objectKey}/restore`);
+  const response = await api.post<ApiResponse<unknown> | unknown>(`/companies/${companyKey}/objects/${objectKey}/restore`, undefined, {
+    params: { version },
+  });
   const object = normalizeCompanyObject(unwrap(response), companyKey);
   return object.id ? object : { ...object, id: objectKey, companyId: companyKey, status: 'ACTIVE' };
 }

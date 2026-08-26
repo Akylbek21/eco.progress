@@ -12,7 +12,7 @@ import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { clearCompanyQueries } from '../src/features/companies/companyCache';
 import { canOpenCompanyEditor, hasCompanyPermission } from '../src/features/companies/companyPermissions';
 import api from '../src/services/api';
-import { createCompany, getCompanyObjects, restoreCompanyObject } from '../src/services/companyService';
+import { createCompany, getCompanyObjects, restoreCompanyObject, updateCompanyObject } from '../src/services/companyService';
 
 const server = setupServer();
 const originalBaseUrl = api.defaults.baseURL;
@@ -115,29 +115,54 @@ describe('companies frontend contract', () => {
 
   it('requests archived objects and restores one through the canonical endpoint', async () => {
     let includeArchivedObjects = '';
+    let restoredVersion = '';
     let restoreCalls = 0;
     server.use(
       http.get('http://localhost/api/companies/7/objects', ({ request }) => {
         includeArchivedObjects = new URL(request.url).searchParams.get('includeArchivedObjects') || '';
-        return HttpResponse.json({ data: { items: [{ id: 3, companyId: 7, name: 'Архивный объект', address: 'Адрес', status: 'ARCHIVED' }] } });
+        return HttpResponse.json({ data: { items: [{ id: 3, version: 6, companyId: 7, name: 'Архивный объект', address: 'Адрес', status: 'ARCHIVED' }] } });
       }),
-      http.post('http://localhost/api/companies/7/objects/3/restore', () => {
+      http.post('http://localhost/api/companies/7/objects/3/restore', ({ request }) => {
         restoreCalls += 1;
-        return HttpResponse.json({ data: { id: 3, companyId: 7, name: 'Объект', address: 'Адрес', status: 'ACTIVE' } });
+        restoredVersion = new URL(request.url).searchParams.get('version') || '';
+        return HttpResponse.json({ data: { id: 3, version: 7, companyId: 7, name: 'Объект', address: 'Адрес', status: 'ACTIVE' } });
       }),
     );
 
     const objects = await getCompanyObjects('7', true);
-    const restored = await restoreCompanyObject('7', '3');
+    const restored = await restoreCompanyObject('7', '3', objects[0].version);
 
     expect(includeArchivedObjects).toBe('true');
     expect(objects[0].status).toBe('ARCHIVED');
+    expect(objects[0].version).toBe(6);
     expect(restoreCalls).toBe(1);
+    expect(restoredVersion).toBe('6');
     expect(restored.status).toBe('ACTIVE');
 
     const page = readFileSync(resolve(process.cwd(), 'src/pages/CompaniesPage.tsx'), 'utf8');
     expect(page).toContain('getCompanyObjects(companyId, true, signal)');
     expect(page).toContain('Восстановить объект ${object.name}');
+  });
+
+  it('sends the current object version in If-Match when coordinates are updated', async () => {
+    let ifMatch = '';
+    let coordinates = '';
+    server.use(http.patch('http://localhost/api/companies/7/objects/3', async ({ request }) => {
+      ifMatch = request.headers.get('If-Match') || '';
+      coordinates = String((await request.json() as { coordinates?: string }).coordinates || '');
+      return HttpResponse.json({ data: { id: 3, version: 5, companyId: 7, name: 'Объект', address: 'Адрес', coordinates, status: 'ACTIVE' } });
+    }));
+
+    const updated = await updateCompanyObject('7', '3', {
+      name: 'Объект', objectType: null, address: 'Адрес', region: null, cityDistrict: null,
+      coordinates: '52.90578579667665, 69.1533993549875', contactPerson: null,
+      contactPhone: null, primary: true, activityType: null, sanitaryZone: null,
+      samplingLocation: null, notes: null,
+    }, 4);
+
+    expect(ifMatch).toBe('4');
+    expect(coordinates).toBe('52.90578579667665, 69.1533993549875');
+    expect(updated.version).toBe(5);
   });
 
   it('renders backend field errors beside the matching canonical field', async () => {

@@ -33,6 +33,7 @@ import {
   canSignReport,
   canSubmitPekReport,
   canTransitionExceedance,
+  canUsePekPermission,
 } from '../src/features/pek/permissions/pekAccess';
 import { pekKeys } from '../src/features/pek/api/pekQueryKeys';
 import { commitPekProgramMutation } from '../src/features/pek/api/pekProgramCache';
@@ -416,6 +417,10 @@ describe('PEK backend contract', () => {
     expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(true);
     expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(false);
     expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_CREATE')).toBe(true);
+    expect(canUsePekPermission({ role: 'ADMIN' }, 'PEK_PROGRAM_EDIT')).toBe(true);
+    expect(canUsePekPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_EDIT')).toBe(true);
+    expect(canUsePekPermission({ role: 'MANAGER' }, 'PEK_PROGRAM_EDIT')).toBe(false);
+    expect(canUsePekPermission({ role: 'HEAD' }, 'PEK_PROGRAM_ACTIVATE')).toBe(true);
     expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_REPORT_CREATE')).toBe(true);
     expect(hasPermission({ role: 'LABORATORY' }, 'PEK_PROGRAM_CREATE')).toBe(false);
     expect(hasPermission({ role: 'LABORATORY' }, 'PEK_REPORT_CREATE')).toBe(false);

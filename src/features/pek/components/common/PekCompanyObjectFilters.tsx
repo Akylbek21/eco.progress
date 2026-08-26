@@ -1,5 +1,5 @@
 import { Autocomplete, CircularProgress, TextField } from '@mui/material';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { usePekScope } from '../../hooks/usePekScope';
 
 type Props = {
@@ -33,6 +33,13 @@ const PekCompanyObjectFilters = ({
   );
   const selectedCompany = scope.companies.find((item) => item.id === companyId) ?? null;
   const selectedObject = activeObjects.find((item) => item.id === objectId) ?? null;
+  const previousCompanyId = useRef(companyId);
+
+  useEffect(() => {
+    const companyChanged = previousCompanyId.current !== companyId;
+    previousCompanyId.current = companyId;
+    if (companyChanged && objectId) onObjectChange('');
+  }, [companyId, objectId, onObjectChange]);
 
   useEffect(() => {
     if (!companyId && scope.companies.length === 1) onCompanyChange(String(scope.companies[0].id));
@@ -79,7 +86,6 @@ const PekCompanyObjectFilters = ({
         noOptionsText={scope.availableCompanies.isLoading ? 'Загрузка компаний…' : 'Нет доступных компаний'}
         onChange={(_, company) => {
           onCompanyChange(company ? String(company.id) : '');
-          onObjectChange('');
         }}
         renderInput={(params) => <TextField
           {...params}

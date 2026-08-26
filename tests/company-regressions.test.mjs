@@ -94,11 +94,13 @@ test('company routes use auth/me permissions and have no local role matrix', asy
 test('object create, update and soft archive use the single company service', async () => {
   const [page, service] = await sources;
   assert.match(page, /createCompanyObject\(companyId, request\)/);
-  assert.match(page, /updateCompanyObject\(companyId, editing\.id, request\)/);
-  assert.match(page, /archiveCompanyObject\(companyId, archiveTarget\.id\)/);
+  assert.match(page, /updateCompanyObject\(companyId, editing\.id, request, editing\.version\)/);
+  assert.match(page, /archiveCompanyObject\(companyId, archiveTarget\.id, archiveTarget\.version\)/);
+  assert.match(service, /'If-Match': String\(version\)/);
+  assert.match(service, /params: \{ version \}/);
   assert.match(service, /objects\/\$\{objectId\}\/archive/);
   assert.match(page, /getCompanyObjects\(companyId, true, signal\)/);
-  assert.match(page, /restoreCompanyObject\(companyId, archiveTarget\.id\)/);
+  assert.match(page, /restoreCompanyObject\(companyId, archiveTarget\.id, archiveTarget\.version\)/);
   assert.doesNotMatch(service, /api\.delete/);
 });
 

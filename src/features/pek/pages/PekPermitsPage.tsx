@@ -224,7 +224,7 @@ const PekPermitsPage = () => {
         : permits.isError
           ? <PekQueryError error={permits.error} resource="разрешительные документы" retry={() => void permits.refetch()} />
           : !permits.data?.length
-            ? <PekState title="Разрешений пока нет" message={canCreate ? 'Добавьте первый разрешительный документ для выбранного объекта.' : 'Для выбранного объекта разрешительные документы не найдены.'} />
+            ? <PekState title="Разрешений пока нет" message={canCreate ? 'Нажмите «Добавить разрешение» справа вверху и заполните данные документа.' : 'У вашей учётной записи нет права PEK_PROGRAM_EDIT для добавления разрешений. Обратитесь к администратору.'} />
             : <div className="overflow-x-auto rounded-2xl border bg-white">
               <table className="w-full min-w-[1050px] text-sm">
                 <thead className="bg-slate-50 text-left"><tr>{['Тип и номер', 'Орган выдачи', 'Дата выдачи', 'Срок действия', 'Статус', 'Связи', 'Действия'].map((label) => <th key={label} className="px-4 py-3">{label}</th>)}</tr></thead>
