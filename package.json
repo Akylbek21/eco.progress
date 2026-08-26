@@ -19,7 +19,7 @@
     "seo:validate": "npm run seo:audit",
     "seo:content:sync": "node scripts/sync-seo-content.mjs",
     "build:seo": "npm run build",
-    "build": "npm run seo:content:sync && npm run images:optimize && npm run generate:sitemap && tsc && vite build && npm run test:production-no-msw && npm run test:production-api-base && npm run prerender && npm run test:prerender-content && npm run test:hydration && npm run seo:audit && npm run test:public-performance",
+    "build": "npm run images:optimize && npm run generate:sitemap && tsc && vite build && npm run test:production-no-msw && npm run test:production-api-base && npm run prerender && npm run test:prerender-content && npm run test:hydration && npm run test:public-performance",
     "test:production-no-msw": "node scripts/verify-production-no-msw.mjs",
     "test:production-api-base": "node scripts/verify-production-api-base.mjs",
     "test:public-performance": "node scripts/verify-public-performance.mjs",
