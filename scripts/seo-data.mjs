@@ -446,7 +446,21 @@ const isServiceCityIndexable = (service, city) =>
   isServiceAvailableInCity(service, city)
   && hasIndexableRegionContent(city.slug)
   && indexableServiceCityPairs.has(`${service.key}:${city.slug}`);
-const serviceCityLink = (service, city) => link(`${service.titleName} в ${city.cityPrepositional}`, `/${service.slugPrefix}-${city.slug}`);
+const mainServicePath = (service) => {
+  const slug = mainServiceSlug[service.key];
+  if (!slug) throw new Error(`Missing main service fallback for: ${service.key}`);
+  return `/services/${slug}`;
+};
+const serviceCityPath = (service, city) => isServiceCityIndexable(service, city)
+  ? `/${service.slugPrefix}-${city.slug}`
+  : mainServicePath(service);
+const serviceCityLink = (service, city) => link(`${service.titleName} в ${city.cityPrepositional}`, serviceCityPath(service, city));
+export const serviceCityFallbacks = serviceProfiles.flatMap((service) => activeCityProfiles
+  .filter((city) => isServiceAvailableInCity(service, city) && !isServiceCityIndexable(service, city))
+  .map((city) => ({
+    source: `/${service.slugPrefix}-${city.slug}`,
+    destination: mainServicePath(service),
+  })));
 const relatedServiceCityLinks = (service, city) => {
   const current = serviceProfiles.findIndex((item) => item.key === service.key);
   return Array.from({ length: serviceProfiles.length - 1 }, (_, index) => index + 1)
@@ -800,7 +814,7 @@ export const seoArticles = articleContent.filter((article) => article.status ===
 
 const ruSeoPages = [
   ...activeCityProfiles.map(createCityPage),
-  ...serviceProfiles.flatMap((service) => activeCityProfiles.filter((city) => isServiceAvailableInCity(service, city)).map((city) => createServiceCityPage(service, city))),
+  ...serviceProfiles.flatMap((service) => activeCityProfiles.filter((city) => isServiceCityIndexable(service, city)).map((city) => createServiceCityPage(service, city))),
   ...specialPages
     .filter((page) => !page.slug.startsWith('utilizaciya-othodov-') || wasteRecyclingRegions.has(page.slug.replace('utilizaciya-othodov-', '')))
     .map(enrichSpecialPage),

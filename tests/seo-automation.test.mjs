@@ -7,14 +7,21 @@ import { canonicalForPublicPath } from '../src/seo/indexingPolicy.ts';
 const root = path.resolve(import.meta.dirname, '..');
 const dist = path.join(root, 'dist');
 const registry = JSON.parse(fs.readFileSync(path.join(root, 'src', 'data', 'seoRegistry.generated.json'), 'utf8'));
+const seoPages = JSON.parse(fs.readFileSync(path.join(root, 'src', 'data', 'seoPages.generated.json'), 'utf8'));
 const sitemap = fs.readFileSync(path.join(root, 'public', 'sitemap.xml'), 'utf8');
 const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
 const sitemapSet = new Set(sitemapUrls);
 const indexable = registry.filter((entry) => entry.robots === 'index,follow');
 const noindex = registry.filter((entry) => entry.robots !== 'index,follow');
+const noindexPaths = new Set(noindex.map((entry) => entry.path));
 const redirectConfig = fs.readFileSync(path.join(root, 'deploy', 'nginx-host', 'snippets', 'legacy-redirects.conf'), 'utf8');
-const redirectRules = [...redirectConfig.matchAll(/location\s+~\s+(\S+)\s*\{\s*return\s+301\s+([^;]+);/g)]
-  .map((match) => ({ source: match[1], destination: match[2], pattern: new RegExp(match[1]) }));
+const serviceCityFallbackConfig = fs.readFileSync(path.join(root, 'deploy', 'nginx-host', 'snippets', 'service-city-fallbacks.generated.conf'), 'utf8');
+const redirectRules = [
+  ...[...redirectConfig.matchAll(/location\s+~\s+(\S+)\s*\{\s*return\s+301\s+([^;]+);/g)]
+    .map((match) => ({ source: match[1], destination: match[2], pattern: new RegExp(match[1]) })),
+  ...[...serviceCityFallbackConfig.matchAll(/location\s+=\s+(\S+)\s*\{\s*return\s+301\s+([^;]+);/g)]
+    .map((match) => ({ source: match[1], destination: match[2], pattern: new RegExp(`^${match[1]}$`) })),
+];
 const pageFile = (pathname) => pathname === '/'
   ? path.join(dist, 'index.html')
   : path.join(dist, pathname.replace(/^\//, ''), 'index.html');
@@ -46,6 +53,16 @@ test('sitemap contains neither noindex nor redirect URLs', () => {
   }
 });
 
+test('generated service and related links never target noindex pages', () => {
+  for (const page of seoPages) {
+    for (const field of ['services', 'relatedLinks']) {
+      for (const item of page[field] || []) {
+        assert.equal(noindexPaths.has(item.path), false, `/${page.slug} [${field}] -> ${item.path}: internal link targets noindex`);
+      }
+    }
+  }
+});
+
 test('indexable pages have unique non-empty Title and H1', () => {
   const titles = new Map();
   const headings = new Map();
@@ -74,6 +91,7 @@ test('internal links on indexable pages never point through a 301', () => {
       const redirects = url.protocol !== 'https:' || url.hostname !== 'ecoprogress.kz'
         || (url.pathname !== '/' && url.pathname.endsWith('/')) || redirect;
       assert.equal(Boolean(redirects), false, `${entry.path} -> ${href}: internal link leads through 301`);
+      assert.equal(noindexPaths.has(url.pathname), false, `${entry.path} -> ${href}: internal link targets noindex`);
     }
   }
 });

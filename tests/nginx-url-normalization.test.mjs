@@ -8,12 +8,29 @@ const legacyRedirects = readFileSync(
   new URL('../deploy/nginx-host/snippets/legacy-redirects.conf', import.meta.url),
   'utf8',
 );
+const serviceCityFallbacks = readFileSync(
+  new URL('../deploy/nginx-host/snippets/service-city-fallbacks.generated.conf', import.meta.url),
+  'utf8',
+);
 
 const count = (source, fragment) => source.split(fragment).length - 1;
 
 test('every public entry point evaluates legacy redirects before its fallback', () => {
   assert.equal(count(hostConfig, 'include /etc/nginx/snippets/legacy-redirects.conf;'), 3);
   assert.equal(count(containerConfig, 'include /etc/nginx/snippets/legacy-redirects.conf;'), 2);
+  assert.equal(count(hostConfig, 'include /etc/nginx/snippets/service-city-fallbacks.generated.conf;'), 3);
+  assert.equal(count(containerConfig, 'include /etc/nginx/snippets/service-city-fallbacks.generated.conf;'), 2);
+});
+
+test('retired service-city routes redirect directly to nationwide service pages', () => {
+  const rules = [...serviceCityFallbacks.matchAll(/location = (\/\S+) \{ return 301 (\S+); \}/g)];
+
+  assert.equal(rules.length, 332);
+  assert.equal(new Set(rules.map(([, source]) => source.replace(/\/$/, ''))).size, 166);
+  for (const [, source, destination] of rules) {
+    assert.match(source, /^\/[a-z0-9-]+\/?$/);
+    assert.match(destination, /^https:\/\/ecoprogress\.kz\/services\/[a-z0-9-]+\$is_args\$args$/);
+  }
 });
 
 test('legacy redirects accept trailing slashes and point directly to the canonical origin', () => {

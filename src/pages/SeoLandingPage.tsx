@@ -17,13 +17,16 @@ import { publicContentRepository } from '../content/apiRepository';
 import { articleRobotsForReviewStatus } from '../content/articleReview';
 import { AeoFaqList, RelatedCaseStudies, VerifiedExperts } from '../components/content/AeoContent';
 import { GENERAL_PRIMARY_CTA_LABEL } from '../content/serviceCatalog';
+import { regions } from '../content/regions';
+import { getCityImage } from '../data/cityImages';
+import { getArticleImage } from '../data/pageHeroImages';
 
 const buildSchema = (page: SeoPageConfig, author?: Expert, reviewer?: Expert, experts: Expert[] = [], cases: CaseStudy[] = []) => {
   const ids = entityIds(page.canonical);
   const expertNodes = experts.map((expert, index) => buildPersonSchema(expert, `${page.canonical}#expert-${index + 1}`));
   const caseUrls = cases.map((item) => `${company.siteUrl}/cases/${item.slug}`);
   const primary = page.type === 'article'
-    ? buildArticleSchema({ canonical: page.canonical, headline: page.h1, description: page.description, datePublished: page.datePublished!, dateModified: page.lastmod, image: `${company.siteUrl}${page.image || '/og-cover.jpg'}`, authorId: author ? ids.author : undefined, reviewerId: reviewer ? ids.reviewer : undefined, caseUrls })
+    ? buildArticleSchema({ canonical: page.canonical, headline: page.h1, description: page.description, datePublished: page.datePublished!, dateModified: page.lastmod, image: `${company.siteUrl}${getArticleImage(page.slug, page.image)}`, authorId: author ? ids.author : undefined, reviewerId: reviewer ? ids.reviewer : undefined, caseUrls })
     : page.type === 'service-city' || page.type === 'service'
       ? buildServiceEntity({ canonical: page.canonical, name: page.h1, description: page.description, serviceType: page.service, areaServed: page.cityNominative ?? page.city, expertIds: expertNodes.map((node) => String(node['@id'])), caseUrls })
       : undefined;
@@ -82,6 +85,9 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
   const audience = page.audience ?? [];
   const outcomes = page.outcomes ?? [];
   const regionDetails = page.type === 'city' ? regionContentMap.get(page.slug.replace('ecologicheskie-uslugi-', '')) : undefined;
+  const pageRegion = regions.find((region) => region.cityNominative === page.cityNominative || region.city === page.city);
+  const articleImage = page.type === 'article' ? getArticleImage(page.slug, page.image) : undefined;
+  const heroImage = (pageRegion ? getCityImage(pageRegion.slug) : undefined) || articleImage || page.image || '/para.jpg';
   const backendExpertMap = new Map(apiExperts.map((expert) => [expert.id, expert]));
   const authorCandidate = page.author ?? (page.authorSlug ? backendExpertMap.get(page.authorSlug) ?? expertMap.get(page.authorSlug) : undefined);
   const reviewerCandidate = page.reviewer ?? (page.reviewerSlug ? backendExpertMap.get(page.reviewerSlug) ?? expertMap.get(page.reviewerSlug) : undefined);
@@ -121,7 +127,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
       <SEO title={page.title} description={page.description} canonical={page.canonical} robots={robots} locale={page.locale || 'ru'} alternates={alternates} type={page.type === 'article' ? 'article' : 'website'} schema={buildSchema(page, approvedArticleAuthor, approvedArticleReviewer, apiExperts, relatedCases)} datePublished={page.datePublished} dateModified={page.lastmod} />
 
       <section className="relative isolate overflow-hidden bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-20">
-        <ResponsiveImage fill priority sizes="100vw" src={page.image || '/para.jpg'} alt={page.h1} width={1600} height={900} wrapperClassName="-z-20" className="object-cover" />
+        <ResponsiveImage fill priority sizes="100vw" src={heroImage} alt={page.h1} width={1600} height={900} wrapperClassName="-z-20" className="object-cover" />
         <div className="absolute inset-0 -z-10 bg-eco-900/84" />
         <div className="mx-auto max-w-7xl">
           <nav className="flex flex-wrap gap-2 text-sm text-white/72" aria-label={isKk ? 'Навигациялық тізбек' : 'Хлебные крошки'}>

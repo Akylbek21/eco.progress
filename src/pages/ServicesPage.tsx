@@ -105,7 +105,7 @@ const ServicesPage = () => {
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-eco-900/72 via-eco-900/36 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 -z-[5] h-16 bg-gradient-to-t from-eco-50/90 to-transparent" />
         <div className="relative mx-auto w-full max-w-7xl [text-shadow:0_2px_18px_rgba(2,28,57,0.72)]">
-          <Reveal><div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold backdrop-blur-md"><Globe2 size={17} className="text-accent" />Решения для бизнеса по Казахстану</div><h1 className="mt-6 max-w-4xl text-4xl font-bold leading-[1.08] sm:text-6xl lg:text-7xl">Экологические услуги полного цикла</h1></Reveal>
+          <Reveal><h1 className="max-w-4xl text-4xl font-bold leading-[1.08] sm:text-6xl lg:text-7xl">Экологические услуги полного цикла</h1></Reveal>
           <Reveal delay={0.1}><p className="mt-6 max-w-2xl text-base leading-7 text-white/82 sm:text-xl sm:leading-8">Проектная документация и лабораторные исследования по Казахстану. Утилизация отходов — в Шымкенте, Таразе и Туркестане; транспортировка и размещение — в Шымкенте.</p></Reveal>
           <Reveal delay={0.14}>
             <div className="mt-8 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3">
@@ -124,9 +124,9 @@ const ServicesPage = () => {
       </section>
       <section className="bg-eco-50 px-4 py-10 sm:px-8 sm:py-14">
         <div className="mx-auto max-w-7xl">
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             {categories.map((item) => (
-              <button key={item} onClick={() => setCategory(item)} className={`shrink-0 rounded-full px-4 py-2.5 text-sm font-semibold transition sm:px-5 sm:py-3 ${category === item ? 'bg-eco-800 text-white' : 'bg-white text-eco-800 hover:bg-eco-200/30'}`}>
+              <button key={item} type="button" aria-pressed={category === item} onClick={() => setCategory(item)} className={`rounded-full px-4 py-2.5 text-sm font-semibold transition sm:px-5 sm:py-3 ${category === item ? 'bg-eco-800 text-white shadow-sm' : 'border border-white bg-white text-eco-800 hover:border-eco-200 hover:bg-eco-100'}`}>
                 {item}
               </button>
             ))}

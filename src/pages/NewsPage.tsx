@@ -1,11 +1,11 @@
 ﻿import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpenCheck, FileCheck2, Lightbulb, Sparkles } from 'lucide-react';
+import { BookOpenCheck, FileCheck2, Lightbulb } from 'lucide-react';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { getNewsResult } from '../services/newsService';
-import { newsCardImages, pageHeroImages } from '../data/pageHeroImages';
+import { getArticleImage, pageHeroImages } from '../data/pageHeroImages';
 
 const NewsPage = () => {
   const { data, isError } = useQuery({
@@ -22,7 +22,7 @@ const NewsPage = () => {
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-eco-900/72 via-eco-900/34 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 -z-[5] h-16 bg-gradient-to-t from-eco-50/90 to-transparent" />
         <div className="mx-auto w-full max-w-7xl [text-shadow:0_2px_18px_rgba(2,28,57,0.72)]">
-          <Reveal><div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold backdrop-blur-md"><Sparkles size={17} className="text-accent" />База знаний EcoProgress</div><h1 className="mt-6 max-w-4xl text-4xl font-bold leading-[1.08] sm:text-6xl lg:text-7xl">Статьи и полезные материалы</h1></Reveal>
+          <Reveal><h1 className="max-w-4xl text-4xl font-bold leading-[1.08] sm:text-6xl lg:text-7xl">Статьи и полезные материалы</h1></Reveal>
           <Reveal delay={0.08}><p className="mt-6 max-w-2xl text-base leading-7 text-white/82 sm:text-xl sm:leading-8">Разбираем экологические требования, документы и практические задачи предприятий простым языком.</p></Reveal>
           <Reveal delay={0.14}>
             <div className="mt-9 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3">
@@ -44,7 +44,7 @@ const NewsPage = () => {
           {news.map((item, index) => (
             <Reveal key={item.id} delay={index * 0.05}>
               <Link to={`/news/${item.id}`} className="group card-hover block h-full overflow-hidden rounded-[22px] bg-white shadow-sm">
-                <ResponsiveImage sizes="(max-width: 767px) 100vw, 33vw" src={newsCardImages[index % newsCardImages.length]} alt={item.title} width={1600} height={900} wrapperClassName="aspect-[16/9] w-full" className="object-cover transition duration-500 group-hover:scale-105" />
+                <ResponsiveImage sizes="(max-width: 767px) 100vw, 33vw" src={getArticleImage(item.id, item.image)} alt={item.title} width={1600} height={900} wrapperClassName="aspect-[16/9] w-full" className="object-cover transition duration-500 group-hover:scale-105" />
                 <div className="p-5">
                   <p className="text-xs font-semibold uppercase text-eco-500">{item.category} · {item.date}</p>
                   <h2 className="mt-3 text-xl font-bold text-eco-900">{item.title}</h2>

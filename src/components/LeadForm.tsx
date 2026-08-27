@@ -59,7 +59,8 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
   const documentsWhatsAppUrl = createWhatsAppUrl(isKk
     ? `Сәлеметсіз бе! «${defaultService}» қызметі бойынша өтінім қалдырдым. Есептеу үшін құжаттарды жіберемін.`
     : `Здравствуйте! Я оставил(а) заявку на услугу «${defaultService}». Отправляю документы для расчёта.`);
-  const containerClassName = `rounded-[24px] border p-5 shadow-xl sm:p-7 ${isBlue ? 'border-eco-700 bg-eco-900 text-white shadow-eco-900/18' : 'border-slate-200 bg-white shadow-eco-900/8'}`;
+  const containerClassName = `relative isolate overflow-hidden rounded-[24px] border p-5 shadow-xl before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-gradient-to-r before:from-transparent before:via-accent/90 before:to-transparent sm:p-7 ${isBlue ? 'border-eco-700/60 bg-gradient-to-br from-eco-900 via-eco-800 to-eco-600 text-white shadow-eco-900/18' : 'border-slate-200 bg-white shadow-eco-900/8'}`;
+  const fieldClassName = `input-focus mt-2 w-full rounded-2xl border px-4 py-3 text-eco-900 transition ${isBlue ? 'border-white/20 bg-white/95 shadow-[inset_0_1px_2px_rgba(2,28,57,0.08),0_8px_24px_-18px_rgba(0,0,0,0.8)]' : 'border-slate-200 bg-white'}`;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -156,6 +157,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
   return (
     <form
       onSubmit={submit}
+      noValidate
       onFocus={() => {
         if (started) return;
         setStarted(true);
@@ -165,42 +167,42 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
       }}
       className={containerClassName}
     >
-      <h2 className={`text-2xl font-bold ${isBlue ? 'text-white' : 'text-eco-900'}`}>{title}</h2>
+      <h2 className={`text-2xl font-bold ${isBlue ? 'border-l-2 border-accent/80 pl-4 text-white' : 'text-eco-900'}`}>{title}</h2>
       {!compact && <p className={`mt-3 text-sm leading-6 ${isBlue ? 'text-white/72' : 'text-slate-600'}`}>{isKk ? 'Байланыс деректерін қалдырыңыз. EcoProgress маманы келесі қадамды түсіндіреді.' : 'Оставьте контакты. Специалист ecoprogress.kz свяжется с вами и подскажет следующий шаг.'}</p>}
       <div className="mt-6 grid gap-4">
         <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
-          <span className="inline-flex items-center gap-1.5"><FaWhatsapp className="text-[#25D366]" size={15} aria-hidden="true" /> Телефон / WhatsApp *</span>
-          <input name="phone" required inputMode="tel" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" />
+          <span>Телефон / WhatsApp *</span>
+          <input name="phone" required inputMode="tel" className={fieldClassName} />
         </label>
         <input type="hidden" name="serviceType" value={defaultService} />
         {isLandingShortForm && <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
           {isKk ? 'Қала' : 'Город'}
-          <input name="city" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" />
+          <input name="city" className={fieldClassName} />
         </label>}
         {isLandingShortForm && isWasteForm &&
           <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
             Вид отходов и примерный объём
-            <input name="wasteType" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" placeholder="Например, строительный мусор — 2 тонны" />
+            <input name="wasteType" className={fieldClassName} placeholder="Например, строительный мусор — 2 тонны" />
           </label>
         }
         {isLandingShortForm && isPekReportForm && <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
           Отчётный период
-          <input name="reportingPeriod" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" placeholder="Например, II квартал 2026" />
+          <input name="reportingPeriod" className={fieldClassName} placeholder="Например, II квартал 2026" />
         </label>}
         {isLandingShortForm && isRoosForm && <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
           Вид объекта / проектируемая деятельность
-          <input name="objectType" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" />
+          <input name="objectType" className={fieldClassName} />
         </label>}
         {isLandingShortForm && serviceDetailLabel[normalizedServiceSlug] && <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
           {serviceDetailLabel[normalizedServiceSlug]}
-          <input name="serviceDetail" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" />
+          <input name="serviceDetail" className={fieldClassName} />
         </label>}
       </div>
       <label className={`mt-4 block text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
         {isKk ? 'Сізге не қажет?' : 'Что вам нужно?'}{isLandingShortForm ? '' : ' *'}
-        <textarea name="comment" required={!isLandingShortForm} className="input-focus mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-eco-900" rows={3} />
+        <textarea name="comment" required={!isLandingShortForm} className={fieldClassName} rows={3} />
       </label>
-      <Button disabled={loading} className={`mt-5 w-full ${isBlue ? 'bg-accent text-eco-900 hover:bg-accent/90' : ''}`}>{loading ? (isKk ? 'Жіберіліп жатыр...' : 'Отправляем...') : submitLabel || (isKk ? 'Есеп алу' : 'Получить расчёт')}</Button>
+      <Button disabled={loading} className={`mt-5 w-full ${isBlue ? '!bg-[#38C7BA] !text-[#021C39] shadow-lg shadow-black/15 hover:!bg-[#55D2C7]' : ''}`}>{loading ? (isKk ? 'Жіберіліп жатыр...' : 'Отправляем...') : submitLabel || (isKk ? 'Есеп алу' : 'Получить расчёт')}</Button>
       {error && (
         <div className="mt-4 rounded-2xl bg-rose-50 p-4 text-sm font-semibold text-rose-800">
           <p className="inline-flex w-full items-start gap-2">

@@ -19,4 +19,16 @@ export const featuredSeoLinks = [
   ['ekologicheskoe-razreshenie-almaty', 'Экологическое разрешение в Алматы', 'Исходные данные, проектные материалы и сопровождение разрешительной процедуры.'],
   ['ovos-almaty', 'ОВОС и скрининг в Алматы', 'Экологическая оценка для строительства, реконструкции и запуска производства.'],
   ['laboratornye-zamery-astana', 'Лабораторные замеры в Астане', 'Организация выезда, измерений и протоколов для ПЭК и санитарного контроля.'],
-].map(([slug, h1, description]) => ({ slug, h1, description }));
+].map(([slug, h1, description]) => ({
+  slug,
+  h1,
+  description,
+  path: ({
+    'szz-almaty': '/services/szz',
+    'pasport-othodov-almaty': '/services/waste-passport',
+    'pek-almaty': '/services/program-pek',
+    'ekologicheskoe-razreshenie-almaty': '/services/environmental-permits',
+    'ovos-almaty': '/services/ovos',
+    'laboratornye-zamery-astana': '/services/laboratory-tests',
+  } as Record<string, string>)[slug] || `/${slug}`,
+}));

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Building2, CheckCircle2, MapPin, MonitorCheck, Search, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Building2, CheckCircle2, MonitorCheck, Search } from 'lucide-react';
 import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { regions } from '../content/regions';
@@ -8,11 +8,7 @@ import { activeServices } from '../content/serviceCatalog';
 import { regionContent, regionContentMap } from '../content/regions/regionContent';
 import { isRegionContentIndexable } from '../content/regions/regionContentQuality';
 import { pageHeroImages } from '../data/pageHeroImages';
-
-const cityPhotos = Array.from(
-  { length: 12 },
-  (_, index) => `/web-images-1600x900/city-photo-${String(index + 1).padStart(2, '0')}-1600x900.webp`,
-);
+import { getCityImage } from '../data/cityImages';
 
 const RegionsPage = () => {
   const [query, setQuery] = useState('');
@@ -37,8 +33,7 @@ const RegionsPage = () => {
         <div className="absolute inset-x-0 bottom-0 -z-10 h-16 bg-gradient-to-t from-[#F4F8FA]/90 to-transparent" />
         <div className="mx-auto w-full max-w-7xl">
           <div className="max-w-4xl [text-shadow:0_2px_18px_rgba(2,28,57,0.72)]">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold backdrop-blur-md"><MapPin size={17} className="text-accent" />Работаем по всему Казахстану</div>
-            <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-[1.08] sm:text-6xl lg:text-7xl">Экологические услуги в вашем городе</h1>
+            <h1 className="max-w-3xl text-4xl font-bold leading-[1.08] sm:text-6xl lg:text-7xl">Экологические услуги в вашем городе</h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-white/80 sm:text-xl sm:leading-8">Документы готовим дистанционно по Казахстану. Выездные работы проводим после оценки задачи и согласования со специалистом.</p>
             <div className="mt-9 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md"><strong className="block text-2xl text-accent">{regions.length}</strong><span className="mt-1 block text-xs text-white/70 sm:text-sm">городов на сайте</span></div>
@@ -65,7 +60,6 @@ const RegionsPage = () => {
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((region) => {
-            const regionIndex = regions.findIndex((item) => item.slug === region.slug);
             const available = activeServices.filter((service) => service.areaServed.type === 'KAZAKHSTAN' || service.areaServed.regions?.includes(region.slug));
             const details = regionContentMap.get(region.slug);
             const indexed = isRegionContentIndexable(details, regionContent);
@@ -74,9 +68,8 @@ const RegionsPage = () => {
             const hasOnSite = available.some((item) => item.areaServed.onSite);
             const cardBody = <>
               <div className="relative h-60 overflow-hidden">
-                <ResponsiveImage sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw" src={cityPhotos[regionIndex % cityPhotos.length]} alt={`Природа региона — ${region.cityNominative}`} width={1600} height={900} wrapperClassName="h-full w-full" className="object-cover transition duration-700 group-hover:scale-105" />
+                <ResponsiveImage sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw" src={getCityImage(region.slug) || pageHeroImages.regions} alt={`Природа региона — ${region.cityNominative}`} width={1600} height={900} wrapperClassName="h-full w-full" className="object-cover transition duration-700 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-eco-900 via-eco-900/25 to-transparent" />
-                <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-eco-900/55 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md"><MapPin size={14} className="text-accent" />Казахстан</div>
                 <div className="absolute inset-x-0 bottom-0 p-5 text-white"><h3 className="text-3xl font-bold">{region.cityNominative}</h3><p className="mt-1 text-sm text-white/75">{region.regionNominative}</p></div>
               </div>
               <div className="flex flex-1 flex-col p-5 sm:p-6">
@@ -99,13 +92,13 @@ const RegionsPage = () => {
 
         {!filtered.length && <div className="mt-8 rounded-[26px] border border-dashed border-eco-200 bg-white px-6 py-14 text-center"><Search className="mx-auto text-eco-400" size={36} /><h2 className="mt-4 text-xl font-bold text-eco-900">Город не найден</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-600">Проверьте название или оставьте заявку — специалист уточнит возможность работы в вашем регионе.</p><button type="button" onClick={() => setQuery('')} className="mt-5 rounded-xl bg-eco-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-eco-800">Показать все города</button></div>}
 
-        <section className="mt-20 rounded-[30px] bg-eco-900 p-6 text-white sm:p-10 lg:p-12">
+        <section className="mt-20 rounded-[30px] border border-eco-100 bg-eco-50 p-6 text-eco-900 sm:p-10 lg:p-12">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl"><div className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-accent"><Sparkles size={17} />Формат работы</div><h2 className="mt-3 text-3xl font-bold sm:text-4xl">Какие услуги доступны в регионах</h2><p className="mt-4 max-w-2xl leading-7 text-white/65">Сразу показываем, где достаточно дистанционной работы, а где потребуется выезд или региональное согласование.</p></div>
+            <div className="max-w-3xl"><h2 className="text-3xl font-bold sm:text-4xl">Какие услуги доступны в регионах</h2><p className="mt-4 max-w-2xl leading-7 text-slate-600">Сразу показываем, где достаточно дистанционной работы, а где потребуется выезд или региональное согласование.</p></div>
             <Link to="/contacts" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3.5 text-sm font-bold text-eco-900 transition hover:bg-accent/90">Уточнить свой регион <ArrowUpRight size={18} /></Link>
           </div>
           <div className="mt-9 grid gap-4 md:grid-cols-2">
-            {groups.map(([title, services]) => <div key={title} className="rounded-[22px] border border-white/10 bg-white/[0.06] p-5 sm:p-6"><h3 className="text-lg font-bold">{title}</h3><ul className="mt-4 space-y-2.5 text-sm text-white/70">{services.map((service) => <li key={service.slug}><Link to={`/services/${service.slug}`} className="inline-flex items-start gap-2 transition hover:text-accent"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-accent" />{service.title}</Link></li>)}</ul></div>)}
+            {groups.map(([title, services]) => <div key={title} className="rounded-[22px] border border-eco-100 bg-white p-5 shadow-sm sm:p-6"><h3 className="text-lg font-bold text-eco-900">{title}</h3><ul className="mt-4 space-y-2.5 text-sm text-slate-600">{services.map((service) => <li key={service.slug}><Link to={`/services/${service.slug}`} className="inline-flex items-start gap-2 transition hover:text-eco-700"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-eco-500" />{service.title}</Link></li>)}</ul></div>)}
           </div>
         </section>
       </section>

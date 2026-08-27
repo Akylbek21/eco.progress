@@ -16,6 +16,7 @@ import type { ArticleContent } from '../content/types';
 import { articleRobotsForReviewStatus } from '../content/articleReview';
 import { AeoFaqList, RelatedCaseStudies, VerifiedExperts } from '../components/content/AeoContent';
 import { articleContentMap } from '../content/articles/articleContent';
+import { getArticleImage } from '../data/pageHeroImages';
 
 const toSeoArticle = (article: ArticleContent): SeoArticleConfig => ({
   id: article.slug,
@@ -88,6 +89,7 @@ const NewsDetailsPage = () => {
   }
 
   const canonical = `${company.siteUrl}${item.slug}`;
+  const heroImage = getArticleImage(item.id, item.image);
   const dates = normalizeArticleDates(item.datePublished, item.dateModified);
   const backendExpertMap = new Map(apiExperts.map((expert) => [expert.id, expert]));
   const authorCandidate = item.author ?? backendExpertMap.get(item.authorSlug) ?? expertMap.get(item.authorSlug);
@@ -99,7 +101,7 @@ const NewsDetailsPage = () => {
   const reviewerId = approved && reviewer ? entityIds(canonical).reviewer : undefined;
   const schema = [
     ...buildCorePageEntities({ canonical, name: item.h1, description: item.description, dateModified: dates.dateModified }),
-    buildArticleSchema({ headline: item.h1, description: item.description, image: `${company.siteUrl}${item.image}`, datePublished: dates.datePublished, dateModified: dates.dateModified, canonical, authorId, reviewerId }),
+    buildArticleSchema({ headline: item.h1, description: item.description, image: `${company.siteUrl}${heroImage}`, datePublished: dates.datePublished, dateModified: dates.dateModified, canonical, authorId, reviewerId }),
     ...(authorId && author ? [buildPersonSchema(author, authorId)] : []),
     ...(reviewerId && reviewer ? [buildPersonSchema(reviewer, reviewerId)] : []),
     buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Статьи', url: `${company.siteUrl}/news` }, { name: item.h1, url: canonical }]),
@@ -109,7 +111,7 @@ const NewsDetailsPage = () => {
     <article className="bg-white">
       <SEO title={`${item.title} | ECOPROGRESS`} description={item.description} canonical={canonical} robots={articleRobotsForReviewStatus(item.reviewStatus)} type="article" schema={schema} datePublished={dates.datePublished} dateModified={dates.dateModified} />
       <section className="relative overflow-hidden px-5 py-24 text-white sm:px-8">
-        <ResponsiveImage fill sizes="100vw" src={item.image} alt={item.imageAlt} priority width={1600} height={900} className="object-cover" />
+        <ResponsiveImage fill sizes="100vw" src={heroImage} alt={item.imageAlt} priority width={1600} height={900} className="object-cover" />
         <div className="absolute inset-0 bg-eco-900/78" />
         <div className="relative mx-auto max-w-4xl">
           <nav className="flex flex-wrap gap-2 text-sm text-white/72" aria-label="Хлебные крошки">

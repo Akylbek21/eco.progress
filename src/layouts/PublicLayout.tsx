@@ -1,7 +1,7 @@
 ﻿import { ReactNode, useEffect, useState } from 'react';
 import { lazy, Suspense } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { ChevronDown, HelpCircle, LogIn, Menu, Search, UserPlus, X } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, HelpCircle, LogIn, Menu, Search, UserPlus, X } from 'lucide-react';
 import { FaInstagram, FaTelegramPlane, FaTiktok, FaWhatsapp } from 'react-icons/fa';
 import Button from '../components/ui/Button';
 import WhatsAppButton from '../components/WhatsAppButton';
@@ -74,14 +74,19 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="min-h-screen bg-[#F7FBFD] text-slate-900">
-      <header className={`sticky top-0 z-40 border-b border-eco-200/45 bg-white/92 text-eco-900 backdrop-blur-xl transition-all duration-300 ${scrolled ? 'shadow-xl shadow-eco-900/8' : 'shadow-sm shadow-eco-900/5'}`}>
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
-          <Link to={isKk ? '/kk' : '/'} className="inline-flex shrink-0 items-center text-xl font-bold text-eco-900">
-            <span className="whitespace-nowrap leading-none">ecoprogress.kz</span>
+      <header className={`sticky top-0 z-40 border-b border-slate-200/70 bg-[#F8FCFE]/94 text-eco-900 backdrop-blur-2xl transition-all duration-300 before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-gradient-to-r before:from-transparent before:via-accent/80 before:to-transparent ${scrolled ? 'shadow-[0_12px_35px_-20px_rgba(2,28,57,0.4)]' : 'shadow-[0_1px_0_rgba(2,28,57,0.03)]'}`}>
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
+          <Link to={isKk ? '/kk' : '/'} className="group inline-flex shrink-0 items-center gap-2.5 text-eco-900" aria-label="ecoprogress.kz — главная">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-gradient-to-br from-eco-900 via-eco-700 to-eco-500 text-white shadow-[0_8px_20px_-10px_rgba(3,43,87,0.8)] transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-105">
+              <span className="eco-mascot text-[23px] leading-none" aria-hidden="true">🐝</span>
+            </span>
+            <span className="whitespace-nowrap text-[19px] font-extrabold leading-none tracking-[-0.035em]">
+              eco<span className="text-eco-500">progress</span><span className="text-[14px] font-bold text-slate-500">.kz</span>
+            </span>
           </Link>
-          <nav className="hidden items-center gap-4 xl:flex xl:gap-5">
+          <nav aria-label={isKk ? 'Негізгі навигация' : 'Основная навигация'} className="hidden items-center gap-1 rounded-full border border-slate-200/80 bg-white/80 p-1.5 shadow-[0_8px_24px_-18px_rgba(2,28,57,0.5)] xl:flex">
             {currentNavItems.map((item) => item.path.startsWith('http') || opensPrivateRuntime(item.path) ? (
-              <a key={item.path} href={item.path} target={item.path.startsWith('http') ? '_blank' : undefined} rel={item.path.startsWith('http') ? 'noreferrer' : undefined} className="relative shrink-0 whitespace-nowrap text-sm font-medium text-slate-700 transition after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:bg-accent after:transition-all hover:text-eco-800 hover:after:w-full">
+              <a key={item.path} href={item.path} target={item.path.startsWith('http') ? '_blank' : undefined} rel={item.path.startsWith('http') ? 'noreferrer' : undefined} className="shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-[13px] font-semibold text-slate-600 transition-all duration-200 hover:bg-eco-50 hover:text-eco-900">
                 {item.label}
               </a>
             ) : (
@@ -93,8 +98,8 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 onFocus={() => preloadPublicRoute(item.path)}
                 onPointerDown={() => preloadPublicRoute(item.path)}
                 className={({ isActive }) =>
-                  `relative shrink-0 whitespace-nowrap text-sm font-medium transition after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:bg-accent after:transition-all ${
-                    isActive ? 'text-eco-800 after:w-full' : 'text-slate-700 hover:text-eco-800 after:w-0 hover:after:w-full'
+                  `shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-[13px] font-semibold transition-all duration-200 ${
+                    isActive ? 'bg-eco-900 text-white shadow-[0_6px_14px_-8px_rgba(2,28,57,0.8)]' : 'text-slate-600 hover:bg-eco-50 hover:text-eco-900'
                   }`
                 }
               >
@@ -102,17 +107,17 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               </NavLink>
             ))}
           </nav>
-          <div className="hidden items-center gap-3 xl:flex">
-            <nav aria-label={isKk ? 'Тілді таңдау' : 'Выбор языка'} className="inline-flex rounded-full border border-eco-200 bg-white p-1 text-xs font-bold">
-              <Link to={ruPath} lang="ru" className={`whitespace-nowrap rounded-full px-3 py-2 ${!isKk ? 'bg-eco-900 text-white' : 'text-eco-800'}`}>RU</Link>
-              <Link to={kkPath} lang="kk" className={`whitespace-nowrap rounded-full px-3 py-2 ${isKk ? 'bg-eco-900 text-white' : 'text-eco-800'}`}>ҚАЗ</Link>
+          <div className="hidden items-center gap-2.5 xl:flex">
+            <nav aria-label={isKk ? 'Тілді таңдау' : 'Выбор языка'} className="inline-flex rounded-full border border-slate-200 bg-white/85 p-1 text-[11px] font-extrabold shadow-sm">
+              <Link to={ruPath} lang="ru" className={`whitespace-nowrap rounded-full px-2.5 py-2 transition-colors ${!isKk ? 'bg-eco-900 text-white' : 'text-slate-500 hover:text-eco-900'}`}>RU</Link>
+              <Link to={kkPath} lang="kk" className={`whitespace-nowrap rounded-full px-2.5 py-2 transition-colors ${isKk ? 'bg-eco-900 text-white' : 'text-slate-500 hover:text-eco-900'}`}>ҚАЗ</Link>
             </nav>
             <div className="relative">
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => setAccountMenuOpen((state) => !state)}
-                className="shrink-0 gap-2 whitespace-nowrap border-eco-200 bg-white text-eco-800 hover:bg-eco-50"
+                className="min-h-10 shrink-0 gap-2 whitespace-nowrap border-slate-200 bg-white/85 px-4 text-[13px] text-eco-900 shadow-sm hover:border-eco-200 hover:bg-white"
                 aria-expanded={accountMenuOpen}
               >
                 {isKk ? 'Мәзір' : 'Меню'} <ChevronDown size={16} className={`transition ${accountMenuOpen ? 'rotate-180' : ''}`} />
@@ -150,12 +155,13 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 </div>
               )}
             </div>
-            <Button type="button" onClick={() => setOrderModal(true)} className="shrink-0 whitespace-nowrap bg-accent text-eco-900 hover:bg-accent/90">
+            <Button type="button" onClick={() => setOrderModal(true)} className="group min-h-11 shrink-0 gap-2 whitespace-nowrap bg-gradient-to-r from-eco-900 to-eco-600 px-5 text-[13px] text-white shadow-[0_10px_22px_-12px_rgba(2,28,57,0.8)] hover:from-eco-800 hover:to-eco-500">
               {isKk ? 'Өтінім қалдыру' : 'Получить консультацию эколога'}
+              <ArrowUpRight size={16} className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
             </Button>
           </div>
           <button
-            className="inline-flex items-center justify-center rounded-2xl border border-eco-200 bg-white p-3 text-eco-900 xl:hidden"
+            className="inline-flex items-center justify-center rounded-[14px] border border-slate-200 bg-white p-3 text-eco-900 shadow-sm transition hover:border-eco-200 hover:bg-eco-50 xl:hidden"
             onClick={() => setMenuOpen((state) => !state)}
             aria-label={isKk ? 'Мәзір' : 'Меню'}
           >
@@ -226,9 +232,11 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
       <footer className="relative isolate overflow-hidden bg-eco-900 text-white">
         <ResponsiveImage fill sizes="100vw" src="/media/ecoprogress-og-cover-1280.jpg" alt="" width={1280} height={720} wrapperClassName="-z-20" className="bg-eco-900 object-cover" />
         <div className="absolute inset-0 -z-10 bg-eco-900/86" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 -z-[5] h-40 bg-gradient-to-b from-[#F7FBFD] via-[#F7FBFD]/88 to-transparent backdrop-blur-xl" />
-        <div className="pointer-events-none absolute inset-x-0 top-12 -z-[5] h-24 bg-[#F7FBFD]/45 blur-2xl" />
-        <div className="relative mx-auto max-w-7xl px-5 pb-14 pt-44 sm:px-8">
+        <svg aria-hidden="true" viewBox="0 0 1440 80" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 top-0 z-0 h-16 w-full sm:h-20">
+          <path fill="#F7FBFD" d="M0 0h1440v18c-324 54-760-20-1440 30V0Z" />
+          <path d="M0 48c680-50 1116 24 1440-30" fill="none" stroke="#38C7BA" strokeOpacity="0.75" strokeWidth="2" />
+        </svg>
+        <div className="relative z-10 mx-auto max-w-7xl px-5 pb-14 pt-24 sm:px-8 sm:pt-28">
           <div className="grid gap-10 lg:grid-cols-[1.3fr_0.8fr_1fr_1fr]">
             <div>
               <h3 className="text-2xl font-bold leading-tight">
@@ -252,7 +260,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 <li><Link to={isKk ? '/kk/qaldyqtar-pasporty' : '/services/waste-passport'} className="hover:text-white">{isKk ? 'Қалдықтар паспорты' : 'Паспорт отходов'}</Link></li>
                 <li><Link to={isKk ? '/kk/pek-esebi' : '/services/report-pek'} className="hover:text-white">{isKk ? 'ПЭК есебі' : 'Отчет ПЭК'}</Link></li>
                 <li><Link to={isKk ? '/kk/ekologiyalyq-ruqsat' : '/services/environmental-permits'} className="hover:text-white">{isKk ? 'Экологиялық рұқсат' : 'Разрешения'}</Link></li>
-                <li><Link to={isKk ? '/kk/sanitariyalyq-qorgau-aimagy' : '/ses-proverka-proizvodstvennyy-kontrol'} className="hover:text-white">{isKk ? 'Санитариялық-қорғау аймағы' : 'Сопровождение проверок'}</Link></li>
+                <li><Link to={isKk ? '/kk/sanitariyalyq-qorgau-aimagy' : '/services/environmental-audit'} className="hover:text-white">{isKk ? 'Санитариялық-қорғау аймағы' : 'Экологический аудит'}</Link></li>
               </ul>
             </div>
             <div>
@@ -278,7 +286,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               <div className="mt-4 space-y-3 text-sm text-white/75">
                 <Link to={isKk ? '/kk' : '/about'} className="block hover:text-white">{isKk ? 'Басты бет' : 'О компании'}</Link>
                 <Link to={isKk ? '/kk/ekologiyalyq-qyzmetter' : '/contacts'} className="block hover:text-white">{isKk ? 'Қызметтер' : 'Контакты'}</Link>
-                {!isKk && <><Link to="/partners" className="block hover:text-white">Партнеры</Link><Link to="/employees" className="block hover:text-white">Сотрудники</Link><Link to="/news" className="block hover:text-white">Статьи</Link><Link to="/cases" className="block hover:text-white">Кейсы</Link><Link to="/faq" className="block hover:text-white">FAQ</Link></>}
+                {!isKk && <><Link to="/partners" className="block hover:text-white">Партнеры</Link><Link to="/news" className="block hover:text-white">Статьи</Link><Link to="/cases" className="block hover:text-white">Кейсы</Link><Link to="/faq" className="block hover:text-white">FAQ</Link></>}
               </div>
               <h4 className="mt-7 text-sm font-semibold uppercase text-eco-200">{isKk ? 'Жеке кабинет' : 'Личный кабинет'}</h4>
               <div className="mt-4 space-y-3 text-sm text-white/75">

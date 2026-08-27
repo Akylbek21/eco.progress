@@ -127,21 +127,12 @@ test('nginx normalizes www, slash and legacy penalty URLs with 301', async () =>
   for (const legacy of ['/passport-othodov-kazakhstan', '/otchet-pek-kazakhstan']) assert.ok(!registry.some((item) => item.path === legacy));
 });
 
-test('existing regional routes remain available while only reviewed commercial pairs are indexable', () => {
-  const cityPages = seoPages.filter((page) => page.type === 'city');
+test('only reviewed commercial service-city pairs are generated', () => {
   const servicePages = seoPages.filter((page) => page.type === 'service-city' && page.locale !== 'kk');
-  const prefixes = ['ndv', 'pek', 'otchet-pek', 'ovos', 'szz', 'puo', 'roos', 'pasport-othodov', 'ekologicheskoe-razreshenie', 'laboratornye-zamery', 'analiz-vody', 'proizvodstvennyy-kontrol', 'utilizaciya-othodov'];
-  assert.equal(servicePages.length, cityPages.length * (prefixes.length - 3) + 5);
-  for (const cityPage of cityPages) {
-    const citySlug = cityPage.slug.replace('ecologicheskie-uslugi-', '');
-    for (const prefix of prefixes.filter((item) => !['utilizaciya-othodov', 'analiz-vody', 'proizvodstvennyy-kontrol'].includes(item))) assert.ok(servicePages.some((page) => page.slug === `${prefix}-${citySlug}`), `${prefix}-${citySlug}`);
-    assert.equal(servicePages.some((page) => page.slug === `utilizaciya-othodov-${citySlug}`), ['shymkent', 'taraz', 'turkestan'].includes(citySlug));
-    assert.equal(servicePages.some((page) => page.slug === `analiz-vody-${citySlug}`), citySlug === 'shymkent');
-    assert.equal(servicePages.some((page) => page.slug === `proizvodstvennyy-kontrol-${citySlug}`), citySlug === 'shymkent');
-  }
+  assert.equal(servicePages.length, 19);
+  assert.ok(servicePages.every((page) => page.indexable === true));
   for (const page of servicePages) {
     assert.ok(page.relatedLinks.some((item) => item.path === `/ecologicheskie-uslugi-${page.slug.split('-').slice(-1)[0]}`) || page.relatedLinks.some((item) => item.label.startsWith('Экологические услуги')));
-    assert.ok(page.relatedLinks.filter((item) => servicePages.some((candidate) => `/${candidate.slug}` === item.path)).length >= 4);
   }
   const indexableSlugs = servicePages.filter((page) => page.indexable).map((page) => page.slug).sort();
   assert.deepEqual(indexableSlugs, [
@@ -175,8 +166,7 @@ test('regional pages use unique content quality and topic clusters expose only a
   const regionalPages = seoPages.filter((page) => page.type === 'city' || page.type === 'service-city');
   assert.equal(regionalPages.filter((page) => page.type === 'city').length, 18, 'existing cities must be retained');
   assert.ok(regionalPages.filter((page) => page.type === 'city').every((page) => page.indexable === true));
-  assert.ok(regionalPages.some((page) => page.type === 'service-city' && page.indexable === false), 'unreviewed service/city pairs must stay out of the index');
-  assert.ok(regionalPages.some((page) => page.type === 'service-city' && page.indexable === true), 'reviewed service/city pairs must remain indexable without a case study');
+  assert.ok(regionalPages.filter((page) => page.type === 'service-city').every((page) => page.indexable === true), 'unreviewed service/city pairs must not be generated');
   assert.ok(regionalPages.every((page) => page.relatedLinks.every((link) => !link.path.startsWith('/news/'))));
 
   assert.equal(isArticleEligibleForSeoLinks({ status: 'published', reviewStatus: 'approved' }), true);
@@ -229,7 +219,7 @@ test('city grammar and PEK keyword cluster use explicit backend-independent form
 test('every SEO city carries explicit cases and generated copy uses the required form', () => {
   for (const forms of regions) {
     const pages = seoPages.filter((page) => page.locale !== 'kk' && (page.slug === `ecologicheskie-uslugi-${forms.slug}` || page.slug.endsWith(`-${forms.slug}`)));
-    assert.ok(pages.length >= 10, forms.slug);
+    assert.ok(pages.length >= 1, forms.slug);
     for (const page of pages) {
       assert.equal(page.cityNominative, forms.cityNominative);
       assert.equal(page.cityGenitive, forms.cityGenitive);

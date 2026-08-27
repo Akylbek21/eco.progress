@@ -226,8 +226,7 @@ const AboutPage = () => {
       <div className="absolute inset-x-0 bottom-0 -z-10 h-16 bg-gradient-to-t from-[#F7FBFD]/90 to-transparent" />
       <div className="mx-auto w-full max-w-7xl [text-shadow:0_2px_18px_rgba(2,28,57,0.72)]">
         <Reveal>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold backdrop-blur-md"><Leaf size={17} className="text-accent" />О компании</div>
-          <h1 className="mt-6 max-w-5xl text-4xl font-bold leading-[1.08] sm:text-6xl lg:text-7xl">
+          <h1 className="max-w-5xl text-4xl font-bold leading-[1.08] sm:text-6xl lg:text-7xl">
             ecoprogress.kz — экологические решения для бизнеса
           </h1>
         </Reveal>
@@ -281,20 +280,18 @@ const AboutPage = () => {
     <section className="bg-white px-4 py-16 sm:px-8 sm:py-20">
       <div className="mx-auto max-w-7xl">
         <Reveal>
-          <div className="relative isolate overflow-hidden rounded-[28px] bg-eco-900 p-6 text-white shadow-2xl shadow-eco-900/15 sm:p-10">
+          <div className="relative isolate overflow-hidden rounded-[28px] bg-eco-900 px-7 py-12 text-white shadow-2xl shadow-eco-900/15 sm:px-12 sm:py-16 lg:px-16">
             <ResponsiveImage fill sizes="(max-width: 1279px) 100vw, 1280px" src="/media/ecoprogress-og-cover-1280.jpg" alt="" width={1280} height={720} wrapperClassName="-z-20" className="bg-eco-900 object-cover" />
-            <div className="absolute inset-0 -z-10 bg-eco-900/80" />
-            <div className="grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-[24px] bg-white/10 text-accent">
-                <Leaf size={38} />
-              </div>
-              <div>
+            <div className="absolute inset-0 -z-10 bg-gradient-to-r from-eco-900/95 via-eco-900/82 to-eco-900/58" />
+            <div aria-hidden="true" className="absolute -right-24 -top-32 h-72 w-72 rounded-full border border-accent/20" />
+            <div aria-hidden="true" className="absolute -bottom-36 right-12 h-64 w-64 rounded-full border border-white/10" />
+            <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-accent/85 to-transparent" />
+            <div className="max-w-5xl border-l-2 border-accent/75 pl-6 sm:pl-10">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Наша миссия</p>
-                <h2 className="mt-3 text-3xl font-bold sm:text-4xl">Объединённые усилия — чистое будущее</h2>
-                <p className="mt-5 max-w-4xl text-lg leading-8 text-white/78">
+                <h2 className="mt-4 max-w-3xl text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">Объединённые усилия — чистое будущее</h2>
+                <p className="mt-6 max-w-4xl text-base leading-8 text-white/78 sm:text-lg">
                   Создавать и внедрять экологически устойчивые решения, которые помогают бизнесу соблюдать требования законодательства, безопасно обращаться с отходами и вносить вклад в чистое будущее.
                 </p>
-              </div>
             </div>
           </div>
         </Reveal>

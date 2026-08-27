@@ -206,7 +206,7 @@ const HomePage = () => (
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {featuredSeoLinks.map((page, index) => (
             <Reveal key={page.slug} delay={index * 0.03}>
-              <Link to={`/${page.slug}`} className="group block h-full rounded-[8px] border border-slate-200 bg-[#F7FBFD] p-5 shadow-sm transition hover:border-eco-300 hover:bg-white">
+              <Link to={page.path} className="group block h-full rounded-[8px] border border-slate-200 bg-[#F7FBFD] p-5 shadow-sm transition hover:border-eco-300 hover:bg-white">
                 <h3 className="font-bold text-eco-900 group-hover:text-eco-600">{page.h1}</h3>
                 <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">{page.description}</p>
                 <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-eco-700">Открыть страницу <ArrowRight size={16} /></span>

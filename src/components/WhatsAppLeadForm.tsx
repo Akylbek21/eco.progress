@@ -80,12 +80,6 @@ const WhatsAppLeadForm = ({
   return (
     <form onSubmit={submit} className="min-w-0 overflow-hidden rounded-[24px] border border-green-100 bg-white p-5 shadow-xl shadow-eco-900/8 sm:p-7">
       <h2 className="inline-flex items-center gap-2 text-2xl font-bold text-eco-900"><FaWhatsapp className="text-[#25D366]" size={24} aria-hidden="true" /> {title}</h2>
-      {!compact && (
-        <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-slate-600">
-          <FaWhatsapp className="mt-1 shrink-0 text-[#25D366]" size={16} aria-hidden="true" />
-          <span>Заполните короткую заявку. Мы откроем WhatsApp с готовым сообщением, вам останется отправить его менеджеру.</span>
-        </p>
-      )}
       <div className="mt-6 grid gap-4">
         <label className="text-sm font-semibold text-slate-700">
           <span className="inline-flex items-center gap-1.5"><FaWhatsapp className="text-[#25D366]" size={15} aria-hidden="true" /> Телефон / WhatsApp *</span>
