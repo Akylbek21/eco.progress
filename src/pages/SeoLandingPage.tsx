@@ -73,7 +73,11 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
     { locale: 'x-default' as const, url: isKk ? page.alternatePath : `/${page.slug}` },
   ] : [];
 
-  const whatsAppUrl = getWhatsAppUrl(isKk ? `Сәлеметсіз бе! ${page.h1} қызметі бойынша кеңес алғым келеді.` : `Здравствуйте! Хочу получить консультацию: ${page.h1}.`);
+  const whatsAppUrl = getWhatsAppUrl(isKk
+    ? `Сәлеметсіз бе! ${page.h1} қызметі бойынша кеңес алғым келеді.`
+    : page.type === 'service-city'
+      ? `Здравствуйте! Хочу отправить документы на проверку по услуге: ${page.h1}.`
+      : `Здравствуйте! Хочу получить консультацию: ${page.h1}.`);
   const services = page.services ?? [];
   const audience = page.audience ?? [];
   const outcomes = page.outcomes ?? [];
@@ -163,7 +167,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
         </div>
       </section>
 
-      {(services.length || audience.length || outcomes.length) && (
+      {page.type !== 'service-city' && (services.length || audience.length || outcomes.length) && (
         <section className="px-4 py-14 sm:px-8">
           <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-3">
             {services.length > 0 && (
@@ -187,6 +191,12 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
               <article key={section.title} className="rounded-[8px] border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-2xl font-bold text-eco-900">{section.title}</h2>
                 <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">{section.body}</p>
+                {page.type === 'service-city' && section.title.startsWith('Какие документы') && (
+                  <Button asChild variant="secondary" className="mt-5"><a href={whatsAppUrl} target="_blank" rel="noreferrer">Отправить документы на проверку</a></Button>
+                )}
+                {page.type === 'service-city' && section.title.startsWith('Стоимость') && (
+                  <Button asChild className="mt-5"><a href="#lead-form">Получить точный расчёт стоимости</a></Button>
+                )}
               </article>
             ))}
           </div>
@@ -216,6 +226,16 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
         {regionDetails.relatedArticleSlugs.length > 0 && <RelatedArticles slugs={regionDetails.relatedArticleSlugs} />}
       </div></section>}
 
+      <section className="bg-white px-4 py-14 sm:px-8">
+        <div className="mx-auto max-w-7xl">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">FAQ</p>
+          <h2 className="mt-3 text-3xl font-bold text-eco-900">{isKk ? 'Жиі қойылатын сұрақтар' : 'Частые вопросы'}</h2>
+          <AeoFaqList faq={page.faq} />
+              {(page.type === 'city' || page.type === 'service-city') && <div className="mt-14"><RelatedCaseStudies service={page.type === 'service-city' ? page.serviceSlug : undefined} city={page.cityNominative ?? page.city} /></div>}
+              {(page.type === 'city' || page.type === 'service-city') && <div className="mt-14"><VerifiedExperts /></div>}
+        </div>
+      </section>
+
       <section className="px-4 py-14 sm:px-8">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1fr_0.85fr]">
           <div className="rounded-[8px] border border-slate-200 bg-white p-6 shadow-sm">
@@ -242,16 +262,6 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
               compact={Boolean(page.serviceSlug)}
             />
           </div>
-        </div>
-      </section>
-
-      <section className="bg-white px-4 py-14 sm:px-8">
-        <div className="mx-auto max-w-7xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">FAQ</p>
-          <h2 className="mt-3 text-3xl font-bold text-eco-900">{isKk ? 'Жиі қойылатын сұрақтар' : 'Частые вопросы'}</h2>
-          <AeoFaqList faq={page.faq} />
-              {(page.type === 'city' || page.type === 'service-city') && <div className="mt-14"><RelatedCaseStudies service={page.type === 'service-city' ? page.serviceSlug : undefined} city={page.cityNominative ?? page.city} /></div>}
-              {(page.type === 'city' || page.type === 'service-city') && <div className="mt-14"><VerifiedExperts /></div>}
         </div>
       </section>
 

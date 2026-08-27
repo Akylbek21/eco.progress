@@ -1,17 +1,19 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { CheckCircle2, ChevronDown, FileText, Globe2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
 import WhatsAppButton from '../components/WhatsAppButton';
 import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
+import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { fallbackServices, getServiceCatalog } from '../services/serviceService';
 import { activeServices, formatKztPrice, GENERAL_PRIMARY_CTA_LABEL, getServicePrimaryCtaLabel, PRELIMINARY_PRICE_NOTICE } from '../content/serviceCatalog';
 import { getBusinessCompanyById } from '../utils/crm';
 import type { ServiceCategory } from '../types';
+import { pageHeroImages } from '../data/pageHeroImages';
 
 const OrderChoiceModal = lazy(() => import('../components/OrderChoiceModal'));
 
@@ -88,14 +90,32 @@ const ServicesPage = () => {
   return (
     <div>
       <SEO />
-      <section className="relative overflow-hidden px-4 py-16 text-white sm:px-8 sm:py-24">
-        <div className="absolute inset-0 bg-windmill bg-cover bg-center" />
-        <div className="absolute inset-0 bg-eco-900/78" />
-        <div className="relative mx-auto max-w-7xl">
-          <Reveal><h1 className="max-w-3xl text-3xl font-bold leading-tight sm:text-6xl">Экологические услуги полного цикла</h1></Reveal>
-          <Reveal delay={0.1}><p className="mt-4 max-w-2xl text-base leading-7 text-white/78 sm:mt-5 sm:text-lg">Проектная документация и лабораторные исследования по Казахстану. Утилизация отходов — в Шымкенте, Таразе и Туркестане; транспортировка и размещение — в Шымкенте.</p></Reveal>
+      <section className="relative isolate min-h-[620px] overflow-hidden px-5 py-20 text-white sm:px-8 sm:py-24 lg:flex lg:items-center">
+        <ResponsiveImage
+          fill
+          priority
+          sizes="100vw"
+          src={pageHeroImages.services}
+          alt="Горный природный ландшафт"
+          width={1600}
+          height={900}
+          wrapperClassName="-z-20"
+          className="object-cover object-center"
+        />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-eco-900/72 via-eco-900/36 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 -z-[5] h-16 bg-gradient-to-t from-eco-50/90 to-transparent" />
+        <div className="relative mx-auto w-full max-w-7xl [text-shadow:0_2px_18px_rgba(2,28,57,0.72)]">
+          <Reveal><div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold backdrop-blur-md"><Globe2 size={17} className="text-accent" />Решения для бизнеса по Казахстану</div><h1 className="mt-6 max-w-4xl text-4xl font-bold leading-[1.08] sm:text-6xl lg:text-7xl">Экологические услуги полного цикла</h1></Reveal>
+          <Reveal delay={0.1}><p className="mt-6 max-w-2xl text-base leading-7 text-white/82 sm:text-xl sm:leading-8">Проектная документация и лабораторные исследования по Казахстану. Утилизация отходов — в Шымкенте, Таразе и Туркестане; транспортировка и размещение — в Шымкенте.</p></Reveal>
+          <Reveal delay={0.14}>
+            <div className="mt-8 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/15 bg-eco-900/42 p-4 backdrop-blur-md"><FileText className="text-accent" size={25} /><span className="mt-2 block text-xs text-white/75 sm:text-sm">документы и проекты</span></div>
+              <div className="rounded-2xl border border-white/15 bg-eco-900/42 p-4 backdrop-blur-md"><CheckCircle2 className="text-accent" size={25} /><span className="mt-2 block text-xs text-white/75 sm:text-sm">работа по договору</span></div>
+              <div className="col-span-2 rounded-2xl border border-white/15 bg-eco-900/42 p-4 backdrop-blur-md sm:col-span-1"><Globe2 className="text-accent" size={25} /><span className="mt-2 block text-xs text-white/75 sm:text-sm">по всему Казахстану</span></div>
+            </div>
+          </Reveal>
           <Reveal delay={0.16}>
-            <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
+            <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
               <Button type="button" onClick={() => setOrderModal('')} className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">{GENERAL_PRIMARY_CTA_LABEL}</Button>
               <WhatsAppButton label="Написать в WhatsApp" className="w-full sm:w-auto" />
             </div>

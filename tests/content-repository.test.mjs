@@ -29,15 +29,17 @@ test('fallback repository uses local content only after a real primary failure',
 });
 
 test('priority content has structured service, article and regional fields', () => {
-  assert.equal(serviceContent.length, 11);
+  assert.equal(serviceContent.length, 13);
   for (const item of serviceContent) {
+    assert.equal(item.hero.benefits.length, 3);
     assert.ok(item.workflow.length >= 3);
     assert.ok(item.deliverables.length > 0);
-    assert.ok(item.faq.length >= 5);
+    assert.ok(item.faq.length >= 6);
+    assert.ok(item.commercial.serviceName);
     assert.ok(item.contentReview.reviewStatus);
     assert.ok(item.aeo);
     for (const [field, value] of Object.entries(item.aeo)) {
-      if (field === 'faq') assert.ok(value.length >= 5);
+      if (field === 'faq') assert.ok(value.length >= 6);
       else assert.ok(value.trim());
     }
   }
@@ -172,9 +174,11 @@ test('short landing forms collect common and service-specific lead details', asy
     assert.match(source, /Что нужно \/ комментарий/u);
     assert.match(source, /name="city"/u);
     assert.match(source, /name="wasteType"/u);
-    assert.match(source, /name="estimatedVolume"/u);
     assert.match(source, /name="reportingPeriod"/u);
     assert.match(source, /name="objectType"/u);
   }
+  assert.doesNotMatch(leadForm, /<input name="estimatedVolume"/u);
+  assert.match(leadForm, /name="serviceDetail"/u);
+  assert.match(whatsAppForm, /name="estimatedVolume"/u);
   assert.match(serviceLanding, /serviceSlug=\{service\.slug\}/u);
 });

@@ -12,7 +12,7 @@ import { PUBLIC_SITE_URL, canonicalForPublicPath, isPublicPageIndexable } from '
 import { buildKkLocalizedPages } from '../src/content/kkSeoPages.ts';
 
 const SITE_URL = PUBLIC_SITE_URL;
-const LASTMOD = '2026-07-17';
+const LASTMOD = '2026-08-27';
 const OG_IMAGE = `${SITE_URL}/media/social/ecoprogress-og-1200x630.jpg`;
 const wasteRecyclingRegions = new Set(wasteRecyclingRegionSlugs);
 
@@ -538,6 +538,7 @@ const createServiceCityPage = (service, city) => {
   const cityIndex = activeCityProfiles.findIndex((item) => item.slug === city.slug);
   const documents = serviceDocuments[service.key];
   const mainPath = `/services/${mainServiceSlug[service.key]}`;
+  const baseServiceContent = serviceContentMap.get(mainServiceSlug[service.key]);
   const visitText = region
     ? `${region.onSiteConditions.join('. ')}. ${region.logisticsNote}`
     : `Документальные этапы выполняются дистанционно. Обследование, отбор проб или выезд в ${city.cityAccusative} подтверждаются только после проверки адреса, задания и доступности специалистов; местный офис не заявляется.`;
@@ -564,7 +565,7 @@ const createServiceCityPage = (service, city) => {
     : wasteCityOverride?.description ?? (isRoos
       ? `Разработка РООС в ${city.cityPrepositional} для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.`
       : `${content.title} в ${city.cityPrepositional}: ${content.meta} Срок и стоимость для ${city.cityGenitive} — после аудита.`);
-  const roosRegionalContent = {
+  const roosRegionalContent = isRoos ? {
     almaty: `Особенности работы в регионе. Для проектов в Алматы важно учитывать плотную городскую застройку, соседство жилых, коммерческих и общественных объектов, ограничения существующих инженерных сетей и частые изменения проектных решений. Разработку РООС начинаем с фиксации актуальной версии генплана и стадии проекта. Документальные этапы выполняем дистанционно; постоянный офис в Алматы и автоматическое включение выезда в цену не заявляем.
 
 Типичные объекты. В работу поступают проекты жилых и коммерческих комплексов, складских и логистических зданий, медицинских и пищевых объектов, сервисных площадок, реконструкции существующих помещений. Само назначение объекта не определяет состав РООС. Проверяем технологию, строительные процессы, источники выбросов и шума, обращение с отходами, водопотребление, водоотведение и расположение чувствительной застройки.
@@ -598,14 +599,17 @@ const createServiceCityPage = (service, city) => {
 Статус регионального кейса. В текущем публичном реестре EcoProgress нет опубликованного проверенного кейса РООС по Шымкенту. Мы сознательно не превращаем внутреннюю заявку или неподтверждённый пример в маркетинговое доказательство. Реальный кейс будет выведен на странице после фиксации исходной задачи, выполненных работ, результата, профильного специалиста и рецензента.
 
 Сроки взаимодействия. Проверку комплекта начинаем после получения проектных файлов и контактного лица со стороны заказчика. Срок РООС зависит от масштаба проекта, числа источников, готовности инженерных разделов и количества итераций. Дистанционный обмен ускоряет сверку документов; обследование и замеры, если они применимы, получают отдельное задание, дату и расчёт.`,
-  }[city.slug];
-  const priorityWasteSections = [
-    { title: 'Стоимость утилизации отходов в Шымкенте', body: 'Стоимость рассчитываем индивидуально по виду, составу, объёму и состоянию отходов, способу упаковки, адресу погрузки и требуемому транспорту. Сроки зависят от состава партии, логистики и условий приёма. Отправьте перечень и фотографии — после проверки подготовим расчёт с учётом вывоза и документов.' },
-    { title: 'Какие отходы принимаем на утилизацию', body: 'Работаем с промышленными и производственными отходами предприятий. Возможность приёма подтверждаем по каждому наименованию после проверки состава, происхождения, объёма, класса опасности и доступной технологии обращения.' },
-    { title: 'Как проходит вывоз и передача отходов', body: 'Этапы работы: сначала проверяем перечень и условия погрузки, затем согласовываем принимающую сторону, транспорт и дату. После этого организуем вывоз или передачу партии и фиксируем фактический объём отходов в документах.' },
-    { title: 'Какие документы получает предприятие', body: 'Что получает предприятие: договорные и закрывающие документы, подтверждающие передачу и выполненную операцию. Точный комплект согласовываем заранее с учётом вида отходов, схемы вывоза и требований бухгалтерского и экологического учёта.' },
-    { title: 'Что нужно для расчёта стоимости', body: 'Пришлите перечень отходов, примерный объём или массу, фотографии, адрес, сведения об упаковке и условиях погрузки. Если есть паспорта отходов, результаты анализов или предыдущие документы передачи, приложите их к заявке.' },
-  ];
+  }[city.slug] : undefined;
+  const cityBenefits = baseServiceContent?.hero.benefits?.slice(0, 3)
+    ?? content.steps.slice(0, 3).map((step) => step[0].toUpperCase() + step.slice(1));
+  const cityPricingFactors = baseServiceContent?.pricingFactors?.length
+    ? baseServiceContent.pricingFactors.map((factor) => `${factor.title}: ${factor.description}`).join(' ')
+    : 'На расчёт влияют объём задачи, полнота исходных данных, количество объектов и необходимость выезда или дополнительных исследований.';
+  const cityDeliverables = baseServiceContent?.aeo.deliverables
+    ?? `Заказчик получает ${service.result}, реестр использованных исходных данных и пояснение следующего шага.`;
+  const cityLegalBasis = baseServiceContent?.legalBasis?.length
+    ? baseServiceContent.legalBasis.map((item) => `${item.title}${item.number ? ` ${item.number}` : ''}${item.date ? ` от ${item.date}` : ''}. ${item.note || ''}`).join(' ')
+    : serviceLegalBasis[service.key];
   return ({
   slug: `${service.slugPrefix}-${city.slug}`,
   city: city.cityNominative,
@@ -636,19 +640,17 @@ const createServiceCityPage = (service, city) => {
     : wasteCityOverride?.intro ?? (isRoos
       ? `Подготовим раздел охраны окружающей среды для проектируемого объекта в ${city.cityPrepositional}. Проверим проектные решения и исходные данные — заказчик получит готовый РООС и расчётные материалы в согласованном составе.`
       : `${content.promise} Для ${city.cityGenitive} учитываем типовые отрасли: ${industries}. ${city.localNote} Документальные этапы (${remoteWork}) можно начать после получения исходных файлов. ${operationalNote}`),
-  sections: isPriorityWasteShymkent ? priorityWasteSections : [
-    ...(roosRegionalContent ? [{ title: `Разработка РООС в ${city.cityPrepositional}: особенности региона`, body: roosRegionalContent }] : []),
-    { title: `${content.title}: состав услуги для ${city.cityGenitive}`, body: `${content.scope} Для местных задач «${regionalTask}» границы работы уточняем по фактической деятельности и категории конкретной площадки.` },
-    { title: `Кому подходит услуга в ${city.cityPrepositional}`, body: `Основные ситуации: ${service.examples}. Среди характерных объектов ${city.cityGenitive} — ${industries}; наличие объекта в списке не заменяет проверку применимости требований.` },
-    { title: `Этапы работ для объекта в ${city.cityPrepositional}`, body: `${workflowLead} ${visitText}` },
-    { title: `Документы для ${content.title.toLowerCase()}`, body: `Запрашиваем реквизиты, адрес и описание деятельности, затем профильные материалы: ${documents.join(', ')}. Для ${city.cityGenitive} перечень дополняем сведениями о региональной логистике и фактическом режиме площадки.` },
-    { title: `Сроки выполнения в ${city.cityPrepositional}`, body: `${content.deadline} Дополнительно учитываем условия для ${city.cityGenitive}: ${region?.logisticsNote || 'маршрут и возможность выезда подтверждаются после проверки адреса'}` },
-    { title: `Особенности работ для ${city.cityGenitive}`, body: `${city.localNote} По направлению «${content.title}» региональный фокус — ${regionalTask}. ${operationalNote}` },
-    { title: `Что получает заказчик из ${city.cityGenitive}`, body: `Итог — ${service.result}. Вместе с материалами передаём реестр использованных исходных данных, отмечаем ограничения и объясняем следующий обязательный шаг для объекта в ${city.cityPrepositional}.` },
-    { title: 'Нормативная база', body: `${serviceLegalBasis[service.key]} Регион не меняет применимое республиканское регулирование; требования проверяются по объекту в ${city.cityPrepositional}.` },
-    ...(region?.regionalFeatures?.length ? [{ title: `Региональные особенности ${city.cityGenitive}`, body: region.regionalFeatures.join('. ') }] : []),
-    ...(region?.estimatedTimeline ? [{ title: `Сроки и логистика для ${city.cityGenitive}`, body: region.estimatedTimeline }] : []),
-    ...(region?.completedWorkExamples?.length ? [{ title: `Примеры выполненных работ в ${city.cityPrepositional}`, body: region.completedWorkExamples.join('. ') }] : []),
+  sections: [
+    { title: `${baseServiceContent?.commercial.audienceTitle ?? `Кому нужна услуга «${content.title}»`} в ${city.cityPrepositional}`, body: `${baseServiceContent?.aeo.targetAudience ?? `Услуга подходит объектам, которым требуется ${service.descriptionNoun}.`} Для ${city.cityGenitive} типичны ${industries}; применимость всегда проверяем по фактической деятельности площадки.` },
+    { title: `${baseServiceContent?.commercial.requiredTitle ?? `Когда требуется услуга «${content.title}»`} в ${city.cityPrepositional}`, body: `${baseServiceContent?.aeo.whenRequired ?? content.faqAnswer} Изменение технологии, мощности, состава источников или исходной проектной версии требует повторной проверки применимости.` },
+    { title: `${baseServiceContent?.commercial.scopeTitle ?? `Что входит в услугу «${content.title}»`} для ${city.cityGenitive}`, body: `${baseServiceContent?.aeo.scope ?? content.scope} ${workflowLead} ${visitText}` },
+    { title: `${baseServiceContent?.commercial.documentsTitle ?? `Какие документы нужны для услуги «${content.title}»`} в ${city.cityPrepositional}`, body: `Для старта нужны: ${documents.join(', ')}. Если полного комплекта нет — отправьте имеющиеся материалы. Специалист проверит их и сообщит, каких данных не хватает.` },
+    { title: `${baseServiceContent?.commercial.timelineTitle ?? `Срок выполнения услуги «${content.title}»`} в ${city.cityPrepositional}`, body: `${baseServiceContent?.aeo.duration ?? content.deadline} Учитываем региональную логистику: ${region?.logisticsNote || 'маршрут и возможность выезда подтверждаются после проверки адреса'}. Предварительный срок определим после проверки исходных данных.` },
+    { title: `${baseServiceContent?.commercial.pricingTitle ?? `Стоимость услуги «${content.title}»`} в ${city.cityPrepositional}`, body: `${baseServiceContent?.aeo.pricing ?? 'Точную стоимость определяем после проверки задания и исходных материалов.'} ${cityPricingFactors}` },
+    { title: `Что получает заказчик в ${city.cityPrepositional}`, body: `${cityDeliverables} Региональные условия и ограничения фиксируем в составе результата, а неподтверждённые работы не включаем.` },
+    { title: `Нормативная база для услуги «${content.title}»`, body: `${cityLegalBasis} Регион не меняет республиканское регулирование; применимость требований проверяется для конкретного объекта. Актуальность централизованного реестра проверялась ${LASTMOD}.` },
+    { title: `Частые ошибки при заказе услуги «${content.title}»`, body: `${baseServiceContent?.aeo.commonMistakes ?? 'Частые ошибки — начинать работу без согласованного задания, передавать разные версии исходных файлов и не фиксировать изменения объекта.'} Для площадки в ${city.cityPrepositional} отдельно проверяем адрес, режим работы и условия доступа.` },
+    { title: roosRegionalContent ? `Разработка РООС в ${city.cityPrepositional}: особенности региона` : `Особенности работы в ${city.cityPrepositional}`, body: `${roosRegionalContent || city.localNote} Региональный фокус — ${regionalTask}. ${operationalNote}` },
   ],
   services: baseServices.map(([_, label, path]) => link(label, path)),
   audience: objectList.slice(0, 12),
@@ -679,6 +681,8 @@ const createServiceCityPage = (service, city) => {
   ctaTitle: `Рассчитать работы по услуге «${content.title}» для ${city.cityGenitive}`,
   ctaText: `Для расчёта услуги «${content.title}» опишите площадку в ${city.cityPrepositional}, укажите ${regionalTask} и приложите доступные документы. Специалист обозначит пробелы и рассчитает этапы с учётом условий выезда для ${city.cityGenitive}.`,
   primaryCtaLabel: getServicePrimaryCtaLabel(mainServiceSlug[service.key]),
+  heroBenefits: cityBenefits,
+  secondaryCtaLabel: 'Отправить документы в WhatsApp',
   ...(isPriorityWasteShymkent ? {
     heroBenefits: ['Работаем с предприятиями', 'Закрывающие документы', 'Расчёт по перечню отходов'],
     primaryCtaLabel: 'Рассчитать стоимость утилизации',

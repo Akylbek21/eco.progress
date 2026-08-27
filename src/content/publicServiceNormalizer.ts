@@ -1,5 +1,6 @@
 import { normalizeServiceSlug } from './serviceCatalog';
 import type { AeoFaqItem, ContentStatus, ReviewStatus, ServiceContent } from './types';
+import { getServiceCommercialContent } from './services/serviceCommercial';
 
 type NullableText = string | null | undefined;
 
@@ -78,9 +79,10 @@ export const normalizePublicService = (value: ServiceContent | PublicServiceDto)
   const pricingFactors = strings(aeo?.pricingFactors);
   const legalBasis = strings(aeo?.legalBasis);
   const commonMistakes = strings(aeo?.commonMistakes);
+  const serviceSlug = normalizeServiceSlug(value.id);
 
   return {
-    serviceSlug: normalizeServiceSlug(value.id),
+    serviceSlug,
     status: status(value.status),
     hero: {
       title: text(value.title),
@@ -123,6 +125,7 @@ export const normalizePublicService = (value: ServiceContent | PublicServiceDto)
       commonMistakes: commonMistakes.join('; '),
       faq: faq(aeo),
     },
+    commercial: getServiceCommercialContent(serviceSlug, text(value.title)),
     relatedServices: [],
     relatedArticles: [],
     contentReview: {

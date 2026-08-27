@@ -1,5 +1,7 @@
 import type { ServiceContent } from '../types';
 import { serviceAeoBySlug, type ServiceAeoSlug } from './serviceAeo.ts';
+import { serviceCommercialBySlug } from './serviceCommercial.ts';
+import { specialLegalBasisBySlug } from './serviceLegalBasis.ts';
 
 const codeBasis: ServiceContent['legalBasis'][number] = {
   title: 'Экологический кодекс Республики Казахстан', number: '№ 400-VI ЗРК', date: '2021-01-02',
@@ -7,15 +9,33 @@ const codeBasis: ServiceContent['legalBasis'][number] = {
   note: 'Применимость конкретных норм определяется категорией объекта и составом работ; перед публикацией обязательных требований нужна проверка профильного специалиста.',
   verificationStatus: 'requires-review', claimStatus: 'requires-review',
 };
-const review: ServiceContent['contentReview'] = { preparedBy: 'Редакция EcoProgress', lastReviewedAt: '2026-07-17', reviewStatus: 'requires-specialist-review' };
-type ServiceDefinition = Omit<ServiceContent, 'status' | 'legalBasis' | 'contentReview' | 'aeo' | 'serviceSlug'> & { serviceSlug: ServiceAeoSlug };
-const define = (content: ServiceDefinition): ServiceContent => ({
-  status: 'published',
-  legalBasis: [codeBasis],
-  contentReview: review,
-  ...content,
-  aeo: { ...serviceAeoBySlug[content.serviceSlug], faq: content.faq },
-});
+const review: ServiceContent['contentReview'] = { preparedBy: 'Редакция EcoProgress', lastReviewedAt: '2026-08-27', reviewStatus: 'requires-specialist-review' };
+type ServiceDefinition = Omit<ServiceContent, 'status' | 'legalBasis' | 'contentReview' | 'aeo' | 'commercial' | 'serviceSlug'> & { serviceSlug: ServiceAeoSlug };
+const define = (content: ServiceDefinition): ServiceContent => {
+  const commercial = serviceCommercialBySlug[content.serviceSlug];
+  const benefits = content.hero.benefits && content.hero.benefits.length >= 3
+    ? content.hero.benefits.slice(0, 3)
+    : content.workflow.slice(0, 3).map((step) => (
+      step.result ? `${step.title}: ${step.result}` : step.title
+    ));
+  const faq = content.faq.length >= 6 ? content.faq : [
+    ...content.faq,
+    {
+      question: `Можно ли заказать услугу «${commercial.serviceName}» дистанционно?`,
+      answer: content.summary.availability,
+    },
+  ];
+  return {
+    status: 'published',
+    legalBasis: [codeBasis, ...(specialLegalBasisBySlug[content.serviceSlug] ?? [])],
+    contentReview: review,
+    ...content,
+    hero: { ...content.hero, benefits },
+    faq,
+    aeo: { ...serviceAeoBySlug[content.serviceSlug], faq },
+    commercial,
+  };
+};
 
 export const serviceContent: ServiceContent[] = [
   define({
@@ -49,6 +69,38 @@ export const serviceContent: ServiceContent[] = [
     risks: [{ risk: 'Программа не соответствует цели документа.', prevention: 'До расчёта уточняем, где будут использованы результаты.' }, { risk: 'Объект работает не в штатном режиме.', prevention: 'Согласуем режим и ответственного представителя.' }],
     faq: [{ question: 'Можно использовать старые протоколы?', answer: 'Это зависит от цели, даты, условий измерений и требований конкретного документа; применимость должен проверить специалист.' }, { question: 'Нужен ли выезд?', answer: 'Для отбора и инструментальных измерений — да. Анализ документов возможен дистанционно.' }, { question: 'Можно добавить точки в день выезда?', answer: 'Только если это технически возможно и согласовано; стоимость и сроки могут измениться.' }, { question: 'Кто должен быть на объекте?', answer: 'Представитель, который обеспечит доступ и подтвердит режим работы.' }, { question: 'Что влияет на срок?', answer: 'Показатели, число точек, методики, загрузка и необходимость повторного уточнения.' }],
     relatedServices: ['industrial-control', 'program-pek', 'report-pek'], relatedArticles: ['kak-prohodit-laboratornyy-zamer-vozduha', 'kakie-laboratornye-zamery-nuzhny-predpriyatiyu'],
+  }),
+  define({
+    serviceSlug: 'waste-passport',
+    hero: { eyebrow: 'Идентификация и классификация отхода', title: 'Разработка паспорта опасных отходов в Казахстане', subtitle: 'Проверим происхождение и состав отхода, определим самостоятельный вид и подготовим паспорт для учёта и передачи.', primaryCta: 'Рассчитать стоимость паспорта', secondaryCta: 'Отправить данные об отходе в WhatsApp', benefits: ['Проверка процесса образования', 'Классификация конкретного вида отхода', 'Паспорт и реестр исходных данных'] },
+    summary: { shortDescription: 'Идентификация, проверка состава, классификация и оформление паспорта.', clientResult: 'Паспорт конкретного вида отхода и реестр использованных данных.', availability: 'Подготовка доступна дистанционно по Казахстану; исследования согласуются отдельно.', durationText: 'Предварительный срок определяется после проверки состава и количества видов.', priceText: 'Стоимость рассчитывается после проверки исходных данных' },
+    whenRequired: [{ title: 'Выявлен новый вид отхода', description: 'Нужно отдельно описать его происхождение и состав.' }, { title: 'Изменились сырьё или технология', description: 'Действующий паспорт может не отражать фактический отход.' }, { title: 'Нужно упорядочить учёт', description: 'Внутренние названия нужно связать с фактическими потоками.' }],
+    targetClients: [{ title: 'Производственные предприятия' }, { title: 'Строительные и сервисные организации' }, { title: 'Компании с несколькими потоками отходов' }],
+    problemsSolved: [{ problem: 'Разные отходы объединены одним названием.', solution: 'Разделяем виды по происхождению и составу.' }, { problem: 'Состав скопирован из чужого документа.', solution: 'Используем данные конкретного процесса и исследований.' }],
+    requiredDocuments: [{ title: 'Описание процесса образования', required: true, source: 'client' }, { title: 'Сведения о сырье и составе', required: true, source: 'client' }, { title: 'Анализы или прежние паспорта', required: false, source: 'client' }, { title: 'Объём и место образования', required: true, source: 'client' }],
+    workflow: [{ order: 1, title: 'Идентификация отхода', description: 'Фиксируем процесс и самостоятельный вид.', responsibleParty: 'joint', result: 'Перечень видов' }, { order: 2, title: 'Проверка происхождения и состава', description: 'Сопоставляем технологию, сырьё и анализы.', responsibleParty: 'ecoprogress', result: 'Проверенные исходные данные' }, { order: 3, title: 'Классификация и заполнение', description: 'Готовим паспорт по проверенному виду.', responsibleParty: 'ecoprogress', result: 'Проект паспорта' }, { order: 4, title: 'Финальная проверка', description: 'Сверяем название, состав и исходные материалы.', responsibleParty: 'joint', result: 'Итоговый документ' }],
+    deliverables: [{ title: 'Паспорт отхода', description: 'Документ для конкретного вида отхода.', format: 'PDF/DOCX' }, { title: 'Реестр исходных данных', description: 'Перечень процессов, анализов и допущений.' }, { title: 'Рекомендации по учёту', description: 'Как связать паспорт с фактическим потоком.' }],
+    notIncluded: ['Лабораторные исследования, если они не включены в расчёт', 'Инвентаризация всех потоков предприятия', 'Исправление недостоверных данных третьих лиц'],
+    pricingFactors: [{ title: 'Количество видов отходов', description: 'Определяет число самостоятельных паспортов.' }, { title: 'Полнота данных о составе', description: 'Влияет на объём дополнительной проверки.' }, { title: 'Необходимость исследований', description: 'Лабораторные работы оцениваются отдельно.' }],
+    risks: [{ risk: 'Несколько отходов объединены одним паспортом', prevention: 'Снача идентифицируем самостоятельные виды.' }, { risk: 'Состав не подтверждён исходными данными', prevention: 'Проверяем сырьё, технологию и анализы.' }, { risk: 'Паспорт не обновлён после изменения процесса', prevention: 'Перед использованием сверяем фактическое образование отхода.' }],
+    faq: [{ question: 'Кому нужен паспорт отходов?', answer: 'Предприятиям, у которых образуются самостоятельные виды отходов и для них применимо паспортирование.' }, { question: 'Нужен ли отдельный паспорт на каждый вид?', answer: 'Перечень определяют по происхождению и составу, а не только по внутренним названиям.' }, { question: 'Сколько стоит паспорт?', answer: 'Цена зависит от числа видов, полноты данных о составе и необходимости исследований.' }, { question: 'Какие данные нужны?', answer: 'Нужны процесс образования, сырьё, состав, объём, место образования и имеющиеся анализы.' }, { question: 'Можно начать без анализа?', answer: 'Да, с проверки имеющихся данных. После неё специалист сообщит, нужно ли исследование.' }, { question: 'Когда паспорт нужно обновить?', answer: 'При изменении сырья, технологии или состава, если старый документ больше не отражает фактический отход.' }, { question: 'Можно ли работать дистанционно?', answer: 'Да, если исходные данные можно получить в электронном виде; исследования согласуются отдельно.' }, { question: 'Что получает заказчик?', answer: 'Паспорт конкретного вида отхода, реестр исходных данных и рекомендации по учёту.' }],
+    relatedServices: ['puo', 'waste-recycling', 'ecological-documents'], relatedArticles: ['dokumenty-peredachi-othodov'],
+  }),
+  define({
+    serviceSlug: 'szz',
+    hero: { eyebrow: 'Расчёты и обоснование границы', title: 'Разработка проекта СЗЗ в Казахстане', subtitle: 'Проверим генплан, технологию, источники выбросов и шума, выполним применимые расчёты и подготовим проект санитарно-защитной зоны.', primaryCta: 'Получить расчёт СЗЗ', secondaryCta: 'Отправить генплан в WhatsApp', benefits: ['Анализ фактической планировки', 'Расчёты по источникам воздействия', 'Проект и маршрут дальнейших процедур'] },
+    summary: { shortDescription: 'Анализ площадки, инвентаризация источников, расчёты и подготовка проекта СЗЗ.', clientResult: 'Проектные и расчётные материалы с перечнем источников.', availability: 'Проект готовится по объектам в Казахстане; замеры и выезд согласуются отдельно.', durationText: 'Срок определяется после проверки генплана, источников и необходимости измерений.', priceText: 'Стоимость рассчитывается после проверки исходных данных' },
+    whenRequired: [{ title: 'Новый объект', description: 'Нужно обосновать границу по технологии и источникам.' }, { title: 'Реконструкция или изменение технологии', description: 'Меняются мощность, оборудование или источники воздействия.' }, { title: 'Изменилась ближайшая застройка', description: 'Требуется проверить актуальность принятой границы.' }],
+    targetClients: [{ title: 'Действующие производственные предприятия' }, { title: 'Проекты строительства и реконструкции' }, { title: 'Объекты с источниками выбросов, шума и иных факторов' }],
+    problemsSolved: [{ problem: 'Размер зоны назван до расчётов.', solution: 'Обосновываем границу по фактическим источникам и планировке.' }, { problem: 'В проекте не учтён шум или ближайшая застройка.', solution: 'Проверяем все применимые источники и ситуационную схему.' }],
+    requiredDocuments: [{ title: 'Генеральный план и ситуационная схема', required: true, source: 'client' }, { title: 'Описание технологии и оборудования', required: true, source: 'client' }, { title: 'Источники выбросов и шума', required: true, source: 'client' }, { title: 'Имеющиеся расчёты и протоколы', required: false, source: 'client' }],
+    workflow: [{ order: 1, title: 'Аудит исходных данных', description: 'Проверяем генплан, технологию и ближайшую застройку.', responsibleParty: 'joint', result: 'Перечень пробелов' }, { order: 2, title: 'Инвентаризация источников', description: 'Фиксируем выбросы, шум и другие факторы.', responsibleParty: 'ecoprogress', result: 'Расчётная модель' }, { order: 3, title: 'Расчёт и анализ границы', description: 'Выполняем применимые расчёты и проверяем планировку.', responsibleParty: 'ecoprogress', result: 'Обоснованная граница' }, { order: 4, title: 'Подготовка и проверка проекта', description: 'Собираем расчётные и описательные материалы.', responsibleParty: 'joint', result: 'Итоговый проект СЗЗ' }],
+    deliverables: [{ title: 'Проектные материалы СЗЗ', description: 'Обоснование границы для фактического объекта.', format: 'PDF/DOCX' }, { title: 'Расчётные материалы', description: 'Перечень источников и применённых расчётов.' }, { title: 'Маршрут дальнейших процедур', description: 'Перечень следующих шагов по конкретному объекту.' }],
+    notIncluded: ['Инструментальные замеры, если они не включены в расчёт', 'Изменение технологии или генплана заказчика', 'Внешние процедуры и сборы без отдельного указания'],
+    pricingFactors: [{ title: 'Площадь и сложность площадки', description: 'Определяют объём анализа генплана и застройки.' }, { title: 'Количество источников', description: 'Влияет на объём расчётов выбросов и шума.' }, { title: 'Необходимость замеров', description: 'Лабораторные и инструментальные работы считаются отдельно.' }, { title: 'Готовность исходных данных', description: 'Изменения схем и технологии требуют повторной сверки.' }],
+    risks: [{ risk: 'Размер зоны обещан до расчётов', prevention: 'Не фиксируем границу до анализа источников.' }, { risk: 'Использован устаревший генплан', prevention: 'Фиксируем версию исходных файлов перед расчётами.' }, { risk: 'Пропущены физические факторы', prevention: 'Проверяем шум и иные применимые воздействия.' }],
+    faq: [{ question: 'Кому нужен проект СЗЗ?', answer: 'Новым и действующим объектам с источниками санитарного воздействия, когда применимость подтверждена по характеристикам площадки.' }, { question: 'Когда нужно пересматривать СЗЗ?', answer: 'При реконструкции, смене технологии, мощности, источников или застройки, если это влияет на принятое обоснование.' }, { question: 'Можно ли заранее назвать размер СЗЗ?', answer: 'Нет. Границу обосновывают по технологии, источникам, расчётам, планировке и предусмотренным исследованиям.' }, { question: 'Что нужно для расчёта?', answer: 'Генплан, ситуационная схема, технология, оборудование, источники выбросов и шума, а также имеющиеся протоколы.' }, { question: 'Сколько занимает разработка?', answer: 'Предварительный срок определяем после проверки источников, генплана и необходимости замеров.' }, { question: 'От чего зависит стоимость?', answer: 'От сложности площадки, числа источников, состава расчётов, замеров и готовности исходных данных.' }, { question: 'Можно ли начать без полного комплекта?', answer: 'Да. Отправьте имеющиеся файлы; специалист сообщит, каких данных не хватает.' }, { question: 'Что получает заказчик?', answer: 'Проектные и расчётные материалы СЗЗ, перечень источников и маршрут дальнейших действий.' }],
+    relatedServices: ['ndv', 'laboratory-tests', 'environmental-design'], relatedArticles: ['podgotovka-k-ekologicheskoy-proverke'],
   }),
   define({
     serviceSlug: 'program-pek',

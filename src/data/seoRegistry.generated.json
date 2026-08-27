@@ -73,7 +73,7 @@
         "url": "https://ecoprogress.kz",
         "name": "Экологические услуги и лабораторные исследования для бизнеса в Казахстане",
         "description": "Экологические услуги и лабораторные исследования для предприятий Казахстана: проектирование, ПЭК, отходы, разрешения и сопровождение.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -82,7 +82,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services",
@@ -158,7 +158,7 @@
         "url": "https://ecoprogress.kz/services",
         "name": "Экологические услуги полного цикла",
         "description": "Экологические документы и лабораторные услуги по Казахстану. Утилизация отходов доступна в Шымкенте, Таразе и Туркестане; вывоз и полигон ТБО — в Шымкенте.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -203,7 +203,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/regions",
@@ -353,7 +353,7 @@
         "url": "https://ecoprogress.kz/about",
         "name": "ECOPROGRESS GROUP",
         "description": "ECOPROGRESS GROUP оказывает экологические услуги для бизнеса в Казахстане: документы, лаборатория, отходы и сопровождение.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -381,7 +381,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/contacts",
@@ -442,7 +442,7 @@
         "url": "https://ecoprogress.kz/contacts",
         "name": "Контакты ECOPROGRESS",
         "description": "Контакты ECOPROGRESS: телефон, WhatsApp, email, адрес и консультация по экологическим услугам в Казахстане.",
-        "dateModified": "2026-07-28",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -470,7 +470,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "monthly",
-    "lastModified": "2026-07-28"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/news",
@@ -620,7 +620,7 @@
         "url": "https://ecoprogress.kz/cases",
         "name": "Подтверждённые экологические кейсы",
         "description": "Опубликованные проекты EcoProgress с проверенными исходными данными, выполненными работами, нормативной базой и результатами.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -648,7 +648,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/employees",
@@ -709,7 +709,7 @@
         "url": "https://ecoprogress.kz/employees",
         "name": "Сотрудники ECOPROGRESS",
         "description": "Команда ECOPROGRESS: специалисты по экологическим документам, лабораторным замерам, отходам и сопровождению бизнеса.",
-        "dateModified": "2026-08-21",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -737,7 +737,7 @@
     "includeInSitemap": false,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-21"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/partners",
@@ -887,7 +887,7 @@
         "url": "https://ecoprogress.kz/tariffs",
         "name": "Тарифы на экологическое сопровождение",
         "description": "Форматы и ориентировочная стоимость экологических документов, лабораторных исследований, аудита и сопровождения бизнеса.",
-        "dateModified": "2026-07-28",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -932,7 +932,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "monthly",
-    "lastModified": "2026-07-28"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/faq",
@@ -1082,7 +1082,7 @@
         "url": "https://ecoprogress.kz/services/ecological-documents",
         "name": "Определим, какие экологические документы нужны вашему объекту, и подготовим согласованный комплект",
         "description": "Подготовка экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1127,7 +1127,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/environmental-design",
@@ -1188,7 +1188,7 @@
         "url": "https://ecoprogress.kz/services/environmental-design",
         "name": "Экологическое проектирование",
         "description": "Основная коммерческая услуга по разработке экологических проектов для строительства и действующих объектов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1233,7 +1233,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/roos",
@@ -1294,7 +1294,7 @@
         "url": "https://ecoprogress.kz/services/roos",
         "name": "Разработка РООС в Казахстане",
         "description": "Разработка РООС для проектной документации в Казахстане. Проверим исходные данные, определим состав раздела и подготовим раздел охраны окружающей среды.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1339,7 +1339,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/waste-passport",
@@ -1362,7 +1362,7 @@
     ],
     "title": "Паспорт отходов — разработка и оформление | EcoProgress",
     "description": "Разрабатываем паспорта отходов для предприятий: проверяем происхождение и состав, классифицируем отход и готовим документы для учёта.",
-    "h1": "Разработка паспорта отходов",
+    "h1": "Разработка паспорта опасных отходов в Казахстане",
     "canonical": "https://ecoprogress.kz/services/waste-passport",
     "robots": "index,follow",
     "ogType": "website",
@@ -1413,9 +1413,9 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/services/waste-passport#webpage",
         "url": "https://ecoprogress.kz/services/waste-passport",
-        "name": "Разработка паспорта отходов",
+        "name": "Разработка паспорта опасных отходов в Казахстане",
         "description": "Разрабатываем паспорта отходов для предприятий: проверяем происхождение и состав, классифицируем отход и готовим документы для учёта.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1425,9 +1425,9 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/services/waste-passport#service",
         "url": "https://ecoprogress.kz/services/waste-passport",
-        "name": "Разработка паспорта отходов",
+        "name": "Разработка паспорта опасных отходов в Казахстане",
         "description": "Разрабатываем паспорта отходов для предприятий: проверяем происхождение и состав, классифицируем отход и готовим документы для учёта.",
-        "serviceType": "Разработка паспорта отходов",
+        "serviceType": "Разработка паспорта опасных отходов в Казахстане",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
         },
@@ -1451,7 +1451,7 @@
           {
             "@type": "ListItem",
             "position": 2,
-            "name": "Разработка паспорта отходов",
+            "name": "Разработка паспорта опасных отходов в Казахстане",
             "item": "https://ecoprogress.kz/services/waste-passport"
           }
         ]
@@ -1460,7 +1460,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/szz",
@@ -1483,7 +1483,7 @@
     ],
     "title": "Проект СЗЗ — разработка санитарно-защитной зоны | EcoProgress",
     "description": "Разработка проекта СЗЗ: анализ площадки и источников, расчёты воздействия, проверка границы и подготовка проектных материалов.",
-    "h1": "Проект санитарно-защитной зоны",
+    "h1": "Разработка проекта СЗЗ в Казахстане",
     "canonical": "https://ecoprogress.kz/services/szz",
     "robots": "index,follow",
     "ogType": "website",
@@ -1534,9 +1534,9 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/services/szz#webpage",
         "url": "https://ecoprogress.kz/services/szz",
-        "name": "Проект санитарно-защитной зоны",
+        "name": "Разработка проекта СЗЗ в Казахстане",
         "description": "Разработка проекта СЗЗ: анализ площадки и источников, расчёты воздействия, проверка границы и подготовка проектных материалов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1546,9 +1546,9 @@
         "@type": "Service",
         "@id": "https://ecoprogress.kz/services/szz#service",
         "url": "https://ecoprogress.kz/services/szz",
-        "name": "Проект санитарно-защитной зоны",
+        "name": "Разработка проекта СЗЗ в Казахстане",
         "description": "Разработка проекта СЗЗ: анализ площадки и источников, расчёты воздействия, проверка границы и подготовка проектных материалов.",
-        "serviceType": "Проект санитарно-защитной зоны",
+        "serviceType": "Разработка проекта СЗЗ в Казахстане",
         "provider": {
           "@id": "https://ecoprogress.kz/#organization"
         },
@@ -1572,7 +1572,7 @@
           {
             "@type": "ListItem",
             "position": 2,
-            "name": "Проект санитарно-защитной зоны",
+            "name": "Разработка проекта СЗЗ в Казахстане",
             "item": "https://ecoprogress.kz/services/szz"
           }
         ]
@@ -1581,7 +1581,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/ndv",
@@ -1657,7 +1657,7 @@
         "url": "https://ecoprogress.kz/services/ndv",
         "name": "Подготовим проект нормативов допустимых выбросов на основе проверенной инвентаризации источников",
         "description": "Инвентаризация источников, расчёты выбросов и подготовка проекта НДВ. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1702,7 +1702,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/puo",
@@ -1763,7 +1763,7 @@
         "url": "https://ecoprogress.kz/services/puo",
         "name": "Разработаем программу управления отходами по фактическим видам, объёмам и способам обращения",
         "description": "Анализ потоков отходов, целевые показатели и программа управления отходами. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1808,7 +1808,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/ovos",
@@ -1869,7 +1869,7 @@
         "url": "https://ecoprogress.kz/services/ovos",
         "name": "Подготовим материалы оценки воздействия для проекта и обозначим зависимости от исходных решений",
         "description": "Подготовка ОВОС и материалов экологической оценки для проектов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1914,7 +1914,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/environmental-permits",
@@ -1990,7 +1990,7 @@
         "url": "https://ecoprogress.kz/services/environmental-permits",
         "name": "Экологические разрешения и декларации",
         "description": "Подготовка разрешительных материалов и сопровождение процедур по требованиям РК. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2035,7 +2035,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/laboratory-tests",
@@ -2111,7 +2111,7 @@
         "url": "https://ecoprogress.kz/services/laboratory-tests",
         "name": "Организуем лабораторные исследования по согласованной программе и передадим протоколы результатов",
         "description": "Анализы воды, воздуха и почвы, замеры выбросов и протоколы исследований. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2156,7 +2156,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/water-analysis",
@@ -2232,7 +2232,7 @@
         "url": "https://ecoprogress.kz/services/water-analysis",
         "name": "Лабораторный анализ воды",
         "description": "Лабораторный анализ питьевой, природной и сточной воды: подберём показатели, согласуем отбор и оформим протокол исследования.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2277,7 +2277,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/industrial-control",
@@ -2338,7 +2338,7 @@
         "url": "https://ecoprogress.kz/services/industrial-control",
         "name": "Производственный контроль СЭС",
         "description": "Программа производственного контроля, замеры и протоколы для санитарных требований. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2383,7 +2383,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/program-pek",
@@ -2459,7 +2459,7 @@
         "url": "https://ecoprogress.kz/services/program-pek",
         "name": "Разработаем программу производственного экологического контроля под источники и процессы предприятия",
         "description": "Программа контроля по фактическим источникам, показателям и процессам предприятия. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2504,7 +2504,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/report-pek",
@@ -2580,7 +2580,7 @@
         "url": "https://ecoprogress.kz/services/report-pek",
         "name": "Подготовка отчёта ПЭК в Казахстане",
         "description": "Подготовим отчёт ПЭК для предприятия: проверим данные мониторинга, протоколы и производственные показатели. Рассчитаем сроки и стоимость подготовки отчёта.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2625,7 +2625,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/waste-transportation",
@@ -2686,7 +2686,7 @@
         "url": "https://ecoprogress.kz/services/waste-transportation",
         "name": "Организуем вывоз согласованных видов отходов с объекта и оформим комплект документов по выполненной перевозке",
         "description": "Сбор и транспортировка отходов с объекта с оформлением сопроводительных документов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2731,7 +2731,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/waste-recycling",
@@ -2807,7 +2807,7 @@
         "url": "https://ecoprogress.kz/services/waste-recycling",
         "name": "Проверим возможность приёма отходов, согласуем способ обращения и оформим документы по выполненной операции",
         "description": "Передача отходов на утилизацию или переработку и оформление подтверждающих документов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2852,7 +2852,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/waste-management",
@@ -2913,7 +2913,7 @@
         "url": "https://ecoprogress.kz/services/waste-management",
         "name": "Комплексное обращение с отходами",
         "description": "Коммерческая страница комплексного вывоза, утилизации и документального сопровождения отходов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2958,7 +2958,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/poligon-tbo",
@@ -3019,7 +3019,7 @@
         "url": "https://ecoprogress.kz/services/poligon-tbo",
         "name": "Полигон ТБО",
         "description": "Приём и законное размещение ТБО с документами для организаций. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3064,7 +3064,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/environmental-audit",
@@ -3125,7 +3125,7 @@
         "url": "https://ecoprogress.kz/services/environmental-audit",
         "name": "Сопровождение экологических проверок",
         "description": "Аудит документов, оценка рисков и подготовка предприятия к экологической проверке. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3170,7 +3170,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/services/ecological-support",
@@ -3231,7 +3231,7 @@
         "url": "https://ecoprogress.kz/services/ecological-support",
         "name": "Организуем экологическое сопровождение с календарём обязанностей, документами и контролем открытых вопросов",
         "description": "Регулярный контроль отчётности, документов, сроков и экологических рисков предприятия. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3276,7 +3276,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/ecologicheskie-uslugi-almaty",
@@ -3337,7 +3337,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
         "name": "Экологические услуги в Алматы",
         "description": "ECOPROGRESS оказывает экологические услуги в Алматы: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3371,7 +3371,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-astana",
@@ -3432,7 +3432,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
         "name": "Экологические услуги в Астане",
         "description": "ECOPROGRESS оказывает экологические услуги в Астане: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3466,7 +3466,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-shymkent",
@@ -3554,7 +3554,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
         "name": "Экологические услуги в Шымкенте",
         "description": "ECOPROGRESS оказывает экологические услуги в Шымкенте: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса. Доступна утилизация отходов.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3588,7 +3588,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-taraz",
@@ -3649,7 +3649,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
         "name": "Экологические услуги в Таразе",
         "description": "ECOPROGRESS оказывает экологические услуги в Таразе: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса. Доступна утилизация отходов.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3683,7 +3683,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-turkestan",
@@ -3744,7 +3744,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
         "name": "Экологические услуги в Туркестане",
         "description": "ECOPROGRESS оказывает экологические услуги в Туркестане: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса. Доступна утилизация отходов.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3778,7 +3778,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-kyzylorda",
@@ -3839,7 +3839,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
         "name": "Экологические услуги в Кызылорде",
         "description": "ECOPROGRESS оказывает экологические услуги в Кызылорде: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3873,7 +3873,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-aktobe",
@@ -3934,7 +3934,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
         "name": "Экологические услуги в Актобе",
         "description": "ECOPROGRESS оказывает экологические услуги в Актобе: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3968,7 +3968,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-atyrau",
@@ -4029,7 +4029,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
         "name": "Экологические услуги в Атырау",
         "description": "ECOPROGRESS оказывает экологические услуги в Атырау: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4063,7 +4063,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-karaganda",
@@ -4124,7 +4124,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
         "name": "Экологические услуги в Караганде",
         "description": "ECOPROGRESS оказывает экологические услуги в Караганде: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4158,7 +4158,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-pavlodar",
@@ -4219,7 +4219,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
         "name": "Экологические услуги в Павлодаре",
         "description": "ECOPROGRESS оказывает экологические услуги в Павлодаре: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4253,7 +4253,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-ust-kamenogorsk",
@@ -4314,7 +4314,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
         "name": "Экологические услуги в Усть-Каменогорске",
         "description": "ECOPROGRESS оказывает экологические услуги в Усть-Каменогорске: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4348,7 +4348,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-kostanay",
@@ -4409,7 +4409,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
         "name": "Экологические услуги в Костанае",
         "description": "ECOPROGRESS оказывает экологические услуги в Костанае: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4443,7 +4443,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-aktau",
@@ -4504,7 +4504,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
         "name": "Экологические услуги в Актау",
         "description": "ECOPROGRESS оказывает экологические услуги в Актау: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4538,7 +4538,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-petropavlovsk",
@@ -4599,7 +4599,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
         "name": "Экологические услуги в Петропавловске",
         "description": "ECOPROGRESS оказывает экологические услуги в Петропавловске: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4633,7 +4633,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-oral",
@@ -4694,7 +4694,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
         "name": "Экологические услуги в Уральске",
         "description": "ECOPROGRESS оказывает экологические услуги в Уральске: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4728,7 +4728,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-kokshetau",
@@ -4789,7 +4789,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
         "name": "Экологические услуги в Кокшетау",
         "description": "ECOPROGRESS оказывает экологические услуги в Кокшетау: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4823,7 +4823,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-taldykorgan",
@@ -4884,7 +4884,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
         "name": "Экологические услуги в Талдыкоргане",
         "description": "ECOPROGRESS оказывает экологические услуги в Талдыкоргане: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4918,7 +4918,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ecologicheskie-uslugi-semey",
@@ -4979,7 +4979,7 @@
         "url": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
         "name": "Экологические услуги в Семее",
         "description": "ECOPROGRESS оказывает экологические услуги в Семее: замеры, ПЭК, паспорта отходов, разрешения и сопровождение бизнеса.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -5013,7 +5013,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-almaty",
@@ -5074,7 +5074,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-almaty",
         "name": "Лабораторные замеры в Алматы",
         "description": "Лабораторные замеры в Алматы: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Алматы — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -5131,7 +5131,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-astana",
@@ -5192,7 +5192,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-astana",
         "name": "Лабораторные замеры в Астане",
         "description": "Лабораторные замеры в Астане: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Астаны — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -5249,7 +5249,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-shymkent",
@@ -5337,7 +5337,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-shymkent",
         "name": "Лабораторные замеры в Шымкенте",
         "description": "Лабораторные замеры в Шымкенте: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -5394,7 +5394,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-taraz",
@@ -5455,7 +5455,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-taraz",
         "name": "Лабораторные замеры в Таразе",
         "description": "Лабораторные замеры в Таразе: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Тараза — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -5512,7 +5512,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-turkestan",
@@ -5573,7 +5573,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-turkestan",
         "name": "Лабораторные замеры в Туркестане",
         "description": "Лабораторные замеры в Туркестане: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Туркестана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -5630,7 +5630,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-kyzylorda",
@@ -5691,7 +5691,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-kyzylorda",
         "name": "Лабораторные замеры в Кызылорде",
         "description": "Лабораторные замеры в Кызылорде: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Кызылорды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -5748,7 +5748,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-aktobe",
@@ -5809,7 +5809,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-aktobe",
         "name": "Лабораторные замеры в Актобе",
         "description": "Лабораторные замеры в Актобе: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Актобе — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -5866,7 +5866,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-atyrau",
@@ -5927,7 +5927,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-atyrau",
         "name": "Лабораторные замеры в Атырау",
         "description": "Лабораторные замеры в Атырау: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Атырау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -5984,7 +5984,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-karaganda",
@@ -6045,7 +6045,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-karaganda",
         "name": "Лабораторные замеры в Караганде",
         "description": "Лабораторные замеры в Караганде: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Караганды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -6102,7 +6102,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-pavlodar",
@@ -6163,7 +6163,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-pavlodar",
         "name": "Лабораторные замеры в Павлодаре",
         "description": "Лабораторные замеры в Павлодаре: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Павлодара — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -6220,7 +6220,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-ust-kamenogorsk",
@@ -6281,7 +6281,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-ust-kamenogorsk",
         "name": "Лабораторные замеры в Усть-Каменогорске",
         "description": "Лабораторные замеры в Усть-Каменогорске: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Усть-Каменогорска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -6338,7 +6338,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-kostanay",
@@ -6399,7 +6399,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-kostanay",
         "name": "Лабораторные замеры в Костанае",
         "description": "Лабораторные замеры в Костанае: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Костаная — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -6456,7 +6456,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-aktau",
@@ -6517,7 +6517,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-aktau",
         "name": "Лабораторные замеры в Актау",
         "description": "Лабораторные замеры в Актау: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Актау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -6574,7 +6574,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-petropavlovsk",
@@ -6635,7 +6635,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-petropavlovsk",
         "name": "Лабораторные замеры в Петропавловске",
         "description": "Лабораторные замеры в Петропавловске: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Петропавловска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -6692,7 +6692,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-oral",
@@ -6753,7 +6753,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-oral",
         "name": "Лабораторные замеры в Уральске",
         "description": "Лабораторные замеры в Уральске: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Уральска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -6810,7 +6810,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-kokshetau",
@@ -6871,7 +6871,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-kokshetau",
         "name": "Лабораторные замеры в Кокшетау",
         "description": "Лабораторные замеры в Кокшетау: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Кокшетау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -6928,7 +6928,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-taldykorgan",
@@ -6989,7 +6989,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-taldykorgan",
         "name": "Лабораторные замеры в Талдыкоргане",
         "description": "Лабораторные замеры в Талдыкоргане: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Талдыкоргана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -7046,7 +7046,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/laboratornye-zamery-semey",
@@ -7107,7 +7107,7 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-semey",
         "name": "Лабораторные замеры в Семее",
         "description": "Лабораторные замеры в Семее: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Семея — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -7164,7 +7164,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-almaty",
@@ -7225,7 +7225,7 @@
         "url": "https://ecoprogress.kz/szz-almaty",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Алматы",
         "description": "Проект СЗЗ в Алматы: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Алматы — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -7282,7 +7282,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-astana",
@@ -7343,7 +7343,7 @@
         "url": "https://ecoprogress.kz/szz-astana",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Астане",
         "description": "Проект СЗЗ в Астане: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Астаны — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -7400,7 +7400,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-shymkent",
@@ -7488,7 +7488,7 @@
         "url": "https://ecoprogress.kz/szz-shymkent",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Шымкенте",
         "description": "Проект СЗЗ в Шымкенте: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -7545,7 +7545,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-taraz",
@@ -7606,7 +7606,7 @@
         "url": "https://ecoprogress.kz/szz-taraz",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Таразе",
         "description": "Проект СЗЗ в Таразе: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Тараза — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -7663,7 +7663,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-turkestan",
@@ -7724,7 +7724,7 @@
         "url": "https://ecoprogress.kz/szz-turkestan",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Туркестане",
         "description": "Проект СЗЗ в Туркестане: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Туркестана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -7781,7 +7781,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-kyzylorda",
@@ -7842,7 +7842,7 @@
         "url": "https://ecoprogress.kz/szz-kyzylorda",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Кызылорде",
         "description": "Проект СЗЗ в Кызылорде: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Кызылорды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -7899,7 +7899,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-aktobe",
@@ -7960,7 +7960,7 @@
         "url": "https://ecoprogress.kz/szz-aktobe",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Актобе",
         "description": "Проект СЗЗ в Актобе: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Актобе — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -8017,7 +8017,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-atyrau",
@@ -8078,7 +8078,7 @@
         "url": "https://ecoprogress.kz/szz-atyrau",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Атырау",
         "description": "Проект СЗЗ в Атырау: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Атырау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -8135,7 +8135,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-karaganda",
@@ -8196,7 +8196,7 @@
         "url": "https://ecoprogress.kz/szz-karaganda",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Караганде",
         "description": "Проект СЗЗ в Караганде: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Караганды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -8253,7 +8253,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-pavlodar",
@@ -8314,7 +8314,7 @@
         "url": "https://ecoprogress.kz/szz-pavlodar",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Павлодаре",
         "description": "Проект СЗЗ в Павлодаре: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Павлодара — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -8371,7 +8371,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-ust-kamenogorsk",
@@ -8432,7 +8432,7 @@
         "url": "https://ecoprogress.kz/szz-ust-kamenogorsk",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Усть-Каменогорске",
         "description": "Проект СЗЗ в Усть-Каменогорске: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Усть-Каменогорска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -8489,7 +8489,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-kostanay",
@@ -8550,7 +8550,7 @@
         "url": "https://ecoprogress.kz/szz-kostanay",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Костанае",
         "description": "Проект СЗЗ в Костанае: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Костаная — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -8607,7 +8607,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-aktau",
@@ -8668,7 +8668,7 @@
         "url": "https://ecoprogress.kz/szz-aktau",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Актау",
         "description": "Проект СЗЗ в Актау: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Актау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -8725,7 +8725,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-petropavlovsk",
@@ -8786,7 +8786,7 @@
         "url": "https://ecoprogress.kz/szz-petropavlovsk",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Петропавловске",
         "description": "Проект СЗЗ в Петропавловске: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Петропавловска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -8843,7 +8843,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-oral",
@@ -8904,7 +8904,7 @@
         "url": "https://ecoprogress.kz/szz-oral",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Уральске",
         "description": "Проект СЗЗ в Уральске: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Уральска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -8961,7 +8961,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-kokshetau",
@@ -9022,7 +9022,7 @@
         "url": "https://ecoprogress.kz/szz-kokshetau",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Кокшетау",
         "description": "Проект СЗЗ в Кокшетау: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Кокшетау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -9079,7 +9079,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-taldykorgan",
@@ -9140,7 +9140,7 @@
         "url": "https://ecoprogress.kz/szz-taldykorgan",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Талдыкоргане",
         "description": "Проект СЗЗ в Талдыкоргане: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Талдыкоргана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -9197,7 +9197,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/szz-semey",
@@ -9258,7 +9258,7 @@
         "url": "https://ecoprogress.kz/szz-semey",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Семее",
         "description": "Проект СЗЗ в Семее: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Семея — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -9315,7 +9315,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-almaty",
@@ -9376,7 +9376,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-almaty",
         "name": "Паспорт отходов в Алматы",
         "description": "Паспорт отходов в Алматы: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Алматы — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -9433,7 +9433,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-astana",
@@ -9494,7 +9494,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-astana",
         "name": "Паспорт отходов в Астане",
         "description": "Паспорт отходов в Астане: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Астаны — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -9551,7 +9551,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-shymkent",
@@ -9639,7 +9639,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-shymkent",
         "name": "Паспорт отходов в Шымкенте",
         "description": "Паспорт отходов в Шымкенте: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -9696,7 +9696,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-taraz",
@@ -9757,7 +9757,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-taraz",
         "name": "Паспорт отходов в Таразе",
         "description": "Паспорт отходов в Таразе: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Тараза — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -9814,7 +9814,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-turkestan",
@@ -9875,7 +9875,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-turkestan",
         "name": "Паспорт отходов в Туркестане",
         "description": "Паспорт отходов в Туркестане: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Туркестана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -9932,7 +9932,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-kyzylorda",
@@ -9993,7 +9993,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-kyzylorda",
         "name": "Паспорт отходов в Кызылорде",
         "description": "Паспорт отходов в Кызылорде: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Кызылорды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -10050,7 +10050,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-aktobe",
@@ -10111,7 +10111,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-aktobe",
         "name": "Паспорт отходов в Актобе",
         "description": "Паспорт отходов в Актобе: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Актобе — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -10168,7 +10168,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-atyrau",
@@ -10229,7 +10229,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-atyrau",
         "name": "Паспорт отходов в Атырау",
         "description": "Паспорт отходов в Атырау: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Атырау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -10286,7 +10286,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-karaganda",
@@ -10347,7 +10347,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-karaganda",
         "name": "Паспорт отходов в Караганде",
         "description": "Паспорт отходов в Караганде: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Караганды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -10404,7 +10404,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-pavlodar",
@@ -10465,7 +10465,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-pavlodar",
         "name": "Паспорт отходов в Павлодаре",
         "description": "Паспорт отходов в Павлодаре: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Павлодара — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -10522,7 +10522,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-ust-kamenogorsk",
@@ -10583,7 +10583,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-ust-kamenogorsk",
         "name": "Паспорт отходов в Усть-Каменогорске",
         "description": "Паспорт отходов в Усть-Каменогорске: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Усть-Каменогорска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -10640,7 +10640,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-kostanay",
@@ -10701,7 +10701,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-kostanay",
         "name": "Паспорт отходов в Костанае",
         "description": "Паспорт отходов в Костанае: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Костаная — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -10758,7 +10758,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-aktau",
@@ -10819,7 +10819,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-aktau",
         "name": "Паспорт отходов в Актау",
         "description": "Паспорт отходов в Актау: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Актау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -10876,7 +10876,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-petropavlovsk",
@@ -10937,7 +10937,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-petropavlovsk",
         "name": "Паспорт отходов в Петропавловске",
         "description": "Паспорт отходов в Петропавловске: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Петропавловска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -10994,7 +10994,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-oral",
@@ -11055,7 +11055,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-oral",
         "name": "Паспорт отходов в Уральске",
         "description": "Паспорт отходов в Уральске: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Уральска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -11112,7 +11112,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-kokshetau",
@@ -11173,7 +11173,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-kokshetau",
         "name": "Паспорт отходов в Кокшетау",
         "description": "Паспорт отходов в Кокшетау: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Кокшетау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -11230,7 +11230,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-taldykorgan",
@@ -11291,7 +11291,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-taldykorgan",
         "name": "Паспорт отходов в Талдыкоргане",
         "description": "Паспорт отходов в Талдыкоргане: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Талдыкоргана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -11348,7 +11348,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pasport-othodov-semey",
@@ -11409,7 +11409,7 @@
         "url": "https://ecoprogress.kz/pasport-othodov-semey",
         "name": "Паспорт отходов в Семее",
         "description": "Паспорт отходов в Семее: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Семея — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -11466,7 +11466,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/utilizaciya-othodov-shymkent",
@@ -11554,7 +11554,7 @@
         "url": "https://ecoprogress.kz/utilizaciya-othodov-shymkent",
         "name": "Утилизация отходов в Шымкенте",
         "description": "Утилизация промышленных отходов в Шымкенте. Проверим перечень отходов, организуем передачу и вывоз, предоставим закрывающие документы. Рассчитаем стоимость.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -11611,7 +11611,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/utilizaciya-othodov-taraz",
@@ -11672,7 +11672,7 @@
         "url": "https://ecoprogress.kz/utilizaciya-othodov-taraz",
         "name": "Утилизация отходов в Таразе",
         "description": "Утилизация промышленных отходов в Таразе. Проверим перечень отходов, рассчитаем способ передачи, стоимость и подготовим закрывающие документы.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -11729,7 +11729,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/utilizaciya-othodov-turkestan",
@@ -11790,7 +11790,7 @@
         "url": "https://ecoprogress.kz/utilizaciya-othodov-turkestan",
         "name": "Утилизация отходов в Туркестане",
         "description": "Утилизация промышленных отходов в Туркестане. Проверим перечень отходов, организуем передачу и подготовим закрывающие документы. Расчёт стоимости по заявке.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -11847,7 +11847,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-almaty",
@@ -11908,7 +11908,7 @@
         "url": "https://ecoprogress.kz/pek-almaty",
         "name": "Программа производственного экологического контроля в Алматы",
         "description": "Программа ПЭК в Алматы: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Алматы — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -11965,7 +11965,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-astana",
@@ -12026,7 +12026,7 @@
         "url": "https://ecoprogress.kz/pek-astana",
         "name": "Программа производственного экологического контроля в Астане",
         "description": "Программа ПЭК в Астане: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Астаны — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -12083,7 +12083,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-shymkent",
@@ -12186,7 +12186,7 @@
         "url": "https://ecoprogress.kz/pek-shymkent",
         "name": "Программа производственного экологического контроля в Шымкенте",
         "description": "Программа ПЭК в Шымкенте: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -12243,7 +12243,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-taraz",
@@ -12304,7 +12304,7 @@
         "url": "https://ecoprogress.kz/pek-taraz",
         "name": "Программа производственного экологического контроля в Таразе",
         "description": "Программа ПЭК в Таразе: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Тараза — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -12361,7 +12361,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-turkestan",
@@ -12422,7 +12422,7 @@
         "url": "https://ecoprogress.kz/pek-turkestan",
         "name": "Программа производственного экологического контроля в Туркестане",
         "description": "Программа ПЭК в Туркестане: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Туркестана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -12479,7 +12479,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-kyzylorda",
@@ -12540,7 +12540,7 @@
         "url": "https://ecoprogress.kz/pek-kyzylorda",
         "name": "Программа производственного экологического контроля в Кызылорде",
         "description": "Программа ПЭК в Кызылорде: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Кызылорды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -12597,7 +12597,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-aktobe",
@@ -12658,7 +12658,7 @@
         "url": "https://ecoprogress.kz/pek-aktobe",
         "name": "Программа производственного экологического контроля в Актобе",
         "description": "Программа ПЭК в Актобе: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Актобе — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -12715,7 +12715,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-atyrau",
@@ -12776,7 +12776,7 @@
         "url": "https://ecoprogress.kz/pek-atyrau",
         "name": "Программа производственного экологического контроля в Атырау",
         "description": "Программа ПЭК в Атырау: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Атырау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -12833,7 +12833,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-karaganda",
@@ -12894,7 +12894,7 @@
         "url": "https://ecoprogress.kz/pek-karaganda",
         "name": "Программа производственного экологического контроля в Караганде",
         "description": "Программа ПЭК в Караганде: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Караганды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -12951,7 +12951,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-pavlodar",
@@ -13012,7 +13012,7 @@
         "url": "https://ecoprogress.kz/pek-pavlodar",
         "name": "Программа производственного экологического контроля в Павлодаре",
         "description": "Программа ПЭК в Павлодаре: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Павлодара — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -13069,7 +13069,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-ust-kamenogorsk",
@@ -13130,7 +13130,7 @@
         "url": "https://ecoprogress.kz/pek-ust-kamenogorsk",
         "name": "Программа производственного экологического контроля в Усть-Каменогорске",
         "description": "Программа ПЭК в Усть-Каменогорске: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Усть-Каменогорска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -13187,7 +13187,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-kostanay",
@@ -13248,7 +13248,7 @@
         "url": "https://ecoprogress.kz/pek-kostanay",
         "name": "Программа производственного экологического контроля в Костанае",
         "description": "Программа ПЭК в Костанае: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Костаная — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -13305,7 +13305,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-aktau",
@@ -13366,7 +13366,7 @@
         "url": "https://ecoprogress.kz/pek-aktau",
         "name": "Программа производственного экологического контроля в Актау",
         "description": "Программа ПЭК в Актау: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Актау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -13423,7 +13423,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-petropavlovsk",
@@ -13484,7 +13484,7 @@
         "url": "https://ecoprogress.kz/pek-petropavlovsk",
         "name": "Программа производственного экологического контроля в Петропавловске",
         "description": "Программа ПЭК в Петропавловске: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Петропавловска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -13541,7 +13541,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-oral",
@@ -13602,7 +13602,7 @@
         "url": "https://ecoprogress.kz/pek-oral",
         "name": "Программа производственного экологического контроля в Уральске",
         "description": "Программа ПЭК в Уральске: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Уральска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -13659,7 +13659,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-kokshetau",
@@ -13720,7 +13720,7 @@
         "url": "https://ecoprogress.kz/pek-kokshetau",
         "name": "Программа производственного экологического контроля в Кокшетау",
         "description": "Программа ПЭК в Кокшетау: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Кокшетау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -13777,7 +13777,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-taldykorgan",
@@ -13838,7 +13838,7 @@
         "url": "https://ecoprogress.kz/pek-taldykorgan",
         "name": "Программа производственного экологического контроля в Талдыкоргане",
         "description": "Программа ПЭК в Талдыкоргане: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Талдыкоргана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -13895,7 +13895,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/pek-semey",
@@ -13956,7 +13956,7 @@
         "url": "https://ecoprogress.kz/pek-semey",
         "name": "Программа производственного экологического контроля в Семее",
         "description": "Программа ПЭК в Семее: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Семея — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -14013,7 +14013,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-almaty",
@@ -14074,7 +14074,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-almaty",
         "name": "Отчёт производственного экологического контроля в Алматы",
         "description": "Отчёт ПЭК в Алматы: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Алматы — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -14131,7 +14131,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-astana",
@@ -14192,7 +14192,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-astana",
         "name": "Отчёт производственного экологического контроля в Астане",
         "description": "Отчёт ПЭК в Астане: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Астаны — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -14249,7 +14249,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-shymkent",
@@ -14337,7 +14337,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-shymkent",
         "name": "Отчёт производственного экологического контроля в Шымкенте",
         "description": "Отчёт ПЭК в Шымкенте: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -14394,7 +14394,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-taraz",
@@ -14455,7 +14455,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-taraz",
         "name": "Отчёт производственного экологического контроля в Таразе",
         "description": "Отчёт ПЭК в Таразе: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Тараза — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -14512,7 +14512,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-turkestan",
@@ -14573,7 +14573,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-turkestan",
         "name": "Отчёт производственного экологического контроля в Туркестане",
         "description": "Отчёт ПЭК в Туркестане: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Туркестана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -14630,7 +14630,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-kyzylorda",
@@ -14691,7 +14691,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-kyzylorda",
         "name": "Отчёт производственного экологического контроля в Кызылорде",
         "description": "Отчёт ПЭК в Кызылорде: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Кызылорды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -14748,7 +14748,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-aktobe",
@@ -14809,7 +14809,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-aktobe",
         "name": "Отчёт производственного экологического контроля в Актобе",
         "description": "Отчёт ПЭК в Актобе: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Актобе — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -14866,7 +14866,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-atyrau",
@@ -14927,7 +14927,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-atyrau",
         "name": "Отчёт производственного экологического контроля в Атырау",
         "description": "Отчёт ПЭК в Атырау: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Атырау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -14984,7 +14984,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-karaganda",
@@ -15045,7 +15045,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-karaganda",
         "name": "Отчёт производственного экологического контроля в Караганде",
         "description": "Отчёт ПЭК в Караганде: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Караганды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -15102,7 +15102,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-pavlodar",
@@ -15163,7 +15163,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-pavlodar",
         "name": "Отчёт производственного экологического контроля в Павлодаре",
         "description": "Отчёт ПЭК в Павлодаре: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Павлодара — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -15220,7 +15220,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-ust-kamenogorsk",
@@ -15281,7 +15281,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-ust-kamenogorsk",
         "name": "Отчёт производственного экологического контроля в Усть-Каменогорске",
         "description": "Отчёт ПЭК в Усть-Каменогорске: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Усть-Каменогорска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -15338,7 +15338,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-kostanay",
@@ -15399,7 +15399,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-kostanay",
         "name": "Отчёт производственного экологического контроля в Костанае",
         "description": "Отчёт ПЭК в Костанае: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Костаная — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -15456,7 +15456,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-aktau",
@@ -15517,7 +15517,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-aktau",
         "name": "Отчёт производственного экологического контроля в Актау",
         "description": "Отчёт ПЭК в Актау: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Актау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -15574,7 +15574,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-petropavlovsk",
@@ -15635,7 +15635,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-petropavlovsk",
         "name": "Отчёт производственного экологического контроля в Петропавловске",
         "description": "Отчёт ПЭК в Петропавловске: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Петропавловска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -15692,7 +15692,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-oral",
@@ -15753,7 +15753,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-oral",
         "name": "Отчёт производственного экологического контроля в Уральске",
         "description": "Отчёт ПЭК в Уральске: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Уральска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -15810,7 +15810,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-kokshetau",
@@ -15871,7 +15871,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-kokshetau",
         "name": "Отчёт производственного экологического контроля в Кокшетау",
         "description": "Отчёт ПЭК в Кокшетау: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Кокшетау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -15928,7 +15928,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-taldykorgan",
@@ -15989,7 +15989,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-taldykorgan",
         "name": "Отчёт производственного экологического контроля в Талдыкоргане",
         "description": "Отчёт ПЭК в Талдыкоргане: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Талдыкоргана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -16046,7 +16046,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/otchet-pek-semey",
@@ -16107,7 +16107,7 @@
         "url": "https://ecoprogress.kz/otchet-pek-semey",
         "name": "Отчёт производственного экологического контроля в Семее",
         "description": "Отчёт ПЭК в Семее: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Семея — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -16164,7 +16164,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/analiz-vody-shymkent",
@@ -16252,7 +16252,7 @@
         "url": "https://ecoprogress.kz/analiz-vody-shymkent",
         "name": "Лабораторный анализ воды в Шымкенте",
         "description": "Анализ воды в Шымкенте: Отбор проб и анализ питьевой, природной или сточной воды. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -16309,7 +16309,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/proizvodstvennyy-kontrol-shymkent",
@@ -16397,7 +16397,7 @@
         "url": "https://ecoprogress.kz/proizvodstvennyy-kontrol-shymkent",
         "name": "Производственный контроль СЭС в Шымкенте",
         "description": "Производственный контроль СЭС в Шымкенте: Программа контроля, замеры рабочих зон и протоколы исследований. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -16454,7 +16454,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-almaty",
@@ -16515,7 +16515,7 @@
         "url": "https://ecoprogress.kz/roos-almaty",
         "name": "Разработка РООС в Алматы",
         "description": "Разработка РООС в Алматы для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -16572,7 +16572,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-astana",
@@ -16633,7 +16633,7 @@
         "url": "https://ecoprogress.kz/roos-astana",
         "name": "Разработка РООС в Астане",
         "description": "Разработка РООС в Астане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -16690,7 +16690,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-shymkent",
@@ -16778,7 +16778,7 @@
         "url": "https://ecoprogress.kz/roos-shymkent",
         "name": "Разработка РООС в Шымкенте",
         "description": "Разработка РООС в Шымкенте для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -16835,7 +16835,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-taraz",
@@ -16896,7 +16896,7 @@
         "url": "https://ecoprogress.kz/roos-taraz",
         "name": "Разработка РООС в Таразе",
         "description": "Разработка РООС в Таразе для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -16953,7 +16953,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-turkestan",
@@ -17014,7 +17014,7 @@
         "url": "https://ecoprogress.kz/roos-turkestan",
         "name": "Разработка РООС в Туркестане",
         "description": "Разработка РООС в Туркестане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -17071,7 +17071,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-kyzylorda",
@@ -17132,7 +17132,7 @@
         "url": "https://ecoprogress.kz/roos-kyzylorda",
         "name": "Разработка РООС в Кызылорде",
         "description": "Разработка РООС в Кызылорде для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -17189,7 +17189,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-aktobe",
@@ -17250,7 +17250,7 @@
         "url": "https://ecoprogress.kz/roos-aktobe",
         "name": "Разработка РООС в Актобе",
         "description": "Разработка РООС в Актобе для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -17307,7 +17307,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-atyrau",
@@ -17368,7 +17368,7 @@
         "url": "https://ecoprogress.kz/roos-atyrau",
         "name": "Разработка РООС в Атырау",
         "description": "Разработка РООС в Атырау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -17425,7 +17425,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-karaganda",
@@ -17486,7 +17486,7 @@
         "url": "https://ecoprogress.kz/roos-karaganda",
         "name": "Разработка РООС в Караганде",
         "description": "Разработка РООС в Караганде для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -17543,7 +17543,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-pavlodar",
@@ -17604,7 +17604,7 @@
         "url": "https://ecoprogress.kz/roos-pavlodar",
         "name": "Разработка РООС в Павлодаре",
         "description": "Разработка РООС в Павлодаре для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -17661,7 +17661,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-ust-kamenogorsk",
@@ -17722,7 +17722,7 @@
         "url": "https://ecoprogress.kz/roos-ust-kamenogorsk",
         "name": "Разработка РООС в Усть-Каменогорске",
         "description": "Разработка РООС в Усть-Каменогорске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -17779,7 +17779,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-kostanay",
@@ -17840,7 +17840,7 @@
         "url": "https://ecoprogress.kz/roos-kostanay",
         "name": "Разработка РООС в Костанае",
         "description": "Разработка РООС в Костанае для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -17897,7 +17897,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-aktau",
@@ -17958,7 +17958,7 @@
         "url": "https://ecoprogress.kz/roos-aktau",
         "name": "Разработка РООС в Актау",
         "description": "Разработка РООС в Актау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -18015,7 +18015,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-petropavlovsk",
@@ -18076,7 +18076,7 @@
         "url": "https://ecoprogress.kz/roos-petropavlovsk",
         "name": "Разработка РООС в Петропавловске",
         "description": "Разработка РООС в Петропавловске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -18133,7 +18133,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-oral",
@@ -18194,7 +18194,7 @@
         "url": "https://ecoprogress.kz/roos-oral",
         "name": "Разработка РООС в Уральске",
         "description": "Разработка РООС в Уральске для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -18251,7 +18251,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-kokshetau",
@@ -18312,7 +18312,7 @@
         "url": "https://ecoprogress.kz/roos-kokshetau",
         "name": "Разработка РООС в Кокшетау",
         "description": "Разработка РООС в Кокшетау для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -18369,7 +18369,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-taldykorgan",
@@ -18430,7 +18430,7 @@
         "url": "https://ecoprogress.kz/roos-taldykorgan",
         "name": "Разработка РООС в Талдыкоргане",
         "description": "Разработка РООС в Талдыкоргане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -18487,7 +18487,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/roos-semey",
@@ -18548,7 +18548,7 @@
         "url": "https://ecoprogress.kz/roos-semey",
         "name": "Разработка РООС в Семее",
         "description": "Разработка РООС в Семее для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -18605,7 +18605,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-almaty",
@@ -18666,7 +18666,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-almaty",
         "name": "Экологическое разрешение в Алматы",
         "description": "Экологическое разрешение в Алматы: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Алматы — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -18723,7 +18723,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-astana",
@@ -18784,7 +18784,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-astana",
         "name": "Экологическое разрешение в Астане",
         "description": "Экологическое разрешение в Астане: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Астаны — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -18841,7 +18841,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-shymkent",
@@ -18929,7 +18929,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-shymkent",
         "name": "Экологическое разрешение в Шымкенте",
         "description": "Экологическое разрешение в Шымкенте: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -18986,7 +18986,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-taraz",
@@ -19047,7 +19047,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-taraz",
         "name": "Экологическое разрешение в Таразе",
         "description": "Экологическое разрешение в Таразе: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Тараза — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -19104,7 +19104,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-turkestan",
@@ -19165,7 +19165,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-turkestan",
         "name": "Экологическое разрешение в Туркестане",
         "description": "Экологическое разрешение в Туркестане: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Туркестана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -19222,7 +19222,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-kyzylorda",
@@ -19283,7 +19283,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-kyzylorda",
         "name": "Экологическое разрешение в Кызылорде",
         "description": "Экологическое разрешение в Кызылорде: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Кызылорды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -19340,7 +19340,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-aktobe",
@@ -19401,7 +19401,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-aktobe",
         "name": "Экологическое разрешение в Актобе",
         "description": "Экологическое разрешение в Актобе: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Актобе — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -19458,7 +19458,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-atyrau",
@@ -19519,7 +19519,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-atyrau",
         "name": "Экологическое разрешение в Атырау",
         "description": "Экологическое разрешение в Атырау: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Атырау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -19576,7 +19576,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-karaganda",
@@ -19637,7 +19637,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-karaganda",
         "name": "Экологическое разрешение в Караганде",
         "description": "Экологическое разрешение в Караганде: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Караганды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -19694,7 +19694,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-pavlodar",
@@ -19755,7 +19755,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-pavlodar",
         "name": "Экологическое разрешение в Павлодаре",
         "description": "Экологическое разрешение в Павлодаре: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Павлодара — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -19812,7 +19812,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-ust-kamenogorsk",
@@ -19873,7 +19873,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-ust-kamenogorsk",
         "name": "Экологическое разрешение в Усть-Каменогорске",
         "description": "Экологическое разрешение в Усть-Каменогорске: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Усть-Каменогорска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -19930,7 +19930,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-kostanay",
@@ -19991,7 +19991,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-kostanay",
         "name": "Экологическое разрешение в Костанае",
         "description": "Экологическое разрешение в Костанае: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Костаная — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -20048,7 +20048,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-aktau",
@@ -20109,7 +20109,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-aktau",
         "name": "Экологическое разрешение в Актау",
         "description": "Экологическое разрешение в Актау: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Актау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -20166,7 +20166,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-petropavlovsk",
@@ -20227,7 +20227,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-petropavlovsk",
         "name": "Экологическое разрешение в Петропавловске",
         "description": "Экологическое разрешение в Петропавловске: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Петропавловска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -20284,7 +20284,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-oral",
@@ -20345,7 +20345,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-oral",
         "name": "Экологическое разрешение в Уральске",
         "description": "Экологическое разрешение в Уральске: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Уральска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -20402,7 +20402,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-kokshetau",
@@ -20463,7 +20463,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-kokshetau",
         "name": "Экологическое разрешение в Кокшетау",
         "description": "Экологическое разрешение в Кокшетау: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Кокшетау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -20520,7 +20520,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-taldykorgan",
@@ -20581,7 +20581,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-taldykorgan",
         "name": "Экологическое разрешение в Талдыкоргане",
         "description": "Экологическое разрешение в Талдыкоргане: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Талдыкоргана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -20638,7 +20638,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ekologicheskoe-razreshenie-semey",
@@ -20699,7 +20699,7 @@
         "url": "https://ecoprogress.kz/ekologicheskoe-razreshenie-semey",
         "name": "Экологическое разрешение в Семее",
         "description": "Экологическое разрешение в Семее: Проверка категории, разрешительные материалы и сопровождение подачи. Срок и стоимость для Семея — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -20756,7 +20756,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-almaty",
@@ -20817,7 +20817,7 @@
         "url": "https://ecoprogress.kz/ovos-almaty",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Алматы",
         "description": "ОВОС в Алматы: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Алматы — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -20874,7 +20874,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-astana",
@@ -20935,7 +20935,7 @@
         "url": "https://ecoprogress.kz/ovos-astana",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Астане",
         "description": "ОВОС в Астане: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Астаны — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -20992,7 +20992,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-shymkent",
@@ -21080,7 +21080,7 @@
         "url": "https://ecoprogress.kz/ovos-shymkent",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Шымкенте",
         "description": "ОВОС в Шымкенте: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -21137,7 +21137,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-taraz",
@@ -21198,7 +21198,7 @@
         "url": "https://ecoprogress.kz/ovos-taraz",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Таразе",
         "description": "ОВОС в Таразе: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Тараза — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -21255,7 +21255,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-turkestan",
@@ -21316,7 +21316,7 @@
         "url": "https://ecoprogress.kz/ovos-turkestan",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Туркестане",
         "description": "ОВОС в Туркестане: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Туркестана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -21373,7 +21373,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-kyzylorda",
@@ -21434,7 +21434,7 @@
         "url": "https://ecoprogress.kz/ovos-kyzylorda",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Кызылорде",
         "description": "ОВОС в Кызылорде: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Кызылорды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -21491,7 +21491,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-aktobe",
@@ -21552,7 +21552,7 @@
         "url": "https://ecoprogress.kz/ovos-aktobe",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Актобе",
         "description": "ОВОС в Актобе: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Актобе — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -21609,7 +21609,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-atyrau",
@@ -21670,7 +21670,7 @@
         "url": "https://ecoprogress.kz/ovos-atyrau",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Атырау",
         "description": "ОВОС в Атырау: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Атырау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -21727,7 +21727,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-karaganda",
@@ -21788,7 +21788,7 @@
         "url": "https://ecoprogress.kz/ovos-karaganda",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Караганде",
         "description": "ОВОС в Караганде: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Караганды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -21845,7 +21845,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-pavlodar",
@@ -21906,7 +21906,7 @@
         "url": "https://ecoprogress.kz/ovos-pavlodar",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Павлодаре",
         "description": "ОВОС в Павлодаре: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Павлодара — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -21963,7 +21963,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-ust-kamenogorsk",
@@ -22024,7 +22024,7 @@
         "url": "https://ecoprogress.kz/ovos-ust-kamenogorsk",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Усть-Каменогорске",
         "description": "ОВОС в Усть-Каменогорске: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Усть-Каменогорска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -22081,7 +22081,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-kostanay",
@@ -22142,7 +22142,7 @@
         "url": "https://ecoprogress.kz/ovos-kostanay",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Костанае",
         "description": "ОВОС в Костанае: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Костаная — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -22199,7 +22199,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-aktau",
@@ -22260,7 +22260,7 @@
         "url": "https://ecoprogress.kz/ovos-aktau",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Актау",
         "description": "ОВОС в Актау: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Актау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -22317,7 +22317,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-petropavlovsk",
@@ -22378,7 +22378,7 @@
         "url": "https://ecoprogress.kz/ovos-petropavlovsk",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Петропавловске",
         "description": "ОВОС в Петропавловске: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Петропавловска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -22435,7 +22435,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-oral",
@@ -22496,7 +22496,7 @@
         "url": "https://ecoprogress.kz/ovos-oral",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Уральске",
         "description": "ОВОС в Уральске: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Уральска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -22553,7 +22553,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-kokshetau",
@@ -22614,7 +22614,7 @@
         "url": "https://ecoprogress.kz/ovos-kokshetau",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Кокшетау",
         "description": "ОВОС в Кокшетау: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Кокшетау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -22671,7 +22671,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-taldykorgan",
@@ -22732,7 +22732,7 @@
         "url": "https://ecoprogress.kz/ovos-taldykorgan",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Талдыкоргане",
         "description": "ОВОС в Талдыкоргане: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Талдыкоргана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -22789,7 +22789,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ovos-semey",
@@ -22850,7 +22850,7 @@
         "url": "https://ecoprogress.kz/ovos-semey",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Семее",
         "description": "ОВОС в Семее: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Семея — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -22907,7 +22907,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-almaty",
@@ -22968,7 +22968,7 @@
         "url": "https://ecoprogress.kz/ndv-almaty",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Алматы",
         "description": "Проект НДВ в Алматы: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Алматы — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -23025,7 +23025,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-astana",
@@ -23086,7 +23086,7 @@
         "url": "https://ecoprogress.kz/ndv-astana",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Астане",
         "description": "Проект НДВ в Астане: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Астаны — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -23143,7 +23143,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-shymkent",
@@ -23231,7 +23231,7 @@
         "url": "https://ecoprogress.kz/ndv-shymkent",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Шымкенте",
         "description": "Проект НДВ в Шымкенте: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -23288,7 +23288,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-taraz",
@@ -23349,7 +23349,7 @@
         "url": "https://ecoprogress.kz/ndv-taraz",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Таразе",
         "description": "Проект НДВ в Таразе: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Тараза — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -23406,7 +23406,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-turkestan",
@@ -23467,7 +23467,7 @@
         "url": "https://ecoprogress.kz/ndv-turkestan",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Туркестане",
         "description": "Проект НДВ в Туркестане: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Туркестана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -23524,7 +23524,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-kyzylorda",
@@ -23585,7 +23585,7 @@
         "url": "https://ecoprogress.kz/ndv-kyzylorda",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Кызылорде",
         "description": "Проект НДВ в Кызылорде: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Кызылорды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -23642,7 +23642,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-aktobe",
@@ -23703,7 +23703,7 @@
         "url": "https://ecoprogress.kz/ndv-aktobe",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Актобе",
         "description": "Проект НДВ в Актобе: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Актобе — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -23760,7 +23760,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-atyrau",
@@ -23821,7 +23821,7 @@
         "url": "https://ecoprogress.kz/ndv-atyrau",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Атырау",
         "description": "Проект НДВ в Атырау: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Атырау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -23878,7 +23878,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-karaganda",
@@ -23939,7 +23939,7 @@
         "url": "https://ecoprogress.kz/ndv-karaganda",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Караганде",
         "description": "Проект НДВ в Караганде: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Караганды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -23996,7 +23996,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-pavlodar",
@@ -24057,7 +24057,7 @@
         "url": "https://ecoprogress.kz/ndv-pavlodar",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Павлодаре",
         "description": "Проект НДВ в Павлодаре: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Павлодара — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -24114,7 +24114,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-ust-kamenogorsk",
@@ -24175,7 +24175,7 @@
         "url": "https://ecoprogress.kz/ndv-ust-kamenogorsk",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Усть-Каменогорске",
         "description": "Проект НДВ в Усть-Каменогорске: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Усть-Каменогорска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -24232,7 +24232,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-kostanay",
@@ -24293,7 +24293,7 @@
         "url": "https://ecoprogress.kz/ndv-kostanay",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Костанае",
         "description": "Проект НДВ в Костанае: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Костаная — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -24350,7 +24350,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-aktau",
@@ -24411,7 +24411,7 @@
         "url": "https://ecoprogress.kz/ndv-aktau",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Актау",
         "description": "Проект НДВ в Актау: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Актау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -24468,7 +24468,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-petropavlovsk",
@@ -24529,7 +24529,7 @@
         "url": "https://ecoprogress.kz/ndv-petropavlovsk",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Петропавловске",
         "description": "Проект НДВ в Петропавловске: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Петропавловска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -24586,7 +24586,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-oral",
@@ -24647,7 +24647,7 @@
         "url": "https://ecoprogress.kz/ndv-oral",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Уральске",
         "description": "Проект НДВ в Уральске: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Уральска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -24704,7 +24704,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-kokshetau",
@@ -24765,7 +24765,7 @@
         "url": "https://ecoprogress.kz/ndv-kokshetau",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Кокшетау",
         "description": "Проект НДВ в Кокшетау: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Кокшетау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -24822,7 +24822,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-taldykorgan",
@@ -24883,7 +24883,7 @@
         "url": "https://ecoprogress.kz/ndv-taldykorgan",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Талдыкоргане",
         "description": "Проект НДВ в Талдыкоргане: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Талдыкоргана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -24940,7 +24940,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ndv-semey",
@@ -25001,7 +25001,7 @@
         "url": "https://ecoprogress.kz/ndv-semey",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Семее",
         "description": "Проект НДВ в Семее: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Семея — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -25058,7 +25058,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-almaty",
@@ -25119,7 +25119,7 @@
         "url": "https://ecoprogress.kz/puo-almaty",
         "name": "Программа управления отходами (ПУО) в Алматы",
         "description": "Программа управления отходами в Алматы: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Алматы — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -25176,7 +25176,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-astana",
@@ -25237,7 +25237,7 @@
         "url": "https://ecoprogress.kz/puo-astana",
         "name": "Программа управления отходами (ПУО) в Астане",
         "description": "Программа управления отходами в Астане: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Астаны — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -25294,7 +25294,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-shymkent",
@@ -25382,7 +25382,7 @@
         "url": "https://ecoprogress.kz/puo-shymkent",
         "name": "Программа управления отходами (ПУО) в Шымкенте",
         "description": "Программа управления отходами в Шымкенте: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -25439,7 +25439,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-taraz",
@@ -25500,7 +25500,7 @@
         "url": "https://ecoprogress.kz/puo-taraz",
         "name": "Программа управления отходами (ПУО) в Таразе",
         "description": "Программа управления отходами в Таразе: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Тараза — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -25557,7 +25557,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-turkestan",
@@ -25618,7 +25618,7 @@
         "url": "https://ecoprogress.kz/puo-turkestan",
         "name": "Программа управления отходами (ПУО) в Туркестане",
         "description": "Программа управления отходами в Туркестане: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Туркестана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -25675,7 +25675,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-kyzylorda",
@@ -25736,7 +25736,7 @@
         "url": "https://ecoprogress.kz/puo-kyzylorda",
         "name": "Программа управления отходами (ПУО) в Кызылорде",
         "description": "Программа управления отходами в Кызылорде: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Кызылорды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -25793,7 +25793,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-aktobe",
@@ -25854,7 +25854,7 @@
         "url": "https://ecoprogress.kz/puo-aktobe",
         "name": "Программа управления отходами (ПУО) в Актобе",
         "description": "Программа управления отходами в Актобе: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Актобе — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -25911,7 +25911,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-atyrau",
@@ -25972,7 +25972,7 @@
         "url": "https://ecoprogress.kz/puo-atyrau",
         "name": "Программа управления отходами (ПУО) в Атырау",
         "description": "Программа управления отходами в Атырау: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Атырау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -26029,7 +26029,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-karaganda",
@@ -26090,7 +26090,7 @@
         "url": "https://ecoprogress.kz/puo-karaganda",
         "name": "Программа управления отходами (ПУО) в Караганде",
         "description": "Программа управления отходами в Караганде: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Караганды — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -26147,7 +26147,7 @@
     "includeInSitemap": false,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-pavlodar",
@@ -26208,7 +26208,7 @@
         "url": "https://ecoprogress.kz/puo-pavlodar",
         "name": "Программа управления отходами (ПУО) в Павлодаре",
         "description": "Программа управления отходами в Павлодаре: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Павлодара — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -26265,7 +26265,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-ust-kamenogorsk",
@@ -26326,7 +26326,7 @@
         "url": "https://ecoprogress.kz/puo-ust-kamenogorsk",
         "name": "Программа управления отходами (ПУО) в Усть-Каменогорске",
         "description": "Программа управления отходами в Усть-Каменогорске: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Усть-Каменогорска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -26383,7 +26383,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-kostanay",
@@ -26444,7 +26444,7 @@
         "url": "https://ecoprogress.kz/puo-kostanay",
         "name": "Программа управления отходами (ПУО) в Костанае",
         "description": "Программа управления отходами в Костанае: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Костаная — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -26501,7 +26501,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-aktau",
@@ -26562,7 +26562,7 @@
         "url": "https://ecoprogress.kz/puo-aktau",
         "name": "Программа управления отходами (ПУО) в Актау",
         "description": "Программа управления отходами в Актау: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Актау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -26619,7 +26619,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-petropavlovsk",
@@ -26680,7 +26680,7 @@
         "url": "https://ecoprogress.kz/puo-petropavlovsk",
         "name": "Программа управления отходами (ПУО) в Петропавловске",
         "description": "Программа управления отходами в Петропавловске: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Петропавловска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -26737,7 +26737,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-oral",
@@ -26798,7 +26798,7 @@
         "url": "https://ecoprogress.kz/puo-oral",
         "name": "Программа управления отходами (ПУО) в Уральске",
         "description": "Программа управления отходами в Уральске: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Уральска — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -26855,7 +26855,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-kokshetau",
@@ -26916,7 +26916,7 @@
         "url": "https://ecoprogress.kz/puo-kokshetau",
         "name": "Программа управления отходами (ПУО) в Кокшетау",
         "description": "Программа управления отходами в Кокшетау: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Кокшетау — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -26973,7 +26973,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-taldykorgan",
@@ -27034,7 +27034,7 @@
         "url": "https://ecoprogress.kz/puo-taldykorgan",
         "name": "Программа управления отходами (ПУО) в Талдыкоргане",
         "description": "Программа управления отходами в Талдыкоргане: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Талдыкоргана — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -27091,7 +27091,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/puo-semey",
@@ -27152,7 +27152,7 @@
         "url": "https://ecoprogress.kz/puo-semey",
         "name": "Программа управления отходами (ПУО) в Семее",
         "description": "Программа управления отходами в Семее: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Семея — после аудита.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -27209,7 +27209,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/ses-proverka-proizvodstvennyy-kontrol",
@@ -27271,7 +27271,7 @@
         "url": "https://ecoprogress.kz/ses-proverka-proizvodstvennyy-kontrol",
         "name": "Проверка СЭС и производственный контроль",
         "description": "Как подготовить производственный контроль СЭС: программа, лабораторные замеры, протоколы, документы и сопровождение проверки.",
-        "dateModified": "2026-07-17",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -27285,7 +27285,7 @@
         "description": "Как подготовить производственный контроль СЭС: программа, лабораторные замеры, протоколы, документы и сопровождение проверки.",
         "image": "https://ecoprogress.kz/media/ekologicheskoe-proektirovanie-1280.jpg",
         "datePublished": "2026-07-17T00:00:00.000Z",
-        "dateModified": "2026-07-17T00:00:00.000Z",
+        "dateModified": "2026-08-27T00:00:00.000Z",
         "author": {
           "@id": "https://ecoprogress.kz/#organization"
         },
@@ -27325,7 +27325,7 @@
     "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/kk",
@@ -27401,7 +27401,7 @@
         "url": "https://ecoprogress.kz/kk",
         "name": "Қазақстандағы бизнеске арналған экологиялық қызметтер",
         "description": "Кәсіпорындарға экологиялық жобалау, ПЭК, зертханалық зерттеулер, қалдықтар құжаттары және рұқсат алу бойынша қызмет көрсетеміз.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -27423,7 +27423,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/kk/ekologiyalyq-qyzmetter",
@@ -27499,7 +27499,7 @@
         "url": "https://ecoprogress.kz/kk/ekologiyalyq-qyzmetter",
         "name": "Кәсіпорындарға арналған экологиялық қызметтер",
         "description": "Кәсіпорындарға экологиялық құжаттар, ПЭК, шығарындылар жобалары, зертханалық өлшеулер және қалдықтар бойынша кешенді қызмет.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -27550,7 +27550,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/kk/qaldyqtar-pasporty",
@@ -27626,7 +27626,7 @@
         "url": "https://ecoprogress.kz/kk/qaldyqtar-pasporty",
         "name": "Қалдықтар паспортын әзірлеу",
         "description": "Кәсіпорындарға қалдықтар паспортын әзірлеу және рәсімдеу. Қажетті деректерді анықтап, жұмыс көлемі мен құнын есептейміз.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -27677,7 +27677,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/kk/services/ndv",
@@ -27753,7 +27753,7 @@
         "url": "https://ecoprogress.kz/kk/services/ndv",
         "name": "Рұқсат етілетін шығарындылар нормативтерінің жобасы",
         "description": "Стационарлық көздерді түгендеу, шығарындыларды есептеу және кәсіпорынға рұқсат етілетін шығарындылар нормативтерін әзірлеу.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -27804,7 +27804,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/kk/pek-bagdarlamasy",
@@ -27880,7 +27880,7 @@
         "url": "https://ecoprogress.kz/kk/pek-bagdarlamasy",
         "name": "Өндірістік экологиялық бақылау бағдарламасын әзірлеу",
         "description": "Кәсіпорынға ПЭК бағдарламасын әзірлеу: бақылау нысандары, мониторинг нүктелері, көрсеткіштер, әдістер және кезеңділік.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -27931,7 +27931,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/kk/pek-esebi",
@@ -28007,7 +28007,7 @@
         "url": "https://ecoprogress.kz/kk/pek-esebi",
         "name": "Өндірістік экологиялық бақылау есебін дайындау",
         "description": "ПЭК бағдарламасы, зертханалық хаттамалар және кезеңнің өндірістік деректері негізінде ресми ПЭК есебін дайындау.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -28058,7 +28058,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/kk/ekologiyalyq-ruqsat",
@@ -28134,7 +28134,7 @@
         "url": "https://ecoprogress.kz/kk/ekologiyalyq-ruqsat",
         "name": "Әсер етуге экологиялық рұқсат алу",
         "description": "Нысан санатын және жобалық негіздерді тексеріп, әсер етуге экологиялық рұқсат алу үшін материалдарды дайындаймыз.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -28185,7 +28185,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/kk/sanitariyalyq-qorgau-aimagy",
@@ -28261,7 +28261,7 @@
         "url": "https://ecoprogress.kz/kk/sanitariyalyq-qorgau-aimagy",
         "name": "Санитариялық-қорғау аймағының жобасын әзірлеу",
         "description": "Шығарындылар, шу және нысанның нақты жоспарлануы бойынша санитариялық-қорғау аймағының жобасын әзірлеу.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -28312,7 +28312,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/kk/zerthanalyq-zertteuler",
@@ -28388,7 +28388,7 @@
         "url": "https://ecoprogress.kz/kk/zerthanalyq-zertteuler",
         "name": "Экологиялық зертханалық зерттеулер",
         "description": "Ауа, су, топырақ, шу және өндірістік факторлар бойынша зертханалық зерттеулер: бағдарлама, сынама алу және хаттамалар.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -28439,7 +28439,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/kk/su-analizi",
@@ -28515,7 +28515,7 @@
         "url": "https://ecoprogress.kz/kk/su-analizi",
         "name": "Суға зертханалық анализ жасау",
         "description": "Ауыз су, табиғи немесе сарқынды суға зертханалық анализ: көрсеткіштерді таңдау, сынама алу және зерттеу хаттамасы.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -28566,7 +28566,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/kk/qaldyqtardy-kadege-zharatu",
@@ -28642,7 +28642,7 @@
         "url": "https://ecoprogress.kz/kk/qaldyqtardy-kadege-zharatu",
         "name": "Қалдықтарды кәдеге жарату",
         "description": "Өндірістік қалдықтарды тексеру, рұқсат етілген операцияны келісу және қабылдау мен кәдеге жаратуды растайтын құжаттар.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -28693,7 +28693,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/kk/pek-bagdarlamasy-shymkent",
@@ -28769,7 +28769,7 @@
         "url": "https://ecoprogress.kz/kk/pek-bagdarlamasy-shymkent",
         "name": "Шымкенттегі ПЭК бағдарламасын әзірлеу",
         "description": "Шымкент кәсіпорындарына ПЭК бағдарламасын әзірлеу: нысандар, мониторинг нүктелері, көрсеткіштер, әдістер және бақылау кестесі.",
-        "dateModified": "2026-08-25",
+        "dateModified": "2026-08-26",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -28820,7 +28820,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-25"
+    "lastModified": "2026-08-26"
   },
   {
     "path": "/news/ekologicheskie-dokumenty-too-kazakhstan",

@@ -24,6 +24,23 @@ export interface ServiceAeoContent {
   faq: AeoFaqItem[];
 }
 
+export interface ServiceCommercialContent {
+  serviceName: string;
+  audienceTitle: string;
+  requiredTitle: string;
+  scopeTitle: string;
+  documentsTitle: string;
+  timelineTitle: string;
+  pricingTitle: string;
+  deliverablesTitle: string;
+  regulationsTitle: string;
+  mistakesTitle: string;
+  faqTitle: string;
+  finalCtaTitle: string;
+  finalCtaText: string;
+  documentsWhatsAppMessage: string;
+}
+
 export interface ContentAuditItem {
   url: string;
   pageType: 'service' | 'article' | 'regional' | 'special' | 'category' | 'trust';
@@ -62,6 +79,7 @@ export interface ServiceContent {
   risks: Array<{ risk: string; prevention: string }>;
   faq: AeoFaqItem[];
   aeo: ServiceAeoContent;
+  commercial: ServiceCommercialContent;
   relatedServices: string[];
   relatedArticles: string[];
   contentReview: { preparedBy?: string; reviewedBy?: string; lastReviewedAt?: string; reviewStatus: ReviewStatus };

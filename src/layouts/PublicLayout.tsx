@@ -26,8 +26,6 @@ const navItems = [
   { label: 'Кейсы', path: '/cases' },
   { label: 'О компании', path: '/about' },
   { label: 'Контакты', path: '/contacts' },
-  { label: 'WhatsApp', path: getWhatsAppUrl() },
-  { label: 'Войти', path: '/login' },
 ];
 
 const kkNavItems = [
@@ -39,6 +37,7 @@ const kkNavItems = [
 ];
 
 const accountMenuItems = [
+  { label: 'WhatsApp', path: getWhatsAppUrl(), Icon: FaWhatsapp },
   { label: 'Поиск по сайту', path: '/search', Icon: Search },
   { label: 'Регистрация', path: '/register', Icon: UserPlus },
   { label: 'Войти', path: '/login', Icon: LogIn },
@@ -80,7 +79,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
           <Link to={isKk ? '/kk' : '/'} className="inline-flex shrink-0 items-center text-xl font-bold text-eco-900">
             <span className="whitespace-nowrap leading-none">ecoprogress.kz</span>
           </Link>
-          <nav className="hidden items-center gap-4 xl:gap-5 lg:flex">
+          <nav className="hidden items-center gap-4 xl:flex xl:gap-5">
             {currentNavItems.map((item) => item.path.startsWith('http') || opensPrivateRuntime(item.path) ? (
               <a key={item.path} href={item.path} target={item.path.startsWith('http') ? '_blank' : undefined} rel={item.path.startsWith('http') ? 'noreferrer' : undefined} className="relative shrink-0 whitespace-nowrap text-sm font-medium text-slate-700 transition after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:bg-accent after:transition-all hover:text-eco-800 hover:after:w-full">
                 {item.label}
@@ -103,7 +102,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               </NavLink>
             ))}
           </nav>
-          <div className="hidden items-center gap-3 lg:flex">
+          <div className="hidden items-center gap-3 xl:flex">
             <nav aria-label={isKk ? 'Тілді таңдау' : 'Выбор языка'} className="inline-flex rounded-full border border-eco-200 bg-white p-1 text-xs font-bold">
               <Link to={ruPath} lang="ru" className={`whitespace-nowrap rounded-full px-3 py-2 ${!isKk ? 'bg-eco-900 text-white' : 'text-eco-800'}`}>RU</Link>
               <Link to={kkPath} lang="kk" className={`whitespace-nowrap rounded-full px-3 py-2 ${isKk ? 'bg-eco-900 text-white' : 'text-eco-800'}`}>ҚАЗ</Link>
@@ -120,8 +119,8 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               </Button>
               {accountMenuOpen && (
                 <div className="absolute right-0 top-[calc(100%+0.75rem)] w-72 overflow-hidden rounded-[20px] border border-eco-100 bg-white p-2 shadow-2xl shadow-eco-900/12">
-                  {accountMenuItems.map(({ label, path, Icon }) => opensPrivateRuntime(path) ? (
-                    <a key={path} href={path} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-eco-900 hover:bg-eco-50">
+                  {accountMenuItems.map(({ label, path, Icon }) => path.startsWith('http') || opensPrivateRuntime(path) ? (
+                    <a key={path} href={path} target={path.startsWith('http') ? '_blank' : undefined} rel={path.startsWith('http') ? 'noreferrer' : undefined} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-eco-900 hover:bg-eco-50">
                       <Icon size={18} className="text-eco-600" />
                       {label}
                     </a>
@@ -156,7 +155,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
             </Button>
           </div>
           <button
-            className="inline-flex items-center justify-center rounded-2xl border border-eco-200 bg-white p-3 text-eco-900 lg:hidden"
+            className="inline-flex items-center justify-center rounded-2xl border border-eco-200 bg-white p-3 text-eco-900 xl:hidden"
             onClick={() => setMenuOpen((state) => !state)}
             aria-label={isKk ? 'Мәзір' : 'Меню'}
           >
@@ -164,7 +163,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
           </button>
         </div>
         {menuOpen && (
-          <div className="border-t border-eco-100 bg-white px-5 py-5 shadow-xl lg:hidden">
+          <div className="border-t border-eco-100 bg-white px-5 py-5 shadow-xl xl:hidden">
             <div className="space-y-2">
               <div className="mb-3 flex gap-2"><Link to={ruPath} onClick={() => setMenuOpen(false)} className="rounded-full border px-4 py-2 text-sm font-bold">RU</Link><Link to={kkPath} onClick={() => setMenuOpen(false)} className="rounded-full border px-4 py-2 text-sm font-bold">ҚАЗ</Link></div>
               {currentNavItems.map((item) => item.path.startsWith('http') || opensPrivateRuntime(item.path) ? (
@@ -188,8 +187,8 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 </NavLink>
               ))}
               <div className="grid gap-2 border-t border-eco-100 pt-3">
-                {accountMenuItems.map(({ label, path, Icon }) => opensPrivateRuntime(path) ? (
-                    <a key={path} href={path} className="flex items-center gap-3 rounded-2xl border border-eco-100 px-4 py-3 text-sm font-semibold text-eco-800">
+                {accountMenuItems.map(({ label, path, Icon }) => path.startsWith('http') || opensPrivateRuntime(path) ? (
+                    <a key={path} href={path} target={path.startsWith('http') ? '_blank' : undefined} rel={path.startsWith('http') ? 'noreferrer' : undefined} className="flex items-center gap-3 rounded-2xl border border-eco-100 px-4 py-3 text-sm font-semibold text-eco-800">
                     <Icon size={18} className="text-eco-600" />
                     {label}
                   </a>

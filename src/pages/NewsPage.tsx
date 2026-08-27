@@ -1,9 +1,11 @@
 ﻿import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { BookOpenCheck, FileCheck2, Lightbulb, Sparkles } from 'lucide-react';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { getNewsResult } from '../services/newsService';
+import { newsCardImages, pageHeroImages } from '../data/pageHeroImages';
 
 const NewsPage = () => {
   const { data, isError } = useQuery({
@@ -15,8 +17,23 @@ const NewsPage = () => {
   return (
     <div className="bg-eco-50">
       <SEO />
-      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
-        <Reveal><h1 className="text-4xl font-bold text-eco-900 sm:text-5xl">Статьи и полезные материалы</h1></Reveal>
+      <section className="relative isolate min-h-[620px] overflow-hidden px-5 py-20 text-white sm:px-8 sm:py-24 lg:flex lg:items-center">
+        <ResponsiveImage fill priority sizes="100vw" src={pageHeroImages.news} alt="Природное явление в ночном небе" width={1600} height={900} wrapperClassName="-z-20" className="object-cover object-center" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-eco-900/72 via-eco-900/34 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 -z-[5] h-16 bg-gradient-to-t from-eco-50/90 to-transparent" />
+        <div className="mx-auto w-full max-w-7xl [text-shadow:0_2px_18px_rgba(2,28,57,0.72)]">
+          <Reveal><div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold backdrop-blur-md"><Sparkles size={17} className="text-accent" />База знаний EcoProgress</div><h1 className="mt-6 max-w-4xl text-4xl font-bold leading-[1.08] sm:text-6xl lg:text-7xl">Статьи и полезные материалы</h1></Reveal>
+          <Reveal delay={0.08}><p className="mt-6 max-w-2xl text-base leading-7 text-white/82 sm:text-xl sm:leading-8">Разбираем экологические требования, документы и практические задачи предприятий простым языком.</p></Reveal>
+          <Reveal delay={0.14}>
+            <div className="mt-9 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/15 bg-eco-900/42 p-4 backdrop-blur-md"><BookOpenCheck className="text-accent" size={25} /><span className="mt-2 block text-xs text-white/75 sm:text-sm">практические разборы</span></div>
+              <div className="rounded-2xl border border-white/15 bg-eco-900/42 p-4 backdrop-blur-md"><FileCheck2 className="text-accent" size={25} /><span className="mt-2 block text-xs text-white/75 sm:text-sm">документы и требования</span></div>
+              <div className="col-span-2 rounded-2xl border border-white/15 bg-eco-900/42 p-4 backdrop-blur-md sm:col-span-1"><Lightbulb className="text-accent" size={25} /><span className="mt-2 block text-xs text-white/75 sm:text-sm">понятные рекомендации</span></div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+      <section className="mx-auto max-w-7xl px-5 py-14 sm:px-8 sm:py-20">
         {data?.stale && (
           <p className="mt-5 rounded-[20px] border border-amber-100 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
             Не удалось обновить материалы. Показана сохранённая версия.
@@ -26,8 +43,8 @@ const NewsPage = () => {
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {news.map((item, index) => (
             <Reveal key={item.id} delay={index * 0.05}>
-              <Link to={`/news/${item.id}`} className="card-hover block h-full overflow-hidden rounded-[22px] bg-white shadow-sm">
-                <ResponsiveImage sizes="(max-width: 767px) 100vw, 33vw" src={item.image} alt={item.title} width={800} height={450} wrapperClassName="aspect-[16/9] w-full" className="object-cover" />
+              <Link to={`/news/${item.id}`} className="group card-hover block h-full overflow-hidden rounded-[22px] bg-white shadow-sm">
+                <ResponsiveImage sizes="(max-width: 767px) 100vw, 33vw" src={newsCardImages[index % newsCardImages.length]} alt={item.title} width={1600} height={900} wrapperClassName="aspect-[16/9] w-full" className="object-cover transition duration-500 group-hover:scale-105" />
                 <div className="p-5">
                   <p className="text-xs font-semibold uppercase text-eco-500">{item.category} · {item.date}</p>
                   <h2 className="mt-3 text-xl font-bold text-eco-900">{item.title}</h2>

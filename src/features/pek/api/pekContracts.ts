@@ -593,6 +593,7 @@ export interface PekReportSource {
   indicatorName?: string | null;
   unit?: string | null;
   controlItemId?: number | null;
+  monitoringPointId?: number | null;
   programIndicatorId?: number | null;
   matchStatus: PekMatchStatus | string;
   matchType?: string | null;

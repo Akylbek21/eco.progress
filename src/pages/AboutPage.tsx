@@ -22,6 +22,7 @@ import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
 import LeadForm from '../components/LeadForm';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
+import { pageHeroImages } from '../data/pageHeroImages';
 import { getWhatsAppUrl } from '../config/company';
 import { trackWhatsAppClick } from '../services/analytics';
 
@@ -219,23 +220,31 @@ const AboutPage = () => {
   <div className="bg-white">
     <SEO />
 
-    <section className="relative isolate overflow-hidden px-4 py-20 text-white sm:px-8 sm:py-28">
-      <ResponsiveImage fill priority sizes="100vw" src="/media/ecoprogress-og-cover-1280.jpg" alt="" width={1280} height={720} wrapperClassName="-z-30" className="bg-eco-900 object-cover" />
-      <div className="absolute inset-0 -z-20 bg-eco-900/78" />
-      <div className="mx-auto max-w-7xl">
+    <section className="relative isolate min-h-[620px] overflow-hidden px-5 py-20 text-white sm:px-8 sm:py-24 lg:flex lg:items-center">
+      <ResponsiveImage fill priority sizes="100vw" src={pageHeroImages.about} alt="Горный пейзаж" width={1600} height={900} wrapperClassName="-z-30" className="bg-eco-900 object-cover object-center" />
+      <div className="absolute inset-0 -z-20 bg-gradient-to-r from-eco-900/72 via-eco-900/38 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 -z-10 h-16 bg-gradient-to-t from-[#F7FBFD]/90 to-transparent" />
+      <div className="mx-auto w-full max-w-7xl [text-shadow:0_2px_18px_rgba(2,28,57,0.72)]">
         <Reveal>
-          <p className="text-sm font-bold uppercase tracking-[0.22em] text-accent">О компании</p>
-          <h1 className="mt-5 max-w-5xl text-4xl font-bold leading-tight sm:text-6xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold backdrop-blur-md"><Leaf size={17} className="text-accent" />О компании</div>
+          <h1 className="mt-6 max-w-5xl text-4xl font-bold leading-[1.08] sm:text-6xl lg:text-7xl">
             ecoprogress.kz — экологические решения для бизнеса
           </h1>
         </Reveal>
         <Reveal delay={0.08}>
-          <p className="mt-6 max-w-4xl text-lg leading-8 text-white/80">
+          <p className="mt-6 max-w-4xl text-base leading-7 text-white/82 sm:text-xl sm:leading-8">
             Мы объединяем экологическое проектирование, лабораторные исследования, транспортировку, утилизацию отходов и услуги полигона, чтобы бизнес мог работать безопасно, законно и с заботой об окружающей среде.
           </p>
         </Reveal>
+        <Reveal delay={0.12}>
+          <div className="mt-9 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/15 bg-eco-900/42 p-4 backdrop-blur-md"><Leaf className="text-accent" size={25} /><span className="mt-2 block text-xs text-white/75 sm:text-sm">комплексный подход</span></div>
+            <div className="rounded-2xl border border-white/15 bg-eco-900/42 p-4 backdrop-blur-md"><ShieldCheck className="text-accent" size={25} /><span className="mt-2 block text-xs text-white/75 sm:text-sm">ответственность за результат</span></div>
+            <div className="col-span-2 rounded-2xl border border-white/15 bg-eco-900/42 p-4 backdrop-blur-md sm:col-span-1"><Globe2 className="text-accent" size={25} /><span className="mt-2 block text-xs text-white/75 sm:text-sm">работа по Казахстану</span></div>
+          </div>
+        </Reveal>
         <Reveal delay={0.16}>
-          <div className="mt-9 grid gap-3 sm:flex sm:flex-wrap">
+          <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
             <Button type="button" onClick={() => setOrderModalOpen(true)} className="w-full bg-accent text-eco-900 hover:bg-accent/90 sm:w-auto">Получить консультацию эколога</Button>
             <Button asChild variant="secondary" className="w-full border-white/35 bg-white/10 text-white hover:bg-white/18 sm:w-auto"><a href="#lead">Получить консультацию эколога</a></Button>
             <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'about_hero' })} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white hover:bg-white/15 sm:w-auto">

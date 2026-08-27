@@ -163,7 +163,7 @@ test('service-city commercial content is unique and contains all required blocks
   assert.equal(new Set(pages.map((page) => JSON.stringify(page.faq))).size, pages.length, 'duplicate FAQ');
   for (const page of pages) {
     const sectionText = page.sections.map((section) => `${section.title} ${section.body}`).join(' ');
-    for (const label of ['Этапы', 'Документы', 'Сроки', 'Что получает']) assert.match(sectionText, new RegExp(label, 'i'), `${page.slug}: ${label}`);
+    for (const label of ['Кому', 'Когда', 'Что входит', 'Какие (?:документы|данные|исходные данные)', 'Срок', 'Стоимость', 'Что получает', 'Нормативная база', 'Частые ошибки']) assert.match(sectionText, new RegExp(label, 'i'), `${page.slug}: ${label}`);
     for (const link of page.relatedLinks.filter((item) => item.path.startsWith('/news/'))) {
       const article = articleContent.find((item) => link.path.endsWith(item.slug));
       assert.ok(isArticleEligibleForSeoLinks(article), `${page.slug}: ${link.path}`);
@@ -302,7 +302,8 @@ test('AEO content is visible and cases use verified backend records', async () =
     readFile(new URL('../src/pages/CasesPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/CaseDetailsPage.tsx', import.meta.url), 'utf8'),
   ]);
-  for (const heading of ['Короткий ответ', 'Кому нужна услуга', 'Когда она обязательна', 'Когда не требуется', 'Какие документы нужны', 'Что получает заказчик', 'Сколько занимает по времени', 'От чего зависит стоимость', 'Нормативная база', 'Частые ошибки', 'FAQ', 'Связанные подтверждённые кейсы']) assert.match(aeo, new RegExp(heading));
+  for (const field of ['audienceTitle', 'requiredTitle', 'scopeTitle', 'documentsTitle', 'timelineTitle', 'pricingTitle', 'deliverablesTitle', 'regulationsTitle', 'mistakesTitle', 'faqTitle']) assert.match(aeo, new RegExp(`commercial\\.${field}`));
+  assert.match(aeo, /RelatedCaseStudies/);
   for (const field of ['id', 'service', 'objectType', 'objectCategory', 'initialData', 'workPerformed', 'regulations', 'completedAt', 'expert', 'reviewer', 'clientAnonymous', 'publishedAt', 'updatedAt']) assert.match(types, new RegExp(`${field}\\??:`));
   assert.match(api, /collection<CaseStudy>\('cases'/);
   assert.match(app, /path="\/cases"/);

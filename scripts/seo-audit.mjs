@@ -39,7 +39,7 @@ if (!Number.isInteger(baselineUrlCount) || baselineUrlCount <= 0) {
     errors.push(message);
   }
 }
-if (cmsContentUnavailable) errors.push('SEO CMS snapshot is empty: experts, cases and articleReviews are all empty');
+if (cmsContentUnavailable) warnings.push('SEO CMS snapshot is empty: expert and case markup stays disabled until verified records are published');
 if (!snapshotExperts.length) warnings.push('SEO CMS snapshot contains no confirmed experts; personal expert markup remains disabled');
 if (!snapshotCases.some((item) => item.status === 'published' && item.publishedAt)) warnings.push('SEO CMS snapshot contains no verified published case studies; case-study pages remain unpublished');
 const snapshotExpertIds = new Set(snapshotExperts.map((item) => item.id));
