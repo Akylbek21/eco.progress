@@ -50,6 +50,12 @@ for (const field of metadata) {
 }
 
 const mainText = (page) => [page.intro, ...(page.sections ?? []).map((section) => `${section.title} ${section.body}`)].join(' ');
+const wasteLogisticsPattern = /парт(?:ия|ии|ию|ией) отходов|услови[яй] погрузки|транспортировк[аи] отходов|операци[ияи] с отходами/iu;
+for (const page of russianRegional.filter((candidate) => candidate.type === 'service-city')) {
+  if (['waste-recycling', 'waste-passport', 'puo'].includes(page.serviceSlug)) continue;
+  const searchable = [page.intro, page.ctaText, ...(page.sections ?? []).map((section) => section.body), ...(page.faq ?? []).map((item) => item.answer)].join(' ');
+  if (wasteLogisticsPattern.test(searchable)) add(`/${page.slug}`, 'в услугу попал нерелевантный текст о партии, погрузке или транспортировке отходов');
+}
 const exactMain = new Map();
 for (const page of regional) {
   const value = normalize(mainText(page));

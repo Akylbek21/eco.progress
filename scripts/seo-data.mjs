@@ -2,6 +2,7 @@ import { frontendServices } from './service-catalog.mjs';
 import { articleContent } from '../src/content/articles/articleContent.ts';
 import { normalizeArticleSlug } from '../src/content/articles/articleSlugs.ts';
 import { regionContent, regionContentMap } from '../src/content/regions/regionContent.ts';
+import { getRegionalServiceNote } from '../src/content/regions/regionalServiceContent.ts';
 import { isRegionContentIndexable } from '../src/content/regions/regionContentQuality.ts';
 import { activeServices, getServicePrimaryCtaLabel, wasteRecyclingRegionSlugs } from '../src/content/serviceCatalog.ts';
 import { serviceContentMap } from '../src/content/services/serviceContent.ts';
@@ -529,6 +530,7 @@ const createCityPage = (city) => ({
 
 const createServiceCityPage = (service, city) => {
   const region = regionContentMap.get(city.slug);
+  const regionalService = getRegionalServiceNote(city.slug, service.key);
   const content = commercialServiceContent[service.key];
   const isPriorityWasteShymkent = service.key === 'waste-utilization' && city.slug === 'shymkent';
   const isRoos = service.key === 'environmental-design';
@@ -553,13 +555,11 @@ const createServiceCityPage = (service, city) => {
   const documents = serviceDocuments[service.key];
   const mainPath = `/services/${mainServiceSlug[service.key]}`;
   const baseServiceContent = serviceContentMap.get(mainServiceSlug[service.key]);
-  const visitText = region
-    ? `${region.onSiteConditions.join('. ')}. ${region.logisticsNote}`
-    : `Документальные этапы выполняются дистанционно. Обследование, отбор проб или выезд в ${city.cityAccusative} подтверждаются только после проверки адреса, задания и доступности специалистов; местный офис не заявляется.`;
-  const regionalTask = region?.commonTasks.join(', ') || city.localNote;
+  const visitText = `${regionalService.onSiteConditions.join('. ')}. ${regionalService.logisticsNote}`;
+  const regionalTask = regionalService.regionalTasks.join(', ');
   const industries = region?.industries.join(', ') || city.objects;
-  const remoteWork = region?.remoteConditions.join(', ') || 'аудит исходных данных и подготовка документов';
-  const articleSlugs = [...new Set([...(content.articles || []), ...(region?.relatedArticleSlugs || [])])];
+  const remoteWork = regionalService.remoteConditions.join(', ');
+  const articleSlugs = [...new Set(content.articles || [])];
   const articleLinks = articleLinksForSlugs(articleSlugs);
   const workflowLead = [
     `Для площадки в ${city.cityPrepositional} порядок начинаем с ${content.steps[0]}, затем выполняем ${content.steps.slice(1, -1).join(', ')} и завершаем этапом «${content.steps.at(-1)}».`,
@@ -653,26 +653,26 @@ const createServiceCityPage = (service, city) => {
     ? 'Организуем передачу промышленных отходов на утилизацию, поможем с вывозом и подготовим закрывающие документы. Рассчитаем стоимость по вашему перечню отходов.'
     : wasteCityOverride?.intro ?? (isRoos
       ? `Подготовим раздел охраны окружающей среды для проектируемого объекта в ${city.cityPrepositional}. Проверим проектные решения и исходные данные — заказчик получит готовый РООС и расчётные материалы в согласованном составе.`
-      : `${content.promise} Для ${city.cityGenitive} учитываем типовые отрасли: ${industries}. ${city.localNote} Документальные этапы (${remoteWork}) можно начать после получения исходных файлов. ${operationalNote}`),
+      : `${content.promise} Для ${city.cityGenitive} учитываем типовые отрасли: ${industries}. ${regionalService.introduction} Документальные этапы (${remoteWork}) можно начать после получения исходных файлов. ${operationalNote}`),
   sections: [
     { title: `${baseServiceContent?.commercial.audienceTitle ?? `Кому нужна услуга «${content.title}»`} в ${city.cityPrepositional}`, body: `${baseServiceContent?.aeo.targetAudience ?? `Услуга подходит объектам, которым требуется ${service.descriptionNoun}.`} Для ${city.cityGenitive} типичны ${industries}; применимость всегда проверяем по фактической деятельности площадки.` },
     { title: `${baseServiceContent?.commercial.requiredTitle ?? `Когда требуется услуга «${content.title}»`} в ${city.cityPrepositional}`, body: `${baseServiceContent?.aeo.whenRequired ?? content.faqAnswer} Изменение технологии, мощности, состава источников или исходной проектной версии требует повторной проверки применимости.` },
     { title: `${baseServiceContent?.commercial.scopeTitle ?? `Что входит в услугу «${content.title}»`} для ${city.cityGenitive}`, body: `${baseServiceContent?.aeo.scope ?? content.scope} ${workflowLead} ${visitText}` },
     { title: `${baseServiceContent?.commercial.documentsTitle ?? `Какие документы нужны для услуги «${content.title}»`} в ${city.cityPrepositional}`, body: `Для старта нужны: ${documents.join(', ')}. Если полного комплекта нет — отправьте имеющиеся материалы. Специалист проверит их и сообщит, каких данных не хватает.` },
-    { title: `${baseServiceContent?.commercial.timelineTitle ?? `Срок выполнения услуги «${content.title}»`} в ${city.cityPrepositional}`, body: `${baseServiceContent?.aeo.duration ?? content.deadline} Учитываем региональную логистику: ${region?.logisticsNote || 'маршрут и возможность выезда подтверждаются после проверки адреса'}. Предварительный срок определим после проверки исходных данных.` },
+    { title: `${baseServiceContent?.commercial.timelineTitle ?? `Срок выполнения услуги «${content.title}»`} в ${city.cityPrepositional}`, body: `${baseServiceContent?.aeo.duration ?? content.deadline} Учитываем условия выполнения услуги: ${regionalService.logisticsNote}. Предварительный срок определим после проверки исходных данных.` },
     { title: `${baseServiceContent?.commercial.pricingTitle ?? `Стоимость услуги «${content.title}»`} в ${city.cityPrepositional}`, body: `${baseServiceContent?.aeo.pricing ?? 'Точную стоимость определяем после проверки задания и исходных материалов.'} ${cityPricingFactors}` },
     { title: `Что получает заказчик в ${city.cityPrepositional}`, body: `${cityDeliverables} Региональные условия и ограничения фиксируем в составе результата, а неподтверждённые работы не включаем.` },
     { title: `Нормативная база для услуги «${content.title}»`, body: `${cityLegalBasis} Регион не меняет республиканское регулирование; применимость требований проверяется для конкретного объекта. Актуальность централизованного реестра проверялась ${LASTMOD}.` },
     { title: `Частые ошибки при заказе услуги «${content.title}»`, body: `${baseServiceContent?.aeo.commonMistakes ?? 'Частые ошибки — начинать работу без согласованного задания, передавать разные версии исходных файлов и не фиксировать изменения объекта.'} Для площадки в ${city.cityPrepositional} отдельно проверяем адрес, режим работы и условия доступа.` },
-    { title: roosRegionalContent ? `Разработка РООС в ${city.cityPrepositional}: особенности региона` : `Особенности работы в ${city.cityPrepositional}`, body: `${roosRegionalContent || city.localNote} Региональный фокус — ${regionalTask}. ${operationalNote}` },
+    { title: roosRegionalContent ? `Разработка РООС в ${city.cityPrepositional}: особенности региона` : `Особенности работы в ${city.cityPrepositional}`, body: `${roosRegionalContent || regionalService.introduction} Региональный фокус — ${regionalTask}. ${operationalNote}` },
   ],
   services: baseServices.map(([_, label, path]) => link(label, path)),
   audience: objectList.slice(0, 12),
   outcomes: clientResults,
   faq: [
-    { question: `${content.faq.replace(/\?$/, '')} в ${city.cityPrepositional}?`, answer: `Для объекта в ${city.cityPrepositional} ${lowerFirst(content.faqAnswer)} Дополнительно учитываем ${regionalTask}.` },
+    { question: `${content.faq.replace(/\?$/, '')} в ${city.cityPrepositional}?`, answer: `Для объекта в ${city.cityPrepositional} ${lowerFirst(content.faqAnswer)} Ключевые данные для этой услуги: ${regionalTask}.` },
     ...serviceFaq(service, city).slice(0, 3),
-    { question: `Как организована работа по направлению «${content.title}» для ${city.cityGenitive}?`, answer: `${city.localNote} ${visitText}` },
+    { question: `Как организована работа по направлению «${content.title}» для ${city.cityGenitive}?`, answer: `${regionalService.introduction} ${visitText}` },
     { question: `Какие особенности площадки в ${city.cityPrepositional} сообщить до расчёта?`, answer: `Для расчёта в ${city.cityPrepositional} укажите адрес, режим, вид деятельности, оборудование и источники воздействия. Для региона характерны ${city.objects}, но состав работ определяем только по данным конкретного объекта.` },
   ],
   relatedLinks: [
@@ -693,7 +693,7 @@ const createServiceCityPage = (service, city) => {
   changefreq: 'weekly',
   lastmod: LASTMOD,
   ctaTitle: `Рассчитать работы по услуге «${content.title}» для ${city.cityGenitive}`,
-  ctaText: `Для расчёта услуги «${content.title}» опишите площадку в ${city.cityPrepositional}, укажите ${regionalTask} и приложите доступные документы. Специалист обозначит пробелы и рассчитает этапы с учётом условий выезда для ${city.cityGenitive}.`,
+  ctaText: `Для расчёта услуги «${content.title}» опишите площадку в ${city.cityPrepositional}, сообщите сведения по направлениям: ${regionalTask}; приложите доступные документы. Специалист обозначит пробелы и рассчитает этапы с учётом условий выезда для ${city.cityGenitive}.`,
   primaryCtaLabel: getServicePrimaryCtaLabel(mainServiceSlug[service.key]),
   heroBenefits: cityBenefits,
   secondaryCtaLabel: 'Отправить документы в WhatsApp',

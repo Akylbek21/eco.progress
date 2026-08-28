@@ -163,6 +163,39 @@ test('service-city commercial content is unique and contains all required blocks
   }
 });
 
+test('service-city regional copy is scoped by service instead of inherited from the city', async () => {
+  const pageText = (slug) => {
+    const page = seoPages.find((candidate) => candidate.slug === slug && candidate.locale !== 'kk');
+    assert.ok(page, `missing ${slug}`);
+    return JSON.stringify(page);
+  };
+
+  for (const slug of [
+    'pek-shymkent',
+    'otchet-pek-shymkent',
+    'ovos-shymkent',
+    'roos-shymkent',
+    'ekologicheskoe-razreshenie-shymkent',
+    'ndv-shymkent',
+    'laboratornye-zamery-shymkent',
+  ]) {
+    assert.doesNotMatch(pageText(slug), /парт(?:ия|ии|ию|ией) отходов|услови[яй] погрузки|транспортировк[аи] отходов|операци[ияи] с отходами/iu, slug);
+  }
+
+  assert.match(pageText('pek-shymkent'), /точки контроля|квартальных измерений/iu);
+  assert.match(pageText('ndv-shymkent'), /инвентаризаци[яию] источников/iu);
+  assert.match(pageText('laboratornye-zamery-shymkent'), /программ[ауы] измерений|точки контроля/iu);
+  assert.match(pageText('utilizaciya-othodov-shymkent'), /партии|погрузки|транспортировки/iu);
+
+  const generator = await readFile(new URL('../scripts/seo-data.mjs', import.meta.url), 'utf8');
+  const serviceCityFactory = generator.slice(
+    generator.indexOf('const createServiceCityPage'),
+    generator.indexOf('const ruSeoPages'),
+  );
+  assert.match(serviceCityFactory, /getRegionalServiceNote\(city\.slug, service\.key\)/);
+  assert.doesNotMatch(serviceCityFactory, /region\?\.(?:remoteConditions|onSiteConditions|commonTasks|logisticsNote)|city\.localNote/);
+});
+
 test('regional pages use unique content quality and topic clusters expose only approved published articles', () => {
   const regionalPages = seoPages.filter((page) => page.type === 'city' || page.type === 'service-city');
   assert.equal(regionalPages.filter((page) => page.type === 'city').length, 18, 'existing cities must be retained');
