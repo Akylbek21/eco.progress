@@ -8,6 +8,7 @@ import { regionContent } from '../src/content/regions/regionContent.ts';
 import { experts } from '../src/content/experts/experts.ts';
 import { trustDocuments } from '../src/content/trust-documents/trustDocuments.ts';
 import { caseStudies } from '../src/content/cases/caseStudies.ts';
+import { isArticleApproved } from '../src/content/articleReview.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const findings = [];
@@ -31,6 +32,8 @@ unique(serviceContent.map((item) => item.serviceSlug), 'serviceContent.serviceSl
 unique(articleContent.map((item) => item.slug), 'articleContent.slug');
 unique(articleContent.map((item) => item.title), 'articleContent.title');
 unique(regionContent.map((item) => item.regionSlug), 'regionContent.regionSlug');
+unique(experts.map((item) => item.slug), 'experts.slug');
+unique(caseStudies.map((item) => item.slug), 'caseStudies.slug');
 
 const serviceSlugs = new Set(serviceCatalog.map((item) => item.slug));
 const articleSlugs = new Set(articleContent.map((item) => item.slug));
@@ -64,6 +67,7 @@ for (const article of articleContent) {
   for (const slug of article.relatedServiceSlugs) if (!serviceSlugs.has(slug)) add('ERROR', 'related-service', target, `Несуществующая услуга ${slug}`);
   for (const slug of article.relatedArticleSlugs) if (!articleSlugs.has(slug)) add('ERROR', 'related-article', target, `Несуществующая статья ${slug}`);
   if (article.status === 'published' && article.reviewStatus !== 'approved') add('WARNING', 'specialist-review', target, 'Опубликованный материал помечен как требующий проверки');
+  if (article.reviewStatus === 'approved' && !isArticleApproved(article)) add('ERROR', 'invalid-reviewer', target, 'Approved-статья должна иметь reviewedAt и ссылку на опубликованного VERIFIED-эксперта');
 }
 
 for (let left = 0; left < articleContent.length; left += 1) for (let right = left + 1; right < articleContent.length; right += 1) {
@@ -79,6 +83,7 @@ for (const region of regionContent) {
   if (!region.introduction || region.industries.length === 0 || region.commonTasks.length === 0) add('ERROR', 'region-content', target, 'Не заполнены обязательные региональные данные');
   for (const slug of region.availableServiceSlugs) if (!serviceSlugs.has(slug)) add('ERROR', 'related-service', target, `Несуществующая услуга ${slug}`);
   for (const slug of region.relatedArticleSlugs) if (!articleSlugs.has(slug)) add('ERROR', 'related-article', target, `Несуществующая статья ${slug}`);
+  for (const slug of region.confirmedCaseSlugs || []) if (!caseStudies.some((item) => item.slug === slug && item.status === 'published')) add('ERROR', 'invalid-case-link', target, `Несуществующий или неопубликованный кейс ${slug}`);
 }
 
 for (const document of trustDocuments) {
@@ -86,7 +91,11 @@ for (const document of trustDocuments) {
   if (document.validUntil && new Date(document.validUntil) < new Date()) add('WARNING', 'expired-document', document.id, 'Истёк срок действия');
   if (document.fileUrl && !fs.existsSync(path.join(root, 'public', document.fileUrl.replace(/^\//, '')))) add('ERROR', 'trust-file', document.id, `Файл не найден: ${document.fileUrl}`);
 }
-for (const item of caseStudies) if (item.status === 'published' && (!item.publishedAt || !item.result || item.workPerformed.length === 0 || item.regulations.length === 0)) add('ERROR', 'case-verification', item.slug, 'Опубликованный кейс не содержит проверяемого результата или нормативной базы');
+for (const item of caseStudies) if (item.status === 'published') {
+  if (!item.publishedAt || !item.result || item.workPerformed.length === 0 || item.regulations.length === 0) add('ERROR', 'case-verification', item.slug, 'Опубликованный кейс не содержит проверяемого результата или нормативной базы');
+  if (!expertIds.has(item.expert.id)) add('ERROR', 'case-expert', item.slug, `Кейс связан с неподтверждённым экспертом ${item.expert.id}`);
+  if (item.reviewer && !expertIds.has(item.reviewer.id)) add('ERROR', 'case-reviewer', item.slug, `Кейс связан с неподтверждённым reviewer ${item.reviewer.id}`);
+}
 
 const forbidden = ['для Алматы и Алматинская область', 'в Караганда и Карагандинская область', 'для Астана и Акмолинская область'];
 const contentFiles = ['src/content', 'src/pages', 'src/components'].flatMap((directory) => {

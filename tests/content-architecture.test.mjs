@@ -79,15 +79,12 @@ test('regions route and canonical alias redirect are wired before catch-all rout
   assert.match(route, /<Navigate to=\{`\/services\/\$\{canonicalSlug\}`\} replace/);
 });
 
-test('news delegates to the canonical repository and fallback is dev-only', async () => {
+test('news renders the complete static article registry without a production API dependency', async () => {
   const source = await readFile(new URL('../src/services/newsService.ts', import.meta.url), 'utf8');
-  assert.match(source, /publicContentRepository\.getArticles\(\)/);
-  assert.match(source, /Array\.isArray\(items\).*source: 'api'/s);
-  assert.match(source, /items: await getDevFallbackNews\(\), source: 'fallback', stale: true/);
-  assert.match(source, /if \(!import\.meta\.env\.DEV\) throw error/);
-  assert.match(source, /if \(!import\.meta\.env\.DEV\) return \[\]/);
-  assert.match(source, /await import\('\.\.\/data\/seoArticles'\)/);
-  assert.doesNotMatch(source, /^import \{ seoArticles \}/m);
+  assert.match(source, /articleContent\.filter\(\(article\) => article\.status === 'published'\)/);
+  assert.match(source, /return prerenderNewsResult/);
+  assert.match(source, /normalizeArticleSlug/);
+  assert.doesNotMatch(source, /publicContentRepository|fetcher|SEO_CONTENT_API/);
 });
 
 test('all required schema entities come from one builder module', async () => {

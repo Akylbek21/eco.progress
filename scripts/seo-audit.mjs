@@ -19,11 +19,6 @@ const pageFile = (pathname) => pathname === '/'
 if (!fs.existsSync(sitemapPath)) throw new Error('SEO audit: dist/sitemap.xml not found');
 const sitemap = read(sitemapPath);
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
-const cmsSnapshot = JSON.parse(read(path.join(root, 'src', 'data', 'seoCmsSnapshot.generated.json')));
-const snapshotExperts = Array.isArray(cmsSnapshot.experts) ? cmsSnapshot.experts : [];
-const snapshotCases = Array.isArray(cmsSnapshot.cases) ? cmsSnapshot.cases : [];
-const snapshotArticleReviews = Array.isArray(cmsSnapshot.articleReviews) ? cmsSnapshot.articleReviews : [];
-const cmsContentUnavailable = !snapshotExperts.length && !snapshotCases.length && !snapshotArticleReviews.length;
 const sitemapBaseline = JSON.parse(read(path.join(root, 'scripts', 'seo-sitemap-baseline.json')));
 const baselineUrlCount = Number(sitemapBaseline.indexableUrlCount);
 const maximumDropPercent = Number(sitemapBaseline.maximumDropPercent);
@@ -37,15 +32,6 @@ if (!Number.isInteger(baselineUrlCount) || baselineUrlCount <= 0) {
     const message = `Indexable sitemap regression: ${urls.length} URLs vs ${baselineUrlCount} in ${sitemapBaseline.source} `
       + `(${dropPercent.toFixed(1)}% drop; allowed ${maximumDropPercent}%)`;
     errors.push(message);
-  }
-}
-if (cmsContentUnavailable) warnings.push('SEO CMS snapshot is empty: expert and case markup stays disabled until verified records are published');
-if (!snapshotExperts.length) warnings.push('SEO CMS snapshot contains no confirmed experts; personal expert markup remains disabled');
-if (!snapshotCases.some((item) => item.status === 'published' && item.publishedAt)) warnings.push('SEO CMS snapshot contains no verified published case studies; case-study pages remain unpublished');
-const snapshotExpertIds = new Set(snapshotExperts.map((item) => item.id));
-for (const review of snapshotArticleReviews.filter((item) => item.reviewStatus === 'approved')) {
-  if (!snapshotExpertIds.has(review.authorSlug) || !snapshotExpertIds.has(review.reviewerSlug) || !review.lastReviewedAt) {
-    errors.push(`Approved article review is not linked to confirmed author/reviewer data: ${review.slug || 'unknown slug'}`);
   }
 }
 if (!/^<\?xml[^>]+>\s*<urlset[\s\S]*<\/urlset>\s*$/i.test(sitemap)) errors.push('Invalid sitemap XML document');

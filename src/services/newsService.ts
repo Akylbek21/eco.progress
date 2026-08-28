@@ -1,12 +1,13 @@
 import type { NewsItem } from '../types';
 import type { ArticleContent } from '../content/types';
-import { articleContent } from '../content/articles/articleContent';
+import { articleContent, articleContentMap } from '../content/articles/articleContent';
+import { normalizeArticleSlug } from '../content/articles/articleSlugs';
 
 export type NewsSource = 'api' | 'fallback';
 export interface NewsResult { items: NewsItem[]; source: NewsSource; stale: boolean }
 
 const articleToNewsItem = (article: ArticleContent): NewsItem => ({
-  id: article.slug,
+  id: normalizeArticleSlug(article.slug),
   title: article.title,
   excerpt: article.excerpt,
   category: 'Полезные материалы',
@@ -28,6 +29,6 @@ export const getNewsResult = async (): Promise<NewsResult> => {
 export const getNews = async (): Promise<NewsItem[]> => (await getNewsResult()).items;
 
 export const getNewsById = async (id: string): Promise<NewsItem | undefined> => {
-  const article = articleContent.find((item) => item.slug === id);
+  const article = articleContentMap.get(normalizeArticleSlug(id));
   return article ? articleToNewsItem(article) : undefined;
 };

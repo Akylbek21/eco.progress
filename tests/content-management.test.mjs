@@ -119,7 +119,7 @@ test('content editor exposes structured blocks, files, comments, diff and respon
   assert.match(service, /FormData/);
 });
 
-test('public service and article pages use one repository without production static fallback', async () => {
+test('services use the repository while public articles use the frontend static registry', async () => {
   const [services, news, repository, servicePage, articlePage] = await Promise.all([
     read('src/services/serviceService.ts'), read('src/services/newsService.ts'),
     read('src/content/apiRepository.ts'),
@@ -127,9 +127,9 @@ test('public service and article pages use one repository without production sta
   ]);
   assert.match(repository, /`\/public\/content\/\$\{name\}`/);
   assert.match(services, /publicContentRepository\.getServices/);
-  assert.match(news, /publicContentRepository\.getArticles/);
+  assert.match(news, /articleContent/);
   assert.match(services, /if \(!import\.meta\.env\.DEV\) throw error/);
-  assert.match(news, /if \(!import\.meta\.env\.DEV\) throw error/);
+  assert.doesNotMatch(news, /publicContentRepository|fetcher/);
   assert.match(servicePage, /publicContentRepository\.getServiceBySlug/);
   assert.match(articlePage, /publicContentRepository\.getArticleBySlug/);
   assert.doesNotMatch(services, /fetcher/);

@@ -4,6 +4,8 @@ import test from 'node:test';
 import { publicStaticPages, seoArticles, seoPages } from '../scripts/seo-data.mjs';
 import { canonicalForPublicPath } from '../src/seo/indexingPolicy.ts';
 import { isLegacyPublicPath, isPrivateOrSystemPath, sitemapEligibilityErrors } from '../src/seo/sitemapPolicy.ts';
+import { experts } from '../src/content/experts/experts.ts';
+import { caseStudies } from '../src/content/cases/caseStudies.ts';
 
 const [sitemapXml, registry] = await Promise.all([
   readFile(new URL('../public/sitemap.xml', import.meta.url), 'utf8'),
@@ -16,6 +18,8 @@ const prerenderSourceCanonicals = new Set([
   ...publicStaticPages.map((page) => canonicalForPublicPath(page.path)),
   ...seoPages.map((page) => canonicalForPublicPath(`/${page.slug}`)),
   ...seoArticles.map((article) => canonicalForPublicPath(article.slug)),
+  ...experts.map((expert) => canonicalForPublicPath(expert.profileUrl)),
+  ...caseStudies.filter((item) => item.status === 'published' && item.publishedAt).map((item) => canonicalForPublicPath(`/cases/${item.slug}`)),
 ]);
 
 test('sitemap contains only unique 200-ready indexable self-canonical URLs', () => {

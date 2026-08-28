@@ -2469,7 +2469,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
                 {currentTab === 'Протокол' && !order.linkedProtocol && (
                   <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm font-semibold text-amber-900">
                     <p>К заявке ещё не привязан протокол.</p>
-                    {access.laboratory && <Link className="mt-3 inline-flex rounded-xl bg-eco-700 px-4 py-2 font-bold text-white" to={`/staff/protocols?create=1&orderId=${encodeURIComponent(order.id)}`}>Создать протокол</Link>}
+                    {access.laboratory && <Link className="mt-3 inline-flex rounded-xl bg-eco-700 px-4 py-2 font-bold text-white" to={`/staff/protocols/new?orderId=${encodeURIComponent(order.id)}`}>Создать протокол</Link>}
                   </section>
                 )}
               </div>

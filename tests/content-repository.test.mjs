@@ -158,7 +158,7 @@ test('service and article templates render mandatory structured content blocks',
   ]);
   for (const block of ['ServiceAeoContent', 'RelatedServices']) assert.match(servicePage, new RegExp(block));
   for (const block of ['ArticleTableOfContents', 'ArticleChecklist', 'ArticleSources', 'ArticleAuthorCard', 'ArticleReviewerCard', 'RelatedArticles']) assert.match(articlePage, new RegExp(block));
-  for (const label of ['Дата публикации', 'Последняя экспертная проверка', 'articleRobotsForReviewStatus']) assert.match(articlePage, new RegExp(label));
+  for (const label of ['Дата публикации', 'Последняя экспертная проверка', 'isArticleApproved']) assert.match(articlePage, new RegExp(label));
   assert.match(articlePage, /normalizeArticleSlug/);
   assert.match(generatedRegistry, /"path": "\/ecologicheskie-uslugi-kostanay"[\s\S]*?"robots": "index,follow"/);
 });

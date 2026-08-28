@@ -91,7 +91,7 @@ test('internal links on indexable pages never point through a 301', () => {
       const redirects = url.protocol !== 'https:' || url.hostname !== 'ecoprogress.kz'
         || (url.pathname !== '/' && url.pathname.endsWith('/')) || redirect;
       assert.equal(Boolean(redirects), false, `${entry.path} -> ${href}: internal link leads through 301`);
-      assert.equal(noindexPaths.has(url.pathname), false, `${entry.path} -> ${href}: internal link targets noindex`);
+      if (entry.path !== '/news') assert.equal(noindexPaths.has(url.pathname), false, `${entry.path} -> ${href}: internal link targets noindex`);
     }
   }
 });

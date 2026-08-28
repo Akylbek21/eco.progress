@@ -35,9 +35,11 @@ const EnvironmentStep = ({
   const water = isWaterProtocolType(type);
 
   return (
-    <section>
-      <h3 className="text-xl font-black">Условия на объекте</h3>
-      <p className="mt-2 text-sm text-slate-500">Погода заполняется по объекту, дате и времени. Если автоматические данные недоступны, значения можно ввести вручную.</p>
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div><h3 className="text-lg font-semibold text-slate-950">Условия измерения</h3><p className="mt-1 text-sm text-slate-500">Данные можно получить по объекту и времени или заполнить вручную.</p><p className="mt-1 text-xs text-slate-500">Источник: {watch('environmentSource') === 'API' ? 'получено автоматически' : 'введено вручную'}</p></div>
+        <Button type="button" variant="secondary" disabled={weatherLoading} onClick={onRefresh}><RefreshCw className={`h-4 w-4 ${weatherLoading ? 'animate-spin' : ''}`} />Обновить автоматически</Button>
+      </div>
       {water && (
         <fieldset
           id="water-characteristics"
@@ -163,10 +165,6 @@ const EnvironmentStep = ({
           {weatherLoading ? 'Загружаем условия среды…' : weatherMessage}
         </p>
       )}
-      <Button type="button" variant="secondary" className="mt-4" disabled={weatherLoading} onClick={onRefresh}>
-        <RefreshCw className={`h-4 w-4 ${weatherLoading ? 'animate-spin' : ''}`} />
-        Обновить условия
-      </Button>
     </section>
   );
 };

@@ -24,6 +24,7 @@ const navItems = [
   { label: 'Города', path: '/regions' },
   { label: 'Статьи', path: '/news' },
   { label: 'Кейсы', path: '/cases' },
+  { label: 'Сотрудники', path: '/experts' },
   { label: 'О компании', path: '/about' },
   { label: 'Контакты', path: '/contacts' },
 ];
@@ -83,7 +84,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
           </Link>
           <nav aria-label={isKk ? 'Негізгі навигация' : 'Основная навигация'} className="hidden items-center gap-1 rounded-full border border-slate-200/80 bg-white/80 p-1.5 shadow-[0_8px_24px_-18px_rgba(2,28,57,0.5)] xl:flex">
             {currentNavItems.map((item) => item.path.startsWith('http') || opensPrivateRuntime(item.path) ? (
-              <a key={item.path} href={item.path} target={item.path.startsWith('http') ? '_blank' : undefined} rel={item.path.startsWith('http') ? 'noreferrer' : undefined} className="shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-[13px] font-semibold text-slate-600 transition-all duration-200 hover:bg-eco-50 hover:text-eco-900">
+              <a key={item.path} href={item.path} target={item.path.startsWith('http') ? '_blank' : undefined} rel={item.path.startsWith('http') ? 'noreferrer' : undefined} className="shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold text-slate-600 transition-all duration-200 hover:bg-eco-50 hover:text-eco-900">
                 {item.label}
               </a>
             ) : (
@@ -95,7 +96,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 onFocus={() => preloadPublicRoute(item.path)}
                 onPointerDown={() => preloadPublicRoute(item.path)}
                 className={({ isActive }) =>
-                  `shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-[13px] font-semibold transition-all duration-200 ${
+                  `shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold transition-all duration-200 ${
                     isActive ? 'bg-eco-900 text-white shadow-[0_6px_14px_-8px_rgba(2,28,57,0.8)]' : 'text-slate-600 hover:bg-eco-50 hover:text-eco-900'
                   }`
                 }
@@ -105,7 +106,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
             ))}
           </nav>
           <div className="hidden items-center gap-2.5 xl:flex">
-            <nav aria-label={isKk ? 'Тілді таңдау' : 'Выбор языка'} className="inline-flex rounded-full border border-slate-200 bg-white/85 p-1 text-[11px] font-extrabold shadow-sm">
+            <nav aria-label={isKk ? 'Тілді таңдау' : 'Выбор языка'} className="inline-flex rounded-full border border-slate-200 bg-white/85 p-1 text-xs font-extrabold shadow-sm">
               <Link to={ruPath} lang="ru" className={`whitespace-nowrap rounded-full px-2.5 py-2 transition-colors ${!isKk ? 'bg-eco-900 text-white' : 'text-slate-500 hover:text-eco-900'}`}>RU</Link>
               <Link to={kkPath} lang="kk" className={`whitespace-nowrap rounded-full px-2.5 py-2 transition-colors ${isKk ? 'bg-eco-900 text-white' : 'text-slate-500 hover:text-eco-900'}`}>ҚАЗ</Link>
             </nav>
@@ -114,7 +115,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 type="button"
                 variant="secondary"
                 onClick={() => setAccountMenuOpen((state) => !state)}
-                className="min-h-10 shrink-0 gap-2 whitespace-nowrap border-slate-200 bg-white/85 px-4 text-[13px] text-eco-900 shadow-sm hover:border-eco-200 hover:bg-white"
+                className="min-h-10 shrink-0 gap-2 whitespace-nowrap border-slate-200 bg-white/85 px-4 text-sm text-eco-900 shadow-sm hover:border-eco-200 hover:bg-white"
                 aria-expanded={accountMenuOpen}
               >
                 {isKk ? 'Мәзір' : 'Меню'} <ChevronDown size={16} className={`transition ${accountMenuOpen ? 'rotate-180' : ''}`} />
@@ -152,7 +153,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 </div>
               )}
             </div>
-            <Button type="button" onClick={() => setOrderModal(true)} className="group min-h-11 shrink-0 gap-2 whitespace-nowrap bg-gradient-to-r from-eco-900 to-eco-600 px-5 text-[13px] text-white shadow-[0_10px_22px_-12px_rgba(2,28,57,0.8)] hover:from-eco-800 hover:to-eco-500">
+            <Button type="button" onClick={() => setOrderModal(true)} className="group min-h-11 shrink-0 gap-2 whitespace-nowrap bg-gradient-to-r from-eco-900 to-eco-600 px-5 text-sm text-white shadow-[0_10px_22px_-12px_rgba(2,28,57,0.8)] hover:from-eco-800 hover:to-eco-500">
               {isKk ? 'Өтінім қалдыру' : 'Получить консультацию эколога'}
               <ArrowUpRight size={16} className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
             </Button>

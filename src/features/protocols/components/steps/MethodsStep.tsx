@@ -1,33 +1,33 @@
 import { useFormContext } from 'react-hook-form';
+import { wizardErrorClass, wizardInputClass, wizardLabelClass, wizardTextareaClass } from '../ProtocolWizardField';
 import type { ProtocolWizardForm } from '../wizardTypes';
-
-const input = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-eco-500 focus:outline-none focus:ring-4 focus:ring-eco-100';
 
 const MethodsStep = () => {
   const { register, formState: { errors } } = useFormContext<ProtocolWizardForm>();
   return (
-    <section>
-      <h3 className="text-xl font-black">Методики испытаний</h3>
-      <p className="mt-2 text-sm text-slate-500">Общая методика подставится из показателей, если она одинакова для всех строк. При необходимости укажите её вручную.</p>
-      <label className="mt-5 block text-sm font-bold">
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
+      <h3 className="text-lg font-semibold text-slate-950">Методика</h3>
+      <p className="mt-1 text-sm text-slate-500">Общие нормативные документы и основание исследования.</p>
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <label className={wizardLabelClass}>
         НД на метод испытаний *
-        <input {...register('testingMethodNd')} className={`${input} mt-1.5 ${errors.testingMethodNd ? 'border-rose-400' : ''}`} />
-        {errors.testingMethodNd?.message && <span className="mt-1 block text-xs text-rose-700">{errors.testingMethodNd.message}</span>}
+        <input {...register('testingMethodNd')} className={`${wizardInputClass} ${errors.testingMethodNd ? 'border-rose-400' : ''}`} />
+        {errors.testingMethodNd?.message && <span className={wizardErrorClass}>{errors.testingMethodNd.message}</span>}
       </label>
-      <label className="mt-4 block text-sm font-bold">
+      <label className={wizardLabelClass}>
         НД на метод отбора
-        <input {...register('samplingMethodNd')} className={`${input} mt-1.5`} />
+        <input {...register('samplingMethodNd')} className={wizardInputClass} />
       </label>
-      <label className="mt-4 block text-sm font-bold">
+      <label className={`${wizardLabelClass} md:col-span-2`}>
         Основание для испытаний
         <textarea
           rows={2}
           {...register('basis')}
-          className={`${input} mt-1.5`}
+          className={wizardTextareaClass}
           placeholder="Например: договор, заявка или программа производственного контроля"
         />
-        <span className="mt-1 block text-xs font-normal text-slate-500">Поле сохранится в разделе «Методика» протокола.</span>
       </label>
+      </div>
     </section>
   );
 };

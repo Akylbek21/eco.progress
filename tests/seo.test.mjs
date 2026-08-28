@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { seoArticles, seoPages } from '../scripts/seo-data.mjs';
-import { articleRobotsForReviewStatus, isArticleEligibleForSeoLinks } from '../src/content/articleReview.ts';
+import { articleRobotsForReviewStatus, isArticleApproved, isArticleEligibleForSeoLinks } from '../src/content/articleReview.ts';
 import { articleContent } from '../src/content/articles/articleContent.ts';
 import { regionContent } from '../src/content/regions/regionContent.ts';
 import { regions } from '../src/content/regions.ts';
@@ -18,7 +18,7 @@ test('production build is independent of the optional SEO CMS API', async () => 
     readFile(new URL('../src/content/regions/regionContentQuality.ts', import.meta.url), 'utf8'),
   ]);
   const scripts = JSON.parse(packageJson).scripts;
-  assert.doesNotMatch(scripts.build, /seo:content:sync|seo:audit/);
+  assert.doesNotMatch(scripts.build, /seo:content:sync|SEO_CONTENT_API/);
   assert.doesNotMatch(dockerfile, /SEO_CONTENT_API_URL|SEO_CONTENT_API_TOKEN/);
   assert.doesNotMatch(compose, /SEO_CONTENT_API_URL|SEO_CONTENT_API_TOKEN|network:\s*eco-net/);
   assert.doesNotMatch(quality, /publishedCaseStudies|confirmedCaseSlugs/);
@@ -107,7 +107,8 @@ test('core routes, schema and private indexing rules are registered', async () =
   assert.ok(contacts?.title && contacts?.h1);
   assert.ok(registry.some((item) => item.path.startsWith('/services/') && item.schema.some((schema) => schema['@type'] === 'Service')));
   assert.ok(registry.some((item) => item.path.startsWith('/news/') && item.schema.some((schema) => schema['@type'] === 'Article')));
-  assert.equal(registry.find((item) => item.path === '/employees')?.robots, 'noindex,follow');
+  assert.equal(registry.find((item) => item.path === '/experts')?.robots, 'index,follow');
+  assert.ok(registry.filter((item) => item.path.startsWith('/experts/')).every((item) => item.robots === 'index,follow'));
 
   const robots = await readFile(new URL('../public/robots.txt', import.meta.url), 'utf8');
   for (const route of ['/staff', '/admin', '/cabinet', '/client', '/login', '/register', '/reset-password', '/api', '/internal']) {
@@ -169,7 +170,7 @@ test('regional pages use unique content quality and topic clusters expose only a
   assert.ok(regionalPages.filter((page) => page.type === 'service-city').every((page) => page.indexable === true), 'unreviewed service/city pairs must not be generated');
   assert.ok(regionalPages.every((page) => page.relatedLinks.every((link) => !link.path.startsWith('/news/'))));
 
-  assert.equal(isArticleEligibleForSeoLinks({ status: 'published', reviewStatus: 'approved' }), true);
+  assert.equal(isArticleEligibleForSeoLinks({ status: 'published', reviewStatus: 'approved' }), false, 'reviewer and reviewedAt are mandatory');
   for (const candidate of [
     { status: 'draft', reviewStatus: 'approved' },
     { status: 'published', reviewStatus: 'draft' },
@@ -188,10 +189,18 @@ test('regional pages use unique content quality and topic clusters expose only a
   }
 });
 
-test('CMS sync normalizes the backend APPROVED expert-review enum before publication checks', async () => {
-  const syncSource = await readFile(new URL('../scripts/sync-seo-content.mjs', import.meta.url), 'utf8');
-  assert.match(syncSource, /APPROVED: 'approved'/);
-  assert.match(syncSource, /\.map\(normalizeArticleReview\)/);
+test('one central predicate gates approved review, indexing and reviewedBy', async () => {
+  const [reviewSource, newsPage, generator] = await Promise.all([
+    readFile(new URL('../src/content/articleReview.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/NewsDetailsPage.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../scripts/generate-sitemap.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(reviewSource, /export const isArticleApproved/);
+  assert.match(reviewSource, /lastReviewedAt/);
+  assert.match(reviewSource, /isCompleteExpert/);
+  assert.match(newsPage, /isArticleApproved/);
+  assert.match(generator, /isArticleApproved/);
+  assert.ok(articleContent.every((article) => !isArticleApproved(article)));
 });
 
 test('city grammar and PEK keyword cluster use explicit backend-independent forms', () => {
@@ -257,17 +266,18 @@ test('schema uses one stable graph model for prerender and hydration', async () 
   assert.match(prerender, /schema\.map\(\(\{ '@context': _context, \.\.\.node \}\) => node\)/);
 });
 
-test('expert model is strict and approved article schema links author and reviewer persons', async () => {
+test('expert model stores only confirmed optional facts and article schema gates reviewer persons', async () => {
   const [types, experts, articlePage, schema] = await Promise.all([
     readFile(new URL('../src/content/types.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/content/experts/experts.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/NewsDetailsPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/seo/entityBuilders.ts', import.meta.url), 'utf8'),
   ]);
-  for (const field of ['id', 'fullName', 'position', 'specialization', 'experienceYears', 'bio', 'photo', 'profileUrl']) assert.match(types, new RegExp(`${field}:`));
-  assert.match(experts, /seoCmsSnapshot\.generated\.json/);
-  assert.doesNotMatch(experts, /fullName:\s*['"][^'"]+|experienceYears:\s*\d/);
-  assert.match(articlePage, /item\.reviewStatus === 'approved'/);
+  for (const field of ['id', 'fullName', 'slug', 'published', 'verificationStatus', 'specialization', 'profileUrl', 'credentials']) assert.match(types, new RegExp(`${field}:`));
+  for (const optional of ['position', 'experienceYears', 'bio', 'photo']) assert.match(types, new RegExp(`${optional}\\?:`));
+  assert.doesNotMatch(experts, /seoCmsSnapshot|experienceYears:\s*\d|photo:\s*['"]/);
+  assert.match(experts, /Бақытбай Құралай Нұрланқызы/);
+  assert.match(articlePage, /isArticleApproved/);
   assert.match(articlePage, /entityIds\(canonical\)\.author/);
   assert.match(articlePage, /entityIds\(canonical\)\.reviewer/);
   assert.match(schema, /reviewedBy/);
@@ -283,11 +293,11 @@ test('service-city registry exposes Service schema and Shymkent UI adds LocalBus
   assert.doesNotMatch(source, /'@type': 'FAQPage'/);
 });
 
-test('AEO content is visible and cases use verified backend records', async () => {
-  const [aeo, types, api, app, casePage, details] = await Promise.all([
+test('AEO content is visible and cases use the static verified registry', async () => {
+  const [aeo, types, cases, app, casePage, details] = await Promise.all([
     readFile(new URL('../src/components/content/AeoContent.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/content/types.ts', import.meta.url), 'utf8'),
-    readFile(new URL('../src/content/apiRepository.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/content/cases/caseStudies.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/App.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/CasesPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/CaseDetailsPage.tsx', import.meta.url), 'utf8'),
@@ -295,7 +305,8 @@ test('AEO content is visible and cases use verified backend records', async () =
   for (const field of ['audienceTitle', 'requiredTitle', 'scopeTitle', 'documentsTitle', 'timelineTitle', 'pricingTitle', 'deliverablesTitle', 'regulationsTitle', 'mistakesTitle', 'faqTitle']) assert.match(aeo, new RegExp(`commercial\\.${field}`));
   assert.match(aeo, /RelatedCaseStudies/);
   for (const field of ['id', 'service', 'objectType', 'objectCategory', 'initialData', 'workPerformed', 'regulations', 'completedAt', 'expert', 'reviewer', 'clientAnonymous', 'publishedAt', 'updatedAt']) assert.match(types, new RegExp(`${field}\\??:`));
-  assert.match(api, /collection<CaseStudy>\('cases'/);
+  assert.match(cases, /caseStudies:\s*CaseStudy\[\]\s*=\s*\[\]/);
+  assert.doesNotMatch(cases, /cms|fetch|api/i);
   assert.match(app, /path="\/cases"/);
   assert.match(app, /path="\/cases\/:slug"/);
   assert.match(casePage, /isPublishableCaseStudy/);

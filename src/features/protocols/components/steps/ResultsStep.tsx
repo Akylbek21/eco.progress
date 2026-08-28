@@ -131,14 +131,14 @@ const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
 
   return (
     <section>
-      {ambient && <div className="mb-6 space-y-4">
+      {ambient && <div className="mb-5 space-y-4">
         <SamplingPointsEditor />
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <p className="text-sm font-black text-slate-900">Точка для добавления показателей</p>
+          <p className="text-sm font-semibold text-slate-900">Точки отбора</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {form.samplingPoints.map((point) => <button key={point.clientPointId} type="button" onClick={() => setActiveSamplingPointId(point.clientPointId)} className={`rounded-full px-4 py-2 text-sm font-bold ${effectiveSamplingPointId === point.clientPointId ? 'bg-eco-700 text-white' : 'border border-slate-200 bg-white text-slate-700'}`}>{point.name || 'Без названия'}</button>)}
+            {form.samplingPoints.map((point) => <button key={point.clientPointId} type="button" onClick={() => setActiveSamplingPointId(point.clientPointId)} className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${effectiveSamplingPointId === point.clientPointId ? 'border-eco-700 bg-eco-700 text-white shadow-sm ring-2 ring-eco-100' : 'border-slate-200 bg-white text-slate-700 hover:border-eco-300'}`}>{point.name || 'Без названия'}</button>)}
           </div>
-          <button type="button" disabled={!effectiveSamplingPointId || !form.results.some((row) => row.samplingPointId === effectiveSamplingPointId)} onClick={copyIndicatorsToAllPoints} className="mt-3 rounded-xl border border-eco-300 px-4 py-2.5 text-sm font-bold text-eco-800 disabled:opacity-40">Скопировать показатели во все точки</button>
+          <button type="button" disabled={!effectiveSamplingPointId || !form.results.some((row) => row.samplingPointId === effectiveSamplingPointId)} onClick={copyIndicatorsToAllPoints} className="mt-3 rounded-xl border border-eco-300 px-4 py-2.5 text-sm font-medium text-eco-800 disabled:opacity-40">Скопировать показатели в остальные точки</button>
         </div>
       </div>}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -146,7 +146,7 @@ const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
           <h3
             id="wizard-step-title"
             tabIndex={-1}
-            className="text-xl font-black"
+            className="text-lg font-semibold text-slate-950"
           >
             Результаты измерений
           </h3>
@@ -155,13 +155,9 @@ const ResultsStep = ({ devices, onSuggestChangeType }: Props) => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setSelector(true)} className="rounded-full bg-eco-700 px-4 py-2 text-sm font-bold text-white hover:bg-eco-800">Добавить из справочника</button>
-          <button type="button" onClick={addManual} className="rounded-full border border-eco-300 px-4 py-2 text-sm font-bold text-eco-800">Добавить вручную</button>
+          <button type="button" aria-label="Добавить из справочника" onClick={() => setSelector(true)} className="rounded-xl bg-eco-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-eco-800">+ Из справочника</button>
+          <button type="button" onClick={addManual} className="rounded-xl border border-eco-300 bg-white px-4 py-2.5 text-sm font-medium text-eco-800">+ Вручную</button>
         </div>
-      </div>
-
-      <div className="mt-5 grid gap-2 rounded-2xl border border-eco-200 bg-eco-50/60 p-4 sm:grid-cols-3">
-        {['Добавьте норматив', 'Введите результат и единицу', 'Выберите прибор'].map((label, index) => <div key={label} className="flex items-center gap-2 text-sm font-semibold text-eco-950"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-eco-700 text-xs text-white">{index + 1}</span>{label}</div>)}
       </div>
 
       <div className="mt-5">

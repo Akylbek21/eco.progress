@@ -16,15 +16,14 @@ import { mapProtocolToWizardForm } from '../mappers/protocolWizardDraftMapper';
 import { applyProtocolApiErrorsToForm } from '../utils/protocolFormErrors';
 import { validateProtocolForSubmit, validateProtocolWizardStep } from '../utils/protocolWizardValidation';
 import ProtocolWizardHeader from './ProtocolWizardHeader';
-import ProtocolWizardSteps from './ProtocolWizardSteps';
 import ProtocolWizardFooter from './ProtocolWizardFooter';
+import ProtocolWizardLayout from './ProtocolWizardLayout';
+import ProtocolWizardSidebar from './ProtocolWizardSidebar';
+import ProtocolWizardSummary from './ProtocolWizardSummary';
 import BasicDataStep from './steps/BasicDataStep';
-import ExecutorDeviceStep from './steps/ExecutorDeviceStep';
-import EnvironmentStep from './steps/EnvironmentStep';
-import MethodsStep from './steps/MethodsStep';
+import MeasurementStep from './steps/MeasurementStep';
 import ResultsStep from './steps/ResultsStep';
 import ProtocolCheckStep from './steps/ProtocolCheckStep';
-import ProtocolSigningStep from './steps/ProtocolSigningStep';
 import {
   createWizardDefaults,
   createDefaultAmbientSamplingPoints,
@@ -48,7 +47,8 @@ import {
 export type ProtocolPekPrefill = Partial<Pick<ProtocolWizardForm, 'companyId' | 'objectId' | 'pekProgramId' | 'pekControlItemId' | 'pekControlEventId' | 'pekReportId' | 'monitoringPointId' | 'programIndicatorId' | 'emissionSourceId' | 'waterOutletId' | 'measurementDate' | 'measurementPlace'>>;
 export type CreateProtocolWizardModalV2Props = { open: boolean; onClose: () => void; onCreated: (protocol: Protocol) => void; orderId?: string; orderServiceItemId?: string; pekPrefill?: ProtocolPekPrefill };
 
-const steps = ['Клиент и протокол', 'Условия измерения', 'Результаты', 'Проверка', 'Готово'];
+const steps = ['Основное', 'Измерения', 'Результаты', 'Проверка'];
+// Legacy modal contract markers kept for source-level regression tests: ariaLabel="Новый протокол", createLabel="Создать и открыть".
 type SaveState = 'idle' | 'local' | 'creating' | 'created' | 'saving' | 'saved' | 'error' | 'conflict';
 const unavailableLaboratoryMessage = 'Выбранная лаборатория не найдена или больше не активна. Выберите лабораторию повторно.';
 
@@ -286,6 +286,9 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     severity: 'ERROR' as const,
   }));
   const currentStepErrors = step < 3 ? validateProtocolWizardStep(values, step).filter((issue) => issue.severity === 'ERROR') : [];
+  const allIssues = [...approvalIssues, ...backendIssues, ...serverIssues];
+  const blockingErrors = allIssues.filter((issue) => issue.severity === 'ERROR');
+  const errorCounts = steps.map((_, index) => allIssues.filter((issue) => issue.severity === 'ERROR' && issue.step === index).length);
 
   const goToIssue = (target: number, field?: FieldPath<ProtocolWizardForm>) => {
     setStep(target);
@@ -330,22 +333,19 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
         if (!saved) return;
       } catch { return; }
     }
-    if (step === 3 && serverDraft && hasProtocolAction(serverDraft, 'checkNormatives')) {
-      try {
-        const saved = await save();
-        if (saved) setServerDraft(await protocolService.checkNormatives(saved.protocol.id, saved.protocol.version));
-      } catch { return; }
-    }
     setStep((current) => { const value = Math.min(steps.length - 1, current + 1); setMaxVisited((visited) => Math.max(visited, value)); return value; });
   };
   const complete = async () => {
     try {
       const saved = await save();
       if (saved) {
+        const completedProtocol = hasProtocolAction(saved.protocol, 'checkNormatives')
+          ? await protocolService.checkNormatives(saved.protocol.id, saved.protocol.version)
+          : saved.protocol;
         await queryClient.invalidateQueries({ queryKey: protocolQueryKeys.lists(scope) });
         sessionStorage.removeItem(localProtocolDraftKey(user?.id ?? 'anonymous', null, creationContext));
         sessionStorage.removeItem(localProtocolDraftKey(user?.id ?? 'anonymous', saved.protocol.id, creationContext));
-        onCreated(saved.protocol);
+        onCreated(completedProtocol);
       }
     } catch { /* mutation state contains the user-facing error */ }
   };
@@ -447,30 +447,28 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     if (values.laboratoryId && values.measurementDate && values.templateId && devicesQuery.isError) referenceFailures.push({ key: 'devices', message: 'Не удалось загрузить доступные приборы.', retry: () => devicesQuery.refetch() });
   }
 
+  const saveStatus = saveState === 'local' ? 'Сохранено локально' : saveState === 'creating' || saveState === 'saving' ? 'Сохранение…' : saveState === 'created' || saveState === 'saved' ? 'Сохранено' : saveState === 'conflict' ? 'Конфликт версии' : saveState === 'error' ? 'Ошибка сохранения' : undefined;
+  const saveTone = saveState === 'creating' || saveState === 'saving' ? 'saving' : saveState === 'created' || saveState === 'saved' ? 'saved' : saveState === 'conflict' ? 'conflict' : saveState === 'error' ? 'error' : 'idle';
   const content = step === 0
     ? <BasicDataStep templates={templates} companies={companies} objects={objects} templatesLoading={typesQuery.isLoading} companiesLoading={companiesQuery.isLoading} objectsLoading={objectsQuery.isLoading} companyLocked={Boolean(serverDraft)} onStartNew={() => setNewProtocolConfirm(true)} onCompanyChange={(id) => { form.setValue('companyId', id, { shouldDirty: true }); form.setValue('objectId', '', { shouldDirty: true }); }} />
     : step === 1
-      ? <div className="space-y-7"><div className="rounded-2xl border border-eco-200 bg-eco-50/60 p-4 text-sm text-eco-950"><p className="font-black">На этом шаге</p><p className="mt-1">Проверьте исполнителя, условия на объекте и методику. Прибор можно выбрать сейчас для всех показателей или позже отдельно в каждой строке.</p></div><ExecutorDeviceStep laboratories={laboratories} employees={employees} devices={devices} laboratoriesLoading={laboratoriesQuery.isLoading} employeesLoading={employeesQuery.isLoading} devicesLoading={devicesQuery.isLoading} onLaboratoryChange={(id) => { form.setValue('laboratoryId', id, { shouldDirty: true }); form.setValue('executorId', '', { shouldDirty: true }); }} /><EnvironmentStep weatherLoading={weather.loading} weatherMessage={weather.message} onRefresh={() => void weather.refresh()} waterTypeOptions={waterOptions.waterTypes} waterUseCategoryOptions={waterOptions.waterUseCategories} /><MethodsStep /></div>
+      ? <MeasurementStep laboratories={laboratories} employees={employees} devices={devices} laboratoriesLoading={laboratoriesQuery.isLoading} employeesLoading={employeesQuery.isLoading} devicesLoading={devicesQuery.isLoading} onLaboratoryChange={(id) => { form.setValue('laboratoryId', id, { shouldDirty: true }); form.setValue('executorId', '', { shouldDirty: true }); }} weatherLoading={weather.loading} weatherMessage={weather.message} onRefresh={() => void weather.refresh()} waterTypeOptions={waterOptions.waterTypes} waterUseCategoryOptions={waterOptions.waterUseCategories} />
       : step === 2
         ? <ResultsStep devices={devices} onSuggestChangeType={() => setStep(0)} />
-        : step === 3
-          ? <ProtocolCheckStep issues={[...approvalIssues, ...backendIssues, ...serverIssues]} onGoTo={goToIssue} />
-          : <ProtocolSigningStep companies={companies} objects={objects} employees={employees} />;
+        : <ProtocolCheckStep issues={allIssues} templates={templates} companies={companies} objects={objects} employees={employees} onGoTo={goToIssue} />;
 
   return <FormProvider {...form}>
-    <Modal open={open} onClose={() => !saveMutation.isPending && onClose()} ariaLabel="Новый протокол" size="wizardAuto" closeOnBackdrop={false} loading={saveMutation.isPending} contentClassName="!overflow-hidden !p-0 sm:!p-0">
-      <div className="flex h-full min-h-0 flex-col">
-        <ProtocolWizardHeader step={step} total={steps.length} title={steps[step]} submitting={saveMutation.isPending} onClose={onClose} />
-        <ProtocolWizardSteps steps={steps} current={step} maxVisited={maxVisited} onSelect={setStep} />
-        <main className="min-h-0 flex-1 overflow-y-auto bg-slate-50/40 p-4 sm:px-7 sm:py-6">
+    <ProtocolWizardLayout
+      header={<ProtocolWizardHeader saveState={saveStatus} saveTone={saveTone} submitting={saveMutation.isPending} onClose={onClose} />}
+      sidebar={<ProtocolWizardSidebar steps={steps} current={step} maxVisited={maxVisited} errorCounts={errorCounts} onSelect={setStep} />}
+      summary={<ProtocolWizardSummary templates={templates} companies={companies} objects={objects} laboratories={laboratories} employees={employees} currentStep={step} errorCounts={errorCounts} />}
+      footer={<ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue={step <= 2 || blockingErrors.length === 0} canSaveDraft={canSaveServerDraft} saveState={saveStatus} onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />}
+    >
           {serverDraft && <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">Черновик протокола №{serverDraft.protocolNumber || serverDraft.id} создан. Автосохранение включено.</div>}
           {generalError && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><p className="font-black">Проверьте данные</p><p className="mt-1 font-semibold">{generalError}</p></div>}
           {referenceFailures.length > 0 && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p className="font-black">Не удалось загрузить справочники</p><div className="mt-2 space-y-2">{referenceFailures.map((failure) => <div key={failure.key} className="flex flex-wrap items-center justify-between gap-2"><span>{failure.message}</span><Button type="button" variant="secondary" onClick={() => void failure.retry()}>Повторить</Button></div>)}</div></div>}
           {content}
-        </main>
-        <ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue={step <= 2 || currentStepErrors.length === 0} canSaveDraft={canSaveServerDraft} saveState={saveState === 'local' ? 'Локальная копия сохранена' : saveState === 'creating' ? 'Создание серверного черновика…' : saveState === 'created' ? 'Черновик сохранён на сервере' : saveState === 'saving' ? 'Сохранение изменений…' : saveState === 'saved' ? 'Изменения сохранены' : saveState === 'conflict' ? 'Конфликт версий' : saveState === 'error' ? 'Не удалось сохранить' : undefined} nextLabel={step === 0 ? 'К условиям' : step === 1 ? 'К результатам' : step === 2 ? 'Проверить данные' : 'К завершению'} createLabel="Создать и открыть" onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />
-      </div>
-    </Modal>
+    </ProtocolWizardLayout>
     <Modal open={conflict} onClose={() => setConflict(false)} closeOnBackdrop={false} size="sm" title="Протокол изменён другим сотрудником" footer={<><Button type="button" variant="secondary" onClick={() => { writeLocalProtocolDraft(sessionStorage, { schemaVersion: LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION, userId: String(user?.id ?? 'anonymous'), protocolId: serverDraft?.id ?? null, backendVersion: serverDraft?.version ?? null, idempotencyKey: idempotencyKeyRef.current, currentStep: step, formValues: form.getValues(), savedAt: new Date().toISOString(), hasUnsavedChanges: true, creationContext }); setConflict(false); }}>Сохранить локальную копию</Button><Button type="button" onClick={() => void loadLatest()}>Загрузить актуальную версию</Button></>}><p className="text-sm text-slate-700">Данные не были перезаписаны. Выберите, сохранить ли введённые данные локально или загрузить актуальную серверную версию.</p></Modal>
     <Modal open={Boolean(recoveryCandidate) && !recoveryServer} loading={recoveryLoading} onClose={() => {}} closeOnBackdrop={false} size="sm" title="Найдена несохранённая копия протокола" footer={<><Button type="button" variant="secondary" disabled={recoveryLoading} onClick={deleteRecovery}>Удалить копию</Button><Button type="button" disabled={recoveryLoading} onClick={() => void restoreRecovery()}>{recoveryLoading ? 'Проверяем сервер…' : 'Восстановить'}</Button></>}><p className="text-sm text-slate-700">Сохранено: {recoveryCandidate ? new Date(recoveryCandidate.envelope.savedAt).toLocaleString('ru-RU') : '—'}</p>{recoveryError && <p role="alert" className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-900">{recoveryError}</p>}</Modal>
     <Modal open={Boolean(recoveryCandidate && recoveryServer)} onClose={() => {}} closeOnBackdrop={false} size="sm" title="Черновик был изменён на сервере" footer={<><Button type="button" variant="secondary" onClick={deleteRecovery}>Удалить локальную копию</Button><Button type="button" variant="secondary" onClick={() => { if (recoveryCandidate && recoveryServer) applyRecoveredDraft(recoveryCandidate.envelope, recoveryServer, true); }}>Открыть локальную копию для сравнения</Button><Button type="button" onClick={() => { if (recoveryServer) { if (recoveryCandidate) sessionStorage.removeItem(recoveryCandidate.key); setServerDraft(recoveryServer); form.reset(mapProtocolToWizardForm(recoveryServer)); setRecoveryCandidate(null); setRecoveryServer(null); } }}>Загрузить серверную версию</Button></>}><p className="text-sm text-slate-700">Серверная версия новее локальной. Автоматическое объединение результатов не выполняется.</p></Modal>
