@@ -13,7 +13,7 @@ import { ArticleAuthorCard, ArticleChecklist, ArticleOrganizationAuthorCard, Art
 import { normalizeArticleSlug } from '../content/articles/articleSlugs';
 import { publicContentRepository } from '../content/apiRepository';
 import type { ArticleContent } from '../content/types';
-import { articleRobotsForReviewStatus } from '../content/articleReview';
+import { isArticleApproved } from '../content/articleReview';
 import { AeoFaqList, RelatedCaseStudies, VerifiedExperts } from '../components/content/AeoContent';
 import { articleContentMap } from '../content/articles/articleContent';
 import { getArticleImage } from '../data/pageHeroImages';
@@ -62,7 +62,7 @@ const NewsDetailsPage = () => {
   const { data: apiExperts = [] } = useQuery({
     queryKey: ['public-content', 'experts'],
     queryFn: () => publicContentRepository.getExperts(),
-    initialData: import.meta.env.DEV ? experts : undefined,
+    initialData: experts,
     staleTime: 5 * 60 * 1000,
   });
   const item = apiContent ? toSeoArticle(apiContent) : undefined;
@@ -92,11 +92,11 @@ const NewsDetailsPage = () => {
   const heroImage = getArticleImage(item.id, item.image);
   const dates = normalizeArticleDates(item.datePublished, item.dateModified);
   const backendExpertMap = new Map(apiExperts.map((expert) => [expert.id, expert]));
+  const approved = isArticleApproved(articleContentMap.get(item.id));
   const authorCandidate = item.author ?? backendExpertMap.get(item.authorSlug) ?? expertMap.get(item.authorSlug);
   const reviewerCandidate = item.reviewer ?? (item.reviewerSlug ? backendExpertMap.get(item.reviewerSlug) ?? expertMap.get(item.reviewerSlug) : undefined);
   const author = isCompleteExpert(authorCandidate) ? authorCandidate : undefined;
-  const reviewer = isCompleteExpert(reviewerCandidate) ? reviewerCandidate : undefined;
-  const approved = item.reviewStatus === 'approved';
+  const reviewer = approved && isCompleteExpert(reviewerCandidate) ? reviewerCandidate : undefined;
   const authorId = approved && author ? entityIds(canonical).author : undefined;
   const reviewerId = approved && reviewer ? entityIds(canonical).reviewer : undefined;
   const schema = [
@@ -106,10 +106,13 @@ const NewsDetailsPage = () => {
     ...(reviewerId && reviewer ? [buildPersonSchema(reviewer, reviewerId)] : []),
     buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Статьи', url: `${company.siteUrl}/news` }, { name: item.h1, url: canonical }]),
   ];
+  const reviewedAtLabel = approved && item.lastReviewedAt
+    ? new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC' }).format(new Date(item.lastReviewedAt))
+    : undefined;
 
   return (
     <article className="bg-white">
-      <SEO title={`${item.title} | ECOPROGRESS`} description={item.description} canonical={canonical} robots={articleRobotsForReviewStatus(item.reviewStatus)} type="article" schema={schema} datePublished={dates.datePublished} dateModified={dates.dateModified} />
+      <SEO title={`${item.title} | ECOPROGRESS`} description={item.description} canonical={canonical} robots={approved ? 'index,follow' : 'noindex,follow'} type="article" schema={schema} datePublished={dates.datePublished} dateModified={dates.dateModified} />
       <section className="relative overflow-hidden px-5 py-24 text-white sm:px-8">
         <ResponsiveImage fill sizes="100vw" src={heroImage} alt={item.imageAlt} priority width={1600} height={900} className="object-cover" />
         <div className="absolute inset-0 bg-eco-900/78" />
@@ -165,9 +168,9 @@ const NewsDetailsPage = () => {
           <div className="grid gap-4 md:grid-cols-2">{author ? <ArticleAuthorCard expert={author} /> : <ArticleOrganizationAuthorCard />}<ArticleReviewerCard expert={reviewer} /></div>
           <div className="rounded-[22px] border border-slate-200 bg-white p-5 text-sm text-slate-600">
             <p>Дата публикации: <time dateTime={dates.datePublished}>{dates.datePublished}</time></p>
-            <p className="mt-2">Последняя экспертная проверка: {item.lastReviewedAt ? <time dateTime={item.lastReviewedAt}>{item.lastReviewedAt}</time> : 'не завершена'}</p>
+            <p className="mt-2">Последняя экспертная проверка: {approved && item.lastReviewedAt ? <time dateTime={item.lastReviewedAt}>{reviewedAtLabel}</time> : 'не завершена'}</p>
           </div>
-          <ContentLastUpdated date={dates.dateModified} requiresReview={item.reviewStatus !== 'approved'} />
+          <ContentLastUpdated date={dates.dateModified} requiresReview={!approved} />
           <VerifiedExperts />
           <RelatedCaseStudies service={item.relatedServiceSlugs[0]} />
         </div>

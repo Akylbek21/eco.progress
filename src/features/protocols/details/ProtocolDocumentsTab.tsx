@@ -32,7 +32,7 @@ const ProtocolDocumentsTab = ({
         <p className="mt-1 text-sm text-slate-500">Версия документа: {protocol.version}</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        {((protocol.status === 'SIGNED' && actions.previewSigned) || (protocol.status !== 'SIGNED' && actions.generatePreview)) && <button type="button" disabled={busy} onClick={onPreview} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold disabled:opacity-50">{protocol.status === 'SIGNED' ? 'Просмотр подписанного PDF' : 'Предварительный просмотр'}</button>}
+        {actions.preview && <button type="button" disabled={busy} onClick={onPreview} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold disabled:opacity-50">Предварительный просмотр</button>}
         {!protocol.hasDocx && actions.generateDocx && <button type="button" disabled={busy} onClick={onGenerateDocx} className="rounded-xl bg-eco-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Сгенерировать DOCX</button>}
         {protocol.hasDocx && actions.regenerateDocx && <button type="button" disabled={busy} onClick={onGenerateDocx} className="rounded-xl border border-eco-600 px-4 py-2 text-sm font-bold text-eco-700 disabled:opacity-50">Перегенерировать DOCX</button>}
         {!protocol.hasPdf && actions.generatePdf && <button type="button" disabled={busy} onClick={onGeneratePdf} className="rounded-xl bg-eco-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Сгенерировать PDF</button>}

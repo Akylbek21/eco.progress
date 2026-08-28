@@ -1,6 +1,6 @@
 import type { ArticleContent } from '../types';
 import { normalizeArticleSlug } from './articleSlugs.ts';
-import cmsSnapshot from '../../data/seoCmsSnapshot.generated.json' with { type: 'json' };
+import { articleReviewBySlug } from './articleReviews.ts';
 
 export { articleSlugAliases, normalizeArticleSlug } from './articleSlugs.ts';
 
@@ -50,22 +50,13 @@ const baseArticleContent: ArticleContent[] = [
   }),
 ];
 
-type ArticleReviewOverride = Pick<ArticleContent, 'slug' | 'reviewStatus'>
-  & Partial<Pick<ArticleContent, 'authorSlug' | 'reviewerSlug' | 'lastReviewedAt'>>;
-const articleReviewOverrides = new Map(
-  ((cmsSnapshot as { articleReviews?: ArticleReviewOverride[] }).articleReviews ?? [])
-    .map((item) => [item.slug, item] as const),
-);
-
 export const articleContent: ArticleContent[] = baseArticleContent.map((article) => {
-  const review = articleReviewOverrides.get(article.slug);
+  const review = articleReviewBySlug.get(article.slug);
   if (!review) return article;
   return {
     ...article,
-    reviewStatus: review.reviewStatus,
-    ...(review.authorSlug ? { authorSlug: review.authorSlug } : {}),
-    ...(review.reviewerSlug ? { reviewerSlug: review.reviewerSlug } : {}),
-    ...(review.lastReviewedAt ? { lastReviewedAt: review.lastReviewedAt } : {}),
+    reviewStatus: review.status,
+    ...(review.status === 'approved' ? { reviewerSlug: review.reviewerSlug, lastReviewedAt: review.reviewedAt } : {}),
   };
 });
 

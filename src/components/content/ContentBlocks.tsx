@@ -23,7 +23,7 @@ export const RelatedArticles = ({ slugs }: { slugs: string[] }) => {
   const { data: articles = [] } = useQuery({
     queryKey: ['public-content', 'articles'],
     queryFn: () => publicContentRepository.getArticles(),
-    initialData: import.meta.env.DEV ? articleContent : undefined,
+    initialData: articleContent,
     staleTime: 5 * 60 * 1000,
   });
   const articlesBySlug = new Map(articles.map((article) => [normalizeArticleSlug(article.slug), article]));

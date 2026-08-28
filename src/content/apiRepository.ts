@@ -1,6 +1,6 @@
 import { fetcher } from '../services/api';
 import { LocalContentRepository } from './repository';
-import type { ArticleContent, CaseStudy, ContentRepository, Expert, RegionContent, ServiceContent, TrustDocument } from './types';
+import type { ArticleContent, CaseStudy, CmsCaseDto, CmsExpertDto, ContentRepository, Expert, RegionContent, ServiceContent, TrustDocument } from './types';
 import { normalizeArticleSlug } from './articles/articleSlugs';
 import { normalizeServiceSlug } from './serviceCatalog';
 import { trackEvent } from '../services/analytics';
@@ -14,6 +14,14 @@ export type PublicContentSource = 'api' | 'cache' | 'fallback';
 
 const CACHE_PREFIX = 'ecoprogress_public_content_v1';
 const CACHE_TTL = 15 * 60 * 1000;
+
+const normalizeExpert = (item: Expert | CmsExpertDto): Expert => 'specializations' in item ? {
+  id: item.id, fullName: item.fullName, position: item.position,
+  specialization: item.specializations, experienceYears: item.experienceYears,
+  bio: item.bio, photo: item.photoUrl, profileUrl: item.profileUrl,
+  slug: item.profileUrl.split('/').filter(Boolean).slice(-1)[0] || item.id,
+  published: true, verificationStatus: item.verificationStatus, credentials: [],
+} : item;
 
 const readCache = <T>(collection: PublicCollection, allowStale = false): T[] | null => {
   if (typeof window === 'undefined') return null;
@@ -82,9 +90,23 @@ export class ApiContentRepository implements ContentRepository {
     const items = await this.getRegions();
     return items.find((item) => item.regionSlug === slug) ?? null;
   }
-  async getExperts() { return (await this.collection<Expert>('experts', () => this.devFallback!.getExperts())).filter(isCompleteExpert); }
+  async getExperts() {
+    return (await this.collection<Expert | CmsExpertDto>('experts', () => this.devFallback!.getExperts()))
+      .filter((item) => !('verificationStatus' in item) || item.verificationStatus === 'VERIFIED')
+      .map(normalizeExpert)
+      .filter(isCompleteExpert);
+  }
   getTrustDocuments() { return this.collection<TrustDocument>('trust-documents', () => this.devFallback!.getTrustDocuments()); }
-  async getCases() { return (await this.collection<CaseStudy>('cases', () => this.devFallback!.getCases())).filter(isPublishableCaseStudy); }
+  async getCases() {
+    const raw = await this.collection<CaseStudy | CmsCaseDto>('cases', () => this.devFallback!.getCases());
+    const expertMap = new Map((await this.getExperts()).map((expert) => [expert.id, expert]));
+    return raw.flatMap((item): CaseStudy[] => {
+      if (!('published' in item)) return [item];
+      const expert = expertMap.get(item.expertId);
+      if (!item.published || !expert) return [];
+      return [{ id: item.id, slug: item.slug, title: item.title, service: item.serviceType, industry: item.objectType, city: item.city, region: item.city, objectType: item.objectType, objectCategory: item.objectType, problem: item.task, initialData: item.description, workPerformed: [item.solution], regulations: [], result: item.result, completedAt: item.completedAt, expert, clientAnonymous: true, status: 'published', publishedAt: item.completedAt, updatedAt: item.updatedAt, duration: item.duration, images: item.images }];
+    }).filter(isPublishableCaseStudy);
+  }
   async getCaseBySlug(slug: string) {
     const items = await this.getCases();
     return items.find((item) => item.slug === slug) ?? null;

@@ -181,6 +181,22 @@ export function mapMeasurementToRequest(
   const normativeId = normalizePositiveId(row.normativeId)
     ?? normalizePositiveId(rowRecord.normativeRecordId);
   const manualNormative = row.normativeSource === 'MANUAL';
+  const comparisonType = manualNormative ? normalizeNullableText(row.comparisonType) : null;
+  const normativeValue = manualNormative
+    ? normalizeDecimal(row.normativeValue, `results.${index}.normativeValue`)
+    : null;
+  const normativeMin = manualNormative
+    ? normalizeDecimal(row.normativeMin, `results.${index}.normativeMin`)
+    : null;
+  const normativeMax = manualNormative
+    ? normalizeDecimal(row.normativeMax, `results.${index}.normativeMax`)
+    : null;
+  if (strict && manualNormative && comparisonType === 'RANGE' && (normativeMin === null || normativeMax === null)) {
+    throw new ProtocolWizardMappingError(`results.${index}.normativeMin`, 'Для диапазона укажите минимальное и максимальное значения');
+  }
+  if (strict && manualNormative && comparisonType !== 'RANGE' && normativeValue === null) {
+    throw new ProtocolWizardMappingError(`results.${index}.normativeValue`, 'Укажите нормативное значение');
+  }
 
   const measurementDeviceId = strict
     ? requirePositiveIntegerId(
@@ -213,9 +229,11 @@ export function mapMeasurementToRequest(
     unit: unit ?? undefined,
     measurementDeviceId: measurementDeviceId ?? undefined,
     normativeId,
-    normativeValue: manualNormative
-      ? normalizeDecimal(row.normativeValue, `results.${index}.normativeValue`) ?? undefined
-      : undefined,
+    normativeValue: normativeValue ?? undefined,
+    normativeMin: normativeMin ?? undefined,
+    normativeMax: normativeMax ?? undefined,
+    comparisonType: comparisonType ?? undefined,
+    manualNormativeReason: manualNormative ? normalizeNullableText(row.manualNormativeReason) ?? undefined : undefined,
     testingMethodNd: normalizeNullableText(row.testingMethodNd || row.methodDocument || form.testingMethodNd) ?? undefined,
     samplingMethodNd: normalizeNullableText(row.samplingMethodNd || form.samplingMethodNd) ?? undefined,
     values: compactValues({
@@ -235,11 +253,7 @@ export function mapMeasurementToRequest(
       formula: normalizeNullableText(row.formula) ?? undefined,
       note: normalizeNullableText(row.note) ?? undefined,
       normativeSource: row.normativeSource,
-      normativeMin: manualNormative ? normalizeDecimal(row.normativeMin, `results.${index}.normativeMin`) ?? undefined : undefined,
-      normativeMax: manualNormative ? normalizeDecimal(row.normativeMax, `results.${index}.normativeMax`) ?? undefined : undefined,
-      comparisonType: manualNormative ? normalizeNullableText(row.comparisonType) ?? undefined : undefined,
       normativeDocument: manualNormative ? normalizeNullableText(row.normativeDocument) ?? undefined : undefined,
-      manualNormativeReason: manualNormative ? normalizeNullableText(row.manualNormativeReason) ?? undefined : undefined,
     }),
   }) as ProtocolWizardMeasurementRequest | Partial<ProtocolWizardMeasurementRequest>;
 }

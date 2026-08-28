@@ -76,10 +76,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
     <div className="min-h-screen bg-[#F7FBFD] text-slate-900">
       <header className={`sticky top-0 z-40 border-b border-slate-200/70 bg-[#F8FCFE]/94 text-eco-900 backdrop-blur-2xl transition-all duration-300 before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-gradient-to-r before:from-transparent before:via-accent/80 before:to-transparent ${scrolled ? 'shadow-[0_12px_35px_-20px_rgba(2,28,57,0.4)]' : 'shadow-[0_1px_0_rgba(2,28,57,0.03)]'}`}>
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
-          <Link to={isKk ? '/kk' : '/'} className="group inline-flex shrink-0 items-center gap-2.5 text-eco-900" aria-label="ecoprogress.kz — главная">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-gradient-to-br from-eco-900 via-eco-700 to-eco-500 text-white shadow-[0_8px_20px_-10px_rgba(3,43,87,0.8)] transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-105">
-              <span className="eco-mascot text-[23px] leading-none" aria-hidden="true">🐝</span>
-            </span>
+          <Link to={isKk ? '/kk' : '/'} className="group inline-flex shrink-0 items-center text-eco-900" aria-label="ecoprogress.kz — главная">
             <span className="whitespace-nowrap text-[19px] font-extrabold leading-none tracking-[-0.035em]">
               eco<span className="text-eco-500">progress</span><span className="text-[14px] font-bold text-slate-500">.kz</span>
             </span>

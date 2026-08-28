@@ -14,7 +14,7 @@ export type ProtocolStatus =
 
 export const protocolActionKeys = [
   'view', 'edit', 'delete', 'calculate', 'checkNormatives', 'sendToApproval',
-  'returnForRevision', 'returnToDraft', 'approve', 'sign', 'generatePreview', 'previewSigned',
+  'returnForRevision', 'returnToDraft', 'approve', 'sign', 'preview',
   'generateDocx', 'generatePdf', 'regenerateDocx', 'regeneratePdf',
   'downloadDocx', 'downloadPdf', 'viewAudit', 'createCorrection', 'publish',
   'cancel', 'archive',
@@ -34,6 +34,8 @@ export type ProtocolWorkflowBlocker = {
   code: string;
   message: string;
   actions?: string[];
+  fieldPath?: string;
+  step?: number;
 };
 
 export type ProtocolResultValue = string | number | null | undefined | Array<string | number | null>;
@@ -459,6 +461,8 @@ export interface Protocol {
   availableActions: ProtocolAvailableActions;
   scope?: ProtocolAccessScope;
   canComplete?: boolean;
+  /** Canonical workflow blockers supplied by backend, grouped or flattened by action. */
+  actionBlockers?: ProtocolWorkflowBlocker[];
   blockingReasons?: ProtocolWorkflowBlocker[];
   publishedToClientAt?: string;
   publishedAt?: string;

@@ -90,6 +90,7 @@ describe('protocol wizard HTTP boundary', () => {
       pekControlItemId: 52,
       pekControlEventId: 53,
       monitoringPointId: 54,
+      programIndicatorId: null,
       emissionSourceId: 55,
       waterOutletId: 56,
     });
@@ -436,9 +437,12 @@ describe('protocol wizard validation and backend errors', () => {
       });
       const point = templateId === 'ambient_air' ? attachAmbientPoint(form) : null;
       if (templateId === 'water') Object.assign(form, { waterType: 'DRINKING_WATER', waterUseCategory: 'I' });
+      if (templateId === 'microclimate') Object.assign(form, { season: 'COLD', workCategory: 'IA', workplaceType: 'PERMANENT', roomType: 'PRODUCTION', normLevel: 'OPTIMAL' });
+      if (templateId === 'lighting') Object.assign(form, { roomType: 'PRODUCTION', workplaceType: 'PERMANENT', lightingType: 'COMBINED', visualWorkCategory: 'III', normLevel: 'MINIMUM' });
+      if (templateId === 'noise_vibration') Object.assign(form, { workplaceType: 'PERMANENT', roomType: 'PRODUCTION', noiseType: 'CONSTANT' });
       const chemical = ['ambient_air', 'workplace_air', 'soil', 'water'].includes(templateId);
       form.results = [{
-        ...emptyWizardResult(), indicatorName: 'Показатель', pollutantCode: chemical ? 'CODE' : '', factorType: chemical ? '' : 'FACTOR', samplingPointId: point?.clientPointId || '',
+        ...emptyWizardResult(), indicatorName: 'Показатель', pollutantCode: chemical ? 'CODE' : '', factorType: chemical ? '' : templateId === 'noise_vibration' ? 'NOISE' : templateId.toUpperCase(), samplingPointId: point?.clientPointId || '',
         value: '0', unit: 'ед.', measurementDeviceId: '7', normativeId: '9', normativeSource: 'DIRECTORY', normativeStatus: 'ACTIVE',
         sampleNumber: templateId === 'soil' || templateId === 'water' ? 'S-1' : '',
         samplingDepth: templateId === 'soil' ? '0.5' : '', samplingPlace: templateId === 'soil' || templateId === 'water' ? 'Точка 1' : '',

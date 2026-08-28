@@ -4,6 +4,7 @@ import ProtocolStatusBadge from './ProtocolStatusBadge';
 import type { Protocol } from '../../types/protocols';
 import { templateName } from '../../data/protocolTemplates';
 import { hasProtocolAction } from '../../features/protocols/utils/protocolActions';
+import { resolveProtocolPrimaryAction } from '../../features/protocols/details/protocolDetailsModel';
 
 type Props = {
   protocols: Protocol[];
@@ -23,20 +24,13 @@ const formatDate = (value?: string) => value && !Number.isNaN(new Date(value).ge
   ? new Date(value).toLocaleDateString('ru-RU')
   : '—';
 
-const primaryLabel = (protocol: Protocol) => {
-  if (hasProtocolAction(protocol, 'sign')) return 'Подписать ЭЦП';
-  if (hasProtocolAction(protocol, 'edit')) return 'Продолжить';
-  if (hasProtocolAction(protocol, 'downloadPdf')) return 'Скачать PDF';
-  if (hasProtocolAction(protocol, 'view')) return 'Открыть';
-  return '';
-};
-
 const ProtocolRowActions = ({ protocol, busy, onOpen, onHistory, onSign, onEdit, onDelete, onArchive, onReplace, onDownload }: {
   protocol: Protocol; busy: boolean; onOpen: Props['onOpen']; onSign: Props['onSign']; onEdit: Props['onEdit']; onDelete: Props['onDelete'];
   onHistory: Props['onHistory']; onArchive: Props['onArchive']; onReplace: Props['onReplace']; onDownload: Props['onDownload'];
 }) => {
   const [open, setOpen] = useState(false);
-  const primary = primaryLabel(protocol);
+  const resolvedPrimary = resolveProtocolPrimaryAction(protocol);
+  const primary = resolvedPrimary.label || (hasProtocolAction(protocol, 'view') ? 'Открыть' : '');
   const hasSecondary = [
     hasProtocolAction(protocol, 'edit'),
     hasProtocolAction(protocol, 'downloadPdf'), hasProtocolAction(protocol, 'downloadDocx'),
@@ -44,9 +38,9 @@ const ProtocolRowActions = ({ protocol, busy, onOpen, onHistory, onSign, onEdit,
     hasProtocolAction(protocol, 'delete'), hasProtocolAction(protocol, 'archive'),
   ].some(Boolean);
   const runPrimary = () => {
-    if (primary === 'Подписать ЭЦП') onSign(protocol);
-    else if (primary === 'Продолжить') onEdit(protocol);
-    else if (primary === 'Скачать PDF') onDownload(protocol, 'pdf');
+    if (resolvedPrimary.key === 'sign') onSign(protocol);
+    else if (resolvedPrimary.key === 'edit') onEdit(protocol);
+    else if (resolvedPrimary.key === 'pdf') onDownload(protocol, 'pdf');
     else if (hasProtocolAction(protocol, 'view')) onOpen(protocol);
   };
   if (!primary && !hasSecondary) return null;

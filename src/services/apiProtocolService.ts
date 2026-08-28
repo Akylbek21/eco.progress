@@ -877,7 +877,8 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     availableActions: normalizeProtocolAvailableActions(source.availableActions),
     scope: source.scope as ProtocolAccessScope | undefined,
     canComplete: source.canComplete === true,
-    blockingReasons: normalizeProtocolWorkflowBlockers(source.blockingReasons ?? source.workflowBlockers ?? source.blockers),
+    actionBlockers: normalizeProtocolWorkflowBlockers(source.actionBlockers ?? source.blockingReasons ?? source.workflowBlockers ?? source.blockers),
+    blockingReasons: normalizeProtocolWorkflowBlockers(source.actionBlockers ?? source.blockingReasons ?? source.workflowBlockers ?? source.blockers),
     publishedToClientAt: pick(source, ['publishedAt', 'publishedToClientAt', 'published_to_client_at']),
     publishedAt: pick(source, ['publishedAt', 'published_at', 'publishedToClientAt']),
     publishedBy: pick(source, ['publishedBy', 'published_by', 'publishedByName']),
@@ -1209,16 +1210,6 @@ export async function previewProtocol(protocolId: string): Promise<Blob> {
   }
 }
 
-/** Reads the immutable PDF persisted at signing time; this endpoint never renders a document. */
-export async function previewSignedProtocol(protocolId: string): Promise<Blob> {
-  try {
-    const response = await api.get<Blob>(`/protocols/${protocolId}/preview-signed`, { responseType: 'blob' });
-    return validateProtocolFileBlob(response.data, 'pdf');
-  } catch (error) {
-    throw await normalizeBlobError(error);
-  }
-}
-
 export async function generateDocx(protocolId: string, version: number): Promise<Protocol> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-docx`, { version: requireProtocolVersion(version) });
   return protocolFromActionResponse(protocolId, response);
@@ -1278,13 +1269,10 @@ const validateProtocolFileBlob = async (blob: Blob, kind: ProtocolDocumentFormat
     : new Blob([blob], { type: protocolFileMimeTypes[kind] });
 };
 
-/** The sole protocol download contract. Format is a backend query parameter, not a path alias. */
+/** Canonical protocol document downloads exposed by the backend contract. */
 export async function downloadProtocolDocument(protocolId: string, kind: ProtocolDocumentFormat): Promise<DownloadedProtocolFile> {
   try {
-    const response = await api.get<Blob>(`/protocols/${protocolId}/download`, {
-      params: { format: kind.toUpperCase() },
-      responseType: 'blob',
-    });
+    const response = await api.get<Blob>(`/protocols/${protocolId}/download-${kind}`, { responseType: 'blob' });
     return {
       blob: await validateProtocolFileBlob(response.data, kind),
       fileName: ensureFileExtension(getContentDispositionFileName(response.headers['content-disposition']), kind),
@@ -1527,6 +1515,9 @@ export async function getWeatherConditions(params: {
 }
 
 export async function calculateProtocol(protocolId: string, version: number): Promise<Protocol> {
-  await calculateProtocolSummary(protocolId, version);
-  return getProtocol(protocolId);
+  const response = await api.post<ApiResponse<unknown> | unknown>(
+    `/protocols/${protocolId}/calculate`,
+    { version: requireProtocolVersion(version) },
+  );
+  return protocolFromActionResponse(protocolId, response);
 }

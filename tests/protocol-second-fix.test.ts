@@ -44,10 +44,13 @@ describe('protocol role matrix v18', () => {
 });
 
 describe('server draft boundary and idempotency', () => {
-  it('requires a template and company before the modal starts a server draft', async () => {
+  it('creates a server draft only on step confirmation or explicit save', async () => {
     const source = await import('node:fs/promises').then((fs) => fs.readFile('src/features/protocols/components/CreateProtocolWizardModalV2.tsx', 'utf8'));
     expect(source).toContain('templateSelectionValid && companySelectionValid');
-    expect(source).toContain('objectSelectionValid');
+    expect(source).toContain('if (step === 0 && !serverDraft)');
+    expect(source).toContain('const saved = await save()');
+    expect(source).not.toContain('canAutoCreateDraft');
+    expect(source).not.toContain('}, 800)');
     expect(source).toContain('companyLocked={Boolean(serverDraft)}');
     expect(source).toContain("setSaveState('conflict')");
   });
@@ -144,12 +147,14 @@ describe('local protocol draft recovery', () => {
       schemaVersion: LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION, userId: '7', protocolId: null,
       backendVersion: null, idempotencyKey: 'stable-key', currentStep: 2, formValues: form,
       savedAt: new Date().toISOString(), hasUnsavedChanges: true,
+      creationContext: { orderId: '', orderServiceItemId: '', pekReportId: '', companyId: '10', objectId: '', source: 'PROTOCOLS' },
     });
     const restored = readLocalProtocolDraft(storage, key, '7');
     expect(restored).toMatchObject({ currentStep: 2, idempotencyKey: 'stable-key' });
     expect(restored?.formValues).toMatchObject({ workplaceType: 'PERMANENT' });
     expect(restored?.formValues.results[0].value).toBe('0');
-    expect(findLatestLocalProtocolDraft(storage, '7')?.key).toBe(key);
+    expect(findLatestLocalProtocolDraft(storage, '7', { companyId: '10' })?.key).toBe(key);
+    expect(findLatestLocalProtocolDraft(storage, '7', { companyId: '999' })).toBeNull();
   });
 
   it('ignores another user and an old schema', () => {
@@ -158,7 +163,7 @@ describe('local protocol draft recovery', () => {
     storage.setItem(key, JSON.stringify({ schemaVersion: LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION - 1, userId: '7' }));
     expect(readLocalProtocolDraft(storage, key, '7')).toBeNull();
     const form = createWizardDefaults();
-    writeLocalProtocolDraft(storage, { schemaVersion: LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION, userId: '8', protocolId: null, backendVersion: null, idempotencyKey: 'x', currentStep: 0, formValues: form, savedAt: new Date().toISOString(), hasUnsavedChanges: true });
+    writeLocalProtocolDraft(storage, { schemaVersion: LOCAL_PROTOCOL_DRAFT_SCHEMA_VERSION, userId: '8', protocolId: null, backendVersion: null, idempotencyKey: 'x', currentStep: 0, formValues: form, savedAt: new Date().toISOString(), hasUnsavedChanges: true, creationContext: { orderId: '', orderServiceItemId: '', pekReportId: '', companyId: '', objectId: '', source: 'PROTOCOLS' } });
     expect(findLatestLocalProtocolDraft(storage, '7')).toBeNull();
   });
 });

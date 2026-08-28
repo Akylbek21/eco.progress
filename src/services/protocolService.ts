@@ -74,7 +74,6 @@ export interface ProtocolService {
   cancelProtocol(protocolId: string, request: CancelProtocolRequest): Promise<Protocol>;
   archiveProtocol(protocolId: string, request: ProtocolVersionRequest): Promise<Protocol>;
   previewProtocol(protocolId: string): Promise<Blob>;
-  previewSignedProtocol(protocolId: string): Promise<Blob>;
   generateDocx(protocolId: string, version: number): Promise<Protocol>;
   generatePdf(protocolId: string, version: number): Promise<Protocol>;
   downloadProtocolDocument(protocolId: string, format: ProtocolDocumentFormat): Promise<DownloadedProtocolFile>;
@@ -137,7 +136,6 @@ const protocolService: ProtocolService = {
   cancelProtocol: async (protocolId, request) => (await implementation()).cancelProtocol(protocolId, request),
   archiveProtocol: async (protocolId, request) => (await implementation()).archiveProtocol(protocolId, request),
   previewProtocol: async (protocolId) => (await implementation()).previewProtocol(protocolId),
-  previewSignedProtocol: async (protocolId) => (await implementation()).previewSignedProtocol(protocolId),
   generateDocx: async (protocolId, version) => (await implementation()).generateDocx(protocolId, version),
   generatePdf: async (protocolId, version) => (await implementation()).generatePdf(protocolId, version),
   downloadProtocolDocument: async (protocolId, format) => (await implementation()).downloadProtocolDocument(protocolId, format),

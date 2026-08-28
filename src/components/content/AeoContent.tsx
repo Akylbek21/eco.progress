@@ -5,6 +5,8 @@ import type { AeoFaqItem, ServiceContent } from '../../content/types';
 import { publicContentRepository } from '../../content/apiRepository';
 import { isPublishableCaseStudy } from '../../content/cases/caseStudyPolicy';
 import { isCompleteExpert } from '../../content/experts/experts';
+import { experts as snapshotExperts } from '../../content/experts/experts';
+import { caseStudies } from '../../content/cases/caseStudies';
 import WhatsAppButton from '../WhatsAppButton';
 
 const card = 'rounded-[22px] border border-slate-200 bg-white p-6 shadow-sm';
@@ -36,6 +38,7 @@ export const RelatedCaseStudies = ({ service, city }: { service?: string; city?:
   const { data = [], isError } = useQuery({
     queryKey: ['public-content', 'cases'],
     queryFn: () => publicContentRepository.getCases(),
+    initialData: caseStudies,
     staleTime: 5 * 60 * 1000,
   });
   if (isError) return null;
@@ -54,6 +57,7 @@ export const VerifiedExperts = () => {
   const { data = [], isError } = useQuery({
     queryKey: ['public-content', 'experts'],
     queryFn: () => publicContentRepository.getExperts(),
+    initialData: snapshotExperts,
     staleTime: 5 * 60 * 1000,
   });
   const experts = data.filter(isCompleteExpert).slice(0, 3);

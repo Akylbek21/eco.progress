@@ -6,6 +6,8 @@ import { canonicalForPublicPath, robotsForPublicPage } from '../src/seo/indexing
 import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, buildServiceEntity, entityIds } from '../src/seo/entityBuilders.ts';
 import { expertMap, experts, isCompleteExpert } from '../src/content/experts/experts.ts';
 import { caseStudies } from '../src/content/cases/caseStudies.ts';
+import { articleContentMap } from '../src/content/articles/articleContent.ts';
+import { isArticleApproved } from '../src/content/articleReview.ts';
 import { isPublishableCaseStudy } from '../src/content/cases/caseStudyPolicy.ts';
 import { alternatePathFor, localePairForPath } from '../src/seo/localeRoutePairs.ts';
 import { sitemapEligibilityErrors } from '../src/seo/sitemapPolicy.ts';
@@ -35,7 +37,7 @@ const verifiedCases = caseStudies.filter(isPublishableCaseStudy);
 const pageSource = (routePath) => {
   if (routePath === '/') return 'src/pages/HomePage.tsx';
   const names = {
-    '/about': 'AboutPage.tsx', '/contacts': 'ContactsPage.tsx', '/employees': 'EmployeesPage.tsx',
+    '/about': 'AboutPage.tsx', '/contacts': 'ContactsPage.tsx', '/employees': 'EmployeesPage.tsx', '/experts': 'EmployeesPage.tsx',
     '/faq': 'FaqPage.tsx', '/news': 'NewsPage.tsx', '/partners': 'PartnersPage.tsx',
     '/regions': 'RegionsPage.tsx', '/services': 'ServicesPage.tsx', '/tariffs': 'TariffsPage.tsx',
   };
@@ -63,8 +65,9 @@ const schemasFor = (source) => {
     schemas.push(buildServiceEntity({ canonical, name: h1, serviceType: service || h1, description, areaServed: cityNominative || city || (locale === 'kk' ? 'Қазақстан' : 'Казахстан'), image, expertIds: expertNodes.map((node) => node['@id']), caseUrls }), ...expertNodes);
   }
   if (type === 'article' && pathName !== '/news') {
-    const author = source.reviewStatus === 'approved' ? expertMap.get(source.authorSlug) : undefined;
-    const reviewer = source.reviewStatus === 'approved' ? expertMap.get(source.reviewerSlug) : undefined;
+    const approved = isArticleApproved(articleContentMap.get(pathName.replace(/^\/news\//, '')));
+    const author = approved ? expertMap.get(source.authorSlug) : undefined;
+    const reviewer = approved ? expertMap.get(source.reviewerSlug) : undefined;
     const ids = entityIds(canonical);
     const caseUrls = verifiedCases.filter((item) => source.relatedServiceSlugs?.includes(item.service)).map((item) => `${SITE_URL}/cases/${item.slug}`);
     schemas.push(buildArticleSchema({ canonical, headline: h1, description, image: image || OG_IMAGE, datePublished, dateModified, authorId: isCompleteExpert(author) ? ids.author : undefined, reviewerId: isCompleteExpert(reviewer) ? ids.reviewer : undefined, caseUrls }));
@@ -116,7 +119,7 @@ const normalizeEntry = (source) => {
     ogImageWidth: 1200,
     ogImageHeight: 630,
     twitterCard: 'summary_large_image',
-    schema: schemasFor({ ...source, locale, canonical, image: ogImage, dateModified: lastModified }),
+    schema: source.schema || schemasFor({ ...source, locale, canonical, image: ogImage, dateModified: lastModified }),
     includeInSitemap: robots === 'index,follow',
     priority: source.priority ?? 0.7,
     changeFrequency: source.changefreq || 'monthly',
@@ -129,8 +132,49 @@ const registry = [
   ...seoPages.map((page) => normalizeEntry({ ...page, path: `/${page.slug}` })),
   ...seoArticles.map((article) => normalizeEntry({
     ...article, path: article.slug, title: `${article.title} | ECOPROGRESS`,
-    type: 'article', priority: 0.7, changefreq: 'weekly', lastModified: article.dateModified,
+    type: 'article', indexable: isArticleApproved(articleContentMap.get(article.slug.replace(/^\/news\//, ''))),
+    priority: 0.7, changefreq: 'weekly', lastModified: article.dateModified,
   })),
+  ...verifiedCases.map((item) => {
+    const pathName = `/cases/${item.slug}`;
+    const canonical = canonicalForPublicPath(pathName);
+    const ids = entityIds(canonical);
+    return normalizeEntry({
+      path: pathName,
+      title: `${item.title} | ECOPROGRESS`,
+      h1: item.title,
+      description: item.problem,
+      type: 'case',
+      priority: 0.7,
+      changefreq: 'monthly',
+      lastModified: item.updatedAt,
+      schema: [
+        ...buildCorePageEntities({ canonical, name: item.title, description: item.problem, dateModified: item.updatedAt }),
+        buildArticleSchema({ canonical, headline: item.title, description: item.problem, image: OG_IMAGE, datePublished: item.publishedAt, dateModified: item.updatedAt, authorId: ids.author }),
+        buildPersonSchema(item.expert, ids.author),
+        buildBreadcrumbSchema([{ name: 'Главная', url: SITE_URL }, { name: 'Кейсы', url: `${SITE_URL}/cases` }, { name: item.title, url: canonical }]),
+      ],
+    });
+  }),
+  ...verifiedExperts.flatMap((expert) => {
+    const profile = new URL(expert.profileUrl, SITE_URL);
+    if (profile.origin !== SITE_URL || !profile.pathname.startsWith('/experts/')) return [];
+    const canonical = profile.toString();
+    return [normalizeEntry({
+      path: profile.pathname,
+      title: `${expert.fullName} — эксперт ECOPROGRESS`,
+      h1: expert.fullName,
+      description: `${expert.fullName}: подтверждённое обучение и компетенции — ${expert.specialization.join(', ')}.`,
+      type: 'expert',
+      priority: 0.6,
+      changefreq: 'monthly',
+      schema: [
+        ...buildCorePageEntities({ canonical, name: expert.fullName, description: `${expert.fullName}: подтверждённое обучение и компетенции.` }),
+        buildPersonSchema(expert, `${canonical}#person`),
+        buildBreadcrumbSchema([{ name: 'Главная', url: SITE_URL }, { name: 'Эксперты', url: `${SITE_URL}/experts` }, { name: expert.fullName, url: canonical }]),
+      ],
+    })];
+  }),
 ];
 
 const duplicatePaths = registry.filter((entry, index) => registry.findIndex((item) => item.path === entry.path) !== index);

@@ -40,7 +40,7 @@ describe('simplified protocol details', () => {
     expect(resolveProtocolPrimaryAction(protocol('READY_FOR_APPROVAL'), 'LABORATORY').key).toBeNull();
     expect(resolveProtocolPrimaryAction(protocol('CALCULATED', { availableActions: { sendToApproval: true } }), 'LABORATORY')).toEqual({ key: 'ready', label: 'Отправить на утверждение' });
     expect(resolveProtocolPrimaryAction(protocol('READY_FOR_APPROVAL', { availableActions: { approve: true } }), 'DIRECTOR')).toEqual({ key: 'approve', label: 'Утвердить' });
-    expect(resolveProtocolPrimaryAction(protocol('APPROVED', { availableActions: { sign: true } }), 'LABORATORY')).toEqual({ key: 'sign', label: 'Подписать ЭЦП' });
+    expect(resolveProtocolPrimaryAction(protocol('APPROVED', { availableActions: { sign: true } }), 'LABORATORY')).toEqual({ key: 'sign', label: 'Подписать' });
   });
 
   it('maps the lifecycle to five employee-facing stages', () => {

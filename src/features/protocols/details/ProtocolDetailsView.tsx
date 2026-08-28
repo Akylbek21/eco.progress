@@ -49,7 +49,7 @@ const baseTabs: Array<{ key: ProtocolDetailsTab; label: string }> = [
   { key: 'history', label: 'История' },
 ];
 
-const ProtocolDetailsView = ({ protocol, actions, missing, workflowErrors, busy, signing, onBack, onEdit, onCalculate, onCheckNormatives, onReady, onApprove, onSign, onPublish, onPreview, onGenerateDocx, onGeneratePdf, onDocx, onPdf, onCorrection, onReturnForRevision, onCancel, onArchive, onReplacement, initialTab = 'results' }: Props) => {
+const ProtocolDetailsView = ({ protocol, actions, missing: _missing, workflowErrors, busy, signing, onBack, onEdit, onCalculate, onCheckNormatives, onReady, onApprove, onSign, onPublish, onPreview, onGenerateDocx, onGeneratePdf, onDocx, onPdf, onCorrection, onReturnForRevision, onCancel, onArchive, onReplacement, initialTab = 'results' }: Props) => {
   const [activeTab, setActiveTab] = useState<ProtocolDetailsTab>(initialTab);
   const tabs = actions.viewAudit ? baseTabs : baseTabs.filter((tab) => tab.key !== 'history');
   useEffect(() => {
@@ -66,10 +66,9 @@ const ProtocolDetailsView = ({ protocol, actions, missing, workflowErrors, busy,
   const primaryBlocked = primaryBlockers.length > 0;
   const signBlocked = protocolTransitionBlockers(protocol, 'sign').length > 0;
   const effectiveActions = signBlocked ? { ...actions, sign: false } : actions;
-  const nextStepMissing = Array.from(new Set([
-    ...missing.map((item) => item.label),
-    ...(protocol.blockingReasons || []).map((item) => item.message.trim()).filter(Boolean),
-  ])).map((label) => ({ label }));
+  const nextStepMissing = Array.from(new Set(
+    (protocol.actionBlockers || protocol.blockingReasons || []).map((item) => item.message.trim()).filter(Boolean),
+  )).map((label) => ({ label }));
   const runPrimary = () => {
     if (primary.key === 'edit') onEdit('results');
     else if (primary.key === 'calculate') onCalculate();
@@ -90,15 +89,8 @@ const ProtocolDetailsView = ({ protocol, actions, missing, workflowErrors, busy,
       <ProtocolContextLinks protocol={protocol} />
       <ProtocolImmutableBanner protocol={protocol} />
       <ProtocolSignaturesCard protocol={protocol} actions={effectiveActions} signing={signing} onSign={onSign} />
-      {actions.publish && (
-        <div className="flex justify-end">
-          <button type="button" disabled={busy} onClick={onPublish} className="min-h-11 rounded-xl bg-eco-600 px-4 text-sm font-bold text-white disabled:opacity-50">
-            Опубликовать для клиента
-          </button>
-        </div>
-      )}
       {workflowErrors.length > 0 && <section role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4"><h2 className="font-black text-rose-900">Не удалось выполнить действие</h2><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-rose-800">{workflowErrors.map((item) => <li key={item}>{item}</li>)}</ul></section>}
-      {allTransitionBlockers.length > 0 && <section role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><h2 className="font-black text-amber-900">Действие заблокировано backend</h2><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-800">{allTransitionBlockers.map((item) => <li key={item.code}>{item.message}</li>)}</ul></section>}
+      {allTransitionBlockers.length > 0 && <section role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><h2 className="font-black text-amber-900">Действие заблокировано backend</h2><ul className="mt-2 space-y-2 text-sm text-amber-800">{allTransitionBlockers.map((item, index) => <li key={`${item.code}-${index}`} className="flex flex-wrap items-center justify-between gap-2"><span>{item.message}</span>{actions.edit && (item.fieldPath || item.step !== undefined) && <button type="button" className="font-bold underline" onClick={() => onEdit(item.fieldPath?.startsWith('results') ? 'results' : item.fieldPath?.match(/method/i) ? 'methods' : 'general')}>Перейти к полю</button>}</li>)}</ul></section>}
       <nav aria-label="Разделы протокола" className="overflow-x-auto border-b border-slate-200">
         <div className="flex min-w-max gap-1">{tabs.map((tab) => <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)} className={`border-b-2 px-4 py-3 text-sm font-bold ${activeTab === tab.key ? 'border-eco-600 text-eco-800' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{tab.label}</button>)}</div>
       </nav>

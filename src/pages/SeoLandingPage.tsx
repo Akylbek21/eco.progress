@@ -14,7 +14,8 @@ import { ArticleAuthorCard, ArticleOrganizationAuthorCard, ArticleReviewerCard, 
 import { expertMap, experts, isCompleteExpert } from '../content/experts/experts';
 import type { CaseStudy, Expert } from '../content/types';
 import { publicContentRepository } from '../content/apiRepository';
-import { articleRobotsForReviewStatus } from '../content/articleReview';
+import { isArticleApproved } from '../content/articleReview';
+import { articleContentMap } from '../content/articles/articleContent';
 import { AeoFaqList, RelatedCaseStudies, VerifiedExperts } from '../components/content/AeoContent';
 import { GENERAL_PRIMARY_CTA_LABEL } from '../content/serviceCatalog';
 import { regions } from '../content/regions';
@@ -93,11 +94,12 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
   const reviewerCandidate = page.reviewer ?? (page.reviewerSlug ? backendExpertMap.get(page.reviewerSlug) ?? expertMap.get(page.reviewerSlug) : undefined);
   const articleAuthor = isCompleteExpert(authorCandidate) ? authorCandidate : undefined;
   const articleReviewer = isCompleteExpert(reviewerCandidate) ? reviewerCandidate : undefined;
-  const approvedArticleAuthor = page.reviewStatus === 'approved' ? articleAuthor : undefined;
-  const approvedArticleReviewer = page.reviewStatus === 'approved' ? articleReviewer : undefined;
+  const approved = page.type === 'article' && isArticleApproved(articleContentMap.get(page.slug.replace(/^news\//, '')));
+  const approvedArticleAuthor = approved ? articleAuthor : undefined;
+  const approvedArticleReviewer = approved ? articleReviewer : undefined;
   const relatedCases = apiCases.filter((item) => (!page.serviceSlug || item.service === page.serviceSlug) && (!page.cityNominative || item.city === page.cityNominative));
   const robots = page.type === 'article'
-    ? articleRobotsForReviewStatus(page.reviewStatus)
+    ? approved ? 'index,follow' : 'noindex,follow'
     : page.indexable === false ? 'noindex,follow' : 'index,follow';
   const startText = isKk
     ? 'Нысан мен қолда бар құжаттарды тексеріп, қызметтің қолданылуын, жұмыс құрамын, мерзімін және нысанға шығу қажеттілігін түсіндіреміз.'

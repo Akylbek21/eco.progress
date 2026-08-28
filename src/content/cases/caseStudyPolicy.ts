@@ -9,8 +9,8 @@ export const isPublishableCaseStudy = (item: CaseStudy): boolean => {
     && Boolean(item.publishedAt)
     && requiredText.every((value) => Boolean(value?.trim()) && !containsPlaceholder(value))
     && item.workPerformed.length > 0
-    && item.regulations.length > 0
+    && item.workPerformed.every((value) => Boolean(value.trim()) && !containsPlaceholder(value))
     && isCompleteExpert(item.expert)
-    && isCompleteExpert(item.reviewer)
+    && (!item.reviewer || isCompleteExpert(item.reviewer))
     && (item.clientAnonymous || Boolean(item.clientName?.trim()));
 };

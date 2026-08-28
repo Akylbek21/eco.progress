@@ -14,6 +14,8 @@ describe('saved protocol normative recognition', () => {
   it('requires a reason only for an explicitly manual normative', () => {
     expect(hasUsableProtocolResultNormative(row({ normativeSource: 'MANUAL', normativeValue: 1 }), '2026-08-13')).toBe(false);
     expect(hasUsableProtocolResultNormative(row({ normativeSource: 'MANUAL', normativeValue: 1, manualNormativeReason: 'Нет записи в справочнике' }), '2026-08-13')).toBe(true);
+    expect(hasUsableProtocolResultNormative(row({ normativeSource: 'MANUAL', comparisonType: 'RANGE', normativeValue: null, normativeMin: 1, normativeMax: 2, manualNormativeReason: 'Нет записи в справочнике' }), '2026-08-13')).toBe(true);
+    expect(hasUsableProtocolResultNormative(row({ normativeSource: 'MANUAL', comparisonType: 'RANGE', normativeMin: 1, manualNormativeReason: 'Нет записи в справочнике' }), '2026-08-13')).toBe(false);
   });
 
   it('rejects an explicitly inactive directory normative', () => {

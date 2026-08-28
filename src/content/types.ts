@@ -155,12 +155,69 @@ export interface RegionContent {
 export interface Expert {
   id: string;
   fullName: string;
-  position: string;
+  slug: string;
+  published: boolean;
+  verificationStatus: 'VERIFIED' | 'PENDING' | 'REJECTED';
+  position?: string;
   specialization: string[];
+  experienceYears?: number;
+  bio?: string;
+  photo?: string;
+  profileUrl: string;
+  credentials: ExpertCredential[];
+}
+
+export interface ExpertCredential {
+  title: string;
+  document: string;
+  issuedBy: string;
+  date: string;
+  hours?: number;
+  number?: string;
+  location?: string;
+}
+
+export interface CmsExpertDto {
+  id: string;
+  fullName: string;
+  position: string;
+  specializations: string[];
   experienceYears: number;
   bio: string;
-  photo: string;
+  photoUrl: string;
   profileUrl: string;
+  verificationStatus: 'VERIFIED';
+  verifiedAt: string;
+  updatedAt: string;
+}
+
+export interface CmsCaseDto {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  city: string;
+  objectType: string;
+  serviceType: string;
+  task: string;
+  solution: string;
+  result: string;
+  duration: string;
+  completedAt: string;
+  expertId: string;
+  images: string[];
+  published: true;
+  updatedAt: string;
+}
+
+export interface CmsArticleReviewDto {
+  articleSlug: string;
+  expertId: string;
+  status: 'REQUIRES_REVIEW' | 'APPROVED' | 'REJECTED';
+  reviewedAt?: string;
+  regulationVersion?: string;
+  comment?: string;
+  updatedAt: string;
 }
 
 export type ExpertProfile = Expert;
@@ -188,12 +245,14 @@ export interface CaseStudy {
   result: string;
   completedAt: string;
   expert: Expert;
-  reviewer: Expert;
+  reviewer?: Expert;
   clientName?: string;
   clientAnonymous: boolean;
   status: 'draft' | 'review' | 'approved' | 'published' | 'rejected' | 'archived';
   publishedAt?: string;
   updatedAt: string;
+  duration?: string;
+  images?: string[];
 }
 
 export interface ContentRepository {

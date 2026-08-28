@@ -6,6 +6,7 @@ import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { company } from '../config/company';
 import { publicContentRepository } from '../content/apiRepository';
 import { isPublishableCaseStudy } from '../content/cases/caseStudyPolicy';
+import { caseStudies } from '../content/cases/caseStudies';
 import { pageHeroImages } from '../data/pageHeroImages';
 import { buildBreadcrumbSchema, buildCorePageEntities } from '../seo/entityBuilders';
 
@@ -13,6 +14,7 @@ const CasesPage = () => {
   const { data = [], isLoading, isError } = useQuery({
     queryKey: ['public-content', 'cases'],
     queryFn: () => publicContentRepository.getCases(),
+    initialData: caseStudies,
     staleTime: 5 * 60 * 1000,
   });
   const cases = data.filter(isPublishableCaseStudy);

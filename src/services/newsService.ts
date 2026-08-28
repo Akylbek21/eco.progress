@@ -1,32 +1,9 @@
 import type { NewsItem } from '../types';
 import type { ArticleContent } from '../content/types';
-import { trackEvent } from './analytics';
-import { publicContentRepository } from '../content/apiRepository';
+import { articleContent } from '../content/articles/articleContent';
 
 export type NewsSource = 'api' | 'fallback';
 export interface NewsResult { items: NewsItem[]; source: NewsSource; stale: boolean }
-
-const getDevFallbackNews = async (): Promise<NewsItem[]> => {
-  if (!import.meta.env.DEV) return [];
-  const { seoArticles } = await import('../data/seoArticles');
-  return seoArticles.map((article) => ({
-    id: article.id,
-    title: article.title,
-    excerpt: article.excerpt,
-    category: article.category,
-    date: article.datePublished,
-    image: article.image,
-    content: article.sections.map((section) => `${section.title}. ${section.body}`),
-  }));
-};
-
-const logApiError = (error: unknown) => {
-  if (!import.meta.env.DEV) return;
-  const status = typeof error === 'object' && error !== null && 'response' in error
-    ? (error as { response?: { status?: number } }).response?.status
-    : undefined;
-  console.info(`[news] API update failed${status ? ` (HTTP ${status})` : ''}.`, error);
-};
 
 const articleToNewsItem = (article: ArticleContent): NewsItem => ({
   id: article.slug,
@@ -38,29 +15,19 @@ const articleToNewsItem = (article: ArticleContent): NewsItem => ({
   content: article.sections.flatMap((section) => [section.title, ...section.paragraphs]),
 });
 
+export const prerenderNewsResult: NewsResult = {
+  items: articleContent.filter((article) => article.status === 'published').map(articleToNewsItem),
+  source: 'fallback',
+  stale: false,
+};
+
 export const getNewsResult = async (): Promise<NewsResult> => {
-  try {
-    const items = await publicContentRepository.getArticles();
-    if (Array.isArray(items)) return { items: items.map(articleToNewsItem), source: 'api', stale: false };
-    throw new Error('News API returned an invalid payload.');
-  } catch (error) {
-    if (!import.meta.env.DEV) throw error;
-    logApiError(error);
-    trackEvent('content_fallback_usage', { collection: 'articles' });
-    return { items: await getDevFallbackNews(), source: 'fallback', stale: true };
-  }
+  return prerenderNewsResult;
 };
 
 export const getNews = async (): Promise<NewsItem[]> => (await getNewsResult()).items;
 
 export const getNewsById = async (id: string): Promise<NewsItem | undefined> => {
-  try {
-    const article = await publicContentRepository.getArticleBySlug(id);
-    return article ? articleToNewsItem(article) : undefined;
-  } catch (error) {
-    if (!import.meta.env.DEV) throw error;
-    logApiError(error);
-    trackEvent('content_fallback_usage', { collection: 'article', slug: id });
-    return (await getDevFallbackNews()).find((item) => item.id === id);
-  }
+  const article = articleContent.find((item) => item.slug === id);
+  return article ? articleToNewsItem(article) : undefined;
 };

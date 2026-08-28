@@ -26,6 +26,7 @@ const ServicesPage = lazy(publicRouteLoaders.services);
 const SeoLandingPage = lazy(() => import('./pages/SeoLandingPage'));
 const ServiceRoutePage = lazy(() => import('./pages/ServiceRoutePage'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
+const ExpertDetailsPage = lazy(() => import('./pages/ExpertDetailsPage'));
 const PartnersPage = lazy(() => import('./pages/PartnersPage'));
 const TariffsPage = lazy(() => import('./pages/TariffsPage'));
 const NewsPage = lazy(publicRouteLoaders.news);
@@ -137,7 +138,7 @@ const ForbiddenPage = ({ message = 'У вашей роли нет прав дл�
   </div>
 );
 
-const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/partners', '/news', '/cases', '/faq', '/contacts'];
+const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/experts', '/partners', '/news', '/cases', '/faq', '/contacts'];
 
 const RouteFallback = () => {
   const { pathname } = useLocation();
@@ -208,6 +209,8 @@ function App() {
         <Route path="/services/:id" element={<PublicLayout><ServiceRoutePage /></PublicLayout>} />
         <Route path="/tariffs" element={<PublicLayout><TariffsPage /></PublicLayout>} />
         <Route path="/employees" element={<PublicLayout><EmployeesPage /></PublicLayout>} />
+        <Route path="/experts" element={<PublicLayout><EmployeesPage /></PublicLayout>} />
+        <Route path="/experts/:id" element={<PublicLayout><ExpertDetailsPage /></PublicLayout>} />
         <Route path="/partners" element={<PublicLayout><PartnersPage /></PublicLayout>} />
         <Route path="/news" element={<PublicLayout><NewsPage /></PublicLayout>} />
         <Route path="/news/:id" element={<PublicLayout><NewsDetailsPage /></PublicLayout>} />

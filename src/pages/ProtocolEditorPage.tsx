@@ -923,10 +923,10 @@ const ProtocolEditorPage = () => {
       const saved = await save();
       if (!saved) return;
     }
-    await run(async (latest) => {
-      await protocolService.checkNormatives(latest.id, latest.version);
-      return protocolService.getProtocol(latest.id);
-    }, 'Расчёт выполнен');
+    await run(
+      (latest) => protocolService.checkNormatives(latest.id, latest.version),
+      'Проверка нормативов выполнена',
+    );
   };
 
   const calculateProtocolResults = async () => {
@@ -947,24 +947,10 @@ const ProtocolEditorPage = () => {
       if (!saved) return;
       current = saved;
     }
-    setBusy(true);
-    try {
-      const summary = await protocolService.calculateProtocolSummary(current.id, current.version);
-      const updated = await protocolService.getProtocol(current.id);
-      applyServerProtocol(updated);
-      toast.success(
-        'Результаты сохранены',
-        `Всего: ${summary.total}; рассчитано: ${summary.calculated}; ручной ввод: ${summary.manual}; ошибки: ${summary.errors}; повторный анализ: ${summary.needsRepeat}; не соответствует: ${summary.exceeded}`,
-      );
-    } catch (calculationError) {
-      if (isProtocolVersionConflict(calculationError)) {
-        setConflictLatest(null);
-        setConflictOpen(true);
-        toast.warning(protocolVersionConflictMessage);
-      } else toast.error('Не удалось рассчитать результаты', getApiErrorMessage(calculationError, 'Не удалось рассчитать результаты'));
-    } finally {
-      setBusy(false);
-    }
+    await run(
+      (latest) => protocolService.calculateProtocol(latest.id, latest.version),
+      'Результаты рассчитаны',
+    );
   };
 
   const refreshWeather = async (selection: { objectId: string; date: string; time: string; signal?: AbortSignal }): Promise<WeatherConditions | void> => {
@@ -1053,20 +1039,18 @@ const ProtocolEditorPage = () => {
 
   const preview = async () => {
     const snapshot = protocolRef.current;
-    const current = snapshot?.status === 'SIGNED'
-      ? snapshot
-      : await ensureSavedProtocol('Сначала сохраняю изменения, затем открываю предпросмотр.');
+    const current = snapshot && hasProtocolAction(snapshot, 'edit')
+      ? await ensureSavedProtocol('Сначала сохраняю изменения, затем открываю предпросмотр.')
+      : snapshot;
     if (!current) return;
-    if (current.status === 'SIGNED' && !hasProtocolAction(current, 'previewSigned')) {
-      toast.warning('Просмотр подписанного PDF недоступен');
+    if (!hasProtocolAction(current, 'preview')) {
+      toast.warning('Предварительный просмотр недоступен');
       return;
     }
     setPreviewOpen(true);
     setPreviewLoading(true);
     try {
-      const blob = current.status === 'SIGNED'
-        ? await protocolService.previewSignedProtocol(current.id)
-        : await protocolService.previewProtocol(current.id);
+      const blob = await protocolService.previewProtocol(current.id);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(blob));
     } catch (previewError) {

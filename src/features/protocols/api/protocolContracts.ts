@@ -176,6 +176,7 @@ export interface ProtocolsQueryRequest {
   search?: string;
   status?: string;
   templateId?: string;
+  subtype?: string;
   companyId?: number;
   objectId?: number;
   laboratoryId?: number;
@@ -199,6 +200,10 @@ export interface ProtocolWizardMeasurementRequest {
   deviceId?: number;
   normativeId?: number;
   normativeValue?: number;
+  normativeMin?: number;
+  normativeMax?: number;
+  comparisonType?: string;
+  manualNormativeReason?: string;
   testingMethodNd?: string;
   samplingMethodNd?: string;
   samplingPlace?: string;

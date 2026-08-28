@@ -18,7 +18,7 @@ describe('protocol backend actions and optimistic-lock contracts', () => {
   it('defines one canonical action contract and rejects removed aggregate flags', () => {
     expect(protocolActionKeys).toEqual(expect.arrayContaining([
       'view', 'edit', 'delete', 'calculate', 'checkNormatives', 'sendToApproval',
-      'returnForRevision', 'returnToDraft', 'approve', 'sign', 'generateDocx', 'generatePdf',
+      'returnForRevision', 'returnToDraft', 'approve', 'sign', 'preview', 'generateDocx', 'generatePdf',
       'regenerateDocx', 'regeneratePdf', 'downloadDocx', 'downloadPdf', 'viewAudit',
       'createCorrection', 'publish', 'cancel', 'archive',
     ]));
@@ -131,15 +131,20 @@ describe('protocol backend actions and optimistic-lock contracts', () => {
     expect(results).toContain('window.confirm(`${protocolVersionConflictMessage}\\nПерезагрузить данные?`)');
   });
 
-  it('returns an approved protocol through a versioned server transition and never renders SIGNED preview', () => {
+  it('returns an approved protocol through a versioned transition and uses one canonical preview', () => {
     const editor = source('src/pages/ProtocolEditorPage.tsx');
     const api = source('src/services/apiProtocolService.ts');
     const signing = source('src/features/protocols/hooks/useSignProtocolMutation.ts');
     expect(editor).toContain("hasProtocolAction(current, 'returnToDraft')");
     expect(editor).toContain('protocolService.returnToDraft(current.id, request)');
     expect(api).toContain('`/protocols/${protocolId}/return-to-draft`');
-    expect(editor).toMatch(/current\.status === 'SIGNED'\s*\?\s*await protocolService\.previewSignedProtocol/);
-    expect(api).toContain('`/protocols/${protocolId}/preview-signed`');
+    expect(editor).toContain("hasProtocolAction(current, 'preview')");
+    expect(editor).toContain('protocolService.previewProtocol(current.id)');
+    expect(editor).not.toContain('previewSignedProtocol');
+    expect(api).toContain('`/protocols/${protocolId}/preview`');
+    expect(api).not.toContain('preview-signed');
+    expect(api).toContain('`/protocols/${protocolId}/download-${kind}`');
+    expect(api).not.toContain("params: { format: kind.toUpperCase() }");
     expect(signing).not.toContain('generatePdf(');
   });
 

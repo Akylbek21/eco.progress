@@ -6,22 +6,23 @@ import { publicContentRepository } from '../content/apiRepository';
 import { isPublishableCaseStudy } from '../content/cases/caseStudyPolicy';
 import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, buildServiceEntity, entityIds } from '../seo/entityBuilders';
 import { ArticleAuthorCard, ArticleReviewerCard } from '../components/content/ContentBlocks';
+import { caseStudies } from '../content/cases/caseStudies';
 
 const CaseDetailsPage = () => {
   const { slug = '' } = useParams();
-  const { data, isLoading, isError } = useQuery({ queryKey: ['public-content', 'case', slug], queryFn: () => publicContentRepository.getCaseBySlug(slug), enabled: Boolean(slug), staleTime: 5 * 60 * 1000 });
+  const { data, isLoading, isError } = useQuery({ queryKey: ['public-content', 'case', slug], queryFn: () => publicContentRepository.getCaseBySlug(slug), enabled: Boolean(slug), initialData: () => caseStudies.find((item) => item.slug === slug), staleTime: 5 * 60 * 1000 });
   if (isLoading) return <div className="px-5 py-20 text-center text-slate-600">Загрузка кейса…</div>;
   if (isError || !data || !isPublishableCaseStudy(data)) return <main className="px-5 py-20 text-center"><SEO title="Кейс не найден | ECOPROGRESS" description="Кейс не опубликован или не прошёл проверку." robots="noindex,follow" /><h1 className="text-3xl font-bold text-eco-900">Кейс не найден</h1><p className="mt-3 text-slate-600">Материал не опубликован или ещё проходит проверку.</p><Link to="/cases" className="mt-6 inline-flex font-semibold text-eco-700 underline">Вернуться к кейсам</Link></main>;
 
   const item = data;
   const canonical = `${company.siteUrl}/cases/${item.slug}`;
   const authorId = entityIds(canonical).author;
-  const reviewerId = entityIds(canonical).reviewer;
+  const reviewerId = item.reviewer ? entityIds(canonical).reviewer : undefined;
   const schema = [
     ...buildCorePageEntities({ canonical, name: item.title, description: item.problem, dateModified: item.updatedAt }),
     buildArticleSchema({ canonical, headline: item.title, description: item.problem, datePublished: item.publishedAt!, dateModified: item.updatedAt, image: `${company.siteUrl}/media/social/ecoprogress-og-1200x630.jpg`, authorId, reviewerId, serviceId: entityIds(canonical).service }),
     buildServiceEntity({ canonical, name: item.service, description: item.problem, areaServed: item.city }),
-    buildPersonSchema(item.expert, authorId), buildPersonSchema(item.reviewer, reviewerId),
+    buildPersonSchema(item.expert, authorId), ...(item.reviewer && reviewerId ? [buildPersonSchema(item.reviewer, reviewerId)] : []),
     buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Кейсы', url: `${company.siteUrl}/cases` }, { name: item.title, url: canonical }]),
   ];
   const client = item.clientAnonymous ? `Промышленное предприятие, ${item.city}` : item.clientName;
@@ -33,9 +34,9 @@ const CaseDetailsPage = () => {
       <CaseSection title="Исходные данные" text={item.initialData} />
       <CaseSection title="Характеристика объекта" text={`${item.objectType}. Категория объекта: ${item.objectCategory}. Отрасль: ${item.industry}. Регион: ${item.region}.`} />
       <section><h2 className="text-3xl font-bold text-eco-900">Что сделали</h2><ul className="mt-5 list-disc space-y-3 pl-6 text-slate-700">{item.workPerformed.map((work) => <li key={work}>{work}</li>)}</ul></section>
-      <section><h2 className="text-3xl font-bold text-eco-900">Какие нормативы использовали</h2><ul className="mt-5 space-y-3">{item.regulations.map((regulation) => <li key={regulation.title}>{regulation.url ? <a href={regulation.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-eco-700 underline">{regulation.title}</a> : regulation.title}</li>)}</ul></section>
+      {item.regulations.length > 0 && <section><h2 className="text-3xl font-bold text-eco-900">Какие нормативы использовали</h2><ul className="mt-5 space-y-3">{item.regulations.map((regulation) => <li key={regulation.title}>{regulation.url ? <a href={regulation.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-eco-700 underline">{regulation.title}</a> : regulation.title}</li>)}</ul></section>}
       <CaseSection title="Результат" text={item.result} />
-      <CaseSection title="Срок выполнения" text={`Работа завершена ${item.completedAt}. Опубликованный кейс не дополняется неподтверждёнными сроками.`} />
+      <CaseSection title="Срок выполнения" text={item.duration ? `${item.duration}. Работа завершена ${item.completedAt}.` : `Работа завершена ${item.completedAt}.`} />
       <section><h2 className="text-3xl font-bold text-eco-900">Специалист и проверка</h2><div className="mt-5 grid gap-4 md:grid-cols-2"><ArticleAuthorCard expert={item.expert} /><ArticleReviewerCard expert={item.reviewer} /></div></section>
     </div>
   </article>;

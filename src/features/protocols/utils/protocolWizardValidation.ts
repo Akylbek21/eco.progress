@@ -71,12 +71,36 @@ export const validateProtocolForSubmit = (form: ProtocolWizardForm): ProtocolVal
     if (!form.waterType) issues.push(issue('WATER_TYPE_REQUIRED', 'Выберите тип воды.', 'waterType', 1));
     if (!form.waterUseCategory) issues.push(issue('WATER_USE_REQUIRED', 'Выберите категорию водопользования.', 'waterUseCategory', 1));
   }
+  if (form.templateId === 'microclimate') {
+    if (!text(form.season)) issues.push(issue('MICROCLIMATE_SEASON_REQUIRED', 'Укажите сезон.', 'season', 1));
+    if (!text(form.workCategory)) issues.push(issue('MICROCLIMATE_WORK_CATEGORY_REQUIRED', 'Укажите категорию работ.', 'workCategory', 1));
+    if (!text(form.workplaceType)) issues.push(issue('MICROCLIMATE_WORKPLACE_REQUIRED', 'Укажите тип рабочего места.', 'workplaceType', 1));
+    if (!text(form.roomType)) issues.push(issue('MICROCLIMATE_ROOM_REQUIRED', 'Укажите тип помещения.', 'roomType', 1));
+    if (!text(form.normLevel)) issues.push(issue('MICROCLIMATE_NORM_LEVEL_REQUIRED', 'Укажите уровень нормирования.', 'normLevel', 1));
+  }
+  if (form.templateId === 'lighting') {
+    if (!text(form.roomType)) issues.push(issue('LIGHTING_ROOM_REQUIRED', 'Укажите тип помещения.', 'roomType', 1));
+    if (!text(form.workplaceType)) issues.push(issue('LIGHTING_WORKPLACE_REQUIRED', 'Укажите тип рабочего места.', 'workplaceType', 1));
+    if (!text(form.lightingType)) issues.push(issue('LIGHTING_TYPE_REQUIRED', 'Укажите тип освещения.', 'lightingType', 1));
+    if (!text(form.visualWorkCategory)) issues.push(issue('LIGHTING_VISUAL_CATEGORY_REQUIRED', 'Укажите разряд зрительной работы.', 'visualWorkCategory', 1));
+    if (!text(form.normLevel)) issues.push(issue('LIGHTING_NORM_LEVEL_REQUIRED', 'Укажите уровень нормирования.', 'normLevel', 1));
+  }
+  if (form.templateId === 'noise_vibration') {
+    const factorTypes = new Set(form.results.map((row) => text(row.factorType).toUpperCase()).filter(Boolean));
+    if (!text(form.workplaceType)) issues.push(issue('PHYSICAL_WORKPLACE_REQUIRED', 'Укажите тип рабочего места.', 'workplaceType', 1));
+    if (!text(form.roomType)) issues.push(issue('PHYSICAL_ROOM_REQUIRED', 'Укажите тип помещения.', 'roomType', 1));
+    if ((factorTypes.has('NOISE') || factorTypes.has('NOISE_VIBRATION')) && !text(form.noiseType)) issues.push(issue('NOISE_TYPE_REQUIRED', 'Укажите тип шума.', 'noiseType', 1));
+  }
   form.results.forEach((row, index) => {
     if (!text(row.indicatorName) && !hasValue(row.value) && !hasValue(row.textValue)) return;
     const prefix = `results.${index}`;
     const effectiveDeviceId = row.measurementDeviceId || form.defaultMeasurementDeviceId;
     if (!effectiveDeviceId) issues.push(issue('DEVICE_REQUIRED', 'Выберите прибор для показателя.', `${prefix}.measurementDeviceId`, 2, 'ERROR', row.clientRowId));
-    const manualConfirmed = row.normativeSource === 'MANUAL' && hasValue(row.normativeValue);
+    const manualConfirmed = row.normativeSource === 'MANUAL' && (
+      row.comparisonType === 'RANGE'
+        ? hasValue(row.normativeMin) && hasValue(row.normativeMax)
+        : hasValue(row.normativeValue)
+    );
     const directoryConfirmed = row.normativeSource === 'DIRECTORY' && Number(row.normativeId) > 0;
     if (!manualConfirmed && !directoryConfirmed) issues.push(issue('NORMATIVE_REQUIRED', 'Выберите или укажите норматив перед согласованием.', `${prefix}.normativeId`, 2, 'ERROR', row.clientRowId));
     if (row.normativeStatus === 'REVIEW') issues.push(issue('NORMATIVE_REVIEW', 'Норматив со статусом REVIEW требует подтверждения.', `${prefix}.normativeId`, 2, 'ERROR', row.clientRowId));

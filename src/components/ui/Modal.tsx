@@ -26,7 +26,7 @@ const sizeClass: Record<NonNullable<ModalProps['size']>, string> = {
   lg: 'max-w-4xl',
   xl: 'max-w-6xl',
   wizard: 'h-dvh max-h-dvh max-w-none rounded-none sm:h-[92vh] sm:max-h-[92vh] sm:w-[94vw] sm:max-w-[1400px] sm:rounded-[24px]',
-  wizardAuto: 'h-dvh max-h-dvh max-w-none rounded-none sm:h-auto sm:max-h-[92vh] sm:w-[94vw] sm:max-w-[1280px] sm:rounded-[24px]',
+  wizardAuto: 'h-dvh max-h-dvh max-w-none rounded-none sm:h-[92vh] sm:max-h-[92vh] sm:w-[94vw] sm:max-w-[1280px] sm:rounded-[24px]',
 };
 
 const Modal = ({

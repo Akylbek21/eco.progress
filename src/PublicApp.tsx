@@ -12,6 +12,7 @@ const ServicesPage = lazy(publicRouteLoaders.services);
 const SeoLandingPage = lazy(() => import('./pages/SeoLandingPage'));
 const ServiceRoutePage = lazy(() => import('./pages/ServiceRoutePage'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
+const ExpertDetailsPage = lazy(() => import('./pages/ExpertDetailsPage'));
 const PartnersPage = lazy(() => import('./pages/PartnersPage'));
 const TariffsPage = lazy(() => import('./pages/TariffsPage'));
 const NewsPage = lazy(publicRouteLoaders.news);
@@ -35,6 +36,8 @@ const PublicRoutes = () => (
             <Route path="/services/:id" element={<PublicRoute><ServiceRoutePage /></PublicRoute>} />
             <Route path="/tariffs" element={<PublicRoute><TariffsPage /></PublicRoute>} />
             <Route path="/employees" element={<PublicRoute><EmployeesPage /></PublicRoute>} />
+            <Route path="/experts" element={<PublicRoute><EmployeesPage /></PublicRoute>} />
+            <Route path="/experts/:id" element={<PublicRoute><ExpertDetailsPage /></PublicRoute>} />
             <Route path="/partners" element={<PublicRoute><PartnersPage /></PublicRoute>} />
             <Route path="/news" element={<PublicRoute><NewsPage /></PublicRoute>} />
             <Route path="/news/:id" element={<PublicRoute><NewsDetailsPage /></PublicRoute>} />
@@ -50,7 +53,7 @@ const PublicRoutes = () => (
   </Routes>
 );
 
-const routesWithoutQueries = new Set(['/', '/about', '/partners', '/tariffs', '/faq', '/contacts', '/regions', '/search']);
+const routesWithoutQueries = new Set(['/', '/about', '/partners', '/tariffs', '/faq', '/contacts', '/regions', '/search', '/employees', '/experts']);
 
 export default function PublicApp() {
   const { pathname } = useLocation();
@@ -61,7 +64,7 @@ export default function PublicApp() {
         <ScrollToTop />
         <AnalyticsRouteTracker />
         <Suspense fallback={<PublicLayout><PageLoader /></PublicLayout>}>
-          {routesWithoutQueries.has(pathname) ? routes : <QueryRuntime>{routes}</QueryRuntime>}
+          {routesWithoutQueries.has(pathname) || pathname.startsWith('/experts/') ? routes : <QueryRuntime>{routes}</QueryRuntime>}
         </Suspense>
       </div>
     </RouteProgressProvider>

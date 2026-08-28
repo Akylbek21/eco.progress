@@ -18,7 +18,7 @@ export const entityIds = (canonical: string) => ({
   reviewer: `${canonical}#reviewer`,
 });
 
-const organizationRef = () => ({ '@id': entityIds(PUBLIC_SITE_URL).organization });
+const organizationRef = () => ({ '@type': 'Organization', '@id': entityIds(PUBLIC_SITE_URL).organization, name: COMPANY.name });
 
 export const buildOrganizationSchema = (): SchemaEntity => ({
   '@context': 'https://schema.org', '@type': 'Organization', '@id': entityIds(PUBLIC_SITE_URL).organization,
@@ -59,8 +59,17 @@ export const buildServiceEntity = (input: { canonical: string; name: string; des
 
 export const buildPersonSchema = (expert: Expert, id: string): SchemaEntity => ({
   '@context': 'https://schema.org', '@type': 'Person', '@id': id, name: expert.fullName,
-  jobTitle: expert.position, description: expert.bio, image: expert.photo, url: expert.profileUrl,
-  knowsAbout: expert.specialization, worksFor: organizationRef(),
+  url: expert.profileUrl.startsWith('http') ? expert.profileUrl : canonicalForPublicPath(expert.profileUrl),
+  ...(expert.position ? { jobTitle: expert.position } : {}),
+  ...(expert.bio ? { description: expert.bio } : {}),
+  ...(expert.photo ? { image: expert.photo } : {}),
+  ...(expert.specialization.length ? { knowsAbout: expert.specialization } : {}),
+  ...(expert.credentials.length ? { hasCredential: expert.credentials.map((item) => ({
+    '@type': 'EducationalOccupationalCredential', name: item.title, credentialCategory: item.document,
+    recognizedBy: { '@type': 'Organization', name: item.issuedBy },
+    ...(item.number ? { identifier: item.number } : {}),
+  })) } : {}),
+  worksFor: organizationRef(),
 });
 
 export const buildArticleSchema = (input: { canonical: string; headline: string; description: string; datePublished: string; dateModified?: string; image: string; authorId?: string; reviewerId?: string; serviceId?: string; caseUrls?: string[] }): SchemaEntity => {

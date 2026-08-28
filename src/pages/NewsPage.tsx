@@ -4,13 +4,14 @@ import { BookOpenCheck, FileCheck2, Lightbulb } from 'lucide-react';
 import Reveal from '../components/animations/Reveal';
 import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
-import { getNewsResult } from '../services/newsService';
+import { getNewsResult, prerenderNewsResult } from '../services/newsService';
 import { getArticleImage, pageHeroImages } from '../data/pageHeroImages';
 
 const NewsPage = () => {
   const { data, isError } = useQuery({
     queryKey: ['news'],
     queryFn: getNewsResult,
+    initialData: prerenderNewsResult,
   });
   const news = data?.items ?? [];
 

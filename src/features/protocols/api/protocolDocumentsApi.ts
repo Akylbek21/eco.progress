@@ -1,6 +1,5 @@
 export {
   previewProtocol,
-  previewSignedProtocol,
   generateDocx,
   generatePdf,
   downloadProtocolDocument,

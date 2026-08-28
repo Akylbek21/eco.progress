@@ -5,7 +5,13 @@ const text = (value: unknown) => value == null ? '' : String(value).trim();
 /** Backend may return only normativeId without an expanded normativeReference. */
 export const hasUsableProtocolResultNormative = (row: ProtocolResult, protocolDate: string): boolean => {
   const source = text(row.values.normativeSource).toUpperCase();
-  if (source === 'MANUAL') return Boolean(text(row.values.manualNormativeReason));
+  if (source === 'MANUAL') {
+    const comparisonType = text(row.values.comparisonType).toUpperCase();
+    const hasNormative = comparisonType === 'RANGE'
+      ? Boolean(text(row.values.normativeMin) && text(row.values.normativeMax))
+      : Boolean(text(row.values.normativeValue));
+    return hasNormative && Boolean(text(row.values.manualNormativeReason));
+  }
 
   const reference = row.normativeReference;
   const normativeId = text(reference?.id ?? row.values.normativeId);
