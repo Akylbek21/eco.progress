@@ -115,10 +115,10 @@ test('creation wizard preserves the selected backend normative id', async () => 
   assert.match(mapper, /row\.normativeSource === 'MANUAL'/);
 });
 
-test('router keeps protocol creation inside the list wizard', async () => {
+test('router opens the dedicated PEK-first protocol creation page', async () => {
   const app = await read('src/App.tsx');
-  assert.match(app, /path="\/staff\/protocols\/create"[^\n]*<Navigate to="\/staff\/protocols\?create=1" replace/);
-  assert.match(app, /path="\/staff\/protocols\/new"[^\n]*<Navigate to="\/staff\/protocols\?create=1" replace/);
+  assert.match(app, /path="\/staff\/protocols\/create"[^\n]*<Navigate to="\/staff\/protocols\/new" replace/);
+  assert.match(app, /path="\/staff\/protocols\/new"[^\n]*<ProtocolCreatePage/);
   assert.match(app, /path="\/staff\/protocols\/:protocolId"[\s\S]*<ProtocolEditorPage/);
 });
 

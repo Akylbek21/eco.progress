@@ -43,6 +43,11 @@ import type {
   SignProtocolRequest,
   ProtocolVersionRequest,
   CreateProtocolDraftRequest,
+  CreateProtocolFromPekRequest,
+  ProtocolCreationContext,
+  ProtocolCreationContextParams,
+  ProtocolCreationRequirement,
+  ProtocolCreationRequirementStatus,
   SaveProtocolDraftResultsRequest,
   UpdateProtocolDraftRequest,
 } from '../features/protocols/api/protocolContracts';
@@ -82,6 +87,11 @@ const firstString = (...values: unknown[]) => {
 };
 const scalarOrNull = (value: unknown): string | number | null =>
   typeof value === 'string' || typeof value === 'number' ? value : null;
+const scalar = (value: unknown): string | number => scalarOrNull(value) ?? '';
+const count = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+};
 const numberOrNull = (value: unknown): number | null => {
   if (value === undefined || value === null || value === '') return null;
   const number = Number(value);
@@ -1020,6 +1030,124 @@ export async function getProtocolTemplates(): Promise<ProtocolTemplate[]> {
 export async function getProtocolTypes(): Promise<ProtocolTemplate[]> {
   const templates = await getProtocolTemplates();
   return templates.filter((template) => template.active !== false);
+}
+
+const creationStatuses = new Set<ProtocolCreationRequirementStatus>([
+  'DUE', 'OVERDUE', 'COMPLETED', 'NOT_DUE', 'CONFIGURATION_REQUIRED',
+]);
+
+const normalizeCreationRequirementStatus = (value: unknown): ProtocolCreationRequirementStatus => {
+  const status = String(value ?? '').trim().toUpperCase().replace(/-/g, '_') as ProtocolCreationRequirementStatus;
+  if (!creationStatuses.has(status)) throw new Error(`Backend вернул неизвестный статус требования ПЭК: ${status || 'EMPTY'}.`);
+  return status;
+};
+
+export const normalizeProtocolCreationContextResponse = (
+  input: unknown,
+  params: ProtocolCreationContextParams,
+): ProtocolCreationContext => {
+  const payload = asRecord(unwrapData(input));
+  const company = asRecord(payload.company);
+  const object = asRecord(payload.object ?? payload.companyObject);
+  const program = asRecord(payload.program ?? payload.pekProgram);
+  const period = asRecord(payload.period ?? payload.currentPeriod);
+  const rawRequirements = extractList(payload.requirements ?? payload, ['requirements']);
+  const requirements = rawRequirements.map((raw, index): ProtocolCreationRequirement => {
+    const source = asRecord(raw);
+    const point = asRecord(source.monitoringPoint ?? source.point);
+    const template = asRecord(source.protocolTemplate ?? source.template);
+    const laboratory = asRecord(source.laboratory);
+    const controlItem = asRecord(source.controlItem ?? source.pekControlItem);
+    const monitoring = asRecord(source.monitoring ?? source.pekMonitoring);
+    const planCount = count(source.planCount ?? source.plannedCount ?? source.plan);
+    const completedCount = count(source.completedCount ?? source.actualCount ?? source.completed);
+    const missingCount = count(source.missingCount ?? source.remainingCount ?? source.missing);
+    const status = normalizeCreationRequirementStatus(source.status);
+    const protocolTemplateId = scalarOrNull(source.protocolTemplateId ?? template.id ?? template.templateId);
+    const indicators = extractList(source.indicators ?? source.parameters, ['indicators', 'parameters']).map((item, indicatorIndex) => {
+      const indicator = asRecord(item);
+      return {
+        id: scalar(indicator.id ?? indicator.indicatorId) || `indicator-${indicatorIndex}`,
+        name: firstString(indicator.name, indicator.indicatorName, indicator.title),
+        unit: firstString(indicator.unit, indicator.unitName) || undefined,
+        normativeLabel: firstString(indicator.normativeLabel, indicator.normativeDisplay, indicator.normative) || undefined,
+      };
+    });
+    const normalized: ProtocolCreationRequirement = {
+      id: firstString(source.id, source.requirementId) || `requirement-${index}`,
+      status,
+      title: firstString(source.title, source.name, controlItem.name, monitoring.name, template.name) || 'Позиция программы ПЭК',
+      subtitle: firstString(source.subtitle, source.description) || undefined,
+      frequency: firstString(source.frequencyLabel, source.frequency, source.periodicity) || undefined,
+      planCount,
+      completedCount,
+      missingCount,
+      canCreate: source.canCreate === true,
+      companyId: scalar(source.companyId ?? company.id ?? params.companyId),
+      objectId: scalar(source.objectId ?? object.id ?? params.objectId),
+      pekProgramId: scalar(source.pekProgramId ?? source.programId ?? program.id),
+      pekMonitoringId: scalar(source.pekMonitoringId ?? source.monitoringId ?? monitoring.id),
+      pekControlItemId: scalar(source.pekControlItemId ?? source.controlItemId ?? controlItem.id),
+      monitoringPointId: scalarOrNull(source.monitoringPointId ?? point.id),
+      monitoringPointName: firstString(source.monitoringPointName, point.name, point.title) || undefined,
+      protocolTemplateId,
+      protocolTemplateName: firstString(source.protocolTemplateName, template.name, template.title) || undefined,
+      laboratoryName: firstString(source.laboratoryName, laboratory.name) || undefined,
+      existingDraftProtocolId: scalarOrNull(source.existingDraftProtocolId ?? source.draftProtocolId) ?? undefined,
+      indicators,
+    };
+    return normalized;
+  });
+
+  return {
+    hasActiveProgram: payload.hasActiveProgram === true,
+    company: { id: scalar(company.id ?? params.companyId), name: firstString(company.name, company.companyName) },
+    object: { id: scalar(object.id ?? params.objectId), name: firstString(object.name, object.objectName) },
+    program: program.id || payload.pekProgramId ? {
+      id: scalar(program.id ?? payload.pekProgramId),
+      number: firstString(program.number, program.programNumber) || undefined,
+      name: firstString(program.name, program.title) || undefined,
+    } : undefined,
+    period: Object.keys(period).length ? {
+      label: firstString(period.label, period.name) || undefined,
+      year: Number.isFinite(Number(period.year)) ? Number(period.year) : undefined,
+      quarter: Number.isFinite(Number(period.quarter)) ? Number(period.quarter) : undefined,
+      startDate: firstString(period.startDate, period.dateFrom) || undefined,
+      endDate: firstString(period.endDate, period.dateTo) || undefined,
+    } : undefined,
+    requirements,
+  };
+};
+
+export async function getProtocolCreationContext(
+  params: ProtocolCreationContextParams,
+  signal?: AbortSignal,
+): Promise<ProtocolCreationContext> {
+  const response = await api.get<ApiResponse<unknown> | unknown>('/protocols/creation-context', { params, signal });
+  return normalizeProtocolCreationContextResponse(response, params);
+}
+
+export async function createProtocolFromPek(payload: CreateProtocolFromPekRequest): Promise<Protocol> {
+  const request: CreateProtocolFromPekRequest = {
+    companyId: payload.companyId,
+    objectId: payload.objectId,
+    pekProgramId: payload.pekProgramId,
+    pekMonitoringId: payload.pekMonitoringId,
+    pekControlItemId: payload.pekControlItemId,
+    monitoringPointId: payload.monitoringPointId,
+    protocolTemplateId: payload.protocolTemplateId,
+  };
+  const required = [request.companyId, request.objectId, request.pekProgramId, request.pekMonitoringId, request.pekControlItemId, request.protocolTemplateId];
+  if (required.some((value) => value === '' || value === null || value === undefined)) {
+    throw new Error('Backend context не содержит всех идентификаторов для создания протокола из ПЭК.');
+  }
+  const response = await api.post<ApiResponse<unknown> | unknown>('/protocols/from-pek', request);
+  const result = unwrapData(response);
+  const resultRecord = asRecord(result);
+  const protocolId = firstString(resultRecord.protocolId, resultRecord.id);
+
+  if (!isProtocolLike(resultRecord) && protocolId) return getProtocol(protocolId);
+  return requireProtocol(result, 'создание из ПЭК');
 }
 
 export async function createProtocolDraft(payload: CreateProtocolDraftRequest, idempotencyKey: string): Promise<Protocol> {

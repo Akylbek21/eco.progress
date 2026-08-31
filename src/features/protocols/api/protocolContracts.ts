@@ -5,6 +5,15 @@ import type {
   UpdateProtocolPayload,
 } from '../../../types/protocols';
 
+export type {
+  CreateProtocolFromPekRequest,
+  ProtocolCreationContext,
+  ProtocolCreationContextParams,
+  ProtocolCreationIndicator,
+  ProtocolCreationRequirement,
+  ProtocolCreationRequirementStatus,
+} from './protocolCreationContracts';
+
 /** DTOs in this file are the only shapes allowed to cross the protocols API boundary. */
 export interface ProtocolOrganizationRequest {
   organizationName: string | null;

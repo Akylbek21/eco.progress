@@ -46,14 +46,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -133,14 +133,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -495,14 +495,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -586,14 +586,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -677,14 +677,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -768,14 +768,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -859,14 +859,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -888,7 +888,7 @@
         "url": "https://ecoprogress.kz/cases",
         "name": "Подтверждённые экологические кейсы",
         "description": "Опубликованные проекты EcoProgress с проверенными исходными данными, выполненными работами, нормативной базой и результатами.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -916,7 +916,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/experts",
@@ -950,14 +950,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -1041,14 +1041,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -1132,14 +1132,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -1494,14 +1494,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -1585,14 +1585,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -1947,14 +1947,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -2309,14 +2309,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -2686,14 +2686,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -3063,14 +3063,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -3440,14 +3440,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -3802,14 +3802,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -4164,14 +4164,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -4541,14 +4541,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -4918,14 +4918,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -5295,14 +5295,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -5657,14 +5657,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -6034,14 +6034,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -6411,14 +6411,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -6773,14 +6773,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -7150,14 +7150,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -7512,14 +7512,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -7874,14 +7874,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -8236,14 +8236,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -8598,14 +8598,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -8960,14 +8960,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -9065,14 +9065,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -9170,14 +9170,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -9199,7 +9199,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -9304,14 +9304,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -9409,14 +9409,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -9514,14 +9514,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -9619,14 +9619,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -9724,14 +9724,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -9829,14 +9829,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -9934,14 +9934,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -10039,14 +10039,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -10144,14 +10144,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -10249,14 +10249,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -10354,14 +10354,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -10459,14 +10459,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -10564,14 +10564,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -10669,14 +10669,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -10774,14 +10774,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -10879,14 +10879,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -11259,14 +11259,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -11288,7 +11288,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -11668,14 +11668,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -11697,7 +11697,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -12079,14 +12079,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -12108,7 +12108,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -12490,14 +12490,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -12519,7 +12519,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -12901,14 +12901,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -13283,14 +13283,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -13680,14 +13680,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -13709,7 +13709,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -14091,14 +14091,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -14473,14 +14473,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -14502,7 +14502,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -14884,14 +14884,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -14913,7 +14913,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -15293,14 +15293,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -15322,7 +15322,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -15702,14 +15702,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -16084,14 +16084,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -16466,14 +16466,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -16495,7 +16495,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -16877,14 +16877,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -16906,7 +16906,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -17286,14 +17286,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -17315,7 +17315,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -17697,14 +17697,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -17726,7 +17726,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -18108,14 +18108,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -18137,7 +18137,7 @@
         },
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
@@ -18520,14 +18520,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -18659,14 +18659,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -18688,7 +18688,7 @@
         "url": "https://ecoprogress.kz/kk",
         "name": "Қазақстандағы бизнеске арналған экологиялық қызметтер",
         "description": "Кәсіпорындарға экологиялық жобалау, ПЭК, зертханалық зерттеулер, қалдықтар құжаттары және рұқсат алу бойынша қызмет көрсетеміз.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -18718,7 +18718,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/kk/ekologiyalyq-qyzmetter",
@@ -18767,14 +18767,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -18796,7 +18796,7 @@
         "url": "https://ecoprogress.kz/kk/ekologiyalyq-qyzmetter",
         "name": "Кәсіпорындарға арналған экологиялық қызметтер",
         "description": "Кәсіпорындарға экологиялық құжаттар, ПЭК, шығарындылар жобалары, зертханалық өлшеулер және қалдықтар бойынша кешенді қызмет.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19107,7 +19107,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/kk/qaldyqtar-pasporty",
@@ -19156,14 +19156,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -19185,7 +19185,7 @@
         "url": "https://ecoprogress.kz/kk/qaldyqtar-pasporty",
         "name": "Қалдықтар паспортын әзірлеу",
         "description": "Кәсіпорындарға қалдықтар паспортын әзірлеу және рәсімдеу. Қажетті деректерді анықтап, жұмыс көлемі мен құнын есептейміз.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19498,7 +19498,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/kk/services/ndv",
@@ -19547,14 +19547,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -19576,7 +19576,7 @@
         "url": "https://ecoprogress.kz/kk/services/ndv",
         "name": "Рұқсат етілетін шығарындылар нормативтерінің жобасы",
         "description": "Стационарлық көздерді түгендеу, шығарындыларды есептеу және кәсіпорынға рұқсат етілетін шығарындылар нормативтерін әзірлеу.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19889,7 +19889,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/kk/pek-bagdarlamasy",
@@ -19938,14 +19938,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -19967,7 +19967,7 @@
         "url": "https://ecoprogress.kz/kk/pek-bagdarlamasy",
         "name": "Өндірістік экологиялық бақылау бағдарламасын әзірлеу",
         "description": "Кәсіпорынға ПЭК бағдарламасын әзірлеу: бақылау нысандары, мониторинг нүктелері, көрсеткіштер, әдістер және кезеңділік.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -20280,7 +20280,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/kk/pek-esebi",
@@ -20329,14 +20329,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -20358,7 +20358,7 @@
         "url": "https://ecoprogress.kz/kk/pek-esebi",
         "name": "Өндірістік экологиялық бақылау есебін дайындау",
         "description": "ПЭК бағдарламасы, зертханалық хаттамалар және кезеңнің өндірістік деректері негізінде ресми ПЭК есебін дайындау.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -20671,7 +20671,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/kk/ekologiyalyq-ruqsat",
@@ -20720,14 +20720,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -20749,7 +20749,7 @@
         "url": "https://ecoprogress.kz/kk/ekologiyalyq-ruqsat",
         "name": "Әсер етуге экологиялық рұқсат алу",
         "description": "Нысан санатын және жобалық негіздерді тексеріп, әсер етуге экологиялық рұқсат алу үшін материалдарды дайындаймыз.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21070,7 +21070,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/kk/sanitariyalyq-qorgau-aimagy",
@@ -21119,14 +21119,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -21148,7 +21148,7 @@
         "url": "https://ecoprogress.kz/kk/sanitariyalyq-qorgau-aimagy",
         "name": "Санитариялық-қорғау аймағының жобасын әзірлеу",
         "description": "Шығарындылар, шу және нысанның нақты жоспарлануы бойынша санитариялық-қорғау аймағының жобасын әзірлеу.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21461,7 +21461,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/kk/zerthanalyq-zertteuler",
@@ -21510,14 +21510,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -21539,7 +21539,7 @@
         "url": "https://ecoprogress.kz/kk/zerthanalyq-zertteuler",
         "name": "Экологиялық зертханалық зерттеулер",
         "description": "Ауа, су, топырақ, шу және өндірістік факторлар бойынша зертханалық зерттеулер: бағдарлама, сынама алу және хаттамалар.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21850,7 +21850,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/kk/su-analizi",
@@ -21899,14 +21899,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -21928,7 +21928,7 @@
         "url": "https://ecoprogress.kz/kk/su-analizi",
         "name": "Суға зертханалық анализ жасау",
         "description": "Ауыз су, табиғи немесе сарқынды суға зертханалық анализ: көрсеткіштерді таңдау, сынама алу және зерттеу хаттамасы.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -22249,7 +22249,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/kk/qaldyqtardy-kadege-zharatu",
@@ -22298,14 +22298,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -22327,7 +22327,7 @@
         "url": "https://ecoprogress.kz/kk/qaldyqtardy-kadege-zharatu",
         "name": "Қалдықтарды кәдеге жарату",
         "description": "Өндірістік қалдықтарды тексеру, рұқсат етілген операцияны келісу және қабылдау мен кәдеге жаратуды растайтын құжаттар.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -22640,7 +22640,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/kk/pek-bagdarlamasy-shymkent",
@@ -22689,14 +22689,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -22718,7 +22718,7 @@
         "url": "https://ecoprogress.kz/kk/pek-bagdarlamasy-shymkent",
         "name": "Шымкенттегі ПЭК бағдарламасын әзірлеу",
         "description": "Шымкент кәсіпорындарына ПЭК бағдарламасын әзірлеу: нысандар, мониторинг нүктелері, көрсеткіштер, әдістер және бақылау кестесі.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -23031,7 +23031,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/news/ekologicheskie-dokumenty-too-kazakhstan",
@@ -23066,14 +23066,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -23185,14 +23185,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -23304,14 +23304,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -23423,14 +23423,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -23542,14 +23542,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -23661,14 +23661,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -23780,14 +23780,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -23899,14 +23899,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -24018,14 +24018,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -24137,14 +24137,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -24256,14 +24256,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -24375,14 +24375,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -24494,14 +24494,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -24613,14 +24613,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -24731,14 +24731,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -24820,7 +24820,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/experts/bektibaeva-ryskul-maratovna",
@@ -24854,14 +24854,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -24943,7 +24943,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/experts/duisenbai-ruslan-serikbaiuly",
@@ -24977,14 +24977,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -25076,7 +25076,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/experts/manap-akerke-maratkyzy",
@@ -25110,14 +25110,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -25199,7 +25199,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/experts/omirbaeva-aigerim-kazybekkyzy",
@@ -25233,14 +25233,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -25322,7 +25322,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/experts/seitkarym-akerke-erbolovna",
@@ -25356,14 +25356,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -25445,7 +25445,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/experts/seitkarym-akerke-erbolkyzy",
@@ -25479,14 +25479,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -25568,7 +25568,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/experts/makhanova-kamilla-maratovna",
@@ -25602,14 +25602,14 @@
         "telephone": "+7 778 121 11 58",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Алимбетова 199/2а",
+          "streetAddress": "мкр Восток, 66",
           "addressLocality": "Шымкент",
           "addressCountry": "KZ"
         },
         "sameAs": [
           "https://www.instagram.com/ecoprogress.group",
           "https://www.tiktok.com/@ecoprogress.group",
-          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16"
+          "https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18"
         ]
       },
       {
@@ -25691,6 +25691,6 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-08-31"
   }
 ]

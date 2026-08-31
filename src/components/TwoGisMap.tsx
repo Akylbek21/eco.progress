@@ -20,12 +20,12 @@ const twoGisWidgetSrcDoc = `<!doctype html>
     </style>
   </head>
   <body>
-    <a class="dg-widget-link" href="https://2gis.kz/shymkent/firm/70000001113587757/center/69.637832,42.319356/zoom/16?utm_medium=widget-source&utm_campaign=firmsonmap&utm_source=bigMap">Посмотреть на карте Шымкента</a>
+    <a class="dg-widget-link" href="https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18?utm_medium=widget-source&utm_campaign=firmsonmap&utm_source=bigMap">Посмотреть на карте Шымкента</a>
     <div class="dg-widget-link">
-      <a href="https://2gis.kz/shymkent/center/69.637832,42.319356/zoom/16/routeTab/rsType/bus/to/69.637832,42.319356%E2%95%8EEco%20Progress,%20%D0%BA%D0%BE%D0%BC%D0%BF%D0%B0%D0%BD%D0%B8%D1%8F?utm_medium=widget-source&utm_campaign=firmsonmap&utm_source=route">Найти проезд до Eco Progress, компания</a>
+      <a href="https://2gis.kz/shymkent/center/69.64210867881776,42.33840753960456/zoom/18/routeTab/rsType/bus/to/69.64210867881776,42.33840753960456%E2%95%8EEco%20Progress,%20%D0%BA%D0%BE%D0%BC%D0%BF%D0%B0%D0%BD%D0%B8%D1%8F?utm_medium=widget-source&utm_campaign=firmsonmap&utm_source=route">Найти проезд до Eco Progress, компания</a>
     </div>
     <script charset="utf-8" src="https://widgets.2gis.com/js/DGWidgetLoader.js"><\/script>
-    <script charset="utf-8">new DGWidgetLoader({"width":"100%","height":600,"borderColor":"#a3a3a3","pos":{"lat":42.319356,"lon":69.637832,"zoom":16},"opt":{"city":"shymkent"},"org":[{"id":"70000001113587757"}]});<\/script>
+    <script charset="utf-8">new DGWidgetLoader({"width":"100%","height":600,"borderColor":"#a3a3a3","pos":{"lat":42.33840753960456,"lon":69.64210867881776,"zoom":18},"opt":{"city":"shymkent"},"org":[{"id":"70000001113587757"}]});<\/script>
     <noscript style="color:#c00;font-size:16px;font-weight:bold;">Виджет карты использует JavaScript. Включите его в настройках вашего браузера.</noscript>
   </body>
 </html>`;

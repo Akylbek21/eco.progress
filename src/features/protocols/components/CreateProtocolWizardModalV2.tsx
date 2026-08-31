@@ -24,6 +24,7 @@ import BasicDataStep from './steps/BasicDataStep';
 import MeasurementStep from './steps/MeasurementStep';
 import ResultsStep from './steps/ResultsStep';
 import ProtocolCheckStep from './steps/ProtocolCheckStep';
+import PekProtocolCreationFlow from './PekProtocolCreationFlow';
 import {
   createWizardDefaults,
   createDefaultAmbientSamplingPoints,
@@ -46,13 +47,14 @@ import {
 
 export type ProtocolPekPrefill = Partial<Pick<ProtocolWizardForm, 'companyId' | 'objectId' | 'pekProgramId' | 'pekControlItemId' | 'pekControlEventId' | 'pekReportId' | 'monitoringPointId' | 'programIndicatorId' | 'emissionSourceId' | 'waterOutletId' | 'measurementDate' | 'measurementPlace'>>;
 export type CreateProtocolWizardModalV2Props = { open: boolean; onClose: () => void; onCreated: (protocol: Protocol) => void; orderId?: string; orderServiceItemId?: string; pekPrefill?: ProtocolPekPrefill };
+export type ProtocolCreationMode = 'PEK' | 'MANUAL';
 
 const steps = ['Основное', 'Измерения', 'Результаты', 'Проверка'];
 // Legacy modal contract markers kept for source-level regression tests: ariaLabel="Новый протокол", createLabel="Создать и открыть".
 type SaveState = 'idle' | 'local' | 'creating' | 'created' | 'saving' | 'saved' | 'error' | 'conflict';
 const unavailableLaboratoryMessage = 'Выбранная лаборатория не найдена или больше не активна. Выберите лабораторию повторно.';
 
-const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', orderServiceItemId = '', pekPrefill }: CreateProtocolWizardModalV2Props) => {
+const ManualProtocolWizard = ({ open, onClose, onCreated, onSelectPek, orderId = '', orderServiceItemId = '', pekPrefill }: CreateProtocolWizardModalV2Props & { onSelectPek: () => void }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const scope = protocolScope(user?.id);
@@ -464,6 +466,7 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
       summary={<ProtocolWizardSummary templates={templates} companies={companies} objects={objects} laboratories={laboratories} employees={employees} currentStep={step} errorCounts={errorCounts} />}
       footer={<ProtocolWizardFooter step={step} total={steps.length} submitting={saveMutation.isPending} retrying={saveState === 'error'} canContinue={step <= 2 || blockingErrors.length === 0} canSaveDraft={canSaveServerDraft} saveState={saveStatus} onBack={() => setStep((current) => Math.max(0, current - 1))} onNext={() => void next()} onCreate={() => void complete()} onSaveDraft={() => void save()} />}
     >
+          {!serverDraft && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-eco-200 bg-eco-50 p-3 text-sm text-eco-950"><span>Ручной режим: тип протокола и данные исследования заполняются сотрудником.</span><Button type="button" variant="secondary" onClick={onSelectPek}>Выбрать по ПЭК</Button></div>}
           {serverDraft && <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">Черновик протокола №{serverDraft.protocolNumber || serverDraft.id} создан. Автосохранение включено.</div>}
           {generalError && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><p className="font-black">Проверьте данные</p><p className="mt-1 font-semibold">{generalError}</p></div>}
           {referenceFailures.length > 0 && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p className="font-black">Не удалось загрузить справочники</p><div className="mt-2 space-y-2">{referenceFailures.map((failure) => <div key={failure.key} className="flex flex-wrap items-center justify-between gap-2"><span>{failure.message}</span><Button type="button" variant="secondary" onClick={() => void failure.retry()}>Повторить</Button></div>)}</div></div>}
@@ -474,6 +477,20 @@ const CreateProtocolWizardModalV2 = ({ open, onClose, onCreated, orderId = '', o
     <Modal open={Boolean(recoveryCandidate && recoveryServer)} onClose={() => {}} closeOnBackdrop={false} size="sm" title="Черновик был изменён на сервере" footer={<><Button type="button" variant="secondary" onClick={deleteRecovery}>Удалить локальную копию</Button><Button type="button" variant="secondary" onClick={() => { if (recoveryCandidate && recoveryServer) applyRecoveredDraft(recoveryCandidate.envelope, recoveryServer, true); }}>Открыть локальную копию для сравнения</Button><Button type="button" onClick={() => { if (recoveryServer) { if (recoveryCandidate) sessionStorage.removeItem(recoveryCandidate.key); setServerDraft(recoveryServer); form.reset(mapProtocolToWizardForm(recoveryServer)); setRecoveryCandidate(null); setRecoveryServer(null); } }}>Загрузить серверную версию</Button></>}><p className="text-sm text-slate-700">Серверная версия новее локальной. Автоматическое объединение результатов не выполняется.</p></Modal>
     <Modal open={newProtocolConfirm} onClose={() => setNewProtocolConfirm(false)} closeOnBackdrop={false} size="sm" title="Начать новый протокол?" footer={<><Button type="button" variant="secondary" onClick={() => setNewProtocolConfirm(false)}>Отмена</Button><Button type="button" onClick={() => void startNewProtocol()}>Начать новый протокол</Button></>}><p className="text-sm text-slate-700">Текущий серверный черновик будет удалён перед созданием нового, чтобы не оставить бесконтрольную копию.</p></Modal>
   </FormProvider>;
+};
+
+const CreateProtocolWizardModalV2 = (props: CreateProtocolWizardModalV2Props) => {
+  const { open, orderId = '', orderServiceItemId = '', pekPrefill } = props;
+  const defaultMode: ProtocolCreationMode = orderId || orderServiceItemId ? 'MANUAL' : 'PEK';
+  const [mode, setMode] = useState<ProtocolCreationMode>(defaultMode);
+
+  useEffect(() => {
+    if (open) setMode(orderId || orderServiceItemId ? 'MANUAL' : 'PEK');
+  }, [open, orderId, orderServiceItemId]);
+
+  return mode === 'PEK'
+    ? <PekProtocolCreationFlow open={open} onClose={props.onClose} onManual={() => setMode('MANUAL')} onCreated={props.onCreated} initialCompanyId={pekPrefill?.companyId || ''} initialObjectId={pekPrefill?.objectId || ''} />
+    : <ManualProtocolWizard {...props} onSelectPek={() => setMode('PEK')} />;
 };
 
 export default CreateProtocolWizardModalV2;

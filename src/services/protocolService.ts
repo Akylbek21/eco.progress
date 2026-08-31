@@ -23,6 +23,9 @@ import type {
   SignProtocolRequest,
   ProtocolVersionRequest,
   CreateProtocolDraftRequest,
+  CreateProtocolFromPekRequest,
+  ProtocolCreationContext,
+  ProtocolCreationContextParams,
   UpdateProtocolDraftRequest,
   SaveProtocolDraftResultsRequest,
 } from '../features/protocols/api/protocolContracts';
@@ -45,6 +48,8 @@ export interface ProtocolService {
   getProtocolAudit(protocolId: string): Promise<Protocol['history']>;
   getProtocolById(protocolId: string): Promise<Protocol>;
   createProtocolDraft(payload: CreateProtocolDraftRequest, idempotencyKey: string): Promise<Protocol>;
+  getProtocolCreationContext(params: ProtocolCreationContextParams, signal?: AbortSignal): Promise<ProtocolCreationContext>;
+  createProtocolFromPek(payload: CreateProtocolFromPekRequest): Promise<Protocol>;
   updateProtocolDraft(protocolId: string, payload: UpdateProtocolDraftRequest): Promise<Protocol>;
   saveProtocolDraftResults(protocolId: string, payload: SaveProtocolDraftResultsRequest): Promise<Protocol>;
   refreshLaboratoryData(protocolId: string, version: number): Promise<Protocol>;
@@ -111,6 +116,8 @@ const protocolService: ProtocolService = {
   getProtocolAudit: async (protocolId) => (await import('../features/protocols/api/protocolQueries')).getProtocolAudit(protocolId),
   getProtocolById: async (protocolId) => (await implementation()).getProtocolById(protocolId),
   createProtocolDraft: async (payload, idempotencyKey) => (await implementation()).createProtocolDraft(payload, idempotencyKey),
+  getProtocolCreationContext: async (params, signal) => (await implementation()).getProtocolCreationContext(params, signal),
+  createProtocolFromPek: async (payload) => (await implementation()).createProtocolFromPek(payload),
   updateProtocolDraft: async (protocolId, payload) => (await implementation()).updateProtocolDraft(protocolId, payload),
   saveProtocolDraftResults: async (protocolId, payload) => (await implementation()).saveProtocolDraftResults(protocolId, payload),
   // Snapshot refresh must always use the real transactional backend endpoint.

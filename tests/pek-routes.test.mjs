@@ -44,6 +44,8 @@ test('report workspace does not synthesize polling or protocol links', () => {
   assert.doesNotMatch(workspace, /canUsePekPermission\(user, 'PEK_REPORT_EDIT'\)/);
   assert.doesNotMatch(workspace, /setInterval|polling|collection-runs/);
   assert.doesNotMatch(workspace, /\/staff\/protocols\?/);
+  assert.doesNotMatch(workspace, /pekControlItemId|programIndicatorId.*createParams/);
+  assert.match(workspace, /\/staff\/protocols\/new\?\$\{createParams\}/);
 });
 
 test('production source does not boot PEK mocks', () => {
