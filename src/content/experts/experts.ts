@@ -1,4 +1,4 @@
-import type { Expert } from '../types';
+import type { CmsExpertDto, Expert } from '../types';
 
 const credential = (title: string, document: string, issuedBy: string, date: string, details: Partial<Expert['credentials'][number]> = {}) => ({ title, document, issuedBy, date, ...details });
 const laboratoryCompetence = 'ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий';
@@ -53,10 +53,18 @@ const confirmedExperts: Expert[] = [
   },
 ];
 
-export const isCompleteExpert = (expert: Expert | null | undefined): expert is Expert => Boolean(
-  expert?.published && expert.verificationStatus === 'VERIFIED' && expert.id.trim() && expert.fullName.trim()
-  && expert.slug.trim() && expert.profileUrl.trim() && expert.specialization.length && expert.credentials.length,
+export const isVerifiedCmsExpert = (expert: CmsExpertDto | null | undefined): expert is CmsExpertDto => Boolean(
+  expert?.verificationStatus === 'VERIFIED' && expert.id?.trim() && expert.fullName?.trim()
+  && expert.profileUrl?.trim() && expert.specializations?.length,
 );
-export const experts = confirmedExperts.filter(isCompleteExpert);
+
+export const isPublishableExpert = (expert: Expert | null | undefined): expert is Expert => Boolean(
+  expert?.published && expert.verificationStatus === 'VERIFIED' && expert.id.trim() && expert.fullName.trim()
+  && expert.slug.trim() && expert.profileUrl.trim() && expert.specialization.length,
+);
+export const isExpertWithCredentials = (expert: Expert | null | undefined): expert is Expert =>
+  Boolean(isPublishableExpert(expert) && expert.credentials.length);
+
+export const experts = confirmedExperts.filter(isExpertWithCredentials);
 export const expertMap = new Map(experts.map((item) => [item.id, item]));
 export const expertProfileMap = new Map(experts.map((item) => [item.profileUrl, item]));

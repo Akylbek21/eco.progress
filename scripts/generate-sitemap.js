@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { OG_IMAGE, publicStaticPages, seoArticles, seoPages, serviceCityFallbacks, SITE_URL } from './seo-data.mjs';
 import { canonicalForPublicPath, robotsForPublicPage } from '../src/seo/indexingPolicy.ts';
 import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, buildServiceEntity, entityIds } from '../src/seo/entityBuilders.ts';
-import { expertMap, experts, isCompleteExpert } from '../src/content/experts/experts.ts';
+import { expertMap, experts, isExpertWithCredentials } from '../src/content/experts/experts.ts';
 import { caseStudies } from '../src/content/cases/caseStudies.ts';
 import { articleContentMap } from '../src/content/articles/articleContent.ts';
 import { isArticleApproved } from '../src/content/articleReview.ts';
@@ -31,7 +31,7 @@ const optimizedImagePaths = {
   '/og-cover.jpg': '/media/social/ecoprogress-og-1200x630.jpg',
 };
 const optimizedImage = (image) => optimizedImagePaths[image] || image;
-const verifiedExperts = experts.filter(isCompleteExpert);
+const verifiedExperts = experts.filter(isExpertWithCredentials);
 const verifiedCases = caseStudies.filter(isPublishableCaseStudy);
 
 const pageSource = (routePath) => {
@@ -58,11 +58,12 @@ const gitDate = (source, fallback) => {
 
 const schemasFor = (source) => {
   const { path: pathName, h1, description, type, canonical, image, datePublished, dateModified, cityNominative, city, service, locale = 'ru' } = source;
-  const schemas = buildCorePageEntities({ canonical, name: h1, description, dateModified, localBusiness: cityNominative === 'Шымкент' });
+  const citationUrls = source.sources?.map((item) => item.url) ?? [];
+  const schemas = buildCorePageEntities({ canonical, name: h1, description, dateModified, localBusiness: cityNominative === 'Шымкент', citationUrls });
   if (type === 'service' || type === 'service-city') {
     const expertNodes = verifiedExperts.map((expert, index) => buildPersonSchema(expert, `${canonical}#expert-${index + 1}`));
     const caseUrls = verifiedCases.filter((item) => !source.serviceSlug || item.service === source.serviceSlug).map((item) => `${SITE_URL}/cases/${item.slug}`);
-    schemas.push(buildServiceEntity({ canonical, name: h1, serviceType: service || h1, description, areaServed: cityNominative || city || (locale === 'kk' ? 'Қазақстан' : 'Казахстан'), image, expertIds: expertNodes.map((node) => node['@id']), caseUrls }), ...expertNodes);
+    schemas.push(buildServiceEntity({ canonical, name: h1, serviceType: service || h1, description, areaServed: cityNominative || city || (locale === 'kk' ? 'Қазақстан' : 'Казахстан'), image, expertIds: expertNodes.map((node) => node['@id']), caseUrls, citationUrls }), ...expertNodes);
   }
   if (type === 'article' && pathName !== '/news') {
     const approved = isArticleApproved(articleContentMap.get(pathName.replace(/^\/news\//, '')));
@@ -70,9 +71,9 @@ const schemasFor = (source) => {
     const reviewer = approved ? expertMap.get(source.reviewerSlug) : undefined;
     const ids = entityIds(canonical);
     const caseUrls = verifiedCases.filter((item) => source.relatedServiceSlugs?.includes(item.service)).map((item) => `${SITE_URL}/cases/${item.slug}`);
-    schemas.push(buildArticleSchema({ canonical, headline: h1, description, image: image || OG_IMAGE, datePublished, dateModified, authorId: isCompleteExpert(author) ? ids.author : undefined, reviewerId: isCompleteExpert(reviewer) ? ids.reviewer : undefined, caseUrls }));
-    if (isCompleteExpert(author)) schemas.push(buildPersonSchema(author, ids.author));
-    if (isCompleteExpert(reviewer)) schemas.push(buildPersonSchema(reviewer, ids.reviewer));
+    schemas.push(buildArticleSchema({ canonical, headline: h1, description, image: image || OG_IMAGE, datePublished, dateModified, authorId: isExpertWithCredentials(author) ? ids.author : undefined, reviewerId: isExpertWithCredentials(reviewer) ? ids.reviewer : undefined, caseUrls }));
+    if (isExpertWithCredentials(author)) schemas.push(buildPersonSchema(author, ids.author));
+    if (isExpertWithCredentials(reviewer)) schemas.push(buildPersonSchema(reviewer, ids.reviewer));
   }
   if (pathName !== '/') schemas.push(buildBreadcrumbSchema(
     source.breadcrumbs?.map((item) => ({ name: item.label, url: item.path }))
@@ -150,8 +151,10 @@ const registry = [
       lastModified: item.updatedAt,
       schema: [
         ...buildCorePageEntities({ canonical, name: item.title, description: item.problem, dateModified: item.updatedAt }),
-        buildArticleSchema({ canonical, headline: item.title, description: item.problem, image: OG_IMAGE, datePublished: item.publishedAt, dateModified: item.updatedAt, authorId: ids.author }),
+        buildArticleSchema({ canonical, headline: item.title, description: item.problem, image: OG_IMAGE, datePublished: item.publishedAt, dateModified: item.updatedAt, authorId: ids.author, reviewerId: ids.reviewer, serviceId: ids.service }),
+        buildServiceEntity({ canonical, name: item.service, description: item.problem, areaServed: item.city }),
         buildPersonSchema(item.expert, ids.author),
+        buildPersonSchema(item.reviewer, ids.reviewer),
         buildBreadcrumbSchema([{ name: 'Главная', url: SITE_URL }, { name: 'Кейсы', url: `${SITE_URL}/cases` }, { name: item.title, url: canonical }]),
       ],
     });

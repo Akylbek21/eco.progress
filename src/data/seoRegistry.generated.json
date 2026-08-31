@@ -1614,7 +1614,7 @@
         "url": "https://ecoprogress.kz/services/ecological-documents",
         "name": "Определим, какие экологические документы нужны вашему объекту, и подготовим согласованный комплект",
         "description": "Подготовка экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1913,7 +1913,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/services/environmental-design",
@@ -1976,7 +1976,7 @@
         "url": "https://ecoprogress.kz/services/environmental-design",
         "name": "Экологическое проектирование",
         "description": "Основная коммерческая услуга по разработке экологических проектов для строительства и действующих объектов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2275,7 +2275,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/services/roos",
@@ -2338,7 +2338,7 @@
         "url": "https://ecoprogress.kz/services/roos",
         "name": "Разработка РООС в Казахстане",
         "description": "Разработка РООС для проектной документации в Казахстане. Проверим исходные данные, определим состав раздела и подготовим раздел охраны окружающей среды.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -2637,7 +2637,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/services/waste-passport",
@@ -2715,7 +2715,7 @@
         "url": "https://ecoprogress.kz/services/waste-passport",
         "name": "Разработка паспорта опасных отходов в Казахстане",
         "description": "Разрабатываем паспорта отходов для предприятий: проверяем происхождение и состав, классифицируем отход и готовим документы для учёта.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3014,7 +3014,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/services/szz",
@@ -3092,7 +3092,7 @@
         "url": "https://ecoprogress.kz/services/szz",
         "name": "Разработка проекта СЗЗ в Казахстане",
         "description": "Разработка проекта СЗЗ: анализ площадки и источников, расчёты воздействия, проверка границы и подготовка проектных материалов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3391,7 +3391,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/services/ndv",
@@ -3469,7 +3469,7 @@
         "url": "https://ecoprogress.kz/services/ndv",
         "name": "Подготовим проект нормативов допустимых выбросов на основе проверенной инвентаризации источников",
         "description": "Инвентаризация источников, расчёты выбросов и подготовка проекта НДВ. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -3768,7 +3768,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/services/puo",
@@ -3831,7 +3831,7 @@
         "url": "https://ecoprogress.kz/services/puo",
         "name": "Разработаем программу управления отходами по фактическим видам, объёмам и способам обращения",
         "description": "Анализ потоков отходов, целевые показатели и программа управления отходами. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4130,7 +4130,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/services/ovos",
@@ -4193,7 +4193,7 @@
         "url": "https://ecoprogress.kz/services/ovos",
         "name": "Подготовим материалы оценки воздействия для проекта и обозначим зависимости от исходных решений",
         "description": "Подготовка ОВОС и материалов экологической оценки для проектов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4492,7 +4492,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/services/environmental-permits",
@@ -4570,7 +4570,7 @@
         "url": "https://ecoprogress.kz/services/environmental-permits",
         "name": "Экологические разрешения и декларации",
         "description": "Подготовка разрешительных материалов и сопровождение процедур по требованиям РК. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -4869,7 +4869,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/services/laboratory-tests",
@@ -4947,7 +4947,7 @@
         "url": "https://ecoprogress.kz/services/laboratory-tests",
         "name": "Организуем лабораторные исследования по согласованной программе и передадим протоколы результатов",
         "description": "Анализы воды, воздуха и почвы, замеры выбросов и протоколы исследований. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -5246,7 +5246,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/services/water-analysis",
@@ -5324,7 +5324,7 @@
         "url": "https://ecoprogress.kz/services/water-analysis",
         "name": "Лабораторный анализ воды",
         "description": "Лабораторный анализ питьевой, природной и сточной воды: подберём показатели, согласуем отбор и оформим протокол исследования.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -5623,7 +5623,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/services/industrial-control",
@@ -5686,7 +5686,7 @@
         "url": "https://ecoprogress.kz/services/industrial-control",
         "name": "Производственный контроль СЭС",
         "description": "Программа производственного контроля, замеры и протоколы для санитарных требований. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -5985,7 +5985,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/services/program-pek",
@@ -6063,7 +6063,7 @@
         "url": "https://ecoprogress.kz/services/program-pek",
         "name": "Разработаем программу производственного экологического контроля под источники и процессы предприятия",
         "description": "Программа контроля по фактическим источникам, показателям и процессам предприятия. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -6362,7 +6362,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/services/report-pek",
@@ -6440,7 +6440,7 @@
         "url": "https://ecoprogress.kz/services/report-pek",
         "name": "Подготовка отчёта ПЭК в Казахстане",
         "description": "Подготовим отчёт ПЭК для предприятия: проверим данные мониторинга, протоколы и производственные показатели. Рассчитаем сроки и стоимость подготовки отчёта.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -6739,7 +6739,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/services/waste-transportation",
@@ -6802,7 +6802,7 @@
         "url": "https://ecoprogress.kz/services/waste-transportation",
         "name": "Организуем вывоз согласованных видов отходов с объекта и оформим комплект документов по выполненной перевозке",
         "description": "Сбор и транспортировка отходов с объекта с оформлением сопроводительных документов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -7101,7 +7101,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/services/waste-recycling",
@@ -7179,7 +7179,7 @@
         "url": "https://ecoprogress.kz/services/waste-recycling",
         "name": "Проверим возможность приёма отходов, согласуем способ обращения и оформим документы по выполненной операции",
         "description": "Передача отходов на утилизацию или переработку и оформление подтверждающих документов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -7478,7 +7478,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/services/waste-management",
@@ -7541,7 +7541,7 @@
         "url": "https://ecoprogress.kz/services/waste-management",
         "name": "Комплексное обращение с отходами",
         "description": "Коммерческая страница комплексного вывоза, утилизации и документального сопровождения отходов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -7840,7 +7840,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/services/poligon-tbo",
@@ -7903,7 +7903,7 @@
         "url": "https://ecoprogress.kz/services/poligon-tbo",
         "name": "Полигон ТБО",
         "description": "Приём и законное размещение ТБО с документами для организаций. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -8202,7 +8202,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/services/environmental-audit",
@@ -8265,7 +8265,7 @@
         "url": "https://ecoprogress.kz/services/environmental-audit",
         "name": "Сопровождение экологических проверок",
         "description": "Аудит документов, оценка рисков и подготовка предприятия к экологической проверке. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -8564,7 +8564,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-27"
   },
   {
     "path": "/services/ecological-support",
@@ -8627,7 +8627,7 @@
         "url": "https://ecoprogress.kz/services/ecological-support",
         "name": "Организуем экологическое сопровождение с календарём обязанностей, документами и контролем открытых вопросов",
         "description": "Регулярный контроль отчётности, документов, сроков и экологических рисков предприятия. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -8926,7 +8926,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/ecologicheskie-uslugi-almaty",
@@ -8992,7 +8992,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -9089,7 +9097,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -9215,7 +9231,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -9312,7 +9336,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -9409,7 +9441,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -9506,7 +9546,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -9603,7 +9651,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -9700,7 +9756,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -9797,7 +9861,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -9894,7 +9966,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -9991,7 +10071,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -10088,7 +10176,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -10185,7 +10281,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -10282,7 +10386,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -10379,7 +10491,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -10476,7 +10596,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -10573,7 +10701,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -10670,7 +10806,15 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -10764,10 +10908,13 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-almaty",
         "name": "Лабораторные замеры в Алматы",
         "description": "Лабораторные замеры в Алматы: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Алматы — после аудита.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -10812,6 +10959,9 @@
           {
             "@id": "https://ecoprogress.kz/laboratornye-zamery-almaty#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
         ]
       },
       {
@@ -11075,7 +11225,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/laboratornye-zamery-shymkent",
@@ -11167,10 +11317,13 @@
         "url": "https://ecoprogress.kz/laboratornye-zamery-shymkent",
         "name": "Лабораторные замеры в Шымкенте",
         "description": "Лабораторные замеры в Шымкенте: Воздух, вода, почва, шум и микроклимат: измерения и протоколы. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -11215,6 +11368,9 @@
           {
             "@id": "https://ecoprogress.kz/laboratornye-zamery-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
         ]
       },
       {
@@ -11478,7 +11634,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/szz-shymkent",
@@ -11570,10 +11726,14 @@
         "url": "https://ecoprogress.kz/szz-shymkent",
         "name": "Проект санитарно-защитной зоны (СЗЗ) в Шымкенте",
         "description": "Проект СЗЗ в Шымкенте: Расчёт границ, анализ выбросов и шума, подготовка проекта СЗЗ. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2200026447"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -11618,6 +11778,10 @@
           {
             "@id": "https://ecoprogress.kz/szz-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2200026447"
         ]
       },
       {
@@ -11881,7 +12045,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/pasport-othodov-shymkent",
@@ -11973,10 +12137,14 @@
         "url": "https://ecoprogress.kz/pasport-othodov-shymkent",
         "name": "Паспорт отходов в Шымкенте",
         "description": "Паспорт отходов в Шымкенте: Классификация, проверка состава и паспорта для учёта отходов. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -12021,6 +12189,10 @@
           {
             "@id": "https://ecoprogress.kz/pasport-othodov-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
         ]
       },
       {
@@ -12284,7 +12456,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/utilizaciya-othodov-shymkent",
@@ -12376,10 +12548,14 @@
         "url": "https://ecoprogress.kz/utilizaciya-othodov-shymkent",
         "name": "Утилизация отходов в Шымкенте",
         "description": "Утилизация промышленных отходов в Шымкенте. Проверим перечень отходов, организуем передачу и вывоз, предоставим закрывающие документы. Рассчитаем стоимость.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -12424,6 +12600,10 @@
           {
             "@id": "https://ecoprogress.kz/utilizaciya-othodov-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
         ]
       },
       {
@@ -12687,7 +12867,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/utilizaciya-othodov-taraz",
@@ -12750,10 +12930,14 @@
         "url": "https://ecoprogress.kz/utilizaciya-othodov-taraz",
         "name": "Утилизация отходов в Таразе",
         "description": "Утилизация промышленных отходов в Таразе. Проверим перечень отходов, рассчитаем способ передачи, стоимость и подготовим закрывающие документы.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -12798,6 +12982,10 @@
           {
             "@id": "https://ecoprogress.kz/utilizaciya-othodov-taraz#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
         ]
       },
       {
@@ -13061,7 +13249,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/utilizaciya-othodov-turkestan",
@@ -13124,10 +13312,14 @@
         "url": "https://ecoprogress.kz/utilizaciya-othodov-turkestan",
         "name": "Утилизация отходов в Туркестане",
         "description": "Утилизация промышленных отходов в Туркестане. Проверим перечень отходов, организуем передачу и подготовим закрывающие документы. Расчёт стоимости по заявке.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -13172,6 +13364,10 @@
           {
             "@id": "https://ecoprogress.kz/utilizaciya-othodov-turkestan#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
         ]
       },
       {
@@ -13435,7 +13631,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/pek-shymkent",
@@ -13542,10 +13738,14 @@
         "url": "https://ecoprogress.kz/pek-shymkent",
         "name": "Программа производственного экологического контроля в Шымкенте",
         "description": "Программа ПЭК в Шымкенте: Объекты контроля, точки мониторинга, показатели и периодичность ПЭК. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -13590,6 +13790,10 @@
           {
             "@id": "https://ecoprogress.kz/pek-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
         ]
       },
       {
@@ -13853,7 +14057,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/otchet-pek-almaty",
@@ -13916,10 +14120,14 @@
         "url": "https://ecoprogress.kz/otchet-pek-almaty",
         "name": "Отчёт производственного экологического контроля в Алматы",
         "description": "Отчёт ПЭК в Алматы: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Алматы — после аудита.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -13964,6 +14172,10 @@
           {
             "@id": "https://ecoprogress.kz/otchet-pek-almaty#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
         ]
       },
       {
@@ -14227,7 +14439,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/otchet-pek-shymkent",
@@ -14319,10 +14531,14 @@
         "url": "https://ecoprogress.kz/otchet-pek-shymkent",
         "name": "Отчёт производственного экологического контроля в Шымкенте",
         "description": "Отчёт ПЭК в Шымкенте: Проверка протоколов и производственных данных, подготовка официального отчёта ПЭК. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -14367,6 +14583,10 @@
           {
             "@id": "https://ecoprogress.kz/otchet-pek-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
         ]
       },
       {
@@ -14630,7 +14850,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/analiz-vody-shymkent",
@@ -14725,7 +14945,10 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -14770,6 +14993,9 @@
           {
             "@id": "https://ecoprogress.kz/analiz-vody-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
         ]
       },
       {
@@ -15128,7 +15354,10 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -15173,6 +15402,9 @@
           {
             "@id": "https://ecoprogress.kz/proizvodstvennyy-kontrol-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
         ]
       },
       {
@@ -15499,10 +15731,14 @@
         "url": "https://ecoprogress.kz/roos-almaty",
         "name": "Разработка РООС в Алматы",
         "description": "Разработка РООС в Алматы для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023809"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -15547,6 +15783,10 @@
           {
             "@id": "https://ecoprogress.kz/roos-almaty#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023809"
         ]
       },
       {
@@ -15810,7 +16050,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/roos-astana",
@@ -15873,10 +16113,14 @@
         "url": "https://ecoprogress.kz/roos-astana",
         "name": "Разработка РООС в Астане",
         "description": "Разработка РООС в Астане для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023809"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -15921,6 +16165,10 @@
           {
             "@id": "https://ecoprogress.kz/roos-astana#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023809"
         ]
       },
       {
@@ -16184,7 +16432,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/roos-shymkent",
@@ -16276,10 +16524,14 @@
         "url": "https://ecoprogress.kz/roos-shymkent",
         "name": "Разработка РООС в Шымкенте",
         "description": "Разработка РООС в Шымкенте для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023809"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -16324,6 +16576,10 @@
           {
             "@id": "https://ecoprogress.kz/roos-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023809"
         ]
       },
       {
@@ -16587,7 +16843,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/ekologicheskoe-razreshenie-shymkent",
@@ -16682,7 +16938,10 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -16727,6 +16986,9 @@
           {
             "@id": "https://ecoprogress.kz/ekologicheskoe-razreshenie-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
         ]
       },
       {
@@ -17082,10 +17344,14 @@
         "url": "https://ecoprogress.kz/ovos-shymkent",
         "name": "Оценка воздействия на окружающую среду (ОВОС) в Шымкенте",
         "description": "ОВОС в Шымкенте: Скрининг, оценка воздействий и подготовка материалов ОВОС. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023809"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -17130,6 +17396,10 @@
           {
             "@id": "https://ecoprogress.kz/ovos-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023809"
         ]
       },
       {
@@ -17393,7 +17663,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/ndv-shymkent",
@@ -17485,10 +17755,14 @@
         "url": "https://ecoprogress.kz/ndv-shymkent",
         "name": "Проект нормативов допустимых выбросов (НДВ) в Шымкенте",
         "description": "Проект НДВ в Шымкенте: Инвентаризация источников, расчёт выбросов и проект НДВ. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -17533,6 +17807,10 @@
           {
             "@id": "https://ecoprogress.kz/ndv-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
         ]
       },
       {
@@ -17796,7 +18074,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/puo-shymkent",
@@ -17888,10 +18166,14 @@
         "url": "https://ecoprogress.kz/puo-shymkent",
         "name": "Программа управления отходами (ПУО) в Шымкенте",
         "description": "Программа управления отходами в Шымкенте: Потоки отходов, целевые показатели и мероприятия в программе ПУО. Срок и стоимость для Шымкента — после аудита.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -17936,6 +18218,10 @@
           {
             "@id": "https://ecoprogress.kz/puo-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
         ]
       },
       {
@@ -18199,7 +18485,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-08-31"
   },
   {
     "path": "/ses-proverka-proizvodstvennyy-kontrol",
@@ -18266,7 +18552,10 @@
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/V2300032276"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -18402,7 +18691,15 @@
         "dateModified": "2026-08-28",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -18502,7 +18799,10 @@
         "dateModified": "2026-08-28",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -18547,6 +18847,9 @@
           {
             "@id": "https://ecoprogress.kz/kk/ekologiyalyq-qyzmetter#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
         ]
       },
       {
@@ -18885,7 +19188,11 @@
         "dateModified": "2026-08-28",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -18930,6 +19237,10 @@
           {
             "@id": "https://ecoprogress.kz/kk/qaldyqtar-pasporty#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
         ]
       },
       {
@@ -19268,7 +19579,11 @@
         "dateModified": "2026-08-28",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -19313,6 +19628,10 @@
           {
             "@id": "https://ecoprogress.kz/kk/services/ndv#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
         ]
       },
       {
@@ -19651,7 +19970,11 @@
         "dateModified": "2026-08-28",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -19696,6 +20019,10 @@
           {
             "@id": "https://ecoprogress.kz/kk/pek-bagdarlamasy#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
         ]
       },
       {
@@ -20034,7 +20361,11 @@
         "dateModified": "2026-08-28",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -20079,6 +20410,10 @@
           {
             "@id": "https://ecoprogress.kz/kk/pek-esebi#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
         ]
       },
       {
@@ -20417,7 +20752,15 @@
         "dateModified": "2026-08-28",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -20462,6 +20805,14 @@
           {
             "@id": "https://ecoprogress.kz/kk/ekologiyalyq-ruqsat#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
         ]
       },
       {
@@ -20800,7 +21151,11 @@
         "dateModified": "2026-08-28",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2200026447"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -20845,6 +21200,10 @@
           {
             "@id": "https://ecoprogress.kz/kk/sanitariyalyq-qorgau-aimagy#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2200026447"
         ]
       },
       {
@@ -21183,7 +21542,10 @@
         "dateModified": "2026-08-28",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -21228,6 +21590,9 @@
           {
             "@id": "https://ecoprogress.kz/kk/zerthanalyq-zertteuler#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400"
         ]
       },
       {
@@ -21566,7 +21931,15 @@
         "dateModified": "2026-08-28",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -21611,6 +21984,14 @@
           {
             "@id": "https://ecoprogress.kz/kk/su-analizi#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903",
+          "https://adilet.zan.kz/rus/docs/V2200026447",
+          "https://adilet.zan.kz/rus/docs/V2100023553",
+          "https://adilet.zan.kz/rus/docs/V2100023809",
+          "https://adilet.zan.kz/rus/docs/V2100022317"
         ]
       },
       {
@@ -21949,7 +22330,11 @@
         "dateModified": "2026-08-28",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -21994,6 +22379,10 @@
           {
             "@id": "https://ecoprogress.kz/kk/qaldyqtardy-kadege-zharatu#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023903"
         ]
       },
       {
@@ -22332,7 +22721,11 @@
         "dateModified": "2026-08-28",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -22377,6 +22770,10 @@
           {
             "@id": "https://ecoprogress.kz/kk/pek-bagdarlamasy-shymkent#expert-8"
           }
+        ],
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
         ]
       },
       {
@@ -22701,7 +23098,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -22817,7 +23217,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -22933,7 +23336,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -23049,7 +23455,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -23165,7 +23574,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -23281,7 +23693,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -23397,7 +23812,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -23513,7 +23931,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -23629,7 +24050,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -23745,7 +24169,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -23861,7 +24288,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -23977,7 +24407,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -24093,7 +24526,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",
@@ -24209,7 +24645,10 @@
         "dateModified": "2026-07-17",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
-        }
+        },
+        "citation": [
+          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+        ]
       },
       {
         "@context": "https://schema.org",

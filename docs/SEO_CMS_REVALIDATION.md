@@ -64,16 +64,38 @@ Required deployment secrets:
 - `VITE_COMPANY_EMAIL`, `VITE_COMPANY_STREET`, `VITE_COMPANY_POSTAL_CODE` —
   confirmed organization data.
 
-`npm run build` first runs `seo:content:sync`. A build without the endpoint may
-reuse a previously generated non-empty snapshot. An empty snapshot, incomplete
-CMS records, or a sitemap drop beyond the committed baseline threshold fails the
-build and must keep the previous production deployment active. Docker deployment
-defaults `SEO_CONTENT_API_URL` to the `eco-app` backend on the external `eco-net`
-network and passes it only to the build stage. Override the variable when the
-backend uses another address.
+`npm run build` first runs `seo:content:sync`. With `SEO_CONTENT_API_URL` configured,
+the build downloads the current article review decisions and confirmed cases before generating the SEO registry,
+sitemap and prerendered HTML. Without the endpoint it retains the committed fail-closed
+snapshots, so no article or case can become indexable accidentally. Invalid or duplicate CMS
+records fail the build before the previous snapshots are overwritten.
 
-`articleReviews` contains only review decisions confirmed in the CMS. Each item has
-`slug`, `reviewStatus`, and, for backend `APPROVED` (normalized to `approved`), mandatory `authorSlug`, `reviewerSlug`
-and `lastReviewedAt`. Both slugs must reference complete expert profiles from the
-same response. Static article copy remains `requires-specialist-review` until that
-record arrives; the frontend never promotes it based on a name or job title alone.
+`articleReviews` contains only review decisions confirmed in the CMS. The DTO uses
+`articleSlug`, `expertId`, `status`, `reviewedAt` and `updatedAt`. Backend `APPROVED`
+is normalized to `approved` only when `expertId` and a valid `reviewedAt` are present.
+The expert must also resolve to a complete public expert profile. Static article copy
+remains `requires-specialist-review` until that record arrives; frontend code and a
+manually edited robots field cannot promote it.
+
+The backend workflow is `DRAFT -> REQUIRES_REVIEW -> APPROVED`. Approval must persist
+the authenticated specialist as `expertId`, set `reviewedAt`, publish the updated public
+snapshot and trigger the frontend build hook. The generated registry then sets
+`robots=index,follow` and includes the article in `sitemap.xml` in the same deployment.
+
+## Confirmed case workflow
+
+Cases use `DRAFT -> REQUIRES_REVIEW -> APPROVED -> PUBLISHED`. A case is eligible for
+SSR, schema and sitemap only when `published=true`, `reviewStatus=APPROVED`, `publishedAt`
+and `reviewedAt` are valid, and both `expertId` and `reviewerId` resolve to public VERIFIED
+experts. The CMS record must include the task, initial data, performed stages, result,
+duration, completion date, applicable regulations and an explicit client anonymity choice.
+It must also provide at least one structured, verified project metric as
+`metrics: [{ "label": "Источники", "value": "17" }]`; metrics are rendered as facts,
+not inferred from marketing copy.
+
+The build stores eligible records in `src/data/caseStudies.generated.json`. Runtime API
+responses pass through the same normalizer and publication predicate. Drafts and incomplete
+published records cannot be promoted by frontend flags; an invalid published record fails
+the build and leaves the currently deployed version active. Once a case passes validation,
+its `/cases/{slug}` route is prerendered and automatically enters the unified SEO registry
+and sitemap. Client names may be omitted only when `clientAnonymous=true`.

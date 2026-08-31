@@ -11,9 +11,10 @@ import { trackServiceView } from '../services/analytics';
 import { activeServices, getCatalogService } from '../content/serviceCatalog';
 import { buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, buildServiceEntity } from '../seo/entityBuilders';
 import { serviceContentMap } from '../content/services/serviceContent';
+import { expertMap, experts, isPublishableExpert } from '../content/experts/experts';
 import { publicContentRepository } from '../content/apiRepository';
 import { ServiceAeoContent } from '../components/content/AeoContent';
-import { ContentLastUpdated, RelatedArticles, RelatedServices } from '../components/content/ContentBlocks';
+import { ContentLastUpdated, RelatedArticles, RelatedServices, ServiceReviewCard } from '../components/content/ContentBlocks';
 import { CheckCircle2 } from 'lucide-react';
 
 export const serviceLandingSlugs = activeServices
@@ -30,7 +31,7 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
     queryFn: () => publicContentRepository.getServiceBySlug(service?.slug || ''),
     enabled: Boolean(service?.slug), initialData: staticContent, staleTime: 5 * 60 * 1000,
   });
-  const { data: confirmedExperts = [] } = useQuery({ queryKey: ['public-content', 'experts'], queryFn: () => publicContentRepository.getExperts(), staleTime: 5 * 60 * 1000 });
+  const { data: confirmedExperts = [] } = useQuery({ queryKey: ['public-content', 'experts'], queryFn: () => publicContentRepository.getExperts(), initialData: experts, staleTime: 5 * 60 * 1000 });
   const { data: confirmedCases = [] } = useQuery({ queryKey: ['public-content', 'cases'], queryFn: () => publicContentRepository.getCases(), staleTime: 5 * 60 * 1000 });
 
   useEffect(() => { if (service) trackServiceView({ slug: service.slug, title: service.title }); }, [service]);
@@ -40,10 +41,16 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
   if (isError || !content) return <div className="px-5 py-20 text-center text-rose-800">Не удалось загрузить описание услуги с сервера.</div>;
 
   const canonical = `${company.siteUrl}/services/${service.slug}`;
+  const reviewerCandidate = content.contentReview.reviewedBy
+    ? confirmedExperts.find((expert) => expert.id === content.contentReview.reviewedBy || expert.slug === content.contentReview.reviewedBy)
+      ?? expertMap.get(content.contentReview.reviewedBy)
+    : undefined;
+  const serviceReviewer = content.contentReview.reviewStatus === 'approved'
+    && content.contentReview.lastReviewedAt && isPublishableExpert(reviewerCandidate) ? reviewerCandidate : undefined;
   const expertNodes = confirmedExperts.map((expert, index) => buildPersonSchema(expert, `${canonical}#expert-${index + 1}`));
   const caseUrls = confirmedCases.filter((item) => item.service === service.slug).map((item) => `${company.siteUrl}/cases/${item.slug}`);
   const schema = [
-    ...buildCorePageEntities({ canonical, name: service.title, description: service.seo.description }),
+    ...buildCorePageEntities({ canonical, name: service.title, description: service.seo.description, dateModified: content.contentReview.lastReviewedAt }),
     buildServiceEntity({ canonical, name: service.title, description: service.fullDescription, serviceType: service.category, areaServed: service.areaServed.type === 'KAZAKHSTAN' ? 'Казахстан' : service.areaServed.regions, expertIds: expertNodes.map((node) => String(node['@id'])), caseUrls }),
     ...expertNodes,
     buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Услуги', url: `${company.siteUrl}/services` }, { name: service.title, url: canonical }]),
@@ -60,6 +67,7 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
       </div>
     </section>
     <main className="bg-eco-50 px-4 py-16 sm:px-8 sm:py-20"><ServiceAeoContent content={content} /></main>
+    {serviceReviewer && <section className="px-4 py-12 sm:px-8"><div className="mx-auto max-w-7xl"><ServiceReviewCard expert={serviceReviewer} reviewedAt={content.contentReview.lastReviewedAt!} legalBasisCheckedAt={content.contentReview.legalBasisCheckedAt} /></div></section>}
     <section id="lead" className="bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-20"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start"><div><h2 className="text-3xl font-bold">{content.commercial.finalCtaTitle}</h2><p className="mt-4 leading-7 text-white/75">{content.commercial.finalCtaText}</p><WhatsAppButton label="Отправить документы в WhatsApp" message={content.commercial.documentsWhatsAppMessage} className="mt-6" /></div><LeadForm source={`service_${service.slug}_final`} formId={`service_${service.slug}_final`} ctaId="final_calculate" sourcePage={`/services/${service.slug}`} title={content.hero.primaryCta} submitLabel={content.hero.primaryCta} compact defaultService={service.title} serviceSlug={service.slug} variant="blue" /></div></section>
     <section className="px-4 py-14 sm:px-8"><div className="mx-auto max-w-7xl space-y-10">{content.contentReview.lastReviewedAt && <ContentLastUpdated date={content.contentReview.lastReviewedAt} requiresReview={content.contentReview.reviewStatus !== 'approved'} />}<RelatedServices slugs={content.relatedServices} />{content.relatedArticles.length > 0 && <RelatedArticles slugs={content.relatedArticles} />}{service.relatedServiceSlugs.length > 0 && <div><h2 className="text-2xl font-bold text-eco-900">Связанные услуги</h2><div className="mt-5 flex flex-wrap gap-3">{service.relatedServiceSlugs.map((relatedSlug) => { const related = getCatalogService(relatedSlug); return related ? <Link key={relatedSlug} to={`/services/${related.slug}`} className="rounded-full border border-eco-200 bg-eco-50 px-4 py-2 text-sm font-semibold text-eco-800">{related.title}</Link> : null; })}</div></div>}</div></section>
   </div>;

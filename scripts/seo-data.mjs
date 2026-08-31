@@ -1,13 +1,14 @@
 import { frontendServices } from './service-catalog.mjs';
 import { articleContent } from '../src/content/articles/articleContent.ts';
+import { articleReviewBySlug } from '../src/content/articles/articleReviews.ts';
 import { normalizeArticleSlug } from '../src/content/articles/articleSlugs.ts';
 import { regionContent, regionContentMap } from '../src/content/regions/regionContent.ts';
 import { getRegionalServiceNote } from '../src/content/regions/regionalServiceContent.ts';
 import { isRegionContentIndexable } from '../src/content/regions/regionContentQuality.ts';
 import { activeServices, getServicePrimaryCtaLabel, wasteRecyclingRegionSlugs } from '../src/content/serviceCatalog.ts';
-import { serviceContentMap } from '../src/content/services/serviceContent.ts';
+import { codeBasis, serviceContent, serviceContentMap } from '../src/content/services/serviceContent.ts';
 import { aboutPublicContent } from '../src/content/aboutPublicContent.ts';
-import { isArticleEligibleForSeoLinks } from '../src/content/articleReview.ts';
+import { isArticleApproved, isArticleEligibleForSeoLinks } from '../src/content/articleReview.ts';
 import { regionNameMap } from '../src/content/regions.ts';
 import { PUBLIC_SITE_URL, canonicalForPublicPath, isPublicPageIndexable } from '../src/seo/indexingPolicy.ts';
 import { buildKkLocalizedPages } from '../src/content/kkSeoPages.ts';
@@ -16,6 +17,21 @@ const SITE_URL = PUBLIC_SITE_URL;
 const LASTMOD = '2026-08-27';
 const OG_IMAGE = `${SITE_URL}/media/social/ecoprogress-og-1200x630.jpg`;
 const wasteRecyclingRegions = new Set(wasteRecyclingRegionSlugs);
+const generatedContentReview = serviceContent[0].contentReview;
+const legalSource = (item, checkedAt = generatedContentReview.legalBasisCheckedAt) => ({
+  title: item.title,
+  url: item.sourceUrl,
+  sourceName: 'ИПС «Әділет»',
+  ...(item.number ? { documentNumber: item.number } : {}),
+  ...(item.date ? { issuedAt: item.date } : {}),
+  ...(item.note ? { supports: [item.note] } : {}),
+  accessedAt: checkedAt,
+  claimStatus: item.claimStatus,
+});
+const officialSourcesFor = (items) => items.filter((item) => item.sourceUrl).map((item) => legalSource(item));
+const generalOfficialSources = [...new Map(
+  serviceContent.flatMap((item) => officialSourcesFor(item.legalBasis)).map((source) => [source.url, source]),
+).values()];
 
 const cityProfiles = [
   ['almaty', 'Алматы', 'Алматы и Алматинская область', 'офисы, клиники, рестораны, склады, торговые центры и пищевые производства', 'Высокая плотность объектов и частые проверки требуют аккуратного ведения экологических документов и лабораторных протоколов.', ['astana', 'shymkent', 'taldykorgan']],
@@ -520,6 +536,11 @@ const createCityPage = (city) => ({
   breadcrumbs: [link('Главная', '/'), link('Города', '/regions'), link(`Экологические услуги в ${city.cityPrepositional}`, `/ecologicheskie-uslugi-${city.slug}`)],
   schemaType: 'WebPage',
   indexable: hasIndexableRegionContent(city.slug),
+  reviewStatus: generatedContentReview.reviewStatus,
+  reviewerSlug: generatedContentReview.reviewedBy,
+  lastReviewedAt: generatedContentReview.lastReviewedAt,
+  legalBasisCheckedAt: generatedContentReview.legalBasisCheckedAt,
+  sources: generalOfficialSources,
   image: '/para.jpg',
   priority: 0.8,
   changefreq: 'weekly',
@@ -624,6 +645,9 @@ const createServiceCityPage = (service, city) => {
   const cityLegalBasis = baseServiceContent?.legalBasis?.length
     ? baseServiceContent.legalBasis.map((item) => `${item.title}${item.number ? ` ${item.number}` : ''}${item.date ? ` от ${item.date}` : ''}. ${item.note || ''}`).join(' ')
     : serviceLegalBasis[service.key];
+  const serviceLegalSources = officialSourcesFor(baseServiceContent?.legalBasis?.length
+    ? baseServiceContent.legalBasis
+    : [codeBasis]);
   return ({
   slug: `${service.slugPrefix}-${city.slug}`,
   city: city.cityNominative,
@@ -642,6 +666,11 @@ const createServiceCityPage = (service, city) => {
   serviceSlug: mainServiceSlug[service.key],
   type: 'service-city',
   indexable: isServiceCityIndexable(service, city),
+  reviewStatus: baseServiceContent?.contentReview.reviewStatus ?? generatedContentReview.reviewStatus,
+  reviewerSlug: baseServiceContent?.contentReview.reviewedBy ?? generatedContentReview.reviewedBy,
+  lastReviewedAt: baseServiceContent?.contentReview.lastReviewedAt ?? generatedContentReview.lastReviewedAt,
+  legalBasisCheckedAt: baseServiceContent?.contentReview.legalBasisCheckedAt ?? generatedContentReview.legalBasisCheckedAt,
+  sources: serviceLegalSources,
   title: seoTitle,
   description: service.key === 'waste-utilization' && !wasteRecyclingRegions.has(city.slug)
     ? `Утилизация отходов в ${city.cityPrepositional}: проверка партии, документов и доступности оператора без заявления местного офиса или собственного вывоза.`
@@ -662,7 +691,7 @@ const createServiceCityPage = (service, city) => {
     { title: `${baseServiceContent?.commercial.timelineTitle ?? `Срок выполнения услуги «${content.title}»`} в ${city.cityPrepositional}`, body: `${baseServiceContent?.aeo.duration ?? content.deadline} Учитываем условия выполнения услуги: ${regionalService.logisticsNote}. Предварительный срок определим после проверки исходных данных.` },
     { title: `${baseServiceContent?.commercial.pricingTitle ?? `Стоимость услуги «${content.title}»`} в ${city.cityPrepositional}`, body: `${baseServiceContent?.aeo.pricing ?? 'Точную стоимость определяем после проверки задания и исходных материалов.'} ${cityPricingFactors}` },
     { title: `Что получает заказчик в ${city.cityPrepositional}`, body: `${cityDeliverables} Региональные условия и ограничения фиксируем в составе результата, а неподтверждённые работы не включаем.` },
-    { title: `Нормативная база для услуги «${content.title}»`, body: `${cityLegalBasis} Регион не меняет республиканское регулирование; применимость требований проверяется для конкретного объекта. Актуальность централизованного реестра проверялась ${LASTMOD}.` },
+    { title: `Нормативная база для услуги «${content.title}»`, body: `${cityLegalBasis} Регион не меняет республиканское регулирование; применимость требований проверяется для конкретного объекта. Актуальность централизованного реестра проверялась ${baseServiceContent?.contentReview.legalBasisCheckedAt || LASTMOD}.` },
     { title: `Частые ошибки при заказе услуги «${content.title}»`, body: `${baseServiceContent?.aeo.commonMistakes ?? 'Частые ошибки — начинать работу без согласованного задания, передавать разные версии исходных файлов и не фиксировать изменения объекта.'} Для площадки в ${city.cityPrepositional} отдельно проверяем адрес, режим работы и условия доступа.` },
     { title: roosRegionalContent ? `Разработка РООС в ${city.cityPrepositional}: особенности региона` : `Особенности работы в ${city.cityPrepositional}`, body: `${roosRegionalContent || regionalService.introduction} Региональный фокус — ${regionalTask}. ${operationalNote}` },
   ],
@@ -691,7 +720,7 @@ const createServiceCityPage = (service, city) => {
   image: service.image,
   priority: priorityCities.includes(city.slug) ? 0.8 : 0.7,
   changefreq: 'weekly',
-  lastmod: LASTMOD,
+  lastmod: baseServiceContent?.contentReview.lastReviewedAt || LASTMOD,
   ctaTitle: `Рассчитать работы по услуге «${content.title}» для ${city.cityGenitive}`,
   ctaText: `Для расчёта услуги «${content.title}» опишите площадку в ${city.cityPrepositional}, сообщите сведения по направлениям: ${regionalTask}; приложите доступные документы. Специалист обозначит пробелы и рассчитает этапы с учётом условий выезда для ${city.cityGenitive}.`,
   primaryCtaLabel: getServicePrimaryCtaLabel(mainServiceSlug[service.key]),
@@ -745,8 +774,18 @@ const specialPages = [
   },
 ];
 
-const enrichSpecialPage = (page) => ({
-  ...page,
+const enrichSpecialPage = (page) => {
+  const review = articleReviewBySlug.get(page.slug);
+  const approved = review && isArticleApproved({
+    status: 'published', reviewStatus: review.status, reviewerSlug: review.reviewerSlug, lastReviewedAt: review.reviewedAt,
+  });
+  const reviewedPage = review ? {
+    ...page,
+    reviewStatus: approved ? 'approved' : review.status === 'approved' ? 'requires-specialist-review' : review.status,
+    ...(approved ? { reviewerSlug: review.reviewerSlug, lastReviewedAt: review.reviewedAt } : {}),
+  } : page;
+  return ({
+  ...reviewedPage,
   canonical: canonical(page.slug),
   keywords: [page.service, 'экологические услуги Казахстан', 'проверка экологии', 'документы для бизнеса'],
   sections: [
@@ -773,10 +812,11 @@ const enrichSpecialPage = (page) => ({
   breadcrumbs: [link('Главная', '/'), link(page.type === 'article' ? 'Статьи' : 'Услуги', page.type === 'article' ? '/news' : '/services'), link(page.h1, `/${page.slug}`)],
   schemaType: page.type === 'article' ? 'Article' : 'Service',
   priority: page.type === 'article' ? 0.7 : 0.85,
-  indexable: isPublicPageIndexable({ path: `/${page.slug}`, type: page.type, reviewStatus: page.reviewStatus }),
+  indexable: isPublicPageIndexable({ path: `/${page.slug}`, type: page.type, reviewStatus: reviewedPage.reviewStatus }),
   changefreq: 'weekly',
   lastmod: LASTMOD,
-});
+  });
+};
 
 export const seoArticles = articleContent.filter((article) => article.status === 'published').map((article) => ({
   id: canonicalArticleSlug(article.slug),
@@ -820,7 +860,24 @@ const ruSeoPages = [
     .map(enrichSpecialPage),
 ];
 
-export const seoPages = [...ruSeoPages, ...buildKkLocalizedPages()];
+const withOfficialSources = (page) => {
+  if (page.type === 'article') return page;
+  const detailedService = page.serviceSlug ? serviceContentMap.get(page.serviceSlug) : undefined;
+  const review = detailedService?.contentReview ?? generatedContentReview;
+  const sources = page.sources?.length
+    ? page.sources
+    : detailedService ? officialSourcesFor(detailedService.legalBasis) : generalOfficialSources;
+  return {
+    ...page,
+    sources,
+    reviewStatus: review.reviewStatus,
+    reviewerSlug: review.reviewedBy,
+    lastReviewedAt: review.lastReviewedAt,
+    legalBasisCheckedAt: review.legalBasisCheckedAt,
+  };
+};
+
+export const seoPages = [...ruSeoPages, ...buildKkLocalizedPages()].map(withOfficialSources);
 
 const legacyStaticPages = [
   { path: '/', title: 'Экологические услуги для бизнеса в Казахстане | EcoProgress', description: 'Экологические услуги и лабораторные исследования для предприятий Казахстана: проектирование, ПЭК, отходы, разрешения и сопровождение.', h1: 'Экологические услуги и лабораторные исследования для бизнеса в Казахстане', priority: 1.0, changefreq: 'weekly', type: 'main' },
@@ -858,6 +915,7 @@ export const publicStaticPages = [
     faq: serviceContentMap.get(service.slug)?.faq || service.faq,
     priority: 0.9,
     changefreq: 'weekly',
+    lastmod: serviceContentMap.get(service.slug)?.contentReview.lastReviewedAt || LASTMOD,
     type: 'service',
   })),
 ];

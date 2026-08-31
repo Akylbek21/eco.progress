@@ -82,7 +82,7 @@ export interface ServiceContent {
   commercial: ServiceCommercialContent;
   relatedServices: string[];
   relatedArticles: string[];
-  contentReview: { preparedBy?: string; reviewedBy?: string; lastReviewedAt?: string; reviewStatus: ReviewStatus };
+  contentReview: { preparedBy?: string; reviewedBy?: string; lastReviewedAt?: string; legalBasisCheckedAt?: string; reviewStatus: ReviewStatus };
 }
 
 export interface ArticleSection {
@@ -117,7 +117,7 @@ export interface ArticleContent {
   imageRequiresReplacement?: boolean;
   tableOfContents: boolean;
   sections: ArticleSection[];
-  sources: Array<{ title: string; url: string; accessedAt?: string; claimStatus: LegalClaimStatus }>;
+  sources: Array<{ title: string; url: string; accessedAt?: string; claimStatus: LegalClaimStatus; sourceName?: string; documentNumber?: string; issuedAt?: string; supports?: string[] }>;
   faq: AeoFaqItem[];
   reviewStatus: ReviewStatus;
 }
@@ -189,6 +189,7 @@ export interface CmsExpertDto {
   verificationStatus: 'VERIFIED';
   verifiedAt: string;
   updatedAt: string;
+  credentials?: ExpertCredential[];
 }
 
 export interface CmsCaseDto {
@@ -197,23 +198,35 @@ export interface CmsCaseDto {
   title: string;
   description: string;
   city: string;
+  region: string;
+  industry: string;
   objectType: string;
+  objectCategory: string;
   serviceType: string;
   task: string;
   solution: string;
+  workPerformed: string[];
+  regulations: Array<{ title: string; url?: string }>;
+  metrics: Array<{ label: string; value: string }>;
   result: string;
   duration: string;
   completedAt: string;
   expertId: string;
+  reviewerId: string;
+  reviewStatus: 'DRAFT' | 'REQUIRES_REVIEW' | 'APPROVED' | 'REJECTED';
+  reviewedAt: string;
   images: string[];
-  published: true;
+  clientAnonymous: boolean;
+  clientName?: string;
+  published: boolean;
+  publishedAt: string;
   updatedAt: string;
 }
 
 export interface CmsArticleReviewDto {
   articleSlug: string;
   expertId: string;
-  status: 'REQUIRES_REVIEW' | 'APPROVED' | 'REJECTED';
+  status: 'DRAFT' | 'REQUIRES_REVIEW' | 'APPROVED' | 'REJECTED';
   reviewedAt?: string;
   regulationVersion?: string;
   comment?: string;
@@ -253,6 +266,7 @@ export interface CaseStudy {
   updatedAt: string;
   duration?: string;
   images?: string[];
+  metrics?: Array<{ label: string; value: string }>;
 }
 
 export interface ContentRepository {

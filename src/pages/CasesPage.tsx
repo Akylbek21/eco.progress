@@ -63,7 +63,11 @@ const CasesPage = () => {
             <Link key={item.id} to={`/cases/${item.slug}`} className="rounded-[22px] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-eco-300 hover:shadow-lg">
               <p className="text-xs font-bold uppercase text-eco-500">{item.service} · {item.city}</p>
               <h2 className="mt-3 text-xl font-bold text-eco-900">{item.title}</h2>
-              <p className="mt-4 text-sm leading-6 text-slate-600">{item.problem}</p>
+              {item.metrics?.length ? <dl className="mt-4 flex flex-wrap gap-2">{item.metrics.map((metric) => <div key={metric.label} className="rounded-xl bg-eco-50 px-3 py-2"><dt className="text-[11px] text-slate-500">{metric.label}</dt><dd className="font-bold text-eco-900">{metric.value}</dd></div>)}</dl> : null}
+              <p className="mt-4 text-sm leading-6 text-slate-600"><strong className="text-slate-900">Задача:</strong> {item.problem}</p>
+              <p className="mt-3 text-sm leading-6 text-slate-600"><strong className="text-slate-900">Результат:</strong> {item.result}</p>
+              {item.duration && <p className="mt-3 text-sm text-slate-600"><strong className="text-slate-900">Срок:</strong> {item.duration}</p>}
+              <p className="mt-3 text-xs text-slate-500">Проверил: {item.reviewer?.fullName}</p>
               <p className="mt-5 text-sm font-semibold text-eco-700">Открыть кейс →</p>
             </Link>
           ))}

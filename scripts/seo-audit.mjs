@@ -38,6 +38,20 @@ if (!/^<\?xml[^>]+>\s*<urlset[\s\S]*<\/urlset>\s*$/i.test(sitemap)) errors.push(
 if (new Set(urls).size !== urls.length) errors.push('Duplicate URLs in sitemap');
 const registry = JSON.parse(read(path.join(root, 'src', 'data', 'seoRegistry.generated.json')));
 const seoPageContent = JSON.parse(read(path.join(root, 'src', 'data', 'seoPages.generated.json')));
+for (const page of seoPageContent.filter((item) => item.type !== 'article')) {
+  if (page.reviewStatus !== 'approved' || !page.reviewerSlug || !page.lastReviewedAt || !page.legalBasisCheckedAt) {
+    errors.push(`Generated page has no complete specialist review chain: /${page.slug}`);
+  }
+  if (!page.sources?.length) errors.push(`Generated page has no official sources: /${page.slug}`);
+  for (const source of page.sources ?? []) {
+    let host;
+    try { host = new URL(source.url).hostname.replace(/^www\./, ''); } catch { errors.push(`Invalid source URL: /${page.slug} -> ${source.url}`); continue; }
+    if (host !== 'adilet.zan.kz') errors.push(`Generated page uses a non-official legal source: /${page.slug} -> ${source.url}`);
+    if (source.claimStatus !== 'verified' || !source.accessedAt || !source.supports?.length) {
+      errors.push(`Generated page has an incomplete claim-source link: /${page.slug} -> ${source.url}`);
+    }
+  }
+}
 const seoPageByPath = new Map(seoPageContent.map((entry) => [`/${entry.slug}`, entry]));
 const registryByCanonical = new Map(registry.map((entry) => [entry.canonical, entry]));
 const registryByPath = new Map(registry.map((entry) => [entry.path === '/kk/' ? '/kk' : entry.path, entry]));

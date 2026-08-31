@@ -1,5 +1,5 @@
 import type { CaseStudy } from '../types';
-import { isCompleteExpert } from '../experts/experts.ts';
+import { isPublishableExpert } from '../experts/experts.ts';
 
 const containsPlaceholder = (value: string) => /\[.*(?:ДОБАВИТЬ|TODO|PLACEHOLDER).*\]/i.test(value);
 
@@ -10,7 +10,7 @@ export const isPublishableCaseStudy = (item: CaseStudy): boolean => {
     && requiredText.every((value) => Boolean(value?.trim()) && !containsPlaceholder(value))
     && item.workPerformed.length > 0
     && item.workPerformed.every((value) => Boolean(value.trim()) && !containsPlaceholder(value))
-    && isCompleteExpert(item.expert)
-    && (!item.reviewer || isCompleteExpert(item.reviewer))
+    && isPublishableExpert(item.expert)
+    && isPublishableExpert(item.reviewer)
     && (item.clientAnonymous || Boolean(item.clientName?.trim()));
 };

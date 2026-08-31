@@ -10,8 +10,8 @@ import { seoPageMap, type SeoPageConfig } from '../data/seoPages';
 import NotFoundPage from './NotFoundPage';
 import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, buildServiceEntity, entityIds } from '../seo/entityBuilders';
 import { regionContentMap } from '../content/regions/regionContent';
-import { ArticleAuthorCard, ArticleOrganizationAuthorCard, ArticleReviewerCard, ArticleSources, RelatedArticles, RelatedServices } from '../components/content/ContentBlocks';
-import { expertMap, experts, isCompleteExpert } from '../content/experts/experts';
+import { ArticleAuthorCard, ArticleOrganizationAuthorCard, ArticleReviewerCard, ArticleSources, RelatedArticles, RelatedServices, ServiceReviewCard } from '../components/content/ContentBlocks';
+import { expertMap, experts, isPublishableExpert } from '../content/experts/experts';
 import type { CaseStudy, Expert } from '../content/types';
 import { publicContentRepository } from '../content/apiRepository';
 import { isArticleApproved } from '../content/articleReview';
@@ -26,13 +26,14 @@ const buildSchema = (page: SeoPageConfig, author?: Expert, reviewer?: Expert, ex
   const ids = entityIds(page.canonical);
   const expertNodes = experts.map((expert, index) => buildPersonSchema(expert, `${page.canonical}#expert-${index + 1}`));
   const caseUrls = cases.map((item) => `${company.siteUrl}/cases/${item.slug}`);
+  const citationUrls = page.sources?.map((source) => source.url) ?? [];
   const primary = page.type === 'article'
     ? buildArticleSchema({ canonical: page.canonical, headline: page.h1, description: page.description, datePublished: page.datePublished!, dateModified: page.lastmod, image: `${company.siteUrl}${getArticleImage(page.slug, page.image)}`, authorId: author ? ids.author : undefined, reviewerId: reviewer ? ids.reviewer : undefined, caseUrls })
     : page.type === 'service-city' || page.type === 'service'
-      ? buildServiceEntity({ canonical: page.canonical, name: page.h1, description: page.description, serviceType: page.service, areaServed: page.cityNominative ?? page.city, expertIds: expertNodes.map((node) => String(node['@id'])), caseUrls })
+      ? buildServiceEntity({ canonical: page.canonical, name: page.h1, description: page.description, serviceType: page.service, areaServed: page.cityNominative ?? page.city, expertIds: expertNodes.map((node) => String(node['@id'])), caseUrls, citationUrls })
       : undefined;
   return [
-    ...buildCorePageEntities({ canonical: page.canonical, name: page.h1, description: page.description, dateModified: page.lastmod, localBusiness: (page.cityNominative ?? page.city) === 'Шымкент' }),
+    ...buildCorePageEntities({ canonical: page.canonical, name: page.h1, description: page.description, dateModified: page.lastmod, localBusiness: (page.cityNominative ?? page.city) === 'Шымкент', citationUrls }),
     ...(primary ? [primary] : []),
     ...(author ? [buildPersonSchema(author, ids.author)] : []),
     ...(reviewer ? [buildPersonSchema(reviewer, ids.reviewer)] : []),
@@ -92,9 +93,13 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
   const backendExpertMap = new Map(apiExperts.map((expert) => [expert.id, expert]));
   const authorCandidate = page.author ?? (page.authorSlug ? backendExpertMap.get(page.authorSlug) ?? expertMap.get(page.authorSlug) : undefined);
   const reviewerCandidate = page.reviewer ?? (page.reviewerSlug ? backendExpertMap.get(page.reviewerSlug) ?? expertMap.get(page.reviewerSlug) : undefined);
-  const articleAuthor = isCompleteExpert(authorCandidate) ? authorCandidate : undefined;
-  const articleReviewer = isCompleteExpert(reviewerCandidate) ? reviewerCandidate : undefined;
-  const approved = page.type === 'article' && isArticleApproved(articleContentMap.get(page.slug.replace(/^news\//, '')));
+  const articleAuthor = isPublishableExpert(authorCandidate) ? authorCandidate : undefined;
+  const articleReviewer = isPublishableExpert(reviewerCandidate) ? reviewerCandidate : undefined;
+  const approved = page.type === 'article' && isArticleApproved(
+    articleContentMap.get(page.slug.replace(/^news\//, '')) ?? {
+      status: 'published', reviewStatus: page.reviewStatus ?? 'requires-specialist-review', reviewerSlug: page.reviewerSlug, lastReviewedAt: page.lastReviewedAt,
+    },
+  );
   const approvedArticleAuthor = approved ? articleAuthor : undefined;
   const approvedArticleReviewer = approved ? articleReviewer : undefined;
   const relatedCases = apiCases.filter((item) => (!page.serviceSlug || item.service === page.serviceSlug) && (!page.cityNominative || item.city === page.cityNominative));
@@ -226,6 +231,15 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
           </div>
         </section>
       )}
+
+      {page.type !== 'article' && page.sources?.length ? (
+        <section className="px-4 py-14 sm:px-8">
+          <div className="mx-auto max-w-7xl space-y-8">
+            <ArticleSources sources={page.sources} title="Нормативная база" />
+            {articleReviewer && page.lastReviewedAt ? <ServiceReviewCard expert={articleReviewer} reviewedAt={page.lastReviewedAt} legalBasisCheckedAt={page.legalBasisCheckedAt} /> : null}
+          </div>
+        </section>
+      ) : null}
 
       {regionDetails && <section className="px-4 py-14 sm:px-8"><div className="mx-auto max-w-7xl space-y-12">
         <section className="rounded-[22px] border border-slate-200 bg-white p-6"><h2 className="text-3xl font-bold text-eco-900">Условия работы в регионе</h2><p className="mt-4 leading-7 text-slate-600">{regionDetails.introduction}</p><p className="mt-4 text-sm leading-6 text-slate-600"><strong>Логистика:</strong> {regionDetails.logisticsNote}</p>{regionDetails.estimatedTimeline && <p className="mt-4 text-sm leading-6 text-slate-600"><strong>Сроки:</strong> {regionDetails.estimatedTimeline}</p>}</section>

@@ -31,15 +31,18 @@ test('all 14 articles remain visible but require specialist review', () => {
   assert.ok(articleContent.every((item) => !isArticleApproved(item)));
 });
 
-test('case architecture is static and publishes no unconfirmed examples', () => {
+test('case architecture uses a fail-closed build snapshot and publishes no unconfirmed examples', () => {
   assert.deepEqual(caseStudies, []);
   const source = fs.readFileSync(path.join(root, 'src/content/cases/caseStudies.ts'), 'utf8');
-  assert.doesNotMatch(source, /cms|fetch|api/i);
+  assert.match(source, /caseStudies\.generated\.json/);
+  assert.match(source, /normalizePublicCase/);
+  assert.doesNotMatch(source, /fetch|\/public\/content\/cases/i);
 });
 
-test('production build has no CMS/API dependency and still generates sitemap before prerender', () => {
+test('production build syncs CMS review decisions before sitemap and prerender', () => {
   const scripts = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).scripts;
-  assert.doesNotMatch(scripts.build, /seo:content:sync|SEO_CONTENT_API/);
+  assert.match(scripts.build, /^npm run seo:content:sync/);
+  assert.ok(scripts.build.indexOf('seo:content:sync') < scripts.build.indexOf('generate:sitemap'));
   assert.ok(scripts.build.indexOf('generate:sitemap') < scripts.build.indexOf('prerender'));
   assert.ok(scripts.build.indexOf('prerender') < scripts.build.indexOf('seo:audit'));
 });

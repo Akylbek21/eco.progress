@@ -1,6 +1,7 @@
 export type CmsContentType = 'SERVICE' | 'ARTICLE' | 'REGION' | 'REGIONAL_PAGE' | 'CASE' | 'EXPERT' | 'TRUST_DOCUMENT' | 'LEGAL_SOURCE' | 'REDIRECT';
 export type CmsContentStatus = 'DRAFT' | 'CONTENT_REVIEW' | 'EXPERT_REVIEW' | 'LEGAL_REVIEW' | 'SEO_REVIEW' | 'READY_TO_PUBLISH' | 'SCHEDULED' | 'PUBLISHED' | 'OUTDATED' | 'UNPUBLISHED' | 'ARCHIVED' | 'REJECTED';
 export type CmsVersionStatus = 'draft' | 'approved' | 'published' | 'archived';
+export type CmsArticleReviewStatus = 'DRAFT' | 'REQUIRES_REVIEW' | 'APPROVED' | 'REJECTED';
 
 export interface CmsSeoFields {
   title: string;
@@ -29,6 +30,9 @@ export interface CmsContentSummary {
   updatedByName?: string;
   scheduledAt?: string;
   nextReviewAt?: string;
+  reviewStatus?: CmsArticleReviewStatus;
+  reviewerSlug?: string;
+  lastReviewedAt?: string;
   validationErrors: number;
   validationWarnings: number;
 }

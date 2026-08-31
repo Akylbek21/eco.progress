@@ -41,13 +41,14 @@ export const buildWebSiteSchema = (): SchemaEntity => ({
   name: COMPANY.brandName, url: PUBLIC_SITE_URL, publisher: organizationRef(),
 });
 
-export const buildWebPageSchema = (input: { canonical: string; name: string; description?: string; dateModified?: string }): SchemaEntity => ({
+export const buildWebPageSchema = (input: { canonical: string; name: string; description?: string; dateModified?: string; citationUrls?: string[] }): SchemaEntity => ({
   '@context': 'https://schema.org', '@type': 'WebPage', '@id': entityIds(input.canonical).webpage,
   url: input.canonical, name: input.name, ...(input.description ? { description: input.description } : {}),
   ...(input.dateModified ? { dateModified: input.dateModified } : {}), isPartOf: { '@id': entityIds(PUBLIC_SITE_URL).website },
+  ...(input.citationUrls?.length ? { citation: input.citationUrls } : {}),
 });
 
-export const buildServiceEntity = (input: { canonical: string; name: string; description: string; serviceType?: string; areaServed?: string | string[]; image?: string; expertIds?: string[]; caseUrls?: string[] }): SchemaEntity => ({
+export const buildServiceEntity = (input: { canonical: string; name: string; description: string; serviceType?: string; areaServed?: string | string[]; image?: string; expertIds?: string[]; caseUrls?: string[]; citationUrls?: string[] }): SchemaEntity => ({
   '@context': 'https://schema.org', '@type': 'Service', '@id': entityIds(input.canonical).service,
   url: input.canonical, name: input.name, description: input.description, serviceType: input.serviceType ?? input.name,
   provider: organizationRef(),
@@ -55,6 +56,7 @@ export const buildServiceEntity = (input: { canonical: string; name: string; des
   ...(input.image ? { image: input.image } : {}),
   ...(input.expertIds?.length ? { subjectOf: input.expertIds.map((id) => ({ '@id': id })) } : {}),
   ...(input.caseUrls?.length ? { hasPart: input.caseUrls.map((url) => ({ '@id': `${url}#article` })) } : {}),
+  ...(input.citationUrls?.length ? { citation: input.citationUrls } : {}),
 });
 
 export const buildPersonSchema = (expert: Expert, id: string): SchemaEntity => ({
@@ -90,7 +92,7 @@ export const buildBreadcrumbSchema = (items: BreadcrumbEntity[], canonical = ite
   itemListElement: items.map((item, index) => ({ '@type': 'ListItem', position: index + 1, name: item.name, item: item.url.startsWith('http') ? item.url : canonicalForPublicPath(item.url) })),
 });
 
-export const buildCorePageEntities = (input: { canonical: string; name: string; description?: string; dateModified?: string; localBusiness?: boolean }): SchemaEntity[] => [
+export const buildCorePageEntities = (input: { canonical: string; name: string; description?: string; dateModified?: string; localBusiness?: boolean; citationUrls?: string[] }): SchemaEntity[] => [
   buildOrganizationSchema(),
   ...(input.localBusiness ? [buildLocalBusinessSchema()] : []),
   buildWebSiteSchema(),

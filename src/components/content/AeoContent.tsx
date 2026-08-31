@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import type { AeoFaqItem, ServiceContent } from '../../content/types';
 import { publicContentRepository } from '../../content/apiRepository';
 import { isPublishableCaseStudy } from '../../content/cases/caseStudyPolicy';
-import { isCompleteExpert } from '../../content/experts/experts';
+import { isPublishableExpert } from '../../content/experts/experts';
 import { experts as snapshotExperts } from '../../content/experts/experts';
 import { caseStudies } from '../../content/cases/caseStudies';
 import WhatsAppButton from '../WhatsAppButton';
@@ -60,7 +60,7 @@ export const VerifiedExperts = () => {
     initialData: snapshotExperts,
     staleTime: 5 * 60 * 1000,
   });
-  const experts = data.filter(isCompleteExpert).slice(0, 3);
+  const experts = data.filter(isPublishableExpert).slice(0, 3);
   if (isError || !experts.length) return null;
   return <section aria-labelledby="verified-experts-title">
     <h2 id="verified-experts-title" className="text-3xl font-bold text-eco-900">Подтверждённые специалисты</h2>

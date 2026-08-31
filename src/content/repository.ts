@@ -6,6 +6,7 @@ import { regionContent, regionContentMap } from './regions/regionContent.ts';
 import { experts } from './experts/experts.ts';
 import { trustDocuments } from './trust-documents/trustDocuments.ts';
 import { caseStudies } from './cases/caseStudies.ts';
+import { isPublishableCaseStudy } from './cases/caseStudyPolicy.ts';
 import { isPublicContent, type ArticleContent, type CaseStudy, type ContentRepository, type Expert, type RegionContent, type ServiceContent, type TrustDocument } from './types.ts';
 
 export class LocalContentRepository implements ContentRepository {
@@ -17,7 +18,7 @@ export class LocalContentRepository implements ContentRepository {
   async getRegionBySlug(slug: string): Promise<RegionContent | null> { const item = regionContentMap.get(slug); return item && isPublicContent(item.status) ? item : null; }
   async getExperts(): Promise<Expert[]> { return experts; }
   async getTrustDocuments(): Promise<TrustDocument[]> { return trustDocuments; }
-  async getCases(): Promise<CaseStudy[]> { return caseStudies.filter((item) => item.status === 'published' && Boolean(item.publishedAt)); }
+  async getCases(): Promise<CaseStudy[]> { return caseStudies.filter(isPublishableCaseStudy); }
   async getCaseBySlug(slug: string): Promise<CaseStudy | null> { return (await this.getCases()).find((item) => item.slug === slug) ?? null; }
 }
 

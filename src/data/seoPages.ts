@@ -16,6 +16,17 @@ export interface SeoFaqItem {
   answer: string;
 }
 
+export interface SeoSource {
+  title: string;
+  url: string;
+  accessedAt?: string;
+  claimStatus: 'verified' | 'requires-review' | 'general-information';
+  sourceName?: string;
+  documentNumber?: string;
+  issuedAt?: string;
+  supports?: string[];
+}
+
 export interface SeoPageConfig {
   pageId?: string;
   slug: string;
@@ -62,7 +73,8 @@ export interface SeoPageConfig {
   reviewer?: Expert;
   datePublished?: string;
   lastReviewedAt?: string;
-  sources?: Array<{ title: string; url: string; accessedAt?: string; claimStatus: 'verified' | 'requires-review' | 'general-information' }>;
+  legalBasisCheckedAt?: string;
+  sources?: SeoSource[];
   ctaTitle?: string;
   ctaText?: string;
   heroBenefits?: string[];

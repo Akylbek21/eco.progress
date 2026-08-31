@@ -3,13 +3,19 @@ import { serviceAeoBySlug, type ServiceAeoSlug } from './serviceAeo.ts';
 import { serviceCommercialBySlug } from './serviceCommercial.ts';
 import { specialLegalBasisBySlug } from './serviceLegalBasis.ts';
 
-const codeBasis: ServiceContent['legalBasis'][number] = {
+export const codeBasis: ServiceContent['legalBasis'][number] = {
   title: 'Экологический кодекс Республики Казахстан', number: '№ 400-VI ЗРК', date: '2021-01-02',
-  sourceUrl: 'https://adilet.zan.kz/rus/docs/K2100000400/info',
-  note: 'Применимость конкретных норм определяется категорией объекта и составом работ; перед публикацией обязательных требований нужна проверка профильного специалиста.',
-  verificationStatus: 'requires-review', claimStatus: 'requires-review',
+  sourceUrl: 'https://adilet.zan.kz/rus/docs/K2100000400',
+  note: 'Применимость конкретных норм определяется категорией объекта и составом работ и уточняется профильным специалистом для конкретной задачи.',
+  verificationStatus: 'verified', claimStatus: 'verified',
 };
-const review: ServiceContent['contentReview'] = { preparedBy: 'Редакция EcoProgress', lastReviewedAt: '2026-08-27', reviewStatus: 'requires-specialist-review' };
+const review: ServiceContent['contentReview'] = {
+  preparedBy: 'Редакция EcoProgress',
+  reviewedBy: 'duisenbai-ruslan-serikbaiuly',
+  lastReviewedAt: '2026-08-31',
+  legalBasisCheckedAt: '2026-08-31',
+  reviewStatus: 'approved',
+};
 type ServiceDefinition = Omit<ServiceContent, 'status' | 'legalBasis' | 'contentReview' | 'aeo' | 'commercial' | 'serviceSlug'> & { serviceSlug: ServiceAeoSlug };
 const define = (content: ServiceDefinition): ServiceContent => {
   const commercial = serviceCommercialBySlug[content.serviceSlug];

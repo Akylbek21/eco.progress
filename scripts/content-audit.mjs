@@ -92,9 +92,10 @@ for (const document of trustDocuments) {
   if (document.fileUrl && !fs.existsSync(path.join(root, 'public', document.fileUrl.replace(/^\//, '')))) add('ERROR', 'trust-file', document.id, `Файл не найден: ${document.fileUrl}`);
 }
 for (const item of caseStudies) if (item.status === 'published') {
+  if (!serviceSlugs.has(item.service)) add('ERROR', 'case-service', item.slug, `Кейс связан с неизвестной услугой ${item.service}`);
   if (!item.publishedAt || !item.result || item.workPerformed.length === 0 || item.regulations.length === 0) add('ERROR', 'case-verification', item.slug, 'Опубликованный кейс не содержит проверяемого результата или нормативной базы');
   if (!expertIds.has(item.expert.id)) add('ERROR', 'case-expert', item.slug, `Кейс связан с неподтверждённым экспертом ${item.expert.id}`);
-  if (item.reviewer && !expertIds.has(item.reviewer.id)) add('ERROR', 'case-reviewer', item.slug, `Кейс связан с неподтверждённым reviewer ${item.reviewer.id}`);
+  if (!item.reviewer || !expertIds.has(item.reviewer.id)) add('ERROR', 'case-reviewer', item.slug, 'Кейс не связан с подтверждённым проверяющим специалистом');
 }
 
 const forbidden = ['для Алматы и Алматинская область', 'в Караганда и Карагандинская область', 'для Астана и Акмолинская область'];
@@ -108,7 +109,7 @@ for (const file of contentFiles) {
 }
 
 const summary = Object.groupBy(findings, (item) => item.level);
-console.log(`Content audit: ${serviceContent.length} detailed services, ${articleContent.length} articles, ${regionContent.length} regions, ${trustDocuments.length} trust documents, ${caseStudies.length} case drafts.`);
+console.log(`Content audit: ${serviceContent.length} detailed services, ${articleContent.length} articles, ${regionContent.length} regions, ${trustDocuments.length} trust documents, ${caseStudies.length} confirmed cases.`);
 for (const item of findings) console.log(`${item.level} [${item.code}] ${item.target}: ${item.message}`);
 console.log(`Result: ${summary.ERROR?.length || 0} errors, ${summary.WARNING?.length || 0} warnings, ${summary.INFO?.length || 0} info.`);
 if (summary.ERROR?.length) process.exitCode = 1;

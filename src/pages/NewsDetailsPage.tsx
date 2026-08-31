@@ -8,7 +8,7 @@ import { company, getWhatsAppUrl } from '../config/company';
 import type { SeoArticleConfig } from '../data/seoArticles';
 import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, entityIds } from '../seo/entityBuilders';
 import { normalizeArticleDates } from '../utils/articleDates';
-import { expertMap, experts, isCompleteExpert } from '../content/experts/experts';
+import { expertMap, experts, isPublishableExpert } from '../content/experts/experts';
 import { ArticleAuthorCard, ArticleChecklist, ArticleOrganizationAuthorCard, ArticleReviewerCard, ArticleSources, ArticleTableOfContents, ArticleWarning, ContentLastUpdated, RelatedArticles, RelatedServices } from '../components/content/ContentBlocks';
 import { normalizeArticleSlug } from '../content/articles/articleSlugs';
 import { publicContentRepository } from '../content/apiRepository';
@@ -92,11 +92,12 @@ const NewsDetailsPage = () => {
   const heroImage = getArticleImage(item.id, item.image);
   const dates = normalizeArticleDates(item.datePublished, item.dateModified);
   const backendExpertMap = new Map(apiExperts.map((expert) => [expert.id, expert]));
-  const approved = isArticleApproved(articleContentMap.get(item.id));
+  const approvalExpertMap = new Map([...expertMap, ...backendExpertMap]);
+  const approved = isArticleApproved(apiContent, approvalExpertMap);
   const authorCandidate = item.author ?? backendExpertMap.get(item.authorSlug) ?? expertMap.get(item.authorSlug);
   const reviewerCandidate = item.reviewer ?? (item.reviewerSlug ? backendExpertMap.get(item.reviewerSlug) ?? expertMap.get(item.reviewerSlug) : undefined);
-  const author = isCompleteExpert(authorCandidate) ? authorCandidate : undefined;
-  const reviewer = approved && isCompleteExpert(reviewerCandidate) ? reviewerCandidate : undefined;
+  const author = isPublishableExpert(authorCandidate) ? authorCandidate : undefined;
+  const reviewer = approved && isPublishableExpert(reviewerCandidate) ? reviewerCandidate : undefined;
   const authorId = approved && author ? entityIds(canonical).author : undefined;
   const reviewerId = approved && reviewer ? entityIds(canonical).reviewer : undefined;
   const schema = [

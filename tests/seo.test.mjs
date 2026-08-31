@@ -10,7 +10,7 @@ import { createSchemaGraph } from '../src/seo/schemaGraph.ts';
 
 const registry = JSON.parse(await readFile(new URL('../src/data/seoRegistry.generated.json', import.meta.url), 'utf8'));
 
-test('production build is independent of the optional SEO CMS API', async () => {
+test('production build consumes the CMS review snapshot before generating SEO artifacts', async () => {
   const [packageJson, dockerfile, compose, quality] = await Promise.all([
     readFile(new URL('../package.json', import.meta.url), 'utf8'),
     readFile(new URL('../Dockerfile', import.meta.url), 'utf8'),
@@ -18,9 +18,10 @@ test('production build is independent of the optional SEO CMS API', async () => 
     readFile(new URL('../src/content/regions/regionContentQuality.ts', import.meta.url), 'utf8'),
   ]);
   const scripts = JSON.parse(packageJson).scripts;
-  assert.doesNotMatch(scripts.build, /seo:content:sync|SEO_CONTENT_API/);
-  assert.doesNotMatch(dockerfile, /SEO_CONTENT_API_URL|SEO_CONTENT_API_TOKEN/);
-  assert.doesNotMatch(compose, /SEO_CONTENT_API_URL|SEO_CONTENT_API_TOKEN|network:\s*eco-net/);
+  assert.match(scripts.build, /^npm run seo:content:sync/);
+  assert.ok(scripts.build.indexOf('seo:content:sync') < scripts.build.indexOf('generate:sitemap'));
+  assert.match(dockerfile, /SEO_CONTENT_API_URL/);
+  assert.match(compose, /SEO_CONTENT_API_URL/);
   assert.doesNotMatch(quality, /publishedCaseStudies|confirmedCaseSlugs/);
 });
 
@@ -222,6 +223,30 @@ test('regional pages use unique content quality and topic clusters expose only a
   }
 });
 
+test('every generated non-article page exposes an official claim-source-review chain', () => {
+  const generatedPages = seoPages.filter((page) => page.type !== 'article');
+  assert.equal(generatedPages.length, 49);
+  for (const page of generatedPages) {
+    assert.equal(page.reviewStatus, 'approved', `${page.slug}: reviewStatus`);
+    assert.ok(page.reviewerSlug, `${page.slug}: reviewerSlug`);
+    assert.ok(page.lastReviewedAt, `${page.slug}: lastReviewedAt`);
+    assert.ok(page.legalBasisCheckedAt, `${page.slug}: legalBasisCheckedAt`);
+    assert.ok(page.sources?.length, `${page.slug}: sources`);
+    for (const source of page.sources) {
+      const host = new URL(source.url).hostname.replace(/^www\./, '');
+      assert.equal(host, 'adilet.zan.kz', `${page.slug}: unofficial source ${source.url}`);
+      assert.equal(source.sourceName, 'ИПС «Әділет»');
+      assert.equal(source.claimStatus, 'verified');
+      assert.ok(source.documentNumber && source.issuedAt && source.accessedAt, `${page.slug}: incomplete source metadata`);
+      assert.ok(source.supports?.length, `${page.slug}: source is not connected to a claim`);
+    }
+    const registryEntry = registry.find((entry) => entry.path === `/${page.slug}`);
+    assert.ok(registryEntry, `${page.slug}: registry entry`);
+    const webPageSchema = registryEntry.schema.find((node) => node['@type'] === 'WebPage');
+    assert.deepEqual(webPageSchema?.citation, page.sources.map((source) => source.url), `${page.slug}: schema citations`);
+  }
+});
+
 test('one central predicate gates approved review, indexing and reviewedBy', async () => {
   const [reviewSource, newsPage, generator] = await Promise.all([
     readFile(new URL('../src/content/articleReview.ts', import.meta.url), 'utf8'),
@@ -230,7 +255,7 @@ test('one central predicate gates approved review, indexing and reviewedBy', asy
   ]);
   assert.match(reviewSource, /export const isArticleApproved/);
   assert.match(reviewSource, /lastReviewedAt/);
-  assert.match(reviewSource, /isCompleteExpert/);
+  assert.match(reviewSource, /isPublishableExpert/);
   assert.match(newsPage, /isArticleApproved/);
   assert.match(generator, /isArticleApproved/);
   assert.ok(articleContent.every((article) => !isArticleApproved(article)));
@@ -338,8 +363,9 @@ test('AEO content is visible and cases use the static verified registry', async 
   for (const field of ['audienceTitle', 'requiredTitle', 'scopeTitle', 'documentsTitle', 'timelineTitle', 'pricingTitle', 'deliverablesTitle', 'regulationsTitle', 'mistakesTitle', 'faqTitle']) assert.match(aeo, new RegExp(`commercial\\.${field}`));
   assert.match(aeo, /RelatedCaseStudies/);
   for (const field of ['id', 'service', 'objectType', 'objectCategory', 'initialData', 'workPerformed', 'regulations', 'completedAt', 'expert', 'reviewer', 'clientAnonymous', 'publishedAt', 'updatedAt']) assert.match(types, new RegExp(`${field}\\??:`));
-  assert.match(cases, /caseStudies:\s*CaseStudy\[\]\s*=\s*\[\]/);
-  assert.doesNotMatch(cases, /cms|fetch|api/i);
+  assert.match(cases, /caseStudies\.generated\.json/);
+  assert.match(cases, /normalizePublicCase/);
+  assert.doesNotMatch(cases, /fetch|\/public\/content\/cases/i);
   assert.match(app, /path="\/cases"/);
   assert.match(app, /path="\/cases\/:slug"/);
   assert.match(casePage, /isPublishableCaseStudy/);

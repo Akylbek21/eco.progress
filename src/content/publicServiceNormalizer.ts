@@ -20,6 +20,7 @@ export interface PublicServiceDto {
   author?: string | null;
   reviewer?: string | null;
   reviewedAt?: string | null;
+  legalBasisCheckedAt?: string | null;
   updatedAt?: string | null;
   aeo?: {
     shortAnswer?: NullableText;
@@ -132,6 +133,7 @@ export const normalizePublicService = (value: ServiceContent | PublicServiceDto)
       preparedBy: text(value.author) || undefined,
       reviewedBy: text(value.reviewer) || undefined,
       lastReviewedAt: text(value.reviewedAt ?? value.updatedAt) || undefined,
+      legalBasisCheckedAt: text(value.legalBasisCheckedAt) || undefined,
       reviewStatus: reviewStatus(value.reviewStatus),
     },
   };

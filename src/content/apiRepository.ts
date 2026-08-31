@@ -4,9 +4,11 @@ import type { ArticleContent, CaseStudy, CmsCaseDto, CmsExpertDto, ContentReposi
 import { normalizeArticleSlug } from './articles/articleSlugs';
 import { normalizeServiceSlug } from './serviceCatalog';
 import { trackEvent } from '../services/analytics';
-import { isCompleteExpert } from './experts/experts';
+import { isPublishableExpert, isVerifiedCmsExpert } from './experts/experts';
 import { isPublishableCaseStudy } from './cases/caseStudyPolicy';
 import { normalizePublicService, type PublicServiceDto } from './publicServiceNormalizer';
+import { normalizePublicArticle } from './publicArticleNormalizer';
+import { normalizePublicCase } from './publicCaseNormalizer';
 
 type PublicCollection = 'services' | 'articles' | 'regions' | 'experts' | 'trust-documents' | 'cases';
 type CacheRecord<T> = { storedAt: number; version: string; items: T[] };
@@ -15,12 +17,12 @@ export type PublicContentSource = 'api' | 'cache' | 'fallback';
 const CACHE_PREFIX = 'ecoprogress_public_content_v1';
 const CACHE_TTL = 15 * 60 * 1000;
 
-const normalizeExpert = (item: Expert | CmsExpertDto): Expert => 'specializations' in item ? {
+export const normalizeExpert = (item: Expert | CmsExpertDto): Expert => 'specializations' in item ? {
   id: item.id, fullName: item.fullName, position: item.position,
   specialization: item.specializations, experienceYears: item.experienceYears,
   bio: item.bio, photo: item.photoUrl, profileUrl: item.profileUrl,
   slug: item.profileUrl.split('/').filter(Boolean).slice(-1)[0] || item.id,
-  published: true, verificationStatus: item.verificationStatus, credentials: [],
+  published: true, verificationStatus: item.verificationStatus, credentials: item.credentials ?? [],
 } : item;
 
 const readCache = <T>(collection: PublicCollection, allowStale = false): T[] | null => {
@@ -79,7 +81,10 @@ export class ApiContentRepository implements ContentRepository {
     const items = await this.getServices();
     return items.find((item) => item.serviceSlug === canonical) ?? null;
   }
-  getArticles() { return this.collection<ArticleContent>('articles', () => this.devFallback!.getArticles()); }
+  async getArticles() {
+    const items = await this.collection<ArticleContent>('articles', () => this.devFallback!.getArticles());
+    return items.map(normalizePublicArticle);
+  }
   async getArticleBySlug(slug: string) {
     const canonical = normalizeArticleSlug(slug);
     const items = await this.getArticles();
@@ -92,9 +97,9 @@ export class ApiContentRepository implements ContentRepository {
   }
   async getExperts() {
     return (await this.collection<Expert | CmsExpertDto>('experts', () => this.devFallback!.getExperts()))
-      .filter((item) => !('verificationStatus' in item) || item.verificationStatus === 'VERIFIED')
+      .filter((item) => 'specializations' in item ? isVerifiedCmsExpert(item) : isPublishableExpert(item))
       .map(normalizeExpert)
-      .filter(isCompleteExpert);
+      .filter(isPublishableExpert);
   }
   getTrustDocuments() { return this.collection<TrustDocument>('trust-documents', () => this.devFallback!.getTrustDocuments()); }
   async getCases() {
@@ -102,9 +107,8 @@ export class ApiContentRepository implements ContentRepository {
     const expertMap = new Map((await this.getExperts()).map((expert) => [expert.id, expert]));
     return raw.flatMap((item): CaseStudy[] => {
       if (!('published' in item)) return [item];
-      const expert = expertMap.get(item.expertId);
-      if (!item.published || !expert) return [];
-      return [{ id: item.id, slug: item.slug, title: item.title, service: item.serviceType, industry: item.objectType, city: item.city, region: item.city, objectType: item.objectType, objectCategory: item.objectType, problem: item.task, initialData: item.description, workPerformed: [item.solution], regulations: [], result: item.result, completedAt: item.completedAt, expert, clientAnonymous: true, status: 'published', publishedAt: item.completedAt, updatedAt: item.updatedAt, duration: item.duration, images: item.images }];
+      const normalized = normalizePublicCase(item, expertMap);
+      return normalized ? [normalized] : [];
     }).filter(isPublishableCaseStudy);
   }
   async getCaseBySlug(slug: string) {

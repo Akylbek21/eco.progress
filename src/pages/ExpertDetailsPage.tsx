@@ -4,13 +4,13 @@ import { company } from '../config/company';
 import { articleContent } from '../content/articles/articleContent';
 import { isArticleApproved } from '../content/articleReview';
 import { publishedCaseStudies } from '../content/cases/caseStudies';
-import { expertMap, expertProfileMap, isCompleteExpert } from '../content/experts/experts';
+import { expertMap, expertProfileMap, isExpertWithCredentials } from '../content/experts/experts';
 import { buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema } from '../seo/entityBuilders';
 
 const ExpertDetailsPage = () => {
   const { id = '' } = useParams();
   const expert = expertProfileMap.get(`/experts/${id}`) ?? expertMap.get(id);
-  if (!isCompleteExpert(expert)) return <main className="px-5 py-20 text-center"><SEO title="Эксперт не найден | ECOPROGRESS" description="Публичный подтверждённый профиль не найден." robots="noindex,follow" /><h1 className="text-3xl font-bold text-eco-900">Эксперт не найден</h1></main>;
+  if (!isExpertWithCredentials(expert)) return <main className="px-5 py-20 text-center"><SEO title="Эксперт не найден | ECOPROGRESS" description="Публичный подтверждённый профиль не найден." robots="noindex,follow" /><h1 className="text-3xl font-bold text-eco-900">Эксперт не найден</h1></main>;
 
   const canonical = `${company.siteUrl}${expert.profileUrl}`;
   const reviewedArticles = articleContent.filter((article) => article.reviewerSlug === expert.id && isArticleApproved(article));

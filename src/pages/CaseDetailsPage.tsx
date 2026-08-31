@@ -30,6 +30,7 @@ const CaseDetailsPage = () => {
     <SEO title={`${item.title} | ECOPROGRESS`} description={item.problem} canonical={canonical} type="article" schema={schema} datePublished={item.publishedAt} dateModified={item.updatedAt} />
     <header className="bg-eco-900 px-5 py-16 text-white sm:px-8"><div className="mx-auto max-w-5xl"><nav className="text-sm text-white/70"><Link to="/">Главная</Link> / <Link to="/cases">Кейсы</Link></nav><p className="mt-8 text-sm font-bold uppercase tracking-wide text-accent">{item.service} · {item.city}</p><h1 className="mt-4 text-4xl font-bold sm:text-5xl">{item.title}</h1><p className="mt-5 text-white/75">Клиент: {client}</p></div></header>
     <div className="mx-auto max-w-5xl space-y-10 px-5 py-14 sm:px-8">
+      {item.metrics?.length ? <section aria-labelledby="case-facts"><h2 id="case-facts" className="text-3xl font-bold text-eco-900">Ключевые факты проекта</h2><dl className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{item.metrics.map((metric) => <div key={metric.label} className="rounded-2xl border border-eco-200 bg-eco-50 p-5"><dt className="text-sm text-slate-600">{metric.label}</dt><dd className="mt-2 text-2xl font-bold text-eco-900">{metric.value}</dd></div>)}</dl></section> : null}
       <CaseSection title="Задача" text={item.problem} />
       <CaseSection title="Исходные данные" text={item.initialData} />
       <CaseSection title="Характеристика объекта" text={`${item.objectType}. Категория объекта: ${item.objectCategory}. Отрасль: ${item.industry}. Регион: ${item.region}.`} />
