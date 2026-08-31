@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import responsiveImages from '../../data/responsiveImages.generated.json';
 
 type Props = {
   src: string;
@@ -29,7 +30,6 @@ const ResponsiveImage = ({
   wrapperClassName = '',
   className = '',
 }: Props) => {
-  const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const legacyResponsiveNames: Record<string, string> = {
     '/cottonbro.jpg': 'ekologicheskoe-proektirovanie',
@@ -43,19 +43,27 @@ const ResponsiveImage = ({
     '/poligon-tbo-2.jpg': 'poligon-tbo',
   };
   const responsiveMatch = src.match(/^\/media\/(.+)-(?:480|768|1024|1280|1920)\.(?:jpg|jpeg|png|webp|avif)$/);
-  const responsiveName = responsiveMatch?.[1] || legacyResponsiveNames[src];
-  const autoSet = (extension: 'avif' | 'webp' | 'jpg') => responsiveName
-    ? [480, 768, 1024, 1280, 1920].map((value) => `/media/${responsiveName}-${value}.${extension} ${value}w`).join(', ')
+  const candidateName = responsiveMatch?.[1] || legacyResponsiveNames[src];
+  const responsiveName = candidateName && candidateName in responsiveImages ? candidateName : undefined;
+  const variants = responsiveName
+    ? responsiveImages[responsiveName as keyof typeof responsiveImages]
     : undefined;
+  const autoSet = (extension: 'avif' | 'webp' | 'jpg') => {
+    const widths = variants?.[extension] || [];
+    return responsiveName && widths.length
+      ? widths.map((value) => `/media/${responsiveName}-${value}.${extension} ${value}w`).join(', ')
+      : undefined;
+  };
   const resolvedAvifSrcSet = avifSrcSet || autoSet('avif');
   const resolvedWebpSrcSet = webpSrcSet || autoSet('webp');
   const resolvedFallbackSrcSet = fallbackSrcSet || autoSet('jpg');
-  const resolvedSrc = responsiveName ? `/media/${responsiveName}-1280.jpg` : src;
+  const fallbackWidths = variants?.jpg || [];
+  const fallbackWidth = fallbackWidths.includes(1280) ? 1280 : fallbackWidths[fallbackWidths.length - 1];
+  const resolvedSrc = responsiveName && fallbackWidth ? `/media/${responsiveName}-${fallbackWidth}.jpg` : src;
   const fetchPriorityAttribute = priority ? { fetchpriority: 'high' } : {};
 
   return (
     <div className={`${fill ? 'absolute inset-0' : 'relative'} overflow-hidden bg-slate-200 ${wrapperClassName}`}>
-      {!loaded && !failed && <div aria-hidden="true" className="route-skeleton absolute inset-0 bg-slate-200" />}
       {!failed && (
         <picture>
           {resolvedAvifSrcSet && <source type="image/avif" srcSet={resolvedAvifSrcSet} sizes={sizes} />}
@@ -70,9 +78,8 @@ const ResponsiveImage = ({
             loading={priority ? 'eager' : 'lazy'}
             {...fetchPriorityAttribute}
             decoding="async"
-            onLoad={() => setLoaded(true)}
             onError={() => setFailed(true)}
-            className={`h-full w-full transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'} ${className}`}
+            className={`h-full w-full ${className}`}
           />
         </picture>
       )}

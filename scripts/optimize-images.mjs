@@ -5,6 +5,7 @@ import sharp from 'sharp';
 const root = process.cwd();
 const publicDir = path.join(root, 'public');
 const outputDir = path.join(publicDir, 'media');
+const manifestPath = path.join(root, 'src', 'data', 'responsiveImages.generated.json');
 const widths = [480, 768, 1024, 1280, 1920];
 const sources = {
   'cottonbro.jpg': 'ekologicheskoe-proektirovanie',
@@ -42,4 +43,19 @@ await sharp(path.join(publicDir, 'og-cover.jpg'))
   .toFile(path.join(outputDir, 'social', 'ecoprogress-og-1200x630.jpg'));
 generated += 1;
 
-console.log(`Generated ${generated} responsive AVIF/WebP/JPEG assets in public/media.`);
+const manifest = {};
+for (const fileName of fs.readdirSync(outputDir)) {
+  const match = fileName.match(/^(.+)-(\d+)\.(avif|webp|jpg)$/);
+  if (!match) continue;
+  const [, name, width, extension] = match;
+  manifest[name] ||= { avif: [], webp: [], jpg: [] };
+  manifest[name][extension].push(Number(width));
+}
+for (const variants of Object.values(manifest)) {
+  for (const extension of ['avif', 'webp', 'jpg']) {
+    variants[extension].sort((left, right) => left - right);
+  }
+}
+fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+
+console.log(`Generated ${generated} responsive assets and indexed ${Object.keys(manifest).length} image families.`);
