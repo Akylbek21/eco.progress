@@ -22,6 +22,7 @@ test('production build consumes the CMS review snapshot before generating SEO ar
   assert.ok(scripts.build.indexOf('seo:content:sync') < scripts.build.indexOf('generate:sitemap'));
   assert.match(dockerfile, /SEO_CONTENT_API_URL/);
   assert.match(compose, /SEO_CONTENT_API_URL/);
+  assert.match(compose, /build:[\s\S]*network:\s*eco-net/);
   assert.doesNotMatch(quality, /publishedCaseStudies|confirmedCaseSlugs/);
 });
 
