@@ -2,11 +2,11 @@ services:
   frontend:
     build:
       context: .
-      # The SEO snapshot is fetched while the image is being built. Attach
-      # build RUN steps to the backend network so the eco-app DNS name works.
-#      network: eco-net
       args:
-        SEO_CONTENT_API_URL: ${SEO_CONTENT_API_URL:-http://eco-app:8080/api/public/content/seo-snapshot}
+        # The current backend has no aggregate SEO snapshot endpoint. Keep the
+        # build offline by default and use the committed fail-closed snapshots.
+        # Set SEO_CONTENT_API_URL explicitly once that endpoint is deployed.
+        SEO_CONTENT_API_URL: ${SEO_CONTENT_API_URL:-}
         SEO_CONTENT_API_TOKEN: ${SEO_CONTENT_API_TOKEN:-}
     container_name: eco-frontend
     ports:
