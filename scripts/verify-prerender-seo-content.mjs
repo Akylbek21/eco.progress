@@ -58,6 +58,16 @@ const verifyPage = ({ route, canonical, html, detailed = false }) => {
   const wordCount = visibleText.split(/\s+/u).filter(Boolean).length;
   if (wordCount < 100) fail(route, `HTML is too thin to be a complete page (${wordCount} visible words).`);
 
+  if (route === '/kk' || route.startsWith('/kk/')) {
+    const forbiddenRussianUi = [
+      'Нормативная база', 'Подтверждает', 'Источник:', 'Статус:', 'Проверено:', 'Короткий ответ',
+      'Получить консультацию эколога', 'Социальные сети', 'Поиск по сайту', 'Регистрация',
+      'Войти', 'Частые вопросы', 'Написать в WhatsApp', 'г. Шымкент',
+    ];
+    const leakedLabel = forbiddenRussianUi.find((label) => visibleText.includes(label));
+    if (leakedLabel) fail(route, `Russian interface text leaked into kk-KZ: ${leakedLabel}.`);
+  }
+
   const internalLinks = new Set(
     [...html.matchAll(/href=["'](\/[^"'#?]*)["']/gi)].map((match) => match[1]),
   );
@@ -77,7 +87,7 @@ const verifyPage = ({ route, canonical, html, detailed = false }) => {
     if (countTags(html, 'h2') < 8) fail(route, 'service document must contain at least eight H2 sections.');
     if (wordCount < 350) fail(route, `service document is too thin (${wordCount} visible words).`);
     const requiredContent = [
-      ['main service text', /Собираем подтверждённые данные/u],
+      ['main service text', /Проверяем результаты производственного экологического контроля/u],
       ['price', /Стоимость/u],
       ['delivery terms', /Срок/u],
       ['FAQ', /(?:FAQ|Частые вопросы)/u],

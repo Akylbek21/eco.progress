@@ -123,7 +123,7 @@ describe('PEK P0 If-Match contracts', () => {
   it('downloads CMS by signature.id', () => {
     const service = readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
     const component = readFileSync(resolve(process.cwd(), 'src/features/pek/components/documents/PekReportDocuments.tsx'), 'utf8');
-    expect(service).toContain("${reportDocumentPath(reportId, 'OFFICIAL')}/signatures/${signatureId}/download");
+    expect(service).toContain("${reportDocumentPath(reportId)}/signatures/${signatureId}/download");
     expect(component).toContain('downloadCms.mutate(signature.id)');
     expect(service).not.toContain('signatureFileId');
     expect(component).not.toContain('signatureFileId');

@@ -252,7 +252,7 @@ describe('PEK backend contract', () => {
     };
     const enabled = mapReportResponse({ ...report, status: 'DRAFT', availableActions: { collect: true, submitReview: true } });
     const view = render(<PekReportActions report={enabled} isPending={false} {...callbacks} />);
-    expect(screen.getByRole('button', { name: 'Повторить сбор' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Получить протоколы' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Отправить на проверку' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Вернуть на доработку' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Утвердить' })).toBeNull();
@@ -269,7 +269,8 @@ describe('PEK backend contract', () => {
   it('backend action hides source mutations', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
     expect(source).toContain('const canMutateSources = item.availableActions.manageSources === true');
-    expect(source).toContain("source.matchStatus !== 'STALE'");
+    expect(source).toContain("['UNMATCHED', 'AMBIGUOUS'].includes(source.matchStatus)");
+    expect(source).toContain("source.matchStatus === 'STALE'");
     expect(source).not.toContain('actions.matchSources ||');
   });
 
@@ -308,7 +309,7 @@ describe('PEK backend contract', () => {
   it('confirms collection, blocks double submit and reconciles all report caches', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
     expect(source).toContain('collectConfirmOpen');
-    expect(source).toContain("collect.isPending ? 'Сбор…'");
+    expect(source).toContain("collect.isPending ? 'Ищем подходящие подписанные протоколы...'");
     expect(source).toContain('pekKeys.reportSourcesRoot');
     expect(source).toContain('pekKeys.planFact');
     expect(source).toContain('pekKeys.readiness');
@@ -319,9 +320,9 @@ describe('PEK backend contract', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
     expect(source).toContain("item.status === 'RETURNED'");
     expect(source).toContain('Отчёт возвращён на доработку');
-    expect(source).toContain("source.matchStatus === 'STALE' ? 'Устаревшая связь'");
+    expect(source).toContain("STALE: 'Источник изменён'");
     expect(source).toContain('getReportReadiness(id, signal)');
-    expect(source).toContain('Данные были изменены другим пользователем');
+    expect(source).toContain('Данные были изменены другим сотрудником');
   });
 
   it('does not expose a fake program versions route and uses the real report history endpoint', () => {

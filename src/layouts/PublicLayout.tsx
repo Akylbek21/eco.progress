@@ -34,7 +34,7 @@ const kkNavItems = [
   { label: 'ПЭК бағдарламасы', path: '/kk/pek-bagdarlamasy' },
   { label: 'Зертханалық зерттеулер', path: '/kk/zerthanalyq-zertteuler' },
   { label: 'Қалдықтар', path: '/kk/qaldyqtardy-kadege-zharatu' },
-  { label: 'WhatsApp', path: getWhatsAppUrl() },
+  { label: 'WhatsApp', path: getWhatsAppUrl('Сәлеметсіз бе! Экологиялық қызметтер бойынша кеңес алғым келеді.') },
 ];
 
 const accountMenuItems = [
@@ -43,6 +43,12 @@ const accountMenuItems = [
   { label: 'Регистрация', path: '/register', Icon: UserPlus },
   { label: 'Войти', path: '/login', Icon: LogIn },
   { label: 'Частые вопросы', path: '/faq', Icon: HelpCircle },
+];
+
+const kkAccountMenuItems = [
+  { label: 'WhatsApp', path: getWhatsAppUrl('Сәлеметсіз бе! Экологиялық қызметтер бойынша кеңес алғым келеді.'), Icon: FaWhatsapp },
+  { label: 'Тіркелу', path: '/register', Icon: UserPlus },
+  { label: 'Кіру', path: '/login', Icon: LogIn },
 ];
 
 const socialLinks = [
@@ -58,6 +64,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
   const { pathname } = useLocation();
   const isKk = pathname === '/kk' || pathname.startsWith('/kk/');
   const currentNavItems = isKk ? kkNavItems : navItems;
+  const currentAccountMenuItems = isKk ? kkAccountMenuItems : accountMenuItems;
   const localePair = localePairForPath(pathname);
   const ruPath = localePair?.ruPath || '/';
   const kkPath = localePair?.kkPath || '/kk';
@@ -77,7 +84,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
     <div className="min-h-screen bg-[#F7FBFD] text-slate-900">
       <header className={`sticky top-0 z-40 border-b border-slate-200/70 bg-[#F8FCFE]/94 text-eco-900 backdrop-blur-2xl transition-all duration-300 before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-gradient-to-r before:from-transparent before:via-accent/80 before:to-transparent ${scrolled ? 'shadow-[0_12px_35px_-20px_rgba(2,28,57,0.4)]' : 'shadow-[0_1px_0_rgba(2,28,57,0.03)]'}`}>
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
-          <Link to={isKk ? '/kk' : '/'} className="group inline-flex shrink-0 items-center text-eco-900" aria-label="ecoprogress.kz — главная">
+          <Link to={isKk ? '/kk' : '/'} className="group inline-flex shrink-0 items-center text-eco-900" aria-label={isKk ? 'ecoprogress.kz — басты бет' : 'ecoprogress.kz — главная'}>
             <span className="whitespace-nowrap text-[19px] font-extrabold leading-none tracking-[-0.035em]">
               eco<span className="text-eco-500">progress</span><span className="text-[14px] font-bold text-slate-500">.kz</span>
             </span>
@@ -122,7 +129,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               </Button>
               {accountMenuOpen && (
                 <div className="absolute right-0 top-[calc(100%+0.75rem)] w-72 overflow-hidden rounded-[20px] border border-eco-100 bg-white p-2 shadow-2xl shadow-eco-900/12">
-                  {accountMenuItems.map(({ label, path, Icon }) => path.startsWith('http') || opensPrivateRuntime(path) ? (
+                  {currentAccountMenuItems.map(({ label, path, Icon }) => path.startsWith('http') || opensPrivateRuntime(path) ? (
                     <a key={path} href={path} target={path.startsWith('http') ? '_blank' : undefined} rel={path.startsWith('http') ? 'noreferrer' : undefined} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-eco-900 hover:bg-eco-50">
                       <Icon size={18} className="text-eco-600" />
                       {label}
@@ -134,7 +141,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                     </Link>
                   ))}
                   <div className="mt-2 border-t border-slate-100 px-3 py-3">
-                    <p className="text-xs font-semibold uppercase text-slate-500">Социальные сети</p>
+                    <p className="text-xs font-semibold uppercase text-slate-500">{isKk ? 'Әлеуметтік желілер' : 'Социальные сети'}</p>
                     <div className="mt-3 flex gap-2">
                       {socialLinks.map(({ label, href, Icon }) => (
                         <a
@@ -191,7 +198,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 </NavLink>
               ))}
               <div className="grid gap-2 border-t border-eco-100 pt-3">
-                {accountMenuItems.map(({ label, path, Icon }) => path.startsWith('http') || opensPrivateRuntime(path) ? (
+                {currentAccountMenuItems.map(({ label, path, Icon }) => path.startsWith('http') || opensPrivateRuntime(path) ? (
                     <a key={path} href={path} target={path.startsWith('http') ? '_blank' : undefined} rel={path.startsWith('http') ? 'noreferrer' : undefined} className="flex items-center gap-3 rounded-2xl border border-eco-100 px-4 py-3 text-sm font-semibold text-eco-800">
                     <Icon size={18} className="text-eco-600" />
                     {label}
@@ -218,15 +225,15 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 </div>
               </div>
               <button type="button" onClick={() => { setMenuOpen(false); setOrderModal(true); }} className="block w-full rounded-2xl bg-accent px-4 py-3 text-left text-sm font-semibold text-eco-900">
-                Получить консультацию эколога
+                {isKk ? 'Өтінім қалдыру' : 'Получить консультацию эколога'}
               </button>
             </div>
           </div>
         )}
       </header>
       <main className="route-page-enter min-h-[70vh]">{children}</main>
-      <WhatsAppButton floating />
-      {orderModal && <Suspense fallback={null}><OrderChoiceModal open onClose={() => setOrderModal(false)} /></Suspense>}
+      <WhatsAppButton floating locale={isKk ? 'kk' : 'ru'} />
+      {orderModal && <Suspense fallback={null}><OrderChoiceModal open onClose={() => setOrderModal(false)} locale={isKk ? 'kk' : 'ru'} /></Suspense>}
       <footer className="relative isolate overflow-hidden bg-eco-900 text-white">
         <ResponsiveImage fill sizes="100vw" src="/media/ecoprogress-og-cover-1280.jpg" alt="" width={1280} height={720} wrapperClassName="-z-20" className="bg-eco-900 object-cover" />
         <div className="absolute inset-0 -z-10 bg-eco-900/86" />
@@ -244,7 +251,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 {isKk ? 'Қазақстан бойынша экологиялық құжаттар мен зертханалық зерттеулер. Қалдықтарды кәдеге жарату — Шымкент, Тараз және Түркістан; шығару — Шымкент.' : 'Экологические документы и лаборатория по Казахстану. Утилизация отходов — Шымкент, Тараз и Туркестан; вывоз — Шымкент.'}
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <WhatsAppButton label="WhatsApp" className="bg-accent px-4 py-2 text-eco-900 hover:bg-accent/90" />
+                <WhatsAppButton label="WhatsApp" locale={isKk ? 'kk' : 'ru'} className="bg-accent px-4 py-2 text-eco-900 hover:bg-accent/90" />
                 <button type="button" onClick={() => setOrderModal(true)} className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">{isKk ? 'Өтінім қалдыру' : 'Получить консультацию эколога'}</button>
               </div>
             </div>
@@ -275,12 +282,12 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 <li className="flex items-center gap-2"><FaWhatsapp className="shrink-0 text-[#25D366]" size={16} aria-hidden="true" /> WhatsApp: {company.whatsappDisplay}</li>
                 <li><a href={`mailto:${company.email}`} onClick={() => trackEmailClick({ placement: 'footer' })} className="hover:text-white">{company.email}</a></li>
                 <li><a href={company.siteUrl} target="_blank" rel="noreferrer" className="hover:text-white">{company.siteLabel}</a></li>
-                <li>{company.address}</li>
-                <li>{company.schedule}</li>
+                <li>{isKk ? 'Шымкент қ., Восток ш/а, 66' : company.address}</li>
+                <li>{isKk ? 'Дс-Жм, 09:00-18:00' : company.schedule}</li>
               </ul>
             </div>
             <div>
-              <h4 className="text-sm font-semibold uppercase text-eco-200">{isKk ? 'Компания' : 'Компания'}</h4>
+              <h4 className="text-sm font-semibold uppercase text-eco-200">{isKk ? 'Компания туралы' : 'Компания'}</h4>
               <div className="mt-4 space-y-3 text-sm text-white/75">
                 <Link to={isKk ? '/kk' : '/about'} className="block hover:text-white">{isKk ? 'Басты бет' : 'О компании'}</Link>
                 <Link to={isKk ? '/kk/ekologiyalyq-qyzmetter' : '/contacts'} className="block hover:text-white">{isKk ? 'Қызметтер' : 'Контакты'}</Link>

@@ -13,6 +13,15 @@ test('protocol creation uses the backend creation-context and from-pek contracts
   }
 });
 
+test('protocol details load canonical PEK links and preserve programIndicatorId', async () => {
+  const api = await read('src/services/apiProtocolService.ts');
+  const types = await read('src/types/protocols.ts');
+  assert.match(api, /getProtocol[\s\S]*`\/protocols\/\$\{protocolId\}\/pek-links`/);
+  assert.match(api, /programIndicatorId:\s*pick\(pekContext/);
+  assert.match(api, /programIndicatorId:\s*scalarOrNull\(source\.programIndicatorId\)/);
+  assert.match(types, /ProtocolPekLink[\s\S]*programIndicatorId\?: string \| number/);
+});
+
 test('creation-context query has the exact backend-authoritative key and enablement', async () => {
   const hook = await read('src/features/protocols/hooks/useProtocolCreationContext.ts');
   assert.match(hook, /\['protocol-creation-context', companyId, objectId, date\]/);

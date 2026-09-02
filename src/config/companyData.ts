@@ -25,5 +25,5 @@ export const COMPANY = {
   instagram: '@ecoprogress.group',
   instagramUrl: 'https://www.instagram.com/ecoprogress.group',
   tiktokUrl: 'https://www.tiktok.com/@ecoprogress.group',
-  mapsUrl: 'https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18',
+  mapsUrl: 'https://2gis.kz/shymkent/geo/22659371323797193',
 } as const;

@@ -472,15 +472,25 @@ export interface Protocol {
 }
 
 export type ProtocolPekLink = {
+  id?: string | number;
   programId: string | number;
   programNumber?: string;
-  reportId: string | number;
+  reportId?: string | number;
   reportName?: string;
   reportPeriod?: string;
   controlItemId?: string | number;
   controlItemName?: string;
+  controlEventId?: string | number;
   monitoringPointId?: string | number;
   monitoringPointName?: string;
+  programIndicatorId?: string | number;
+  emissionSourceId?: string | number;
+  waterOutletId?: string | number;
+  orderId?: string | number;
+  orderServiceItemId?: string | number;
+  matchType?: string;
+  matchStatus?: string;
+  version?: number;
 };
 
 export type ProtocolPage = {

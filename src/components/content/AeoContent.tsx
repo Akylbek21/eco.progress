@@ -21,20 +21,20 @@ export const normalizeAeoFaq = (item: AeoFaqItem) => {
   };
 };
 
-export const AeoFaqList = ({ faq }: { faq: readonly AeoFaqItem[] }) => (
+export const AeoFaqList = ({ faq, locale = 'ru' }: { faq: readonly AeoFaqItem[]; locale?: 'ru' | 'kk' }) => (
   <div className="mt-8 grid gap-4 md:grid-cols-2">
     {faq.map((raw) => {
       const item = normalizeAeoFaq(raw);
       return <article key={item.question} className={card}>
         <h3 className="text-lg font-bold leading-7 text-eco-900">{item.question}</h3>
-        <p className="mt-3 font-semibold leading-7 text-eco-950"><span className="sr-only">Короткий ответ: </span>{item.shortAnswer}</p>
+        <p className="mt-3 font-semibold leading-7 text-eco-950"><span className="sr-only">{locale === 'kk' ? 'Қысқаша жауап: ' : 'Короткий ответ: '}</span>{item.shortAnswer}</p>
         {item.explanation && item.explanation !== item.shortAnswer && <p className="mt-3 text-sm leading-6 text-slate-600">{item.explanation}</p>}
       </article>;
     })}
   </div>
 );
 
-export const RelatedCaseStudies = ({ service, city }: { service?: string; city?: string }) => {
+export const RelatedCaseStudies = ({ service, city, locale = 'ru' }: { service?: string; city?: string; locale?: 'ru' | 'kk' }) => {
   const { data = [], isError } = useQuery({
     queryKey: ['public-content', 'cases'],
     queryFn: () => publicContentRepository.getCases(),
@@ -47,13 +47,13 @@ export const RelatedCaseStudies = ({ service, city }: { service?: string; city?:
     && (!city || item.city === city));
   if (!cases.length) return null;
   return <section aria-labelledby="related-cases-title">
-    <h2 id="related-cases-title" className="text-3xl font-bold text-eco-900">Реализованные проекты / Кейсы</h2>
-    <p className="mt-4 max-w-4xl leading-7 text-slate-600">Показываем только опубликованные проекты с проверенными исходными данными и результатом.</p>
-    <div className="mt-6 grid gap-4 md:grid-cols-2">{cases.map((item) => <Link key={item.id} to={`/cases/${item.slug}`} className={`${card} block hover:border-eco-300`}><p className="text-xs font-bold uppercase text-eco-500">{item.industry} · {item.city}</p><h3 className="mt-2 text-xl font-bold text-eco-900">{item.title}</h3><p className="mt-4 text-sm leading-6 text-slate-600"><strong className="text-slate-900">Задача:</strong> {item.problem}</p><p className="mt-2 text-sm leading-6 text-slate-600"><strong className="text-slate-900">Что сделали:</strong> {item.workPerformed.join('; ')}</p><p className="mt-2 text-sm leading-6 text-slate-600"><strong className="text-slate-900">Результат:</strong> {item.result}</p></Link>)}</div>
+    <h2 id="related-cases-title" className="text-3xl font-bold text-eco-900">{locale === 'kk' ? 'Орындалған жобалар' : 'Реализованные проекты / Кейсы'}</h2>
+    <p className="mt-4 max-w-4xl leading-7 text-slate-600">{locale === 'kk' ? 'Тек бастапқы деректері мен нәтижесі тексерілген жария жобаларды көрсетеміз.' : 'Показываем только опубликованные проекты с проверенными исходными данными и результатом.'}</p>
+    <div className="mt-6 grid gap-4 md:grid-cols-2">{cases.map((item) => <Link key={item.id} to={`/cases/${item.slug}`} className={`${card} block hover:border-eco-300`}><p className="text-xs font-bold uppercase text-eco-500">{item.industry} · {item.city}</p><h3 className="mt-2 text-xl font-bold text-eco-900">{item.title}</h3><p className="mt-4 text-sm leading-6 text-slate-600"><strong className="text-slate-900">{locale === 'kk' ? 'Міндет' : 'Задача'}:</strong> {item.problem}</p><p className="mt-2 text-sm leading-6 text-slate-600"><strong className="text-slate-900">{locale === 'kk' ? 'Орындалған жұмыс' : 'Что сделали'}:</strong> {item.workPerformed.join('; ')}</p><p className="mt-2 text-sm leading-6 text-slate-600"><strong className="text-slate-900">{locale === 'kk' ? 'Нәтиже' : 'Результат'}:</strong> {item.result}</p></Link>)}</div>
   </section>;
 };
 
-export const VerifiedExperts = () => {
+export const VerifiedExperts = ({ locale = 'ru' }: { locale?: 'ru' | 'kk' } = {}) => {
   const { data = [], isError } = useQuery({
     queryKey: ['public-content', 'experts'],
     queryFn: () => publicContentRepository.getExperts(),
@@ -63,10 +63,10 @@ export const VerifiedExperts = () => {
   const experts = data.filter(isPublishableExpert).slice(0, 3);
   if (isError || !experts.length) return null;
   return <section aria-labelledby="verified-experts-title">
-    <h2 id="verified-experts-title" className="text-3xl font-bold text-eco-900">Подтверждённые специалисты</h2>
+    <h2 id="verified-experts-title" className="text-3xl font-bold text-eco-900">{locale === 'kk' ? 'Біліктілігі расталған мамандар' : 'Подтверждённые специалисты'}</h2>
     <div className="mt-6 grid gap-4 md:grid-cols-3">{experts.map((expert) => <article key={expert.id} className={card}>
       <a href={expert.profileUrl} className="text-lg font-bold text-eco-900 underline decoration-eco-200">{expert.fullName}</a>
-      <p className="mt-1 text-sm text-slate-600">{expert.position} · опыт {expert.experienceYears} лет</p>
+      <p className="mt-1 text-sm text-slate-600">{expert.position} · {locale === 'kk' ? `тәжірибесі ${expert.experienceYears} жыл` : `опыт ${expert.experienceYears} лет`}</p>
       <p className="mt-3 text-sm leading-6 text-slate-600">{expert.specialization.join(' · ')}</p>
     </article>)}</div>
   </section>;

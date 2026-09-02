@@ -237,7 +237,7 @@ test('every generated non-article page exposes an official claim-source-review c
     for (const source of page.sources) {
       const host = new URL(source.url).hostname.replace(/^www\./, '');
       assert.equal(host, 'adilet.zan.kz', `${page.slug}: unofficial source ${source.url}`);
-      assert.equal(source.sourceName, 'ИПС «Әділет»');
+      assert.equal(source.sourceName, page.locale === 'kk' ? '«Әділет» АҚЖ' : 'ИПС «Әділет»');
       assert.equal(source.claimStatus, 'verified');
       assert.ok(source.documentNumber && source.issuedAt && source.accessedAt, `${page.slug}: incomplete source metadata`);
       assert.ok(source.supports?.length, `${page.slug}: source is not connected to a claim`);
@@ -405,4 +405,69 @@ test('analytics uses direct gtag, single SPA page view and success-only lead eve
   const errorBranch = leadForm.indexOf('} catch', apiSuccess);
   assert.ok(apiSuccess > submitStart && apiSuccess < leadEvent);
   assert.ok(leadEvent < errorBranch);
+});
+
+test('every service-city heading stays scoped to its own service', () => {
+  const signatures = new Map([
+    ['laboratory-tests', /Лабораторные замеры/iu],
+    ['szz', /Проект СЗЗ|санитарно-защитной зоны/iu],
+    ['waste-passport', /Паспорт отходов/iu],
+    ['waste-recycling', /Утилизация отходов/iu],
+    ['program-pek', /Программа ПЭК|программа производственного экологического контроля/iu],
+    ['report-pek', /Отч[её]т ПЭК|отч[её]т производственного экологического контроля/iu],
+    ['water-analysis', /Анализ воды/iu],
+    ['industrial-control', /Производственный контроль СЭС/iu],
+    ['roos', /РООС|раздел охраны окружающей среды/iu],
+    ['environmental-permits', /Экологическое разрешение/iu],
+    ['ovos', /ОВОС|скрининг воздействия/iu],
+    ['ndv', /Проект НДВ|нормативов допустимых выбросов/iu],
+    ['puo', /ПУО|программа управления отходами/iu],
+  ]);
+  const pages = seoPages.filter((page) => page.type === 'service-city' && page.locale !== 'kk');
+  for (const page of pages) {
+    const headings = [page.h1, ...page.sections.map((section) => section.title)];
+    for (const [serviceSlug, pattern] of signatures) {
+      if (serviceSlug !== page.serviceSlug) {
+        assert.ok(headings.every((heading) => !pattern.test(heading)), `${page.slug} contains a heading for ${serviceSlug}`);
+      }
+    }
+  }
+});
+
+test('public PEK content contains no internal field names or CRM terminology', () => {
+  const pekPages = seoPages.filter((page) => ['program-pek', 'report-pek'].includes(page.serviceSlug));
+  const publicCopy = JSON.stringify(pekPages);
+  assert.doesNotMatch(publicCopy, /regulationVersion|templateVersion|submissionDueDate|periodEnd|CRM-аналитика|внутренний аналитический отчёт|\bmonitoring\b|\breadiness\b|\bQA\b/u);
+});
+
+test('public PEK report explains the deadline in client language', async () => {
+  const serviceAeo = await readFile(new URL('../src/content/services/serviceAeo.ts', import.meta.url), 'utf8');
+  assert.match(serviceAeo, /Перед подготовкой отчёта определяем применимый срок сдачи для конкретного объекта и отчётного периода/u);
+  assert.match(serviceAeo, /Правил №250 с изменениями от 30 марта 2026 года/u);
+  assert.doesNotMatch(serviceAeo, /regulationVersion|templateVersion|submissionDueDate|CRM-аналитика/u);
+});
+
+test('Kazakh SEO pages use Kazakh source metadata and official Kazakh links', () => {
+  const kkPages = seoPages.filter((page) => page.locale === 'kk');
+  assert.ok(kkPages.length > 0);
+  const sourceCopy = JSON.stringify(kkPages.flatMap((page) => page.sources ?? []));
+  assert.doesNotMatch(sourceCopy, /Нормативная база|Подтверждает|Источник|Статус|Проверено|Короткий ответ/u);
+  assert.ok(kkPages.flatMap((page) => page.sources ?? []).every((source) => !source.url.includes('/rus/docs/')));
+});
+
+test('public NAP has one Shymkent address and schema reads the same source', async () => {
+  const [companyData, companyConfig, entityBuilders, servicesPage] = await Promise.all([
+    readFile(new URL('../src/config/companyData.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/config/company.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/seo/entityBuilders.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/ServicesPage.tsx', import.meta.url), 'utf8'),
+  ]);
+  assert.match(companyData, /city: 'Шымкент'/u);
+  assert.match(companyData, /street: .*'мкр Восток, 66'/u);
+  assert.match(companyData, /mapsUrl: 'https:\/\/2gis\.kz\/shymkent\/geo\/22659371323797193'/u);
+  assert.match(companyConfig, /address: `г\. \$\{COMPANY\.address\.city\}, \$\{COMPANY\.address\.street\}`/u);
+  assert.match(entityBuilders, /streetAddress: COMPANY\.address\.street/u);
+  assert.doesNotMatch([companyData, companyConfig, entityBuilders].join('\n'), /Алимбетова|199\/2/iu);
+  assert.doesNotMatch(companyData, /firm\/70000001113587757/u);
+  assert.doesNotMatch(servicesPage, /Исполнитель:|getBusinessCompanyById/u);
 });

@@ -151,7 +151,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
               <h1 className="mt-5 max-w-5xl text-4xl font-bold leading-tight sm:text-5xl">{page.h1}</h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-white/84">{page.intro}</p>
               {page.heroBenefits?.length ? (
-                <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-3" aria-label="Преимущества">
+                <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-3" aria-label={isKk ? 'Артықшылықтар' : 'Преимущества'}>
                   {page.heroBenefits.map((benefit) => (
                     <li key={benefit} className="inline-flex items-center gap-2 text-sm font-semibold text-white/90">
                       <CheckCircle2 className="shrink-0 text-accent" size={19} aria-hidden="true" />
@@ -169,7 +169,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
                 </Button>
               </div>
             </div>
-            {page.heroBenefits?.length ? <div id="hero-lead-form"><LeadForm source={`seo_hero_${page.slug}`} formId={`seo_hero_${page.slug}`} ctaId="hero_calculate" sourcePage={`/${page.slug}`} serviceSlug={page.serviceSlug} defaultService={page.service || 'Экологические услуги'} title={isKk ? 'Қысқа өтінім' : 'Короткая заявка'} submitLabel={page.primaryCtaLabel || (isKk ? 'Құнын есептеу' : GENERAL_PRIMARY_CTA_LABEL)} locale={isKk ? 'kk' : 'ru'} compact /></div> : <div className="rounded-[8px] border border-white/15 bg-white/10 p-6 backdrop-blur">
+            {page.heroBenefits?.length ? <div id="hero-lead-form"><LeadForm source={`seo_hero_${page.slug}`} formId={`seo_hero_${page.slug}`} ctaId="hero_calculate" sourcePage={`/${page.slug}`} serviceSlug={page.serviceSlug} defaultService={page.service || (isKk ? 'Экологиялық қызметтер' : 'Экологические услуги')} title={isKk ? 'Қысқа өтінім' : 'Короткая заявка'} submitLabel={page.primaryCtaLabel || (isKk ? 'Құнын есептеу' : GENERAL_PRIMARY_CTA_LABEL)} locale={isKk ? 'kk' : 'ru'} compact /></div> : <div className="rounded-[8px] border border-white/15 bg-white/10 p-6 backdrop-blur">
               <ShieldCheck className="text-accent" size={34} />
               <h2 className="mt-5 text-2xl font-bold">{isKk ? 'Жұмысты неден бастаймыз' : 'Что сделаем на старте'}</h2>
               <p className="mt-4 text-sm leading-6 text-white/75">
@@ -219,7 +219,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
       {page.type === 'article' && (
         <section className="px-4 py-14 sm:px-8">
           <div className="mx-auto max-w-7xl space-y-8">
-            <ArticleSources sources={page.sources ?? []} />
+            <ArticleSources sources={page.sources ?? []} locale={isKk ? 'kk' : 'ru'} />
             <div className="grid gap-4 md:grid-cols-2">
               {articleAuthor ? <ArticleAuthorCard expert={articleAuthor} /> : <ArticleOrganizationAuthorCard />}
               <ArticleReviewerCard expert={articleReviewer} />
@@ -235,8 +235,8 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
       {page.type !== 'article' && page.sources?.length ? (
         <section className="px-4 py-14 sm:px-8">
           <div className="mx-auto max-w-7xl space-y-8">
-            <ArticleSources sources={page.sources} title="Нормативная база" />
-            {articleReviewer && page.lastReviewedAt ? <ServiceReviewCard expert={articleReviewer} reviewedAt={page.lastReviewedAt} legalBasisCheckedAt={page.legalBasisCheckedAt} /> : null}
+            <ArticleSources sources={page.sources} title={isKk ? 'Нормативтік негіз' : 'Нормативная база'} locale={isKk ? 'kk' : 'ru'} />
+            {articleReviewer && page.lastReviewedAt ? <ServiceReviewCard expert={articleReviewer} reviewedAt={page.lastReviewedAt} legalBasisCheckedAt={page.legalBasisCheckedAt} locale={isKk ? 'kk' : 'ru'} /> : null}
           </div>
         </section>
       ) : null}
@@ -250,11 +250,11 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
 
       <section className="bg-white px-4 py-14 sm:px-8">
         <div className="mx-auto max-w-7xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">FAQ</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">{isKk ? 'Сұрақ-жауап' : 'FAQ'}</p>
           <h2 className="mt-3 text-3xl font-bold text-eco-900">{isKk ? 'Жиі қойылатын сұрақтар' : 'Частые вопросы'}</h2>
-          <AeoFaqList faq={page.faq} />
-              {(page.type === 'city' || page.type === 'service-city') && <div className="mt-14"><RelatedCaseStudies service={page.type === 'service-city' ? page.serviceSlug : undefined} city={page.cityNominative ?? page.city} /></div>}
-              {(page.type === 'city' || page.type === 'service-city') && <div className="mt-14"><VerifiedExperts /></div>}
+          <AeoFaqList faq={page.faq} locale={isKk ? 'kk' : 'ru'} />
+              {!isKk && (page.type === 'city' || page.type === 'service-city') && <div className="mt-14"><RelatedCaseStudies service={page.type === 'service-city' ? page.serviceSlug : undefined} city={page.cityNominative ?? page.city} locale="ru" /></div>}
+              {!isKk && (page.type === 'city' || page.type === 'service-city') && <div className="mt-14"><VerifiedExperts locale="ru" /></div>}
         </div>
       </section>
 
@@ -277,7 +277,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
               source={`seo_${page.slug}`}
               sourcePage={`/${page.slug}`}
               serviceSlug={page.serviceSlug}
-              defaultService={page.service || 'Экологические услуги'}
+              defaultService={page.service || (isKk ? 'Экологиялық қызметтер' : 'Экологические услуги')}
               locale={isKk ? 'kk' : 'ru'}
               title={isKk ? 'Өтінім қалдыру' : 'Получить расчёт'}
               submitLabel={page.primaryCtaLabel || (isKk ? 'Құнын есептеу' : GENERAL_PRIMARY_CTA_LABEL)}

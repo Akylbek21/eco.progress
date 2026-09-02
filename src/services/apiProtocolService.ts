@@ -24,6 +24,7 @@ import type {
   ProtocolEnvironmentalConditions,
   ProtocolMeasurementDevice,
   ProtocolPage,
+  ProtocolPekLink,
   ProtocolListQuery,
   ProtocolResultValue,
   ProtocolResultRow,
@@ -97,6 +98,32 @@ const numberOrNull = (value: unknown): number | null => {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 };
+
+const normalizeProtocolPekLinks = (input: unknown): ProtocolPekLink[] =>
+  extractList(input, ['links', 'pekLinks', 'pekConnections']).map((value) => {
+    const source = asRecord(value);
+    return {
+      id: scalarOrNull(source.id) ?? undefined,
+      programId: scalar(source.programId ?? source.pekProgramId),
+      programNumber: firstString(source.programNumber) || undefined,
+      reportId: scalarOrNull(source.reportId ?? source.pekReportId) ?? undefined,
+      reportName: firstString(source.reportName) || undefined,
+      reportPeriod: firstString(source.reportPeriod) || undefined,
+      controlItemId: scalarOrNull(source.controlItemId ?? source.pekControlItemId) ?? undefined,
+      controlItemName: firstString(source.controlItemName) || undefined,
+      controlEventId: scalarOrNull(source.controlEventId ?? source.pekControlEventId) ?? undefined,
+      monitoringPointId: scalarOrNull(source.monitoringPointId) ?? undefined,
+      monitoringPointName: firstString(source.monitoringPointName) || undefined,
+      programIndicatorId: scalarOrNull(source.programIndicatorId) ?? undefined,
+      emissionSourceId: scalarOrNull(source.emissionSourceId) ?? undefined,
+      waterOutletId: scalarOrNull(source.waterOutletId) ?? undefined,
+      orderId: scalarOrNull(source.orderId) ?? undefined,
+      orderServiceItemId: scalarOrNull(source.orderServiceItemId) ?? undefined,
+      matchType: firstString(source.matchType) || undefined,
+      matchStatus: firstString(source.matchStatus) || undefined,
+      version: numberOrNull(source.version) ?? undefined,
+    };
+  });
 const requireProtocolVersion = (value: unknown, field = 'protocol.version'): number => {
   const version = Number(value);
   if (!Number.isInteger(version) || version < 0) {
@@ -882,6 +909,7 @@ export const normalizeProtocol = (raw: unknown): Protocol => {
     pekControlItemId: pick(pekContext, ['pekControlItemId', 'pek_control_item_id']) || pick(source, ['pekControlItemId', 'pek_control_item_id']),
     pekControlEventId: pick(pekContext, ['pekControlEventId', 'pek_control_event_id']) || pick(source, ['pekControlEventId', 'pek_control_event_id']),
     monitoringPointId: pick(pekContext, ['monitoringPointId', 'monitoring_point_id']) || pick(source, ['monitoringPointId', 'monitoring_point_id']),
+    programIndicatorId: pick(pekContext, ['programIndicatorId', 'program_indicator_id']) || pick(source, ['programIndicatorId', 'program_indicator_id']),
     emissionSourceId: pick(pekContext, ['emissionSourceId', 'emission_source_id']) || pick(source, ['emissionSourceId', 'emission_source_id']),
     waterOutletId: pick(pekContext, ['waterOutletId', 'water_outlet_id']) || pick(source, ['waterOutletId', 'water_outlet_id']),
     availableActions: normalizeProtocolAvailableActions(source.availableActions),
@@ -1164,12 +1192,12 @@ export async function refreshLaboratoryData(protocolId: string, version: number)
 }
 
 export async function getProtocol(protocolId: string): Promise<Protocol> {
-  const response = await api.get<ApiResponse<unknown>>(
-    `/protocols/${protocolId}`
-  );
-
+  const response = await api.get<ApiResponse<unknown>>(`/protocols/${protocolId}`);
   const payload = response.data?.data ?? response.data;
-  return requireProtocol(payload, 'загрузка');
+  const protocol = requireProtocol(payload, 'загрузка');
+  const pekLinksResponse = await api.get<ApiResponse<unknown>>(`/protocols/${protocolId}/pek-links`);
+  protocol.pekLinks = normalizeProtocolPekLinks(pekLinksResponse);
+  return protocol;
 }
 
 export const getProtocolById = getProtocol;

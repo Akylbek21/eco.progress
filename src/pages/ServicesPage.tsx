@@ -11,7 +11,6 @@ import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { fallbackServices, getServiceCatalog } from '../services/serviceService';
 import { activeServices, formatKztPrice, GENERAL_PRIMARY_CTA_LABEL, getServicePrimaryCtaLabel, PRELIMINARY_PRICE_NOTICE } from '../content/serviceCatalog';
-import { getBusinessCompanyById } from '../utils/crm';
 import type { ServiceCategory } from '../types';
 import { pageHeroImages } from '../data/pageHeroImages';
 
@@ -136,10 +135,7 @@ const ServicesPage = () => {
               <Reveal key={service.id} delay={index * 0.04}>
                 <div id={`service-${service.id}`} className={`card-hover flex h-full scroll-mt-28 flex-col rounded-[18px] border bg-white p-5 sm:rounded-[22px] sm:p-6 ${(selectedIncludes[service.id] ?? []).length > 0 ? 'border-accent ring-4 ring-accent/15' : 'border-slate-200'}`}>
                   <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-semibold text-eco-500">{service.category}</p>
-                      <p className="mt-1 text-xs font-bold text-slate-500">Исполнитель: {getBusinessCompanyById(service.businessCompanyId).name}</p>
-                    </div>
+                    <p className="text-sm font-semibold text-eco-500">{service.category}</p>
                     {(selectedIncludes[service.id] ?? []).length > 0 && (
                       <span className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-eco-900">
                         Выбрано: {(selectedIncludes[service.id] ?? []).length}

@@ -93,7 +93,7 @@ describe('PEK P1 backend-authoritative frontend logic', () => {
     expect(requests[0].headers.get('If-Match')).toBe('8');
     const workspace = source('src/features/pek/pages/PekReportWorkspacePage.tsx');
     expect(workspace).toContain('pekApi.collectReport(id, report.data!.version)');
-    expect(workspace).toContain('Отчёт был изменён другим пользователем. Данные обновлены.');
+    expect(workspace).toContain('Данные были изменены другим сотрудником.\\nОбновите страницу и повторите действие.');
     expect(workspace).toMatch(/const collect = useMutation\([\s\S]*?retry: false/);
   });
 

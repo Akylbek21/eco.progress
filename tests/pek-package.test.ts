@@ -51,7 +51,7 @@ describe('PEK report package backend contract', () => {
 
   it('shows the backend stale-document error and exact conflict copy', () => {
     expect(mapPekError({ isAxiosError: true, response: { status: 409, data: { code: 'PEK_DOCUMENT_STALE' } } }).message).toBe('Документ устарел. Сформируйте его заново.');
-    expect(mapPekError({ isAxiosError: true, response: { status: 412, data: {} } }).message).toBe('Данные были изменены другим пользователем');
+    expect(mapPekError({ isAxiosError: true, response: { status: 412, data: {} } }).message).toBe('Данные были изменены другим сотрудником.\nОбновите страницу и повторите действие.');
     const component = readFileSync(resolve(process.cwd(), 'src/features/pek/components/documents/PekReportDocuments.tsx'), 'utf8');
     expect(component).toContain('latest?.stale');
     expect(component).toContain('report.availableActions[config.downloadAction] === true');

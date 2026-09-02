@@ -11,12 +11,21 @@ type Props = {
   open: boolean;
   onClose: () => void;
   preSelectedService?: string;
+  locale?: 'ru' | 'kk';
 };
 
 type EcoService = { id: string; title: string };
 
-const OrderChoiceModal = ({ open, onClose, preSelectedService }: Props) => {
+const createKkWhatsAppMessage = (service = '') => `Сәлеметсіз бе! Өтінім қалдырғым келеді.
+
+Қызмет: ${service}
+Қала:
+Телефон / WhatsApp:
+Сұрақ:`;
+
+const OrderChoiceModal = ({ open, onClose, preSelectedService, locale = 'ru' }: Props) => {
   const navigate = useNavigate();
+  const isKk = locale === 'kk';
   // Public runtime intentionally has no AuthProvider. The private cabinet
   // validates the stored session after navigation.
   const isAuthenticated = typeof window !== 'undefined' && Boolean(localStorage.getItem('eco-progress-token'));
@@ -46,43 +55,37 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService }: Props) => {
     }
   };
 
-  const whatsappUrl = createWhatsAppUrl(createBlankWhatsAppRequestMessage(selectedServiceTitle));
+  const whatsappUrl = createWhatsAppUrl(
+    isKk ? createKkWhatsAppMessage(selectedServiceTitle) : createBlankWhatsAppRequestMessage(selectedServiceTitle),
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm" onClick={onClose}>
       <div className="relative w-full max-w-2xl overflow-hidden rounded-[24px] bg-white p-5 shadow-2xl sm:p-7" onClick={(event) => event.stopPropagation()}>
-        <button type="button" onClick={onClose} className="absolute right-4 top-4 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Закрыть">
+        <button type="button" onClick={onClose} className="absolute right-4 top-4 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label={isKk ? 'Жабу' : 'Закрыть'}>
           <X size={20} />
         </button>
 
-        <h2 className="pr-10 text-2xl font-bold text-eco-900">Получить консультацию эколога</h2>
+        <h2 className="pr-10 text-2xl font-bold text-eco-900">{isKk ? 'Эколог маманнан кеңес алу' : 'Получить консультацию эколога'}</h2>
         <p className="mt-3 flex max-w-xl items-start gap-2 text-sm leading-6 text-slate-600">
           <FaWhatsapp className="mt-1 shrink-0 text-[#25D366]" size={16} aria-hidden="true" />
-          <span>Выберите удобный способ. Можно работать через личный кабинет или отправить заявку менеджеру в WhatsApp без регистрации.</span>
+          <span>{isKk ? 'Өзіңізге ыңғайлы тәсілді таңдаңыз: жеке кабинет арқылы тапсырыс беріңіз немесе тіркелмей-ақ WhatsApp арқылы менеджерге жазыңыз.' : 'Выберите удобный способ: оформите заказ через личный кабинет или отправьте заявку менеджеру в WhatsApp без регистрации.'}</span>
         </p>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <div className="flex min-w-0 flex-col rounded-[20px] border border-slate-200 bg-eco-50 p-5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-eco-700 shadow-sm">
-              <Monitor size={23} />
-            </div>
-            <h3 className="mt-4 text-lg font-bold text-eco-900">Заказать через личный кабинет</h3>
-            <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">
-              Для клиентов, которые хотят отслеживать статус, документы, оплату и результат в кабинете.
-            </p>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-eco-700 shadow-sm"><Monitor size={23} /></div>
+            <h3 className="mt-4 text-lg font-bold text-eco-900">{isKk ? 'Жеке кабинет арқылы тапсырыс беру' : 'Заказать через личный кабинет'}</h3>
+            <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{isKk ? 'Тапсырыстың мәртебесін, құжаттарды, төлемді және нәтижені кабинеттен бақылағысы келетін клиенттерге арналған.' : 'Для клиентов, которые хотят отслеживать статус, документы, оплату и результат в кабинете.'}</p>
             <Button type="button" onClick={handleOnline} className="mt-5 w-full">
-              {isAuthenticated ? 'Перейти в кабинет' : 'Войти / зарегистрироваться'}
+              {isKk ? (isAuthenticated ? 'Кабинетке өту' : 'Кіру / тіркелу') : (isAuthenticated ? 'Перейти в кабинет' : 'Войти / зарегистрироваться')}
             </Button>
           </div>
 
           <div className="flex min-w-0 flex-col rounded-[20px] border border-green-100 bg-green-50 p-5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#25D366] shadow-sm">
-              <FaWhatsapp size={24} aria-hidden="true" />
-            </div>
-            <h3 className="mt-4 inline-flex items-center gap-2 text-lg font-bold text-eco-900"><FaWhatsapp className="text-[#25D366]" size={18} aria-hidden="true" /> Написать в WhatsApp</h3>
-            <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">
-              Без регистрации. Менеджер получит сообщение и свяжется с вами.
-            </p>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#25D366] shadow-sm"><FaWhatsapp size={24} aria-hidden="true" /></div>
+            <h3 className="mt-4 inline-flex items-center gap-2 text-lg font-bold text-eco-900"><FaWhatsapp className="text-[#25D366]" size={18} aria-hidden="true" /> {isKk ? 'WhatsApp арқылы жазу' : 'Написать в WhatsApp'}</h3>
+            <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{isKk ? 'Тіркелу қажет емес. Менеджер хабарламаңызды алып, сізбен байланысады.' : 'Без регистрации. Менеджер получит сообщение и свяжется с вами.'}</p>
             <a
               href={whatsappUrl}
               target="_blank"
@@ -93,7 +96,7 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService }: Props) => {
               }}
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-center text-sm font-bold text-white shadow-sm transition hover:bg-[#20bd5a]"
             >
-              <FaWhatsapp size={18} aria-hidden="true" /> Написать в WhatsApp
+              <FaWhatsapp size={18} aria-hidden="true" /> {isKk ? 'WhatsApp арқылы жазу' : 'Написать в WhatsApp'}
             </a>
           </div>
         </div>

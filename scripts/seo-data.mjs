@@ -32,6 +32,43 @@ const officialSourcesFor = (items) => items.filter((item) => item.sourceUrl).map
 const generalOfficialSources = [...new Map(
   serviceContent.flatMap((item) => officialSourcesFor(item.legalBasis)).map((source) => [source.url, source]),
 ).values()];
+const kkOfficialSourceCopy = {
+  K2100000400: {
+    title: 'Қазақстан Республикасының Экология кодексі',
+    supports: ['Нақты нормалардың қолданылуы нысан санаты мен жұмыс құрамына байланысты анықталып, әр тапсырма бойынша бейінді маманмен нақтыланады.'],
+  },
+  V2100023903: {
+    title: 'Қалдықтар сыныптауышы',
+    supports: ['Қалдықтарды жіктеу және кодтау үшін қолданылады; нақты кодтың қолданылуы қалдықтың құрамы мен шығу тегіне қарай тексеріледі.'],
+  },
+  V2200026447: {
+    title: '«Объектілердің санитариялық-қорғаныш аймақтарына қойылатын санитариялық-эпидемиологиялық талаптар» санитариялық қағидалары',
+    supports: ['Санитариялық-қорғаныш аймақтары мен санитариялық ажырауларды белгілеу, жобалау және пайдалану тәртібін айқындайды.'],
+  },
+  V2100023553: {
+    title: 'I және II санаттағы объектілердің өндірістік экологиялық бақылау бағдарламасын әзірлеу, ішкі есеп жүргізу және мерзімдік есептерді ұсыну қағидалары',
+    supports: ['Өндірістік экологиялық бақылау бағдарламасының мазмұнын, ішкі есепті және бақылау нәтижелері бойынша мерзімдік есептілікті реттейді.'],
+  },
+  V2100023809: {
+    title: 'Экологиялық бағалауды ұйымдастыру және өткізу жөніндегі нұсқаулық',
+    supports: ['Қоршаған ортаға әсерді бағалауды және оңайлатылған тәртіппен экологиялық бағалауды ұйымдастыруды реттейді.'],
+  },
+  V2100022317: {
+    title: 'Қоршаған ортаға эмиссиялар нормативтерін айқындау әдістемелері',
+    supports: ['Эмиссиялар нормативтерін, соның ішінде жол берілетін шығарындылар нормативтерін есептеу мен негіздеу тәртібін айқындайды.'],
+  },
+};
+const localizeOfficialSourceKk = (source) => {
+  const documentId = source.url.split('/').at(-1);
+  const localized = kkOfficialSourceCopy[documentId];
+  return {
+    ...source,
+    ...(localized || {}),
+    url: source.url.replace('/rus/docs/', '/kaz/docs/'),
+    sourceName: '«Әділет» АҚЖ',
+    ...(source.documentNumber ? { documentNumber: source.documentNumber.replace(/^приказ/u, 'бұйрық') } : {}),
+  };
+};
 
 const cityProfiles = [
   ['almaty', 'Алматы', 'Алматы и Алматинская область', 'офисы, клиники, рестораны, склады, торговые центры и пищевые производства', 'Высокая плотность объектов и частые проверки требуют аккуратного ведения экологических документов и лабораторных протоколов.', ['astana', 'shymkent', 'taldykorgan']],
@@ -308,7 +345,7 @@ const commercialServiceContent = {
     promise: 'Готовим официальный отчёт ПЭК за отчётный период по действующей программе и подтверждённым данным предприятия.',
     scope: 'Проверяем программу ПЭК, лабораторные протоколы, журналы и сведения по выбросам, сбросам и отходам, затем формируем отчётный комплект.',
     steps: ['проверка программы и отчётного периода', 'сбор протоколов и производственных данных', 'сверка полноты мониторинга', 'устранение расхождений в исходных сведениях', 'подготовка официального отчёта ПЭК'],
-    deadline: 'Срок подготовки зависит от полноты данных за период; дату сдачи определяют применимые требования, а не окончание программы ПЭК.',
+    deadline: 'Перед подготовкой отчёта определяем применимый срок сдачи для конкретного объекта и отчётного периода. По действующей редакции Правил №250 с изменениями от 30 марта 2026 года отчёт представляется ежеквартально до первого числа второго месяца после отчётного квартала.',
     faq: 'Можно ли подготовить отчёт ПЭК без лабораторных протоколов?',
     faqAnswer: 'Отчёт должен отражать фактически выполненный контроль. Отсутствующие обязательные измерения нельзя заменять расчётным или шаблонным текстом.',
     articles: ['kak-formiruetsya-otchet-pek', 'chto-sdavat-po-ekologii-kazhdyy-god'],
@@ -600,7 +637,8 @@ const createServiceCityPage = (service, city) => {
     : wasteCityOverride?.description ?? (isRoos
       ? `Разработка РООС в ${city.cityPrepositional} для проектируемых объектов. Проверим исходные данные, определим состав работ и рассчитаем стоимость подготовки раздела.`
       : `${content.title} в ${city.cityPrepositional}: ${content.meta} Срок и стоимость для ${city.cityGenitive} — после аудита.`);
-  const roosRegionalContent = isRoos ? {
+  const serviceSpecificRegionalContent = ({
+    'environmental-design': {
     almaty: `Особенности работы в регионе. Для проектов в Алматы важно учитывать плотную городскую застройку, соседство жилых, коммерческих и общественных объектов, ограничения существующих инженерных сетей и частые изменения проектных решений. Разработку РООС начинаем с фиксации актуальной версии генплана и стадии проекта. Документальные этапы выполняем дистанционно; постоянный офис в Алматы и автоматическое включение выезда в цену не заявляем.
 
 Типичные объекты. В работу поступают проекты жилых и коммерческих комплексов, складских и логистических зданий, медицинских и пищевых объектов, сервисных площадок, реконструкции существующих помещений. Само назначение объекта не определяет состав РООС. Проверяем технологию, строительные процессы, источники выбросов и шума, обращение с отходами, водопотребление, водоотведение и расположение чувствительной застройки.
@@ -634,7 +672,8 @@ const createServiceCityPage = (service, city) => {
 Статус регионального кейса. В текущем публичном реестре EcoProgress нет опубликованного проверенного кейса РООС по Шымкенту. Мы сознательно не превращаем внутреннюю заявку или неподтверждённый пример в маркетинговое доказательство. Реальный кейс будет выведен на странице после фиксации исходной задачи, выполненных работ, результата, профильного специалиста и рецензента.
 
 Сроки взаимодействия. Проверку комплекта начинаем после получения проектных файлов и контактного лица со стороны заказчика. Срок РООС зависит от масштаба проекта, числа источников, готовности инженерных разделов и количества итераций. Дистанционный обмен ускоряет сверку документов; обследование и замеры, если они применимы, получают отдельное задание, дату и расчёт.`,
-  }[city.slug] : undefined;
+    },
+  })[service.key]?.[city.slug];
   const cityBenefits = baseServiceContent?.hero.benefits?.slice(0, 3)
     ?? content.steps.slice(0, 3).map((step) => step[0].toUpperCase() + step.slice(1));
   const cityPricingFactors = baseServiceContent?.pricingFactors?.length
@@ -693,7 +732,7 @@ const createServiceCityPage = (service, city) => {
     { title: `Что получает заказчик в ${city.cityPrepositional}`, body: `${cityDeliverables} Региональные условия и ограничения фиксируем в составе результата, а неподтверждённые работы не включаем.` },
     { title: `Нормативная база для услуги «${content.title}»`, body: `${cityLegalBasis} Регион не меняет республиканское регулирование; применимость требований проверяется для конкретного объекта. Актуальность централизованного реестра проверялась ${baseServiceContent?.contentReview.legalBasisCheckedAt || LASTMOD}.` },
     { title: `Частые ошибки при заказе услуги «${content.title}»`, body: `${baseServiceContent?.aeo.commonMistakes ?? 'Частые ошибки — начинать работу без согласованного задания, передавать разные версии исходных файлов и не фиксировать изменения объекта.'} Для площадки в ${city.cityPrepositional} отдельно проверяем адрес, режим работы и условия доступа.` },
-    { title: roosRegionalContent ? `Разработка РООС в ${city.cityPrepositional}: особенности региона` : `Особенности работы в ${city.cityPrepositional}`, body: `${roosRegionalContent || regionalService.introduction} Региональный фокус — ${regionalTask}. ${operationalNote}` },
+    { title: serviceSpecificRegionalContent ? `Разработка РООС в ${city.cityPrepositional}: особенности региона` : `Особенности работы в ${city.cityPrepositional}`, body: `${serviceSpecificRegionalContent || regionalService.introduction} Региональный фокус — ${regionalTask}. ${operationalNote}` },
   ],
   services: baseServices.map(([_, label, path]) => link(label, path)),
   audience: objectList.slice(0, 12),
@@ -860,6 +899,19 @@ const ruSeoPages = [
     .map(enrichSpecialPage),
 ];
 
+const serviceTopicSignatures = new Map(serviceProfiles.map((service) => [
+  mainServiceSlug[service.key],
+  new RegExp(service.titleName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'iu'),
+]));
+for (const page of ruSeoPages.filter((item) => item.type === 'service-city')) {
+  const headings = [page.h1, ...page.sections.map((section) => section.title)];
+  for (const [serviceSlug, signature] of serviceTopicSignatures) {
+    if (serviceSlug !== page.serviceSlug && headings.some((heading) => signature.test(heading))) {
+      throw new Error(`Service-city topic leak: ${page.slug} contains heading for ${serviceSlug}`);
+    }
+  }
+}
+
 const withOfficialSources = (page) => {
   if (page.type === 'article') return page;
   const detailedService = page.serviceSlug ? serviceContentMap.get(page.serviceSlug) : undefined;
@@ -869,7 +921,7 @@ const withOfficialSources = (page) => {
     : detailedService ? officialSourcesFor(detailedService.legalBasis) : generalOfficialSources;
   return {
     ...page,
-    sources,
+    sources: page.locale === 'kk' ? sources.map(localizeOfficialSourceKk) : sources,
     reviewStatus: review.reviewStatus,
     reviewerSlug: review.reviewedBy,
     lastReviewedAt: review.lastReviewedAt,

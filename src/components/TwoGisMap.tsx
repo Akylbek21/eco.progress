@@ -1,47 +1,17 @@
+import { MapPin } from 'lucide-react';
 import { company } from '../config/company';
-
-const twoGisWidgetSrcDoc = `<!doctype html>
-<html lang="ru">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      html,
-      body {
-        margin: 0;
-        min-height: 100%;
-        overflow: hidden;
-        background: #f1f5f9;
-      }
-
-      .dg-widget-link {
-        display: none;
-      }
-    </style>
-  </head>
-  <body>
-    <a class="dg-widget-link" href="https://2gis.kz/shymkent/firm/70000001113587757/center/69.64210867881776,42.33840753960456/zoom/18?utm_medium=widget-source&utm_campaign=firmsonmap&utm_source=bigMap">Посмотреть на карте Шымкента</a>
-    <div class="dg-widget-link">
-      <a href="https://2gis.kz/shymkent/center/69.64210867881776,42.33840753960456/zoom/18/routeTab/rsType/bus/to/69.64210867881776,42.33840753960456%E2%95%8EEco%20Progress,%20%D0%BA%D0%BE%D0%BC%D0%BF%D0%B0%D0%BD%D0%B8%D1%8F?utm_medium=widget-source&utm_campaign=firmsonmap&utm_source=route">Найти проезд до Eco Progress, компания</a>
-    </div>
-    <script charset="utf-8" src="https://widgets.2gis.com/js/DGWidgetLoader.js"><\/script>
-    <script charset="utf-8">new DGWidgetLoader({"width":"100%","height":600,"borderColor":"#a3a3a3","pos":{"lat":42.33840753960456,"lon":69.64210867881776,"zoom":18},"opt":{"city":"shymkent"},"org":[{"id":"70000001113587757"}]});<\/script>
-    <noscript style="color:#c00;font-size:16px;font-weight:bold;">Виджет карты использует JavaScript. Включите его в настройках вашего браузера.</noscript>
-  </body>
-</html>`;
 
 const TwoGisMap = () => (
   <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-sm">
-    <iframe
-      title="Карта 2GIS Eco Progress"
-      srcDoc={twoGisWidgetSrcDoc}
-      className="block h-[420px] w-full border-0 sm:h-[600px]"
-      loading="lazy"
-      sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-    />
+    <a href={company.mapsUrl} target="_blank" rel="noreferrer" className="flex min-h-[320px] flex-col items-center justify-center bg-gradient-to-br from-eco-950 via-eco-800 to-eco-600 px-6 text-center text-white sm:min-h-[420px]">
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white/12 ring-1 ring-white/25"><MapPin size={42} className="text-accent" aria-hidden="true" /></span>
+      <span className="mt-6 text-2xl font-bold">{company.name} на карте</span>
+      <span className="mt-3 text-base text-white/80">{company.address}</span>
+      <span className="mt-6 rounded-full bg-accent px-5 py-3 text-sm font-bold text-eco-950">Показать точку в 2GIS</span>
+    </a>
     <div className="flex flex-col gap-3 border-t border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <p className="font-bold text-eco-900">Eco Progress, компания</p>
+        <p className="font-bold text-eco-900">{company.name}</p>
         <p className="mt-1 text-sm text-slate-600">{company.address}</p>
       </div>
       <a

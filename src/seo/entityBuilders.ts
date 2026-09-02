@@ -25,7 +25,8 @@ export const buildOrganizationSchema = (): SchemaEntity => ({
   name: COMPANY.name, alternateName: COMPANY.brandName, url: PUBLIC_SITE_URL,
   logo: { '@type': 'ImageObject', url: COMPANY.logo }, email: COMPANY.email, telephone: COMPANY.phone.display,
   address: { '@type': 'PostalAddress', streetAddress: COMPANY.address.street, addressLocality: COMPANY.address.city, addressCountry: COMPANY.address.country },
-  sameAs: [COMPANY.instagramUrl, COMPANY.tiktokUrl, COMPANY.mapsUrl],
+  hasMap: COMPANY.mapsUrl,
+  sameAs: [COMPANY.instagramUrl, COMPANY.tiktokUrl],
 });
 
 export const buildLocalBusinessSchema = (): SchemaEntity => ({
@@ -33,6 +34,7 @@ export const buildLocalBusinessSchema = (): SchemaEntity => ({
   name: COMPANY.name, url: PUBLIC_SITE_URL, image: COMPANY.defaultOgImage, email: COMPANY.email, telephone: COMPANY.phone.display,
   parentOrganization: organizationRef(),
   address: { '@type': 'PostalAddress', streetAddress: COMPANY.address.street, addressLocality: COMPANY.address.city, addressCountry: COMPANY.address.country },
+  hasMap: COMPANY.mapsUrl,
   areaServed: { '@type': 'City', name: COMPANY.address.city }, openingHours: 'Mo-Fr 09:00-18:00',
 });
 

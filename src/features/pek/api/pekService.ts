@@ -98,15 +98,24 @@ const reportAction = async (
   return mapReportResponse(await get<unknown>(`/pek/reports/${id}`));
 };
 
-const reportDocumentPath = (id: number, kind: PekReportDocumentKind) =>
-  `/pek/reports/${id}/document`;
+const reportDocumentPath = (id: number) => `/pek/reports/${id}/document`;
+
+const backendDocumentType = (kind: PekReportDocumentKind): 'OFFICIAL' | 'INTERNAL' =>
+  kind === 'OFFICIAL' ? 'OFFICIAL' : 'INTERNAL';
+
+const frontendDocumentKind = (value: unknown, fallback: PekReportDocumentKind): PekReportDocumentKind => {
+  const normalized = String(value ?? '').trim().toUpperCase();
+  if (normalized === 'OFFICIAL') return 'OFFICIAL';
+  if (normalized === 'INTERNAL' || normalized === 'INTERNAL_ANALYTICAL') return 'INTERNAL_ANALYTICAL';
+  return fallback;
+};
 
 const mapDocumentVersion = (value: unknown, kind: PekReportDocumentKind): PekDocumentVersion => {
   const source = unwrapPekData<Record<string, unknown>>(value);
   return {
     id: Number(source.id),
     version: Number(source.version || 0),
-    documentKind: kind,
+    documentKind: frontendDocumentKind(source.documentType ?? source.documentKind, kind),
     regulationVersion: source.regulationVersion == null ? null : String(source.regulationVersion),
     templateVersion: source.templateVersion == null ? null : String(source.templateVersion),
     generatedAt: String(source.generatedAt || ''),
@@ -304,30 +313,37 @@ export const pekApi = {
   generateReportDocument: async (id: number, kind: PekReportDocumentKind, format: PekReportDocumentFormat, version: number) => {
     if (format === 'xlsx') throw new Error('Backend ПЭК не поддерживает формирование XLSX.');
     const target = kind === 'OFFICIAL' ? `generate-official-${format}` : `generate-internal-${format}`;
-    return mapDocumentVersion((await api.post(`${reportDocumentPath(id, kind)}/${target}`, {}, pekMutationOptions(version))).data, kind);
+    return mapDocumentVersion((await api.post(`${reportDocumentPath(id)}/${target}`, {}, pekMutationOptions(version))).data, kind);
   },
   getReportDocumentVersions: async (id: number, kind: PekReportDocumentKind, signal?: AbortSignal) =>
-    (await get<unknown[]>(`${reportDocumentPath(id, kind)}/versions`, {}, signal)).map((item) => mapDocumentVersion(item, kind)),
+    (await get<unknown[]>(`${reportDocumentPath(id)}/versions`, { documentType: backendDocumentType(kind) }, signal))
+      .map((item) => mapDocumentVersion(item, kind)),
   downloadReportDocumentVersion: async (reportId: number, kind: PekReportDocumentKind, versionId: number, format: PekReportDocumentFormat): Promise<PekBlobResult> => {
-    const response = await api.get<Blob>(`${reportDocumentPath(reportId, kind)}/versions/${versionId}/download/${format}`, { responseType: 'blob' });
+    const response = await api.get<Blob>(`${reportDocumentPath(reportId)}/versions/${versionId}/download/${format}`, {
+      params: { documentType: backendDocumentType(kind) },
+      responseType: 'blob',
+    });
     return {
       blob: response.data,
       filename: filenameFromDisposition(response.headers['content-disposition'], `pek-report-${reportId}-v${versionId}.${format}`),
     };
   },
   downloadReportDocument: async (id: number, kind: PekReportDocumentKind, format: PekReportDocumentFormat, _preview = false): Promise<PekBlobResult> => {
-    const response = await api.get<Blob>(`${reportDocumentPath(id, kind)}/download/${format}`, { responseType: 'blob' });
+    const response = await api.get<Blob>(`${reportDocumentPath(id)}/download/${format}`, {
+      params: { documentType: backendDocumentType(kind) },
+      responseType: 'blob',
+    });
     return {
       blob: response.data,
       filename: filenameFromDisposition(response.headers['content-disposition'], `pek-report-${id}.${format}`),
     };
   },
   signReportDocument: async (id: number, version: number, cms: string) =>
-    unwrapPekData<PekReportSignature>((await api.post(`${reportDocumentPath(id, 'OFFICIAL')}/sign`, { cms }, pekMutationOptions(version))).data),
+    unwrapPekData<PekReportSignature>((await api.post(`${reportDocumentPath(id)}/sign`, { cms }, pekMutationOptions(version))).data),
   getReportSignatures: (id: number, signal?: AbortSignal) =>
-    get<PekReportSignature[]>(`${reportDocumentPath(id, 'OFFICIAL')}/signatures`, {}, signal),
+    get<PekReportSignature[]>(`${reportDocumentPath(id)}/signatures`, {}, signal),
   downloadReportSignature: async (reportId: number, signatureId: number): Promise<PekBlobResult> => {
-    const response = await api.get<Blob>(`${reportDocumentPath(reportId, 'OFFICIAL')}/signatures/${signatureId}/download`, { responseType: 'blob' });
+    const response = await api.get<Blob>(`${reportDocumentPath(reportId)}/signatures/${signatureId}/download`, { responseType: 'blob' });
     return { blob: response.data, filename: filenameFromDisposition(response.headers['content-disposition'], `pek-report-${reportId}-signature.cms`) };
   },
   getReportPackage: async (id: number, signal?: AbortSignal): Promise<PekReportPackage | null> => {

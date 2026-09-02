@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import api from '../src/services/api';
 import { pekApi } from '../src/features/pek/api/pekService';
 
-const calls: Array<{ path: string; authorization: string | null }> = [];
+const calls: Array<{ path: string; documentType: string | null; authorization: string | null }> = [];
 const storage = new Map<string, string>();
 Object.defineProperty(globalThis, 'localStorage', {
   configurable: true,
@@ -19,13 +19,25 @@ Object.defineProperty(globalThis, 'localStorage', {
 const server = setupServer(
   http.get('*/api/pek/reports/9/document/versions/:versionId/download/:format', ({ request }) => {
     const url = new URL(request.url);
-    calls.push({ path: url.pathname, authorization: request.headers.get('Authorization') });
+    calls.push({ path: url.pathname, documentType: url.searchParams.get('documentType'), authorization: request.headers.get('Authorization') });
     const format = url.pathname.endsWith('/pdf') ? 'pdf' : 'docx';
     return new HttpResponse('protected-file', {
       headers: {
         'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="history.${format}"`,
       },
+    });
+  }),
+  http.get('*/api/pek/reports/9/document/versions', ({ request }) => {
+    const url = new URL(request.url);
+    calls.push({ path: url.pathname, documentType: url.searchParams.get('documentType'), authorization: request.headers.get('Authorization') });
+    return HttpResponse.json({ data: [{ id: 51, version: 2, documentType: url.searchParams.get('documentType'), hasDocx: true, hasPdf: true }] });
+  }),
+  http.get('*/api/pek/reports/9/document/download/:format', ({ request }) => {
+    const url = new URL(request.url);
+    calls.push({ path: url.pathname, documentType: url.searchParams.get('documentType'), authorization: request.headers.get('Authorization') });
+    return new HttpResponse('latest-protected-file', {
+      headers: { 'Content-Type': 'application/octet-stream', 'Content-Disposition': 'attachment; filename="latest.pdf"' },
     });
   }),
 );
@@ -39,6 +51,7 @@ afterAll(() => {
   server.close();
   localStorage.clear();
 });
+afterEach(() => { calls.length = 0; });
 
 const component = () => readFileSync(resolve(process.cwd(), 'src/features/pek/components/documents/PekReportDocuments.tsx'), 'utf8');
 const contracts = () => readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekContracts.ts'), 'utf8');
@@ -50,13 +63,29 @@ describe('PEK P2 historical documents', () => {
     const pdf = await pekApi.downloadReportDocumentVersion(9, 'INTERNAL_ANALYTICAL', 42, 'pdf');
 
     expect(calls).toEqual([
-      { path: '/api/pek/reports/9/document/versions/41/download/docx', authorization: 'Bearer document-token' },
-      { path: '/api/pek/reports/9/document/versions/42/download/pdf', authorization: 'Bearer document-token' },
+      { path: '/api/pek/reports/9/document/versions/41/download/docx', documentType: 'OFFICIAL', authorization: 'Bearer document-token' },
+      { path: '/api/pek/reports/9/document/versions/42/download/pdf', documentType: 'INTERNAL', authorization: 'Bearer document-token' },
     ]);
     expect(docx.filename).toBe('history.docx');
     expect(pdf.filename).toBe('history.pdf');
     expect(docx.blob).toBeTruthy();
     expect(service()).toContain("responseType: 'blob'");
+  });
+
+  it('separates official and internal latest documents through documentType', async () => {
+    const official = await pekApi.getReportDocumentVersions(9, 'OFFICIAL');
+    const internal = await pekApi.getReportDocumentVersions(9, 'INTERNAL_ANALYTICAL');
+    await pekApi.downloadReportDocument(9, 'OFFICIAL', 'pdf');
+    await pekApi.downloadReportDocument(9, 'INTERNAL_ANALYTICAL', 'pdf');
+
+    expect(calls.map(({ path, documentType }) => ({ path, documentType }))).toEqual([
+      { path: '/api/pek/reports/9/document/versions', documentType: 'OFFICIAL' },
+      { path: '/api/pek/reports/9/document/versions', documentType: 'INTERNAL' },
+      { path: '/api/pek/reports/9/document/download/pdf', documentType: 'OFFICIAL' },
+      { path: '/api/pek/reports/9/document/download/pdf', documentType: 'INTERNAL' },
+    ]);
+    expect(official[0].documentKind).toBe('OFFICIAL');
+    expect(internal[0].documentKind).toBe('INTERNAL_ANALYTICAL');
   });
 
   it('shows historical buttons only from hasDocx/hasPdf and passes version.id', () => {
