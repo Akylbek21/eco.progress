@@ -88,6 +88,10 @@ export const canArchivePekReport = (user: PekUser, report: PekReportAccess) =>
 export const canCreateProgram = (user: PekUser) => canUsePekPermission(user, 'PEK_PROGRAM_CREATE');
 export const canEditProgram = (user: PekUser, resource?: PekResourceAccess) =>
   resourceFlag(resource, 'edit', 'canEdit') ?? canUsePekPermission(user, 'PEK_PROGRAM_EDIT');
+export const canDeleteProgram = (user: PekUser, resource?: { status?: string; availableActions?: { delete?: boolean } }) => {
+  if (typeof resource?.availableActions?.delete === 'boolean') return resource.availableActions.delete;
+  return resource?.status === 'DRAFT' && canUsePekPermission(user, 'PEK_PROGRAM_EDIT');
+};
 export const canCreateReport = (user: PekUser) => canUsePekPermission(user, 'PEK_REPORT_CREATE');
 export const canRunPekScheduler = (user: PekUser) => canUsePekPermission(user, 'PEK_ADMIN');
 export const canCollectResults = (user: PekUser, resource?: PekResourceAccess) =>

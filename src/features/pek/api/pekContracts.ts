@@ -150,6 +150,7 @@ export type PekAvailableActions = readonly PekAvailableAction[];
 
 export type PekProgramAvailableActions = {
   edit: boolean;
+  delete?: boolean;
   submit: boolean;
   approve: boolean;
   returnForRevision: boolean;

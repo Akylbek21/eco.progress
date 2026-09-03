@@ -166,6 +166,9 @@ export const pekApi = {
     mapProgramResponse(unwrapPekData<unknown>(
       (await api.patch(`/pek/programs/${id}`, body, pekMutationOptions(version))).data,
     )),
+  deleteProgram: async (id: number, version: number) => {
+    await api.delete(`/pek/programs/${id}`, pekMutationOptions(version));
+  },
   saveProgramDraft: async (id: number, version: number, body: PekProgramUpdateRequest, signal?: AbortSignal) =>
     mapProgramResponse(unwrapPekData<unknown>(
       (await api.patch(`/pek/programs/${id}/draft`, body, { ...pekMutationOptions(version), signal })).data,

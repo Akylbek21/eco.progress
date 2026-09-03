@@ -1,7 +1,11 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import ConfirmModal from '../../../components/modals/ConfirmModal';
+import Button from '../../../components/ui/Button';
 import { useAuth } from '../../../contexts/AuthContext';
-import type { PekProgramFilters, PekProgramStatus } from '../api/pekContracts';
+import useToast from '../../../hooks/useToast';
+import type { PekProgram, PekProgramFilters, PekProgramStatus } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import EntityName from '../components/common/EntityName';
@@ -10,7 +14,8 @@ import PekLookupSelect from '../components/common/PekLookupSelect';
 import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekReadiness, PekState, PekStatusBadge } from '../components/common/PekUi';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import { canCreateProgram } from '../permissions/pekAccess';
+import { canCreateProgram, canDeleteProgram } from '../permissions/pekAccess';
+import { mapPekError } from '../utils/pekErrorMapper';
 import { pekStatusLabels } from '../utils/pekLabels';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 
@@ -19,6 +24,8 @@ const statuses: PekProgramStatus[] = ['DRAFT', 'UNDER_REVIEW', 'RETURNED', 'APPR
 const PekProgramsPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const [deleting, setDeleting] = useState<PekProgram | null>(null);
   const [params, setParams] = useSearchParams();
   const rawSearch = params.get('search') || '';
   const filters: PekProgramFilters = {
@@ -53,6 +60,16 @@ const PekProgramsPage = () => {
     queryFn: ({ signal }) => pekApi.getAssignees(filters.companyId!, ['PEK_RESPONSIBLE'], signal),
     enabled: Boolean(filters.companyId),
     retry: retryPekQuery,
+  });
+  const removeProgram = useMutation({
+    mutationFn: (program: PekProgram) => pekApi.deleteProgram(program.id, program.version),
+    onSuccess: async (_, program) => {
+      setDeleting(null);
+      queryClient.removeQueries({ queryKey: pekKeys.programDetail(program.company?.id, program.id) });
+      await queryClient.invalidateQueries({ queryKey: pekKeys.programsRoot() });
+      toast.success(`Программа «${program.number}» удалена`);
+    },
+    onError: (error) => toast.error(mapPekError(error).message),
   });
   const hasFilters = Boolean(rawSearch || filters.companyId || filters.objectId || filters.status || filters.activeOn || filters.responsibleUserId);
 
@@ -113,7 +130,16 @@ const PekProgramsPage = () => {
                   <td className="px-4 py-3"><PekStatusBadge status={item.status} /></td>
                   <td className="px-4 py-3"><PekReadiness value={item.readinessPercent} /></td>
                   <td className="px-4 py-3">{item.updatedAt || '—'}</td>
-                  <td className="px-4 py-3"><Link className="font-bold text-eco-700" to={`/staff/pek/programs/${item.id}?companyId=${item.company?.id || filters.companyId || ''}`}>Открыть</Link></td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Link className="font-bold text-eco-700" to={`/staff/pek/programs/${item.id}?companyId=${item.company?.id || filters.companyId || ''}`}>Открыть</Link>
+                      {canDeleteProgram(user, item) && (
+                        <Button type="button" variant="danger" className="min-h-0 px-3 py-1.5" onClick={() => setDeleting(item)}>
+                          Удалить
+                        </Button>
+                      )}
+                    </div>
+                  </td>
                 </tr>)}</tbody>
               </table>
             </div>
@@ -123,6 +149,16 @@ const PekProgramsPage = () => {
               <button type="button" disabled={(filters.page || 0) + 1 >= programs.data.totalPages} onClick={() => update('page', String((filters.page || 0) + 1))} className="rounded-full border px-4 py-2 disabled:opacity-40">Далее</button>
             </div>
           </>}
+    <ConfirmModal
+      isOpen={Boolean(deleting)}
+      title="Удалить программу ПЭК?"
+      description={deleting ? `Программа «${deleting.number} — ${deleting.name}» будет удалена без возможности восстановления.` : undefined}
+      confirmText="Удалить"
+      variant="danger"
+      loading={removeProgram.isPending}
+      onClose={() => { if (!removeProgram.isPending) setDeleting(null); }}
+      onConfirm={() => { if (deleting) removeProgram.mutate(deleting); }}
+    />
   </div>;
 };
 

@@ -30,6 +30,7 @@ import {
   canCollectPekReport,
   canCreateProgram,
   canCreateReport,
+  canDeleteProgram,
   canSignReport,
   canSubmitPekReport,
   canTransitionExceedance,
@@ -83,6 +84,10 @@ const server = setupServer(
     body = await request.json();
     ifMatch = request.headers.get('If-Match');
     return HttpResponse.json({ data: programResponse });
+  }),
+  http.delete('*/api/pek/programs/:id', ({ request }) => {
+    ifMatch = request.headers.get('If-Match');
+    return new HttpResponse(null, { status: 204 });
   }),
   http.post('*/api/pek/programs/:id/return', async ({ request }) => {
     body = await request.json();
@@ -216,6 +221,18 @@ describe('PEK backend contract', () => {
     expect(body).toMatchObject({ controlItems: [], indicators: [], measures: [] });
     expect(body).not.toHaveProperty('version');
     expect(ifMatch).toBe('12');
+  });
+
+  it('deletes a program with optimistic-lock version in If-Match', async () => {
+    await pekApi.deleteProgram(1, 12);
+    expect(ifMatch).toBe('12');
+  });
+
+  it('allows deletion only for editable drafts unless backend explicitly decides', () => {
+    const editor = { role: 'ECOLOGIST' as const };
+    expect(canDeleteProgram(editor, { status: 'DRAFT' })).toBe(true);
+    expect(canDeleteProgram(editor, { status: 'ACTIVE' })).toBe(false);
+    expect(canDeleteProgram(editor, { status: 'DRAFT', availableActions: { delete: false } })).toBe(false);
   });
 
   it('keeps return version only in If-Match header', async () => {

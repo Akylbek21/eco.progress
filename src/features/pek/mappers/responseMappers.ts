@@ -76,6 +76,9 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
     updatedAt: source.updatedAt == null ? undefined : String(source.updatedAt),
     availableActions: {
       edit: availableActionFlags(source.availableActions).edit === true,
+      delete: typeof availableActionFlags(source.availableActions).delete === 'boolean'
+        ? availableActionFlags(source.availableActions).delete
+        : undefined,
       submit: availableActionFlags(source.availableActions).submit === true,
       approve: availableActionFlags(source.availableActions).approve === true,
       returnForRevision: availableActionFlags(source.availableActions).returnForRevision === true,
