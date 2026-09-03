@@ -127,6 +127,56 @@ const HomePage = () => (
 
     <Suspense fallback={null}><ServiceSelector /></Suspense>
 
+    <section aria-labelledby="object-category-title" className="bg-[#F7FBFD] px-4 py-14 sm:px-8 sm:py-20">
+      <Reveal>
+        <div className="mx-auto grid max-w-7xl overflow-hidden rounded-[28px] border border-eco-100 bg-white shadow-xl shadow-eco-900/7 lg:grid-cols-[1.08fr_0.92fr]">
+          <div className="relative p-6 sm:p-10 lg:p-12">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-eco-600 via-accent to-transparent" />
+            <div className="inline-flex items-center gap-3 rounded-full bg-eco-50 px-3 py-2 text-eco-800">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-eco-600 text-white">
+                <FileText size={18} aria-hidden="true" />
+              </span>
+              <span className="pr-2 text-xs font-bold uppercase tracking-[0.16em]">Гид для предприятия</span>
+            </div>
+            <h2 id="object-category-title" className="mt-6 max-w-3xl text-3xl font-bold leading-[1.15] text-eco-950 sm:text-4xl lg:text-[42px]">
+              Определите категорию воздействия вашего объекта
+            </h2>
+            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+              Понятное сравнение I–IV категорий: кому нужны экологическое разрешение, декларация и программа ПЭК, а также какие риски возникают при ошибке.
+            </p>
+            <div className="mt-7 flex flex-wrap items-center gap-4">
+              <Button asChild className="px-6 py-3.5 shadow-md shadow-eco-700/15">
+                <Link
+                  to="/news/kak-opredelit-kategoriyu-obekta"
+                  onClick={() => trackEvent('related_article_click', { placement: 'home_object_category', article: 'kak-opredelit-kategoriyu-obekta' })}
+                >
+                  Читать подробный материал <ArrowRight size={18} />
+                </Link>
+              </Button>
+              <span className="text-sm font-medium text-slate-500">Официальные требования РК</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 bg-eco-50/70 p-4 sm:p-6 lg:p-8" aria-label="Четыре категории воздействия">
+            {[
+              ['I', 'Значительное', 'bg-rose-50 border-rose-100 text-rose-700', 'bg-rose-500'],
+              ['II', 'Умеренное', 'bg-amber-50 border-amber-100 text-amber-700', 'bg-amber-500'],
+              ['III', 'Незначительное', 'bg-sky-50 border-sky-100 text-sky-700', 'bg-sky-500'],
+              ['IV', 'Минимальное', 'bg-emerald-50 border-emerald-100 text-emerald-700', 'bg-emerald-500'],
+            ].map(([category, impact, color, dot]) => (
+              <div key={category} className={`group flex min-h-36 flex-col justify-between rounded-[20px] border p-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:min-h-44 sm:p-6 ${color}`}>
+                <div className={`h-2 w-2 rounded-full ${dot}`} />
+                <div>
+                  <span className="text-4xl font-black tracking-tight sm:text-5xl">{category}</span>
+                  <span className="mt-2 block text-sm font-bold text-slate-700 sm:text-base">{impact}</span>
+                  <span className="mt-0.5 block text-xs font-medium text-slate-500">воздействие</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Reveal>
+    </section>
+
     <section id="about-company" className="bg-white px-4 py-16 sm:px-8 sm:py-20">
       <div className="mx-auto grid max-w-7xl gap-8 overflow-hidden rounded-[28px] border border-eco-100 bg-gradient-to-br from-white to-eco-50/70 p-5 shadow-xl shadow-eco-900/6 sm:p-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-center lg:gap-12">
         <Reveal direction="right" className="lg:pl-2">

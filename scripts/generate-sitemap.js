@@ -7,7 +7,7 @@ import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, build
 import { expertMap, experts, isExpertWithCredentials } from '../src/content/experts/experts.ts';
 import { caseStudies } from '../src/content/cases/caseStudies.ts';
 import { articleContentMap } from '../src/content/articles/articleContent.ts';
-import { isArticleApproved } from '../src/content/articleReview.ts';
+import { isArticleApproved, isArticleIndexable } from '../src/content/articleReview.ts';
 import { isPublishableCaseStudy } from '../src/content/cases/caseStudyPolicy.ts';
 import { alternatePathFor, localePairForPath } from '../src/seo/localeRoutePairs.ts';
 import { sitemapEligibilityErrors } from '../src/seo/sitemapPolicy.ts';
@@ -133,7 +133,7 @@ const registry = [
   ...seoPages.map((page) => normalizeEntry({ ...page, path: `/${page.slug}` })),
   ...seoArticles.map((article) => normalizeEntry({
     ...article, path: article.slug, title: `${article.title} | ECOPROGRESS`,
-    type: 'article', indexable: isArticleApproved(articleContentMap.get(article.slug.replace(/^\/news\//, ''))),
+    type: 'article', indexable: isArticleIndexable(articleContentMap.get(article.slug.replace(/^\/news\//, ''))),
     priority: 0.7, changefreq: 'weekly', lastModified: article.dateModified,
   })),
   ...verifiedCases.map((item) => {

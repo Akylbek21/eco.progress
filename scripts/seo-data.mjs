@@ -882,7 +882,7 @@ export const seoArticles = articleContent.filter((article) => article.status ===
   image: article.heroImage || '/og-cover.jpg',
   imageAlt: article.heroImageAlt,
   tableOfContents: article.tableOfContents,
-  sections: article.sections.map((section) => ({ ...section, body: [...section.paragraphs, ...(section.bullets || []), ...(section.checklist || []), ...(section.warning ? [section.warning] : [])].join(' ') })),
+  sections: article.sections.map((section) => ({ ...section, body: [...section.paragraphs, ...(section.bullets || []), ...(section.checklist || []), ...(section.warning ? [section.warning] : []), ...(section.table?.headers || []), ...(section.table?.rows.flatMap((row) => row.cells) || [])].join(' ') })),
   faq: article.faq,
   relatedLinks: [
     ...article.relatedServiceSlugs.map((slug) => link(frontendServices.find((service) => service.slug === slug)?.title || slug, `/services/${slug}`)),

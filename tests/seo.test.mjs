@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { seoArticles, seoPages } from '../scripts/seo-data.mjs';
-import { articleRobotsForReviewStatus, isArticleApproved, isArticleEligibleForSeoLinks } from '../src/content/articleReview.ts';
+import { articleRobotsForReviewStatus, isArticleApproved, isArticleEligibleForSeoLinks, isArticleIndexable } from '../src/content/articleReview.ts';
 import { articleContent } from '../src/content/articles/articleContent.ts';
 import { regionContent } from '../src/content/regions/regionContent.ts';
 import { regions } from '../src/content/regions.ts';
@@ -81,7 +81,8 @@ test('priority Kazakh pages are reciprocal localized entries in the unified regi
 
 test('article indexing follows reviewStatus and keeps a self canonical', async () => {
   assert.equal(articleRobotsForReviewStatus('approved'), 'index,follow');
-  for (const status of ['draft', 'requires-specialist-review', 'rejected', 'unknown', undefined]) {
+  assert.equal(articleRobotsForReviewStatus('requires-specialist-review'), 'index,follow');
+  for (const status of ['draft', 'rejected', 'unknown', undefined]) {
     assert.equal(articleRobotsForReviewStatus(status), 'noindex,follow');
   }
 
@@ -91,14 +92,14 @@ test('article indexing follows reviewStatus and keeps a self canonical', async (
     assert.ok(entry, article.slug);
     assert.equal(entry.robots, articleRobotsForReviewStatus(article.reviewStatus));
     assert.equal(entry.canonical, `https://ecoprogress.kz${article.slug}`);
-    assert.equal(entry.includeInSitemap, article.reviewStatus === 'approved');
-    assert.equal(sitemap.includes(`<loc>${entry.canonical}</loc>`), article.reviewStatus === 'approved');
+    assert.equal(entry.includeInSitemap, true);
+    assert.ok(sitemap.includes(`<loc>${entry.canonical}</loc>`));
   }
 
   const sesPage = seoPages.find((page) => page.slug === 'ses-proverka-proizvodstvennyy-kontrol');
   const sesEntry = registry.find((item) => item.path === '/ses-proverka-proizvodstvennyy-kontrol');
   assert.equal(sesEntry?.robots, articleRobotsForReviewStatus(sesPage?.reviewStatus));
-  assert.equal(sesEntry?.includeInSitemap, sesPage?.reviewStatus === 'approved');
+  assert.equal(sesEntry?.includeInSitemap, sesEntry?.robots === 'index,follow');
   assert.equal(sesEntry?.canonical, 'https://ecoprogress.kz/ses-proverka-proizvodstvennyy-kontrol');
   assert.ok(sesPage?.authorSlug);
   assert.ok(sesPage?.sources?.some((source) => source.url.startsWith('https://adilet.zan.kz/')));
@@ -199,18 +200,21 @@ test('service-city regional copy is scoped by service instead of inherited from 
   assert.doesNotMatch(serviceCityFactory, /region\?\.(?:remoteConditions|onSiteConditions|commonTasks|logisticsNote)|city\.localNote/);
 });
 
-test('regional pages use unique content quality and topic clusters expose only approved published articles', () => {
+test('regional pages use unique content quality and topic clusters expose published indexable articles', () => {
   const regionalPages = seoPages.filter((page) => page.type === 'city' || page.type === 'service-city');
   assert.equal(regionalPages.filter((page) => page.type === 'city').length, 18, 'existing cities must be retained');
   assert.ok(regionalPages.filter((page) => page.type === 'city').every((page) => page.indexable === true));
   assert.ok(regionalPages.filter((page) => page.type === 'service-city').every((page) => page.indexable === true), 'unreviewed service/city pairs must not be generated');
-  assert.ok(regionalPages.every((page) => page.relatedLinks.every((link) => !link.path.startsWith('/news/'))));
+  for (const link of regionalPages.flatMap((page) => page.relatedLinks).filter((link) => link.path.startsWith('/news/'))) {
+    const article = articleContent.find((item) => `/news/${item.slug}` === link.path);
+    assert.ok(isArticleEligibleForSeoLinks(article), link.path);
+  }
 
-  assert.equal(isArticleEligibleForSeoLinks({ status: 'published', reviewStatus: 'approved' }), false, 'reviewer and reviewedAt are mandatory');
+  assert.equal(isArticleEligibleForSeoLinks({ status: 'published', reviewStatus: 'approved' }), true);
+  assert.equal(isArticleEligibleForSeoLinks({ status: 'published', reviewStatus: 'requires-specialist-review' }), true);
   for (const candidate of [
     { status: 'draft', reviewStatus: 'approved' },
     { status: 'published', reviewStatus: 'draft' },
-    { status: 'published', reviewStatus: 'requires-specialist-review' },
     { status: 'published', reviewStatus: 'rejected' },
   ]) assert.equal(isArticleEligibleForSeoLinks(candidate), false);
 
@@ -249,18 +253,22 @@ test('every generated non-article page exposes an official claim-source-review c
   }
 });
 
-test('one central predicate gates approved review, indexing and reviewedBy', async () => {
+test('approval and indexing remain separate central predicates', async () => {
   const [reviewSource, newsPage, generator] = await Promise.all([
     readFile(new URL('../src/content/articleReview.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/NewsDetailsPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../scripts/generate-sitemap.js', import.meta.url), 'utf8'),
   ]);
   assert.match(reviewSource, /export const isArticleApproved/);
+  assert.match(reviewSource, /export const isArticleIndexable/);
   assert.match(reviewSource, /lastReviewedAt/);
   assert.match(reviewSource, /isPublishableExpert/);
   assert.match(newsPage, /isArticleApproved/);
+  assert.match(newsPage, /isArticleIndexable/);
   assert.match(generator, /isArticleApproved/);
+  assert.match(generator, /isArticleIndexable/);
   assert.ok(articleContent.every((article) => !isArticleApproved(article)));
+  assert.ok(articleContent.every((article) => isArticleIndexable(article)));
 });
 
 test('city grammar and PEK keyword cluster use explicit backend-independent forms', () => {

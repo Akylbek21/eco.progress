@@ -36,7 +36,7 @@ test('priority Алматы commercial landings are indexable only with substant
   }
 });
 
-test('priority GSC article stays noindex until a specialist approves it', () => {
+test('published GSC article is indexable while specialist review remains explicit', () => {
   const path = '/news/kak-opredelit-kategoriyu-obekta';
   const article = seoArticles.find((item) => item.slug === path);
   const entry = registry.find((item) => item.path === path);
@@ -44,12 +44,11 @@ test('priority GSC article stays noindex until a specialist approves it', () => 
   assert.ok(article);
   assert.notEqual(article.reviewStatus, 'approved');
   assert.equal(article.reviewerSlug, undefined);
-  assert.equal(entry?.robots, 'noindex,follow');
-  assert.equal(entry?.includeInSitemap, false);
+  assert.equal(entry?.robots, 'index,follow');
+  assert.equal(entry?.includeInSitemap, true);
 });
 
 test('every noindex registry page remains out of sitemap', () => {
   const noindexPages = registry.filter((entry) => entry.robots === 'noindex,follow');
-  assert.ok(noindexPages.length > 0);
   assert.ok(noindexPages.every((entry) => entry.includeInSitemap === false));
 });

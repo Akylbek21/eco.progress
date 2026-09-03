@@ -33,7 +33,7 @@ const articleAudit: ContentAuditItem[] = articleContent.map((item) => ({
   pageType: 'article',
   primaryIntent: item.intent,
   targetAudience: item.targetAudience.join(', '),
-  currentWordCount: countWords([item.shortAnswer, ...item.sections.flatMap((section) => [...section.paragraphs, ...(section.bullets || []), ...(section.checklist || []), section.warning || '']), ...item.faq.flatMap((entry) => [entry.question, entry.answer])]),
+  currentWordCount: countWords([item.shortAnswer, ...item.sections.flatMap((section) => [...section.paragraphs, ...(section.bullets || []), ...(section.checklist || []), section.warning || '', ...(section.table?.headers || []), ...(section.table?.rows.flatMap((row) => row.cells) || [])]), ...item.faq.flatMap((entry) => [entry.question, entry.answer])]),
   hasLegalBasis: item.sources.length > 0,
   hasAuthor: Boolean(item.authorSlug),
   hasRealExamples: item.intent === 'case-study',

@@ -20,7 +20,7 @@ const unique = (items, label) => {
 const words = (value) => value.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
 const wordCount = (value) => words(value).length;
 const textualValues = (value) => typeof value === 'string' ? [value] : Array.isArray(value) ? value.flatMap(textualValues) : value && typeof value === 'object' ? Object.values(value).flatMap(textualValues) : [];
-const articleText = (article) => [article.shortAnswer, ...article.sections.flatMap((section) => [...section.paragraphs, ...(section.bullets || []), ...(section.checklist || []), section.warning || '']), ...article.faq.flatMap((item) => [item.question, item.answer])].join(' ');
+const articleText = (article) => [article.shortAnswer, ...article.sections.flatMap((section) => [...section.paragraphs, ...(section.bullets || []), ...(section.checklist || []), section.warning || '', ...(section.table?.headers || []), ...(section.table?.rows.flatMap((row) => row.cells) || [])]), ...article.faq.flatMap((item) => [item.question, item.answer])].join(' ');
 const similarity = (left, right) => {
   const a = new Set(words(left)); const b = new Set(words(right));
   const intersection = [...a].filter((word) => b.has(word)).length;

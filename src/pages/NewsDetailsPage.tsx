@@ -13,7 +13,7 @@ import { ArticleAuthorCard, ArticleChecklist, ArticleOrganizationAuthorCard, Art
 import { normalizeArticleSlug } from '../content/articles/articleSlugs';
 import { publicContentRepository } from '../content/apiRepository';
 import type { ArticleContent } from '../content/types';
-import { isArticleApproved } from '../content/articleReview';
+import { isArticleApproved, isArticleIndexable } from '../content/articleReview';
 import { AeoFaqList, RelatedCaseStudies, VerifiedExperts } from '../components/content/AeoContent';
 import { articleContentMap } from '../content/articles/articleContent';
 import { getArticleImage } from '../data/pageHeroImages';
@@ -94,6 +94,7 @@ const NewsDetailsPage = () => {
   const backendExpertMap = new Map(apiExperts.map((expert) => [expert.id, expert]));
   const approvalExpertMap = new Map([...expertMap, ...backendExpertMap]);
   const approved = isArticleApproved(apiContent, approvalExpertMap);
+  const indexable = isArticleIndexable(apiContent);
   const authorCandidate = item.author ?? backendExpertMap.get(item.authorSlug) ?? expertMap.get(item.authorSlug);
   const reviewerCandidate = item.reviewer ?? (item.reviewerSlug ? backendExpertMap.get(item.reviewerSlug) ?? expertMap.get(item.reviewerSlug) : undefined);
   const author = isPublishableExpert(authorCandidate) ? authorCandidate : undefined;
@@ -113,7 +114,7 @@ const NewsDetailsPage = () => {
 
   return (
     <article className="bg-white">
-      <SEO title={`${item.title} | ECOPROGRESS`} description={item.description} canonical={canonical} robots={approved ? 'index,follow' : 'noindex,follow'} type="article" schema={schema} datePublished={dates.datePublished} dateModified={dates.dateModified} />
+      <SEO title={`${item.title} | ECOPROGRESS`} description={item.description} canonical={canonical} robots={indexable ? 'index,follow' : 'noindex,follow'} type="article" schema={schema} datePublished={dates.datePublished} dateModified={dates.dateModified} />
       <section className="relative overflow-hidden px-5 py-24 text-white sm:px-8">
         <ResponsiveImage fill sizes="100vw" src={heroImage} alt={item.imageAlt} priority width={1600} height={900} className="object-cover" />
         <div className="absolute inset-0 bg-eco-900/78" />
@@ -133,6 +134,25 @@ const NewsDetailsPage = () => {
           <section id={section.id} key={section.id} className="mb-10 scroll-mt-24">
             <h2 className="text-2xl font-bold text-eco-900">{section.title}</h2>
             <div className="mt-3 space-y-4">{section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
+            {section.table && (
+              <div className="relative left-1/2 mt-8 w-[calc(100vw-2rem)] max-w-[1120px] -translate-x-1/2 overflow-x-auto rounded-[16px] border border-slate-200 bg-white shadow-sm sm:w-[calc(100vw-4rem)]">
+                <table className="w-full min-w-[980px] border-collapse text-left text-[15px] leading-6">
+                  {section.table.caption && <caption className="border-b bg-eco-50 px-5 py-4 text-left font-semibold text-eco-950">{section.table.caption}</caption>}
+                  <thead className="bg-slate-100 text-eco-950">
+                    <tr>{section.table.headers.map((header) => <th key={header} scope="col" className="border-r border-slate-200 px-5 py-4 align-top last:border-r-0">{header}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {section.table.rows.map((row, rowIndex) => (
+                      <tr key={`${section.id}-row-${rowIndex}`} className="border-t border-slate-200 even:bg-slate-50/70">
+                        {row.cells.map((cell, cellIndex) => cellIndex === 0
+                          ? <th key={`${section.id}-${rowIndex}-${cellIndex}`} scope="row" className="w-44 whitespace-pre-line border-r border-slate-200 px-5 py-5 align-top font-bold text-eco-950">{cell}</th>
+                          : <td key={`${section.id}-${rowIndex}-${cellIndex}`} className="whitespace-pre-line border-r border-slate-200 px-5 py-5 align-top last:border-r-0">{cell}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             {section.bullets && <ul className="mt-5 list-disc space-y-2 pl-6">{section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>}
             {section.checklist && <div className="mt-5"><ArticleChecklist items={section.checklist} /></div>}
             {section.warning && <div className="mt-5"><ArticleWarning>{section.warning}</ArticleWarning></div>}

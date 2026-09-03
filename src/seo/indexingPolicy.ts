@@ -1,4 +1,4 @@
-import { isApprovedArticleReview } from '../content/articleReview.ts';
+import { articleRobotsForReviewStatus } from '../content/articleReview.ts';
 import type { SeoRobots } from './types.ts';
 import { absoluteUrl, SITE_ORIGIN } from './url.ts';
 
@@ -15,8 +15,8 @@ export interface PublicIndexingCandidate {
 
 export const robotsForPublicPage = (page: PublicIndexingCandidate): SeoRobots => {
   if (page.indexable === false || page.path === '/employees') return 'noindex,follow';
-  if (page.type === 'article' && page.path !== '/news' && !isApprovedArticleReview(page.reviewStatus)) {
-    return 'noindex,follow';
+  if (page.type === 'article' && page.path !== '/news') {
+    return articleRobotsForReviewStatus(page.reviewStatus);
   }
   return 'index,follow';
 };

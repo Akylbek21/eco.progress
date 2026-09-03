@@ -192,6 +192,14 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Определение категории объекта по степени воздействия на окружающую среду",
+        "path": "/news/kak-opredelit-kategoriyu-obekta"
+      },
+      {
+        "label": "Какие лабораторные замеры нужны предприятию",
+        "path": "/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu"
+      },
+      {
         "label": "Экологические услуги в Астане",
         "path": "/ecologicheskie-uslugi-astana"
       },
@@ -496,6 +504,14 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Чем отличаются ОВОС, отчёт о возможных воздействиях и РООС",
+        "path": "/news/otlichiya-ovos-oovv-roos"
+      },
+      {
+        "label": "Что предприятие сдаёт по экологии каждый год",
+        "path": "/news/chto-sdavat-po-ekologii-kazhdyy-god"
       },
       {
         "label": "Экологические услуги в Алматы",
@@ -816,6 +832,14 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Какие экологические документы должны быть у предприятия",
+        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
+      },
+      {
+        "label": "Как организовать вывоз и утилизацию отходов",
+        "path": "/news/vyvoz-i-utilizaciya-othodov"
+      },
+      {
         "label": "Экологические услуги в Туркестане",
         "path": "/ecologicheskie-uslugi-turkestan"
       },
@@ -1124,6 +1148,18 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Что такое программа производственного экологического контроля",
+        "path": "/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol"
+      },
+      {
+        "label": "Как проходит лабораторный замер воздуха",
+        "path": "/news/kak-prohodit-laboratornyy-zamer-vozduha"
+      },
+      {
+        "label": "Как организовать вывоз и утилизацию отходов",
+        "path": "/news/vyvoz-i-utilizaciya-othodov"
       },
       {
         "label": "Экологические услуги в Шымкенте",
@@ -1436,6 +1472,18 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Какие экологические документы должны быть у предприятия",
+        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
+      },
+      {
+        "label": "Какие лабораторные замеры нужны предприятию",
+        "path": "/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu"
+      },
+      {
+        "label": "Как организовать вывоз и утилизацию отходов",
+        "path": "/news/vyvoz-i-utilizaciya-othodov"
+      },
+      {
         "label": "Экологические услуги в Шымкенте",
         "path": "/ecologicheskie-uslugi-shymkent"
       },
@@ -1740,6 +1788,14 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Когда требуется проект нормативов допустимых выбросов",
+        "path": "/news/kogda-nuzhen-proekt-ndv"
+      },
+      {
+        "label": "Что предприятие сдаёт по экологии каждый год",
+        "path": "/news/chto-sdavat-po-ekologii-kazhdyy-god"
       },
       {
         "label": "Экологические услуги в Туркестане",
@@ -2048,6 +2104,14 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Определение категории объекта по степени воздействия на окружающую среду",
+        "path": "/news/kak-opredelit-kategoriyu-obekta"
+      },
+      {
+        "label": "Как разработать программу управления отходами",
+        "path": "/news/kak-razrabotat-programmu-upravleniya-othodami"
+      },
+      {
         "label": "Экологические услуги в Атырау",
         "path": "/ecologicheskie-uslugi-atyrau"
       },
@@ -2352,6 +2416,14 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Когда требуется проект нормативов допустимых выбросов",
+        "path": "/news/kogda-nuzhen-proekt-ndv"
+      },
+      {
+        "label": "Какие документы подтверждают передачу отходов",
+        "path": "/news/dokumenty-peredachi-othodov"
       },
       {
         "label": "Экологические услуги в Актобе",
@@ -2660,6 +2732,14 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Когда требуется проект нормативов допустимых выбросов",
+        "path": "/news/kogda-nuzhen-proekt-ndv"
+      },
+      {
+        "label": "Как подготовить отчёт ПЭК по данным контроля",
+        "path": "/news/kak-formiruetsya-otchet-pek"
+      },
+      {
         "label": "Экологические услуги в Астане",
         "path": "/ecologicheskie-uslugi-astana"
       },
@@ -2964,6 +3044,14 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Как подготовить отчёт ПЭК по данным контроля",
+        "path": "/news/kak-formiruetsya-otchet-pek"
+      },
+      {
+        "label": "Когда требуется проект нормативов допустимых выбросов",
+        "path": "/news/kogda-nuzhen-proekt-ndv"
       },
       {
         "label": "Экологические услуги в Караганде",
@@ -3280,6 +3368,14 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Когда требуется проект нормативов допустимых выбросов",
+        "path": "/news/kogda-nuzhen-proekt-ndv"
+      },
+      {
+        "label": "Как подготовить отчёт ПЭК по данным контроля",
+        "path": "/news/kak-formiruetsya-otchet-pek"
+      },
+      {
         "label": "Экологические услуги в Семее",
         "path": "/ecologicheskie-uslugi-semey"
       },
@@ -3592,6 +3688,14 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Какие документы подтверждают передачу отходов",
+        "path": "/news/dokumenty-peredachi-othodov"
+      },
+      {
+        "label": "Что предприятие сдаёт по экологии каждый год",
+        "path": "/news/chto-sdavat-po-ekologii-kazhdyy-god"
       },
       {
         "label": "Экологические услуги в Петропавловске",
@@ -3908,6 +4012,14 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Какие документы подтверждают передачу отходов",
+        "path": "/news/dokumenty-peredachi-othodov"
+      },
+      {
+        "label": "Когда требуется проект нормативов допустимых выбросов",
+        "path": "/news/kogda-nuzhen-proekt-ndv"
+      },
+      {
         "label": "Экологические услуги в Атырау",
         "path": "/ecologicheskie-uslugi-atyrau"
       },
@@ -4220,6 +4332,14 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Что предприятие сдаёт по экологии каждый год",
+        "path": "/news/chto-sdavat-po-ekologii-kazhdyy-god"
+      },
+      {
+        "label": "Как проходит лабораторный замер воздуха",
+        "path": "/news/kak-prohodit-laboratornyy-zamer-vozduha"
       },
       {
         "label": "Экологические услуги в Костанае",
@@ -4536,6 +4656,14 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Когда требуется проект нормативов допустимых выбросов",
+        "path": "/news/kogda-nuzhen-proekt-ndv"
+      },
+      {
+        "label": "Как подготовиться к экологической проверке",
+        "path": "/news/podgotovka-k-ekologicheskoy-proverke"
+      },
+      {
         "label": "Экологические услуги в Актобе",
         "path": "/ecologicheskie-uslugi-aktobe"
       },
@@ -4848,6 +4976,14 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Какие лабораторные замеры нужны предприятию",
+        "path": "/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu"
+      },
+      {
+        "label": "Как подготовиться к экологической проверке",
+        "path": "/news/podgotovka-k-ekologicheskoy-proverke"
       },
       {
         "label": "Экологические услуги в Астане",
@@ -5164,6 +5300,14 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Что такое программа производственного экологического контроля",
+        "path": "/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol"
+      },
+      {
+        "label": "Какие документы подтверждают передачу отходов",
+        "path": "/news/dokumenty-peredachi-othodov"
+      },
+      {
         "label": "Экологические услуги в Алматы",
         "path": "/ecologicheskie-uslugi-almaty"
       },
@@ -5478,6 +5622,14 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Как подготовить отчёт ПЭК по данным контроля",
+        "path": "/news/kak-formiruetsya-otchet-pek"
+      },
+      {
+        "label": "Как проходит лабораторный замер воздуха",
+        "path": "/news/kak-prohodit-laboratornyy-zamer-vozduha"
+      },
+      {
         "label": "Экологические услуги в Усть-Каменогорске",
         "path": "/ecologicheskie-uslugi-ust-kamenogorsk"
       },
@@ -5780,6 +5932,14 @@
       {
         "label": "Отчёт ПЭК в Алматы",
         "path": "/otchet-pek-almaty"
+      },
+      {
+        "label": "Какие лабораторные замеры нужны предприятию",
+        "path": "/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu"
+      },
+      {
+        "label": "Как проходит лабораторный замер воздуха",
+        "path": "/news/kak-prohodit-laboratornyy-zamer-vozduha"
       }
     ],
     "breadcrumbs": [
@@ -6004,6 +6164,14 @@
       {
         "label": "Программа ПЭК в Шымкенте",
         "path": "/pek-shymkent"
+      },
+      {
+        "label": "Какие лабораторные замеры нужны предприятию",
+        "path": "/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu"
+      },
+      {
+        "label": "Как проходит лабораторный замер воздуха",
+        "path": "/news/kak-prohodit-laboratornyy-zamer-vozduha"
       }
     ],
     "breadcrumbs": [
@@ -6240,6 +6408,10 @@
       {
         "label": "Отчёт ПЭК в Шымкенте",
         "path": "/otchet-pek-shymkent"
+      },
+      {
+        "label": "Как подготовиться к экологической проверке",
+        "path": "/news/podgotovka-k-ekologicheskoy-proverke"
       }
     ],
     "breadcrumbs": [
@@ -6476,6 +6648,10 @@
       {
         "label": "Анализ воды в Шымкенте",
         "path": "/analiz-vody-shymkent"
+      },
+      {
+        "label": "Какие документы подтверждают передачу отходов",
+        "path": "/news/dokumenty-peredachi-othodov"
       }
     ],
     "breadcrumbs": [
@@ -6712,6 +6888,10 @@
       {
         "label": "Производственный контроль в Шымкенте",
         "path": "/proizvodstvennyy-kontrol-shymkent"
+      },
+      {
+        "label": "Какие документы подтверждают передачу отходов",
+        "path": "/news/dokumenty-peredachi-othodov"
       }
     ],
     "breadcrumbs": [
@@ -6948,6 +7128,10 @@
       {
         "label": "Экологическое разрешение в Таразе",
         "path": "/services/environmental-permits"
+      },
+      {
+        "label": "Какие документы подтверждают передачу отходов",
+        "path": "/news/dokumenty-peredachi-othodov"
       }
     ],
     "breadcrumbs": [
@@ -7184,6 +7368,10 @@
       {
         "label": "Экологическое разрешение в Туркестане",
         "path": "/services/environmental-permits"
+      },
+      {
+        "label": "Какие документы подтверждают передачу отходов",
+        "path": "/news/dokumenty-peredachi-othodov"
       }
     ],
     "breadcrumbs": [
@@ -7420,6 +7608,10 @@
       {
         "label": "Разработка РООС в Шымкенте",
         "path": "/roos-shymkent"
+      },
+      {
+        "label": "Что такое программа производственного экологического контроля",
+        "path": "/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol"
       }
     ],
     "breadcrumbs": [
@@ -7656,6 +7848,14 @@
       {
         "label": "Проект НДВ в Алматы",
         "path": "/services/ndv"
+      },
+      {
+        "label": "Как подготовить отчёт ПЭК по данным контроля",
+        "path": "/news/kak-formiruetsya-otchet-pek"
+      },
+      {
+        "label": "Что предприятие сдаёт по экологии каждый год",
+        "path": "/news/chto-sdavat-po-ekologii-kazhdyy-god"
       }
     ],
     "breadcrumbs": [
@@ -7892,6 +8092,14 @@
       {
         "label": "Экологическое разрешение в Шымкенте",
         "path": "/ekologicheskoe-razreshenie-shymkent"
+      },
+      {
+        "label": "Как подготовить отчёт ПЭК по данным контроля",
+        "path": "/news/kak-formiruetsya-otchet-pek"
+      },
+      {
+        "label": "Что предприятие сдаёт по экологии каждый год",
+        "path": "/news/chto-sdavat-po-ekologii-kazhdyy-god"
       }
     ],
     "breadcrumbs": [
@@ -8116,6 +8324,10 @@
       {
         "label": "ОВОС / скрининг в Шымкенте",
         "path": "/ovos-shymkent"
+      },
+      {
+        "label": "Какие лабораторные замеры нужны предприятию",
+        "path": "/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu"
       }
     ],
     "breadcrumbs": [
@@ -8340,6 +8552,10 @@
       {
         "label": "Проект НДВ в Шымкенте",
         "path": "/ndv-shymkent"
+      },
+      {
+        "label": "Что такое программа производственного экологического контроля",
+        "path": "/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol"
       }
     ],
     "breadcrumbs": [
@@ -8576,6 +8792,10 @@
       {
         "label": "ПУО в Алматы",
         "path": "/services/puo"
+      },
+      {
+        "label": "Какие экологические документы должны быть у предприятия",
+        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
       }
     ],
     "breadcrumbs": [
@@ -8812,6 +9032,10 @@
       {
         "label": "ПУО в Астане",
         "path": "/services/puo"
+      },
+      {
+        "label": "Какие экологические документы должны быть у предприятия",
+        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
       }
     ],
     "breadcrumbs": [
@@ -9048,6 +9272,10 @@
       {
         "label": "ПУО в Шымкенте",
         "path": "/puo-shymkent"
+      },
+      {
+        "label": "Какие экологические документы должны быть у предприятия",
+        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
       }
     ],
     "breadcrumbs": [
@@ -9272,6 +9500,10 @@
       {
         "label": "Лабораторные замеры в Шымкенте",
         "path": "/laboratornye-zamery-shymkent"
+      },
+      {
+        "label": "Какие экологические документы должны быть у предприятия",
+        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
       }
     ],
     "breadcrumbs": [
@@ -9508,6 +9740,10 @@
       {
         "label": "Проект СЗЗ в Шымкенте",
         "path": "/szz-shymkent"
+      },
+      {
+        "label": "Какие экологические документы должны быть у предприятия",
+        "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
       }
     ],
     "breadcrumbs": [
@@ -9744,6 +9980,10 @@
       {
         "label": "Паспорт отходов в Шымкенте",
         "path": "/pasport-othodov-shymkent"
+      },
+      {
+        "label": "Когда требуется проект нормативов допустимых выбросов",
+        "path": "/news/kogda-nuzhen-proekt-ndv"
       }
     ],
     "breadcrumbs": [
@@ -9980,6 +10220,10 @@
       {
         "label": "Утилизация отходов в Шымкенте",
         "path": "/utilizaciya-othodov-shymkent"
+      },
+      {
+        "label": "Какие документы подтверждают передачу отходов",
+        "path": "/news/dokumenty-peredachi-othodov"
       }
     ],
     "breadcrumbs": [
@@ -10172,7 +10416,7 @@
     ],
     "schemaType": "Article",
     "priority": 0.7,
-    "indexable": false,
+    "indexable": true,
     "changefreq": "weekly",
     "lastmod": "2026-08-27"
   },

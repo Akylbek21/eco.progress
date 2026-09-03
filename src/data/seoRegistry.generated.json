@@ -162,7 +162,7 @@
         "url": "https://ecoprogress.kz/services",
         "name": "Экологические услуги полного цикла",
         "description": "Экологические документы и лабораторные услуги по Казахстану. Утилизация отходов доступна в Шымкенте, Таразе и Туркестане; вывоз и полигон ТБО — в Шымкенте.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -461,7 +461,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/regions",
@@ -888,7 +888,7 @@
         "url": "https://ecoprogress.kz/cases",
         "name": "Подтверждённые экологические кейсы",
         "description": "Опубликованные проекты EcoProgress с проверенными исходными данными, выполненными работами, нормативной базой и результатами.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -916,7 +916,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/experts",
@@ -18509,7 +18509,7 @@
     "description": "Как подготовить производственный контроль СЭС: программа, лабораторные замеры, протоколы, документы и сопровождение проверки.",
     "h1": "Проверка СЭС и производственный контроль",
     "canonical": "https://ecoprogress.kz/ses-proverka-proizvodstvennyy-kontrol",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Проверка СЭС и производственный контроль | ECOPROGRESS",
@@ -18621,7 +18621,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-08-27"
@@ -18702,7 +18702,7 @@
         "url": "https://ecoprogress.kz/kk",
         "name": "Қазақстандағы бизнеске арналған экологиялық қызметтер",
         "description": "Кәсіпорындарға экологиялық жобалау, ПЭК, зертханалық зерттеулер, қалдықтар құжаттары және рұқсат алу бойынша қызмет көрсетеміз.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -18732,7 +18732,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/kk/ekologiyalyq-qyzmetter",
@@ -18810,7 +18810,7 @@
         "url": "https://ecoprogress.kz/kk/ekologiyalyq-qyzmetter",
         "name": "Кәсіпорындарға арналған экологиялық қызметтер",
         "description": "Кәсіпорындарға экологиялық құжаттар, ПЭК, шығарындылар жобалары, зертханалық өлшеулер және қалдықтар бойынша кешенді қызмет.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19121,7 +19121,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/kk/qaldyqtar-pasporty",
@@ -19199,7 +19199,7 @@
         "url": "https://ecoprogress.kz/kk/qaldyqtar-pasporty",
         "name": "Қалдықтар паспортын әзірлеу",
         "description": "Кәсіпорындарға қалдықтар паспортын әзірлеу және рәсімдеу. Қажетті деректерді анықтап, жұмыс көлемі мен құнын есептейміз.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19512,7 +19512,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/kk/services/ndv",
@@ -19590,7 +19590,7 @@
         "url": "https://ecoprogress.kz/kk/services/ndv",
         "name": "Рұқсат етілетін шығарындылар нормативтерінің жобасы",
         "description": "Стационарлық көздерді түгендеу, шығарындыларды есептеу және кәсіпорынға рұқсат етілетін шығарындылар нормативтерін әзірлеу.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19903,7 +19903,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/kk/pek-bagdarlamasy",
@@ -19981,7 +19981,7 @@
         "url": "https://ecoprogress.kz/kk/pek-bagdarlamasy",
         "name": "Өндірістік экологиялық бақылау бағдарламасын әзірлеу",
         "description": "Кәсіпорынға ПЭК бағдарламасын әзірлеу: бақылау нысандары, мониторинг нүктелері, көрсеткіштер, әдістер және кезеңділік.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -20294,7 +20294,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/kk/pek-esebi",
@@ -20372,7 +20372,7 @@
         "url": "https://ecoprogress.kz/kk/pek-esebi",
         "name": "Өндірістік экологиялық бақылау есебін дайындау",
         "description": "ПЭК бағдарламасы, зертханалық хаттамалар және кезеңнің өндірістік деректері негізінде ресми ПЭК есебін дайындау.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -20685,7 +20685,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/kk/ekologiyalyq-ruqsat",
@@ -20763,7 +20763,7 @@
         "url": "https://ecoprogress.kz/kk/ekologiyalyq-ruqsat",
         "name": "Әсер етуге экологиялық рұқсат алу",
         "description": "Нысан санатын және жобалық негіздерді тексеріп, әсер етуге экологиялық рұқсат алу үшін материалдарды дайындаймыз.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21084,7 +21084,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/kk/sanitariyalyq-qorgau-aimagy",
@@ -21162,7 +21162,7 @@
         "url": "https://ecoprogress.kz/kk/sanitariyalyq-qorgau-aimagy",
         "name": "Санитариялық-қорғау аймағының жобасын әзірлеу",
         "description": "Шығарындылар, шу және нысанның нақты жоспарлануы бойынша санитариялық-қорғау аймағының жобасын әзірлеу.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21475,7 +21475,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/kk/zerthanalyq-zertteuler",
@@ -21553,7 +21553,7 @@
         "url": "https://ecoprogress.kz/kk/zerthanalyq-zertteuler",
         "name": "Экологиялық зертханалық зерттеулер",
         "description": "Ауа, су, топырақ, шу және өндірістік факторлар бойынша зертханалық зерттеулер: бағдарлама, сынама алу және хаттамалар.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21864,7 +21864,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/kk/su-analizi",
@@ -21942,7 +21942,7 @@
         "url": "https://ecoprogress.kz/kk/su-analizi",
         "name": "Суға зертханалық анализ жасау",
         "description": "Ауыз су, табиғи немесе сарқынды суға зертханалық анализ: көрсеткіштерді таңдау, сынама алу және зерттеу хаттамасы.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -22263,7 +22263,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/kk/qaldyqtardy-kadege-zharatu",
@@ -22341,7 +22341,7 @@
         "url": "https://ecoprogress.kz/kk/qaldyqtardy-kadege-zharatu",
         "name": "Қалдықтарды кәдеге жарату",
         "description": "Өндірістік қалдықтарды тексеру, рұқсат етілген операцияны келісу және қабылдау мен кәдеге жаратуды растайтын құжаттар.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -22654,7 +22654,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/kk/pek-bagdarlamasy-shymkent",
@@ -22732,7 +22732,7 @@
         "url": "https://ecoprogress.kz/kk/pek-bagdarlamasy-shymkent",
         "name": "Шымкенттегі ПЭК бағдарламасын әзірлеу",
         "description": "Шымкент кәсіпорындарына ПЭК бағдарламасын әзірлеу: нысандар, мониторинг нүктелері, көрсеткіштер, әдістер және бақылау кестесі.",
-        "dateModified": "2026-08-31",
+        "dateModified": "2026-09-02",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -23045,7 +23045,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/news/ekologicheskie-dokumenty-too-kazakhstan",
@@ -23055,7 +23055,7 @@
     "description": "Практический порядок проверки экологических документов предприятия без универсального списка, который не учитывает объект.",
     "h1": "Какие экологические документы должны быть у предприятия",
     "canonical": "https://ecoprogress.kz/news/ekologicheskie-dokumenty-too-kazakhstan",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Какие экологические документы должны быть у предприятия | ECOPROGRESS",
@@ -23161,7 +23161,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -23174,7 +23174,7 @@
     "description": "Как составить календарь экологической отчётности предприятия и не переносить чужие сроки на свой объект.",
     "h1": "Что предприятие сдаёт по экологии каждый год",
     "canonical": "https://ecoprogress.kz/news/chto-sdavat-po-ekologii-kazhdyy-god",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Что предприятие сдаёт по экологии каждый год | ECOPROGRESS",
@@ -23280,7 +23280,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -23289,15 +23289,15 @@
     "path": "/news/kak-opredelit-kategoriyu-obekta",
     "locale": "ru",
     "alternates": [],
-    "title": "Как определить категорию объекта экологического воздействия | ECOPROGRESS",
-    "description": "Какие исходные данные собрать для определения категории объекта и почему нельзя делать вывод только по названию бизнеса.",
-    "h1": "Как определить категорию объекта экологического воздействия",
+    "title": "Определение категории объекта по степени воздействия на окружающую среду | ECOPROGRESS",
+    "description": "Категории объектов I, II, III и IV по Экологическому кодексу РК: как определить категорию, какие разрешения и документы проверить и чем опасна ошибка.",
+    "h1": "Определение категории объекта по степени воздействия на окружающую среду",
     "canonical": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
-    "ogTitle": "Как определить категорию объекта экологического воздействия | ECOPROGRESS",
-    "ogDescription": "Какие исходные данные собрать для определения категории объекта и почему нельзя делать вывод только по названию бизнеса.",
+    "ogTitle": "Определение категории объекта по степени воздействия на окружающую среду | ECOPROGRESS",
+    "ogDescription": "Категории объектов I, II, III и IV по Экологическому кодексу РК: как определить категорию, какие разрешения и документы проверить и чем опасна ошибка.",
     "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -23345,14 +23345,16 @@
         "@type": "WebPage",
         "@id": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta#webpage",
         "url": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta",
-        "name": "Как определить категорию объекта экологического воздействия",
-        "description": "Какие исходные данные собрать для определения категории объекта и почему нельзя делать вывод только по названию бизнеса.",
-        "dateModified": "2026-07-17",
+        "name": "Определение категории объекта по степени воздействия на окружающую среду",
+        "description": "Категории объектов I, II, III и IV по Экологическому кодексу РК: как определить категорию, какие разрешения и документы проверить и чем опасна ошибка.",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
         "citation": [
-          "https://adilet.zan.kz/rus/docs/K2100000400/info"
+          "https://adilet.zan.kz/rus/docs/K2100000400",
+          "https://adilet.zan.kz/rus/docs/V2100023538",
+          "https://adilet.zan.kz/rus/docs/V2100023553"
         ]
       },
       {
@@ -23360,11 +23362,11 @@
         "@type": "Article",
         "@id": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta#article",
         "url": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta",
-        "headline": "Как определить категорию объекта экологического воздействия",
-        "description": "Какие исходные данные собрать для определения категории объекта и почему нельзя делать вывод только по названию бизнеса.",
+        "headline": "Определение категории объекта по степени воздействия на окружающую среду",
+        "description": "Категории объектов I, II, III и IV по Экологическому кодексу РК: как определить категорию, какие разрешения и документы проверить и чем опасна ошибка.",
         "image": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
         "datePublished": "2026-07-01T00:00:00.000Z",
-        "dateModified": "2026-07-17T00:00:00.000Z",
+        "dateModified": "2026-09-03T00:00:00.000Z",
         "author": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -23393,16 +23395,16 @@
           {
             "@type": "ListItem",
             "position": 2,
-            "name": "Как определить категорию объекта экологического воздействия",
+            "name": "Определение категории объекта по степени воздействия на окружающую среду",
             "item": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta"
           }
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-07-17"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol",
@@ -23412,7 +23414,7 @@
     "description": "Как программа ПЭК связывает источники воздействия, показатели, точки контроля и результаты предприятия.",
     "h1": "Что такое программа производственного экологического контроля",
     "canonical": "https://ecoprogress.kz/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Что такое программа производственного экологического контроля | ECOPROGRESS",
@@ -23518,7 +23520,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -23531,7 +23533,7 @@
     "description": "Пошаговая сверка программы ПЭК, первичных данных, лабораторных протоколов и итогового отчёта производственного экологического контроля.",
     "h1": "Как подготовить отчёт ПЭК по данным контроля",
     "canonical": "https://ecoprogress.kz/news/kak-formiruetsya-otchet-pek",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Как подготовить отчёт ПЭК по данным контроля | ECOPROGRESS",
@@ -23637,7 +23639,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -23650,7 +23652,7 @@
     "description": "Как определить цель, точки и показатели лабораторной программы без заказа универсального набора исследований.",
     "h1": "Какие лабораторные замеры нужны предприятию",
     "canonical": "https://ecoprogress.kz/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Какие лабораторные замеры нужны предприятию | ECOPROGRESS",
@@ -23756,7 +23758,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -23769,7 +23771,7 @@
     "description": "Подготовка объекта, согласование точек, режим оборудования, выезд и проверка протокола лабораторного замера воздуха.",
     "h1": "Как проходит лабораторный замер воздуха",
     "canonical": "https://ecoprogress.kz/news/kak-prohodit-laboratornyy-zamer-vozduha",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Как проходит лабораторный замер воздуха | ECOPROGRESS",
@@ -23875,7 +23877,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -23888,7 +23890,7 @@
     "description": "Практический аудит документов, объектов и ответственных перед экологической проверкой без обещания её результата.",
     "h1": "Как подготовиться к экологической проверке",
     "canonical": "https://ecoprogress.kz/news/podgotovka-k-ekologicheskoy-proverke",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Как подготовиться к экологической проверке | ECOPROGRESS",
@@ -23994,7 +23996,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -24007,7 +24009,7 @@
     "description": "От реестра процессов и отходов до мероприятий, показателей и проверяемой программы управления отходами.",
     "h1": "Как разработать программу управления отходами",
     "canonical": "https://ecoprogress.kz/news/kak-razrabotat-programmu-upravleniya-othodami",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Как разработать программу управления отходами | ECOPROGRESS",
@@ -24113,7 +24115,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -24126,7 +24128,7 @@
     "description": "Как связать договор, заявку, фактическую партию и закрывающие документы без универсального обещания одного акта.",
     "h1": "Какие документы подтверждают передачу отходов",
     "canonical": "https://ecoprogress.kz/news/dokumenty-peredachi-othodov",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Какие документы подтверждают передачу отходов | ECOPROGRESS",
@@ -24232,7 +24234,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -24245,7 +24247,7 @@
     "description": "Путь от описания партии и проверки оператора до вывоза, фактической операции и закрывающего комплекта.",
     "h1": "Как организовать вывоз и утилизацию отходов",
     "canonical": "https://ecoprogress.kz/news/vyvoz-i-utilizaciya-othodov",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Как организовать вывоз и утилизацию отходов | ECOPROGRESS",
@@ -24351,7 +24353,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -24364,7 +24366,7 @@
     "description": "Какие изменения объекта служат поводом проверить актуальность инвентаризации и необходимость проекта НДВ.",
     "h1": "Когда требуется проект нормативов допустимых выбросов",
     "canonical": "https://ecoprogress.kz/news/kogda-nuzhen-proekt-ndv",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Когда требуется проект нормативов допустимых выбросов | ECOPROGRESS",
@@ -24470,7 +24472,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -24483,7 +24485,7 @@
     "description": "Как различать экологические материалы по задаче и стадии проекта, не подменяя юридическую маршрутизацию похожими названиями.",
     "h1": "Чем отличаются ОВОС, отчёт о возможных воздействиях и РООС",
     "canonical": "https://ecoprogress.kz/news/otlichiya-ovos-oovv-roos",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Чем отличаются ОВОС, отчёт о возможных воздействиях и РООС | ECOPROGRESS",
@@ -24589,7 +24591,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -24602,7 +24604,7 @@
     "description": "Как проводить проверку экологических рисков без публикации устаревших сумм штрафов и универсальных выводов.",
     "h1": "Какие риски и штрафы возможны за экологические нарушения",
     "canonical": "https://ecoprogress.kz/news/shtrafy-za-ekologicheskie-narusheniya",
-    "robots": "noindex,follow",
+    "robots": "index,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Какие риски и штрафы возможны за экологические нарушения | ECOPROGRESS",
@@ -24708,7 +24710,7 @@
         ]
       }
     ],
-    "includeInSitemap": false,
+    "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-07-17"
@@ -24834,7 +24836,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/experts/bektibaeva-ryskul-maratovna",
@@ -24957,7 +24959,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/experts/duisenbai-ruslan-serikbaiuly",
@@ -25090,7 +25092,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/experts/manap-akerke-maratkyzy",
@@ -25213,7 +25215,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/experts/omirbaeva-aigerim-kazybekkyzy",
@@ -25336,7 +25338,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/experts/seitkarym-akerke-erbolovna",
@@ -25459,7 +25461,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/experts/seitkarym-akerke-erbolkyzy",
@@ -25582,7 +25584,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   },
   {
     "path": "/experts/makhanova-kamilla-maratovna",
@@ -25705,6 +25707,6 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-31"
+    "lastModified": "2026-09-02"
   }
 ]

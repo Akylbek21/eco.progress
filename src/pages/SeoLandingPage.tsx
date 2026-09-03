@@ -14,7 +14,7 @@ import { ArticleAuthorCard, ArticleOrganizationAuthorCard, ArticleReviewerCard, 
 import { expertMap, experts, isPublishableExpert } from '../content/experts/experts';
 import type { CaseStudy, Expert } from '../content/types';
 import { publicContentRepository } from '../content/apiRepository';
-import { isArticleApproved } from '../content/articleReview';
+import { isArticleApproved, isArticleIndexable } from '../content/articleReview';
 import { articleContentMap } from '../content/articles/articleContent';
 import { AeoFaqList, RelatedCaseStudies, VerifiedExperts } from '../components/content/AeoContent';
 import { GENERAL_PRIMARY_CTA_LABEL } from '../content/serviceCatalog';
@@ -95,16 +95,17 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
   const reviewerCandidate = page.reviewer ?? (page.reviewerSlug ? backendExpertMap.get(page.reviewerSlug) ?? expertMap.get(page.reviewerSlug) : undefined);
   const articleAuthor = isPublishableExpert(authorCandidate) ? authorCandidate : undefined;
   const articleReviewer = isPublishableExpert(reviewerCandidate) ? reviewerCandidate : undefined;
-  const approved = page.type === 'article' && isArticleApproved(
-    articleContentMap.get(page.slug.replace(/^news\//, '')) ?? {
+  const articleContent = page.type === 'article'
+    ? articleContentMap.get(page.slug.replace(/^news\//, '')) ?? {
       status: 'published', reviewStatus: page.reviewStatus ?? 'requires-specialist-review', reviewerSlug: page.reviewerSlug, lastReviewedAt: page.lastReviewedAt,
-    },
-  );
+    }
+    : undefined;
+  const approved = page.type === 'article' && isArticleApproved(articleContent);
   const approvedArticleAuthor = approved ? articleAuthor : undefined;
   const approvedArticleReviewer = approved ? articleReviewer : undefined;
   const relatedCases = apiCases.filter((item) => (!page.serviceSlug || item.service === page.serviceSlug) && (!page.cityNominative || item.city === page.cityNominative));
   const robots = page.type === 'article'
-    ? approved ? 'index,follow' : 'noindex,follow'
+    ? isArticleIndexable(articleContent) ? 'index,follow' : 'noindex,follow'
     : page.indexable === false ? 'noindex,follow' : 'index,follow';
   const startText = isKk
     ? 'Нысан мен қолда бар құжаттарды тексеріп, қызметтің қолданылуын, жұмыс құрамын, мерзімін және нысанға шығу қажеттілігін түсіндіреміз.'

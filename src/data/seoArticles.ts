@@ -9,6 +9,11 @@ export interface SeoArticleSection {
   bullets?: string[];
   checklist?: string[];
   warning?: string;
+  table?: {
+    caption?: string;
+    headers: string[];
+    rows: Array<{ cells: string[] }>;
+  };
 }
 
 export interface SeoArticleConfig {

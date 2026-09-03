@@ -13,7 +13,7 @@ const articleToNewsItem = (article: ArticleContent): NewsItem => ({
   category: 'Полезные материалы',
   date: article.datePublished,
   image: article.heroImage || '/og-cover.jpg',
-  content: article.sections.flatMap((section) => [section.title, ...section.paragraphs]),
+  content: article.sections.flatMap((section) => [section.title, ...section.paragraphs, ...(section.table?.headers || []), ...(section.table?.rows.flatMap((row) => row.cells) || [])]),
 });
 
 export const prerenderNewsResult: NewsResult = {

@@ -25,7 +25,7 @@ export const searchPublicContent = async (query: string): Promise<PublicSearchRe
     if (haystack.includes(needle)) results.push({ type: 'service', slug: item.serviceSlug, title: item.hero.title, description: item.summary.shortDescription, url: `/services/${item.serviceSlug}` });
   }
   for (const item of articles) {
-    const haystack = normalize(`${item.title} ${item.description} ${item.excerpt} ${item.shortAnswer} ${item.sections.map((section) => `${section.title} ${section.paragraphs.join(' ')}`).join(' ')}`);
+    const haystack = normalize(`${item.title} ${item.description} ${item.excerpt} ${item.shortAnswer} ${item.sections.map((section) => `${section.title} ${section.paragraphs.join(' ')} ${(section.table?.headers || []).join(' ')} ${(section.table?.rows.flatMap((row) => row.cells) || []).join(' ')}`).join(' ')}`);
     if (haystack.includes(needle)) results.push({ type: 'article', slug: item.slug, title: item.title, description: item.excerpt, url: `/news/${item.slug}` });
   }
   for (const item of regionItems) {
