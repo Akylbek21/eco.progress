@@ -1,4 +1,6 @@
-export const SITE_ORIGIN = 'https://ecoprogress.kz';
+import { COMPANY_INFO } from '../config/companyInfo.ts';
+
+export const SITE_ORIGIN = COMPANY_INFO.domain;
 
 export const normalizePathname = (pathname: string): string => {
   const path = pathname.split(/[?#]/, 1)[0] || '/';

@@ -1,5 +1,4 @@
 import axios, { type AxiosProgressEvent } from 'axios';
-import { getActiveCompanies, getCompanyObjects } from '../../../services/companyService';
 import { pekApiClient as api } from './pekApiClient';
 import { filenameFromDisposition, mapPekPage, unwrapPekData } from './pekMappers';
 import { pekMutationOptions } from './pekMutation';
@@ -14,6 +13,7 @@ import type {
   PekPermit,
   PekPermitCreateRequest,
   PekPermitHistoryEntry,
+  PekPermitFileUploadResponse,
   PekPermitStatusRequest,
   PekPermitUpdateRequest,
   PekProgram,
@@ -137,16 +137,10 @@ export type PekUploadOptions = {
 };
 
 export const pekApi = {
-  getScopeCompanies: async (signal?: AbortSignal): Promise<PekScopeCompany[]> =>
-    (await getActiveCompanies(signal)).map((company) => ({ id: Number(company.id), name: company.name, bin: company.bin || null })),
-  getScopeCompanyObjects: async (companyId: number, signal?: AbortSignal): Promise<PekScopeObject[]> =>
-    (await getCompanyObjects(String(companyId), false, signal)).map((object) => ({
-      id: Number(object.id),
-      companyId,
-      name: object.name,
-      address: object.address || null,
-      status: 'ACTIVE',
-    })),
+  getScopeCompanies: (signal?: AbortSignal): Promise<PekScopeCompany[]> =>
+    get<PekScopeCompany[]>('/pek/scope/companies', {}, signal),
+  getScopeCompanyObjects: (companyId: number, signal?: AbortSignal): Promise<PekScopeObject[]> =>
+    get<PekScopeObject[]>(`/pek/scope/companies/${companyId}/objects`, {}, signal),
 
   async getDashboard(filters: PekDashboardFilters, signal?: AbortSignal) {
     return mapDashboardResponse(await get<unknown>('/pek/dashboard', filters, signal));
@@ -255,6 +249,22 @@ export const pekApi = {
     get<PekPermit[]>('/pek/permits', { objectId }, signal),
   getPermit: (id: number, signal?: AbortSignal) =>
     get<PekPermit>(`/pek/permits/${id}`, {}, signal),
+  uploadPermitFile: async (companyId: number, file: File, permit?: Pick<PekPermit, 'id' | 'version'>): Promise<PekPermitFileUploadResponse> => {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await api.post('/pek/permits/files', form, {
+      params: cleanParams({ companyId, permitId: permit?.id }),
+      ...(permit ? pekMutationOptions(permit.version) : {}),
+    });
+    return unwrapPekData<PekPermitFileUploadResponse>(response.data);
+  },
+  downloadPermitFile: async (id: number): Promise<PekBlobResult> => {
+    const response = await api.get<Blob>(`/pek/permits/${id}/file`, { responseType: 'blob' });
+    return {
+      blob: response.data,
+      filename: filenameFromDisposition(response.headers['content-disposition'], `permit-${id}`),
+    };
+  },
   createPermit: async (body: PekPermitCreateRequest) =>
     unwrapPekData<PekPermit>((await api.post('/pek/permits', body)).data),
   updatePermit: async (id: number, body: PekPermitUpdateRequest) => {

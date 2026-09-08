@@ -1,10 +1,11 @@
 ﻿import { COMPANY_CONTACTS } from './contacts';
 import { createWhatsAppUrl } from '../utils/whatsapp';
 import { appConfig } from './app';
-import { COMPANY } from './companyData';
+import { COMPANY_INFO as COMPANY } from './companyInfo';
 
 export const company = {
   name: COMPANY.name,
+  brandName: COMPANY.brandName,
   phone: COMPANY_CONTACTS.phoneDisplay,
   phoneHref: `tel:+${COMPANY_CONTACTS.phone}`,
   whatsapp: COMPANY_CONTACTS.whatsappPhone,
@@ -15,6 +16,7 @@ export const company = {
   instagram: COMPANY.instagram,
   instagramUrl: COMPANY.instagramUrl,
   tiktokUrl: COMPANY.tiktokUrl,
+  telegramUrl: COMPANY.telegramUrl,
   mapsUrl: COMPANY.mapsUrl,
   siteLabel: 'ecoprogress.kz',
   siteUrl: appConfig.siteUrl,

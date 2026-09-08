@@ -1,0 +1,146 @@
+﻿:root {
+  --background: #081719; --map-color: #21494b; --border-color: #88c8b3; --accent: #c8e5a4;
+  --text: #f0f5ee; --muted: #8ba6a5; --card-background: rgba(15, 39, 40, .94);
+  font-family: Inter, 'Segoe UI', Arial, sans-serif; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--background); color: var(--text); }
+button, select { font: inherit; }
+button, select, a { -webkit-tap-highlight-color: transparent; outline-offset: 5px; }
+button { cursor: pointer; }
+button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid var(--accent); }
+.geography {
+  position: relative; isolation: isolate; overflow: hidden;
+  padding: 54px max(40px, calc((100vw - 1320px) / 2)) 38px;
+  background: radial-gradient(ellipse at 52% 48%, #214b4438, transparent 57%), linear-gradient(120deg, #0d2224 0%, #081719 48%, #0c2022 100%);
+}
+.geography::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' opacity='.2' filter='url(%23n)' d='M0 0h180v180H0z'/%3E%3C/svg%3E"); opacity: .15;
+}
+.geography::after { content: ''; position: absolute; top: 0; left: 12%; right: 12%; height: 1px; background: linear-gradient(90deg, transparent, #b6dfb557, transparent); }
+.ambient { position: absolute; pointer-events: none; z-index: -1; border-radius: 50%; will-change: transform; }
+.ambient-one { width: 900px; height: 650px; top: 0; left: 13%; background: radial-gradient(ellipse, #498a6230, transparent 67%); animation: ambient-drift 22s ease-in-out infinite alternate; }
+.ambient-two { width: 700px; height: 600px; top: 80px; right: -250px; background: radial-gradient(ellipse, #56898223, transparent 67%); animation: ambient-drift 27s ease-in-out infinite alternate-reverse; }
+header { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; pointer-events: none; }
+.eyebrow { display: flex; align-items: center; gap: 13px; font-size: 9px; letter-spacing: 2.3px; color: #a2bcb6; margin: 0 0 22px; }
+.eyebrow i { width: 24px; height: 1px; background: #a2bcb640; }
+.eyebrow>span, .live-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px #c8e5a466; }
+h2 { font-size: clamp(42px, 4.4vw, 66px); font-weight: 350; line-height: 1.06; letter-spacing: -2.8px; margin: 0; }
+h2 em { font-style: normal; color: #bed8c0; }
+.period { color: var(--accent); }
+.subtitle { color: var(--muted); font-size: 14px; margin: 19px 0 0; letter-spacing: .1px; }
+.header-note { padding: 12px 0 0 28px; width: 250px; position: relative; }
+.note-icon { color: var(--accent); position: absolute; font-size: 27px; left: -14px; top: 26px; }
+.header-note p { font-size: 15px; color: #aec0ba; line-height: 1.8; margin: 0; }
+.header-note strong { color: var(--text); font-weight: 400; }
+.note-line { display: block; width: 45px; height: 1px; background: #c8e5a440; margin: 17px 0; }
+.header-note small { font-size: 10px; color: var(--muted); }
+.stage { position: relative; height: 510px; margin: -35px -26px 0; }
+.map-word { position: absolute; top: 15%; left: 0; width: 100%; text-align: center; font-size: clamp(60px, 11.4vw, 170px); line-height: 1; font-weight: 600; letter-spacing: .09em; color: #bddbc005; -webkit-text-stroke: 1px #bddbc00c; pointer-events: none; user-select: none; }
+.map-grid { position: absolute; inset: 4% -10% -4%; pointer-events: none; background-image: linear-gradient(#b8ddc407 1px, transparent 1px), linear-gradient(90deg, #b8ddc407 1px, transparent 1px); background-size: 62px 62px; transform: perspective(700px) rotateX(52deg); mask-image: radial-gradient(ellipse, black, transparent 67%); }
+.map-glow { position: absolute; inset: 22% 13% 5%; background: radial-gradient(ellipse, #9acc7a27 0%, #5ba48b14 35%, transparent 67%); pointer-events: none; animation: glow-breathe 9s ease-in-out infinite alternate; }
+.ground-orbit { position: absolute; left: 50%; top: 55%; border: 1px solid #abd3b00b; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%) rotate(-8deg); }
+.orbit-one { width: 84%; height: 54%; }
+.orbit-two { width: 96%; height: 69%; border-style: dashed; border-color: #abd3b007; }
+#canvas-host, #labels { position: absolute; inset: 0; }
+canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 1s; }
+.ready canvas { opacity: 1; }
+#labels { pointer-events: none; }
+.city-label { position: absolute; pointer-events: auto; color: #d2e1da; background: transparent; border: 0; font-size: 12px; font-weight: 450; white-space: nowrap; padding: 14px 11px 14px 23px; transform: translate(-12px, -50%); opacity: 0; transition: color .25s, opacity .4s; text-shadow: 0 2px 7px #001a17, 0 0 15px #001a17; min-height: 44px; }
+.city-label::before { content: ''; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #e5f4cb; left: 9px; top: calc(50% - 2px); box-shadow: 0 0 8px #c8e5a4, 0 0 20px #c8e5a460; transition: box-shadow .25s, transform .25s; }
+.city-label:hover, .city-label.active { color: #f2ffde; z-index: 3; }
+.city-label:hover::before, .city-label.active::before { transform: scale(1.4); box-shadow: 0 0 12px #e6ffc0, 0 0 28px #c8e5a4a0; }
+.city-label small { visibility: hidden; opacity: 0; position: absolute; top: 42px; left: 16px; padding: 10px 13px; background: #102f2ef5; border: 1px solid #b8d6ad30; box-shadow: 0 8px 24px #0004; border-radius: 7px; font-size: 10px; color: #c6d9ce; transform: translateY(5px); transition: opacity .2s, transform .2s; pointer-events: none; }
+.city-label:hover small, .city-label:focus-visible small { visibility: visible; opacity: 1; transform: translateY(0); }
+.city-label[data-city='Астана'] { transform: translate(calc(-100% + 12px), -50%); padding-left: 10px; padding-right: 25px; color: #e8f5d4; }
+.city-label[data-city='Астана']::before { left: auto; right: 9px; }
+.city-label:focus-visible { z-index: 3; }
+.compass { position: absolute; top: 62px; right: 24px; font-size: 9px; color: #aac3b6; text-align: center; }
+.compass span { display: block; font-size: 26px; font-weight: 200; margin-top: 9px; }
+.map-caption { position: absolute; bottom: 18px; left: 26px; letter-spacing: 1.8px; font-size: 9px; color: #c7d9cd; display: flex; align-items: center; gap: 10px; }
+.caption-detail { color: #76928d; margin-left: 15px; letter-spacing: .2px; font-size: 10px; }
+.controls { position: absolute; right: 26px; bottom: 8px; display: flex; align-items: center; gap: 7px; }
+.control-hint { font-size: 10px; color: var(--muted); padding-right: 12px; }
+.controls button { border: 1px solid #b4d6b51f; background: #b8dcc507; color: #cce0d0; width: 42px; height: 42px; border-radius: 50%; font-size: 21px; transition: background .25s, border-color .25s, transform .25s; }
+.controls button:hover { background: #bddfb419; border-color: #bddfb45a; transform: translateY(-2px); }
+#map-message { position: absolute; top: 46%; width: 100%; text-align: center; font-size: 13px; color: var(--muted); pointer-events: none; }
+footer { position: relative; display: flex; justify-content: space-between; padding-top: 28px; gap: 24px; }
+footer::before { content: ''; position: absolute; top: 0; width: 100%; height: 1px; background: linear-gradient(90deg, #c2d7ae40, #c2d7ae12 70%, transparent); }
+.statistics { display: flex; gap: 62px; }
+.statistics>div { display: flex; flex-direction: column; gap: 7px; position: relative; }
+.statistics>div+div { padding-left: 32px; border-left: 1px solid #c2d7ae12; }
+.statistics .stat-index { font-size: 8px; letter-spacing: 1.6px; color: #7f9d91; margin-bottom: 1px; }
+.statistics strong { font-size: 48px; font-weight: 300; letter-spacing: -1.7px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.statistics b { font-weight: inherit; }
+.statistics strong span { color: var(--accent); font-size: 31px; vertical-align: 5px; margin-left: 3px; }
+.statistics>div>span { font-size: 11px; color: #93aba1; }
+.choose { min-width: 265px; align-self: center; }
+.choose label { display: flex; justify-content: space-between; font-size: 13px; margin: 0 0 11px; color: #d5e2d6; }
+.choose label span { color: var(--accent); font-size: 18px; }
+.choose select { background: #b8dbc608; border: 1px solid #c1dfb92b; border-radius: 8px; padding: 12px 14px; color: #d5e5d8; width: 100%; font-size: 12px; cursor: pointer; transition: border-color .2s, background .2s; }
+.choose select:hover { border-color: #c1dfb970; background: #b8dbc60e; }
+.choose option { background: #102b2b; }
+.choose p { font-size: 9px; color: #77948c; margin: 10px 0 0; }
+.city-card { position: absolute; right: 55px; top: 28px; width: 300px; background: var(--card-background); border: 1px solid #c3e0b83b; border-radius: 16px; backdrop-filter: blur(22px); box-shadow: 0 25px 75px #0007, inset 0 1px #e2f4d418; z-index: 5; overflow: hidden; animation: card-in .4s cubic-bezier(.2,.8,.2,1); }
+.city-card[hidden] { display: none; }
+.city-card img { width: 100%; height: 130px; object-fit: cover; display: block; filter: saturate(.65); mask-image: linear-gradient(black 65%, #0008); }
+.close { position: absolute; right: 12px; top: 12px; border: 1px solid #ffffff30; background: #0c211dcc; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 24px; z-index: 1; }
+.close:hover { background: #3c5f48; }
+.card-body { padding: 22px; }
+.status { display: inline-flex; align-items: center; gap: 7px; font-size: 10px; color: var(--accent); padding: 5px 8px; border-radius: 4px; background: #c8e5a40c; }
+.status::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+h3 { font-size: 30px; font-weight: 350; letter-spacing: -.6px; margin: 12px 0 9px; }
+.card-body p { font-size: 12px; line-height: 1.8; color: #a9beb3; margin: 0; }
+.card-count { display: flex; gap: 10px; align-items: baseline; margin: 16px 0; }
+.card-count strong { font-size: 30px; font-weight: 350; }
+.card-count span { font-size: 11px; color: var(--muted); }
+.card-body a { display: flex; justify-content: space-between; text-decoration: none; border: 1px solid #c8e5a434; border-radius: 7px; background: #c8e5a40b; padding: 12px 14px; font-size: 12px; color: var(--accent); transition: background .2s; }
+.card-body a:hover { background: #c8e5a422; }
+.ready footer { animation: interface-in 2.3s both; }
+.is-paused *, .is-paused *::before, .is-paused *::after { animation-play-state: paused!important; }
+@keyframes ambient-drift { from { transform: translate(-45px, -20px) scale(.95); } to { transform: translate(55px, 30px) scale(1.08); } }
+@keyframes glow-breathe { from { opacity: .6; transform: scale(.94); } to { opacity: 1; transform: scale(1.05); } }
+@keyframes card-in { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes interface-in { 0%, 73% { opacity: 0; transform: translateY(9px); } 100% { opacity: 1; transform: translateY(0); } }
+@media (min-width: 1700px) { .stage { height: 550px; } }
+@media (max-width: 1000px) { .statistics { gap: 24px; } .statistics>div+div { padding-left: 20px; } .choose { min-width: 220px; } .control-hint { display: none; } .statistics>div>span { font-size: 10px; } }
+@media (max-width: 700px) {
+  .geography { padding: 32px 22px 28px; }
+  .ambient-one { width: 550px; left: -120px; opacity: .7; animation: none; }
+  .ambient-two, .header-note, .control-hint { display: none; }
+  .eyebrow { font-size: 7px; letter-spacing: 1.3px; gap: 8px; margin-bottom: 20px; }
+  .eyebrow i { width: 16px; }
+  h2 { font-size: clamp(34px, 8.8vw, 50px); letter-spacing: -1.5px; }
+  .subtitle { font-size: 11px; margin-top: 15px; }
+  .stage { height: 365px; margin: 5px -18px 0; }
+  .map-word { top: 23%; font-size: 13vw; letter-spacing: .03em; }
+  .map-grid { background-size: 36px 36px; opacity: .7; }
+  .map-glow { animation: none; opacity: .6; inset: 22% 0 8%; }
+  .compass { top: 22px; right: 18px; font-size: 8px; }
+  .compass span { font-size: 22px; }
+  .city-label { font-size: 9px; padding-left: 19px; }
+  .city-label::before { left: 8px; width: 4px; height: 4px; }
+  .map-caption { left: 18px; bottom: 23px; font-size: 8px; letter-spacing: 1.3px; }
+  .caption-detail { display: none; }
+  .controls { right: 18px; bottom: 10px; gap: 5px; }
+  .controls button { width: 40px; height: 40px; font-size: 20px; }
+  footer { flex-direction: column; padding-top: 24px; gap: 26px; }
+  .statistics { justify-content: space-between; gap: 10px; }
+  .statistics>div { flex: 1; gap: 5px; }
+  .statistics>div+div { padding-left: 12px; }
+  .statistics .stat-index { font-size: 6px; letter-spacing: .65px; }
+  .statistics strong { font-size: 38px; }
+  .statistics strong span { font-size: 24px; vertical-align: 3px; }
+  .statistics>div>span { font-size: 9px; max-width: 110px; line-height: 1.5; }
+  .choose { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; align-items: center; }
+  .choose label { font-size: 11px; margin: 0; }
+  .choose select { font-size: 11px; padding: 11px 9px; }
+  .choose p { grid-column: 1/-1; font-size: 8px; margin-top: 11px; }
+  .city-card { top: 0; right: 18px; width: min(290px, calc(100% - 36px)); }
+  .city-card img { height: 94px; }
+  .card-body { padding: 17px; }
+  h3 { font-size: 26px; margin: 9px 0; }
+  .card-count { margin: 10px 0; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none!important; transition: none!important; } }

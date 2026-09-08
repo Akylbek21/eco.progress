@@ -110,6 +110,7 @@ const PekProgramCreatePage = () => {
   const autosaveController = useRef<AbortController>();
   const autosaveSequence = useRef(0);
   const appliedAutosaveSequence = useRef(0);
+  const queuedAutosave = useRef<PekProgramForm>();
   const lastAutosaveHash = useRef('');
 
   const form = useForm<PekProgramForm>({
@@ -183,6 +184,7 @@ const PekProgramCreatePage = () => {
     },
     onError: (error) => {
       if (axios.isCancel(error) || (error instanceof DOMException && error.name === 'AbortError')) return;
+      queuedAutosave.current = undefined;
       if (mapPekError(error).status === 409) {
         setAutosaveState('conflict');
         setConflictOpen(true);
@@ -193,6 +195,13 @@ const PekProgramCreatePage = () => {
   });
 
   useEffect(() => {
+    if (autosave.isPending || !queuedAutosave.current) return;
+    const next = queuedAutosave.current;
+    queuedAutosave.current = undefined;
+    autosave.mutate(next);
+  }, [autosave.isPending]);
+
+  useEffect(() => {
     const subscription = watch((partial) => {
       if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
       autosaveTimer.current = window.setTimeout(() => {
@@ -200,7 +209,6 @@ const PekProgramCreatePage = () => {
         void savePekDraft(draftKey, value, edit ? versionRef.current : 'new');
         const payloadHash = JSON.stringify(mapProgramAutosaveToRequest(value));
         if (payloadHash === lastAutosaveHash.current) return;
-        lastAutosaveHash.current = payloadHash;
         if (!navigator.onLine) {
           setAutosaveState('offline');
           return;
@@ -209,9 +217,10 @@ const PekProgramCreatePage = () => {
           edit
           && program.data
           && program.data.availableActions.edit === true
-          && !autosave.isPending
         ) {
-          autosave.mutate(value);
+          lastAutosaveHash.current = payloadHash;
+          if (autosave.isPending) queuedAutosave.current = value;
+          else autosave.mutate(value);
         }
       }, 1500);
     });

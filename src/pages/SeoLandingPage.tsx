@@ -148,7 +148,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
           </nav>
           <div className="mt-8 grid gap-10 lg:grid-cols-[1.08fr_0.72fr] lg:items-center">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.22em] text-accent">{page.city || page.service || 'ECOPROGRESS'}</p>
+              <p className="text-sm font-bold uppercase tracking-[0.22em] text-accent">{page.city || page.service || company.brandName}</p>
               <h1 className="mt-5 max-w-5xl text-4xl font-bold leading-tight sm:text-5xl">{page.h1}</h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-white/84">{page.intro}</p>
               {page.heroBenefits?.length ? (
@@ -223,11 +223,11 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
             <ArticleSources sources={page.sources ?? []} locale={isKk ? 'kk' : 'ru'} />
             <div className="grid gap-4 md:grid-cols-2">
               {articleAuthor ? <ArticleAuthorCard expert={articleAuthor} /> : <ArticleOrganizationAuthorCard />}
-              <ArticleReviewerCard expert={articleReviewer} />
+              {approvedArticleReviewer && <ArticleReviewerCard expert={approvedArticleReviewer} />}
             </div>
             <div className="rounded-[22px] border border-slate-200 bg-white p-5 text-sm text-slate-600">
               <p>Дата публикации: <time dateTime={page.datePublished}>{page.datePublished}</time></p>
-              <p className="mt-2">Последняя экспертная проверка: {page.lastReviewedAt ? <time dateTime={page.lastReviewedAt}>{page.lastReviewedAt}</time> : 'не завершена'}</p>
+              {approved && page.lastReviewedAt && <p className="mt-2">Последняя экспертная проверка: <time dateTime={page.lastReviewedAt}>{page.lastReviewedAt}</time></p>}
             </div>
           </div>
         </section>
@@ -262,7 +262,7 @@ const SeoLandingPage = ({ slug: slugProp }: { slug?: string }) => {
       <section className="px-4 py-14 sm:px-8">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1fr_0.85fr]">
           <div className="rounded-[8px] border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-3xl font-bold text-eco-900">{isKk ? 'EcoProgress жұмыс қағидалары' : 'Почему выбирают ECOPROGRESS'}</h2>
+            <h2 className="text-3xl font-bold text-eco-900">{isKk ? `${company.brandName} жұмыс қағидалары` : `Почему выбирают ${company.brandName.toUpperCase()}`}</h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               {trustPoints.map((item) => (
                 <div key={item} className="rounded-[8px] bg-eco-50 p-4 text-sm font-semibold leading-6 text-eco-900">{item}</div>

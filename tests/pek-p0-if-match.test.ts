@@ -1,11 +1,26 @@
+// @vitest-environment jsdom
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { pekApi } from '../src/features/pek/api/pekService';
 import { mapProgramResponse } from '../src/features/pek/mappers/responseMappers';
 import { handlePekMutationError, PEK_VERSION_CONFLICT_MESSAGE } from '../src/features/pek/utils/pekMutationError';
+import api from '../src/services/api';
+import { normalizeApiError } from '../src/services/apiHelpers';
 
-type CapturedRequest = { method: string; path: string; ifMatch: string | null; body: unknown };
+Object.defineProperty(globalThis, 'localStorage', {
+  configurable: true,
+  value: {
+    getItem: () => null,
+    setItem: () => undefined,
+    removeItem: () => undefined,
+    clear: () => undefined,
+  },
+});
+
+type CapturedRequest = { method: string; path: string; params: Record<string, string>; ifMatch: string | null; body: unknown };
 const calls: CapturedRequest[] = [];
 const capture = async (request: Request): Promise<CapturedRequest> => {
   const contentType = request.headers.get('content-type') || '';
@@ -13,6 +28,7 @@ const capture = async (request: Request): Promise<CapturedRequest> => {
   const entry = {
     method: request.method,
     path: new URL(request.url).pathname,
+    params: Object.fromEntries(new URL(request.url).searchParams),
     ifMatch: request.headers.get('If-Match'),
     body,
   };
@@ -39,6 +55,10 @@ const server = setupServer(
     await capture(request);
     return HttpResponse.json({ data: { companyId: 17, version: 13, defaultReportType: 'YEARLY' } });
   }),
+  http.post('*/api/pek/scheduler/run', async ({ request }) => {
+    await capture(request);
+    return new HttpResponse(null, { status: 204 });
+  }),
   http.post('*/api/pek/reports/9/return', async ({ request }) => { await capture(request); return HttpResponse.json({ data: { ...report, status: 'RETURNED', version: 9 } }); }),
   http.post('*/api/pek/reports/9/sources/31/match', async ({ request }) => { await capture(request); return HttpResponse.json({ data: source }); }),
   http.post('*/api/pek/reports/9/sources/31/exclude', async ({ request }) => { await capture(request); return HttpResponse.json({ data: source }); }),
@@ -52,7 +72,10 @@ const server = setupServer(
   http.post('*/api/pek/exceedances/4/corrective-actions/2/transition', async ({ request }) => { await capture(request); return HttpResponse.json({ data: { id: 2, exceedanceId: 4, description: 'Фильтр', status: 'DONE', version: 4, availableActions: {} } }); }),
 );
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeAll(() => {
+  api.defaults.baseURL = 'http://localhost/api';
+  server.listen({ onUnhandledRequest: 'error' });
+});
 afterEach(() => { calls.length = 0; server.resetHandlers(); });
 afterAll(() => server.close());
 
@@ -81,6 +104,13 @@ describe('PEK P0 If-Match contracts', () => {
     await pekApi.updateSettings(17, 12, { defaultReportType: 'YEARLY' } as never);
     expectVersioned(calls[0], 12, { defaultReportType: 'YEARLY' });
     expect(calls[0]).toMatchObject({ method: 'PUT', path: '/api/pek/settings' });
+  });
+
+  it('runs the scheduler only for the selected company and version', async () => {
+    await pekApi.runSchedulerNow(17, 4);
+    expect(calls[0]).toMatchObject({
+      method: 'POST', path: '/api/pek/scheduler/run', params: { companyId: '17' }, ifMatch: '4', body: undefined,
+    });
   });
 
   it('returns report with reason only in JSON', async () => {
@@ -135,7 +165,17 @@ describe('PEK P0 If-Match contracts', () => {
     expect(mapped.message).toBe(PEK_VERSION_CONFLICT_MESSAGE);
     expect(refresh).toHaveBeenCalledTimes(1);
   });
+
+  it('handles resource-specific version conflicts and currentVersion in fieldErrors', async () => {
+    const refresh = vi.fn(async () => undefined);
+    const error = { isAxiosError: true, response: { status: 409, data: {
+      code: 'PEK_PROGRAM_VERSION_CONFLICT',
+      fieldErrors: { currentVersion: '14' },
+      traceId: 'trace-14',
+    } } };
+    const parsed = normalizeApiError(error);
+    expect(parsed).toMatchObject({ currentVersion: 14, traceId: 'trace-14' });
+    await handlePekMutationError(error, refresh);
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
 });
-// @vitest-environment jsdom
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';

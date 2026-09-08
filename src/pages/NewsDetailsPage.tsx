@@ -1,7 +1,6 @@
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MessageCircle } from 'lucide-react';
-import Button from '../components/ui/Button';
+import { ArrowRight, CheckCircle2, Leaf, MessageCircle } from 'lucide-react';
 import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { company, getWhatsAppUrl } from '../config/company';
@@ -76,7 +75,7 @@ const NewsDetailsPage = () => {
   if (!item) {
     return (
       <div className="bg-eco-50 px-5 py-20">
-        <SEO title="Новость не найдена | ECOPROGRESS" description="Материал не найден или был снят с публикации." robots="noindex,follow" />
+        <SEO title={`Новость не найдена | ${company.brandName.toUpperCase()}`} description="Материал не найден или был снят с публикации." robots="noindex,follow" />
         <div className="mx-auto max-w-3xl rounded-[24px] bg-white p-8 text-center shadow-sm">
           <h1 className="text-3xl font-bold text-eco-900">Новость не найдена</h1>
           <p className="mt-3 text-slate-600">Материал мог быть снят с публикации или ссылка устарела.</p>
@@ -114,7 +113,7 @@ const NewsDetailsPage = () => {
 
   return (
     <article className="bg-white">
-      <SEO title={`${item.title} | ECOPROGRESS`} description={item.description} canonical={canonical} robots={indexable ? 'index,follow' : 'noindex,follow'} type="article" schema={schema} datePublished={dates.datePublished} dateModified={dates.dateModified} />
+      <SEO title={`${item.title} | ${company.brandName.toUpperCase()}`} description={item.description} canonical={canonical} robots={indexable ? 'index,follow' : 'noindex,follow'} type="article" schema={schema} datePublished={dates.datePublished} dateModified={dates.dateModified} />
       <section className="relative overflow-hidden px-5 py-24 text-white sm:px-8">
         <ResponsiveImage fill sizes="100vw" src={heroImage} alt={item.imageAlt} priority width={1600} height={900} className="object-cover" />
         <div className="absolute inset-0 bg-eco-900/78" />
@@ -158,14 +157,36 @@ const NewsDetailsPage = () => {
             {section.warning && <div className="mt-5"><ArticleWarning>{section.warning}</ArticleWarning></div>}
           </section>
         ))}
-        <section className="mt-12 rounded-[8px] bg-eco-900 p-6 text-white">
-          <h2 className="text-2xl font-bold">Нужна консультация по экологии?</h2>
-          <p className="mt-3 text-base leading-7 text-white/75">Отправьте город, объект и вопрос. Специалист подскажет документы, сроки и следующий шаг.</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button asChild className="bg-accent text-eco-900 hover:bg-accent/90"><Link to="/contacts">Получить консультацию эколога</Link></Button>
-            <a href={getWhatsAppUrl(`Здравствуйте! Хочу консультацию по статье: ${item.h1}`)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
-              <MessageCircle size={18} /> WhatsApp
-            </a>
+        <section className="relative mt-14 overflow-hidden rounded-[28px] border border-[#16486b] bg-[#062947] px-6 py-8 text-white shadow-[0_22px_60px_-30px_rgba(3,40,66,0.8)] sm:px-9 sm:py-10">
+          <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[#38c7ba]/20 blur-3xl" aria-hidden="true" />
+          <div className="pointer-events-none absolute -bottom-28 left-1/3 h-52 w-52 rounded-full bg-[#238fc2]/15 blur-3xl" aria-hidden="true" />
+          <div className="relative grid gap-8 lg:grid-cols-[1.35fr_0.85fr] lg:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#38c7ba]/35 bg-[#38c7ba]/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#55d8cc]">
+                <Leaf size={15} aria-hidden="true" /> Помощь эколога
+              </div>
+              <h2 className="mt-5 max-w-xl text-2xl font-bold leading-tight sm:text-3xl">Нужна консультация по экологии?</h2>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-[#c6d6e2]">Коротко опишите объект и задачу. Специалист разберёт ситуацию и подскажет, какие документы нужны и с чего начать.</p>
+              <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap">
+                <Link to="/contacts" className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#38c7ba] px-6 py-3 text-sm font-bold text-[#062947] shadow-lg shadow-black/10 transition hover:bg-[#55d8cc] sm:w-auto">
+                  Получить консультацию <ArrowRight className="transition-transform group-hover:translate-x-1" size={18} aria-hidden="true" />
+                </Link>
+                <a href={getWhatsAppUrl(`Здравствуйте! Хочу консультацию по статье: ${item.h1}`)} target="_blank" rel="noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/25 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10 sm:w-auto">
+                  <MessageCircle size={18} aria-hidden="true" /> Написать в WhatsApp
+                </a>
+              </div>
+            </div>
+            <div className="rounded-[20px] border border-[#ffffff]/15 bg-[#ffffff]/[0.07] p-5 backdrop-blur-sm sm:p-6">
+              <p className="text-sm font-bold text-white">После обращения вы получите</p>
+              <ul className="mt-4 space-y-3 text-sm leading-6 text-[#c6d6e2]">
+                {['Перечень необходимых документов', 'Оценку сроков и порядка работ', 'Понятный следующий шаг'].map((benefit) => (
+                  <li key={benefit} className="flex gap-3">
+                    <CheckCircle2 className="mt-0.5 shrink-0 text-[#38c7ba]" size={18} aria-hidden="true" />
+                    <span>{benefit}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
         <section className="mt-12">
@@ -186,12 +207,12 @@ const NewsDetailsPage = () => {
           {item.relatedServiceSlugs.length > 0 && <RelatedServices slugs={item.relatedServiceSlugs} title="Услуги по теме материала" />}
           {item.relatedArticleSlugs.length > 0 && <RelatedArticles slugs={item.relatedArticleSlugs} />}
           <ArticleSources sources={item.sources} />
-          <div className="grid gap-4 md:grid-cols-2">{author ? <ArticleAuthorCard expert={author} /> : <ArticleOrganizationAuthorCard />}<ArticleReviewerCard expert={reviewer} /></div>
+          <div className="grid gap-4 md:grid-cols-2">{author ? <ArticleAuthorCard expert={author} /> : <ArticleOrganizationAuthorCard />}{reviewer && <ArticleReviewerCard expert={reviewer} />}</div>
           <div className="rounded-[22px] border border-slate-200 bg-white p-5 text-sm text-slate-600">
             <p>Дата публикации: <time dateTime={dates.datePublished}>{dates.datePublished}</time></p>
-            <p className="mt-2">Последняя экспертная проверка: {approved && item.lastReviewedAt ? <time dateTime={item.lastReviewedAt}>{reviewedAtLabel}</time> : 'не завершена'}</p>
+            {approved && item.lastReviewedAt && <p className="mt-2">Последняя экспертная проверка: <time dateTime={item.lastReviewedAt}>{reviewedAtLabel}</time></p>}
           </div>
-          <ContentLastUpdated date={dates.dateModified} requiresReview={!approved} />
+          <ContentLastUpdated date={dates.dateModified} />
           <VerifiedExperts />
           <RelatedCaseStudies service={item.relatedServiceSlugs[0]} />
         </div>

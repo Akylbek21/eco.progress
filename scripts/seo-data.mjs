@@ -12,6 +12,7 @@ import { isArticleApproved, isArticleEligibleForSeoLinks } from '../src/content/
 import { regionNameMap } from '../src/content/regions.ts';
 import { PUBLIC_SITE_URL, canonicalForPublicPath, isPublicPageIndexable } from '../src/seo/indexingPolicy.ts';
 import { buildKkLocalizedPages } from '../src/content/kkSeoPages.ts';
+import { COMPANY_INFO } from '../src/config/companyInfo.ts';
 
 const SITE_URL = PUBLIC_SITE_URL;
 const LASTMOD = '2026-08-27';
@@ -947,7 +948,7 @@ const legacyStaticPages = [
   { path: '/services/waste-management', title: 'Вывоз и утилизация отходов в Шымкенте | ECOPROGRESS', description: 'Утилизация отходов для бизнеса в Шымкенте: вывоз, переработка, акты, закрывающие документы и экологическое сопровождение.', h1: 'Вывоз и утилизация отходов в Шымкенте', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/services/environmental-permits', title: 'Экологические разрешения | ECOPROGRESS', description: 'Разрешение на эмиссии, декларация воздействия, ОВОС, скрининг и экологические документы для бизнеса.', h1: 'Экологические разрешения', priority: 0.9, changefreq: 'weekly', type: 'service' },
   { path: '/services/ecological-support', title: 'Экологическое сопровождение бизнеса | ECOPROGRESS', description: 'Экологическое сопровождение бизнеса: аудит, документы, ПЭК, замеры, отходы, проверки и консультации.', h1: 'Экологическое сопровождение бизнеса', priority: 0.9, changefreq: 'weekly', type: 'service' },
-  { path: '/about', title: 'О компании и специалистах ECOPROGRESS', description: 'ECOPROGRESS GROUP оказывает экологические услуги для бизнеса в Казахстане: документы, лаборатория, отходы и сопровождение.', h1: 'ECOPROGRESS GROUP', faq: aboutPublicContent.faq, priority: 0.7, changefreq: 'monthly', type: 'main' },
+  { path: '/about', title: `О компании и специалистах ${COMPANY_INFO.brandName}`, description: `${COMPANY_INFO.name} оказывает экологические услуги для бизнеса в Казахстане: документы, лаборатория, отходы и сопровождение.`, h1: COMPANY_INFO.name, faq: aboutPublicContent.faq, priority: 0.7, changefreq: 'monthly', type: 'main' },
   { path: '/contacts', title: 'Контакты экологической компании ECOPROGRESS', description: 'Контакты ECOPROGRESS: телефон, WhatsApp, email, адрес и консультация по экологическим услугам в Казахстане.', h1: 'Контакты ECOPROGRESS', priority: 0.8, changefreq: 'monthly', type: 'main' },
   { path: '/news', title: 'Статьи об экологии для бизнеса | ECOPROGRESS', description: 'Статьи ECOPROGRESS об экологических документах, ПЭК, СЭС, отходах, замерах, разрешениях и проверках бизнеса.', h1: 'Статьи и новости', priority: 0.7, changefreq: 'weekly', type: 'article' },
   { path: '/cases', title: 'Подтверждённые экологические кейсы | ECOPROGRESS', description: 'Опубликованные проекты EcoProgress с проверенными исходными данными, выполненными работами, нормативной базой и результатами.', h1: 'Подтверждённые экологические кейсы', priority: 0.7, changefreq: 'weekly', type: 'main' },

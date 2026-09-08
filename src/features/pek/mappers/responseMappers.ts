@@ -51,6 +51,8 @@ const availableActionFlags = (value: unknown): Record<string, boolean> => Object
 
 export const mapProgramResponse = (value: unknown): PekProgram => {
   const source = row(validatePekContract(pekProgramContractSchema, value, 'программы ПЭК'));
+  const snapshot = row(source.facilitySnapshot);
+  const permits = Array.isArray(source.permits) ? source.permits.map(row) : [];
   const responsible = named(source.responsibleUser || source.responsible);
   const company = named(source.company) || (source.companyId == null ? null : { id: numberValue(source.companyId), name: String(source.companyName || '') });
   const object = named(source.object) || (source.objectId == null ? null : { id: numberValue(source.objectId), name: String(source.objectName || '') });
@@ -108,15 +110,19 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
       availableActions: row(source.monitoring).availableActions,
     }, numberValue(source.id)),
     documents: Array.isArray(source.documents) ? source.documents as PekProgram['documents'] : [],
-    facilityInformation: source.facilityInformation == null ? null : String(source.facilityInformation),
-    kato: source.kato == null ? null : String(source.kato),
-    bin: source.bin == null ? null : String(source.bin),
-    oked: source.oked == null ? null : String(source.oked),
-    environmentalCategory: source.environmentalCategory == null ? null : String(source.environmentalCategory),
-    designCapacity: source.designCapacity == null ? null : String(source.designCapacity),
-    actualCapacity: source.actualCapacity == null ? null : String(source.actualCapacity),
-    productionCharacteristics: source.productionCharacteristics == null ? null : String(source.productionCharacteristics),
-    permitIds: Array.isArray(source.permitIds) ? source.permitIds.map((id) => numberValue(id)).filter(Boolean) : [],
+    facilityInformation: (snapshot.facilityInformation ?? source.facilityInformation) == null ? null : String(snapshot.facilityInformation ?? source.facilityInformation),
+    kato: (snapshot.kato ?? source.kato) == null ? null : String(snapshot.kato ?? source.kato),
+    bin: (snapshot.binSnapshot ?? source.bin) == null ? null : String(snapshot.binSnapshot ?? source.bin),
+    oked: (snapshot.oked ?? source.oked) == null ? null : String(snapshot.oked ?? source.oked),
+    environmentalCategory: (snapshot.environmentalCategory ?? source.environmentalCategory) == null ? null : String(snapshot.environmentalCategory ?? source.environmentalCategory),
+    designCapacity: (snapshot.designCapacity ?? source.designCapacity) == null ? null : String(snapshot.designCapacity ?? source.designCapacity),
+    actualCapacity: (snapshot.actualCapacity ?? source.actualCapacity) == null ? null : String(snapshot.actualCapacity ?? source.actualCapacity),
+    productionCharacteristics: (snapshot.productionCharacteristics ?? source.productionCharacteristics) == null ? null : String(snapshot.productionCharacteristics ?? source.productionCharacteristics),
+    monitoringScope: (snapshot.monitoringScope ?? source.monitoringScope) == null ? null : String(snapshot.monitoringScope ?? source.monitoringScope),
+    readinessNotes: (snapshot.readinessNotes ?? source.readinessNotes) == null ? null : String(snapshot.readinessNotes ?? source.readinessNotes),
+    permitIds: Array.isArray(source.permitIds)
+      ? source.permitIds.map((id) => numberValue(id)).filter(Boolean)
+      : permits.map((permit) => numberValue(permit.id)).filter(Boolean),
   };
 };
 

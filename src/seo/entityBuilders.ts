@@ -1,4 +1,4 @@
-import { COMPANY } from '../config/companyData.ts';
+import { COMPANY_INFO as COMPANY } from '../config/companyInfo.ts';
 import type { Expert } from '../content/types.ts';
 import { normalizeArticleDates } from '../utils/articleDates.ts';
 import { canonicalForPublicPath, PUBLIC_SITE_URL } from './indexingPolicy.ts';
@@ -35,7 +35,7 @@ export const buildLocalBusinessSchema = (): SchemaEntity => ({
   parentOrganization: organizationRef(),
   address: { '@type': 'PostalAddress', streetAddress: COMPANY.address.street, addressLocality: COMPANY.address.city, addressCountry: COMPANY.address.country },
   hasMap: COMPANY.mapsUrl,
-  areaServed: { '@type': 'City', name: COMPANY.address.city }, openingHours: 'Mo-Fr 09:00-18:00',
+  areaServed: { '@type': 'City', name: COMPANY.address.city }, openingHours: COMPANY.schemaOpeningHours,
 });
 
 export const buildWebSiteSchema = (): SchemaEntity => ({

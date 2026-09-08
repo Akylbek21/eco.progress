@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
-import { History, Pencil, Plus, ShieldAlert } from 'lucide-react';
+import { Download, History, Pencil, Plus, ShieldAlert } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
@@ -20,6 +20,15 @@ import { canUsePekPermission } from '../permissions/pekAccess';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { handlePekMutationError } from '../utils/pekMutationError';
 import { retryPekQuery } from '../utils/pekQueryPolicy';
+
+const saveBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
 
 const statusLabels: Record<PekPermitStatus, string> = {
   ACTIVE: 'Действует',
@@ -42,7 +51,7 @@ type PermitEditorProps = {
   pending: boolean;
   error: string;
   onClose: () => void;
-  onSubmit: (body: PekPermitCreateRequest | PekPermitUpdateRequest) => void;
+  onSubmit: (body: PekPermitCreateRequest | PekPermitUpdateRequest, file?: File) => void;
 };
 
 const PermitEditor = ({ permit, companyId, objectId, pending, error, onClose, onSubmit }: PermitEditorProps) => {
@@ -66,9 +75,11 @@ const PermitEditor = ({ permit, companyId, objectId, pending, error, onClose, on
       authority: String(form.get('authority') || '').trim(),
       note: String(form.get('note') || '').trim() || null,
     };
+    const selected = form.get('permitFile');
+    const file = selected instanceof File && selected.size > 0 ? selected : undefined;
     onSubmit(permit
       ? { ...values, version: permit.version }
-      : { ...values, companyId, objectId });
+      : { ...values, companyId, objectId }, file);
   };
 
   return <Modal
@@ -146,9 +157,16 @@ const PekPermitsPage = () => {
   });
 
   const save = useMutation({
-    mutationFn: (body: PekPermitCreateRequest | PekPermitUpdateRequest) => editing && editing !== 'new'
-      ? pekApi.updatePermit(editing.id, body as PekPermitUpdateRequest)
-      : pekApi.createPermit(body as PekPermitCreateRequest),
+    mutationFn: async ({ body, file }: { body: PekPermitCreateRequest | PekPermitUpdateRequest; file?: File }) => {
+      const existing = editing && editing !== 'new' ? editing : null;
+      const uploaded = file
+        ? await pekApi.uploadPermitFile(companyId, file, existing || undefined)
+        : null;
+      const payload = uploaded ? { ...body, fileId: uploaded.fileId } : body;
+      return existing
+        ? pekApi.updatePermit(existing.id, payload as PekPermitUpdateRequest)
+        : pekApi.createPermit(payload as PekPermitCreateRequest);
+    },
     onSuccess: async () => {
       setEditing(null);
       setMutationError('');
@@ -177,6 +195,12 @@ const PekPermitsPage = () => {
     queryFn: ({ signal }) => pekApi.getPermitHistory(historyPermit!.id, signal),
     enabled: Boolean(historyPermit),
     retry: retryPekQuery,
+  });
+
+  const download = useMutation({
+    mutationFn: (permit: PekPermit) => pekApi.downloadPermitFile(permit.id),
+    onSuccess: ({ blob, filename }) => saveBlob(blob, filename),
+    onError: (error) => window.alert(mapPekError(error).message),
   });
 
   const requestStatus = (permit: PekPermit, status: PekPermitStatus) => {
@@ -225,6 +249,7 @@ const PekPermitsPage = () => {
                     {(permit.availableActions?.edit ?? canCreate) && <Button type="button" variant="secondary" disabled={openPermit.isPending} onClick={() => openPermit.mutate(permit.id)}><Pencil size={14} /> Изменить</Button>}
                     {(permit.availableActions?.markExpired ?? canChangePermitStatus) && <Button type="button" variant="secondary" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'EXPIRED')}><ShieldAlert size={14} /> Истёк</Button>}
                     {(permit.availableActions?.revoke ?? canChangePermitStatus) && <Button type="button" variant="danger" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'REVOKED')}><ShieldAlert size={14} /> Отозвать</Button>}
+                    {permit.fileId && <Button type="button" variant="secondary" disabled={download.isPending} onClick={() => download.mutate(permit)}><Download size={14} /> Скачать</Button>}
                     <Button type="button" variant="secondary" onClick={() => setHistoryPermit(permit)}><History size={14} /> История</Button>
                   </div></td>
                 </tr>)}</tbody>
@@ -238,7 +263,7 @@ const PekPermitsPage = () => {
       pending={save.isPending}
       error={mutationError}
       onClose={() => { if (!save.isPending) setEditing(null); }}
-      onSubmit={(body) => save.mutate(body)}
+      onSubmit={(body, file) => save.mutate({ body, file })}
     />}
 
     {historyPermit && <Modal isOpen title={`История разрешения № ${historyPermit.number}`} onClose={() => setHistoryPermit(null)}>

@@ -132,6 +132,25 @@ describe('current protocol backend contract', () => {
     expect(ifMatch).toBeNull();
   });
 
+  it('accepts the production mutation envelope with data, message and success', async () => {
+    server.use(
+      http.post('http://localhost/api/protocols/42/ready-for-approval', () => HttpResponse.json({
+        data: { ...protocol, id: '86', protocolNumber: 'VRZ-2026-0008', templateId: 'ambient_air', version: 9 },
+        message: 'Черновик обновлён',
+        success: true,
+      })),
+    );
+
+    const updated = await readyForApproval('42', { version: 8 });
+
+    expect(updated).toMatchObject({
+      id: '86',
+      protocolNumber: 'VRZ-2026-0008',
+      templateId: 'ambient_air',
+      version: 9,
+    });
+  });
+
   it('allows the ready-for-approval workflow more time than the global API timeout', async () => {
     const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { data: { ...protocol, status: 'READY_FOR_APPROVAL', version: 9 } } });
     const get = vi.spyOn(api, 'get').mockResolvedValue({ data: { data: { ...protocol, status: 'READY_FOR_APPROVAL', version: 9 } } });

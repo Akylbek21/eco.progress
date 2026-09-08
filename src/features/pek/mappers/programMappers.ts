@@ -37,32 +37,34 @@ const mapIndicators = (form: PekProgramForm) => form.indicators.map((indicator) 
   };
 });
 
-const header = (form: PekProgramForm) => ({
-  companyId: form.companyId,
-  objectId: form.objectId,
-  number: form.number.trim(),
+const facilitySnapshot = (form: PekProgramForm) => ({
+  facilityInformation: form.facilityInformation?.trim() || null,
+  kato: form.kato?.trim() || null,
+  binSnapshot: form.bin?.trim() || null,
+  oked: form.oked?.trim() || null,
+  environmentalCategory: form.environmentalCategory?.trim() || null,
+  designCapacity: form.designCapacity?.trim() || null,
+  productionCharacteristics: form.productionCharacteristics?.trim() || null,
+  actualCapacity: form.actualCapacity?.trim() || null,
+  monitoringScope: form.monitoringScope?.trim() || null,
+  readinessNotes: form.readinessNotes?.trim() || null,
+});
+
+const mutableHeader = (form: PekProgramForm) => ({
   name: form.name.trim(),
   description: form.description?.trim() || null,
   validFrom: form.validFrom,
   validUntil: form.validUntil,
   responsibleUserId: form.responsibleUserId || null,
-  regulationVersion: form.regulationVersion?.trim() || null,
-  templateVersion: form.templateVersion?.trim() || null,
-  facilityInformation: form.facilityInformation?.trim() || null,
-  kato: form.kato?.trim() || null,
-  bin: form.bin?.trim() || null,
-  oked: form.oked?.trim() || null,
-  environmentalCategory: form.environmentalCategory?.trim() || null,
-  designCapacity: form.designCapacity?.trim() || null,
-  actualCapacity: form.actualCapacity?.trim() || null,
-  productionCharacteristics: form.productionCharacteristics?.trim() || null,
-  monitoringScope: form.monitoringScope?.trim() || null,
+  facilitySnapshot: facilitySnapshot(form),
   permitIds: form.permitIds || [],
-  readinessNotes: form.readinessNotes?.trim() || null,
 });
 
 export const mapProgramCreateFormToRequest = (form: PekProgramForm): PekProgramCreateRequest => ({
-  ...header(form),
+  ...mutableHeader(form),
+  companyId: form.companyId,
+  objectId: form.objectId,
+  number: form.number.trim(),
   controlItems: mapControlItems(form.controlItems),
   indicators: mapIndicators(form),
   measures: mapMeasures(form.measures),
@@ -76,20 +78,14 @@ export const mapProgramEditFormToRequest = (
     'measures',
   ]),
 ): PekProgramUpdateRequest => ({
-  ...header(form),
-  companyId: undefined,
-  objectId: undefined,
-  number: undefined,
+  ...mutableHeader(form),
   controlItems: changedCollections.has('controlItems') ? mapControlItems(form.controlItems) : undefined,
   indicators: changedCollections.has('indicators') ? mapIndicators(form) : undefined,
   measures: changedCollections.has('measures') ? mapMeasures(form.measures) : undefined,
 });
 
 export const mapProgramAutosaveToRequest = (form: PekProgramForm): PekProgramUpdateRequest => ({
-  ...header(form),
-  companyId: undefined,
-  objectId: undefined,
-  number: undefined,
+  ...mutableHeader(form),
   // Undefined is intentional: backend treats [] as a command to clear a collection.
   controlItems: undefined,
   indicators: undefined,

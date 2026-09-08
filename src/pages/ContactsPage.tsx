@@ -28,7 +28,7 @@ const ContactsPage = () => {
         <Reveal>
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Контакты</p>
-            <h1 className="mt-3 text-4xl font-bold text-eco-900">Контакты ECOPROGRESS</h1>
+            <h1 className="mt-3 text-4xl font-bold text-eco-900">Контакты {company.brandName.toUpperCase()}</h1>
             <p className="mt-4 leading-7 text-slate-600">Свяжитесь с нами для консультации, расчета стоимости или быстрой проверки ситуации.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild><a href={company.phoneHref} onClick={() => trackPhoneClick({ placement: 'contacts_page' })}>Позвонить</a></Button>
@@ -49,7 +49,7 @@ const ContactsPage = () => {
               <a href={company.mapsUrl} target="_blank" rel="noreferrer" className="rounded-[20px] border border-eco-100 bg-eco-900 p-5 text-white shadow-sm sm:col-span-2">
                 <MapPin className="text-accent" size={24} />
                 <p className="mt-4 font-bold">Открыть карту</p>
-                <p className="mt-2 text-sm text-white/70">Откроется карта с расположением офиса ecoprogress.kz.</p>
+                <p className="mt-2 text-sm text-white/70">Откроется карта с расположением офиса {company.siteLabel}.</p>
               </a>
             </div>
           </Reveal>

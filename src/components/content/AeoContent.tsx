@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { AeoFaqItem, ServiceContent } from '../../content/types';
 import { publicContentRepository } from '../../content/apiRepository';
+import { formatRussianExperience, validExperienceYears } from '../../utils/experience';
 import { isPublishableCaseStudy } from '../../content/cases/caseStudyPolicy';
 import { isPublishableExpert } from '../../content/experts/experts';
 import { experts as snapshotExperts } from '../../content/experts/experts';
@@ -66,7 +67,9 @@ export const VerifiedExperts = ({ locale = 'ru' }: { locale?: 'ru' | 'kk' } = {}
     <h2 id="verified-experts-title" className="text-3xl font-bold text-eco-900">{locale === 'kk' ? 'Біліктілігі расталған мамандар' : 'Подтверждённые специалисты'}</h2>
     <div className="mt-6 grid gap-4 md:grid-cols-3">{experts.map((expert) => <article key={expert.id} className={card}>
       <a href={expert.profileUrl} className="text-lg font-bold text-eco-900 underline decoration-eco-200">{expert.fullName}</a>
-      <p className="mt-1 text-sm text-slate-600">{expert.position} · {locale === 'kk' ? `тәжірибесі ${expert.experienceYears} жыл` : `опыт ${expert.experienceYears} лет`}</p>
+      <p className="mt-1 text-sm text-slate-600">{expert.position}{locale === 'kk'
+        ? (validExperienceYears(expert.experienceYears) ? ` · тәжірибесі ${expert.experienceYears} жыл` : '')
+        : (formatRussianExperience(expert.experienceYears) ? ` · опыт ${formatRussianExperience(expert.experienceYears)}` : '')}</p>
       <p className="mt-3 text-sm leading-6 text-slate-600">{expert.specialization.join(' · ')}</p>
     </article>)}</div>
   </section>;

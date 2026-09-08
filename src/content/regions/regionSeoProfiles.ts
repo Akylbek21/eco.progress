@@ -5,8 +5,11 @@ import { isRegionContentIndexable } from './regionContentQuality';
 export interface RegionSeoProfile {
   slug: string;
   nominative: string;
-  prepositional: string;
   genitive: string;
+  dative: string;
+  accusative: string;
+  instrumental: string;
+  prepositional: string;
   regionName: string;
   indexed: boolean;
   industries: string[];
@@ -24,8 +27,11 @@ export const regionSeoProfiles: RegionSeoProfile[] = regions.map((name) => {
   return {
     slug: name.slug,
     nominative: name.cityNominative,
-    prepositional: name.cityPrepositional,
     genitive: name.cityGenitive,
+    dative: name.cityDative,
+    accusative: name.cityAccusative,
+    instrumental: name.cityInstrumental,
+    prepositional: name.cityPrepositional,
     regionName: name.regionNominative,
     indexed: isRegionContentIndexable(content, regionContent),
     industries: content?.industries || [],

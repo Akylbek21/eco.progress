@@ -223,6 +223,60 @@ describe('PEK backend contract', () => {
     expect(ifMatch).toBe('12');
   });
 
+  it('round-trips the backend facilitySnapshot and linked permits contract', () => {
+    const extended = {
+      ...form,
+      facilityInformation: 'Facility', kato: '711', bin: '123456789012', oked: '23.51',
+      environmentalCategory: 'II', designCapacity: '1200', actualCapacity: '870',
+      productionCharacteristics: 'Dry process', monitoringScope: 'Air and water',
+      readinessNotes: 'Ready', permitIds: [41, 42],
+      regulationVersion: 'not accepted by program mutation DTO',
+      templateVersion: 'not accepted by program mutation DTO',
+    };
+    const request = mapProgramCreateFormToRequest(extended);
+    expect(request.facilitySnapshot).toEqual({
+      facilityInformation: 'Facility', kato: '711', binSnapshot: '123456789012', oked: '23.51',
+      environmentalCategory: 'II', designCapacity: '1200', productionCharacteristics: 'Dry process',
+      actualCapacity: '870', monitoringScope: 'Air and water', readinessNotes: 'Ready',
+    });
+    expect(request.permitIds).toEqual([41, 42]);
+    expect(request).not.toHaveProperty('actualCapacity');
+    expect(request).not.toHaveProperty('regulationVersion');
+    expect(request).not.toHaveProperty('templateVersion');
+
+    const reopened = mapProgramResponse({
+      ...programResponse,
+      facilitySnapshot: request.facilitySnapshot,
+      permits: [{ id: 41 }, { id: 42 }],
+    });
+    expect(reopened).toMatchObject({
+      facilityInformation: 'Facility', bin: '123456789012', actualCapacity: '870',
+      monitoringScope: 'Air and water', readinessNotes: 'Ready', permitIds: [41, 42],
+    });
+  });
+
+  it('uploads a replacement permit file with scope and If-Match', async () => {
+    let uploadUrl = '';
+    let uploadIfMatch: string | null = null;
+    let uploadedFileName = '';
+    server.use(
+      http.post('*/api/pek/permits/files', async ({ request }) => {
+        uploadUrl = request.url;
+        uploadIfMatch = request.headers.get('If-Match');
+        const data = await request.formData();
+        uploadedFileName = (data.get('file') as File).name;
+        return HttpResponse.json({ data: { fileId: 'gridfs-42', fileName: 'permit.pdf', contentType: 'application/pdf', size: 3 } });
+      }),
+    );
+
+    const uploaded = await pekApi.uploadPermitFile(7, new File(['pdf'], 'permit.pdf', { type: 'application/pdf' }), { id: 9, version: 4 });
+    expect(uploaded.fileId).toBe('gridfs-42');
+    expect(Object.fromEntries(new URL(uploadUrl).searchParams)).toEqual({ companyId: '7', permitId: '9' });
+    expect(uploadIfMatch).toBe('4');
+    expect(uploadedFileName).toBeTruthy();
+    expect(uploaded.fileName).toBe('permit.pdf');
+  });
+
   it('deletes a program with optimistic-lock version in If-Match', async () => {
     await pekApi.deleteProgram(1, 12);
     expect(ifMatch).toBe('12');
@@ -742,12 +796,17 @@ describe('PEK backend contract', () => {
     expect(service).toContain("api.post('/pek/permits', body)");
     expect(service).toContain("api.patch(`/pek/permits/${id}`, payload, pekMutationOptions(version))");
     expect(service).toContain("api.post(`/pek/permits/${id}/status`");
+    expect(service).toContain("api.post('/pek/permits/files'");
+    expect(service).toContain("api.get<Blob>(`/pek/permits/${id}/file`");
     expect(service).not.toContain("api.delete(`/pek/permits/${id}`");
     expect(service).toContain("get<PekPermitHistoryEntry[]>(`/pek/permits/${id}/history`");
     expect(service).not.toContain('/pek/lookups/objects/${objectId}/permits');
     expect(page).toContain('permit.availableActions?.edit');
     expect(page).toContain('permit.availableActions?.markExpired');
     expect(page).toContain('permit.availableActions?.revoke');
+    expect(page).toContain('pekApi.uploadPermitFile');
+    expect(page).toContain('pekApi.downloadPermitFile');
+    expect(page).toContain('fileId: uploaded.fileId');
     expect(programForm).toContain('permit.effectivelyActive');
   });
 
@@ -769,8 +828,10 @@ describe('PEK backend contract', () => {
     expect(scope).not.toContain('getCompanyObjects');
     expect(scope).not.toContain('pekApi.getPrograms');
     expect(scope).toContain('retry: retryPekQuery');
-    expect(service).toContain('getActiveCompanies');
-    expect(service).toContain('getCompanyObjects');
+    expect(service).toContain("'/pek/scope/companies'");
+    expect(service).toContain('`/pek/scope/companies/${companyId}/objects`');
+    expect(service).not.toContain('getActiveCompanies');
+    expect(service).not.toContain('getCompanyObjects');
     expect(filters).toContain('<Autocomplete');
     expect(filters).toContain('options={scope.companies}');
     expect(filters).not.toContain('type="number"');

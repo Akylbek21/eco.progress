@@ -75,7 +75,7 @@
         "url": "https://ecoprogress.kz",
         "name": "Экологические услуги и лабораторные исследования для бизнеса в Казахстане",
         "description": "Экологические услуги и лабораторные исследования для предприятий Казахстана: проектирование, ПЭК, отходы, разрешения и сопровождение.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -84,7 +84,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/services",
@@ -558,13 +558,13 @@
     "path": "/about",
     "locale": "ru",
     "alternates": [],
-    "title": "О компании и специалистах ECOPROGRESS",
+    "title": "О компании и специалистах EcoProgress",
     "description": "ECOPROGRESS GROUP оказывает экологические услуги для бизнеса в Казахстане: документы, лаборатория, отходы и сопровождение.",
     "h1": "ECOPROGRESS GROUP",
     "canonical": "https://ecoprogress.kz/about",
     "robots": "index,follow",
     "ogType": "website",
-    "ogTitle": "О компании и специалистах ECOPROGRESS",
+    "ogTitle": "О компании и специалистах EcoProgress",
     "ogDescription": "ECOPROGRESS GROUP оказывает экологические услуги для бизнеса в Казахстане: документы, лаборатория, отходы и сопровождение.",
     "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
     "ogImageWidth": 1200,
@@ -888,7 +888,7 @@
         "url": "https://ecoprogress.kz/cases",
         "name": "Подтверждённые экологические кейсы",
         "description": "Опубликованные проекты EcoProgress с проверенными исходными данными, выполненными работами, нормативной базой и результатами.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -916,7 +916,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/experts",
@@ -18702,7 +18702,7 @@
         "url": "https://ecoprogress.kz/kk",
         "name": "Қазақстандағы бизнеске арналған экологиялық қызметтер",
         "description": "Кәсіпорындарға экологиялық жобалау, ПЭК, зертханалық зерттеулер, қалдықтар құжаттары және рұқсат алу бойынша қызмет көрсетеміз.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -18732,7 +18732,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/kk/ekologiyalyq-qyzmetter",
@@ -18810,7 +18810,7 @@
         "url": "https://ecoprogress.kz/kk/ekologiyalyq-qyzmetter",
         "name": "Кәсіпорындарға арналған экологиялық қызметтер",
         "description": "Кәсіпорындарға экологиялық құжаттар, ПЭК, шығарындылар жобалары, зертханалық өлшеулер және қалдықтар бойынша кешенді қызмет.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19121,7 +19121,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/kk/qaldyqtar-pasporty",
@@ -19199,7 +19199,7 @@
         "url": "https://ecoprogress.kz/kk/qaldyqtar-pasporty",
         "name": "Қалдықтар паспортын әзірлеу",
         "description": "Кәсіпорындарға қалдықтар паспортын әзірлеу және рәсімдеу. Қажетті деректерді анықтап, жұмыс көлемі мен құнын есептейміз.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19512,7 +19512,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/kk/services/ndv",
@@ -19590,7 +19590,7 @@
         "url": "https://ecoprogress.kz/kk/services/ndv",
         "name": "Рұқсат етілетін шығарындылар нормативтерінің жобасы",
         "description": "Стационарлық көздерді түгендеу, шығарындыларды есептеу және кәсіпорынға рұқсат етілетін шығарындылар нормативтерін әзірлеу.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19903,7 +19903,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/kk/pek-bagdarlamasy",
@@ -19981,7 +19981,7 @@
         "url": "https://ecoprogress.kz/kk/pek-bagdarlamasy",
         "name": "Өндірістік экологиялық бақылау бағдарламасын әзірлеу",
         "description": "Кәсіпорынға ПЭК бағдарламасын әзірлеу: бақылау нысандары, мониторинг нүктелері, көрсеткіштер, әдістер және кезеңділік.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -20294,7 +20294,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/kk/pek-esebi",
@@ -20372,7 +20372,7 @@
         "url": "https://ecoprogress.kz/kk/pek-esebi",
         "name": "Өндірістік экологиялық бақылау есебін дайындау",
         "description": "ПЭК бағдарламасы, зертханалық хаттамалар және кезеңнің өндірістік деректері негізінде ресми ПЭК есебін дайындау.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -20685,7 +20685,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/kk/ekologiyalyq-ruqsat",
@@ -20763,7 +20763,7 @@
         "url": "https://ecoprogress.kz/kk/ekologiyalyq-ruqsat",
         "name": "Әсер етуге экологиялық рұқсат алу",
         "description": "Нысан санатын және жобалық негіздерді тексеріп, әсер етуге экологиялық рұқсат алу үшін материалдарды дайындаймыз.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21084,7 +21084,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/kk/sanitariyalyq-qorgau-aimagy",
@@ -21162,7 +21162,7 @@
         "url": "https://ecoprogress.kz/kk/sanitariyalyq-qorgau-aimagy",
         "name": "Санитариялық-қорғау аймағының жобасын әзірлеу",
         "description": "Шығарындылар, шу және нысанның нақты жоспарлануы бойынша санитариялық-қорғау аймағының жобасын әзірлеу.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21475,7 +21475,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/kk/zerthanalyq-zertteuler",
@@ -21553,7 +21553,7 @@
         "url": "https://ecoprogress.kz/kk/zerthanalyq-zertteuler",
         "name": "Экологиялық зертханалық зерттеулер",
         "description": "Ауа, су, топырақ, шу және өндірістік факторлар бойынша зертханалық зерттеулер: бағдарлама, сынама алу және хаттамалар.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21864,7 +21864,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/kk/su-analizi",
@@ -21942,7 +21942,7 @@
         "url": "https://ecoprogress.kz/kk/su-analizi",
         "name": "Суға зертханалық анализ жасау",
         "description": "Ауыз су, табиғи немесе сарқынды суға зертханалық анализ: көрсеткіштерді таңдау, сынама алу және зерттеу хаттамасы.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -22263,7 +22263,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/kk/qaldyqtardy-kadege-zharatu",
@@ -22341,7 +22341,7 @@
         "url": "https://ecoprogress.kz/kk/qaldyqtardy-kadege-zharatu",
         "name": "Қалдықтарды кәдеге жарату",
         "description": "Өндірістік қалдықтарды тексеру, рұқсат етілген операцияны келісу және қабылдау мен кәдеге жаратуды растайтын құжаттар.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -22654,7 +22654,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/kk/pek-bagdarlamasy-shymkent",
@@ -22732,7 +22732,7 @@
         "url": "https://ecoprogress.kz/kk/pek-bagdarlamasy-shymkent",
         "name": "Шымкенттегі ПЭК бағдарламасын әзірлеу",
         "description": "Шымкент кәсіпорындарына ПЭК бағдарламасын әзірлеу: нысандар, мониторинг нүктелері, көрсеткіштер, әдістер және бақылау кестесі.",
-        "dateModified": "2026-09-02",
+        "dateModified": "2026-09-03",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -23045,7 +23045,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/news/ekologicheskie-dokumenty-too-kazakhstan",
@@ -24836,7 +24836,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/experts/bektibaeva-ryskul-maratovna",
@@ -24959,7 +24959,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/experts/duisenbai-ruslan-serikbaiuly",
@@ -25092,7 +25092,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/experts/manap-akerke-maratkyzy",
@@ -25215,7 +25215,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/experts/omirbaeva-aigerim-kazybekkyzy",
@@ -25338,7 +25338,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/experts/seitkarym-akerke-erbolovna",
@@ -25461,7 +25461,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/experts/seitkarym-akerke-erbolkyzy",
@@ -25584,7 +25584,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   },
   {
     "path": "/experts/makhanova-kamilla-maratovna",
@@ -25707,6 +25707,6 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-02"
+    "lastModified": "2026-09-03"
   }
 ]

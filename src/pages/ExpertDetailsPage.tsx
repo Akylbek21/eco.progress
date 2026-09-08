@@ -10,14 +10,14 @@ import { buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema } from 
 const ExpertDetailsPage = () => {
   const { id = '' } = useParams();
   const expert = expertProfileMap.get(`/experts/${id}`) ?? expertMap.get(id);
-  if (!isExpertWithCredentials(expert)) return <main className="px-5 py-20 text-center"><SEO title="Эксперт не найден | ECOPROGRESS" description="Публичный подтверждённый профиль не найден." robots="noindex,follow" /><h1 className="text-3xl font-bold text-eco-900">Эксперт не найден</h1></main>;
+  if (!isExpertWithCredentials(expert)) return <main className="px-5 py-20 text-center"><SEO title={`Эксперт не найден | ${company.brandName.toUpperCase()}`} description="Публичный подтверждённый профиль не найден." robots="noindex,follow" /><h1 className="text-3xl font-bold text-eco-900">Эксперт не найден</h1></main>;
 
   const canonical = `${company.siteUrl}${expert.profileUrl}`;
   const reviewedArticles = articleContent.filter((article) => article.reviewerSlug === expert.id && isArticleApproved(article));
   const relatedCases = publishedCaseStudies.filter((item) => item.expert.id === expert.id || item.reviewer?.id === expert.id);
   const description = `${expert.fullName}: подтверждённое обучение и компетенции — ${expert.specialization.join(', ')}.`;
   return <main className="bg-eco-50">
-    <SEO title={`${expert.fullName} — эксперт ECOPROGRESS`} description={description} canonical={canonical} schema={[
+    <SEO title={`${expert.fullName} — эксперт ${company.brandName.toUpperCase()}`} description={description} canonical={canonical} schema={[
       ...buildCorePageEntities({ canonical, name: expert.fullName, description }),
       buildPersonSchema(expert, `${canonical}#person`),
       buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Эксперты', url: `${company.siteUrl}/experts` }, { name: expert.fullName, url: canonical }]),

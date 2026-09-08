@@ -116,12 +116,20 @@ export type PekPermitCreateRequest = {
   validFrom: string;
   validTo: string;
   authority?: string | null;
+  fileId?: string | null;
   note?: string | null;
+  pekProgramId?: PekId | null;
 };
 export type PekPermitUpdateRequest = Partial<Omit<PekPermitCreateRequest, 'companyId' | 'objectId'>> & {
   version: number;
 };
 export type PekPermitStatusRequest = { version: number; status: PekPermitStatus; comment: string };
+export type PekPermitFileUploadResponse = {
+  fileId: string;
+  fileName: string;
+  contentType: string;
+  size: number;
+};
 export type PekPermitHistoryEntry = {
   fromStatus: PekPermitStatus | null;
   toStatus: PekPermitStatus;
@@ -363,7 +371,34 @@ export type PekProgramHeaderFields = {
   permitIds?: PekId[];
   readinessNotes?: string | null;
 };
-export type PekProgramCreateRequest = PekProgramHeaderFields & {
+
+export type PekFacilitySnapshotDto = {
+  facilityInformation: string | null;
+  kato: string | null;
+  binSnapshot: string | null;
+  oked: string | null;
+  environmentalCategory: string | null;
+  designCapacity: string | null;
+  productionCharacteristics: string | null;
+  actualCapacity: string | null;
+  monitoringScope: string | null;
+  readinessNotes: string | null;
+};
+
+type PekProgramMutationFields = {
+  name: string;
+  description?: string | null;
+  validFrom: string;
+  validUntil: string;
+  responsibleUserId?: number | null;
+  facilitySnapshot: PekFacilitySnapshotDto;
+  permitIds?: PekId[] | null;
+};
+
+export type PekProgramCreateRequest = PekProgramMutationFields & {
+  companyId: number;
+  objectId: number;
+  number: string;
   controlItems: Omit<PekControlItem, 'clientId'>[];
   indicators: Omit<PekIndicator, 'clientId' | 'controlItemClientId'>[];
   measures: Omit<PekMeasure, 'clientId'>[];
@@ -374,7 +409,7 @@ export type PekProgramCloneRequest = {
   validFrom?: string;
   validUntil?: string;
 };
-export type PekProgramUpdateRequest = Partial<PekProgramHeaderFields> & {
+export type PekProgramUpdateRequest = Partial<PekProgramMutationFields> & {
   controlItems?: Omit<PekControlItem, 'clientId'>[] | null;
   indicators?: Omit<PekIndicator, 'clientId' | 'controlItemClientId'>[] | null;
   measures?: Omit<PekMeasure, 'clientId'>[] | null;

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>География наших проектов — Eco Progress</title>
+  <link rel="icon" href="/favicon.png">
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/controls/OrbitControls.js":"./vendor/OrbitControls.js"}}</script>
+  <script type="module" src="./script.js"></script>
+</head>
+<body>
+  <section class="geography" aria-labelledby="geography-title">
+    <div class="ambient ambient-one" aria-hidden="true"></div><div class="ambient ambient-two" aria-hidden="true"></div>
+    <header><div><p class="eyebrow"><span></span> ECO PROGRESS <i></i> ГЕОГРАФИЯ ПРИСУТСТВИЯ</p><h2 id="geography-title">География наших<br><em>проектов</em><span class="period">.</span></h2><p class="subtitle">Реализуем проекты по всему Казахстану</p></div><div class="header-note"><span class="note-icon" aria-hidden="true">↗</span><p>Единая экспертиза.<br><strong>Масштаб всей страны.</strong></p><span class="note-line"></span><small>Проектируем устойчивое будущее</small></div></header>
+    <div class="stage" aria-label="Интерактивная карта Казахстана">
+      <div class="map-word" aria-hidden="true">KAZAKHSTAN</div><div class="map-grid" aria-hidden="true"></div><div class="map-glow" aria-hidden="true"></div><div class="ground-orbit orbit-one" aria-hidden="true"></div><div class="ground-orbit orbit-two" aria-hidden="true"></div><div id="canvas-host"></div><div id="labels"></div>
+      <p id="map-message" role="status">Загружаем карту Казахстана…</p>
+      <div class="compass" aria-hidden="true">N<span>↑</span></div>
+      <div class="map-caption"><span class="live-dot"></span> СЕТЬ ПРОЕКТОВ <span class="caption-detail">Единые стандарты в каждом регионе</span></div>
+      <div class="controls"><span class="control-hint">Исследуйте карту</span><button id="zoom-in" aria-label="Приблизить карту">+</button><button id="zoom-out" aria-label="Отдалить карту">−</button><button id="reset" aria-label="Сбросить ракурс">↺</button></div>
+      <aside id="city-card" class="city-card" aria-labelledby="city-title" hidden>
+        <button id="close-card" class="close" aria-label="Закрыть карточку">×</button>
+        <img id="city-image" alt="" width="480" height="240">
+        <div class="card-body"><span id="city-status" class="status"></span><h3 id="city-title"></h3><p id="city-description"></p><div class="card-count"><strong id="city-count"></strong><span>проектов</span></div><a href="/cases" target="_top">Посмотреть проекты <span aria-hidden="true">↗</span></a></div>
+      </aside>
+    </div>
+    <footer><div class="statistics"><div><span class="stat-index">01 / ПРИСУТСТВИЕ</span><strong><b data-count="8">8</b><span>+</span></strong><span>городов Казахстана</span></div><div><span class="stat-index">02 / ОПЫТ</span><strong><b data-count="25">25</b><span>+</span></strong><span>реализованных проектов</span></div><div><span class="stat-index">03 / МАСШТАБ</span><strong><b data-count="17">17</b></strong><span>регионов страны</span></div></div><div class="choose"><label for="city-select">Ваш город. Наш опыт. <span>↗</span></label><select id="city-select" aria-label="Выберите город"><option value="">Выберите город</option></select><p>Выберите точку на карте или город в списке</p></div></footer>
+    <noscript><p>Для интерактивной карты включите JavaScript. Работаем по Казахстану. <a href="/cases" target="_top">Посмотреть проекты</a></p></noscript>
+  </section>
+</body>
+</html>

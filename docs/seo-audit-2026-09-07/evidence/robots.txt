@@ -1,0 +1,31 @@
+User-agent: *
+Allow: /
+Allow: /services/
+Allow: /news/
+Allow: /about
+Allow: /cases
+
+# City landing pages are root-level public URLs and are covered by Allow: /.
+
+Disallow: /cabinet
+Disallow: /cabinet/
+Disallow: /client
+Disallow: /client/
+Disallow: /staff
+Disallow: /staff/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /reset-password
+Disallow: /dashboard
+Disallow: /internal
+Disallow: /internal/
+Disallow: /api
+Disallow: /api/
+Disallow: /document-flow
+Disallow: /sign
+Disallow: /public/document-flow/sign
+
+Sitemap: https://ecoprogress.kz/sitemap.xml
+Host: ecoprogress.kz

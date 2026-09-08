@@ -23,7 +23,7 @@ import SEO from '../components/SEO';
 import LeadForm from '../components/LeadForm';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { pageHeroImages } from '../data/pageHeroImages';
-import { getWhatsAppUrl } from '../config/company';
+import { company, getWhatsAppUrl } from '../config/company';
 import { trackWhatsAppClick } from '../services/analytics';
 
 const OrderChoiceModal = lazy(() => import('../components/OrderChoiceModal'));
@@ -227,7 +227,7 @@ const AboutPage = () => {
       <div className="mx-auto w-full max-w-7xl [text-shadow:0_2px_18px_rgba(2,28,57,0.72)]">
         <Reveal>
           <h1 className="max-w-5xl text-4xl font-bold leading-[1.08] sm:text-6xl lg:text-7xl">
-            ecoprogress.kz — экологические решения для бизнеса
+            {company.siteLabel} — экологические решения для бизнеса
           </h1>
         </Reveal>
         <Reveal delay={0.08}>
@@ -326,7 +326,7 @@ const AboutPage = () => {
 
     <section className="bg-white px-4 py-16 sm:px-8 sm:py-20">
       <div className="mx-auto max-w-7xl">
-        <SectionIntro eyebrow="Группа компаний" title="Группа компаний ecoprogress.kz" text="В группу входят компании и направления, которые закрывают разные экологические задачи бизнеса: проектирование, лаборатория, транспортировка отходов, утилизация и полигон." />
+        <SectionIntro eyebrow="Группа компаний" title={`Группа компаний ${company.siteLabel}`} text="В группу входят компании и направления, которые закрывают разные экологические задачи бизнеса: проектирование, лаборатория, транспортировка отходов, утилизация и полигон." />
         <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {companies.map(({ title, text, logo }, index) => (
             <Reveal key={title} delay={index * 0.04}>
@@ -421,7 +421,7 @@ const AboutPage = () => {
 
     <section className="bg-white px-4 py-16 sm:px-8 sm:py-20">
       <div className="mx-auto max-w-7xl space-y-12">
-        <SectionIntro eyebrow="Практическая информация" title="Как ECOPROGRESS помогает бизнесу" text="Состав услуги определяется по фактическому объекту и подтвержденным исходным данным." />
+        <SectionIntro eyebrow="Практическая информация" title={`Как ${company.brandName.toUpperCase()} помогает бизнесу`} text="Состав услуги определяется по фактическому объекту и подтвержденным исходным данным." />
         <div className="grid gap-6 lg:grid-cols-2">
           <AboutTextList title="Кому нужны услуги" items={aboutPublicContent.audience} />
           <AboutTextList title="Что входит в работу" items={aboutPublicContent.included} />
@@ -443,7 +443,7 @@ const AboutPage = () => {
         <Reveal direction="right">
           <div>
             <h2 className="text-3xl font-bold sm:text-4xl">Нужна помощь с экологическими документами или отходами?</h2>
-            <p className="mt-4 max-w-xl leading-7 text-slate-600">Оставьте заявку — специалист ecoprogress.kz свяжется с вами, уточнит задачу и подскажет оптимальное решение.</p>
+            <p className="mt-4 max-w-xl leading-7 text-slate-600">Оставьте заявку — специалист {company.siteLabel} свяжется с вами, уточнит задачу и подскажет оптимальное решение.</p>
             <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap">
               <Button asChild className="w-full sm:w-auto"><a href="#lead-form">Получить консультацию эколога</a></Button>
               <a href={getWhatsAppUrl()} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ placement: 'about_bottom' })} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-eco-200 bg-white px-5 py-3 text-sm font-semibold text-eco-900 shadow-sm hover:bg-eco-50 sm:w-auto">

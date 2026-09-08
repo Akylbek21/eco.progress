@@ -464,18 +464,21 @@ test('Kazakh SEO pages use Kazakh source metadata and official Kazakh links', ()
 });
 
 test('public NAP has one Shymkent address and schema reads the same source', async () => {
-  const [companyData, companyConfig, entityBuilders, servicesPage] = await Promise.all([
+  const [companyInfo, companyData, companyConfig, entityBuilders, servicesPage] = await Promise.all([
+    readFile(new URL('../src/config/companyInfo.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/config/companyData.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/config/company.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/seo/entityBuilders.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/ServicesPage.tsx', import.meta.url), 'utf8'),
   ]);
-  assert.match(companyData, /city: 'Шымкент'/u);
-  assert.match(companyData, /street: .*'мкр Восток, 66'/u);
-  assert.match(companyData, /mapsUrl: 'https:\/\/2gis\.kz\/shymkent\/geo\/22659371323797193'/u);
+  assert.match(companyInfo, /city: 'Шымкент'/u);
+  assert.match(companyInfo, /street: .*'мкр Восток, 66'/u);
+  assert.match(companyInfo, /mapsUrl: 'https:\/\/2gis\.kz\/shymkent\/geo\/22659371323797193'/u);
+  assert.match(companyData, /from '.\/companyInfo'/u);
   assert.match(companyConfig, /address: `г\. \$\{COMPANY\.address\.city\}, \$\{COMPANY\.address\.street\}`/u);
   assert.match(entityBuilders, /streetAddress: COMPANY\.address\.street/u);
-  assert.doesNotMatch([companyData, companyConfig, entityBuilders].join('\n'), /Алимбетова|199\/2/iu);
-  assert.doesNotMatch(companyData, /firm\/70000001113587757/u);
+  assert.match(entityBuilders, /openingHours: COMPANY\.schemaOpeningHours/u);
+  assert.doesNotMatch([companyInfo, companyData, companyConfig, entityBuilders].join('\n'), /Алимбетова|199\/2/iu);
+  assert.doesNotMatch(companyInfo, /firm\/70000001113587757/u);
   assert.doesNotMatch(servicesPage, /Исполнитель:|getBusinessCompanyById/u);
 });

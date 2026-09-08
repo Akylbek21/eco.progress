@@ -45,9 +45,11 @@ export type PekUiError = {
 };
 
 const VERSION_CONFLICT_CODES = new Set(['VERSION_CONFLICT', 'PEK_VERSION_CONFLICT', 'PEK_PERMIT_VERSION_CONFLICT', 'OPTIMISTIC_LOCK_CONFLICT']);
+const isVersionConflictCode = (code?: string) =>
+  Boolean(code && (VERSION_CONFLICT_CODES.has(code) || code.endsWith('_VERSION_CONFLICT')));
 
 export const isPekVersionConflict = (error: Pick<PekUiError, 'code' | 'status'>) =>
-  VERSION_CONFLICT_CODES.has(error.code || '') || error.status === 412;
+  isVersionConflictCode(error.code) || error.status === 412;
 
 export const isPekVersionRequired = (error: Pick<PekUiError, 'code'>) => error.code === 'VERSION_REQUIRED';
 
@@ -68,7 +70,7 @@ export const mapPekError = (error: unknown): PekUiError => {
   const nestedDetails = details.details && typeof details.details === 'object' ? details.details as Record<string, unknown> : {};
   const missingFields = Array.isArray(details.missingFields) ? details.missingFields : Array.isArray(nestedDetails.missingFields) ? nestedDetails.missingFields : [];
   const status = parsed.status;
-  const versionConflict = VERSION_CONFLICT_CODES.has(parsed.code || '') || status === 412;
+  const versionConflict = isVersionConflictCode(parsed.code) || status === 412;
   const conflictMessage = versionConflict
     ? 'Данные были изменены другим сотрудником.\nОбновите страницу и повторите действие.'
     : undefined;

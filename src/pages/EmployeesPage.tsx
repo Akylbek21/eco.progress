@@ -8,15 +8,16 @@ const EmployeesPage = () => {
   const { pathname } = useLocation();
   const employeeView = pathname === '/employees';
   const canonical = `${company.siteUrl}/experts`;
-  const description = 'Подтверждённые специалисты ECOPROGRESS и сведения об их обучении и профессиональных компетенциях.';
+  const publicName = company.brandName.toUpperCase();
+  const description = `Подтверждённые специалисты ${publicName} и сведения об их обучении и профессиональных компетенциях.`;
   return <main className="bg-eco-50">
-    <SEO title={employeeView ? 'Сотрудники ECOPROGRESS' : 'Сотрудники и эксперты ECOPROGRESS'} description={description} canonical={canonical} robots={employeeView ? 'noindex,follow' : 'index,follow'} schema={[
-      ...buildCorePageEntities({ canonical, name: 'Сотрудники и эксперты ECOPROGRESS', description }),
+    <SEO title={employeeView ? `Сотрудники ${publicName}` : `Сотрудники и эксперты ${publicName}`} description={description} canonical={canonical} robots={employeeView ? 'noindex,follow' : 'index,follow'} schema={[
+      ...buildCorePageEntities({ canonical, name: `Сотрудники и эксперты ${publicName}`, description }),
       ...experts.map((expert) => buildPersonSchema(expert, `${company.siteUrl}${expert.profileUrl}#person`)),
       buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Эксперты', url: canonical }]),
     ]} />
     <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
-      <h1 className="text-4xl font-bold text-eco-900 sm:text-5xl">{employeeView ? 'Сотрудники ECOPROGRESS' : 'Сотрудники и эксперты ECOPROGRESS'}</h1>
+      <h1 className="text-4xl font-bold text-eco-900 sm:text-5xl">{employeeView ? `Сотрудники ${publicName}` : `Сотрудники и эксперты ${publicName}`}</h1>
       <p className="mt-4 max-w-3xl text-slate-600">В реестр включены только опубликованные специалисты с подтверждёнными сведениями об обучении или компетенции.</p>
       <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {experts.map((expert) => <article key={expert.id} className="rounded-[22px] border border-slate-200 bg-white p-6 shadow-sm">

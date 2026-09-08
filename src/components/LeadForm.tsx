@@ -6,6 +6,7 @@ import { getLeadAttribution, trackContentEvent, trackEvent, trackLeadSubmit, tra
 import { useToast } from '../hooks/useToast';
 import { createWhatsAppLeadMessage, createWhatsAppUrl } from '../utils/whatsapp';
 import { activeServices, normalizeServiceSlug } from '../content/serviceCatalog';
+import { company } from '../config/company';
 
 type LeadFormProps = {
   source?: string;
@@ -168,7 +169,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
       className={containerClassName}
     >
       <h2 className={`text-2xl font-bold ${isBlue ? 'border-l-2 border-accent/80 pl-4 text-white' : 'text-eco-900'}`}>{title}</h2>
-      {!compact && <p className={`mt-3 text-sm leading-6 ${isBlue ? 'text-white/72' : 'text-slate-600'}`}>{isKk ? 'Байланыс деректерін қалдырыңыз. EcoProgress маманы келесі қадамды түсіндіреді.' : 'Оставьте контакты. Специалист ecoprogress.kz свяжется с вами и подскажет следующий шаг.'}</p>}
+      {!compact && <p className={`mt-3 text-sm leading-6 ${isBlue ? 'text-white/72' : 'text-slate-600'}`}>{isKk ? `Байланыс деректерін қалдырыңыз. ${company.brandName} маманы келесі қадамды түсіндіреді.` : `Оставьте контакты. Специалист ${company.siteLabel} свяжется с вами и подскажет следующий шаг.`}</p>}
       <div className="mt-6 grid gap-4">
         <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
           <span>Телефон / WhatsApp *</span>

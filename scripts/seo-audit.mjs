@@ -292,7 +292,11 @@ const contactOrganization = registry.find((entry) => entry.path === '/contacts')
   const type = item['@type'];
   return type === 'Organization' || (Array.isArray(type) && type.includes('Organization'));
 });
-for (const expected of [contactOrganization?.telephone, contactOrganization?.email, contactOrganization?.address?.streetAddress, 'Пн-Пт, 09:00-18:00'].filter(Boolean)) {
+const contactLocalBusiness = registry.find((entry) => entry.path === '/contacts')?.schema.find((item) => {
+  const type = item['@type'];
+  return type === 'LocalBusiness' || (Array.isArray(type) && type.includes('LocalBusiness'));
+});
+for (const expected of [contactOrganization?.telephone, contactOrganization?.email, contactOrganization?.address?.streetAddress, contactLocalBusiness?.openingHours].filter(Boolean)) {
   if (!contactsHtml.includes(expected)) errors.push(`Contacts prerender missing real contact field: ${expected}`);
 }
 if (/Основные услуги[\s\S]*Города Казахстана/.test(contactsHtml)) errors.push('Contacts prerender still contains the generic static-page template');

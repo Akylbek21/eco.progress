@@ -54,7 +54,7 @@ const kkAccountMenuItems = [
 const socialLinks = [
   { label: 'TikTok', href: company.tiktokUrl, Icon: FaTiktok },
   { label: 'Instagram', href: company.instagramUrl, Icon: FaInstagram },
-  { label: 'Telegram', href: 'https://t.me/ecoprogress_group', Icon: FaTelegramPlane },
+  { label: 'Telegram', href: company.telegramUrl, Icon: FaTelegramPlane },
 ];
 
 const privateRuntimePrefixes = ['/login', '/register', '/staff', '/cabinet', '/client', '/admin', '/dashboard'];
@@ -84,9 +84,9 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
     <div className="min-h-screen bg-[#F7FBFD] text-slate-900">
       <header className={`sticky top-0 z-40 border-b border-slate-200/70 bg-[#F8FCFE]/94 text-eco-900 backdrop-blur-2xl transition-all duration-300 before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-gradient-to-r before:from-transparent before:via-accent/80 before:to-transparent ${scrolled ? 'shadow-[0_12px_35px_-20px_rgba(2,28,57,0.4)]' : 'shadow-[0_1px_0_rgba(2,28,57,0.03)]'}`}>
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
-          <Link to={isKk ? '/kk' : '/'} className="group inline-flex shrink-0 items-center text-eco-900" aria-label={isKk ? 'ecoprogress.kz — басты бет' : 'ecoprogress.kz — главная'}>
+          <Link to={isKk ? '/kk' : '/'} className="group inline-flex shrink-0 items-center text-eco-900" aria-label={`${company.siteLabel} — ${isKk ? 'басты бет' : 'главная'}`}>
             <span className="whitespace-nowrap text-[19px] font-extrabold leading-none tracking-[-0.035em]">
-              eco<span className="text-eco-500">progress</span><span className="text-[14px] font-bold text-slate-500">.kz</span>
+              {company.siteLabel}
             </span>
           </Link>
           <nav aria-label={isKk ? 'Негізгі навигация' : 'Основная навигация'} className="hidden items-center gap-1 rounded-full border border-slate-200/80 bg-white/80 p-1.5 shadow-[0_8px_24px_-18px_rgba(2,28,57,0.5)] xl:flex">
@@ -245,7 +245,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
           <div className="grid gap-10 lg:grid-cols-[1.3fr_0.8fr_1fr_1fr]">
             <div>
               <h3 className="text-2xl font-bold leading-tight">
-                ecoprogress.kz
+                {company.siteLabel}
               </h3>
               <p className="mt-4 max-w-md text-sm leading-6 text-white/75">
                 {isKk ? 'Қазақстан бойынша экологиялық құжаттар мен зертханалық зерттеулер. Қалдықтарды кәдеге жарату — Шымкент, Тараз және Түркістан; шығару — Шымкент.' : 'Экологические документы и лаборатория по Казахстану. Утилизация отходов — Шымкент, Тараз и Туркестан; вывоз — Шымкент.'}
@@ -300,7 +300,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               </div>
             </div>
           </div>
-          <div className="mt-12 border-t border-white/15 pt-6 text-sm text-white/60">2026 ecoprogress.kz. {isKk ? 'Барлық құқықтар қорғалған.' : 'Все права защищены.'}</div>
+          <div className="mt-12 border-t border-white/15 pt-6 text-sm text-white/60">2026 {company.siteLabel}. {isKk ? 'Барлық құқықтар қорғалған.' : 'Все права защищены.'}</div>
         </div>
       </footer>
     </div>

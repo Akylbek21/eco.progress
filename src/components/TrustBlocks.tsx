@@ -2,6 +2,7 @@ import { Award, Beaker, Building2, ClipboardCheck, FileCheck2, FolderCheck, Recy
 import { useQuery } from '@tanstack/react-query';
 import { trustDocuments } from '../content/trust-documents/trustDocuments';
 import { publicContentRepository } from '../content/apiRepository';
+import { company } from '../config/company';
 
 const reasons = [
   ['Работаем с юридическими лицами и ИП', Building2],
@@ -13,7 +14,7 @@ const reasons = [
   ['Все этапы можно контролировать в личном кабинете', ClipboardCheck],
 ] as const;
 
-export const TrustSection = () => <section id="trust" className="bg-[#F7FBFD] px-4 py-16 sm:px-8 sm:py-20"><div className="mx-auto max-w-7xl"><div className="max-w-3xl"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Доверие</p><h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Почему выбирают ecoprogress.kz</h2></div><div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">{reasons.map(([title, Icon]) => <div key={title} className="rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm"><Icon className="text-eco-600" size={24} /><p className="mt-4 text-sm font-bold leading-6 text-eco-900">{title}</p></div>)}</div></div></section>;
+export const TrustSection = () => <section id="trust" className="bg-[#F7FBFD] px-4 py-16 sm:px-8 sm:py-20"><div className="mx-auto max-w-7xl"><div className="max-w-3xl"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">Доверие</p><h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">Почему выбирают {company.siteLabel}</h2></div><div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">{reasons.map(([title, Icon]) => <div key={title} className="rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm"><Icon className="text-eco-600" size={24} /><p className="mt-4 text-sm font-bold leading-6 text-eco-900">{title}</p></div>)}</div></div></section>;
 
 export const DocumentsSection = () => {
   const { data: documents = [], isError } = useQuery({

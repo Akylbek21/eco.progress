@@ -45,3 +45,13 @@ test('company restore operations and current backend object count are canonical'
   assert.match(service, /source\.objectsCount \?\? source\.objectCount/);
   assert.doesNotMatch(service, /facilityCount/);
 });
+
+test('orders use linked protocols and the backend completion decision', async () => {
+  const page = await read('src/pages/StaffPages.tsx');
+  const adapter = await read('src/services/backendAdapters.ts');
+  assert.match(page, /order\.linkedProtocol/);
+  assert.match(page, /order\.canComplete === true/);
+  assert.match(page, /order\.blockingReasons/);
+  assert.doesNotMatch(page, /updateLaboratoryStatus\(order\.id, 'result_ready'/);
+  assert.match(adapter, /linkedProtocol:/);
+});

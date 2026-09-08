@@ -7,6 +7,7 @@ import WhatsAppButton from '../components/WhatsAppButton';
 import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
+import ProjectGeography from '../components/home/ProjectGeography';
 import { company } from '../config/company';
 import { featuredSeoLinks } from '../data/featuredSeoLinks';
 import { trackEvent } from '../services/analytics';
@@ -182,9 +183,9 @@ const HomePage = () => (
         <Reveal direction="right" className="lg:pl-2">
           <div className="max-w-xl">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-eco-500">О компании</p>
-            <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">ecoprogress.kz — комплексные экологические решения</h2>
+            <h2 className="mt-3 text-3xl font-bold text-eco-900 sm:text-4xl">{company.siteLabel} — комплексные экологические решения</h2>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
-              ecoprogress.kz помогает бизнесу с проектированием, лабораторными исследованиями и сопровождением по Казахстану. Утилизация отходов доступна в Шымкенте, Таразе и Туркестане; вывоз — в Шымкенте.
+              {company.siteLabel} помогает бизнесу с проектированием, лабораторными исследованиями и сопровождением по Казахстану. Утилизация отходов доступна в Шымкенте, Таразе и Туркестане; вывоз — в Шымкенте.
             </p>
             <Button asChild className="mt-7"><Link to="/about">Подробнее о компании</Link></Button>
           </div>
@@ -289,6 +290,7 @@ const HomePage = () => (
       </div>
     </section>
 
+    <ProjectGeography />
     <DeferredSection minHeight={560}><Suspense fallback={null}><HomeTrustSections /></Suspense></DeferredSection>
     <DeferredSection minHeight={420}><Suspense fallback={null}><HomeCaseStudies /></Suspense></DeferredSection>
 

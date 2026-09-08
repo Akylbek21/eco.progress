@@ -15,6 +15,10 @@ for (const requiredPath of [templatePath, serverEntryPath, registryPath]) {
 const { renderPublicApp } = await import(pathToFileURL(serverEntryPath).href);
 const rawTemplate = fs.readFileSync(templatePath, 'utf8');
 const seoRegistry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+const publicOrganization = seoRegistry
+  .flatMap((entry) => entry.schema || [])
+  .find((entity) => entity['@type'] === 'Organization');
+if (!publicOrganization?.name) throw new Error('SEO registry does not contain the public Organization name');
 
 const rootStart = rawTemplate.indexOf('<div id="root"');
 const bodyEnd = rawTemplate.lastIndexOf('</body>');
@@ -65,7 +69,7 @@ const renderHeadBlock = (entry) => {
     `<meta name="robots" content="${escapeHtml(entry.robots)}" />`,
     `<link rel="canonical" href="${escapeHtml(entry.canonical)}" />`,
     ...(entry.alternates || []).map((alternate) => `<link rel="alternate" hreflang="${escapeHtml(alternate.locale)}" href="${escapeHtml(alternate.url)}" data-ecoprogress-hreflang="true" />`),
-    '<meta property="og:site_name" content="ECOPROGRESS GROUP" />',
+    `<meta property="og:site_name" content="${escapeHtml(publicOrganization.name)}" />`,
     `<meta property="og:type" content="${escapeHtml(type)}" />`,
     `<meta property="og:title" content="${escapeHtml(entry.ogTitle || entry.title)}" />`,
     `<meta property="og:description" content="${escapeHtml(entry.ogDescription || entry.description)}" />`,

@@ -946,7 +946,7 @@ const isProtocolLike = (value: unknown) => {
 };
 
 const protocolFromActionResponse = async (_protocolId: string, response: unknown): Promise<Protocol> =>
-  requireProtocol(response, 'mutation');
+  requireProtocol(unwrapData(response), 'mutation');
 
 const requireProtocol = (input: unknown, action: string): Protocol => {
   const direct = asRecord(input);

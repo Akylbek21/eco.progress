@@ -203,12 +203,16 @@ export const parseApiError = (error: unknown, fallback = 'Не удалось в
   const backendMessage = response?.message ?? nested?.message ?? response?.error ?? nested?.error;
   const message = safeBackendMessage(backendMessage)
     || (status && statusMessages[status] ? statusMessages[status] : fallback);
+  const rawCurrentVersion = response?.currentVersion ?? nested?.currentVersion ?? explicitFields?.currentVersion;
+  const currentVersion = rawCurrentVersion === null || rawCurrentVersion === undefined || rawCurrentVersion === ''
+    ? undefined
+    : Number(rawCurrentVersion);
   return {
     message,
     code: typeof codeValue === 'string' ? codeValue.trim().toUpperCase() : undefined,
     fieldErrors: Object.keys(fieldErrors).length ? fieldErrors : undefined,
     status,
-    currentVersion: Number(response?.currentVersion ?? nested?.currentVersion) || undefined,
+    currentVersion: Number.isFinite(currentVersion) ? currentVersion : undefined,
   };
 };
 

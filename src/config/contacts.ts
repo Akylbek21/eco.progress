@@ -1,4 +1,4 @@
-import { COMPANY } from './companyData';
+import { COMPANY_INFO as COMPANY } from './companyInfo';
 
 export const COMPANY_CONTACTS = {
   phone: COMPANY.phone.value,

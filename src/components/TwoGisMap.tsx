@@ -11,7 +11,10 @@ const TwoGisMap = () => (
     </a>
     <div className="flex flex-col gap-3 border-t border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <p className="font-bold text-eco-900">{company.name}</p>
+        <p className="flex items-center gap-2 font-bold text-eco-900">
+          <MapPin size={20} className="text-eco-600" aria-hidden="true" />
+          {company.name}
+        </p>
         <p className="mt-1 text-sm text-slate-600">{company.address}</p>
       </div>
       <a
