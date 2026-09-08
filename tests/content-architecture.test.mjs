@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { activeServices, DEFAULT_SECONDARY_CTA_LABEL, formatKztPrice, GENERAL_PRIMARY_CTA_LABEL, getCatalogService, getServicePrimaryCtaLabel, getServiceSecondaryCtaLabel, normalizeServiceSlug, serviceCatalog, serviceSlugAliases } from '../src/content/serviceCatalog.ts';
+import { activeServices, DEFAULT_SECONDARY_CTA_LABEL, formatKztPrice, GENERAL_PRIMARY_CTA_LABEL, getCatalogService, getServicePrimaryCtaLabel, getServiceSecondaryCtaLabel, normalizeServiceSlug, serviceCatalog, serviceGroups, serviceSlugAliases } from '../src/content/serviceCatalog.ts';
 import { normalizeArticleDates } from '../src/utils/articleDates.ts';
 import { regions } from '../src/content/regions.ts';
 import { seoArticles } from '../scripts/seo-data.mjs';
@@ -17,6 +17,14 @@ test('service catalog has stable unique slugs and valid relations', () => {
     for (const slug of service.relatedArticleSlugs) assert.ok(articleSlugs.has(slug), `${service.slug} -> article ${slug}`);
     if (service.showInCalculator) assert.equal(typeof service.pricing.calculatorBasePrice, 'number');
   }
+});
+
+test('service catalog separates five directions from concrete services', () => {
+  assert.deepEqual(serviceGroups.map((group) => group.title), ['Экологическое проектирование', 'Разрешения', 'Лабораторные исследования', 'Отходы', 'Сопровождение предприятий']);
+  assert.equal(getCatalogService('ecological-documents')?.pageType, 'direction-overview');
+  assert.equal(getCatalogService('environmental-design')?.pageType, 'direction-overview');
+  for (const slug of ['ndv', 'roos', 'szz', 'puo', 'ovos', 'program-pek', 'report-pek']) assert.equal(getCatalogService(slug)?.pageType, 'service');
+  assert.doesNotMatch(serviceCatalog.map((service) => service.shortDescription).join(' '), /коммерческая страница|основная коммерческая услуга/iu);
 });
 
 test('legacy aliases resolve to canonical service slugs', () => {

@@ -18,6 +18,8 @@ export type ServiceItem = {
   businessCompanyId: string;
   title: string;
   category: ServiceCategory;
+  pageType: 'service' | 'direction-overview';
+  searchAliases: string[];
   description: string;
   forWhom: string;
   result: string;
@@ -25,6 +27,8 @@ export type ServiceItem = {
   documents: string[];
   workflow: string[];
   duration: string;
+  areaServed: string;
+  price?: string;
   icon?: string;
 };
 

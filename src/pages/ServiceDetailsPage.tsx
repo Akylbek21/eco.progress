@@ -10,9 +10,10 @@ import ErrorState from '../components/ui/ErrorState';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { getServiceById } from '../services/serviceService';
 import { catalogItemToServiceItem } from '../services/serviceService';
-import { formatKztPrice, getCatalogService, getServicePrimaryCtaLabel, getServiceSecondaryCtaLabel, PRELIMINARY_PRICE_NOTICE } from '../content/serviceCatalog';
+import { formatKztPrice, getCatalogService, getServiceGroup, getServicePrimaryCtaLabel, getServiceSecondaryCtaLabel, PRELIMINARY_PRICE_NOTICE, serviceGroupAnchor } from '../content/serviceCatalog';
 import { company } from '../config/company';
 import { createBlankWhatsAppRequestMessage } from '../utils/whatsapp';
+import { buildBreadcrumbSchema } from '../seo/entityBuilders';
 
 const OrderChoiceModal = lazy(() => import('../components/OrderChoiceModal'));
 
@@ -30,14 +31,18 @@ const ServiceDetailsPage = () => {
   if (isLoading) return <PageSkeleton />;
   if (isError && !service) return <div className="mx-auto min-h-[60vh] max-w-3xl px-5 py-16"><ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} /></div>;
   if (!service) return <Navigate to="/services" replace />;
+  const serviceGroup = getServiceGroup(service.category);
+  const canonical = `${company.siteUrl}/services/${catalogService?.slug || id}`;
 
   return (
     <div>
       <SEO
         title={catalogService?.seo.title || `${service.title} | ecoprogress.kz`}
         description={catalogService?.seo.description || service.description}
-        canonical={`${company.siteUrl}/services/${catalogService?.slug || id}`}
+        canonical={canonical}
+        schema={buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Услуги', url: `${company.siteUrl}/services` }, { name: serviceGroup.title, url: `${company.siteUrl}/services#${serviceGroupAnchor(service.category)}` }, { name: service.title, url: canonical }])}
       />
+      <nav aria-label="Хлебные крошки" className="bg-eco-900 px-5 pt-5 text-sm text-white/70 sm:px-8"><ol className="mx-auto flex max-w-7xl flex-wrap gap-2"><li><Link to="/services" className="hover:text-white">Услуги</Link></li><li aria-hidden="true">/</li><li><Link to={`/services#${serviceGroupAnchor(service.category)}`} className="hover:text-white">{serviceGroup.title}</Link></li><li aria-hidden="true">/</li><li className="text-white">{service.title}</li></ol></nav>
       <section className="relative overflow-hidden px-5 py-24 text-white sm:px-8">
         <div className="absolute inset-0 bg-windmill bg-cover bg-center" />
         <div className="absolute inset-0 bg-eco-900/80" />
@@ -80,6 +85,7 @@ const ServiceDetailsPage = () => {
             <p className="mt-3 leading-7 text-slate-650">{catalogService.areaServed.description} Перед началом работ специалист проверяет объект, задачу и исходные документы, затем фиксирует состав результата и применимые ограничения.</p>
             <p className="mt-3 leading-7 text-slate-650"><strong>Ориентировочная стоимость:</strong> {formatKztPrice(catalogService.pricing)}. {PRELIMINARY_PRICE_NOTICE}</p>
           </section>
+          <p><Link to={`/services#${serviceGroupAnchor(service.category)}`} className="font-semibold text-eco-700 underline decoration-eco-200 underline-offset-4">Вернуться к направлению «{serviceGroup.title}»</Link></p>
           {catalogService.legalBasis?.length ? <section>
             <h2 className="text-2xl font-bold text-eco-900">Нормативная база</h2>
             <ul className="mt-4 space-y-2 text-slate-650">{catalogService.legalBasis.map((item) => <li key={item.title}>• {item.title}{item.documentNumber ? `, ${item.documentNumber}` : ''}</li>)}</ul>

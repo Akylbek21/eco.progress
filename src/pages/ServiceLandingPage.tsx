@@ -8,7 +8,7 @@ import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { company } from '../config/company';
 import { trackServiceView } from '../services/analytics';
-import { activeServices, getCatalogService } from '../content/serviceCatalog';
+import { activeServices, getCatalogService, getServiceGroup, serviceGroupAnchor } from '../content/serviceCatalog';
 import { buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, buildServiceEntity } from '../seo/entityBuilders';
 import { serviceContentMap } from '../content/services/serviceContent';
 import { expertMap, experts, isPublishableExpert } from '../content/experts/experts';
@@ -41,6 +41,8 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
   if (isError || !content) return <div className="px-5 py-20 text-center text-rose-800">Не удалось загрузить описание услуги с сервера.</div>;
 
   const canonical = `${company.siteUrl}/services/${service.slug}`;
+  const serviceGroup = getServiceGroup(service.category);
+  const directionUrl = `${company.siteUrl}/services#${serviceGroupAnchor(service.category)}`;
   const reviewerCandidate = content.contentReview.reviewedBy
     ? confirmedExperts.find((expert) => expert.id === content.contentReview.reviewedBy || expert.slug === content.contentReview.reviewedBy)
       ?? expertMap.get(content.contentReview.reviewedBy)
@@ -53,11 +55,12 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
     ...buildCorePageEntities({ canonical, name: service.title, description: service.seo.description, dateModified: content.contentReview.lastReviewedAt }),
     buildServiceEntity({ canonical, name: service.title, description: service.fullDescription, serviceType: service.category, areaServed: service.areaServed.type === 'KAZAKHSTAN' ? 'Казахстан' : service.areaServed.regions, expertIds: expertNodes.map((node) => String(node['@id'])), caseUrls }),
     ...expertNodes,
-    buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Услуги', url: `${company.siteUrl}/services` }, { name: service.title, url: canonical }]),
+    buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Услуги', url: `${company.siteUrl}/services` }, { name: serviceGroup.title, url: directionUrl }, { name: service.title, url: canonical }]),
   ];
 
   return <div className="bg-white">
     <SEO title={service.seo.title} description={service.seo.description} canonical={canonical} schema={schema} />
+    <nav aria-label="Хлебные крошки" className="bg-eco-900 px-4 pt-5 text-sm text-white/70 sm:px-8"><ol className="mx-auto flex max-w-7xl flex-wrap gap-2"><li><Link to="/services" className="hover:text-white">Услуги</Link></li><li aria-hidden="true">/</li><li><Link to={`/services#${serviceGroupAnchor(service.category)}`} className="hover:text-white">{serviceGroup.title}</Link></li><li aria-hidden="true">/</li><li className="text-white">{service.title}</li></ol></nav>
     <section className="relative isolate overflow-hidden bg-eco-900 px-4 py-16 text-white sm:px-8 sm:py-24">
       <ResponsiveImage fill sizes="100vw" src={service.image || '/og-cover.jpg'} alt={service.title} priority width={1600} height={900} wrapperClassName="-z-20" className="object-cover" />
       <div className="absolute inset-0 -z-10 bg-eco-900/82" />

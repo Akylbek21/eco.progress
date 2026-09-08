@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -8,6 +8,9 @@ const RegisterPage = ({ onSuccess }: { onSuccess?: (message: string) => void }) 
   const [type, setType] = useState<'company' | 'individual' | null>(null);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedRedirect = searchParams.get('redirect');
+  const safeRedirect = requestedRedirect?.startsWith('/') && !requestedRedirect.startsWith('//') ? requestedRedirect : '/cabinet';
   const { register } = useAuth();
   const toast = useToast();
 
@@ -41,7 +44,7 @@ const RegisterPage = ({ onSuccess }: { onSuccess?: (message: string) => void }) 
         });
       }
       onSuccess?.('Кабинет клиента создан. Теперь вы можете оставить заявку и отслеживать ее статус.');
-      navigate('/cabinet');
+      navigate(safeRedirect);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
         || (err as Error)?.message

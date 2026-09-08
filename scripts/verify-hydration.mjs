@@ -275,11 +275,78 @@ try {
   if (exceptions.length) throw new Error(`Runtime exceptions after login navigation:\n${exceptions.join('\n')}`);
   if (consoleErrors.length) throw new Error(`Console warnings/errors after login navigation:\n${consoleErrors.join('\n')}`);
 
+  await cdp.send('Emulation.setDeviceMetricsOverride', {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  consoleErrors.length = 0;
+  exceptions.length = 0;
+  const servicesLoaded = cdp.waitFor('Page.loadEventFired');
+  await cdp.send('Page.navigate', { url: liveMode ? 'https://ecoprogress.kz/services' : `http://127.0.0.1:${sitePort}/services` });
+  await servicesLoaded;
+  await delay(750);
+  const servicesEvaluation = await cdp.send('Runtime.evaluate', {
+    expression: `(() => {
+      const input = document.querySelector('input[placeholder]');
+      const directionHeadings = [...document.querySelectorAll('section[id^="direction-"] h2')].map((node) => node.textContent?.trim());
+      const detailLinks = [...document.querySelectorAll('a[href^="/services/"]')].map((node) => node.getAttribute('href'));
+      return {
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        directionHeadings,
+        detailLinks,
+        hasSearch: Boolean(input),
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const servicesResult = servicesEvaluation.result.value;
+  if (servicesResult.viewportWidth !== 390 || servicesResult.documentWidth > servicesResult.viewportWidth) {
+    throw new Error(`Services mobile viewport overflows: ${JSON.stringify(servicesResult)}`);
+  }
+  if (!servicesResult.hasSearch || servicesResult.directionHeadings.length !== 5 || !servicesResult.detailLinks.includes('/services/ndv')) {
+    throw new Error(`Services catalog structure check failed: ${JSON.stringify(servicesResult)}`);
+  }
+  await cdp.send('Runtime.evaluate', {
+    expression: `(() => {
+      const input = document.querySelector('input[placeholder]');
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+      setter.call(input, 'НДВ');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    })()`,
+  });
+  await delay(250);
+  const searchEvaluation = await cdp.send('Runtime.evaluate', {
+    expression: `(() => {
+      const cards = [...document.querySelectorAll('section[id^="direction-"] h3')].map((node) => node.textContent?.trim() || '');
+      const cta = [...document.querySelectorAll('button')].find((node) => node.textContent?.includes('Рассчитать стоимость НДВ'));
+      cta?.click();
+      return { cards, clicked: Boolean(cta) };
+    })()`,
+    returnByValue: true,
+  });
+  await delay(1000);
+  const searchResult = searchEvaluation.result.value;
+  const modalEvaluation = await cdp.send('Runtime.evaluate', {
+    expression: `({
+      hasDialog: Boolean(document.querySelector('[role="dialog"]')),
+      selectedServiceInWhatsapp: [...document.querySelectorAll('a[href*="wa.me"]')].some((link) => decodeURIComponent(link.href).includes('Проект нормативов допустимых выбросов'))
+    })`,
+    returnByValue: true,
+  });
+  if (searchResult.cards.length !== 1 || !searchResult.cards[0].includes('допустимых выбросов') || !searchResult.clicked || !modalEvaluation.result.value.hasDialog || !modalEvaluation.result.value.selectedServiceInWhatsapp) {
+    throw new Error(`Services search/order check failed: ${JSON.stringify({ searchResult, modal: modalEvaluation.result.value })}`);
+  }
+  if (exceptions.length) throw new Error(`Runtime exceptions during services mobile check:\n${exceptions.join('\n')}`);
+  if (consoleErrors.length) throw new Error(`Console warnings/errors during services mobile check:\n${consoleErrors.join('\n')}`);
+
   const highestCls = results.reduce((highest, result) => result.cls > highest.cls ? result : highest);
   console.log(
     `${liveMode ? 'Live h' : 'H'}ydration check passed for all ${results.length} indexable pages: `
     + 'no mismatches, runtime exceptions '
-    + `or console warnings/errors; highest CLS=${highestCls.cls.toFixed(4)} at ${highestCls.path}; login navigation passed.`,
+    + `or console warnings/errors; highest CLS=${highestCls.cls.toFixed(4)} at ${highestCls.path}; login navigation and services mobile flow passed.`,
   );
 } finally {
   socket?.close();

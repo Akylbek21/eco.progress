@@ -24,11 +24,13 @@ test('frontend expert registry contains only published VERIFIED profiles with co
   }
 });
 
-test('all 14 articles remain visible but require specialist review', () => {
+test('all 14 reviewed articles remain visible with a complete specialist approval', () => {
   assert.equal(articleContent.length, 14);
   assert.ok(articleContent.every((item) => item.status === 'published'));
-  assert.ok(articleContent.every((item) => item.reviewStatus === 'requires-specialist-review'));
-  assert.ok(articleContent.every((item) => !isArticleApproved(item)));
+  assert.ok(articleContent.every((item) => item.reviewStatus === 'approved'));
+  assert.ok(articleContent.every((item) => item.reviewerSlug === 'duisenbai-ruslan-serikbaiuly'));
+  assert.ok(articleContent.every((item) => item.lastReviewedAt === '2026-09-08'));
+  assert.ok(articleContent.every((item) => isArticleApproved(item)));
 });
 
 test('case architecture uses a fail-closed build snapshot and publishes no unconfirmed examples', () => {

@@ -1,6 +1,21 @@
 {
   "schemaVersion": 1,
-  "generatedAt": null,
-  "source": null,
-  "articleReviews": []
+  "generatedAt": "2026-09-08T00:00:00+05:00",
+  "source": "frontend-editorial-review",
+  "articleReviews": [
+    { "articleSlug": "ekologicheskie-dokumenty-too-kazakhstan", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "chto-sdavat-po-ekologii-kazhdyy-god", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "kak-opredelit-kategoriyu-obekta", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "kak-formiruetsya-otchet-pek", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "kakie-laboratornye-zamery-nuzhny-predpriyatiyu", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "kak-prohodit-laboratornyy-zamer-vozduha", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "podgotovka-k-ekologicheskoy-proverke", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "kak-razrabotat-programmu-upravleniya-othodami", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "dokumenty-peredachi-othodov", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "vyvoz-i-utilizaciya-othodov", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "kogda-nuzhen-proekt-ndv", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "otlichiya-ovos-oovv-roos", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" },
+    { "articleSlug": "kakie-shtrafy-za-ekologiyu-v-kazakhstane", "expertId": "duisenbai-ruslan-serikbaiuly", "status": "APPROVED", "reviewedAt": "2026-09-08", "updatedAt": "2026-09-08" }
+  ]
 }

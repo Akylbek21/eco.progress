@@ -36,14 +36,15 @@ test('priority Алматы commercial landings are indexable only with substant
   }
 });
 
-test('published GSC article is indexable while specialist review remains explicit', () => {
+test('published GSC article keeps its completed specialist review and indexing', () => {
   const path = '/news/kak-opredelit-kategoriyu-obekta';
   const article = seoArticles.find((item) => item.slug === path);
   const entry = registry.find((item) => item.path === path);
 
   assert.ok(article);
-  assert.notEqual(article.reviewStatus, 'approved');
-  assert.equal(article.reviewerSlug, undefined);
+  assert.equal(article.reviewStatus, 'approved');
+  assert.equal(article.reviewerSlug, 'duisenbai-ruslan-serikbaiuly');
+  assert.equal(article.lastReviewedAt, '2026-09-08');
   assert.equal(entry?.robots, 'index,follow');
   assert.equal(entry?.includeInSitemap, true);
 });

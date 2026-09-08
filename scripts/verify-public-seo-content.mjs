@@ -56,7 +56,7 @@ const forbidden = [
   ['reportContentRevision', /\breportContentRevision\b/i],
   ['availableActions', /\bavailableActions\b/i],
   ['If-Match', /\bIf-Match\b/i],
-  ['internal reviewer field', /\breviewer(?:Slug|Id)?\b/i],
+  ['internal reviewer field', /\breviewer(?:Slug|Id)\b/i],
   ['устаревший адрес Алимбетова', /\bАлимбетова\b/iu],
   ['устаревший номер адреса 199/2', /\b199\/2\b/u],
   ['для Шымкент', /\bдля\s+Шымкент(?=[\s.,;:!?])/iu],

@@ -267,7 +267,7 @@ test('approval and indexing remain separate central predicates', async () => {
   assert.match(newsPage, /isArticleIndexable/);
   assert.match(generator, /isArticleApproved/);
   assert.match(generator, /isArticleIndexable/);
-  assert.ok(articleContent.every((article) => !isArticleApproved(article)));
+  assert.ok(articleContent.every((article) => isArticleApproved(article)));
   assert.ok(articleContent.every((article) => isArticleIndexable(article)));
 });
 

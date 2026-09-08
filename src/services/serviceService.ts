@@ -20,6 +20,8 @@ export const catalogItemToServiceItem = (service: ServiceCatalogItem): ServiceIt
   businessCompanyId: String(service.apiId ?? service.id),
   title: service.title,
   category: service.category,
+  pageType: service.pageType,
+  searchAliases: [service.shortTitle, ...service.searchAliases].filter((value): value is string => Boolean(value)),
   description: service.shortDescription,
   forWhom: service.targetClients.join(', '),
   result: service.deliverables.join('; '),
@@ -27,6 +29,10 @@ export const catalogItemToServiceItem = (service: ServiceCatalogItem): ServiceIt
   documents: service.requiredDocuments,
   workflow: service.workflow.sort((a, b) => a.order - b.order).map((step) => step.title),
   duration: service.duration.text,
+  areaServed: service.areaServed.description,
+  price: service.pricing.priceFrom !== undefined || service.pricing.priceTo !== undefined || service.pricing.priceText
+    ? [service.pricing.priceFrom !== undefined ? `от ${new Intl.NumberFormat('ru-RU').format(service.pricing.priceFrom)} ₸` : '', service.pricing.priceText].filter(Boolean).join(' ')
+    : undefined,
   icon: service.icon,
 });
 
@@ -54,6 +60,11 @@ const canonicalizeApiServices = (items: ServiceContent[]): ServiceItem[] => {
   });
 };
 
+const mergeApiServicesWithFallback = (items: ServiceContent[]): ServiceItem[] => {
+  const apiServices = new Map(canonicalizeApiServices(items).map((service) => [service.id, service]));
+  return fallbackServices.map((service) => apiServices.get(service.id) ?? service);
+};
+
 const devLog = (message: string, error?: unknown) => {
   if (import.meta.env.DEV) console.info(`[service catalog] ${message}`, error ?? '');
 };
@@ -62,7 +73,7 @@ export const getServiceCatalog = async (): Promise<ServiceCatalogResult> => {
   try {
     const services = await publicContentRepository.getServices();
     if (Array.isArray(services)) {
-      return { items: canonicalizeApiServices(services), source: 'api' };
+      return { items: mergeApiServicesWithFallback(services), source: 'api' };
     }
     throw new Error('Public services API returned an invalid payload.');
   } catch (error) {

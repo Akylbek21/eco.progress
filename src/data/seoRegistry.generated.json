@@ -75,7 +75,7 @@
         "url": "https://ecoprogress.kz",
         "name": "Экологические услуги и лабораторные исследования для бизнеса в Казахстане",
         "description": "Экологические услуги и лабораторные исследования для предприятий Казахстана: проектирование, ПЭК, отходы, разрешения и сопровождение.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -84,7 +84,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/services",
@@ -615,7 +615,7 @@
         "url": "https://ecoprogress.kz/about",
         "name": "ECOPROGRESS GROUP",
         "description": "ECOPROGRESS GROUP оказывает экологические услуги для бизнеса в Казахстане: документы, лаборатория, отходы и сопровождение.",
-        "dateModified": "2026-08-27",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -643,7 +643,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-27"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/contacts",
@@ -706,7 +706,7 @@
         "url": "https://ecoprogress.kz/contacts",
         "name": "Контакты ECOPROGRESS",
         "description": "Контакты ECOPROGRESS: телефон, WhatsApp, email, адрес и консультация по экологическим услугам в Казахстане.",
-        "dateModified": "2026-08-26",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -734,7 +734,7 @@
     "includeInSitemap": true,
     "priority": 0.8,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-26"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/news",
@@ -888,7 +888,7 @@
         "url": "https://ecoprogress.kz/cases",
         "name": "Подтверждённые экологические кейсы",
         "description": "Опубликованные проекты EcoProgress с проверенными исходными данными, выполненными работами, нормативной базой и результатами.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -916,7 +916,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/experts",
@@ -979,7 +979,7 @@
         "url": "https://ecoprogress.kz/experts",
         "name": "Сотрудники и эксперты ECOPROGRESS",
         "description": "Подтверждённые специалисты ECOPROGRESS и сведения об их обучении и профессиональных компетенциях.",
-        "dateModified": "2026-08-28",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1007,7 +1007,7 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "monthly",
-    "lastModified": "2026-08-28"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/partners",
@@ -1558,13 +1558,13 @@
     "locale": "ru",
     "alternates": [],
     "title": "Экологические документы | ECOPROGRESS",
-    "description": "Подготовка экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "description": "Обзор экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
     "h1": "Определим, какие экологические документы нужны вашему объекту, и подготовим согласованный комплект",
     "canonical": "https://ecoprogress.kz/services/ecological-documents",
     "robots": "index,follow",
     "ogType": "website",
     "ogTitle": "Экологические документы | ECOPROGRESS",
-    "ogDescription": "Подготовка экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogDescription": "Обзор экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
     "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -1613,7 +1613,7 @@
         "@id": "https://ecoprogress.kz/services/ecological-documents#webpage",
         "url": "https://ecoprogress.kz/services/ecological-documents",
         "name": "Определим, какие экологические документы нужны вашему объекту, и подготовим согласованный комплект",
-        "description": "Подготовка экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "description": "Обзор экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
         "dateModified": "2026-08-31",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -1625,7 +1625,7 @@
         "@id": "https://ecoprogress.kz/services/ecological-documents#service",
         "url": "https://ecoprogress.kz/services/ecological-documents",
         "name": "Определим, какие экологические документы нужны вашему объекту, и подготовим согласованный комплект",
-        "description": "Подготовка экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "description": "Обзор экологических документов, программ, отчётов и разрешительных материалов для бизнеса. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
         "serviceType": "Определим, какие экологические документы нужны вашему объекту, и подготовим согласованный комплект",
         "provider": {
           "@type": "Organization",
@@ -1920,13 +1920,13 @@
     "locale": "ru",
     "alternates": [],
     "title": "Экологическое проектирование | ECOPROGRESS",
-    "description": "Основная коммерческая услуга по разработке экологических проектов для строительства и действующих объектов.",
+    "description": "Обзор экологических проектов для строительства и действующих объектов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
     "h1": "Экологическое проектирование",
     "canonical": "https://ecoprogress.kz/services/environmental-design",
     "robots": "index,follow",
     "ogType": "website",
     "ogTitle": "Экологическое проектирование | ECOPROGRESS",
-    "ogDescription": "Основная коммерческая услуга по разработке экологических проектов для строительства и действующих объектов.",
+    "ogDescription": "Обзор экологических проектов для строительства и действующих объектов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
     "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -1975,7 +1975,7 @@
         "@id": "https://ecoprogress.kz/services/environmental-design#webpage",
         "url": "https://ecoprogress.kz/services/environmental-design",
         "name": "Экологическое проектирование",
-        "description": "Основная коммерческая услуга по разработке экологических проектов для строительства и действующих объектов.",
+        "description": "Обзор экологических проектов для строительства и действующих объектов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -1987,7 +1987,7 @@
         "@id": "https://ecoprogress.kz/services/environmental-design#service",
         "url": "https://ecoprogress.kz/services/environmental-design",
         "name": "Экологическое проектирование",
-        "description": "Основная коммерческая услуга по разработке экологических проектов для строительства и действующих объектов.",
+        "description": "Обзор экологических проектов для строительства и действующих объектов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
         "serviceType": "Экологическое проектирование",
         "provider": {
           "@type": "Organization",
@@ -7485,13 +7485,13 @@
     "locale": "ru",
     "alternates": [],
     "title": "Комплексное обращение с отходами | ECOPROGRESS",
-    "description": "Коммерческая страница комплексного вывоза, утилизации и документального сопровождения отходов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "description": "Вывоз, утилизация и документальное сопровождение отходов в рамках одной заявки. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
     "h1": "Комплексное обращение с отходами",
     "canonical": "https://ecoprogress.kz/services/waste-management",
     "robots": "index,follow",
     "ogType": "website",
     "ogTitle": "Комплексное обращение с отходами | ECOPROGRESS",
-    "ogDescription": "Коммерческая страница комплексного вывоза, утилизации и документального сопровождения отходов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+    "ogDescription": "Вывоз, утилизация и документальное сопровождение отходов в рамках одной заявки. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
     "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
     "ogImageWidth": 1200,
     "ogImageHeight": 630,
@@ -7540,7 +7540,7 @@
         "@id": "https://ecoprogress.kz/services/waste-management#webpage",
         "url": "https://ecoprogress.kz/services/waste-management",
         "name": "Комплексное обращение с отходами",
-        "description": "Коммерческая страница комплексного вывоза, утилизации и документального сопровождения отходов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "description": "Вывоз, утилизация и документальное сопровождение отходов в рамках одной заявки. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
         "dateModified": "2026-08-27",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
@@ -7552,7 +7552,7 @@
         "@id": "https://ecoprogress.kz/services/waste-management#service",
         "url": "https://ecoprogress.kz/services/waste-management",
         "name": "Комплексное обращение с отходами",
-        "description": "Коммерческая страница комплексного вывоза, утилизации и документального сопровождения отходов. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
+        "description": "Вывоз, утилизация и документальное сопровождение отходов в рамках одной заявки. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.",
         "serviceType": "Комплексное обращение с отходами",
         "provider": {
           "@type": "Organization",
@@ -18702,7 +18702,7 @@
         "url": "https://ecoprogress.kz/kk",
         "name": "Қазақстандағы бизнеске арналған экологиялық қызметтер",
         "description": "Кәсіпорындарға экологиялық жобалау, ПЭК, зертханалық зерттеулер, қалдықтар құжаттары және рұқсат алу бойынша қызмет көрсетеміз.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -18732,7 +18732,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/kk/ekologiyalyq-qyzmetter",
@@ -18810,7 +18810,7 @@
         "url": "https://ecoprogress.kz/kk/ekologiyalyq-qyzmetter",
         "name": "Кәсіпорындарға арналған экологиялық қызметтер",
         "description": "Кәсіпорындарға экологиялық құжаттар, ПЭК, шығарындылар жобалары, зертханалық өлшеулер және қалдықтар бойынша кешенді қызмет.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19121,7 +19121,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/kk/qaldyqtar-pasporty",
@@ -19199,7 +19199,7 @@
         "url": "https://ecoprogress.kz/kk/qaldyqtar-pasporty",
         "name": "Қалдықтар паспортын әзірлеу",
         "description": "Кәсіпорындарға қалдықтар паспортын әзірлеу және рәсімдеу. Қажетті деректерді анықтап, жұмыс көлемі мен құнын есептейміз.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19512,7 +19512,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/kk/services/ndv",
@@ -19590,7 +19590,7 @@
         "url": "https://ecoprogress.kz/kk/services/ndv",
         "name": "Рұқсат етілетін шығарындылар нормативтерінің жобасы",
         "description": "Стационарлық көздерді түгендеу, шығарындыларды есептеу және кәсіпорынға рұқсат етілетін шығарындылар нормативтерін әзірлеу.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19903,7 +19903,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/kk/pek-bagdarlamasy",
@@ -19981,7 +19981,7 @@
         "url": "https://ecoprogress.kz/kk/pek-bagdarlamasy",
         "name": "Өндірістік экологиялық бақылау бағдарламасын әзірлеу",
         "description": "Кәсіпорынға ПЭК бағдарламасын әзірлеу: бақылау нысандары, мониторинг нүктелері, көрсеткіштер, әдістер және кезеңділік.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -20294,7 +20294,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/kk/pek-esebi",
@@ -20372,7 +20372,7 @@
         "url": "https://ecoprogress.kz/kk/pek-esebi",
         "name": "Өндірістік экологиялық бақылау есебін дайындау",
         "description": "ПЭК бағдарламасы, зертханалық хаттамалар және кезеңнің өндірістік деректері негізінде ресми ПЭК есебін дайындау.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -20685,7 +20685,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/kk/ekologiyalyq-ruqsat",
@@ -20763,7 +20763,7 @@
         "url": "https://ecoprogress.kz/kk/ekologiyalyq-ruqsat",
         "name": "Әсер етуге экологиялық рұқсат алу",
         "description": "Нысан санатын және жобалық негіздерді тексеріп, әсер етуге экологиялық рұқсат алу үшін материалдарды дайындаймыз.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21084,7 +21084,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/kk/sanitariyalyq-qorgau-aimagy",
@@ -21162,7 +21162,7 @@
         "url": "https://ecoprogress.kz/kk/sanitariyalyq-qorgau-aimagy",
         "name": "Санитариялық-қорғау аймағының жобасын әзірлеу",
         "description": "Шығарындылар, шу және нысанның нақты жоспарлануы бойынша санитариялық-қорғау аймағының жобасын әзірлеу.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21475,7 +21475,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/kk/zerthanalyq-zertteuler",
@@ -21553,7 +21553,7 @@
         "url": "https://ecoprogress.kz/kk/zerthanalyq-zertteuler",
         "name": "Экологиялық зертханалық зерттеулер",
         "description": "Ауа, су, топырақ, шу және өндірістік факторлар бойынша зертханалық зерттеулер: бағдарлама, сынама алу және хаттамалар.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21864,7 +21864,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/kk/su-analizi",
@@ -21942,7 +21942,7 @@
         "url": "https://ecoprogress.kz/kk/su-analizi",
         "name": "Суға зертханалық анализ жасау",
         "description": "Ауыз су, табиғи немесе сарқынды суға зертханалық анализ: көрсеткіштерді таңдау, сынама алу және зерттеу хаттамасы.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -22263,7 +22263,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/kk/qaldyqtardy-kadege-zharatu",
@@ -22341,7 +22341,7 @@
         "url": "https://ecoprogress.kz/kk/qaldyqtardy-kadege-zharatu",
         "name": "Қалдықтарды кәдеге жарату",
         "description": "Өндірістік қалдықтарды тексеру, рұқсат етілген операцияны келісу және қабылдау мен кәдеге жаратуды растайтын құжаттар.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -22654,7 +22654,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/kk/pek-bagdarlamasy-shymkent",
@@ -22732,7 +22732,7 @@
         "url": "https://ecoprogress.kz/kk/pek-bagdarlamasy-shymkent",
         "name": "Шымкенттегі ПЭК бағдарламасын әзірлеу",
         "description": "Шымкент кәсіпорындарына ПЭК бағдарламасын әзірлеу: нысандар, мониторинг нүктелері, көрсеткіштер, әдістер және бақылау кестесі.",
-        "dateModified": "2026-09-03",
+        "dateModified": "2026-09-08",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -23045,7 +23045,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/news/ekologicheskie-dokumenty-too-kazakhstan",
@@ -23056,7 +23056,7 @@
     "h1": "Какие экологические документы должны быть у предприятия",
     "canonical": "https://ecoprogress.kz/news/ekologicheskie-dokumenty-too-kazakhstan",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Какие экологические документы должны быть у предприятия | ECOPROGRESS",
     "ogDescription": "Практический порядок проверки экологических документов предприятия без универсального списка, который не учитывает объект.",
@@ -23132,6 +23132,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/ekologicheskie-dokumenty-too-kazakhstan#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -23139,6 +23142,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/ekologicheskie-dokumenty-too-kazakhstan#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/ekologicheskie-dokumenty-too-kazakhstan#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -23175,7 +23215,7 @@
     "h1": "Что предприятие сдаёт по экологии каждый год",
     "canonical": "https://ecoprogress.kz/news/chto-sdavat-po-ekologii-kazhdyy-god",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Что предприятие сдаёт по экологии каждый год | ECOPROGRESS",
     "ogDescription": "Как составить календарь экологической отчётности предприятия и не переносить чужие сроки на свой объект.",
@@ -23251,6 +23291,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/chto-sdavat-po-ekologii-kazhdyy-god#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -23258,6 +23301,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/chto-sdavat-po-ekologii-kazhdyy-god#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/chto-sdavat-po-ekologii-kazhdyy-god#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -23294,7 +23374,7 @@
     "h1": "Определение категории объекта по степени воздействия на окружающую среду",
     "canonical": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Определение категории объекта по степени воздействия на окружающую среду | ECOPROGRESS",
     "ogDescription": "Категории объектов I, II, III и IV по Экологическому кодексу РК: как определить категорию, какие разрешения и документы проверить и чем опасна ошибка.",
@@ -23372,6 +23452,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -23379,6 +23462,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/kak-opredelit-kategoriyu-obekta#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -23415,7 +23535,7 @@
     "h1": "Что такое программа производственного экологического контроля",
     "canonical": "https://ecoprogress.kz/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Что такое программа производственного экологического контроля | ECOPROGRESS",
     "ogDescription": "Как программа ПЭК связывает источники воздействия, показатели, точки контроля и результаты предприятия.",
@@ -23491,6 +23611,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -23498,6 +23621,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -23534,7 +23694,7 @@
     "h1": "Как подготовить отчёт ПЭК по данным контроля",
     "canonical": "https://ecoprogress.kz/news/kak-formiruetsya-otchet-pek",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Как подготовить отчёт ПЭК по данным контроля | ECOPROGRESS",
     "ogDescription": "Пошаговая сверка программы ПЭК, первичных данных, лабораторных протоколов и итогового отчёта производственного экологического контроля.",
@@ -23610,6 +23770,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/kak-formiruetsya-otchet-pek#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -23617,6 +23780,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/kak-formiruetsya-otchet-pek#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/kak-formiruetsya-otchet-pek#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -23653,7 +23853,7 @@
     "h1": "Какие лабораторные замеры нужны предприятию",
     "canonical": "https://ecoprogress.kz/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Какие лабораторные замеры нужны предприятию | ECOPROGRESS",
     "ogDescription": "Как определить цель, точки и показатели лабораторной программы без заказа универсального набора исследований.",
@@ -23729,6 +23929,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -23736,6 +23939,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/kakie-laboratornye-zamery-nuzhny-predpriyatiyu#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -23772,7 +24012,7 @@
     "h1": "Как проходит лабораторный замер воздуха",
     "canonical": "https://ecoprogress.kz/news/kak-prohodit-laboratornyy-zamer-vozduha",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Как проходит лабораторный замер воздуха | ECOPROGRESS",
     "ogDescription": "Подготовка объекта, согласование точек, режим оборудования, выезд и проверка протокола лабораторного замера воздуха.",
@@ -23848,6 +24088,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/kak-prohodit-laboratornyy-zamer-vozduha#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -23855,6 +24098,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/kak-prohodit-laboratornyy-zamer-vozduha#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/kak-prohodit-laboratornyy-zamer-vozduha#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -23891,7 +24171,7 @@
     "h1": "Как подготовиться к экологической проверке",
     "canonical": "https://ecoprogress.kz/news/podgotovka-k-ekologicheskoy-proverke",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Как подготовиться к экологической проверке | ECOPROGRESS",
     "ogDescription": "Практический аудит документов, объектов и ответственных перед экологической проверкой без обещания её результата.",
@@ -23967,6 +24247,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/podgotovka-k-ekologicheskoy-proverke#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -23974,6 +24257,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/podgotovka-k-ekologicheskoy-proverke#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/podgotovka-k-ekologicheskoy-proverke#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -24010,7 +24330,7 @@
     "h1": "Как разработать программу управления отходами",
     "canonical": "https://ecoprogress.kz/news/kak-razrabotat-programmu-upravleniya-othodami",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Как разработать программу управления отходами | ECOPROGRESS",
     "ogDescription": "От реестра процессов и отходов до мероприятий, показателей и проверяемой программы управления отходами.",
@@ -24086,6 +24406,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/kak-razrabotat-programmu-upravleniya-othodami#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -24093,6 +24416,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/kak-razrabotat-programmu-upravleniya-othodami#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/kak-razrabotat-programmu-upravleniya-othodami#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -24129,7 +24489,7 @@
     "h1": "Какие документы подтверждают передачу отходов",
     "canonical": "https://ecoprogress.kz/news/dokumenty-peredachi-othodov",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Какие документы подтверждают передачу отходов | ECOPROGRESS",
     "ogDescription": "Как связать договор, заявку, фактическую партию и закрывающие документы без универсального обещания одного акта.",
@@ -24205,6 +24565,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/dokumenty-peredachi-othodov#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -24212,6 +24575,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/dokumenty-peredachi-othodov#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/dokumenty-peredachi-othodov#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -24248,7 +24648,7 @@
     "h1": "Как организовать вывоз и утилизацию отходов",
     "canonical": "https://ecoprogress.kz/news/vyvoz-i-utilizaciya-othodov",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Как организовать вывоз и утилизацию отходов | ECOPROGRESS",
     "ogDescription": "Путь от описания партии и проверки оператора до вывоза, фактической операции и закрывающего комплекта.",
@@ -24324,6 +24724,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/vyvoz-i-utilizaciya-othodov#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -24331,6 +24734,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/vyvoz-i-utilizaciya-othodov#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/vyvoz-i-utilizaciya-othodov#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -24367,7 +24807,7 @@
     "h1": "Когда требуется проект нормативов допустимых выбросов",
     "canonical": "https://ecoprogress.kz/news/kogda-nuzhen-proekt-ndv",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Когда требуется проект нормативов допустимых выбросов | ECOPROGRESS",
     "ogDescription": "Какие изменения объекта служат поводом проверить актуальность инвентаризации и необходимость проекта НДВ.",
@@ -24443,6 +24883,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/kogda-nuzhen-proekt-ndv#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -24450,6 +24893,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/kogda-nuzhen-proekt-ndv#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/kogda-nuzhen-proekt-ndv#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -24486,7 +24966,7 @@
     "h1": "Чем отличаются ОВОС, отчёт о возможных воздействиях и РООС",
     "canonical": "https://ecoprogress.kz/news/otlichiya-ovos-oovv-roos",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Чем отличаются ОВОС, отчёт о возможных воздействиях и РООС | ECOPROGRESS",
     "ogDescription": "Как различать экологические материалы по задаче и стадии проекта, не подменяя юридическую маршрутизацию похожими названиями.",
@@ -24562,6 +25042,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/otlichiya-ovos-oovv-roos#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -24569,6 +25052,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/otlichiya-ovos-oovv-roos#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/otlichiya-ovos-oovv-roos#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -24605,7 +25125,7 @@
     "h1": "Какие риски и штрафы возможны за экологические нарушения",
     "canonical": "https://ecoprogress.kz/news/shtrafy-za-ekologicheskie-narusheniya",
     "robots": "index,follow",
-    "reviewStatus": "requires-specialist-review",
+    "reviewStatus": "approved",
     "ogType": "article",
     "ogTitle": "Какие риски и штрафы возможны за экологические нарушения | ECOPROGRESS",
     "ogDescription": "Как проводить проверку экологических рисков без публикации устаревших сумм штрафов и универсальных выводов.",
@@ -24681,6 +25201,9 @@
           "@id": "https://ecoprogress.kz/#organization",
           "name": "ECOPROGRESS GROUP"
         },
+        "reviewedBy": {
+          "@id": "https://ecoprogress.kz/news/shtrafy-za-ekologicheskie-narusheniya#reviewer"
+        },
         "publisher": {
           "@type": "Organization",
           "@id": "https://ecoprogress.kz/#organization",
@@ -24688,6 +25211,43 @@
         },
         "mainEntityOfPage": {
           "@id": "https://ecoprogress.kz/news/shtrafy-za-ekologicheskie-narusheniya#webpage"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/news/shtrafy-za-ekologicheskie-narusheniya#reviewer",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
         }
       },
       {
@@ -24836,7 +25396,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/experts/bektibaeva-ryskul-maratovna",
@@ -24959,7 +25519,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/experts/duisenbai-ruslan-serikbaiuly",
@@ -25092,7 +25652,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/experts/manap-akerke-maratkyzy",
@@ -25215,7 +25775,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/experts/omirbaeva-aigerim-kazybekkyzy",
@@ -25338,7 +25898,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/experts/seitkarym-akerke-erbolovna",
@@ -25461,7 +26021,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/experts/seitkarym-akerke-erbolkyzy",
@@ -25584,7 +26144,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   },
   {
     "path": "/experts/makhanova-kamilla-maratovna",
@@ -25707,6 +26267,6 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-03"
+    "lastModified": "2026-09-08"
   }
 ]

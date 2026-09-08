@@ -6,6 +6,7 @@ import Button from './ui/Button';
 import { trackWhatsAppClick } from '../services/analytics';
 import { getServices } from '../services/serviceService';
 import { createBlankWhatsAppRequestMessage, createWhatsAppUrl } from '../utils/whatsapp';
+import { getCatalogService } from '../content/serviceCatalog';
 
 type Props = {
   open: boolean;
@@ -40,7 +41,7 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService, locale = 'ru' }: 
   }, [open]);
 
   const selectedServiceTitle = useMemo(
-    () => services.find((service) => service.id === preSelectedService)?.title || '',
+    () => services.find((service) => service.id === preSelectedService)?.title || (preSelectedService ? getCatalogService(preSelectedService)?.title : '') || '',
     [preSelectedService, services],
   );
 
@@ -51,7 +52,8 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService, locale = 'ru' }: 
     if (isAuthenticated) {
       navigate(preSelectedService ? `/cabinet/orders/new?service=${preSelectedService}` : '/cabinet/orders/new');
     } else {
-      navigate('/register');
+      const orderPath = preSelectedService ? `/cabinet/orders/new?service=${preSelectedService}` : '/cabinet/orders/new';
+      navigate(`/register?redirect=${encodeURIComponent(orderPath)}`);
     }
   };
 
@@ -61,7 +63,7 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService, locale = 'ru' }: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-[24px] bg-white p-5 shadow-2xl sm:p-7" onClick={(event) => event.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label={isKk ? 'Тапсырыс тәсілін таңдау' : 'Выбор способа заказа'} className="relative w-full max-w-2xl overflow-hidden rounded-[24px] bg-white p-5 shadow-2xl sm:p-7" onClick={(event) => event.stopPropagation()}>
         <button type="button" onClick={onClose} className="absolute right-4 top-4 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label={isKk ? 'Жабу' : 'Закрыть'}>
           <X size={20} />
         </button>

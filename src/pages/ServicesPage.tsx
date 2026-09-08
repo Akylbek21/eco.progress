@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
-import { CheckCircle2, ChevronDown, FileText, Globe2 } from 'lucide-react';
+import { CheckCircle2, FileText, Globe2, Search, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Reveal from '../components/animations/Reveal';
@@ -9,14 +9,16 @@ import WhatsAppButton from '../components/WhatsAppButton';
 import WhatsAppLeadForm from '../components/WhatsAppLeadForm';
 import SEO from '../components/SEO';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
+import ServiceCard from '../components/content/ServiceCard';
 import { fallbackServices, getServiceCatalog } from '../services/serviceService';
-import { activeServices, formatKztPrice, GENERAL_PRIMARY_CTA_LABEL, getServicePrimaryCtaLabel, PRELIMINARY_PRICE_NOTICE } from '../content/serviceCatalog';
+import { activeServices, formatKztPrice, GENERAL_PRIMARY_CTA_LABEL, getCatalogService, getServiceCatalogGroup, PRELIMINARY_PRICE_NOTICE, serviceGroups } from '../content/serviceCatalog';
 import type { ServiceCategory } from '../types';
 import { pageHeroImages } from '../data/pageHeroImages';
 
 const OrderChoiceModal = lazy(() => import('../components/OrderChoiceModal'));
 
-const categories: Array<'Все' | ServiceCategory> = ['Все', 'Проектирование', 'Разрешения', 'Лаборатория', 'Отходы', 'Предприятия'];
+const categories: Array<'Все' | ServiceCategory> = ['Все', ...serviceGroups.map((group) => group.category)];
+const categoryLabel = (value: 'Все' | ServiceCategory) => value === 'Все' ? value : serviceGroups.find((group) => group.category === value)?.title || value;
 const calculatorCatalogServices = activeServices.filter((service) => service.showInCalculator && service.pricing.calculatorBasePrice !== undefined);
 
 const ServicesPage = () => {
@@ -29,8 +31,7 @@ const ServicesPage = () => {
   const services = data?.items ?? [];
   const calculatorServices = calculatorCatalogServices;
   const [category, setCategory] = useState<'Все' | ServiceCategory>('Все');
-  const [expandedService, setExpandedService] = useState<string | null>(null);
-  const [selectedIncludes, setSelectedIncludes] = useState<Record<string, string[]>>({});
+  const [search, setSearch] = useState('');
   const [orderModal, setOrderModal] = useState<string | null>(null);
   const [calculator, setCalculator] = useState({
     serviceId: '',
@@ -40,7 +41,20 @@ const ServicesPage = () => {
     labPoints: '0',
   });
   useEffect(() => { if (calculatorServices.length && !calculator.serviceId) setCalculator((c) => ({ ...c, serviceId: calculatorServices[0].slug })); }, [calculator.serviceId, calculatorServices]);
-  const items = useMemo(() => (category === 'Все' ? services : services.filter((item) => item.category === category)), [category, services]);
+  const normalizedSearch = search.trim().toLocaleLowerCase('ru');
+  const items = useMemo(() => services.filter((service) => {
+    if (service.pageType !== 'service') return false;
+    if (category !== 'Все' && getServiceCatalogGroup({ slug: service.id, category: service.category }) !== category) return false;
+    if (!normalizedSearch) return true;
+    const catalog = getCatalogService(service.id);
+    return [service.title, catalog?.shortTitle, service.id, ...service.searchAliases]
+      .filter(Boolean).join(' ').toLocaleLowerCase('ru').includes(normalizedSearch);
+  }), [category, normalizedSearch, services]);
+  const groupedItems = useMemo(() => serviceGroups.map((group) => ({
+    ...group,
+    services: items.filter((service) => getServiceCatalogGroup({ slug: service.id, category: service.category }) === group.category),
+    overviewPages: services.filter((service) => service.pageType === 'direction-overview' && getServiceCatalogGroup({ slug: service.id, category: service.category }) === group.category),
+  })).filter((group) => group.services.length > 0), [items, services]);
   const selectedService = services.find((service) => service.id === calculator.serviceId) ?? services[0];
   const selectedCatalogService = activeServices.find((service) => service.slug === calculator.serviceId);
   const basePrice = selectedCatalogService?.showInCalculator ? selectedCatalogService.pricing.calculatorBasePrice : undefined;
@@ -54,30 +68,6 @@ const ServicesPage = () => {
   const updateCalculator = (name: keyof typeof calculator, value: string) => {
     setCalculator((current) => ({ ...current, [name]: value }));
   };
-  const toggleIncludedService = (serviceId: string, item: string) => {
-    setSelectedIncludes((current) => {
-      const selected = current[serviceId] ?? [];
-      const next = selected.includes(item) ? selected.filter((value) => value !== item) : [...selected, item];
-      return { ...current, [serviceId]: next };
-    });
-  };
-  const getOrderPath = (serviceId: string) => {
-    const service = services.find((item) => item.id === serviceId);
-    const selected = selectedIncludes[serviceId] ?? [];
-    const indexes = selected.map((item) => service?.includes.indexOf(item) ?? -1).filter((index) => index >= 0);
-    return indexes.length > 0 ? `/cabinet/orders/new?service=${serviceId}&items=${indexes.join(',')}` : `/cabinet/orders/new?service=${serviceId}`;
-  };
-
-  useEffect(() => {
-    const openServiceFromHash = () => {
-      const serviceId = window.location.hash.replace('#service-', '');
-      if (services.some((service) => service.id === serviceId)) setExpandedService(serviceId);
-    };
-    openServiceFromHash();
-    window.addEventListener('hashchange', openServiceFromHash);
-    return () => window.removeEventListener('hashchange', openServiceFromHash);
-  }, [services]);
-
   if (!selectedService) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-5 text-center text-sm font-semibold text-slate-600">
@@ -123,69 +113,35 @@ const ServicesPage = () => {
       </section>
       <section className="bg-eco-50 px-4 py-10 sm:px-8 sm:py-14">
         <div className="mx-auto max-w-7xl">
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            {categories.map((item) => (
-              <button key={item} type="button" aria-pressed={category === item} onClick={() => setCategory(item)} className={`rounded-full px-4 py-2.5 text-sm font-semibold transition sm:px-5 sm:py-3 ${category === item ? 'bg-eco-800 text-white shadow-sm' : 'border border-white bg-white text-eco-800 hover:border-eco-200 hover:bg-eco-100'}`}>
-                {item}
-              </button>
-            ))}
+          <div className="sticky top-16 z-20 -mx-4 border-y border-eco-100 bg-eco-50/95 px-4 py-4 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+            <label className="relative block max-w-2xl">
+              <span className="sr-only">Поиск услуги</span>
+              <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} aria-hidden="true" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти услугу: НДВ, ПЭК, анализ воды…" className="input-focus w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-12 text-base text-slate-900 shadow-sm" />
+              {search && <button type="button" onClick={() => setSearch('')} aria-label="Очистить поиск" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-slate-500 hover:bg-slate-100"><X size={18} /></button>}
+            </label>
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:gap-3">
+              {categories.map((item) => (
+                <button key={item} type="button" aria-pressed={category === item} onClick={() => setCategory(item)} className={`shrink-0 rounded-full px-4 py-2.5 text-sm font-semibold transition sm:px-5 ${category === item ? 'bg-eco-800 text-white shadow-sm' : 'border border-white bg-white text-eco-800 hover:border-eco-200 hover:bg-eco-100'}`}>
+                  {categoryLabel(item)}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="mt-8 grid gap-4 sm:mt-10 sm:gap-6 md:grid-cols-2">
-            {items.map((service, index) => (
-              <Reveal key={service.id} delay={index * 0.04}>
-                <div id={`service-${service.id}`} className={`card-hover flex h-full scroll-mt-28 flex-col rounded-[18px] border bg-white p-5 sm:rounded-[22px] sm:p-6 ${(selectedIncludes[service.id] ?? []).length > 0 ? 'border-accent ring-4 ring-accent/15' : 'border-slate-200'}`}>
-                  <div className="flex items-start justify-between gap-4">
-                    <p className="text-sm font-semibold text-eco-500">{service.category}</p>
-                    {(selectedIncludes[service.id] ?? []).length > 0 && (
-                      <span className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-eco-900">
-                        Выбрано: {(selectedIncludes[service.id] ?? []).length}
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="mt-3 text-xl font-bold leading-snug text-eco-900 sm:text-2xl">{service.title}</h2>
-                  {['waste-transportation', 'waste-management'].includes(service.id) && (
-                    <p className="mt-2 text-xs font-bold uppercase tracking-wide text-eco-600">Только в Шымкенте</p>
-                  )}
-                  {service.id === 'waste-recycling' && (
-                    <p className="mt-2 text-xs font-bold uppercase tracking-wide text-eco-600">Шымкент · Тараз · Туркестан</p>
-                  )}
-                  <p className="mt-4 flex-1 text-sm leading-6 text-slate-600 sm:mt-5">{service.description}</p>
-                  <div className="mt-5 overflow-hidden rounded-2xl border border-eco-100 bg-eco-50 sm:mt-6 sm:rounded-[18px]">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedService(expandedService === service.id ? null : service.id)}
-                      className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-sm font-bold text-eco-900 transition hover:bg-eco-100/60 sm:gap-4 sm:px-5 sm:py-4"
-                      aria-expanded={expandedService === service.id}
-                    >
-                      <span>Выберите услуги внутри направления</span>
-                      <ChevronDown className={`shrink-0 transition-transform ${expandedService === service.id ? 'rotate-180' : ''}`} size={20} />
-                    </button>
-                    {expandedService === service.id && (
-                      <ul className="space-y-3 border-t border-eco-100 bg-white px-4 py-4 text-sm leading-6 text-slate-700 sm:px-5">
-                        {service.includes.map((item) => (
-                          <li key={item}>
-                            <label className="flex cursor-pointer gap-3 rounded-2xl p-2 transition hover:bg-eco-50">
-                              <input
-                                type="checkbox"
-                                checked={(selectedIncludes[service.id] ?? []).includes(item)}
-                                onChange={() => toggleIncludedService(service.id, item)}
-                                className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-[#38C7BA]"
-                              />
-                              <span>{item}</span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                  <div className="mt-5 grid gap-3 sm:mt-6 sm:flex sm:flex-wrap">
-                    <Button asChild variant="secondary" className="w-full sm:w-auto"><Link to={`/services/${service.id}`}>Подробнее</Link></Button>
-                    <Button type="button" onClick={() => setOrderModal(service.id)} className="w-full sm:w-auto">{(selectedIncludes[service.id] ?? []).length > 0 ? 'Заказать выбранные' : getServicePrimaryCtaLabel(service.id)}</Button>
-                  </div>
+
+          {groupedItems.length > 0 ? <div className="mt-10 space-y-14">
+            {groupedItems.map((group) => (
+              <section key={group.category} id={`direction-${serviceGroups.findIndex((item) => item.category === group.category) + 1}`} className="scroll-mt-28" aria-labelledby={`group-${group.category}`}>
+                <div className="flex flex-col justify-between gap-4 border-b border-eco-200 pb-5 sm:flex-row sm:items-end">
+                  <div><p className="text-sm font-bold uppercase tracking-[0.16em] text-eco-500">Направление</p><h2 id={`group-${group.category}`} className="mt-2 text-3xl font-bold text-eco-900">{group.title}</h2><p className="mt-2 max-w-2xl text-base leading-7 text-slate-600">{group.description}</p></div>
+                  {group.overviewPages.length > 0 && <nav aria-label={`Обзор направления ${group.title}`} className="flex flex-wrap gap-2">{group.overviewPages.map((page) => <Link key={page.id} to={`/services/${page.id}`} className="rounded-full border border-eco-200 bg-white px-4 py-2 text-sm font-semibold text-eco-800 hover:bg-eco-100">Обзор: {page.title}</Link>)}</nav>}
                 </div>
-              </Reveal>
+                <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                  {group.services.map((service, index) => <Reveal key={service.id} delay={index * 0.03}><ServiceCard service={service} onOrder={setOrderModal} /></Reveal>)}
+                </div>
+              </section>
             ))}
-          </div>
+          </div> : <div className="mt-10 rounded-[24px] border border-dashed border-eco-300 bg-white px-6 py-12 text-center"><h2 className="text-2xl font-bold text-eco-900">Услуги не найдены</h2><p className="mt-3 text-slate-600">Попробуйте другое название или сокращение либо сбросьте фильтр.</p><Button type="button" variant="secondary" className="mt-6" onClick={() => { setSearch(''); setCategory('Все'); }}>Показать все услуги</Button></div>}
         </div>
       </section>
 

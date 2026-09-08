@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { company } from '../config/company';
-import { articleContent } from '../content/articles/articleContent';
+import { articleContent, normalizeArticleSlug } from '../content/articles/articleContent';
 import { isArticleApproved } from '../content/articleReview';
 import { publishedCaseStudies } from '../content/cases/caseStudies';
 import { expertMap, expertProfileMap, isExpertWithCredentials } from '../content/experts/experts';
@@ -39,7 +39,7 @@ const ExpertDetailsPage = () => {
         </div>)}</div>
       </section>
 
-      <section className="mt-12"><h2 className="text-3xl font-bold text-eco-900">Проверенные статьи</h2>{reviewedArticles.length ? <ul className="mt-5 space-y-3">{reviewedArticles.map((item) => <li key={item.slug}><Link className="font-semibold text-eco-700 underline" to={`/news/${item.slug}`}>{item.title}</Link></li>)}</ul> : <p className="mt-4 text-slate-600">Подтверждённых рецензий пока нет.</p>}</section>
+      <section className="mt-12"><h2 className="text-3xl font-bold text-eco-900">Проверенные статьи</h2>{reviewedArticles.length ? <ul className="mt-5 space-y-3">{reviewedArticles.map((item) => <li key={item.slug}><Link className="font-semibold text-eco-700 underline" to={`/news/${normalizeArticleSlug(item.slug)}`}>{item.title}</Link></li>)}</ul> : <p className="mt-4 text-slate-600">Подтверждённых рецензий пока нет.</p>}</section>
       <section className="mt-12"><h2 className="text-3xl font-bold text-eco-900">Опубликованные кейсы</h2>{relatedCases.length ? <ul className="mt-5 space-y-3">{relatedCases.map((item) => <li key={item.slug}><Link className="font-semibold text-eco-700 underline" to={`/cases/${item.slug}`}>{item.title}</Link></li>)}</ul> : <p className="mt-4 text-slate-600">Подтверждённых опубликованных кейсов пока нет.</p>}</section>
       <Link to="/experts" className="mt-12 inline-flex font-semibold text-eco-700 underline">Все эксперты</Link>
     </article>
