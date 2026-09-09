@@ -13,6 +13,14 @@ type Props = {
   onClose: () => void;
   preSelectedService?: string;
   locale?: 'ru' | 'kk';
+  leadContext?: {
+    source: 'PROJECT_MAP';
+    cityId?: string;
+    regionId?: string;
+    locationName?: string;
+    serviceCode?: string;
+    caseId?: string;
+  };
 };
 
 type EcoService = { id: string; title: string };
@@ -24,7 +32,7 @@ const createKkWhatsAppMessage = (service = '') => `Сәлеметсіз бе! Ө
 Телефон / WhatsApp:
 Сұрақ:`;
 
-const OrderChoiceModal = ({ open, onClose, preSelectedService, locale = 'ru' }: Props) => {
+const OrderChoiceModal = ({ open, onClose, preSelectedService, locale = 'ru', leadContext }: Props) => {
   const navigate = useNavigate();
   const isKk = locale === 'kk';
   // Public runtime intentionally has no AuthProvider. The private cabinet
@@ -49,16 +57,32 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService, locale = 'ru' }: 
 
   const handleOnline = () => {
     onClose();
+    const params = new URLSearchParams();
+    if (preSelectedService) params.set('service', preSelectedService);
+    if (leadContext) {
+      params.set('source', leadContext.source);
+      if (leadContext.cityId) params.set('cityId', leadContext.cityId);
+      if (leadContext.regionId) params.set('regionId', leadContext.regionId);
+      if (leadContext.locationName) params.set('city', leadContext.locationName);
+      if (leadContext.serviceCode) params.set('serviceCode', leadContext.serviceCode);
+      if (leadContext.caseId) params.set('caseId', leadContext.caseId);
+    }
+    const orderPath = `/cabinet/orders/new${params.size ? `?${params.toString()}` : ''}`;
     if (isAuthenticated) {
-      navigate(preSelectedService ? `/cabinet/orders/new?service=${preSelectedService}` : '/cabinet/orders/new');
+      navigate(orderPath);
     } else {
-      const orderPath = preSelectedService ? `/cabinet/orders/new?service=${preSelectedService}` : '/cabinet/orders/new';
       navigate(`/register?redirect=${encodeURIComponent(orderPath)}`);
     }
   };
 
+  const contextLines = leadContext ? [
+    leadContext.locationName && `Город / область: ${leadContext.locationName}`,
+    leadContext.serviceCode && `Код услуги: ${leadContext.serviceCode}`,
+    leadContext.caseId && `Похожий кейс: ${leadContext.caseId}`,
+    `Источник: ${leadContext.source}`,
+  ].filter(Boolean).join('\n') : '';
   const whatsappUrl = createWhatsAppUrl(
-    isKk ? createKkWhatsAppMessage(selectedServiceTitle) : createBlankWhatsAppRequestMessage(selectedServiceTitle),
+    `${isKk ? createKkWhatsAppMessage(selectedServiceTitle) : createBlankWhatsAppRequestMessage(selectedServiceTitle)}${contextLines ? `\n\n${contextLines}` : ''}`,
   );
 
   return (

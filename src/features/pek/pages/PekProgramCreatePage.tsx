@@ -290,8 +290,8 @@ const PekProgramCreatePage = () => {
       await commitPekProgramMutation(queryClient, saved.company?.id ?? companyId, saved);
       await removePekDraft(draftKey).catch(() => undefined);
       setAutosaveState('saved');
-      toast.success('Черновик программы сохранён');
-      navigate(`/staff/pek/programs/${saved.id}/edit?companyId=${saved.company?.id ?? companyId}&step=1`, { replace: true });
+      toast.success('Программа создана');
+      navigate(`/staff/pek/programs/${saved.id}?companyId=${saved.company?.id ?? companyId}`, { replace: true });
     },
     onError: (error) => {
       setAutosaveState('error');
@@ -301,10 +301,63 @@ const PekProgramCreatePage = () => {
     },
   });
 
+  const validateHeader = (value: PekProgramForm) => {
+    let message = '';
+    if (!value.companyId) { form.setError('companyId', { message: 'Выберите компанию' }); message = 'Выберите компанию'; }
+    else if (!value.objectId) { form.setError('objectId', { message: 'Выберите объект' }); message = 'Выберите объект'; }
+    else if (!value.number.trim()) { form.setError('number', { message: 'Укажите номер' }); message = 'Укажите номер'; }
+    else if (!value.name.trim()) { form.setError('name', { message: 'Укажите название' }); message = 'Укажите название'; }
+    else if (!value.validFrom || !value.validUntil || value.validUntil < value.validFrom) { form.setError('validUntil', { message: 'Проверьте период программы' }); message = 'Проверьте период программы'; }
+    return message;
+  };
+
   if (program.isLoading) return <PekLoading />;
   if (program.isError) return <PekQueryError error={program.error} resource="Программа ПЭК" retry={() => void program.refetch()} />;
   if (edit && program.data?.availableActions.edit !== true) {
     return <PekState title="Программа доступна только для просмотра" message="Изменение этой программы сейчас недоступно." />;
+  }
+
+  if (!edit) {
+    const create = form.handleSubmit((value) => {
+      const message = validateHeader(value);
+      if (message) {
+        toast.error(message);
+        return;
+      }
+      createServerDraft.mutate(value);
+    });
+
+    return <div className="mx-auto max-w-4xl space-y-5">
+      <PekPageHeader
+        title="Создание программы ПЭК"
+        description="Укажите основные сведения. Остальные разделы заполняются в рабочем пространстве программы."
+      />
+      <form onSubmit={create} className="rounded-2xl border bg-white p-5 sm:p-7">
+        {createServerDraft.isError && <div role="alert" className="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">Не удалось создать программу. Проверьте поля и повторите попытку.</div>}
+        <div className="grid gap-5 md:grid-cols-2">
+          <input type="hidden" {...register('companyId', { valueAsNumber: true })} />
+          <input type="hidden" {...register('objectId', { valueAsNumber: true })} />
+          <PekCompanyObjectFilters
+            companyId={companyId || undefined}
+            objectId={objectId || undefined}
+            required
+            onCompanyChange={(value) => {
+              setValue('companyId', Number(value) || 0, { shouldDirty: true, shouldValidate: true });
+              setValue('objectId', 0, { shouldDirty: true, shouldValidate: true });
+            }}
+            onObjectChange={(value) => setValue('objectId', Number(value) || 0, { shouldDirty: true, shouldValidate: true })}
+          />
+          <label>Номер *<input {...register('number')} className={inputClass} />{formState.errors.number && <span className="mt-1 block text-xs text-rose-700">{formState.errors.number.message}</span>}</label>
+          <label>Название *<input {...register('name')} className={inputClass} />{formState.errors.name && <span className="mt-1 block text-xs text-rose-700">{formState.errors.name.message}</span>}</label>
+          <label>Период с *<input type="date" {...register('validFrom')} className={inputClass} /></label>
+          <label>Период по *<input type="date" {...register('validUntil')} className={inputClass} />{formState.errors.validUntil && <span className="mt-1 block text-xs text-rose-700">{formState.errors.validUntil.message}</span>}</label>
+          <PekLookupSelect label="Ответственный" value={watch('responsibleUserId')} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => setValue('responsibleUserId', value, { shouldDirty: true })} />
+        </div>
+        <div className="mt-7 flex justify-end">
+          <Button type="submit" disabled={createServerDraft.isPending}>{createServerDraft.isPending ? 'Создание…' : 'Создать программу'}</Button>
+        </div>
+      </form>
+    </div>;
   }
 
   const submit = form.handleSubmit((value) => {
@@ -323,15 +376,6 @@ const PekProgramCreatePage = () => {
     setValue('indicators', indicators.map((row, rowIndex) => rowIndex === index ? { ...row, ...patch } : row), { shouldDirty: true });
   const updateMeasure = (index: number, patch: Partial<PekMeasure>) =>
     setValue('measures', measures.map((row, rowIndex) => rowIndex === index ? { ...row, ...patch } : row), { shouldDirty: true });
-  const validateHeader = (value: PekProgramForm) => {
-    let message = '';
-    if (!value.companyId) { form.setError('companyId', { message: 'Выберите компанию' }); message = 'Выберите компанию'; }
-    else if (!value.objectId) { form.setError('objectId', { message: 'Выберите объект' }); message = 'Выберите объект'; }
-    else if (!value.number.trim()) { form.setError('number', { message: 'Укажите номер' }); message = 'Укажите номер'; }
-    else if (!value.name.trim()) { form.setError('name', { message: 'Укажите название' }); message = 'Укажите название'; }
-    else if (!value.validFrom || !value.validUntil || value.validUntil < value.validFrom) { form.setError('validUntil', { message: 'Проверьте период программы' }); message = 'Проверьте период программы'; }
-    return message;
-  };
 
   const saveDraftNow = () => {
     const value = getValues();

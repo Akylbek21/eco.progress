@@ -227,6 +227,17 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
   const { user } = useAuth();
   const toast = useToast();
   const { data: services = [] } = useQuery({ queryKey: ['services'], queryFn: getServices });
+  const mapLeadContext = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return {
+      source: params.get('source') || '',
+      cityId: params.get('cityId') || '',
+      regionId: params.get('regionId') || '',
+      serviceCode: params.get('serviceCode') || '',
+      caseId: params.get('caseId') || '',
+      locationName: params.get('city') || '',
+    };
+  }, [location.search]);
   const serviceFromUrl = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const serviceId = normalizeServiceSlug(params.get('service') ?? '');
@@ -267,7 +278,12 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
         `Тип клиента: ${String(form.get('clientKind'))}`,
         `Город: ${String(form.get('city') || 'не указан')}`,
         `WhatsApp: ${String(form.get('whatsapp') || 'не указан')}`,
-      ].join('\n');
+        mapLeadContext.source && `Источник: ${mapLeadContext.source}`,
+        mapLeadContext.cityId && `ID города: ${mapLeadContext.cityId}`,
+        mapLeadContext.regionId && `ID области: ${mapLeadContext.regionId}`,
+        mapLeadContext.serviceCode && `Код услуги карты: ${mapLeadContext.serviceCode}`,
+        mapLeadContext.caseId && `Похожий кейс: ${mapLeadContext.caseId}`,
+      ].filter(Boolean).join('\n');
       const selectedItemsText = selectedOrderItems.length > 0 ? `\n\nВыбранные работы:\n${selectedOrderItems.map((item) => `- ${item}`).join('\n')}` : '';
       const order = await createOrder({
         contactPerson: String(form.get('contactPerson')),
@@ -355,7 +371,7 @@ export const CabinetNewOrderPage = ({ onNotify }: { onNotify?: (message: string)
           <Input name="email" label="Email *" type="email" defaultValue={user?.email} required />
           <Input name="companyName" label="Название компании" defaultValue={user?.companyName ?? user?.name} />
           <Input name="bin" label="БИН / ИИН" defaultValue={user?.bin} />
-          <Input name="city" label="Город" defaultValue={user?.city} />
+          <Input name="city" label="Город / область" defaultValue={mapLeadContext.locationName || user?.city} />
           <Input name="objectAddress" label="Адрес объекта" />
           <label className="text-sm font-semibold text-slate-700">Срочность<select name="urgency" className="input-focus mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3"><option>Стандартная</option><option>Срочно</option><option>Не срочно</option></select></label>
         </div>

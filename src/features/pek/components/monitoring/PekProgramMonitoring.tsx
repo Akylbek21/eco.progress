@@ -23,6 +23,25 @@ type FormState = {
 
 const monitoringTypes: PekMonitoringType[] = ['AMBIENT_AIR', 'EMISSION_SOURCE', 'SURFACE_WATER', 'GROUNDWATER', 'WASTEWATER', 'SOIL', 'WASTE', 'PHYSICAL_FACTOR'];
 const frequencyTypes: PekPeriodicity[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL', 'PER_EVENT'];
+const monitoringTypeLabels: Record<PekMonitoringType, string> = {
+  AMBIENT_AIR: 'Атмосферный воздух',
+  EMISSION_SOURCE: 'Источники выбросов',
+  SURFACE_WATER: 'Поверхностные воды',
+  GROUNDWATER: 'Подземные воды',
+  WASTEWATER: 'Сточные воды',
+  SOIL: 'Почва',
+  WASTE: 'Отходы',
+  PHYSICAL_FACTOR: 'Физические факторы',
+};
+const frequencyLabels: Record<PekPeriodicity, string> = {
+  DAILY: 'Ежедневно',
+  WEEKLY: 'Еженедельно',
+  MONTHLY: 'Ежемесячно',
+  QUARTERLY: 'Ежеквартально',
+  SEMIANNUAL: 'Раз в полугодие',
+  ANNUAL: 'Ежегодно',
+  PER_EVENT: 'По событию',
+};
 const emptyForm: FormState = { monitoringType: '', name: '', methodology: '', laboratoryId: '', frequencyType: '', plannedCount: '0', controlItemIds: '', protocolTypes: '', active: true };
 const csv = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
 const numberCsv = (value: string) => csv(value).map(Number).filter(Number.isFinite);
@@ -116,16 +135,16 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
   const openCreate = () => { setForm(emptyForm); setEditing('new'); };
   const openEdit = (item: PekMonitoringDirection) => { setForm(formFromItem(item)); setEditing(item); };
 
-  return <section aria-label="Направления мониторинга" className="space-y-4 rounded-2xl border bg-white p-5">
+  return <section aria-label="Производственный мониторинг" className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h2 className="text-lg font-black">Направления мониторинга</h2><p className="text-sm text-slate-500">Настройки производственного экологического контроля.</p></div>
+      <div><h2 className="text-lg font-black">Производственный мониторинг</h2><p className="text-sm text-slate-500">Компоненты окружающей среды, периодичность и точки контроля.</p></div>
       {canCreate && <Button variant="contained" onClick={openCreate}>Добавить направление</Button>}
     </div>
     {mutationError && <Alert severity="error">{mapPekError(mutationError).message}</Alert>}
     {!items.length ? <Alert severity="info">Направления мониторинга пока не добавлены.</Alert> : <div className="grid gap-3">
       {items.map((item) => <article key={item.id} className="rounded-xl border p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><h3 className="font-black">{item.name}</h3><p className="text-sm text-slate-500">Направление: {item.monitoringType} · {item.frequencyType} · план: {item.plannedCount}</p></div>
+          <div><h3 className="font-black">{monitoringTypeLabels[item.monitoringType]}</h3><p className="text-sm text-slate-500">{item.name !== monitoringTypeLabels[item.monitoringType] ? `${item.name} · ` : ''}{frequencyLabels[item.frequencyType]} · план: {item.plannedCount}</p></div>
           <div className="flex gap-2">
             {item.availableActions.edit === true && <Button size="small" variant="outlined" onClick={() => openEdit(item)}>Изменить</Button>}
             {item.availableActions.delete === true && <Button size="small" color="error" onClick={() => setDeleting(item)}>Удалить</Button>}
@@ -144,10 +163,10 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
     <Dialog open={Boolean(editing)} onClose={() => !save.isPending && setEditing(null)} fullWidth maxWidth="md">
       <DialogTitle>{editing === 'new' ? 'Добавить направление' : 'Изменить направление'}</DialogTitle>
       <DialogContent><div className="mt-2 grid gap-4 sm:grid-cols-2">
-        <TextField select label="Тип мониторинга *" value={form.monitoringType} onChange={(event) => setForm((value) => ({ ...value, monitoringType: event.target.value as PekMonitoringType }))}>{monitoringTypes.map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}</TextField>
+        <TextField select label="Раздел мониторинга *" value={form.monitoringType} onChange={(event) => setForm((value) => ({ ...value, monitoringType: event.target.value as PekMonitoringType }))}>{monitoringTypes.map((type) => <MenuItem key={type} value={type}>{monitoringTypeLabels[type]}</MenuItem>)}</TextField>
         <TextField label="Название *" value={form.name} onChange={(event) => setForm((value) => ({ ...value, name: event.target.value }))} />
         <TextField label="Методика" value={form.methodology} onChange={(event) => setForm((value) => ({ ...value, methodology: event.target.value }))} />
-        <TextField select label="Периодичность *" value={form.frequencyType} onChange={(event) => setForm((value) => ({ ...value, frequencyType: event.target.value as PekPeriodicity }))}>{frequencyTypes.map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}</TextField>
+        <TextField select label="Периодичность *" value={form.frequencyType} onChange={(event) => setForm((value) => ({ ...value, frequencyType: event.target.value as PekPeriodicity }))}>{frequencyTypes.map((type) => <MenuItem key={type} value={type}>{frequencyLabels[type]}</MenuItem>)}</TextField>
         <TextField label="Плановое количество *" type="number" value={form.plannedCount} onChange={(event) => setForm((value) => ({ ...value, plannedCount: event.target.value }))} />
         <div className="space-y-2 sm:col-span-2"><p className="text-sm font-semibold">Объекты контроля</p>{program.controlItems?.map((control) => <FormControlLabel key={control.id || control.clientId} control={<Checkbox checked={Boolean(control.id && numberCsv(form.controlItemIds).includes(control.id))} onChange={(event) => { if (!control.id) return; const current = numberCsv(form.controlItemIds); setForm((value) => ({ ...value, controlItemIds: (event.target.checked ? [...current, control.id!] : current.filter((id) => id !== control.id)).join(', ') })); }} />} label={`${control.code} · ${control.name}`} />)}</div>
         <TextField label="Типы протоколов (только чтение)" value={form.protocolTypes} disabled helperText="Значение рассчитывает backend" />
