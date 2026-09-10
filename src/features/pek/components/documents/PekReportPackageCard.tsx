@@ -6,6 +6,7 @@ import { pekKeys } from '../../api/pekQueryKeys';
 import { pekApi } from '../../api/pekService';
 import { mapPekError } from '../../utils/pekErrorMapper';
 import PekQueryError from '../common/PekQueryError';
+import { canGeneratePekPackage } from '../../utils/pekPackageActions';
 
 const saveBlob = ({ blob, filename }: PekBlobResult) => {
   const url = URL.createObjectURL(blob);
@@ -58,7 +59,7 @@ const PekReportPackageCard = ({ report }: { report: PekReport }) => {
   if (packageQuery.isError) return <section className="rounded-2xl border bg-white p-5"><PekQueryError error={packageQuery.error} resource="комплект ПЭК" retry={() => void packageQuery.refetch()} /></section>;
 
   if (!packageQuery.data) {
-    const canGenerate = report.availableActions.generatePackage === true;
+    const canGenerate = canGeneratePekPackage(report);
     return <section className="space-y-4 rounded-2xl border bg-white p-5">
       <div><h2 className="text-lg font-black">Комплект документов ПЭК</h2><p className="text-sm text-slate-500">Комплект ещё не сформирован.</p></div>
       {generate.error && <Alert severity="error">{mapPekError(generate.error).message}</Alert>}
@@ -70,14 +71,14 @@ const PekReportPackageCard = ({ report }: { report: PekReport }) => {
   const failure = generate.error || download.error;
   const mappedFailure = failure ? mapPekError(failure) : null;
   const missingFields = [...new Set([...(data.missingFields || []), ...(mappedFailure?.missingFields || [])])].map(friendlyMissingField);
-  const canGenerate = data.availableActions.generatePackage === true;
+  const canGenerate = canGeneratePekPackage(report, data.availableActions.generatePackage);
   const canDownload = data.availableActions.downloadPackage === true;
   const busy = generate.isPending || download.isPending;
 
   return <section className="space-y-5 rounded-2xl border bg-white p-5">
     <div><h2 className="text-lg font-black">Комплект документов ПЭК</h2><p className="text-sm text-slate-500">Комплект сформирован на основе ревизии данных отчёта.</p></div>
     {mappedFailure && <Alert severity="error">{mappedFailure.message}</Alert>}
-    {missingFields.length > 0 && <Alert severity="warning"><strong>Для формирования комплекта заполните:</strong><ul className="mt-2 list-disc pl-5">{missingFields.map((field) => <li key={field}>{field}</li>)}</ul></Alert>}
+    {missingFields.length > 0 && <Alert severity="warning"><strong>Замечания при формировании комплекта:</strong><ul className="mt-2 list-disc pl-5">{missingFields.map((field) => <li key={field}>{field}</li>)}</ul><p className="mt-2">После исправления данных сформируйте комплект повторно, чтобы обновить файлы и список замечаний.</p></Alert>}
 
     <div className="grid gap-3 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-4">
       <div><span className="text-slate-500">Версия документа</span><p className="font-bold">v{data.documentVersion}</p></div>
@@ -89,7 +90,7 @@ const PekReportPackageCard = ({ report }: { report: PekReport }) => {
     <div><h3 className="font-bold">Файлы</h3>{data.files.length ? <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{data.files.map((file) => <li key={file}>{file}</li>)}</ul> : <p className="mt-2 text-sm text-slate-500">Файлы ещё не сформированы.</p>}</div>
 
     <div className="flex flex-wrap gap-2">
-      {canGenerate && <Button variant="contained" disabled={busy || missingFields.length > 0} onClick={() => generate.mutate()}>Сформировать комплект ПЭК</Button>}
+      {canGenerate && <Button variant="contained" disabled={busy} onClick={() => generate.mutate()}>Сформировать комплект ПЭК</Button>}
       {canDownload && <Button variant="outlined" disabled={busy || !data.downloadAvailable} onClick={() => download.mutate()}>Скачать ZIP</Button>}
     </div>
   </section>;

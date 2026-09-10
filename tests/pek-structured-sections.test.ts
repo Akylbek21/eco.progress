@@ -50,7 +50,7 @@ describe('structured PEK sections', () => {
     const points = readFileSync(resolve(process.cwd(), 'src/features/pek/components/monitoring/PekMonitoringPoints.tsx'), 'utf8');
     const settings = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekSettingsPage.tsx'), 'utf8');
     for (const title of ['Внутренние проверки', 'QA/QC измерений', 'Аварийные процедуры', 'Матрица ответственности']) expect(sections).toContain(title);
-    expect(points).toContain('coordinatePattern');
+    expect(points).toContain('coordinateError');
     expect(points).toContain('52.905785, 69.153399');
     expect(settings).toContain('PekCompanyStaff');
   });

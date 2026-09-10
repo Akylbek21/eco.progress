@@ -11,32 +11,16 @@ const explicitPermission = (user: PekUser, permission: string): boolean | undefi
   return user.permissions.includes(permission);
 };
 
-const viewRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'MANAGER', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST'];
-const programEditorRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'];
-const reportEditorRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST', 'LABORATORY'];
-const supervisorRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD'];
-const submitterRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'ECOLOGIST'];
-const adminRoles: UserRole[] = ['ADMIN', 'DIRECTOR'];
-
-export const canUsePekPermission = (user: PekUser, permission: string) => {
-  const explicit = explicitPermission(user, permission);
-  if (explicit !== undefined) return explicit;
-  const role = user?.role;
-  if (!role) return false;
-  if (permission === 'PEK_VIEW' || permission === 'PEK_SETTINGS_VIEW' || permission === 'PEK_REPORT_EXPORT') {
-    return user?.companyPermissions?.COMPANY_VIEW === true || viewRoles.includes(role);
-  }
-  if (permission === 'PEK_PROGRAM_CREATE' || permission === 'PEK_PROGRAM_EDIT') return programEditorRoles.includes(role);
-  if (permission === 'PEK_REPORT_CREATE' || permission === 'PEK_REPORT_EDIT' || permission === 'PEK_REPORT_COLLECT' || permission === 'PEK_REPORT_VALIDATE') return reportEditorRoles.includes(role);
-  if (permission === 'PEK_PROGRAM_ACTIVATE' || permission === 'PEK_PROGRAM_ARCHIVE' || permission === 'PEK_PROGRAM_REVIEW' || permission === 'PEK_PROGRAM_APPROVE') return supervisorRoles.includes(role);
-  if (permission === 'PEK_REPORT_REVIEW' || permission === 'PEK_REPORT_RETURN' || permission === 'PEK_REPORT_APPROVE' || permission === 'PEK_SETTINGS_EDIT') return supervisorRoles.includes(role);
-  if (permission === 'PEK_REPORT_SIGN' || permission === 'PEK_REPORT_SUBMIT') return submitterRoles.includes(role);
-  if (permission === 'PEK_ADMIN') return adminRoles.includes(role);
-  return false;
-};
+// Resource action flags and explicit permissions are authoritative; never infer grants from roles.
+export const canUsePekPermission = (user: PekUser, permission: string) => explicitPermission(user, permission) === true;
 
 export const canViewPek = (user: PekUser) => {
-  return canUsePekPermission(user, 'PEK_VIEW');
+  const explicit = explicitPermission(user, 'PEK_VIEW');
+  // The current /auth/me contract does not expose PEK_* permissions. Missing
+  // permission data means "unknown", not "denied": the PEK endpoints still
+  // enforce PEK_VIEW and company membership. An explicit permission list is
+  // authoritative when a newer backend provides it.
+  return explicit ?? Boolean(user);
 };
 export const canEditPek = (user: PekUser) =>
   canUsePekPermission(user, 'PEK_PROGRAM_EDIT') || canUsePekPermission(user, 'PEK_REPORT_EDIT');
@@ -83,8 +67,7 @@ export const canArchivePekReport = (user: PekUser, report: PekReportAccess) =>
   resourceFlag(report, 'archive', 'canArchive') === true;
 
 // Central PEK access surface. Resource-level flags are authoritative whenever
-// the response contains them; role fallback is used only when no such field is
-// available and mirrors PekSecurityExpressions.
+// the response contains them; otherwise explicit permissions are required.
 export const canCreateProgram = (user: PekUser) => canUsePekPermission(user, 'PEK_PROGRAM_CREATE');
 export const canEditProgram = (user: PekUser, resource?: PekResourceAccess) =>
   resourceFlag(resource, 'edit', 'canEdit') ?? canUsePekPermission(user, 'PEK_PROGRAM_EDIT');

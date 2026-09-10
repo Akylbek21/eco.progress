@@ -1,0 +1,416 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table><tbody><tr><td><p>
+№</p>
+</td><td><p>
+Показатели</p>
+</td><td><p>
+Единицы<br>измерения</p>
+</td><td><p>
+Нормативы<br>(ПДК), не более</p>
+</td><td><p>
+Лимитирующий показатель вредности</p>
+</td><td><p>
+Класс<br>опасности</p>
+</td></tr><tr><td><p>
+1</p>
+</td><td><p>
+2</p>
+</td><td><p>
+3</p>
+</td><td><p>
+4</p>
+</td><td><p>
+5</p>
+</td><td><p>
+6</p>
+</td></tr><tr><td><br>
+</td><td colspan="5"><p>
+Обобщенные показатели</p>
+</td></tr><tr><td><p>
+1</p>
+</td><td><p>
+Водородный показатель</p>
+</td><td><p>
+единицы рН</p>
+</td><td><p>
+в пределах 6-9</p>
+</td><td><br>
+</td><td><br>
+</td></tr><tr><td><p>
+2</p>
+</td><td><p>
+Общая минерализация (сухой остаток)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+1000 (1500)</p>
+</td><td><br>
+</td><td><br>
+</td></tr><tr><td><p>
+3</p>
+</td><td><p>
+Жесткость общая</p>
+</td><td><p>
+мг-экв/л</p>
+</td><td><p>
+7,0 (10)</p>
+</td><td><br>
+</td><td><br>
+</td></tr><tr><td><p>
+4</p>
+</td><td><p>
+Окисляемость перманганатная</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+5,0</p>
+</td><td><br>
+</td><td><br>
+</td></tr><tr><td><p>
+5</p>
+</td><td><p>
+Нефтепродукты, суммарно</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,1</p>
+</td><td><br>
+</td><td><br>
+</td></tr><tr><td><p>
+6</p>
+</td><td><p>
+Поверхностно-активные вещества (ПАВ), анионо-активные</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,5</p>
+</td><td><br>
+</td><td><br>
+</td></tr><tr><td><p>
+7</p>
+</td><td><p>
+Фенольный индекс</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,25</p>
+</td><td><br>
+</td><td><br>
+</td></tr><tr><td colspan="6"><p>
+Неорганические вещества</p>
+</td></tr><tr><td><p>
+8</p>
+</td><td><p>
+Алюминий (А13+)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,5</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+9</p>
+</td><td><p>
+Барий (Ва2+)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,1</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+10</p>
+</td><td><p>
+Бериллий (Ве2+)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,0002</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+1</p>
+</td></tr><tr><td><p>
+11</p>
+</td><td><p>
+Бор (В, суммарно)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,5</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+12</p>
+</td><td><p>
+Железо (Fe, суммарно)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,3 (1,0)</p>
+</td><td><p>
+орг.</p>
+</td><td><p>
+3</p>
+</td></tr><tr><td><p>
+13</p>
+</td><td><p>
+Кадмий (Сd, суммарно)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,001</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+14</p>
+</td><td><p>
+Марганец (Мn, суммарно)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,1 (0,5)</p>
+</td><td><p>
+орг.</p>
+</td><td><p>
+3</p>
+</td></tr><tr><td><p>
+15</p>
+</td><td><p>
+Медь (Сu, суммарно)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+1,0</p>
+</td><td><p>
+орг.</p>
+</td><td><p>
+3</p>
+</td></tr><tr><td><p>
+16</p>
+</td><td><p>
+Молибден (Мо), суммарно)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,25</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+17</p>
+</td><td><p>
+Мышьяк (Аs, суммарно)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,05</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+18</p>
+</td><td><p>
+Никель (Ni, суммарно)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,1</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+3</p>
+</td></tr><tr><td><p>
+19</p>
+</td><td><p>
+Нитраты (по NO3)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+45</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+3</p>
+</td></tr><tr><td><p>
+20</p>
+</td><td><p>
+Ртуть (Нg, суммарно)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,0005</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+1</p>
+</td></tr><tr><td><p>
+21</p>
+</td><td><p>
+Свинец (Рb, суммарно)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,03</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+22</p>
+</td><td><p>
+Селен (Sе, суммарно)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,01</p>
+</td><td><p>
+с-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+23</p>
+</td><td><p>
+Стронций (Sr2+)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+7,0</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+24</p>
+</td><td><p>
+Сульфаты (SO4)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+500</p>
+</td><td><p>
+орг.</p>
+</td><td><p>
+4</p>
+</td></tr><tr><td colspan="6"><p>
+Фториды (F) для климатических районов:</p>
+</td></tr><tr><td><p>
+25</p>
+</td><td><p>
+I и II</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+1,5</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+26</p>
+</td><td><p>
+III</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+1,2</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+27</p>
+</td><td><p>
+Хлориды (СL-)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+350</p>
+</td><td><p>
+орг.</p>
+</td><td><p>
+4</p>
+</td></tr><tr><td><p>
+28</p>
+</td><td><p>
+Хром (Сr6+)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,05</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+3</p>
+</td></tr><tr><td><p>
+29</p>
+</td><td><p>
+Цианиды (СN~)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,035</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+30</p>
+</td><td><p>
+Цинк (Zn2+)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+5,0</p>
+</td><td><p>
+орг.</p>
+</td><td><p>
+3</p>
+</td></tr><tr><td colspan="6"><p>
+Органические вещества:</p>
+</td></tr><tr><td><p>
+31</p>
+</td><td><p>
+<font face="Symbol">g</font>-ГХЦГ (линдан)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,002</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+1</p>
+</td></tr><tr><td><p>
+32</p>
+</td><td><p>
+ДДТ (сумма изомеров)</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,002</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+33</p>
+</td><td><p>
+2,4-Д</p>
+</td><td><p>
+мг/л</p>
+</td><td><p>
+0,03</p>
+</td><td><p>
+с.-т.</p>
+</td><td><p>
+2</p>
+</td></tr></tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>

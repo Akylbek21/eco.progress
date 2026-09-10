@@ -39,7 +39,7 @@ describe('PEK report package backend contract', () => {
 
   it('uses package actions only and refetches report/document/package after generation', () => {
     const component = readFileSync(resolve(process.cwd(), 'src/features/pek/components/documents/PekReportPackageCard.tsx'), 'utf8');
-    expect(component).toContain('data.availableActions.generatePackage === true');
+    expect(component).toContain('canGeneratePekPackage(report, data.availableActions.generatePackage)');
     expect(component).not.toContain('regeneratePackage');
     expect(component).toContain('data.availableActions.downloadPackage === true');
     expect(component).toContain('packageQuery.refetch()');

@@ -1,0 +1,153 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table><tbody><tr><td><p>
+№ п/п</p>
+</td><td><p>
+Наименование вещества</p>
+</td><td><p>
+Величина ПДК мк/кг почвы с учетом фона (кларка)</p>
+</td><td><p>
+Лимитирующий показатель</p>
+</td></tr><tr><td><p>
+1</p>
+</td><td><p>
+2</p>
+</td><td><p>
+3</p>
+</td><td><p>
+4</p>
+</td></tr><tr><td colspan="4"><p>
+подвижная форма</p>
+</td></tr><tr><td><p>
+1</p>
+</td><td><p>
+кобальт* (1)</p>
+</td><td><p>
+5,0</p>
+</td><td><p>
+общесанитарный</p>
+</td></tr><tr><td><p>
+2</p>
+</td><td><p>
+фтор* (2)</p>
+</td><td><p>
+2,8</p>
+</td><td><p>
+транслокационный</p>
+</td></tr><tr><td><p>
+3</p>
+</td><td><p>
+хром* (3)</p>
+</td><td><p>
+6,0</p>
+</td><td><p>
+общесанитарный</p>
+</td></tr><tr><td colspan="4"><p>
+водорастворимая форма</p>
+</td></tr><tr><td><p>
+4</p>
+</td><td><p>
+фтор</p>
+</td><td><p>
+10,0</p>
+</td><td><p>
+транслокационный</p>
+</td></tr><tr><td><p>
+5</p>
+</td><td><p>
+бенз(а)пирен</p>
+</td><td><p>
+0,02</p>
+</td><td><p>
+общесанитарный</p>
+</td></tr><tr><td><p>
+6</p>
+</td><td><p>
+ксилолы (орто-, мета-, пара)</p>
+</td><td><p>
+0,3</p>
+</td><td><p>
+транслокационный</p>
+</td></tr><tr><td><p>
+7</p>
+</td><td><p>
+мышьяк</p>
+</td><td><p>
+2,0</p>
+</td><td><p>
+транслокационный</p>
+</td></tr><tr><td><p>
+8</p>
+</td><td><p>
+ОФУ* (4)</p>
+</td><td><p>
+3000,0</p>
+</td><td><p>
+водный и общесанитарный</p>
+</td></tr><tr><td><p>
+9</p>
+</td><td><p>
+ртуть</p>
+</td><td><p>
+2,1</p>
+</td><td><p>
+транслокационный</p>
+</td></tr><tr><td><p>
+10</p>
+</td><td><p>
+свинец</p>
+</td><td><p>
+32,0</p>
+</td><td><p>
+общесанитарный</p>
+</td></tr><tr><td><p>
+11</p>
+</td><td><p>
+свинец + ртуть</p>
+</td><td><p>
+20,0 + 1,0</p>
+</td><td><p>
+транслокационный</p>
+</td></tr><tr><td rowspan="3"><p>
+12</p>
+</td><td><p>
+элементарная сера</p>
+</td><td><p>
+160,0</p>
+</td><td><p>
+общесанитарный</p>
+</td></tr><tr><td><p>
+сероводород</p>
+</td><td><p>
+0,4</p>
+</td><td><p>
+воздушный</p>
+</td></tr><tr><td><p>
+серная кислота</p>
+</td><td><p>
+160,0</p>
+</td><td><p>
+общесанитарный</p>
+</td></tr><tr><td><p>
+13</p>
+</td><td><p>
+стирол</p>
+</td><td><p>
+0,1</p>
+</td><td><p>
+воздушный</p>
+</td></tr><tr><td><p>
+14</p>
+</td><td><p>
+формальдегид</p>
+</td><td><p>
+7,0</p>
+</td><td><p>
+-"-</p>
+</td></tr><tr><td><p>
+15</p>
+</td><td><p>
+хлористый калий</p>
+</td><td><p>
+560,0</p>
+</td><td><p>
+водный</p>
+</td></tr></tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>

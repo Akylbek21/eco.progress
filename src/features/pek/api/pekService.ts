@@ -176,6 +176,8 @@ export const pekApi = {
     mapProgramResponse(unwrapPekData<unknown>((await api.post(`/pek/programs/${id}/clone`, body, pekMutationOptions(version))).data)),
   getProgramHistory: (id: number, signal?: AbortSignal) =>
     get<PekHistoryItem[]>(`/pek/programs/${id}/history`, {}, signal),
+  getProgramReadiness: (id: number, signal?: AbortSignal) =>
+    get<PekReadinessResponse>(`/pek/programs/${id}/readiness`, {}, signal),
   createProgramMonitoring: async (id: number, version: number, body: PekMonitoringMutationRequest) =>
     mapProgramResponse(unwrapPekData<unknown>((await api.post(`/pek/programs/${id}/monitoring`, body, pekMutationOptions(version))).data)),
   updateProgramMonitoring: async (id: number, monitoringId: number, body: PekMonitoringMutationRequest, programVersion: number) =>

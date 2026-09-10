@@ -1,0 +1,56 @@
+openapi: 3.1.0
+info: { title: EcoProgress PEK Settings API, version: 1.0.0 }
+paths:
+  /api/pek/settings:
+    get:
+      summary: Effective settings of the current user's company
+      responses:
+        '200': { description: Stored settings or virtual defaults, content: { application/json: { schema: { $ref: '#/components/schemas/SettingsEnvelope' } } } }
+        '403': { description: No active company membership }
+    put:
+      summary: Create or replace settings of the current user's company
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/UpdatePekSettingsRequest' } } } }
+      responses:
+        '200': { description: Saved resource with current version, content: { application/json: { schema: { $ref: '#/components/schemas/SettingsEnvelope' } } } }
+        '409': { description: PEK_SETTINGS_VERSION_CONFLICT }
+        '422': { description: PEK_SETTINGS_VALIDATION_FAILED }
+components:
+  schemas:
+    PekReportType: { type: string, enum: [QUARTERLY, YEARLY] }
+    UpdatePekSettingsRequest:
+      type: object
+      required: [defaultReportType, autoCollectProtocols, includeOnlySignedProtocols, allowFallbackMatching, requireManualAmbiguousConfirmation, requireAllPlanFactItems, blockSubmitWithUnmatchedResults, blockSubmitWithAmbiguousResults, blockSubmitWithStaleSources, blockSubmitWithOpenExceedances, notifyBeforeDeadlineDays, notifyMissingProtocols, notifyExceedances, notifyReportReturned, version]
+      properties:
+        defaultResponsibleUserId: { type: [integer, 'null'], format: int64 }
+        defaultLaboratoryId: { type: [integer, 'null'], format: int64 }
+        defaultReportType: { $ref: '#/components/schemas/PekReportType' }
+        autoCollectProtocols: { type: boolean, description: Must remain false while automaticCollectionSupported=false }
+        includeOnlySignedProtocols: { type: boolean }
+        allowFallbackMatching: { type: boolean }
+        requireManualAmbiguousConfirmation: { type: boolean }
+        requireAllPlanFactItems: { type: boolean }
+        blockSubmitWithUnmatchedResults: { type: boolean }
+        blockSubmitWithAmbiguousResults: { type: boolean }
+        blockSubmitWithStaleSources: { type: boolean }
+        blockSubmitWithOpenExceedances: { type: boolean }
+        notifyBeforeDeadlineDays: { type: integer, minimum: 0, maximum: 365 }
+        notifyMissingProtocols: { type: boolean }
+        notifyExceedances: { type: boolean }
+        notifyReportReturned: { type: boolean }
+        version: { type: integer, format: int64 }
+    PekSettingsResponse:
+      allOf:
+        - $ref: '#/components/schemas/UpdatePekSettingsRequest'
+        - type: object
+          properties:
+            companyId: { type: integer, format: int64 }
+            defaultResponsibleUser: { type: [object, 'null'], properties: { id: { type: integer }, fullName: { type: string } } }
+            defaultLaboratory: { type: [object, 'null'], properties: { id: { type: integer }, name: { type: string } } }
+            availableActions: { type: object, properties: { view: { type: boolean }, edit: { type: boolean } } }
+            capabilities: { type: object, properties: { notificationsSupported: { type: boolean }, automaticCollectionSupported: { type: boolean } } }
+    SettingsEnvelope:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/PekSettingsResponse' }
+        message: { type: [string, 'null'] }

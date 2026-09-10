@@ -1,0 +1,144 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table><tbody><tr><td><p align="center">
+№</p>
+</td><td><p align="center">
+Наименование вещества по IUPAC</p>
+</td><td><p align="center">
+Номер САS</p>
+</td><td><p align="center">
+Формула</p>
+</td><td><p align="center">
+Предельно-допустимые концентрации (ПДК), мг/м3</p>
+</td><td><p align="center">
+Агрегат, состояние в воздухе в условиях производства</p>
+</td><td><p align="center">
+Класс опасности</p>
+</td><td><p align="center">
+Особенности действия на организм</p>
+</td></tr><tr><td><p align="center">
+1</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+6</p>
+</td><td><p align="center">
+7</p>
+</td><td><p align="center">
+8</p>
+</td></tr><tr><td><p align="center">
+1</p>
+</td><td><p>
+Азотный тетраоксид (АТ)</p>
+</td><td><p align="center">
+10544-72-6</p>
+</td><td><p align="center">
+N2 O4</p>
+</td><td><p align="center">
+2,0</p>
+</td><td><p align="center">
+П</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+О, +</p>
+</td></tr><tr><td><p align="center">
+2</p>
+</td><td><p>
+Гидразин</p>
+</td><td><p align="center">
+302-01-2</p>
+</td><td><p align="center">
+H2 N2</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+П</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
++</p>
+</td></tr><tr><td><p align="center">
+3</p>
+</td><td><p>
+Несимметричный диметилгидразин, 1,1-диметилгидразин (НДМГ, гептил)</p>
+</td><td><p align="center">
+57-14-7</p>
+</td><td><p align="center">
+C2H8N2</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+П</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
++</p>
+</td></tr><tr><td><p align="center">
+4</p>
+</td><td><p>
+Керосин Т-1</p>
+</td><td><p align="center">
+8008-20-6</p>
+</td><td><br>
+</td><td><p align="center">
+300 в пересчете на углерод</p>
+</td><td><p align="center">
+П</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
++</p>
+</td></tr><tr><td><p align="center">
+5</p>
+</td><td><p>
+Нитрозодиметиламин (НДМА)</p>
+</td><td><p align="center">
+62-75-9</p>
+</td><td><p align="center">
+C2H6ON2</p>
+</td><td><p align="center">
+0,01</p>
+</td><td><p align="center">
+П</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+К, +</p>
+</td></tr><tr><td><p align="center">
+6</p>
+</td><td><p>
+Тетраметилтетразен (ТМТ)</p>
+</td><td><p align="center">
+6130-87-6</p>
+</td><td><p align="center">
+C4H12N4</p>
+</td><td><p align="center">
+3,0</p>
+</td><td><p align="center">
+П+А</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
++</p>
+</td></tr><tr><td><p align="center">
+7</p>
+</td><td><p>
+Диметиламин (ДМА)</p>
+</td><td><p align="center">
+124-40-3</p>
+</td><td><p align="center">
+C2H6N</p>
+</td><td><p align="center">
+1,0</p>
+</td><td><p align="center">
+П+А</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+К,+</p>
+</td></tr></tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>

@@ -582,6 +582,7 @@ export type PekApiErrorDetails = {
 };
 
 export type PekValidationIssue = {
+  blocking?: boolean;
   code: string;
   message: string;
   severity: 'BLOCKING' | 'WARNING' | 'INFO' | string;
@@ -857,8 +858,6 @@ export interface PekMonitoringPoint {
   version: number;
 }
 export type PekMonitoringPointRequest = Pick<PekMonitoringPoint, 'name' | 'description'> & {
-  latitude?: number | null;
-  longitude?: number | null;
   coordinates?: string | null;
 };
 

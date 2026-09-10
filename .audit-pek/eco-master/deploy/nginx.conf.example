@@ -1,0 +1,89 @@
+# Reference nginx config for ecoprogress.kz - NOT auto-applied, NOT part of this repo's build or
+# deploy pipeline. This backend repository has no nginx/frontend-static layer at all (see
+# docker-compose.yml / Dockerfile - just the Spring Boot app + MySQL + Mongo). This file exists so
+# the infra/frontend team has a concrete starting point for the items that live outside this
+# codebase; copy it into whatever repo actually owns the nginx deployment and adjust paths/upstream
+# names to match. It does not change this backend's API contracts, JWT, security, or DTOs - see
+# kz.eco.config.PublicApiCacheHeadersFilter / CacheHeadersConfig for the backend-side half of this
+# work (Cache-Control + ETag on public read-only API responses).
+
+# --- gzip (item 3) ------------------------------------------------------------------------------
+gzip on;
+gzip_comp_level 5;
+gzip_min_length 1024;
+gzip_types
+    text/html
+    text/css
+    application/javascript
+    application/json
+    image/svg+xml;
+gzip_vary on;
+
+# --- brotli (item 4) - only if the brotli module is compiled/loaded into this nginx build --------
+# brotli on;
+# brotli_comp_level 5;
+# brotli_min_length 1024;
+# brotli_types text/html text/css application/javascript application/json image/svg+xml;
+
+server {
+    listen 443 ssl http2;
+    server_name ecoprogress.kz www.ecoprogress.kz;
+
+    root /var/www/ecoprogress/dist;   # Vite build output directory - adjust to actual deploy path
+    index index.html;
+
+    # --- Vite hashed assets (item 1) --------------------------------------------------------
+    # Filenames are content-hashed (e.g. /assets/index-a1b2c3d4.js) - a new deploy always ships a
+    # new filename, so a 1-year immutable cache is safe: the browser/CDN will never need to
+    # revalidate a given URL, only fetch the new one after the next build.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;   # never falls through to the SPA index.html - see item 7 below
+    }
+
+    # --- optimized media (item 5) ------------------------------------------------------------
+    # AVIF/WebP under /media/* are build-time-optimized and content-addressed the same way as
+    # /assets - same long-cache treatment, same "never SPA-fallback" rule.
+    location /media/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # --- reverse proxy to this Spring Boot backend --------------------------------------------
+    # Untouched API contract - nginx only proxies, cache headers for public GET endpoints are set
+    # by the backend itself (kz.eco.config.PublicApiCacheHeadersFilter/CacheHeadersConfig), so
+    # nginx must NOT override or strip Cache-Control/ETag on the way through.
+    location /api/ {
+        proxy_pass http://eco-backend:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /sitemap.xml {
+        proxy_pass http://eco-backend:8080;
+    }
+
+    location = /robots.txt {
+        proxy_pass http://eco-backend:8080;
+    }
+
+    # --- AI/search crawlers must reach public pages normally ----------------------------------
+    # Explicitly do not rate-limit, challenge, or block by User-Agent for OAI-SearchBot/GPTBot/
+    # ChatGPT-User/Googlebot/Bingbot/PerplexityBot/ClaudeBot anywhere in this server block - no
+    # such rule exists here and none should be added. If a WAF/CDN sits in front of this origin,
+    # verify there too that these user agents get a normal 200, not 403/429/a JS challenge page.
+
+    # --- HTML / prerendered pages (item 2) -----------------------------------------------------
+    # Every other request falls through to the SPA's index.html (or a prerendered page with the
+    # same filename) - explicitly NOT immutable, since the same URL's content can change on the
+    # next deploy without the filename changing. no-cache still allows the browser to keep a local
+    # copy, but forces revalidation (a conditional GET) on every use.
+    location / {
+        add_header Cache-Control "no-cache" always;
+        try_files $uri $uri/ /index.html;   # SPA fallback - only reachable for non-/assets,
+                                             # non-/media, non-/api URLs, since those all have
+                                             # their own location blocks matched first (item 7)
+    }
+}

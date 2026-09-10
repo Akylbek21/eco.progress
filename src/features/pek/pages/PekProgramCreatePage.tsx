@@ -34,6 +34,7 @@ import {
 import type { ComparisonType, PekActionStatus, PekControlType, PekPeriodicity } from '../api/pekContracts';
 import PekProgramStructuredSections from '../components/sections/PekProgramStructuredSections';
 import NormativeSelectorModal from '../../protocols/components/components/NormativeSelectorModal';
+import PekControlSourceSelect from '../components/inventory/PekControlSourceSelect';
 import type { NormativeRecord, ProtocolTemplateId } from '../../../types/protocols';
 
 const steps = [
@@ -110,6 +111,7 @@ const PekProgramCreatePage = () => {
   const autosaveController = useRef<AbortController>();
   const autosaveSequence = useRef(0);
   const appliedAutosaveSequence = useRef(0);
+  const autosavePendingRef = useRef(false);
   const queuedAutosave = useRef<PekProgramForm>();
   const lastAutosaveHash = useRef('');
 
@@ -173,7 +175,10 @@ const PekProgramCreatePage = () => {
       return { saved, sequence };
     },
     retry: false,
-    onMutate: () => setAutosaveState('saving'),
+    onMutate: () => {
+      autosavePendingRef.current = true;
+      setAutosaveState('saving');
+    },
     onSuccess: ({ saved, sequence }) => {
       if (sequence < appliedAutosaveSequence.current) return;
       appliedAutosaveSequence.current = sequence;
@@ -192,12 +197,16 @@ const PekProgramCreatePage = () => {
         setAutosaveState('error');
       }
     },
+    onSettled: () => {
+      autosavePendingRef.current = false;
+    },
   });
 
   useEffect(() => {
-    if (autosave.isPending || !queuedAutosave.current) return;
+    if (autosavePendingRef.current || autosave.isPending || !queuedAutosave.current) return;
     const next = queuedAutosave.current;
     queuedAutosave.current = undefined;
+    autosavePendingRef.current = true;
     autosave.mutate(next);
   }, [autosave.isPending]);
 
@@ -219,8 +228,11 @@ const PekProgramCreatePage = () => {
           && program.data.availableActions.edit === true
         ) {
           lastAutosaveHash.current = payloadHash;
-          if (autosave.isPending) queuedAutosave.current = value;
-          else autosave.mutate(value);
+          if (autosavePendingRef.current) queuedAutosave.current = value;
+          else {
+            autosavePendingRef.current = true;
+            autosave.mutate(value);
+          }
         }
       }, 1500);
     });
@@ -381,7 +393,17 @@ const PekProgramCreatePage = () => {
     const value = getValues();
     const message = validateHeader(value);
     if (message) { toast.error(message); return; }
-    if (edit) autosave.mutate(value);
+    if (autosaveTimer.current) {
+      window.clearTimeout(autosaveTimer.current);
+      autosaveTimer.current = undefined;
+    }
+    if (edit) {
+      if (autosavePendingRef.current) queuedAutosave.current = value;
+      else {
+        autosavePendingRef.current = true;
+        autosave.mutate(value);
+      }
+    }
     else createServerDraft.mutate(value);
   };
 
@@ -439,9 +461,19 @@ const PekProgramCreatePage = () => {
         {autosaveState === 'conflict' && <span className="text-rose-700">Программа изменена другим сотрудником</span>}
       </span>}
     />
-    <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-      {steps.map((label, index) => <li key={label} className={`rounded-xl p-3 text-center text-xs font-bold ${index === step ? 'bg-eco-700 text-white' : 'bg-white'}`}>{index + 1}. {label}</li>)}
-    </ol>
+    <nav aria-label="Шаги программы ПЭК">
+      <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {steps.map((label, index) => <li key={label}>
+          <button
+            type="button"
+            aria-current={index === step ? 'step' : undefined}
+            disabled={save.isPending || createServerDraft.isPending}
+            onClick={() => setStep(index)}
+            className={`h-full w-full rounded-xl p-3 text-center text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-eco-700 disabled:cursor-wait disabled:opacity-60 ${index === step ? 'bg-eco-700 text-white' : 'bg-white hover:bg-eco-50 hover:text-eco-800'}`}
+          >{index + 1}. {label}</button>
+        </li>)}
+      </ol>
+    </nav>
     <form onSubmit={submit}>
       <section className="rounded-2xl border bg-white p-5">
         {Object.keys(formState.errors).length > 0 && <div role="alert" aria-live="assertive" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">Проверьте заполнение текущего раздела. Первая ошибка: {String(Object.values(formState.errors)[0]?.message || 'некорректные данные')}</div>}
@@ -491,6 +523,7 @@ const PekProgramCreatePage = () => {
             <div className="grid gap-3 md:grid-cols-3">
               <TextField label="Код *" value={row.code} onChange={(value) => updateControl(index, { code: value })} />
               <TextField label="Название *" value={row.name} onChange={(value) => updateControl(index, { name: value })} />
+              <PekControlSourceSelect programId={edit ? id : undefined} value={row} onChange={patch => updateControl(index, patch)} />
               <TextField label="Раздел" value={row.sectionCode} onChange={(value) => updateControl(index, { sectionCode: value })} />
               <SelectField label="Тип контроля *" value={row.controlType} options={pekControlTypeOptions} onChange={(value) => updateControl(index, { controlType: value as PekControlType })} />
               <TextField label="Компонент среды" value={row.environmentComponent} onChange={(value) => updateControl(index, { environmentComponent: value })} />

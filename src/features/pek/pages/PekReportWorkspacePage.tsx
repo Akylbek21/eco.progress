@@ -15,12 +15,14 @@ import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 import PekReportDocuments from '../components/documents/PekReportDocuments';
 import PekReportPackageCard from '../components/documents/PekReportPackageCard';
 import PekReportExceedances from '../components/exceedances/PekReportExceedances';
+import PekInventoryEditor from '../components/inventory/PekInventoryEditor';
 
 const tabs = [
   { key: 'overview', label: 'Обзор' },
   { key: 'sources', label: 'Источники данных' },
   { key: 'plan-fact', label: 'План / факт' },
   { key: 'exceedances', label: 'Превышения' },
+  { key: 'waste-movements', label: 'Движение отходов' },
   { key: 'documents', label: 'Документы' },
   { key: 'history', label: 'История' },
 ] as const;
@@ -262,7 +264,7 @@ const PekReportWorkspacePage = () => {
   if (report.isLoading) return <PekLoading />;
   if (report.isError || !report.data) return <PekQueryError error={report.error} resource="отчёт ПЭК" retry={() => void report.refetch()} />;
   const item = report.data;
-  const canMutateSources = item.availableActions.manageSources === true;
+  const canMutateSources = item.availableActions.matchSources === true;
   const pending = collect.isPending || submitReview.isPending || returnReport.isPending || approve.isPending || submitAuthority.isPending || accept.isPending || reject.isPending || archive.isPending;
   const setTab = (nextTab: TabKey) => { const next = new URLSearchParams(params); nextTab === 'overview' ? next.delete('tab') : next.set('tab', nextTab); setParams(next, { replace: true }); };
 
@@ -270,7 +272,8 @@ const PekReportWorkspacePage = () => {
     <PekPageHeader title={`Отчёт ПЭК за ${item.periodStart} — ${item.periodEnd}`} description={`${item.company?.name || 'Компания не указана'} · ${item.object?.name || 'Объект не указан'} · версия ${item.version}`} actions={<PekStatusBadge status={item.status} />} />
     {actionError && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void report.refetch()}>Обновить данные</MuiButton>}>{actionError}</Alert>}
     <PekReportActions report={item} isPending={pending} onCollect={() => setCollectConfirmOpen(true)} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => setApproveConfirmOpen(true)} onSubmitAuthority={() => setSubmitConfirmOpen(true)} onAccept={() => setAcceptConfirmOpen(true)} onReject={() => setRejectOpen(true)} onArchive={() => setArchiveConfirmOpen(true)} />
-    {item.status === 'REJECTED' && <Alert severity="error"><strong>Официальный отчёт отклонён.</strong><div className="mt-1">Причина: {item.rejectionReason || 'не указана'} · дата: {item.rejectedAt || 'не указана'}</div></Alert>}
+    {['SUBMITTED', 'ACCEPTED', 'REJECTED'].includes(item.status) && <Alert severity="info">Статус сдачи, принятия или отклонения отмечен сотрудником вручную. Автоматическое подтверждение государственного органа не поступает.</Alert>}
+    {item.status === 'REJECTED' && <Alert severity="error"><strong>Отмечено отклонение отчёта.</strong><div className="mt-1">Причина: {item.rejectionReason || 'не указана'} · дата: {item.rejectedAt || 'не указана'}</div></Alert>}
     {item.status === 'RETURNED' && <Alert severity="warning">
       <strong>Отчёт возвращён на доработку</strong>
       {item.returnInfo ? <div className="mt-2 space-y-1">
@@ -322,6 +325,7 @@ const PekReportWorkspacePage = () => {
 
     {tab === 'plan-fact' && <PlanFactContent report={item} loading={planFact.isLoading} error={planFact.error} data={planFact.data} retry={() => void planFact.refetch()} />}
     {tab === 'exceedances' && <PekReportExceedances report={item} />}
+    {tab === 'waste-movements' && <PekInventoryEditor key={`waste-${item.id}`} kind="waste-movements" parentId={item.id} programId={item.programId} companyId={item.companyId} canEdit={item.availableActions.edit === true} />}
     {tab === 'documents' && <div className="space-y-4"><PekReportPackageCard report={item} /><PekReportDocuments report={item} /></div>}
     {tab === 'history' && <section className="space-y-4 rounded-2xl border bg-white p-5"><h2 className="font-black">История отчёта</h2>{history.isLoading ? <PekLoading /> : history.isError ? <PekQueryError error={history.error} resource="историю отчёта" retry={() => void history.refetch()} /> : !history.data?.length ? <PekState title="История пока пуста" /> : <ol className="space-y-3">{history.data.map((entry, index) => <li key={`${entry.performedAt}-${index}`} className="rounded-xl border p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold">{entry.action}</p><span className="text-xs text-slate-500">Версия {entry.version}</span></div><p className="mt-1 text-sm">{entry.fromStatus || '—'} → {entry.toStatus}</p><p className="mt-1 text-sm text-slate-600">{entry.performedBy?.name || entry.performedBy?.fullName || 'Сотрудник'} · {new Date(entry.performedAt).toLocaleString('ru-RU')}</p>{entry.comment && <p className="mt-2 text-sm">{entry.comment}</p>}</li>)}</ol>}</section>}
     <Dialog open={collectConfirmOpen} onClose={() => !collect.isPending && setCollectConfirmOpen(false)} fullWidth maxWidth="sm">
@@ -333,7 +337,11 @@ const PekReportWorkspacePage = () => {
     <Dialog open={Boolean(excludeSource)} onClose={() => !exclude.isPending && setExcludeSource(null)} fullWidth maxWidth="sm"><DialogTitle>Исключить источник из отчёта</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина исключения *" value={excludeReason} onChange={(event) => setExcludeReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setExcludeSource(null)}>Отмена</MuiButton><MuiButton color="error" variant="contained" disabled={!excludeReason.trim() || exclude.isPending} onClick={() => exclude.mutate()}>Исключить</MuiButton></DialogActions></Dialog>
     <Dialog open={returnOpen} onClose={() => !returnReport.isPending && setReturnOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Вернуть отчёт на доработку</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина возврата *" value={returnReason} onChange={(event) => setReturnReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setReturnOpen(false)}>Отмена</MuiButton><MuiButton color="warning" variant="contained" disabled={!returnReason.trim() || returnReport.isPending} onClick={() => returnReport.mutate(item)}>Вернуть</MuiButton></DialogActions></Dialog>
     <Dialog open={approveConfirmOpen} onClose={() => !approve.isPending && setApproveConfirmOpen(false)}><DialogTitle>Утвердить отчёт?</DialogTitle><DialogContent><Alert severity="success">Актуальная проверка готовности не содержит блокирующих проблем.</Alert></DialogContent><DialogActions><MuiButton onClick={() => setApproveConfirmOpen(false)}>Отмена</MuiButton><MuiButton variant="contained" disabled={approve.isPending} onClick={() => { setApproveConfirmOpen(false); approve.mutate(item); }}>Утвердить</MuiButton></DialogActions></Dialog>
-    <Dialog open={submitConfirmOpen} onClose={() => !submitAuthority.isPending && setSubmitConfirmOpen(false)}><DialogTitle>Сдать официальный отчёт?</DialogTitle><DialogContent><Alert severity="info">Срок сдачи: {item.submissionDueDate || 'backend не установил срок'}. Будет отправлен официальный нормативный документ, не внутренний аналитический отчёт.</Alert></DialogContent><DialogActions><MuiButton onClick={() => setSubmitConfirmOpen(false)}>Отмена</MuiButton><MuiButton color="success" variant="contained" disabled={submitAuthority.isPending} onClick={() => submitAuthority.mutate(item)}>Сдать</MuiButton></DialogActions></Dialog>
+    <Dialog open={submitConfirmOpen} onClose={() => !submitAuthority.isPending && setSubmitConfirmOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Отметить отчёт как сданный</DialogTitle><DialogContent>
+      <Alert severity="info">Это ручная отметка в системе. Отправка в государственный орган не выполняется. Принятие и отклонение также отмечаются сотрудником вручную.</Alert>
+      <Alert severity="warning" className="mt-3">Текущий сервис сохраняет только статус и время отметки. Сохранение реквизитов сдачи и подтверждающего файла пока недоступно.</Alert>
+      <div className="mt-4 grid gap-3">{['Дата сдачи', 'Регистрационный номер', 'Способ сдачи', 'Подтверждающий файл', 'Комментарий'].map(label => <TextField key={label} label={label} disabled helperText="Не поддерживается текущим сервисом" />)}</div>
+    </DialogContent><DialogActions><MuiButton disabled={submitAuthority.isPending} onClick={() => setSubmitConfirmOpen(false)}>Отмена</MuiButton><MuiButton color="success" variant="contained" disabled={submitAuthority.isPending} onClick={() => submitAuthority.mutate(item)}>Отметить как сданный</MuiButton></DialogActions></Dialog>
     <Dialog open={acceptConfirmOpen} onClose={() => !accept.isPending && setAcceptConfirmOpen(false)}><DialogTitle>Принять официальный отчёт?</DialogTitle><DialogActions><MuiButton onClick={() => setAcceptConfirmOpen(false)}>Отмена</MuiButton><MuiButton color="success" variant="contained" disabled={accept.isPending} onClick={() => accept.mutate(item)}>Принять</MuiButton></DialogActions></Dialog>
     <Dialog open={rejectOpen} onClose={() => !reject.isPending && setRejectOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Отклонить официальный отчёт</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина отклонения *" value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setRejectOpen(false)}>Отмена</MuiButton><MuiButton color="error" variant="contained" disabled={!rejectionReason.trim() || reject.isPending} onClick={() => reject.mutate(item)}>Отклонить</MuiButton></DialogActions></Dialog>
     <Dialog open={archiveConfirmOpen} onClose={() => !archive.isPending && setArchiveConfirmOpen(false)}><DialogTitle>Архивировать отчёт?</DialogTitle><DialogContent><Alert severity="warning">После архивирования изменение отчёта и его источников будет недоступно.</Alert></DialogContent><DialogActions><MuiButton onClick={() => setArchiveConfirmOpen(false)}>Отмена</MuiButton><MuiButton variant="contained" disabled={archive.isPending} onClick={() => { setArchiveConfirmOpen(false); archive.mutate(item); }}>Архивировать</MuiButton></DialogActions></Dialog>

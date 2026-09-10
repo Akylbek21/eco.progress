@@ -1,0 +1,11 @@
+[
+  {
+    "file": "microclimate_seed.json",
+    "sourceDocumentCode": "DSM_15",
+    "sourceDocumentName": "Гигиенические нормативы к физическим факторам, оказывающим воздействие на человека",
+    "appendixNo": 1,
+    "tableNo": 1,
+    "factorType": "MICROCLIMATE",
+    "parserType": "MICROCLIMATE_WORK_ZONE"
+  }
+]

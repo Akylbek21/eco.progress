@@ -1,0 +1,20 @@
+ALTER TABLE normative_records ADD COLUMN source_document_code VARCHAR(40);
+ALTER TABLE normative_records ADD COLUMN source_document_name VARCHAR(300);
+ALTER TABLE normative_records ADD COLUMN appendix_no INT;
+ALTER TABLE normative_records ADD COLUMN table_no INT;
+ALTER TABLE normative_records ADD COLUMN factor_type VARCHAR(40);
+ALTER TABLE normative_records ADD COLUMN factor_code VARCHAR(80);
+ALTER TABLE normative_records ADD COLUMN room_type VARCHAR(80);
+ALTER TABLE normative_records ADD COLUMN season VARCHAR(40);
+ALTER TABLE normative_records ADD COLUMN work_category VARCHAR(40);
+ALTER TABLE normative_records ADD COLUMN workplace_type VARCHAR(40);
+ALTER TABLE normative_records ADD COLUMN norm_level VARCHAR(40);
+ALTER TABLE normative_records ADD COLUMN condition_json TEXT;
+
+CREATE INDEX idx_nr_source_document_code ON normative_records (source_document_code);
+CREATE INDEX idx_nr_template_type ON normative_records (template_type);
+CREATE INDEX idx_nr_factor_type ON normative_records (factor_type);
+CREATE INDEX idx_nr_factor_code ON normative_records (factor_code);
+CREATE INDEX idx_nr_season ON normative_records (season);
+CREATE INDEX idx_nr_work_category ON normative_records (work_category);
+CREATE INDEX idx_nr_workplace_type ON normative_records (workplace_type);

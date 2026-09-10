@@ -1,0 +1,143 @@
+[
+  {
+    "url": "http://ecoprogress.kz/",
+    "status": 301,
+    "location": "https://ecoprogress.kz/",
+    "robots": null,
+    "cache": null,
+    "body": "<html>\r\n<head><title>301 Moved Permanently</title></head>\r\n<body>\r\n<center><h1>301 Moved Permanently</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n"
+  },
+  {
+    "url": "https://www.ecoprogress.kz/",
+    "status": 301,
+    "location": "https://ecoprogress.kz/",
+    "robots": null,
+    "cache": null,
+    "body": "<html>\r\n<head><title>301 Moved Permanently</title></head>\r\n<body>\r\n<center><h1>301 Moved Permanently</h1></center>\r\n<hr><center>nginx/1.31.5</center>\r\n</body>\r\n</html>\r\n"
+  },
+  {
+    "url": "https://ecoprogress.kz/services/ndv/",
+    "status": 301,
+    "location": "https://ecoprogress.kz/services/ndv",
+    "robots": null,
+    "cache": null,
+    "body": "<html>\r\n<head><title>301 Moved Permanently</title></head>\r\n<body>\r\n<center><h1>301 Moved Permanently</h1></center>\r\n<hr><center>nginx/1.31.5</center>\r\n</body>\r\n</html>\r\n"
+  },
+  {
+    "url": "https://ecoprogress.kz/services/ndv?utm_source=seo-audit",
+    "status": 200,
+    "location": null,
+    "robots": null,
+    "cache": null,
+    "canonical": "https://ecoprogress.kz/services/ndv",
+    "metaRobots": "index,follow",
+    "body": "<!DOCTYPE html>\n<html lang=\"ru\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"/favicon.png\" />\n    <link rel=\"apple-touch-icon\" href=\"/favicon.png\" /><!-- Google Search Console: set VITE_GOOGLE_SITE_VERIFICATION and prerender will output the verification meta tag. --><script type=\"module\" crossorigin src=\"/assets/index-DgBjnUfe.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/react-oMnBLpbd.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Cer_oJ3U.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-DXrvOyQN.css\">\n      <title>Проект нормативов допустимых выбросов | ECOPROGRESS</title>\n    <meta name=\"description\" content=\"Инвентаризация источников, расчёты выбросов и подготовка проекта НДВ. Состав, сроки и стоимость уточняются после анализа объекта и исходных документов.\" />\n    <meta name=\"robots\" content=\"index,follow\" />"
+  },
+  {
+    "url": "https://ecoprogress.kz/seo-audit-missing-20260909",
+    "status": 404,
+    "location": null,
+    "robots": "noindex, follow",
+    "cache": null,
+    "canonical": "https://ecoprogress.kz/404",
+    "metaRobots": "noindex,follow",
+    "body": "<!DOCTYPE html>\n<html lang=\"ru\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"/favicon.png\" />\n    <link rel=\"apple-touch-icon\" href=\"/favicon.png\" /><!-- Google Search Console: set VITE_GOOGLE_SITE_VERIFICATION and prerender will output the verification meta tag. --><script type=\"module\" crossorigin src=\"/assets/index-DgBjnUfe.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/react-oMnBLpbd.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Cer_oJ3U.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-DXrvOyQN.css\">\n      <title>Страница не найдена | ECOPROGRESS</title>\n    <meta name=\"description\" content=\"Страница не найдена. Перейдите на главную или оставьте заявку на экологические услуги.\" />\n    <meta name=\"robots\" content=\"noindex,follow\" />\n    <link rel=\"canonical\" href=\"https://ecoprogress.kz/404\" />\n    <meta propert"
+  },
+  {
+    "url": "https://ecoprogress.kz/login",
+    "status": 200,
+    "location": null,
+    "robots": null,
+    "cache": null,
+    "canonical": "https://ecoprogress.kz",
+    "metaRobots": "index,follow",
+    "body": "<!DOCTYPE html>\n<html lang=\"ru\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"/favicon.png\" />\n    <link rel=\"apple-touch-icon\" href=\"/favicon.png\" /><!-- Google Search Console: set VITE_GOOGLE_SITE_VERIFICATION and prerender will output the verification meta tag. --><script type=\"module\" crossorigin src=\"/assets/index-DgBjnUfe.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/react-oMnBLpbd.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Cer_oJ3U.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-DXrvOyQN.css\">\n      <title>Экологические услуги для бизнеса в Казахстане | EcoProgress</title>\n    <meta name=\"description\" content=\"Экологические услуги и лабораторные исследования для предприятий Казахстана: проектирование, ПЭК, отходы, разрешения и сопровождение.\" />\n    <meta name=\"robots\" content=\"index,follow\" />\n    <link"
+  },
+  {
+    "url": "https://ecoprogress.kz/staff/pek",
+    "status": 200,
+    "location": null,
+    "robots": null,
+    "cache": null,
+    "canonical": "https://ecoprogress.kz",
+    "metaRobots": "index,follow",
+    "body": "<!DOCTYPE html>\n<html lang=\"ru\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"/favicon.png\" />\n    <link rel=\"apple-touch-icon\" href=\"/favicon.png\" /><!-- Google Search Console: set VITE_GOOGLE_SITE_VERIFICATION and prerender will output the verification meta tag. --><script type=\"module\" crossorigin src=\"/assets/index-DgBjnUfe.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/react-oMnBLpbd.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Cer_oJ3U.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-DXrvOyQN.css\">\n      <title>Экологические услуги для бизнеса в Казахстане | EcoProgress</title>\n    <meta name=\"description\" content=\"Экологические услуги и лабораторные исследования для предприятий Казахстана: проектирование, ПЭК, отходы, разрешения и сопровождение.\" />\n    <meta name=\"robots\" content=\"index,follow\" />\n    <link"
+  },
+  {
+    "url": "https://ecoprogress.kz/cabinet",
+    "status": 200,
+    "location": null,
+    "robots": null,
+    "cache": null,
+    "canonical": "https://ecoprogress.kz",
+    "metaRobots": "index,follow",
+    "body": "<!DOCTYPE html>\n<html lang=\"ru\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"/favicon.png\" />\n    <link rel=\"apple-touch-icon\" href=\"/favicon.png\" /><!-- Google Search Console: set VITE_GOOGLE_SITE_VERIFICATION and prerender will output the verification meta tag. --><script type=\"module\" crossorigin src=\"/assets/index-DgBjnUfe.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/react-oMnBLpbd.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Cer_oJ3U.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-DXrvOyQN.css\">\n      <title>Экологические услуги для бизнеса в Казахстане | EcoProgress</title>\n    <meta name=\"description\" content=\"Экологические услуги и лабораторные исследования для предприятий Казахстана: проектирование, ПЭК, отходы, разрешения и сопровождение.\" />\n    <meta name=\"robots\" content=\"index,follow\" />\n    <link"
+  },
+  {
+    "url": "https://ecoprogress.kz/search",
+    "status": 404,
+    "location": null,
+    "robots": "noindex, follow",
+    "cache": null,
+    "canonical": "https://ecoprogress.kz/404",
+    "metaRobots": "noindex,follow",
+    "body": "<!DOCTYPE html>\n<html lang=\"ru\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"/favicon.png\" />\n    <link rel=\"apple-touch-icon\" href=\"/favicon.png\" /><!-- Google Search Console: set VITE_GOOGLE_SITE_VERIFICATION and prerender will output the verification meta tag. --><script type=\"module\" crossorigin src=\"/assets/index-DgBjnUfe.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/react-oMnBLpbd.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Cer_oJ3U.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-DXrvOyQN.css\">\n      <title>Страница не найдена | ECOPROGRESS</title>\n    <meta name=\"description\" content=\"Страница не найдена. Перейдите на главную или оставьте заявку на экологические услуги.\" />\n    <meta name=\"robots\" content=\"noindex,follow\" />\n    <link rel=\"canonical\" href=\"https://ecoprogress.kz/404\" />\n    <meta propert"
+  },
+  {
+    "url": "https://ecoprogress.kz/employees",
+    "status": 404,
+    "location": null,
+    "robots": "noindex, follow",
+    "cache": null,
+    "canonical": "https://ecoprogress.kz/404",
+    "metaRobots": "noindex,follow",
+    "body": "<!DOCTYPE html>\n<html lang=\"ru\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"/favicon.png\" />\n    <link rel=\"apple-touch-icon\" href=\"/favicon.png\" /><!-- Google Search Console: set VITE_GOOGLE_SITE_VERIFICATION and prerender will output the verification meta tag. --><script type=\"module\" crossorigin src=\"/assets/index-DgBjnUfe.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/react-oMnBLpbd.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Cer_oJ3U.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-DXrvOyQN.css\">\n      <title>Страница не найдена | ECOPROGRESS</title>\n    <meta name=\"description\" content=\"Страница не найдена. Перейдите на главную или оставьте заявку на экологические услуги.\" />\n    <meta name=\"robots\" content=\"noindex,follow\" />\n    <link rel=\"canonical\" href=\"https://ecoprogress.kz/404\" />\n    <meta propert"
+  },
+  {
+    "url": "https://ecoprogress.kz/tariffs",
+    "status": 200,
+    "location": null,
+    "robots": null,
+    "cache": null,
+    "canonical": "https://ecoprogress.kz/tariffs",
+    "metaRobots": "index,follow",
+    "body": "<!DOCTYPE html>\n<html lang=\"ru\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"/favicon.png\" />\n    <link rel=\"apple-touch-icon\" href=\"/favicon.png\" /><!-- Google Search Console: set VITE_GOOGLE_SITE_VERIFICATION and prerender will output the verification meta tag. --><script type=\"module\" crossorigin src=\"/assets/index-DgBjnUfe.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/react-oMnBLpbd.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Cer_oJ3U.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-DXrvOyQN.css\">\n      <title>Цены на экологические услуги | ECOPROGRESS</title>\n    <meta name=\"description\" content=\"Форматы и ориентировочная стоимость экологических документов, лабораторных исследований, аудита и сопровождения бизнеса.\" />\n    <meta name=\"robots\" content=\"index,follow\" />\n    <link rel=\"canonical\" href=\"https:/"
+  },
+  {
+    "url": "https://ecoprogress.kz/robots.txt",
+    "status": 200,
+    "location": null,
+    "robots": null,
+    "cache": null,
+    "body": "User-agent: *\nAllow: /\nAllow: /services/\nAllow: /news/\nAllow: /about\nAllow: /cases\n\n# City landing pages are root-level public URLs and are covered by Allow: /.\n\nDisallow: /cabinet\nDisallow: /cabinet/\nDisallow: /client\nDisallow: /client/\nDisallow: /staff\nDisallow: /staff/\nDisallow: /admin\nDisallow: /admin/\nDisallow: /login\nDisallow: /register\nDisallow: /reset-password\nDisallow: /dashboard\nDisallow: /internal\nDisallow: /internal/\nDisallow: /api\nDisallow: /api/\nDisallow: /document-flow\nDisallow: /sign\nDisallow: /public/document-flow/sign\n\nSitemap: https://ecoprogress.kz/sitemap.xml\nHost: ecoprogress.kz\n"
+  },
+  {
+    "url": "https://npieco.kz/robots.txt",
+    "status": 200,
+    "location": null,
+    "robots": null,
+    "cache": null,
+    "body": "User-agent: Yandex\r\nDisallow: /?\r\nDisallow: *%2F\r\nDisallow: /admin/\r\nDisallow: /*.xls\r\nDisallow: /*.doc\r\nDisallow: /*.ppt\r\nDisallow: /*openstat=\r\nDisallow: /*yclid=\r\nDisallow: /*gclid=\r\nDisallow: /*utm_campaign=\r\nDisallow: /*utm_source=\r\nDisallow: /*utm_medium=\r\nDisallow: /*adv=\r\nDisallow: /*pc=\r\nDisallow: /*preview=\r\nDisallow: /search/results/?search\r\nDisallow: /services/prochie-uslugi/vydacha-licenzii-na-oborot-prekursorov/\r\nAllow: /static/css*.css\r\nAllow: /static/js*.js\r\nAllow: /media/uploads/images*.jpg\r\nAllow: /*.pdf\r\nAllow: /media/uploads/images*.jpeg\r\nAllow: /media/uploads/images*.png\r\nAllow: /media/uploads/images*.gif\r\nClean-param: gad\r\nClean-param: gad_source\r\nClean-param: utm_source\r\nClean-param: utm_medium\r\nClean-param: utm_campaign\r\nClean-param: utm_term\r\nClean-param: utm_type\r\nClean-param: utm_campaign\r\nClean-param: utm_content\r\nClean-param: yclid\r\nClean-param: etext\r\nClean-param: block\r\nClean-param: pos\r\nClean-param: openstat\r\nClean-param: gclid\r\nClean-param: adv\r\nClean-p"
+  },
+  {
+    "url": "http://npieco.kz/",
+    "status": 200,
+    "location": null,
+    "robots": null,
+    "cache": null,
+    "canonical": "http://npieco.kz",
+    "body": "<!doctype html>\n<html lang=\"ru\">\n  <head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">     \n    <link rel=\"stylesheet\" href=\"/static/css/bootstrap.min.css\">\n    <link rel=\"stylesheet\" href=\"/static/css/all.css\">\n    <link rel=\"stylesheet\" href=\"/static/css/quiz.css\">\n    <link rel=\"stylesheet\" href=\"/static/css/extra.css\">\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n    <link href=\"https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap\" rel=\"stylesheet\">\n\n    <title>Разработка экологической документации НПИ Экология Будущего Астана</title>\n\n    <meta name=\"keywords\" content=\"экологические проекты, экологические работы, лабораторные исследования, СЗЗ, ЗСО, ПДВ, НДВ, РООС, ООВВ\"/>\n    <meta name=\"description\" content=\"Сотрудники компании НПИ «Экология Будущего». Специалисты в области эко"
+  },
+  {
+    "url": "https://www.npieco.kz/",
+    "error": "fetch failed"
+  },
+  {
+    "url": "https://npieco.kz/seo-audit-missing-20260909",
+    "status": 301,
+    "location": "/seo-audit-missing-20260909/",
+    "robots": null,
+    "cache": null,
+    "body": ""
+  }
+]

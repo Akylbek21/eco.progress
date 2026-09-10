@@ -1,0 +1,3 @@
+-- Run this manually on MySQL if Hibernate ddl-auto=update can't alter the columns:
+-- ALTER TABLE audit_log MODIFY entity_id BIGINT NULL;
+-- ALTER TABLE orders MODIFY status VARCHAR(40) NOT NULL;

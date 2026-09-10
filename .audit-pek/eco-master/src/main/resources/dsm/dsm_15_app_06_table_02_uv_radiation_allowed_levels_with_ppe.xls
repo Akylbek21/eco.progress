@@ -1,0 +1,25 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table><tbody><tr><td><p>
+ПДУ</p>
+</td><td><p>
+Область УФО</p>
+</td></tr><tr><td><p>
+1</p>
+</td><td><p>
+2</p>
+</td></tr><tr><td><p>
+10,0 Вт/м2</p>
+</td><td><p>
+для области УФ-А (400-315 нм)</p>
+</td></tr><tr><td><p>
+0,01 Вт/м2</p>
+</td><td><p>
+для области УФ-В (315-280 нм)</p>
+</td></tr><tr><td><p>
+составляет 1 Вт/м<sup>2</sup> и ниже (при использовании специальной одежды и средств защиты лица и рук, не пропускающих излучение (спилк, кожа, ткани с пленочным покрытием и аналогичные изделия)</p>
+</td><td><p>
+УФ- В + УФ-С (200-315 нм)</p>
+</td></tr><tr><td><p>
+запрещается</p>
+</td><td><p>
+УФ-С</p>
+</td></tr></tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>

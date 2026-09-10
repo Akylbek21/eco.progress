@@ -1,0 +1,169 @@
+User-agent: Yandex
+Disallow: /?
+Disallow: *%2F
+Disallow: /admin/
+Disallow: /*.xls
+Disallow: /*.doc
+Disallow: /*.ppt
+Disallow: /*openstat=
+Disallow: /*yclid=
+Disallow: /*gclid=
+Disallow: /*utm_campaign=
+Disallow: /*utm_source=
+Disallow: /*utm_medium=
+Disallow: /*adv=
+Disallow: /*pc=
+Disallow: /*preview=
+Disallow: /search/results/?search
+Disallow: /services/prochie-uslugi/vydacha-licenzii-na-oborot-prekursorov/
+Allow: /static/css*.css
+Allow: /static/js*.js
+Allow: /media/uploads/images*.jpg
+Allow: /*.pdf
+Allow: /media/uploads/images*.jpeg
+Allow: /media/uploads/images*.png
+Allow: /media/uploads/images*.gif
+Clean-param: gad
+Clean-param: gad_source
+Clean-param: utm_source
+Clean-param: utm_medium
+Clean-param: utm_campaign
+Clean-param: utm_term
+Clean-param: utm_type
+Clean-param: utm_campaign
+Clean-param: utm_content
+Clean-param: yclid
+Clean-param: etext
+Clean-param: block
+Clean-param: pos
+Clean-param: openstat
+Clean-param: gclid
+Clean-param: adv
+Clean-param: pc
+Clean-param: preview
+Clean-param: page
+Clean-param: gbraid
+Clean-param: gad_campaignid
+
+User-agent: Googlebot
+Disallow: /?
+Disallow: *%2F
+Disallow: /admin/
+Disallow: /*.xls
+Disallow: /*.doc
+Disallow: /*.ppt
+Disallow: /*openstat=
+Disallow: /*yclid=
+Disallow: /*gclid=
+Disallow: /*utm_campaign=
+Disallow: /*utm_source=
+Disallow: /*utm_medium=
+Disallow: /*adv=
+Disallow: /*pc=
+Disallow: /*preview=
+Disallow: /search/results/?search
+Allow: /static/css*.css
+Allow: /static/js*.js
+Allow: /media/uploads/images*.jpg
+Allow: /*.pdf
+Allow: /media/uploads/images*.jpeg
+Allow: /media/uploads/images*.png
+Allow: /media/uploads/images*.gif
+
+User-agent: bingbot
+Crawl-delay: 29
+Disallow: /search/results/?search=
+
+User-agent: *
+Disallow: /?
+Disallow: *%2F
+Disallow: /admin/
+Disallow: /*.xls
+Disallow: /*.doc
+Disallow: /*.ppt
+Disallow: /*openstat=
+Disallow: /*yclid=
+Disallow: /*gclid=
+Disallow: /*utm_campaign=
+Disallow: /*utm_source=
+Disallow: /*utm_medium=
+Disallow: /*adv=
+Disallow: /*pc=
+Disallow: /*preview=
+Disallow: /search/results/?search
+Allow: /static/css*.css
+Allow: /static/js*.js
+Allow: /media/uploads/images*.jpg
+Allow: /*.pdf
+Allow: /media/uploads/images*.jpeg
+Allow: /media/uploads/images*.png
+Allow: /media/uploads/images*.gif
+
+Sitemap: https://npieco.kz/sitemap.xml
+Host: https://npieco.kz/
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: Detectify
+Disallow: /
+
+User-agent: dotbot
+Disallow: /
+
+User-agent: Riddler
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: LinkpadBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: FlipboardProxy
+Disallow: /
+
+User-agent: aiHitBot
+Disallow: /
+
+User-agent: trovitBot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot/1.2~bl
+Disallow: /
+
+User-agent: MegaIndex.ru/2.0
+Disallow: /
+
+User-agent: DotBot/1.1
+Disallow: /
+
+User-agent: AhrefsBot/5.2
+Disallow: /
+
+User-agent: SemrushBot/2~bl
+Disallow: /
+
+User-agent: ia_archiver
+Crawl-Delay: 30
+
+User-agent: ltx71
+Disallow: /
+
+User-agent: CCBot/2.0
+Disallow: /
+
+User-agent: VelenPublicWebCrawler
+Disallow: /
+
+User-agent: bingbot/2.0
+Disallow: /
+
+User-agent: serpstatbot/1.0
+Disallow: /

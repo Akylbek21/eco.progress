@@ -1,0 +1,271 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table><tbody><tr><td rowspan="5"><p>
+№</p>
+</td><td rowspan="5"><p>
+Период года</p>
+</td><td rowspan="5"><p>
+Категория работ</p>
+</td><td colspan="5"><p>
+Температура, <sup>о</sup>С</p>
+</td><td colspan="2"><p>
+Относительная влажность на рабочих местах - постоянных и непостоянных, не более</p>
+</td><td colspan="2"><p>
+Скорость движения, м/с на рабочих местах - постоянных и непостоянных*</p>
+</td></tr><tr><td rowspan="4"><p>
+Оптимальная</p>
+</td><td colspan="4"><p>
+Допустимая</p>
+</td><td rowspan="4"><p>
+Оптимальная</p>
+</td><td rowspan="4"><p>
+Допустимая</p>
+</td><td rowspan="4"><p>
+Оптимальная, не более</p>
+</td><td rowspan="4"><p>
+Допустимая</p>
+</td></tr><tr><td colspan="2"><p>
+Верхняя граница</p>
+</td><td colspan="2"><p>
+Нижняя граница</p>
+</td></tr><tr><td colspan="4"><p>
+на рабочих местах</p>
+</td></tr><tr><td><p>
+постоянных</p>
+</td><td><p>
+непостоянных</p>
+</td><td><p>
+постоянных</p>
+</td><td><p>
+Непостоянных</p>
+</td></tr><tr><td><p>
+1</p>
+</td><td><p>
+2</p>
+</td><td><p>
+3</p>
+</td><td><p>
+4</p>
+</td><td><p>
+5</p>
+</td><td><p>
+6</p>
+</td><td><p>
+7</p>
+</td><td><p>
+8</p>
+</td><td><p>
+9</p>
+</td><td><p>
+10</p>
+</td><td><p>
+11</p>
+</td><td><p>
+12</p>
+</td></tr><tr><td rowspan="5"><p>
+1</p>
+</td><td rowspan="5"><p>
+Холодный период года</p>
+</td><td><p>
+Легкая – 1а</p>
+</td><td><p>
+22-24</p>
+</td><td><p>
+25</p>
+</td><td><p>
+26</p>
+</td><td><p>
+21</p>
+</td><td><p>
+18</p>
+</td><td><p>
+40-60</p>
+</td><td><p>
+75</p>
+</td><td><p>
+0,1</p>
+</td><td><p>
+не более 0,1</p>
+</td></tr><tr><td><p>
+Легкая – 1б</p>
+</td><td><p>
+21-23</p>
+</td><td><p>
+24</p>
+</td><td><p>
+25</p>
+</td><td><p>
+20</p>
+</td><td><p>
+17</p>
+</td><td><p>
+40-60</p>
+</td><td><p>
+75</p>
+</td><td><p>
+0,1</p>
+</td><td><p>
+не более 0,2</p>
+</td></tr><tr><td><p>
+Средней тяжести – II a</p>
+</td><td><p>
+18-20</p>
+</td><td><p>
+23</p>
+</td><td><p>
+24</p>
+</td><td><p>
+17</p>
+</td><td><p>
+15</p>
+</td><td><p>
+40-60</p>
+</td><td><p>
+75</p>
+</td><td><p>
+0,2</p>
+</td><td><p>
+не более 0,3</p>
+</td></tr><tr><td><p>
+Средней тяжести – II б</p>
+</td><td><p>
+17-19</p>
+</td><td><p>
+21</p>
+</td><td><p>
+23</p>
+</td><td><p>
+15</p>
+</td><td><p>
+13</p>
+</td><td><p>
+40-60</p>
+</td><td><p>
+75</p>
+</td><td><p>
+0,2</p>
+</td><td><p>
+не более 0,4</p>
+</td></tr><tr><td><p>
+Тяжелая – III</p>
+</td><td><p>
+16-18</p>
+</td><td><p>
+19</p>
+</td><td><p>
+20</p>
+</td><td><p>
+13</p>
+</td><td><p>
+12</p>
+</td><td><p>
+40-60</p>
+</td><td><p>
+75</p>
+</td><td><p>
+0,3</p>
+</td><td><p>
+не более 0,5</p>
+</td></tr><tr><td rowspan="5"><p>
+2</p>
+</td><td rowspan="5"><p>
+Теплый период года</p>
+</td><td><p>
+Легкая – 1а</p>
+</td><td><p>
+23-25</p>
+</td><td><p>
+28</p>
+</td><td><p>
+30</p>
+</td><td><p>
+22</p>
+</td><td><p>
+20</p>
+</td><td><p>
+40-60</p>
+</td><td><p>
+55 при 28 <sup>о</sup>С</p>
+</td><td><p>
+0,1</p>
+</td><td><p>
+0,1-0,2</p>
+</td></tr><tr><td><p>
+Легкая – 1б</p>
+</td><td><p>
+22-24</p>
+</td><td><p>
+28</p>
+</td><td><p>
+30</p>
+</td><td><p>
+21</p>
+</td><td><p>
+19</p>
+</td><td><p>
+40-60</p>
+</td><td><p>
+60 – при 27 <sup>о</sup>С</p>
+</td><td><p>
+0,2</p>
+</td><td><p>
+0,1-0,3</p>
+</td></tr><tr><td><p>
+Средней тяжести – II a</p>
+</td><td><p>
+21-23</p>
+</td><td><p>
+27</p>
+</td><td><p>
+29</p>
+</td><td><p>
+18</p>
+</td><td><p>
+17</p>
+</td><td><p>
+40-60</p>
+</td><td><p>
+65 – при 26 <sup>о</sup>С</p>
+</td><td><p>
+0,3</p>
+</td><td><p>
+0,2-0,4</p>
+</td></tr><tr><td><p>
+Средней тяжести – II б</p>
+</td><td><p>
+20-22</p>
+</td><td><p>
+27</p>
+</td><td><p>
+29</p>
+</td><td><p>
+16</p>
+</td><td><p>
+15</p>
+</td><td><p>
+40-60</p>
+</td><td><p>
+70 – при 25 <sup>о</sup>С</p>
+</td><td><p>
+0,3</p>
+</td><td><p>
+0,2-0,5</p>
+</td></tr><tr><td><p>
+Тяжелая – III</p>
+</td><td><p>
+18-20</p>
+</td><td><p>
+26</p>
+</td><td><p>
+28</p>
+</td><td><p>
+15</p>
+</td><td><p>
+13</p>
+</td><td><p>
+40-60</p>
+</td><td><p>
+75 – при 24 <sup>о</sup>С и ниже</p>
+</td><td><p>
+0,4</p>
+</td><td><p>
+0,2-0,6</p>
+</td></tr></tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>

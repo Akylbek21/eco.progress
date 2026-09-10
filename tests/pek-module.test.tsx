@@ -29,6 +29,7 @@ import {
   canArchiveReport,
   canCollectPekReport,
   canCreateProgram,
+  canViewPek,
   canCreateReport,
   canDeleteProgram,
   canSignReport,
@@ -283,7 +284,7 @@ describe('PEK backend contract', () => {
   });
 
   it('allows deletion only for editable drafts unless backend explicitly decides', () => {
-    const editor = { role: 'ECOLOGIST' as const };
+    const editor = { role: 'ECOLOGIST' as const, permissions: ['PEK_PROGRAM_EDIT'] };
     expect(canDeleteProgram(editor, { status: 'DRAFT' })).toBe(true);
     expect(canDeleteProgram(editor, { status: 'ACTIVE' })).toBe(false);
     expect(canDeleteProgram(editor, { status: 'DRAFT', availableActions: { delete: false } })).toBe(false);
@@ -297,7 +298,7 @@ describe('PEK backend contract', () => {
 
   it('uses report availableActions without status or role fallbacks', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
-    expect(source).toContain('item.availableActions.manageSources === true');
+    expect(source).toContain('item.availableActions.matchSources === true');
     expect(source).not.toContain("['DRAFT', 'COLLECTING', 'RETURNED'].includes(item.status)");
   });
 
@@ -339,7 +340,7 @@ describe('PEK backend contract', () => {
 
   it('backend action hides source mutations', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
-    expect(source).toContain('const canMutateSources = item.availableActions.manageSources === true');
+    expect(source).toContain('const canMutateSources = item.availableActions.matchSources === true');
     expect(source).toContain("['UNMATCHED', 'AMBIGUOUS'].includes(source.matchStatus)");
     expect(source).toContain("source.matchStatus === 'STALE'");
     expect(source).not.toContain('actions.matchSources ||');
@@ -485,21 +486,23 @@ describe('PEK backend contract', () => {
     expect(valid.success).toBe(true);
   });
 
-  it('uses backend permissions when present and documented legacy role fallbacks otherwise', () => {
-    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(true);
-    expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(true);
-    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_CREATE')).toBe(true);
-    expect(canUsePekPermission({ role: 'ADMIN' }, 'PEK_PROGRAM_EDIT')).toBe(true);
-    expect(canUsePekPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_EDIT')).toBe(true);
+  it('requires explicit backend permissions and denies role-only grants', () => {
+    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(false);
+    expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(false);
+    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_CREATE')).toBe(false);
+    expect(canUsePekPermission({ role: 'ADMIN' }, 'PEK_PROGRAM_EDIT')).toBe(false);
+    expect(canUsePekPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_EDIT')).toBe(false);
     expect(canUsePekPermission({ role: 'MANAGER' }, 'PEK_PROGRAM_EDIT')).toBe(false);
-    expect(canUsePekPermission({ role: 'HEAD' }, 'PEK_PROGRAM_ACTIVATE')).toBe(true);
-    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_REPORT_CREATE')).toBe(true);
+    expect(canUsePekPermission({ role: 'HEAD' }, 'PEK_PROGRAM_ACTIVATE')).toBe(false);
+    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_REPORT_CREATE')).toBe(false);
     expect(hasPermission({ role: 'LABORATORY' }, 'PEK_PROGRAM_CREATE')).toBe(false);
-    expect(hasPermission({ role: 'LABORATORY' }, 'PEK_REPORT_CREATE')).toBe(true);
+    expect(hasPermission({ role: 'LABORATORY' }, 'PEK_REPORT_CREATE')).toBe(false);
     expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_REPORT_CREATE')).toBe(false);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: ['PEK_VIEW'] }, 'PEK_VIEW')).toBe(true);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: [] }, 'PEK_PROGRAM_CREATE')).toBe(false);
     expect(hasPermission({ role: 'ADMIN', permissions: [] }, 'PEK_VIEW')).toBe(false);
+    expect(canViewPek({ role: 'ECOLOGIST' })).toBe(true);
+    expect(canViewPek({ role: 'ECOLOGIST', permissions: [] })).toBe(false);
   });
 
   it('fails closed for an unknown role and prioritizes resource-level actions', () => {

@@ -1,0 +1,857 @@
+{
+  "total": 103,
+  "sitemap": 103,
+  "statuses": {
+    "200": 103
+  },
+  "duplicateTitles": [],
+  "duplicateDescriptions": [],
+  "duplicateText": [],
+  "missingCanonical": [],
+  "nonSelfCanonical": [],
+  "missingDescription": [],
+  "h1Issues": [],
+  "hreflangIssues": [],
+  "unresolvedLinks": [],
+  "similarCityPairs": [
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "jaccard": 77
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "jaccard": 77
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "jaccard": 78
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "jaccard": 78
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-almaty",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "jaccard": 77
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-astana",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "jaccard": 77
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "jaccard": 77
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "jaccard": 70
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-shymkent",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "jaccard": 77
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "jaccard": 76
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "jaccard": 77
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taraz",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "jaccard": 70
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-turkestan",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "jaccard": 76
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "jaccard": 78
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "jaccard": 78
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "jaccard": 79
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 76
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kyzylorda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "jaccard": 76
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "jaccard": 77
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "jaccard": 77
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktobe",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "jaccard": 77
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "jaccard": 77
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
+      "jaccard": 76
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 76
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-atyrau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "jaccard": 80
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "jaccard": 77
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 76
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-karaganda",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 76
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "jaccard": 76
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 76
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 76
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-pavlodar",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 76
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-ust-kamenogorsk",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "jaccard": 75
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kostanay",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-aktau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 71
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 72
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-petropavlovsk",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 74
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-oral",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-kokshetau",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 73
+    },
+    {
+      "a": "https://ecoprogress.kz/ecologicheskie-uslugi-taldykorgan",
+      "b": "https://ecoprogress.kz/ecologicheskie-uslugi-semey",
+      "jaccard": 74
+    }
+  ],
+  "services": [
+    {
+      "url": "https://ecoprogress.kz/services/ecological-documents",
+      "roughWords": 689,
+      "legalLinks": 1
+    },
+    {
+      "url": "https://ecoprogress.kz/services/environmental-design",
+      "roughWords": 176,
+      "legalLinks": 0
+    },
+    {
+      "url": "https://ecoprogress.kz/services/roos",
+      "roughWords": 689,
+      "legalLinks": 2
+    },
+    {
+      "url": "https://ecoprogress.kz/services/waste-passport",
+      "roughWords": 702,
+      "legalLinks": 2
+    },
+    {
+      "url": "https://ecoprogress.kz/services/szz",
+      "roughWords": 708,
+      "legalLinks": 2
+    },
+    {
+      "url": "https://ecoprogress.kz/services/ndv",
+      "roughWords": 602,
+      "legalLinks": 2
+    },
+    {
+      "url": "https://ecoprogress.kz/services/puo",
+      "roughWords": 599,
+      "legalLinks": 2
+    },
+    {
+      "url": "https://ecoprogress.kz/services/ovos",
+      "roughWords": 612,
+      "legalLinks": 2
+    },
+    {
+      "url": "https://ecoprogress.kz/services/environmental-permits",
+      "roughWords": 170,
+      "legalLinks": 0
+    },
+    {
+      "url": "https://ecoprogress.kz/services/laboratory-tests",
+      "roughWords": 620,
+      "legalLinks": 1
+    },
+    {
+      "url": "https://ecoprogress.kz/services/water-analysis",
+      "roughWords": 213,
+      "legalLinks": 0
+    },
+    {
+      "url": "https://ecoprogress.kz/services/industrial-control",
+      "roughWords": 170,
+      "legalLinks": 0
+    },
+    {
+      "url": "https://ecoprogress.kz/services/program-pek",
+      "roughWords": 651,
+      "legalLinks": 2
+    },
+    {
+      "url": "https://ecoprogress.kz/services/report-pek",
+      "roughWords": 849,
+      "legalLinks": 2
+    },
+    {
+      "url": "https://ecoprogress.kz/services/waste-transportation",
+      "roughWords": 616,
+      "legalLinks": 2
+    },
+    {
+      "url": "https://ecoprogress.kz/services/waste-recycling",
+      "roughWords": 627,
+      "legalLinks": 2
+    },
+    {
+      "url": "https://ecoprogress.kz/services/waste-management",
+      "roughWords": 171,
+      "legalLinks": 0
+    },
+    {
+      "url": "https://ecoprogress.kz/services/poligon-tbo",
+      "roughWords": 164,
+      "legalLinks": 0
+    },
+    {
+      "url": "https://ecoprogress.kz/services/environmental-audit",
+      "roughWords": 173,
+      "legalLinks": 0
+    },
+    {
+      "url": "https://ecoprogress.kz/services/ecological-support",
+      "roughWords": 594,
+      "legalLinks": 1
+    }
+  ],
+  "schemaCounts": {
+    "Organization": 103,
+    "ImageObject": 103,
+    "PostalAddress": 103,
+    "WebSite": 103,
+    "WebPage": 103,
+    "Service": 52,
+    "Place": 52,
+    "Person": 74,
+    "EducationalOccupationalCredential": 74,
+    "BreadcrumbList": 102,
+    "ListItem": 102,
+    "LocalBusiness": 14,
+    "ProfessionalService": 14,
+    "City": 14,
+    "Article": 15
+  }
+}

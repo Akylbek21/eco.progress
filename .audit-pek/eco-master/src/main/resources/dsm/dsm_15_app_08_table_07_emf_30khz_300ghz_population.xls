@@ -1,0 +1,43 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table><tbody><tr><td><p>
+Диапазон частот</p>
+</td><td><p>
+30-300 кГц</p>
+</td><td><p>
+0,3-3 МГц</p>
+</td><td><p>
+3-30 МГц</p>
+</td><td><p>
+30-300 МГц</p>
+</td><td><p>
+0,3-300 ГГц</p>
+</td></tr><tr><td><p>
+1</p>
+</td><td><p>
+2</p>
+</td><td><p>
+3</p>
+</td><td><p>
+4</p>
+</td><td><p>
+5</p>
+</td><td><p>
+6</p>
+</td></tr><tr><td><p>
+Нормируемый параметр</p>
+</td><td colspan="4"><p>
+Напряженность электрического поля, Е (В/м)</p>
+</td><td><p>
+Плотность потока энергии, ППЭ (мкВт/см<sup>2</sup>)</p>
+</td></tr><tr><td><p>
+ПДУ</p>
+</td><td><p>
+25</p>
+</td><td><p>
+15</p>
+</td><td><p>
+10</p>
+</td><td><p>
+3</p>
+</td><td><p>
+10 25*</p>
+</td></tr></tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>
