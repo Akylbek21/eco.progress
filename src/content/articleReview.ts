@@ -6,18 +6,20 @@ export const isApprovedArticleReview = (reviewStatus: unknown): reviewStatus is 
   reviewStatus === 'approved';
 
 const isIndexableArticleReview = (reviewStatus: unknown): boolean =>
-  reviewStatus === 'approved' || reviewStatus === 'requires-specialist-review';
+  reviewStatus === 'approved';
 
 export const articleRobotsForReviewStatus = (reviewStatus: unknown): SeoRobots =>
   isIndexableArticleReview(reviewStatus) ? 'index,follow' : 'noindex,follow';
 
 export const isArticleIndexable = (
-  article: Pick<ArticleContent, 'status' | 'reviewStatus'> | null | undefined,
-): boolean => Boolean(article?.status === 'published' && isIndexableArticleReview(article.reviewStatus));
+  article: Pick<ArticleContent, 'status' | 'reviewStatus' | 'reviewerSlug' | 'lastReviewedAt'> | null | undefined,
+  reviewers: ReadonlyMap<string, Expert> = expertMap,
+): boolean => isArticleApproved(article, reviewers);
 
 export const isArticleEligibleForSeoLinks = (
   article: Pick<ArticleContent, 'status' | 'reviewStatus' | 'reviewerSlug' | 'lastReviewedAt'> | null | undefined,
-): boolean => isArticleIndexable(article);
+  reviewers: ReadonlyMap<string, Expert> = expertMap,
+): boolean => isArticleIndexable(article, reviewers);
 
 export const isArticleApproved = (
   article: Pick<ArticleContent, 'status' | 'reviewStatus' | 'reviewerSlug' | 'lastReviewedAt'> | null | undefined,

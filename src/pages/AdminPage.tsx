@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import Reveal from '../components/animations/Reveal';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { fetcher } from '../services/api';
@@ -40,10 +39,6 @@ const AdminPage = () => {
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-[22px] border border-emerald-100 bg-emerald-50 p-5 text-sm leading-6 text-emerald-900">
-        <p className="font-semibold">Создание клиентов и сотрудников доступно в разделе «Пользователи».</p>
-        <Link to="/admin/users" className="rounded-full bg-eco-800 px-4 py-2 text-sm font-semibold text-white">Открыть пользователей</Link>
-      </div>
       <div className="grid gap-6 lg:grid-cols-2">
         {blocks.map((block, index) => (
           <Reveal key={block.title} delay={index * 0.04}>

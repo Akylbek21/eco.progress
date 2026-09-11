@@ -48,7 +48,7 @@ export const validateCases = (body) => {
   const nonEmptyList = (value) => Array.isArray(value) && value.length > 0 && value.every(text);
   const invalid = cases.filter((item) => {
     const requiredText = [item?.id, item?.slug, item?.title, item?.description, item?.city, item?.region, item?.industry,
-      item?.objectType, item?.objectCategory, item?.serviceType, item?.task, item?.solution, item?.result, item?.duration, item?.expertId, item?.reviewerId];
+      item?.objectType, item?.objectCategory, item?.serviceType, item?.serviceSlug, item?.task, item?.solution, item?.result, item?.duration, item?.expertId, item?.reviewerId];
     return !requiredText.every(text) || !approved(item?.reviewStatus)
       || !date(item?.completedAt) || !date(item?.reviewedAt) || !date(item?.publishedAt) || !date(item?.updatedAt)
       || typeof item?.clientAnonymous !== 'boolean'
@@ -58,7 +58,10 @@ export const validateCases = (body) => {
       || item.regulations.some((entry) => !text(entry?.title))
       || !Array.isArray(item.metrics) || item.metrics.length === 0
       || item.metrics.some((entry) => !text(entry?.label) || !text(entry?.value))
-      || !Array.isArray(item.images);
+      || !Array.isArray(item.images)
+      || item.images.some((image) => !text(image?.url) || !text(image?.alt)
+        || !Number.isInteger(image?.width) || image.width <= 0 || !Number.isInteger(image?.height) || image.height <= 0)
+      || (item.relatedArticleSlugs !== undefined && (!Array.isArray(item.relatedArticleSlugs) || !item.relatedArticleSlugs.every(text)));
   });
   if (invalid.length) throw new Error(`Case snapshot is not deployment-safe: ${invalid.length} invalid published CMS record(s). Previous snapshot was not overwritten.`);
   if (new Set(cases.map((item) => item.slug)).size !== cases.length || new Set(cases.map((item) => item.id)).size !== cases.length) {

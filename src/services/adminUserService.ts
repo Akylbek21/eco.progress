@@ -43,6 +43,12 @@ export interface AdminUserPageResponse {
   totalPages: number;
 }
 
+type AdminUserPageApiResponse = Partial<AdminUserPageResponse> & {
+  items?: AdminUserRecord[];
+  size?: number;
+  totalElements?: number;
+};
+
 export type CreateAdminUserPayload = {
   email: string;
   name: string;
@@ -63,7 +69,7 @@ export type CreateAdminUserPayload = {
 export type UpdateAdminUserPayload = Partial<CreateAdminUserPayload>;
 
 export async function listUsers(params?: AdminUserListParams): Promise<AdminUserPageResponse> {
-  const response = await api.get<ApiResponse<AdminUserPageResponse> | AdminUserPageResponse>('/admin/users', {
+  const response = await api.get<ApiResponse<AdminUserPageApiResponse> | AdminUserPageApiResponse>('/admin/users', {
     params: {
       page: params?.page ?? 0,
       limit: params?.limit ?? 20,
@@ -73,18 +79,28 @@ export async function listUsers(params?: AdminUserListParams): Promise<AdminUser
       sort: params?.sort ?? 'name,asc',
     },
   });
-  const payload = unwrapApiResponse<AdminUserPageResponse>(response.data);
-  return payload || { items: [], page: 0, limit: 20, total: 0, totalPages: 0 };
+  const payload = unwrapApiResponse<AdminUserPageApiResponse>(response.data);
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  return {
+    items,
+    page: payload?.page ?? params?.page ?? 0,
+    limit: payload?.limit ?? payload?.size ?? params?.limit ?? 20,
+    total: payload?.total ?? payload?.totalElements ?? items.length,
+    totalPages: payload?.totalPages ?? (items.length ? 1 : 0),
+  };
 }
 
 /** @deprecated Use listUsers with pagination instead */
 export async function getUsers(): Promise<AdminUserRecord[]> {
-  try {
-    const response = await listUsers({ limit: 1000 });
-    return response.items;
-  } catch {
-    return [];
-  }
+  const pageSize = 100; // Backend contract allows at most 100 records per request.
+  const firstPage = await listUsers({ page: 0, limit: pageSize });
+  if (firstPage.totalPages <= 1) return firstPage.items;
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+      listUsers({ page: index + 1, limit: pageSize })),
+  );
+  return [firstPage, ...remainingPages].flatMap((page) => page.items);
 }
 
 export async function createUser(payload: CreateAdminUserPayload): Promise<AdminUserRecord> {

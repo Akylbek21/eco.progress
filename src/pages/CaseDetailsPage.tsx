@@ -7,6 +7,7 @@ import { isPublishableCaseStudy } from '../content/cases/caseStudyPolicy';
 import { buildArticleSchema, buildBreadcrumbSchema, buildCorePageEntities, buildPersonSchema, buildServiceEntity, entityIds } from '../seo/entityBuilders';
 import { ArticleAuthorCard, ArticleReviewerCard } from '../components/content/ContentBlocks';
 import { caseStudies } from '../content/cases/caseStudies';
+import { getCatalogService } from '../content/serviceCatalog';
 
 const CaseDetailsPage = () => {
   const { slug = '' } = useParams();
@@ -18,10 +19,16 @@ const CaseDetailsPage = () => {
   const canonical = `${company.siteUrl}/cases/${item.slug}`;
   const authorId = entityIds(canonical).author;
   const reviewerId = item.reviewer ? entityIds(canonical).reviewer : undefined;
+  const service = getCatalogService(item.serviceSlug);
+  const serviceCanonical = `${company.siteUrl}/services/${item.serviceSlug}`;
+  const serviceId = entityIds(serviceCanonical).service;
+  const caseImage = item.images?.[0]?.url
+    ? (item.images[0].url.startsWith('http') ? item.images[0].url : `${company.siteUrl}${item.images[0].url}`)
+    : `${company.siteUrl}/media/social/ecoprogress-og-1200x630.jpg`;
   const schema = [
     ...buildCorePageEntities({ canonical, name: item.title, description: item.problem, dateModified: item.updatedAt }),
-    buildArticleSchema({ canonical, headline: item.title, description: item.problem, datePublished: item.publishedAt!, dateModified: item.updatedAt, image: `${company.siteUrl}/media/social/ecoprogress-og-1200x630.jpg`, authorId, reviewerId, serviceId: entityIds(canonical).service }),
-    buildServiceEntity({ canonical, name: item.service, description: item.problem, areaServed: item.city }),
+    buildArticleSchema({ canonical, headline: item.title, description: item.problem, datePublished: item.publishedAt!, dateModified: item.updatedAt, image: caseImage, authorId, reviewerId, serviceId }),
+    buildServiceEntity({ canonical: serviceCanonical, name: service?.title ?? item.service, description: service?.fullDescription ?? item.problem, areaServed: item.city }),
     buildPersonSchema(item.expert, authorId), ...(item.reviewer && reviewerId ? [buildPersonSchema(item.reviewer, reviewerId)] : []),
     buildBreadcrumbSchema([{ name: 'Главная', url: company.siteUrl }, { name: 'Кейсы', url: `${company.siteUrl}/cases` }, { name: item.title, url: canonical }]),
   ];
@@ -38,6 +45,8 @@ const CaseDetailsPage = () => {
       {item.regulations.length > 0 && <section><h2 className="text-3xl font-bold text-eco-900">Какие нормативы использовали</h2><ul className="mt-5 space-y-3">{item.regulations.map((regulation) => <li key={regulation.title}>{regulation.url ? <a href={regulation.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-eco-700 underline">{regulation.title}</a> : regulation.title}</li>)}</ul></section>}
       <CaseSection title="Результат" text={item.result} />
       <CaseSection title="Срок выполнения" text={item.duration ? `${item.duration}. Работа завершена ${item.completedAt}.` : `Работа завершена ${item.completedAt}.`} />
+      {item.images?.length ? <section><h2 className="text-3xl font-bold text-eco-900">Фото проекта</h2><div className="mt-5 grid gap-4 md:grid-cols-2">{item.images.map((image) => <img key={image.url} src={image.url} alt={image.alt} width={image.width} height={image.height} loading="lazy" className="h-auto w-full rounded-2xl object-cover" />)}</div></section> : null}
+      <section><h2 className="text-3xl font-bold text-eco-900">Связанные материалы</h2><div className="mt-5 flex flex-wrap gap-3"><Link to={`/services/${item.serviceSlug}`} className="rounded-full border border-eco-200 bg-eco-50 px-4 py-2 font-semibold text-eco-800">{service?.title ?? item.service}</Link>{item.relatedArticleSlugs.map((articleSlug) => <Link key={articleSlug} to={`/news/${articleSlug}`} className="rounded-full border border-slate-200 px-4 py-2 font-semibold text-eco-800">Статья по теме</Link>)}</div></section>
       <section><h2 className="text-3xl font-bold text-eco-900">Специалист и проверка</h2><div className="mt-5 grid gap-4 md:grid-cols-2"><ArticleAuthorCard expert={item.expert} /><ArticleReviewerCard expert={item.reviewer} /></div></section>
     </div>
   </article>;

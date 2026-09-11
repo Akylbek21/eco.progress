@@ -208,6 +208,7 @@ export interface CmsCaseDto {
   objectType: string;
   objectCategory: string;
   serviceType: string;
+  serviceSlug: string;
   task: string;
   solution: string;
   workPerformed: string[];
@@ -220,7 +221,8 @@ export interface CmsCaseDto {
   reviewerId: string;
   reviewStatus: 'DRAFT' | 'REQUIRES_REVIEW' | 'APPROVED' | 'REJECTED';
   reviewedAt: string;
-  images: string[];
+  images: CaseStudyImage[];
+  relatedArticleSlugs?: string[];
   clientAnonymous: boolean;
   clientName?: string;
   published: boolean;
@@ -251,6 +253,7 @@ export interface CaseStudy {
   slug: string;
   title: string;
   service: string;
+  serviceSlug: string;
   industry: string;
   city: string;
   region: string;
@@ -270,8 +273,16 @@ export interface CaseStudy {
   publishedAt?: string;
   updatedAt: string;
   duration?: string;
-  images?: string[];
+  images?: CaseStudyImage[];
+  relatedArticleSlugs: string[];
   metrics?: Array<{ label: string; value: string }>;
+}
+
+export interface CaseStudyImage {
+  url: string;
+  alt: string;
+  width: number;
+  height: number;
 }
 
 export interface ContentRepository {

@@ -18,6 +18,7 @@ export const normalizePublicCase = (
     slug: item.slug,
     title: item.title,
     service: item.serviceType,
+    serviceSlug: item.serviceSlug,
     industry: item.industry,
     city: item.city,
     region: item.region,
@@ -38,6 +39,7 @@ export const normalizePublicCase = (
     updatedAt: item.updatedAt,
     duration: item.duration,
     images: item.images,
+    relatedArticleSlugs: item.relatedArticleSlugs ?? [],
     metrics: item.metrics,
   };
   return isPublishableCaseStudy(normalized) ? normalized : null;

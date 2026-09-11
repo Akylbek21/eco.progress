@@ -115,11 +115,13 @@ for (const url of urls) {
   const h1 = normalizeText(one(html, /<h1(?:\s[^>]*)?>([\s\S]*?)<\/h1>/i));
   const pageSchemas = schemas(html);
   const words = visibleText(html).split(' ').filter(Boolean);
+  const renderedText = visibleText(html);
   const htmlLang = one(html, /<html\s+[^>]*lang=["']([^"']+)["']/i);
   const hreflangs = new Map([...html.matchAll(/<link\s+rel=["']alternate["'][^>]*hreflang=["']([^"']+)["'][^>]*href=["']([^"']+)["'][^>]*>/gi)].map((match) => [match[1], match[2]]));
 
   if (!title) errors.push(`Missing title: ${parsed.pathname}`);
   if (!description) errors.push(`Missing description: ${parsed.pathname}`);
+  if ([title, description, canonical, h1].some((value) => /^(?:undefined|null|nan)$/i.test(value))) errors.push(`Nullish SEO field: ${parsed.pathname}`);
   if (h1Count !== 1) errors.push(`Expected one H1, found ${h1Count}: ${parsed.pathname}`);
   if (canonicalCount !== 1) errors.push(`Expected one canonical, found ${canonicalCount}: ${parsed.pathname}`);
   if (canonical !== url) errors.push(`Canonical mismatch at ${parsed.pathname}: ${canonical || 'missing'}`);
@@ -152,6 +154,7 @@ for (const url of urls) {
   if (title.length < 35 || title.length > 75) warnings.push(`Title length ${title.length}: ${parsed.pathname}`);
   if (description.length < 100 || description.length > 180) warnings.push(`Description length ${description.length}: ${parsed.pathname}`);
   if (/(?:localhost|127\.0\.0\.1|example\.(?:com|org)|test\.)/i.test(html)) errors.push(`Development/test host found: ${parsed.pathname}`);
+  if (/(?:^|\s)(?:undefined|null|nan)(?:\s|$)/i.test(renderedText)) errors.push(`Unresolved nullish value in rendered content: ${parsed.pathname}`);
   if (/href=["'](?:https:\/\/ecoprogress\.kz)?\/(?:services\/(?:eco-design|laboratory|permits|landfill|enterprise-support)(?=[/"'?#])|passport-othodov-kazakhstan|otchet-pek-kazakhstan|shtrafy-za-ekologiyu-kazakhstan|shtrafy-za-ekologicheskie-narusheniya-kazakhstan|news\/(?:kakie-shtrafy-za-ekologiyu-v-kazakhstane|komu-nuzhen-proizvodstvennyy-kontrol-ses|kak-poluchit-razreshenie-na-emissii|chto-takoe-pasport-othodov|kakie-dokumenty-proveryaet-ses|ekologicheskoe-soprovozhdenie-biznesa)|(?:passport-othodov|ovos-skrining-vozdeystviya|razreshenie-na-emissii|ekologicheskoe-proektirovanie|proizvodstvennyy-kontrol-ses|laboratornye-izmereniya|proekt-ndv|programma-pek|razrabotka-pek|proizvodstvennyy-ekologicheskiy-kontrol|proekt-szz|razdel-oos|programma-upravleniya-othodami|ekologicheskoe-razreshenie-na-vozdeystvie)-[^/"'#?]+)(?:["'#?])/i.test(html)) errors.push(`Legacy URL used internally: ${parsed.pathname}`);
 
   for (const image of html.matchAll(/<img\b([^>]*)>/gi)) {
@@ -196,10 +199,16 @@ for (const url of urls) {
     const target = internalUrl.pathname.replace(/\/$/, '') || '/';
     if (!registryPaths.has(target) && !fs.existsSync(pageFile(target))) warnings.push(`Broken internal link: ${parsed.pathname} -> ${target}`);
   }
-  for (const match of html.matchAll(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/gi)) {
-    const paragraph = normalizeText(match[1]);
-    if (paragraph.length <= 80 || paragraphAllowlist.has(paragraph)) continue;
-    const paths = paragraphs.get(paragraph) || new Set(); paths.add(parsed.pathname); paragraphs.set(paragraph, paths);
+}
+
+for (const entry of seoPageContent.filter((item) => item.type === 'city' || item.type === 'service-city')) {
+  const blocks = [entry.intro, ...(entry.sections ?? []).map((section) => section.body), ...(entry.faq ?? []).map((item) => item.answer)]
+    .map(normalizeText).filter((paragraph) => paragraph.length > 80 && !paragraphAllowlist.has(paragraph));
+  if (new Set(blocks).size !== blocks.length) errors.push(`Repeated content block within regional page: /${entry.slug}`);
+  for (const paragraph of blocks) {
+    const paths = paragraphs.get(paragraph) || new Set();
+    paths.add(`/${entry.slug}`);
+    paragraphs.set(paragraph, paths);
   }
 }
 

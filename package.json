@@ -16,6 +16,7 @@
     "prerender": "vite build --ssr scripts/entry-server.jsx --outDir dist-ssr && node scripts/prerender.js",
     "seo:audit": "node scripts/linguistic-content-audit.mjs && node scripts/seo-audit.mjs",
     "seo:noindex-report": "node scripts/noindex-report.mjs",
+    "seo:indexnow": "node scripts/submit-indexnow.mjs",
     "content:audit": "node --loader ./scripts/ts-loader.mjs scripts/content-audit.mjs",
     "content:export": "node --loader ./scripts/ts-loader.mjs scripts/content-export.mjs",
     "content:migrate:dry-run": "node --loader ./scripts/ts-loader.mjs scripts/content-export.mjs --dry-run",

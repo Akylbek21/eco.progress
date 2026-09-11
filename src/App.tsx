@@ -80,7 +80,7 @@ const CabinetOrdersPage = lazyNamed(() => import('./pages/CabinetPages'), 'Cabin
 const CabinetPaymentsPage = lazyNamed(() => import('./pages/CabinetPages'), 'CabinetPaymentsPage');
 
 const StaffClientsPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffClientsPage');
-const StaffCalendarPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffCalendarPage');
+const StaffCalendarPage = lazy(() => import('./pages/staff/StaffCalendarPage'));
 const StaffCommercialOffersPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffCommercialOffersPage');
 const StaffContractsPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffContractsPage');
 const StaffDashboardPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffDashboardPage');
@@ -92,7 +92,6 @@ const StaffOrdersPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffOrde
 const StaffProfilePage = lazyNamed(() => import('./pages/StaffPages'), 'StaffProfilePage');
 const StaffReportsPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffReportsPage');
 const StaffTasksPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffTasksPage');
-const StaffUserRolesPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffUserRolesPage');
 
 const allStaffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST', 'STAFF'];
 const protocolRoles: UserRole[] = allStaffRoles;
@@ -276,7 +275,7 @@ function App() {
         <Route path="/staff/documents" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffDocumentsPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/document-flow" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><SignatureDocumentsPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><PaymentsPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/calendar" element={<RoleAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'LABORATORY', 'ECOLOGIST', 'MANAGER']}><StaffCalendarPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/calendar" element={<RoleAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'ECOLOGIST', 'MANAGER']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'ECOLOGIST', 'MANAGER']}><StaffCalendarPage /></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><StaffAccess roles={protocolRoles}><ErrorBoundary fallbackTitle="Не удалось открыть протоколы"><ProtocolsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/protocols/create" element={<Navigate to="/staff/protocols/new" replace />} />
         <Route path="/staff/protocols/new" element={<RoleAccess roles={protocolRoles} loginPath="/staff/login"><StaffLayout><ProtocolCreateAccess><ErrorBoundary fallbackTitle="Не удалось открыть создание протокола"><ProtocolCreatePage /></ErrorBoundary></ProtocolCreateAccess></StaffLayout></RoleAccess>} />
@@ -302,13 +301,14 @@ function App() {
         <Route path="/staff/settings/laboratories" element={<RoleAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY']}><ErrorBoundary fallbackTitle="Не удалось открыть настройки лаборатории"><LaboratorySettingsPage /></ErrorBoundary></StaffAccess></StaffLayout></RoleAccess>} />
         <Route path="/staff/settings/laboratory" element={<Navigate to="/staff/settings/laboratories" replace />} />
         <Route path="/staff/reports" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN', 'ACCOUNTANT']}><StaffReportsPage /></StaffAccess></StaffLayout></RoleAccess>} />
-        <Route path="/staff/user-roles" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN']}><StaffUserRolesPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/employees" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><StaffLayout><StaffAccess roles={['ADMIN']}><AdminUsersPage /></StaffAccess></StaffLayout></RoleAccess>} />
+        <Route path="/staff/user-roles" element={<Navigate to="/staff/employees" replace />} />
         <Route path="/staff/notifications" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffNotificationsPage /></StaffLayout></RoleAccess>} />
         <Route path="/staff/profile" element={<RoleAccess roles={allStaffRoles} loginPath="/staff/login"><StaffLayout><StaffProfilePage /></StaffLayout></RoleAccess>} />
         <Route path="/dashboard/payments" element={<RoleAccess roles={['ADMIN', 'ACCOUNTANT']} loginPath="/staff/login"><StaffLayout><PaymentsPage /></StaffLayout></RoleAccess>} />
 
         <Route path="/admin" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminPage /></AdminLayout></RoleAccess>} />
-        <Route path="/admin/users" element={<RoleAccess roles={['ADMIN']} loginPath="/staff/login"><AdminLayout><AdminUsersPage /></AdminLayout></RoleAccess>} />
+        <Route path="/admin/users" element={<Navigate to="/staff/employees" replace />} />
         <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
         </Routes>
         </Suspense>

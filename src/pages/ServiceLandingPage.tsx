@@ -50,7 +50,7 @@ const ServiceLandingPage = ({ slug }: { slug: string }) => {
   const serviceReviewer = content.contentReview.reviewStatus === 'approved'
     && content.contentReview.lastReviewedAt && isPublishableExpert(reviewerCandidate) ? reviewerCandidate : undefined;
   const expertNodes = confirmedExperts.map((expert, index) => buildPersonSchema(expert, `${canonical}#expert-${index + 1}`));
-  const caseUrls = confirmedCases.filter((item) => item.service === service.slug).map((item) => `${company.siteUrl}/cases/${item.slug}`);
+  const caseUrls = confirmedCases.filter((item) => item.serviceSlug === service.slug).map((item) => `${company.siteUrl}/cases/${item.slug}`);
   const schema = [
     ...buildCorePageEntities({ canonical, name: service.title, description: service.seo.description, dateModified: content.contentReview.lastReviewedAt }),
     buildServiceEntity({ canonical, name: service.title, description: service.fullDescription, serviceType: service.category, areaServed: service.areaServed.type === 'KAZAKHSTAN' ? 'Казахстан' : service.areaServed.regions, expertIds: expertNodes.map((node) => String(node['@id'])), caseUrls }),

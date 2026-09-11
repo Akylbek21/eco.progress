@@ -183,7 +183,7 @@ const AdminUsersPage = () => {
   const [staffErrors, setStaffErrors] = useState<StaffFormErrors>({});
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
 
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['admin-users'],
     queryFn: getUsers,
   });
@@ -373,6 +373,20 @@ const AdminUsersPage = () => {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="rounded-[24px] border border-rose-200 bg-rose-50 p-6 text-rose-950">
+        <h2 className="text-lg font-bold">Не удалось загрузить пользователей</h2>
+        <p className="mt-2 text-sm text-rose-800">
+          {error instanceof Error ? error.message : 'Сервер вернул ошибку при загрузке списка.'}
+        </p>
+        <Button type="button" variant="secondary" className="mt-4" onClick={() => void refetch()}>
+          Повторить
+        </Button>
+      </div>
+    );
+  }
+
   const tabs = [
     { key: 'staff' as const, label: 'Сотрудники', count: stats.staff },
     { key: 'clients' as const, label: 'Клиенты', count: stats.clients },
@@ -384,7 +398,7 @@ const AdminUsersPage = () => {
       <section className="overflow-hidden rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-5">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-eco-700">Администрирование</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-eco-700">CRM · сотрудники</p>
             <h2 className="mt-2 text-3xl font-bold text-slate-950">Пользователи системы</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
               Управление сотрудниками CRM, клиентскими аккаунтами, доступами и статусами.

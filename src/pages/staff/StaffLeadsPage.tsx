@@ -6,6 +6,12 @@ import { getApiErrorMessage } from '../../services/apiHelpers';
 import { getLeads, updateLeadStatus, type LeadStatus } from '../../services/leadService';
 
 const statuses: LeadStatus[] = ['new', 'contacted', 'in_progress', 'closed'];
+const statusLabels: Record<LeadStatus, string> = {
+  new: 'Новая',
+  contacted: 'Связались',
+  in_progress: 'В работе',
+  closed: 'Закрыта',
+};
 const safeInternalPath = (value?: string) => value?.startsWith('/') && !value.startsWith('//') ? value : undefined;
 
 const StaffLeadsPage = () => {
@@ -53,7 +59,7 @@ const StaffLeadsPage = () => {
       <div><h2 className="text-3xl font-bold text-eco-900">Лиды</h2><p className="mt-1 text-sm text-slate-600">Обращения с сайта и других каналов.</p></div>
       <div className="grid gap-3 md:grid-cols-4">
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск" className="rounded-2xl border border-slate-200 px-4 py-3" />
-        <select value={status} onChange={(event) => setStatus(event.target.value as 'all' | LeadStatus)} className="rounded-2xl border border-slate-200 px-4 py-3"><option value="all">Все статусы</option>{statuses.map((item) => <option key={item}>{item}</option>)}</select>
+        <select value={status} onChange={(event) => setStatus(event.target.value as 'all' | LeadStatus)} className="rounded-2xl border border-slate-200 px-4 py-3"><option value="all">Все статусы</option>{statuses.map((item) => <option key={item} value={item}>{statusLabels[item]}</option>)}</select>
         <select value={source} onChange={(event) => setSource(event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3"><option value="all">Все источники</option>{sources.map((item) => <option key={item}>{item}</option>)}</select>
         <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3" />
       </div>
@@ -63,7 +69,7 @@ const StaffLeadsPage = () => {
         <table className="min-w-full text-left text-sm"><thead><tr className="border-b border-slate-200 text-slate-500"><th className="p-3">Дата</th><th className="p-3">Контакт</th><th className="p-3">Город / услуга</th><th className="p-3">Источник</th><th className="p-3">Комментарий</th><th className="p-3">Статус</th></tr></thead>
           <tbody>{filtered.map((lead) => {
             const sourcePath = safeInternalPath(lead.attribution?.sourceUrl);
-            return <tr key={lead.id} className="border-b border-slate-100"><td className="p-3">{lead.createdAt}</td><td className="p-3"><p className="font-bold">{lead.name}</p><p>{lead.phone}</p></td><td className="p-3">{lead.city}<br />{lead.serviceType}</td><td className="p-3"><p>{lead.source}</p>{lead.attribution && <div className="mt-2 space-y-1 text-xs text-slate-500"><p>{lead.attribution.sourceType || 'PAGE'}{lead.attribution.sourceSlug ? ` · ${lead.attribution.sourceSlug}` : ''}</p>{lead.attribution.serviceSlug && <p>Услуга: {lead.attribution.serviceSlug}</p>}{lead.attribution.utmCampaign && <p>UTM: {lead.attribution.utmCampaign}</p>}{sourcePath && <a className="font-semibold text-eco-700 underline" href={sourcePath} target="_blank" rel="noreferrer">Открыть источник</a>}</div>}</td><td className="max-w-xs p-3">{lead.comment}</td><td className="p-3"><select value={lead.status} disabled={updatingId === lead.id} onChange={(event) => changeStatus(lead.id, event.target.value as LeadStatus)} className="rounded-xl border border-slate-200 px-3 py-2">{statuses.map((item) => <option key={item}>{item}</option>)}</select></td></tr>;
+            return <tr key={lead.id} className="border-b border-slate-100"><td className="p-3">{lead.createdAt}</td><td className="p-3"><p className="font-bold">{lead.name}</p><p>{lead.phone}</p></td><td className="p-3">{lead.city}<br />{lead.serviceType}</td><td className="p-3"><p>{lead.source}</p>{lead.attribution && <div className="mt-2 space-y-1 text-xs text-slate-500"><p>{lead.attribution.sourceType || 'PAGE'}{lead.attribution.sourceSlug ? ` · ${lead.attribution.sourceSlug}` : ''}</p>{lead.attribution.serviceSlug && <p>Услуга: {lead.attribution.serviceSlug}</p>}{lead.attribution.utmCampaign && <p>UTM: {lead.attribution.utmCampaign}</p>}{sourcePath && <a className="font-semibold text-eco-700 underline" href={sourcePath} target="_blank" rel="noreferrer">Открыть источник</a>}</div>}</td><td className="max-w-xs p-3">{lead.comment}</td><td className="p-3"><select value={lead.status} disabled={updatingId === lead.id} onChange={(event) => changeStatus(lead.id, event.target.value as LeadStatus)} className="rounded-xl border border-slate-200 px-3 py-2">{statuses.map((item) => <option key={item} value={item}>{statusLabels[item]}</option>)}</select></td></tr>;
           })}</tbody>
         </table>
       </div>

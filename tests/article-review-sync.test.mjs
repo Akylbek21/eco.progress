@@ -44,7 +44,7 @@ test('CMS sync persists complete approved published cases', () => inTempProject(
     id: 'case-pek-1', slug: 'pek-shymkent', title: 'ПЭК для производственного предприятия',
     description: 'Исходные документы предприятия', city: 'Шымкент', region: 'Туркестанская область', industry: 'Производство',
     objectType: 'Производственное предприятие', objectCategory: 'II категория',
-    serviceType: 'program-pek', task: 'Актуализировать программу ПЭК', solution: 'Проверили документы и подготовили программу',
+    serviceType: 'Программа ПЭК', serviceSlug: 'program-pek', task: 'Актуализировать программу ПЭК', solution: 'Проверили документы и подготовили программу',
     workPerformed: ['Проверили документы', 'Подготовили программу'], regulations: [{ title: 'Экологический кодекс Республики Казахстан' }],
     metrics: [{ label: 'Источники', value: '17' }, { label: 'Точки мониторинга', value: '8' }],
     result: 'Программа передана заказчику', duration: '15 рабочих дней',

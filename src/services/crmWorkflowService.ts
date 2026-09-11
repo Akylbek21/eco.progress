@@ -128,13 +128,20 @@ type CalendarApiEvent = {
 };
 
 const mapCalendarEventType = (type?: string): StaffCalendarEvent['type'] =>
-  type === 'measurement' ? 'laboratory' : type === 'waste' ? 'waste' : 'task';
+  type === 'order_deadline' ? 'order' : type === 'measurement' ? 'laboratory' : type === 'waste' ? 'waste' : 'task';
+
+const localIsoDate = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const mapCalendarEventStatus = (status: string | null | undefined, eventDate?: string): StaffCalendarEvent['status'] => {
   if (status === 'done' || status === 'completed' || status === 'cancelled') return 'completed';
   if (status === 'reschedule_requested') return 'rescheduled';
   const date = eventDate?.slice(0, 10);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localIsoDate();
   if (date && date < today) return 'overdue';
   if (date === today) return 'today';
   return 'planned';

@@ -44,7 +44,7 @@ export const RelatedCaseStudies = ({ service, city, locale = 'ru' }: { service?:
   });
   if (isError) return null;
   const cases = data.filter((item) => isPublishableCaseStudy(item)
-    && (!service || item.service === service)
+    && (!service || item.serviceSlug === service)
     && (!city || item.city === city));
   if (!cases.length) return null;
   return <section aria-labelledby="related-cases-title">

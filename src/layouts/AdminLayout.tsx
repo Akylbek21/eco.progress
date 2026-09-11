@@ -1,10 +1,9 @@
 ﻿import { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Settings, Users } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 const nav = [
   { to: '/admin', label: 'Контент', hash: '#услуги' },
-  { to: '/admin/users', label: 'Пользователи' },
 ];
 
 const AdminLayout = ({ children }: { children: ReactNode }) => (
@@ -25,7 +24,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => (
               }`
             }
           >
-            {item.label === 'Пользователи' ? <Users size={16} /> : <Settings size={16} />}
+            <Settings size={16} />
             {item.label}
           </NavLink>
         ))}

@@ -179,7 +179,7 @@ export type WasteRemoval = {
   comment?: string;
 };
 
-export type StaffCalendarEventType = 'laboratory' | 'waste' | 'task';
+export type StaffCalendarEventType = 'order' | 'laboratory' | 'waste' | 'task';
 export type StaffCalendarEventStatus = 'today' | 'planned' | 'overdue' | 'rescheduled' | 'completed';
 
 export type StaffCalendarEvent = {

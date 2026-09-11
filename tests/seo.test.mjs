@@ -81,8 +81,7 @@ test('priority Kazakh pages are reciprocal localized entries in the unified regi
 
 test('article indexing follows reviewStatus and keeps a self canonical', async () => {
   assert.equal(articleRobotsForReviewStatus('approved'), 'index,follow');
-  assert.equal(articleRobotsForReviewStatus('requires-specialist-review'), 'index,follow');
-  for (const status of ['draft', 'rejected', 'unknown', undefined]) {
+  for (const status of ['requires-specialist-review', 'draft', 'rejected', 'unknown', undefined]) {
     assert.equal(articleRobotsForReviewStatus(status), 'noindex,follow');
   }
 
@@ -92,8 +91,8 @@ test('article indexing follows reviewStatus and keeps a self canonical', async (
     assert.ok(entry, article.slug);
     assert.equal(entry.robots, articleRobotsForReviewStatus(article.reviewStatus));
     assert.equal(entry.canonical, `https://ecoprogress.kz${article.slug}`);
-    assert.equal(entry.includeInSitemap, true);
-    assert.ok(sitemap.includes(`<loc>${entry.canonical}</loc>`));
+    assert.equal(entry.includeInSitemap, entry.robots === 'index,follow');
+    assert.equal(sitemap.includes(`<loc>${entry.canonical}</loc>`), entry.includeInSitemap);
   }
 
   const sesPage = seoPages.find((page) => page.slug === 'ses-proverka-proizvodstvennyy-kontrol');
@@ -210,8 +209,10 @@ test('regional pages use unique content quality and topic clusters expose publis
     assert.ok(isArticleEligibleForSeoLinks(article), link.path);
   }
 
-  assert.equal(isArticleEligibleForSeoLinks({ status: 'published', reviewStatus: 'approved' }), true);
-  assert.equal(isArticleEligibleForSeoLinks({ status: 'published', reviewStatus: 'requires-specialist-review' }), true);
+  const approvedArticle = articleContent.find((article) => isArticleApproved(article));
+  assert.ok(approvedArticle);
+  assert.equal(isArticleEligibleForSeoLinks(approvedArticle), true);
+  assert.equal(isArticleEligibleForSeoLinks({ status: 'published', reviewStatus: 'requires-specialist-review' }), false);
   for (const candidate of [
     { status: 'draft', reviewStatus: 'approved' },
     { status: 'published', reviewStatus: 'draft' },

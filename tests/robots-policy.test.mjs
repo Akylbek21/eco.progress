@@ -52,3 +52,11 @@ test('robots advertises only the canonical sitemap host', () => {
   assert.match(robots, /^Host: ecoprogress\.kz$/mu);
   assert.doesNotMatch(robots, /https?:\/\/www\./iu);
 });
+
+test('Googlebot, Bingbot and OAI-SearchBot inherit the crawlable wildcard policy', () => {
+  assert.match(robots, /^User-agent: \*$/mu);
+  for (const bot of ['Googlebot', 'Bingbot', 'OAI-SearchBot']) {
+    assert.equal(isBlocked('/services/report-pek'), false, bot);
+    assert.equal(isBlocked('/news/kak-formiruetsya-otchet-pek'), false, bot);
+  }
+});
