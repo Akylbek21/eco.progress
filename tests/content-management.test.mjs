@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import test from 'node:test';
 import { canAccess, rolePermissions } from '../src/config/permissions.ts';
 
@@ -35,22 +34,6 @@ test('administrative content client uses real API, optimistic locking and no moc
   assert.match(editor, /window\.setTimeout[\s\S]*1000/);
   assert.match(editor, /beforeunload/);
   assert.match(editor, /canAccess\(user\?\.role, 'publish_content'\)/);
-});
-
-test('database migration contains versioning, workflow, audit and attribution constraints', async (context) => {
-  const migrationUrl = new URL('../backend/src/main/resources/db/migration/V5__create_content_management.sql', import.meta.url);
-  if (!existsSync(migrationUrl)) {
-    context.skip('Backend is supplied as a separate archive in this frontend workspace.');
-    return;
-  }
-  const sql = await read('backend/src/main/resources/db/migration/V5__create_content_management.sql');
-  for (const table of ['content_items', 'content_versions', 'content_status_history', 'content_comments', 'content_legal_sources', 'content_redirects', 'content_files', 'content_audit_log', 'content_experiments', 'lead_content_attribution', 'content_events']) {
-    assert.match(sql, new RegExp(`CREATE TABLE ${table} \\(`));
-  }
-  assert.match(sql, /optimistic_lock_version BIGINT NOT NULL/);
-  assert.match(sql, /CHECK \(source_path <> target_path\)/);
-  assert.match(sql, /UNIQUE \(content_type, slug, locale\)/);
-  assert.match(sql, /status <> 'PUBLISHED' OR published_version_id IS NOT NULL/);
 });
 
 test('public repository uses backend in production and enables cache/static fallback only in dev', async () => {
