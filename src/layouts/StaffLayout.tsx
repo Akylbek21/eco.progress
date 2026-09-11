@@ -11,7 +11,7 @@ import { canViewPek } from '../features/pek/permissions/pekAccess';
 import { hasCompanyPermission, type CompanyPermissionAction } from '../features/companies/companyPermissions';
 
 const protocolRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER', 'ACCOUNTANT', 'ECOLOGIST', 'WASTE_SPECIALIST', 'STAFF'];
-const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
+const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'];
 
 const links: Array<{ label: string; path: string; icon: typeof ClipboardList; paymentsOnly?: boolean; rolesOnly?: boolean; allowedRoles?: UserRole[]; permission?: Permission; companyPermission?: CompanyPermissionAction }> = [
   { label: 'Обзор', path: '/staff', icon: LayoutDashboard },
@@ -64,7 +64,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
   const nav = (mobile = false) => (
     <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
       {(user?.role === 'LABORATORY'
-        ? links.filter((item) => ['/staff/protocols', '/staff/journals', '/staff/pek', '/staff/document-flow'].includes(item.path)
+        ? links.filter((item) => ['/staff/protocols', '/staff/journals', '/staff/normatives', '/staff/pek', '/staff/document-flow'].includes(item.path)
           || Boolean(item.companyPermission && hasCompanyPermission(user, item.companyPermission)))
         : links
       ).map((item) => {

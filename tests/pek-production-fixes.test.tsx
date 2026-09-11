@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import PekMonitoringPoints from '../src/features/pek/components/monitoring/PekMonitoringPoints';
 import PekControlSourceSelect from '../src/features/pek/components/inventory/PekControlSourceSelect';
 import PekReadinessPanel from '../src/features/pek/components/common/PekReadinessPanel';
+import PekProgramStructure from '../src/features/pek/components/workspace/PekProgramStructure';
 import { pekApi } from '../src/features/pek/api/pekService';
 import { pekInventoryApi } from '../src/features/pek/api/pekInventory';
 import { serializeCoordinates } from '../src/features/pek/utils/pekCoordinates';
@@ -63,12 +64,14 @@ it('loads each source registry and monitoring points only for the selected progr
   expect(list.mock.calls.map(call => call.slice(0, 2))).toEqual([[5, 'emission-sources'], [5, 'discharge-sources'], [5, 'waste-items']]);
 });
 
-it('never grants PEK mutation permissions from a role alone', () => {
+it('uses the backend role matrix only when auth/me omits permissions', () => {
   for (const permission of ['PEK_PROGRAM_EDIT', 'PEK_PROGRAM_APPROVE', 'PEK_REPORT_SIGN', 'PEK_REPORT_SUBMIT']) {
-    expect(canUsePekPermission({ role: 'ADMIN' }, permission)).toBe(false);
+    expect(canUsePekPermission({ role: 'ADMIN' }, permission)).toBe(true);
     expect(canUsePekPermission({ role: 'ADMIN', permissions: [] }, permission)).toBe(false);
     expect(canUsePekPermission({ permissions: [permission] }, permission)).toBe(true);
   }
+  expect(canUsePekPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_EDIT')).toBe(true);
+  expect(canUsePekPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_APPROVE')).toBe(false);
   expect(canViewPek({ role: 'ECOLOGIST' })).toBe(true);
   expect(canViewPek({ role: 'ECOLOGIST', permissions: [] })).toBe(false);
 });
@@ -81,6 +84,28 @@ it('serializes manual and delayed program autosaves before using a version', () 
   expect(source).toContain('onSettled: () =>');
 });
 
+it('uses a full PATCH for manual draft saves and saves before continuing', () => {
+  const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramCreatePage.tsx'), 'utf8');
+  const manualDraft = source.slice(source.indexOf('const saveDraft = useMutation'), source.indexOf('const createServerDraft = useMutation'));
+  const saveDraftNow = source.slice(source.indexOf('const saveDraftNow = () =>'), source.indexOf('const nextStep = () =>'));
+  const nextStep = source.slice(source.indexOf('const nextStep = () =>'), source.indexOf('const normativeTemplate ='));
+
+  expect(manualDraft).toContain('pekApi.updateProgram(id, versionRef.current, mapProgramEditFormToRequest(value))');
+  expect(manualDraft).not.toContain('mapProgramAutosaveToRequest(value)');
+  expect(saveDraftNow).toContain('saveDraft.mutate(value)');
+  expect(saveDraftNow).not.toContain('autosave.mutate(value)');
+  expect(nextStep).toContain('saveDraft.mutate(value');
+  expect(nextStep).toContain('onSuccess: () => setStep');
+});
+
+it('waits for an in-flight autosave and suppresses queued autosaves during a full save', () => {
+  const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramCreatePage.tsx'), 'utf8');
+  expect(source).toContain('const autosaveCompletionRef = useRef<Promise<void> | null>(null)');
+  expect(source).toContain('if (inFlightAutosave) await inFlightAutosave');
+  expect(source).toContain('if (manualSavePendingRef.current) return');
+  expect(source).toContain('mapped.status === 409 || mapped.status === 412');
+});
+
 it('counts backend ERROR issues using the authoritative blocking flag', () => {
   render(<PekReadinessPanel readiness={{ ready: false, completionPercent: 50, issues: [
     { code: 'NO_EMERGENCY_PROCEDURES', section: 'EMERGENCY_PROCEDURES', severity: 'ERROR', blocking: true, message: 'Добавьте действия при аварии' },
@@ -89,4 +114,25 @@ it('counts backend ERROR issues using the authoritative blocking flag', () => {
   expect(screen.getByText('Утверждение заблокировано. Проблем: 1')).toBeTruthy();
   expect(screen.getByText('Блокирует отправку')).toBeTruthy();
   expect(screen.getByText('Предупреждение')).toBeTruthy();
+});
+
+it('shows the authoritative readiness endpoint percentage in the program structure', () => {
+  vi.spyOn(pekApi, 'getInternalInspections').mockResolvedValue([]);
+  vi.spyOn(pekApi, 'getMeasurementQa').mockResolvedValue([]);
+  vi.spyOn(pekApi, 'getEmergencyProcedures').mockResolvedValue([]);
+  vi.spyOn(pekApi, 'getResponsibilities').mockResolvedValue([]);
+  mount(<PekProgramStructure
+    program={{ id: 6, readinessPercent: 40, monitoring: { items: [] } } as PekProgram}
+    readinessPercent={33}
+    onOpenSection={() => {}}
+  />);
+  expect(screen.getByText('33%')).toBeTruthy();
+  expect(screen.queryByText('40%')).toBeNull();
+});
+
+it('preserves report scope when opening the creation form', () => {
+  const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportsPage.tsx'), 'utf8');
+  expect(source).toContain("createReportParams.set('companyId', String(companyId))");
+  expect(source).toContain("createReportParams.set('objectId', String(objectId))");
+  expect(source).toContain('to={createReportHref}');
 });

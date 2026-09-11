@@ -486,23 +486,24 @@ describe('PEK backend contract', () => {
     expect(valid.success).toBe(true);
   });
 
-  it('requires explicit backend permissions and denies role-only grants', () => {
-    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(false);
-    expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(false);
-    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_CREATE')).toBe(false);
-    expect(canUsePekPermission({ role: 'ADMIN' }, 'PEK_PROGRAM_EDIT')).toBe(false);
-    expect(canUsePekPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_EDIT')).toBe(false);
+  it('uses backend permissions first and falls back to the legacy backend role matrix', () => {
+    expect(hasPermission({ role: 'ADMIN' }, 'PEK_VIEW')).toBe(true);
+    expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_VIEW')).toBe(true);
+    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_CREATE')).toBe(true);
+    expect(canUsePekPermission({ role: 'ADMIN' }, 'PEK_PROGRAM_EDIT')).toBe(true);
+    expect(canUsePekPermission({ role: 'ECOLOGIST' }, 'PEK_PROGRAM_EDIT')).toBe(true);
     expect(canUsePekPermission({ role: 'MANAGER' }, 'PEK_PROGRAM_EDIT')).toBe(false);
-    expect(canUsePekPermission({ role: 'HEAD' }, 'PEK_PROGRAM_ACTIVATE')).toBe(false);
-    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_REPORT_CREATE')).toBe(false);
+    expect(canUsePekPermission({ role: 'HEAD' }, 'PEK_PROGRAM_ACTIVATE')).toBe(true);
+    expect(hasPermission({ role: 'ECOLOGIST' }, 'PEK_REPORT_CREATE')).toBe(true);
     expect(hasPermission({ role: 'LABORATORY' }, 'PEK_PROGRAM_CREATE')).toBe(false);
-    expect(hasPermission({ role: 'LABORATORY' }, 'PEK_REPORT_CREATE')).toBe(false);
+    expect(hasPermission({ role: 'LABORATORY' }, 'PEK_REPORT_CREATE')).toBe(true);
     expect(hasPermission({ role: 'ACCOUNTANT' }, 'PEK_REPORT_CREATE')).toBe(false);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: ['PEK_VIEW'] }, 'PEK_VIEW')).toBe(true);
     expect(hasPermission({ role: 'ECOLOGIST', permissions: [] }, 'PEK_PROGRAM_CREATE')).toBe(false);
     expect(hasPermission({ role: 'ADMIN', permissions: [] }, 'PEK_VIEW')).toBe(false);
     expect(canViewPek({ role: 'ECOLOGIST' })).toBe(true);
     expect(canViewPek({ role: 'ECOLOGIST', permissions: [] })).toBe(false);
+    expect(canViewPek({ role: 'CLIENT' })).toBe(false);
   });
 
   it('fails closed for an unknown role and prioritizes resource-level actions', () => {

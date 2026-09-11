@@ -9,7 +9,6 @@ import type {
   PekDashboard,
   PekDashboardFilters,
   PekHistoryItem,
-  PekLookupOption,
   PekPermit,
   PekPermitCreateRequest,
   PekPermitHistoryEntry,
@@ -63,10 +62,12 @@ import type {
 import {
   mapCollectionResult,
   mapDashboardResponse,
+  mapAssigneesResponse,
   mapExceedanceResponse,
   mapProgramResponse,
   mapReportResponse,
 } from '../mappers/responseMappers';
+import { mapProgramMonitoring } from '../mappers/monitoringMapper';
 import { mapReportPackage } from '../mappers/packageMapper';
 
 const cleanParams = (input: Record<string, unknown>) => Object.fromEntries(
@@ -178,6 +179,8 @@ export const pekApi = {
     get<PekHistoryItem[]>(`/pek/programs/${id}/history`, {}, signal),
   getProgramReadiness: (id: number, signal?: AbortSignal) =>
     get<PekReadinessResponse>(`/pek/programs/${id}/readiness`, {}, signal),
+  getProgramMonitoring: async (id: number, signal?: AbortSignal) =>
+    mapProgramMonitoring(await get<unknown>(`/pek/programs/${id}/monitoring`, {}, signal), id),
   createProgramMonitoring: async (id: number, version: number, body: PekMonitoringMutationRequest) =>
     mapProgramResponse(unwrapPekData<unknown>((await api.post(`/pek/programs/${id}/monitoring`, body, pekMutationOptions(version))).data)),
   updateProgramMonitoring: async (id: number, monitoringId: number, body: PekMonitoringMutationRequest, programVersion: number) =>
@@ -245,8 +248,8 @@ export const pekApi = {
     };
   },
 
-  getAssignees: (companyId: number, roles: string[], signal?: AbortSignal) =>
-    get<PekLookupOption[]>('/pek/lookups/assignees', { companyId, roles: roles.join(',') }, signal),
+  getAssignees: async (companyId: number, roles: string[], signal?: AbortSignal) =>
+    mapAssigneesResponse(await get<unknown>('/pek/lookups/assignees', { companyId, roles: roles.join(',') }, signal)),
   getPermits: (objectId: number, signal?: AbortSignal) =>
     get<PekPermit[]>('/pek/permits', { objectId }, signal),
   getPermit: (id: number, signal?: AbortSignal) =>

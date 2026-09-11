@@ -22,6 +22,7 @@ import {
   mapProgramEditFormToRequest,
   mapProgramToForm,
 } from '../mappers/programMappers';
+import { mergeAssigneesWithCompanyStaff } from '../mappers/responseMappers';
 import { loadPekDraft, pekDraftKey, removePekDraft, savePekDraft, type PekStoredDraft } from '../utils/pekDraftStorage';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { pekProgramFormSchema } from '../validation/programSchema';
@@ -112,6 +113,8 @@ const PekProgramCreatePage = () => {
   const autosaveSequence = useRef(0);
   const appliedAutosaveSequence = useRef(0);
   const autosavePendingRef = useRef(false);
+  const autosaveCompletionRef = useRef<Promise<void> | null>(null);
+  const manualSavePendingRef = useRef(false);
   const queuedAutosave = useRef<PekProgramForm>();
   const lastAutosaveHash = useRef('');
 
@@ -136,6 +139,12 @@ const PekProgramCreatePage = () => {
     queryFn: ({ signal }) => pekApi.getAssignees(companyId, ['PEK_RESPONSIBLE'], signal),
     enabled: companyId > 0,
   });
+  const companyStaff = useQuery({
+    queryKey: pekKeys.companyStaff(companyId, user?.id),
+    queryFn: ({ signal }) => pekApi.getCompanyStaff(companyId, signal),
+    enabled: companyId > 0,
+  });
+  const responsibleOptions = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data);
   const permits = useQuery({
     queryKey: pekKeys.permits(objectId, user?.id),
     queryFn: ({ signal }) => pekApi.getPermits(objectId, signal),
@@ -171,8 +180,21 @@ const PekProgramCreatePage = () => {
       const controller = new AbortController();
       autosaveController.current = controller;
       const sequence = ++autosaveSequence.current;
-      const saved = await pekApi.saveProgramDraft(id, versionRef.current, mapProgramAutosaveToRequest(value), controller.signal);
-      return { saved, sequence };
+      const request = pekApi.saveProgramDraft(id, versionRef.current, mapProgramAutosaveToRequest(value), controller.signal);
+      const completion = request.then((saved) => {
+        if (sequence >= appliedAutosaveSequence.current) {
+          appliedAutosaveSequence.current = sequence;
+          versionRef.current = saved.version;
+        }
+      }).then(() => undefined, () => undefined);
+      autosaveCompletionRef.current = completion;
+      try {
+        const saved = await request;
+        return { saved, sequence };
+      } finally {
+        await completion;
+        if (autosaveCompletionRef.current === completion) autosaveCompletionRef.current = null;
+      }
     },
     retry: false,
     onMutate: () => {
@@ -203,7 +225,7 @@ const PekProgramCreatePage = () => {
   });
 
   useEffect(() => {
-    if (autosavePendingRef.current || autosave.isPending || !queuedAutosave.current) return;
+    if (manualSavePendingRef.current || autosavePendingRef.current || autosave.isPending || !queuedAutosave.current) return;
     const next = queuedAutosave.current;
     queuedAutosave.current = undefined;
     autosavePendingRef.current = true;
@@ -216,6 +238,7 @@ const PekProgramCreatePage = () => {
       autosaveTimer.current = window.setTimeout(() => {
         const value = { ...pekProgramDefaults, ...partial } as PekProgramForm;
         void savePekDraft(draftKey, value, edit ? versionRef.current : 'new');
+        if (manualSavePendingRef.current) return;
         const payloadHash = JSON.stringify(mapProgramAutosaveToRequest(value));
         if (payloadHash === lastAutosaveHash.current) return;
         if (!navigator.onLine) {
@@ -253,11 +276,47 @@ const PekProgramCreatePage = () => {
     return () => window.removeEventListener('beforeunload', warn);
   }, [autosaveState]);
 
+  const prepareFullSave = async () => {
+    if (autosaveTimer.current) {
+      window.clearTimeout(autosaveTimer.current);
+      autosaveTimer.current = undefined;
+    }
+    queuedAutosave.current = undefined;
+    const inFlightAutosave = autosaveCompletionRef.current;
+    if (inFlightAutosave) await inFlightAutosave;
+    queuedAutosave.current = undefined;
+  };
+
+  const handleSaveError = (error: unknown) => {
+    const mapped = mapPekError(error);
+    if (mapped.status === 409 || mapped.status === 412) {
+      setAutosaveState('conflict');
+      setConflictOpen(true);
+    } else {
+      setAutosaveState('error');
+    }
+    const firstField = Object.keys(mapped.fieldErrors)[0];
+    Object.entries(mapped.fieldErrors).forEach(([field, message]) => form.setError(field as FieldPath<PekProgramForm>, { message }));
+    if (firstField) {
+      setStep(stepForField(firstField));
+      window.setTimeout(() => form.setFocus(firstField as FieldPath<PekProgramForm>), 0);
+    }
+    toast.error(mapped.message);
+  };
+
   const save = useMutation({
-    mutationFn: (value: PekProgramForm) => edit
-      ? pekApi.updateProgram(id, versionRef.current, mapProgramEditFormToRequest(value))
-      : pekApi.createProgram(mapProgramCreateFormToRequest(value)),
+    mutationFn: async (value: PekProgramForm) => {
+      if (edit) {
+        await prepareFullSave();
+        return pekApi.updateProgram(id, versionRef.current, mapProgramEditFormToRequest(value));
+      }
+      return pekApi.createProgram(mapProgramCreateFormToRequest(value));
+    },
     retry: false,
+    onMutate: () => {
+      manualSavePendingRef.current = true;
+      setAutosaveState('saving');
+    },
     onSuccess: async (saved) => {
       versionRef.current = saved.version;
       await removePekDraft(draftKey).catch(() => undefined);
@@ -272,19 +331,36 @@ const PekProgramCreatePage = () => {
       toast.success(edit ? 'Программа обновлена' : 'Программа создана');
       navigate(`/staff/pek/programs/${saved.id}?companyId=${saved.company?.id ?? companyId ?? routeCompanyId ?? ''}`);
     },
-    onError: (error) => {
-      const mapped = mapPekError(error);
-      if (mapped.status === 409) {
-        setAutosaveState('conflict');
-        setConflictOpen(true);
-      }
-      const firstField = Object.keys(mapped.fieldErrors)[0];
-      Object.entries(mapped.fieldErrors).forEach(([field, message]) => form.setError(field as FieldPath<PekProgramForm>, { message }));
-      if (firstField) {
-        setStep(stepForField(firstField));
-        window.setTimeout(() => form.setFocus(firstField as FieldPath<PekProgramForm>), 0);
-      }
-      toast.error(mapped.message);
+    onError: handleSaveError,
+    onSettled: () => {
+      manualSavePendingRef.current = false;
+    },
+  });
+
+  const saveDraft = useMutation({
+    mutationFn: async (value: PekProgramForm) => {
+      await prepareFullSave();
+      return pekApi.updateProgram(id, versionRef.current, mapProgramEditFormToRequest(value));
+    },
+    retry: false,
+    onMutate: () => {
+      manualSavePendingRef.current = true;
+      setAutosaveState('saving');
+    },
+    onSuccess: async (saved) => {
+      versionRef.current = saved.version;
+      const savedForm = mapProgramToForm(saved);
+      lastAutosaveHash.current = JSON.stringify(mapProgramAutosaveToRequest(savedForm));
+      reset(savedForm);
+      await removePekDraft(draftKey).catch(() => undefined);
+      await commitPekProgramMutation(queryClient, routeCompanyId ?? saved.company?.id ?? companyId, saved);
+      await queryClient.invalidateQueries({ queryKey: pekKeys.dashboard({}, user?.id) });
+      setAutosaveState('saved');
+      toast.success('Черновик сохранён');
+    },
+    onError: handleSaveError,
+    onSettled: () => {
+      manualSavePendingRef.current = false;
     },
   });
 
@@ -363,7 +439,7 @@ const PekProgramCreatePage = () => {
           <label>Название *<input {...register('name')} className={inputClass} />{formState.errors.name && <span className="mt-1 block text-xs text-rose-700">{formState.errors.name.message}</span>}</label>
           <label>Период с *<input type="date" {...register('validFrom')} className={inputClass} /></label>
           <label>Период по *<input type="date" {...register('validUntil')} className={inputClass} />{formState.errors.validUntil && <span className="mt-1 block text-xs text-rose-700">{formState.errors.validUntil.message}</span>}</label>
-          <PekLookupSelect label="Ответственный" value={watch('responsibleUserId')} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => setValue('responsibleUserId', value, { shouldDirty: true })} />
+          <PekLookupSelect label="Ответственный" value={watch('responsibleUserId')} options={responsibleOptions} loading={assignees.isLoading && companyStaff.isLoading} error={assignees.isError && companyStaff.isError} onRetry={() => void Promise.all([assignees.refetch(), companyStaff.refetch()])} onChange={(value) => setValue('responsibleUserId', value, { shouldDirty: true })} />
         </div>
         <div className="mt-7 flex justify-end">
           <Button type="submit" disabled={createServerDraft.isPending}>{createServerDraft.isPending ? 'Создание…' : 'Создать программу'}</Button>
@@ -393,17 +469,7 @@ const PekProgramCreatePage = () => {
     const value = getValues();
     const message = validateHeader(value);
     if (message) { toast.error(message); return; }
-    if (autosaveTimer.current) {
-      window.clearTimeout(autosaveTimer.current);
-      autosaveTimer.current = undefined;
-    }
-    if (edit) {
-      if (autosavePendingRef.current) queuedAutosave.current = value;
-      else {
-        autosavePendingRef.current = true;
-        autosave.mutate(value);
-      }
-    }
+    if (edit) saveDraft.mutate(value);
     else createServerDraft.mutate(value);
   };
 
@@ -420,7 +486,9 @@ const PekProgramCreatePage = () => {
       createServerDraft.mutate(value);
       return;
     }
-    setStep((current) => current + 1);
+    saveDraft.mutate(value, {
+      onSuccess: () => setStep((current) => current + 1),
+    });
   };
   const normativeTemplate = (indicatorIndex: number): ProtocolTemplateId => {
     const indicator = indicators[indicatorIndex];
@@ -467,7 +535,7 @@ const PekProgramCreatePage = () => {
           <button
             type="button"
             aria-current={index === step ? 'step' : undefined}
-            disabled={save.isPending || createServerDraft.isPending}
+            disabled={save.isPending || saveDraft.isPending || createServerDraft.isPending}
             onClick={() => setStep(index)}
             className={`h-full w-full rounded-xl p-3 text-center text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-eco-700 disabled:cursor-wait disabled:opacity-60 ${index === step ? 'bg-eco-700 text-white' : 'bg-white hover:bg-eco-50 hover:text-eco-800'}`}
           >{index + 1}. {label}</button>
@@ -498,7 +566,7 @@ const PekProgramCreatePage = () => {
           <label className="md:col-span-2">Сведения об объекте и его местоположении *<textarea {...register('facilityInformation')} rows={5} className={inputClass} placeholder="Назначение объекта, адрес, границы площадки, режим работы и основные источники воздействия" /></label>
           <label>Действует с *<input type="date" {...register('validFrom')} className={inputClass} /></label>
           <label>Действует до *<input type="date" {...register('validUntil')} className={inputClass} /></label>
-          <PekLookupSelect label="Ответственный" value={watch('responsibleUserId')} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => setValue('responsibleUserId', value, { shouldDirty: true })} />
+          <PekLookupSelect label="Ответственный" value={watch('responsibleUserId')} options={responsibleOptions} loading={assignees.isLoading && companyStaff.isLoading} error={assignees.isError && companyStaff.isError} onRetry={() => void Promise.all([assignees.refetch(), companyStaff.refetch()])} onChange={(value) => setValue('responsibleUserId', value, { shouldDirty: true })} />
           {edit && <p className="text-xs text-slate-500 md:col-span-2">Компания, объект и номер фиксируются при создании программы.</p>}
           <div className="text-sm text-slate-600"><strong>Действующие разрешительные документы</strong><p className="mt-2">{permits.isLoading ? 'Загрузка…' : activePermits.length ? activePermits.map((item) => `${item.type} № ${item.number}`).join(', ') : 'Для объекта нет действующих разрешительных документов'}</p></div>
           {Object.values(formState.errors).length > 0 && <p role="alert" className="md:col-span-2 text-sm text-rose-700">Проверьте обязательные поля программы.</p>}
@@ -535,7 +603,7 @@ const PekProgramCreatePage = () => {
               <TextField label="Метод отбора" value={row.samplingMethod} onChange={(value) => updateControl(index, { samplingMethod: value })} />
               <TextField label="Дата начала" type="date" value={row.startDate} onChange={(value) => updateControl(index, { startDate: value })} />
               <TextField label="Дата окончания" type="date" value={row.endDate} onChange={(value) => updateControl(index, { endDate: value })} />
-              <PekLookupSelect label="Ответственный" value={row.responsibleUserId} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => updateControl(index, { responsibleUserId: value })} />
+              <PekLookupSelect label="Ответственный" value={row.responsibleUserId} options={responsibleOptions} loading={assignees.isLoading && companyStaff.isLoading} error={assignees.isError && companyStaff.isError} onRetry={() => void Promise.all([assignees.refetch(), companyStaff.refetch()])} onChange={(value) => updateControl(index, { responsibleUserId: value })} />
               <label className="flex items-center gap-2"><input type="checkbox" checked={row.mandatory} onChange={(event) => updateControl(index, { mandatory: event.target.checked })} />Обязательная</label>
               <label className="flex items-center gap-2"><input type="checkbox" checked={row.active} onChange={(event) => updateControl(index, { active: event.target.checked })} />Активна</label>
             </div>
@@ -578,7 +646,7 @@ const PekProgramCreatePage = () => {
               <TextField label="Описание" value={row.description} onChange={(value) => updateMeasure(index, { description: value })} />
               <TextField label="Начало" type="date" value={row.plannedStartDate} onChange={(value) => updateMeasure(index, { plannedStartDate: value })} />
               <TextField label="Срок *" type="date" value={row.plannedEndDate} onChange={(value) => updateMeasure(index, { plannedEndDate: value })} />
-              <PekLookupSelect label="Ответственный *" value={row.responsibleUserId} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => updateMeasure(index, { responsibleUserId: value })} />
+              <PekLookupSelect label="Ответственный *" value={row.responsibleUserId} options={responsibleOptions} loading={assignees.isLoading && companyStaff.isLoading} error={assignees.isError && companyStaff.isError} onRetry={() => void Promise.all([assignees.refetch(), companyStaff.refetch()])} onChange={(value) => updateMeasure(index, { responsibleUserId: value })} />
               <NumberField label="Бюджет" value={row.plannedBudget} onChange={(value) => updateMeasure(index, { plannedBudget: value })} />
               <TextField label="Валюта" value={row.currency} onChange={(value) => updateMeasure(index, { currency: value })} />
               <SelectField label="Статус" value={row.status} options={pekActionStatusOptions} onChange={(value) => updateMeasure(index, { status: value as PekActionStatus })} />
@@ -602,12 +670,12 @@ const PekProgramCreatePage = () => {
       </section>
       <NormativeSelectorModal open={normativeIndicatorIndex != null} templateId={normativeIndicatorIndex == null ? '' : normativeTemplate(normativeIndicatorIndex)} onClose={() => setNormativeIndicatorIndex(null)} onAdd={chooseNormative} onManual={() => toast.error('Ручной норматив доступен только при поддержке причины backend-контрактом.')} />
       <footer className="mt-4 flex flex-wrap justify-between gap-3">
-        <Button type="button" variant="secondary" disabled={step === 0 || save.isPending} onClick={() => setStep((value) => value - 1)}>Назад</Button>
-        <Button type="button" variant="secondary" disabled={autosave.isPending || createServerDraft.isPending || save.isPending} onClick={saveDraftNow}>
-          {autosave.isPending || createServerDraft.isPending ? 'Сохранение…' : 'Сохранить черновик'}
+        <Button type="button" variant="secondary" disabled={step === 0 || save.isPending || saveDraft.isPending} onClick={() => setStep((value) => value - 1)}>Назад</Button>
+        <Button type="button" variant="secondary" disabled={saveDraft.isPending || createServerDraft.isPending || save.isPending} onClick={saveDraftNow}>
+          {saveDraft.isPending || createServerDraft.isPending ? 'Сохранение…' : 'Сохранить черновик'}
         </Button>
         {step < steps.length - 1
-          ? <Button type="button" onClick={nextStep}>Продолжить</Button>
+          ? <Button type="button" disabled={saveDraft.isPending || save.isPending} onClick={nextStep}>{saveDraft.isPending ? 'Сохранение…' : 'Продолжить'}</Button>
           : <Button type="submit" disabled={save.isPending} aria-busy={save.isPending}>{save.isPending ? 'Сохранение…' : 'Сохранить программу'}</Button>}
       </footer>
     </form>

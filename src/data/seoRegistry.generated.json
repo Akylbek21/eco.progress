@@ -18509,7 +18509,7 @@
     "description": "Как подготовить производственный контроль СЭС: программа, лабораторные замеры, протоколы, документы и сопровождение проверки.",
     "h1": "Проверка СЭС и производственный контроль",
     "canonical": "https://ecoprogress.kz/ses-proverka-proizvodstvennyy-kontrol",
-    "robots": "index,follow",
+    "robots": "noindex,follow",
     "reviewStatus": "requires-specialist-review",
     "ogType": "article",
     "ogTitle": "Проверка СЭС и производственный контроль | ECOPROGRESS",
@@ -18621,7 +18621,7 @@
         ]
       }
     ],
-    "includeInSitemap": true,
+    "includeInSitemap": false,
     "priority": 0.7,
     "changeFrequency": "weekly",
     "lastModified": "2026-08-27"

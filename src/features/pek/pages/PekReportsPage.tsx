@@ -33,6 +33,10 @@ const PekReportsPage = () => {
     retry: retryPekQuery, staleTime: PEK_STALE_TIME_MS,
     enabled: Boolean(companyId && objectId),
   });
+  const createReportParams = new URLSearchParams();
+  if (companyId) createReportParams.set('companyId', String(companyId));
+  if (objectId) createReportParams.set('objectId', String(objectId));
+  const createReportHref = `/staff/pek/reports/new${createReportParams.size ? `?${createReportParams}` : ''}`;
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     value ? next.set(key, value) : next.delete(key);
@@ -44,7 +48,7 @@ const PekReportsPage = () => {
     setParams(next, { replace: true });
   };
   return <div className="space-y-5">
-    <PekPageHeader title="Отчёты ПЭК" description="Отчёты и связанные с ними протоколы по выбранному объекту" actions={canCreateReport(user) ? <Link to="/staff/pek/reports/new" className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white">Создать отчёт</Link> : undefined} />
+    <PekPageHeader title="Отчёты ПЭК" description="Отчёты и связанные с ними протоколы по выбранному объекту" actions={canCreateReport(user) ? <Link to={createReportHref} className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white">Создать отчёт</Link> : undefined} />
     <section className="grid gap-3 rounded-2xl border bg-white p-4 md:grid-cols-5">
       <PekCompanyObjectFilters companyId={companyId || undefined} objectId={objectId || undefined} onCompanyChange={(value) => update('companyId', value)} onObjectChange={(value) => update('objectId', value)} />
       <label className="text-xs font-bold text-slate-600">Статус<select value={filters.status || ''} onChange={(event) => update('status', event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2"><option value="">Все</option>{(['DRAFT', 'COLLECTING', 'READY_FOR_REVIEW', 'RETURNED', 'APPROVED', 'SIGNED', 'SUBMITTED', 'ACCEPTED', 'REJECTED', 'ARCHIVED'] as PekReportStatus[]).map((status) => <option key={status} value={status}>{labelPekStatus(status)}</option>)}</select></label>

@@ -16,6 +16,7 @@ import { mapPekError } from '../utils/pekErrorMapper';
 import { handlePekMutationError } from '../utils/pekMutationError';
 import { retryPekQuery } from '../utils/pekQueryPolicy';
 import PekCompanyStaff from '../components/settings/PekCompanyStaff';
+import { mergeAssigneesWithCompanyStaff } from '../mappers/responseMappers';
 
 const settingsGroups: Array<{ title: string; fields: Array<[keyof PekSettingsUpdateRequest, string]> }> = [
   { title: 'Сбор протоколов', fields: [['includeOnlySignedProtocols', 'Использовать только подписанные'], ['allowFallbackMatching', 'Дополнительное автоматическое сопоставление'], ['requireManualAmbiguousConfirmation', 'Требовать ручное подтверждение неоднозначных результатов']] },
@@ -42,6 +43,8 @@ const PekSettingsPage = () => {
     retry: retryPekQuery,
   });
   const assignees = useQuery({ queryKey: pekKeys.assignees(selectedCompanyId, ['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(selectedCompanyId, ['PEK_RESPONSIBLE'], signal), enabled: selectedCompanyId > 0 });
+  const companyStaff = useQuery({ queryKey: pekKeys.companyStaff(selectedCompanyId, user?.id), queryFn: ({ signal }) => pekApi.getCompanyStaff(selectedCompanyId, signal), enabled: selectedCompanyId > 0 });
+  const responsibleOptions = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data);
   const laboratories = useQuery({ queryKey: ['laboratories', 'pek-settings', `user:${user?.id ?? 'anonymous'}`], queryFn: ({ signal }) => getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }, signal) });
   const runScheduler = useMutation({
     mutationFn: () => pekApi.runSchedulerNow(selectedCompanyId, settings.data!.version),
@@ -108,7 +111,7 @@ const PekSettingsPage = () => {
     <section className="space-y-5 rounded-2xl border bg-white p-5">
       <div className="grid gap-4 md:grid-cols-3">
         <TextField select label="Тип отчётного периода" value={form.defaultReportType} disabled={!editable} onChange={(event) => set('defaultReportType', event.target.value as 'QUARTERLY' | 'YEARLY')}><MenuItem value="QUARTERLY">Квартальный</MenuItem><MenuItem value="YEARLY">Годовой</MenuItem></TextField>
-        <TextField select label="Ответственный по умолчанию" value={form.defaultResponsibleUserId ?? ''} disabled={!editable || assignees.isLoading} onChange={(event) => set('defaultResponsibleUserId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбран</MenuItem>{assignees.data?.map((user) => <MenuItem key={user.id} value={user.id}>{user.name}</MenuItem>)}</TextField>
+        <TextField select label="Ответственный по умолчанию" value={form.defaultResponsibleUserId ?? ''} disabled={!editable || (assignees.isLoading && companyStaff.isLoading)} onChange={(event) => set('defaultResponsibleUserId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбран</MenuItem>{responsibleOptions.map((responsible) => <MenuItem key={responsible.id} value={responsible.id}>{responsible.name}</MenuItem>)}</TextField>
         <TextField select label="Лаборатория по умолчанию для создания протоколов" value={form.defaultLaboratoryId ?? ''} disabled={!editable || laboratories.isLoading} onChange={(event) => set('defaultLaboratoryId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбрана</MenuItem>{laboratories.data?.content.map((laboratory) => <MenuItem key={laboratory.id} value={laboratory.id}>{laboratory.name}</MenuItem>)}</TextField>
         <TextField type="number" label="Уведомлять до срока, дней" value={form.notifyBeforeDeadlineDays} disabled={!editable} inputProps={{ min: 0, max: 365 }} onChange={(event) => set('notifyBeforeDeadlineDays', Number(event.target.value))} />
       </div>

@@ -11,16 +11,61 @@ const explicitPermission = (user: PekUser, permission: string): boolean | undefi
   return user.permissions.includes(permission);
 };
 
-// Resource action flags and explicit permissions are authoritative; never infer grants from roles.
-export const canUsePekPermission = (user: PekUser, permission: string) => explicitPermission(user, permission) === true;
+// Backward-compatible mirror of PekPermissionMatrix from the backend. Newer
+// /auth/me responses expose permissions directly; older deployed versions omit
+// the field completely. The fallback only controls UI visibility — every PEK
+// endpoint still enforces its own role and company-scope checks.
+const viewPermissions = ['PEK_VIEW', 'PEK_PROGRAM_VIEW', 'PEK_REPORT_VIEW', 'PEK_REPORT_EXPORT', 'PEK_SETTINGS_VIEW'];
+const authorPermissions = [
+  'PEK_PROGRAM_CREATE',
+  'PEK_PROGRAM_EDIT',
+  'PEK_PROGRAM_SUBMIT',
+  'PEK_REPORT_CREATE',
+  'PEK_REPORT_EDIT',
+  'PEK_REPORT_COLLECT',
+  'PEK_REPORT_MATCH',
+  'PEK_REPORT_VALIDATE',
+  'PEK_REPORT_SIGN',
+  'PEK_REPORT_SUBMIT',
+];
+const supervisorPermissions = [
+  'PEK_PROGRAM_REVIEW',
+  'PEK_PROGRAM_APPROVE',
+  'PEK_PROGRAM_ACTIVATE',
+  'PEK_PROGRAM_ARCHIVE',
+  'PEK_REPORT_REVIEW',
+  'PEK_REPORT_RETURN',
+  'PEK_REPORT_APPROVE',
+  'PEK_SETTINGS_EDIT',
+];
+const laboratoryPermissions = [
+  'PEK_REPORT_CREATE',
+  'PEK_REPORT_EDIT',
+  'PEK_REPORT_COLLECT',
+  'PEK_REPORT_MATCH',
+  'PEK_REPORT_VALIDATE',
+];
+
+const permissionSet = (...groups: string[][]) => new Set(groups.flat());
+const legacyRolePermissions: Partial<Record<UserRole, ReadonlySet<string>>> = {
+  ADMIN: permissionSet(viewPermissions, authorPermissions, supervisorPermissions, ['PEK_ADMIN']),
+  DIRECTOR: permissionSet(viewPermissions, authorPermissions, supervisorPermissions, ['PEK_ADMIN']),
+  HEAD: permissionSet(viewPermissions, authorPermissions, supervisorPermissions),
+  ECOLOGIST: permissionSet(viewPermissions, authorPermissions),
+  LABORATORY: permissionSet(viewPermissions, laboratoryPermissions),
+  MANAGER: permissionSet(viewPermissions),
+  ACCOUNTANT: permissionSet(viewPermissions),
+  WASTE_SPECIALIST: permissionSet(viewPermissions),
+};
+
+export const canUsePekPermission = (user: PekUser, permission: string) => {
+  const explicit = explicitPermission(user, permission);
+  if (explicit !== undefined) return explicit;
+  return Boolean(user?.role && legacyRolePermissions[user.role]?.has(permission));
+};
 
 export const canViewPek = (user: PekUser) => {
-  const explicit = explicitPermission(user, 'PEK_VIEW');
-  // The current /auth/me contract does not expose PEK_* permissions. Missing
-  // permission data means "unknown", not "denied": the PEK endpoints still
-  // enforce PEK_VIEW and company membership. An explicit permission list is
-  // authoritative when a newer backend provides it.
-  return explicit ?? Boolean(user);
+  return canUsePekPermission(user, 'PEK_VIEW');
 };
 export const canEditPek = (user: PekUser) =>
   canUsePekPermission(user, 'PEK_PROGRAM_EDIT') || canUsePekPermission(user, 'PEK_REPORT_EDIT');

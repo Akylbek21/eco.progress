@@ -68,7 +68,7 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService, locale = 'ru', le
   const emailBody = isKk
     ? `Сәлеметсіз бе! Өтінім қалдырғым келеді.\n\nҚызмет: ${serviceLabel}\nҚала:\nТелефон / WhatsApp:\nСұрақ:\n${contextLines ? `\n${contextLines}` : ''}`
     : `Здравствуйте! Хочу оставить заявку.\n\nУслуга: ${serviceLabel}\nГород:\nТелефон / WhatsApp:\nЧто вам нужно:\n${contextLines ? `\n${contextLines}` : ''}`;
-  const emailUrl = `mailto:${company.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+  const emailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(company.email)}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm" onClick={onClose}>
@@ -132,13 +132,15 @@ const OrderChoiceModal = ({ open, onClose, preSelectedService, locale = 'ru', le
               <div className="flex min-w-0 flex-col rounded-[20px] border border-sky-100 bg-sky-50 p-5 md:col-span-2 lg:col-span-1">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-sky-700 shadow-sm"><Mail size={23} aria-hidden="true" /></div>
                 <h3 className="mt-4 inline-flex items-center gap-2 text-lg font-bold text-eco-900"><Mail className="text-sky-700" size={18} aria-hidden="true" /> {isKk ? 'Email арқылы жіберу' : 'Отправить по email'}</h3>
-                <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{isKk ? `Хат үлгісін ашамыз. Оны толтырып, ${company.email} мекенжайына жіберіңіз.` : `Откроем готовый шаблон письма. Заполните его и отправьте на ${company.email}.`}</p>
+                <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{isKk ? `Gmail браузерде ашылады. Хатты толтырып, ${company.email} мекенжайына жіберіңіз.` : `Gmail откроется в браузере. Заполните письмо и отправьте его на ${company.email}.`}</p>
                 <a
                   href={emailUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   onClick={() => trackEmailClick({ placement: 'order_modal', service: selectedServiceTitle || preSelectedService })}
                   className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-sky-700 px-5 py-3 text-center text-sm font-bold text-white shadow-sm transition hover:bg-sky-800"
                 >
-                  <Mail size={18} aria-hidden="true" /> {isKk ? 'Email ашу' : 'Открыть email'}
+                  <Mail size={18} aria-hidden="true" /> {isKk ? 'Gmail ашу' : 'Открыть Gmail'}
                 </a>
               </div>
             </div>

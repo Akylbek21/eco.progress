@@ -1,1 +1,1 @@
-export type { LegacyNormativeDto, NormativeReplaceMode } from '../../types/normative';
+export type { LegacyNormativeDto } from '../../types/normative';

@@ -24,7 +24,7 @@ export type AdminUserRecord = {
   createdAt?: string | null;
 };
 
-export type AdminUserStatus = 'active' | 'blocked' | 'pending';
+export type AdminUserStatus = 'active' | 'blocked' | 'pending_setup';
 
 export interface AdminUserListParams {
   page?: number;

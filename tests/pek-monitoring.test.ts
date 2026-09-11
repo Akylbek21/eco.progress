@@ -49,7 +49,8 @@ describe('PEK monitoring backend contract', () => {
 
   it('renders CRUD buttons only from backend availableActions and refetches after mutations', () => {
     const component = readFileSync(resolve(process.cwd(), 'src/features/pek/components/monitoring/PekProgramMonitoring.tsx'), 'utf8');
-    expect(component).toContain('program.monitoring?.availableActions.create === true');
+    expect(component).toContain('currentMonitoring?.availableActions.create === true');
+    expect(component).toContain('pekApi.getProgramMonitoring(program.id, signal)');
     expect(component).toContain('item.availableActions.edit === true');
     expect(component).toContain('item.availableActions.delete === true');
     expect(component).toContain('await commitAggregate(actualProgram)');

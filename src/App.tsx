@@ -95,7 +95,7 @@ const StaffTasksPage = lazyNamed(() => import('./pages/StaffPages'), 'StaffTasks
 
 const allStaffRoles: UserRole[] = ['MANAGER', 'ADMIN', 'DIRECTOR', 'HEAD', 'ACCOUNTANT', 'ECOLOGIST', 'LABORATORY', 'WASTE_SPECIALIST', 'STAFF'];
 const protocolRoles: UserRole[] = allStaffRoles;
-const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY', 'MANAGER'];
+const normativeRoles: UserRole[] = ['ADMIN', 'DIRECTOR', 'HEAD', 'LABORATORY'];
 const pekRoles: UserRole[] = [...allStaffRoles];
 
 const PekAccess = ({ children }: { children: ReactNode }) => {

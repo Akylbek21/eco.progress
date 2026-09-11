@@ -2,8 +2,10 @@ import type {
   PekDashboard,
   PekCollectResponse,
   PekExceedance,
+  PekLookupOption,
   PekProgram,
   PekReport,
+  PekStaffAssignment,
 } from '../api/pekContracts';
 import { pekProgramContractSchema, pekReportContractSchema, validatePekContract } from '../api/pekContractSchemas';
 import { mapProgramMonitoring } from './monitoringMapper';
@@ -48,6 +50,46 @@ const returnInfo = (value: unknown): PekReport['returnInfo'] => {
 const availableActionFlags = (value: unknown): Record<string, boolean> => Object.fromEntries(
   Object.entries(row(value)).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean'),
 );
+
+/** Maps the assignee lookup DTO without applying client-side role/status filtering. */
+export const mapAssigneeResponse = (value: unknown): PekLookupOption => {
+  const source = row(value);
+  const id = numberValue(source.id ?? source.userId, Number.NaN);
+  const name = source.name ?? source.fullName ?? source.userFullName;
+  if (!Number.isFinite(id) || name == null || !String(name).trim()) {
+    throw new Error('Backend вернул некорректную запись сотрудника ПЭК.');
+  }
+  return {
+    id,
+    name: String(name).trim(),
+    description: source.description == null ? undefined : String(source.description),
+    status: source.status == null ? undefined : String(source.status),
+    role: source.role == null ? undefined : String(source.role),
+  };
+};
+
+export const mapAssigneesResponse = (value: unknown): PekLookupOption[] => {
+  if (!Array.isArray(value)) throw new Error('Backend вернул некорректный список сотрудников ПЭК.');
+  return value.map(mapAssigneeResponse);
+};
+
+export const mergeAssigneesWithCompanyStaff = (
+  assignees: PekLookupOption[] = [],
+  staff: PekStaffAssignment[] = [],
+): PekLookupOption[] => {
+  const merged = new Map(assignees.map((item) => [Number(item.id), item]));
+  for (const assignment of staff) {
+    if (assignment.status !== 'ACTIVE' || merged.has(assignment.userId)) continue;
+    merged.set(assignment.userId, {
+      id: assignment.userId,
+      name: assignment.userFullName || assignment.userEmail,
+      description: assignment.userEmail,
+      status: assignment.status,
+      role: 'PEK_RESPONSIBLE',
+    });
+  }
+  return [...merged.values()];
+};
 
 export const mapProgramResponse = (value: unknown): PekProgram => {
   const source = row(validatePekContract(pekProgramContractSchema, value, 'программы ПЭК'));

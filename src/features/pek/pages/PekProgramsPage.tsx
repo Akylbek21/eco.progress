@@ -21,6 +21,18 @@ import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 
 const statuses: PekProgramStatus[] = ['DRAFT', 'UNDER_REVIEW', 'RETURNED', 'APPROVED', 'ACTIVE', 'ARCHIVED'];
 
+const ProgramReadinessCell = ({ program, userId }: { program: PekProgram; userId?: string | number | null }) => {
+  const readiness = useQuery({
+    queryKey: pekKeys.programReadiness(program.id, userId, program.contentRevision),
+    queryFn: ({ signal }) => pekApi.getProgramReadiness(program.id, signal),
+    retry: retryPekQuery,
+    staleTime: PEK_STALE_TIME_MS,
+  });
+  return readiness.isError
+    ? <span className="text-xs text-rose-700" title="Не удалось получить серверную готовность">Ошибка</span>
+    : <PekReadiness value={readiness.data?.progressPercent} />;
+};
+
 const PekProgramsPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -128,7 +140,7 @@ const PekProgramsPage = () => {
                   <td className="px-4 py-3">{item.version}</td>
                   <td className="px-4 py-3">{item.responsible?.name || '—'}</td>
                   <td className="px-4 py-3"><PekStatusBadge status={item.status} /></td>
-                  <td className="px-4 py-3"><PekReadiness value={item.readinessPercent} /></td>
+                  <td className="px-4 py-3"><ProgramReadinessCell program={item} userId={user?.id} /></td>
                   <td className="px-4 py-3">{item.updatedAt || '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center gap-3">

@@ -445,12 +445,6 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ecoprogress.kz/ses-proverka-proizvodstvennyy-kontrol</loc>
-    <lastmod>2026-08-27</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://ecoprogress.kz/kk</loc>
     <xhtml:link rel="alternate" hreflang="ru-KZ" href="https://ecoprogress.kz" />
     <xhtml:link rel="alternate" hreflang="kk-KZ" href="https://ecoprogress.kz/kk" />

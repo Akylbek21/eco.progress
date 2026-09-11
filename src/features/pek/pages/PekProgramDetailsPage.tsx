@@ -54,7 +54,7 @@ const PekProgramDetailsPage = () => {
     enabled: Boolean(program.data?.object?.id),
   });
   const readiness = useQuery({
-    queryKey: ['pek', 'program', 'readiness', id, user?.id, program.data?.contentRevision],
+    queryKey: pekKeys.programReadiness(id, user?.id, program.data?.contentRevision),
     queryFn: ({ signal }) => pekApi.getProgramReadiness(id, signal), enabled: Boolean(program.data),
   });
   const counts = useQuery({
@@ -159,7 +159,7 @@ const PekProgramDetailsPage = () => {
       {counts.isError && <PekQueryError error={counts.error} resource="Состав реестров" retry={() => void counts.refetch()} />}
       {counts.data && <section className="rounded-2xl border bg-white p-5"><h3 className="font-bold">Состав программы</h3><ul className="mt-3 space-y-2">{counts.data.map(([label, count]) => <li key={label}><button type="button" className="text-left underline" onClick={() => setTab(label === 'Точки мониторинга' ? 1 : 8)}>{count ? '✓' : '—'} {label} — {count || 'отсутствуют'}</button></li>)}</ul><p className="mt-3 text-sm text-slate-500">Обязательность разделов и блокирующие проблемы определяются проверкой готовности выше.</p></section>}
       <section className="rounded-2xl border bg-white p-5"><h3 className="font-bold">Заполненные сведения</h3><ul className="mt-3 space-y-2"><li>{item.responsible ? '✓ Ответственный назначен' : '✕ Ответственный не назначен'}</li><li>Позиции контроля — {item.controlItems?.length || 0}</li><li>Показатели — {item.indicators?.length || 0}</li><li>Направления мониторинга — {item.monitoring?.items.length || 0}</li></ul></section>
-      <PekProgramStructure program={item} onOpenSection={(section) => setTab(sectionTabs[section])} />
+      <PekProgramStructure program={item} readinessPercent={readiness.data?.progressPercent} onOpenSection={(section) => setTab(sectionTabs[section])} />
       <section className="rounded-2xl border bg-white p-5"><h2 className="mb-4 text-lg font-black">Общие сведения</h2><div className="grid gap-3 md:grid-cols-2"><Info label="Компания" value={item.company?.name || '—'} /><Info label="Объект" value={item.object?.name || '—'} /><Info label="Описание" value={item.description || '—'} /><Info label="Последнее изменение" value={item.updatedAt || '—'} /><Info label="Проектная мощность" value={item.designCapacity || '—'} /><Info label="Фактическая мощность" value={item.actualCapacity || '—'} /></div></section>
     </div>}
     {tab !== 0 && <section className="rounded-2xl border bg-white p-5">

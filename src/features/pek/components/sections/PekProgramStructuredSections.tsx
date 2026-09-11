@@ -16,6 +16,7 @@ import type {
 } from '../../api/pekContracts';
 import { pekKeys } from '../../api/pekQueryKeys';
 import { pekApi } from '../../api/pekService';
+import { mergeAssigneesWithCompanyStaff } from '../../mappers/responseMappers';
 import { mapPekError } from '../../utils/pekErrorMapper';
 import { handlePekMutationError } from '../../utils/pekMutationError';
 
@@ -90,7 +91,8 @@ const PekProgramStructuredSections = ({ program, section }: { program: PekProgra
   const { user } = useAuth();
   const companyId = program.company?.id || 0;
   const assignees = useQuery({ queryKey: pekKeys.assignees(companyId, ['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(companyId, ['PEK_RESPONSIBLE'], signal), enabled: companyId > 0 });
-  const users = (assignees.data || []).map((item) => ({ id: item.id, name: item.name }));
+  const companyStaff = useQuery({ queryKey: pekKeys.companyStaff(companyId, user?.id), queryFn: ({ signal }) => pekApi.getCompanyStaff(companyId, signal), enabled: companyId > 0 });
+  const users = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data).map((item) => ({ id: Number(item.id), name: item.name }));
 
   const inspection: SectionDefinition<PekInternalInspection, PekInternalInspectionRequest> = {
     key: 'internal-inspections', title: 'Внутренние проверки', description: 'План, факт, результаты и корректирующие действия.', addLabel: 'Добавить проверку',

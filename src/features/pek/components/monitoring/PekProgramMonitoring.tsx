@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, TextField } from '@mui/material';
 import { useState } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -75,10 +75,16 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
   const [editing, setEditing] = useState<PekMonitoringDirection | 'new' | null>(null);
   const [deleting, setDeleting] = useState<PekMonitoringDirection | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const monitoringKey = pekKeys.programMonitoring(program.id, user?.id, program.contentRevision);
+  const monitoring = useQuery({
+    queryKey: monitoringKey,
+    queryFn: ({ signal }) => pekApi.getProgramMonitoring(program.id, signal),
+  });
 
   const commitAggregate = async (actualProgram: PekProgram) => {
     const companyScope = String(program.company?.id ?? 'current-company');
     queryClient.setQueryData(pekKeys.programDetail(program.company?.id, program.id), actualProgram);
+    if (actualProgram.monitoring) queryClient.setQueryData(monitoringKey, actualProgram.monitoring);
     queryClient.setQueriesData<PekDocumentVersion[]>({
       predicate: ({ queryKey }) => queryKey[0] === 'pek' && queryKey[3] === companyScope && queryKey.includes('documents'),
     }, (versions) => versions?.map((document) => ({
@@ -88,13 +94,18 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: pekKeys.programsRoot() }),
       queryClient.invalidateQueries({ queryKey: pekKeys.programHistory(program.id, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: monitoringKey }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportsRoot(program.company?.id, user?.id) }),
       queryClient.invalidateQueries({ predicate: ({ queryKey }) => queryKey[0] === 'pek' && queryKey[3] === companyScope && (queryKey.includes('readiness') || queryKey.includes('package')) }),
     ]);
   };
   const refreshProgram = async () => {
-    const actual = await pekApi.getProgram(program.id);
+    const [actual, actualMonitoring] = await Promise.all([
+      pekApi.getProgram(program.id),
+      pekApi.getProgramMonitoring(program.id),
+    ]);
     queryClient.setQueryData(pekKeys.programDetail(program.company?.id, program.id), actual);
+    queryClient.setQueryData(monitoringKey, actualMonitoring);
     return actual;
   };
 
@@ -130,8 +141,9 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
   });
 
   const mutationError = save.error || remove.error;
-  const items = program.monitoring?.items || [];
-  const canCreate = program.monitoring?.availableActions.create === true;
+  const currentMonitoring = monitoring.data ?? program.monitoring;
+  const items = currentMonitoring?.items || [];
+  const canCreate = currentMonitoring?.availableActions.create === true;
   const openCreate = () => { setForm(emptyForm); setEditing('new'); };
   const openEdit = (item: PekMonitoringDirection) => { setForm(formFromItem(item)); setEditing(item); };
 
@@ -140,6 +152,7 @@ const PekProgramMonitoring = ({ program }: { program: PekProgram }) => {
       <div><h2 className="text-lg font-black">Производственный мониторинг</h2><p className="text-sm text-slate-500">Компоненты окружающей среды, периодичность и точки контроля.</p></div>
       {canCreate && <Button variant="contained" onClick={openCreate}>Добавить направление</Button>}
     </div>
+    {monitoring.isError && <Alert severity="error">{mapPekError(monitoring.error).message}</Alert>}
     {mutationError && <Alert severity="error">{mapPekError(mutationError).message}</Alert>}
     {!items.length ? <Alert severity="info">Направления мониторинга пока не добавлены.</Alert> : <div className="grid gap-3">
       {items.map((item) => <article key={item.id} className="rounded-xl border p-4">

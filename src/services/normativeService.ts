@@ -1,6 +1,6 @@
 import api, { ApiResponse } from './api';
 import { extractItem, extractList } from './apiHelpers';
-import type { LegacyNormativeDto as NormativeRecord, NormativeRecord as CanonicalNormativeRecord, NormativeReplaceMode, NormativeValueType } from '../types/normative';
+import type { LegacyNormativeDto as NormativeRecord, NormativeRecord as CanonicalNormativeRecord, NormativeValueType } from '../types/normative';
 import type { NormativeSearchParams, NormativeSearchResponse } from '../types/normativeSearch';
 
 type UnknownRecord = Record<string, unknown>;
@@ -184,8 +184,8 @@ const finiteNumber = (value: unknown): number | undefined => {
 const canonicalValueType = (value: unknown, rawValue: unknown): NormativeValueType => {
   const normalized = normalizeKey(value);
   const aliases: Record<string, NormativeValueType> = {
-    LESS_OR_EQUAL: 'LE', LE: 'LE', LESS: 'LT', LT: 'LT', GREATER_OR_EQUAL: 'GE', GE: 'GE',
-    GREATER: 'GT', GT: 'GT', EQUAL: 'EXACT', EXACT: 'EXACT', RANGE: 'RANGE', TEXT: 'TEXT',
+    LESS_OR_EQUAL: 'LE', LE: 'LE', LESS: 'LE', LT: 'LE', GREATER_OR_EQUAL: 'GE', GE: 'GE',
+    GREATER: 'GE', GT: 'GE', EQUAL: 'EXACT', EXACT: 'EXACT', RANGE: 'RANGE', TEXT: 'TEXT',
     ABSENT: 'REFERENCE_ONLY', INFO: 'REFERENCE_ONLY', REFERENCE_ONLY: 'REFERENCE_ONLY',
   };
   return aliases[normalized] || (finiteNumber(rawValue) !== undefined ? 'EXACT' : 'TEXT');
@@ -265,22 +265,53 @@ export interface NormativeRecordsParams {
   status?: string;
   formType?: string;
   subtype?: string;
-  waterUseCategory?: string;
   roomType?: string;
   season?: string;
   workCategory?: string;
   workplaceType?: string;
   normLevel?: string;
-  noiseType?: string;
-  visualWorkCategory?: string;
-  lightingType?: string;
-  documentCode?: string;
-  subCategory?: string;
-  protocolType?: string;
-  archived?: boolean;
-  sort?: string;
   unit?: string;
 }
+
+/** Exact request DTO accepted by ProtocolApiDtos.NormativeUpsertRequest. */
+export interface NormativeUpsertRequest {
+  templateId?: string;
+  researchObject?: string;
+  indicator?: string;
+  unit?: string;
+  normativeType?: string;
+  value?: string;
+  min?: string;
+  max?: string;
+  comparisonType?: string;
+  normativeDocument?: string;
+  testingMethod?: string;
+  samplingMethod?: string;
+  validFrom?: string;
+  validUntil?: string;
+  active?: boolean;
+  casNumber?: string;
+  chemicalFormula?: string;
+  normativeSubType?: string;
+  hazardClass?: string;
+  limitingIndicator?: string;
+  sourceDocumentCode?: string;
+  sourceDocumentName?: string;
+  documentNumber?: string;
+  documentDate?: string;
+  appendixNo?: number;
+  tableNo?: number;
+  factorType?: string;
+  factorCode?: string;
+  roomType?: string;
+  season?: string;
+  workCategory?: string;
+  workplaceType?: string;
+  normLevel?: string;
+  conditionJson?: string;
+}
+
+export type NormativeImportMode = 'MANAGED' | 'EXCEL';
 
 export type NormativePageState = {
   items: NormativeRecord[];
@@ -415,17 +446,15 @@ const directoryParams = (params?: NormativeRecordsParams) => {
   const page = Number(params?.page ?? DEFAULT_PAGE);
   const size = Number(params?.size ?? DEFAULT_SIZE);
   const search = firstString(params?.search, params?.query);
-  const { query: _query, sourceDocumentCode: _sourceDocumentCode, ...rest } = params || {};
+  const { query: _query, ...rest } = params || {};
   void _query;
-  void _sourceDocumentCode;
   return compactParams({
     ...rest,
     page,
     size,
     status: params?.status || 'ACTIVE',
     search: search || undefined,
-    documentCode: params?.documentCode || params?.sourceDocumentCode,
-    archived: params?.archived,
+    sourceDocumentCode: params?.sourceDocumentCode,
   });
 };
 
@@ -435,29 +464,56 @@ export async function getNormativeRecords(params: NormativeRecordsParams = {}, s
   return normalizeNormativeRecordsPage(response, params);
 }
 
-export async function getNormativeRecord(id: string | number, signal?: AbortSignal): Promise<NormativeRecord> {
-  const response = await api.get<ApiResponse<unknown> | unknown>(`/normatives/records/${encodeURIComponent(String(id))}`, { signal });
-  return normalizeNormative(extractItem(response, ['record', 'normative']));
-}
+const toNormativeUpsertPayload = (payload: NormativeUpsertRequest): NormativeUpsertRequest => ({
+  templateId: payload.templateId,
+  researchObject: payload.researchObject,
+  indicator: payload.indicator,
+  unit: payload.unit,
+  normativeType: payload.normativeType,
+  value: payload.value,
+  min: payload.min,
+  max: payload.max,
+  comparisonType: payload.comparisonType,
+  normativeDocument: payload.normativeDocument,
+  testingMethod: payload.testingMethod,
+  samplingMethod: payload.samplingMethod,
+  validFrom: payload.validFrom,
+  validUntil: payload.validUntil,
+  active: payload.active,
+  casNumber: payload.casNumber,
+  chemicalFormula: payload.chemicalFormula,
+  normativeSubType: payload.normativeSubType,
+  hazardClass: payload.hazardClass,
+  limitingIndicator: payload.limitingIndicator,
+  sourceDocumentCode: payload.sourceDocumentCode,
+  sourceDocumentName: payload.sourceDocumentName,
+  documentNumber: payload.documentNumber,
+  documentDate: payload.documentDate,
+  appendixNo: payload.appendixNo,
+  tableNo: payload.tableNo,
+  factorType: payload.factorType,
+  factorCode: payload.factorCode,
+  roomType: payload.roomType,
+  season: payload.season,
+  workCategory: payload.workCategory,
+  workplaceType: payload.workplaceType,
+  normLevel: payload.normLevel,
+  conditionJson: payload.conditionJson,
+});
 
-export async function createNormative(payload: Omit<NormativeRecord, 'id'>): Promise<NormativeRecord> {
-  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives', payload);
+export async function createNormative(payload: NormativeUpsertRequest): Promise<NormativeRecord> {
+  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives', toNormativeUpsertPayload(payload));
   return normalizeNormative(extractItem(response, ['normative']));
 }
 
-export async function updateNormative(id: string, payload: Partial<NormativeRecord>): Promise<NormativeRecord> {
-  const response = await api.patch<ApiResponse<unknown> | unknown>(`/normatives/${id}`, payload);
+export async function updateNormative(id: string, payload: NormativeUpsertRequest): Promise<NormativeRecord> {
+  const response = await api.patch<ApiResponse<unknown> | unknown>(`/normatives/${id}`, toNormativeUpsertPayload(payload));
   return normalizeNormative(extractItem(response, ['normative']));
 }
 
 export async function archiveNormative(id: string): Promise<NormativeRecord> {
   const response = await api.post<ApiResponse<unknown> | unknown>(`/normatives/${id}/archive`);
   return normalizeNormative(extractItem(response, ['normative']));
-}
-
-export async function restoreNormative(id: string): Promise<NormativeRecord> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/normatives/${id}/restore`);
-  return normalizeNormative(extractItem(response, ['record', 'normative']));
 }
 
 export type NormativeImportPreview = {
@@ -511,12 +567,11 @@ export async function importDsm32FromResources(): Promise<NormativeResourceImpor
   };
 }
 
-const postNormativeImportPreview = async (file: File, documentCode: string, replaceMode: NormativeReplaceMode) => {
+const postNormativeImportPreview = async (file: File, mode: NormativeImportMode) => {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('documentCode', documentCode);
-  formData.append('replaceMode', replaceMode);
-  return api.post<ApiResponse<unknown> | unknown>('/normatives/import/preview', formData);
+  const url = mode === 'MANAGED' ? '/normatives/import/preview' : '/normatives/import-excel/preview';
+  return api.post<ApiResponse<unknown> | unknown>(url, formData);
 };
 
 const unwrapImportData = (response: unknown): UnknownRecord => {
@@ -543,7 +598,7 @@ const normalizeImportErrors = (...values: unknown[]): Array<{ row?: number; mess
 
 const extractImportPreviewItems = (response: unknown): NormativeRecord[] => {
   const item = unwrapImportData(response);
-  const source = [item.items, item.rows, item.previewRows, item.records, item.normatives, item.content].find(Array.isArray);
+  const source = [item.items, item.rows, item.preview, item.previewRows, item.records, item.normatives, item.content].find(Array.isArray);
   if (Array.isArray(source)) return source.map(normalizeNormative);
   return extractNormativeRecords(response);
 };
@@ -566,7 +621,7 @@ export function normalizeImportPreviewResponse(response: unknown, fileName?: str
     total: Number.isFinite(totalRecords) ? totalRecords : 0,
     valid: Number.isFinite(validRows) ? validRows : 0,
     invalid: Number.isFinite(errorRows) ? errorRows : 0,
-    created: Number(item.newNormatives ?? item.created ?? item.new ?? item.newRows ?? item.toCreate ?? 0),
+    created: Number(item.newNormatives ?? item.imported ?? item.created ?? item.new ?? item.newRows ?? item.toCreate ?? 0),
     updated: Number(item.updatedNormatives ?? item.updated ?? item.update ?? item.updatedRows ?? item.toUpdate ?? 0),
     errors,
     importId: importId || undefined,
@@ -597,28 +652,28 @@ export function normalizeImportPreviewResponse(response: unknown, fileName?: str
   };
 }
 
-export async function previewNormativeImport(file: File, documentCode: string, replaceMode: NormativeReplaceMode): Promise<NormativeImportPreview> {
-  const response = await postNormativeImportPreview(file, documentCode, replaceMode);
+export async function previewNormativeImport(file: File, mode: NormativeImportMode): Promise<NormativeImportPreview> {
+  const response = await postNormativeImportPreview(file, mode);
   return normalizeImportPreviewResponse(response, file.name);
 }
 
-export async function confirmNormativeImport(importId: string, originalFile: File, replaceMode: NormativeReplaceMode): Promise<NormativeImportPreview> {
-  if (!importId.trim()) throw new Error('Сессия предварительного импорта завершена. Загрузите файл повторно.');
+export async function confirmNormativeImport(importId: string | undefined, originalFile: File, mode: NormativeImportMode): Promise<NormativeImportPreview> {
+  if (mode === 'MANAGED' && !importId?.trim()) throw new Error('Сессия предварительного импорта завершена. Загрузите файл повторно.');
   const formData = new FormData();
   formData.append('file', originalFile);
-  const response = await api.post<ApiResponse<unknown> | unknown>('/normatives/import/confirm', formData, {
-    params: { importId, replaceMode },
-  });
-  return normalizeImportPreviewResponse(response);
+  const url = mode === 'MANAGED' ? '/normatives/import/confirm' : '/normatives/import-excel/confirm';
+  const response = await api.post<ApiResponse<unknown> | unknown>(url, formData, mode === 'MANAGED' ? {
+    params: { importId },
+  } : undefined);
+  const normalized = normalizeImportPreviewResponse(response);
+  const items = extractNormativeRecords(response);
+  return items.length && !normalized.total
+    ? { ...normalized, items, total: items.length, valid: items.length, created: items.length }
+    : normalized;
 }
 
 export async function rollbackNormativeImport(importId: string): Promise<void> {
-  await api.post(`/normatives/import/${encodeURIComponent(importId)}/rollback`);
-}
-
-export async function getNormativeImportStatus(importId: string): Promise<NormativeImportPreview> {
-  const response = await api.get<ApiResponse<unknown> | unknown>(`/normatives/import/${encodeURIComponent(importId)}`);
-  return normalizeImportPreviewResponse(response);
+  await api.post(`/normatives/imports/${encodeURIComponent(importId)}/rollback`);
 }
 
 export async function getNormativesForProtocol(
@@ -631,14 +686,11 @@ export async function getNormativesForProtocol(
 
 export const normativeService = {
   getRecords: getNormativeRecords,
-  getRecord: getNormativeRecord,
   createRecord: createNormative,
   updateRecord: updateNormative,
   archiveRecord: archiveNormative,
-  restoreRecord: restoreNormative,
   previewImport: previewNormativeImport,
   confirmImport: confirmNormativeImport,
   rollbackImport: rollbackNormativeImport,
-  getImportStatus: getNormativeImportStatus,
   getForProtocol: getNormativesForProtocol,
 };

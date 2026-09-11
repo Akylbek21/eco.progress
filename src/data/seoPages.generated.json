@@ -10416,7 +10416,7 @@
     ],
     "schemaType": "Article",
     "priority": 0.7,
-    "indexable": true,
+    "indexable": false,
     "changefreq": "weekly",
     "lastmod": "2026-08-27"
   },

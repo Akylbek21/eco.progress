@@ -18,12 +18,14 @@ test('public order choice creates a CRM lead instead of redirecting to the clien
   assert.match(leadService, /api\.post<[^\n]+>\('\/leads', payload\)/);
 });
 
-test('public order choice keeps WhatsApp and provides a prefilled email request', async () => {
+test('public order choice keeps WhatsApp and opens a prefilled Gmail request in the browser', async () => {
   const modal = await read('src/components/OrderChoiceModal.tsx');
 
   assert.match(modal, /createBlankWhatsAppRequestMessage/);
   assert.match(modal, /trackWhatsAppClick/);
-  assert.match(modal, /mailto:\$\{company\.email\}/);
+  assert.match(modal, /https:\/\/mail\.google\.com\/mail\/\?view=cm&fs=1&to=/);
+  assert.match(modal, /target="_blank"/);
   assert.match(modal, /trackEmailClick/);
   assert.match(modal, /Отправить по email/);
+  assert.match(modal, /Открыть Gmail/);
 });

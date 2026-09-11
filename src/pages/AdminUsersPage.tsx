@@ -35,7 +35,6 @@ const staffRoles = [
   { value: 'ADMIN', label: 'Администратор' },
   { value: 'DIRECTOR', label: 'Директор' },
   { value: 'HEAD', label: 'Руководитель отдела' },
-  { value: 'LAB_HEAD', label: 'Заведующий лабораторией' },
   { value: 'MANAGER', label: 'Менеджер' },
   { value: 'ACCOUNTANT', label: 'Бухгалтер' },
   { value: 'ECOLOGIST', label: 'Эколог' },
@@ -61,6 +60,7 @@ const roleLabels: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   active: 'Активен',
   blocked: 'Заблокирован',
+  pending_setup: 'Ожидает установки пароля',
 };
 
 const emptyStaffForm = {
@@ -103,9 +103,14 @@ const isStaffUser = (user: AdminUserRecord) => staffRoleValues.has(user.role as 
 
 const StatusChip = ({ status }: { status?: string | null }) => {
   const isBlocked = status === 'blocked';
+  const isPendingSetup = status === 'pending_setup';
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-      isBlocked ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-100' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+      isBlocked
+        ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-100'
+        : isPendingSetup
+          ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'
+          : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
     }`}>
       {statusLabels[status || 'active'] || status || 'Активен'}
     </span>
@@ -205,7 +210,7 @@ const AdminUsersPage = () => {
     mutationFn: createUser,
     onSuccess: () => {
       invalidateUsers();
-      toast.success('Готово', 'Пользователь успешно создан');
+      toast.success('Готово', 'Пользователь создан. Ссылка для установки пароля отправлена на email');
     },
     onError: (error: Error) => {
       toast.error('Ошибка', error.message || 'Не удалось создать пользователя');
@@ -294,7 +299,6 @@ const AdminUsersPage = () => {
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Введите корректный email';
     if (!staffForm.phone.trim()) errors.phone = 'Укажите телефон';
     if (!/^\d{12}$/.test(staffForm.iin.trim())) errors.iin = 'ИИН должен состоять из 12 цифр';
-    if (!editingStaff && !staffForm.password.trim()) errors.password = 'Пароль обязателен при создании';
     if (!staffForm.role) errors.role = 'Выберите роль';
     if (!staffForm.position.trim()) errors.position = 'Укажите должность';
     if (!staffForm.city.trim()) errors.city = 'Укажите город';
@@ -317,30 +321,28 @@ const AdminUsersPage = () => {
       role: staffForm.role,
       status: staffForm.status,
     };
-    if (staffForm.password.trim()) payload.password = staffForm.password;
+    if (editingStaff && staffForm.password.trim()) payload.password = staffForm.password;
 
-    if (editingStaff) {
-      await updateMutation.mutateAsync({ id: editingStaff.id, payload });
-    } else {
-      await createMutation.mutateAsync(payload);
+    try {
+      if (editingStaff) {
+        await updateMutation.mutateAsync({ id: editingStaff.id, payload });
+      } else {
+        await createMutation.mutateAsync(payload);
+      }
+      closeDrawer();
+    } catch {
+      // The mutation displays the normalized API error and the form stays open for correction.
+      return;
     }
-    closeDrawer();
   };
 
   const submitClient = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const password = String(form.get('password') || '');
-    const confirm = String(form.get('confirm') || '');
-    if (password !== confirm) {
-      toast.error('Ошибка', 'Пароли не совпадают');
-      return;
-    }
 
     const payload: CreateAdminUserPayload = {
       email: String(form.get('email') || '').trim(),
       name: String(form.get('name') || '').trim(),
-      password,
       phone: String(form.get('phone') || '').trim() || undefined,
       city: String(form.get('city') || '').trim() || undefined,
       legalAddress: String(form.get('legalAddress') || '').trim() || undefined,
@@ -352,8 +354,13 @@ const AdminUsersPage = () => {
       status: 'active',
     };
 
-    await createMutation.mutateAsync(payload);
-    event.currentTarget.reset();
+    try {
+      await createMutation.mutateAsync(payload);
+      event.currentTarget.reset();
+    } catch {
+      // The mutation displays the normalized API error and preserves the entered values.
+      return;
+    }
   };
 
   const confirmAction = async () => {
@@ -514,7 +521,7 @@ const AdminUsersPage = () => {
               <span className="rounded-[18px] bg-eco-50 p-3 text-eco-800"><UserPlus size={20} /></span>
               <div>
                 <h3 className="text-xl font-bold text-slate-950">Создать клиента</h3>
-                <p className="text-sm text-slate-500">Существующая клиентская логика сохранена отдельно.</p>
+                <p className="text-sm text-slate-500">После создания клиент получит ссылку для установки пароля на email.</p>
               </div>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
@@ -553,8 +560,6 @@ const AdminUsersPage = () => {
                     <Field name="legalAddress" label="Юридический адрес" />
                   </>
                 )}
-                <Field name="password" label="Пароль" type="password" required />
-                <Field name="confirm" label="Подтверждение пароля" type="password" required />
               </div>
               <Button type="submit" disabled={createMutation.isPending} className="w-full sm:w-auto">
                 {createMutation.isPending ? 'Создание...' : 'Создать клиента'}
@@ -656,7 +661,9 @@ const AdminUsersPage = () => {
                   {editingStaff ? 'Редактировать сотрудника' : 'Добавить сотрудника'}
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  Пароль при редактировании можно оставить пустым.
+                  {editingStaff
+                    ? 'Новый пароль можно оставить пустым.'
+                    : 'Сотрудник получит ссылку для самостоятельной установки пароля на email.'}
                 </p>
               </div>
               <button type="button" onClick={closeDrawer} className="rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200">
@@ -673,7 +680,7 @@ const AdminUsersPage = () => {
                 </div>
                 <StaffTextField field="iin" label="ИИН сотрудника" form={staffForm} errors={staffErrors} onChange={handleStaffChange} required />
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <StaffTextField field="password" label={editingStaff ? 'Новый пароль' : 'Пароль'} type="password" form={staffForm} errors={staffErrors} onChange={handleStaffChange} required={!editingStaff} />
+                  {editingStaff && <StaffTextField field="password" label="Новый пароль" type="password" form={staffForm} errors={staffErrors} onChange={handleStaffChange} />}
                   <label className={labelClass}>
                     Роль<span className="text-rose-500"> *</span>
                     <select

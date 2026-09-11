@@ -21,10 +21,18 @@ const PekCompanyStaff = ({ companyId, editable }: { companyId: number; editable:
   const [email, setEmail] = useState('');
   const [tier, setTier] = useState<PekStaffTier>('VIEWER');
   const [status, setStatus] = useState<PekStaffStatus>('ACTIVE');
-  const refresh = () => client.invalidateQueries({ queryKey });
-  const assign = useMutation({ mutationFn: () => pekApi.assignCompanyStaff(companyId, { email: email.trim(), tier }), onSuccess: async () => { setCreating(false); setEmail(''); await refresh(); } });
-  const update = useMutation({ mutationFn: () => pekApi.updateCompanyStaff(companyId, editing!.id, editing!.version, { tier, status }), onSuccess: async () => { setEditing(null); await refresh(); } });
-  const remove = useMutation({ mutationFn: () => pekApi.removeCompanyStaff(companyId, deleting!.id, deleting!.version), onSuccess: async () => { setDeleting(null); await refresh(); } });
+  const refresh = async () => {
+    await Promise.all([
+      client.invalidateQueries({ queryKey }),
+      client.invalidateQueries({
+        queryKey: pekKeys.assigneesRoot(companyId, user?.id),
+        refetchType: 'active',
+      }),
+    ]);
+  };
+  const assign = useMutation({ mutationFn: () => pekApi.assignCompanyStaff(companyId, { email: email.trim(), tier }), onSuccess: async () => { await refresh(); setCreating(false); setEmail(''); } });
+  const update = useMutation({ mutationFn: () => pekApi.updateCompanyStaff(companyId, editing!.id, editing!.version, { tier, status }), onSuccess: async () => { await refresh(); setEditing(null); } });
+  const remove = useMutation({ mutationFn: () => pekApi.removeCompanyStaff(companyId, deleting!.id, deleting!.version), onSuccess: async () => { await refresh(); setDeleting(null); } });
   const openEdit = (item: PekStaffAssignment) => { setTier(item.tier); setStatus(item.status); setEditing(item); };
 
   return <section className="space-y-4 rounded-2xl border bg-white p-5">

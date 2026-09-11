@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, Copy, Edit3, FileSpreadsheet, Plus, RefreshCw, Search } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
@@ -8,9 +8,9 @@ import NormativeForm, { type NormativeFormValues } from '../components/normative
 import { templateName } from '../data/protocolTemplates';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { archiveNormative, confirmNormativeImport, createNormative, getNormativeRecords, importDsm32FromResources, importPhysicalFactorsFromResources, previewNormativeImport, restoreNormative, rollbackNormativeImport, updateNormative, type NormativeImportPreview, type NormativeRecordsParams } from '../services/normativeService';
+import { archiveNormative, confirmNormativeImport, createNormative, getNormativeRecords, importDsm32FromResources, importPhysicalFactorsFromResources, previewNormativeImport, rollbackNormativeImport, updateNormative, type NormativeImportMode, type NormativeImportPreview, type NormativeRecordsParams, type NormativeUpsertRequest } from '../services/normativeService';
 import { getApiStatus } from '../services/apiHelpers';
-import type { LegacyNormativeDto as NormativeRecord, NormativeReplaceMode } from '../types/normative';
+import type { LegacyNormativeDto as NormativeRecord } from '../types/normative';
 import { getNormativePermissions } from '../utils/normativePermissions';
 import { parseNormativeApiError } from '../utils/normativeApiError';
 
@@ -821,7 +821,8 @@ const NormativeDirectoryPage = () => {
   const filtersInitializedRef = useRef(false);
   const permissions = getNormativePermissions(user);
   const canManage = permissions.canCreate;
-  const canImportResources = permissions.canReplaceDocument;
+  const canImportResources = permissions.canImportResources;
+  const importMode: NormativeImportMode = permissions.canRollbackImport ? 'MANAGED' : 'EXCEL';
   const initialDocument = NORMATIVE_DOCUMENTS.some((item) => item.code === searchParams.get('documentCode')) ? searchParams.get('documentCode') as NormativeDocumentCode : 'DSM_70';
   const [activeDocument, setActiveDocument] = useState<NormativeDocumentCode>(initialDocument);
   const [activeCategory, setActiveCategory] = useState<NormativeCategoryCode>((searchParams.get('category') || getCategories(initialDocument)[0]?.code || 'ambient_air') as NormativeCategoryCode);
@@ -840,7 +841,6 @@ const NormativeDirectoryPage = () => {
   const [waterTypeFilter, setWaterTypeFilter] = useState('');
   const [formTypeFilter, setFormTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'ARCHIVED' | 'ALL'>((searchParams.get('archived') === 'true' ? 'ARCHIVED' : searchParams.get('archived') === 'all' ? 'ALL' : 'ACTIVE'));
-  const [sort, setSort] = useState(searchParams.get('sort') || 'updatedAt,desc');
   const [editing, setEditing] = useState<NormativeRecord | null>(null);
   const [viewing, setViewing] = useState<NormativeRecord | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<NormativeTableRow | null>(null);
@@ -852,7 +852,6 @@ const NormativeDirectoryPage = () => {
   const [importError, setImportError] = useState('');
   const [importing, setImporting] = useState(false);
   const [importingResources, setImportingResources] = useState(false);
-  const [replaceMode, setReplaceMode] = useState<NormativeReplaceMode>('UPSERT');
   const [importResult, setImportResult] = useState<NormativeImportPreview | null>(null);
   const [importStep, setImportStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [previewStatus, setPreviewStatus] = useState('ALL');
@@ -872,8 +871,6 @@ const NormativeDirectoryPage = () => {
     search: debouncedSearchReady && normalizedDebouncedQuery ? normalizedDebouncedQuery : undefined,
     sourceDocumentCode: activeDocument,
     status: statusFilter,
-    archived: statusFilter === 'ALL' ? undefined : statusFilter === 'ARCHIVED',
-    sort,
     templateId: templateFilter || categoryParams.templateId,
     environmentType: environmentFilter || undefined,
     factorType: factorTypeFilter || categoryParams.factorType,
@@ -885,7 +882,7 @@ const NormativeDirectoryPage = () => {
     formType: formTypeFilter || undefined,
     normativeType: typeFilter || categoryParams.normativeType,
     normativeSubType: subtypeFilter || undefined,
-  }), [page, size, debouncedSearchReady, normalizedDebouncedQuery, activeDocument, templateFilter, categoryParams, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, formTypeFilter, typeFilter, subtypeFilter, statusFilter, sort]);
+  }), [page, size, debouncedSearchReady, normalizedDebouncedQuery, activeDocument, templateFilter, categoryParams, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, formTypeFilter, typeFilter, subtypeFilter, statusFilter]);
   const normativeQueryKey = useMemo(() => [
     'normatives',
     activeDocument,
@@ -901,10 +898,9 @@ const NormativeDirectoryPage = () => {
     subtypeFilter,
     formTypeFilter,
     statusFilter,
-    sort,
     page,
     size,
-  ], [activeDocument, activeCategory, debouncedSearchReady, normalizedDebouncedQuery, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, typeFilter, subtypeFilter, formTypeFilter, statusFilter, sort, page, size]);
+  ], [activeDocument, activeCategory, debouncedSearchReady, normalizedDebouncedQuery, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, typeFilter, subtypeFilter, formTypeFilter, statusFilter, page, size]);
   const {
     data: recordsPage,
     error: loadError,
@@ -943,9 +939,8 @@ const NormativeDirectoryPage = () => {
     if (subtypeFilter) next.set('subCategory', subtypeFilter);
     if (statusFilter === 'ARCHIVED') next.set('archived', 'true');
     if (statusFilter === 'ALL') next.set('archived', 'all');
-    if (sort) next.set('sort', sort);
     setSearchParams(next, { replace: true });
-  }, [page, size, activeDocument, activeCategory, query, templateFilter, subtypeFilter, statusFilter, sort, setSearchParams]);
+  }, [page, size, activeDocument, activeCategory, query, templateFilter, subtypeFilter, statusFilter, setSearchParams]);
 
   useEffect(() => {
     if (!documentInitializedRef.current) {
@@ -971,7 +966,7 @@ const NormativeDirectoryPage = () => {
       return;
     }
     setPage(0);
-  }, [query, activeDocument, activeCategory, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, formTypeFilter, typeFilter, subtypeFilter, statusFilter, sort, size]);
+  }, [query, activeDocument, activeCategory, templateFilter, environmentFilter, factorTypeFilter, appendixFilter, tableFilter, waterTypeFilter, formTypeFilter, typeFilter, subtypeFilter, statusFilter, size]);
 
   useEffect(() => {
     if (!editorDirty) return undefined;
@@ -1036,128 +1031,50 @@ const NormativeDirectoryPage = () => {
     setEditorDirty(false);
   };
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!editing || !canManage || saving) return;
-    const form = new FormData(event.currentTarget);
-    const value = normalizeNumericInput(form.get('value'));
-    const minValue = normalizeNumericInput(form.get('minValue'));
-    const maxValue = normalizeNumericInput(form.get('maxValue'));
-    if ([value, minValue, maxValue].some((item) => item === null)) {
-      toast.warning('Проверьте числовые поля', 'Допустимы число, знак минус и один десятичный разделитель.');
-      return;
-    }
-    const indicatorName = String(form.get('indicatorName') || '').trim();
-    const sourceDocumentCode = String(form.get('sourceDocumentCode') || '').trim();
-    const templateId = String(form.get('templateId') || '').trim() as NormativeRecord['templateId'];
-    const comparisonType = String(form.get('comparisonType') || editing.comparisonType || 'LESS_OR_EQUAL') as NormativeRecord['comparisonType'];
-    if (!indicatorName || !sourceDocumentCode || !templateId) {
-      toast.warning('Заполните обязательные поля', 'Наименование, документ-код и templateId обязательны.');
-      return;
-    }
-    if (comparisonType === 'RANGE') {
-      if (!minValue || !maxValue) {
-        toast.warning('Для диапазона укажите минимум и максимум');
-        return;
-      }
-      if (Number(minValue) > Number(maxValue)) {
-        toast.warning('Минимум не может быть больше максимума');
-        return;
-      }
-    } else if (!['ABSENT', 'INFO'].includes(comparisonType) && !value && !minValue && !maxValue) {
-      toast.warning('Укажите значение норматива');
-      return;
-    }
-    const payload: Partial<NormativeRecord> & { notes?: string } = {
-      indicatorName,
-      indicator: indicatorName,
-      pollutantCode: String(form.get('pollutantCode') || '').trim(),
-      casNumber: String(form.get('casNumber') || '').trim(),
-      chemicalFormula: String(form.get('chemicalFormula') || '').trim(),
-      unit: String(form.get('unit') || '').trim(),
-      value: value || '',
-      minValue: minValue || '',
-      maxValue: maxValue || '',
-      comparisonType,
-      normativeType: String(form.get('normativeType') || '').trim(),
-      normativeSubType: String(form.get('normativeSubType') || '').trim(),
-      sourceDocumentCode,
-      normativeDocument: sourceDocumentCode,
-      templateId,
-      category: String(form.get('category') || '').trim(),
-      categoryCode: String(form.get('categoryCode') || '').trim(),
-      hazardClass: String(form.get('hazardClass') || '').trim(),
-      limitingIndicator: String(form.get('limitingIndicator') || '').trim(),
-      notes: String(form.get('notes') || '').trim(),
-    };
-    if (!payload.category) delete payload.category;
-    if (!payload.categoryCode) delete payload.categoryCode;
-
-    setSaving(true);
-    try {
-      if (editing.id) {
-        await updateNormative(editing.id, payload);
-      } else {
-        const { id: _editingId, ...editingDefaults } = editing;
-        void _editingId;
-        await createNormative({
-          ...editingDefaults,
-          ...payload,
-          researchObject: editing.researchObject || payload.category || indicatorName,
-          testingMethod: editing.testingMethod || '',
-          samplingMethod: editing.samplingMethod || '',
-          validFrom: editing.validFrom || new Date().toISOString().slice(0, 10),
-          active: true,
-        } as Omit<NormativeRecord, 'id'>);
-      }
-      await queryClient.invalidateQueries({ queryKey: ['normatives'] });
-      setEditing(null);
-      setEditorDirty(false);
-      toast.success(editing.id ? 'Норматив обновлен' : 'Норматив создан');
-    } catch (submitError) {
-      toast.error('Не удалось сохранить норматив', submitError instanceof Error ? submitError.message : undefined);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const saveNormativeForm = async (values: NormativeFormValues) => {
     if (!editing || !permissions.canEdit || saving) return;
-    const comparisonType = ({ EXACT: 'EQUAL', LE: 'LESS_OR_EQUAL', LT: 'LESS_THAN', GE: 'GREATER_OR_EQUAL', GT: 'GREATER_THAN', RANGE: 'RANGE', TEXT: 'INFO', REFERENCE_ONLY: 'ABSENT' } as Record<string, string>)[values.valueType];
-    const payload: Partial<NormativeRecord> & { valueType: string; valueRaw?: string } = {
-      sourceDocumentCode: values.documentCode,
-      normativeDocument: values.documentCode,
-      category: values.category,
-      categoryCode: values.category,
-      normativeSubType: values.subCategory,
-      subtype: values.subCategory,
-      indicatorName: values.indicatorName,
+    const comparisonType = ({ EXACT: 'EQUAL', LE: 'LESS_OR_EQUAL', GE: 'GREATER_OR_EQUAL', RANGE: 'RANGE', TEXT: 'INFO', REFERENCE_ONLY: 'ABSENT' } as Record<string, string>)[values.valueType];
+    const optionalInteger = (value: unknown) => value === undefined || value === null || value === '' ? undefined : Number(value);
+    const payload: NormativeUpsertRequest = {
+      templateId: values.protocolType,
+      researchObject: values.category,
       indicator: values.indicatorName,
-      code: values.indicatorCode,
-      pollutantCode: values.indicatorCode,
-      cas: values.cas,
-      casNumber: values.cas,
-      formula: values.formula,
-      chemicalFormula: values.formula,
       unit: values.unit,
-      valueType: values.valueType,
-      comparisonType: comparisonType as NormativeRecord['comparisonType'],
-      value: values.value || values.valueRaw || '',
-      normativeValue: values.value || values.valueRaw || '',
-      minValue: values.valueType === 'RANGE' ? values.minValue : undefined,
-      maxValue: values.valueType === 'RANGE' ? values.maxValue : undefined,
-      valueRaw: values.valueRaw,
+      normativeType: editing.normativeType || 'PDK',
+      value: ['TEXT', 'REFERENCE_ONLY', 'RANGE'].includes(values.valueType) ? undefined : values.value,
+      min: values.valueType === 'RANGE' ? values.minValue : undefined,
+      max: values.valueType === 'RANGE' ? values.maxValue : undefined,
+      comparisonType,
+      normativeDocument: editing.normativeDocument || values.documentCode,
+      testingMethod: editing.testingMethod,
+      samplingMethod: editing.samplingMethod,
+      validFrom: editing.validFrom,
+      validUntil: editing.validUntil,
+      active: editing.id ? undefined : true,
+      casNumber: values.cas,
+      chemicalFormula: values.formula,
+      normativeSubType: values.subCategory,
+      hazardClass: editing.hazardClass,
+      limitingIndicator: editing.limitingIndicator,
+      sourceDocumentCode: values.documentCode,
+      sourceDocumentName: editing.sourceDocumentName,
+      documentNumber: editing.documentNumber,
+      documentDate: editing.documentDate,
+      appendixNo: optionalInteger(editing.appendixNo),
+      tableNo: optionalInteger(editing.tableNo),
+      factorType: editing.factorType,
+      factorCode: values.indicatorCode,
+      roomType: editing.roomType,
+      season: editing.season,
+      workCategory: editing.workCategory,
+      workplaceType: editing.workplaceType,
+      normLevel: editing.normLevel,
       conditionJson: values.conditions,
-      templateId: values.protocolType as NormativeRecord['templateId'],
     };
     setSaving(true);
     try {
       if (editing.id) await updateNormative(editing.id, payload);
-      else {
-        const { id: _id, ...defaults } = editing;
-        void _id;
-        await createNormative({ ...defaults, ...payload, active: true, archived: false, status: 'ACTIVE' } as Omit<NormativeRecord, 'id'>);
-      }
+      else await createNormative(payload);
       await queryClient.invalidateQueries({ queryKey: ['normatives'] });
       setEditing(null);
       setEditorDirty(false);
@@ -1190,21 +1107,6 @@ const NormativeDirectoryPage = () => {
     }
   };
 
-  const restoreRecord = async (record: NormativeRecord) => {
-    if (!permissions.canArchive || saving) return;
-    setSaving(true);
-    try {
-      await restoreNormative(record.id);
-      await queryClient.invalidateQueries({ queryKey: ['normatives'] });
-      setViewing(null);
-      toast.success('Норматив восстановлен');
-    } catch (restoreError) {
-      toast.error('Не удалось восстановить норматив', parseNormativeApiError(restoreError).message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const copyNormative = async (row: NormativeTableRow) => {
     const text = visibleColumns
       .map((column) => `${column.label}: ${column.render(row, 0)}`)
@@ -1225,7 +1127,6 @@ const NormativeDirectoryPage = () => {
     setImporting(false);
     setImportResult(null);
     setImportStep(1);
-    setReplaceMode('UPSERT');
     setPreviewStatus('ALL');
     setPreviewPage(0);
   };
@@ -1278,8 +1179,8 @@ const NormativeDirectoryPage = () => {
       return;
     }
     const file = selectedFiles[0];
-    if (!/\.(xlsx|xls|csv)$/i.test(file.name)) {
-      setImportError('Поддерживаются файлы .xlsx, .xls и .csv');
+    if (!/\.xlsx$/i.test(file.name)) {
+      setImportError('Backend поддерживает для этого импорта только файлы .xlsx');
       return;
     }
     if (file.size > 20 * 1024 * 1024) {
@@ -1297,7 +1198,7 @@ const NormativeDirectoryPage = () => {
     if (!selectedFiles.length || importing) return;
     setImporting(true);
     try {
-      const preview = await previewNormativeImport(selectedFiles[0], activeDocument, replaceMode);
+      const preview = await previewNormativeImport(selectedFiles[0], importMode);
       setImportPreview(preview);
       setImportStep(3);
       if (!preview.total || !preview.valid) {
@@ -1324,8 +1225,8 @@ const NormativeDirectoryPage = () => {
     setImportStep(4);
     try {
       const importBatchId = stats.importId || stats.importBatchId;
-      if (!importBatchId) throw new Error('Сессия предварительного импорта завершена. Загрузите файл повторно.');
-      const result = await confirmNormativeImport(importBatchId, importFiles[0], replaceMode);
+      if (importMode === 'MANAGED' && !importBatchId) throw new Error('Сессия предварительного импорта завершена. Загрузите файл повторно.');
+      const result = await confirmNormativeImport(importBatchId, importFiles[0], importMode);
       setImportResult(result);
       setImportStep(5);
       toast.success('Нормативы импортированы');
@@ -1346,7 +1247,7 @@ const NormativeDirectoryPage = () => {
     || !importStats.valid
     || importing
     || Boolean(importError)
-    || !(importStats.importBatchId || importStats.importId);
+    || (importMode === 'MANAGED' && !(importStats.importBatchId || importStats.importId));
   const emptyMessage = searchHintVisible
     ? 'Введите минимум 3 символа для поиска'
     : normalizedQuery.length > 0 && searchAllowed
@@ -1363,9 +1264,9 @@ const NormativeDirectoryPage = () => {
       closeImport(true);
       await load();
     } catch (rollbackError) {
-      const message = rollbackError instanceof Error ? rollbackError.message : 'Не удалось откатить импорт DSM_138';
+      const message = parseNormativeApiError(rollbackError).message || 'Не удалось откатить импорт';
       setImportError(message);
-      toast.error('Не удалось откатить импорт DSM_138', message);
+      toast.error('Не удалось откатить импорт', message);
     } finally {
       setImporting(false);
     }
@@ -1568,7 +1469,7 @@ const NormativeDirectoryPage = () => {
           ['Единица', getRecordUnit(viewing)], ['Норматив', displayNormative(viewing) || 'Справочная запись'], ['Исходное значение', viewing.normativeValue || viewing.value || '—'],
           ['Условия применения', displayConditions(viewing)], ['Дата действия', [viewing.validFrom, viewing.validUntil].filter(Boolean).join(' — ') || '—'],
           ['Источник импорта', viewing.sourceFileName || viewing.source || '—'], ['Статус', viewing.archived || viewing.status === 'ARCHIVED' ? 'Архивный' : 'Активный'],
-        ].map(([label, value]) => <div key={label}><dt className="text-slate-500">{label}</dt><dd className="mt-1 break-words font-semibold text-slate-900">{String(value)}</dd></div>)}</dl>{user?.role === 'ADMIN' && viewing.conditionJson && <details className="rounded-xl bg-slate-50 p-3 text-sm"><summary className="cursor-pointer font-semibold">Технические условия</summary><pre className="mt-2 overflow-auto whitespace-pre-wrap">{viewing.conditionJson}</pre></details>}<div className="flex justify-end gap-2">{permissions.canEdit && <Button type="button" variant="secondary" onClick={() => { setEditing(viewing); setViewing(null); }}>Изменить</Button>}{permissions.canArchive && !(viewing.archived || viewing.status === 'ARCHIVED') && <Button type="button" onClick={() => archiveGroup(singleRecordRow(viewing, 0))}>Архивировать</Button>}{permissions.canArchive && (viewing.archived || viewing.status === 'ARCHIVED') && <Button type="button" onClick={() => restoreRecord(viewing)}>Восстановить</Button>}</div></div>}
+        ].map(([label, value]) => <div key={label}><dt className="text-slate-500">{label}</dt><dd className="mt-1 break-words font-semibold text-slate-900">{String(value)}</dd></div>)}</dl>{user?.role === 'ADMIN' && viewing.conditionJson && <details className="rounded-xl bg-slate-50 p-3 text-sm"><summary className="cursor-pointer font-semibold">Технические условия</summary><pre className="mt-2 overflow-auto whitespace-pre-wrap">{viewing.conditionJson}</pre></details>}<div className="flex justify-end gap-2">{permissions.canEdit && !(viewing.archived || viewing.status === 'ARCHIVED') && <Button type="button" variant="secondary" onClick={() => { setEditing(viewing); setViewing(null); }}>Изменить</Button>}{permissions.canArchive && !(viewing.archived || viewing.status === 'ARCHIVED') && <Button type="button" onClick={() => archiveGroup(singleRecordRow(viewing, 0))}>Архивировать</Button>}</div></div>}
       </Modal>
 
       <Modal open={Boolean(archiveTarget)} onClose={() => { if (!saving) setArchiveTarget(null); }} title={`Архивировать норматив «${archiveTarget ? getRecordName(archiveTarget.primary) : ''}»?`}>
@@ -1583,7 +1484,7 @@ const NormativeDirectoryPage = () => {
         <Modal open={importOpen} onClose={() => closeImport()} title="Импорт нормативов из Excel" description="Сначала файл проверяется, затем импорт подтверждается." size="lg" loading={importing}>
           <div className="space-y-4">
             <ol className="grid grid-cols-2 gap-2 text-xs font-bold text-slate-500 sm:grid-cols-5">
-              {['1. Файл', '2. Настройки', '3. Preview', '4. Подтверждение', '5. Результат'].map((label, index) => <li key={label} className={`rounded-lg px-2 py-2 text-center ${importStep === index + 1 ? 'bg-eco-700 text-white' : 'bg-slate-100'}`}>{label}</li>)}
+              {['1. Файл', '2. Проверка', '3. Preview', '4. Подтверждение', '5. Результат'].map((label, index) => <li key={label} className={`rounded-lg px-2 py-2 text-center ${importStep === index + 1 ? 'bg-eco-700 text-white' : 'bg-slate-100'}`}>{label}</li>)}
             </ol>
             <div
               className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 focus-within:border-eco-500"
@@ -1593,7 +1494,7 @@ const NormativeDirectoryPage = () => {
               <p className="mb-2 text-sm font-semibold text-slate-700">Перетащите файл сюда или выберите его с устройства</p>
               <input
                 type="file"
-                accept=".xls,.xlsx,.csv"
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 aria-label="Выберите файл нормативов"
                 onChange={(event) => selectImportFiles(event.target.files)}
                 className={inputClass}
@@ -1605,10 +1506,8 @@ const NormativeDirectoryPage = () => {
               ) : 'Выберите файл Excel для проверки'}
             </div>
             {importFiles.length > 0 && importStep < 5 && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="space-y-1 text-sm font-semibold"><span>Документ</span><input value={activeDocument} readOnly className={inputClass} /></label>
-                <label className="space-y-1 text-sm font-semibold"><span>Режим импорта</span><select value={replaceMode} onChange={(event) => setReplaceMode(event.target.value as NormativeReplaceMode)} className={inputClass}><option value="INSERT_ONLY">Только новые</option><option value="UPSERT">Добавить и обновить</option>{permissions.canReplaceDocument && <option value="REPLACE_DOCUMENT">Полностью заменить документ</option>}</select></label>
-                <div className="text-sm text-slate-600 sm:col-span-2">{importFiles[0].name} · {(importFiles[0].size / 1024).toFixed(1)} КБ</div>
+              <div className="grid gap-3">
+                <div className="text-sm text-slate-600">{importFiles[0].name} · {(importFiles[0].size / 1024).toFixed(1)} КБ</div>
                 {importStep === 2 && <Button type="button" disabled={importing} onClick={previewImport}>Проверить файл</Button>}
               </div>
             )}
@@ -1642,12 +1541,12 @@ const NormativeDirectoryPage = () => {
             {importStats.warnings && importStats.warnings.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{importStats.warnings.slice(0, 10).map((item, index) => <p key={index}>Предупреждение {item.row || '-'}: {item.message}</p>)}</div>}
             <div className="flex justify-end gap-3">
               <Button type="button" variant="secondary" onClick={() => closeImport()}>Отмена</Button>
-              {permissions.canRollbackImport && (importStats.importBatchId || importStats.importId) && (
+              {importStep === 5 && permissions.canRollbackImport && (importResult?.importBatchId || importResult?.importId) && (
                 <Button type="button" variant="secondary" disabled={importing} onClick={rollbackImport}>Откатить импорт</Button>
               )}
               {importStep === 3 && <Button type="button" disabled={confirmImportDisabled} onClick={commitImport}>Подтвердить импорт</Button>}
             </div>
-            {importStep === 5 && importResult && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><h3 className="font-black text-emerald-900">Импорт завершён</h3><p className="mt-2 text-sm">Добавлено: {importResult.created ?? 0} · Обновлено: {importResult.updated ?? 0} · Пропущено: {importResult.duplicates ?? 0} · Ошибок: {importResult.invalid}</p><p className="mt-1 text-sm">Документ: {importResult.documentCode || activeDocument} · Версия: {importResult.documentVersion || '—'} · Время: {importResult.durationMs ? `${(importResult.durationMs / 1000).toFixed(1)} с` : '—'}</p><Button type="button" className="mt-3" onClick={() => closeImport(true)}>Перейти к нормативам</Button></div>}
+            {importStep === 5 && importResult && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><h3 className="font-black text-emerald-900">Импорт завершён</h3><p className="mt-2 text-sm">Добавлено: {importResult.created ?? 0} · Обновлено: {importResult.updated ?? 0} · Пропущено: {importResult.duplicates ?? 0} · Ошибок: {importResult.invalid}</p><Button type="button" className="mt-3" onClick={() => closeImport(true)}>Перейти к нормативам</Button></div>}
           </div>
         </Modal>
       )}

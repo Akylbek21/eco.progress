@@ -43,7 +43,7 @@ const SectionRow = ({ label, status, onClick }: { label: string; status: Section
   </button>
 );
 
-const PekProgramStructure = ({ program, onOpenSection }: { program: PekProgram; onOpenSection: (section: PekWorkspaceSection) => void }) => {
+const PekProgramStructure = ({ program, readinessPercent, onOpenSection }: { program: PekProgram; readinessPercent?: number | null; onOpenSection: (section: PekWorkspaceSection) => void }) => {
   const inspections = useQuery({ queryKey: pekKeys.programSection(program.id, 'internal-inspections'), queryFn: ({ signal }) => pekApi.getInternalInspections(program.id, signal) });
   const qa = useQuery({ queryKey: pekKeys.programSection(program.id, 'measurement-qa'), queryFn: ({ signal }) => pekApi.getMeasurementQa(program.id, signal) });
   const emergencies = useQuery({ queryKey: pekKeys.programSection(program.id, 'emergency-procedures'), queryFn: ({ signal }) => pekApi.getEmergencyProcedures(program.id, signal) });
@@ -57,15 +57,13 @@ const PekProgramStructure = ({ program, onOpenSection }: { program: PekProgram; 
     { label: 'Действия при ЧС', query: emergencies },
     { label: 'Ответственность', query: responsibilities },
   ];
-  const readiness = program.readiness?.completionPercent ?? program.readinessPercent;
-
   return <section aria-labelledby="pek-program-structure-title" className="rounded-2xl border bg-white p-5 sm:p-7">
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b pb-5">
       <div>
         <p className="text-xs font-black uppercase tracking-[.16em] text-slate-500">Официальная структура</p>
         <h2 id="pek-program-structure-title" className="mt-1 text-xl font-black text-slate-900">Программа ПЭК</h2>
       </div>
-      <div className="text-right"><p className="text-xs font-bold uppercase text-slate-500">Готовность</p><p className="text-2xl font-black text-slate-900">{readiness == null ? '—' : `${readiness}%`}</p></div>
+      <div className="text-right"><p className="text-xs font-bold uppercase text-slate-500">Готовность</p><p className="text-2xl font-black text-slate-900">{readinessPercent == null ? '—' : `${readinessPercent}%`}</p></div>
     </div>
 
     <div className="space-y-6">
