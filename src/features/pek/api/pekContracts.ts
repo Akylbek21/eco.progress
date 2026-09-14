@@ -530,8 +530,6 @@ export type PekReportCreationParams = {
 export type PekReportCreateRequest = PekReportCreationParams & {
   programId: number;
   collectImmediately: boolean;
-  regulationVersion?: string | null;
-  templateVersion?: string | null;
 };
 export interface PekCreationContext {
   company?: PekNamedRef | null;
@@ -774,6 +772,7 @@ export type PekLaboratorySnapshot = {
   accreditationNumber: string | null;
   accreditationValidFrom: string | null;
   accreditationValidUntil: string | null;
+  accreditationScope: string | null;
 };
 
 export type PekOfficialGeneralInfo = {
@@ -797,13 +796,81 @@ export type PekOfficialGeneralInfo = {
   submissionDueDate: string | null;
 };
 
-export type PekOfficialResultRow = Record<string, string | number | boolean | null>;
+export type PekApplicability = {
+  tableType: string;
+  applicable: boolean;
+  reason: string | null;
+};
+
+export type PekOfficialResultRow = {
+  controlItemId: number | null;
+  monitoringPointId: number | null;
+  pointName: string | null;
+  indicatorName: string | null;
+  indicatorCode: string | null;
+  measurementDate: string | null;
+  measurementMethod: string | null;
+  normativeValue: string | null;
+  actualValue: string | null;
+  unit: string | null;
+  exceedance: boolean;
+  exceedanceRatio: string | null;
+  correctiveAction: string | null;
+  protocolNumber: string | null;
+  protocolId: number | null;
+  protocolResultId: number | null;
+};
+
+export type PekOfficialEmissionResultRow = {
+  emissionSourceId: number | null;
+  sourceName: string | null;
+  indicatorName: string | null;
+  indicatorCode: string | null;
+  normativeGs: string | null;
+  normativeTonsYear: string | null;
+  actualGs: string | null;
+  actualTonsQuarter: string | null;
+  actualTonsYear: string | null;
+  exceedance: boolean;
+  correctiveAction: string | null;
+  protocolId: number | null;
+  protocolResultId: number | null;
+};
+
+export type PekOfficialWastewaterResultRow = {
+  waterOutletId: number | null;
+  outletName: string | null;
+  indicatorName: string | null;
+  indicatorCode: string | null;
+  normativeValue: string | null;
+  normativeUnit: string | null;
+  normativeTonsYear: string | null;
+  actualValue: string | null;
+  actualTonsQuarter: string | null;
+  actualTonsYear: string | null;
+  exceedance: boolean;
+  correctiveAction: string | null;
+  protocolId: number | null;
+  protocolResultId: number | null;
+};
+
+export type PekOfficialTables = {
+  emissions: PekOfficialEmissionResultRow[];
+  instrumentalMeasurements: PekOfficialResultRow[];
+  calculatedEmissions: PekOfficialEmissionResultRow[];
+  ambientAir: PekOfficialResultRow[];
+  wastewater: PekOfficialWastewaterResultRow[];
+  water: PekOfficialResultRow[];
+  soil: PekOfficialResultRow[];
+  radiation: PekOfficialResultRow[];
+  marine: PekOfficialWastewaterResultRow[];
+};
 
 export type PekOfficialReportData = {
   general: PekOfficialGeneralInfo;
   laboratory: PekLaboratorySnapshot | null;
-  applicability: Array<{ tableType: string; applicable: boolean; reason: string | null }>;
-  tables: Record<string, PekOfficialResultRow[]>;
+  applicability: PekApplicability[];
+  tables: PekOfficialTables;
   ready: boolean;
   progressPercent: number;
 };

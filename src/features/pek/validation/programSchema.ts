@@ -76,7 +76,9 @@ export const pekProgramFormSchema = z.object({
   value.controlItems.forEach((item, index) => {
     if (item.controlType && laboratoryControlTypes.has(item.controlType)) {
       if (!item.laboratoryId) context.addIssue({ code: 'custom', path: ['controlItems', index, 'laboratoryId'], message: 'Выберите лабораторию для лабораторного контроля' });
-      if (!item.measurementMethod?.trim() && !item.samplingMethod?.trim()) context.addIssue({ code: 'custom', path: ['controlItems', index, 'measurementMethod'], message: 'Укажите метод измерения или отбора проб' });
+      const measurementMethod = typeof item.measurementMethod === 'string' ? item.measurementMethod : '';
+      const samplingMethod = typeof item.samplingMethod === 'string' ? item.samplingMethod : '';
+      if (!measurementMethod.trim() && !samplingMethod.trim()) context.addIssue({ code: 'custom', path: ['controlItems', index, 'measurementMethod'], message: 'Укажите метод измерения или отбора проб' });
     }
     if (item.frequencyType === 'PER_EVENT' && !item.plannedCount) {
       context.addIssue({ code: 'custom', path: ['controlItems', index, 'plannedCount'], message: 'Для контроля по событию укажите плановое количество' });

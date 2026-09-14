@@ -530,7 +530,7 @@ describe('PEK backend contract', () => {
     const dashboard = await pekApi.getDashboard({});
     expect(dashboard.totalReportCount).toBe(0);
     expect(dashboard.readinessPercent).toBe(0);
-    expect(labelPekStatus('NEW_BACKEND_STATUS')).toBe('NEW_BACKEND_STATUS');
+    expect(labelPekStatus('NEW_BACKEND_STATUS')).toBe('Неизвестный статус');
   });
 
   it('preserves zero normative values and validates program dates', () => {

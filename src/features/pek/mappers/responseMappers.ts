@@ -52,6 +52,15 @@ const returnInfo = (value: unknown): PekReport['returnInfo'] => {
 const availableActionFlags = (value: unknown): Record<string, boolean> => Object.fromEntries(
   Object.entries(row(value)).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean'),
 );
+const hasAvailableAction = (value: unknown, ...codes: string[]) => {
+  const flags = availableActionFlags(value);
+  if (codes.some((code) => flags[code] === true)) return true;
+  if (!Array.isArray(value)) return false;
+  return value.some((entry) => {
+    const action = row(entry);
+    return codes.includes(String(action.code || '')) && action.enabled !== false;
+  });
+};
 
 /** Maps the assignee lookup DTO without applying client-side role/status filtering. */
 export const mapAssigneeResponse = (value: unknown): PekLookupOption => {
@@ -103,7 +112,7 @@ export const mergeAssigneesWithCompanyStaff = (
     merged.set(currentUserId, {
       id: currentUserId,
       name: currentUserName,
-      description: currentUser.position?.trim() || currentUser.email?.trim() || undefined,
+      description: currentUser?.position?.trim() || currentUser?.email?.trim() || undefined,
       status: 'ACTIVE',
       role: 'PEK_RESPONSIBLE',
     });
@@ -150,7 +159,7 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
       archive: availableActionFlags(source.availableActions).archive === true,
       clone: availableActionFlags(source.availableActions).clone === true,
       uploadDocument: availableActionFlags(source.availableActions).uploadDocument === true,
-      retemplate: availableActionFlags(source.availableActions).retemplate === true,
+      retemplate: hasAvailableAction(source.availableActions, 'retemplate', 'updateTemplate', 'RETEMPLATE', 'UPDATE_TEMPLATE'),
     },
     readOnly: Boolean(source.readOnly),
     readiness: Object.keys(row(source.readiness)).length ? source.readiness as PekProgram['readiness'] : null,

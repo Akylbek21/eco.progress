@@ -32,8 +32,6 @@ test('production PEK transport contains only backend-implemented report contract
     'review-comments',
     'prepare-signing',
     'exports/',
-    'submission',
-    'revision',
   ].forEach((unsupported) => assert.doesNotMatch(service, new RegExp(unsupported)));
   assert.match(service, /reports\/\$\{id\}\/history/);
   assert.match(service, /reports\/\$\{reportId\}\/exceedances/);

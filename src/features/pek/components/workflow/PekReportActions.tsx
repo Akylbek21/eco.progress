@@ -1,4 +1,5 @@
 import { Button } from '@mui/material';
+import ActionMenu from '../../../../components/ui/ActionMenu';
 import type { PekReport } from '../../api/pekContracts';
 
 type Props = {
@@ -14,26 +15,25 @@ type Props = {
   onArchive: () => void;
 };
 
-const PekReportActions = ({
-  report,
-  isPending,
-  onCollect,
-  onSubmit,
-  onReturn,
-  onApprove,
-  onSubmitAuthority,
-  onAccept,
-  onReject,
-  onArchive,
-}: Props) => <div className="flex flex-wrap gap-2">
-  {report.availableActions.collect === true && <Button variant="contained" disabled={isPending} onClick={onCollect}>Получить протоколы</Button>}
-  {report.availableActions.submitReview === true && <Button variant="contained" disabled={isPending} onClick={onSubmit}>{report.status === 'RETURNED' ? 'Повторно отправить на проверку' : 'Отправить на проверку'}</Button>}
-  {report.availableActions.returnForRevision === true && <Button color="warning" variant="outlined" disabled={isPending} onClick={onReturn}>Вернуть на доработку</Button>}
-  {report.availableActions.approve === true && <Button variant="contained" disabled={isPending} onClick={onApprove}>Утвердить</Button>}
-  {report.availableActions.submit === true && <Button color="success" variant="contained" disabled={isPending} onClick={onSubmitAuthority}>Отметить отчёт как сданный</Button>}
-  {report.availableActions.accept === true && <Button color="success" variant="contained" disabled={isPending} onClick={onAccept}>Отметить принятие отчёта</Button>}
-  {report.availableActions.reject === true && <Button color="error" variant="outlined" disabled={isPending} onClick={onReject}>Отметить отклонение отчёта</Button>}
-  {report.availableActions.archive === true && <Button variant="outlined" disabled={isPending} onClick={onArchive}>Архивировать</Button>}
-</div>;
+type VisibleAction = { key: string; label: string; run: () => void };
+
+const PekReportActions = ({ report, isPending, onCollect, onSubmit, onReturn, onApprove, onSubmitAuthority, onAccept, onReject, onArchive }: Props) => {
+  const actions: VisibleAction[] = [];
+  const allowed = report.availableActions;
+  if (allowed.collect === true) actions.push({ key: 'collect', label: 'Получить протоколы', run: onCollect });
+  if (allowed.submitReview === true) actions.push({ key: 'submitReview', label: 'Отправить на проверку', run: onSubmit });
+  if (allowed.returnForRevision === true) actions.push({ key: 'returnForRevision', label: 'Вернуть на доработку', run: onReturn });
+  if (allowed.approve === true) actions.push({ key: 'approve', label: 'Утвердить', run: onApprove });
+  if (allowed.submit === true) actions.push({ key: 'submit', label: 'Отметить отчёт как сданный', run: onSubmitAuthority });
+  if (allowed.accept === true) actions.push({ key: 'accept', label: 'Отметить принятие отчёта', run: onAccept });
+  if (allowed.reject === true) actions.push({ key: 'reject', label: 'Отметить отклонение отчёта', run: onReject });
+  if (allowed.archive === true) actions.push({ key: 'archive', label: 'Архивировать', run: onArchive });
+  const [primary, ...secondary] = actions;
+
+  return <div className="flex flex-wrap gap-2">
+    {primary && <Button variant="contained" disabled={isPending} onClick={primary.run}>{primary.label}</Button>}
+    {secondary.length > 0 && <ActionMenu label="Ещё" disabled={isPending}><div className="py-1">{secondary.map(action => <button key={action.key} type="button" className="block w-full px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50" onClick={action.run}>{action.label}</button>)}</div></ActionMenu>}
+  </div>;
+};
 
 export default PekReportActions;

@@ -6,7 +6,7 @@ import Modal from '../../../components/ui/Modal';
 import ActionMenu from '../../../components/ui/ActionMenu';
 import { useToast } from '../../../hooks/useToast';
 import { useAuth } from '../../../contexts/AuthContext';
-import type { PekAvailableAction, PekProgram } from '../api/pekContracts';
+import type { PekAvailableAction, PekControlItem, PekIndicator, PekProgram } from '../api/pekContracts';
 import { commitPekProgramMutation } from '../api/pekProgramCache';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
@@ -33,7 +33,7 @@ const PekProgramDetailsPage = () => {
   const requestedTab = Number(searchParams.get('tab'));
   const tab = Number.isInteger(requestedTab) && requestedTab >= 0 && requestedTab < tabs.length ? requestedTab : 0;
   const setTab = (value: number) => setSearchParams(previous => { const next = new URLSearchParams(previous); next.set('tab', String(value)); return next; });
-  const workspaceTab = [0, 8, 1, 1, 2, 1, 8, 1, 8, 1, 4, 4, 5, 0][tab] ?? 0;
+  const workspaceTab = [0, 8, 9, 1, 2, 1, 10, 1, 1, 1, 4, 4, 5, 0][tab] ?? 0;
   const [action, setAction] = useState<PekAvailableAction | null>(null);
   const [cloneAction, setCloneAction] = useState<PekAvailableAction | null>(null);
   const [cloneNumber, setCloneNumber] = useState('');
@@ -114,15 +114,14 @@ const PekProgramDetailsPage = () => {
   if (program.isLoading) return <PekLoading />;
   if (program.isError || !program.data) return <PekQueryError error={program.error} resource="Программа ПЭК" retry={() => void program.refetch()} />;
   const item = program.data;
-  const workflowActions: PekAvailableAction[] = [
-    item.availableActions.submit && { code: 'SUBMIT_REVIEW', label: 'Отправить на согласование', enabled: true },
-    item.availableActions.returnForRevision && { code: 'RETURN', label: 'Вернуть на доработку', enabled: true, requiresComment: true },
-    item.availableActions.approve && { code: 'APPROVE', label: 'Согласовать', enabled: true },
-    item.availableActions.activate && { code: 'ACTIVATE', label: 'Активировать', enabled: true },
-    item.availableActions.archive && { code: 'ARCHIVE', label: 'Архивировать', enabled: true },
-    item.availableActions.clone && { code: 'CLONE', label: 'Клонировать', enabled: true },
-    item.availableActions.retemplate && { code: 'RETEMPLATE', label: 'Обновить шаблон', enabled: true, confirmationRequired: true },
-  ].filter((candidate): candidate is PekAvailableAction => Boolean(candidate));
+  const workflowActions: PekAvailableAction[] = [];
+  if (item.availableActions.submit) workflowActions.push({ code: 'SUBMIT_REVIEW', label: 'Отправить на согласование', enabled: true });
+  if (item.availableActions.returnForRevision) workflowActions.push({ code: 'RETURN', label: 'Вернуть на доработку', enabled: true, requiresComment: true });
+  if (item.availableActions.approve) workflowActions.push({ code: 'APPROVE', label: 'Согласовать', enabled: true });
+  if (item.availableActions.activate) workflowActions.push({ code: 'ACTIVATE', label: 'Активировать', enabled: true });
+  if (item.availableActions.archive) workflowActions.push({ code: 'ARCHIVE', label: 'Архивировать', enabled: true });
+  if (item.availableActions.clone) workflowActions.push({ code: 'CLONE', label: 'Клонировать', enabled: true });
+  if (item.availableActions.retemplate) workflowActions.push({ code: 'RETEMPLATE', label: 'Обновить шаблон', enabled: true, confirmationRequired: true });
   const primaryWorkflowAction = workflowActions.find((candidate) => ['SUBMIT_REVIEW', 'APPROVE', 'ACTIVATE'].includes(candidate.code));
   const secondaryWorkflowActions = workflowActions.filter((candidate) => candidate !== primaryWorkflowAction);
 
@@ -169,9 +168,11 @@ const PekProgramDetailsPage = () => {
       <section className="rounded-2xl border bg-white p-5"><h2 className="mb-4 text-lg font-black">Общие сведения</h2><div className="grid gap-3 md:grid-cols-2"><Info label="Компания" value={item.company?.name || '—'} /><Info label="Объект" value={item.object?.name || '—'} /><Info label="Описание" value={item.description || '—'} /><Info label="Последнее изменение" value={item.updatedAt || '—'} /><Info label="Проектная мощность" value={[item.designCapacity, item.designCapacityUnit].filter(Boolean).join(' ') || '—'} /></div></section>
     </div>}
     {workspaceTab !== 0 && <section className="border border-slate-300 bg-white p-4">
-      {workspaceTab === 1 && <div className="space-y-6"><PekProgramMonitoring program={item} /><div><h3 className="mb-3 font-black">Объекты контроля</h3>{item.availableActions.edit && <Link className="text-eco-700 underline" to={`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=5`}>Редактировать позиции и связи с источниками</Link>}<DataRows rows={item.controlItems || []} /></div></div>}
+      {workspaceTab === 1 && <div className="space-y-6"><PekProgramMonitoring program={item} /><div><h3 className="mb-3 font-black">Позиции контроля</h3><ProgramControlTable program={item} canEdit={item.availableActions.edit === true} /></div></div>}
       {workspaceTab === 2 && <><DataRows rows={item.indicators || []} />{item.availableActions.edit && <Link className="text-eco-700 underline" to={`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=6`}>Редактировать показатели</Link>}</>}
-      {workspaceTab === 8 && <div className="space-y-5">{(['emission-sources', 'discharge-sources', 'waste-items'] as const).map(kind => <PekInventoryEditor key={`${id}-${kind}`} kind={kind} parentId={id} programId={id} companyId={item.company?.id} canEdit={item.availableActions.edit === true && !item.readOnly} />)}</div>}
+      {workspaceTab === 8 && <PekInventoryEditor kind="waste-items" parentId={id} programId={id} companyId={item.company?.id} canEdit={item.availableActions.edit === true && !item.readOnly} />}
+      {workspaceTab === 9 && <PekInventoryEditor kind="emission-sources" parentId={id} programId={id} companyId={item.company?.id} canEdit={item.availableActions.edit === true && !item.readOnly} />}
+      {workspaceTab === 10 && <PekInventoryEditor kind="discharge-sources" parentId={id} programId={id} companyId={item.company?.id} canEdit={item.availableActions.edit === true && !item.readOnly} />}
       {workspaceTab === 3 && <><DataRows rows={item.measures || []} />{item.availableActions.edit && <Link className="text-eco-700 underline" to={`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=11`}>Редактировать мероприятия</Link>}</>}
       {workspaceTab === 4 && <PekProgramStructuredSections program={item} />}
       {workspaceTab === 5 && <div className="space-y-6"><div><h2 className="font-black">Разрешительные документы</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{permits.data?.filter((permit) => item.permitIds?.includes(permit.id)).map((permit) => <article key={permit.id} className="border p-4"><strong>{permit.type} № {permit.number}</strong><p className="mt-1 text-sm">Дата выдачи: {permit.issuedAt || '—'}</p><p className="text-sm">Срок действия: {permit.validFrom} — {permit.validTo}</p><p className="text-sm">Статус: {permit.status}</p></article>)}{!permits.isLoading && !permits.data?.some((permit) => item.permitIds?.includes(permit.id)) && <p className="text-sm text-slate-500">Разрешения не выбраны.</p>}</div></div><PekProgramDocuments companyId={companyId} programId={id} version={item.version} documents={item.documents || []} canUpload={item.availableActions.uploadDocument} /></div>}
@@ -210,5 +211,16 @@ const DataRows = ({ rows }: { rows: unknown[] }) => <div className="space-y-2">{
   const row = value as Record<string, unknown>;
   return <div key={String(row.id || row.clientId || index)} className="border-b border-slate-200 px-2 py-2"><strong>{String(row.name || row.indicatorName || `Запись ${index + 1}`)}</strong></div>;
 })}{!rows.length && <p className="text-slate-500">Данные не добавлены</p>}</div>;
+
+const ProgramControlTable = ({ program, canEdit }: { program: PekProgram; canEdit: boolean }) => {
+  const rows: { control: PekControlItem; indicator: PekIndicator | null }[] = [];
+  (program.controlItems || []).forEach(control => {
+    const indicators = (program.indicators || []).filter(indicator => indicator.controlItemId === control.id || indicator.controlItemClientId === control.clientId);
+    if (indicators.length) indicators.forEach(indicator => rows.push({ control, indicator }));
+    else rows.push({ control, indicator: null });
+  });
+  if (!rows.length) return <p className="text-slate-500">Данные не добавлены</p>;
+  return <div className="max-h-[65vh] overflow-auto"><table className="w-full min-w-[950px] text-sm"><thead className="sticky top-0 z-10 bg-white"><tr className="border-b text-left"><th className="p-2">Источник</th><th>Точка</th><th>Показатель</th><th>Периодичность</th><th>Метод</th><th>Статус</th><th>Действия</th></tr></thead><tbody>{rows.map(({ control, indicator }, index) => <tr key={`${String(control.id || control.clientId)}-${String(indicator?.id || indicator?.clientId || index)}`} className="border-b"><td className="p-2">{control.name}</td><td>{control.monitoringPointId ? `№ ${control.monitoringPointId}` : '—'}</td><td>{indicator?.indicatorName || '—'}</td><td>{[control.frequencyType, control.frequencyValue].filter(Boolean).join(' · ') || '—'}</td><td>{control.measurementMethod || control.samplingMethod || '—'}</td><td>{control.active ? 'Активна' : 'Неактивна'}</td><td>{canEdit ? <Link className="font-bold text-eco-700 underline" to={`/staff/pek/programs/${program.id}/edit?companyId=${program.company?.id || ''}&step=5`}>Изменить</Link> : '—'}</td></tr>)}</tbody></table></div>;
+};
 
 export default PekProgramDetailsPage;

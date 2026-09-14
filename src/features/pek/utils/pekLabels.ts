@@ -7,7 +7,12 @@ export const pekReportTypeLabels: Record<PekReportType, string> = {
 };
 
 export const labelPekReportType = (value?: PekReportType | null) =>
-  value ? pekReportTypeLabels[value] : '—';
+  value ? pekReportTypeLabels[value] || unknownEnum('reportType', value) : '—';
+
+const unknownEnum = (kind: string, value: string) => {
+  console.warn(`[PEK] Unknown ${kind}:`, value);
+  return 'Неизвестный статус';
+};
 
 export const pekStatusLabels: Record<PekProgramStatus | PekReportStatus, string> = {
   DRAFT: 'Черновик',
@@ -32,9 +37,26 @@ export const pekActionLabels: Record<PekAvailableActionCode, string> = {
   ACTIVATE: 'Активировать',
   ARCHIVE: 'Архивировать',
   CLONE: 'Клонировать',
+  RETEMPLATE: 'Актуализировать шаблон',
 };
 
 export const labelPekStatus = (value?: string | null) =>
   value && value in pekStatusLabels
     ? pekStatusLabels[value as keyof typeof pekStatusLabels]
-    : value || '—';
+    : value ? unknownEnum('status', value) : '—';
+
+export const pekSeverityLabels: Record<string, string> = {
+  ERROR: 'Ошибка', WARNING: 'Предупреждение', INFO: 'Информация',
+};
+export const pekMatchStatusLabels: Record<string, string> = {
+  MATCHED: 'Сопоставлен', MANUAL: 'Подтверждён вручную', MANUALLY_MATCHED: 'Подтверждён вручную',
+  UNMATCHED: 'Не сопоставлен', AMBIGUOUS: 'Требует выбора', STALE: 'Источник изменён', EXCLUDED: 'Исключён',
+};
+export const pekPlanFactStatusLabels: Record<string, string> = {
+  NOT_STARTED: 'Не выполнено', PARTIALLY_COMPLETED: 'Выполнено частично', COMPLETED: 'Выполнено',
+  OVERDUE: 'Просрочено', EXCEEDED: 'Есть превышение', NOT_APPLICABLE: 'Не применяется',
+};
+
+export const labelPekSeverity = (value?: string | null) => value ? pekSeverityLabels[value] || unknownEnum('severity', value) : '—';
+export const labelPekMatchStatus = (value?: string | null) => value ? pekMatchStatusLabels[value] || unknownEnum('matchStatus', value) : '—';
+export const labelPekPlanFactStatus = (value?: string | null) => value ? pekPlanFactStatusLabels[value] || unknownEnum('planFactStatus', value) : '—';

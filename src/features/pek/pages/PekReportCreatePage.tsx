@@ -12,7 +12,7 @@ import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { mapReportCreateRequest } from '../mappers/reportMappers';
 import { mapPekError } from '../utils/pekErrorMapper';
-import { labelPekReportType, labelPekStatus, pekReportTypeLabels } from '../utils/pekLabels';
+import { labelPekReportType, labelPekStatus } from '../utils/pekLabels';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 import { currentQuarter } from '../utils/pekPeriod';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -76,6 +76,28 @@ const PekReportCreatePage = () => {
   });
   const availablePrograms = context.data?.programs || [];
   const selectedProgramId = programId ?? context.data?.selectedProgramId ?? null;
+  const selectedProgram = availablePrograms.find((program) => program.id === selectedProgramId) || null;
+  const canRetemplate = selectedProgram?.availableActions.retemplate === true;
+  const retemplate = useMutation({
+    mutationFn: () => pekApi.retemplateProgram(selectedProgram!.id, selectedProgram!.version),
+    retry: false,
+    onSuccess: async (updatedProgram) => {
+      client.setQueryData(pekKeys.programDetail(updatedProgram.company?.id || companyId, updatedProgram.id), updatedProgram);
+      await Promise.all([
+        client.invalidateQueries({ queryKey: pekKeys.programsRoot() }),
+        client.invalidateQueries({ queryKey: pekKeys.creationContext(params, user?.id) }),
+        client.invalidateQueries({ queryKey: ['pek', `user:${String(user?.id ?? 'anonymous')}`, 'program-readiness', String(updatedProgram.id)] }),
+      ]);
+      await context.refetch();
+      if (updatedProgram.status !== 'ACTIVE') {
+        toast.success('Шаблон программы актуализирован. Проверьте новые обязательные поля.');
+        navigate(`/staff/pek/programs/${updatedProgram.id}?companyId=${updatedProgram.company?.id || companyId}&tab=13`);
+        return;
+      }
+      toast.success('Программа актуализирована до действующей нормативной версии.');
+    },
+    onError: (error) => toast.error(mapPekError(error).message),
+  });
   const selectedProgramAvailable = selectedProgramId != null && availablePrograms.some((program) => program.id === selectedProgramId);
   const blocked = Boolean(
     !context.data
@@ -83,10 +105,6 @@ const PekReportCreatePage = () => {
     || context.data.duplicateReportId
     || !selectedProgramAvailable
   );
-  const annualReportLabel = context.data?.reportType === 'PEM_CASPIAN_ANNUAL'
-    ? pekReportTypeLabels.PEM_CASPIAN_ANNUAL
-    : pekReportTypeLabels.PEK_TABLES_7_12_ANNUAL;
-
   return <div className="space-y-5">
     <PekPageHeader title="Создание отчёта ПЭК" description="Выберите программу и вид отчётности. Точные даты и нормативный тип система определит по объекту автоматически." />
     <section className="grid gap-4 rounded-2xl border bg-white p-4 md:grid-cols-2 sm:p-5 xl:grid-cols-3">
@@ -97,7 +115,7 @@ const PekReportCreatePage = () => {
         onObjectChange={(value) => setObjectId(Number(value) || 0)}
         required
       />
-      <label>Вид отчётности<select value={periodType} onChange={(event) => setPeriodType(event.target.value as PekPeriodType)} className={inputClass}><option value="QUARTER">Квартальный отчёт ПЭК</option><option value="YEAR">{annualReportLabel}</option></select>{periodType === 'YEAR' && <span className="mt-1 block text-xs text-slate-500">{context.data?.reportType === 'PEM_CASPIAN_ANNUAL' ? 'Для выбранного объекта применяется годовой производственный мониторинг Каспия.' : 'Для выбранного объекта применяются годовые таблицы ПЭК.'}</span>}</label>
+      <label>Отчётный период<select value={periodType} onChange={(event) => setPeriodType(event.target.value as PekPeriodType)} className={inputClass}><option value="QUARTER">Квартальный</option><option value="YEAR">Годовой</option></select></label>
       <label>Год<input type="number" min={2000} max={2100} value={year} onChange={(event) => setYear(Number(event.target.value))} className={inputClass} /></label>
       {periodType === 'QUARTER' && <label>Квартал<select value={quarter} onChange={(event) => setQuarter(Number(event.target.value))} className={inputClass}>{[1, 2, 3, 4].map((value) => <option key={value}>{value}</option>)}</select></label>}
     </section>
@@ -111,13 +129,19 @@ const PekReportCreatePage = () => {
             <div className="grid gap-3 md:grid-cols-2">
               <Summary label="Компания" value={context.data.company?.name || '—'} />
               <Summary label="Объект" value={context.data.object?.name || '—'} />
-              <Summary label="Вид отчётности" value={labelPekReportType(context.data.reportType)} />
+              <Summary label="Вид отчёта" value={context.data.reportType ? labelPekReportType(context.data.reportType) : 'Тип отчёта не получен от backend'} />
               <Summary label="Начало периода" value={context.data.periodStart} />
               <Summary label="Окончание периода" value={context.data.periodEnd} />
               <Summary label="Срок сдачи" value={context.data.submissionDueDate || 'Не установлен'} />
               <Summary label="Форма / НПА" value={`${context.data.templateVersion || '—'} / ${context.data.regulationVersion || '—'}`} />
             </div>
-            {availablePrograms.length > 0 && <label>Программа<select value={selectedProgramId ?? ''} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : null)} className={inputClass}><option value="">Выберите программу</option>{availablePrograms.map((program) => <option key={program.id} value={program.id}>{program.number} · {program.name}</option>)}</select></label>}
+            {availablePrograms.length > 0 && <div><label>Программа<select value={selectedProgramId ?? ''} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : null)} className={inputClass}><option value="">Выберите программу</option>{availablePrograms.map((program) => <option key={program.id} value={program.id}>{program.number} · {program.name}</option>)}</select></label>
+              {canRetemplate && <div className="mt-3 border-l-4 border-amber-500 bg-amber-50 p-3 text-sm text-amber-950">
+                <p className="font-black">Программа использует устаревший шаблон</p>
+                <p className="mt-1">Для создания отчёта сначала актуализируйте программу до действующей нормативной версии.</p>
+                <Button className="mt-3" disabled={retemplate.isPending} aria-busy={retemplate.isPending} onClick={() => retemplate.mutate()}>{retemplate.isPending ? 'Актуализация…' : 'Актуализировать программу'}</Button>
+              </div>}
+            </div>}
             {!availablePrograms.length && programsInScope.isLoading && <PekLoading />}
             {!availablePrograms.length && programsInScope.isError && (
               <PekQueryError error={programsInScope.error} resource="Программы выбранного объекта" retry={() => void programsInScope.refetch()} />
@@ -142,13 +166,13 @@ const PekReportCreatePage = () => {
                 ))}
               </div>
             )}
-            {context.data.warnings.map((warning) => <p key={warning} className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{warning}</p>)}
+            {context.data.warnings.filter((warning) => !(canRetemplate && /устаревш|legacy|template/i.test(warning))).map((warning) => <p key={warning} className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{warning}</p>)}
             {context.data.blockingReasons.map((reason) => <p key={reason} className="rounded-xl bg-rose-50 p-3 text-sm text-rose-900">{reason}</p>)}
             {context.data.duplicateReportId && <p className="rounded-xl bg-amber-50 p-3 text-sm">Отчёт за период уже существует. <Link className="font-bold underline" to={`/staff/pek/reports/${context.data.duplicateReportId}`}>Открыть отчёт №{context.data.duplicateReportId}</Link></p>}
             <PekState title="Ответственный будет назначен автоматически" message="После создания назначение отобразится в рабочей области отчёта." />
             <Button disabled={blocked || create.isPending} aria-busy={create.isPending} onClick={() => {
               if (!selectedProgramAvailable || selectedProgramId == null) return toast.error('Выбранная программа больше недоступна для этого отчёта.');
-              create.mutate(mapReportCreateRequest(params, selectedProgramId, false, context.data));
+              create.mutate(mapReportCreateRequest(params, selectedProgramId, false));
             }}>
               {create.isPending ? 'Создание…' : 'Создать отчёт'}
             </Button>

@@ -13,15 +13,17 @@ import PekReportActions from '../components/workflow/PekReportActions';
 import { isPekVersionConflict, mapPekError } from '../utils/pekErrorMapper';
 import { handlePekMutationError as handleVersionedPekError } from '../utils/pekMutationError';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
-import { labelPekReportType } from '../utils/pekLabels';
+import { labelPekMatchStatus, labelPekPlanFactStatus, labelPekReportType } from '../utils/pekLabels';
 import PekReportDocuments from '../components/documents/PekReportDocuments';
 import PekReportPackageCard from '../components/documents/PekReportPackageCard';
 import PekReportExceedances from '../components/exceedances/PekReportExceedances';
 import PekInventoryEditor from '../components/inventory/PekInventoryEditor';
 import PekReportSubmissionDialog, { pekSubmissionMethodLabels, type PekSubmissionDraft } from '../components/submission/PekReportSubmissionDialog';
+import PekOfficialReport from '../components/official/PekOfficialReport';
 
 const tabs = [
   { key: 'overview', label: 'Общие сведения' },
+  { key: 'official', label: 'Официальный отчёт' },
   { key: 'sources', label: 'Производственный мониторинг' },
   { key: 'plan-fact', label: 'PLAN / FACT' },
   { key: 'exceedances', label: 'Превышения' },
@@ -31,14 +33,6 @@ const tabs = [
 ] as const;
 type TabKey = typeof tabs[number]['key'];
 
-const matchLabels: Record<string, string> = {
-  MATCHED: 'Сопоставлен', MANUAL: 'Подтверждён вручную', MANUALLY_MATCHED: 'Подтверждён вручную',
-  UNMATCHED: 'Не сопоставлен', AMBIGUOUS: 'Требует выбора', STALE: 'Источник изменён', EXCLUDED: 'Исключён',
-};
-const planLabels: Record<string, string> = {
-  NOT_STARTED: 'Не выполнено', PARTIALLY_COMPLETED: 'Выполнено частично', COMPLETED: 'Выполнено',
-  OVERDUE: 'Просрочено', EXCEEDED: 'Есть превышение', NOT_APPLICABLE: 'Не применяется',
-};
 const reportSectionLabels: Record<string, string> = {
   SOURCES: 'Производственный мониторинг', EXCEEDANCES: 'Превышения', PLAN_FACT: 'PLAN / FACT',
   DOCUMENTS: 'Документы', SUBMISSION: 'Сдача', GENERAL: 'Общие сведения',
@@ -115,12 +109,12 @@ const PekReportWorkspacePage = () => {
   });
   const readiness = useQuery({
     queryKey: pekKeys.readiness(id, report.data?.companyId, user?.id), queryFn: ({ signal }) => pekApi.getReportReadiness(id, signal),
-    enabled: Boolean(report.data) && tab === 'overview', retry: retryPekQuery,
+    enabled: Boolean(report.data) && ['overview', 'official'].includes(tab), retry: retryPekQuery,
   });
   const officialData = useQuery({
     queryKey: ['pek', 'reports', id, 'official-data', user?.id],
     queryFn: ({ signal }) => pekApi.getOfficialReportData(id, signal),
-    enabled: Boolean(report.data) && tab === 'overview',
+    enabled: Boolean(report.data) && tab === 'official',
     retry: retryPekQuery,
   });
   const history = useQuery({
@@ -376,13 +370,6 @@ const PekReportWorkspacePage = () => {
         <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-black">Фактическая мощность за период</h2><p className="mt-1 text-sm text-slate-500">Эти данные относятся только к текущему отчёту, а не к многолетней программе.</p></div><MuiButton variant="contained" size="small" disabled={updateGeneral.isPending || item.availableActions.edit !== true} onClick={() => updateGeneral.mutate()}>{updateGeneral.isPending ? 'Сохранение…' : 'Сохранить'}</MuiButton></div>
         <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]"><TextField size="small" label="Фактическая мощность" value={actualCapacity} disabled={item.availableActions.edit !== true} onChange={(event) => setActualCapacity(event.target.value)} /><TextField size="small" label="Единица измерения" placeholder="т/год, м³/сут" value={actualCapacityUnit} disabled={item.availableActions.edit !== true} onChange={(event) => setActualCapacityUnit(event.target.value)} /></div>
       </section>
-      <section className="rounded-2xl border bg-white p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-black">Официальные данные отчёта</h2><p className="mt-1 text-sm text-slate-500">Состав и применимость таблиц получены напрямую из backend.</p></div>{officialData.data && <PekReadiness value={officialData.data.progressPercent} />}</div>
-        {officialData.isLoading ? <div className="mt-4"><PekLoading /></div> : officialData.isError ? <div className="mt-4"><PekQueryError error={officialData.error} resource="официальные данные отчёта" retry={() => void officialData.refetch()} /></div> : officialData.data && <>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Info label="Компания / БИН" value={`${officialData.data.general.companyName || '—'} / ${officialData.data.general.companyBin || '—'}`} /><Info label="КАТО / ОКЭД" value={`${officialData.data.general.kato || '—'} / ${officialData.data.general.oked || '—'}`} /><Info label="Категория" value={officialData.data.general.environmentalCategory || '—'} /><Info label="Лаборатория" value={officialData.data.laboratory?.laboratoryName || 'Не определена'} /></div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{officialData.data.applicability.map((entry) => <div key={entry.tableType} className={`rounded-xl border p-3 text-sm ${entry.applicable ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50 text-slate-600'}`}><strong>{entry.tableType}</strong><p className="mt-1">{entry.applicable ? 'Применяется' : entry.reason || 'Не применяется'}</p></div>)}</div>
-        </>}
-      </section>
       {item.submission && <section className="rounded-2xl border bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><h2 className="font-black">Сведения о сдаче</h2><p className="mt-1 text-sm text-slate-500">Фактическая передача отчёта в государственный орган</p></div>
@@ -399,11 +386,12 @@ const PekReportWorkspacePage = () => {
       <section className="border border-slate-300 bg-white"><div className="border-b border-slate-200 px-4 py-3"><h2 className="font-black">Готовность отчёта</h2></div>
         {readiness.isLoading ? <p className="mt-2">Проверяем…</p> : readiness.isError ? <PekQueryError error={readiness.error} resource="готовность отчёта" retry={() => void readiness.refetch()} /> : readiness.data && <>
           <div className="flex gap-6 px-4 py-3 text-sm"><strong>Готовность: {readiness.data.progressPercent}%</strong><span><b className="text-rose-700">{readiness.data.issues.filter((issue) => issue.blocking).length}</b> ошибок</span><span><b className="text-amber-700">{readiness.data.issues.filter((issue) => !issue.blocking).length}</b> предупреждений</span></div>
-          {readiness.data.issues.length ? <ul className="divide-y divide-slate-200">{readiness.data.issues.map((issue) => <li key={issue.code}><button className="flex w-full gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50" onClick={() => setTab(issue.section === 'SOURCES' ? 'sources' : issue.section === 'EXCEEDANCES' ? 'exceedances' : 'plan-fact')}><span className={issue.blocking ? 'text-rose-700' : 'text-amber-700'}>{issue.blocking ? 'Ошибка' : 'Предупреждение'}</span><span className="flex-1"><b>{issue.message}</b><span className="block text-xs text-slate-500">{reportSectionLabels[issue.section || ''] || 'Проверка отчёта'}</span></span><span className="text-xs font-bold text-eco-800">Открыть →</span></button></li>)}</ul> : <Alert className="m-3" severity="success">Отчёт готов к отправке.</Alert>}
+          {readiness.data.issues.length ? <ul className="divide-y divide-slate-200">{readiness.data.issues.map((issue) => <li key={issue.code}><button className="flex w-full gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50" onClick={() => setTab(issue.section === 'OFFICIAL_TABLES' ? 'official' : issue.section === 'SOURCES' ? 'sources' : issue.section === 'EXCEEDANCES' ? 'exceedances' : issue.section === 'DOCUMENTS' ? 'documents' : issue.section === 'GENERAL' ? 'overview' : 'plan-fact')}><span className={issue.blocking ? 'text-rose-700' : 'text-amber-700'}>{issue.blocking ? 'Ошибка' : 'Предупреждение'}</span><span className="flex-1"><b>{issue.message}</b><span className="block text-xs text-slate-500">{reportSectionLabels[issue.section || ''] || 'Проверка отчёта'}</span></span><span className="text-xs font-bold text-eco-800">Открыть →</span></button></li>)}</ul> : <Alert className="m-3" severity="success">Отчёт готов к отправке.</Alert>}
         </>}
         <Link className="mt-4 inline-flex font-bold text-eco-700" to={`/staff/pek/programs/${item.programId}`}>Открыть программу ПЭК</Link>
       </section>
     </div>}
+    {tab === 'official' && (officialData.isLoading || readiness.isLoading ? <PekLoading /> : officialData.isError ? <PekQueryError error={officialData.error} resource="официальный отчёт" retry={() => void officialData.refetch()} /> : readiness.isError ? <PekQueryError error={readiness.error} resource="готовность отчёта" retry={() => void readiness.refetch()} /> : officialData.data ? <PekOfficialReport data={officialData.data} readiness={readiness.data} /> : null)}
 
     {tab === 'sources' && <section className="space-y-4 rounded-2xl border bg-white p-5">
       <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-black">Источники данных</h2><p className="text-sm text-slate-600">Только фактически сохранённые backend связи отчёта.</p></div><TextField select size="small" label="Статус" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)} sx={{ minWidth: 220 }}><MenuItem value="ALL">Все</MenuItem><MenuItem value="MATCHED">Сопоставленные</MenuItem><MenuItem value="MANUALLY_MATCHED">Сопоставленные вручную</MenuItem><MenuItem value="UNMATCHED">Несопоставленные</MenuItem><MenuItem value="AMBIGUOUS">Неоднозначные</MenuItem><MenuItem value="STALE">Устаревшие</MenuItem><MenuItem value="EXCLUDED">Исключённые</MenuItem></TextField></div>
@@ -419,7 +407,7 @@ const PekReportWorkspacePage = () => {
             <td><p>{source.indicatorName || '—'}</p><p className="text-xs text-slate-500">{source.indicatorCode || 'без кода'} · {source.unit || 'без единицы'}</p></td>
             <td><p>{source.value ?? source.valueText ?? '—'} {source.unit || ''}</p><p className="text-xs text-slate-500">Норматив: {source.normativeValue ?? '—'} · {source.comparisonType || 'без сравнения'}</p>{source.isExceedance && <p className="text-xs font-bold text-rose-700">Превышение</p>}</td>
            <td><p>{source.controlItemName || '—'}</p><p className="text-xs">{source.programIndicatorName || '—'}</p></td>
-           <td>{source.excluded ? matchLabels.EXCLUDED : matchLabels[source.matchStatus] || source.matchStatus}</td>
+           <td>{source.excluded ? labelPekMatchStatus('EXCLUDED') : labelPekMatchStatus(source.matchStatus)}</td>
            <td className="relative text-right"><ActionMenu label={`Действия с источником ${source.protocolNumber}`} widthClass="w-64">{canMutateSources && !source.excluded && ['UNMATCHED', 'AMBIGUOUS'].includes(source.matchStatus) && <MuiButton size="small" onClick={() => { setSelectedSource(source); setControlItemId(''); setIndicatorId(''); }}>{source.matchStatus === 'AMBIGUOUS' ? 'Выбрать показатель' : 'Сопоставить вручную'}</MuiButton>}{canMutateSources && !source.excluded && source.matchStatus === 'UNMATCHED' && <MuiButton size="small" color="error" onClick={() => setExcludeSource(source)}>Исключить</MuiButton>}{canMutateSources && source.matchStatus === 'STALE' && <MuiButton size="small" onClick={() => setCollectConfirmOpen(true)}>Обновить данные</MuiButton>}{canMutateSources && source.excluded && <MuiButton size="small" disabled={restore.isPending} onClick={() => restore.mutate(source)}>Восстановить</MuiButton>}</ActionMenu></td>
          </tr>;
       })}</tbody></table></div>}
@@ -459,7 +447,7 @@ const PlanFactContent = ({ report, loading, error, data, retry }: { report: PekR
   if (error) return <PekQueryError error={error} resource="план/факт" retry={retry} />;
   if (!data?.items.length) return <PekState title="План/факт не сформирован" message="Запустите сбор данных из протоколов." />;
   const createParams = new URLSearchParams({ companyId: String(report.companyId), objectId: String(report.objectId), pekReportId: String(report.id) });
-  return <section className="space-y-4 rounded-2xl border bg-white p-5"><div className="grid gap-3 sm:grid-cols-5"><Info label="План" value={data.summary.planned} /><Info label="Выполнено" value={data.summary.completed} /><Info label="Не хватает" value={data.summary.missing} /><Info label="Выполнение" value={`${data.summary.completionPercent}%`} /><Info label="Превышения" value={data.summary.exceedances} /></div><div className="overflow-x-auto"><table className="w-full min-w-[1200px] text-sm"><thead><tr className="border-b text-left"><th className="p-2">Период</th><th>Направление</th><th>Точка</th><th>Показатель</th><th>План</th><th>Факт</th><th>Выполнение %</th><th>Протокол</th><th>Результат</th><th>Статус</th></tr></thead><tbody>{data.items.map((row) => <tr key={row.planFactRowId} className="border-b"><td className="p-2">{row.period || (report.quarter ? `Q${report.quarter}` : report.year)}</td><td>{row.directionName || row.controlItemName}</td><td>{row.monitoringPointName || row.measurementPlace || '—'}</td><td>{row.indicatorName}</td><td>{row.plannedCount}</td><td>{row.actualCount}</td><td>{row.completionPercent}%</td><td>{row.protocolNumber || (row.missingCount > 0 ? <Link className="font-bold text-eco-700" to={`/staff/protocols/new?${createParams}`}>Создать протокол</Link> : '—')}</td><td>{row.resultValue ?? row.worstValue ?? row.averageValue ?? '—'}</td><td>{planLabels[row.status] || row.status}{row.hasExceedance ? ' · превышение' : ''}</td></tr>)}</tbody></table></div></section>;
+  return <section className="space-y-4 rounded-2xl border bg-white p-5"><div className="grid gap-3 sm:grid-cols-5"><Info label="План" value={data.summary.planned} /><Info label="Выполнено" value={data.summary.completed} /><Info label="Не хватает" value={data.summary.missing} /><Info label="Выполнение" value={`${data.summary.completionPercent}%`} /><Info label="Превышения" value={data.summary.exceedances} /></div><div className="overflow-x-auto"><table className="w-full min-w-[1200px] text-sm"><thead><tr className="border-b text-left"><th className="p-2">Период</th><th>Направление</th><th>Точка</th><th>Показатель</th><th>План</th><th>Факт</th><th>Выполнение %</th><th>Протокол</th><th>Результат</th><th>Статус</th></tr></thead><tbody>{data.items.map((row) => <tr key={row.planFactRowId} className="border-b"><td className="p-2">{row.period || (report.quarter ? `Q${report.quarter}` : report.year)}</td><td>{row.directionName || row.controlItemName}</td><td>{row.monitoringPointName || row.measurementPlace || '—'}</td><td>{row.indicatorName}</td><td>{row.plannedCount}</td><td>{row.actualCount}</td><td>{row.completionPercent}%</td><td>{row.protocolNumber || (row.missingCount > 0 ? <Link className="font-bold text-eco-700" to={`/staff/protocols/new?${createParams}`}>Создать протокол</Link> : '—')}</td><td>{row.resultValue ?? row.worstValue ?? row.averageValue ?? '—'}</td><td>{labelPekPlanFactStatus(row.status)}{row.hasExceedance ? ' · превышение' : ''}</td></tr>)}</tbody></table></div></section>;
 };
 const Info = ({ label, value }: { label: string; value: string | number }) => <div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 font-semibold">{value}</p></div>;
 export default PekReportWorkspacePage;
