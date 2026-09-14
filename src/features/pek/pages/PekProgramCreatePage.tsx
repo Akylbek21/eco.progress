@@ -37,6 +37,7 @@ import PekProgramStructuredSections from '../components/sections/PekProgramStruc
 import NormativeSelectorModal from '../../protocols/components/components/NormativeSelectorModal';
 import PekControlSourceSelect from '../components/inventory/PekControlSourceSelect';
 import type { NormativeRecord, ProtocolTemplateId } from '../../../types/protocols';
+import { getLaboratories } from '../../laboratories/api/laboratoryService';
 
 const steps = [
   'Сведения об объекте',
@@ -84,7 +85,7 @@ const stepForField = (field: string) => field.startsWith('controlItems') ? 5
   : field.startsWith('indicators') ? 6
     : field.startsWith('measures') ? 11
       : field.startsWith('kato') || field.startsWith('bin') || field.startsWith('oked') ? 1
-          : field.startsWith('environmentalCategory') || field.startsWith('designCapacity') || field.startsWith('actualCapacity') ? 2
+          : field.startsWith('environmentalCategory') || field.startsWith('designCapacity') || field.startsWith('designCapacityUnit') ? 2
           : field.startsWith('productionCharacteristics') ? 3
             : field.startsWith('monitoringScope') ? 4
               : field.startsWith('permitIds') ? 12
@@ -144,11 +145,15 @@ const PekProgramCreatePage = () => {
     queryFn: ({ signal }) => pekApi.getCompanyStaff(companyId, signal),
     enabled: companyId > 0,
   });
-  const responsibleOptions = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data);
+  const responsibleOptions = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data, user);
   const permits = useQuery({
     queryKey: pekKeys.permits(objectId, user?.id),
     queryFn: ({ signal }) => pekApi.getPermits(objectId, signal),
     enabled: objectId > 0,
+  });
+  const laboratories = useQuery({
+    queryKey: ['laboratories', 'pek-program-form', `user:${user?.id ?? 'anonymous'}`],
+    queryFn: ({ signal }) => getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }, signal),
   });
   const draftKey = useMemo(
     () => pekDraftKey('program', user?.id, programId, edit ? program.data?.version ?? 'loading' : 'new', companyId || 'none'),
@@ -415,14 +420,14 @@ const PekProgramCreatePage = () => {
       createServerDraft.mutate(value);
     });
 
-    return <div className="mx-auto max-w-4xl space-y-5">
+    return <div className="mx-auto max-w-4xl space-y-4">
       <PekPageHeader
         title="Создание программы ПЭК"
         description="Укажите основные сведения. Остальные разделы заполняются в рабочем пространстве программы."
       />
-      <form onSubmit={create} className="rounded-2xl border bg-white p-5 sm:p-7">
+      <form onSubmit={create} className="border border-slate-300 bg-white p-4 sm:p-5">
         {createServerDraft.isError && <div role="alert" className="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">Не удалось создать программу. Проверьте поля и повторите попытку.</div>}
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           <input type="hidden" {...register('companyId', { valueAsNumber: true })} />
           <input type="hidden" {...register('objectId', { valueAsNumber: true })} />
           <PekCompanyObjectFilters
@@ -439,9 +444,9 @@ const PekProgramCreatePage = () => {
           <label>Название *<input {...register('name')} className={inputClass} />{formState.errors.name && <span className="mt-1 block text-xs text-rose-700">{formState.errors.name.message}</span>}</label>
           <label>Период с *<input type="date" {...register('validFrom')} className={inputClass} /></label>
           <label>Период по *<input type="date" {...register('validUntil')} className={inputClass} />{formState.errors.validUntil && <span className="mt-1 block text-xs text-rose-700">{formState.errors.validUntil.message}</span>}</label>
-          <PekLookupSelect label="Ответственный" value={watch('responsibleUserId')} options={responsibleOptions} loading={assignees.isLoading && companyStaff.isLoading} error={assignees.isError && companyStaff.isError} onRetry={() => void Promise.all([assignees.refetch(), companyStaff.refetch()])} onChange={(value) => setValue('responsibleUserId', value, { shouldDirty: true })} />
         </div>
-        <div className="mt-7 flex justify-end">
+        <p className="mt-3 text-xs text-slate-500">Реквизиты объекта, категория, мощность, нормативная версия и ответственный подтянутся автоматически после создания.</p>
+        <div className="mt-5 flex justify-end">
           <Button type="submit" disabled={createServerDraft.isPending}>{createServerDraft.isPending ? 'Создание…' : 'Создать программу'}</Button>
         </div>
       </form>
@@ -566,7 +571,7 @@ const PekProgramCreatePage = () => {
           <label className="md:col-span-2">Сведения об объекте и его местоположении *<textarea {...register('facilityInformation')} rows={5} className={inputClass} placeholder="Назначение объекта, адрес, границы площадки, режим работы и основные источники воздействия" /></label>
           <label>Действует с *<input type="date" {...register('validFrom')} className={inputClass} /></label>
           <label>Действует до *<input type="date" {...register('validUntil')} className={inputClass} /></label>
-          <PekLookupSelect label="Ответственный" value={watch('responsibleUserId')} options={responsibleOptions} loading={assignees.isLoading && companyStaff.isLoading} error={assignees.isError && companyStaff.isError} onRetry={() => void Promise.all([assignees.refetch(), companyStaff.refetch()])} onChange={(value) => setValue('responsibleUserId', value, { shouldDirty: true })} />
+          <PekLookupSelect label="Ответственный" value={watch('responsibleUserId')} options={responsibleOptions} loading={!responsibleOptions.length && assignees.isLoading && companyStaff.isLoading} error={!responsibleOptions.length && assignees.isError && companyStaff.isError} onRetry={() => void Promise.all([assignees.refetch(), companyStaff.refetch()])} onChange={(value) => setValue('responsibleUserId', value, { shouldDirty: true })} />
           {edit && <p className="text-xs text-slate-500 md:col-span-2">Компания, объект и номер фиксируются при создании программы.</p>}
           <div className="text-sm text-slate-600"><strong>Действующие разрешительные документы</strong><p className="mt-2">{permits.isLoading ? 'Загрузка…' : activePermits.length ? activePermits.map((item) => `${item.type} № ${item.number}`).join(', ') : 'Для объекта нет действующих разрешительных документов'}</p></div>
           {Object.values(formState.errors).length > 0 && <p role="alert" className="md:col-span-2 text-sm text-rose-700">Проверьте обязательные поля программы.</p>}
@@ -578,9 +583,10 @@ const PekProgramCreatePage = () => {
           <p className="md:col-span-3 text-sm text-slate-500">Реквизиты относятся к оператору и конкретному объекту, для которого разрабатывается программа.</p>
         </div>}
         {step === 2 && <div className="grid gap-4 md:grid-cols-2">
-          <label>Категория объекта *<select {...register('environmentalCategory')} className={inputClass}><option value="">Выберите категорию</option><option value="I">I категория</option><option value="II">II категория</option><option value="III">III категория</option><option value="IV">IV категория</option></select></label>
-          <label>Проектная мощность *<textarea {...register('designCapacity')} rows={3} className={inputClass} placeholder="Значение и единицы мощности" /></label>
-          <label>Фактическая мощность *<textarea {...register('actualCapacity')} rows={3} className={inputClass} placeholder="Фактическое значение и режим загрузки" /></label>
+          <label>Категория объекта *<select {...register('environmentalCategory')} className={inputClass}><option value="">Выберите категорию</option><option value="I">I категория</option><option value="II">II категория</option></select></label>
+          <label>Проектная мощность *<input {...register('designCapacity')} className={inputClass} placeholder="Например, 150 000" /></label>
+          <label>Единица проектной мощности *<input {...register('designCapacityUnit')} className={inputClass} placeholder="Например, м³/сут или т/год" /></label>
+          <p className="text-sm text-slate-500 md:col-span-2">Фактическая мощность указывается отдельно в каждом отчёте ПЭК за соответствующий период.</p>
         </div>}
         {step === 3 && <label className="block">Характеристика производственных и технологических процессов *<textarea {...register('productionCharacteristics')} rows={12} className={inputClass} placeholder="Технологические линии, сырьё, продукция, оборудование, источники эмиссий, водопользование и образование отходов" /></label>}
         {step === 4 && <label className="block">Организация производственного мониторинга *<textarea {...register('monitoringScope')} rows={12} className={inputClass} placeholder="Компоненты среды, наблюдения, лаборатории, сбор и хранение результатов мониторинга" /></label>}
@@ -592,6 +598,7 @@ const PekProgramCreatePage = () => {
               <TextField label="Код *" value={row.code} onChange={(value) => updateControl(index, { code: value })} />
               <TextField label="Название *" value={row.name} onChange={(value) => updateControl(index, { name: value })} />
               <PekControlSourceSelect programId={edit ? id : undefined} value={row} onChange={patch => updateControl(index, patch)} />
+              <label>Лаборатория<select value={row.laboratoryId || ''} onChange={(event) => updateControl(index, { laboratoryId: event.target.value ? Number(event.target.value) : null })} className={inputClass}><option value="">Не выбрана</option>{laboratories.data?.content.map((laboratory) => <option key={laboratory.id} value={laboratory.id}>{laboratory.name}</option>)}</select></label>
               <TextField label="Раздел" value={row.sectionCode} onChange={(value) => updateControl(index, { sectionCode: value })} />
               <SelectField label="Тип контроля *" value={row.controlType} options={pekControlTypeOptions} onChange={(value) => updateControl(index, { controlType: value as PekControlType })} />
               <TextField label="Компонент среды" value={row.environmentComponent} onChange={(value) => updateControl(index, { environmentComponent: value })} />
@@ -603,7 +610,7 @@ const PekProgramCreatePage = () => {
               <TextField label="Метод отбора" value={row.samplingMethod} onChange={(value) => updateControl(index, { samplingMethod: value })} />
               <TextField label="Дата начала" type="date" value={row.startDate} onChange={(value) => updateControl(index, { startDate: value })} />
               <TextField label="Дата окончания" type="date" value={row.endDate} onChange={(value) => updateControl(index, { endDate: value })} />
-              <PekLookupSelect label="Ответственный" value={row.responsibleUserId} options={responsibleOptions} loading={assignees.isLoading && companyStaff.isLoading} error={assignees.isError && companyStaff.isError} onRetry={() => void Promise.all([assignees.refetch(), companyStaff.refetch()])} onChange={(value) => updateControl(index, { responsibleUserId: value })} />
+              <PekLookupSelect label="Ответственный" value={row.responsibleUserId} options={responsibleOptions} loading={!responsibleOptions.length && assignees.isLoading && companyStaff.isLoading} error={!responsibleOptions.length && assignees.isError && companyStaff.isError} onRetry={() => void Promise.all([assignees.refetch(), companyStaff.refetch()])} onChange={(value) => updateControl(index, { responsibleUserId: value })} />
               <label className="flex items-center gap-2"><input type="checkbox" checked={row.mandatory} onChange={(event) => updateControl(index, { mandatory: event.target.checked })} />Обязательная</label>
               <label className="flex items-center gap-2"><input type="checkbox" checked={row.active} onChange={(event) => updateControl(index, { active: event.target.checked })} />Активна</label>
             </div>
@@ -646,7 +653,7 @@ const PekProgramCreatePage = () => {
               <TextField label="Описание" value={row.description} onChange={(value) => updateMeasure(index, { description: value })} />
               <TextField label="Начало" type="date" value={row.plannedStartDate} onChange={(value) => updateMeasure(index, { plannedStartDate: value })} />
               <TextField label="Срок *" type="date" value={row.plannedEndDate} onChange={(value) => updateMeasure(index, { plannedEndDate: value })} />
-              <PekLookupSelect label="Ответственный *" value={row.responsibleUserId} options={responsibleOptions} loading={assignees.isLoading && companyStaff.isLoading} error={assignees.isError && companyStaff.isError} onRetry={() => void Promise.all([assignees.refetch(), companyStaff.refetch()])} onChange={(value) => updateMeasure(index, { responsibleUserId: value })} />
+              <PekLookupSelect label="Ответственный *" value={row.responsibleUserId} options={responsibleOptions} loading={!responsibleOptions.length && assignees.isLoading && companyStaff.isLoading} error={!responsibleOptions.length && assignees.isError && companyStaff.isError} onRetry={() => void Promise.all([assignees.refetch(), companyStaff.refetch()])} onChange={(value) => updateMeasure(index, { responsibleUserId: value })} />
               <NumberField label="Бюджет" value={row.plannedBudget} onChange={(value) => updateMeasure(index, { plannedBudget: value })} />
               <TextField label="Валюта" value={row.currency} onChange={(value) => updateMeasure(index, { currency: value })} />
               <SelectField label="Статус" value={row.status} options={pekActionStatusOptions} onChange={(value) => updateMeasure(index, { status: value as PekActionStatus })} />

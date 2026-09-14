@@ -4,6 +4,7 @@ const controlTypes = ['EMISSION', 'AMBIENT_AIR', 'WATER_INTAKE', 'WASTEWATER', '
 const periodicities = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL', 'PER_EVENT'] as const;
 const comparisonTypes = ['LESS_OR_EQUAL', 'GREATER_OR_EQUAL', 'RANGE', 'BETWEEN', 'EQUAL', 'ABSENT', 'INFO'] as const;
 const actionStatuses = ['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'OVERDUE', 'CANCELLED'] as const;
+const laboratoryControlTypes = new Set(['EMISSION', 'AMBIENT_AIR', 'WATER_INTAKE', 'WASTEWATER', 'SOIL', 'PHYSICAL_FACTOR']);
 
 export const pekProgramFormSchema = z.object({
   companyId: z.number().int().positive('Выберите компанию'),
@@ -18,9 +19,9 @@ export const pekProgramFormSchema = z.object({
   kato: z.string().nullish(),
   bin: z.string().refine((value) => !value || /^\d{12}$/.test(value), 'БИН должен содержать 12 цифр').nullish(),
   oked: z.string().nullish(),
-  environmentalCategory: z.string().nullish(),
+  environmentalCategory: z.enum(['I', 'II'], { message: 'Программа ПЭК поддерживается только для I и II категории' }).or(z.literal('')).nullish(),
   designCapacity: z.string().nullish(),
-  actualCapacity: z.string().nullish(),
+  designCapacityUnit: z.string().nullish(),
   productionCharacteristics: z.string().nullish(),
   monitoringScope: z.string().nullish(),
   permitIds: z.array(z.number().int().positive()).optional(),
@@ -73,6 +74,10 @@ export const pekProgramFormSchema = z.object({
     }
   });
   value.controlItems.forEach((item, index) => {
+    if (item.controlType && laboratoryControlTypes.has(item.controlType)) {
+      if (!item.laboratoryId) context.addIssue({ code: 'custom', path: ['controlItems', index, 'laboratoryId'], message: 'Выберите лабораторию для лабораторного контроля' });
+      if (!item.measurementMethod?.trim() && !item.samplingMethod?.trim()) context.addIssue({ code: 'custom', path: ['controlItems', index, 'measurementMethod'], message: 'Укажите метод измерения или отбора проб' });
+    }
     if (item.frequencyType === 'PER_EVENT' && !item.plannedCount) {
       context.addIssue({ code: 'custom', path: ['controlItems', index, 'plannedCount'], message: 'Для контроля по событию укажите плановое количество' });
     }

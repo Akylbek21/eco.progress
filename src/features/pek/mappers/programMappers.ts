@@ -44,8 +44,8 @@ const facilitySnapshot = (form: PekProgramForm) => ({
   oked: form.oked?.trim() || null,
   environmentalCategory: form.environmentalCategory?.trim() || null,
   designCapacity: form.designCapacity?.trim() || null,
+  designCapacityUnit: form.designCapacityUnit?.trim() || null,
   productionCharacteristics: form.productionCharacteristics?.trim() || null,
-  actualCapacity: form.actualCapacity?.trim() || null,
   monitoringScope: form.monitoringScope?.trim() || null,
   readinessNotes: form.readinessNotes?.trim() || null,
 });
@@ -115,7 +115,7 @@ export const mapProgramToForm = (program: PekProgram): PekProgramForm => {
     oked: program.oked || '',
     environmentalCategory: program.environmentalCategory || '',
     designCapacity: program.designCapacity || '',
-    actualCapacity: program.actualCapacity || '',
+    designCapacityUnit: program.designCapacityUnit || '',
     productionCharacteristics: program.productionCharacteristics || '',
     monitoringScope: program.monitoringScope || '',
     permitIds: program.permitIds || [],

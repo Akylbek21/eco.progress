@@ -5,6 +5,8 @@ import type {
   PekLookupOption,
   PekProgram,
   PekReport,
+  PekReportType,
+  PekSubmissionMethod,
   PekStaffAssignment,
 } from '../api/pekContracts';
 import { pekProgramContractSchema, pekReportContractSchema, validatePekContract } from '../api/pekContractSchemas';
@@ -76,6 +78,7 @@ export const mapAssigneesResponse = (value: unknown): PekLookupOption[] => {
 export const mergeAssigneesWithCompanyStaff = (
   assignees: PekLookupOption[] = [],
   staff: PekStaffAssignment[] = [],
+  currentUser?: { id: string | number; name?: string; email?: string; position?: string; role?: string } | null,
 ): PekLookupOption[] => {
   const merged = new Map(assignees.map((item) => [Number(item.id), item]));
   for (const assignment of staff) {
@@ -85,6 +88,23 @@ export const mergeAssigneesWithCompanyStaff = (
       name: assignment.userFullName || assignment.userEmail,
       description: assignment.userEmail,
       status: assignment.status,
+      role: 'PEK_RESPONSIBLE',
+    });
+  }
+  const currentUserId = Number(currentUser?.id);
+  const currentUserName = currentUser?.name?.trim() || currentUser?.email?.trim();
+  if (
+    currentUser?.role !== 'CLIENT'
+    && Number.isSafeInteger(currentUserId)
+    && currentUserId > 0
+    && currentUserName
+    && !merged.has(currentUserId)
+  ) {
+    merged.set(currentUserId, {
+      id: currentUserId,
+      name: currentUserName,
+      description: currentUser.position?.trim() || currentUser.email?.trim() || undefined,
+      status: 'ACTIVE',
       role: 'PEK_RESPONSIBLE',
     });
   }
@@ -130,6 +150,7 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
       archive: availableActionFlags(source.availableActions).archive === true,
       clone: availableActionFlags(source.availableActions).clone === true,
       uploadDocument: availableActionFlags(source.availableActions).uploadDocument === true,
+      retemplate: availableActionFlags(source.availableActions).retemplate === true,
     },
     readOnly: Boolean(source.readOnly),
     readiness: Object.keys(row(source.readiness)).length ? source.readiness as PekProgram['readiness'] : null,
@@ -158,10 +179,13 @@ export const mapProgramResponse = (value: unknown): PekProgram => {
     oked: (snapshot.oked ?? source.oked) == null ? null : String(snapshot.oked ?? source.oked),
     environmentalCategory: (snapshot.environmentalCategory ?? source.environmentalCategory) == null ? null : String(snapshot.environmentalCategory ?? source.environmentalCategory),
     designCapacity: (snapshot.designCapacity ?? source.designCapacity) == null ? null : String(snapshot.designCapacity ?? source.designCapacity),
-    actualCapacity: (snapshot.actualCapacity ?? source.actualCapacity) == null ? null : String(snapshot.actualCapacity ?? source.actualCapacity),
+    designCapacityUnit: (snapshot.designCapacityUnit ?? source.designCapacityUnit) == null ? null : String(snapshot.designCapacityUnit ?? source.designCapacityUnit),
     productionCharacteristics: (snapshot.productionCharacteristics ?? source.productionCharacteristics) == null ? null : String(snapshot.productionCharacteristics ?? source.productionCharacteristics),
     monitoringScope: (snapshot.monitoringScope ?? source.monitoringScope) == null ? null : String(snapshot.monitoringScope ?? source.monitoringScope),
     readinessNotes: (snapshot.readinessNotes ?? source.readinessNotes) == null ? null : String(snapshot.readinessNotes ?? source.readinessNotes),
+    ready: typeof source.ready === 'boolean' ? source.ready : undefined,
+    blockingReasons: Array.isArray(source.blockingReasons) ? source.blockingReasons.map(String) : [],
+    warnings: Array.isArray(source.warnings) ? source.warnings.map(String) : [],
     permitIds: Array.isArray(source.permitIds)
       ? source.permitIds.map((id) => numberValue(id)).filter(Boolean)
       : permits.map((permit) => numberValue(permit.id)).filter(Boolean),
@@ -174,15 +198,25 @@ export const mapReportResponse = (
 ): PekReport => {
   const source = row(validatePekContract(pekReportContractSchema, value, 'отчёта ПЭК'));
   const responsibleUser = named(source.responsibleUser);
+  const submission = row(source.submission);
+  const hasSubmission = Object.keys(submission).length > 0;
   return {
     ...source,
     id: numberValue(source.id),
     version: numberValue(source.version),
     contentRevision: numberValue(source.contentRevision),
     regulationVersion: source.regulationVersion == null ? null : String(source.regulationVersion),
+    regulationCode: source.regulationCode == null ? null : String(source.regulationCode),
     templateVersion: source.templateVersion == null ? null : String(source.templateVersion),
     status: String(source.status || ''),
     periodType: String(source.periodType || 'QUARTER') as PekReport['periodType'],
+    reportType: source.reportType == null ? null : String(source.reportType) as PekReportType,
+    actualCapacity: source.actualCapacity == null ? null : String(source.actualCapacity),
+    actualCapacityUnit: source.actualCapacityUnit == null ? null : String(source.actualCapacityUnit),
+    laboratorySnapshot: Object.keys(row(source.laboratorySnapshot)).length ? source.laboratorySnapshot as PekReport['laboratorySnapshot'] : null,
+    officialDataStatus: source.officialDataStatus == null ? null : String(source.officialDataStatus),
+    warnings: Array.isArray(source.warnings) ? source.warnings.map(String) : [],
+    blockingReasons: Array.isArray(source.blockingReasons) ? source.blockingReasons.map(String) : [],
     year: numberValue(source.reportYear ?? source.year),
     quarter: source.reportQuarter == null && source.quarter == null
       ? null
@@ -191,6 +225,16 @@ export const mapReportResponse = (
     periodEnd: String(source.periodEnd || ''),
     submissionDueDate: source.submissionDueDate == null ? null : String(source.submissionDueDate),
     submittedAt: source.submittedAt == null ? null : String(source.submittedAt),
+    submission: hasSubmission ? {
+      submissionMethod: submission.submissionMethod == null ? null : String(submission.submissionMethod) as PekSubmissionMethod,
+      registrationNumber: submission.registrationNumber == null ? null : String(submission.registrationNumber),
+      submissionComment: submission.submissionComment == null ? null : String(submission.submissionComment),
+      confirmationFileId: submission.confirmationFileId == null ? null : String(submission.confirmationFileId),
+      submittedAt: submission.submittedAt == null ? null : String(submission.submittedAt),
+      submittedBy: named(submission.submittedBy),
+      createdAt: submission.createdAt == null ? null : String(submission.createdAt),
+      updatedAt: submission.updatedAt == null ? null : String(submission.updatedAt),
+    } : null,
     acceptedAt: source.acceptedAt == null ? null : String(source.acceptedAt),
     rejectedAt: source.rejectedAt == null ? null : String(source.rejectedAt),
     rejectionReason: source.rejectionReason == null ? null : String(source.rejectionReason),

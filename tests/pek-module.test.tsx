@@ -169,7 +169,9 @@ const form: PekProgramForm = {
     code: 'AIR-1',
     name: 'Air',
     controlType: 'EMISSION',
+    laboratoryId: 5,
     frequencyType: 'QUARTERLY',
+    measurementMethod: 'СТ РК 1',
     mandatory: true,
     active: true,
     sortOrder: 0,
@@ -228,7 +230,7 @@ describe('PEK backend contract', () => {
     const extended = {
       ...form,
       facilityInformation: 'Facility', kato: '711', bin: '123456789012', oked: '23.51',
-      environmentalCategory: 'II', designCapacity: '1200', actualCapacity: '870',
+      environmentalCategory: 'II', designCapacity: '1200', designCapacityUnit: 'т/год',
       productionCharacteristics: 'Dry process', monitoringScope: 'Air and water',
       readinessNotes: 'Ready', permitIds: [41, 42],
       regulationVersion: 'not accepted by program mutation DTO',
@@ -237,8 +239,8 @@ describe('PEK backend contract', () => {
     const request = mapProgramCreateFormToRequest(extended);
     expect(request.facilitySnapshot).toEqual({
       facilityInformation: 'Facility', kato: '711', binSnapshot: '123456789012', oked: '23.51',
-      environmentalCategory: 'II', designCapacity: '1200', productionCharacteristics: 'Dry process',
-      actualCapacity: '870', monitoringScope: 'Air and water', readinessNotes: 'Ready',
+      environmentalCategory: 'II', designCapacity: '1200', designCapacityUnit: 'т/год', productionCharacteristics: 'Dry process',
+      monitoringScope: 'Air and water', readinessNotes: 'Ready',
     });
     expect(request.permitIds).toEqual([41, 42]);
     expect(request).not.toHaveProperty('actualCapacity');
@@ -251,7 +253,7 @@ describe('PEK backend contract', () => {
       permits: [{ id: 41 }, { id: 42 }],
     });
     expect(reopened).toMatchObject({
-      facilityInformation: 'Facility', bin: '123456789012', actualCapacity: '870',
+      facilityInformation: 'Facility', bin: '123456789012', designCapacity: '1200', designCapacityUnit: 'т/год',
       monitoringScope: 'Air and water', readinessNotes: 'Ready', permitIds: [41, 42],
     });
   });
@@ -294,6 +296,82 @@ describe('PEK backend contract', () => {
     await pekApi.returnProgram(1, 12, 'Исправить период');
     expect(body).toEqual({ reason: 'Исправить период' });
     expect(ifMatch).toBe('12');
+  });
+
+  it('uploads and records official submission details through the backend contract', async () => {
+    let uploadedFileName = '';
+    let submissionBody: Record<string, unknown> = {};
+    let submissionIfMatch: string | null = null;
+    server.use(
+      http.post('*/api/pek/reports/:id/submission/file', async ({ request }) => {
+        const data = await request.formData();
+        uploadedFileName = (data.get('file') as File).name;
+        return HttpResponse.json({ data: { fileId: 'submission-file-1', fileName: uploadedFileName, contentType: 'application/pdf', size: 3 } });
+      }),
+      http.post('*/api/pek/reports/:id/submission', async ({ request }) => {
+        submissionBody = await request.json() as Record<string, unknown>;
+        submissionIfMatch = request.headers.get('If-Match');
+        return HttpResponse.json({ data: {
+          ...report,
+          status: 'SUBMITTED',
+          version: 14,
+          submittedAt: submissionBody.submittedAt,
+          submission: { ...submissionBody, submittedBy: { id: 7, name: 'Эколог' }, createdAt: '2026-09-14T10:31:00', updatedAt: null },
+        } });
+      }),
+    );
+
+    const uploaded = await pekApi.uploadReportSubmissionConfirmation(9, new File(['pdf'], 'receipt.pdf', { type: 'application/pdf' }));
+    const saved = await pekApi.recordReportSubmission(9, 13, {
+      submissionMethod: 'EGOV_PORTAL',
+      registrationNumber: 'REG-42',
+      submittedAt: '2026-09-14T10:30',
+      submissionComment: 'Принято порталом',
+      confirmationFileId: uploaded.fileId,
+    });
+
+    expect(uploadedFileName).toBeTruthy();
+    expect(submissionIfMatch).toBe('13');
+    expect(submissionBody).toMatchObject({ submissionMethod: 'EGOV_PORTAL', registrationNumber: 'REG-42', confirmationFileId: 'submission-file-1' });
+    expect(saved.submission).toMatchObject({ submissionMethod: 'EGOV_PORTAL', registrationNumber: 'REG-42', submittedBy: { name: 'Эколог' } });
+  });
+
+  it('submits a signed report with official filing details in the submit request body', async () => {
+    let submitBody: Record<string, unknown> = {};
+    let submitIfMatch: string | null = null;
+    server.use(http.post('*/api/pek/reports/:id/submit', async ({ request }) => {
+      submitBody = await request.json() as Record<string, unknown>;
+      submitIfMatch = request.headers.get('If-Match');
+      return HttpResponse.json({ data: { ...report, status: 'SUBMITTED', version: 14, submission: null } });
+    }));
+
+    await pekApi.submitReport(9, 13, {
+      submittedAt: '2026-09-14T10:30',
+      submissionMethod: 'ECO_PORTAL',
+      registrationNumber: 'REG-43',
+      confirmationFileId: 'submission-file-1',
+      comment: 'Принято порталом',
+    });
+
+    expect(submitIfMatch).toBe('13');
+    expect(submitBody).toEqual({
+      submittedAt: '2026-09-14T10:30',
+      submissionMethod: 'ECO_PORTAL',
+      registrationNumber: 'REG-43',
+      confirmationFileId: 'submission-file-1',
+      comment: 'Принято порталом',
+    });
+  });
+
+  it('replaces the disabled submission placeholder with connected fields', () => {
+    const workspace = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
+    const dialog = readFileSync(resolve(process.cwd(), 'src/features/pek/components/submission/PekReportSubmissionDialog.tsx'), 'utf8');
+    expect(workspace).toContain('pekApi.recordReportSubmission');
+    expect(workspace).toContain('pekApi.uploadReportSubmissionConfirmation');
+    expect(workspace).not.toContain('пока недоступно');
+    for (const label of ['Способ сдачи', 'Регистрационный номер', 'Дата сдачи', 'Комментарий', 'Файл подтверждения']) {
+      expect(dialog).toContain(label);
+    }
   });
 
   it('uses report availableActions without status or role fallbacks', () => {

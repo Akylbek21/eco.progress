@@ -17,7 +17,7 @@ export const pekProgramDefaults: PekProgramForm = {
   oked: '',
   environmentalCategory: '',
   designCapacity: '',
-  actualCapacity: '',
+  designCapacityUnit: '',
   productionCharacteristics: '',
   monitoringScope: '',
   permitIds: [],

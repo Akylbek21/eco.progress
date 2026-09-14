@@ -11,6 +11,7 @@ type Props = {
   showObject?: boolean;
   companyDisabled?: boolean;
   objectDisabled?: boolean;
+  filterLayout?: boolean;
 };
 
 const noop = () => undefined;
@@ -24,6 +25,7 @@ const PekCompanyObjectFilters = ({
   showObject = true,
   companyDisabled,
   objectDisabled,
+  filterLayout = false,
 }: Props) => {
   const scope = usePekScope(companyId);
   const objects = scope.objects;
@@ -73,8 +75,11 @@ const PekCompanyObjectFilters = ({
         ? 'У выбранной компании нет активных объектов'
         : undefined;
 
+  const filterFieldClass = 'grid min-w-0 grid-rows-[1rem_2.5rem_minmax(1rem,auto)] gap-y-1';
+
   return <>
-    <div className="min-w-0">
+    <div className={filterLayout ? filterFieldClass : 'min-w-0'}>
+      {filterLayout && <span className="text-xs font-bold text-slate-600">Компания{required ? ' *' : ''}</span>}
       <Autocomplete
         options={scope.companies}
         value={selectedCompany}
@@ -89,9 +94,10 @@ const PekCompanyObjectFilters = ({
         }}
         renderInput={(params) => <TextField
           {...params}
-          label={`Компания${required ? ' *' : ''}`}
+          label={filterLayout ? undefined : `Компания${required ? ' *' : ''}`}
+          size={filterLayout ? 'small' : undefined}
           error={scope.availableCompanies.isError}
-          helperText={companyHelper}
+          helperText={filterLayout ? undefined : companyHelper}
           placeholder={scope.availableCompanies.isLoading ? 'Загрузка компаний…' : 'Выберите компанию'}
           InputProps={{
             ...params.InputProps,
@@ -99,10 +105,16 @@ const PekCompanyObjectFilters = ({
           }}
         />}
       />
-      {scope.availableCompanies.isError && <button type="button" onClick={() => void scope.availableCompanies.refetch()} className="mt-1 text-xs font-bold text-rose-700 underline">Повторить</button>}
+      {filterLayout
+        ? <span className={`text-xs font-medium ${scope.availableCompanies.isError ? 'text-rose-700' : 'text-slate-500'}`}>
+            {companyHelper}
+            {scope.availableCompanies.isError && <button type="button" onClick={() => void scope.availableCompanies.refetch()} className="ml-1 font-bold underline">Повторить</button>}
+          </span>
+        : scope.availableCompanies.isError && <button type="button" onClick={() => void scope.availableCompanies.refetch()} className="mt-1 text-xs font-bold text-rose-700 underline">Повторить</button>}
     </div>
 
-    {showObject && <div className="min-w-0">
+    {showObject && <div className={filterLayout ? filterFieldClass : 'min-w-0'}>
+      {filterLayout && <span className="text-xs font-bold text-slate-600">Объект{required ? ' *' : ''}</span>}
       <Autocomplete
         key={`pek-object-company-${companyId || 'none'}`}
         options={activeObjects}
@@ -116,9 +128,10 @@ const PekCompanyObjectFilters = ({
         onChange={(_, object) => onObjectChange(object ? String(object.id) : '')}
         renderInput={(params) => <TextField
           {...params}
-          label={`Объект${required ? ' *' : ''}`}
+          label={filterLayout ? undefined : `Объект${required ? ' *' : ''}`}
+          size={filterLayout ? 'small' : undefined}
           error={objects.isError}
-          helperText={objectHelper}
+          helperText={filterLayout ? undefined : objectHelper}
           placeholder={!companyId ? 'Сначала выберите компанию' : objects.isLoading ? 'Загрузка объектов…' : 'Выберите объект'}
           InputProps={{
             ...params.InputProps,
@@ -126,7 +139,12 @@ const PekCompanyObjectFilters = ({
           }}
         />}
       />
-      {objects.isError && <button type="button" onClick={() => void objects.refetch()} className="mt-1 text-xs font-bold text-rose-700 underline">Повторить</button>}
+      {filterLayout
+        ? <span className={`text-xs font-medium ${objects.isError ? 'text-rose-700' : 'text-slate-500'}`}>
+            {objectHelper}
+            {objects.isError && <button type="button" onClick={() => void objects.refetch()} className="ml-1 font-bold underline">Повторить</button>}
+          </span>
+        : objects.isError && <button type="button" onClick={() => void objects.refetch()} className="mt-1 text-xs font-bold text-rose-700 underline">Повторить</button>}
     </div>}
   </>;
 };

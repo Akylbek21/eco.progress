@@ -1,5 +1,0 @@
-original_file,new_file,source_document_code,template_id,environment_type,table_no,parser_type,title,status,comment
-Без названия (60).xls,dsm_32_table_01_soil_chemical_substances_pdk.xls,DSM_32,soil,SOIL,1,DSM32_SOIL_PDK_TABLE,Предельно-допустимые концентрации химических веществ в почве,READY_FOR_IMPORT,
-Без названия (61).xls,dsm_32_table_02_soil_sanitary_chemical_radiological_assessment.xls,DSM_32,soil,SOIL,2,DSM32_SOIL_SANITARY_CHEMICAL_RADIOLOGICAL_ASSESSMENT,Оценка почвы по санитарно-химическим и радиологическим показателям,READY_FOR_IMPORT,
-Без названия (62).xls,dsm_32_table_03_soil_microbiological_parasitological_assessment.xls,DSM_32,soil,SOIL,3,DSM32_SOIL_MICROBIOLOGICAL_PARASITOLOGICAL_ASSESSMENT,Оценка почвы по микробиологическим и паразитологическим показателям,READY_FOR_IMPORT,
-Без названия (63).xls,dsm_32_table_04_soil_degradation_chemical_biological_pollution_criteria.xls,DSM_32,soil,SOIL,4,DSM32_SOIL_DEGRADATION_POLLUTION_CRITERIA,Критерии физической деградации и показатели химического и биологического загрязнений почвы,READY_FOR_IMPORT,

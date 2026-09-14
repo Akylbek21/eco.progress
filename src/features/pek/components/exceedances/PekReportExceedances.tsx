@@ -13,7 +13,7 @@ import { uploadAndAttachExceedanceEvidence } from './evidenceFlow';
 
 const statusLabels: Record<string, string> = {
   OPEN: 'Открыто', UNDER_REVIEW: 'На рассмотрении', CONFIRMED: 'Подтверждено', FALSE_POSITIVE: 'Ложное срабатывание',
-  IN_PROGRESS: 'В работе', RESOLVED: 'Устранено', VERIFIED: 'Проверено', CLOSED: 'Закрыто', CANCELLED: 'Отменено',
+  IN_PROGRESS: 'В работе', DONE: 'Выполнено', RESOLVED: 'Устранено', VERIFIED: 'Проверено', CLOSED: 'Закрыто', CANCELLED: 'Отменено',
 };
 
 const transitionStatus = (key: string) => key.slice('transitionTo'.length)
@@ -34,6 +34,12 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
     enabled: selectedId !== null,
   });
   const selected = detail.data;
+  const correctiveActionsKey = ['pek', 'exceedances', selectedId || 'none', 'corrective-actions', user?.id] as const;
+  const correctiveActions = useQuery({
+    queryKey: correctiveActionsKey,
+    queryFn: ({ signal }) => pekApi.getCorrectiveActions(selectedId!, signal),
+    enabled: selectedId !== null,
+  });
   const assignees = useQuery({
     queryKey: pekKeys.assignees(report.companyId, ['PEK_RESPONSIBLE'], user?.id),
     queryFn: ({ signal }) => pekApi.getAssignees(report.companyId, ['PEK_RESPONSIBLE'], signal),
@@ -48,6 +54,9 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
   const [transition, setTransition] = useState('');
   const [comment, setComment] = useState('');
   const [resolutionComment, setResolutionComment] = useState('');
+  const [actionDescription, setActionDescription] = useState('');
+  const [actionResponsibleId, setActionResponsibleId] = useState('');
+  const [actionDueDate, setActionDueDate] = useState('');
 
   useEffect(() => {
     if (!selected) return;
@@ -59,6 +68,8 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
     setTransition('');
     setComment('');
     setResolutionComment(selected.resolutionComment || '');
+    setActionResponsibleId(selected.responsibleUserId ? String(selected.responsibleUserId) : '');
+    setActionDueDate(selected.dueDate || '');
   }, [selected]);
 
   const refreshAfterMutation = async (id: number): Promise<PekExceedance> => {
@@ -130,6 +141,29 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
       void handlePekMutationError(error, () => refreshAfterMutation(selected!.id));
     },
   });
+  const refreshCorrectiveActions = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: correctiveActionsKey }),
+      refreshAfterMutation(selected!.id),
+    ]);
+  };
+  const createAction = useMutation({
+    mutationFn: () => pekApi.createCorrectiveAction(selected!.id, selected!.version, {
+      description: actionDescription.trim(),
+      responsibleUserId: actionResponsibleId ? Number(actionResponsibleId) : null,
+      dueDate: actionDueDate || null,
+    }),
+    onSuccess: async () => {
+      setActionDescription('');
+      await refreshCorrectiveActions();
+    },
+    retry: false,
+  });
+  const transitionAction = useMutation({
+    mutationFn: ({ actionId, status }: { actionId: number; status: string }) => pekApi.transitionCorrectiveAction(selected!.id, actionId, { version: selected!.version, status }),
+    onSuccess: refreshCorrectiveActions,
+    retry: false,
+  });
 
   if (list.isLoading) return <PekLoading />;
   if (list.isError) return <PekQueryError error={list.error} resource="превышения отчёта" retry={() => void list.refetch()} />;
@@ -144,8 +178,8 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
   const canEdit = selectedActions.edit === true;
   const canAddEvidence = selectedActions.addEvidence === true;
   const canChangeStatus = allowedTransitions.length > 0 && (selectedActions.transition === true || selectedActions.changeStatus === true || actionTransitions.length > 0);
-  const pending = assign.isPending || evidence.isPending || transitionMutation.isPending;
-  const mutationError = assign.error || evidence.error || transitionMutation.error;
+  const pending = assign.isPending || evidence.isPending || transitionMutation.isPending || createAction.isPending || transitionAction.isPending;
+  const mutationError = assign.error || evidence.error || transitionMutation.error || createAction.error || transitionAction.error;
   const mutationFailure = mutationError ? mapPekError(mutationError) : null;
 
   return <section className="space-y-4 rounded-2xl border bg-white p-5">
@@ -157,6 +191,7 @@ const PekReportExceedances = ({ report }: { report: PekReport }) => {
       {selected.resolutionComment && <div><strong>Комментарий об устранении:</strong> {selected.resolutionComment}</div>}
       {mutationFailure && <Alert severity={mutationFailure.status === 403 ? 'warning' : 'error'}>{mutationFailure.code && <strong>{mutationFailure.code}: </strong>}{mutationFailure.message}{Object.entries(mutationFailure.fieldErrors).map(([field, message]) => <div key={field}>{field}: {message}</div>)}</Alert>}
       {(canAssign || canEdit) && <section className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2"><TextField select label="Ответственный" value={responsibleUserId} onChange={(event) => setResponsibleUserId(event.target.value)}><MenuItem value="">Не выбран</MenuItem>{assignees.data?.map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}</TextField><TextField type="date" label="Срок устранения" InputLabelProps={{ shrink: true }} value={dueDate} onChange={(event) => setDueDate(event.target.value)} /><TextField className="sm:col-span-2" multiline minRows={3} label="Корректирующее мероприятие" value={correctiveAction} onChange={(event) => setCorrectiveAction(event.target.value)} /><div className="sm:col-span-2"><Button variant="contained" disabled={pending || !responsibleUserId || !dueDate || !correctiveAction.trim()} onClick={() => assign.mutate()}>{canEdit ? 'Изменить' : 'Назначить ответственного'}</Button></div></section>}
+      <section className="space-y-3 rounded-xl border p-4"><div><h3 className="font-black">План корректирующих действий</h3><p className="text-sm text-slate-500">Отдельные мероприятия, которые backend учитывает при проверке готовности.</p></div>{correctiveActions.isLoading ? <PekLoading /> : correctiveActions.isError ? <PekQueryError error={correctiveActions.error} resource="корректирующие действия" retry={() => void correctiveActions.refetch()} /> : !correctiveActions.data?.length ? <PekState title="Действия не добавлены" /> : <div className="space-y-2">{correctiveActions.data.map((action) => <article key={action.id} className="rounded-lg bg-slate-50 p-3 text-sm"><div className="flex flex-wrap justify-between gap-2"><strong>{action.description}</strong><span>{statusLabels[action.status] || action.status}</span></div><p className="mt-1 text-slate-600">{action.responsible?.name || 'Ответственный не назначен'} · срок: {action.dueDate || '—'}</p>{action.comment && <p className="mt-1">{action.comment}</p>}{action.availableActions.transition && <div className="mt-2 flex gap-2">{(action.status === 'PLANNED' ? ['IN_PROGRESS', 'CANCELLED'] : action.status === 'IN_PROGRESS' ? ['DONE', 'CANCELLED'] : []).map((status) => <Button key={status} size="small" disabled={pending} onClick={() => transitionAction.mutate({ actionId: action.id, status })}>{statusLabels[status] || status}</Button>)}</div>}</article>)}</div>}{canEdit && <div className="grid gap-3 border-t pt-3 sm:grid-cols-2"><TextField className="sm:col-span-2" multiline minRows={2} label="Новое корректирующее действие *" value={actionDescription} onChange={(event) => setActionDescription(event.target.value)} /><TextField select label="Ответственный" value={actionResponsibleId} onChange={(event) => setActionResponsibleId(event.target.value)}><MenuItem value="">Не выбран</MenuItem>{assignees.data?.map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}</TextField><TextField type="date" label="Срок" InputLabelProps={{ shrink: true }} value={actionDueDate} onChange={(event) => setActionDueDate(event.target.value)} /><div className="sm:col-span-2"><Button variant="contained" disabled={pending || !actionDescription.trim()} onClick={() => createAction.mutate()}>Добавить действие</Button></div></div>}</section>
       {canAddEvidence && <section className="rounded-xl border p-4">{!evidenceOpen ? <Button variant="outlined" onClick={() => setEvidenceOpen(true)}>Добавить доказательство</Button> : <><label className="block text-sm font-semibold">Файл подтверждения</label><input className="mt-2 block w-full rounded-lg border p-2 text-sm" type="file" onChange={(event) => setEvidenceFile(event.target.files?.[0] || null)} /><p className="mt-2 text-xs text-slate-500">{evidenceFile ? evidenceFile.name : 'Файл не выбран'}</p><div className="mt-3 flex gap-2"><Button variant="contained" disabled={pending || !evidenceFile} onClick={() => evidence.mutate()}>Загрузить и прикрепить</Button><Button variant="outlined" disabled={pending} onClick={() => { setEvidenceFile(null); setEvidenceOpen(false); }}>Отмена</Button></div></>}</section>}
       <div><strong>Прикреплённые файлы:</strong>{!selected.evidenceFileIds?.length ? <span className="ml-2 text-slate-500">нет</span> : <ul className="mt-2 space-y-2">{selected.evidenceFileIds.map((fileId, index) => <li key={fileId} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">{evidenceNames[fileId] || `Подтверждение ${index + 1}`}</li>)}</ul>}</div>
       {canChangeStatus && <section className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2">

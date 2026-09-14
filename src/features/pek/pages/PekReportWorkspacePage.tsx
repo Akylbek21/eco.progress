@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button as MuiButton, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from '@mui/material';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import ActionMenu from '../../../components/ui/ActionMenu';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -8,22 +8,24 @@ import type { PekReport, PekReportSource } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
 import PekQueryError from '../components/common/PekQueryError';
-import { PekLoading, PekPageHeader, PekState, PekStatusBadge } from '../components/common/PekUi';
+import { PekLoading, PekPageHeader, PekReadiness, PekState, PekStatusBadge } from '../components/common/PekUi';
 import PekReportActions from '../components/workflow/PekReportActions';
 import { isPekVersionConflict, mapPekError } from '../utils/pekErrorMapper';
 import { handlePekMutationError as handleVersionedPekError } from '../utils/pekMutationError';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
+import { labelPekReportType } from '../utils/pekLabels';
 import PekReportDocuments from '../components/documents/PekReportDocuments';
 import PekReportPackageCard from '../components/documents/PekReportPackageCard';
 import PekReportExceedances from '../components/exceedances/PekReportExceedances';
 import PekInventoryEditor from '../components/inventory/PekInventoryEditor';
+import PekReportSubmissionDialog, { pekSubmissionMethodLabels, type PekSubmissionDraft } from '../components/submission/PekReportSubmissionDialog';
 
 const tabs = [
-  { key: 'overview', label: 'Обзор' },
-  { key: 'sources', label: 'Источники данных' },
-  { key: 'plan-fact', label: 'План / факт' },
+  { key: 'overview', label: 'Общие сведения' },
+  { key: 'sources', label: 'Производственный мониторинг' },
+  { key: 'plan-fact', label: 'PLAN / FACT' },
   { key: 'exceedances', label: 'Превышения' },
-  { key: 'waste-movements', label: 'Движение отходов' },
+  { key: 'waste-movements', label: 'Отходы' },
   { key: 'documents', label: 'Документы' },
   { key: 'history', label: 'История' },
 ] as const;
@@ -37,6 +39,10 @@ const planLabels: Record<string, string> = {
   NOT_STARTED: 'Не выполнено', PARTIALLY_COMPLETED: 'Выполнено частично', COMPLETED: 'Выполнено',
   OVERDUE: 'Просрочено', EXCEEDED: 'Есть превышение', NOT_APPLICABLE: 'Не применяется',
 };
+const reportSectionLabels: Record<string, string> = {
+  SOURCES: 'Производственный мониторинг', EXCEEDANCES: 'Превышения', PLAN_FACT: 'PLAN / FACT',
+  DOCUMENTS: 'Документы', SUBMISSION: 'Сдача', GENERAL: 'Общие сведения',
+};
 const deadlineRemaining = (submissionDueDate: string | null) => {
   if (!submissionDueDate) return 'Backend не установил срок';
   const due = new Date(`${submissionDueDate}T00:00:00`);
@@ -46,6 +52,15 @@ const deadlineRemaining = (submissionDueDate: string | null) => {
   if (days < 0) return `Просрочено на ${Math.abs(days)} дн.`;
   if (days === 0) return 'Срок сегодня';
   return `Осталось: ${days} дн.`;
+};
+
+const saveBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 };
 
 const PekReportWorkspacePage = () => {
@@ -73,6 +88,8 @@ const PekReportWorkspacePage = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [conflictOpen, setConflictOpen] = useState(false);
   const [collectConfirmOpen, setCollectConfirmOpen] = useState(false);
+  const [actualCapacity, setActualCapacity] = useState('');
+  const [actualCapacityUnit, setActualCapacityUnit] = useState('');
 
   const report = useQuery({
     queryKey: pekKeys.report(id, undefined, user?.id), queryFn: ({ signal }) => pekApi.getReport(id, signal),
@@ -100,12 +117,23 @@ const PekReportWorkspacePage = () => {
     queryKey: pekKeys.readiness(id, report.data?.companyId, user?.id), queryFn: ({ signal }) => pekApi.getReportReadiness(id, signal),
     enabled: Boolean(report.data) && tab === 'overview', retry: retryPekQuery,
   });
+  const officialData = useQuery({
+    queryKey: ['pek', 'reports', id, 'official-data', user?.id],
+    queryFn: ({ signal }) => pekApi.getOfficialReportData(id, signal),
+    enabled: Boolean(report.data) && tab === 'overview',
+    retry: retryPekQuery,
+  });
   const history = useQuery({
     queryKey: pekKeys.reportHistory(id, report.data?.companyId, user?.id),
     queryFn: ({ signal }) => pekApi.getReportHistory(id, signal),
     enabled: Boolean(report.data) && tab === 'history',
     retry: retryPekQuery,
   });
+
+  useEffect(() => {
+    setActualCapacity(report.data?.actualCapacity || '');
+    setActualCapacityUnit(report.data?.actualCapacityUnit || '');
+  }, [report.data?.actualCapacity, report.data?.actualCapacityUnit]);
 
   const invalidateReportData = async () => {
     await Promise.all([
@@ -120,6 +148,7 @@ const PekReportWorkspacePage = () => {
       queryClient.invalidateQueries({ queryKey: pekKeys.reportDocuments(id, undefined, report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportPackage(id, report.data?.companyId, user?.id) }),
       queryClient.invalidateQueries({ queryKey: pekKeys.reportSignatures(id, report.data?.companyId, user?.id) }),
+      queryClient.invalidateQueries({ queryKey: ['pek', 'reports', id, 'official-data', user?.id] }),
     ]);
   };
   const invalidateWorkflowData = async () => {
@@ -158,6 +187,20 @@ const PekReportWorkspacePage = () => {
     await invalidateWorkflowData();
     return actual;
   };
+
+  const updateGeneral = useMutation({
+    mutationFn: () => pekApi.updateReportGeneral(id, report.data!.version, {
+      actualCapacity: actualCapacity.trim() || null,
+      actualCapacityUnit: actualCapacityUnit.trim() || null,
+    }),
+    onSuccess: async (actual) => {
+      queryClient.setQueryData(pekKeys.report(id, undefined, user?.id), actual);
+      setActionError(null);
+      await invalidateReportData();
+    },
+    onError: (error) => void handleMutationError(error, 'Не удалось сохранить фактическую мощность.'),
+    retry: false,
+  });
 
   const collect = useMutation({
     mutationFn: async () => {
@@ -199,9 +242,39 @@ const PekReportWorkspacePage = () => {
     retry: false,
   });
   const submitAuthority = useMutation({
-    mutationFn: async (item: PekReport) => { await pekApi.submitReport(id, item.version); return refreshAfterWorkflow(['SUBMITTED']); },
-    onSuccess: () => { setSubmitConfirmOpen(false); setActionError(null); },
-    onError: (error) => void handleMutationError(error, 'Не удалось сдать официальный отчёт.'),
+    mutationFn: async (draft: PekSubmissionDraft) => {
+      const uploaded = draft.confirmationFile
+        ? await pekApi.uploadReportSubmissionConfirmation(id, draft.confirmationFile)
+        : null;
+      const current = report.data!;
+      const confirmationFileId = uploaded?.fileId || current.submission?.confirmationFileId || null;
+      if (current.status === 'SIGNED' && current.availableActions.submit === true) {
+        return pekApi.submitReport(id, current.version, {
+          submissionMethod: draft.submissionMethod,
+          registrationNumber: draft.registrationNumber.trim() || null,
+          submittedAt: draft.submittedAt,
+          comment: draft.submissionComment.trim() || null,
+          confirmationFileId,
+        });
+      }
+      return pekApi.recordReportSubmission(id, current.version, {
+        submissionMethod: draft.submissionMethod,
+        registrationNumber: draft.registrationNumber.trim() || null,
+        submittedAt: draft.submittedAt,
+        submissionComment: draft.submissionComment.trim() || null,
+        confirmationFileId,
+      });
+    },
+    onSuccess: async (actual) => {
+      queryClient.setQueryData(pekKeys.report(id, undefined, user?.id), actual);
+      setSubmitConfirmOpen(false);
+      setActionError(null);
+      await invalidateWorkflowData();
+    },
+    onError: async (error) => {
+      await invalidateWorkflowData();
+      await handleMutationError(error, 'Не удалось сохранить сведения о сдаче официального отчёта.');
+    },
     retry: false,
   });
   const accept = useMutation({
@@ -258,6 +331,11 @@ const PekReportWorkspacePage = () => {
     onError: (error) => void handleMutationError(error, 'Не удалось восстановить источник.'),
     retry: false,
   });
+  const downloadSubmissionConfirmation = useMutation({
+    mutationFn: () => pekApi.downloadReportSubmissionConfirmation(id),
+    onSuccess: ({ blob, filename }) => saveBlob(blob, filename),
+    onError: (error) => setActionError(mapPekError(error).message),
+  });
 
   const indicators = useMemo(() => program.data?.indicators || [], [program.data?.indicators]);
   const controlItems = useMemo(() => program.data?.controlItems || [], [program.data?.controlItems]);
@@ -266,13 +344,12 @@ const PekReportWorkspacePage = () => {
   if (report.isError || !report.data) return <PekQueryError error={report.error} resource="отчёт ПЭК" retry={() => void report.refetch()} />;
   const item = report.data;
   const canMutateSources = item.availableActions.matchSources === true;
-  const pending = collect.isPending || submitReview.isPending || returnReport.isPending || approve.isPending || submitAuthority.isPending || accept.isPending || reject.isPending || archive.isPending;
+  const pending = collect.isPending || updateGeneral.isPending || submitReview.isPending || returnReport.isPending || approve.isPending || submitAuthority.isPending || accept.isPending || reject.isPending || archive.isPending;
   const setTab = (nextTab: TabKey) => { const next = new URLSearchParams(params); nextTab === 'overview' ? next.delete('tab') : next.set('tab', nextTab); setParams(next, { replace: true }); };
 
-  return <div className="space-y-5">
-    <PekPageHeader title={`Отчёт ПЭК за ${item.periodStart} — ${item.periodEnd}`} description={`${item.company?.name || 'Компания не указана'} · ${item.object?.name || 'Объект не указан'} · версия ${item.version}`} actions={<PekStatusBadge status={item.status} />} />
+  return <div className="space-y-4">
+    <PekPageHeader title="ПЭК Отчёт" description={`${item.company?.name || 'Компания не указана'} · ${item.object?.name || 'Объект не указан'} · ${item.periodStart} — ${item.periodEnd}`} actions={<><PekReadiness value={readiness.data?.progressPercent} /><PekStatusBadge status={item.status} /><PekReportActions report={item} isPending={pending} onCollect={() => setCollectConfirmOpen(true)} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => setApproveConfirmOpen(true)} onSubmitAuthority={() => setSubmitConfirmOpen(true)} onAccept={() => setAcceptConfirmOpen(true)} onReject={() => setRejectOpen(true)} onArchive={() => setArchiveConfirmOpen(true)} /></>} />
     {actionError && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void report.refetch()}>Обновить данные</MuiButton>}>{actionError}</Alert>}
-    <PekReportActions report={item} isPending={pending} onCollect={() => setCollectConfirmOpen(true)} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => setApproveConfirmOpen(true)} onSubmitAuthority={() => setSubmitConfirmOpen(true)} onAccept={() => setAcceptConfirmOpen(true)} onReject={() => setRejectOpen(true)} onArchive={() => setArchiveConfirmOpen(true)} />
     {['SUBMITTED', 'ACCEPTED', 'REJECTED'].includes(item.status) && <Alert severity="info">Статус сдачи, принятия или отклонения отмечен сотрудником вручную. Автоматическое подтверждение государственного органа не поступает.</Alert>}
     {item.status === 'REJECTED' && <Alert severity="error"><strong>Отмечено отклонение отчёта.</strong><div className="mt-1">Причина: {item.rejectionReason || 'не указана'} · дата: {item.rejectedAt || 'не указана'}</div></Alert>}
     {item.status === 'RETURNED' && <Alert severity="warning">
@@ -289,16 +366,40 @@ const PekReportWorkspacePage = () => {
       <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-4"><span>Найдено протоколов: {collectionSummary.linkedProtocolCount}</span><span>Добавлено: {collectionSummary.addedCount}</span><span>Обновлено: {collectionSummary.updatedCount}</span><span>Сопоставлено: {collectionSummary.matchedCount} результатов</span><span>Требуют проверки: {collectionSummary.reviewRequiredCount}</span><span>Не сопоставлено: {collectionSummary.unmatchedCount}</span><span>Превышений: {collectionSummary.exceedanceCount}</span></div>
       {collectionSummary.warnings.length > 0 && <ul className="mt-2 list-disc pl-5">{collectionSummary.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
     </Alert>}
-    <nav className="flex max-w-full gap-1 overflow-x-auto border-b" aria-label="Разделы отчёта">{tabs.map(({ key, label }) => <button key={key} type="button" onClick={() => setTab(key)} className={`shrink-0 whitespace-nowrap px-4 py-3 font-bold ${tab === key ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}</nav>
+    <nav className="pek-section-nav sticky top-0 z-20 flex max-w-full gap-0 overflow-x-auto border-y border-slate-300 bg-white" aria-label="Разделы отчёта">{tabs.map(({ key, label }) => <button key={key} type="button" onClick={() => setTab(key)} className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-bold ${tab === key ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}</nav>
 
     {tab === 'overview' && <div className="space-y-4">
-      <section className="grid gap-3 rounded-2xl border bg-white p-5 sm:grid-cols-2 lg:grid-cols-4">
-        <Info label="Период" value={`${item.periodStart} — ${item.periodEnd}`} /><Info label="Срок представления" value={item.submissionDueDate || 'Не установлен'} /><Info label="До срока" value={deadlineRemaining(item.submissionDueDate)} /><Info label="Программа" value={program.data ? `${program.data.number} · ${program.data.name}` : 'Загрузка…'} /><Info label="Форма / НПА" value={`${item.templateVersion || '—'} / ${item.regulationVersion || '—'}`} /><Info label="Связано протоколов" value={item.linkedProtocolCount} /><Info label="Последний сбор" value={item.lastCollectedAt || 'Сбор ещё не выполнялся'} /><Info label="Сдан" value={item.submittedAt || '—'} /><Info label="Принят" value={item.acceptedAt || '—'} /><Info label="Ответственный" value={item.responsibleUser?.name || 'Не назначен'} /><Info label="Результатов" value={sourceSummary.data?.linkedResultCount ?? '—'} />
+      <section className="grid gap-x-6 gap-y-2 border-b border-slate-200 bg-white px-3 py-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Info label="Вид отчётности" value={labelPekReportType(item.reportType)} /><Info label="Период" value={`${item.periodStart} — ${item.periodEnd}`} /><Info label="Срок представления" value={item.submissionDueDate || 'Не установлен'} /><Info label="До срока" value={deadlineRemaining(item.submissionDueDate)} /><Info label="Программа" value={program.data ? `${program.data.number} · ${program.data.name}` : 'Загрузка…'} /><Info label="Форма / НПА" value={`${item.templateVersion || '—'} / ${item.regulationVersion || '—'}`} /><Info label="Связано протоколов" value={item.linkedProtocolCount} /><Info label="Последний сбор" value={item.lastCollectedAt || 'Сбор ещё не выполнялся'} /><Info label="Сдан" value={item.submittedAt || '—'} /><Info label="Принят" value={item.acceptedAt || '—'} /><Info label="Ответственный" value={item.responsibleUser?.name || 'Не назначен'} /><Info label="Результатов" value={sourceSummary.data?.linkedResultCount ?? '—'} />
       </section>
-      <section className="rounded-2xl border bg-white p-5"><h2 className="font-black">Готовность отчёта</h2>
+      <section className="rounded-2xl border bg-white p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-black">Фактическая мощность за период</h2><p className="mt-1 text-sm text-slate-500">Эти данные относятся только к текущему отчёту, а не к многолетней программе.</p></div><MuiButton variant="contained" size="small" disabled={updateGeneral.isPending || item.availableActions.edit !== true} onClick={() => updateGeneral.mutate()}>{updateGeneral.isPending ? 'Сохранение…' : 'Сохранить'}</MuiButton></div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]"><TextField size="small" label="Фактическая мощность" value={actualCapacity} disabled={item.availableActions.edit !== true} onChange={(event) => setActualCapacity(event.target.value)} /><TextField size="small" label="Единица измерения" placeholder="т/год, м³/сут" value={actualCapacityUnit} disabled={item.availableActions.edit !== true} onChange={(event) => setActualCapacityUnit(event.target.value)} /></div>
+      </section>
+      <section className="rounded-2xl border bg-white p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-black">Официальные данные отчёта</h2><p className="mt-1 text-sm text-slate-500">Состав и применимость таблиц получены напрямую из backend.</p></div>{officialData.data && <PekReadiness value={officialData.data.progressPercent} />}</div>
+        {officialData.isLoading ? <div className="mt-4"><PekLoading /></div> : officialData.isError ? <div className="mt-4"><PekQueryError error={officialData.error} resource="официальные данные отчёта" retry={() => void officialData.refetch()} /></div> : officialData.data && <>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Info label="Компания / БИН" value={`${officialData.data.general.companyName || '—'} / ${officialData.data.general.companyBin || '—'}`} /><Info label="КАТО / ОКЭД" value={`${officialData.data.general.kato || '—'} / ${officialData.data.general.oked || '—'}`} /><Info label="Категория" value={officialData.data.general.environmentalCategory || '—'} /><Info label="Лаборатория" value={officialData.data.laboratory?.laboratoryName || 'Не определена'} /></div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{officialData.data.applicability.map((entry) => <div key={entry.tableType} className={`rounded-xl border p-3 text-sm ${entry.applicable ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50 text-slate-600'}`}><strong>{entry.tableType}</strong><p className="mt-1">{entry.applicable ? 'Применяется' : entry.reason || 'Не применяется'}</p></div>)}</div>
+        </>}
+      </section>
+      {item.submission && <section className="rounded-2xl border bg-white p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><h2 className="font-black">Сведения о сдаче</h2><p className="mt-1 text-sm text-slate-500">Фактическая передача отчёта в государственный орган</p></div>
+          {item.submission.confirmationFileId && <MuiButton size="small" variant="outlined" disabled={downloadSubmissionConfirmation.isPending} onClick={() => downloadSubmissionConfirmation.mutate()}>{downloadSubmissionConfirmation.isPending ? 'Скачивание…' : 'Скачать подтверждение'}</MuiButton>}
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Info label="Способ сдачи" value={item.submission.submissionMethod ? pekSubmissionMethodLabels[item.submission.submissionMethod] : '—'} />
+          <Info label="Регистрационный номер" value={item.submission.registrationNumber || '—'} />
+          <Info label="Дата сдачи" value={item.submission.submittedAt || item.submittedAt || '—'} />
+          <Info label="Кто зафиксировал" value={item.submission.submittedBy?.name || '—'} />
+        </div>
+        {item.submission.submissionComment && <div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm"><strong>Комментарий:</strong> {item.submission.submissionComment}</div>}
+      </section>}
+      <section className="border border-slate-300 bg-white"><div className="border-b border-slate-200 px-4 py-3"><h2 className="font-black">Готовность отчёта</h2></div>
         {readiness.isLoading ? <p className="mt-2">Проверяем…</p> : readiness.isError ? <PekQueryError error={readiness.error} resource="готовность отчёта" retry={() => void readiness.refetch()} /> : readiness.data && <>
-          <p className="mt-2 text-2xl font-black">{readiness.data.progressPercent}%</p>
-          {readiness.data.issues.length ? <ul className="mt-3 space-y-2">{readiness.data.issues.map((issue) => <li key={issue.code}><button className={`w-full rounded-xl border p-3 text-left ${issue.blocking ? 'border-rose-200 bg-rose-50' : 'border-amber-200 bg-amber-50'}`} onClick={() => setTab(issue.section === 'SOURCES' ? 'sources' : issue.section === 'EXCEEDANCES' ? 'exceedances' : 'plan-fact')}>{issue.blocking ? 'Блокирует отправку: ' : 'Предупреждение: '}{issue.message}</button></li>)}</ul> : <Alert className="mt-3" severity="success">Отчёт готов к отправке.</Alert>}
+          <div className="flex gap-6 px-4 py-3 text-sm"><strong>Готовность: {readiness.data.progressPercent}%</strong><span><b className="text-rose-700">{readiness.data.issues.filter((issue) => issue.blocking).length}</b> ошибок</span><span><b className="text-amber-700">{readiness.data.issues.filter((issue) => !issue.blocking).length}</b> предупреждений</span></div>
+          {readiness.data.issues.length ? <ul className="divide-y divide-slate-200">{readiness.data.issues.map((issue) => <li key={issue.code}><button className="flex w-full gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50" onClick={() => setTab(issue.section === 'SOURCES' ? 'sources' : issue.section === 'EXCEEDANCES' ? 'exceedances' : 'plan-fact')}><span className={issue.blocking ? 'text-rose-700' : 'text-amber-700'}>{issue.blocking ? 'Ошибка' : 'Предупреждение'}</span><span className="flex-1"><b>{issue.message}</b><span className="block text-xs text-slate-500">{reportSectionLabels[issue.section || ''] || 'Проверка отчёта'}</span></span><span className="text-xs font-bold text-eco-800">Открыть →</span></button></li>)}</ul> : <Alert className="m-3" severity="success">Отчёт готов к отправке.</Alert>}
         </>}
         <Link className="mt-4 inline-flex font-bold text-eco-700" to={`/staff/pek/programs/${item.programId}`}>Открыть программу ПЭК</Link>
       </section>
@@ -315,8 +416,8 @@ const PekReportWorkspacePage = () => {
            <td className="p-2 font-semibold"><p>№ {source.protocolNumber}</p><p className="text-xs font-normal text-slate-500">{source.protocolStatus || 'Статус не указан'}</p></td>
            <td><p>{source.protocolDate || source.measurementDate || '—'}</p><p className="text-xs text-slate-500">{source.laboratoryName || 'Лаборатория не указана'}</p></td>
            <td><p>{source.samplingPlace || '—'}</p><p className="text-xs text-slate-500">{source.methodology || ''}</p></td>
-           <td><p>{source.indicatorName || '—'}</p><p className="text-xs text-slate-500">{source.indicatorCode || 'без кода'} · {source.unit || 'без единицы'}</p></td>
-           <td><p>{source.value ?? source.valueText ?? '—'} {source.unit || ''}</p><p className="text-xs text-slate-500">Норматив: {source.normativeValue ?? '—'} · {source.comparisonType || 'без сравнения'}</p>{source.isExceedance && <p className="text-xs font-bold text-rose-700">Превышение</p>}</td>
+            <td><p>{source.indicatorName || '—'}</p><p className="text-xs text-slate-500">{source.indicatorCode || 'без кода'} · {source.unit || 'без единицы'}</p></td>
+            <td><p>{source.value ?? source.valueText ?? '—'} {source.unit || ''}</p><p className="text-xs text-slate-500">Норматив: {source.normativeValue ?? '—'} · {source.comparisonType || 'без сравнения'}</p>{source.isExceedance && <p className="text-xs font-bold text-rose-700">Превышение</p>}</td>
            <td><p>{source.controlItemName || '—'}</p><p className="text-xs">{source.programIndicatorName || '—'}</p></td>
            <td>{source.excluded ? matchLabels.EXCLUDED : matchLabels[source.matchStatus] || source.matchStatus}</td>
            <td className="relative text-right"><ActionMenu label={`Действия с источником ${source.protocolNumber}`} widthClass="w-64">{canMutateSources && !source.excluded && ['UNMATCHED', 'AMBIGUOUS'].includes(source.matchStatus) && <MuiButton size="small" onClick={() => { setSelectedSource(source); setControlItemId(''); setIndicatorId(''); }}>{source.matchStatus === 'AMBIGUOUS' ? 'Выбрать показатель' : 'Сопоставить вручную'}</MuiButton>}{canMutateSources && !source.excluded && source.matchStatus === 'UNMATCHED' && <MuiButton size="small" color="error" onClick={() => setExcludeSource(source)}>Исключить</MuiButton>}{canMutateSources && source.matchStatus === 'STALE' && <MuiButton size="small" onClick={() => setCollectConfirmOpen(true)}>Обновить данные</MuiButton>}{canMutateSources && source.excluded && <MuiButton size="small" disabled={restore.isPending} onClick={() => restore.mutate(source)}>Восстановить</MuiButton>}</ActionMenu></td>
@@ -338,11 +439,14 @@ const PekReportWorkspacePage = () => {
     <Dialog open={Boolean(excludeSource)} onClose={() => !exclude.isPending && setExcludeSource(null)} fullWidth maxWidth="sm"><DialogTitle>Исключить источник из отчёта</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина исключения *" value={excludeReason} onChange={(event) => setExcludeReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setExcludeSource(null)}>Отмена</MuiButton><MuiButton color="error" variant="contained" disabled={!excludeReason.trim() || exclude.isPending} onClick={() => exclude.mutate()}>Исключить</MuiButton></DialogActions></Dialog>
     <Dialog open={returnOpen} onClose={() => !returnReport.isPending && setReturnOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Вернуть отчёт на доработку</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина возврата *" value={returnReason} onChange={(event) => setReturnReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setReturnOpen(false)}>Отмена</MuiButton><MuiButton color="warning" variant="contained" disabled={!returnReason.trim() || returnReport.isPending} onClick={() => returnReport.mutate(item)}>Вернуть</MuiButton></DialogActions></Dialog>
     <Dialog open={approveConfirmOpen} onClose={() => !approve.isPending && setApproveConfirmOpen(false)}><DialogTitle>Утвердить отчёт?</DialogTitle><DialogContent><Alert severity="success">Актуальная проверка готовности не содержит блокирующих проблем.</Alert></DialogContent><DialogActions><MuiButton onClick={() => setApproveConfirmOpen(false)}>Отмена</MuiButton><MuiButton variant="contained" disabled={approve.isPending} onClick={() => { setApproveConfirmOpen(false); approve.mutate(item); }}>Утвердить</MuiButton></DialogActions></Dialog>
-    <Dialog open={submitConfirmOpen} onClose={() => !submitAuthority.isPending && setSubmitConfirmOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Отметить отчёт как сданный</DialogTitle><DialogContent>
-      <Alert severity="info">Это ручная отметка в системе. Отправка в государственный орган не выполняется. Принятие и отклонение также отмечаются сотрудником вручную.</Alert>
-      <Alert severity="warning" className="mt-3">Текущий сервис сохраняет только статус и время отметки. Сохранение реквизитов сдачи и подтверждающего файла пока недоступно.</Alert>
-      <div className="mt-4 grid gap-3">{['Дата сдачи', 'Регистрационный номер', 'Способ сдачи', 'Подтверждающий файл', 'Комментарий'].map(label => <TextField key={label} label={label} disabled helperText="Не поддерживается текущим сервисом" />)}</div>
-    </DialogContent><DialogActions><MuiButton disabled={submitAuthority.isPending} onClick={() => setSubmitConfirmOpen(false)}>Отмена</MuiButton><MuiButton color="success" variant="contained" disabled={submitAuthority.isPending} onClick={() => submitAuthority.mutate(item)}>Отметить как сданный</MuiButton></DialogActions></Dialog>
+    <PekReportSubmissionDialog
+      open={submitConfirmOpen}
+      pending={submitAuthority.isPending}
+      submission={item.submission}
+      defaultSubmittedAt={item.submittedAt}
+      onClose={() => setSubmitConfirmOpen(false)}
+      onSubmit={(draft) => submitAuthority.mutate(draft)}
+    />
     <Dialog open={acceptConfirmOpen} onClose={() => !accept.isPending && setAcceptConfirmOpen(false)}><DialogTitle>Принять официальный отчёт?</DialogTitle><DialogActions><MuiButton onClick={() => setAcceptConfirmOpen(false)}>Отмена</MuiButton><MuiButton color="success" variant="contained" disabled={accept.isPending} onClick={() => accept.mutate(item)}>Принять</MuiButton></DialogActions></Dialog>
     <Dialog open={rejectOpen} onClose={() => !reject.isPending && setRejectOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Отклонить официальный отчёт</DialogTitle><DialogContent><TextField autoFocus fullWidth multiline minRows={3} margin="normal" label="Причина отклонения *" value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} /></DialogContent><DialogActions><MuiButton onClick={() => setRejectOpen(false)}>Отмена</MuiButton><MuiButton color="error" variant="contained" disabled={!rejectionReason.trim() || reject.isPending} onClick={() => reject.mutate(item)}>Отклонить</MuiButton></DialogActions></Dialog>
     <Dialog open={archiveConfirmOpen} onClose={() => !archive.isPending && setArchiveConfirmOpen(false)}><DialogTitle>Архивировать отчёт?</DialogTitle><DialogContent><Alert severity="warning">После архивирования изменение отчёта и его источников будет недоступно.</Alert></DialogContent><DialogActions><MuiButton onClick={() => setArchiveConfirmOpen(false)}>Отмена</MuiButton><MuiButton variant="contained" disabled={archive.isPending} onClick={() => { setArchiveConfirmOpen(false); archive.mutate(item); }}>Архивировать</MuiButton></DialogActions></Dialog>

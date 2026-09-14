@@ -9,6 +9,7 @@ type Props = {
   required?: boolean;
   disabled?: boolean;
   placeholder?: string;
+  filterLayout?: boolean;
   onChange: (id: number | null) => void;
   onRetry?: () => void;
 };
@@ -22,17 +23,18 @@ const PekLookupSelect = ({
   required,
   disabled,
   placeholder = 'Выберите значение',
+  filterLayout = false,
   onChange,
   onRetry,
 }: Props) => (
-  <label className="text-sm font-bold">
-    {label}{required ? ' *' : ''}
+  <label className={filterLayout ? 'grid min-w-0 grid-rows-[1rem_2.5rem_minmax(1rem,auto)] gap-y-1 text-xs font-bold text-slate-600' : 'text-sm font-bold'}>
+    <span>{label}{required ? ' *' : ''}</span>
     <select
       aria-label={label}
       value={value || ''}
       disabled={disabled || loading || error}
       onChange={(event) => onChange(event.target.value ? Number(event.target.value) : null)}
-      className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 disabled:bg-slate-100"
+      className={`${filterLayout ? 'h-10' : 'mt-1'} w-full rounded-xl border border-slate-300 px-3 py-2 disabled:bg-slate-100`}
     >
       <option value="">{loading ? 'Загрузка…' : placeholder}</option>
       {options.map((item) => (
@@ -41,15 +43,13 @@ const PekLookupSelect = ({
         </option>
       ))}
     </select>
-    {!loading && !error && options.length === 0 && (
-      <span className="mt-1 block text-xs font-medium text-slate-500">Доступные значения отсутствуют.</span>
-    )}
-    {error && (
-      <span className="mt-1 block text-xs font-medium text-rose-700">
+    <span className={`${filterLayout ? '' : 'mt-1 block'} text-xs font-medium ${error ? 'text-rose-700' : 'text-slate-500'}`}>
+      {!loading && !error && options.length === 0 && 'Доступные значения отсутствуют.'}
+      {error && <>
         Не удалось загрузить справочник.
         {onRetry && <button type="button" onClick={onRetry} className="ml-1 underline">Повторить</button>}
-      </span>
-    )}
+      </>}
+    </span>
   </label>
 );
 

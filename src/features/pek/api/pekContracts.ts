@@ -20,6 +20,7 @@ export type PekReportStatus =
 export type PekReportDocumentKind = 'OFFICIAL' | 'INTERNAL_ANALYTICAL';
 export type PekReportDocumentFormat = 'docx' | 'pdf' | 'xlsx';
 export type PekPeriodType = 'QUARTER' | 'YEAR';
+export type PekReportType = 'PEK_QUARTERLY' | 'PEK_TABLES_7_12_ANNUAL' | 'PEM_CASPIAN_ANNUAL';
 export type ComparisonType =
   | 'LESS_OR_EQUAL'
   | 'GREATER_OR_EQUAL'
@@ -130,6 +131,31 @@ export type PekPermitFileUploadResponse = {
   contentType: string;
   size: number;
 };
+export type PekSubmissionMethod = 'ECO_PORTAL' | 'EGOV_PORTAL' | 'EMAIL' | 'PAPER' | 'COURIER' | 'OTHER';
+export type PekSubmissionRecord = {
+  submissionMethod: PekSubmissionMethod | null;
+  registrationNumber: string | null;
+  submissionComment: string | null;
+  confirmationFileId: string | null;
+  submittedAt: string | null;
+  submittedBy: PekNamedRef | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+export type PekRecordSubmissionRequest = {
+  submissionMethod: PekSubmissionMethod;
+  registrationNumber?: string | null;
+  submissionComment?: string | null;
+  confirmationFileId?: string | null;
+  submittedAt?: string | null;
+};
+export type PekSubmitReportRequest = {
+  submittedAt: string;
+  registrationNumber?: string | null;
+  submissionMethod: PekSubmissionMethod;
+  confirmationFileId?: string | null;
+  comment?: string | null;
+};
 export type PekPermitHistoryEntry = {
   fromStatus: PekPermitStatus | null;
   toStatus: PekPermitStatus;
@@ -145,7 +171,8 @@ export type PekAvailableActionCode =
   | 'APPROVE'
   | 'ACTIVATE'
   | 'ARCHIVE'
-  | 'CLONE';
+  | 'CLONE'
+  | 'RETEMPLATE';
 export type PekAvailableAction = {
   code: PekAvailableActionCode;
   label: string;
@@ -166,6 +193,7 @@ export type PekProgramAvailableActions = {
   archive: boolean;
   clone: boolean;
   uploadDocument: boolean;
+  retemplate?: boolean;
 };
 
 export type PekReportAvailableActions = {
@@ -296,11 +324,14 @@ export interface PekProgram {
   oked?: string | null;
   environmentalCategory?: string | null;
   designCapacity?: string | null;
-  actualCapacity?: string | null;
+  designCapacityUnit?: string | null;
   productionCharacteristics?: string | null;
   monitoringScope?: string | null;
   permitIds?: PekId[];
   readinessNotes?: string | null;
+  ready?: boolean;
+  blockingReasons?: string[];
+  warnings?: string[];
 }
 
 export type PekMonitoringType =
@@ -365,7 +396,7 @@ export type PekProgramHeaderFields = {
   oked?: string | null;
   environmentalCategory?: string | null;
   designCapacity?: string | null;
-  actualCapacity?: string | null;
+  designCapacityUnit?: string | null;
   productionCharacteristics?: string | null;
   monitoringScope?: string | null;
   permitIds?: PekId[];
@@ -379,8 +410,8 @@ export type PekFacilitySnapshotDto = {
   oked: string | null;
   environmentalCategory: string | null;
   designCapacity: string | null;
+  designCapacityUnit: string | null;
   productionCharacteristics: string | null;
-  actualCapacity: string | null;
   monitoringScope: string | null;
   readinessNotes: string | null;
 };
@@ -438,15 +469,24 @@ export interface PekReport {
   version: number;
   contentRevision: number;
   regulationVersion: string | null;
+  regulationCode: string | null;
   templateVersion: string | null;
   status: PekReportStatus | string;
   periodType: PekPeriodType;
+  reportType: PekReportType | null;
+  actualCapacity: string | null;
+  actualCapacityUnit: string | null;
+  laboratorySnapshot: PekLaboratorySnapshot | null;
+  officialDataStatus: string | null;
+  warnings: string[];
+  blockingReasons: string[];
   year: number;
   quarter?: number | null;
   periodStart: string;
   periodEnd: string;
   submissionDueDate: string | null;
   submittedAt: string | null;
+  submission: PekSubmissionRecord | null;
   acceptedAt: string | null;
   rejectedAt: string | null;
   rejectionReason: string | null;
@@ -501,6 +541,7 @@ export interface PekCreationContext {
   submissionDueDate: string | null;
   regulationVersion: string | null;
   templateVersion: string | null;
+  reportType: PekReportType | null;
   programs: PekProgram[];
   selectedProgramId?: number | null;
   duplicateReportId?: number | null;
@@ -722,7 +763,70 @@ export interface PekReadinessResponse {
   progressPercent: number;
   summary: { planned: number; completed: number; missing: number; unmatched: number; ambiguous: number; stale: number; openExceedances: number; overdueActions: number };
   issues: Array<{ code: string; section: string; severity: string; message: string; blocking: boolean }>;
+  blockingIssues: Array<{ code: string; section: string; severity: string; message: string; blocking: boolean }>;
+  warnings: Array<{ code: string; section: string; severity: string; message: string; blocking: boolean }>;
 }
+
+export type PekLaboratorySnapshot = {
+  laboratoryId: number | null;
+  laboratoryName: string | null;
+  laboratoryBin: string | null;
+  accreditationNumber: string | null;
+  accreditationValidFrom: string | null;
+  accreditationValidUntil: string | null;
+};
+
+export type PekOfficialGeneralInfo = {
+  companyName: string | null;
+  companyBin: string | null;
+  objectName: string | null;
+  kato: string | null;
+  oked: string | null;
+  environmentalCategory: string | null;
+  coordinates: string | null;
+  designCapacity: string | null;
+  actualCapacity: string | null;
+  actualCapacityUnit: string | null;
+  programNumber: string | null;
+  programName: string | null;
+  regulationVersion: string | null;
+  regulationCode: string | null;
+  templateVersion: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  submissionDueDate: string | null;
+};
+
+export type PekOfficialResultRow = Record<string, string | number | boolean | null>;
+
+export type PekOfficialReportData = {
+  general: PekOfficialGeneralInfo;
+  laboratory: PekLaboratorySnapshot | null;
+  applicability: Array<{ tableType: string; applicable: boolean; reason: string | null }>;
+  tables: Record<string, PekOfficialResultRow[]>;
+  ready: boolean;
+  progressPercent: number;
+};
+
+export type PekProtocolLink = {
+  id: number;
+  reportId: number | null;
+  programId: number;
+  protocolId: number;
+  controlItemId: number | null;
+  programIndicatorId: number | null;
+  controlEventId: number | null;
+  monitoringPointId: number | null;
+  emissionSourceId: number | null;
+  waterOutletId: number | null;
+  orderId: string | null;
+  orderServiceItemId: string | null;
+  requirementKey: string | null;
+  matchType: string | null;
+  matchStatus: string | null;
+  createdAt: string;
+  version: number;
+};
 
 export interface PekDocumentVersion {
   id: number;
@@ -806,8 +910,14 @@ export interface PekCorrectiveAction {
   exceedanceId: number;
   description: string;
   responsibleUserId?: number | null;
+  responsible?: PekNamedRef | null;
   dueDate?: string | null;
   status: string;
+  comment?: string | null;
+  completedAt?: string | null;
+  completedBy?: number | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
   version: number;
   availableActions: Record<string, boolean>;
 }
@@ -872,6 +982,10 @@ export interface PekInternalInspection {
   responsibleUserId: number | null;
   status: string;
   version: number;
+  department: string | null;
+  frequencyType: string | null;
+  violations: string | null;
+  correctiveActions: string | null;
 }
 export type PekInternalInspectionRequest = Omit<PekInternalInspection, 'id' | 'programId' | 'version'>;
 

@@ -12,11 +12,10 @@ import PekQueryError from '../components/common/PekQueryError';
 import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { mapReportCreateRequest } from '../mappers/reportMappers';
 import { mapPekError } from '../utils/pekErrorMapper';
-import { labelPekStatus } from '../utils/pekLabels';
+import { labelPekReportType, labelPekStatus, pekReportTypeLabels } from '../utils/pekLabels';
 import { PEK_STALE_TIME_MS, retryPekQuery } from '../utils/pekQueryPolicy';
 import { currentQuarter } from '../utils/pekPeriod';
 import { useAuth } from '../../../contexts/AuthContext';
-import { canCollectResults } from '../permissions/pekAccess';
 
 const inputClass = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2';
 
@@ -32,7 +31,6 @@ const PekReportCreatePage = () => {
   const [year, setYear] = useState(Number(initial.get('year')) || new Date().getFullYear());
   const [quarter, setQuarter] = useState(Number(initial.get('quarter')) || currentQuarter());
   const [programId, setProgramId] = useState<number | null>(null);
-  const [collectImmediately, setCollectImmediately] = useState(false);
   const params: PekReportCreationParams = {
     companyId,
     objectId,
@@ -85,9 +83,12 @@ const PekReportCreatePage = () => {
     || context.data.duplicateReportId
     || !selectedProgramAvailable
   );
+  const annualReportLabel = context.data?.reportType === 'PEM_CASPIAN_ANNUAL'
+    ? pekReportTypeLabels.PEM_CASPIAN_ANNUAL
+    : pekReportTypeLabels.PEK_TABLES_7_12_ANNUAL;
 
   return <div className="space-y-5">
-    <PekPageHeader title="Создание отчёта ПЭК" description="Выберите программу и отчётный период. Точные даты система определит автоматически." />
+    <PekPageHeader title="Создание отчёта ПЭК" description="Выберите программу и вид отчётности. Точные даты и нормативный тип система определит по объекту автоматически." />
     <section className="grid gap-4 rounded-2xl border bg-white p-4 md:grid-cols-2 sm:p-5 xl:grid-cols-3">
       <PekCompanyObjectFilters
         companyId={companyId || undefined}
@@ -96,7 +97,7 @@ const PekReportCreatePage = () => {
         onObjectChange={(value) => setObjectId(Number(value) || 0)}
         required
       />
-      <label>Тип периода<select value={periodType} onChange={(event) => setPeriodType(event.target.value as PekPeriodType)} className={inputClass}><option value="QUARTER">Квартал</option><option value="YEAR">Год</option></select></label>
+      <label>Вид отчётности<select value={periodType} onChange={(event) => setPeriodType(event.target.value as PekPeriodType)} className={inputClass}><option value="QUARTER">Квартальный отчёт ПЭК</option><option value="YEAR">{annualReportLabel}</option></select>{periodType === 'YEAR' && <span className="mt-1 block text-xs text-slate-500">{context.data?.reportType === 'PEM_CASPIAN_ANNUAL' ? 'Для выбранного объекта применяется годовой производственный мониторинг Каспия.' : 'Для выбранного объекта применяются годовые таблицы ПЭК.'}</span>}</label>
       <label>Год<input type="number" min={2000} max={2100} value={year} onChange={(event) => setYear(Number(event.target.value))} className={inputClass} /></label>
       {periodType === 'QUARTER' && <label>Квартал<select value={quarter} onChange={(event) => setQuarter(Number(event.target.value))} className={inputClass}>{[1, 2, 3, 4].map((value) => <option key={value}>{value}</option>)}</select></label>}
     </section>
@@ -110,6 +111,7 @@ const PekReportCreatePage = () => {
             <div className="grid gap-3 md:grid-cols-2">
               <Summary label="Компания" value={context.data.company?.name || '—'} />
               <Summary label="Объект" value={context.data.object?.name || '—'} />
+              <Summary label="Вид отчётности" value={labelPekReportType(context.data.reportType)} />
               <Summary label="Начало периода" value={context.data.periodStart} />
               <Summary label="Окончание периода" value={context.data.periodEnd} />
               <Summary label="Срок сдачи" value={context.data.submissionDueDate || 'Не установлен'} />
@@ -143,11 +145,10 @@ const PekReportCreatePage = () => {
             {context.data.warnings.map((warning) => <p key={warning} className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{warning}</p>)}
             {context.data.blockingReasons.map((reason) => <p key={reason} className="rounded-xl bg-rose-50 p-3 text-sm text-rose-900">{reason}</p>)}
             {context.data.duplicateReportId && <p className="rounded-xl bg-amber-50 p-3 text-sm">Отчёт за период уже существует. <Link className="font-bold underline" to={`/staff/pek/reports/${context.data.duplicateReportId}`}>Открыть отчёт №{context.data.duplicateReportId}</Link></p>}
-            {canCollectResults(user) && <label className="flex items-center gap-2"><input type="checkbox" checked={collectImmediately} onChange={(event) => setCollectImmediately(event.target.checked)} />Сразу собрать подходящие протоколы</label>}
             <PekState title="Ответственный будет назначен автоматически" message="После создания назначение отобразится в рабочей области отчёта." />
             <Button disabled={blocked || create.isPending} aria-busy={create.isPending} onClick={() => {
               if (!selectedProgramAvailable || selectedProgramId == null) return toast.error('Выбранная программа больше недоступна для этого отчёта.');
-              create.mutate(mapReportCreateRequest(params, selectedProgramId, collectImmediately, context.data));
+              create.mutate(mapReportCreateRequest(params, selectedProgramId, false, context.data));
             }}>
               {create.isPending ? 'Создание…' : 'Создать отчёт'}
             </Button>

@@ -1,4 +1,13 @@
-import type { PekAvailableActionCode, PekProgramStatus, PekReportStatus } from '../api/pekContracts';
+import type { PekAvailableActionCode, PekProgramStatus, PekReportStatus, PekReportType } from '../api/pekContracts';
+
+export const pekReportTypeLabels: Record<PekReportType, string> = {
+  PEK_QUARTERLY: 'Квартальный отчёт ПЭК',
+  PEK_TABLES_7_12_ANNUAL: 'Годовые таблицы ПЭК',
+  PEM_CASPIAN_ANNUAL: 'Годовой производственный мониторинг Каспия',
+};
+
+export const labelPekReportType = (value?: PekReportType | null) =>
+  value ? pekReportTypeLabels[value] : '—';
 
 export const pekStatusLabels: Record<PekProgramStatus | PekReportStatus, string> = {
   DRAFT: 'Черновик',

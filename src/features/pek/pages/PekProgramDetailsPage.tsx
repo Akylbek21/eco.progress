@@ -3,13 +3,14 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
+import ActionMenu from '../../../components/ui/ActionMenu';
 import { useToast } from '../../../hooks/useToast';
 import { useAuth } from '../../../contexts/AuthContext';
 import type { PekAvailableAction, PekProgram } from '../api/pekContracts';
 import { commitPekProgramMutation } from '../api/pekProgramCache';
 import { pekKeys } from '../api/pekQueryKeys';
 import { pekApi } from '../api/pekService';
-import { PekLoading, PekPageHeader, PekPrimaryAction, PekStatusBadge } from '../components/common/PekUi';
+import { PekLoading, PekPageHeader, PekPrimaryAction, PekReadiness, PekStatusBadge } from '../components/common/PekUi';
 import PekQueryError from '../components/common/PekQueryError';
 import PekProgramDocuments from '../components/documents/PekProgramDocuments';
 import PekProgramMonitoring from '../components/monitoring/PekProgramMonitoring';
@@ -21,7 +22,7 @@ import PekInventoryEditor from '../components/inventory/PekInventoryEditor';
 import PekReadinessPanel from '../components/common/PekReadinessPanel';
 import { pekInventoryApi } from '../api/pekInventory';
 
-const tabs = ['Программа ПЭК', 'Производственный мониторинг', 'Показатели', 'Мероприятия', 'Организация контроля', 'Разрешения и документы', 'История', 'Отчёты', 'Реестры'];
+const tabs = ['Общие сведения', 'Отходы', 'Источники выбросов', 'Инструментальный контроль', 'Расчётный контроль', 'Газовый мониторинг', 'Сброс сточных вод', 'Атмосферный воздух', 'Водные объекты', 'Почва', 'Внутренние проверки', 'Организация контроля', 'Документы', 'Проверка программы'];
 const sectionTabs: Record<PekWorkspaceSection, number> = { overview: 0, controls: 1, organization: 4, documents: 5 };
 
 const PekProgramDetailsPage = () => {
@@ -32,6 +33,7 @@ const PekProgramDetailsPage = () => {
   const requestedTab = Number(searchParams.get('tab'));
   const tab = Number.isInteger(requestedTab) && requestedTab >= 0 && requestedTab < tabs.length ? requestedTab : 0;
   const setTab = (value: number) => setSearchParams(previous => { const next = new URLSearchParams(previous); next.set('tab', String(value)); return next; });
+  const workspaceTab = [0, 8, 1, 1, 2, 1, 8, 1, 8, 1, 4, 4, 5, 0][tab] ?? 0;
   const [action, setAction] = useState<PekAvailableAction | null>(null);
   const [cloneAction, setCloneAction] = useState<PekAvailableAction | null>(null);
   const [cloneNumber, setCloneNumber] = useState('');
@@ -83,6 +85,7 @@ const PekProgramDetailsPage = () => {
         validFrom: cloneValidFrom || undefined,
         validUntil: cloneValidUntil || undefined,
       });
+      if (item.code === 'RETEMPLATE') return pekApi.retemplateProgram(id, version);
       throw new Error('Это действие сейчас недоступно.');
     },
     retry: false,
@@ -118,24 +121,27 @@ const PekProgramDetailsPage = () => {
     item.availableActions.activate && { code: 'ACTIVATE', label: 'Активировать', enabled: true },
     item.availableActions.archive && { code: 'ARCHIVE', label: 'Архивировать', enabled: true },
     item.availableActions.clone && { code: 'CLONE', label: 'Клонировать', enabled: true },
+    item.availableActions.retemplate && { code: 'RETEMPLATE', label: 'Обновить шаблон', enabled: true, confirmationRequired: true },
   ].filter((candidate): candidate is PekAvailableAction => Boolean(candidate));
+  const primaryWorkflowAction = workflowActions.find((candidate) => ['SUBMIT_REVIEW', 'APPROVE', 'ACTIVATE'].includes(candidate.code));
+  const secondaryWorkflowActions = workflowActions.filter((candidate) => candidate !== primaryWorkflowAction);
 
-  return <div className="space-y-5">
+  return <div className="space-y-4">
     <PekPageHeader
-      title={`${item.number} · ${item.name}`}
-      description={`${item.company?.name || 'Компания не указана'} · ${item.object?.name || 'Объект не указан'}`}
+      title={`Программа ПЭК № ${item.number}`}
+      description={`${item.company?.name || 'Компания не указана'} · ${item.object?.name || 'Объект не указан'} · ${item.validFrom} — ${item.validUntil}`}
       actions={<>
+        <PekReadiness value={readiness.data?.progressPercent} />
         <PekStatusBadge status={item.status} />
-        {workflowActions.map((candidate) => (
-          <PekPrimaryAction key={candidate.code} action={candidate} pending={workflow.isPending} onClick={(selected) => selected.code === 'CLONE' ? setCloneAction(selected) : setAction(selected)} />
-        ))}
         {item.availableActions.edit && (
-          <button type="button" onClick={() => navigate(`/staff/pek/programs/${id}/edit?companyId=${companyId || item.company?.id || ''}`)} className="rounded-full border px-5 py-2 font-bold">Изменить</button>
+          <button type="button" onClick={() => navigate(`/staff/pek/programs/${id}/edit?companyId=${companyId || item.company?.id || ''}`)} className="border border-slate-300 px-3 py-1.5 text-sm font-bold">Сохранить</button>
         )}
+        {primaryWorkflowAction && <PekPrimaryAction action={primaryWorkflowAction} pending={workflow.isPending} onClick={(selected) => setAction(selected)} />}
+        {secondaryWorkflowActions.length > 0 && <ActionMenu label="Дополнительные действия" widthClass="w-56"><div className="py-1">{secondaryWorkflowActions.map((candidate) => <button key={candidate.code} type="button" className="block w-full px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50" onClick={() => candidate.code === 'CLONE' ? setCloneAction(candidate) : setAction(candidate)}>{candidate.label}</button>)}</div></ActionMenu>}
       </>}
     />
     {workflowErrors.length > 0 && <section role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900"><strong>Программа не готова к выполнению действия:</strong><ul className="mt-2 list-disc pl-5">{workflowErrors.map((message) => <li key={message}>{message}</li>)}</ul></section>}
-    <section className="grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+    <section className="grid gap-x-6 gap-y-2 border-b border-slate-200 bg-white px-3 py-3 sm:grid-cols-2 lg:grid-cols-4">
       <Info label="Версия" value={item.version} />
       <Info label="Период" value={`${item.validFrom} — ${item.validUntil}`} />
       <Info label="Версия формы" value={item.templateVersion || '—'} />
@@ -144,10 +150,10 @@ const PekProgramDetailsPage = () => {
       <Info label="Ответственный" value={item.responsible?.name || '—'} />
       <Info label="Режим" value={item.readOnly ? 'Только чтение' : 'Редактирование разрешено'} />
     </section>
-    <nav className="flex max-w-full gap-1 overflow-x-auto border-b" aria-label="Разделы программы ПЭК">
+    <nav className="pek-section-nav sticky top-0 z-20 flex max-w-full gap-0 overflow-x-auto border-y border-slate-300 bg-white" aria-label="Разделы программы ПЭК">
       {tabs.map((label, index) => <button key={label} type="button" onClick={() => setTab(index)} className={`shrink-0 whitespace-nowrap px-4 py-3 font-bold ${tab === index ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}
     </nav>
-    {tab === 0 && <div className="space-y-5">
+    {workspaceTab === 0 && <div className="space-y-5">
       {readiness.isPending && <p role="status">Проверка готовности программы…</p>}
       {readiness.isError && <PekQueryError error={readiness.error} resource="Готовность программы" retry={() => void readiness.refetch()} />}
       {readiness.data && <PekReadinessPanel readiness={{ ...readiness.data, completionPercent: readiness.data.progressPercent }} onIssueClick={issue => {
@@ -160,17 +166,17 @@ const PekProgramDetailsPage = () => {
       {counts.data && <section className="rounded-2xl border bg-white p-5"><h3 className="font-bold">Состав программы</h3><ul className="mt-3 space-y-2">{counts.data.map(([label, count]) => <li key={label}><button type="button" className="text-left underline" onClick={() => setTab(label === 'Точки мониторинга' ? 1 : 8)}>{count ? '✓' : '—'} {label} — {count || 'отсутствуют'}</button></li>)}</ul><p className="mt-3 text-sm text-slate-500">Обязательность разделов и блокирующие проблемы определяются проверкой готовности выше.</p></section>}
       <section className="rounded-2xl border bg-white p-5"><h3 className="font-bold">Заполненные сведения</h3><ul className="mt-3 space-y-2"><li>{item.responsible ? '✓ Ответственный назначен' : '✕ Ответственный не назначен'}</li><li>Позиции контроля — {item.controlItems?.length || 0}</li><li>Показатели — {item.indicators?.length || 0}</li><li>Направления мониторинга — {item.monitoring?.items.length || 0}</li></ul></section>
       <PekProgramStructure program={item} readinessPercent={readiness.data?.progressPercent} onOpenSection={(section) => setTab(sectionTabs[section])} />
-      <section className="rounded-2xl border bg-white p-5"><h2 className="mb-4 text-lg font-black">Общие сведения</h2><div className="grid gap-3 md:grid-cols-2"><Info label="Компания" value={item.company?.name || '—'} /><Info label="Объект" value={item.object?.name || '—'} /><Info label="Описание" value={item.description || '—'} /><Info label="Последнее изменение" value={item.updatedAt || '—'} /><Info label="Проектная мощность" value={item.designCapacity || '—'} /><Info label="Фактическая мощность" value={item.actualCapacity || '—'} /></div></section>
+      <section className="rounded-2xl border bg-white p-5"><h2 className="mb-4 text-lg font-black">Общие сведения</h2><div className="grid gap-3 md:grid-cols-2"><Info label="Компания" value={item.company?.name || '—'} /><Info label="Объект" value={item.object?.name || '—'} /><Info label="Описание" value={item.description || '—'} /><Info label="Последнее изменение" value={item.updatedAt || '—'} /><Info label="Проектная мощность" value={[item.designCapacity, item.designCapacityUnit].filter(Boolean).join(' ') || '—'} /></div></section>
     </div>}
-    {tab !== 0 && <section className="rounded-2xl border bg-white p-5">
-      {tab === 1 && <div className="space-y-6"><PekProgramMonitoring program={item} /><div><h3 className="mb-3 font-black">Объекты контроля</h3>{item.availableActions.edit && <Link className="text-eco-700 underline" to={`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=5`}>Редактировать позиции и связи с источниками</Link>}<DataRows rows={item.controlItems || []} /></div></div>}
-      {tab === 2 && <><DataRows rows={item.indicators || []} />{item.availableActions.edit && <Link className="text-eco-700 underline" to={`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=6`}>Редактировать показатели</Link>}</>}
-      {tab === 8 && <div className="space-y-5">{(['emission-sources', 'discharge-sources', 'waste-items'] as const).map(kind => <PekInventoryEditor key={`${id}-${kind}`} kind={kind} parentId={id} programId={id} companyId={item.company?.id} canEdit={item.availableActions.edit === true && !item.readOnly} />)}</div>}
-      {tab === 3 && <><DataRows rows={item.measures || []} />{item.availableActions.edit && <Link className="text-eco-700 underline" to={`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=11`}>Редактировать мероприятия</Link>}</>}
-      {tab === 4 && <PekProgramStructuredSections program={item} />}
-      {tab === 5 && <div className="space-y-6"><div><h2 className="font-black">Разрешительные документы</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{permits.data?.filter((permit) => item.permitIds?.includes(permit.id)).map((permit) => <article key={permit.id} className="rounded-xl border p-4"><strong>{permit.type} № {permit.number}</strong><p className="mt-1 text-sm">Дата выдачи: {permit.issuedAt || '—'}</p><p className="text-sm">Срок действия: {permit.validFrom} — {permit.validTo}</p><p className="text-sm">Статус: {permit.status}</p></article>)}{!permits.isLoading && !permits.data?.some((permit) => item.permitIds?.includes(permit.id)) && <p className="text-sm text-slate-500">Разрешения не выбраны.</p>}</div></div><PekProgramDocuments companyId={companyId} programId={id} version={item.version} documents={item.documents || []} canUpload={item.availableActions.uploadDocument} /></div>}
-      {tab === 6 && <Link className="font-bold text-eco-700" to={`/staff/pek/programs/${id}/history`}>Открыть историю программы</Link>}
-      {tab === 7 && <Link className="font-bold text-eco-700" to={`/staff/pek/reports?companyId=${item.company?.id || ''}&objectId=${item.object?.id || ''}&programId=${id}`}>Открыть отчёты объекта</Link>}
+    {workspaceTab !== 0 && <section className="border border-slate-300 bg-white p-4">
+      {workspaceTab === 1 && <div className="space-y-6"><PekProgramMonitoring program={item} /><div><h3 className="mb-3 font-black">Объекты контроля</h3>{item.availableActions.edit && <Link className="text-eco-700 underline" to={`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=5`}>Редактировать позиции и связи с источниками</Link>}<DataRows rows={item.controlItems || []} /></div></div>}
+      {workspaceTab === 2 && <><DataRows rows={item.indicators || []} />{item.availableActions.edit && <Link className="text-eco-700 underline" to={`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=6`}>Редактировать показатели</Link>}</>}
+      {workspaceTab === 8 && <div className="space-y-5">{(['emission-sources', 'discharge-sources', 'waste-items'] as const).map(kind => <PekInventoryEditor key={`${id}-${kind}`} kind={kind} parentId={id} programId={id} companyId={item.company?.id} canEdit={item.availableActions.edit === true && !item.readOnly} />)}</div>}
+      {workspaceTab === 3 && <><DataRows rows={item.measures || []} />{item.availableActions.edit && <Link className="text-eco-700 underline" to={`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=11`}>Редактировать мероприятия</Link>}</>}
+      {workspaceTab === 4 && <PekProgramStructuredSections program={item} />}
+      {workspaceTab === 5 && <div className="space-y-6"><div><h2 className="font-black">Разрешительные документы</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{permits.data?.filter((permit) => item.permitIds?.includes(permit.id)).map((permit) => <article key={permit.id} className="border p-4"><strong>{permit.type} № {permit.number}</strong><p className="mt-1 text-sm">Дата выдачи: {permit.issuedAt || '—'}</p><p className="text-sm">Срок действия: {permit.validFrom} — {permit.validTo}</p><p className="text-sm">Статус: {permit.status}</p></article>)}{!permits.isLoading && !permits.data?.some((permit) => item.permitIds?.includes(permit.id)) && <p className="text-sm text-slate-500">Разрешения не выбраны.</p>}</div></div><PekProgramDocuments companyId={companyId} programId={id} version={item.version} documents={item.documents || []} canUpload={item.availableActions.uploadDocument} /></div>}
+      {workspaceTab === 6 && <Link className="font-bold text-eco-700" to={`/staff/pek/programs/${id}/history`}>Открыть историю программы</Link>}
+      {workspaceTab === 7 && <Link className="font-bold text-eco-700" to={`/staff/pek/reports?companyId=${item.company?.id || ''}&objectId=${item.object?.id || ''}&programId=${id}`}>Открыть отчёты объекта</Link>}
     </section>}
     <PekActionModal action={action} pending={workflow.isPending} onClose={() => setAction(null)} onConfirm={(comment) => action && workflow.mutate({ item: action, comment })} />
     <Modal
@@ -202,7 +208,7 @@ const PekProgramDetailsPage = () => {
 const Info = ({ label, value }: { label: string; value: string | number }) => <div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 font-semibold">{value}</p></div>;
 const DataRows = ({ rows }: { rows: unknown[] }) => <div className="space-y-2">{rows.map((value, index) => {
   const row = value as Record<string, unknown>;
-  return <div key={String(row.id || row.clientId || index)} className="rounded-xl bg-slate-50 p-3"><strong>{String(row.code || row.indicatorCode || '')}</strong> {String(row.name || row.indicatorName || `Запись ${index + 1}`)}</div>;
+  return <div key={String(row.id || row.clientId || index)} className="border-b border-slate-200 px-2 py-2"><strong>{String(row.name || row.indicatorName || `Запись ${index + 1}`)}</strong></div>;
 })}{!rows.length && <p className="text-slate-500">Данные не добавлены</p>}</div>;
 
 export default PekProgramDetailsPage;

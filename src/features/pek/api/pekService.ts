@@ -23,6 +23,10 @@ import type {
   PekMonitoringMutationRequest,
   PekReport,
   PekReportCreateRequest,
+  PekRecordSubmissionRequest,
+  PekSubmitReportRequest,
+  PekOfficialReportData,
+  PekProtocolLink,
   PekReportCreationParams,
   PekReportFilters,
   PekPlanFactResponse,
@@ -175,6 +179,8 @@ export const pekApi = {
   archiveProgram: (id: number, version: number) => programAction(id, 'archive', version),
   cloneProgram: async (id: number, version: number, body: PekProgramCloneRequest) =>
     mapProgramResponse(unwrapPekData<unknown>((await api.post(`/pek/programs/${id}/clone`, body, pekMutationOptions(version))).data)),
+  retemplateProgram: async (id: number, version: number) =>
+    mapProgramResponse(unwrapPekData<unknown>((await api.post(`/pek/programs/${id}/retemplate`, {}, pekMutationOptions(version))).data)),
   getProgramHistory: (id: number, signal?: AbortSignal) =>
     get<PekHistoryItem[]>(`/pek/programs/${id}/history`, {}, signal),
   getProgramReadiness: (id: number, signal?: AbortSignal) =>
@@ -290,10 +296,15 @@ export const pekApi = {
   },
   getReport: async (id: number, signal?: AbortSignal) =>
     mapReportResponse(await get<unknown>(`/pek/reports/${id}`, {}, signal)),
+  getOfficialReportData: (id: number, signal?: AbortSignal) =>
+    get<PekOfficialReportData>(`/pek/reports/${id}/official-data`, {}, signal),
+  updateReportGeneral: async (id: number, version: number, body: { actualCapacity: string | null; actualCapacityUnit: string | null }) =>
+    mapReportResponse(unwrapPekData<unknown>((await api.patch(`/pek/reports/${id}/general`, body, pekMutationOptions(version))).data)),
   getReportCreationContext: async (params: PekReportCreationParams, signal?: AbortSignal) => {
     const context = await get<PekCreationContext>('/pek/reports/creation-context', params, signal);
     return {
       ...context,
+      reportType: context.reportType ?? null,
       programs: (context.programs || []).map(mapProgramResponse),
       warnings: context.warnings || [],
       blockingReasons: context.blockingReasons || [],
@@ -323,7 +334,22 @@ export const pekApi = {
   returnReport: async (id: number, version: number, reason: string) =>
     mapReportResponse(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/return`, { reason }, pekMutationOptions(version))).data)),
   approveReport: (id: number, version: number) => reportAction(id, 'approve', version),
-  submitReport: (id: number, version: number) => reportAction(id, 'submit', version),
+  submitReport: async (id: number, version: number, body: PekSubmitReportRequest) =>
+    mapReportResponse(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/submit`, body, pekMutationOptions(version))).data)),
+  uploadReportSubmissionConfirmation: async (id: number, file: File): Promise<PekPermitFileUploadResponse> => {
+    const form = new FormData();
+    form.append('file', file);
+    return unwrapPekData<PekPermitFileUploadResponse>((await api.post(`/pek/reports/${id}/submission/file`, form)).data);
+  },
+  recordReportSubmission: async (id: number, version: number, body: PekRecordSubmissionRequest) =>
+    mapReportResponse(unwrapPekData<unknown>((await api.post(`/pek/reports/${id}/submission`, body, pekMutationOptions(version))).data)),
+  downloadReportSubmissionConfirmation: async (id: number): Promise<PekBlobResult> => {
+    const response = await api.get<Blob>(`/pek/reports/${id}/submission/file`, { responseType: 'blob' });
+    return {
+      blob: response.data,
+      filename: filenameFromDisposition(response.headers['content-disposition'], `pek-report-${id}-submission-confirmation`),
+    };
+  },
   acceptReport: (id: number, version: number) => reportAction(id, 'accept', version),
   rejectReport: async (id: number, version: number, rejectionReason: string) =>
     api.post(`/pek/reports/${id}/reject`, { rejectionReason }, pekMutationOptions(version)).then(() => get<unknown>(`/pek/reports/${id}`)).then(mapReportResponse),
@@ -414,11 +440,22 @@ export const pekApi = {
     const { version, ...payload } = body;
     return unwrapPekData<PekCorrectiveAction>((await api.post(`/pek/exceedances/${exceedanceId}/corrective-actions/${actionId}/transition`, payload, pekMutationOptions(version))).data);
   },
+  getCorrectiveActions: (exceedanceId: number, signal?: AbortSignal) =>
+    get<PekCorrectiveAction[]>(`/pek/exceedances/${exceedanceId}/corrective-actions`, {}, signal),
+  getProgramProtocols: (programId: number, signal?: AbortSignal) =>
+    get<PekProtocolLink[]>(`/pek/programs/${programId}/protocols`, {}, signal),
+  getReportProtocols: (reportId: number, signal?: AbortSignal) =>
+    get<PekProtocolLink[]>(`/pek/reports/${reportId}/protocols`, {}, signal),
+  getControlItemProtocols: (controlItemId: number, signal?: AbortSignal) =>
+    get<PekProtocolLink[]>(`/pek/control-items/${controlItemId}/protocols`, {}, signal),
   getSettings: (companyId: number, signal?: AbortSignal) => get<PekSettings>('/pek/settings', { companyId }, signal),
   updateSettings: async (companyId: number, version: number, body: PekSettingsUpdateRequest) =>
     unwrapPekData<PekSettings>((await api.put('/pek/settings', body, { ...pekMutationOptions(version), params: { companyId } })).data),
   runSchedulerNow: async (companyId: number, version: number): Promise<void> => {
     await api.post('/pek/scheduler/run', null, { ...pekMutationOptions(version), params: { companyId } });
+  },
+  runSchedulerForAllCompanies: async (): Promise<void> => {
+    await api.post('/pek/scheduler/run-all');
   },
   getCompanyStaff: (companyId: number, signal?: AbortSignal) => get<PekStaffAssignment[]>(`/pek/companies/${companyId}/staff`, {}, signal),
   assignCompanyStaff: (companyId: number, body: PekStaffAssignmentCreateRequest) => api.post(`/pek/companies/${companyId}/staff`, body).then(({ data }) => unwrapPekData<PekStaffAssignment>(data)),

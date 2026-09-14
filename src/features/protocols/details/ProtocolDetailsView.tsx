@@ -82,13 +82,24 @@ const ProtocolDetailsView = ({ protocol, actions, missing: _missing, workflowErr
     else if (primary.key === 'review') setActiveTab('results');
   };
   return (
-    <div className="space-y-4 pb-24">
+    <div className="protocol-workspace space-y-3 pb-24">
       <ProtocolHeader protocol={protocol} actions={actions} busy={busy} primaryDisabled={primaryBlocked} primaryLabel={primary.label} onBack={onBack} onPrimary={runPrimary} onDocx={onDocx} onGenerateDocx={onGenerateDocx} onGeneratePdf={onGeneratePdf} onCorrection={onCorrection} onReturnForRevision={onReturnForRevision} onCancel={onCancel} onArchive={onArchive} onHistory={() => setActiveTab('history')} />
       <ProtocolProgress status={protocol.status} />
-      <ProtocolNextStepCard protocol={protocol} missing={nextStepMissing} />
+      <div className="protocol-summary-grid grid gap-3 xl:grid-cols-[1fr_1.3fr_0.72fr]">
+        <section className="protocol-summary-card border border-slate-200 bg-white">
+          <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2"><h2 className="font-black">Основные данные</h2>{actions.edit && <button type="button" className="text-xs font-bold text-eco-700" onClick={() => onEdit('general')}>Изменить</button>}</div>
+          <dl className="grid grid-cols-[8rem_minmax(0,1fr)] text-sm">
+            <dt>Версия</dt><dd>v{protocol.version}</dd>
+            <dt>Дата создания</dt><dd>{new Date(protocol.createdAt).toLocaleDateString('ru-RU')}</dd>
+            <dt>Ответственный</dt><dd>{protocol.executor || protocol.laboratory.executorName || '—'}</dd>
+            <dt>Результаты</dt><dd>{protocol.results.length}</dd>
+          </dl>
+        </section>
+        <ProtocolNextStepCard protocol={protocol} missing={nextStepMissing} />
+        <ProtocolSignaturesCard protocol={protocol} actions={effectiveActions} signing={signing} onSign={onSign} />
+      </div>
       <ProtocolContextLinks protocol={protocol} />
       <ProtocolImmutableBanner protocol={protocol} />
-      <ProtocolSignaturesCard protocol={protocol} actions={effectiveActions} signing={signing} onSign={onSign} />
       {workflowErrors.length > 0 && <section role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4"><h2 className="font-black text-rose-900">Не удалось выполнить действие</h2><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-rose-800">{workflowErrors.map((item) => <li key={item}>{item}</li>)}</ul></section>}
       {allTransitionBlockers.length > 0 && <section role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><h2 className="font-black text-amber-900">Действие заблокировано backend</h2><ul className="mt-2 space-y-2 text-sm text-amber-800">{allTransitionBlockers.map((item, index) => <li key={`${item.code}-${index}`} className="flex flex-wrap items-center justify-between gap-2"><span>{item.message}</span>{actions.edit && (item.fieldPath || item.step !== undefined) && <button type="button" className="font-bold underline" onClick={() => onEdit(item.fieldPath?.startsWith('results') ? 'results' : item.fieldPath?.match(/method/i) ? 'methods' : 'general')}>Перейти к полю</button>}</li>)}</ul></section>}
       <nav aria-label="Разделы протокола" className="overflow-x-auto border-b border-slate-200">

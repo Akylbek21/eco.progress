@@ -93,28 +93,32 @@ const PekProgramsPage = () => {
         ? <Link to="/staff/pek/programs/new" className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white">Создать программу</Link>
         : undefined}
     />
-    <section className="grid gap-3 rounded-2xl border bg-white p-4 md:grid-cols-2 xl:grid-cols-4 min-[1900px]:grid-cols-8">
-      <label className="text-xs font-bold text-slate-600">Поиск
-        <input aria-label="Поиск программ" value={rawSearch} onChange={(event) => update('search', event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2" placeholder="Номер или название" />
+    <section className="grid items-start gap-3 rounded-2xl border bg-white p-4 md:grid-cols-2 xl:grid-cols-4 min-[1900px]:grid-cols-8">
+      <label className="grid grid-rows-[1rem_2.5rem_minmax(1rem,auto)] gap-y-1 text-xs font-bold text-slate-600"><span>Поиск</span>
+        <input aria-label="Поиск программ" value={rawSearch} onChange={(event) => update('search', event.target.value)} className="h-10 w-full rounded-xl border px-3 py-2" placeholder="Номер или название" />
+        <span aria-hidden="true" />
       </label>
-      <PekCompanyObjectFilters companyId={filters.companyId} objectId={filters.objectId} onCompanyChange={(value) => update('companyId', value)} onObjectChange={(value) => update('objectId', value)} />
-      <label className="text-xs font-bold text-slate-600">Статус
-        <select value={filters.status || ''} onChange={(event) => update('status', event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
+      <PekCompanyObjectFilters filterLayout companyId={filters.companyId} objectId={filters.objectId} onCompanyChange={(value) => update('companyId', value)} onObjectChange={(value) => update('objectId', value)} />
+      <label className="grid grid-rows-[1rem_2.5rem_minmax(1rem,auto)] gap-y-1 text-xs font-bold text-slate-600"><span>Статус</span>
+        <select value={filters.status || ''} onChange={(event) => update('status', event.target.value)} className="h-10 w-full rounded-xl border px-3 py-2">
           <option value="">Все</option>{statuses.map((status) => <option key={status} value={status}>{pekStatusLabels[status]}</option>)}
         </select>
+        <span aria-hidden="true" />
       </label>
-      <label className="text-xs font-bold text-slate-600">Действует на
-        <input type="date" value={filters.activeOn || ''} onChange={(event) => update('activeOn', event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2" />
+      <label className="grid grid-rows-[1rem_2.5rem_minmax(1rem,auto)] gap-y-1 text-xs font-bold text-slate-600"><span>Действует на</span>
+        <input type="date" value={filters.activeOn || ''} onChange={(event) => update('activeOn', event.target.value)} className="h-10 w-full rounded-xl border px-3 py-2" />
+        <span aria-hidden="true" />
       </label>
-      <PekLookupSelect label="Ответственный" value={filters.responsibleUserId} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => update('responsibleUserId', value ? String(value) : '')} />
-      <label className="text-xs font-bold text-slate-600">Сортировка
-        <select value={filters.sort} onChange={(event) => update('sort', event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
+      <PekLookupSelect filterLayout label="Ответственный" value={filters.responsibleUserId} options={assignees.data || []} loading={assignees.isLoading} error={assignees.isError} onRetry={() => void assignees.refetch()} onChange={(value) => update('responsibleUserId', value ? String(value) : '')} />
+      <label className="grid grid-rows-[1rem_2.5rem_minmax(1rem,auto)] gap-y-1 text-xs font-bold text-slate-600"><span>Сортировка</span>
+        <select value={filters.sort} onChange={(event) => update('sort', event.target.value)} className="h-10 w-full rounded-xl border px-3 py-2">
           <option value="updatedAt,desc">Сначала изменённые</option>
           <option value="number,asc">По номеру</option>
           <option value="validFrom,desc">По периоду</option>
         </select>
+        <span aria-hidden="true" />
       </label>
-      <button type="button" onClick={() => setParams({}, { replace: true })} className="self-end rounded-xl border px-3 py-2 text-sm font-bold">Сбросить</button>
+      <button type="button" onClick={() => setParams({}, { replace: true })} className="mt-5 h-10 rounded-xl border px-3 py-2 text-sm font-bold">Сбросить</button>
     </section>
     {programs.isLoading
       ? <PekLoading />
@@ -127,18 +131,7 @@ const PekProgramsPage = () => {
             />
           : <>
             <div className="max-w-full overflow-x-auto rounded-2xl border bg-white">
-              <table className="w-[1560px] table-fixed text-sm">
-                <colgroup>
-                  <col className="w-40" />
-                  <col className="w-[260px]" />
-                  <col className="w-[220px]" />
-                  <col className="w-60" />
-                  <col className="w-[220px]" />
-                  <col className="w-20" />
-                  <col className="w-52" />
-                  <col className="w-28" />
-                  <col className="w-20" />
-                </colgroup>
+              <table className="w-full min-w-[1180px] text-sm">
                 <thead className="bg-slate-50 text-left"><tr>
                   {['Номер', 'Название', 'Компания', 'Объект', 'Период действия', 'Версия', 'Ответственный', 'Готовность', ''].map((label, index) => <th key={`${label}-${index}`} className="whitespace-nowrap px-4 py-3">{label}</th>)}
                 </tr></thead>

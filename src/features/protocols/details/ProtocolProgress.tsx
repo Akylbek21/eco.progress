@@ -18,7 +18,7 @@ const ProtocolProgress = ({ status }: { status: string }) => {
   }
   const current = lifecycleStage(normalized) ?? 0;
   return (
-    <section aria-label="Этапы протокола" className="overflow-x-auto rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+    <section aria-label="Этапы протокола" className="overflow-x-auto border border-slate-200 bg-white px-3 py-2">
       <ol className="flex min-w-[580px] items-center">
         {stages.map((label, index) => <li key={label} className="flex flex-1 items-center last:flex-none">
           <div className={`flex items-center gap-2 text-sm font-bold ${index === current ? 'text-eco-800' : index < current ? 'text-emerald-700' : 'text-slate-400'}`}>

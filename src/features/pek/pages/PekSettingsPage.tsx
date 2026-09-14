@@ -44,7 +44,7 @@ const PekSettingsPage = () => {
   });
   const assignees = useQuery({ queryKey: pekKeys.assignees(selectedCompanyId, ['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(selectedCompanyId, ['PEK_RESPONSIBLE'], signal), enabled: selectedCompanyId > 0 });
   const companyStaff = useQuery({ queryKey: pekKeys.companyStaff(selectedCompanyId, user?.id), queryFn: ({ signal }) => pekApi.getCompanyStaff(selectedCompanyId, signal), enabled: selectedCompanyId > 0 });
-  const responsibleOptions = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data);
+  const responsibleOptions = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data, user);
   const laboratories = useQuery({ queryKey: ['laboratories', 'pek-settings', `user:${user?.id ?? 'anonymous'}`], queryFn: ({ signal }) => getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }, signal) });
   const runScheduler = useMutation({
     mutationFn: () => pekApi.runSchedulerNow(selectedCompanyId, settings.data!.version),
@@ -57,6 +57,12 @@ const PekSettingsPage = () => {
       const mapped = await handlePekMutationError(error, () => settings.refetch());
       setMessage(mapped.message);
     },
+    retry: false,
+  });
+  const runGlobalScheduler = useMutation({
+    mutationFn: () => pekApi.runSchedulerForAllCompanies(),
+    onSuccess: () => setMessage('Глобальный сбор протоколов завершён.'),
+    onError: (error) => setMessage(mapPekError(error).message),
     retry: false,
   });
   const [form, setForm] = useState<PekSettingsUpdateRequest | null>(null);
@@ -101,6 +107,7 @@ const PekSettingsPage = () => {
   if (!settings.data || !form) return <PekState title="Настройки ПЭК не получены" message="Сервис не вернул данные настроек." />;
   const editable = settings.data.availableActions?.edit === true;
   const canRunScheduler = settings.data.availableActions?.runScheduler === true;
+  const canRunGlobalScheduler = settings.data.availableActions?.runSchedulerGlobal === true;
   const dirty = settings.data ? JSON.stringify(form) !== JSON.stringify(toRequest(settings.data)) : false;
   const set = <K extends keyof PekSettingsUpdateRequest>(key: K, value: PekSettingsUpdateRequest[K]) => setForm((current) => current ? { ...current, [key]: value } : current);
   return <div className="space-y-5">
@@ -110,14 +117,14 @@ const PekSettingsPage = () => {
     {message && <Alert severity={save.isError ? 'error' : 'success'}>{message}</Alert>}
     <section className="space-y-5 rounded-2xl border bg-white p-5">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <TextField select label="Тип отчётного периода" value={form.defaultReportType} disabled={!editable} onChange={(event) => set('defaultReportType', event.target.value as 'QUARTERLY' | 'YEARLY')}><MenuItem value="QUARTERLY">Квартальный</MenuItem><MenuItem value="YEARLY">Годовой</MenuItem></TextField>
+        <TextField select label="Тип отчётного периода" value={form.defaultReportType} disabled={!editable} onChange={(event) => set('defaultReportType', event.target.value as 'QUARTERLY' | 'YEARLY')}><MenuItem value="QUARTERLY">Квартальный отчёт ПЭК</MenuItem><MenuItem value="YEARLY">Ежегодно — вид зависит от объекта</MenuItem></TextField>
         <TextField select label="Ответственный по умолчанию" value={form.defaultResponsibleUserId ?? ''} disabled={!editable || (assignees.isLoading && companyStaff.isLoading)} onChange={(event) => set('defaultResponsibleUserId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбран</MenuItem>{responsibleOptions.map((responsible) => <MenuItem key={responsible.id} value={responsible.id}>{responsible.name}</MenuItem>)}</TextField>
         <TextField select label="Лаборатория по умолчанию для создания протоколов" value={form.defaultLaboratoryId ?? ''} disabled={!editable || laboratories.isLoading} onChange={(event) => set('defaultLaboratoryId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбрана</MenuItem>{laboratories.data?.content.map((laboratory) => <MenuItem key={laboratory.id} value={laboratory.id}>{laboratory.name}</MenuItem>)}</TextField>
         <TextField type="number" label="Уведомлять до срока, дней" value={form.notifyBeforeDeadlineDays} disabled={!editable} inputProps={{ min: 0, max: 365 }} onChange={(event) => set('notifyBeforeDeadlineDays', Number(event.target.value))} />
       </div>
       <FormControlLabel control={<Checkbox checked={form.autoCollectProtocols} disabled={!editable} onChange={(event) => set('autoCollectProtocols', event.target.checked)} />} label="Автоматически получать протоколы" />
       <div className="grid gap-4 xl:grid-cols-3">{settingsGroups.map((group) => <fieldset key={group.title} className="min-w-0 rounded-xl border p-4"><legend className="max-w-full px-2 font-black">{group.title}</legend><div className="grid gap-2">{group.fields.map(([key, label]) => <FormControlLabel key={key} control={<Checkbox checked={Boolean(form[key])} disabled={!editable} onChange={(event) => set(key, event.target.checked)} />} label={label} />)}</div></fieldset>)}</div>
-      {canRunScheduler && <Button variant="outlined" disabled={runScheduler.isPending} onClick={() => runScheduler.mutate()}>{runScheduler.isPending ? 'Получаем протоколы…' : 'Получить протоколы сейчас'}</Button>}
+      <div className="flex flex-wrap gap-3">{canRunScheduler && <Button variant="outlined" disabled={runScheduler.isPending} onClick={() => runScheduler.mutate()}>{runScheduler.isPending ? 'Получаем протоколы…' : 'Получить протоколы сейчас'}</Button>}{canRunGlobalScheduler && <Button variant="outlined" disabled={runGlobalScheduler.isPending} onClick={() => runGlobalScheduler.mutate()}>{runGlobalScheduler.isPending ? 'Глобальный запуск…' : 'Получить протоколы по всем компаниям'}</Button>}</div>
       {editable && <div className="flex justify-end gap-3"><Button variant="outlined" disabled={!dirty || save.isPending} onClick={() => settings.data && setForm(toRequest(settings.data))}>Сбросить</Button><Button variant="contained" disabled={!dirty || save.isPending} onClick={() => save.mutate(form)}>{save.isPending ? 'Сохранение…' : 'Сохранить'}</Button></div>}
     </section>
     <PekCompanyStaff companyId={selectedCompanyId} editable={editable} />

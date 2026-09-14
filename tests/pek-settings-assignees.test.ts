@@ -61,9 +61,25 @@ describe('PEK settings assignees', () => {
     ]);
   });
 
+  it('keeps the authenticated staff user available when the company has no PEK assignments', () => {
+    expect(mergeAssigneesWithCompanyStaff([], [], {
+      id: '42',
+      name: 'Текущий администратор',
+      email: 'admin@example.kz',
+      position: 'Администратор',
+      role: 'ADMIN',
+    })).toEqual([{
+      id: 42,
+      name: 'Текущий администратор',
+      description: 'Администратор',
+      status: 'ACTIVE',
+      role: 'PEK_RESPONSIBLE',
+    }]);
+  });
+
   it('uses the merged company staff options in the program form', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramCreatePage.tsx'), 'utf8');
-    expect(source).toContain('mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data)');
+    expect(source).toContain('mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data, user)');
     expect(source).not.toContain('options={assignees.data || []}');
   });
 });

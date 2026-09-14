@@ -5,7 +5,7 @@ import type { PekAvailableAction } from '../../api/pekContracts';
 import { labelPekStatus } from '../../utils/pekLabels';
 
 export const PekStatusBadge = ({ status }: { status: string }) => (
-  <span className="inline-flex whitespace-nowrap rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">
+  <span className="inline-flex whitespace-nowrap border border-slate-300 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-700">
     {labelPekStatus(status)}
   </span>
 );
@@ -15,12 +15,12 @@ export const PekPageHeader = ({ title, description, actions }: {
   description?: string;
   actions?: ReactNode;
 }) => (
-  <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 xl:flex-row xl:items-center xl:justify-between">
-    <div className="min-w-0">
-      <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">{title}</h1>
-      {description && <p className="mt-2 text-sm text-slate-600">{description}</p>}
+  <header className="pek-page-header border-b border-slate-300 bg-white px-3 py-3">
+    <div className="pek-page-header-copy min-w-0">
+      <h1 className="text-xl font-black text-slate-950">{title}</h1>
+      {description && <p className="mt-1 text-xs text-slate-600">{description}</p>}
     </div>
-    {actions && <div className="flex max-w-full flex-wrap items-center gap-2 [&>div]:shrink-0 [&>button]:shrink-0">{actions}</div>}
+    {actions && <div className="pek-page-header-actions flex max-w-full flex-wrap items-center gap-1.5 [&>div]:shrink-0 [&>button]:shrink-0">{actions}</div>}
   </header>
 );
 
@@ -46,8 +46,8 @@ export const PekState = ({ title, message, retry }: {
 export const PekReadiness = ({ value }: { value?: number | null; valid?: boolean }) => (
   <div className="min-w-28 whitespace-nowrap">
     <div className="flex justify-between text-xs font-semibold">
-      <span>{value === undefined || value === null ? '—' : `${value}%`}</span>
       <span>Готовность</span>
+      <span>{value === undefined || value === null ? '—' : `${value}%`}</span>
     </div>
     <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-200">
       <div className="h-full bg-eco-600" style={{ width: `${Math.max(0, Math.min(100, value ?? 0))}%` }} />

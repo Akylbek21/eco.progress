@@ -234,6 +234,222 @@ svg {
   word-break: normal;
 }
 
+/* Compact PEK workbench. Kept local to the module so public/admin UI is unchanged. */
+.pek-module {
+  --pek-line: #d9e2ec;
+  font-size: 0.875rem;
+}
+
+.pek-module > div:first-child {
+  border-radius: 0.375rem;
+  box-shadow: none;
+}
+
+.pek-module nav.sticky {
+  top: 0;
+  border-color: var(--pek-line);
+  box-shadow: 0 1px 0 rgb(15 23 42 / 0.04);
+}
+
+.pek-module nav.sticky button {
+  min-height: 2.5rem;
+  border-right: 1px solid #e8edf3;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.8125rem;
+}
+
+.pek-module :where(section, article)[class*="rounded-2xl"] { border-radius: 0.375rem; }
+.pek-module :where(section, article)[class*="p-5"] { padding: 0.875rem; }
+.pek-module :where(section, article)[class*="p-8"] { padding: 1rem; }
+.pek-module table { border-collapse: collapse; font-size: 0.78rem; }
+.pek-module th { background: #f4f7fa; color: #25364b; font-size: 0.72rem; }
+.pek-module :where(th, td) {
+  border: 1px solid var(--pek-line);
+  padding: 0.5rem 0.625rem;
+  vertical-align: top;
+}
+.pek-module tbody tr:hover { background: #f8fbfd; }
+.pek-module :where(input, select, textarea) { border-radius: 0.25rem !important; }
+
+.pek-workspace-breadcrumb + div > header {
+  margin-inline: -0.25rem;
+  padding: 0.75rem 0.25rem;
+}
+
+.pek-workspace-breadcrumb + div > header h1 {
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+}
+
+.pek-page-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.75rem 1.25rem;
+}
+
+.pek-page-header-copy p {
+  max-width: 72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pek-page-header-actions {
+  justify-content: flex-end;
+  min-width: max-content;
+}
+
+.pek-page-header-actions > .min-w-28 {
+  order: -2;
+  min-width: 7rem;
+}
+
+.pek-page-header-actions > span {
+  order: -1;
+}
+
+.pek-page-header-actions button {
+  min-height: 2rem;
+  padding-block: 0.35rem;
+}
+
+@media (max-width: 1023px) {
+  .pek-page-header { grid-template-columns: minmax(0, 1fr); }
+  .pek-page-header-actions { justify-content: flex-start; min-width: 0; }
+  .pek-page-header-copy p { white-space: normal; }
+}
+
+.pek-workspace-breadcrumb + div > header + section.grid {
+  border: 1px solid var(--pek-line);
+  padding: 0;
+}
+
+.pek-workspace-breadcrumb + div > header + section.grid > div {
+  min-height: 3.25rem;
+  border-right: 1px solid var(--pek-line);
+  padding: 0.625rem 0.75rem;
+}
+
+.pek-module [aria-label="Панель готовности"] {
+  border-radius: 0.375rem;
+}
+
+.pek-module [aria-label="Панель готовности"] > div:first-child {
+  padding-block: 0.625rem;
+}
+
+.pek-module button,
+.pek-module a[class*="border"] {
+  border-radius: 0.3rem;
+}
+
+.pek-module button[class*="bg-eco"],
+.pek-module .MuiButton-contained {
+  box-shadow: none;
+}
+
+@media (min-width: 1536px) {
+  .pek-module .pek-section-nav {
+    float: left;
+    width: 13.5rem;
+    max-height: calc(100vh - 5rem);
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border: 1px solid var(--pek-line);
+    background: #f6f8fb;
+    scrollbar-width: thin;
+  }
+
+  .pek-module .pek-section-nav button {
+    width: 100%;
+    flex-shrink: 0;
+    border-right: 0;
+    border-bottom: 1px solid #e8edf3;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .pek-module .pek-section-nav button[class*="border-b-2"] {
+    border-bottom-width: 1px;
+    border-left: 3px solid #08756b;
+    background: #e9f5f2;
+    padding-left: calc(0.875rem - 3px);
+  }
+
+  .pek-module .pek-section-nav ~ * {
+    margin-left: 14.375rem;
+  }
+}
+
+/* Protocol workbench follows the same compact visual language as PEK. */
+.protocol-workspace {
+  --protocol-line: #d9e2ec;
+  font-size: 0.875rem;
+}
+
+.protocol-workspace :where(header, section, article)[class*="rounded-2xl"] {
+  border-radius: 0.375rem;
+  box-shadow: none;
+}
+
+.protocol-workspace :where(section, article)[class*="p-5"] { padding: 0.875rem; }
+.protocol-workspace :where(section, article)[class*="p-4"] { padding: 0.75rem; }
+.protocol-workspace nav[aria-label="Разделы протокола"] { background: #fff; }
+.protocol-workspace nav[aria-label="Разделы протокола"] button { padding-block: 0.625rem; }
+
+.protocol-summary-grid > section {
+  min-width: 0;
+  min-height: 12rem;
+}
+
+.protocol-summary-card dt,
+.protocol-summary-card dd {
+  border-bottom: 1px solid var(--protocol-line);
+  padding: 0.55rem 0.75rem;
+}
+
+.protocol-summary-card dt {
+  border-right: 1px solid var(--protocol-line);
+  background: #f6f8fb;
+  color: #64748b;
+}
+
+.protocol-summary-card dd { font-weight: 600; }
+.protocol-summary-grid > section:nth-child(2) { border-color: #f0c769; background: #fffdf7; }
+
+.protocol-workspace table {
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.protocol-workspace :where(th, td) {
+  border: 1px solid var(--protocol-line);
+  padding: 0.55rem 0.7rem !important;
+  vertical-align: top;
+}
+
+.protocol-workspace thead th {
+  background: #f4f7fa;
+  color: #25364b;
+  font-size: 0.72rem;
+}
+
+.protocol-workspace tbody tr:hover { background: #f8fbfd; }
+.protocol-workspace button { border-radius: 0.3rem; }
+
+@media (max-width: 1279px) {
+  .protocol-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .protocol-summary-grid > :last-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 767px) {
+  .protocol-summary-grid { grid-template-columns: minmax(0, 1fr); }
+  .protocol-summary-grid > :last-child { grid-column: auto; }
+  .protocol-header p.truncate { white-space: normal; }
+}
+
 @keyframes heroZoom {
   from { transform: scale(1); }
   to { transform: scale(1.05); }

@@ -10,14 +10,25 @@ describe('PEK report and program aggregate contract', () => {
     const report = mapReportResponse({
       id: 9, companyId: 1, objectId: 2, programId: 3, version: 6, contentRevision: 8,
       regulationVersion: 'Rules-250/2026', templateVersion: 'official-v3', status: 'REJECTED',
-      periodType: 'QUARTER', reportYear: 2026, reportQuarter: 2,
-      periodStart: '2026-04-01', periodEnd: '2026-06-30', submissionDueDate: '2026-07-15',
+      reportType: 'PEM_CASPIAN_ANNUAL',
+      periodType: 'YEAR', reportYear: 2026, reportQuarter: null,
+      periodStart: '2026-01-01', periodEnd: '2026-12-31', submissionDueDate: '2027-03-01',
       submittedAt: '2026-07-10T10:00:00Z', acceptedAt: null,
       rejectedAt: '2026-07-11T10:00:00Z', rejectionReason: 'Исправить расчёты', linkedProtocolCount: 2,
     });
-    expect(report.submissionDueDate).toBe('2026-07-15');
+    expect(report.submissionDueDate).toBe('2027-03-01');
     expect(report.submissionDueDate).not.toBe(report.periodEnd);
+    expect(report.reportType).toBe('PEM_CASPIAN_ANNUAL');
     expect(report).toMatchObject({ status: 'REJECTED', rejectionReason: 'Исправить расчёты' });
+  });
+
+  it('shows the statutory annual report names instead of a generic year label', () => {
+    const labels = source('src/features/pek/utils/pekLabels.ts');
+    const createPage = source('src/features/pek/pages/PekReportCreatePage.tsx');
+    expect(labels).toContain("PEK_TABLES_7_12_ANNUAL: 'Годовые таблицы ПЭК'");
+    expect(labels).toContain("PEM_CASPIAN_ANNUAL: 'Годовой производственный мониторинг Каспия'");
+    expect(createPage).toContain("context.data?.reportType === 'PEM_CASPIAN_ANNUAL'");
+    expect(createPage).not.toContain('<option value="YEAR">Год</option>');
   });
 
   it('maps official and internal generation onto the backend document resource', () => {
