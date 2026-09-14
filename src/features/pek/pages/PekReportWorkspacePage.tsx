@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button as MuiButton, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from '@mui/material';
 import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import ActionMenu from '../../../components/ui/ActionMenu';
 import { useAuth } from '../../../contexts/AuthContext';
 import type { PekReport, PekReportSource } from '../api/pekContracts';
 import { pekKeys } from '../api/pekQueryKeys';
@@ -288,7 +289,7 @@ const PekReportWorkspacePage = () => {
       <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-4"><span>Найдено протоколов: {collectionSummary.linkedProtocolCount}</span><span>Добавлено: {collectionSummary.addedCount}</span><span>Обновлено: {collectionSummary.updatedCount}</span><span>Сопоставлено: {collectionSummary.matchedCount} результатов</span><span>Требуют проверки: {collectionSummary.reviewRequiredCount}</span><span>Не сопоставлено: {collectionSummary.unmatchedCount}</span><span>Превышений: {collectionSummary.exceedanceCount}</span></div>
       {collectionSummary.warnings.length > 0 && <ul className="mt-2 list-disc pl-5">{collectionSummary.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
     </Alert>}
-    <nav className="flex gap-1 overflow-x-auto border-b" aria-label="Разделы отчёта">{tabs.map(({ key, label }) => <button key={key} type="button" onClick={() => setTab(key)} className={`whitespace-nowrap px-4 py-3 font-bold ${tab === key ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}</nav>
+    <nav className="flex max-w-full gap-1 overflow-x-auto border-b" aria-label="Разделы отчёта">{tabs.map(({ key, label }) => <button key={key} type="button" onClick={() => setTab(key)} className={`shrink-0 whitespace-nowrap px-4 py-3 font-bold ${tab === key ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}</nav>
 
     {tab === 'overview' && <div className="space-y-4">
       <section className="grid gap-3 rounded-2xl border bg-white p-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -318,7 +319,7 @@ const PekReportWorkspacePage = () => {
            <td><p>{source.value ?? source.valueText ?? '—'} {source.unit || ''}</p><p className="text-xs text-slate-500">Норматив: {source.normativeValue ?? '—'} · {source.comparisonType || 'без сравнения'}</p>{source.isExceedance && <p className="text-xs font-bold text-rose-700">Превышение</p>}</td>
            <td><p>{source.controlItemName || '—'}</p><p className="text-xs">{source.programIndicatorName || '—'}</p></td>
            <td>{source.excluded ? matchLabels.EXCLUDED : matchLabels[source.matchStatus] || source.matchStatus}</td>
-           <td><div className="flex flex-wrap gap-2">{canMutateSources && !source.excluded && ['UNMATCHED', 'AMBIGUOUS'].includes(source.matchStatus) && <MuiButton size="small" onClick={() => { setSelectedSource(source); setControlItemId(''); setIndicatorId(''); }}>{source.matchStatus === 'AMBIGUOUS' ? 'Выбрать показатель' : 'Сопоставить вручную'}</MuiButton>}{canMutateSources && !source.excluded && source.matchStatus === 'UNMATCHED' && <MuiButton size="small" color="error" onClick={() => setExcludeSource(source)}>Исключить</MuiButton>}{canMutateSources && source.matchStatus === 'STALE' && <MuiButton size="small" onClick={() => setCollectConfirmOpen(true)}>Обновить данные</MuiButton>}{canMutateSources && source.excluded && <MuiButton size="small" disabled={restore.isPending} onClick={() => restore.mutate(source)}>Восстановить</MuiButton>}</div></td>
+           <td className="relative text-right"><ActionMenu label={`Действия с источником ${source.protocolNumber}`} widthClass="w-64">{canMutateSources && !source.excluded && ['UNMATCHED', 'AMBIGUOUS'].includes(source.matchStatus) && <MuiButton size="small" onClick={() => { setSelectedSource(source); setControlItemId(''); setIndicatorId(''); }}>{source.matchStatus === 'AMBIGUOUS' ? 'Выбрать показатель' : 'Сопоставить вручную'}</MuiButton>}{canMutateSources && !source.excluded && source.matchStatus === 'UNMATCHED' && <MuiButton size="small" color="error" onClick={() => setExcludeSource(source)}>Исключить</MuiButton>}{canMutateSources && source.matchStatus === 'STALE' && <MuiButton size="small" onClick={() => setCollectConfirmOpen(true)}>Обновить данные</MuiButton>}{canMutateSources && source.excluded && <MuiButton size="small" disabled={restore.isPending} onClick={() => restore.mutate(source)}>Восстановить</MuiButton>}</ActionMenu></td>
          </tr>;
       })}</tbody></table></div>}
     </section>}

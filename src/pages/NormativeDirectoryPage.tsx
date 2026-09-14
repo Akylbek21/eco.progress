@@ -2,6 +2,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from '
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, Copy, Edit3, FileSpreadsheet, Plus, RefreshCw, Search } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
+import ActionMenu from '../components/ui/ActionMenu';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import NormativeForm, { type NormativeFormValues } from '../components/normatives/NormativeForm';
@@ -1414,22 +1415,22 @@ const NormativeDirectoryPage = () => {
                             <div className="max-w-[320px] whitespace-normal break-words" title={column.render(row, index)}>{column.render(row, index)}</div>
                           </td>
                         ))}
-                        <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>
-                          <div className="flex justify-end gap-2">
-                            <Button type="button" variant="secondary" className="px-3" title="Скопировать норматив" onClick={() => copyNormative(row)}>
-                              <Copy className="h-4 w-4" />
+                        <td className="relative px-3 py-3 text-right" onClick={(event) => event.stopPropagation()}>
+                          <ActionMenu label={`Действия с нормативом ${row.primary.indicatorName || row.primary.id}`}>
+                            <Button type="button" variant="secondary" title="Скопировать норматив" onClick={() => copyNormative(row)}>
+                              <Copy className="h-4 w-4" /> Скопировать
                             </Button>
                             {canManage ? (
                               <>
-                              <Button type="button" variant="secondary" className="px-3" title="Изменить" onClick={() => { setEditing(row.primary); setEditorDirty(false); }}>
-                                <Edit3 className="h-4 w-4" />
+                              <Button type="button" variant="secondary" title="Изменить" onClick={() => { setEditing(row.primary); setEditorDirty(false); }}>
+                                <Edit3 className="h-4 w-4" /> Изменить
                               </Button>
-                              <Button type="button" variant="secondary" className="px-3" title="Архивировать" onClick={() => archiveGroup(row)}>
-                                <Archive className="h-4 w-4" />
+                              <Button type="button" variant="secondary" title="Архивировать" onClick={() => archiveGroup(row)}>
+                                <Archive className="h-4 w-4" /> Архивировать
                               </Button>
                               </>
                             ) : null}
-                          </div>
+                          </ActionMenu>
                         </td>
                       </tr>
                     ))}

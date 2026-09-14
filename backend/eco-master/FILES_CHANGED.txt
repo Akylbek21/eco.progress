@@ -1,0 +1,125 @@
+ИЗМЕНЕННЫЕ И СОЗДАННЫЕ ФАЙЛЫ
+Дата: 2026-08-07
+
+=== НОВЫЕ ФАЙЛЫ ===
+
+1. src/main/resources/db/migration/V73__pek_protocol_order_context.sql
+   - Flyway миграция для добавления order_id и order_service_item_id
+   - Добавлены индексы для оптимизации поиска
+   - ~20 строк SQL
+
+2. src/test/java/kz/eco/pek/PekProtocolLinkIntegrationTest.java
+   - Интеграционные тесты для ПЭК связей протоколов
+   - 13 test methods покрывают основные сценарии
+   - ~350 строк Java
+
+3. IMPLEMENTATION_SUMMARY.md
+   - Полная документация реализации
+   - API контракты, примеры, архитектурные решения
+   - ~180 строк Markdown
+
+4. CHANGES_SUMMARY.md
+   - Резюме всех изменений с деталями
+   - Список endpoints, DTO, статистика
+   - ~150 строк Markdown
+
+5. COMPLETION_REPORT.md
+   - Итоговый отчет о выполнении всех задач
+   - Рекомендации и следующие шаги
+   - ~200 строк Markdown
+
+=== ИЗМЕНЕННЫЕ ФАЙЛЫ ===
+
+1. src/main/java/kz/eco/pek/PekReportProtocolSource.java
+   - Добавлены поля: orderId (String, 32), orderServiceItemId (String, 64)
+   - Добавлены getters/setters
+   - +20 строк
+
+2. src/main/java/kz/eco/pek/dto/PekApiDtos.java
+   - Добавлены 3 новых DTO records
+   - Расширены 2 существующих DTO (ProtocolLinkResponse, CreateProtocolDraftRequest)
+   - +60 строк
+
+3. src/main/java/kz/eco/pek/PekReportProtocolSourceRepository.java
+   - Добавлены 3 новых repository методов с сортировкой
+   - +10 строк
+
+4. src/main/java/kz/eco/pek/PekProtocolLinkService.java
+   - Добавлены 5 основных методов (createFromPekContext, update, listByProgram, listByReport, listByControlItem)
+   - Добавлены 2 вспомогательных метода валидации
+   - Расширен toResponse() для новых полей
+   - +180 строк
+
+5. src/main/java/kz/eco/protocol/ProtocolService.java
+   - Добавлен импорт PekApiDtos
+   - Расширен doCreateDraft() метод для обработки pekContext
+   - Интеграция с pekProtocolLinkService.createFromPekContext()
+   - +30 строк
+
+6. src/main/java/kz/eco/protocol/ProtocolController.java
+   - Добавлены 2 новых endpoint метода (POST и PUT для pek-links)
+   - +15 строк
+
+7. src/main/java/kz/eco/pek/PekController.java
+   - Добавлены 3 новых endpoint метода для двустороннего чтения
+   - +15 строк
+
+=== СТАТИСТИКА ===
+
+Всего файлов затронуто: 12
+- Новых файлов: 5
+- Измененных файлов: 7
+
+Строк кода:
+- Production код: +355 строк
+- Тестовый код: +350 строк
+- Документация: +530 строк
+
+Endpoints:
+- Новых: 5 (2 в ProtocolController, 3 в PekController)
+- Расширено: 4 (существующие endpoints поддерживают новые поля)
+
+DTO Records:
+- Новых: 3 (CreateProtocolPekLinkRequest, UpdateProtocolPekLinkRequest, ProtocolPekContextRequest)
+- Расширено: 2 (ProtocolLinkResponse, CreateProtocolDraftRequest)
+
+Repository методы:
+- Новых: 3 (findByReportIdOrderByCreatedAtAsc, findByProgramIdOrderByCreatedAtAsc, findByControlItemIdOrderByCreatedAtAsc)
+
+Service методы:
+- Новых: 5 (createFromPekContext, update, listByProgram, listByReport, listByControlItem)
+- Вспомогательных: 2 (validateEditableProtocol, validateCompanyScope)
+
+Test cases:
+- Новых: 13 интеграционных тестов
+
+=== ВАЖНЫЕ ЗАМЕЧАНИЯ ===
+
+1. Все изменения обратно совместимы
+2. Миграция добавляет только новые колонки (ADD COLUMN)
+3. Существующие endpoints не изменились
+4. Company scope проверяется на сервере
+5. Optimistic locking реализовано через версионирование
+6. Идемпотентность поддерживается через unique index
+
+=== ЗАВИСИМОСТИ ===
+
+Новые зависимости: НЕТУ (используются существующие)
+Обновленные зависимости: НЕТУ
+Удаленные зависимости: НЕТУ
+
+=== ТРЕБУЕМЫЕ ДЕЙСТВИЯ ПЕРЕД MERGE ===
+
+1. ✅ Проверить что все файлы скомпилированы: mvn clean compile
+2. ✅ Запустить интеграционные тесты: mvn test -Dtest=PekProtocolLinkIntegrationTest
+3. ✅ Запустить все тесты: mvn test
+4. ✅ Полная сборка: mvn clean install
+5. ✅ Code review всех измененных файлов
+6. ✅ Проверить что миграция применяется корректно
+
+=== СЛЕДУЮЩИЕ ШАГИ ===
+
+1. Развернуть на dev/staging для тестирования
+2. Обновить frontend для использования new endpoints
+3. Добавить интеграцию с plan/fact (Phase 2)
+4. Добавить полный аудит trail (Phase 3)

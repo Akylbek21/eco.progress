@@ -80,7 +80,7 @@ const PekReportPackageCard = ({ report }: { report: PekReport }) => {
     {mappedFailure && <Alert severity="error">{mappedFailure.message}</Alert>}
     {missingFields.length > 0 && <Alert severity="warning"><strong>Замечания при формировании комплекта:</strong><ul className="mt-2 list-disc pl-5">{missingFields.map((field) => <li key={field}>{field}</li>)}</ul><p className="mt-2">После исправления данных сформируйте комплект повторно, чтобы обновить файлы и список замечаний.</p></Alert>}
 
-    <div className="grid gap-3 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-4">
+    <div className="grid gap-3 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
       <div><span className="text-slate-500">Версия документа</span><p className="font-bold">v{data.documentVersion}</p></div>
       <div><span className="text-slate-500">Ревизия данных</span><p className="font-bold">{data.sourceContentRevision}</p></div>
       <div><span className="text-slate-500">Дата генерации</span><p className="font-bold">{data.generatedAt ? new Date(data.generatedAt).toLocaleString('ru-RU') : '—'}</p></div>

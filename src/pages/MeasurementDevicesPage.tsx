@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Archive, Edit3, Plus, RefreshCw } from 'lucide-react';
+import ActionMenu from '../components/ui/ActionMenu';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../hooks/useToast';
@@ -183,11 +184,11 @@ const MeasurementDevicesPage = () => {
                   <td className="px-4 py-4">{item.verificationValidUntil || '-'}</td>
                   <td className="px-4 py-4">{item.units || '-'}</td>
                   <td className="px-4 py-4"><StatusBadge status={statusValue} /></td>
-                  <td className="px-4 py-4">
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="secondary" className="px-3" onClick={() => { setEditing(item); setModalOpen(true); }}><Edit3 className="h-4 w-4" /></Button>
-                      <Button type="button" variant="secondary" className="px-3" onClick={() => archive(item)}><Archive className="h-4 w-4" /></Button>
-                    </div>
+                  <td className="relative px-4 py-4 text-right">
+                    <ActionMenu label={`Действия с прибором ${item.name}`}>
+                      <Button type="button" variant="secondary" onClick={() => { setEditing(item); setModalOpen(true); }}><Edit3 className="h-4 w-4" /> Изменить</Button>
+                      <Button type="button" variant="secondary" onClick={() => archive(item)}><Archive className="h-4 w-4" /> Архивировать</Button>
+                    </ActionMenu>
                   </td>
                 </tr>
               );})}

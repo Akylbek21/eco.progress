@@ -5,7 +5,7 @@ import type { PekAvailableAction } from '../../api/pekContracts';
 import { labelPekStatus } from '../../utils/pekLabels';
 
 export const PekStatusBadge = ({ status }: { status: string }) => (
-  <span className="inline-flex rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">
+  <span className="inline-flex whitespace-nowrap rounded-full bg-eco-50 px-3 py-1 text-xs font-bold text-eco-800">
     {labelPekStatus(status)}
   </span>
 );
@@ -15,12 +15,12 @@ export const PekPageHeader = ({ title, description, actions }: {
   description?: string;
   actions?: ReactNode;
 }) => (
-  <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
-    <div>
+  <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 xl:flex-row xl:items-center xl:justify-between">
+    <div className="min-w-0">
       <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">{title}</h1>
       {description && <p className="mt-2 text-sm text-slate-600">{description}</p>}
     </div>
-    {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+    {actions && <div className="flex max-w-full flex-wrap items-center gap-2 [&>div]:shrink-0 [&>button]:shrink-0">{actions}</div>}
   </header>
 );
 
@@ -44,7 +44,7 @@ export const PekState = ({ title, message, retry }: {
 );
 
 export const PekReadiness = ({ value }: { value?: number | null; valid?: boolean }) => (
-  <div className="min-w-28">
+  <div className="min-w-28 whitespace-nowrap">
     <div className="flex justify-between text-xs font-semibold">
       <span>{value === undefined || value === null ? '—' : `${value}%`}</span>
       <span>Готовность</span>

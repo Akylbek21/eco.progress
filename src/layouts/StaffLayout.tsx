@@ -1,6 +1,6 @@
 ﻿import { ReactNode, useState } from 'react';
 import { NavLink, Link, Navigate } from 'react-router-dom';
-import { BarChart3, Bell, BookOpenCheck, Building2, CalendarDays, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, FlaskConical, Gauge, Handshake, LayoutDashboard, Leaf, LockKeyhole, LogOut, Menu, Settings, UserRoundSearch, Users, X } from 'lucide-react';
+import { BarChart3, Bell, BookOpenCheck, Building2, CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, CreditCard, FileSignature, FileText, FlaskConical, Gauge, Handshake, LayoutDashboard, Leaf, LockKeyhole, LogOut, Menu, Settings, UserRoundSearch, Users, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { canAccessPayments } from '../utils/payments';
 import { canAccess, hasPermission } from '../config/permissions';
@@ -55,14 +55,23 @@ const roleLabel = (role?: string) => {
 
 const StaffLayout = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => typeof window !== 'undefined' && window.localStorage.getItem('staff-menu-collapsed') === 'true');
   const { user, loading, isAuthenticated, isStaff, logout } = useAuth();
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><LoadingSpinner /></div>;
   if (!isAuthenticated || !isStaff) return <Navigate to="/staff/login" replace />;
   const homePath = '/staff';
 
+  const toggleCollapsed = () => {
+    setCollapsed((current) => {
+      const next = !current;
+      window.localStorage.setItem('staff-menu-collapsed', String(next));
+      return next;
+    });
+  };
+
   const nav = (mobile = false) => (
-    <nav className={mobile ? 'space-y-1' : 'mt-8 space-y-1'}>
+    <nav className={mobile ? 'space-y-1' : `mt-8 space-y-1 ${collapsed ? 'px-1' : ''}`}>
       {(user?.role === 'LABORATORY'
         ? links.filter((item) => ['/staff/protocols', '/staff/journals', '/staff/normatives', '/staff/pek', '/staff/document-flow'].includes(item.path)
           || Boolean(item.companyPermission && hasCompanyPermission(user, item.companyPermission)))
@@ -79,13 +88,13 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
             <div
               key={item.path}
               title={title}
-              className={`flex cursor-not-allowed items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium ${
+              className={`flex cursor-not-allowed items-center rounded-2xl py-3 text-sm font-medium ${collapsed && !mobile ? 'justify-center px-2' : 'gap-3 px-4'} ${
                 mobile ? 'text-slate-400' : 'text-white/45'
               }`}
             >
-              <Icon size={18} />
-              <span className="min-w-0 flex-1">{item.label}</span>
-              <LockKeyhole size={14} />
+              <Icon className="shrink-0" size={18} />
+              {(!collapsed || mobile) && <span className="min-w-0 flex-1">{item.label}</span>}
+              {(!collapsed || mobile) && <LockKeyhole size={14} />}
             </div>
           );
         }
@@ -94,9 +103,10 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
             key={item.path}
             to={item.path}
             end={item.path === '/staff'}
+            title={collapsed && !mobile ? item.label : undefined}
             onClick={() => setOpen(false)}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
+              `flex items-center rounded-2xl py-3 text-sm font-medium transition ${collapsed && !mobile ? 'justify-center px-2' : 'gap-3 px-4'} ${
                 mobile
                   ? isActive
                     ? 'bg-eco-900 text-white shadow-lg shadow-eco-900/15'
@@ -107,7 +117,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
               }`
             }
           >
-            <Icon size={18} /> {item.label}
+            <Icon className="shrink-0" size={18} /> {(!collapsed || mobile) && item.label}
           </NavLink>
         );
       })}
@@ -115,21 +125,26 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 lg:grid lg:grid-cols-[290px_1fr]">
-      <aside className="hidden bg-eco-900 p-6 text-white lg:block">
-        <Link to={homePath} className="flex items-center text-xl font-bold leading-tight">
-          <span>
+    <div className={`min-h-screen bg-slate-100 text-slate-900 xl:grid ${collapsed ? 'xl:grid-cols-[84px_minmax(0,1fr)]' : 'xl:grid-cols-[270px_minmax(0,1fr)]'}`}>
+      <aside className={`hidden bg-eco-900 text-white xl:sticky xl:top-0 xl:block xl:h-screen xl:overflow-y-auto ${collapsed ? 'p-3' : 'p-5'}`}>
+        <div className={`flex items-start ${collapsed ? 'flex-col items-center gap-3' : 'justify-between gap-3'}`}>
+          <Link to={homePath} title={collapsed ? 'ecoprogress.kz CRM' : undefined} className="flex min-w-0 items-center text-xl font-bold leading-tight">
+          {collapsed ? <Leaf size={26} aria-label="ecoprogress.kz CRM" /> : <span>
             <span className="block">ecoprogress.kz</span>
             <span className="block text-xs tracking-[0.22em] text-white/55">CRM</span>
-          </span>
-        </Link>
-        <p className="mt-2 text-sm text-white/60">Кабинет сотрудника</p>
+          </span>}
+          </Link>
+          <button type="button" onClick={toggleCollapsed} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 text-white/75 transition hover:bg-white/10 hover:text-white" aria-label={collapsed ? 'Развернуть меню' : 'Свернуть меню'} title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}>
+            {collapsed ? <ChevronRight size={19} /> : <ChevronLeft size={19} />}
+          </button>
+        </div>
+        {!collapsed && <p className="mt-2 text-sm text-white/60">Кабинет сотрудника</p>}
         {nav()}
       </aside>
-      <div>
+      <div className="min-w-0">
         <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
           <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-8">
-            <button className="rounded-2xl border border-slate-200 bg-white p-3 lg:hidden" onClick={() => setOpen(true)} aria-label="Меню">
+            <button className="rounded-2xl border border-slate-200 bg-white p-3 xl:hidden" onClick={() => setOpen(true)} aria-label="Меню">
               <Menu size={20} />
             </button>
             <div className="min-w-0 flex-1">
@@ -146,8 +161,8 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
           </div>
         </header>
         {open && (
-          <div className="fixed inset-0 z-50 bg-eco-900/40 lg:hidden" onClick={() => setOpen(false)}>
-            <aside className="h-full w-80 max-w-[86vw] bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <div className="fixed inset-0 z-50 bg-eco-900/40 xl:hidden" onClick={() => setOpen(false)}>
+            <aside className="h-full w-80 max-w-[86vw] overflow-y-auto bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
               <div className="mb-6 flex items-center justify-between">
                 <div>
                   <span className="font-bold text-eco-900">CRM сотрудника</span>

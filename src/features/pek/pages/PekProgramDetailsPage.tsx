@@ -144,8 +144,8 @@ const PekProgramDetailsPage = () => {
       <Info label="Ответственный" value={item.responsible?.name || '—'} />
       <Info label="Режим" value={item.readOnly ? 'Только чтение' : 'Редактирование разрешено'} />
     </section>
-    <nav className="flex gap-1 overflow-x-auto border-b">
-      {tabs.map((label, index) => <button key={label} type="button" onClick={() => setTab(index)} className={`whitespace-nowrap px-4 py-3 font-bold ${tab === index ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}
+    <nav className="flex max-w-full gap-1 overflow-x-auto border-b" aria-label="Разделы программы ПЭК">
+      {tabs.map((label, index) => <button key={label} type="button" onClick={() => setTab(index)} className={`shrink-0 whitespace-nowrap px-4 py-3 font-bold ${tab === index ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}
     </nav>
     {tab === 0 && <div className="space-y-5">
       {readiness.isPending && <p role="status">Проверка готовности программы…</p>}

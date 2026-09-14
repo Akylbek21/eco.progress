@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ConfirmModal from '../../../components/modals/ConfirmModal';
-import Button from '../../../components/ui/Button';
+import ActionMenu from '../../../components/ui/ActionMenu';
 import { useAuth } from '../../../contexts/AuthContext';
 import useToast from '../../../hooks/useToast';
 import type { PekProgram, PekProgramFilters, PekProgramStatus } from '../api/pekContracts';
@@ -12,7 +12,7 @@ import EntityName from '../components/common/EntityName';
 import PekCompanyObjectFilters from '../components/common/PekCompanyObjectFilters';
 import PekLookupSelect from '../components/common/PekLookupSelect';
 import PekQueryError from '../components/common/PekQueryError';
-import { PekLoading, PekPageHeader, PekReadiness, PekState, PekStatusBadge } from '../components/common/PekUi';
+import { PekLoading, PekPageHeader, PekState } from '../components/common/PekUi';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { canCreateProgram, canDeleteProgram } from '../permissions/pekAccess';
 import { mapPekError } from '../utils/pekErrorMapper';
@@ -30,7 +30,7 @@ const ProgramReadinessCell = ({ program, userId }: { program: PekProgram; userId
   });
   return readiness.isError
     ? <span className="text-xs text-rose-700" title="Не удалось получить серверную готовность">Ошибка</span>
-    : <PekReadiness value={readiness.data?.progressPercent} />;
+    : <span className="font-bold text-eco-900">{readiness.data?.progressPercent === undefined ? '—' : `${readiness.data.progressPercent}%`}</span>;
 };
 
 const PekProgramsPage = () => {
@@ -93,7 +93,7 @@ const PekProgramsPage = () => {
         ? <Link to="/staff/pek/programs/new" className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white">Создать программу</Link>
         : undefined}
     />
-    <section className="grid gap-3 rounded-2xl border bg-white p-4 md:grid-cols-4 xl:grid-cols-8">
+    <section className="grid gap-3 rounded-2xl border bg-white p-4 md:grid-cols-2 xl:grid-cols-4 min-[1900px]:grid-cols-8">
       <label className="text-xs font-bold text-slate-600">Поиск
         <input aria-label="Поиск программ" value={rawSearch} onChange={(event) => update('search', event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2" placeholder="Номер или название" />
       </label>
@@ -126,36 +126,41 @@ const PekProgramsPage = () => {
               message={hasFilters ? 'Измените или сбросьте фильтры.' : 'Создайте первую программу ПЭК.'}
             />
           : <>
-            <div className="overflow-x-auto rounded-2xl border bg-white">
-              <table className="w-full min-w-[1180px] text-sm">
+            <div className="max-w-full overflow-x-auto rounded-2xl border bg-white">
+              <table className="w-[1560px] table-fixed text-sm">
+                <colgroup>
+                  <col className="w-40" />
+                  <col className="w-[260px]" />
+                  <col className="w-[220px]" />
+                  <col className="w-60" />
+                  <col className="w-[220px]" />
+                  <col className="w-20" />
+                  <col className="w-52" />
+                  <col className="w-28" />
+                  <col className="w-20" />
+                </colgroup>
                 <thead className="bg-slate-50 text-left"><tr>
-                  {['Номер', 'Название', 'Компания', 'Объект', 'Период действия', 'Версия', 'Ответственный', 'Статус', 'Готовность', 'Последнее изменение', 'Действия'].map((label) => <th key={label} className="px-4 py-3">{label}</th>)}
+                  {['Номер', 'Название', 'Компания', 'Объект', 'Период действия', 'Версия', 'Ответственный', 'Готовность', ''].map((label, index) => <th key={`${label}-${index}`} className="whitespace-nowrap px-4 py-3">{label}</th>)}
                 </tr></thead>
                 <tbody>{programs.data.content.map((item) => <tr key={item.id} className="border-t">
-                  <td className="px-4 py-3 font-bold">{item.number}</td>
-                  <td className="px-4 py-3">{item.name}</td>
-                  <td className="px-4 py-3"><EntityName value={item.company} fallback="—" /></td>
-                  <td className="px-4 py-3"><EntityName value={item.object} fallback="—" /></td>
-                  <td className="px-4 py-3">{item.validFrom} — {item.validUntil}</td>
-                  <td className="px-4 py-3">{item.version}</td>
-                  <td className="px-4 py-3">{item.responsible?.name || '—'}</td>
-                  <td className="px-4 py-3"><PekStatusBadge status={item.status} /></td>
+                  <td className="whitespace-nowrap px-4 py-3 font-bold">{item.number}</td>
+                  <td className="break-normal px-4 py-3">{item.name}</td>
+                  <td className="break-normal px-4 py-3"><EntityName value={item.company} fallback="—" /></td>
+                  <td className="break-normal px-4 py-3"><EntityName value={item.object} fallback="—" /></td>
+                  <td className="whitespace-nowrap px-4 py-3">{item.validFrom} — {item.validUntil}</td>
+                  <td className="whitespace-nowrap px-4 py-3">{item.version}</td>
+                  <td className="break-normal px-4 py-3">{item.responsible?.name || '—'}</td>
                   <td className="px-4 py-3"><ProgramReadinessCell program={item} userId={user?.id} /></td>
-                  <td className="px-4 py-3">{item.updatedAt || '—'}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <Link className="font-bold text-eco-700" to={`/staff/pek/programs/${item.id}?companyId=${item.company?.id || filters.companyId || ''}`}>Открыть</Link>
-                      {canDeleteProgram(user, item) && (
-                        <Button type="button" variant="danger" className="min-h-0 px-3 py-1.5" onClick={() => setDeleting(item)}>
-                          Удалить
-                        </Button>
-                      )}
-                    </div>
+                  <td className="relative px-4 py-3 text-right">
+                    <ActionMenu label={`Действия с программой ${item.number}`} widthClass="w-40">
+                        <Link className="block px-4 py-2.5 font-semibold text-eco-800 hover:bg-slate-50" to={`/staff/pek/programs/${item.id}?companyId=${item.company?.id || filters.companyId || ''}`}>Открыть</Link>
+                        {canDeleteProgram(user, item) && <button type="button" className="block w-full px-4 py-2.5 text-left font-semibold text-rose-700 hover:bg-rose-50" onClick={() => setDeleting(item)}>Удалить</button>}
+                    </ActionMenu>
                   </td>
                 </tr>)}</tbody>
               </table>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <button type="button" disabled={!filters.page} onClick={() => update('page', String((filters.page || 0) - 1))} className="rounded-full border px-4 py-2 disabled:opacity-40">Назад</button>
               <span>Страница {(filters.page || 0) + 1} из {programs.data.totalPages || 1}</span>
               <button type="button" disabled={(filters.page || 0) + 1 >= programs.data.totalPages} onClick={() => update('page', String((filters.page || 0) + 1))} className="rounded-full border px-4 py-2 disabled:opacity-40">Далее</button>

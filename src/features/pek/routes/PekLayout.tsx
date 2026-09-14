@@ -25,11 +25,11 @@ const PekLayout = ({ children }: { children: ReactNode }) => {
   const segments = location.pathname.split('/').filter(Boolean).slice(2);
   const activeFilters = new URLSearchParams(location.search).size;
 
-  return <section className="space-y-4">
+  return <section className="pek-module min-w-0 space-y-4">
     <div className="rounded-2xl border bg-white p-3 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link to="/staff/pek" className="text-xl font-black text-slate-950">Производственный экологический контроль</Link>
+        <div className="min-w-0">
+          <Link to="/staff/pek" className="text-lg font-black leading-tight text-slate-950 sm:text-xl">Производственный экологический контроль</Link>
           <nav aria-label="Хлебные крошки" className="mt-1 flex flex-wrap gap-1 text-xs text-slate-500">
             <Link to="/staff/pek">ПЭК</Link>
             {segments.map((segment, index) => <span key={`${segment}-${index}`}>/ {labels[segment] || (/^\d+$/.test(segment) ? `№ ${segment}` : segment)}</span>)}

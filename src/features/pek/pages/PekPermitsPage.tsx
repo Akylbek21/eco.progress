@@ -3,6 +3,7 @@ import { FormEvent, useState } from 'react';
 import { Download, History, Pencil, Plus, ShieldAlert } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import Button from '../../../components/ui/Button';
+import ActionMenu from '../../../components/ui/ActionMenu';
 import Modal from '../../../components/ui/Modal';
 import { useAuth } from '../../../contexts/AuthContext';
 import type {
@@ -245,13 +246,13 @@ const PekPermitsPage = () => {
                   <td className="px-4 py-3"><p>{permit.validFrom} — {permit.validTo}</p>{permit.status === 'ACTIVE' && !permit.effectivelyActive && <p className="mt-1 text-xs font-semibold text-amber-700">Вне срока действия</p>}</td>
                   <td className="px-4 py-3"><span className={`rounded-full px-3 py-1 text-xs font-bold ${statusClasses[permit.status]}`}>{statusLabels[permit.status]}</span></td>
                   <td className="px-4 py-3 text-xs text-slate-600">{permit.fileId ? 'Файл прикреплён' : 'Нет файла'}</td>
-                  <td className="px-4 py-3"><div className="flex flex-wrap gap-2">
+                  <td className="relative px-4 py-3 text-right"><ActionMenu label={`Действия с разрешением ${permit.number}`} widthClass="w-56">
                     {(permit.availableActions?.edit ?? canCreate) && <Button type="button" variant="secondary" disabled={openPermit.isPending} onClick={() => openPermit.mutate(permit.id)}><Pencil size={14} /> Изменить</Button>}
                     {(permit.availableActions?.markExpired ?? canChangePermitStatus) && <Button type="button" variant="secondary" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'EXPIRED')}><ShieldAlert size={14} /> Истёк</Button>}
                     {(permit.availableActions?.revoke ?? canChangePermitStatus) && <Button type="button" variant="danger" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'REVOKED')}><ShieldAlert size={14} /> Отозвать</Button>}
                     {permit.fileId && <Button type="button" variant="secondary" disabled={download.isPending} onClick={() => download.mutate(permit)}><Download size={14} /> Скачать</Button>}
                     <Button type="button" variant="secondary" onClick={() => setHistoryPermit(permit)}><History size={14} /> История</Button>
-                  </div></td>
+                  </ActionMenu></td>
                 </tr>)}</tbody>
               </table>
             </div>}

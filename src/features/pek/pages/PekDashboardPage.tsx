@@ -76,7 +76,7 @@ const PekDashboardPage = () => {
         <Link className="rounded-full bg-eco-600 px-5 py-2.5 text-sm font-bold text-white" to="/staff/pek/reports">Отчёты</Link>
       </>}
     />
-    <section className="grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-7">
+    <section className="grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-2 xl:grid-cols-4 min-[1900px]:grid-cols-7">
       <PekCompanyObjectFilters
         companyId={filters.companyId}
         objectId={filters.objectId}
@@ -131,8 +131,8 @@ const PekDashboardPage = () => {
                 <h2 className="font-black">Ближайшие задачи</h2>
                 <div className="mt-3 space-y-2">
                   {dashboard.data.deadlines.map((item) => (
-                    <Link key={`${item.type}-${item.id}-${item.date}`} to={item.type.includes('PROGRAM') ? `/staff/pek/programs/${item.id}` : `/staff/pek/reports/${item.id}`} className="flex justify-between rounded-xl bg-slate-50 p-3 text-sm">
-                      <span>{item.description}</span><strong>{item.date}</strong>
+                    <Link key={`${item.type}-${item.id}-${item.date}`} to={item.type.includes('PROGRAM') ? `/staff/pek/programs/${item.id}` : `/staff/pek/reports/${item.id}`} className="flex flex-col gap-1 rounded-xl bg-slate-50 p-3 text-sm sm:flex-row sm:justify-between">
+                      <span className="min-w-0">{item.description}</span><strong className="shrink-0">{item.date}</strong>
                     </Link>
                   ))}
                   {!dashboard.data.deadlines.length && <p className="text-sm text-slate-500">На ближайшее время задач нет</p>}
@@ -142,8 +142,8 @@ const PekDashboardPage = () => {
                 <h2 className="font-black">Последние отчёты</h2>
                 <div className="mt-3 space-y-2">
                   {dashboard.data.reports.map((report) => (
-                    <Link key={report.id} to={`/staff/pek/reports/${report.id}`} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-sm">
-                      <span>Отчёт ПЭК · {report.periodStart}—{report.periodEnd}</span>
+                    <Link key={report.id} to={`/staff/pek/reports/${report.id}`} className="flex flex-col items-start gap-2 rounded-xl bg-slate-50 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <span className="min-w-0">Отчёт ПЭК · {report.periodStart}—{report.periodEnd}</span>
                       <PekStatusBadge status={report.status} />
                     </Link>
                   ))}

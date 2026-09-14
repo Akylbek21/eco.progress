@@ -88,7 +88,7 @@ const PekReportCreatePage = () => {
 
   return <div className="space-y-5">
     <PekPageHeader title="Создание отчёта ПЭК" description="Выберите программу и отчётный период. Точные даты система определит автоматически." />
-    <section className="grid gap-4 rounded-2xl border bg-white p-5 md:grid-cols-3">
+    <section className="grid gap-4 rounded-2xl border bg-white p-4 md:grid-cols-2 sm:p-5 xl:grid-cols-3">
       <PekCompanyObjectFilters
         companyId={companyId || undefined}
         objectId={objectId || undefined}

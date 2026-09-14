@@ -149,17 +149,24 @@ svg {
   transition: width 160ms ease-out;
 }
 
-.staff-crm,
-.staff-crm * {
+.staff-crm {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.staff-crm > * {
   min-width: 0;
 }
 
-.staff-crm :where(h1, h2, h3, h4, h5, p, span, a, button, label, td, th) {
-  overflow-wrap: anywhere;
+.staff-crm :where(h1, h2, h3, h4, h5, p, span, label) {
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
-.staff-crm :where(button, a, span) {
+.staff-crm :where(button, a) {
   max-width: 100%;
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
 .staff-crm :where(.rounded-full) {
@@ -171,8 +178,14 @@ svg {
   max-width: 100%;
 }
 
-.staff-crm table {
-  table-layout: fixed;
+.staff-crm :where(.overflow-x-auto, .overflow-auto) {
+  max-width: 100%;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.staff-crm :where(nav.overflow-x-auto, [role="tablist"].overflow-x-auto) > * {
+  flex-shrink: 0;
 }
 
 .staff-crm td,
@@ -180,6 +193,45 @@ svg {
   padding-left: 0.75rem;
   padding-right: 0.75rem;
   vertical-align: top;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.staff-crm th {
+  white-space: nowrap;
+}
+
+.staff-crm :where(table button, table a) {
+  white-space: nowrap;
+}
+
+/* The staff sidebar reduces the usable width before viewport breakpoints do.
+   Keep dense PEK forms readable on compact laptop and tablet widths. */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .pek-module :where(.md\:grid-cols-3, .md\:grid-cols-4, .md\:grid-cols-5,
+    .lg\:grid-cols-3, .lg\:grid-cols-4, .lg\:grid-cols-7,
+    .sm\:grid-cols-4, .sm\:grid-cols-5) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .staff-crm :where(button, a[class*="rounded"]) {
+    min-height: 2.75rem;
+  }
+
+  .staff-crm :where(header, section, article, form)[class*="p-6"],
+  .staff-crm :where(header, section, article, form)[class*="p-8"] {
+    padding: 1rem;
+  }
+
+  .staff-crm :where(.flex.justify-between) {
+    row-gap: 0.75rem;
+  }
+}
+
+.pek-module :where(button, a) {
+  word-break: normal;
 }
 
 @keyframes heroZoom {

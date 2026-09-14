@@ -530,7 +530,7 @@ const PekProgramCreatePage = () => {
       </span>}
     />
     <nav aria-label="Шаги программы ПЭК">
-      <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <ol className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {steps.map((label, index) => <li key={label}>
           <button
             type="button"
@@ -571,7 +571,7 @@ const PekProgramCreatePage = () => {
           <div className="text-sm text-slate-600"><strong>Действующие разрешительные документы</strong><p className="mt-2">{permits.isLoading ? 'Загрузка…' : activePermits.length ? activePermits.map((item) => `${item.type} № ${item.number}`).join(', ') : 'Для объекта нет действующих разрешительных документов'}</p></div>
           {Object.values(formState.errors).length > 0 && <p role="alert" className="md:col-span-2 text-sm text-rose-700">Проверьте обязательные поля программы.</p>}
         </div>}
-        {step === 1 && <div className="grid gap-4 md:grid-cols-3">
+        {step === 1 && <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <label>КАТО *<input {...register('kato')} className={inputClass} inputMode="numeric" /></label>
           <label>БИН оператора *<input {...register('bin')} className={inputClass} inputMode="numeric" maxLength={12} /></label>
           <label>ОКЭД *<input {...register('oked')} className={inputClass} /></label>
