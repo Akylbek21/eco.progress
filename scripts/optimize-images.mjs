@@ -15,6 +15,7 @@ const sources = {
   'pexels-jan-van.jpg': 'otbor-prob-vody',
   'para.jpg': 'ecoprogress-og-cover',
   'ekologicheskoe-soprovozhdenie.jpg': 'ekologicheskoe-soprovozhdenie',
+  'media/ecologist-outsourcing-hero.png': 'ecologist-outsourcing-hero',
   'utilizacija-othodov-3.jpg': 'utilizaciya-othodov',
   'poligon-tbo-2.jpg': 'poligon-tbo',
 };

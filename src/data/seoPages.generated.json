@@ -192,6 +192,10 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
+      },
+      {
         "label": "Определение категории объекта по степени воздействия на окружающую среду",
         "path": "/news/kak-opredelit-kategoriyu-obekta"
       },
@@ -504,6 +508,10 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
       },
       {
         "label": "Чем отличаются ОВОС, отчёт о возможных воздействиях и РООС",
@@ -832,6 +840,10 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
+      },
+      {
         "label": "Какие экологические документы должны быть у предприятия",
         "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
       },
@@ -1148,6 +1160,10 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
       },
       {
         "label": "Что такое программа производственного экологического контроля",
@@ -1472,6 +1488,10 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
+      },
+      {
         "label": "Какие экологические документы должны быть у предприятия",
         "path": "/news/ekologicheskie-dokumenty-too-kazakhstan"
       },
@@ -1790,6 +1810,10 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
+      },
+      {
         "label": "Когда требуется проект нормативов допустимых выбросов",
         "path": "/news/kogda-nuzhen-proekt-ndv"
       },
@@ -2102,6 +2126,10 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
       },
       {
         "label": "Определение категории объекта по степени воздействия на окружающую среду",
@@ -2418,6 +2446,10 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
+      },
+      {
         "label": "Когда требуется проект нормативов допустимых выбросов",
         "path": "/news/kogda-nuzhen-proekt-ndv"
       },
@@ -2732,6 +2764,10 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
+      },
+      {
         "label": "Когда требуется проект нормативов допустимых выбросов",
         "path": "/news/kogda-nuzhen-proekt-ndv"
       },
@@ -3044,6 +3080,10 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
       },
       {
         "label": "Как подготовить отчёт ПЭК по данным контроля",
@@ -3368,6 +3408,10 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
+      },
+      {
         "label": "Когда требуется проект нормативов допустимых выбросов",
         "path": "/news/kogda-nuzhen-proekt-ndv"
       },
@@ -3688,6 +3732,10 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
       },
       {
         "label": "Какие документы подтверждают передачу отходов",
@@ -4012,6 +4060,10 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
+      },
+      {
         "label": "Какие документы подтверждают передачу отходов",
         "path": "/news/dokumenty-peredachi-othodov"
       },
@@ -4332,6 +4384,10 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
       },
       {
         "label": "Что предприятие сдаёт по экологии каждый год",
@@ -4656,6 +4712,10 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
+      },
+      {
         "label": "Когда требуется проект нормативов допустимых выбросов",
         "path": "/news/kogda-nuzhen-proekt-ndv"
       },
@@ -4976,6 +5036,10 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
       },
       {
         "label": "Какие лабораторные замеры нужны предприятию",
@@ -5300,6 +5364,10 @@
         "path": "/services/environmental-design"
       },
       {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
+      },
+      {
         "label": "Что такое программа производственного экологического контроля",
         "path": "/news/chto-takoe-proizvodstvennyy-ekologicheskiy-kontrol"
       },
@@ -5620,6 +5688,10 @@
       {
         "label": "Экологическое проектирование",
         "path": "/services/environmental-design"
+      },
+      {
+        "label": "Эколог на аутсорсинге",
+        "path": "/services/ecological-support"
       },
       {
         "label": "Как подготовить отчёт ПЭК по данным контроля",

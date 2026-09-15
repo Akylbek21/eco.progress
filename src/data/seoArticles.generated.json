@@ -117,7 +117,7 @@
         "path": "/services/environmental-audit"
       },
       {
-        "label": "Экологическое сопровождение предприятия",
+        "label": "Эколог на аутсорсинге",
         "path": "/services/ecological-support"
       },
       {
@@ -243,7 +243,7 @@
     ],
     "relatedLinks": [
       {
-        "label": "Экологическое сопровождение предприятия",
+        "label": "Эколог на аутсорсинге",
         "path": "/services/ecological-support"
       },
       {
@@ -1133,7 +1133,7 @@
         "path": "/services/environmental-audit"
       },
       {
-        "label": "Экологическое сопровождение предприятия",
+        "label": "Эколог на аутсорсинге",
         "path": "/services/ecological-support"
       },
       {
@@ -1909,7 +1909,7 @@
         "path": "/services/environmental-audit"
       },
       {
-        "label": "Экологическое сопровождение предприятия",
+        "label": "Эколог на аутсорсинге",
         "path": "/services/ecological-support"
       },
       {
