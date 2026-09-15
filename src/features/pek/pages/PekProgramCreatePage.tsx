@@ -145,7 +145,7 @@ const PekProgramCreatePage = () => {
     queryFn: ({ signal }) => pekApi.getCompanyStaff(companyId, signal),
     enabled: companyId > 0,
   });
-  const responsibleOptions = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data, user);
+  const responsibleOptions = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data);
   const permits = useQuery({
     queryKey: pekKeys.permits(objectId, user?.id),
     queryFn: ({ signal }) => pekApi.getPermits(objectId, signal),

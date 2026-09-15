@@ -47,13 +47,14 @@ describe('PEK settings assignees', () => {
     expect(source.match(/onSuccess: async \(\) => \{ await refresh\(\);/g)).toHaveLength(3);
   });
 
-  it('adds active company staff omitted by the role lookup without duplicating lookup users', () => {
+  it('adds eligible active company staff omitted by the role lookup without duplicating lookup users', () => {
     expect(mergeAssigneesWithCompanyStaff(
       [{ id: 7, name: 'Эколог' }],
       [
         { id: 101, companyId: 5, userId: 7, userFullName: 'Эколог', userEmail: 'eco@example.kz', tier: 'EDITOR', status: 'ACTIVE', createdAt: '', updatedAt: '', version: 0 },
         { id: 102, companyId: 5, userId: 9, userFullName: 'Администратор', userEmail: 'admin@example.kz', tier: 'REVIEWER', status: 'ACTIVE', createdAt: '', updatedAt: '', version: 0 },
-        { id: 103, companyId: 5, userId: 10, userFullName: 'Отключён', userEmail: 'off@example.kz', tier: 'VIEWER', status: 'INACTIVE', createdAt: '', updatedAt: '', version: 0 },
+        { id: 103, companyId: 5, userId: 10, userFullName: 'Наблюдатель', userEmail: 'viewer@example.kz', tier: 'VIEWER', status: 'ACTIVE', createdAt: '', updatedAt: '', version: 0 },
+        { id: 104, companyId: 5, userId: 11, userFullName: 'Отключён', userEmail: 'off@example.kz', tier: 'EDITOR', status: 'INACTIVE', createdAt: '', updatedAt: '', version: 0 },
       ],
     )).toEqual([
       { id: 7, name: 'Эколог' },
@@ -61,25 +62,13 @@ describe('PEK settings assignees', () => {
     ]);
   });
 
-  it('keeps the authenticated staff user available when the company has no PEK assignments', () => {
-    expect(mergeAssigneesWithCompanyStaff([], [], {
-      id: '42',
-      name: 'Текущий администратор',
-      email: 'admin@example.kz',
-      position: 'Администратор',
-      role: 'ADMIN',
-    })).toEqual([{
-      id: 42,
-      name: 'Текущий администратор',
-      description: 'Администратор',
-      status: 'ACTIVE',
-      role: 'PEK_RESPONSIBLE',
-    }]);
+  it('does not invent an assignee when the company has no eligible PEK staff', () => {
+    expect(mergeAssigneesWithCompanyStaff([], [])).toEqual([]);
   });
 
   it('uses the merged company staff options in the program form', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekProgramCreatePage.tsx'), 'utf8');
-    expect(source).toContain('mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data, user)');
+    expect(source).toContain('mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data)');
     expect(source).not.toContain('options={assignees.data || []}');
   });
 });

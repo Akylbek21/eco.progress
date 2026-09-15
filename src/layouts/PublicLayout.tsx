@@ -83,15 +83,15 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
   return (
     <div className="min-h-screen bg-[#F7FBFD] text-slate-900">
       <header className={`sticky top-0 z-40 border-b border-slate-200/70 bg-[#F8FCFE]/94 text-eco-900 backdrop-blur-2xl transition-all duration-300 before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-gradient-to-r before:from-transparent before:via-accent/80 before:to-transparent ${scrolled ? 'shadow-[0_12px_35px_-20px_rgba(2,28,57,0.4)]' : 'shadow-[0_1px_0_rgba(2,28,57,0.03)]'}`}>
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-5 py-2.5 sm:px-8 2xl:gap-4 2xl:py-3.5">
           <Link to={isKk ? '/kk' : '/'} className="group inline-flex shrink-0 items-center text-eco-900" aria-label={`${company.siteLabel} — ${isKk ? 'басты бет' : 'главная'}`}>
-            <span className="whitespace-nowrap text-[19px] font-extrabold leading-none tracking-[-0.035em]">
+            <span className="whitespace-nowrap text-[17px] font-extrabold leading-none tracking-[-0.035em] 2xl:text-[19px]">
               {company.siteLabel}
             </span>
           </Link>
-          <nav aria-label={isKk ? 'Негізгі навигация' : 'Основная навигация'} className="hidden items-center gap-1 rounded-full border border-slate-200/80 bg-white/80 p-1.5 shadow-[0_8px_24px_-18px_rgba(2,28,57,0.5)] xl:flex">
+          <nav aria-label={isKk ? 'Негізгі навигация' : 'Основная навигация'} className="hidden shrink-0 items-center gap-0.5 rounded-full border border-slate-200/80 bg-white/80 p-1 shadow-[0_8px_24px_-18px_rgba(2,28,57,0.5)] xl:flex 2xl:gap-1 2xl:p-1.5">
             {currentNavItems.map((item) => item.path.startsWith('http') || opensPrivateRuntime(item.path) ? (
-              <a key={item.path} href={item.path} target={item.path.startsWith('http') ? '_blank' : undefined} rel={item.path.startsWith('http') ? 'noreferrer' : undefined} className="shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold text-slate-600 transition-all duration-200 hover:bg-eco-50 hover:text-eco-900">
+              <a key={item.path} href={item.path} target={item.path.startsWith('http') ? '_blank' : undefined} rel={item.path.startsWith('http') ? 'noreferrer' : undefined} className="shrink-0 whitespace-nowrap rounded-full px-2 py-1.5 text-xs font-semibold text-slate-600 transition-all duration-200 hover:bg-eco-50 hover:text-eco-900 2xl:px-3 2xl:py-2 2xl:text-sm">
                 {item.label}
               </a>
             ) : (
@@ -103,7 +103,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 onFocus={() => preloadPublicRoute(item.path)}
                 onPointerDown={() => preloadPublicRoute(item.path)}
                 className={({ isActive }) =>
-                  `shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold transition-all duration-200 ${
+                  `shrink-0 whitespace-nowrap rounded-full px-2 py-1.5 text-xs font-semibold transition-all duration-200 2xl:px-3 2xl:py-2 2xl:text-sm ${
                     isActive ? 'bg-eco-900 text-white shadow-[0_6px_14px_-8px_rgba(2,28,57,0.8)]' : 'text-slate-600 hover:bg-eco-50 hover:text-eco-900'
                   }`
                 }
@@ -112,7 +112,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               </NavLink>
             ))}
           </nav>
-          <div className="hidden items-center gap-2.5 xl:flex">
+          <div className="hidden shrink-0 items-center gap-1.5 xl:flex 2xl:gap-2.5">
             <nav aria-label={isKk ? 'Тілді таңдау' : 'Выбор языка'} className="inline-flex rounded-full border border-slate-200 bg-white/85 p-1 text-xs font-extrabold shadow-sm">
               <Link to={ruPath} lang="ru" className={`whitespace-nowrap rounded-full px-2.5 py-2 transition-colors ${!isKk ? 'bg-eco-900 text-white' : 'text-slate-500 hover:text-eco-900'}`}>RU</Link>
               <Link to={kkPath} lang="kk" className={`whitespace-nowrap rounded-full px-2.5 py-2 transition-colors ${isKk ? 'bg-eco-900 text-white' : 'text-slate-500 hover:text-eco-900'}`}>ҚАЗ</Link>
@@ -122,7 +122,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 type="button"
                 variant="secondary"
                 onClick={() => setAccountMenuOpen((state) => !state)}
-                className="min-h-10 shrink-0 gap-2 whitespace-nowrap border-slate-200 bg-white/85 px-4 text-sm text-eco-900 shadow-sm hover:border-eco-200 hover:bg-white"
+                className="min-h-9 shrink-0 gap-1 whitespace-nowrap border-slate-200 bg-white/85 px-3 text-xs text-eco-900 shadow-sm hover:border-eco-200 hover:bg-white 2xl:min-h-10 2xl:gap-2 2xl:px-4 2xl:text-sm"
                 aria-expanded={accountMenuOpen}
               >
                 {isKk ? 'Мәзір' : 'Меню'} <ChevronDown size={16} className={`transition ${accountMenuOpen ? 'rotate-180' : ''}`} />
@@ -160,8 +160,9 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
                 </div>
               )}
             </div>
-            <Button type="button" onClick={() => setOrderModal(true)} className="group min-h-11 shrink-0 gap-2 whitespace-nowrap bg-gradient-to-r from-eco-900 to-eco-600 px-5 text-sm text-white shadow-[0_10px_22px_-12px_rgba(2,28,57,0.8)] hover:from-eco-800 hover:to-eco-500">
-              {isKk ? 'Өтінім қалдыру' : 'Получить консультацию эколога'}
+            <Button type="button" onClick={() => setOrderModal(true)} className="group min-h-9 shrink-0 gap-1.5 whitespace-nowrap bg-gradient-to-r from-eco-900 to-eco-600 px-3 text-xs text-white shadow-[0_10px_22px_-12px_rgba(2,28,57,0.8)] hover:from-eco-800 hover:to-eco-500 2xl:min-h-11 2xl:gap-2 2xl:px-5 2xl:text-sm">
+              <span className="2xl:hidden">{isKk ? 'Өтінім қалдыру' : 'Консультация'}</span>
+              <span className="hidden 2xl:inline">{isKk ? 'Өтінім қалдыру' : 'Получить консультацию эколога'}</span>
               <ArrowUpRight size={16} className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
             </Button>
           </div>

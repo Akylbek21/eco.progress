@@ -139,11 +139,11 @@ const PekProgramDetailsPage = () => {
       </>}
     />
     {workflowErrors.length > 0 && <section role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900"><strong>Программа не готова к выполнению действия:</strong><ul className="mt-2 list-disc pl-5">{workflowErrors.map((message) => <li key={message}>{message}</li>)}</ul></section>}
-    <section className="grid gap-x-6 gap-y-2 border-b border-slate-200 bg-white px-3 py-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section className="grid gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
       <Info label="Версия" value={item.version} />
       <Info label="Период" value={`${item.validFrom} — ${item.validUntil}`} />
       <Info label="Версия формы" value={item.templateVersion || '—'} />
-      <Info label="Версия НПА" value={item.regulationVersion || '—'} />
+      <Info label="Версия НПА" value={item.regulationVersion || '—'} clamp />
       <Info label="Ревизия данных" value={item.contentRevision} />
       <Info label="Ответственный" value={item.responsible?.name || '—'} />
       <Info label="Режим" value={item.readOnly ? 'Только чтение' : 'Редактирование разрешено'} />
@@ -202,7 +202,12 @@ const PekProgramDetailsPage = () => {
   </div>;
 };
 
-const Info = ({ label, value }: { label: string; value: string | number }) => <div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 font-semibold">{value}</p></div>;
+const Info = ({ label, value, clamp = false }: { label: string; value: string | number; clamp?: boolean }) => (
+  <div className="min-w-0 rounded-lg bg-slate-50 px-3 py-2">
+    <p className="text-[10px] font-bold uppercase leading-4 tracking-wide text-slate-500">{label}</p>
+    <p className={`mt-0.5 text-[13px] font-semibold leading-[18px] text-slate-800 ${clamp ? 'line-clamp-2' : ''}`} title={clamp ? String(value) : undefined}>{value}</p>
+  </div>
+);
 const DataRows = ({ rows }: { rows: unknown[] }) => <div className="space-y-2">{rows.map((value, index) => {
   const row = value as Record<string, unknown>;
   return <div key={String(row.id || row.clientId || index)} className="border-b border-slate-200 px-2 py-2"><strong>{String(row.name || row.indicatorName || `Запись ${index + 1}`)}</strong></div>;

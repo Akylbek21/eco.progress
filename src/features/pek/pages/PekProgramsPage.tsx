@@ -131,18 +131,18 @@ const PekProgramsPage = () => {
             />
           : <>
             <div className="max-w-full overflow-x-auto rounded-2xl border bg-white">
-              <table className="w-full min-w-[1180px] text-sm">
+              <table className="w-full min-w-[1180px] table-fixed text-sm">
                 <thead className="bg-slate-50 text-left"><tr>
                   {['Номер', 'Название', 'Компания', 'Объект', 'Период действия', 'Версия', 'Ответственный', 'Готовность', ''].map((label, index) => <th key={`${label}-${index}`} className="whitespace-nowrap px-4 py-3">{label}</th>)}
                 </tr></thead>
-                <tbody>{programs.data.content.map((item) => <tr key={item.id} className="border-t">
-                  <td className="whitespace-nowrap px-4 py-3 font-bold">{item.number}</td>
-                  <td className="break-normal px-4 py-3">{item.name}</td>
-                  <td className="break-normal px-4 py-3"><EntityName value={item.company} fallback="—" /></td>
-                  <td className="break-normal px-4 py-3"><EntityName value={item.object} fallback="—" /></td>
+                <tbody>{programs.data.content.map((item) => <tr key={item.id} className="h-20 border-t align-middle">
+                  <td className="px-4 py-2 font-bold"><span className="line-clamp-2 break-words" title={item.number}>{item.number}</span></td>
+                  <td className="px-4 py-2"><span className="line-clamp-2 break-words" title={item.name}>{item.name}</span></td>
+                  <td className="px-4 py-2"><EntityName value={item.company} fallback="—" className="line-clamp-2 break-words" /></td>
+                  <td className="px-4 py-2"><EntityName value={item.object} fallback="—" className="line-clamp-2 break-words" /></td>
                   <td className="whitespace-nowrap px-4 py-3">{item.validFrom} — {item.validUntil}</td>
                   <td className="whitespace-nowrap px-4 py-3">{item.version}</td>
-                  <td className="break-normal px-4 py-3">{item.responsible?.name || '—'}</td>
+                  <td className="px-4 py-2"><span className="line-clamp-2 break-words" title={item.responsible?.name}>{item.responsible?.name || '—'}</span></td>
                   <td className="px-4 py-3"><ProgramReadinessCell program={item} userId={user?.id} /></td>
                   <td className="relative px-4 py-3 text-right">
                     <ActionMenu label={`Действия с программой ${item.number}`} widthClass="w-40">

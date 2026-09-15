@@ -87,33 +87,16 @@ export const mapAssigneesResponse = (value: unknown): PekLookupOption[] => {
 export const mergeAssigneesWithCompanyStaff = (
   assignees: PekLookupOption[] = [],
   staff: PekStaffAssignment[] = [],
-  currentUser?: { id: string | number; name?: string; email?: string; position?: string; role?: string } | null,
 ): PekLookupOption[] => {
-  const merged = new Map(assignees.map((item) => [Number(item.id), item]));
+  const eligibleAssignees = assignees.filter((item) => !item.status || item.status.toUpperCase() === 'ACTIVE');
+  const merged = new Map(eligibleAssignees.map((item) => [Number(item.id), item]));
   for (const assignment of staff) {
-    if (assignment.status !== 'ACTIVE' || merged.has(assignment.userId)) continue;
+    if (assignment.status !== 'ACTIVE' || assignment.tier === 'VIEWER' || merged.has(assignment.userId)) continue;
     merged.set(assignment.userId, {
       id: assignment.userId,
       name: assignment.userFullName || assignment.userEmail,
       description: assignment.userEmail,
       status: assignment.status,
-      role: 'PEK_RESPONSIBLE',
-    });
-  }
-  const currentUserId = Number(currentUser?.id);
-  const currentUserName = currentUser?.name?.trim() || currentUser?.email?.trim();
-  if (
-    currentUser?.role !== 'CLIENT'
-    && Number.isSafeInteger(currentUserId)
-    && currentUserId > 0
-    && currentUserName
-    && !merged.has(currentUserId)
-  ) {
-    merged.set(currentUserId, {
-      id: currentUserId,
-      name: currentUserName,
-      description: currentUser?.position?.trim() || currentUser?.email?.trim() || undefined,
-      status: 'ACTIVE',
       role: 'PEK_RESPONSIBLE',
     });
   }

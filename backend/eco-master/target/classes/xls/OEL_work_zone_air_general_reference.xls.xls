@@ -1,0 +1,6241 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table><tbody><tr><td><p align="center">
+№</p>
+</td><td><p align="center">
+Наименование вещества</p>
+</td><td><p align="center">
+Номер САS</p>
+</td><td><p align="center">
+Формула</p>
+</td><td><p align="center">
+Величина ориентировочной безопасной уровни воздействия (ОБУВ) (мг/м<sup>3</sup>)</p>
+</td><td><p align="center">
+Агрегатное состояние</p>
+</td></tr><tr><td><p align="center">
+1</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+6</p>
+</td></tr><tr><td><p align="center">
+1</p>
+</td><td><p>
+Абомин</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+2</p>
+</td><td><p>
+Аденозинтрифосфат динатрия</p>
+</td><td><p align="center">
+987-65-5</p>
+</td><td><p align="center">
+С<sub>10</sub>Н<sub>14</sub>N<sub>5</sub>Nа<sub>2</sub>0<sub>13</sub>Рз</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+3</p>
+</td><td><p>
+1-Аза-3-оксобицикло[2,2,2]октан) гидрохлорид</p>
+</td><td><p align="center">
+1193-65-3</p>
+</td><td><p align="center">
+C<sub>7</sub>H<sub>11</sub>NO • С1Н</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+4</p>
+</td><td><p>
+3' - Азидо - 3 ' - деокситимидин</p>
+</td><td><p align="center">
+30516-87-1</p>
+</td><td><p align="center">
+С<sub>10</sub>Н<sub>13</sub>N<sub>5</sub>0<sub>4</sub></p>
+</td><td><p align="center">
+0,01</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+5</p>
+</td><td><p>
+Азоциклотридеканон</p>
+</td><td><p align="center">
+2947-04-6</p>
+</td><td><p align="center">
+C<sub>12</sub>H<sub>23</sub>NO</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+6</p>
+</td><td><p>
+Алкилпропилендиамин*</p>
+</td><td><br>
+</td><td><p align="center">
+(CH<sub>2</sub>)<sub>n</sub>C<sub>4</sub>H<sub>12</sub>N</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+7</p>
+</td><td><p>
+Алкилтриметиламинийхлорид+</p>
+</td><td><br>
+</td><td><p align="center">
+(C<sub>11-9</sub>)ClN</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+8</p>
+</td><td><p>
+2-Аминобутандиоат калия</p>
+</td><td><p align="center">
+14007-45-5</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>7</sub>K<sub>X</sub>N0<sub>4</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+9</p>
+</td><td><p>
+Аминобутандиоат магния</p>
+</td><td><p align="center">
+2068-80-6</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>7</sub>Mg<sub>o,5</sub>N0<sub>4</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+10</p>
+</td><td><p>
+9-Амино-2&gt;3,5,6)7,8-гексагидро--1Н-циклопентахинолина моногидрат</p>
+</td><td><p align="center">
+62732-44-9</p>
+</td><td><p align="center">
+C<sub>12</sub>H<sub>16</sub>N<sub>2</sub> • H<sub>2</sub>0</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+11</p>
+</td><td><p>
+6-Аминогексанат натрия, ацилированный высшими жирными кислотами</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>14</sub>NNa(CnH<sub>2n+1</sub>CO)0<sub>2</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+12</p>
+</td><td><p>
+6-Аминогексаноат натрия</p>
+</td><td><p align="center">
+7234-49-3</p>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>12</sub>NNa0<sub>2</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+13</p>
+</td><td><p>
+6-Аминс-5-[(гидроксиамино)метилен1-1,3-диметил-гидроурацил</p>
+</td><td><p align="center">
+17789-32-1</p>
+</td><td><p align="center">
+C<sub>7</sub>H<sub>10</sub>N<sub>4</sub>0<sub>3</sub></p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+14</p>
+</td><td><p>
+[S]-4-(2-Амино-1-гидроксиэтил)бензол-1,2-диол [R-(R*,R*)]-2,3-дигидроксибутандиоат (1:1) моногидрат+</p>
+</td><td><p align="center">
+5794-08-1</p>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>11</sub>N0<sub>3</sub> - С<sub>4</sub>Н<sub>6</sub>0<sub>6</sub> - H<sub>2</sub>0</p>
+</td><td><p align="center">
+0,01</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+15</p>
+</td><td><p>
+6-Амино-5-гидроксинафтил- 1 -сульфокислота</p>
+</td><td><p align="center">
+573-07-9</p>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>9</sub>NO<sub>4</sub>S</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+16</p>
+</td><td><p>
+7-Аминодезацетоксицефалоспорановая кислота</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>10</sub>N<sub>2</sub>0<sub>3</sub>S</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+17</p>
+</td><td><p>
+2- Амино-4, 6-диметилпир имидин</p>
+</td><td><p align="center">
+767-15-7</p>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>9</sub>N<sub>3</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+18</p>
+</td><td><p>
+3-[[[2[(Аминоиминометил)амино]-4-тиазолил]метил]тио]-N-(аминосульфонил)пропанимид</p>
+</td><td><p align="center">
+76824-35-6</p>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>15</sub>N<sub>7</sub>0<sub>2</sub>S<sub>3</sub></p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+19</p>
+</td><td><p>
+N- (Аминокарбонил) -2 -бром- 3 -метилбутанамид</p>
+</td><td><p align="center">
+496-67-3</p>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>11</sub>BrN<sub>2</sub>0<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+20</p>
+</td><td><p>
+4- (Амино метил )бензойная кислота</p>
+</td><td><p align="center">
+56-91-7</p>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>9</sub>NO2</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+21</p>
+</td><td><p>
+1-Амино-4-метилпиперазин</p>
+</td><td><p align="center">
+6928-85-4</p>
+</td><td><p align="center">
+C<sub>5</sub>H<sub>13</sub>N<sub>3</sub></p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+22</p>
+</td><td><p>
+2-Амино-N-метилпиперазид-Т-(2-амино-4-хлорфенил)бензойная кислота</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>17</sub>H<sub>19</sub>ClN<sub>4</sub>O<sub>2</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+23</p>
+</td><td><p>
+3-[(4-Амино-2-метил-5-пиридинил)метил]-5-(2-гидроксиэтил)-4-метилтиазолий фосфат (1:1) соль фосфат (1:2) соль)</p>
+</td><td><p align="center">
+532-44-5</p>
+</td><td><p align="center">
+C<sub>12</sub>H<sub>17</sub>N<sub>4</sub>OS • 2Н<sub>3</sub>0<sub>4</sub>Р • Н<sub>3</sub>0<sub>4</sub>Р</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+24</p>
+</td><td><p>
+S-[2]:[(4-Амино-2-метил-5-пиримидинил)метил[формил-амино]-1-[2-(фосфонокси)этил]проп-1-енилфенилкарбатиоат</p>
+</td><td><p align="center">
+22457-89-2</p>
+</td><td><p align="center">
+C<sub>19</sub>H<sub>23</sub>N<sub>4</sub>O<sub>6</sub>PS</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+25</p>
+</td><td><p>
+2-Амино-1-метил-3-фенил-5-хлорбензойной кислоты метилсульфат+</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>15</sub>H<sub>12</sub>ClNO<sub>2</sub> • CH<sub>4</sub>O<sub>4</sub>S</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+26</p>
+</td><td><p>
+4- Амино - 6- метоксипиримидин</p>
+</td><td><p align="center">
+696-45-7</p>
+</td><td><p align="center">
+C<sub>5</sub>H<sub>7</sub>N<sub>3</sub>0</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+27</p>
+</td><td><p>
+1- Амино -4-нитро -2-хлорбензол+</p>
+</td><td><p align="center">
+121-87-9</p>
+</td><td><p align="center">
+С<sub>6</sub>Н<sub>5</sub>СlN<sub>2</sub>О<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+28</p>
+</td><td><p>
+2-Амино-N-(2-нитро-4-хлорфенил)бензойная кислота</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>13</sub>H<sub>9</sub>CIN<sub>2</sub>O<sub>4</sub></p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+29</p>
+</td><td><p>
+4-(Аминосульфонил)бензойная кислота</p>
+</td><td><p align="center">
+138-41-0</p>
+</td><td><p align="center">
+C<sub>7</sub>H<sub>7</sub>NO<sub>4</sub>S</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+30</p>
+</td><td><p>
+5-(Аминосульфонил)-4-хлор-2-[(2-фуранилметил)амино]бензойная кислота</p>
+</td><td><p align="center">
+54-31-9</p>
+</td><td><p align="center">
+C<sub>12</sub>H<sub>11</sub>ClN<sub>2</sub>0<sub>5</sub>S</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+31</p>
+</td><td><p>
+3-Аминотетрагидротиофен- 1 , 1 -диоксид</p>
+</td><td><p align="center">
+52261-00-2</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>9</sub>N0<sub>3</sub>S</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+32</p>
+</td><td><p>
+D(-)- б -Аминофенилэтановая кислота</p>
+</td><td><p align="center">
+875-74-1</p>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>9</sub>N0<sub>2</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+33</p>
+</td><td><p>
+L(+)- б -Аминофенилэтановая кислота</p>
+</td><td><p align="center">
+2935-35-5</p>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>9</sub>N0<sub>2</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+34</p>
+</td><td><p>
+4-Амино-2-фуроил-6,7-диметоксилиперазин-1-илхина-золина гидрохлорид</p>
+</td><td><p align="center">
+19237-84-4</p>
+</td><td><p align="center">
+C<sub>19</sub>H<sub>21</sub>N<sub>5</sub>O<sub>4</sub> • C1H</p>
+</td><td><p align="center">
+0,03 A</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+35</p>
+</td><td><p>
+2- Амино - 5 -хлорбензофенон</p>
+</td><td><p align="center">
+719-59-5</p>
+</td><td><p align="center">
+C<sub>13</sub>H<sub>10</sub>C1NO</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+36</p>
+</td><td><p>
+4-Амино -6-хлорпиримидин</p>
+</td><td><p align="center">
+5426-89-7</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>4</sub>C1N<sub>3</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+37</p>
+</td><td><p>
+(2-Амино-5-хлорфенил)фенилметанон-[Е]-оксим</p>
+</td><td><p align="center">
+15185-66-7</p>
+</td><td><p align="center">
+C<sub>13</sub>H<sub>12</sub>ClN<sub>2</sub>O</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+38</p>
+</td><td><p>
+2-Аминоэтанола бензоат</p>
+</td><td><p align="center">
+4337-66-0</p>
+</td><td><p align="center">
+C<sub>13</sub>H<sub>19</sub>N</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+39</p>
+</td><td><p>
+2-Аминоэтанола сульфаяилат</p>
+</td><td><p align="center">
+15730-83-3</p>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>14</sub>N<sub>2</sub>0<sub>4</sub>S</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+40</p>
+</td><td><p>
+2-Аминоэтилгидросульфат</p>
+</td><td><p align="center">
+926-39-6</p>
+</td><td><p align="center">
+C<sub>2</sub>H<sub>7</sub>NO<sub>4</sub>S</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+41</p>
+</td><td><p>
+Аммоний бромид</p>
+</td><td><p align="center">
+12124-97-9</p>
+</td><td><p align="center">
+H<sub>4</sub>BrN</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+42</p>
+</td><td><p>
+триАммоний диакваоктахлор-м -нитридодирутенат(4-)+</p>
+</td><td><p align="center">
+27316-90-1</p>
+</td><td><p align="center">
+C<sub>18</sub>H<sub>I6</sub>N<sub>4</sub>0<sub>2</sub>Ru<sub>2</sub></p>
+</td><td><p align="center">
+0,05</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+43</p>
+</td><td><p>
+Д-(-)-N-Ацетиламинофенилэтановая кислота</p>
+</td><td><p align="center">
+29633-99-6</p>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>11</sub>NO<sub>3</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+44</p>
+</td><td><p>
+4- (Ацетилокси)бензойная кислота</p>
+</td><td><p align="center">
+2345-34-8</p>
+</td><td><p align="center">
+C<sub>9</sub>H<sub>8</sub>O<sub>4</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+45</p>
+</td><td><p>
+2- (Ацетилокси)бензолсульфамид</p>
+</td><td><p align="center">
+39082- 31-0</p>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>9</sub>NO<sub>4</sub>S</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+46</p>
+</td><td><p>
+3-[2-(Ацетилокси)-1-метилэтил]-1,2,4,5,6,6а,7,8,9,10а-д-кагидро-1,5-дигидрокси-9-(метоксиметил)-6,10а-диметилдициклопента[a,d ] циклоокт-4-ен- 6- ил</p>
+</td><td><p align="center">
+20108-30-9</p>
+</td><td><p align="center">
+Сз<sub>6</sub>Н<sub>5б</sub>О<sub>12</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+47</p>
+</td><td><p>
+(7б,17б)-7-(Ацетилтио)-17-гидрокси-3-оксопрегн-4-ен-21-карбоновой кислоты у-лактон</p>
+</td><td><p align="center">
+52-01-7</p>
+</td><td><p align="center">
+C<sub>24</sub>H<sub>32</sub>O<sub>4</sub>S</p>
+</td><td><p align="center">
+0,05</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+48</p>
+</td><td><p>
+Ацетил циклододецен</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>25</sub>O</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+49</p>
+</td><td><p>
+6-Ацетокси-2,5,7,8-тетраметил-2-(4,8,12-триметилтридецил)хроман</p>
+</td><td><p align="center">
+1406-18-4</p>
+</td><td><p align="center">
+С<sub>29</sub>Н5<sub>о</sub>О<sub>2</sub></p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+50</p>
+</td><td><p>
+1-Бензгидрилпиперазин</p>
+</td><td><p align="center">
+841-77-0</p>
+</td><td><p align="center">
+С<sub>17</sub>Н<sub>20</sub>N<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+51</p>
+</td><td><p>
+1,2-Бензизотиазол-3-(2Н)-он натрия 1,1 -диоксид</p>
+</td><td><p align="center">
+128-44-9</p>
+</td><td><p align="center">
+C<sub>7</sub>H<sub>5</sub>NNa0<sub>3</sub>S</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+52</p>
+</td><td><p>
+1,2-Бензизотиазол-З-он 1,1-оксид</p>
+</td><td><p align="center">
+81-07-1</p>
+</td><td><p align="center">
+C<sub>7</sub>H<sub>5</sub>N0<sub>3</sub>S</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+53</p>
+</td><td><p>
+2- Бензилбензооксазол</p>
+</td><td><p align="center">
+2008-07-3</p>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>11</sub>NO</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+54</p>
+</td><td><p>
+3-Бензилгидантоин</p>
+</td><td><br>
+</td><td><p align="center">
+С<sub>10</sub>Н<sub>10</sub>N<sub>2</sub>0<sub>2</sub></p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+55</p>
+</td><td><p>
+Бензоат лития</p>
+</td><td><p align="center">
+553-54-8</p>
+</td><td><p align="center">
+C<sub>7</sub>H<sub>5</sub>O<sub>2</sub>Li</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+56</p>
+</td><td><p>
+4-(Бензоиламино)-2-гидроксибензоат кальция</p>
+</td><td><p align="center">
+528-96-1</p>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>11</sub>Ca<sub>o,5</sub>N0<sub>4</sub></p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+57</p>
+</td><td><p>
+(+— )-5-Бензоил-2,3-дигидро-1Н-пирролизинкарбоновая кислота соль с 2-амино-2-(гидроксиметил)пропан-1,3-диолом (1:1)+</p>
+</td><td><p align="center">
+74103-07-4</p>
+</td><td><p align="center">
+C<sub>15</sub>H<sub>13</sub>N0<sub>3</sub> • C<sub>4</sub>H<sub>11</sub>N0<sub>3</sub></p>
+</td><td><p align="center">
+0,01</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+58</p>
+</td><td><p>
+1-Бензоил-2-имидазолидинон</p>
+</td><td><p align="center">
+27034-77-1</p>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>10</sub>N<sub>2</sub>0<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+59</p>
+</td><td><p>
+2- Бензоил-2,4-дихлор- N -метил- N-фенилацетамид</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>16</sub>H<sub>13</sub>C1<sub>2</sub>N0<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+60</p>
+</td><td><p>
+2- [(N- Бензоил-N- (3,4- дихлорфенил )амино]этилпропионат</p>
+</td><td><p align="center">
+33878-50-1</p>
+</td><td><p align="center">
+C<sub>18</sub>H<sub>17</sub>C1<sub>2</sub>N0<sub>3</sub></p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+61</p>
+</td><td><p>
+1,3-Бензтиазол-2-илтио-2-(2-амино-1,3-тиазол-4-ил)-2(син)-метоксииминоацетат</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>15</sub>H<sub>13</sub>N<sub>4</sub>S<sub>3</sub></p>
+</td><td><p align="center">
+5A</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+62</p>
+</td><td><p>
+Биомасса сухая штамма "Streptomyces ciimamonensis НИЦБ 109" /по монезину/</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+63</p>
+</td><td><p>
+N,N-Бис(диацетил)этан-1,2-диамин</p>
+</td><td><p align="center">
+10543-57-4</p>
+</td><td><p align="center">
+С<sub>10</sub>Н<sub>16</sub>N<sub>2</sub>O<sub>4</sub></p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+64</p>
+</td><td><p>
+Бисизобензфуран-[1,1',3,3 ' ]тетрон</p>
+</td><td><p align="center">
+59800-20-3</p>
+</td><td><p align="center">
+C<sub>16</sub>H<sub>6</sub>0<sub>6</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+65</p>
+</td><td><p>
+б,б-Бис(2-метилфенил)-1-азабицикло[2,2,2]октан-3-метанол</p>
+</td><td><p align="center">
+57734-69-7</p>
+</td><td><p align="center">
+C<sub>22</sub>H<sub>27</sub>NO</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+66</p>
+</td><td><p>
+б,б-Бис(2-метилфенил)-1-азабицикло[2,2,2]октан-3-метанола гидрохлорид</p>
+</td><td><p align="center">
+57734-70-0</p>
+</td><td><p align="center">
+C<sub>22</sub>H<sub>27</sub>NO • С1Н</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+67</p>
+</td><td><p>
+Бис- (2-метокси)этилдекандиоат</p>
+</td><td><p align="center">
+71850-03-8</p>
+</td><td><p align="center">
+C<sub>16</sub>H<sub>30</sub>0<sub>6</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+68</p>
+</td><td><p>
+1,3-Бис(4-нитрофенокси)бензол</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>18</sub>H<sub>12</sub>0<sub>6</sub>N<sub>2</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+69</p>
+</td><td><p>
+1,1-Бис-(4-оксифенил)-2,2,3,3,4,4,5,5-октафторпентан</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>17</sub>H<sub>19</sub>F<sub>8</sub>0</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+70</p>
+</td><td><p>
+Бис-[1-(1Н)-2(пиридонил)]глиоксаль</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>7</sub>H<sub>3</sub>N0<sub>3</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+71</p>
+</td><td><p>
+2,2- Бис [(проп-2-енилокси) метил ]бутан- 1 -ол</p>
+</td><td><p align="center">
+682-09-7</p>
+</td><td><p align="center">
+C<sub>12</sub>H<sub>22</sub>O<sub>3</sub></p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+72</p>
+</td><td><p>
+1,2-Бис[1,4,6,9-тетразотрицикло-(4,4,1,4,9)-додеканоэти-лиден]дигидрохлорид</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>30</sub>N<sub>8</sub> • C1<sub>2</sub>H<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+73</p>
+</td><td><p>
+N, N- Бис-триметилсилилкарбамид</p>
+</td><td><p align="center">
+18287-63-7</p>
+</td><td><p align="center">
+C<sub>7</sub>H<sub>20</sub>N<sub>2O</sub>Si<sub>2</sub></p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+74</p>
+</td><td><p>
+1,3- Бис(трихлорметил)бензол</p>
+</td><td><p align="center">
+881-99-2</p>
+</td><td><p align="center">
+С<sub>8</sub>Н<sub>4</sub>Сl<sub>6</sub></p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+75</p>
+</td><td><p>
+N, N- Бис (фосфонометил)глицин</p>
+</td><td><p align="center">
+2439-99-8</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>11</sub>N0<sub>8</sub>P<sub>2</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+76</p>
+</td><td><p>
+3-Бромаминобензола сульфат</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>6</sub>BrN • 0,5H<sub>2</sub>SO<sub>4</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+77</p>
+</td><td><p>
+4-Бромаминобeнзола гидрохлорид</p>
+</td><td><p align="center">
+624-19-1</p>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>6</sub>BrN • С1Н</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+78</p>
+</td><td><p>
+2Бромбензил-N-этилдиметиламинийбромид+</p>
+</td><td><p align="center">
+3170-72-7</p>
+</td><td><p align="center">
+C<sub>11</sub>H<sub>17</sub>BrN</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+79</p>
+</td><td><p>
+3-[3-(4-Бром-1,1-бифенил-4-ил)-3-гидрокси-1-фенил-пропил]-4-гидрокси-2Н-1-бензопиран-2-он+</p>
+</td><td><p align="center">
+28772-56-7</p>
+</td><td><p align="center">
+С<sub>3</sub>оН<sub>2</sub>зВг0<sub>4</sub></p>
+</td><td><p align="center">
+0,001</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+80</p>
+</td><td><p>
+3-[3-(4-Бром-[1,1-бифенил]-4-ил)-1,2,3,4-тетрагидро-1-нафталенил]-4-гидрокси-2Н-1-бензопиран-2-он</p>
+</td><td><p align="center">
+56073-10-0</p>
+</td><td><p align="center">
+C<sub>31</sub>H<sub>23</sub>Br0<sub>3</sub></p>
+</td><td><p align="center">
+0,001</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+81</p>
+</td><td><p>
+2-Бромбутан+</p>
+</td><td><p align="center">
+76-76-2</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>9</sub>Br</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+82</p>
+</td><td><p>
+4Бром-1-гидрокси-N-октадецилнафталин-2-кар6окс-мид</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>29</sub>H<sub>44</sub>BrNO<sub>2</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+83</p>
+</td><td><p>
+7-Бром-2,3-дигидро-2-оксо-5-фенил-1H-1,4-бензодиазепин- 1 -ацетгидразид</p>
+</td><td><p align="center">
+129186-29-4</p>
+</td><td><p align="center">
+C<sub>19</sub>H<sub>16</sub>BrN<sub>4</sub>0<sub>3</sub></p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+84</p>
+</td><td><p>
+2-Бром-1,1,3-триметоксипропан</p>
+</td><td><p align="center">
+759-97-7</p>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>13</sub>Br0<sub>3</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+85</p>
+</td><td><p>
+8в-5-Бром-3-пиридинкарбонат 10-метокси-1,6-диметил-эрголин-8 -метанола+</p>
+</td><td><p align="center">
+85736-63-6</p>
+</td><td><p align="center">
+C<sub>16</sub>H<sub>36</sub>BrN0<sub>4</sub></p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+86</p>
+</td><td><p>
+N -Бромсукцинимид</p>
+</td><td><p align="center">
+128-08-5</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>4</sub>BrN0<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+87</p>
+</td><td><p>
+4-Бром- N-фенилацетамид</p>
+</td><td><p align="center">
+103-88-8</p>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>8</sub>BrNO</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+88</p>
+</td><td><p>
+7-Бром-5 -(2-хлорфенил)- 1 , 3-дигидро- 1 ,4-бенздиазепин-2-он</p>
+</td><td><p align="center">
+51753-57-2</p>
+</td><td><p align="center">
+C<sub>l5</sub>H<sub>10</sub>BrClN<sub>2</sub>0</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+89</p>
+</td><td><p>
+Бутан- 1 ,4-диамин</p>
+</td><td><p align="center">
+110-60-1</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>12</sub>N<sub>2</sub></p>
+</td><td><p align="center">
+0,7</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+90</p>
+</td><td><p>
+N-Бутилимидодикарбонимида диамида гидрохлорид+</p>
+</td><td><p align="center">
+1190-53-0</p>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>15</sub>N<sub>5</sub> • СН</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+91</p>
+</td><td><p>
+1-Бутил-N-(2,4,6-триметилфенилпирролидин-2-карбоксамид</p>
+</td><td><p align="center">
+30103-44-7</p>
+</td><td><p align="center">
+C<sub>18</sub>H<sub>28</sub>N<sub>2</sub>0</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+92</p>
+</td><td><p>
+1-Бутил-N-(2,4,6-триметилфенил)пирролидин-2-карбо-самид гидрохлорид</p>
+</td><td><p align="center">
+19089-24-8</p>
+</td><td><p align="center">
+C<sub>18</sub>H<sub>28</sub>N<sub>2</sub>0 • C1H</p>
+</td><td><p align="center">
+0,6</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+93</p>
+</td><td><p>
+Бутилформиат</p>
+</td><td><p align="center">
+592-84-7</p>
+</td><td><p align="center">
+C<sub>5</sub>H<sub>10</sub>O<sub>2</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+94</p>
+</td><td><p>
+Версамид стеариновой кислоты</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>20</sub>H<sub>51</sub>N<sub>2</sub>0</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+95</p>
+</td><td><p>
+Гадолиний оксид</p>
+</td><td><p align="center">
+12064-62-9</p>
+</td><td><p align="center">
+Gd<sub>2</sub>O<sub>3</sub></p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+96</p>
+</td><td><p>
+Гафний ацетилацетонат</p>
+</td><td><p align="center">
+17475-67-1</p>
+</td><td><p align="center">
+С<sub>2о</sub>Н<sub>28</sub>НfО<sub>8</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+97</p>
+</td><td><p>
+2&gt;3,4,4а,5,9в-Гексагидро-2,8-диметил-1Н-пиридо[4,3-b]-индола, дигидрохлорид</p>
+</td><td><p align="center">
+33162-17-3</p>
+</td><td><p align="center">
+C<sub>13</sub>H<sub>18</sub>N<sub>2</sub> • Сl<sub>2</sub>Н<sub>2</sub></p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+98</p>
+</td><td><p>
+(Е,Е)-Гекса-2,4-диеновая кислота+</p>
+</td><td><p align="center">
+110-44-1</p>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>8</sub>0<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+99</p>
+</td><td><p>
+N- Гексилоксиметилазепин+</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>13</sub>H<sub>25</sub>N0<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+100</p>
+</td><td><p>
+2-Гексилоксинафталин+</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>16</sub>H<sub>18</sub>0</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+101</p>
+</td><td><p>
+Гепарин, натриевая соль</p>
+</td><td><p align="center">
+9041-08-1</p>
+</td><td><br>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+102</p>
+</td><td><p>
+Гидразинкарбоксилимидамид гидрокарбонат</p>
+</td><td><p align="center">
+2582-30-1</p>
+</td><td><p align="center">
+C<sub>2</sub>H<sub>8</sub>N<sub>4</sub>0<sub>3</sub></p>
+</td><td><p align="center">
+0,1 A</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+103</p>
+</td><td><p>
+Гидроксибутаноат лития+</p>
+</td><td><p align="center">
+61742-10-7</p>
+</td><td><p align="center">
+С<sub>4</sub>Н<sub>7</sub>L<sub>i</sub>О<sub>3</sub></p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+104</p>
+</td><td><p>
+1-Гидрокси-2,6-динитро-4-(1,1,2,2-тетрафторэтокси)-бензол</p>
+</td><td><p align="center">
+116800-49-8</p>
+</td><td><p align="center">
+С<sub>8</sub>HF<sub>4</sub>N<sub>2</sub>0<sub>6</sub></p>
+</td><td><p align="center">
+0,02</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+105</p>
+</td><td><p>
+(4-[1-Гидрокси-2-(метиламино)этил]бензол-1)2-диол)-гидротартрат+</p>
+</td><td><p align="center">
+51-42-3</p>
+</td><td><p align="center">
+C<sub>12</sub>H<sub>16</sub>N0<sub>6</sub></p>
+</td><td><p align="center">
+0,01</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+106</p>
+</td><td><p>
+1,3-Гидроксиметил-в -гидроксиэтил-1,3,5-гексагидротриазомол-2+</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>15</sub>N<sub>3</sub>0<sub>4</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+107</p>
+</td><td><p>
+3- Гидрокси- 5 - метилизоксазол</p>
+</td><td><p align="center">
+Ю004-44-1</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>5</sub>NO<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+108</p>
+</td><td><p>
+4-[2-Гидрокси-3-[(1-метилэтил)амино]пропокси]бензо-ацетамид</p>
+</td><td><p align="center">
+29122-68-7</p>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>22</sub>N<sub>2</sub>0<sub>3</sub></p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+109</p>
+</td><td><p>
+4-[1-Гидрокси-2-[(1-метилэтил)амино]этилбензол]-1,2-диол гидрохлорид</p>
+</td><td><p align="center">
+51-30-9</p>
+</td><td><p align="center">
+C<sub>11</sub>H<sub>17</sub>NO<sub>3</sub> • C1H</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+110</p>
+</td><td><p>
+3-Гидрокси-6-метил-2-этилпиридин бутандиоат (1:1)+</p>
+</td><td><p align="center">
+127464-43-1</p>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>11</sub>NO • С<sub>4</sub>Н<sub>6</sub>0<sub>2</sub></p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+111</p>
+</td><td><p>
+1-Гидрокси-2-метокси-4-(проп-1-ил)бензол</p>
+</td><td><p align="center">
+97-54-1</p>
+</td><td><p align="center">
+C<sub>1</sub>oH<sub>12</sub>O<sub>2</sub></p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+112</p>
+</td><td><p>
+3-Гидрокси-N-нафтален-1-илнафталин-2-карбоксамид</p>
+</td><td><p align="center">
+132-68-3</p>
+</td><td><p align="center">
+C<sub>2I</sub>H<sub>15</sub>N0<sub>2</sub></p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+113</p>
+</td><td><p>
+5-Гидрокси-2-нитрозонафталинсульфоновая кислота</p>
+</td><td><p align="center">
+23253-13-6</p>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>7</sub>N0<sub>5</sub>S</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+114</p>
+</td><td><p>
+1-Гидрокси-N-октадецилнафталин-2-карбоксамид</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>29</sub>H<sub>45</sub>NO<sub>2</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+115</p>
+</td><td><p>
+4-гидрокси-2,4,6-триметилциклогексан-2,5-диен-1-он</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>9</sub>H<sub>14</sub>O<sub>2</sub></p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+116</p>
+</td><td><p>
+2-(4-Гидроксифенокси)пропановая кислота</p>
+</td><td><p align="center">
+67648-61-7</p>
+</td><td><p align="center">
+C<sub>9</sub>H<sub>10</sub>O<sub>4</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+117</p>
+</td><td><p>
+3 - Гидроксихинуклидин</p>
+</td><td><p align="center">
+1619-34-7</p>
+</td><td><p align="center">
+C<sub>7</sub>H<sub>13</sub>NO</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+118</p>
+</td><td><p>
+3- Гидрокси-3- цианхинуклидин</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>12</sub>N<sub>2</sub>0</p>
+</td><td><p align="center">
+0,005</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+119</p>
+</td><td><p>
+2-в-Д-Глюкопиранозил-1,3,6,7-тетраоксиксантен-9-он</p>
+</td><td><p align="center">
+4773-96-0</p>
+</td><td><p align="center">
+C<sub>l7</sub>H<sub>16</sub>O<sub>12</sub></p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+120</p>
+</td><td><p>
+Гольмий оксид</p>
+</td><td><p align="center">
+12281-10-6</p>
+</td><td><p align="center">
+НоО</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+121</p>
+</td><td><p>
+Децилхлорид</p>
+</td><td><p align="center">
+28519-06-4</p>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>21</sub>Cl</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+122</p>
+</td><td><p>
+4-Диазоэтиламинобензолбор фторид</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>12</sub>BF<sub>3</sub>N<sub>3</sub></p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+123</p>
+</td><td><p>
+Диалкиламинопропионитрил+</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>3</sub>H<sub>4</sub>N<sub>2</sub>(C<sub>n</sub>H<sub>2n+1</sub>)</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+124</p>
+</td><td><p>
+5Н-Дибенз[в,f)азепин-5-карбоксамид</p>
+</td><td><p align="center">
+298-46-4</p>
+</td><td><p align="center">
+C<sub>15</sub>H<sub>12</sub>N<sub>2</sub>0</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+125</p>
+</td><td><p>
+2, 3-Дибромбут-2-ен- 1 ,4-диол</p>
+</td><td><p align="center">
+3234-02-4</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>6</sub>Br<sub>2</sub>0<sub>2</sub></p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+126</p>
+</td><td><p>
+6,6-Дибром-3,3-диметил-7-оксо-4,4-диоксид (2S-цис)-4-тиа-1-азабицикло-(3,2,0)-гептан-2-карбоновая кислота</p>
+</td><td><p align="center">
+76646-91-8</p>
+</td><td><p align="center">
+C<sub>8</sub>H<sub>9</sub>Br<sub>2</sub>NO<sub>5</sub>S</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+127</p>
+</td><td><p>
+1 ,2-Дибром- 1 , 1-дифторэтан</p>
+</td><td><p align="center">
+75-82-1</p>
+</td><td><p align="center">
+C<sub>2</sub>H<sub>2</sub>Br<sub>2</sub>F<sub>2</sub></p>
+</td><td><p align="center">
+200</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+128</p>
+</td><td><p>
+(1б)-1,2-Дигидро-12-гидроксисенеционан-11,16-диона-[R(R*,R*)]-2,3-дигидроксибутандиоат (1:1)</p>
+</td><td><p align="center">
+1257-59-6</p>
+</td><td><p align="center">
+C<sub>18</sub>H<sub>27</sub>N0<sub>5</sub> • C<sub>4</sub>H<sub>6</sub>0<sub>6</sub></p>
+</td><td><p align="center">
+0,05</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+129</p>
+</td><td><p>
+[10,11-Дигидро-5Н-дибенз(в,f)]-азепин</p>
+</td><td><p align="center">
+494-19-9</p>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>13</sub>N</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+130</p>
+</td><td><p>
+10,11-Дигидро-N,N-диметил-5H-дибенз[b,f]aзeпин-5-пропанамина гидрохлорид+</p>
+</td><td><p align="center">
+113-52-0</p>
+</td><td><p align="center">
+C<sub>19</sub>H<sub>24</sub>N<sub>2</sub> • C1H</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+131</p>
+</td><td><p>
+1,4-Дигидро-6,8-дифтор-7-(3-метилпиперазин-1-ил)-4-оксо-1-этилхинолин-З-карбоновая кислота гидрохлорид</p>
+</td><td><p align="center">
+98079-52-8</p>
+</td><td><p align="center">
+C<sub>17</sub>H<sub>19</sub>F<sub>2</sub>N<sub>3</sub>0<sub>3</sub> • С1Н</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+132</p>
+</td><td><p>
+1 ,4-Дигидро-6,7-дифтор-4-оксо- 1 -этилхинолин-3-карбоновая кислота</p>
+</td><td><p align="center">
+70032-25-6</p>
+</td><td><p align="center">
+C<sub>12</sub>H<sub>9</sub>F<sub>2</sub>N0<sub>3</sub></p>
+</td><td><p align="center">
+0,6</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+133</p>
+</td><td><p>
+4, 6- Дигидроксипиримидин</p>
+</td><td><p align="center">
+1193-24-4</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>4</sub>N<sub>2</sub>0<sub>2</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+134</p>
+</td><td><p>
+1,4-Дигидро-6,7-метилендиокси-1-этил-4-оксохинолин-3-карбоновая кислота</p>
+</td><td><p align="center">
+32932-16-4</p>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>15</sub>N0<sub>5</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+135</p>
+</td><td><p>
+1,4-Дигидро-7-(4-метилпиперазин-1-ил)-4-оксо-6-фтор-1-этилхинолин-З-карбоновой кислоты метансульфонат</p>
+</td><td><p align="center">
+70458-95-6</p>
+</td><td><p align="center">
+C<sub>17</sub>H<sub>20</sub>FN<sub>3</sub>0<sub>3</sub> • CH403S</p>
+</td><td><p align="center">
+0,6</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+136</p>
+</td><td><p>
+1,4-Дигидро-7-(4-метилпиперазин-1-ил)-6-фтор4-оксо-1-этил-хинолин-З-карбоновая кислота</p>
+</td><td><p align="center">
+70458-92-3</p>
+</td><td><p align="center">
+C<sub>17</sub>H<sub>20</sub>FN<sub>3</sub>0<sub>3</sub></p>
+</td><td><p align="center">
+0,6</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+137</p>
+</td><td><p>
+4,5-Дигидро-4-(1-метил-4-пиперидинилиден)~1-он-бензо(4,5-циклогепта[1,2-b]тиофен-10-он-(Е)-бут-2-ендиоат (1:1)</p>
+</td><td><p align="center">
+34580-14-8</p>
+</td><td><p align="center">
+C<sub>19</sub>H<sub>19</sub>NOS • C<sub>4</sub>H<sub>4</sub>0<sub>4</sub></p>
+</td><td><p align="center">
+0,01</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+138</p>
+</td><td><p>
+N,N-Дигидроксиметилкарбамид</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>3</sub>H<sub>9</sub>N<sub>2</sub>0<sub>3</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+139</p>
+</td><td><p>
+Дигидро-5-пентил-2-(ЗН)-фуранон</p>
+</td><td><p align="center">
+104-61-0</p>
+</td><td><p align="center">
+C<sub>9</sub>H<sub>16</sub>O<sub>2</sub></p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+140</p>
+</td><td><p>
+г-[2,4-Ди(2,2-диметилпропил)фенокси)]бутанамид</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>20</sub>H<sub>35</sub>N0<sub>2</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+141</p>
+</td><td><p>
+2-(2,2-Ди(1,1-диметилпропил)фенокси-а-этилацетилами-но)- 1 -гидрокси-4,6-дихлор-5-метилбензол</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>27</sub>H<sub>37</sub>C1NO<sub>3</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+142</p>
+</td><td><p>
+2,3-Димеркаптопропан-1-сульфонат натрия+</p>
+</td><td><p align="center">
+4076-02-2</p>
+</td><td><p align="center">
+C<sub>3</sub>H<sub>7</sub>Na0<sub>3</sub>S<sub>3</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+143</p>
+</td><td><p>
+4- Диметиламин-2- метокси-5- нитробензоилхлорид</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>11</sub>ClN<sub>2</sub>O<sub>4</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+144</p>
+</td><td><p>
+3-[[(Диметиламино)карбонил]окси]N,N-N трииметил-бензоламинийметилсульфат+</p>
+</td><td><p align="center">
+51-60-5</p>
+</td><td><p align="center">
+C<sub>13</sub>H<sub>22</sub>N<sub>2</sub>0<sub>6</sub>S</p>
+</td><td><p align="center">
+0,01</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+145</p>
+</td><td><p>
+N-[2-[[[5-(Диметиламино)метил]-2-фуранил]метилтио]-этил]-N,-метил-2-нитро-1,1-этандиамин гидрохлорид+</p>
+</td><td><p align="center">
+66357-59-3</p>
+</td><td><p align="center">
+C<sub>13</sub>H<sub>22</sub>N<sub>4</sub>O<sub>3</sub>S - С1Н</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+146</p>
+</td><td><p>
+2-[(Диметиламино)метил]циклогексан гидрохлорид</p>
+</td><td><p align="center">
+42036-65-7</p>
+</td><td><p align="center">
+C<sub>9</sub>H<sub>17</sub>NO - C1H</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+147</p>
+</td><td><p>
+ОS-Диметил-N-ацетилфосфораминотиоат</p>
+</td><td><p align="center">
+30560-19-1</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>10</sub>N0<sub>3</sub>PS</p>
+</td><td><p align="center">
+0,7</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+148</p>
+</td><td><p>
+0,0-Диметил-S-1(4,6-диамино-1,3,5-триазан-2-ил)метил]-дитиофосфат</p>
+</td><td><p align="center">
+78-57-9</p>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>12</sub>N<sub>5</sub>0<sub>2</sub>PS<sub>2</sub></p>
+</td><td><p align="center">
+I</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+149</p>
+</td><td><p>
+5 ,6 - Диметил -2-диметиламино-4 -пиримидинилд иметил-карбамат</p>
+</td><td><p align="center">
+23103-98-2</p>
+</td><td><p align="center">
+C<sub>11</sub>H<sub>18</sub>N<sub>4</sub>0<sub>2</sub></p>
+</td><td><p align="center">
+0,05</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+150</p>
+</td><td><p>
+Диметилдиметилгексадекадиенкарбонат</p>
+</td><td><br>
+</td><td><p align="center">
+С<sub>2о</sub>Н<sub>з4</sub>О<sub>4</sub></p>
+</td><td><p align="center">
+15</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+151</p>
+</td><td><p>
+N,N-Диметил- N- [ (дихлорфторметил)тио) - N-фенилсульфамид</p>
+</td><td><p align="center">
+1085-98-9</p>
+</td><td><p align="center">
+C<sub>9</sub>H<sub>11</sub>Cl<sub>2</sub>FN<sub>2</sub>O<sub>2</sub>S<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+152</p>
+</td><td><p>
+Диметиленциклобутан (изомеры 1,3-диметиленциклобутан, 1,2-диметиленциклобутан)</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>12</sub></p>
+</td><td><p align="center">
+50</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+153</p>
+</td><td><p>
+Диметилкарбамид</p>
+</td><td><p align="center">
+1320-50-9</p>
+</td><td><p align="center">
+C<sub>3</sub>H<sub>8</sub>N<sub>2</sub>0</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+154</p>
+</td><td><p>
+1,2-Диметил-3-карбэтокси-5-ацетоксииндол</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>15</sub>H<sub>I7</sub>N0<sub>4</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+155</p>
+</td><td><p>
+0,0-Димeтил-S-2-мepкaптo-N-(3-мeтoкcипропил)aцeтaмид тиофосфорной кислоты</p>
+</td><td><p align="center">
+919-77-7</p>
+</td><td><p align="center">
+C<sub>7</sub>H<sub>16</sub>NO<sub>4</sub>PS<sub>2</sub></p>
+</td><td><p align="center">
+0,15</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+156</p>
+</td><td><p>
+Диметилметилдодецевдикарбонат</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>15</sub>H<sub>30</sub>O<sub>4</sub></p>
+</td><td><p align="center">
+20</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+157</p>
+</td><td><p>
+0,0-Диметил-0-(4-метилтио-3-метилфенил)тиофосфат</p>
+</td><td><p align="center">
+55-38-9</p>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>15</sub>0<sub>3</sub>PS<sub>2</sub></p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+158</p>
+</td><td><p>
+N,N,-Диметил-Ы'-(4-метокси-3-хлорфенил)карбамид</p>
+</td><td><p align="center">
+19937-59-8</p>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>13</sub>C1N<sub>2</sub>0<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+159</p>
+</td><td><p>
+3,3-Диметил-7-оксо-6-ацетиламино-7-тиа-1-азабицикло-[3,2,0]гептанкарбонат натрия 1,1 -диоксид</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>10</sub>N<sub>2</sub>Na0<sub>5</sub>S</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+160</p>
+</td><td><p>
+3,7-Диметил-1-(5-оксогексил)-3,7-дигидро-1Н-пурин-2,6-дион</p>
+</td><td><p align="center">
+6493-05-6</p>
+</td><td><p align="center">
+C<sub>13</sub>H<sub>18</sub>N<sub>4</sub>0<sub>3</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+161</p>
+</td><td><p>
+О,О-ДиметилS-[(2-оксо-6-хлороксазол(4,5-в)пиридин-3 (2Н) - илметил ]тиофосфат</p>
+</td><td><p align="center">
+35575-96-3</p>
+</td><td><p align="center">
+C<sub>9</sub>H<sub>10</sub>ClN<sub>2</sub>O<sub>5</sub>PS</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+162</p>
+</td><td><p>
+3 , 7 -Диметил окта-2, 6 -диен-8 -аль</p>
+</td><td><p align="center">
+5392-40-5</p>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>16</sub>O</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+163</p>
+</td><td><p>
+1 ,4-Диметилпиперазин</p>
+</td><td><p align="center">
+104-58-1</p>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>14</sub>N<sub>2</sub></p>
+</td><td><p align="center">
+0,01</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+164</p>
+</td><td><p>
+Диметил-[1,2-фениленбис(иминокарбонотиоил)]бискарбамат</p>
+</td><td><p align="center">
+23564-05-8</p>
+</td><td><p align="center">
+C<sub>12</sub>H<sub>14</sub>N<sub>4</sub>O<sub>4</sub>S<sub>2</sub></p>
+</td><td><p align="center">
+1,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+165</p>
+</td><td><p>
+N, N-Диметил-N-(2-феноксиэтил)-N-(декан-1-ол)аминийбромид</p>
+</td><td><p align="center">
+538-71-6</p>
+</td><td><p align="center">
+C<sub>22</sub>H<sub>40</sub>BrNO<sub>4</sub></p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+166</p>
+</td><td><p>
+(1,1 -Диметилэтйл)-2-гидроксибензоат</p>
+</td><td><p align="center">
+87-19-4</p>
+</td><td><p align="center">
+С<sub>11</sub>Н<sub>14</sub>0<sub>3</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+167</p>
+</td><td><p>
+4-( 1 , 1 -Диметилэтил) - 1 -метилбензол+</p>
+</td><td><p align="center">
+98-51-1</p>
+</td><td><p align="center">
+С<sub>11</sub>Н<sub>1б</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+168</p>
+</td><td><p>
+4- ( 1 , 1-Диметилэтил)- 1 -метил- 2-хлорбензол</p>
+</td><td><p align="center">
+42597-10-4</p>
+</td><td><p align="center">
+C<sub>11</sub>H<sub>15</sub>Cl</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+169</p>
+</td><td><p>
+4-(1,1-Диметилэтил-2,2,2-трихлор)-1-метил бензол</p>
+</td><td><p align="center">
+16341-99-4</p>
+</td><td><p align="center">
+С<sub>11</sub>Н<sub>13</sub>С1<sub>3</sub></p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+170</p>
+</td><td><p>
+2-[4-(1Д-Диметилэтил)фенил]пропионовый альдегид+</p>
+</td><td><p align="center">
+61136-74-1</p>
+</td><td><p align="center">
+С<sub>13</sub>Н<sub>18</sub>0</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+171</p>
+</td><td><p>
+Диметилди(гидроксиэтил) аммоний фосфорнокислый</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>18</sub>N0<sub>5</sub>P</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+172</p>
+</td><td><p>
+1 -[4-( 1 , 1 -Диметилэтил)фенил]этанон+</p>
+</td><td><p align="center">
+38861-78-8</p>
+</td><td><p align="center">
+С<sub>12</sub>Н<sub>16</sub>0</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п+а</p>
+</td></tr><tr><td><p align="center">
+173</p>
+</td><td><p>
+1 - (1 , 1, -Диметилэтокси)бутан</p>
+</td><td><p align="center">
+1000-63-1</p>
+</td><td><p align="center">
+С<sub>8</sub>Н<sub>18</sub>0</p>
+</td><td><p align="center">
+30</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+174</p>
+</td><td><p>
+(1,1 -Диметилэтокси)бут- 1 -ен</p>
+</td><td><p align="center">
+22617-97-6</p>
+</td><td><p align="center">
+С<sub>8</sub>Н<sub>16</sub>0</p>
+</td><td><p align="center">
+20</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+175</p>
+</td><td><p>
+0,0-Диметил-2-(6-этокси-2-этил-4-пирилидинил)тиофосфат</p>
+</td><td><p align="center">
+6389-81-7</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>11</sub>0<sub>3</sub>PS</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+п+а</p>
+</td></tr><tr><td><p align="center">
+176</p>
+</td><td><p>
+3,4-Диметоксибензилхлорид+</p>
+</td><td><p align="center">
+7306-46-9</p>
+</td><td><p align="center">
+С<sub>9</sub>Н<sub>11</sub>С10<sub>2</sub></p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+177</p>
+</td><td><p>
+1 ,2-Диметоксибензол+</p>
+</td><td><p align="center">
+91-16-7</p>
+</td><td><p align="center">
+С<sub>8</sub>Н<sub>10</sub>О<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+178</p>
+</td><td><p>
+3 ,4 - Диметоксифенилэтиламин</p>
+</td><td><p align="center">
+120-20-7</p>
+</td><td><p align="center">
+С<sub>10</sub>Н<sub>15</sub>N0<sub>2</sub></p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+п+а</p>
+</td></tr><tr><td><p align="center">
+179</p>
+</td><td><p>
+1,1-Ди(4-метоксифенил)-2,2,2-трихлорэтан+</p>
+</td><td><p align="center">
+72-43-5</p>
+</td><td><p align="center">
+С<sub>16</sub>Н<sub>15</sub>С1<sub>3</sub>02</p>
+</td><td><p align="center">
+0,4</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+180</p>
+</td><td><p>
+б-[3-[[2-(3,4-Диметоксифенил)этил]метиламино]пропил]-3,4-диметокси-б-(1-метилэтил)бензонатонитрил гидрохлорид</p>
+</td><td><p align="center">
+152-11-4</p>
+</td><td><p align="center">
+C<sub>27</sub>H<sub>38</sub>N<sub>2</sub>0<sub>4</sub> • С1Н</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+181</p>
+</td><td><p>
+2,2'-[(1,4-Диоксо-1,4-бутандиил)бис(окси)бис-N,N,N-триметилэтан] аминийдииодид+</p>
+</td><td><p align="center">
+541-19-5</p>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>3o</sub>I<sub>2</sub>N<sub>2</sub>O<sub>2</sub></p>
+</td><td><p align="center">
+0,1 О</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+182</p>
+</td><td><p>
+2,4-Ди(пиридиний) N- метил метиленсалигенина дихлорид</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>2</sub>iH<sub>26</sub>Cl2N<sub>2</sub>0<sub>2</sub> • С1<sub>2</sub>Н<sub>2</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+183</p>
+</td><td><p>
+N,N-Дипропиламино-2,6-динитро-4-(1-метилэтил)бензол</p>
+</td><td><br>
+</td><td><p align="center">
+С<sub>15</sub>Н<sub>22</sub>К<sub>3</sub>0<sub>4</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+184</p>
+</td><td><p>
+диДиспрозий триоксид</p>
+</td><td><p align="center">
+1308-87-8</p>
+</td><td><p align="center">
+Dy<sub>2</sub>0<sub>3</sub></p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+185</p>
+</td><td><p>
+3,3'-Дитиобис(метилен)бис[5-гидрокси-6-метилпиридин-4-метанол] дигидрохлорид гидрат</p>
+</td><td><p align="center">
+10049-83-9</p>
+</td><td><p align="center">
+C<sub>16</sub>H<sub>2</sub>oN<sub>2</sub>0<sub>4</sub>S<sub>2</sub> • С1<sub>2</sub>Н<sub>2</sub> • Н<sub>2</sub>О</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+186</p>
+</td><td><p>
+2,2'-Дитиобисэтанамин дитидрохлорид+</p>
+</td><td><p align="center">
+56-17-7</p>
+</td><td><p align="center">
+C<sub>4</sub>H<sub>12</sub>N<sub>2</sub>S<sub>2</sub> • С1<sub>2</sub>Н<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+187</p>
+</td><td><p>
+Дифенилкетон</p>
+</td><td><p align="center">
+119-61-9</p>
+</td><td><p align="center">
+C<sub>13</sub>H<sub>1O</sub>O</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+188</p>
+</td><td><p>
+1,3-Дифенил-5-(4-метоксифенил)пиразолин</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>22</sub>H<sub>18</sub>N<sub>2</sub>0</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+189</p>
+</td><td><p>
+2,5 -Дифенилоксазол</p>
+</td><td><p align="center">
+92-71-7</p>
+</td><td><p align="center">
+C<sub>15</sub>H<sub>11</sub>NO</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+190</p>
+</td><td><p>
+Дифенилсульфид</p>
+</td><td><p align="center">
+139-66-2</p>
+</td><td><p align="center">
+C<sub>12</sub>H<sub>10</sub>S</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+п+а</p>
+</td></tr><tr><td><p align="center">
+191</p>
+</td><td><p>
+1 , 1 –Дифенилхлорметан</p>
+</td><td><p align="center">
+90-99-3</p>
+</td><td><p align="center">
+С<sub>13</sub>Н<sub>11</sub>Сl</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п+а</p>
+</td></tr><tr><td><p align="center">
+192</p>
+</td><td><p>
+Дихлорацетамидометил-6-хлорбензойная кислота</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>13</sub>H<sub>9</sub>Cl<sub>3</sub>NO<sub>3</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+193</p>
+</td><td><p>
+7,7-Дихлорбицикло-[3,2,0]-гепт-2-ен-6-он</p>
+</td><td><p align="center">
+5307-99-3</p>
+</td><td><p align="center">
+C<sub>7</sub>H<sub>6</sub>C1O</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+194</p>
+</td><td><p>
+1,1-Дихлор-3,3-диметилбуган-2-он</p>
+</td><td><p align="center">
+22591-21-5</p>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>10</sub>C1<sub>2</sub>0</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+195</p>
+</td><td><p>
+2,5-Дихлор-4-(1,1-диметилэтил)-1-метилбензол</p>
+</td><td><br>
+</td><td><p align="center">
+С<sub>11</sub>Н<sub>14</sub>С1<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+196</p>
+</td><td><p>
+2,4-Дихлор-6,7-диметоксихиназолин</p>
+</td><td><p align="center">
+27631-29-4</p>
+</td><td><p align="center">
+С<sub>10</sub>Н<sub>8</sub>Cl<sub>2</sub>N<sub>2</sub>O<sub>2</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+197</p>
+</td><td><p>
+2,6 -Дихлордифениламин</p>
+</td><td><p align="center">
+15307-93-4</p>
+</td><td><p align="center">
+C<sub>12</sub>H<sub>9</sub>C1<sub>2</sub>N</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+198</p>
+</td><td><p>
+б,б-Дихлоркарбоновые кислоты фракции С17-20</p>
+</td><td><br>
+</td><td><p align="center">
+С<sub>17</sub>НзоС1<sub>2</sub>О<sub>2</sub>-С<sub>2о</sub>Н<sub>з8</sub>С1<sub>2</sub>О<sub>2</sub></p>
+</td><td><p align="center">
+50</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+199</p>
+</td><td><p>
+N-(3,4-Дихлорфенил)-2-метилпроп-2-енамид</p>
+</td><td><p align="center">
+2164-09-2</p>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>9</sub>C1<sub>2</sub>NO</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+200</p>
+</td><td><p>
+1,1-Дихлор-3-метилбутен-1+</p>
+</td><td><p align="center">
+32363-91-0</p>
+</td><td><p align="center">
+С<sub>5</sub>Н<sub>8</sub>С1<sub>2</sub></p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+201</p>
+</td><td><p>
+1, 1 -Дихлор-4-метилпент-4-ен-2-ол</p>
+</td><td><p align="center">
+62836-20-8</p>
+</td><td><p align="center">
+С<sub>6</sub>Н<sub>10</sub>С1<sub>2</sub>0</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+202</p>
+</td><td><p>
+2, 5 - Дихлор- 4- нитроаминобензол +</p>
+</td><td><p align="center">
+6627-34-5</p>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>4</sub>C1<sub>2</sub>N<sub>2</sub>0<sub>2</sub></p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+203</p>
+</td><td><p>
+1-(2,6-Дихлорфенил)индолин-2-он</p>
+</td><td><br>
+</td><td><p align="center">
+С<sub>14</sub>Н<sub>9</sub>С1<sub>2</sub>О</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+204</p>
+</td><td><p>
+N-(2,6-Дихлорфенил)-N-фенилацетамид</p>
+</td><td><p align="center">
+84803-53-2</p>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>11</sub>C1<sub>2</sub>NO</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+205</p>
+</td><td><p>
+1,1-Ди(4-хлорфенокси)-3,3-диметилбутан-2-он</p>
+</td><td><p align="center">
+43067-49-8</p>
+</td><td><p align="center">
+С<sub>18</sub>Н<sub>18</sub>Cl<sub>2</sub>Оз</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+206</p>
+</td><td><p>
+2,2 -Ди(4-цианатофенил )пропан</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>17</sub>H<sub>16</sub>N<sub>2</sub></p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+207</p>
+</td><td><p>
+Дициклогексиламина фосфат</p>
+</td><td><br>
+</td><td><p align="center">
+C12H26N04P</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+208</p>
+</td><td><p>
+Дициклогексил олово оксид+</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>12</sub>H<sub>22</sub>OSn</p>
+</td><td><p align="center">
+0,01</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+209</p>
+</td><td><p>
+N-[2-(Диэтиламино)этил]-4-(диметиламино)-2-метокси-5-нитробензамида гидрохлорид</p>
+</td><td><p align="center">
+89591-51-5</p>
+</td><td><p align="center">
+C<sub>16</sub>H<sub>26</sub>N<sub>4</sub>0<sub>4</sub> • C1H</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+210</p>
+</td><td><p>
+2-(Диэтиламино)-N(2,6-диметилфеил)ацетамид</p>
+</td><td><p align="center">
+137-58-6</p>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>22</sub>N<sub>2</sub>O</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+211</p>
+</td><td><p>
+N-[2-(Диэтиламино)этил]-2-метокси-5-(метилсульфонил)бензамида гидрохлорид</p>
+</td><td><p align="center">
+51012-33-0</p>
+</td><td><p align="center">
+C<sub>15</sub>H<sub>24</sub>N<sub>2</sub>O<sub>6</sub>S • C1H</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+212</p>
+</td><td><p>
+Диэтил (N-г)децилоксипропил (N - в) карбокси(в)сульфо -пропил аспарагинат динатрия</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>25</sub>H<sub>43</sub>NNa<sub>2</sub>0<sub>11</sub>S</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+213</p>
+</td><td><p>
+Диэтил-(3,4-дифтораминобензол)метиленпропандиоат</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>17</sub>F<sub>2</sub>N0<sub>4</sub></p>
+</td><td><p align="center">
+0,6</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+214</p>
+</td><td><p>
+Диэтилентриаминпентаэтановой кислоты цинковый комплекс</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>33</sub>N<sub>3</sub>Zn</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+215</p>
+</td><td><p>
+Диэтилкарбонат</p>
+</td><td><p align="center">
+105-58-8</p>
+</td><td><p align="center">
+С<sub>5</sub>Н<sub>10</sub>0<sub>3</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+216</p>
+</td><td><p>
+Диэтилентриаминпентаацетат тринатрия комплекс с медью</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>14</sub>H<sub>27</sub>CuN<sub>3</sub>Na<sub>3</sub>O<sub>10</sub></p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+217</p>
+</td><td><p>
+Диэтилпропандиоат</p>
+</td><td><p align="center">
+105-53-3</p>
+</td><td><p align="center">
+С<sub>7</sub>Н<sub>12</sub>О<sub>4</sub></p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+218</p>
+</td><td><p>
+0,0-Диэтил-0-(3,5,6-трихлорпиридин-2-ил)ти;офосфат</p>
+</td><td><p align="center">
+2921-88-2</p>
+</td><td><p align="center">
+C<sub>9</sub>H<sub>11</sub>Cl<sub>3</sub>NO<sub>3</sub>PS</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+219</p>
+</td><td><p>
+Диэтил фосфат- S-этилизотиуроний</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>7</sub>H<sub>19</sub>N<sub>2</sub>O<sub>4</sub>PS</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+220</p>
+</td><td><p>
+0,0 -Диэтил -0- (2-хиноксал инил)тиофосфонат</p>
+</td><td><p align="center">
+13593-03-8</p>
+</td><td><p align="center">
+C<sub>I2</sub>H<sub>15</sub>N<sub>2</sub>0<sub>3</sub>PS</p>
+</td><td><p align="center">
+0,7</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+221</p>
+</td><td><p>
+N,N-Диэтил-2-хлорэтанамин гидрохлорид+</p>
+</td><td><p align="center">
+869-24-9</p>
+</td><td><p align="center">
+C<sub>6</sub>H<sub>14</sub>C1N - HC1</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+222</p>
+</td><td><p>
+(R*S*)-4,4'-(1,2-Диэтил-1,2-этандиил)бис(бензолсульфонат дикалия)+</p>
+</td><td><p align="center">
+13517-49-2</p>
+</td><td><p align="center">
+C<sub>18</sub>H<sub>2o</sub>K<sub>2</sub>O<sub>6</sub>S<sub>2</sub></p>
+</td><td><p align="center">
+0,02</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+223</p>
+</td><td><p>
+0,0-Диэтил-0-(6-этоксикарбонил-5-метил)пиразол-(1,5-пирилидин-2- ол )тиофосфат</p>
+</td><td><p align="center">
+13457-18-6</p>
+</td><td><p align="center">
+С<sub>14</sub>Н<sub>2о</sub>Nз0<sub>5</sub>РS</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+224</p>
+</td><td><p>
+Додецилдиметилгидроксиметиламинийхлорид+</p>
+</td><td><p align="center">
+85736-63-6</p>
+</td><td><p align="center">
+C<sub>16</sub>H<sub>36</sub>C1NO</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+225</p>
+</td><td><p>
+диЕвропий триоксид</p>
+</td><td><p align="center">
+1308-96-9</p>
+</td><td><p align="center">
+Eu<sub>2</sub>O<sub>3</sub></p>
+</td><td><p align="center">
+6</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+226</p>
+</td><td><p>
+Изодеканол+</p>
+</td><td><p align="center">
+25339-17-7</p>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>22</sub>O</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+227</p>
+</td><td><p>
+б-Изодецил-щ-гидроксигекса(окси-1,2-этандиол)</p>
+</td><td><p align="center">
+61827-42-7</p>
+</td><td><p align="center">
+С<sub>22</sub>H<sub>4б</sub>О<sub>8</sub></p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+228</p>
+</td><td><p>
+Изопропанольный сольват сульфоксидбензилпенициллина</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>19</sub>H<sub>26</sub>0<sub>6</sub>N<sub>2</sub>S</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+229</p>
+</td><td><p>
+2-Имидазолидинон</p>
+</td><td><p align="center">
+120-93-4</p>
+</td><td><p align="center">
+C<sub>3</sub>H<sub>6</sub>N<sub>2</sub>0</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+230</p>
+</td><td><p>
+Иттербий диоксид</p>
+</td><td><p align="center">
+56321-58-1</p>
+</td><td><p align="center">
+Yb0<sub>2</sub></p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+231</p>
+</td><td><p>
+Кальций цианурат</p>
+</td><td><p align="center">
+53846-34-7</p>
+</td><td><p align="center">
+C<sub>3</sub>HCaN<sub>3</sub>O<sub>3</sub></p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+232</p>
+</td><td><p>
+1 - Карбамоил- 3 - метилпиразо л</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>5</sub>H<sub>7</sub>N<sub>3</sub>0</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+233</p>
+</td><td><p>
+2- Карбокси-4, 5-диметоксифенилкарбамид</p>
+</td><td><br>
+</td><td><p align="center">
+C<sub>10</sub>H<sub>12</sub>N<sub>2</sub>0<sub>5</sub></p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+234</p>
+</td><td><p>
+3- Карбоксихинуклидин</p>
+</td><td><br>
+</td><td><p align="center">
+C8H13N02</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+235</p>
+</td><td><p>
+(2-Карбоэтокси-1-метилэтил)-(2-карбометокси-1-метил-этил)амин</p>
+</td><td><br>
+</td><td><p align="center">
+C11H21N04</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+236</p>
+</td><td><p>
+2-Карбэтоксиамино-10-(3-диэтиламинопропионил)фено-тиазин+</p>
+</td><td><br>
+</td><td><p align="center">
+С22Н27NзОзS</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+237</p>
+</td><td><p>
+2-Карбэтоксиамино-10-(3-диэтиламинопропионил)фено-тиазина гидрохлорид+</p>
+</td><td><br>
+</td><td><p align="center">
+C22H28C1N303S</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+238</p>
+</td><td><p>
+3 - Карбэтокси-д -дегидрохинуклидин</p>
+</td><td><br>
+</td><td><p align="center">
+C10H16N302</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+239</p>
+</td><td><p>
+4-Кето-3-проп-1-енил-3-этил-5-(1"-этилдигидрохинолид-4-ол-этилиден)-4',5'-дифенилтиазолинотиазололцианэтил-сульфат</p>
+</td><td><br>
+</td><td><p align="center">
+C38H43N305S3</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+240</p>
+</td><td><p>
+Метилгуанилизокарбамид комплекс с хлористым цинком</p>
+</td><td><br>
+</td><td><p align="center">
+C26H16N405</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+241</p>
+</td><td><p>
+Краситель кубовый С бордо</p>
+</td><td><br>
+</td><td><p align="center">
+C26H16N405</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+242</p>
+</td><td><p>
+Краситель органический "Негрозан П"</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+243</p>
+</td><td><p>
+Краситель органический хромовый черный "О"</p>
+</td><td><p align="center">
+5850-21-5</p>
+</td><td><p align="center">
+C23H14N6Na2O9S</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+244</p>
+</td><td><p>
+Куприт висмута стронция кальция</p>
+</td><td><p align="center">
+118392-20-4</p>
+</td><td><p align="center">
+Вi4Са3Си4016Sг3</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+245</p>
+</td><td><p>
+Куприт иттрия бария+</p>
+</td><td><p align="center">
+111907-01-8</p>
+</td><td><p align="center">
+Ba2Cu3O7Y</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+246</p>
+</td><td><p>
+Куприт таллия бария кальция+</p>
+</td><td><p align="center">
+115866-07-4</p>
+</td><td><p align="center">
+ВазСазСизО10Tl 2</p>
+</td><td><p align="center">
+0,04</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+247</p>
+</td><td><p>
+Купронафт</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+248</p>
+</td><td><p>
+диЛантан триоксид</p>
+</td><td><p align="center">
+1312-81-8</p>
+</td><td><p align="center">
+La2O3</p>
+</td><td><p align="center">
+6</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+249</p>
+</td><td><p>
+Лантана стронция кобальтит+</p>
+</td><td><p align="center">
+128090-06-2</p>
+</td><td><p align="center">
+CoLaO3Sr0,5</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+250</p>
+</td><td><p>
+Леспедеция копеечниковая (сухой экстракт листьев)</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+251</p>
+</td><td><p>
+Лигнин модифицированный гидролизный окисленный</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+252</p>
+</td><td><p>
+Лигофум</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+253</p>
+</td><td><p>
+Люминофор Фл-543-1</p>
+</td><td><br>
+</td><td><p align="center">
+Ceo,2Gdo,2Lao,404PTbo,1</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+254</p>
+</td><td><p>
+Лютеций оксид</p>
+</td><td><p align="center">
+12032-02-8</p>
+</td><td><p align="center">
+LuO</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+255</p>
+</td><td><p>
+MQ624M (смесь четвертичных аммониевых соединений)+</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+256</p>
+</td><td><p>
+Масло сосновое флотационное</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+15</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+257</p>
+</td><td><p>
+Мацеробациллин</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+258</p>
+</td><td><p>
+Медная амальгама /в пересчете на ртуть, контроль ртути обязателен/</p>
+</td><td><p align="center">
+12757-18-5</p>
+</td><td><p align="center">
+CuHg</p>
+</td><td><p align="center">
+0,4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+259</p>
+</td><td><p>
+Ментанилацетат</p>
+</td><td><br>
+</td><td><p align="center">
+C16H22O</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+260</p>
+</td><td><p>
+Метанольный сольвент сульфоксида бензилпенициллина</p>
+</td><td><br>
+</td><td><p align="center">
+C16H11N2O5S</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+261</p>
+</td><td><p>
+Метил - (4-аминокарбонил)бензоат</p>
+</td><td><p align="center">
+6757-31-9</p>
+</td><td><p align="center">
+C9H9NO3</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+262</p>
+</td><td><p>
+[S-(R*,R*)]-2-(Метиламино)-1-фенилпропан-1-ол гидрохлорид+</p>
+</td><td><p align="center">
+345-78-8</p>
+</td><td><p align="center">
+C10H15NO • C1H</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+263</p>
+</td><td><p>
+2-Метиламино-6-хлорбензойная кислота</p>
+</td><td><br>
+</td><td><p align="center">
+C8H8C1NO2</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+264</p>
+</td><td><p>
+2- Метиламино-5-хлорбензофенон</p>
+</td><td><p align="center">
+1022-13-5</p>
+</td><td><p align="center">
+C14H12C1NO</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+265</p>
+</td><td><p>
+4-Метилбензолсульфоновой кислоты гидрат</p>
+</td><td><p align="center">
+6192-52-5</p>
+</td><td><p align="center">
+C7H803S • H20</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+266</p>
+</td><td><p>
+1-Метил-2-бромметил-2-карбэтокск-5-ацетокси-6-бром-индол</p>
+</td><td><br>
+</td><td><p align="center">
+C15H15Br2N03</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+267</p>
+</td><td><p>
+8-(3-Метилбут-2-енил)-5,4,7-0-В-Д-глюкопиранозилфлавананол феллавин</p>
+</td><td><br>
+</td><td><p align="center">
+С25Н26О12</p>
+</td><td><p align="center">
+2.</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+268</p>
+</td><td><p>
+Метилгексан-1,6-диоат+</p>
+</td><td><p align="center">
+627-91-8</p>
+</td><td><p align="center">
+С7H12O4</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+269</p>
+</td><td><p>
+Метилгептадекафторнонаноат</p>
+</td><td><p align="center">
+51502-45-5</p>
+</td><td><p align="center">
+С10НзF17О2</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+270</p>
+</td><td><p>
+6-Метилгепт-5-ен-2-он+</p>
+</td><td><p align="center">
+110-93-0</p>
+</td><td><p align="center">
+С8Н140</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+271</p>
+</td><td><p>
+9- Метил- 1 ,2-дигидрокарбазол-4(ЗН)-он</p>
+</td><td><p align="center">
+51626-88-1</p>
+</td><td><p align="center">
+C13H13NO</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+272</p>
+</td><td><p>
+Метил -4-диметил амино-2 - мето кс ибензоат</p>
+</td><td><p align="center">
+1202-25-1</p>
+</td><td><p align="center">
+C11H15N03</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+273</p>
+</td><td><p>
+Метил-4- диметиламино- 5 - нитро- 2 – метоксибензоат</p>
+</td><td><br>
+</td><td><p align="center">
+C11H14N205</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+274</p>
+</td><td><p>
+Метил-2,2 -диметил- 3- (2,2-дихлорэтенил )цикл опропан-карбонат</p>
+</td><td><p align="center">
+61898-95-1</p>
+</td><td><p align="center">
+C2lH20Cl2O3</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+275</p>
+</td><td><p>
+2-Метил-1-диэтиламинобутан-3-он-оксим</p>
+</td><td><br>
+</td><td><p align="center">
+C9H19N2O2</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+276</p>
+</td><td><p>
+Метилен-бис-4-(1-метилбензоил)пиперазин</p>
+</td><td><br>
+</td><td><p align="center">
+C2IH24N202</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+277</p>
+</td><td><p>
+2- Метилимидазол</p>
+</td><td><p align="center">
+693-98-1</p>
+</td><td><p align="center">
+C4H6N2</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+278</p>
+</td><td><p>
+б-Метилкарбамоил-5-метилнитро-6-хлорбензойная кислота</p>
+</td><td><p align="center">
+532637-71-1</p>
+</td><td><p align="center">
+C10H9C1N205</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+279</p>
+</td><td><p>
+2-Метил-3-карбэтокси-5,5-дигидропиран</p>
+</td><td><br>
+</td><td><p align="center">
+C9H13O3</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+280</p>
+</td><td><p>
+б-Метил-4-(2-метиллропил)фенилэтановая кислота</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+281</p>
+</td><td><p>
+1-Метил-4-(1-метилэтил)циклогексан-1,4-диен</p>
+</td><td><p align="center">
+99-85-4</p>
+</td><td><p align="center">
+C10H16</p>
+</td><td><p align="center">
+8</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+282</p>
+</td><td><p>
+Метилметоксиацетат</p>
+</td><td><p align="center">
+6290-49-9</p>
+</td><td><p align="center">
+C4H803</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+283</p>
+</td><td><p>
+Метил-2 -метокси- 5 -метил сульфонил бензоат</p>
+</td><td><p align="center">
+37874-09-2</p>
+</td><td><p align="center">
+C9H12O4S</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+284</p>
+</td><td><p>
+4-Метил-9-метокси-2,4,5,6-тетрагидро-1Н-3,4,6а-триазафлуорантена гидрохлорид+</p>
+</td><td><p align="center">
+53734-79-5</p>
+</td><td><p align="center">
+C19H21N3O • С1Н</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+285</p>
+</td><td><p>
+Метил -4-цианобензоат</p>
+</td><td><p align="center">
+1229-35-7</p>
+</td><td><p align="center">
+C9H7N02</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+286</p>
+</td><td><p>
+2-Метил-4(5)-нитроимидазол</p>
+</td><td><p align="center">
+696-23-1</p>
+</td><td><p align="center">
+C4H5N3O2</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+287</p>
+</td><td><p>
+Метилгафидина гидрохлорид /по б-пиколину/</p>
+</td><td><br>
+</td><td><p align="center">
+C6H7N - СlH</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+288</p>
+</td><td><p>
+Метил -2- пиролидин</p>
+</td><td><p align="center">
+51013-18-4</p>
+</td><td><p align="center">
+C5H9NO</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+289</p>
+</td><td><p>
+2-[4-(2-Метилпропил)фенил)пропановая кислота</p>
+</td><td><p align="center">
+15687-27-1</p>
+</td><td><p align="center">
+C13H18O2</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+290</p>
+</td><td><p>
+2-Метил-2,3,4,5-тетрагидро-5-(фенилметил)-1Н-пиридо[4,3-b]индол нафталин-1,5-дисульфонат (1:2)</p>
+</td><td><p align="center">
+6153-33-9</p>
+</td><td><p align="center">
+Cl9H2oN2 • 0,5C10H806S2</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+291</p>
+</td><td><p>
+Метилтриалкиламинийметилсульфат</p>
+</td><td><br>
+</td><td><p align="center">
+CH3(CnH2n+1)3N • CH4O4S</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+292</p>
+</td><td><p>
+Метилтриалкиламинийнитрат</p>
+</td><td><br>
+</td><td><p align="center">
+CH3(CnH2n+1)3N • HN03</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+293</p>
+</td><td><p>
+Метилтриалкиламинийсульфат</p>
+</td><td><br>
+</td><td><p align="center">
+CH3(CnH2n+1)3N -H2O4S</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+294</p>
+</td><td><p>
+Метилфенилдиметоксисилан+</p>
+</td><td><p align="center">
+3027-21-2</p>
+</td><td><p align="center">
+C9H44O2Si</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+295</p>
+</td><td><p>
+3-Метил-1-фенилпиразол-5-он</p>
+</td><td><br>
+</td><td><p align="center">
+C10H10N20</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+296</p>
+</td><td><p>
+Метилфосфонокарбаминовая кислота</p>
+</td><td><p align="center">
+2231-31-4</p>
+</td><td><p align="center">
+C7HI6N05P</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+297</p>
+</td><td><p>
+2-Метил-4-хлорбут-1-ен-3-ин+</p>
+</td><td><p align="center">
+51951-41-8</p>
+</td><td><p align="center">
+C5H5C1</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+298</p>
+</td><td><p>
+2-Метил-2-(3-хлорпропил)-1,3-диоксолан</p>
+</td><td><p align="center">
+5978-08-5</p>
+</td><td><p align="center">
+С7Н13С102</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+299</p>
+</td><td><p>
+N- ( 1 - Метилэтил)аминобензол +</p>
+</td><td><p align="center">
+768-52-5</p>
+</td><td><p align="center">
+C9H13N</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+300</p>
+</td><td><p>
+2-(1-Метилэтил)-5-метилциклогексанол</p>
+</td><td><p align="center">
+1490-04-6</p>
+</td><td><p align="center">
+C10H20O</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+301</p>
+</td><td><p>
+[8]-1-(1-Метилэтил)-4-метилциклогекс-3-ен-1-ол</p>
+</td><td><p align="center">
+2438-10-0</p>
+</td><td><p align="center">
+C10H18O</p>
+</td><td><p align="center">
+30</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+302</p>
+</td><td><p>
+(1-Метилэтал)циклогексан+</p>
+</td><td><p align="center">
+696-29-7</p>
+</td><td><p align="center">
+C9H17</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+303</p>
+</td><td><p>
+2-(1-Метилэтокси)этанол</p>
+</td><td><p align="center">
+109-59-1</p>
+</td><td><p align="center">
+C5H12O2</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+304</p>
+</td><td><p>
+4- Метоксиацетофенон+</p>
+</td><td><p align="center">
+100-06-1</p>
+</td><td><p align="center">
+C9H1002</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+305</p>
+</td><td><p>
+2-Метоксибекзойная кислота</p>
+</td><td><p align="center">
+579-75-9</p>
+</td><td><p align="center">
+C8H8O3</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+306</p>
+</td><td><p>
+5-Метокси- 1 Н-индол- 1-этанамин</p>
+</td><td><p align="center">
+110194-93-6</p>
+</td><td><p align="center">
+C11H14N20</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+307</p>
+</td><td><p>
+5-Метокси-1Н-индол-1-этанамин гидрохлорид+</p>
+</td><td><p align="center">
+66-83-1</p>
+</td><td><p align="center">
+C11H14N20 • C1H</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+308</p>
+</td><td><p>
+N- L-(Метоксикарбонилэтил ) -2, 6- диметиламинобензол</p>
+</td><td><br>
+</td><td><p align="center">
+C12H18N02</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+309</p>
+</td><td><p>
+5-Метокси-2-[[(4-метокси-3,5-диметил-2-пиридинил)-метил]сульфинил] - 1 Н-бензимидазол</p>
+</td><td><p align="center">
+73590-58-6</p>
+</td><td><p align="center">
+C17H10N303S</p>
+</td><td><p align="center">
+0,01</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+310</p>
+</td><td><p>
+6-Метокси-1-оксо-1,4-пиридо[4,3-b]индол</p>
+</td><td><br>
+</td><td><p align="center">
+C12H16N202</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+311</p>
+</td><td><p>
+2-(Метоксифенил)гидразинсульфонат натрия</p>
+</td><td><p align="center">
+86265-16-9</p>
+</td><td><p align="center">
+C7H9N2NaO4S</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+312</p>
+</td><td><p>
+Метоксифенилгидразон пиперидин-2,3-дион</p>
+</td><td><br>
+</td><td><p align="center">
+C12H15N303</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+313</p>
+</td><td><p>
+4-(Метоксифенил)диазенсульфонат натрия</p>
+</td><td><p align="center">
+5354-81-1</p>
+</td><td><p align="center">
+C7H7N2NaO4S</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+314</p>
+</td><td><p>
+2- Метоксифенол</p>
+</td><td><p align="center">
+90-05-1</p>
+</td><td><p align="center">
+С7Н802</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+315</p>
+</td><td><p>
+(8б,9R)-6'-Метоксихинхонан-9-ол гидрохлорид</p>
+</td><td><p align="center">
+7549-43-1</p>
+</td><td><p align="center">
+C20H24N202 • С1Н</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+316</p>
+</td><td><p>
+4- [ в- (2-Метокси - 5 -хлорбензамидо)этил ]бензолсульфонамид</p>
+</td><td><br>
+</td><td><p align="center">
+C16H17C1N204</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+317</p>
+</td><td><p>
+2-Метоксиэтанол</p>
+</td><td><p align="center">
+109-86-4</p>
+</td><td><p align="center">
+C3H802</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+318</p>
+</td><td><p>
+4-Морфолино-2,5-дибутоксибензолдиазоний тетрафтор-борат</p>
+</td><td><br>
+</td><td><p align="center">
+C18H28BF4N203</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+319</p>
+</td><td><p>
+Мукалтин</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+320</p>
+</td><td><p>
+Мультиэнзимная композиция СХ-1 (ТУ 9291-024-05800805-97) /контроль по амилазе/</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+321</p>
+</td><td><p>
+Мультиэнзимная композиция СХ-2 (ТУ 9291-029-34588571-98) /контроль по целлюлазе/</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+322</p>
+</td><td><p>
+диНатрий вольфрамат</p>
+</td><td><p align="center">
+13472-45-2</p>
+</td><td><p align="center">
+Na204W</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+323</p>
+</td><td><p>
+диНатрий пентацианоферрат (2) дигидрат+</p>
+</td><td><p align="center">
+13755-38-9</p>
+</td><td><p align="center">
+C5FeN5Na20 • 2H2O</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+324</p>
+</td><td><p>
+б -Нафтилэтановая кислота</p>
+</td><td><p align="center">
+86-87-3</p>
+</td><td><p align="center">
+C12H8O2</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+325</p>
+</td><td><p>
+5-(2-Нафтоил)-аминобензимидозол-2-он</p>
+</td><td><br>
+</td><td><p align="center">
+C18H1402N3</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+326</p>
+</td><td><p>
+Неодим триоксид</p>
+</td><td><p align="center">
+1313-97-9</p>
+</td><td><p align="center">
+NdO3</p>
+</td><td><p align="center">
+6</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+327</p>
+</td><td><p>
+Нефтяные сульфоксиды+</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+328</p>
+</td><td><p>
+Нитрилотриметилентрифосфоновой кислоты медный комплекс тригидрат</p>
+</td><td><br>
+</td><td><p align="center">
+C3H12CuNO9P3 - ЗН20</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+329</p>
+</td><td><p>
+Нитрилотриметиленфосфонат тринатрия цинковый комплекс тригидрат</p>
+</td><td><br>
+</td><td><p align="center">
+C3H9NNa309P3Zn • ЗН2О</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+330</p>
+</td><td><p>
+Нитрилотриметиленфосфоновой кислоты железный комплекс пентагидрат</p>
+</td><td><br>
+</td><td><p align="center">
+C3H12FeNO9P3 • 5Н2О</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+331</p>
+</td><td><p>
+4-Нтробензолкарбоксимидамид гидрохлорид</p>
+</td><td><p align="center">
+15723-90-7</p>
+</td><td><p align="center">
+C7H7N302 • С1Н</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+332</p>
+</td><td><p>
+5-Нитро-4-диметиламино-2-метоксибензойная кислота</p>
+</td><td><p align="center">
+42832-21-3</p>
+</td><td><p align="center">
+C10H12N205</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+333</p>
+</td><td><p>
+3- Нитродифениламин</p>
+</td><td><p align="center">
+4531-79-7</p>
+</td><td><p align="center">
+С12Н10N2Оз</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+334</p>
+</td><td><p>
+N-(3 - Нитрофенил)ацетамид</p>
+</td><td><p align="center">
+122-28-1</p>
+</td><td><p align="center">
+C8H8N203</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+335</p>
+</td><td><p>
+3- (5 - Нитрофуран-2-ил ) проп -2-еналь+</p>
+</td><td><p align="center">
+1874-22-2</p>
+</td><td><p align="center">
+C7H5NO4</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+336</p>
+</td><td><p>
+5- Нитро-2-фуранкарбоксальдегид</p>
+</td><td><p align="center">
+698-63-5</p>
+</td><td><p align="center">
+C5H3NO4</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+337</p>
+</td><td><p>
+2-[2-(5-Нитро-2-фурил)этенил]хинолин</p>
+</td><td><p align="center">
+735-84-2</p>
+</td><td><p align="center">
+C15H10N203</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+338</p>
+</td><td><p>
+2-[2-(5-Нитро-2-фурил)этенил]-4-хинолинкарбоновой кислоты- 1 -диэтиламино-4-пентиламид</p>
+</td><td><p align="center">
+70762-66-2</p>
+</td><td><p align="center">
+С25НзоN404</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+339</p>
+</td><td><p>
+(5 - Нитро-2-фурфуранил)метандиолдиацетат</p>
+</td><td><p align="center">
+92-55-7</p>
+</td><td><p align="center">
+C9H9NO7</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+340</p>
+</td><td><p>
+4- Нитро-2-цианаминобензол</p>
+</td><td><p align="center">
+17420-30-3</p>
+</td><td><p align="center">
+C7H5N202</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+341</p>
+</td><td><p>
+2,2-Оксибис(2-хлорпропан)</p>
+</td><td><p align="center">
+39638-32-9</p>
+</td><td><p align="center">
+С6Н12С120</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+342</p>
+</td><td><p>
+1, 1,-Оксиди-2-пропанол</p>
+</td><td><p align="center">
+110-98-5</p>
+</td><td><p align="center">
+С6Н1403</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+343</p>
+</td><td><p>
+N- Оксиметил-N ,N -ди [ди(2-оксиэтиламинометил ) 1 карб-мид+</p>
+</td><td><br>
+</td><td><p align="center">
+C12H28N406</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+344</p>
+</td><td><p>
+Оксиранилметилнеодеканоат</p>
+</td><td><p align="center">
+26761-45-5</p>
+</td><td><p align="center">
+С13Н24О3</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+345</p>
+</td><td><p>
+2- Оксиэтилдецил сульфид</p>
+</td><td><p align="center">
+41891-88-7</p>
+</td><td><p align="center">
+C12H26OS</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+346</p>
+</td><td><p>
+9-Оксо-10(9Н)-акридинацетат натрия</p>
+</td><td><p align="center">
+58880-43-6</p>
+</td><td><p align="center">
+C15H10NNa03</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+347</p>
+</td><td><p>
+3-Оксо-2-(трифторметил)додекафтороктановая кислота</p>
+</td><td><br>
+</td><td><p align="center">
+C8HF1503</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+348</p>
+</td><td><p>
+2- Оксо -4-фенилпирролидинацетамид</p>
+</td><td><p align="center">
+77472-70-9</p>
+</td><td><p align="center">
+C12H13NO</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+349</p>
+</td><td><p>
+Октадеканоат алюминия</p>
+</td><td><p align="center">
+637-12-7</p>
+</td><td><p align="center">
+C54H105A106</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+350</p>
+</td><td><p>
+Октадеканоат магния</p>
+</td><td><p align="center">
+557-04-0</p>
+</td><td><p align="center">
+C36H7oMg04</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+351</p>
+</td><td><p>
+2,2,3,З,4,4,5,5-Октафторпентил-2-цианпроп-2-еноат+</p>
+</td><td><p align="center">
+27827-90-3</p>
+</td><td><p align="center">
+C9H5F8N02</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+352</p>
+</td><td><p>
+2-(Октилтио)этанол</p>
+</td><td><p align="center">
+3547-33-9</p>
+</td><td><p align="center">
+C10H22OS</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+353</p>
+</td><td><p>
+Октилфенолы С14.22+</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+354</p>
+</td><td><p>
+Октилхлорид</p>
+</td><td><p align="center">
+57214-71-8</p>
+</td><td><p align="center">
+C8H9Cl</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+355</p>
+</td><td><p>
+Октилциаыдифенил</p>
+</td><td><br>
+</td><td><p align="center">
+C21H25N</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+356</p>
+</td><td><p>
+Октилэтенилсульфон+</p>
+</td><td><p align="center">
+28345-91-7</p>
+</td><td><p align="center">
+C10H19O2S</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+357</p>
+</td><td><p>
+Олово диоксид</p>
+</td><td><p align="center">
+1317-45-9</p>
+</td><td><p align="center">
+SnO2</p>
+</td><td><p align="center">
+6</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+358</p>
+</td><td><p>
+Олово четыреххлористое пятиводное+</p>
+</td><td><p align="center">
+10026-06-9</p>
+</td><td><p align="center">
+CL4Sn • 5H2O</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+359</p>
+</td><td><p>
+Осмий</p>
+</td><td><p align="center">
+7440-04-2</p>
+</td><td><p align="center">
+Os</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+360</p>
+</td><td><p>
+Палладиевая чернь</p>
+</td><td><p align="center">
+7440-05-3</p>
+</td><td><p align="center">
+Pd</p>
+</td><td><p align="center">
+1 A</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+361</p>
+</td><td><p>
+Пероксозтановая кислота+ /с обязательным контролем ацетона/</p>
+</td><td><p align="center">
+79-21-0</p>
+</td><td><p align="center">
+С2H4O3</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+362</p>
+</td><td><p>
+Пенталпщ /контроль по парацетамолу/</p>
+</td><td><p align="center">
+56603-86-2</p>
+</td><td><br>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+363</p>
+</td><td><p>
+5,5-Пентаметилен-7-оксо-2,3,4,5,6,7-гексагидроциклопента -б пиримидин-</p>
+</td><td><br>
+</td><td><p align="center">
+C14H25N2O</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+364</p>
+</td><td><p>
+Петан-3-он+</p>
+</td><td><p align="center">
+96-22-0</p>
+</td><td><p align="center">
+C5H100</p>
+</td><td><p align="center">
+20</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+365</p>
+</td><td><p>
+Перфторнонаат аммония+</p>
+</td><td><p align="center">
+4149-60-4</p>
+</td><td><p align="center">
+C9H2IN02</p>
+</td><td><p align="center">
+0,05</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+366</p>
+</td><td><p>
+Пиперидинкарбоновой кислоты гидрохлорид</p>
+</td><td><p align="center">
+5107-10-8</p>
+</td><td><p align="center">
+С6Н11NO2 • C1H</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+367</p>
+</td><td><p>
+4,4, - (2-Пиридилметил )бис(гидроксибензол)диацетат</p>
+</td><td><p align="center">
+603-50-9</p>
+</td><td><p align="center">
+C22H19NO4</p>
+</td><td><p align="center">
+0,05</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+368</p>
+</td><td><p>
+Пиридин гидробромид</p>
+</td><td><p align="center">
+18820-82-1</p>
+</td><td><p align="center">
+C5H5N • ВгН</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+369</p>
+</td><td><p>
+Пиридин-4-карбоновая кислота</p>
+</td><td><p align="center">
+55-22-1</p>
+</td><td><p align="center">
+C6H5N02</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+370</p>
+</td><td><p>
+Пиридин-4-карбоновой кислоты гидразида комплекс с железом (2+) сульфат дигидрат</p>
+</td><td><br>
+</td><td><p align="center">
+C6H7FeN3O5S • Н4О2</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+371</p>
+</td><td><p>
+Полимер кубовых остатков ректификации стирола</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+372</p>
+</td><td><p>
+Полиметиленсульфид</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+373</p>
+</td><td><p>
+Пол и[окси(диметилсилилен) ]</p>
+</td><td><p align="center">
+9016-00-6</p>
+</td><td><p align="center">
+[C2H6OSi]n</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+374</p>
+</td><td><p>
+Празеодим оксид</p>
+</td><td><p align="center">
+12035-81-3</p>
+</td><td><p align="center">
+PrO</p>
+</td><td><p align="center">
+6</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+375</p>
+</td><td><p>
+Пропандиамид</p>
+</td><td><p align="center">
+108-13-4</p>
+</td><td><p align="center">
+C3H6N202</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+376</p>
+</td><td><p>
+Пропан- 1 ,2-диол~2-метилпроп-2-еноат</p>
+</td><td><br>
+</td><td><p align="center">
+C7H1303</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+377</p>
+</td><td><p>
+N-Проп-1-енил-N-(2,4,6-триметилфениламинокарбонилметил)морфолиний бромид+</p>
+</td><td><br>
+</td><td><p align="center">
+C18H27BrN202</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+378</p>
+</td><td><p>
+2-Пропилпентаноат натрия</p>
+</td><td><p align="center">
+1069-66-5</p>
+</td><td><p align="center">
+C8H15O2Na</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+379</p>
+</td><td><p>
+Раунатин+</p>
+</td><td><p align="center">
+39379-45-9</p>
+</td><td><br>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+380</p>
+</td><td><p>
+Рустомасс (биомасса продуцента авермекгина Streptomyces avermitilis 3NN) /по белку/</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+0,1 A</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+381</p>
+</td><td><p>
+Рутений гидроксид хлорид</p>
+</td><td><p align="center">
+16845-29-7</p>
+</td><td><p align="center">
+Cl3HORu</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+382</p>
+</td><td><p>
+Рибофлавин-5'-дигидрофосфат</p>
+</td><td><p align="center">
+146-17-S</p>
+</td><td><p align="center">
+C17H21N409P</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+383</p>
+</td><td><p>
+Рибофлавин-5'-(дигидрофосфат) натрия</p>
+</td><td><p align="center">
+130-40-5</p>
+</td><td><p align="center">
+C17H2oN4Na09P</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+384</p>
+</td><td><p>
+Селен сульфид+</p>
+</td><td><p align="center">
+7446-34-6</p>
+</td><td><p align="center">
+SSe</p>
+</td><td><p align="center">
+0,05</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+385</p>
+</td><td><p>
+2-Семикарбазидэтановая кислота</p>
+</td><td><br>
+</td><td><p align="center">
+C3H9N303</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+386</p>
+</td><td><p>
+Скандий оксид</p>
+</td><td><p align="center">
+12059-91-5</p>
+</td><td><p align="center">
+ScO</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+387</p>
+</td><td><p>
+Смесь диалкил С17-2о диметиламинийхлорида и алкил-С10-16 бензилдиметиламинийхлорида+</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+388</p>
+</td><td><p>
+Смесь дифенил-4-третбутилфосфата (52,9%), ди-п-трет-бутилфенилфосфата (30,3%) и трифенилфосфата (16,8%)</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+389</p>
+</td><td><p>
+Смесь метоксигликолей (метоксидигликоль — 10%, ме-токситригликоль — 75%, метокситетрагликоль — 15%)</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+7</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+390</p>
+</td><td><p>
+Смесь солей алкил С10-16 аминов с кислотами С1-4+ /контроль по изопропиловому спирту/</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+391</p>
+</td><td><p>
+Смесь N-трихлорметилтиофталимида с N-тетрахлор-1,12,2-этилтиотетрагидрофталимидом</p>
+</td><td><br>
+</td><td><p align="center">
+С19Н13Cl7N204S2</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+392</p>
+</td><td><p>
+Стрихнидин-10-он нитрат+</p>
+</td><td><p align="center">
+66-32-0</p>
+</td><td><p align="center">
+C2iH22N202 • HN03</p>
+</td><td><p align="center">
+0,015</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+393</p>
+</td><td><p>
+Стронций метафосфат</p>
+</td><td><p align="center">
+18266-28-9</p>
+</td><td><p align="center">
+06P2Sr</p>
+</td><td><p align="center">
+8</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+394</p>
+</td><td><p>
+7-Сульфамоил-6-хлор-3,4-дигидро-2Н-1,1,2,4-бензотиадиазин- 1, 1 -диоксид</p>
+</td><td><br>
+</td><td><p align="center">
+C7H6C1N304S</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+395</p>
+</td><td><p>
+Тербий оксид</p>
+</td><td><p align="center">
+12035-91-5</p>
+</td><td><p align="center">
+TbO</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+396</p>
+</td><td><p>
+Тетрабутоксититан</p>
+</td><td><p align="center">
+132071-58-0</p>
+</td><td><p align="center">
+C16H3604Ti</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+397</p>
+</td><td><p>
+1 ,2,3, 6-Тетрагидро-2, 6-диоксопиримидин-4- карбонат калия</p>
+</td><td><p align="center">
+24598-73-0</p>
+</td><td><p align="center">
+C5H3KN2O4</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+398</p>
+</td><td><p>
+1 ,2, 3, 9-Тетрагидро(4Н)карбазол -4-он+</p>
+</td><td><p align="center">
+15128-52-6</p>
+</td><td><p align="center">
+C12H11NO</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+399</p>
+</td><td><p>
+1,2,3,9-Тетрагидро-9-метил-3-[(2-метил-1Н-имидазол-1-ил) метил ] -4Н -карбазол-4-он</p>
+</td><td><p align="center">
+99614-02-5</p>
+</td><td><p align="center">
+C18H19N30</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+400</p>
+</td><td><p>
+Тетрадиметилсульфоксидгексаметилентетрамин хлорид кобальта</p>
+</td><td><br>
+</td><td><p align="center">
+C14H36Cl4CoN4O4S4</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+401</p>
+</td><td><p>
+2,4,6,8-Тетраметил-2,4,6,8-тетраазобицикло(3,3,0)октан-3,7 -дион</p>
+</td><td><p align="center">
+10095-06-4</p>
+</td><td><p align="center">
+C8H14N402</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+402</p>
+</td><td><p>
+1-(2,4,б-Трибромфенил)-1Н-пиррол-2,5-дион</p>
+</td><td><p align="center">
+59789-51-4</p>
+</td><td><p align="center">
+C10H4Br3N02</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+403</p>
+</td><td><p>
+2,4а,7-Тригидрокси-1-метил-8-метилен-1,4а-лактон-гибб-3-ен-1,10-дикарбоновой кислоты</p>
+</td><td><br>
+</td><td><p align="center">
+C2oH23O9</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+404</p>
+</td><td><p>
+Три(2- гидроксиэтил)амин</p>
+</td><td><p align="center">
+102-71-6</p>
+</td><td><p align="center">
+C6H15N03</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+405</p>
+</td><td><p>
+(Т-4)Тригидро[тиобис(метан)]бор</p>
+</td><td><p align="center">
+13292-87-0</p>
+</td><td><p align="center">
+C2H9BS</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+406</p>
+</td><td><p>
+3 - (2,2,2-Триметилгидразиний) метилпропионатбромид</p>
+</td><td><br>
+</td><td><p align="center">
+C7H20BrN202</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+407</p>
+</td><td><p>
+[S-(Z)]-3,7,11-Триметилдодека-1,6,10-триен-3-ол</p>
+</td><td><p align="center">
+142-50-7</p>
+</td><td><p align="center">
+C15H260</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+408</p>
+</td><td><p>
+2,2,4-Триметилпентан-1,3-диол-(2-метилпропаноат) /смесь изомеров/</p>
+</td><td><p align="center">
+25265-77-4</p>
+</td><td><p align="center">
+C12H24O3</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п+а</p>
+</td></tr><tr><td><p align="center">
+409</p>
+</td><td><p>
+Триметил фосфит+</p>
+</td><td><p align="center">
+121-45-9</p>
+</td><td><p align="center">
+C3H9O3P</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+410</p>
+</td><td><p>
+2,3,3-Триметоксипроп-1-ен</p>
+</td><td><p align="center">
+102526-84-1</p>
+</td><td><p align="center">
+C6H1203</p>
+</td><td><p align="center">
+20</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+411</p>
+</td><td><p>
+3,16,18-Триокси-9,13-эпоксилабден-15-онат натрия</p>
+</td><td><br>
+</td><td><p align="center">
+C20H33Na06</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+412</p>
+</td><td><p>
+N- [ 3 - (Трифторметил)фенил ]ацетамид</p>
+</td><td><p align="center">
+351-36-0</p>
+</td><td><p align="center">
+C9H8F3NO</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+413</p>
+</td><td><p>
+2-Трифторметил-2,5,5,9-тетрагидро-4-гидрокситридека-фторнонан</p>
+</td><td><br>
+</td><td><p align="center">
+C9H5F160</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+414</p>
+</td><td><p>
+DL-б -Трихлорацетиламино - в - гидрокси-4-нитропропио -фенон+</p>
+</td><td><br>
+</td><td><p align="center">
+C11H11Cl3N205</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+415</p>
+</td><td><p>
+2,3,6-Трихлорбензойная кислота</p>
+</td><td><p align="center">
+50-31-7</p>
+</td><td><p align="center">
+C7H3C1302</p>
+</td><td><p align="center">
+0,6</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+416</p>
+</td><td><p>
+1,1,1 -Трихлор-2-метилпропанол-2+</p>
+</td><td><p align="center">
+57-15-8</p>
+</td><td><p align="center">
+C4H7C13O</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+417</p>
+</td><td><p>
+1-(2,4,6-Трихлорфенил)-3-амино-1Н-пираз-5-ол</p>
+</td><td><p align="center">
+86491-52-3</p>
+</td><td><p align="center">
+C9H6C13N30</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+418</p>
+</td><td><p>
+1,1,3-Трихлор-3-фенилпропан+</p>
+</td><td><br>
+</td><td><p align="center">
+C9H9C13</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+419</p>
+</td><td><p>
+Трихоцетин</p>
+</td><td><br>
+</td><td><p align="center">
+C19H24O5</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+420</p>
+</td><td><p>
+Трициклогексилолово хлорид+</p>
+</td><td><p align="center">
+3091-32-5</p>
+</td><td><p align="center">
+C18H33ClSn</p>
+</td><td><p align="center">
+0,02</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+421</p>
+</td><td><p>
+Триэтилбензиламиний хлорид</p>
+</td><td><p align="center">
+56-98-9</p>
+</td><td><p align="center">
+C10H16ClN</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+422</p>
+</td><td><p>
+диТУлий триоксид</p>
+</td><td><p align="center">
+12036-44-1</p>
+</td><td><p align="center">
+ОзТm2</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+423</p>
+</td><td><p>
+Фенилазопропандинитрил</p>
+</td><td><br>
+</td><td><p align="center">
+C11H6N402</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+424</p>
+</td><td><p>
+N-Фениламино-3-(трифторметил)бензол</p>
+</td><td><p align="center">
+101-23-5</p>
+</td><td><p align="center">
+C13H10F3N</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+425</p>
+</td><td><p>
+N-Фенилацетамид</p>
+</td><td><p align="center">
+103-84-4</p>
+</td><td><p align="center">
+C8H9NO</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+426</p>
+</td><td><p>
+7-Фенилацетамидодезацетоксицефалоспороновая кислота</p>
+</td><td><br>
+</td><td><p align="center">
+C16H18N204S</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+427</p>
+</td><td><p>
+Фенил-1-гидроксинафталин-2-карбонат</p>
+</td><td><br>
+</td><td><p align="center">
+C17H12O3</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+428</p>
+</td><td><p>
+Т-Фенил-1,3-диаминобензол</p>
+</td><td><p align="center">
+5840-03-9</p>
+</td><td><p align="center">
+C12H12N2</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+429</p>
+</td><td><p>
+1 -Фенил- 1 -(3,4-диметилфенил)этан</p>
+</td><td><br>
+</td><td><p align="center">
+C16H19</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+430</p>
+</td><td><p>
+Фенилметил-3,3-диметил:--7-оксо-6-[(феноксиацетил)-амино-4-тиа-1-азабицикло[3,2,0]гептан-2-карбонат-4-оксид</p>
+</td><td><p align="center">
+4052-69-1</p>
+</td><td><p align="center">
+C23H24N206S</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+431</p>
+</td><td><p>
+Фенилметил -2-метилпроп-2-еноат</p>
+</td><td><p align="center">
+2495-37-6</p>
+</td><td><p align="center">
+С11Н12О2</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+432</p>
+</td><td><p>
+1-Фенилпиразолидин-З-он</p>
+</td><td><p align="center">
+92-43-3</p>
+</td><td><p align="center">
+C9H10N20</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+433</p>
+</td><td><p>
+3 - Фенилпроп-2-еналь</p>
+</td><td><p align="center">
+104-55-2</p>
+</td><td><p align="center">
+C9H8O</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+434</p>
+</td><td><p>
+3-Фенилпроп-2-ен-1-ол</p>
+</td><td><p align="center">
+104-54-1</p>
+</td><td><p align="center">
+С9Н10О</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+435</p>
+</td><td><p>
+S- [2- [ (Фенил сульфонил)амино]этил)] -0,0-бис( 1 -метил -этил)дитиофосфат</p>
+</td><td><p align="center">
+741-58-2</p>
+</td><td><p align="center">
+C14H24NO4PS3</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+436</p>
+</td><td><p>
+1-Фенил-1Н-тетразол-5-тиол</p>
+</td><td><p align="center">
+86-93-1</p>
+</td><td><p align="center">
+C7H6N4S</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+437</p>
+</td><td><p>
+0-(1-Фенил-1,2,4-триазолил-3)-О,О-диэтилтиофосфат</p>
+</td><td><br>
+</td><td><p align="center">
+C13H15N303S</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+п+а</p>
+</td></tr><tr><td><p align="center">
+438</p>
+</td><td><p>
+1 -Фенил- 1-хлорпропан-2-он</p>
+</td><td><p align="center">
+4773-35-7</p>
+</td><td><p align="center">
+С9Н9С1О</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+439</p>
+</td><td><p>
+б -Фенилб а-циклогексил-1-пиперидикопронанол гидрохлорид+</p>
+</td><td><p align="center">
+52-49-3</p>
+</td><td><p align="center">
+C20H31NO • С1Н</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+440</p>
+</td><td><p>
+5-Фенил-5-этилдигидро-(1Н,5Н)-пиримидин-4,6-дион</p>
+</td><td><p align="center">
+125-33-7</p>
+</td><td><p align="center">
+C12H14N202</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+441</p>
+</td><td><p>
+10 Н-Фенотиазин</p>
+</td><td><p align="center">
+92-84-2</p>
+</td><td><p align="center">
+C12H9NS</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+442</p>
+</td><td><p>
+2-Формилфеноксиэтановая кислота+</p>
+</td><td><p align="center">
+6280-80-4</p>
+</td><td><p align="center">
+C9H8O4</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+443</p>
+</td><td><p>
+N-Фосфонометилглицин</p>
+</td><td><br>
+</td><td><p align="center">
+C3H7N05P</p>
+</td><td><p align="center">
+1,5</p>
+</td><td><p align="center">
+п+а</p>
+</td></tr><tr><td><p align="center">
+444</p>
+</td><td><p>
+Фосфорная кислота /в пересчете на P2Os/</p>
+</td><td><p align="center">
+7664-38-2</p>
+</td><td><p align="center">
+H3O4P</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+445</p>
+</td><td><p>
+2-Хлор-4-амино-6, 7-диметоксихиназолин</p>
+</td><td><p align="center">
+23680-84-4</p>
+</td><td><p align="center">
+C10H10C1N302</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+446</p>
+</td><td><p>
+N-Xлopaцeтил-(2,6-диxлopдифeнил)aмин</p>
+</td><td><br>
+</td><td><p align="center">
+С14H10Сl3N</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+447</p>
+</td><td><p>
+6-Хлор-2-бензоксазолон</p>
+</td><td><p align="center">
+19932-84-4</p>
+</td><td><p align="center">
+C7H4C1NO2</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п+а</p>
+</td></tr><tr><td><p align="center">
+448</p>
+</td><td><p>
+6-Хлоргексан-2-он</p>
+</td><td><p align="center">
+10226-30-9</p>
+</td><td><p align="center">
+C6H11ClO</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+449</p>
+</td><td><p>
+7-Хлор-2,3-дигидро-1-метил-5-фенил-1Н-1,4-бензодиазепин</p>
+</td><td><p align="center">
+2898-12-6</p>
+</td><td><p align="center">
+C16H15C1N2</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+450</p>
+</td><td><p>
+7-Хлор-2,3-дигидро-1-метил-5-фенил-1Н-1,4-бензодиазепин-2-он</p>
+</td><td><p align="center">
+439-14гЗ</p>
+</td><td><p align="center">
+C16H13ClN2O</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+451</p>
+</td><td><p>
+7-Хлор-1,3-дигидро-3-окси-5-фенил-2Н- 1,4-бензодиаз-пин-2-он</p>
+</td><td><p align="center">
+607-75-0</p>
+</td><td><p align="center">
+C15H11ClN202</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+452</p>
+</td><td><p>
+1-[4-Хлор-3-[4,5-дигидро-5-оксо-1-(2,4,6-трихлорфенил)-1Н-пиразол-3-ил[аминофенил]-3-октадеценилпиролидин-2, 5 -дион</p>
+</td><td><p align="center">
+61368-53-4</p>
+</td><td><p align="center">
+С37Н46Сl4N40з</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+453</p>
+</td><td><p>
+2-Хлор-5-(3,5-дикарбометоксифенилсульфамид)аминобензол</p>
+</td><td><br>
+</td><td><p align="center">
+C16H15C1N206S</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+454</p>
+</td><td><p>
+2-Хлор-N-(2,6-диметилфенил)ацетамид</p>
+</td><td><p align="center">
+1131-01-7</p>
+</td><td><p align="center">
+C10H12C1NO</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+455</p>
+</td><td><p>
+2-Хлор-N-(2,6-диметилфенил)-N-[(2-метилпропокси)метил]ацетамид</p>
+</td><td><p align="center">
+24353-58-0</p>
+</td><td><p align="center">
+C15H22ClN02</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+456</p>
+</td><td><p>
+2-Хлор-2,4-ди[(1,1-диметилпропил)фенокси]бутироиламиноамид(1-бензилгидантоин)пивалоилэтановой кислоты</p>
+</td><td><br>
+</td><td><p align="center">
+C43H55C1N406</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+457</p>
+</td><td><p>
+2-Хлор-5-[у-(2",4"-ди[(1,1-диметилпропил)фенокси]бутироиламино] анилид (1-фенилтетразолилтио-5)пивалоил-этановой кислоты</p>
+</td><td><br>
+</td><td><p align="center">
+С45Н56С1N6О3</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+458</p>
+</td><td><p>
+2-Хлор-5[-г (2",4"-ди[(1,1-диметилпропил)фенокси]бутироиламино] анилид (4-карбоксифенокси) пивалоилэтановой кислоты</p>
+</td><td><br>
+</td><td><p align="center">
+C46H57C1N306</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+459</p>
+</td><td><p>
+2-Хлор- N - (2, 6-диэтил фенил) -N- (метоксиметил )ацетамид</p>
+</td><td><p align="center">
+15972-60-8</p>
+</td><td><p align="center">
+C14H20ClNO2</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+460</p>
+</td><td><p>
+7-Хлор-2-метиламино-5-фенил-ЗН-1,4-бензодиазепиноксид</p>
+</td><td><p align="center">
+58-25-3</p>
+</td><td><p align="center">
+C16H14C1N30</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+461</p>
+</td><td><p>
+Хлор-2- метилбутен+</p>
+</td><td><p align="center">
+68012-28-2</p>
+</td><td><p align="center">
+С5Н9С1</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+462</p>
+</td><td><p>
+8-Хлор-11-(4-метил-1-пиперазинил)-5Н-дибензо(в,е)-(1,4)-диазепин</p>
+</td><td><br>
+</td><td><p align="center">
+С27Н39ClN4O2</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+463</p>
+</td><td><p>
+Хлорметилпиридин</p>
+</td><td><br>
+</td><td><p align="center">
+C6H6CIN</p>
+</td><td><p align="center">
+1,5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+464</p>
+</td><td><p>
+N - (3-Хлор -4-метилфенил) пропанамид</p>
+</td><td><p align="center">
+709-97-7</p>
+</td><td><p align="center">
+C10H12C1NO</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+465</p>
+</td><td><p>
+8-Хлор-1-метил-6-фенил-4Н-[1,2,4]-триазоло(4,За)-( 1 ,4)бензодиазепин</p>
+</td><td><p align="center">
+28981-97-7</p>
+</td><td><p align="center">
+C17H13CLN4</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+466</p>
+</td><td><p>
+8-Хлор-1-метил-6-фенил-4Н-S-триазоло(4,За)-S-N-окси-(1,4)-бензодиазепин .</p>
+</td><td><br>
+</td><td><p align="center">
+C25H19CIN5O</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+467</p>
+</td><td><p>
+3 -Хлорметил- 6 -хлорбензоксазолон</p>
+</td><td><p align="center">
+40507-94-6</p>
+</td><td><p align="center">
+C8H5C12N02</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п+а</p>
+</td></tr><tr><td><p align="center">
+468</p>
+</td><td><p>
+N-{4-[2[(5-Хлор-2-метоксибензамидо)этил]фенилсульфонил}- N -циклогексилкарбамид</p>
+</td><td><p align="center">
+10238-21-8</p>
+</td><td><p align="center">
+С23Н28С1Nз05S</p>
+</td><td><p align="center">
+0,01</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+469</p>
+</td><td><p>
+Хлорсульфуровая кислота+</p>
+</td><td><p align="center">
+25404-06-2</p>
+</td><td><p align="center">
+HCIO2S</p>
+</td><td><p align="center">
+0,1</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+470</p>
+</td><td><p>
+5-Хлор- 3 -фенил антранил</p>
+</td><td><p align="center">
+7716-88-3</p>
+</td><td><p align="center">
+C13H8C1NO</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+471</p>
+</td><td><p>
+1-[(2-Хлорфенил)дифенилметил]-1Н-имидазол</p>
+</td><td><p align="center">
+23593-75-1</p>
+</td><td><p align="center">
+C22H17C1N2</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+472</p>
+</td><td><p>
+2-(Хлорфенил)-2(метиламино)циклогексанона гидрохлорид</p>
+</td><td><p align="center">
+1867-66-9</p>
+</td><td><p align="center">
+C13H10C1NO • C1H</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+а</p>
+</td></tr><tr><td><p align="center">
+473</p>
+</td><td><p>
+Хлорфенилсилилэтан</p>
+</td><td><br>
+</td><td><p align="center">
+C8H9ClSi</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п+а</p>
+</td></tr><tr><td><p align="center">
+474</p>
+</td><td><p>
+Хлорэтил-2-метилпроп-2-еноат+</p>
+</td><td><br>
+</td><td><p align="center">
+C6H10C102</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+475</p>
+</td><td><p>
+N-(2-Хлорэтил)-N-(фенилметил)бензметанамин гидрохлорид</p>
+</td><td><p align="center">
+55-43-6</p>
+</td><td><p align="center">
+C16H18C1N • ОН</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+476</p>
+</td><td><p>
+2-Хлорэтилэтил-2,4,5-трихлорфенил фосфат</p>
+</td><td><p align="center">
+74944-84-6</p>
+</td><td><p align="center">
+С10Н11Сl4O4Р</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+477</p>
+</td><td><p>
+5 -Холестен- Зв -ол</p>
+</td><td><p align="center">
+57-88-5</p>
+</td><td><p align="center">
+С27Н46О</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+478</p>
+</td><td><p>
+Хром диоксид</p>
+</td><td><p align="center">
+1208-01-8</p>
+</td><td><p align="center">
+СO2</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+479</p>
+</td><td><p>
+Цианацетат гидразид</p>
+</td><td><p align="center">
+140-87-4</p>
+</td><td><p align="center">
+C3H5N3O</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+480</p>
+</td><td><p>
+Цианацет(1-метилэтилиден)гидразид</p>
+</td><td><p align="center">
+4974-42-9</p>
+</td><td><p align="center">
+C2H6N2</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+481</p>
+</td><td><p>
+4- Цианпиридин</p>
+</td><td><p align="center">
+100-48-1</p>
+</td><td><p align="center">
+C6H4N2</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+482</p>
+</td><td><p>
+Циклогексан-1,3-диона фенилгидразон</p>
+</td><td><p align="center">
+27385-45-1</p>
+</td><td><p align="center">
+C12H14N202</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+483</p>
+</td><td><p>
+Циклогексиламмония фторид</p>
+</td><td><br>
+</td><td><p align="center">
+C6H13FN</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+484</p>
+</td><td><p>
+6-Циклогексил-9в-(N,N-дибензиламино)этил-3,4-дигидрокарбазол-1-(2Н)-он</p>
+</td><td><br>
+</td><td><p align="center">
+C34H39N2</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+485</p>
+</td><td><p>
+6-Циклогексил-3,4-дигидрокарбазол-1-(2Н)-он</p>
+</td><td><br>
+</td><td><p align="center">
+C18H21N</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+486</p>
+</td><td><p>
+2-Циклогексилкарбонил-4-оксо- 1 ,2,3,6,7, 1 1 -гексагидро-4Н-пиразино(1,2-б-)изохинолин</p>
+</td><td><br>
+</td><td><p align="center">
+C20H24N302</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+487</p>
+</td><td><p>
+4-Циклогексилфенилгидразондиклогексан- 1 ,2-дион</p>
+</td><td><br>
+</td><td><p align="center">
+C18H25N202</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+488</p>
+</td><td><p>
+Циклододекан</p>
+</td><td><p align="center">
+294-62-2</p>
+</td><td><p align="center">
+C12H24</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+489</p>
+</td><td><p>
+Циклододеканон-(Е)-оксим</p>
+</td><td><p align="center">
+62599-50-2</p>
+</td><td><p align="center">
+C16H29NO</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+490</p>
+</td><td><p>
+Цикло додекатриен- 1,5,9</p>
+</td><td><p align="center">
+706-31-0</p>
+</td><td><p align="center">
+С12H18</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+491</p>
+</td><td><p>
+1-Циклопропил-6-фтор-1,4-дигидро-4-оксо(пиперази-нил)-3-хинолинкарбоновой кислоты гидрохлорид гидрат</p>
+</td><td><p align="center">
+93107-08-5</p>
+</td><td><p align="center">
+C17H18FN3O3 • C1H • H20</p>
+</td><td><p align="center">
+0,5 A</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+492</p>
+</td><td><p>
+триЦинка дифосфат+</p>
+</td><td><p align="center">
+7779-90-0</p>
+</td><td><p align="center">
+08P2Zn3</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+493</p>
+</td><td><p>
+Цинк гидрофосфат (1:1)</p>
+</td><td><p align="center">
+14332-60-6</p>
+</td><td><p align="center">
+HO4PZn</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+494</p>
+</td><td><p>
+Цинк ди(ацетамид)дихлорид</p>
+</td><td><p align="center">
+18400-98-1</p>
+</td><td><p align="center">
+C4H10Cl2N202Zn</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+495</p>
+</td><td><p>
+Цинк динитрат</p>
+</td><td><p align="center">
+7779-88-6</p>
+</td><td><p align="center">
+N2O6Zn</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+496</p>
+</td><td><p>
+Цинк карбонат</p>
+</td><td><p align="center">
+3486-35-9</p>
+</td><td><p align="center">
+C03Zn</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+497</p>
+</td><td><p>
+Цинк селенид</p>
+</td><td><p align="center">
+1315-09-9</p>
+</td><td><p align="center">
+SeZn</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+498</p>
+</td><td><p>
+Цитохром С</p>
+</td><td><p align="center">
+9079-56-5</p>
+</td><td><p align="center">
+C517H827N143O149S4</p>
+</td><td><p align="center">
+2A</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+499</p>
+</td><td><p>
+Эпоксидная смола УП-62 /по эпихлоргидрину/</p>
+</td><td><br>
+</td><td><br>
+</td><td><p align="center">
+2A</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+500</p>
+</td><td><p>
+Т-(2,3-Эпоксипропил) карбазол</p>
+</td><td><br>
+</td><td><p align="center">
+C15H13NO</p>
+</td><td><p align="center">
+3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+501</p>
+</td><td><p>
+диЭрбий триоксид</p>
+</td><td><p align="center">
+12061-16-4</p>
+</td><td><p align="center">
+Er203</p>
+</td><td><p align="center">
+4</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+502</p>
+</td><td><p>
+Этандиаль+</p>
+</td><td><p align="center">
+107-22-2</p>
+</td><td><p align="center">
+C2H202</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+503</p>
+</td><td><p>
+2,2'-(1,2-Этандиил)бис(аминобензол)дифосфат</p>
+</td><td><p align="center">
+93045-02-4</p>
+</td><td><p align="center">
+С14Н16N2 • Н608Р2</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+504</p>
+</td><td><p>
+Этаноламин гидрохлорид</p>
+</td><td><p align="center">
+2002-24-6</p>
+</td><td><p align="center">
+C2H7NO - С1Н</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+505</p>
+</td><td><p>
+[2-(Этенилокси)этокси]метилоксиран+</p>
+</td><td><p align="center">
+16801-19-7</p>
+</td><td><p align="center">
+C7H12О3</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+506</p>
+</td><td><p>
+1-(Этенилсулъфонил)декан+</p>
+</td><td><p align="center">
+18287-90-6</p>
+</td><td><p align="center">
+Ci2H24O2S</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+507</p>
+</td><td><p>
+Этил-6-бром-5-гидрокси-1-метил-2-[(фенилтио)ме-тил]-1Н-индол-3-карбонат</p>
+</td><td><p align="center">
+131707-24-9</p>
+</td><td><p align="center">
+C19H18BrNO3S</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+508</p>
+</td><td><p>
+Этил-6-бром-4-[(диметиламино)метил]-5-гидрокси-1-метил-2-[(фенилтио)метил]-1Н-индол-3-карбонат</p>
+</td><td><p align="center">
+131707-25-0</p>
+</td><td><p align="center">
+C22H25BrN2O3S</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+509</p>
+</td><td><p>
+Этил-5-гидрокси-1,2-диметил-1Н-индол-3-карбонат</p>
+</td><td><p align="center">
+15574-49-9</p>
+</td><td><p align="center">
+C13H15N03</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+510</p>
+</td><td><p>
+Этиддифениламино- 3 - карбамат</p>
+</td><td><br>
+</td><td><p align="center">
+C15H15N02</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+511</p>
+</td><td><p>
+Этил-6,7-дифтор-1,4-дигидро-4-гидроксихинолин-3-карбонат</p>
+</td><td><br>
+</td><td><p align="center">
+C12H12F2N03</p>
+</td><td><p align="center">
+0,6</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+512</p>
+</td><td><p>
+Этил-6,7-дифтор-1,4-дигидро-4-оксохинолин-3-карбонат</p>
+</td><td><p align="center">
+121873-01-6</p>
+</td><td><p align="center">
+C12H9F2NO3</p>
+</td><td><p align="center">
+0,6</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+513</p>
+</td><td><p>
+3 -Этилендиаминтетраацетатбис- 2-ди (тиосульфат) цинкат октанатрия, п-водный (п=4-6)</p>
+</td><td><br>
+</td><td><p align="center">
+C10H10N2Na8014S4 • (4-6)H20</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+514</p>
+</td><td><p>
+Этилендиаминтетраацетатобис(нитрил отриацетоцинкат) -гексанатрий 4- водный</p>
+</td><td><br>
+</td><td><p align="center">
+C22H24O26N4Na6Zn2 • 4H2O</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+515</p>
+</td><td><p>
+Этилмеркуритио-2-гидроксибензоат натрия /по ртути/</p>
+</td><td><br>
+</td><td><p align="center">
+C7H9HgNaO2S</p>
+</td><td><p align="center">
+0,005</p>
+</td><td><p align="center">
+п</p>
+</td></tr><tr><td><p align="center">
+516</p>
+</td><td><p>
+5-Этил-5-(1-метилбутил)-2-тиобарбитурат натрия</p>
+</td><td><p align="center">
+71-73-8</p>
+</td><td><p align="center">
+C11H17N2Na02S</p>
+</td><td><p align="center">
+0,3</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+517</p>
+</td><td><p>
+5-Этил-5-(1-метилбутил)-2-тиобарбитуровая кислота</p>
+</td><td><p align="center">
+76-75-5</p>
+</td><td><p align="center">
+C11H18N202S</p>
+</td><td><p align="center">
+0,5</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+518</p>
+</td><td><p>
+2-Этил-6-метил-3-гидроксипиридин гидрохлорид</p>
+</td><td><p align="center">
+13258-59-8</p>
+</td><td><p align="center">
+C8H11NO • С1Н</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+519</p>
+</td><td><p>
+4-Этил-4-метилпиперидин-2,6-дион+</p>
+</td><td><p align="center">
+64-65-3</p>
+</td><td><p align="center">
+C8H13N02</p>
+</td><td><p align="center">
+0,2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+520</p>
+</td><td><p>
+Этил- б-циан-1-циклогексилиден- 1 -ацетат+</p>
+</td><td><p align="center">
+58567-40-1</p>
+</td><td><p align="center">
+C11H15N02</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+521</p>
+</td><td><p>
+Этил-б-циан-б-этилфенилацетат</p>
+</td><td><p align="center">
+718-71-8</p>
+</td><td><p align="center">
+C13H15N02</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+522</p>
+</td><td><p>
+Этил-2,3-эпокси-3-[4-(2-метилпропил)фенил]бутаноат+</p>
+</td><td><br>
+</td><td><p align="center">
+C16H22O3</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+523</p>
+</td><td><p>
+в -Этоксиэтилбис(в -метоксикарбонилэтил)амин</p>
+</td><td><br>
+</td><td><p align="center">
+C8H16N03</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+524</p>
+</td><td><p>
+1-(2-Этоксиэтил)пиперид-4-он</p>
+</td><td><br>
+</td><td><p align="center">
+C9H17NO2</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+525</p>
+</td><td><p>
+1-(2-Этоксиэтил)-4-этенилбензоилоксипиперидин гид-рохлорид+</p>
+</td><td><br>
+</td><td><p align="center">
+C18H25N03 • C1H</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+526</p>
+</td><td><p>
+1-(2-Этоксиэтил)-4-этенил-4-гидроксипиперидин+</p>
+</td><td><br>
+</td><td><p align="center">
+C11H21NО2</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+527</p>
+</td><td><p>
+2- [2- (2-Этоксиэтокси)этокси] этанол</p>
+</td><td><p align="center">
+112-50-5</p>
+</td><td><p align="center">
+C8H18O4</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+528</p>
+</td><td><p>
+Эгил-а-циан-а-этилфенилацетат</p>
+</td><td><p align="center">
+718-71-8</p>
+</td><td><p align="center">
+C13H15N02</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+529</p>
+</td><td><p>
+Эгил-2,3-эпокси-3-[4-(2-метилпропил)фенил]бутаноат+</p>
+</td><td><br>
+</td><td><p align="center">
+C16H22O3</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+530</p>
+</td><td><p>
+р -Этоксиэтилбисф -метоксикарбонилэтил)амин</p>
+</td><td><br>
+</td><td><p align="center">
+C8H16N03</p>
+</td><td><p align="center">
+5</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+531</p>
+</td><td><p>
+1-(2-Этоксиэтил)пиперид-4-он</p>
+</td><td><br>
+</td><td><p align="center">
+C9H17NO2</p>
+</td><td><p align="center">
+2</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr><tr><td><p align="center">
+532</p>
+</td><td><p>
+1-(2-Этоксиэтил)-4-этенилбензоилоксипиперидин гид-рохлорид+</p>
+</td><td><br>
+</td><td><p align="center">
+C18H25N03 • C1H</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+533</p>
+</td><td><p>
+1-(2-Этоксиэтил)-4-этенил-4-гидроксипиперидин+</p>
+</td><td><br>
+</td><td><p align="center">
+CnH21Nt)2</p>
+</td><td><p align="center">
+1</p>
+</td><td><p align="center">
+a</p>
+</td></tr><tr><td><p align="center">
+534</p>
+</td><td><p>
+2- [2- (2-Этоксиэтокси)этокси] этанол</p>
+</td><td><p align="center">
+112-50-5</p>
+</td><td><p align="center">
+C8H18O4</p>
+</td><td><p align="center">
+10</p>
+</td><td><p align="center">
+п+a</p>
+</td></tr></tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>

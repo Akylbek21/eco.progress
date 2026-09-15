@@ -12,8 +12,7 @@ const EntityName = ({
   className?: string;
 }) => {
   const name = value?.name?.trim();
-  return <span className={className}>{name || fallback}</span>;
+  return <span className={className} title={name || undefined}>{name || fallback}</span>;
 };
 
 export default EntityName;
-

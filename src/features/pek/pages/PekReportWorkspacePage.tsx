@@ -49,6 +49,12 @@ const deadlineRemaining = (submissionDueDate: string | null) => {
   return `Осталось: ${days} дн.`;
 };
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
+};
+
 const saveBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -365,8 +371,8 @@ const PekReportWorkspacePage = () => {
     <nav className="pek-section-nav sticky top-0 z-20 flex max-w-full gap-0 overflow-x-auto border-y border-slate-300 bg-white" aria-label="Разделы отчёта">{tabs.map(({ key, label }) => <button key={key} type="button" onClick={() => setTab(key)} className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-bold ${tab === key ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}</nav>
 
     {tab === 'overview' && <div className="space-y-4">
-      <section className="grid gap-x-6 gap-y-2 border-b border-slate-200 bg-white px-3 py-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Info label="Вид отчётности" value={labelPekReportType(item.reportType)} /><Info label="Период" value={`${item.periodStart} — ${item.periodEnd}`} /><Info label="Срок представления" value={item.submissionDueDate || 'Не установлен'} /><Info label="До срока" value={deadlineRemaining(item.submissionDueDate)} /><Info label="Программа" value={program.data ? `${program.data.number} · ${program.data.name}` : 'Загрузка…'} /><Info label="Форма / НПА" value={`${item.templateVersion || '—'} / ${item.regulationVersion || '—'}`} /><Info label="Связано протоколов" value={item.linkedProtocolCount} /><Info label="Последний сбор" value={item.lastCollectedAt || 'Сбор ещё не выполнялся'} /><Info label="Сдан" value={item.submittedAt || '—'} /><Info label="Принят" value={item.acceptedAt || '—'} /><Info label="Ответственный" value={item.responsibleUser?.name || 'Не назначен'} /><Info label="Результатов" value={sourceSummary.data?.linkedResultCount ?? '—'} />
+      <section className="grid gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+        <Info label="Вид отчётности" value={labelPekReportType(item.reportType)} /><Info label="Период" value={`${item.periodStart} — ${item.periodEnd}`} /><Info label="Срок представления" value={item.submissionDueDate || 'Не установлен'} /><Info label="До срока" value={deadlineRemaining(item.submissionDueDate)} /><Info label="Программа" value={program.data ? `${program.data.number} · ${program.data.name}` : 'Загрузка…'} clamp /><Info label="Форма / НПА" value={`${item.templateVersion || '—'} / ${item.regulationVersion || '—'}`} clamp /><Info label="Связано протоколов" value={item.linkedProtocolCount} /><Info label="Последний сбор" value={item.lastCollectedAt ? formatDateTime(item.lastCollectedAt) : 'Сбор ещё не выполнялся'} /><Info label="Сдан" value={formatDateTime(item.submittedAt)} /><Info label="Принят" value={formatDateTime(item.acceptedAt)} /><Info label="Ответственный" value={item.responsibleUser?.name || 'Не назначен'} clamp /><Info label="Результатов" value={sourceSummary.data?.linkedResultCount ?? '—'} />
       </section>
       <section className="rounded-2xl border bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-black">Фактическая мощность за период</h2><p className="mt-1 text-sm text-slate-500">Эти данные относятся только к текущему отчёту, а не к многолетней программе.</p></div><MuiButton variant="contained" size="small" disabled={updateGeneral.isPending || item.availableActions.edit !== true} onClick={() => updateGeneral.mutate()}>{updateGeneral.isPending ? 'Сохранение…' : 'Сохранить'}</MuiButton></div>
@@ -458,5 +464,10 @@ const PlanFactContent = ({ report, loading, error, data, retry }: { report: PekR
   const createParams = new URLSearchParams({ companyId: String(report.companyId), objectId: String(report.objectId), pekReportId: String(report.id) });
   return <section className="space-y-4 rounded-2xl border bg-white p-5"><div className="grid gap-3 sm:grid-cols-5"><Info label="План" value={data.summary.planned} /><Info label="Выполнено" value={data.summary.completed} /><Info label="Не хватает" value={data.summary.missing} /><Info label="Выполнение" value={`${data.summary.completionPercent}%`} /><Info label="Превышения" value={data.summary.exceedances} /></div><div className="overflow-x-auto"><table className="w-full min-w-[1200px] text-sm"><thead><tr className="border-b text-left"><th className="p-2">Период</th><th>Направление</th><th>Точка</th><th>Показатель</th><th>План</th><th>Факт</th><th>Выполнение %</th><th>Протокол</th><th>Результат</th><th>Статус</th></tr></thead><tbody>{data.items.map((row) => <tr key={row.planFactRowId} className="border-b"><td className="p-2">{row.period || (report.quarter ? `Q${report.quarter}` : report.year)}</td><td>{row.directionName || row.controlItemName}</td><td>{row.monitoringPointName || row.measurementPlace || '—'}</td><td>{row.indicatorName}</td><td>{row.plannedCount}</td><td>{row.actualCount}</td><td>{row.completionPercent}%</td><td>{row.protocolNumber || (row.missingCount > 0 ? <Link className="font-bold text-eco-700" to={`/staff/protocols/new?${createParams}`}>Создать протокол</Link> : '—')}</td><td>{row.resultValue ?? row.worstValue ?? row.averageValue ?? '—'}</td><td>{labelPekPlanFactStatus(row.status)}{row.hasExceedance ? ' · превышение' : ''}</td></tr>)}</tbody></table></div></section>;
 };
-const Info = ({ label, value }: { label: string; value: string | number }) => <div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 font-semibold">{value}</p></div>;
+const Info = ({ label, value, clamp = false }: { label: string; value: string | number; clamp?: boolean }) => (
+  <div className="min-w-0 rounded-lg bg-slate-50 px-3 py-2">
+    <p className="text-[10px] font-bold uppercase leading-4 tracking-wide text-slate-500">{label}</p>
+    <p className={`mt-0.5 text-[13px] font-semibold leading-[18px] text-slate-800 ${clamp ? 'line-clamp-2' : ''}`} title={clamp ? String(value) : undefined}>{value}</p>
+  </div>
+);
 export default PekReportWorkspacePage;

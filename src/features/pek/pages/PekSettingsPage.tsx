@@ -17,6 +17,7 @@ import { handlePekMutationError } from '../utils/pekMutationError';
 import { retryPekQuery } from '../utils/pekQueryPolicy';
 import PekCompanyStaff from '../components/settings/PekCompanyStaff';
 import { mergeAssigneesWithCompanyStaff } from '../mappers/responseMappers';
+import { getUsers } from '../../../services/adminUserService';
 
 const settingsGroups: Array<{ title: string; fields: Array<[keyof PekSettingsUpdateRequest, string]> }> = [
   { title: 'Сбор протоколов', fields: [['includeOnlySignedProtocols', 'Использовать только подписанные'], ['allowFallbackMatching', 'Дополнительное автоматическое сопоставление'], ['requireManualAmbiguousConfirmation', 'Требовать ручное подтверждение неоднозначных результатов']] },
@@ -44,7 +45,13 @@ const PekSettingsPage = () => {
   });
   const assignees = useQuery({ queryKey: pekKeys.assignees(selectedCompanyId, ['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(selectedCompanyId, ['PEK_RESPONSIBLE'], signal), enabled: selectedCompanyId > 0 });
   const companyStaff = useQuery({ queryKey: pekKeys.companyStaff(selectedCompanyId, user?.id), queryFn: ({ signal }) => pekApi.getCompanyStaff(selectedCompanyId, signal), enabled: selectedCompanyId > 0 });
-  const responsibleOptions = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data, user);
+  const systemUsers = useQuery({ queryKey: ['admin-users'], queryFn: getUsers, enabled: selectedCompanyId > 0 });
+  const responsibleOptions = [...new Map([
+    ...mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data),
+    ...(systemUsers.data || [])
+      .filter((employee) => employee.role !== 'CLIENT' && employee.status.toLowerCase() === 'active')
+      .map((employee) => ({ id: employee.id, name: employee.fullName?.trim() || employee.name, description: employee.position || employee.email, status: 'ACTIVE', role: employee.role })),
+  ].map((employee) => [Number(employee.id), employee])).values()];
   const laboratories = useQuery({ queryKey: ['laboratories', 'pek-settings', `user:${user?.id ?? 'anonymous'}`], queryFn: ({ signal }) => getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }, signal) });
   const runScheduler = useMutation({
     mutationFn: () => pekApi.runSchedulerNow(selectedCompanyId, settings.data!.version),
@@ -73,6 +80,17 @@ const PekSettingsPage = () => {
   }, [settings.data]);
   const save = useMutation({
     mutationFn: async (body: PekSettingsUpdateRequest) => {
+      if (body.defaultResponsibleUserId) {
+        const selectedId = Number(body.defaultResponsibleUserId);
+        const alreadyEligible = assignees.data?.some((employee) => Number(employee.id) === selectedId);
+        const assignment = companyStaff.data?.find((employee) => employee.userId === selectedId);
+        const systemEmployee = systemUsers.data?.find((employee) => employee.id === selectedId);
+        if (!alreadyEligible && assignment && (assignment.status !== 'ACTIVE' || assignment.tier === 'VIEWER')) {
+          await pekApi.updateCompanyStaff(selectedCompanyId, assignment.id, assignment.version, { status: 'ACTIVE', tier: 'EDITOR' });
+        } else if (!alreadyEligible && !assignment && systemEmployee) {
+          await pekApi.assignCompanyStaff(selectedCompanyId, { email: systemEmployee.email, tier: 'EDITOR' });
+        }
+      }
       await pekApi.updateSettings(selectedCompanyId, settings.data!.version, body);
       const confirmed = await pekApi.getSettings(selectedCompanyId);
       if (JSON.stringify(toRequest(confirmed)) !== JSON.stringify(body)) {
@@ -82,6 +100,8 @@ const PekSettingsPage = () => {
     },
     onSuccess: (confirmed) => {
       queryClient.setQueryData(settingsKey, confirmed);
+      void queryClient.invalidateQueries({ queryKey: pekKeys.companyStaff(selectedCompanyId, user?.id) });
+      void queryClient.invalidateQueries({ queryKey: pekKeys.assigneesRoot(selectedCompanyId, user?.id) });
       setMessage('Настройки ПЭК сохранены.');
     },
     onError: async (error) => {
@@ -109,6 +129,9 @@ const PekSettingsPage = () => {
   const canRunScheduler = settings.data.availableActions?.runScheduler === true;
   const canRunGlobalScheduler = settings.data.availableActions?.runSchedulerGlobal === true;
   const dirty = settings.data ? JSON.stringify(form) !== JSON.stringify(toRequest(settings.data)) : false;
+  const responsibleValue = responsibleOptions.some((option) => Number(option.id) === form.defaultResponsibleUserId) ? form.defaultResponsibleUserId ?? '' : '';
+  const responsibleLoading = assignees.isLoading || companyStaff.isLoading || systemUsers.isLoading;
+  const configuredResponsibleUnavailable = Boolean(form.defaultResponsibleUserId) && !responsibleLoading && !responsibleValue;
   const set = <K extends keyof PekSettingsUpdateRequest>(key: K, value: PekSettingsUpdateRequest[K]) => setForm((current) => current ? { ...current, [key]: value } : current);
   return <div className="space-y-5">
     <PekPageHeader title="Настройки ПЭК" description="Правила сбора данных и проверки готовности отчётов" />
@@ -118,7 +141,7 @@ const PekSettingsPage = () => {
     <section className="space-y-5 rounded-2xl border bg-white p-5">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <TextField select label="Тип отчётного периода" value={form.defaultReportType} disabled={!editable} onChange={(event) => set('defaultReportType', event.target.value as 'QUARTERLY' | 'YEARLY')}><MenuItem value="QUARTERLY">Квартальный отчёт ПЭК</MenuItem><MenuItem value="YEARLY">Ежегодно — вид зависит от объекта</MenuItem></TextField>
-        <TextField select label="Ответственный по умолчанию" value={form.defaultResponsibleUserId ?? ''} disabled={!editable || (assignees.isLoading && companyStaff.isLoading)} onChange={(event) => set('defaultResponsibleUserId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбран</MenuItem>{responsibleOptions.map((responsible) => <MenuItem key={responsible.id} value={responsible.id}>{responsible.name}</MenuItem>)}</TextField>
+        <TextField select label="Ответственный по умолчанию" value={responsibleValue} disabled={!editable || responsibleLoading} error={assignees.isError && companyStaff.isError && systemUsers.isError} helperText={responsibleLoading ? 'Загрузка сотрудников…' : configuredResponsibleUnavailable ? 'Прежний сотрудник больше недоступен — выберите активного.' : undefined} onChange={(event) => set('defaultResponsibleUserId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбран</MenuItem>{responsibleOptions.map((responsible) => <MenuItem key={responsible.id} value={responsible.id}>{responsible.name}</MenuItem>)}</TextField>
         <TextField select label="Лаборатория по умолчанию для создания протоколов" value={form.defaultLaboratoryId ?? ''} disabled={!editable || laboratories.isLoading} onChange={(event) => set('defaultLaboratoryId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбрана</MenuItem>{laboratories.data?.content.map((laboratory) => <MenuItem key={laboratory.id} value={laboratory.id}>{laboratory.name}</MenuItem>)}</TextField>
         <TextField type="number" label="Уведомлять до срока, дней" value={form.notifyBeforeDeadlineDays} disabled={!editable} inputProps={{ min: 0, max: 365 }} onChange={(event) => set('notifyBeforeDeadlineDays', Number(event.target.value))} />
       </div>

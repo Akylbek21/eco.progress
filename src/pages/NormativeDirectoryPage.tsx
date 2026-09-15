@@ -1378,11 +1378,11 @@ const NormativeDirectoryPage = () => {
           {loading ? (
             <div className="overflow-x-auto">
               <div className="px-4 py-3 text-sm font-semibold text-slate-500">Загрузка нормативов...</div>
-              <table className="min-w-[1180px] w-full text-left text-sm">
+              <table className="w-full min-w-[1500px] table-fixed text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
-                    {visibleColumns.map((column) => <th key={column.key} className="px-3 py-3">{column.label}</th>)}
-                    <th className="px-3 py-3 text-right">Действия</th>
+                    {visibleColumns.map((column) => <th key={column.key} className="whitespace-nowrap px-3 py-3">{column.label}</th>)}
+                    <th className="w-24 whitespace-nowrap px-3 py-3 text-right">Действия</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1400,22 +1400,22 @@ const NormativeDirectoryPage = () => {
             <div key={group.title}>
               <div className="bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">{group.title}</div>
               <div className="overflow-x-auto">
-                <table className="min-w-[1180px] w-full text-left text-sm">
+                <table className="w-full min-w-[1500px] table-fixed text-left text-sm">
                   <thead className="bg-white text-xs uppercase tracking-wide text-slate-500">
                     <tr>
-                      {visibleColumns.map((column) => <th key={column.key} className="px-3 py-3">{column.label}</th>)}
-                      <th className="px-3 py-3 text-right">Действия</th>
+                      {visibleColumns.map((column) => <th key={column.key} className="whitespace-nowrap px-3 py-3">{column.label}</th>)}
+                      <th className="w-24 whitespace-nowrap px-3 py-3 text-right">Действия</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {group.rows.map((row, index) => (
-                      <tr key={row.key} tabIndex={0} onClick={() => setViewing(row.primary)} onKeyDown={(event) => { if (event.key === 'Enter') setViewing(row.primary); }} className="cursor-pointer hover:bg-slate-50 focus:bg-eco-50 focus:outline-none">
+                      <tr key={row.key} tabIndex={0} onClick={() => setViewing(row.primary)} onKeyDown={(event) => { if (event.key === 'Enter') setViewing(row.primary); }} className="h-20 cursor-pointer align-middle hover:bg-slate-50 focus:bg-eco-50 focus:outline-none">
                         {visibleColumns.map((column) => (
-                          <td key={column.key} className={`px-3 py-3 ${column.className || ''}`}>
-                            <div className="max-w-[320px] whitespace-normal break-words" title={column.render(row, index)}>{column.render(row, index)}</div>
+                          <td key={column.key} className={`px-3 py-2 ${column.className || ''}`}>
+                            <div className="line-clamp-2 break-words leading-5" title={column.render(row, index)}>{column.render(row, index)}</div>
                           </td>
                         ))}
-                        <td className="relative px-3 py-3 text-right" onClick={(event) => event.stopPropagation()}>
+                        <td className="relative px-3 py-2 text-right" onClick={(event) => event.stopPropagation()}>
                           <ActionMenu label={`Действия с нормативом ${row.primary.indicatorName || row.primary.id}`}>
                             <Button type="button" variant="secondary" title="Скопировать норматив" onClick={() => copyNormative(row)}>
                               <Copy className="h-4 w-4" /> Скопировать

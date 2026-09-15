@@ -27,13 +27,7 @@ const PekLayout = ({ children }: { children: ReactNode }) => {
   const isWorkspace = segments.some((segment) => /^\d+$/.test(segment));
 
   if (isWorkspace) {
-    return <section className="pek-module min-w-0 space-y-3">
-      <nav aria-label="Хлебные крошки" className="pek-workspace-breadcrumb flex min-w-0 items-center gap-2 border-b border-slate-200 bg-white px-1 pb-2 text-xs text-slate-500">
-        <Link to="/staff/pek">ПЭК</Link>
-        {segments.map((segment, index) => <span key={`${segment}-${index}`} className="truncate">/ {labels[segment] || (/^\d+$/.test(segment) ? `№ ${segment}` : segment)}</span>)}
-      </nav>
-      {children}
-    </section>;
+    return <section className="pek-module min-w-0">{children}</section>;
   }
 
   return <section className="pek-module min-w-0 space-y-4">

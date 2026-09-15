@@ -92,7 +92,7 @@ const PekProgramStructuredSections = ({ program, section }: { program: PekProgra
   const companyId = program.company?.id || 0;
   const assignees = useQuery({ queryKey: pekKeys.assignees(companyId, ['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(companyId, ['PEK_RESPONSIBLE'], signal), enabled: companyId > 0 });
   const companyStaff = useQuery({ queryKey: pekKeys.companyStaff(companyId, user?.id), queryFn: ({ signal }) => pekApi.getCompanyStaff(companyId, signal), enabled: companyId > 0 });
-  const users = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data, user).map((item) => ({ id: Number(item.id), name: item.name }));
+  const users = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data).map((item) => ({ id: Number(item.id), name: item.name }));
 
   const inspection: SectionDefinition<PekInternalInspection, PekInternalInspectionRequest> = {
     key: 'internal-inspections', title: 'Внутренние проверки', description: 'План, факт, результаты и корректирующие действия.', addLabel: 'Добавить проверку',
