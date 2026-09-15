@@ -8,7 +8,7 @@ import { createWizardDefaults, emptyWizardResult } from '../src/features/protoco
 import { mapWizardResultToDraftRequest, mapWizardToCreateDraft } from '../src/features/protocols/mappers/protocolWizardDraftMapper';
 import { normalizeProtocolStatus } from '../src/config/protocolStatus';
 import { hasProtocolAction, normalizeProtocolAvailableActions } from '../src/features/protocols/utils/protocolActions';
-import { calculateResult, createCorrection, getProtocol, importExcel, normalizeProtocol, readyForApproval, removeProtocolMeasurementDevice, returnForRevision, returnToDraft, saveProtocolDraftResults, saveRawMeasurements, signProtocol } from '../src/services/apiProtocolService';
+import { calculateProtocol, calculateResult, createCorrection, getProtocol, importExcel, normalizeProtocol, readyForApproval, removeProtocolMeasurementDevice, returnForRevision, returnToDraft, saveProtocolDraftResults, saveRawMeasurements, signProtocol } from '../src/services/apiProtocolService';
 import { normalizeApiError } from '../src/services/apiHelpers';
 import { isProtocolVersionConflict } from '../src/features/protocols/utils/protocolVersionConflict';
 import { protocolAccessErrorMessage } from '../src/utils/protocolError';
@@ -149,6 +149,23 @@ describe('current protocol backend contract', () => {
       templateId: 'ambient_air',
       version: 9,
     });
+  });
+
+  it('re-reads the protocol after the calculate endpoint returns a summary', async () => {
+    let calculateBody: unknown;
+    server.use(
+      http.post('http://localhost/api/protocols/42/calculate', async ({ request }) => {
+        calculateBody = await request.json();
+        return HttpResponse.json({ data: { protocolId: '42', version: 9, total: 2, calculated: 2 } });
+      }),
+      http.get('http://localhost/api/protocols/42', () => HttpResponse.json({ data: { ...protocol, version: 9 } })),
+      http.get('http://localhost/api/protocols/42/pek-links', () => HttpResponse.json({ data: [] })),
+    );
+
+    const calculated = await calculateProtocol('42', 8);
+
+    expect(calculateBody).toEqual({ version: 8 });
+    expect(calculated).toMatchObject({ id: '42', version: 9 });
   });
 
   it('allows the ready-for-approval workflow more time than the global API timeout', async () => {

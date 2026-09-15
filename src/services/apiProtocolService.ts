@@ -1209,22 +1209,22 @@ export async function updateProtocol(protocolId: string, payload: UpdateProtocol
   const protocol = await protocolFromActionResponse(protocolId, response);
   const persistedChecks: Array<[string, unknown, unknown]> = [
     ['companyId', payload.companyId, protocol.companyId],
-    ['objectId', payload.objectId, protocol.objectId],
-    ['laboratoryId', payload.laboratoryId, protocol.laboratory?.laboratoryId],
-    ['executorId', payload.executorId, protocol.executorId],
-    ['protocolDate', payload.protocolDate, protocol.protocolDate],
-    ['sampleDate', payload.sampleDate ?? payload.testing.samplingDate, protocol.samplingDate ?? protocol.testing?.samplingDate],
-    ['measurementDate', payload.measurementDate, protocol.measurementDate],
-    ['measurementTime', payload.measurementTime, protocol.measurementTime],
-    ['measurementPlace', payload.measurementPlace, protocol.measurementPlace],
-    ['testingStartDate', payload.testing.testingStartDate, protocol.testingStartDate ?? protocol.testing?.testingStartDate],
-    ['testingEndDate', payload.testing.testingEndDate, protocol.testingEndDate ?? protocol.testing?.testingEndDate],
-    ['sourceNumber', payload.sourceNumber, protocol.sourceNumber],
-    ['conditions.waterType', payload.conditions?.waterType, protocol.conditions?.waterType ?? protocol.waterType],
-    ['conditions.waterUseCategory', payload.conditions?.waterUseCategory, protocol.conditions?.waterUseCategory ?? protocol.waterUseCategory],
-    ['conditions.sampleNumber', payload.conditions?.sampleNumber ?? payload.sampleNumber, protocol.conditions?.sampleNumber ?? protocol.sampleNumber],
-    ['conditions.samplingPlace', payload.conditions?.samplingPlace ?? payload.samplingPlace, protocol.conditions?.samplingPlace ?? protocol.samplingPlace],
-    ['conditions.samplingDepth', payload.conditions?.samplingDepth ?? payload.samplingDepth, protocol.conditions?.samplingDepth ?? protocol.samplingDepth],
+    ['objectId', request.objectId, protocol.objectId],
+    ['laboratoryId', request.laboratory.laboratoryId, protocol.laboratory?.laboratoryId],
+    ['executorId', request.executorId, protocol.executorId],
+    ['protocolDate', request.protocolDate, protocol.protocolDate],
+    ['sampleDate', request.testing.samplingDate, protocol.samplingDate ?? protocol.testing?.samplingDate],
+    ['measurementDate', request.measurementDate, protocol.measurementDate],
+    ['measurementTime', request.measurementTime, protocol.measurementTime],
+    ['measurementPlace', request.measurementPlace, protocol.measurementPlace],
+    ['testingStartDate', request.testingStartDate, protocol.testingStartDate ?? protocol.testing?.testingStartDate],
+    ['testingEndDate', request.testingEndDate, protocol.testingEndDate ?? protocol.testing?.testingEndDate],
+    ['sourceNumber', request.sourceNumber, protocol.sourceNumber],
+    ['conditions.waterType', request.environment.conditions?.waterType, protocol.conditions?.waterType ?? protocol.waterType],
+    ['conditions.waterUseCategory', request.environment.conditions?.waterUseCategory, protocol.conditions?.waterUseCategory ?? protocol.waterUseCategory],
+    ['conditions.sampleNumber', request.environment.conditions?.sampleNumber ?? request.testing.sampleNumber, protocol.conditions?.sampleNumber ?? protocol.sampleNumber],
+    ['conditions.samplingPlace', request.environment.conditions?.samplingPlace ?? request.testing.samplingPlace, protocol.conditions?.samplingPlace ?? protocol.samplingPlace],
+    ['conditions.samplingDepth', request.environment.conditions?.samplingDepth ?? request.testing.samplingDepth, protocol.conditions?.samplingDepth ?? protocol.samplingDepth],
   ];
   const ignored = persistedChecks.find(([, expected, actual]) => expected !== undefined && expected !== null && String(expected) !== String(actual ?? ''));
   if (ignored) throw new Error(`Backend не сохранил поле «${ignored[0]}». Обновите контракт PATCH /protocols/{id}.`);
@@ -1671,9 +1671,12 @@ export async function getWeatherConditions(params: {
 }
 
 export async function calculateProtocol(protocolId: string, version: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(
+  await api.post<ApiResponse<unknown> | unknown>(
     `/protocols/${protocolId}/calculate`,
     { version: requireProtocolVersion(version) },
   );
-  return protocolFromActionResponse(protocolId, response);
+  // The calculation endpoint returns a calculation summary in production,
+  // not a full protocol DTO. Re-read the updated protocol instead of treating
+  // a successful summary response as a broken mutation contract.
+  return getProtocol(protocolId);
 }

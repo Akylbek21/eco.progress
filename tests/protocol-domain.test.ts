@@ -83,6 +83,21 @@ describe('protocol domain contract', () => {
     expect(request.testing).not.toHaveProperty('measurementDate');
   });
 
+  it('does not send non-applicable sample condition fields for ambient air', () => {
+    const request = mapProtocolFormToUpdateRequest({
+      templateId: 'ambient_air', version: 4, number: 'AIR-1', protocolDate: '2026-07-22',
+      objectId: 11, executor: '', approver: '', measurementPlace: 'ТК-01', samplingPlace: 'ТК-01',
+      sampleNumber: 'generated-sample', samplingDepth: '2',
+      organization: { organizationName: 'Компания', organizationAddress: '', objectName: 'Объект', productName: 'Воздух', testingBasis: 'ПЭК' },
+      laboratory: { laboratoryName: 'Лаборатория', laboratoryAddress: '', accreditationNumber: '', accreditationValidUntil: '', director: '', laboratoryHead: '', executor: '' },
+      testing: { productNormativeDocument: '', samplingMethodDocument: '', testingMethodDocument: '', samplingDate: '2026-07-22', testingStartDate: '2026-07-22', testingEndDate: '2026-07-22', testingDate: '', testingPurpose: '', environmentConditions: '' },
+      conditions: { sampleNumber: 'legacy', samplingDepth: '2', samplingPlace: 'ТК-01' },
+    });
+    expect(request.measurementPlace).toBeNull();
+    expect(request.testing).toMatchObject({ sampleNumber: null, samplingPlace: null, samplingDepth: null });
+    expect(request.environment.conditions).toMatchObject({ sampleNumber: null, samplingPlace: null, samplingDepth: null });
+  });
+
   it('removes result aliases from values and keeps a single device id', () => {
     expect(mapProtocolResultFormToRequest({
       measurementDeviceId: 8,

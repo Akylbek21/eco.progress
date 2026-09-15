@@ -3,7 +3,10 @@ import type { PekReadiness, PekValidationIssue } from '../../api/pekContracts';
 
 const sectionLabels: Record<string, string> = {
   GENERAL: 'Общие сведения', CONTROL_ITEMS: 'Позиции контроля', INDICATORS: 'Показатели',
-  INTERNAL_INSPECTIONS: 'Внутренние проверки', SOURCES: 'Источники выбросов', DOCUMENTS: 'Документы',
+  MONITORING: 'Производственный мониторинг', WASTE: 'Отходы', PERMITS: 'Разрешения',
+  INTERNAL_INSPECTIONS: 'Внутренние проверки', MEASUREMENT_QA: 'Контроль качества измерений',
+  EMERGENCY_PROCEDURES: 'Действия при аварийных ситуациях', RESPONSIBILITY: 'Структура ответственности',
+  SOURCES: 'Источники выбросов', DOCUMENTS: 'Документы',
 };
 const issueLabels: Record<string, string> = {
   MONITORING_POINTS_REQUIRED: 'Добавьте точки мониторинга', ACTIVE_PERMIT_REQUIRED: 'Выберите действующее разрешение',

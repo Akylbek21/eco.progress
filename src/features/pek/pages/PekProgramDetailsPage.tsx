@@ -21,19 +21,18 @@ import { handlePekMutationError } from '../utils/pekMutationError';
 import PekInventoryEditor from '../components/inventory/PekInventoryEditor';
 import PekReadinessPanel from '../components/common/PekReadinessPanel';
 import { pekInventoryApi } from '../api/pekInventory';
+import { parsePekProgramTab, pekProgramTabs, targetForReadinessIssue, type PekProgramTabKey } from './pekProgramNavigation';
 
-const tabs = ['Общие сведения', 'Отходы', 'Источники выбросов', 'Инструментальный контроль', 'Расчётный контроль', 'Газовый мониторинг', 'Сброс сточных вод', 'Атмосферный воздух', 'Водные объекты', 'Почва', 'Внутренние проверки', 'Организация контроля', 'Документы', 'Проверка программы'];
-const sectionTabs: Record<PekWorkspaceSection, number> = { overview: 0, controls: 1, organization: 4, documents: 5 };
+const sectionTabs: Record<PekWorkspaceSection, PekProgramTabKey> = { overview: 'general', controls: 'monitoring', organization: 'organization', documents: 'documents' };
 
 const PekProgramDetailsPage = () => {
   const id = Number(useParams().programId);
   const [searchParams, setSearchParams] = useSearchParams();
   const companyId = Number(searchParams.get('companyId')) || undefined;
   const programDetailKey = pekKeys.programDetail(companyId, id);
-  const requestedTab = Number(searchParams.get('tab'));
-  const tab = Number.isInteger(requestedTab) && requestedTab >= 0 && requestedTab < tabs.length ? requestedTab : 0;
-  const setTab = (value: number) => setSearchParams(previous => { const next = new URLSearchParams(previous); next.set('tab', String(value)); return next; });
-  const workspaceTab = [0, 8, 9, 1, 2, 1, 10, 1, 1, 1, 4, 4, 5, 0][tab] ?? 0;
+  const tab = parsePekProgramTab(searchParams.get('tab'));
+  const structuredSection = searchParams.get('section') || undefined;
+  const setTab = (value: PekProgramTabKey, section?: string) => setSearchParams(previous => { const next = new URLSearchParams(previous); next.set('tab', value); section ? next.set('section', section) : next.delete('section'); return next; });
   const [action, setAction] = useState<PekAvailableAction | null>(null);
   const [cloneAction, setCloneAction] = useState<PekAvailableAction | null>(null);
   const [cloneNumber, setCloneNumber] = useState('');
@@ -150,34 +149,31 @@ const PekProgramDetailsPage = () => {
       <Info label="Режим" value={item.readOnly ? 'Только чтение' : 'Редактирование разрешено'} />
     </section>
     <nav className="pek-section-nav sticky top-0 z-20 flex max-w-full gap-0 overflow-x-auto border-y border-slate-300 bg-white" aria-label="Разделы программы ПЭК">
-      {tabs.map((label, index) => <button key={label} type="button" onClick={() => setTab(index)} className={`shrink-0 whitespace-nowrap px-4 py-3 font-bold ${tab === index ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}
+      {pekProgramTabs.map(({ key, label }) => <button key={key} type="button" onClick={() => setTab(key)} className={`shrink-0 whitespace-nowrap px-4 py-3 font-bold ${tab === key ? 'border-b-2 border-eco-600 text-eco-800' : 'text-slate-500'}`}>{label}</button>)}
     </nav>
-    {workspaceTab === 0 && <div className="space-y-5">
+    {(tab === 'general' || tab === 'readiness') && <div className="space-y-5">
       {readiness.isPending && <p role="status">Проверка готовности программы…</p>}
       {readiness.isError && <PekQueryError error={readiness.error} resource="Готовность программы" retry={() => void readiness.refetch()} />}
       {readiness.data && <PekReadinessPanel readiness={{ ...readiness.data, completionPercent: readiness.data.progressPercent }} onIssueClick={issue => {
-        const section = issue.section || '';
-        if (section === 'GENERAL') { navigate(`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=0`); return; }
-        setTab(/PERMIT|DOCUMENT/.test(section) ? 5 : /INDICATOR/.test(section) ? 2 : /INSPECTION|QA|EMERGENCY|RESPONSIBILITY/.test(section) ? 4 : /SOURCE|WASTE/.test(section) ? 8 : 1);
+        const target = targetForReadinessIssue(issue);
+        if (target.editGeneral) { navigate(`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=0`); return; }
+        setTab(target.tab, target.structuredSection);
       }} />}
       {counts.isPending && <p role="status">Загрузка состава реестров…</p>}
       {counts.isError && <PekQueryError error={counts.error} resource="Состав реестров" retry={() => void counts.refetch()} />}
-      {counts.data && <section className="rounded-2xl border bg-white p-5"><h3 className="font-bold">Состав программы</h3><ul className="mt-3 space-y-2">{counts.data.map(([label, count]) => <li key={label}><button type="button" className="text-left underline" onClick={() => setTab(label === 'Точки мониторинга' ? 1 : 8)}>{count ? '✓' : '—'} {label} — {count || 'отсутствуют'}</button></li>)}</ul><p className="mt-3 text-sm text-slate-500">Обязательность разделов и блокирующие проблемы определяются проверкой готовности выше.</p></section>}
+      {counts.data && <section className="rounded-2xl border bg-white p-5"><h3 className="font-bold">Состав программы</h3><ul className="mt-3 space-y-2">{counts.data.map(([label, count], index) => <li key={label}><button type="button" className="text-left underline" onClick={() => setTab(index === 0 ? 'emissions' : index === 1 ? 'discharges' : index === 2 ? 'waste' : 'monitoring')}>{count ? '✓' : '—'} {label} — {count || 'отсутствуют'}</button></li>)}</ul><p className="mt-3 text-sm text-slate-500">Обязательность разделов и блокирующие проблемы определяются проверкой готовности выше.</p></section>}
       <section className="rounded-2xl border bg-white p-5"><h3 className="font-bold">Заполненные сведения</h3><ul className="mt-3 space-y-2"><li>{item.responsible ? '✓ Ответственный назначен' : '✕ Ответственный не назначен'}</li><li>Позиции контроля — {item.controlItems?.length || 0}</li><li>Показатели — {item.indicators?.length || 0}</li><li>Направления мониторинга — {item.monitoring?.items.length || 0}</li></ul></section>
       <PekProgramStructure program={item} readinessPercent={readiness.data?.progressPercent} onOpenSection={(section) => setTab(sectionTabs[section])} />
       <section className="rounded-2xl border bg-white p-5"><h2 className="mb-4 text-lg font-black">Общие сведения</h2><div className="grid gap-3 md:grid-cols-2"><Info label="Компания" value={item.company?.name || '—'} /><Info label="Объект" value={item.object?.name || '—'} /><Info label="Описание" value={item.description || '—'} /><Info label="Последнее изменение" value={item.updatedAt || '—'} /><Info label="Проектная мощность" value={[item.designCapacity, item.designCapacityUnit].filter(Boolean).join(' ') || '—'} /></div></section>
     </div>}
-    {workspaceTab !== 0 && <section className="border border-slate-300 bg-white p-4">
-      {workspaceTab === 1 && <div className="space-y-6"><PekProgramMonitoring program={item} /><div><h3 className="mb-3 font-black">Позиции контроля</h3><ProgramControlTable program={item} canEdit={item.availableActions.edit === true} /></div></div>}
-      {workspaceTab === 2 && <><DataRows rows={item.indicators || []} />{item.availableActions.edit && <Link className="text-eco-700 underline" to={`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=6`}>Редактировать показатели</Link>}</>}
-      {workspaceTab === 8 && <PekInventoryEditor kind="waste-items" parentId={id} programId={id} companyId={item.company?.id} canEdit={item.availableActions.edit === true && !item.readOnly} />}
-      {workspaceTab === 9 && <PekInventoryEditor kind="emission-sources" parentId={id} programId={id} companyId={item.company?.id} canEdit={item.availableActions.edit === true && !item.readOnly} />}
-      {workspaceTab === 10 && <PekInventoryEditor kind="discharge-sources" parentId={id} programId={id} companyId={item.company?.id} canEdit={item.availableActions.edit === true && !item.readOnly} />}
-      {workspaceTab === 3 && <><DataRows rows={item.measures || []} />{item.availableActions.edit && <Link className="text-eco-700 underline" to={`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=11`}>Редактировать мероприятия</Link>}</>}
-      {workspaceTab === 4 && <PekProgramStructuredSections program={item} />}
-      {workspaceTab === 5 && <div className="space-y-6"><div><h2 className="font-black">Разрешительные документы</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{permits.data?.filter((permit) => item.permitIds?.includes(permit.id)).map((permit) => <article key={permit.id} className="border p-4"><strong>{permit.type} № {permit.number}</strong><p className="mt-1 text-sm">Дата выдачи: {permit.issuedAt || '—'}</p><p className="text-sm">Срок действия: {permit.validFrom} — {permit.validTo}</p><p className="text-sm">Статус: {permit.status}</p></article>)}{!permits.isLoading && !permits.data?.some((permit) => item.permitIds?.includes(permit.id)) && <p className="text-sm text-slate-500">Разрешения не выбраны.</p>}</div></div><PekProgramDocuments companyId={companyId} programId={id} version={item.version} documents={item.documents || []} canUpload={item.availableActions.uploadDocument} /></div>}
-      {workspaceTab === 6 && <Link className="font-bold text-eco-700" to={`/staff/pek/programs/${id}/history`}>Открыть историю программы</Link>}
-      {workspaceTab === 7 && <Link className="font-bold text-eco-700" to={`/staff/pek/reports?companyId=${item.company?.id || ''}&objectId=${item.object?.id || ''}&programId=${id}`}>Открыть отчёты объекта</Link>}
+    {tab !== 'general' && tab !== 'readiness' && <section className="border border-slate-300 bg-white p-4">
+      {['monitoring', 'gas-monitoring', 'atmospheric-air', 'water', 'soil'].includes(tab) && <div className="space-y-6"><PekProgramMonitoring program={item} /><div><h3 className="mb-3 font-black">Позиции контроля</h3><ProgramControlTable program={item} canEdit={item.availableActions.edit === true} /></div></div>}
+      {tab === 'calculated-control' && <><DataRows rows={item.indicators || []} />{item.availableActions.edit && <Link className="text-eco-700 underline" to={`/staff/pek/programs/${id}/edit?companyId=${item.company?.id || ''}&step=6`}>Редактировать показатели</Link>}</>}
+      {tab === 'waste' && <PekInventoryEditor kind="waste-items" parentId={id} programId={id} companyId={item.company?.id} canEdit={item.availableActions.edit === true && !item.readOnly} />}
+      {tab === 'emissions' && <PekInventoryEditor kind="emission-sources" parentId={id} programId={id} companyId={item.company?.id} canEdit={item.availableActions.edit === true && !item.readOnly} />}
+      {tab === 'discharges' && <PekInventoryEditor kind="discharge-sources" parentId={id} programId={id} companyId={item.company?.id} canEdit={item.availableActions.edit === true && !item.readOnly} />}
+      {(tab === 'inspections' || tab === 'organization') && <PekProgramStructuredSections program={item} section={(structuredSection || (tab === 'inspections' ? 'internal-inspections' : undefined)) as Parameters<typeof PekProgramStructuredSections>[0]['section']} />}
+      {tab === 'documents' && <div className="space-y-6"><div><h2 className="font-black">Разрешительные документы</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{permits.data?.filter((permit) => item.permitIds?.includes(permit.id)).map((permit) => <article key={permit.id} className="border p-4"><strong>{permit.type} № {permit.number}</strong><p className="mt-1 text-sm">Дата выдачи: {permit.issuedAt || '—'}</p><p className="text-sm">Срок действия: {permit.validFrom} — {permit.validTo}</p><p className="text-sm">Статус: {permit.status}</p></article>)}{!permits.isLoading && !permits.data?.some((permit) => item.permitIds?.includes(permit.id)) && <p className="text-sm text-slate-500">Разрешения не выбраны.</p>}</div></div><PekProgramDocuments companyId={companyId} programId={id} version={item.version} documents={item.documents || []} canUpload={item.availableActions.uploadDocument} /></div>}
     </section>}
     <PekActionModal action={action} pending={workflow.isPending} onClose={() => setAction(null)} onConfirm={(comment) => action && workflow.mutate({ item: action, comment })} />
     <Modal

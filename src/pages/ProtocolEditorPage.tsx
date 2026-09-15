@@ -15,6 +15,7 @@ import ProtocolLaboratoryForm from '../components/protocols/ProtocolLaboratoryFo
 import ProtocolOrganizationForm from '../components/protocols/ProtocolOrganizationForm';
 import ProtocolPreviewModal from '../components/protocols/ProtocolPreviewModal';
 import ProtocolResultsTable from '../components/protocols/ProtocolResultsTable';
+import ProtocolSamplingPointsForm from '../components/protocols/ProtocolSamplingPointsForm';
 import ProtocolTestingForm from '../components/protocols/ProtocolTestingForm';
 import ReplaceProtocolModal from '../components/protocols/ReplaceProtocolModal';
 import ReturnForRevisionModal from '../components/protocols/ReturnForRevisionModal';
@@ -31,6 +32,7 @@ import type { CompanyObject } from '../types/companies';
 import type { LaboratoryEmployee, MeasurementDevice, Protocol, ProtocolCompanySnapshot, ProtocolMeasurementDevice, WeatherConditions } from '../types/protocols';
 import { parseLaboratoryApiError } from '../utils/laboratoryApiError';
 import { isWaterProtocolType } from '../config/protocolWater';
+import { protocolToUpdatePayload } from '../features/protocols/mappers/protocolUpdatePayload';
 import { collectProtocolDevices, isDeviceValidForDate } from '../utils/protocolDevices';
 import { normalizeProtocolError, protocolAccessErrorMessage } from '../utils/protocolError';
 import { isProtocolVersionConflict, protocolVersionConflictMessage } from '../features/protocols/utils/protocolVersionConflict';
@@ -766,43 +768,7 @@ const ProtocolEditorPage = () => {
     setPreviewOpen(false);
     let conflictDetected = false;
     const operation = (async (): Promise<Protocol | null> => {
-      const updateSnapshot = (item: Protocol) => protocolService.updateProtocol(item.id, {
-        templateId: item.templateId,
-        version: Number(item.version || 0),
-        number: item.protocolNumber || item.number || '',
-        protocolDate: item.protocolDate || '',
-        companyId: item.companyId,
-        objectId: item.objectId,
-        laboratoryId: item.laboratory?.laboratoryId || item.laboratory?.id,
-        sampleDate: item.testing.samplingDate || item.measurementDate || item.protocolDate,
-        sampleNumber: item.sampleNumber,
-        samplingPlace: item.samplingPlace || item.measurementPlace,
-        samplingDepth: item.samplingDepth,
-        measurementDate: item.measurementDate || item.testing.samplingDate || item.protocolDate,
-        measurementTime: item.measurementTime,
-        measurementPlace: item.measurementPlace,
-        formCode: item.formCode,
-        appendixNumber: item.appendixNumber,
-        executor: item.executor || '',
-        executorId: item.executorId == null ? undefined : String(item.executorId),
-        approver: item.approver || '',
-        laboratory: item.laboratory,
-        organization: item.organization,
-        testing: item.testing,
-        environment: item.environment,
-        conditions: {
-          ...(item.conditions || {}),
-          ...(isWaterProtocolType(item.templateId) ? {
-            waterType: item.waterType,
-            waterUseCategory: item.waterUseCategory,
-          } : {}),
-        },
-        explanatoryNote: item.explanatoryNote,
-        testingMethodDocument: item.testingMethodDocument || item.testing.testingMethodDocument,
-        complianceDocument: item.complianceDocument,
-        printVisibility: item.printVisibility,
-        samplingPoints: item.samplingPoints,
-      });
+      const updateSnapshot = (item: Protocol) => protocolService.updateProtocol(item.id, protocolToUpdatePayload(item));
       try {
         const draftProtocol = await ensureDraftProtocol(snapshot);
         const saved = await updateSnapshot(draftProtocol);
@@ -1240,7 +1206,16 @@ const ProtocolEditorPage = () => {
         {editSection === 'laboratory' && <ProtocolLaboratoryForm value={protocol.laboratory} employees={laboratoryEmployees} readOnly={!protocol.availableActions.edit} loading={busy} canOpenSettings={protocol.availableActions.edit} onExecutorChange={(employee) => patchProtocol({ executorId: employee.id, executor: employee.fullName, laboratory: { ...protocol.laboratory, executorId: String(employee.id), executor: employee.fullName } })} onRefresh={refreshLaboratorySnapshot} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
         {editSection === 'environment' && <div className="space-y-5">{isWaterProtocolType(protocol.templateId) && <ProtocolWaterCharacteristicsForm waterType={protocol.waterType || String(protocol.environment?.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.environment?.conditions?.waterUseCategory || '')} readOnly={!protocol.availableActions.edit} onChange={({ waterType, waterUseCategory }) => patchProtocol({ conditions: { ...(protocol.environment?.conditions || {}), waterType, waterUseCategory } })} />}<ProtocolEnvironmentForm value={protocol.environment || {}} measurementDate={protocol.measurementDate || protocol.testing.samplingDate || protocol.protocolDate} measurementTime={protocol.measurementTime || ''} objectId={String(protocol.objectId || '')} objectName={companyObjects.find((item) => item.id === String(protocol.objectId))?.name || protocol.companySnapshot.objectName || ''} objectOptions={companyObjects.map((item) => ({ id: item.id, name: item.name }))} readOnly={!protocol.availableActions.edit} loading={busy} onSelectionChange={changeWeatherSelection} onRequestConditions={refreshWeather} onChange={(environment) => patchProtocol({ environment })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} /></div>}
         {editSection === 'methods' && <ProtocolTestingForm templateId={protocol.templateId} value={protocol.testing} measurementDate={protocol.measurementDate || protocol.testing.samplingDate} readOnly={!protocol.availableActions.edit} onMeasurementDateChange={(measurementDate) => patchProtocol({ measurementDate })} onChange={(testing) => patchProtocol({ testing })} testingBasis={protocol.organization.testingBasis} onTestingBasisChange={(testingBasis) => patchProtocol({ organization: { ...protocol.organization, testingBasis } })} printVisibility={protocol.printVisibility} onPrintVisibilityChange={(printVisibility) => patchProtocol({ printVisibility })} />}
-        {editSection === 'results' && <ProtocolResultsTable embedded protocolId={protocol.id} version={protocol.version} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} samplingPoints={protocol.samplingPoints} devices={protocol.measurementDevices} readOnly={!protocol.availableActions.edit} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onVersionChange={applyServerVersion} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />}
+        {editSection === 'results' && <div className="space-y-5">
+          {protocol.templateId === 'ambient_air' && <ProtocolSamplingPointsForm
+            points={protocol.samplingPoints || []}
+            results={protocol.results}
+            disabled={!protocol.availableActions.edit || busy}
+            onChange={(samplingPoints) => patchProtocol({ samplingPoints })}
+            onSave={() => { void save(); }}
+          />}
+          <ProtocolResultsTable embedded protocolId={protocol.id} version={protocol.version} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} samplingPoints={protocol.samplingPoints} devices={protocol.measurementDevices} readOnly={!protocol.availableActions.edit} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onVersionChange={applyServerVersion} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />
+        </div>}
       </Modal>
 
       <ProtocolPreviewModal

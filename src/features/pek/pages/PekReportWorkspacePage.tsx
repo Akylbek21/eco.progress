@@ -20,6 +20,7 @@ import PekReportExceedances from '../components/exceedances/PekReportExceedances
 import PekInventoryEditor from '../components/inventory/PekInventoryEditor';
 import PekReportSubmissionDialog, { pekSubmissionMethodLabels, type PekSubmissionDraft } from '../components/submission/PekReportSubmissionDialog';
 import PekOfficialReport from '../components/official/PekOfficialReport';
+import PekProtocolQuickEntryDialog from '../components/protocols/PekProtocolQuickEntryDialog';
 
 const tabs = [
   { key: 'overview', label: 'Общие сведения' },
@@ -82,6 +83,7 @@ const PekReportWorkspacePage = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [conflictOpen, setConflictOpen] = useState(false);
   const [collectConfirmOpen, setCollectConfirmOpen] = useState(false);
+  const [quickProtocolEntryOpen, setQuickProtocolEntryOpen] = useState(false);
   const [actualCapacity, setActualCapacity] = useState('');
   const [actualCapacityUnit, setActualCapacityUnit] = useState('');
 
@@ -342,7 +344,7 @@ const PekReportWorkspacePage = () => {
   const setTab = (nextTab: TabKey) => { const next = new URLSearchParams(params); nextTab === 'overview' ? next.delete('tab') : next.set('tab', nextTab); setParams(next, { replace: true }); };
 
   return <div className="space-y-4">
-    <PekPageHeader title="ПЭК Отчёт" description={`${item.company?.name || 'Компания не указана'} · ${item.object?.name || 'Объект не указан'} · ${item.periodStart} — ${item.periodEnd}`} actions={<><PekReadiness value={readiness.data?.progressPercent} /><PekStatusBadge status={item.status} /><PekReportActions report={item} isPending={pending} onCollect={() => setCollectConfirmOpen(true)} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => setApproveConfirmOpen(true)} onSubmitAuthority={() => setSubmitConfirmOpen(true)} onAccept={() => setAcceptConfirmOpen(true)} onReject={() => setRejectOpen(true)} onArchive={() => setArchiveConfirmOpen(true)} /></>} />
+    <PekPageHeader title="ПЭК Отчёт" description={`${item.company?.name || 'Компания не указана'} · ${item.object?.name || 'Объект не указан'} · ${item.periodStart} — ${item.periodEnd}`} actions={<><PekReadiness value={readiness.data?.progressPercent} /><PekStatusBadge status={item.status} /><PekReportActions report={item} isPending={pending} onCollect={() => setQuickProtocolEntryOpen(true)} onSubmit={() => submitReview.mutate(item)} onReturn={() => setReturnOpen(true)} onApprove={() => setApproveConfirmOpen(true)} onSubmitAuthority={() => setSubmitConfirmOpen(true)} onAccept={() => setAcceptConfirmOpen(true)} onReject={() => setRejectOpen(true)} onArchive={() => setArchiveConfirmOpen(true)} /></>} />
     {actionError && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void report.refetch()}>Обновить данные</MuiButton>}>{actionError}</Alert>}
     {['SUBMITTED', 'ACCEPTED', 'REJECTED'].includes(item.status) && <Alert severity="info">Статус сдачи, принятия или отклонения отмечен сотрудником вручную. Автоматическое подтверждение государственного органа не поступает.</Alert>}
     {item.status === 'REJECTED' && <Alert severity="error"><strong>Отмечено отклонение отчёта.</strong><div className="mt-1">Причина: {item.rejectionReason || 'не указана'} · дата: {item.rejectedAt || 'не указана'}</div></Alert>}
@@ -418,6 +420,13 @@ const PekReportWorkspacePage = () => {
     {tab === 'waste-movements' && <PekInventoryEditor key={`waste-${item.id}`} kind="waste-movements" parentId={item.id} programId={item.programId} companyId={item.companyId} canEdit={item.availableActions.edit === true} />}
     {tab === 'documents' && <div className="space-y-4"><PekReportPackageCard report={item} /><PekReportDocuments report={item} /></div>}
     {tab === 'history' && <section className="space-y-4 rounded-2xl border bg-white p-5"><h2 className="font-black">История отчёта</h2>{history.isLoading ? <PekLoading /> : history.isError ? <PekQueryError error={history.error} resource="историю отчёта" retry={() => void history.refetch()} /> : !history.data?.length ? <PekState title="История пока пуста" /> : <ol className="space-y-3">{history.data.map((entry, index) => <li key={`${entry.performedAt}-${index}`} className="rounded-xl border p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold">{entry.action}</p><span className="text-xs text-slate-500">Версия {entry.version}</span></div><p className="mt-1 text-sm">{entry.fromStatus || '—'} → {entry.toStatus}</p><p className="mt-1 text-sm text-slate-600">{entry.performedBy?.name || entry.performedBy?.fullName || 'Сотрудник'} · {new Date(entry.performedAt).toLocaleString('ru-RU')}</p>{entry.comment && <p className="mt-2 text-sm">{entry.comment}</p>}</li>)}</ol>}</section>}
+    <PekProtocolQuickEntryDialog
+      open={quickProtocolEntryOpen}
+      report={item}
+      program={program.data}
+      onClose={() => setQuickProtocolEntryOpen(false)}
+      onCollect={() => { setQuickProtocolEntryOpen(false); setCollectConfirmOpen(true); }}
+    />
     <Dialog open={collectConfirmOpen} onClose={() => !collect.isPending && setCollectConfirmOpen(false)} fullWidth maxWidth="sm">
       <DialogTitle>Получить протоколы?</DialogTitle>
       <DialogContent><Alert severity="info">Backend заново проверит подходящие протоколы, обновит сопоставления, план/факт и готовность отчёта. Ручные решения будут обработаны по серверным правилам reconciliation.</Alert></DialogContent>
